@@ -27,4 +27,22 @@ void MockViewSource::CreateView(const ViewRefHelper& view_ref) {
       std::make_unique<MockAnnotationView>([]() {}, []() {}, []() {}));
 }
 
+MockSemanticTree* MockViewSource::GetMockSemanticTree(zx_koid_t view_ref_koid) {
+  auto view = GetViewWrapper(view_ref_koid);
+  FX_CHECK(view);
+
+  auto* mock_view_semantics = static_cast<MockViewSemantics*>(view->view_semantics());
+  FX_CHECK(mock_view_semantics);
+
+  return mock_view_semantics->mock_semantic_tree();
+}
+
+void MockViewSource::UpdateSemanticTree(zx_koid_t view_ref_koid,
+                                        std::vector<a11y::SemanticTree::TreeUpdate> node_updates) {
+  auto* mock_semantic_tree = GetMockSemanticTree(view_ref_koid);
+  FX_CHECK(mock_semantic_tree);
+
+  mock_semantic_tree->Update(std::move(node_updates));
+}
+
 }  // namespace accessibility_test

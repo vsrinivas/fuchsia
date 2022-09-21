@@ -10,15 +10,15 @@
 namespace a11y {
 
 ScreenReaderContext::ScreenReaderContext(std::unique_ptr<A11yFocusManager> a11y_focus_manager,
-                                         TtsManager* tts_manager, SemanticsSource* semantics_source,
+                                         TtsManager* tts_manager, ViewSource* view_source,
                                          std::string locale_id)
     : executor_(async_get_default_dispatcher()),
       a11y_focus_manager_(std::move(a11y_focus_manager)),
       tts_manager_(tts_manager),
-      semantics_source_(semantics_source),
+      view_source_(view_source),
       locale_id_(std::move(locale_id)) {
   FX_CHECK(tts_manager);
-  FX_CHECK(semantics_source_);
+  FX_CHECK(view_source_);
   tts_manager_->OpenEngine(tts_engine_ptr_.NewRequest(),
                            [](fuchsia::accessibility::tts::TtsManager_OpenEngine_Result result) {
                              if (result.is_err()) {
@@ -52,8 +52,7 @@ ScreenReaderContext::ScreenReaderContext(std::unique_ptr<A11yFocusManager> a11y_
           last_a11y_focused_node_ = std::nullopt;
           return;
         }
-        const auto* node =
-            semantics_source_->GetSemanticNode(a11y_focus->view_ref_koid, a11y_focus->node_id);
+        const auto* node = GetSemanticNode(a11y_focus->view_ref_koid, a11y_focus->node_id);
         if (!node) {
           last_a11y_focused_node_ = std::nullopt;
           return;
@@ -84,8 +83,8 @@ bool ScreenReaderContext::IsTextFieldFocused() const {
   if (!a11y_focus) {
     return false;
   }
-  const auto* node =
-      semantics_source_->GetSemanticNode(a11y_focus->view_ref_koid, a11y_focus->node_id);
+
+  const auto* node = GetSemanticNode(a11y_focus->view_ref_koid, a11y_focus->node_id);
   if (!node) {
     return false;
   }
@@ -103,8 +102,7 @@ bool ScreenReaderContext::IsVirtualKeyboardFocused() const {
   if (!a11y_focus) {
     return false;
   }
-  const auto* node =
-      semantics_source_->GetSemanticNode(a11y_focus->view_ref_koid, a11y_focus->node_id);
+  const auto* node = GetSemanticNode(a11y_focus->view_ref_koid, a11y_focus->node_id);
   if (!node) {
     return false;
   }
@@ -130,8 +128,7 @@ bool ScreenReaderContext::UpdateCacheIfDescribableA11yFocusedNodeContentChanged(
   if (!a11y_focus || !last_a11y_focused_node_) {
     return false;
   }
-  const auto* node =
-      semantics_source_->GetSemanticNode(a11y_focus->view_ref_koid, a11y_focus->node_id);
+  const auto* node = GetSemanticNode(a11y_focus->view_ref_koid, a11y_focus->node_id);
   if (!node) {
     return false;
   }
@@ -153,6 +150,28 @@ bool ScreenReaderContext::UpdateCacheIfDescribableA11yFocusedNodeContentChanged(
   }
 
   return false;
+}
+
+const fuchsia::accessibility::semantics::Node* ScreenReaderContext::GetSemanticNode(
+    zx_koid_t view_ref_koid, uint32_t node_id) const {
+  FX_DCHECK(view_source_);
+
+  auto view_wrapper = view_source_->GetViewWrapper(view_ref_koid);
+  if (!view_wrapper) {
+    return nullptr;
+  }
+
+  auto* view_semantics = view_wrapper->view_semantics();
+  if (!view_semantics) {
+    return nullptr;
+  }
+
+  auto semantic_tree = view_semantics->GetTree();
+  if (!semantic_tree) {
+    return nullptr;
+  }
+
+  return semantic_tree->GetNode(node_id);
 }
 
 }  // namespace a11y

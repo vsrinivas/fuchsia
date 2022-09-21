@@ -12,6 +12,7 @@
 #include "src/ui/a11y/lib/focus_chain/tests/mocks/mock_focus_chain_requester.h"
 #include "src/ui/a11y/lib/screen_reader/focus/tests/mocks/mock_a11y_focus_manager.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantics_source.h"
+#include "src/ui/a11y/lib/testing/view_ref_helper.h"
 #include "src/ui/a11y/lib/tts/tts_manager.h"
 #include "src/ui/a11y/lib/view/tests/mocks/mock_view_source.h"
 
@@ -29,17 +30,26 @@ class ScreenReaderContextTest : public gtest::RealLoopFixture {
 
     // Initialize screen reader context.
     screen_reader_context_ = std::make_unique<a11y::ScreenReaderContext>(
-        std::move(a11y_focus_manager), &tts_manager_, &mock_semantics_source_);
+        std::move(a11y_focus_manager), &tts_manager_, &mock_view_source_);
+
+    // Create a mock view.
+    mock_view_source_.CreateView(view_ref_helper_);
+  }
+
+  void CreateOrUpdateSemanticNode(fuchsia::accessibility::semantics::Node node) {
+    std::vector<a11y::SemanticTree::TreeUpdate> node_updates;
+    node_updates.push_back(std::move(node));
+    mock_view_source_.UpdateSemanticTree(view_ref_helper_.koid(), std::move(node_updates));
   }
 
   sys::testing::ComponentContextProvider context_provider_;
   MockAccessibilityFocusChainRequester mock_focus_requester_;
   MockAccessibilityFocusChainRegistry mock_focus_registry_;
-  MockSemanticsSource mock_semantics_source_;
   MockViewSource mock_view_source_;
   MockA11yFocusManager* a11y_focus_manager_ptr_ = nullptr;
   a11y::TtsManager tts_manager_;
   std::unique_ptr<a11y::ScreenReaderContext> screen_reader_context_;
+  ViewRefHelper view_ref_helper_;
 };
 
 // Checks that the pointer returned by GetA11yFocusManager matches the one passed in the
@@ -66,22 +76,22 @@ TEST_F(ScreenReaderContextTest, SetsSemanticLevel) {
 }
 
 TEST_F(ScreenReaderContextTest, IsVirtualKeyboardFocused) {
-  a11y_focus_manager_ptr_->SetA11yFocus(1u, 0u, [](auto...) {});
+  a11y_focus_manager_ptr_->SetA11yFocus(view_ref_helper_.koid(), 0u, [](auto...) {});
   fuchsia::accessibility::semantics::Node node;
   node.set_node_id(0u);
   node.mutable_attributes()->set_is_keyboard_key(true);
-  mock_semantics_source_.CreateSemanticNode(1u, std::move(node));
+  CreateOrUpdateSemanticNode(std::move(node));
 
   EXPECT_TRUE(screen_reader_context_->IsVirtualKeyboardFocused());
 }
 
 TEST_F(ScreenReaderContextTest, IsTextFieldFocused) {
-  a11y_focus_manager_ptr_->SetA11yFocus(1u, 0u, [](auto...) {});
+  a11y_focus_manager_ptr_->SetA11yFocus(view_ref_helper_.koid(), 0u, [](auto...) {});
   {
     fuchsia::accessibility::semantics::Node node;
     node.set_node_id(0u);
     node.set_role(fuchsia::accessibility::semantics::Role::TEXT_FIELD);
-    mock_semantics_source_.CreateSemanticNode(1u, std::move(node));
+    CreateOrUpdateSemanticNode(std::move(node));
   }
   EXPECT_TRUE(screen_reader_context_->IsTextFieldFocused());
 
@@ -89,7 +99,7 @@ TEST_F(ScreenReaderContextTest, IsTextFieldFocused) {
     fuchsia::accessibility::semantics::Node node;
     node.set_node_id(0u);
     node.set_role(fuchsia::accessibility::semantics::Role::SEARCH_BOX);
-    mock_semantics_source_.CreateSemanticNode(1u, std::move(node));
+    CreateOrUpdateSemanticNode(std::move(node));
   }
 
   EXPECT_TRUE(screen_reader_context_->IsTextFieldFocused());
@@ -98,7 +108,7 @@ TEST_F(ScreenReaderContextTest, IsTextFieldFocused) {
     fuchsia::accessibility::semantics::Node node;
     node.set_node_id(0u);
     node.set_role(fuchsia::accessibility::semantics::Role::BUTTON);
-    mock_semantics_source_.CreateSemanticNode(1u, std::move(node));
+    CreateOrUpdateSemanticNode(std::move(node));
   }
 
   EXPECT_FALSE(screen_reader_context_->IsTextFieldFocused());
@@ -108,7 +118,7 @@ TEST_F(ScreenReaderContextTest, FallbackToEnglishWhenLocaleIsUnknown) {
   auto a11y_focus_manager = std::make_unique<MockA11yFocusManager>();
 
   screen_reader_context_ = std::make_unique<a11y::ScreenReaderContext>(
-      std::move(a11y_focus_manager), &tts_manager_, &mock_semantics_source_, "sr-RS");
+      std::move(a11y_focus_manager), &tts_manager_, &mock_view_source_, "sr-RS");
 
   // Because the provided locale does not exist, check that it used en-US as a fallback.
   icu::Locale locale("en-US");
@@ -123,10 +133,10 @@ TEST_F(ScreenReaderContextTest, UpdateCacheIfDescribableA11yFocusedNodeContentCh
   {
     fuchsia::accessibility::semantics::Node node;
     node.set_node_id(0u);
-    mock_semantics_source_.CreateSemanticNode(1u, std::move(node));
+    CreateOrUpdateSemanticNode(std::move(node));
   }
 
-  a11y_focus_manager_ptr_->SetA11yFocus(1u, 0u, [](auto...) {});
+  a11y_focus_manager_ptr_->SetA11yFocus(view_ref_helper_.koid(), 0u, [](auto...) {});
   EXPECT_FALSE(screen_reader_context_->UpdateCacheIfDescribableA11yFocusedNodeContentChanged());
 
   fuchsia::accessibility::semantics::Node clone;
@@ -135,7 +145,7 @@ TEST_F(ScreenReaderContextTest, UpdateCacheIfDescribableA11yFocusedNodeContentCh
     node.set_node_id(0u);
     node.mutable_attributes()->set_label("foo");
     node.Clone(&clone);
-    mock_semantics_source_.CreateSemanticNode(1u, std::move(node));
+    CreateOrUpdateSemanticNode(std::move(node));
   }
 
   EXPECT_TRUE(screen_reader_context_->UpdateCacheIfDescribableA11yFocusedNodeContentChanged());
@@ -144,7 +154,7 @@ TEST_F(ScreenReaderContextTest, UpdateCacheIfDescribableA11yFocusedNodeContentCh
     fuchsia::accessibility::semantics::Node node;
     clone.Clone(&node);
     node.mutable_states()->set_selected(true);
-    mock_semantics_source_.CreateSemanticNode(1u, std::move(node));
+    CreateOrUpdateSemanticNode(std::move(node));
   }
 
   EXPECT_TRUE(screen_reader_context_->UpdateCacheIfDescribableA11yFocusedNodeContentChanged());
@@ -154,7 +164,7 @@ TEST_F(ScreenReaderContextTest, UpdateCacheIfDescribableA11yFocusedNodeContentCh
     clone.Clone(&node);
     node.mutable_states()->set_selected(false);
     node.Clone(&clone);  // To update the value in clone.
-    mock_semantics_source_.CreateSemanticNode(1u, std::move(node));
+    CreateOrUpdateSemanticNode(std::move(node));
   }
 
   EXPECT_TRUE(screen_reader_context_->UpdateCacheIfDescribableA11yFocusedNodeContentChanged());
@@ -163,7 +173,7 @@ TEST_F(ScreenReaderContextTest, UpdateCacheIfDescribableA11yFocusedNodeContentCh
     fuchsia::accessibility::semantics::Node node;
     clone.Clone(&node);
     node.set_role(fuchsia::accessibility::semantics::Role::BUTTON);
-    mock_semantics_source_.CreateSemanticNode(1u, std::move(node));
+    CreateOrUpdateSemanticNode(std::move(node));
   }
 
   // No change this time, as only the role changed and we care only about changes in attributes or

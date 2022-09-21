@@ -14,8 +14,8 @@
 
 #include "src/ui/a11y/lib/screen_reader/focus/a11y_focus_manager.h"
 #include "src/ui/a11y/lib/screen_reader/speaker.h"
-#include "src/ui/a11y/lib/semantics/semantics_source.h"
 #include "src/ui/a11y/lib/tts/tts_manager.h"
+#include "src/ui/a11y/lib/view/view_source.h"
 
 namespace a11y {
 
@@ -107,9 +107,9 @@ class ScreenReaderContext {
   // |a11y_focus_manager| will be owned by this class.
   // |tts_manager| is not kept, and must be valid only during this constructor, where
   // |tts_engine_ptr_| is instantiated.
-  // |semantics_source| must outlive this object.
+  // |view_source| must outlive this object.
   explicit ScreenReaderContext(std::unique_ptr<A11yFocusManager> a11y_focus_manager,
-                               TtsManager* tts_manager, SemanticsSource* semantics_source,
+                               TtsManager* tts_manager, ViewSource* view_source,
                                std::string locale_id = "en-US");
 
   virtual ~ScreenReaderContext();
@@ -171,6 +171,10 @@ class ScreenReaderContext {
   ScreenReaderContext();
 
  private:
+  // Helper method to retrieve a semantic node.
+  const fuchsia::accessibility::semantics::Node* GetSemanticNode(zx_koid_t view_ref_koid,
+                                                                 uint32_t node_id) const;
+
   async::Executor executor_;
 
   // Stores A11yFocusManager pointer.
@@ -181,8 +185,8 @@ class ScreenReaderContext {
   // engine we opened in the constructor.
   TtsManager* tts_manager_ = nullptr;
 
-  // Interface used to obtain semantic data.
-  SemanticsSource* const semantics_source_ = nullptr;
+  // Interface used to obtain view data, including semantics.
+  ViewSource* const view_source_ = nullptr;
 
   // Interface to the engine is owned by this class so that it can build and rebuild the Speaker
   // when the locale changes.
@@ -226,9 +230,9 @@ class ScreenReaderContextFactory {
 
   virtual std::unique_ptr<ScreenReaderContext> CreateScreenReaderContext(
       std::unique_ptr<A11yFocusManager> a11y_focus_manager, TtsManager* tts_manager,
-      SemanticsSource* semantics_source, std::string locale_id = "en-US") {
+      ViewSource* view_source, std::string locale_id = "en-US") {
     return std::make_unique<ScreenReaderContext>(std::move(a11y_focus_manager), tts_manager,
-                                                 semantics_source, locale_id);
+                                                 view_source, locale_id);
   }
 };
 

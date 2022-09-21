@@ -50,6 +50,7 @@ executable("screen_reader_tests") {
     "//src/ui/a11y/lib/semantics/tests/mocks",
     "//src/ui/a11y/lib/semantics/util",
     "//src/ui/a11y/lib/testing:input",
+    "//src/ui/a11y/lib/testing:view_ref_helper",
     "//src/ui/a11y/lib/tts",
     "//src/ui/a11y/lib/tts/tests/mocks",
     "//src/ui/a11y/lib/util",

@@ -9,6 +9,7 @@
 
 #include <unordered_map>
 
+#include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_tree.h"
 #include "src/ui/a11y/lib/testing/view_ref_helper.h"
 #include "src/ui/a11y/lib/view/view_source.h"
 #include "src/ui/a11y/lib/view/view_wrapper.h"
@@ -26,6 +27,18 @@ class MockViewSource : public a11y::ViewSource {
   // Creates a wrapper for the supplied view_ref, with mock functional
   // interfaces.
   void CreateView(const ViewRefHelper& view_ref);
+
+  // Convenience methods
+
+  // Gets the mock semantic tree associated with the given view ref koid, if any.
+  MockSemanticTree* GetMockSemanticTree(zx_koid_t view_ref_koid);
+
+  // Updates the semantic tree associated with the given view ref koid.
+  //
+  // If there is no view with the given view ref koid, this method will
+  // crash.
+  void UpdateSemanticTree(zx_koid_t view_ref_koid,
+                          std::vector<a11y::SemanticTree::TreeUpdate> node_updates);
 
  private:
   std::unordered_map<zx_koid_t, std::unique_ptr<a11y::ViewWrapper>> views_;
