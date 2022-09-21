@@ -111,6 +111,3 @@ legacy_cache_package_labels +=
 # This should be overridden by products which inherit from minimal.
 fuchsia_product_assembly_config_label = "//products/minimal"
 fuchsia_product_assembly_config_file = "${root_build_dir}/obj/products/minimal/minimal/product_assembly_config.json"
-
-fuchsia_structured_config_policy =
-    "//products/minimal/minimal_user_structured_config_policy.json5"

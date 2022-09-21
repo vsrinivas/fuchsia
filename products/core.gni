@@ -130,8 +130,3 @@ product_system_image_deps +=
 fuchsia_product_assembly_config_label = "//products/core"
 fuchsia_product_assembly_config_file =
     "${root_build_dir}/obj/products/core/core/product_assembly_config.json"
-
-# Set to empty so that products which inherit from core don't automatically get minimal's no-op
-# policy. Necessary to ensure that the check for policy on non-eng builds will actually discover
-# missing policies.
-fuchsia_structured_config_policy = ""
