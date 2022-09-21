@@ -461,11 +461,6 @@ func infraToolLogChecks() []FailureModeCheck {
 			String: testrunnerconstants.FailedToStartSerialTestMsg,
 			Type:   swarmingOutputType,
 		},
-		// This error happens when ffx test returns early and skips running some tests.
-		&stringInLogCheck{
-			String: fmt.Sprintf("testrunner FATAL: %s", testrunnerconstants.SkippedRunningTestsMsg),
-			Type:   swarmingOutputType,
-		},
 		// For fxbug.dev/92141.
 		&stringInLogCheck{
 			String: ffxutilconstants.TimeoutReachingTargetMsg,
@@ -494,6 +489,16 @@ func infraToolLogChecks() []FailureModeCheck {
 		// because many tests are taking too long.
 		&stringInLogCheck{
 			String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.CommandExceededTimeoutMsg),
+			Type:   swarmingOutputType,
+		},
+		// For fxbug.dev/94343.
+		&stringInLogCheck{
+			String: "There was an internal error running tests: Fidl(ClientChannelClosed { status: Status(PEER_CLOSED)",
+			Type:   swarmingOutputType,
+		},
+		// This error happens when ffx test returns early and skips running some tests.
+		&stringInLogCheck{
+			String: fmt.Sprintf("testrunner FATAL: %s", testrunnerconstants.SkippedRunningTestsMsg),
 			Type:   swarmingOutputType,
 		},
 	}
