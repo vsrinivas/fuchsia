@@ -30,7 +30,6 @@ rustc_library("settings_inspect_utils") {
 
   sources = [
     "src/inspect_writable_map.rs",
-    "src/inspect_writable_queue.rs",
     "src/joinable_inspect_vecdeque.rs",
     "src/lib.rs",
     "src/managed_inspect_map.rs",

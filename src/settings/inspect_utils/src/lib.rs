@@ -4,10 +4,6 @@
 
 #![warn(clippy::all)]
 
-/// A queue of fixed length that holds inspect-writeable items that is
-/// inspect-writeable itself.
-pub mod inspect_writable_queue;
-
 /// A map from String to inspect-writeable item that can be written to inspect.
 pub mod inspect_writable_map;
 
