@@ -1077,9 +1077,9 @@ From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.
 
 ### crashpad_http_transport_impl
 
-**Current value (from the default):** `"libcurl"`
+**Current value (from the default):** `"socket"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/bbc99508df7708de3197af4f60237a112042ae51/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:19](https://fuchsia.googlesource.com/third_party/crashpad/+/bbc99508df7708de3197af4f60237a112042ae51/util/net/tls.gni#19)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
@@ -3012,7 +3012,7 @@ From //build/go/go_build.gni:22
     will have build and test results cached, and is safe to be written to
     concurrently. If overridden, this directory must be a full path.
 
-**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/dartlang/.gocache"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/.gocache"`
 
 From //build/go/go_build.gni:18
 
@@ -3216,6 +3216,27 @@ Some Fuchsia builds use a different value here.
 **Current value (from the default):** `"//third_party/icu/default"`
 
 From //src/lib/icu/third_party_icu_headers.gni:8
+
+### icu_tzres_path
+Path to directory containing ICU time zone resource files. See `icu_tzres_source`.
+
+**Current value (from the default):** `"//third_party/icu/default/tzres"`
+
+From //src/lib/icu/tzdata/icu_tzres_source.gni:21
+
+### icu_tzres_source
+Which source location to use for ICU's time zone .res files:
+"git" or "prebuilt".
+
+If set to "git", then the tzres files will contain the same time zone
+definitions as the ICU data monolith.
+
+If set to "prebuilt", then the tzres files will be retrieved from CIPD
+and may be newer than what's available in the ICU data monolith.
+
+**Current value (from the default):** `"git"`
+
+From //src/lib/icu/tzdata/icu_tzres_source.gni:16
 
 ### icu_use_data_file
 Tells icu to load an external data file rather than rely on the icudata
@@ -6513,7 +6534,7 @@ From //build/security.gni:227
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"dartlang/thinlto-cache"`
+**Current value (from the default):** `"thinlto-cache"`
 
 From //build/config/lto/config.gni:16
 
@@ -6784,7 +6805,7 @@ VkInstances or VkDevice will fail.
 This argument will affect all vulkan_{executable/test} build targets.
 
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
 From //src/lib/vulkan/build/config.gni:40
 
