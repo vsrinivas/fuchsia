@@ -346,14 +346,19 @@ void UsbHubDevice::HandleDeviceConnected(PortNumber port) {
   status.connected = true;
   bool was_empty = pending_enumeration_list_.is_empty();
   pending_enumeration_list_.push_back(&status);
+  status.enumeration_pending = true;
   if (was_empty) {
     EnumerateNext();
   }
 }
 
 void UsbHubDevice::HandleDeviceDisconnected(PortNumber port) {
-  bool link_status = port_status_[PortNumberToIndex(port).value()].link_active;
-  port_status_[PortNumberToIndex(port).value()].Reset();
+  auto& status = port_status_[PortNumberToIndex(port).value()];
+  if (status.enumeration_pending) {
+    pending_enumeration_list_.erase(port_status_[PortNumberToIndex(port).value()]);
+  }
+  bool link_status = status.link_active;
+  status.Reset();
   if (link_status) {
     bus_.DeviceRemoved(reinterpret_cast<uint64_t>(zxdev()), port.value());
   }
@@ -361,7 +366,6 @@ void UsbHubDevice::HandleDeviceDisconnected(PortNumber port) {
 
 void UsbHubDevice::HandleResetComplete(PortNumber port) {
   port_status_[PortNumberToIndex(port).value()].reset_pending = false;
-  port_status_[PortNumberToIndex(port).value()].enumeration_pending = true;
   auto speed = port_status_[PortNumberToIndex(port).value()].GetSpeed(speed_);
   zx_status_t status = bus_.DeviceAdded(reinterpret_cast<uint64_t>(zxdev()), port.value(), speed);
 
