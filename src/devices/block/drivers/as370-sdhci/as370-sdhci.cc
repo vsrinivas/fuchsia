@@ -180,14 +180,12 @@ zx_status_t As370Sdhci::SdhciGetInterrupt(zx::interrupt* out_irq) {
 }
 
 zx_status_t As370Sdhci::SdhciGetMmio(zx::vmo* out_mmio, zx_off_t* out_offset) {
-  core_mmio_.get_vmo()->duplicate(ZX_RIGHT_SAME_RIGHTS, out_mmio);
   *out_offset = core_mmio_.get_offset();
-  return ZX_OK;
+  return core_mmio_.get_vmo()->duplicate(ZX_RIGHT_SAME_RIGHTS, out_mmio);
 }
 
 zx_status_t As370Sdhci::SdhciGetBti(uint32_t index, zx::bti* out_bti) {
-  *out_bti = std::move(bti_);
-  return ZX_OK;
+  return bti_.duplicate(ZX_RIGHT_SAME_RIGHTS, out_bti);
 }
 
 // TODO(bradenkell): The VS680 SDIO base clock seems to be different than what the controller
