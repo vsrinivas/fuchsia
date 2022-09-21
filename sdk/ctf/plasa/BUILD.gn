@@ -63,14 +63,6 @@ if (current_toolchain == toolchain_variant.base) {
     ]
     deps = [ "//sdk:plasa" ]
   }
-
-  plasa_fragment_fidl("vdso_summary") {
-    testonly = true
-    dest = "vdso"
-    fidl_ir = "${root_gen_dir}/zircon/vdso/zx.fidl.json"
-    output_fragment_file = "${target_gen_dir}/zx.api_summary.json"
-    deps = [ "//zircon/vdso" ]
-  }
 }
 
 action("filter_compdb") {
