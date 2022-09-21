@@ -316,13 +316,16 @@ impl FileOps for PipeFileObject {
                         }
                         chunk
                     }
-                    Err(errno) if errno == EPIPE && actual > 0 => return Ok(actual),
+                    Err(errno) if errno == EPIPE && actual > 0 => {
+                        return Ok(BlockableOpsResult::Done(actual))
+                    }
                     Err(errno) => return Err(errno),
                 };
                 if actual < requested {
-                    return error!(EAGAIN);
+                    Ok(BlockableOpsResult::Partial(actual))
+                } else {
+                    Ok(BlockableOpsResult::Done(actual))
                 }
-                Ok(actual)
             },
             FdEvents::POLLOUT,
             None,

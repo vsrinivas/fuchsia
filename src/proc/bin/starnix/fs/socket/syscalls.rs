@@ -238,7 +238,7 @@ pub fn sys_accept4(
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
     let accepted_socket = file.blocking_op(
         current_task,
-        || socket.accept(),
+        || socket.accept().map(BlockableOpsResult::Done),
         FdEvents::POLLIN | FdEvents::POLLHUP,
         None,
     )?;

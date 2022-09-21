@@ -115,7 +115,7 @@ impl SocketFile {
                     // If the error is ENOTCONN (that is, the write failed because the socket was
                     // disconnected), then return the amount of bytes that were written before
                     // the disconnect.
-                    return Ok(actual);
+                    return Ok(BlockableOpsResult::Done(actual));
                 }
                 result => result,
             }?;
@@ -123,14 +123,14 @@ impl SocketFile {
             actual += bytes_written;
 
             if actual < requested {
-                return error!(EAGAIN);
+                Ok(BlockableOpsResult::Partial(actual))
+            } else {
+                Ok(BlockableOpsResult::Done(actual))
             }
-
-            Ok(actual)
         };
 
         if flags.contains(SocketMessageFlags::DONTWAIT) {
-            op()
+            op().map(BlockableOpsResult::value)
         } else {
             let deadline = self.socket.send_timeout().map(zx::Time::after);
             file.blocking_op(current_task, op, FdEvents::POLLOUT | FdEvents::POLLHUP, deadline)
@@ -157,10 +157,10 @@ impl SocketFile {
 
         let op = || {
             let mut user_buffers = UserBufferIterator::new(data);
-            self.socket.read(current_task, &mut user_buffers, flags)
+            self.socket.read(current_task, &mut user_buffers, flags).map(BlockableOpsResult::Done)
         };
         if flags.contains(SocketMessageFlags::DONTWAIT) {
-            op()
+            op().map(BlockableOpsResult::value)
         } else {
             let deadline = deadline.or_else(|| self.socket.receive_timeout().map(zx::Time::after));
             file.blocking_op(current_task, op, FdEvents::POLLIN | FdEvents::POLLHUP, deadline)

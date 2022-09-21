@@ -42,6 +42,26 @@ impl SeekOrigin {
     }
 }
 
+pub enum BlockableOpsResult<T> {
+    Done(T),
+    Partial(T),
+}
+
+impl<T> BlockableOpsResult<T> {
+    pub fn value(self) -> T {
+        match self {
+            Self::Done(v) | Self::Partial(v) => v,
+        }
+    }
+
+    pub fn is_partial(&self) -> bool {
+        match self {
+            Self::Done(_) => false,
+            Self::Partial(_) => true,
+        }
+    }
+}
+
 /// Corresponds to struct file_operations in Linux, plus any filesystem-specific data.
 pub trait FileOps: Send + Sync + AsAny + 'static {
     /// Called when the FileObject is closed.
@@ -656,15 +676,23 @@ impl FileObject {
         deadline: Option<zx::Time>,
     ) -> Result<T, Errno>
     where
-        Op: FnMut() -> Result<T, Errno>,
+        Op: FnMut() -> Result<BlockableOpsResult<T>, Errno>,
     {
-        match op() {
-            Err(errno) if errno == EAGAIN && !self.flags().contains(OpenFlags::NONBLOCK) => {}
-            result => return result,
+        if self.flags().contains(OpenFlags::NONBLOCK) {
+            return op().map(BlockableOpsResult::value);
         }
 
         let waiter = Waiter::new();
         loop {
+            let result = op();
+            let is_partial = match &result {
+                Err(e) if e.code == EAGAIN => true,
+                Ok(v) => v.is_partial(),
+                _ => false,
+            };
+            if !is_partial {
+                return result.map(BlockableOpsResult::value);
+            }
             self.ops().wait_async(
                 self,
                 current_task,
@@ -673,12 +701,15 @@ impl FileObject {
                 WaitCallback::none(),
                 WaitAsyncOptions::empty(),
             );
-            match op() {
-                Err(errno) if errno == EAGAIN => waiter
-                    .wait_until(current_task, deadline.unwrap_or(zx::Time::INFINITE))
-                    .map_err(|e| if e == ETIMEDOUT { errno!(EAGAIN) } else { e })?,
-                result => return result,
-            }
+            waiter.wait_until(current_task, deadline.unwrap_or(zx::Time::INFINITE)).map_err(
+                |e| {
+                    if e == ETIMEDOUT {
+                        errno!(EAGAIN)
+                    } else {
+                        e
+                    }
+                },
+            )?;
         }
     }
 
@@ -688,7 +719,7 @@ impl FileObject {
         }
         self.blocking_op(
             current_task,
-            || self.ops().read(self, current_task, data),
+            || self.ops().read(self, current_task, data).map(BlockableOpsResult::Done),
             FdEvents::POLLIN | FdEvents::POLLHUP,
             None,
         )
@@ -705,7 +736,7 @@ impl FileObject {
         }
         self.blocking_op(
             current_task,
-            || self.ops().read_at(self, current_task, offset, data),
+            || self.ops().read_at(self, current_task, offset, data).map(BlockableOpsResult::Done),
             FdEvents::POLLIN | FdEvents::POLLHUP,
             None,
         )
@@ -725,6 +756,7 @@ impl FileObject {
                     let _guard = self.node().append_lock.read();
                     self.ops().write(self, current_task, data)
                 }
+                .map(BlockableOpsResult::Done)
             },
             FdEvents::POLLOUT | FdEvents::POLLHUP,
             None,
@@ -744,7 +776,7 @@ impl FileObject {
             current_task,
             || {
                 let _guard = self.node().append_lock.read();
-                self.ops().write_at(self, current_task, offset, data)
+                self.ops().write_at(self, current_task, offset, data).map(BlockableOpsResult::Done)
             },
             FdEvents::POLLOUT | FdEvents::POLLHUP,
             None,

@@ -22,6 +22,7 @@ test("syscalls_test_bin") {
     "fcntl_lock_test.cc",
     "fs_test.cc",
     "mmap_test.cc",
+    "pipe_test.cc",
     "poll_test.cc",
     "prctl_test.cc",
     "restart_read_test.cc",
