@@ -8,9 +8,12 @@
 import 'dart:io' show File;
 import 'dart:convert';
 
+import 'package:sl4f/trace_processing.dart';
 import 'package:test/test.dart';
 
 import 'helpers.dart';
+
+const _trace2jsonPath = 'runtime_deps/trace2json';
 
 void main() {
   enableLoggingOutput();
@@ -49,37 +52,66 @@ void main() {
         expectedMetricNamesFile: 'fuchsia.microbenchmarks.txt');
   }, timeout: Timeout.none);
 
+  // Modify the given fuchsiaperf.json file to add a suffix to all of
+  // the test_suite fields, to allow distinguishing between test
+  // variants.
+  void addTestSuiteSuffix(File resultsFile, String suffix) {
+    final jsonData = jsonDecode(resultsFile.readAsStringSync());
+    for (final testResult in jsonData) {
+      testResult['test_suite'] += suffix;
+    }
+    resultsFile.writeAsStringSync(jsonEncode(jsonData));
+  }
+
   // Run some of the microbenchmarks with tracing enabled to measure the
   // overhead of tracing.
   test('fuchsia_microbenchmarks_tracing_categories_enabled', () async {
     final helper = await PerfTestHelper.make();
-    const resultsFile = '/tmp/perf_results_tracing.json';
 
     final List<File> resultsFiles = [];
     for (var process = 0; process < processRuns; ++process) {
-      final result = await helper.sl4fDriver.ssh
-          .run('/bin/trace record --spawn=true --buffering-mode=circular'
-              ' --categories=kernel,benchmark /bin/fuchsia_microbenchmarks -p'
-              ' --quiet --out $resultsFile --runs $iterationsPerTestPerProcess'
-              ' --filter $filterRegex --enable-tracing');
-      expect(result.exitCode, equals(0));
-      // The json file fuchsia_microbenchmarks outputs will have the same suite
-      // and test names as the non perf ones. Here, we rewrite the suite names
-      // in the json file so catapult can distinguish them.
-      var resultsJson =
-          utf8.decoder.convert(await helper.storage.readFile(resultsFile));
-      var results = jsonDecode(resultsJson);
+      final traceSession = await helper.performance.initializeTracing(
+          categories: ['kernel', 'benchmark'], bufferSize: 36);
+      await traceSession.start();
 
-      for (var testResult in results) {
-        var suiteName = testResult['test_suite'];
-        testResult['test_suite'] = suiteName + '.tracing';
+      final resultsFile = await helper.runTestComponentReturningResultsFile(
+          packageName: 'fuchsia_microbenchmarks_perftestmode',
+          componentName: 'fuchsia_microbenchmarks_perftestmode.cm',
+          commandArgs: '-p --quiet'
+              ' --out ${PerfTestHelper.componentOutputPath}'
+              ' --runs $iterationsPerTestPerProcess'
+              ' --filter $filterRegex --enable-tracing',
+          resultsFileSuffix: '_process$process');
+      addTestSuiteSuffix(resultsFile, '.tracing');
+      resultsFiles.add(resultsFile);
+
+      await traceSession.stop();
+
+      const testName = 'fuchsia_microbenchmarks_tracing_categories_enabled';
+      final fxtTraceFile = await traceSession.terminateAndDownload(testName);
+      final jsonTraceFile = await helper.performance
+          .convertTraceFileToJson(_trace2jsonPath, fxtTraceFile);
+
+      // Check that the trace contains the expected trace events.
+      final Model model = await createModelFromFile(jsonTraceFile);
+
+      var events = filterEvents(getAllEvents(model), category: 'benchmark');
+      for (final eventName in [
+        'InstantEvent',
+        'ScopedDuration',
+        'DurationBegin'
+      ]) {
+        expect(events.where((event) => event.name == eventName).length,
+            iterationsPerTestPerProcess,
+            reason: 'Mismatch for $eventName');
       }
 
-      var localResults = await helper.dump.writeAsString(
-          'results_microbenchmarks_tracing_process$process',
-          'fuchsiaperf_full.json',
-          jsonEncode(results));
-      resultsFiles.add(localResults);
+      events = filterEvents(getAllEvents(model), category: 'kernel:syscall');
+      for (final eventName in ['syscall_test_0', 'syscall_test_8']) {
+        expect(events.where((event) => event.name == eventName).length,
+            iterationsPerTestPerProcess,
+            reason: 'Mismatch for $eventName');
+      }
     }
     await helper.processResultsSummarized(resultsFiles,
         expectedMetricNamesFile: 'fuchsia.microbenchmarks.tracing.txt');
@@ -90,33 +122,35 @@ void main() {
   // off.
   test('fuchsia_microbenchmarks_tracing_categories_disabled', () async {
     final helper = await PerfTestHelper.make();
-    const resultsFile = '/tmp/perf_results_tracing_categories_disabled.json';
 
     final List<File> resultsFiles = [];
     for (var process = 0; process < processRuns; ++process) {
-      final result = await helper.sl4fDriver.ssh
-          .run('/bin/trace record --spawn=true --buffering-mode=circular'
-              ' --categories=none /bin/fuchsia_microbenchmarks -p'
-              ' --quiet --out $resultsFile --runs $iterationsPerTestPerProcess'
-              ' --filter $filterRegex --enable-tracing');
-      expect(result.exitCode, equals(0));
-      // The json file fuchsia_microbenchmarks outputs will have the same suite
-      // and test names as the non perf ones. Here, we rewrite the suite names
-      // in the json file so catapult can distinguish them.
-      var resultsJson =
-          utf8.decoder.convert(await helper.storage.readFile(resultsFile));
-      var results = jsonDecode(resultsJson);
+      final traceSession = await helper.performance.initializeTracing(
+          categories: ['nonexistent_category'], bufferSize: 36);
+      await traceSession.start();
 
-      for (var testResult in results) {
-        var suiteName = testResult['test_suite'];
-        testResult['test_suite'] = suiteName + '.tracing_categories_disabled';
-      }
+      final resultsFile = await helper.runTestComponentReturningResultsFile(
+          packageName: 'fuchsia_microbenchmarks_perftestmode',
+          componentName: 'fuchsia_microbenchmarks_perftestmode.cm',
+          commandArgs: '-p --quiet'
+              ' --out ${PerfTestHelper.componentOutputPath}'
+              ' --runs $iterationsPerTestPerProcess'
+              ' --filter $filterRegex --enable-tracing',
+          resultsFileSuffix: '_process$process');
+      addTestSuiteSuffix(resultsFile, '.tracing_categories_disabled');
+      resultsFiles.add(resultsFile);
 
-      var localResults = await helper.dump.writeAsString(
-          'results_microbenchmarks_tracing_category_disabled_process$process',
-          'fuchsiaperf_full.json',
-          jsonEncode(results));
-      resultsFiles.add(localResults);
+      await traceSession.stop();
+
+      const testName = 'fuchsia_microbenchmarks_tracing_categories_disabled';
+      final fxtTraceFile = await traceSession.terminateAndDownload(testName);
+      final jsonTraceFile = await helper.performance
+          .convertTraceFileToJson(_trace2jsonPath, fxtTraceFile);
+
+      // All the real tracing categories are disabled, so we should
+      // get no trace events.
+      final Model model = await createModelFromFile(jsonTraceFile);
+      expect(getAllEvents(model), []);
     }
     await helper.processResultsSummarized(resultsFiles,
         expectedMetricNamesFile:

@@ -139,6 +139,48 @@ class PerfTestHelper {
     }
   }
 
+  // Runs the given component once and saves the performance results
+  // (a fuchsiaperf.json file) in a host-side file, the path of which
+  // is returned.  The argument resultsFileSuffix is included in the
+  // name of that file.
+  Future<File> runTestComponentReturningResultsFile(
+      {@required String packageName,
+      @required String componentName,
+      @required String commandArgs,
+      @required String resultsFileSuffix}) async {
+    // Make a name for the output directory that is very likely to be
+    // unique.
+    final timestamp = DateTime.now().microsecondsSinceEpoch;
+    final String targetOutputDir = '/tmp/perftest_$timestamp';
+
+    final result = await sl4fDriver.ssh.run('mkdir $targetOutputDir');
+    expect(result.exitCode, equals(0));
+
+    try {
+      final String command = 'run-test-suite'
+          ' fuchsia-pkg://fuchsia.com/$packageName#meta/$componentName'
+          ' --deprecated-output-directory $targetOutputDir -- $commandArgs';
+      final result = await sl4fDriver.ssh.run(command);
+      expect(result.exitCode, equals(0));
+
+      // Search for the output file within the directory structure
+      // produced by run-test-suite.
+      final findResult = await sl4fDriver.ssh
+          .run('find $targetOutputDir -name results.fuchsiaperf.json');
+      final String findOutput = findResult.stdout.trim();
+      expect(findOutput, isNot(equals('')));
+      final List<String> targetOutputFiles = findOutput.split('\n');
+      expect(targetOutputFiles.length, equals(1));
+
+      return await storage.dumpFile(targetOutputFiles[0],
+          'results_$packageName$resultsFileSuffix', 'fuchsiaperf_full.json');
+    } finally {
+      // Clean up: remove the output tree.
+      final result = await sl4fDriver.ssh.run('rm -r $targetOutputDir');
+      expect(result.exitCode, equals(0));
+    }
+  }
+
   // Runs a component and publishes the performance test results that
   // it produces, which the component should write to the file
   // componentOutputPath.
@@ -150,37 +192,11 @@ class PerfTestHelper {
       int processRuns = 1}) async {
     final List<File> localResultsFiles = [];
     for (var process = 0; process < processRuns; ++process) {
-      // Make a name for the output directory that is very likely to be
-      // unique.
-      final timestamp = DateTime.now().microsecondsSinceEpoch;
-      final String targetOutputDir = '/tmp/perftest_$timestamp';
-
-      final result = await sl4fDriver.ssh.run('mkdir $targetOutputDir');
-      expect(result.exitCode, equals(0));
-
-      try {
-        final String command = 'run-test-suite'
-            ' fuchsia-pkg://fuchsia.com/$packageName#meta/$componentName'
-            ' --deprecated-output-directory $targetOutputDir -- $commandArgs';
-        final result = await sl4fDriver.ssh.run(command);
-        expect(result.exitCode, equals(0));
-
-        // Search for the output file within the directory structure
-        // produced by run-test-suite.
-        final findResult = await sl4fDriver.ssh
-            .run('find $targetOutputDir -name results.fuchsiaperf.json');
-        final String findOutput = findResult.stdout.trim();
-        expect(findOutput, isNot(equals('')));
-        final List<String> targetOutputFiles = findOutput.split('\n');
-        expect(targetOutputFiles.length, equals(1));
-
-        localResultsFiles.add(await storage.dumpFile(targetOutputFiles[0],
-            'results_${packageName}_process$process', 'fuchsiaperf_full.json'));
-      } finally {
-        // Clean up: remove the output tree.
-        final result = await sl4fDriver.ssh.run('rm -r $targetOutputDir');
-        expect(result.exitCode, equals(0));
-      }
+      localResultsFiles.add(await runTestComponentReturningResultsFile(
+          packageName: packageName,
+          componentName: componentName,
+          commandArgs: commandArgs,
+          resultsFileSuffix: '_process$process'));
     }
     await processResultsSummarized(localResultsFiles,
         expectedMetricNamesFile: expectedMetricNamesFile);
