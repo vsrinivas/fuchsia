@@ -144,6 +144,8 @@ pub(crate) struct IfaceManagerService {
     network_selector: Arc<NetworkSelector>,
     fsm_futures:
         FuturesUnordered<future_with_metadata::FutureWithMetadata<(), StateMachineMetadata>>,
+    network_selection_futures:
+        FuturesUnordered<BoxFuture<'static, Option<client_types::ConnectionCandidate>>>,
     telemetry_sender: TelemetrySender,
     // A sender to be cloned for each connection to send periodic data about connection quality.
     stats_sender: ConnectionStatsSender,
@@ -170,6 +172,7 @@ impl IfaceManagerService {
             saved_networks: saved_networks,
             network_selector,
             fsm_futures: FuturesUnordered::new(),
+            network_selection_futures: FuturesUnordered::new(),
             telemetry_sender,
             stats_sender,
         }
@@ -465,6 +468,9 @@ impl IfaceManagerService {
                 self.fsm_futures.push(fut);
             }
         }
+
+        // Cancel any ongoing attempt to auto connect the previously idle iface.
+        self.network_selection_futures.clear();
 
         client_iface.last_roam_time = fasync::Time::now();
         self.clients.push(client_iface);
@@ -894,16 +900,13 @@ pub fn wpa3_supported(security_support: fidl_common::SecuritySupport) -> bool {
 }
 
 async fn initiate_network_selection(
-    iface_manager: &IfaceManagerService,
+    iface_manager: &mut IfaceManagerService,
     iface_manager_client: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     network_selector: Arc<NetworkSelector>,
-    network_selection_futures: &mut FuturesUnordered<
-        BoxFuture<'static, Option<client_types::ConnectionCandidate>>,
-    >,
 ) {
     if !iface_manager.idle_clients().is_empty()
         && iface_manager.saved_networks.known_network_count().await > 0
-        && network_selection_futures.is_empty()
+        && iface_manager.network_selection_futures.is_empty()
     {
         iface_manager
             .telemetry_sender
@@ -915,7 +918,7 @@ async fn initiate_network_selection(
                 .find_best_connection_candidate(iface_manager_client.clone(), &ignore_list)
                 .await
         };
-        network_selection_futures.push(fut.boxed());
+        iface_manager.network_selection_futures.push(fut.boxed());
     }
 }
 
@@ -959,9 +962,6 @@ async fn handle_terminated_state_machine(
     iface_manager: &mut IfaceManagerService,
     iface_manager_client: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     selector: Arc<NetworkSelector>,
-    network_selection_futures: &mut FuturesUnordered<
-        BoxFuture<'static, Option<client_types::ConnectionCandidate>>,
-    >,
 ) {
     match terminated_fsm.role {
         fidl_fuchsia_wlan_common::WlanMacRole::Ap => {
@@ -976,10 +976,9 @@ async fn handle_terminated_state_machine(
         fidl_fuchsia_wlan_common::WlanMacRole::Client => {
             iface_manager.record_idle_client(terminated_fsm.iface_id);
             initiate_network_selection(
-                &iface_manager,
+                iface_manager,
                 iface_manager_client.clone(),
                 selector.clone(),
-                network_selection_futures,
             )
             .await;
         }
@@ -1118,9 +1117,6 @@ pub(crate) async fn serve_iface_manager_requests(
     // machines have the opportunity to run.
     let mut operation_futures = FuturesUnordered::new();
 
-    // Scans will be initiated to perform network selection if clients become disconnected.
-    let mut network_selection_futures = FuturesUnordered::new();
-
     // Create a timer to periodically check to ensure that all client interfaces are connected.
     let mut reconnect_monitor_interval: i64 = 1;
     let mut connectivity_monitor_timer =
@@ -1139,15 +1135,13 @@ pub(crate) async fn serve_iface_manager_requests(
                     &mut iface_manager,
                     iface_manager_client.clone(),
                     network_selector.clone(),
-                    &mut network_selection_futures,
                 ).await;
             },
             () = connectivity_monitor_timer.select_next_some() => {
                 initiate_network_selection(
-                    &iface_manager,
+                    &mut iface_manager,
                     iface_manager_client.clone(),
                     network_selector.clone(),
-                    &mut network_selection_futures
                 ).await;
             },
             op = operation_futures.select_next_some() => match op {
@@ -1159,7 +1153,7 @@ pub(crate) async fn serve_iface_manager_requests(
                     ).await;
                 }
             },
-            network_selection_result = network_selection_futures.select_next_some() => {
+            network_selection_result = iface_manager.network_selection_futures.select_next_some() => {
                 handle_network_selection_results(
                     network_selection_result,
                     &mut iface_manager,
@@ -1919,6 +1913,62 @@ mod tests {
         // Verify that the ClientIfaceContainer has been moved from unconfigured to configured.
         assert_eq!(iface_manager.clients.len(), 1);
         assert_eq!(iface_manager.clients[0].config, Some(network_id.into()));
+    }
+
+    #[fuchsia::test]
+    fn test_connect_cancels_auto_reconnect_future() {
+        let mut exec = fuchsia_async::TestExecutor::new().expect("failed to create an executor");
+
+        let mut test_values = test_setup(&mut exec);
+        let (mut iface_manager, mut _sme_stream) =
+            create_iface_manager_with_client(&test_values, false);
+        let (saved_networks, mut stash_server) =
+            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server());
+        test_values.saved_networks = Arc::new(saved_networks);
+
+        // Add credentials for the test network to the saved networks.
+        let network_id = NetworkIdentifier::new(TEST_SSID.clone(), SecurityType::Wpa);
+        let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
+        let save_network_fut = test_values.saved_networks.store(network_id.clone(), credential);
+        pin_mut!(save_network_fut);
+        assert_variant!(exec.run_until_stalled(&mut save_network_fut), Poll::Pending);
+
+        process_stash_write(&mut exec, &mut stash_server);
+
+        // Add a network selection future which won't complete that should be canceled by a
+        // connect request.
+        async fn blocking_fn() -> Option<client_types::ConnectionCandidate> {
+            loop {}
+        }
+        iface_manager.network_selection_futures.push(blocking_fn().boxed());
+
+        // Request a connect through IfaceManager and respond to requests needed to complete it.
+        {
+            let config = create_connect_request(&TEST_SSID, TEST_PASSWORD);
+            let connect_fut = iface_manager.connect(config);
+            pin_mut!(connect_fut);
+
+            // Expect that we have requested a client SME proxy.
+            assert_variant!(exec.run_until_stalled(&mut connect_fut), Poll::Pending);
+            let mut monitor_service_fut = test_values.monitor_service_stream.into_future();
+            assert_variant!(
+                poll_service_req(&mut exec, &mut monitor_service_fut),
+                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceMonitorRequest::GetClientSme {
+                    iface_id: TEST_CLIENT_IFACE_ID, sme_server: _, responder
+                }) => {
+                    // Send back a positive acknowledgement.
+                    assert!(responder.send(&mut Ok(())).is_ok());
+                }
+            );
+
+            pin_mut!(connect_fut);
+            assert_variant!(exec.run_until_stalled(&mut connect_fut), Poll::Ready(connect_result) => {
+                assert!(connect_result.is_ok());
+            });
+        }
+
+        // Verify that the network selection future was dropped from the list.
+        assert!(iface_manager.network_selection_futures.is_empty());
     }
 
     #[fuchsia::test]
@@ -4940,11 +4990,6 @@ mod tests {
 
         let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
 
-        // Create an empty FuturesUnordered to hold the network selection request.
-        let mut network_selection_futures = FuturesUnordered::<
-            BoxFuture<'static, Option<client_types::ConnectionCandidate>>,
-        >::new();
-
         // Create a network selector to be used by the network selection request.
         let (persistence_req_sender, _persistence_stream) = create_inspect_persistence_channel();
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
@@ -4976,17 +5021,16 @@ mod tests {
             }
             NetworkSelectionMissingAttribute::NetworkSelectionInProgress => {
                 // Insert a future so that it looks like a scan is in progress.
-                network_selection_futures.push(ready(None).boxed());
+                iface_manager.network_selection_futures.push(ready(None).boxed());
             }
         }
 
         {
             // Run the future to completion.
             let fut = initiate_network_selection(
-                &iface_manager,
+                &mut iface_manager,
                 iface_manager_client.clone(),
                 selector,
-                &mut network_selection_futures,
             );
             pin_mut!(fut);
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
@@ -5008,7 +5052,7 @@ mod tests {
         }
 
         // Run all network_selection futures to completion.
-        for mut network_selection_future in network_selection_futures.iter_mut() {
+        for mut network_selection_future in iface_manager.network_selection_futures.iter_mut() {
             assert_variant!(exec.run_until_stalled(&mut network_selection_future), Poll::Ready(_));
         }
 
@@ -5239,7 +5283,6 @@ mod tests {
 
         // Create remaining boilerplate to call handle_terminated_state_machine.
         let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
-        let mut network_selection_futures = FuturesUnordered::new();
 
         let metadata = StateMachineMetadata {
             role: fidl_fuchsia_wlan_common::WlanMacRole::Client,
@@ -5252,7 +5295,6 @@ mod tests {
                 &mut iface_manager,
                 iface_manager_client,
                 selector,
-                &mut network_selection_futures,
             );
             pin_mut!(fut);
 
@@ -5263,7 +5305,7 @@ mod tests {
         assert!(iface_manager.idle_clients().contains(&TEST_CLIENT_IFACE_ID));
 
         // Verify that a scan has been kicked off.
-        assert!(!network_selection_futures.is_empty());
+        assert!(!iface_manager.network_selection_futures.is_empty());
     }
 
     #[fuchsia::test]
@@ -5286,7 +5328,6 @@ mod tests {
 
         // Create remaining boilerplate to call handle_terminated_state_machine.
         let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
-        let mut network_selection_futures = FuturesUnordered::new();
 
         let metadata = StateMachineMetadata {
             role: fidl_fuchsia_wlan_common::WlanMacRole::Ap,
@@ -5299,7 +5340,6 @@ mod tests {
                 &mut iface_manager,
                 iface_manager_client,
                 selector,
-                &mut network_selection_futures,
             );
             pin_mut!(fut);
 
