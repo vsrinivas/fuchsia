@@ -91,7 +91,6 @@ zx_status_t x86_bringup_aps(uint32_t* apic_ids, uint32_t count) {
       status = ZX_ERR_NO_MEMORY;
       goto cleanup_all;
     }
-    memset(thread, 0, sizeof(Thread));
     init_thread_struct(thread, "");
 
     status = thread->stack().Init();

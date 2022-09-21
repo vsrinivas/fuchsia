@@ -317,9 +317,9 @@ class SchedulerState {
   // The legacy base, effective, and inherited priority values.
   // TODO(eieio): Move initialization of these members to the constructor. It is
   // currently handled by Scheduler::InitializeThread.
-  int base_priority_;
-  int effective_priority_;
-  int inherited_priority_;
+  int base_priority_{0};
+  int effective_priority_{0};
+  int inherited_priority_{0};
 };
 
 #endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_SCHEDULER_STATE_H_

@@ -183,8 +183,6 @@ void Thread::set_name(ktl::string_view name) {
 }
 
 void init_thread_struct(Thread* t, const char* name) {
-  memset(t, 0, sizeof(Thread));
-
   // Placement new to trigger any special construction requirements of the
   // Thread structure.
   //

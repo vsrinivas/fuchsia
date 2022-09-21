@@ -1360,7 +1360,7 @@ struct Thread {
 
   struct Linebuffer {
     size_t pos = 0;
-    ktl::array<char, 128> buffer;
+    ktl::array<char, 128> buffer{};
   };
 
   void UpdateSchedulerStats(const RuntimeStats::SchedulerStats& stats) TA_REQ(thread_lock);
@@ -1564,8 +1564,8 @@ struct Thread {
 
   // These fields are among the most active in the thread. They are grouped
   // together near the front to improve cache locality.
-  unsigned int flags_;
-  ktl::atomic<unsigned int> signals_;
+  unsigned int flags_{};
+  ktl::atomic<unsigned int> signals_{};
   SchedulerState scheduler_state_;
   WaitQueueCollection::ThreadState wait_queue_state_;
   TaskState task_state_;
@@ -1582,7 +1582,7 @@ struct Thread {
 #endif
 
   // pointer to the kernel address space this thread is associated with
-  VmAspace* aspace_;
+  VmAspace* aspace_{};
 
   // Saved by SignalPolicyException() to store the type of policy error, and
   // passed to exception disptach in ProcessPendingSignals().
@@ -1600,7 +1600,7 @@ struct Thread {
   zx_koid_t pid_ = ZX_KOID_INVALID;
 
   // Architecture-specific stuff.
-  struct arch_thread arch_;
+  arch_thread arch_{};
 
   KernelStack stack_;
 
@@ -1608,7 +1608,7 @@ struct Thread {
   void* recursive_object_deletion_list_ = nullptr;
 
   // This always includes the trailing NUL.
-  char name_[ZX_MAX_NAME_LEN];
+  char name_[ZX_MAX_NAME_LEN]{};
 
   // Buffering for Debuglog output.
   Linebuffer linebuffer_;
@@ -1622,7 +1622,7 @@ struct Thread {
   // restore user register state.
   //
   // See also |IsUserStateSavedLocked()| and |ScopedThreadExceptionContext|.
-  bool user_state_saved_;
+  bool user_state_saved_{};
 
 #if LOCK_TRACING_ENABLED
   // The flow id allocated before blocking on the last lock.
@@ -1634,7 +1634,7 @@ struct Thread {
 
   // For threads with migration functions, indicates whether a migration is in progress. When true,
   // the migrate function has been called with Before but not yet with After.
-  bool migrate_pending_;
+  bool migrate_pending_{};
 
   // Provides a way to execute a custom logic when a thread must be migrated between CPUs.
   MigrateFn migrate_fn_;
