@@ -179,12 +179,6 @@ class Linter {
   std::string filename_;
   bool file_is_in_platform_source_tree_;
 
-  enum class LintStyle {
-    IpcStyle,
-    CStyle,
-  };
-  LintStyle lint_style_;
-
   LintingTreeCallbacks callbacks_;
 
   // Case type functions used by CheckCase().
@@ -198,15 +192,6 @@ class Linter {
   // being used has been determined.
   CheckDef invalid_case_for_decl_name_{"", TemplateString()};
   const CheckDef& invalid_case_for_decl_name() const { return invalid_case_for_decl_name_; }
-
-  const CaseType& decl_case_type_for_style() const {
-    switch (lint_style_) {
-      case LintStyle::IpcStyle:
-        return upper_camel_;
-      case LintStyle::CStyle:
-        return lower_snake_;
-    }
-  }
 
   bool exclude_by_default_ = false;
   std::set<std::string> included_check_ids_;

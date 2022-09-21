@@ -31,6 +31,21 @@ constexpr bool IsZirconLibrary(std::string_view name) {
   return name == kZirconLibraryZx || name == kZirconLibraryZbi;
 }
 
+// Whether the provided declarations should be exempt from an
+// invalid-case-for-decl-name check.
+//
+// TODO(fxbug.dev/109734): Burn these down.
+constexpr bool IsLayoutCaseCheckExempt(std::string_view library_name, std::string_view declname) {
+  return library_name == kZirconLibraryZx && (declname == "obj_type" || declname == "rights");
+}
+constexpr bool IsAliasCaseCheckExempt(std::string_view library_name, std::string_view declname) {
+  return library_name == kZirconLibraryZx &&
+         (declname == "status" || declname == "time" || declname == "duration" ||
+          declname == "ticks" || declname == "koid" || declname == "vaddr" || declname == "paddr" ||
+          declname == "paddr32" || declname == "gpaddr" || declname == "off" ||
+          declname == "procarg" || declname == "signals");
+}
+
 // Convert the SourceElement (start- and end-tokens within the SourceFile)
 // to a std::string_view, spanning from the beginning of the start token, to the end
 // of the end token. The three methods support classes derived from
@@ -43,7 +58,7 @@ template <typename SourceElementSubtype>
 std::string_view to_string_view(const std::unique_ptr<SourceElementSubtype>& element_ptr) {
   static_assert(std::is_base_of<fidl::raw::SourceElement, SourceElementSubtype>::value,
                 "template parameter type is not derived from SourceElement");
-  return to_string_view(element_ptr.get());
+  return to_string_view(*element_ptr);
 }
 
 // Convert the SourceElement to a std::string, using the method described above
@@ -219,16 +234,8 @@ void Linter::NewFile(const raw::File& element) {
   } else {
     file_is_in_platform_source_tree_ = std::ifstream(filename_.c_str()).good();
   }
-
-  if (library_prefix_ == kZirconLibraryZx) {
-    lint_style_ = LintStyle::CStyle;
-    invalid_case_for_decl_name_ =
-        DefineCheck("invalid-case-for-decl-name", "${TYPE} must be named in lower_snake_case");
-  } else {
-    lint_style_ = LintStyle::IpcStyle;
-    invalid_case_for_decl_name_ =
-        DefineCheck("invalid-case-for-decl-name", "${TYPE} must be named in UpperCamelCase");
-  }
+  invalid_case_for_decl_name_ =
+      DefineCheck("invalid-case-for-decl-name", "${TYPE} must be named in UpperCamelCase");
 
   if (!library_is_platform_source_library_) {
     // TODO(fxbug.dev/7871): Implement more specific test,
@@ -248,8 +255,7 @@ void Linter::NewFile(const raw::File& element) {
     AddFinding(element.library_decl->path, kLibraryNameDepthCheck);
   }
 
-  // Library name is not checked for CStyle because it must be simply "zx".
-  if (lint_style_ == LintStyle::IpcStyle) {
+  if (!IsZirconLibrary(library_prefix_)) {
     for (const auto& component : element.library_decl->path->components) {
       if (RE2::FullMatch(to_string(component), kDisallowedLibraryComponentRegex)) {
         AddFinding(component, kLibraryNameComponentCheck);
@@ -476,7 +482,7 @@ Linter::Linter()
       //
       (const raw::ProtocolDeclaration& element) {
         linter.CheckCase("protocols", element.identifier, linter.invalid_case_for_decl_name(),
-                         linter.decl_case_type_for_style());
+                         linter.upper_camel_);
         for (const auto& word : utils::id_to_words(to_string(element.identifier))) {
           if (word == "service") {
             linter.AddFinding(element.identifier, name_contains_service_check);
@@ -489,8 +495,7 @@ Linter::Linter()
                       //
                       (const raw::ProtocolMethod& element) {
                         linter.CheckCase("methods", element.identifier,
-                                         linter.invalid_case_for_decl_name(),
-                                         linter.decl_case_type_for_style());
+                                         linter.invalid_case_for_decl_name(), linter.upper_camel_);
                       });
   callbacks_.OnEvent(
       [&linter = *this, event_check = DefineCheck("event-names-must-start-with-on",
@@ -498,9 +503,8 @@ Linter::Linter()
       //
       (const raw::ProtocolMethod& element) {
         std::string id = to_string(element.identifier);
-        auto finding =
-            linter.CheckCase("events", element.identifier, linter.invalid_case_for_decl_name(),
-                             linter.decl_case_type_for_style());
+        auto finding = linter.CheckCase("events", element.identifier,
+                                        linter.invalid_case_for_decl_name(), linter.upper_camel_);
         if (finding && finding->suggestion().has_value()) {
           auto& suggestion = finding->suggestion().value();
           if (suggestion.replacement().has_value()) {
@@ -553,17 +557,25 @@ Linter::Linter()
           return;
         }
 
-        auto* inline_layout = static_cast<raw::InlineLayoutReference*>(layout_ref);
-        std::string layout_kind = name_layout_kind(*inline_layout->layout);
-        linter.CheckCase(layout_kind + "s", element.identifier, linter.invalid_case_for_decl_name(),
-                         linter.decl_case_type_for_style());
+        // TODO(fxbug.dev/109734): Remove these exemptions.
+        std::string_view name = to_string_view(element.identifier);
+        if (!IsLayoutCaseCheckExempt(linter.library_prefix_, name)) {
+          auto* inline_layout = static_cast<raw::InlineLayoutReference*>(layout_ref);
+          std::string layout_kind = name_layout_kind(*inline_layout->layout);
+          linter.CheckCase(layout_kind + "s", element.identifier,
+                           linter.invalid_case_for_decl_name(), linter.upper_camel_);
+        }
       });
   callbacks_.OnAliasDeclaration([&linter = *this]
                                 //
                                 (const raw::AliasDeclaration& element) {
-                                  linter.CheckCase("type alias", element.alias,
-                                                   linter.invalid_case_for_decl_name(),
-                                                   linter.decl_case_type_for_style());
+                                  // TODO(fxbug.dev/109734): Remove these exemptions.
+                                  std::string_view name = to_string_view(element.alias);
+                                  if (!IsAliasCaseCheckExempt(linter.library_prefix_, name)) {
+                                    linter.CheckCase("type alias", element.alias,
+                                                     linter.invalid_case_for_decl_name(),
+                                                     linter.upper_camel_);
+                                  }
                                 });
   callbacks_.OnLayout(
       [&linter = *this, explict_flexible_modifier_check = explict_flexible_modifier,
