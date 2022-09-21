@@ -122,7 +122,9 @@ template("generated_fshost_config") {
     }
 
     # Don't allow these configurations into production.
-    if (values.no_zxcrypt || values.gpt_all) {
+    # Partition limits should always be set on production builds.
+    if (values.no_zxcrypt || values.gpt_all || values.blobfs_max_bytes == 0 ||
+        values.data_max_bytes == 0) {
       if (!defined(deps)) {
         deps = []
       }
