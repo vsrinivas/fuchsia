@@ -2458,3 +2458,16 @@
   reviewers: ['abarth@google.com', 'etryzelaar@google.com', 'geb@google.com', 'jsankey@google.com']
   submitted: '2022-06-27'
   reviewed: '2022-09-31'
+
+- name: 'RFC-0189'
+  title: 'Window Management'
+  short_description: 'Describe the platform architecture and standard APIs for window management.'
+  authors: ['neelsa@google.com']
+  file: '0189_window_management.md'
+  area: ['Graphics', 'HCI', 'View System']
+  issue: ['109665']
+  gerrit_change_id: ['711338']
+  status: 'Accepted'
+  reviewers: ['abarth@google.com', 'dworsham@google.com', 'thatguy@google.com', 'sanjayc@google.com', 'asz@google.com', 'wez@google.com']
+  submitted: '2022-08-12'
+  reviewed: '2022-09-20'

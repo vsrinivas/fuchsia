@@ -392,3 +392,5 @@ toc:
     path: /docs/contribute/governance/rfcs/0187_allow_first_thread_in_process_to_start_with_zx_thread_start.md
   - title: "RFC-0188: Component ABI Compatibility"
     path: /docs/contribute/governance/rfcs/0188_component_abi_compatibility.md
+  - title: "RFC-0189: Window Management"
+    path: /docs/contribute/governance/rfcs/0189_window_management.md
