@@ -463,8 +463,8 @@ mod tests {
         std::{convert::TryInto, sync::Arc, task::Poll},
     };
 
-    const TEST_URL: &str = "fuchsia-pkg://fuchsia.com/update/0?hash=0000000000000000000000000000000000000000000000000000000000000000";
-    const TEST_URL_BASE: &str = "fuchsia-pkg://fuchsia.com/";
+    const TEST_URL: &str = "fuchsia-pkg://fuchsia.test/update/0?hash=0000000000000000000000000000000000000000000000000000000000000000";
+    const TEST_URL_BASE: &str = "fuchsia-pkg://fuchsia.test/";
     const TEST_PACKAGE_NAME: &str =
         "update/0?hash=0000000000000000000000000000000000000000000000000000000000000000";
 

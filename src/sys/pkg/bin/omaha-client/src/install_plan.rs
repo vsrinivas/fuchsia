@@ -8,7 +8,7 @@ use std::fmt;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum UpdatePackageUrl {
-    /// The pinned fuchsia update package URL, e.g. fuchsia-pkg://fuchsia.com/update/0?hash=...
+    /// The pinned fuchsia update package URL, e.g. fuchsia-pkg://fuchsia.example/update/0?hash=...
     System(PinnedAbsolutePackageUrl),
     /// The pinned package URL for eagerly updated package.
     Package(PinnedAbsolutePackageUrl),
@@ -44,7 +44,7 @@ impl FuchsiaInstallPlan {
     pub fn new_test() -> Self {
         Self {
             update_package_urls: vec![UpdatePackageUrl::System(
-                "fuchsia-pkg://fuchsia.com/update/0?hash=0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap(),
+                "fuchsia-pkg://fuchsia.test/update/0?hash=0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap(),
             )],
             install_source: InstallSource::OnDemand,
             urgent_update: false,
@@ -65,7 +65,7 @@ mod tests {
 
     #[test]
     fn test_install_plan_id_system_update() {
-        let url = "fuchsia-pkg://fuchsia.com/update/0?hash=0000000000000000000000000000000000000000000000000000000000000000";
+        let url = "fuchsia-pkg://fuchsia.test/update/0?hash=0000000000000000000000000000000000000000000000000000000000000000";
         let install_plan = FuchsiaInstallPlan {
             update_package_urls: vec![UpdatePackageUrl::System(url.parse().unwrap())],
             ..FuchsiaInstallPlan::default()
@@ -76,8 +76,8 @@ mod tests {
 
     #[test]
     fn test_install_plan_id_package_groups() {
-        let url1 = "fuchsia-pkg://foo.com/foo?hash=0000000000000000000000000000000000000000000000000000000000000000";
-        let url2 = "fuchsia-pkg://bar.com/bar?hash=1111111111111111111111111111111111111111111111111111111111111111";
+        let url1 = "fuchsia-pkg://foo.test/foo?hash=0000000000000000000000000000000000000000000000000000000000000000";
+        let url2 = "fuchsia-pkg://bar.test/bar?hash=1111111111111111111111111111111111111111111111111111111111111111";
         let install_plan = FuchsiaInstallPlan {
             update_package_urls: vec![
                 UpdatePackageUrl::System(PinnedAbsolutePackageUrl::parse(url1).unwrap()),
