@@ -14,6 +14,8 @@ sdk_source_set("driver_compat") {
     "compat.h",
     "connect.cc",
     "connect.h",
+    "context.cc",
+    "context.h",
     "device_server.cc",
     "device_server.h",
     "service_offers.cc",
@@ -24,6 +26,7 @@ sdk_source_set("driver_compat") {
   public_deps = [
     "//sdk/fidl/fuchsia.driver.compat:fuchsia.driver.compat_cpp_wire",
     "//sdk/lib/driver2:cpp",
+    "//sdk/lib/driver2:devfs_exporter",
     "//sdk/lib/sys/component/cpp",
   ]
 }

@@ -8,6 +8,7 @@
 #include <lib/driver2/devfs_exporter.h>
 #include <lib/driver2/driver2_cpp.h>
 #include <lib/driver_compat/compat.h>
+#include <lib/driver_compat/context.h>
 #include <lib/driver_compat/symbols.h>
 #include <lib/inspect/component/cpp/component.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
@@ -50,71 +51,42 @@ class InputReportDriver : public driver::DriverBase {
     // Start the inner DFv1 driver.
     input_report_->Start();
 
-    // Connect to DevfsExporter.
-    auto status = ConnectToDevfsExporter();
-    if (status.is_error()) {
-      return status.take_error();
-    }
-
-    // Connect to our parent.
-    auto result = component::ConnectAt<fuchsia_driver_compat::Service::Device>(
-        context().incoming()->svc_dir());
-    if (result.is_error()) {
-      return result.take_error();
-    }
-    parent_client_.Bind(std::move(result.value()), async_dispatcher());
-
-    // Get the topological path and create our child when it completes.
-    parent_client_->GetTopologicalPath().Then([this](auto& result) {
-      auto status = CreateAndServeDevice(std::move(result->path()));
+    // Create our compat context, and serve our device when it's created.
+    compat::Context::ConnectAndCreate(&context(), async_dispatcher(), [this](auto result) {
+      if (!result.is_ok()) {
+        FDF_LOG(ERROR, "Call to Context::ConnectAndCreate failed: %s", result.status_string());
+        ScheduleStop();
+        return;
+      }
+      compat_context_ = std::move(*result);
+      auto status = CreateAndServeDevice();
       if (!status.is_ok()) {
         FDF_LOG(ERROR, "Call to CreateAndServeDevice failed: %s", status.status_string());
         ScheduleStop();
+        return;
       }
     });
     return zx::ok();
   }
 
  private:
-  zx::status<> ConnectToDevfsExporter() {
-    // Connect to DevfsExporter.
-    auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
-    if (endpoints.is_error()) {
-      return endpoints.take_error();
-    }
-    // Serve a connection to outgoing.
-    auto status = context().outgoing()->Serve(std::move(endpoints->server));
-    if (status.is_error()) {
-      return status.take_error();
-    }
-
-    auto exporter = driver::DevfsExporter::Create(
-        *context().incoming(), async_dispatcher(),
-        fidl::WireSharedClient(std::move(endpoints->client), async_dispatcher()));
-    if (exporter.is_error()) {
-      return zx::error(exporter.error_value());
-    }
-    exporter_ = std::move(*exporter);
-    return zx::ok();
-  }
-
-  zx::status<> CreateAndServeDevice(std::string topological_path) {
+  zx::status<> CreateAndServeDevice() {
     // Create our child device and FIDL server.
     child_ = compat::DeviceServer("InputReport", ZX_PROTOCOL_INPUTREPORT,
-                                  topological_path + "/InputReport", {});
+                                  compat_context_->TopologicalPath("InputReport"), {});
     auto status = context().outgoing()->component().AddProtocol<fuchsia_input_report::InputDevice>(
         &input_report_.value(), "InputReport");
     if (status.is_error()) {
       return status.take_error();
     }
-    exporter_.Export(std::string("svc/").append(child_->name()), child_->topological_path(), {},
-                     ZX_PROTOCOL_INPUTREPORT, [this](zx_status_t status) {
-                       if (status != ZX_OK) {
-                         FDF_LOG(WARNING, "Failed to export to devfs: %s",
-                                 zx_status_get_string(status));
-                         ScheduleStop();
-                       }
-                     });
+    compat_context_->devfs_exporter().Export(
+        std::string("svc/").append(child_->name()), child_->topological_path(), {},
+        ZX_PROTOCOL_INPUTREPORT, [this](zx_status_t status) {
+          if (status != ZX_OK) {
+            FDF_LOG(WARNING, "Failed to export to devfs: %s", zx_status_get_string(status));
+            ScheduleStop();
+          }
+        });
     return zx::ok();
   }
 
@@ -125,8 +97,7 @@ class InputReportDriver : public driver::DriverBase {
   std::optional<hid_input_report_dev::InputReport> input_report_;
   std::optional<inspect::ComponentInspector> exposed_inspector_;
   std::optional<compat::DeviceServer> child_;
-  fidl::Client<fuchsia_driver_compat::Device> parent_client_;
-  driver::DevfsExporter exporter_;
+  std::shared_ptr<compat::Context> compat_context_;
 };
 
 }  // namespace
