@@ -1,0 +1,27 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+config("adb-daemon-headers") {
+  include_dirs = [ "." ]
+}
+
+source_set("adb-daemon") {
+  sources = [
+    "adb-daemon-base.h",
+    "adb-protocol.cc",
+    "adb-protocol.h",
+    "socket.cc",
+    "socket.h",
+    "transport.cc",
+    "transport.h",
+    "types.h",
+  ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.hardware.adb",
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxc",
+  ]
+  public_configs = [ ":adb-daemon-headers" ]
+}
