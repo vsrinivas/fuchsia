@@ -21,35 +21,32 @@ class DispatcherBuilder;
 
 namespace fdf {
 
-// Usage Notes:
-//
 // C++ wrapper for a dispatcher, with RAII semantics. Automatically shuts down
 // the dispatcher when it goes out of scope.
 //
-// Example:
+// # Example
 //
-//  void Driver::OnDispatcherShutdown(fdf_dispatcher_t* dispatcher) {
-//    // Handle dispatcher shutdown.
-//    // It is now safe to destroy |dispatcher|.
-//  }
+//   void Driver::OnDispatcherShutdown(fdf_dispatcher_t* dispatcher) {
+//     // Handle dispatcher shutdown.
+//     // It is now safe to destroy |dispatcher|.
+//   }
 //
-//  void Driver::Start() {
-//    // TODO(fxb/85946): update this once scheduler_role is supported.
-//    const std::string_view scheduler_role = "";
-//    const std::string_view name = "MyDriver";
+//   void Driver::Start() {
+//     // TODO(fxb/85946): update this once scheduler_role is supported.
+//     const std::string_view scheduler_role = "";
+//     const std::string_view name = "MyDriver";
 //
-//    auto shutdown_handler = [&]() {
-//      OnDispatcherShutdown();
-//    };
-//    auto dispatcher = fdf::Dispatcher::Create(0, name, shutdown_handler, scheduler_role);
+//     auto shutdown_handler = [&]() {
+//       OnDispatcherShutdown();
+//     };
+//     auto dispatcher = fdf::Dispatcher::Create(0, name, shutdown_handler, scheduler_role);
 //
-//    fdf::ChannelRead channel_read;
-//    ...
+//     fdf::ChannelRead channel_read;
+//     ...
 //     zx_status_t status = channel_read->Begin(dispatcher.get());
 //
-//    // The dispatcher will call the channel_read handler when ready.
-//  }
-//
+//     // The dispatcher will call the channel_read handler when ready.
+//   }
 class Dispatcher {
  public:
   using HandleType = fdf_dispatcher_t*;
@@ -57,10 +54,13 @@ class Dispatcher {
   // Called when the asynchronous shutdown for |dispatcher| has completed.
   using ShutdownHandler = fit::callback<void(fdf_dispatcher_t* dispatcher)>;
 
-  // Creates a dispatcher.
+  // Creates a dispatcher for performing asynchronous operations.
   //
-  // |options| provides configuration for the dispatcher.
-  // See also |FDF_DISPATCHER_OPTION_UNSYNCHRONIZED| and |FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS|.
+  // |options| provides the dispatcher configuration. The following options are supported:
+  //   * `FDF_DISPATHER_OPTION_SYNCHRONIZED` or `FDF_DISPATCHER_OPTION_UNSYNCHRONIZED` - sets
+  //     whether parallel callbacks in the callbacks set in the dispatcher are allowed.
+  //   * `FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS` - the dispatcher may not share zircon threads with
+  //     other drivers. This may not be set with `FDF_DISPATCHER_OPTION_UNSYNCHRONIZED`.
   //
   // |name| is reported via diagnostics. It is similar to setting the name of a thread. Names longer
   // than `ZX_MAX_NAME_LEN` may be truncated.
@@ -69,11 +69,23 @@ class Dispatcher {
   // dispatcher is handled at. It may or may not impact the ability for other drivers to share
   // zircon threads with the dispatcher.
   //
-  // |shutdown_handler| will be called when the dispatcher's asynchronous shutdown
-  // has completed. The client is responsible for retaining this structure in memory
-  // (and unmodified) until the handler runs.
+  // |shutdown_handler| will be called after |ShutdownAsync| has been called, and the dispatcher
+  // has completed its asynchronous shutdown. The client is responsible for retaining this
+  // structure in memory (and unmodified) until the handler runs.
+  //
+  // # Thread requirements
   //
   // This must be called from a thread managed by the driver runtime.
+  //
+  // # Errors
+  //
+  // ZX_ERR_NOT_SUPPORTED: |options| is not a supported configuration, which is any of:
+  //   * `FDF_DISPATCHER_OPTION_UNSYNCHRONIZED` with `FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS`.
+  //
+  // ZX_ERR_INVALID_ARGS: This was not called from a thread managed by the driver runtime.
+  //
+  // ZX_ERR_BAD_STATE: Dispatchers are currently not allowed to be created, such as when a driver
+  // is being shutdown by its driver host.
   static zx::status<Dispatcher> Create(uint32_t options, cpp17::string_view name,
                                        ShutdownHandler shutdown_handler,
                                        cpp17::string_view scheduler_role = {}) {
@@ -100,33 +112,36 @@ class Dispatcher {
   }
 
   // Returns an unowned dispatcher provided an async dispatcher. If |async_dispatcher| was not
-  // retrieved via `fdf_dispatcher_get_async_dispatcher`, the call will result in a crash.
+  // retrieved via |fdf_dispatcher_get_async_dispatcher|, the call will result in a crash.
   static Unowned<Dispatcher> From(async_dispatcher_t* async_dispatcher) {
     return Unowned<Dispatcher>(fdf_dispatcher_from_async_dispatcher(async_dispatcher));
   }
 
   explicit Dispatcher(fdf_dispatcher_t* dispatcher = nullptr) : dispatcher_(dispatcher) {}
 
+  // Dispatcher cannot be copied.
   Dispatcher(const Dispatcher& to_copy) = delete;
   Dispatcher& operator=(const Dispatcher& other) = delete;
 
+  // Dispatcher can be moved. Once moved, invoking a method on an instance will
+  // yield undefined behavior.
   Dispatcher(Dispatcher&& other) noexcept : Dispatcher(other.release()) {}
   Dispatcher& operator=(Dispatcher&& other) noexcept {
     reset(other.release());
     return *this;
   }
 
-  // Shutting down a dispatcher is an asynchronous operation.
+  // Begins shutting down the dispatcher. Shutting down is an asynchronous operation.
   //
   // Once |Dispatcher::ShutdownAsync| is called, the dispatcher will no longer
-  // accept queueing new async_dispatcher_t operations or ChannelRead callbacks.
+  // accept queueing new |async_dispatcher_t| operations or |ChannelRead| callbacks.
   //
-  // The dispatcher will asynchronously wait for all pending async_dispatcher_t
-  // and ChannelRead callbacks to complete. Then it will serially cancel all
-  // remaining callbacks with ZX_ERR_CANCELED and call the shutdown handler set
+  // The dispatcher will asynchronously wait for all pending |async_dispatcher_t|
+  // and |ChannelRead| callbacks to complete. Then it will serially cancel all
+  // remaining callbacks with |ZX_ERR_CANCELED| and call the shutdown handler set
   // in |Dispatcher::Create|.
   //
-  // If the dispatcher is already shutdown, this will do nothing.
+  // If the dispatcher is already shutting down or has completed shutdown, this will do nothing.
   void ShutdownAsync() {
     if (dispatcher_) {
       fdf_dispatcher_shutdown_async(dispatcher_);
@@ -134,7 +149,8 @@ class Dispatcher {
   }
 
   // The dispatcher must be completely shutdown before the dispatcher can be closed.
-  // It is safe to call this from the shutdown handler set in |Dispatcher::Create|.
+  // i.e. the shutdown handler set in |Dispatcher::Create| has been called.
+  // It is safe to call this from that shutdown handler.
   ~Dispatcher() { close(); }
 
   fdf_dispatcher_t* get() const { return dispatcher_; }

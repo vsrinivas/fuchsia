@@ -52,9 +52,12 @@ class Channel {
   Channel() : channel_(FDF_HANDLE_INVALID) {}
   explicit Channel(fdf_handle_t channel) : channel_(channel) {}
 
+  // Channel cannot be copied.
   Channel(const Channel& to_copy) = delete;
   Channel& operator=(const Channel& other) = delete;
 
+  // Channel can be moved. Once moved, invoking a method on an instance will
+  // yield undefined behavior.
   Channel(Channel&& other) noexcept : Channel(other.release()) {}
   Channel& operator=(Channel&& other) noexcept {
     reset(other.release());

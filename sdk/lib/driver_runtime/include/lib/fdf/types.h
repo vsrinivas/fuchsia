@@ -33,6 +33,17 @@ typedef struct fdf_channel_call_args {
   uint32_t* rd_num_handles;
 } fdf_channel_call_args_t;
 
+// Dispatcher creation options
+
+// This flag disallows parallel calls into callbacks set in the dispatcher.
+#define FDF_DISPATCHER_OPTION_SYNCHRONIZED ((uint32_t)0u << 0)
+// This flag allows parallel calls into callbacks set in the dispatcher.
+// Cannot be set in conjunction with `FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS`.
+#define FDF_DISPATCHER_OPTION_UNSYNCHRONIZED ((uint32_t)1u << 0)
+// This flag indicates that the dispatcher may not share zircon threads with other drivers.
+// Cannot be set in conjunction with `FDF_DISPATCHER_OPTION_UNSYNCHRONIZED`.
+#define FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS ((uint32_t)1u << 1)
+
 __END_CDECLS
 
 #endif  // LIB_DRIVER_RUNTIME_INCLUDE_LIB_FDF_TYPES_H_
