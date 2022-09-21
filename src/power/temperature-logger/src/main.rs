@@ -9,7 +9,6 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect::{self as inspect, Property},
-    fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zircon as zx,
     futures::{
         stream::{FuturesUnordered, StreamExt, TryStreamExt},
@@ -18,6 +17,7 @@ use {
     serde_derive::Deserialize,
     serde_json as json,
     std::{cell::RefCell, collections::HashMap, rc::Rc, task::Poll},
+    tracing::{error, info},
 };
 
 const CONFIG_PATH: &'static str = "/config/data/config.json";
@@ -271,7 +271,7 @@ impl TemperatureLogger {
                 // updated. We could do something fancier like exposing an error count, but this
                 // sample will be missing from the trace counter as is, and any serious analysis
                 // should be performed on the trace.
-                Err(e) => fx_log_err!("Error reading temperature: {:?}", e),
+                Err(e) => error!("Error reading temperature: {:?}", e),
             };
         }
 
@@ -312,7 +312,7 @@ impl TemperatureLoggerServer {
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: Error| fx_log_err!("{:?}", e)),
+            .unwrap_or_else(|err: Error| error!(?err)),
         )
     }
 
@@ -393,18 +393,16 @@ impl InspectData {
     }
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main(logging_tags = ["temperature-logger"])]
 async fn main() {
     // v2 components can't surface stderr yet, so we need to explicitly log errors.
     match inner_main().await {
-        Err(e) => fx_log_err!("Terminated with error: {}", e),
-        Ok(()) => fx_log_info!("Terminated with Ok(())"),
+        Err(e) => error!("Terminated with error: {}", e),
+        Ok(()) => info!("Terminated with Ok(())"),
     }
 }
 
 async fn inner_main() -> Result<()> {
-    fuchsia_syslog::init_with_tags(&["temperature-logger"]).expect("failed to initialize logger");
-
     // Set up tracing
     fuchsia_trace_provider::trace_provider_create_with_fdio();
 
@@ -555,7 +553,7 @@ mod tests {
             );
         }
     }
-    #[test]
+    #[fuchsia::test]
     fn test_logging_duration() {
         let mut runner = Runner::new();
 
@@ -609,7 +607,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_log_forever() {
         let mut runner = Runner::new();
 
@@ -634,7 +632,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_already_logging_error() {
         let mut runner = Runner::new();
 
@@ -666,7 +664,7 @@ mod tests {
         assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(Ok(()))));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_invalid_arguments() {
         let mut runner = Runner::new();
 
@@ -685,7 +683,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_multiple_stops_ok() {
         let mut runner = Runner::new();
 
