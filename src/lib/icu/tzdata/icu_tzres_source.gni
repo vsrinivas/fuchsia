@@ -13,7 +13,7 @@ declare_args() {
   #
   # If set to "prebuilt", then the tzres files will be retrieved from CIPD
   # and may be newer than what's available in the ICU data monolith.
-  icu_tzres_source = "git"
+  icu_tzres_source = "prebuilt"
 }
 
 declare_args() {
