@@ -31,12 +31,10 @@ fuchsia_driver("root-driver") {
   deps = [
     ":fuchsia.runtime.test_cpp_wire",
     ":root-bind",
-    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_cpp_wire",
-    "//sdk/lib/driver2:cpp-promise",
-    "//sdk/lib/sys/component/cpp",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_cpp",
+    "//sdk/lib/driver2:cpp",
     "//src/devices/bind/fuchsia.test:fuchsia.test_cpp",
     "//src/devices/lib/driver:driver_runtime",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 
@@ -59,11 +57,10 @@ fuchsia_driver("leaf-driver") {
   output_name = "runtime-dispatcher-leaf"
   sources = [ "leaf-driver.cc" ]
   deps = [
-    ":fuchsia.runtime.test_cpp_wire",
+    ":fuchsia.runtime.test_cpp",
     ":runtime-dispatcher-leaf-bind",
-    "//sdk/lib/driver2:cpp-promise",
+    "//sdk/lib/driver2:cpp",
     "//src/devices/lib/driver:driver_runtime",
-    "//zircon/system/ulib/async:async-cpp",
   ]
 }
 

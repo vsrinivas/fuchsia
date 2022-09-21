@@ -39,7 +39,7 @@ class LeafDriver : public driver::DriverBase {
 
  private:
   void AsyncCallDoThenAck() {
-    auto callback = [&](fidl::Result<ft::Handshake::Do>& result) mutable {
+    auto callback = [this](fidl::Result<ft::Handshake::Do>& result) mutable {
       if (!result.is_ok()) {
         FDF_LOG(ERROR, "Handshake Do failed: %s", result.error_value().status_string());
         UnbindNode(result.error_value().status());

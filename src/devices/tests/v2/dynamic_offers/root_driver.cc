@@ -92,7 +92,7 @@ class RootDriver : public driver::DriverBase, public fidl::Server<ft::Handshake>
     }
 
     node_->AddChild({std::move(args), std::move(endpoints->server), {}})
-        .Then([&, client = std::move(endpoints->client)](
+        .Then([this, client = std::move(endpoints->client)](
                   fidl::Result<fdf::Node::AddChild>& add_result) mutable {
           if (add_result.is_error()) {
             FDF_LOG(ERROR, "Failed to AddChild: %s",

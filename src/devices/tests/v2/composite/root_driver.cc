@@ -131,7 +131,7 @@ class RootDriver : public driver::DriverBase {
       return false;
     }
 
-    auto add_callback = [&, client = std::move(endpoints->client)](
+    auto add_callback = [this, &controller, client = std::move(endpoints->client)](
                             fidl::WireUnownedResult<fdf::Node::AddChild>& result) mutable {
       if (!result.ok()) {
         FDF_LOG(ERROR, "Adding child failed: %s", result.error().status_string());
