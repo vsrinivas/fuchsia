@@ -23,6 +23,7 @@ PATH="$PWD/prebuilt/third_party/rust/linux-x64/bin:$PATH" \
   --size_t-is-usize \
   --with-derive-default \
   --allowlist-function "zxio_.*" \
+  --allowlist-var "E[A-Z]*" \
   --raw-line "${RAW_LINES}" \
   -o src/proc/lib/syncio/src/zxio.rs \
   src/proc/lib/syncio/wrapper.h \
