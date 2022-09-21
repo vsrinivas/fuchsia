@@ -59,8 +59,8 @@ class LeafDriver : public driver::DriverBase {
     node().reset();
   }
 
-  fidl::Client<ft::Handshake> handshake_;
-  fidl::Client<ft::Waiter> waiter_;
+  fidl::SharedClient<ft::Handshake> handshake_;
+  fidl::SharedClient<ft::Waiter> waiter_;
 };
 
 }  // namespace

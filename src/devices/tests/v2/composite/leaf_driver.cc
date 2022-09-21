@@ -36,7 +36,9 @@ class LeafDriver : public driver::DriverBase {
       return;
     }
 
-    auto work_result = DoWork({std::move(connect_result.value()), async_dispatcher()});
+    const fidl::WireSharedClient<ft::Waiter> client{std::move(connect_result.value()),
+                                                    async_dispatcher()};
+    auto work_result = DoWork(client);
     if (work_result.is_error()) {
       FDF_LOG(ERROR, "DoWork was not successful: %s", work_result.status_string());
       return;
@@ -61,7 +63,7 @@ class LeafDriver : public driver::DriverBase {
     return zx::ok(result.value().number);
   }
 
-  zx::status<> DoWork(fidl::WireClient<ft::Waiter> waiter) {
+  zx::status<> DoWork(const fidl::WireSharedClient<ft::Waiter>& waiter) {
     // Check the left device.
     auto number = ConnectToDeviceAndGetNumber("fuchsia.composite.test.Service/left/device");
     if (number.is_error()) {

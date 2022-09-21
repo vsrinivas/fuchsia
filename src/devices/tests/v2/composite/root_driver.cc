@@ -17,7 +17,6 @@ using namespace fuchsia_driver_framework;
 }  // namespace fdf
 
 namespace fcd = fuchsia_component_decl;
-namespace fio = fuchsia_io;
 namespace ft = fuchsia_composite_test;
 
 namespace {
@@ -154,12 +153,12 @@ class RootDriver : public driver::DriverBase {
     return true;
   }
 
-  void DropNode() { node_client_ = {}; }
+  void DropNode() { node_client_.AsyncTeardown(); }
 
   fidl::WireSharedClient<fdf::NodeController> left_controller_;
   fidl::WireSharedClient<fdf::NodeController> right_controller_;
 
-  fidl::WireClient<fdf::Node> node_client_;
+  fidl::WireSharedClient<fdf::Node> node_client_;
 
   NumberServer left_server_ = NumberServer(1);
   NumberServer right_server_ = NumberServer(2);

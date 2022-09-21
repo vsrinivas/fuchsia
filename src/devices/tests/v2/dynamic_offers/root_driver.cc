@@ -98,7 +98,7 @@ class RootDriver : public driver::DriverBase, public fidl::Server<ft::Handshake>
           if (add_result.is_error()) {
             FDF_LOG(ERROR, "Failed to AddChild: %s",
                     add_result.error_value().FormatDescription().c_str());
-            node_ = {};
+            node_.AsyncTeardown();
             return;
           }
 
@@ -111,8 +111,8 @@ class RootDriver : public driver::DriverBase, public fidl::Server<ft::Handshake>
   // fidl::Server<ft::Handshake>
   void Do(DoRequest& request, DoCompleter::Sync& completer) override { completer.Reply(); }
 
-  fidl::Client<fdf::Node> node_;
-  fidl::Client<fdf::NodeController> controller_;
+  fidl::SharedClient<fdf::Node> node_;
+  fidl::SharedClient<fdf::NodeController> controller_;
 };
 
 }  // namespace
