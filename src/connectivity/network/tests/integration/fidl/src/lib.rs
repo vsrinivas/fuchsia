@@ -319,24 +319,11 @@ async fn add_del_interface_address_deprecated<N: Netstack>(
 
 // Regression test which asserts that racing an address removal and interface
 // removal doesn't cause a Netstack panic.
-//
-// TODO(https://fxbug.dev/37717): this test fails against netstack3 because of apparent race
-// conditions producing error logs:
-// ----------------xxxxx----------------
-// [sandbox/netemul:40-del_interface_and_address_ns3_eth/netstack][netstack3::bindings] ERROR:
-// [src/connectivity/network/netstack3/src/bindings/mod.rs(305)] Tried to send frame on device that
-// is not listed: Ethernet(0)
-//
-// ----------------xxxxx----------------
 #[variants_test]
-async fn remove_interface_and_address<E: netemul::Endpoint>(name: &str) {
+async fn remove_interface_and_address<E: netemul::Endpoint, N: Netstack>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
     let stack =
-        realm.connect_to_protocol::<fnet_stack::StackMarker>().expect("connect to protocol");
-    // NB: A second channel is needed in order for the address removal
-    // requests and the interface removal request to be served concurrently.
-    let stack2 =
         realm.connect_to_protocol::<fnet_stack::StackMarker>().expect("connect to protocol");
 
     let mut addresses = (0..32)
@@ -364,9 +351,10 @@ async fn remove_interface_and_address<E: netemul::Endpoint>(name: &str) {
 
         // Removing many addresses increases the chances that address removal
         // will be handled concurrently with interface removal.
+        let iface_id = iface.id();
         let remove_addr_fut =
             futures::stream::iter(addresses.iter_mut()).for_each_concurrent(None, |addr| {
-                stack.del_interface_address_deprecated(iface.id(), addr).map(|r| {
+                stack.del_interface_address_deprecated(iface_id, addr).map(|r| {
                     match r.expect("call del_interface_address_deprecated") {
                         Ok(()) | Err(fnet_stack::Error::NotFound) => {}
                         Err(e) => panic!("delete interface address error: {:?}", e),
@@ -380,12 +368,10 @@ async fn remove_interface_and_address<E: netemul::Endpoint>(name: &str) {
         // interface removal will be handled by Netstack immediately rather
         // concurrently with address removal, which is not the desired
         // behavior.
-        let remove_interface_fut = async {
-            stack2
-                .del_ethernet_interface(iface.id())
-                .await
-                .expect("call del_ethernet_interface")
-                .expect("delete interface")
+        let remove_interface_fut = async move {
+            // NB: iface.remove uses a different channel to remove the interface
+            // which can race with removing addresses above.
+            let (_endpoint, _control) = iface.remove().await.expect("failed to remove interface");
         };
 
         futures::future::join(remove_addr_fut, remove_interface_fut).await;
