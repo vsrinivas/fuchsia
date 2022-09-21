@@ -27,6 +27,11 @@
 
 namespace wlan::nxpfmac {
 
+constexpr char kClientInterfaceName[] = "nxpfmac-wlan-fullmac-client";
+constexpr uint8_t kClientInterfaceId = 0;
+constexpr char kApInterfaceName[] = "nxpfmac-wlan-fullmac-ap";
+constexpr uint8_t kApInterfaceId = 1;
+
 constexpr char kFirmwarePath[] = "nxpfmac/sdsd8987_combo.bin";
 constexpr char kTxPwrWWPath[] = "nxpfmac/txpower_WW.bin";
 // constexpr char kTxPwrUSPath[] = "nxpfmac/txpower_US.bin";
@@ -127,20 +132,148 @@ zx_status_t Device::DdkServiceConnect(const char *service_name, fdf::Channel cha
 
 void Device::GetSupportedMacRoles(fdf::Arena &arena,
                                   GetSupportedMacRolesCompleter::Sync &completer) {
-  NXPF_ERR("Not supported");
-  completer.buffer(arena).ReplyError(ZX_ERR_NOT_SUPPORTED);
+  fuchsia_wlan_common::wire::WlanMacRole
+      supported_mac_roles_list[fuchsia_wlan_common::wire::kMaxSupportedMacRoles] = {};
+  uint8_t supported_mac_roles_count = 0;
+  IoctlRequest<mlan_ds_bss> bss_req(MLAN_IOCTL_BSS, MLAN_ACT_GET, 0,
+                                    {.sub_command = MLAN_OID_BSS_ROLE});
+  auto &bss_role = bss_req.UserReq().param.bss_role;
+
+  for (uint8_t i = 0; i < MLAN_MAX_BSS_NUM; i++) {
+    // Retrieve the role of BSS at index i
+    bss_req.IoctlReq().bss_index = i;
+
+    const IoctlStatus io_status = ioctl_adapter_->IssueIoctlSync(&bss_req);
+    if (io_status != IoctlStatus::Success) {
+      NXPF_ERR("BSS role get req for bss: %d failed: %d", i, io_status);
+      continue;
+    }
+    switch (bss_role) {
+      case MLAN_BSS_TYPE_STA:
+        supported_mac_roles_list[supported_mac_roles_count++] =
+            fuchsia_wlan_common::wire::WlanMacRole::kClient;
+        break;
+      case MLAN_BSS_TYPE_UAP:
+        supported_mac_roles_list[supported_mac_roles_count++] =
+            fuchsia_wlan_common::wire::WlanMacRole::kAp;
+        break;
+      default:
+        NXPF_ERR("Unsupported BSS role: %d at idx: %d", bss_role, i);
+    }
+  }
+
+  auto reply_vector = fidl::VectorView<fuchsia_wlan_common::wire::WlanMacRole>::FromExternal(
+      supported_mac_roles_list, supported_mac_roles_count);
+  completer.buffer(arena).ReplySuccess(reply_vector);
 }
 
 void Device::CreateIface(CreateIfaceRequestView request, fdf::Arena &arena,
                          CreateIfaceCompleter::Sync &completer) {
-  NXPF_ERR("Not supported");
-  completer.buffer(arena).ReplyError(ZX_ERR_NOT_SUPPORTED);
+  std::lock_guard<std::mutex> lock(lock_);
+
+  if (!request->has_role() || !request->has_mlme_channel()) {
+    NXPF_ERR("Missing role(%s) and/or channel(%s)", request->has_role() ? "true" : "false",
+             request->has_mlme_channel() ? "true" : "false");
+    completer.buffer(arena).ReplyError(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+
+  uint16_t iface_id = 0;
+
+  switch (request->role()) {
+    case fuchsia_wlan_common::wire::WlanMacRole::kClient: {
+      if (client_interface_ != nullptr) {
+        NXPF_ERR("Client interface already exists");
+        completer.buffer(arena).ReplyError(ZX_ERR_ALREADY_EXISTS);
+        return;
+      }
+
+      WlanInterface *interface = nullptr;
+      zx_status_t status = WlanInterface::Create(
+          parent(), kClientInterfaceName, kClientInterfaceId, WLAN_MAC_ROLE_CLIENT, GetDispatcher(),
+          &event_handler_, ioctl_adapter_.get(), std::move(request->mlme_channel()), &interface);
+      if (status != ZX_OK) {
+        NXPF_ERR("Could not create client interface: %s", zx_status_get_string(status));
+        completer.buffer(arena).ReplyError(status);
+        return;
+      }
+
+      client_interface_ = interface;  // The lifecycle of `interface` is owned by the devhost.
+      iface_id = kClientInterfaceId;
+
+      break;
+    }
+    case fuchsia_wlan_common::wire::WlanMacRole::kAp: {
+      if (ap_interface_ != nullptr) {
+        NXPF_ERR("AP interface already exists");
+        completer.buffer(arena).ReplyError(ZX_ERR_ALREADY_EXISTS);
+        return;
+      }
+
+      WlanInterface *interface = nullptr;
+      zx_status_t status = WlanInterface::Create(
+          parent(), kApInterfaceName, kApInterfaceId, WLAN_MAC_ROLE_AP, GetDispatcher(),
+          &event_handler_, ioctl_adapter_.get(), std::move(request->mlme_channel()), &interface);
+      if (status != ZX_OK) {
+        NXPF_ERR("Could not create AP interface: %s", zx_status_get_string(status));
+        completer.buffer(arena).ReplyError(status);
+        return;
+      }
+      ap_interface_ = interface;  // The lifecycle of `interface` is owned by the devhost.
+      iface_id = kApInterfaceId;
+
+      break;
+    };
+    default: {
+      NXPF_ERR("MAC role %u not supported", request->role());
+      completer.buffer(arena).ReplyError(ZX_ERR_NOT_SUPPORTED);
+      return;
+    }
+  }
+
+  fidl::Arena fidl_arena;
+  auto builder =
+      fuchsia_wlan_wlanphyimpl::wire::WlanphyImplCreateIfaceResponse::Builder(fidl_arena);
+  builder.iface_id(iface_id);
+  completer.buffer(arena).ReplySuccess(builder.Build());
 }
 
 void Device::DestroyIface(DestroyIfaceRequestView request, fdf::Arena &arena,
                           DestroyIfaceCompleter::Sync &completer) {
-  NXPF_ERR("Not supported");
-  completer.buffer(arena).ReplyError(ZX_ERR_NOT_SUPPORTED);
+  std::lock_guard<std::mutex> lock(lock_);
+
+  NXPF_INFO("Destroying interface %u", request->iface_id());
+  switch (request->iface_id()) {
+    case kClientInterfaceId: {
+      if (client_interface_ == nullptr) {
+        NXPF_ERR("Client interface %u unavailable, skipping destroy.", request->iface_id());
+        completer.buffer(arena).ReplyError(ZX_ERR_NOT_FOUND);
+        return;
+      }
+      // Remove the network device port so no additional frames are queued up for transmission. Do
+      // this before the TX queue is flushed as part of deleting the interface. That way no stray
+      // TX frames can sneak into the TX queue between flushing the queue and removing the port.
+      client_interface_->DdkAsyncRemove();
+      client_interface_ = nullptr;
+      break;
+    }
+    case kApInterfaceId: {
+      if (ap_interface_ == nullptr) {
+        NXPF_ERR("AP interface %u unavailable, skipping destroy.", request->iface_id());
+        completer.buffer(arena).ReplyError(ZX_ERR_NOT_FOUND);
+        return;
+      }
+      ap_interface_->DdkAsyncRemove();
+      ap_interface_ = nullptr;
+      break;
+    }
+    default: {
+      NXPF_ERR("AP interface %u unavailable, skipping destroy.", request->iface_id());
+      completer.buffer(arena).ReplyError(ZX_ERR_NOT_FOUND);
+      return;
+    }
+  }
+  completer.buffer(arena).ReplySuccess();
 }
 
 void Device::SetCountry(SetCountryRequestView request, fdf::Arena &arena,

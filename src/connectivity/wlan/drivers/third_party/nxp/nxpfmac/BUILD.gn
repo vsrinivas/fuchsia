@@ -48,6 +48,7 @@ source_set("core") {
     "ioctl_adapter.cc",
     "moal_shim.cc",
     "scanner.cc",
+    "wlan_interface.cc",
   ]
   public = [ "device.h" ]
   deps = [ ":nxpfmac_sdio_bind" ]

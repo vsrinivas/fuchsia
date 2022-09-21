@@ -28,12 +28,12 @@
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/event_handler.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/ioctl_adapter.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/wlan_interface.h"
 
 namespace wlan::nxpfmac {
 
 class Device;
 class DeviceInspect;
-class WlanInterface;
 
 using DeviceType =
     ::ddk::Device<Device, ddk::Initializable, ddk::Suspendable, ddk::ServiceConnectable>;
@@ -95,6 +95,11 @@ class Device : public DeviceType, public fdf::WireServer<fuchsia_wlan_wlanphyimp
   void* mlan_adapter_ = nullptr;
 
   BusInterface* bus_ = nullptr;
+
+  std::mutex lock_;
+
+  WlanInterface* client_interface_;
+  WlanInterface* ap_interface_;
 
   EventHandler event_handler_;
   std::unique_ptr<IoctlAdapter> ioctl_adapter_;

@@ -28,7 +28,9 @@ class MockFullmacIfc : public ::ddk::WlanFullmacImplIfcProtocol<MockFullmacIfc> 
     on_scan_result.Call(result);
   }
   void WlanFullmacImplIfcOnScanEnd(const wlan_fullmac_scan_end_t* end) { on_scan_end.Call(end); }
-  void WlanFullmacImplIfcConnectConf(const wlan_fullmac_connect_confirm_t* resp) {}
+  void WlanFullmacImplIfcConnectConf(const wlan_fullmac_connect_confirm_t* resp) {
+    on_connect_conf.Call(resp);
+  }
   void WlanFullmacImplIfcAuthInd(const wlan_fullmac_auth_ind_t* resp) {}
   void WlanFullmacImplIfcDeauthConf(const wlan_fullmac_deauth_confirm_t* resp) {}
   void WlanFullmacImplIfcDeauthInd(const wlan_fullmac_deauth_indication_t* ind) {}
@@ -50,6 +52,7 @@ class MockFullmacIfc : public ::ddk::WlanFullmacImplIfcProtocol<MockFullmacIfc> 
 
   mock_function::MockFunction<void, const wlan_fullmac_scan_result_t*> on_scan_result;
   mock_function::MockFunction<void, const wlan_fullmac_scan_end_t*> on_scan_end;
+  mock_function::MockFunction<void, const wlan_fullmac_connect_confirm_t*> on_connect_conf;
 
  private:
   wlan_fullmac_impl_ifc_protocol_t proto_;

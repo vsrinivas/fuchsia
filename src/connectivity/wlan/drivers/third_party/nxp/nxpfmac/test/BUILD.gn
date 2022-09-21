@@ -18,6 +18,7 @@ test("nxpfmac_test") {
     "ioctl_adapter_test.cc",
     "scanner_test.cc",
     "waitable_state_test.cc",
+    "wlan_interface_test.cc",
   ]
   deps = [
     ":mlan_mocks",
