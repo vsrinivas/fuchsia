@@ -34,7 +34,7 @@ use net_types::{
 use netstack3_core::{
     data_structures::id_map_collection::{IdMapCollection, IdMapCollectionKey},
     device::DeviceId,
-    error::LocalAddressError,
+    error::{LocalAddressError, SocketError},
     ip::{icmp, socket::IpSockSendError, IpDeviceIdContext, IpExt, TransportIpContext},
     socket::datagram::{MulticastInterfaceSelector, SetMulticastMembershipError},
     sync::Mutex,
@@ -406,7 +406,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> Transpor
     type CreateListenerError = LocalAddressError;
     type ConnectListenerError = UdpConnectListenerError;
     type ReconnectConnError = UdpConnectListenerError;
-    type SetSocketDeviceError = LocalAddressError;
+    type SetSocketDeviceError = SocketError;
     type SetMulticastMembershipError = SetMulticastMembershipError;
     type LocalIdentifier = NonZeroU16;
     type RemoteIdentifier = NonZeroU16;
@@ -524,7 +524,15 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> Transpor
                 core_udp::set_unbound_udp_device(sync_ctx, ctx, id, device);
                 Ok(())
             }
-            SocketId::Bound(id) => core_udp::set_bound_udp_device(sync_ctx, ctx, id.into(), device),
+            SocketId::Bound(id) => match id {
+                BoundSocketId::Listener(id) => {
+                    core_udp::set_listener_udp_device(sync_ctx, ctx, id, device)
+                        .map_err(SocketError::Local)
+                }
+                BoundSocketId::Connected(id) => {
+                    core_udp::set_conn_udp_device(sync_ctx, ctx, id, device)
+                }
+            },
         }
     }
 

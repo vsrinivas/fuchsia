@@ -260,6 +260,10 @@ impl<I: IpExt, D, O> IpSock<I, D, O> {
         &self.definition.remote_ip
     }
 
+    pub(crate) fn proto(&self) -> I::Proto {
+        self.definition.proto
+    }
+
     pub(crate) fn options(&self) -> &O {
         &self.options
     }
@@ -942,6 +946,7 @@ pub(crate) mod testutil {
         }
     }
 
+    #[derive(Clone)]
     pub(crate) struct DummyDeviceConfig<D, A: IpAddress> {
         pub(crate) device: D,
         pub(crate) local_ips: Vec<SpecifiedAddr<A>>,

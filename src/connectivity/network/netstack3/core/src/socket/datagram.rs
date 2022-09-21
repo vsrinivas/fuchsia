@@ -20,9 +20,9 @@ use crate::{
         id_map::{Entry as IdMapEntry, IdMap, OccupiedEntry as IdMapOccupied},
         socketmap::Tagged,
     },
-    error::{LocalAddressError, ZonedAddressError},
+    error::{LocalAddressError, RemoteAddressError, SocketError, ZonedAddressError},
     ip::{
-        socket::{IpSock, SendOptions},
+        socket::{IpSock, IpSockCreationError, SendOptions},
         HopLimits, IpDeviceId, IpExt,
     },
     socket::{
@@ -209,6 +209,16 @@ pub(crate) trait DatagramStateContext<A: SocketMapAddrSpec, C, S> {
     fn with_sockets_mut<O, F: FnOnce(&mut DatagramSockets<A, S>) -> O>(&mut self, cb: F) -> O;
 
     fn get_default_hop_limits(&self, device: Option<A::DeviceId>) -> HopLimits;
+
+    fn new_ip_socket<O>(
+        &mut self,
+        ctx: &mut C,
+        device: Option<A::DeviceId>,
+        local_ip: Option<SpecifiedAddr<A::IpAddr>>,
+        remote: SpecifiedAddr<A::IpAddr>,
+        proto: <A::IpVersion as packet_formats::ip::IpExt>::Proto,
+        options: O,
+    ) -> Result<IpSock<A::IpVersion, A::DeviceId, O>, (IpSockCreationError, O)>;
 }
 
 pub(crate) trait DatagramStateNonSyncContext<A: SocketMapAddrSpec> {
@@ -569,7 +579,7 @@ pub(crate) enum DatagramBoundId<S: DatagramSocketStateSpec> {
     Connected(S::ConnId),
 }
 
-pub(crate) fn set_bound_device<
+pub(crate) fn set_listener_device<
     A: SocketMapAddrSpec,
     C: DatagramStateNonSyncContext<A>,
     SC: DatagramStateContext<A, C, S>,
@@ -577,73 +587,108 @@ pub(crate) fn set_bound_device<
 >(
     sync_ctx: &mut SC,
     _ctx: &mut C,
-    id: impl Into<DatagramBoundId<S>>,
+    id: S::ListenerId,
     device_id: Option<A::DeviceId>,
 ) -> Result<(), LocalAddressError>
 where
     Bound<S>: Tagged<AddrVec<A>>,
     S::ListenerAddrState:
         SocketMapAddrStateSpec<Id = S::ListenerId, SharingState = S::ListenerSharingState>,
-    S::ConnAddrState: SocketMapAddrStateSpec<Id = S::ConnId, SharingState = S::ConnSharingState>,
 {
-    sync_ctx.with_sockets_mut(|state| {
-        let DatagramSockets { bound, unbound: _ } = state;
-        let id = id.into();
-
+    sync_ctx.with_sockets_mut(|DatagramSockets { unbound: _, bound }| {
         // Don't allow changing the device if one of the IP addresses in the socket
         // address vector requires a zone (scope ID).
-        let (device, must_have_zone) = match &id {
-            DatagramBoundId::Listener(id) => {
-                let (_, _, addr): &(S::ListenerState, S::ListenerSharingState, _) = bound
-                    .listeners()
-                    .get_by_id(&id)
-                    .unwrap_or_else(|| panic!("invalid listener ID {:?}", id));
-                let ListenerAddr { device, ip: ListenerIpAddr { addr, identifier: _ } } = addr;
-                (device, addr.as_ref().map_or(false, socket::must_have_zone))
-            }
-            DatagramBoundId::Connected(id) => {
-                let (_, _, addr): &(S::ConnState, S::ConnSharingState, _) = bound
-                    .conns()
-                    .get_by_id(&id)
-                    .unwrap_or_else(|| panic!("invalid conn ID {:?}", id));
-                let ConnAddr {
-                    device,
-                    ip: ConnIpAddr { local: (local_ip, _), remote: (remote_ip, _) },
-                } = addr;
-                (device, [local_ip, remote_ip].into_iter().any(|a| socket::must_have_zone(a)))
-            }
-        };
+        let (_, _, addr): &(S::ListenerState, S::ListenerSharingState, _) = bound
+            .listeners()
+            .get_by_id(&id)
+            .unwrap_or_else(|| panic!("invalid listener ID {:?}", id));
+        let ListenerAddr { device, ip: ListenerIpAddr { addr, identifier: _ } } = addr;
+        let must_have_zone = addr.as_ref().map_or(false, socket::must_have_zone);
 
         if device != &device_id && must_have_zone {
             return Err(LocalAddressError::Zone(ZonedAddressError::DeviceZoneMismatch));
         }
 
-        match id {
-            DatagramBoundId::Listener(id) => {
-                let entry = bound
-                    .listeners_mut()
-                    .entry(&id)
-                    .unwrap_or_else(|| panic!("invalid listener ID {:?}", id));
-                let (_, _, addr) = entry.get();
-                let new_addr = ListenerAddr { device: device_id, ..addr.clone() };
-                entry
-                    .try_update_addr(new_addr)
-                    .map_err(|(ExistsError, _entry)| LocalAddressError::AddressInUse)
-                    .map(|_| ())
+        let entry = bound
+            .listeners_mut()
+            .entry(&id)
+            .unwrap_or_else(|| panic!("invalid listener ID {:?}", id));
+        let (_, _, addr): &(S::ListenerState, S::ListenerSharingState, _) = entry.get();
+        let new_addr = ListenerAddr { device: device_id, ..addr.clone() };
+        entry
+            .try_update_addr(new_addr)
+            .map_err(|(ExistsError {}, _entry)| LocalAddressError::AddressInUse)
+            .map(|_new_entry| ())
+    })
+}
+
+pub(crate) fn set_connected_device<
+    A: SocketMapAddrSpec,
+    C: DatagramStateNonSyncContext<A>,
+    SC: DatagramStateContext<A, C, S>,
+    S: DatagramSocketSpec<A>,
+>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    id: S::ConnId,
+    device_id: Option<A::DeviceId>,
+) -> Result<(), SocketError>
+where
+    Bound<S>: Tagged<AddrVec<A>>,
+    S::ConnAddrState: SocketMapAddrStateSpec<Id = S::ConnId, SharingState = S::ConnSharingState>,
+{
+    let (local_ip, remote_ip, proto) =
+        sync_ctx.with_sockets(|DatagramSockets { bound, unbound: _ }| {
+            // Don't allow changing the device if one of the IP addresses in the socket
+            // address vector requires a zone (scope ID).
+            let (state, _, addr): &(_, S::ConnSharingState, _) =
+                bound.conns().get_by_id(&id).unwrap_or_else(|| panic!("invalid conn ID {:?}", id));
+            let ConnAddr {
+                device,
+                ip: ConnIpAddr { local: (local_ip, _), remote: (remote_ip, _) },
+            } = addr;
+            let must_have_zone =
+                [local_ip, remote_ip].into_iter().any(|a| socket::must_have_zone(a));
+
+            if device != &device_id && must_have_zone {
+                return Err(SocketError::Local(LocalAddressError::Zone(
+                    ZonedAddressError::DeviceZoneMismatch,
+                )));
             }
-            DatagramBoundId::Connected(id) => {
-                let entry = bound
-                    .conns_mut()
-                    .entry(&id)
-                    .unwrap_or_else(|| panic!("invalid conn ID {:?}", id));
-                let (_, _, addr) = entry.get();
-                let new_addr = ConnAddr { device: device_id, ..addr.clone() };
-                entry
-                    .try_update_addr(new_addr)
-                    .map_err(|(ExistsError, _entry)| LocalAddressError::AddressInUse)
-                    .map(|_| ())
+
+            let ConnState { socket } = state;
+            Ok((*local_ip, *remote_ip, socket.proto()))
+        })?;
+
+    let mut new_socket = sync_ctx
+        .new_ip_socket(ctx, device_id, Some(local_ip), remote_ip, proto, Default::default())
+        .map_err(|_: (IpSockCreationError, IpOptions<_, _>)| {
+            SocketError::Remote(RemoteAddressError::NoRoute)
+        })?;
+
+    // Re-borrow the state mutably now that we know a socket can be constructed
+    // and try to move the address.
+    // TODO(https://fxbug.dev/108008): Combine this with the above when
+    // with_sockets_mut provides an additional context argument that can be used
+    // to construct the socket.
+    sync_ctx.with_sockets_mut(|DatagramSockets { unbound: _, bound }| {
+        let entry =
+            bound.conns_mut().entry(&id).unwrap_or_else(|| panic!("invalid conn ID {:?}", id));
+        let (_, _, addr): &(_, S::ConnSharingState, _) = entry.get();
+        let new_addr = ConnAddr { device: device_id, ..addr.clone() };
+
+        let mut entry = match entry.try_update_addr(new_addr) {
+            Err((ExistsError, _entry)) => {
+                return Err(SocketError::Local(LocalAddressError::AddressInUse))
             }
-        }
+            Ok(entry) => entry,
+        };
+        // Since the move was successful, replace the old socket with
+        // the new one but move the options over.
+        let ConnState { socket } = entry.get_state_mut();
+        let _: IpOptions<_, _> = new_socket.replace_options(socket.take_options());
+        *socket = new_socket;
+        Ok(())
     })
 }
 
@@ -1197,6 +1242,18 @@ mod test {
         ) -> O {
             let Self { sockets, state: _ } = self;
             cb(sockets)
+        }
+
+        fn new_ip_socket<O>(
+            &mut self,
+            _ctx: &mut DummyNonSyncCtx,
+            _device: Option<D>,
+            _local_ip: Option<SpecifiedAddr<I::Addr>>,
+            _remote: SpecifiedAddr<I::Addr>,
+            _proto: I::Proto,
+            _options: O,
+        ) -> Result<IpSock<I, D, O>, (IpSockCreationError, O)> {
+            unimplemented!("not required for any existing tests")
         }
     }
 

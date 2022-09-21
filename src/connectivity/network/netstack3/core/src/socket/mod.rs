@@ -377,6 +377,8 @@ pub(crate) trait SocketTypeStateEntry: Sized {
 
     fn get(&self) -> &(Self::State, Self::SharingState, Self::Addr);
 
+    fn get_state_mut(&mut self) -> &mut Self::State;
+
     fn try_update_addr(self, new_addr: Self::Addr) -> Result<Self, (ExistsError, Self)>;
 
     fn remove(self) -> (Self::State, Self::SharingState, Self::Addr);
@@ -570,6 +572,12 @@ where
     fn get(&self) -> &(Self::State, Self::SharingState, Self::Addr) {
         let Self { id_entry, addr_entry: _, _marker } = self;
         id_entry.get()
+    }
+
+    fn get_state_mut(&mut self) -> &mut Self::State {
+        let Self { id_entry, addr_entry: _, _marker } = self;
+        let (state, _, _): &mut (_, SharingState, Addr) = id_entry.get_mut();
+        state
     }
 
     fn try_update_addr(self, new_addr: Self::Addr) -> Result<Self, (ExistsError, Self)> {
