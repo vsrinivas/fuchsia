@@ -65,3 +65,5 @@ function auto_derive_from_bytes_for() {
 
 auto_derive_from_bytes_for binder_transaction_data
 auto_derive_from_bytes_for flat_binder_object
+
+scripts/fx format-code --files=src/proc/lib/linux_uapi/src/x86_64.rs
