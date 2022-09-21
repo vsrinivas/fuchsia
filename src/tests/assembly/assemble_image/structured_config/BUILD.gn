@@ -7,16 +7,12 @@ import("//src/tests/assembly/assemble_image/test_assembly_config.gni")
 
 test_assembly_config("structured_config") {
   base_packages = [ "//examples/assembly/structured_config/configured_by_assembly($default_toolchain)" ]
+  platform = {
+    feature_set_level = "empty"
+    build_type = "eng"
+  }
   additional_args = [
     "--config",
     "assembly_example_enabled=true",
   ]
-  config_json = {
-    platform = {
-      feature_set_level = "empty"
-      build_type = "eng"
-    }
-    product = {
-    }
-  }
 }

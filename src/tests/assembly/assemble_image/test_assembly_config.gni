@@ -4,6 +4,7 @@
 
 import("//build/assembly/generated_image_assembly_config.gni")
 import("//build/assembly/legacy_assembly_input_bundle.gni")
+import("//build/assembly/product_assembly_configuration.gni")
 import("//build/python/python_action.gni")
 import("//build/python/python_binary.gni")
 import("//build/testing/host_test.gni")
@@ -11,9 +12,6 @@ import("//build/testing/host_test.gni")
 # Runs ffx assembly with the given parameters as an integration test
 #
 # Arguments
-#   config_json (required)
-#     contents of the assembly config.json as a scope
-#
 #   base_packages (optional)
 #     [list of labels] The packages to include in the base package set.
 #
@@ -22,6 +20,15 @@ import("//build/testing/host_test.gni")
 #
 #   additional_deps (optional)
 #     [list of labels] config files or other generated inputs to be used by assembly
+#
+#   platform (optional)
+#     contents of the product assembly config platform configuration.
+#     Passed through to the product_assembly_configuration() template
+#
+#   product (optional)
+#     contents of the product assembly config product configuration.
+#     Passed through to the product_assembly_configuration() template
+#
 template("test_assembly_config") {
   base_packages_param = []
   if (defined(invoker.base_packages)) {
@@ -37,8 +44,6 @@ template("test_assembly_config") {
   if (defined(invoker.additional_deps)) {
     additional_deps_param += invoker.additional_deps
   }
-
-  config_json_param = invoker.config_json
 
   labels = {
     ffx = "//src/developer/ffx:host"
@@ -82,18 +87,25 @@ template("test_assembly_config") {
           "additional_args_param",
           "config_json_param",
         ])
+    not_needed(invoker,
+               [
+                 "product",
+                 "platform",
+               ])
   }
 
   if (is_fuchsia) {
     fuchsia_files = {
-      assembly_config = "${target_out_dir}/config.json"
+      assembly_config = "${target_out_dir}/${target_name}_product_config/product_assembly_config.json"
     }
 
-    generated_file("config") {
+    product_assembly_configuration("${target_name}_product_config") {
       testonly = true
-      outputs = [ fuchsia_files.assembly_config ]
-      output_conversion = "json"
-      contents = config_json_param
+      forward_variables_from(invoker,
+                             [
+                               "product",
+                               "platform",
+                             ])
     }
 
     # NOTE: target named this way for legacy_assembly_input_bundle's label inference
