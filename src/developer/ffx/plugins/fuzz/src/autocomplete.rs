@@ -16,7 +16,6 @@ use {
     std::cell::RefCell,
     std::collections::BTreeMap,
     std::collections::{HashMap, VecDeque},
-    std::path::{Path, PathBuf},
     std::sync::{Arc, Mutex},
     std::vec::IntoIter,
 };
@@ -24,7 +23,7 @@ use {
 /// Performs `rustyline`-style autocompletion for the `ffx fuzz` plugin.
 pub struct FuzzHelper {
     state: Arc<Mutex<FuzzerState>>,
-    fuchsia_dir: PathBuf,
+    tests_json: Option<String>,
     file_completer: FilenameCompleter,
     tokens: RefCell<VecDeque<String>>,
     positional: RefCell<IntoIter<ParameterType>>,
@@ -69,12 +68,12 @@ impl Completer for FuzzHelper {
 impl FuzzHelper {
     /// Creates a new `FuzzHelper`.
     ///
-    /// This helper will use the given `fuchsia_dir` to look for fuzzer URLs when providing
+    /// This helper will use the given `tests_json` to look for fuzzer URLs when providing
     /// suggestions for URL parameters. It will also use the shared fuzzer `state` to provide
     /// suggestions for valid commands.
-    pub fn new<P: AsRef<Path>>(fuchsia_dir: P, state: Arc<Mutex<FuzzerState>>) -> Self {
+    pub fn new(tests_json: Option<String>, state: Arc<Mutex<FuzzerState>>) -> Self {
         Self {
-            fuchsia_dir: PathBuf::from(fuchsia_dir.as_ref()),
+            tests_json,
             state,
             file_completer: FilenameCompleter::new(),
             tokens: RefCell::new(VecDeque::new()),
@@ -188,7 +187,7 @@ impl FuzzHelper {
     fn get_parameter_completions(&self, expected: &Option<ParameterType>) -> Vec<String> {
         match expected {
             Some(ParameterType::Opt) => options::NAMES.iter().map(|s| s.to_string()).collect(),
-            Some(ParameterType::Url) => get_fuzzer_urls(&self.fuchsia_dir)
+            Some(ParameterType::Url) => get_fuzzer_urls(&self.tests_json)
                 .unwrap_or(Vec::new())
                 .into_iter()
                 .map(|s| s.to_string())
@@ -350,9 +349,8 @@ mod tests {
 
     #[fuchsia::test]
     async fn test_empty() -> Result<()> {
-        let test = Test::try_new()?;
         let state = Arc::new(Mutex::new(FuzzerState::Detached));
-        let helper = FuzzHelper::new(test.root_dir(), Arc::clone(&state));
+        let helper = FuzzHelper::new(None, Arc::clone(&state));
 
         // Not attached.
         let result = helper.complete("", 0)?;
@@ -383,9 +381,8 @@ mod tests {
 
     #[fuchsia::test]
     async fn test_list() -> Result<()> {
-        let test = Test::try_new()?;
         let state = Arc::new(Mutex::new(FuzzerState::Detached));
-        let helper = FuzzHelper::new(test.root_dir(), Arc::clone(&state));
+        let helper = FuzzHelper::new(None, Arc::clone(&state));
 
         // 'list' is always available.
         let result = helper.complete("l", 0)?;
@@ -401,7 +398,7 @@ mod tests {
 
         // 'list' takes flags as arguments.
         let result = helper.complete("list -", 0)?;
-        verify_pairs(result.1, vec!["--pattern"], Replacements::except("-"));
+        verify_pairs(result.1, vec!["--json-file", "--pattern"], Replacements::except("-"));
 
         let result = helper.complete("list --invalid", 0)?;
         verify_pairs(result.1, Vec::new(), Replacements::Exact);
@@ -415,7 +412,14 @@ mod tests {
     async fn test_attach() -> Result<()> {
         let test = Test::try_new()?;
         let state = Arc::new(Mutex::new(FuzzerState::Detached));
-        let helper = FuzzHelper::new(test.root_dir(), Arc::clone(&state));
+        let urls = vec![
+            "fuchsia-pkg://fuchsia.com/fake#meta/foo-fuzzer.cm",
+            "fuchsia-pkg://fuchsia.com/fake#meta/bar-fuzzer.cm",
+            "fuchsia-pkg://fuchsia.com/fake#meta/baz-fuzzer.cm",
+        ];
+        let tests_json = test.create_tests_json(urls.iter())?;
+        let tests_json = Some(tests_json.to_string_lossy().to_string());
+        let helper = FuzzHelper::new(tests_json, Arc::clone(&state));
 
         // 'attach' is only suggested when detached.
         let result = helper.complete("a", 0)?;
@@ -430,12 +434,6 @@ mod tests {
         assert!(result.1.is_empty());
 
         set_state(Arc::clone(&state), FuzzerState::Detached);
-        let urls = vec![
-            "fuchsia-pkg://fuchsia.com/fake#meta/foo-fuzzer.cm",
-            "fuchsia-pkg://fuchsia.com/fake#meta/bar-fuzzer.cm",
-            "fuchsia-pkg://fuchsia.com/fake#meta/baz-fuzzer.cm",
-        ];
-        test.create_tests_json(urls.iter())?;
 
         // Last token already complete.
         let result = helper.complete("attach", 0)?;
@@ -462,9 +460,8 @@ mod tests {
 
     #[fuchsia::test]
     async fn test_get() -> Result<()> {
-        let test = Test::try_new()?;
         let state = Arc::new(Mutex::new(FuzzerState::Detached));
-        let helper = FuzzHelper::new(test.root_dir(), Arc::clone(&state));
+        let helper = FuzzHelper::new(None, Arc::clone(&state));
 
         // 'get' is only suggested if attached.
         let result = helper.complete("g", 0)?;
@@ -488,9 +485,8 @@ mod tests {
 
     #[fuchsia::test]
     async fn test_set() -> Result<()> {
-        let test = Test::try_new()?;
         let state = Arc::new(Mutex::new(FuzzerState::Detached));
-        let helper = FuzzHelper::new(test.root_dir(), Arc::clone(&state));
+        let helper = FuzzHelper::new(None, Arc::clone(&state));
 
         // 'set' is only suggested if attached but not running.
         let result = helper.complete("se", 0)?;
@@ -515,7 +511,7 @@ mod tests {
     async fn test_add() -> Result<()> {
         let test = Test::try_new()?;
         let state = Arc::new(Mutex::new(FuzzerState::Detached));
-        let helper = FuzzHelper::new(test.root_dir(), Arc::clone(&state));
+        let helper = FuzzHelper::new(None, Arc::clone(&state));
 
         // 'add' is only suggested when attached.
         let result = helper.complete("a", 0)?;
@@ -537,7 +533,7 @@ mod tests {
     async fn test_try() -> Result<()> {
         let test = Test::try_new()?;
         let state = Arc::new(Mutex::new(FuzzerState::Detached));
-        let helper = FuzzHelper::new(test.root_dir(), Arc::clone(&state));
+        let helper = FuzzHelper::new(None, Arc::clone(&state));
 
         // 'try' is only suggested when attached and not running.
         let result = helper.complete("t", 0)?;
@@ -557,9 +553,8 @@ mod tests {
 
     #[fuchsia::test]
     async fn test_run() -> Result<()> {
-        let test = Test::try_new()?;
         let state = Arc::new(Mutex::new(FuzzerState::Detached));
-        let helper = FuzzHelper::new(test.root_dir(), Arc::clone(&state));
+        let helper = FuzzHelper::new(None, Arc::clone(&state));
 
         // 'run' is only suggested when attached and not running.
         let result = helper.complete("r", 0)?;
@@ -583,9 +578,8 @@ mod tests {
 
     #[fuchsia::test]
     async fn test_cleanse() -> Result<()> {
-        let test = Test::try_new()?;
         let state = Arc::new(Mutex::new(FuzzerState::Detached));
-        let helper = FuzzHelper::new(test.root_dir(), Arc::clone(&state));
+        let helper = FuzzHelper::new(None, Arc::clone(&state));
 
         // 'cleanse' is only suggested when attached and not running.
         let result = helper.complete("c", 0)?;
@@ -604,9 +598,8 @@ mod tests {
 
     #[fuchsia::test]
     async fn test_minimize() -> Result<()> {
-        let test = Test::try_new()?;
         let state = Arc::new(Mutex::new(FuzzerState::Detached));
-        let helper = FuzzHelper::new(test.root_dir(), Arc::clone(&state));
+        let helper = FuzzHelper::new(None, Arc::clone(&state));
 
         // 'minimize' is only suggested when attached and not running.
         let result = helper.complete("m", 0)?;
@@ -625,9 +618,8 @@ mod tests {
 
     #[fuchsia::test]
     async fn test_merge() -> Result<()> {
-        let test = Test::try_new()?;
         let state = Arc::new(Mutex::new(FuzzerState::Detached));
-        let helper = FuzzHelper::new(test.root_dir(), Arc::clone(&state));
+        let helper = FuzzHelper::new(None, Arc::clone(&state));
 
         // 'minimize' is only suggested when attached and not running.
         let result = helper.complete("m", 0)?;
@@ -646,9 +638,8 @@ mod tests {
 
     #[fuchsia::test]
     async fn test_status() -> Result<()> {
-        let test = Test::try_new()?;
         let state = Arc::new(Mutex::new(FuzzerState::Detached));
-        let helper = FuzzHelper::new(test.root_dir(), Arc::clone(&state));
+        let helper = FuzzHelper::new(None, Arc::clone(&state));
 
         // 'status' is always available.
         let result = helper.complete("sta", 0)?;
@@ -667,9 +658,8 @@ mod tests {
 
     #[fuchsia::test]
     async fn test_fetch() -> Result<()> {
-        let test = Test::try_new()?;
         let state = Arc::new(Mutex::new(FuzzerState::Detached));
-        let helper = FuzzHelper::new(test.root_dir(), Arc::clone(&state));
+        let helper = FuzzHelper::new(None, Arc::clone(&state));
 
         // 'fetch' is only suggested when attached.
         let result = helper.complete("f", 0)?;
@@ -693,9 +683,8 @@ mod tests {
 
     #[fuchsia::test]
     async fn test_detach() -> Result<()> {
-        let test = Test::try_new()?;
         let state = Arc::new(Mutex::new(FuzzerState::Detached));
-        let helper = FuzzHelper::new(test.root_dir(), Arc::clone(&state));
+        let helper = FuzzHelper::new(None, Arc::clone(&state));
 
         // 'detach' is only suggested when attached.
         let result = helper.complete("d", 0)?;
@@ -714,9 +703,8 @@ mod tests {
 
     #[fuchsia::test]
     async fn test_stop() -> Result<()> {
-        let test = Test::try_new()?;
         let state = Arc::new(Mutex::new(FuzzerState::Detached));
-        let helper = FuzzHelper::new(test.root_dir(), Arc::clone(&state));
+        let helper = FuzzHelper::new(None, Arc::clone(&state));
 
         // 'stop' is always available.
         let result = helper.complete("sto", 0)?;
@@ -735,9 +723,8 @@ mod tests {
 
     #[fuchsia::test]
     async fn test_exit() -> Result<()> {
-        let test = Test::try_new()?;
         let state = Arc::new(Mutex::new(FuzzerState::Detached));
-        let helper = FuzzHelper::new(test.root_dir(), Arc::clone(&state));
+        let helper = FuzzHelper::new(None, Arc::clone(&state));
 
         // 'exit' is always available.
         let result = helper.complete("e", 0)?;
@@ -756,9 +743,8 @@ mod tests {
 
     #[fuchsia::test]
     async fn test_clear() -> Result<()> {
-        let test = Test::try_new()?;
         let state = Arc::new(Mutex::new(FuzzerState::Detached));
-        let helper = FuzzHelper::new(test.root_dir(), Arc::clone(&state));
+        let helper = FuzzHelper::new(None, Arc::clone(&state));
 
         // 'clear' is always available.
         let result = helper.complete("c", 0)?;
@@ -777,9 +763,8 @@ mod tests {
 
     #[fuchsia::test]
     async fn test_history() -> Result<()> {
-        let test = Test::try_new()?;
         let state = Arc::new(Mutex::new(FuzzerState::Detached));
-        let helper = FuzzHelper::new(test.root_dir(), Arc::clone(&state));
+        let helper = FuzzHelper::new(None, Arc::clone(&state));
 
         // 'history' is always available.
         let result = helper.complete("hi", 0)?;

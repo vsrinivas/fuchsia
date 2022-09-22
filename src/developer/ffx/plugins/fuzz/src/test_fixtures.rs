@@ -165,13 +165,13 @@ impl Test {
         &self,
         build_dir: P,
         contents: S,
-    ) -> Result<()> {
+    ) -> Result<PathBuf> {
         let build_dir = build_dir.as_ref();
         let mut tests_json = PathBuf::from(build_dir);
         tests_json.push("tests.json");
         fs::write(&tests_json, contents.as_ref())
             .with_context(|| format!("failed to write to '{}'", tests_json.to_string_lossy()))?;
-        Ok(())
+        Ok(tests_json)
     }
 
     /// Creates a fake "tests.json" file for testing.
@@ -180,7 +180,7 @@ impl Test {
     ///
     /// Returns an error if any filesystem operations fail.
     ///
-    pub fn create_tests_json<D: Display>(&self, urls: impl Iterator<Item = D>) -> Result<()> {
+    pub fn create_tests_json<D: Display>(&self, urls: impl Iterator<Item = D>) -> Result<PathBuf> {
         let build_dir = self
             .create_dir("out/default")
             .context("failed to create build directory for 'tests.json'")?;
@@ -201,8 +201,7 @@ impl Test {
         let json_data = json!(json_data);
         self.write_tests_json(&build_dir, json_data.to_string()).with_context(|| {
             format!("failed to create '{}/tests.json'", build_dir.to_string_lossy())
-        })?;
-        Ok(())
+        })
     }
 
     /// Creates several temporary `files` from the given iterator for testing.

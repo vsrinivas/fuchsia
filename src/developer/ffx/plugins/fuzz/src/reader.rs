@@ -14,7 +14,6 @@ use {
     rustyline::error::ReadlineError,
     rustyline::{CompletionType, Config, Editor},
     std::io,
-    std::path::{Path, PathBuf},
     std::sync::{Arc, Mutex},
     std::thread,
     termion::input::TermRead,
@@ -33,7 +32,7 @@ pub trait Reader {
     }
 
     /// Begin reading. Must be called at most once. Does nothing by default.
-    fn start<P: AsRef<Path>>(&mut self, _fuchsia_dir: P, _state: Arc<Mutex<FuzzerState>>) {}
+    fn start(&mut self, _tests_json: Option<String>, _state: Arc<Mutex<FuzzerState>>) {}
 
     /// Read and parse a command.
     async fn prompt(&mut self) -> Option<ParsedCommand>;
@@ -129,8 +128,7 @@ impl Reader for ShellReader {
         true
     }
 
-    fn start<P: AsRef<Path>>(&mut self, fuchsia_dir: P, state: Arc<Mutex<FuzzerState>>) {
-        let fuchsia_dir = PathBuf::from(fuchsia_dir.as_ref());
+    fn start(&mut self, tests_json: Option<String>, state: Arc<Mutex<FuzzerState>>) {
         let (req_sender, req_receiver) = mpsc::unbounded::<InputRequest>();
         let (resp_sender, resp_receiver) = mpsc::unbounded::<ParsedCommand>();
         self.sender = req_sender;
@@ -141,7 +139,7 @@ impl Reader for ShellReader {
         thread::spawn(move || {
             let mut executor = fasync::LocalExecutor::new().expect("Failed to create executor");
             executor.run_singlethreaded(async move {
-                shell_read_loop(fuchsia_dir, req_receiver, resp_sender, state, history).await;
+                shell_read_loop(tests_json, req_receiver, resp_sender, state, history).await;
             });
         });
     }
@@ -163,7 +161,7 @@ impl Reader for ShellReader {
 }
 
 async fn shell_read_loop(
-    fuchsia_dir: PathBuf,
+    tests_json: Option<String>,
     mut receiver: mpsc::UnboundedReceiver<InputRequest>,
     mut sender: mpsc::UnboundedSender<ParsedCommand>,
     state: Arc<Mutex<FuzzerState>>,
@@ -177,7 +175,7 @@ async fn shell_read_loop(
         let mut history_mut = history.lock().unwrap();
         *history_mut = editor.history().iter().map(|s| s.clone()).collect();
     }
-    editor.set_helper(Some(FuzzHelper::new(&fuchsia_dir, state)));
+    editor.set_helper(Some(FuzzHelper::new(tests_json, state)));
     while let Some(input_request) = receiver.next().await {
         match input_request {
             InputRequest::Command => {

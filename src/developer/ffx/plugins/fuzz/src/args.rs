@@ -100,7 +100,7 @@ pub enum FuzzShellSubcommand {
 /// These commands may be known in advance, or may be entered interactively by a user.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Session {
-    Interactive,
+    Interactive(Option<String>),
     Quiet(Vec<FuzzShellCommand>),
     Verbose(Vec<FuzzShellCommand>),
 }
@@ -113,7 +113,7 @@ impl FuzzCommand {
             commands.push(FuzzShellSubcommand::Attach(attach));
         }
         let (quiet, command) = match self.command.clone() {
-            FuzzSubcommand::Shell(_) => return Session::Interactive,
+            FuzzSubcommand::Shell(cmd) => return Session::Interactive(cmd.json_file),
             FuzzSubcommand::List(cmd) => (false, FuzzShellSubcommand::List(cmd)),
             FuzzSubcommand::Get(cmd) => (cmd.quiet, FuzzShellSubcommand::Get(cmd.into())),
             FuzzSubcommand::Set(cmd) => (cmd.quiet, FuzzShellSubcommand::Set(cmd.into())),
@@ -144,7 +144,11 @@ impl FuzzCommand {
 /// subcommands can be converted to `FuzzShellCommand`s using `FuzzCommand::as_shell`.
 #[derive(Clone, Debug, FromArgs, PartialEq)]
 #[argh(subcommand, name = "shell", description = "Starts an interactive fuzzing session.")]
-pub struct ShellSubcommand {}
+pub struct ShellSubcommand {
+    /// path to JSON file describing fuzzers; looks for tests.json under $FUCHSIA_DIR by default
+    #[argh(option, short = 'j')]
+    pub json_file: Option<String>,
+}
 
 /// Types of parameters that can be auto-completed.
 ///
@@ -208,6 +212,10 @@ pub enum FuzzerState {
 #[derive(Clone, Debug, FromArgs, PartialEq)]
 #[argh(subcommand, name = "list", description = "Lists available fuzzers.")]
 pub struct ListSubcommand {
+    /// path to JSON file describing fuzzers; looks for tests.json under $FUCHSIA_DIR by default
+    #[argh(option, short = 'j')]
+    pub json_file: Option<String>,
+
     /// list all fuzzers matching shell-style glob pattern; default is to list all fuzzers
     #[argh(option, short = 'p')]
     pub pattern: Option<String>,
@@ -216,7 +224,7 @@ pub struct ListSubcommand {
 impl Autocomplete for ListSubcommand {
     const POSITIONAL_TYPES: &'static [ParameterType] = &[];
     const OPTION_TYPES: &'static [(&'static str, Option<ParameterType>)] =
-        &[("--pattern", Some(ParameterType::Any))];
+        &[("--json-file", Some(ParameterType::Path)), ("--pattern", Some(ParameterType::Any))];
 }
 
 /// Command to start and/or attach to a fuzzer on a device.
@@ -570,25 +578,54 @@ mod tests {
 
     #[fuchsia::test]
     async fn test_shell() {
-        assert_eq!(get_session("shell"), Session::Interactive);
+        assert_eq!(get_session("shell"), Session::Interactive(None));
+        assert_eq!(get_session("shell -j foo"), Session::Interactive(Some("foo".to_string())));
+        assert_eq!(
+            get_session("shell --json-file bar"),
+            Session::Interactive(Some("bar".to_string()))
+        );
     }
 
     #[fuchsia::test]
     async fn test_list() {
         let expected = shell_cmds(vec![
-            FuzzShellSubcommand::List(ListSubcommand { pattern: None }),
+            FuzzShellSubcommand::List(ListSubcommand { json_file: None, pattern: None }),
             FuzzShellSubcommand::Exit(ExitShellSubcommand {}),
         ]);
         assert_eq!(get_session("list"), Session::Verbose(expected));
 
         let expected = shell_cmds(vec![
-            FuzzShellSubcommand::List(ListSubcommand { pattern: Some("foo".to_string()) }),
+            FuzzShellSubcommand::List(ListSubcommand {
+                json_file: Some("foo".to_string()),
+                pattern: None,
+            }),
+            FuzzShellSubcommand::Exit(ExitShellSubcommand {}),
+        ]);
+        assert_eq!(get_session("list -j foo"), Session::Verbose(expected));
+
+        let expected = shell_cmds(vec![
+            FuzzShellSubcommand::List(ListSubcommand {
+                json_file: Some("bar".to_string()),
+                pattern: None,
+            }),
+            FuzzShellSubcommand::Exit(ExitShellSubcommand {}),
+        ]);
+        assert_eq!(get_session("list --json-file bar"), Session::Verbose(expected));
+
+        let expected = shell_cmds(vec![
+            FuzzShellSubcommand::List(ListSubcommand {
+                json_file: None,
+                pattern: Some("foo".to_string()),
+            }),
             FuzzShellSubcommand::Exit(ExitShellSubcommand {}),
         ]);
         assert_eq!(get_session("list -p foo"), Session::Verbose(expected));
 
         let expected = shell_cmds(vec![
-            FuzzShellSubcommand::List(ListSubcommand { pattern: Some("bar".to_string()) }),
+            FuzzShellSubcommand::List(ListSubcommand {
+                json_file: None,
+                pattern: Some("bar".to_string()),
+            }),
             FuzzShellSubcommand::Exit(ExitShellSubcommand {}),
         ]);
         assert_eq!(get_session("list --pattern bar"), Session::Verbose(expected));

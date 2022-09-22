@@ -9,6 +9,7 @@ use {
     fidl_fuchsia_fuzzer as fuzz,
     serde_json::Value,
     sha2::{Digest, Sha256},
+    std::env,
     std::fs,
     std::path::{Path, PathBuf},
     url::Url,
@@ -61,24 +62,36 @@ pub fn digest_path<P: AsRef<Path>>(out_dir: P, prefix: Option<&str>, data: &[u8]
 /// Gets URLs for available fuzzers.
 ///
 /// Reads from the filesystem and parses the build metadata to produce a list of URLs for fuzzer
-/// packages.
-pub fn get_fuzzer_urls<P: AsRef<Path>>(fuchsia_dir: P) -> Result<Vec<Url>> {
-    // Find tests.json.
-    let mut fx_build_dir = PathBuf::from(fuchsia_dir.as_ref());
+/// packages. If `tests_json` is `None`, this will look for the FUCHSIA_DIR environment variable to
+/// locate tests.json within the build directory.
+///
+/// Returns an error if tests.json cannot be found, read, or parsed as valid JSON.
+pub fn get_fuzzer_urls(tests_json: &Option<String>) -> Result<Vec<Url>> {
+    let tests_json = match tests_json {
+        Some(tests_json) => Ok(PathBuf::from(tests_json)),
+        None => test_json_path(None).context("tests.json was not provided and could not be found"),
+    }?;
+    let json_data = fs::read_to_string(&tests_json)
+        .context(format!("failed to read '{}'", tests_json.to_string_lossy()))?;
+    parse_tests_json(json_data)
+        .context(format!("failed to parse '{}'", tests_json.to_string_lossy()))
+}
+
+fn test_json_path(fuchsia_dir: Option<&Path>) -> Result<PathBuf> {
+    let fuchsia_dir = match fuchsia_dir {
+        Some(fuchsia_dir) => Ok(fuchsia_dir.to_string_lossy().to_string()),
+        None => env::var("FUCHSIA_DIR").context("FUCHSIA_DIR is not set"),
+    }?;
+    let mut fx_build_dir = PathBuf::from(&fuchsia_dir);
     fx_build_dir.push(".fx-build-dir");
     let mut fx_build_dir = fs::read_to_string(&fx_build_dir)
         .with_context(|| format!("failed to read '{}'", fx_build_dir.to_string_lossy()))?;
 
     fx_build_dir.retain(|c| !c.is_whitespace());
-    let mut tests_json = PathBuf::from(fuchsia_dir.as_ref());
+    let mut tests_json = PathBuf::from(&fuchsia_dir);
     tests_json.push(&fx_build_dir);
     tests_json.push("tests.json");
-
-    // Extract fuzzers.
-    let json_data = fs::read_to_string(&tests_json)
-        .with_context(|| format!("failed to read '{}'", tests_json.to_string_lossy()))?;
-    parse_tests_json(json_data)
-        .with_context(|| format!("failed to parse '{}'", tests_json.to_string_lossy()))
+    Ok(tests_json)
 }
 
 fn parse_tests_json(json_data: String) -> Result<Vec<Url>> {
@@ -115,28 +128,47 @@ fn parse_tests_json(json_data: String) -> Result<Vec<Url>> {
 
 #[cfg(test)]
 mod tests {
-    use {super::get_fuzzer_urls, crate::test_fixtures::Test, anyhow::Result, serde_json::json};
+    use {
+        super::{get_fuzzer_urls, test_json_path},
+        crate::test_fixtures::Test,
+        anyhow::Result,
+        serde_json::json,
+    };
 
     #[fuchsia::test]
-    async fn test_get_fuzzer_urls() -> Result<()> {
+    async fn test_test_json_path() -> Result<()> {
         let test = Test::try_new()?;
         let build_dir = test.create_dir("out/default")?;
 
         // Missing .fx-build-dir
         let fuchsia_dir = test.root_dir();
-        let actual = format!("{:?}", get_fuzzer_urls(&fuchsia_dir));
+        let actual = format!("{:?}", test_json_path(Some(&fuchsia_dir)));
         let expected = format!("failed to read '{}/.fx-build-dir'", fuchsia_dir.to_string_lossy());
         assert!(actual.contains(&expected));
 
-        // Missing tests.json
+        // Valid
         test.write_fx_build_dir(&build_dir)?;
-        let actual = format!("{:?}", get_fuzzer_urls(&fuchsia_dir));
+        test_json_path(Some(&fuchsia_dir))?;
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    async fn test_get_fuzzer_urls() -> Result<()> {
+        let test = Test::try_new()?;
+        let build_dir = test.create_dir("out/default")?;
+        test.write_fx_build_dir(&build_dir)?;
+        let fuchsia_dir = test.root_dir();
+        let tests_json = test_json_path(Some(fuchsia_dir))?;
+        let tests_json = Some(tests_json.to_string_lossy().to_string());
+
+        // Missing tests.json
+        let actual = format!("{:?}", get_fuzzer_urls(&tests_json));
         let expected = format!("failed to read '{}/tests.json'", build_dir.to_string_lossy());
         assert!(actual.contains(&expected));
 
         // tests.json is not JSON.
         test.write_tests_json(&build_dir, "hello world!\n")?;
-        let actual = format!("{:?}", get_fuzzer_urls(&fuchsia_dir));
+        let actual = format!("{:?}", get_fuzzer_urls(&tests_json));
         assert!(actual.contains("expected value"));
 
         // tests.json is not an array.
@@ -144,13 +176,13 @@ mod tests {
             "foo": 1
         });
         test.write_tests_json(&build_dir, json_data.to_string())?;
-        let actual = format!("{:?}", get_fuzzer_urls(&fuchsia_dir));
+        let actual = format!("{:?}", get_fuzzer_urls(&tests_json));
         assert!(actual.contains("root object is not array"));
 
         // tests.json contains empty array
         let json_data = json!([]);
         test.write_tests_json(&build_dir, json_data.to_string())?;
-        let fuzzers = get_fuzzer_urls(&fuchsia_dir)?;
+        let fuzzers = get_fuzzer_urls(&tests_json)?;
         assert!(fuzzers.is_empty());
 
         // Various malformed tests.jsons
@@ -160,7 +192,7 @@ mod tests {
             }
         ]);
         test.write_tests_json(&build_dir, json_data.to_string())?;
-        let actual = format!("{:?}", get_fuzzer_urls(&fuchsia_dir));
+        let actual = format!("{:?}", get_fuzzer_urls(&tests_json));
         assert!(actual.contains("found 'test' field that is not an object"));
 
         let json_data = json!([
@@ -171,7 +203,7 @@ mod tests {
             }
         ]);
         test.write_tests_json(&build_dir, json_data.to_string())?;
-        let actual = format!("{:?}", get_fuzzer_urls(&fuchsia_dir));
+        let actual = format!("{:?}", get_fuzzer_urls(&tests_json));
         assert!(actual.contains("found 'build_rule' field that is not a string"));
 
         let json_data = json!([
@@ -183,7 +215,7 @@ mod tests {
             }
         ]);
         test.write_tests_json(&build_dir, json_data.to_string())?;
-        let actual = format!("{:?}", get_fuzzer_urls(fuchsia_dir));
+        let actual = format!("{:?}", get_fuzzer_urls(&tests_json));
         assert!(actual.contains("found 'package_url' field that is not a string"));
 
         let json_data = json!([
@@ -195,7 +227,7 @@ mod tests {
             }
         ]);
         test.write_tests_json(&build_dir, json_data.to_string())?;
-        let actual = format!("{:?}", get_fuzzer_urls(fuchsia_dir));
+        let actual = format!("{:?}", get_fuzzer_urls(&tests_json));
         assert!(actual.contains("failed to parse URL"));
 
         // tests.json contains fuzzers mixed with other tests.
@@ -225,7 +257,7 @@ mod tests {
             }
         ]);
         test.write_tests_json(&build_dir, json_data.to_string())?;
-        let urls = get_fuzzer_urls(fuchsia_dir)?;
+        let urls = get_fuzzer_urls(&tests_json)?;
         assert_eq!(urls[0].as_str(), "fuchsia-pkg://fuchsia.com/fake#meta/foo-fuzzer.cm");
         assert_eq!(urls[1].as_str(), "fuchsia-pkg://fuchsia.com/fake#meta/bar-fuzzer.cm");
         Ok(())

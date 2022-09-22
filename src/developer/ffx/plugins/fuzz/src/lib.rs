@@ -3,15 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::reader::{CommandReader, Reader, ShellReader},
+    crate::reader::{CommandReader, ShellReader},
     crate::shell::Shell,
-    crate::writer::{OutputSink, StdioSink, Writer},
+    crate::writer::{StdioSink, Writer},
     anyhow::Result,
-    errors::ffx_bail,
     ffx_core::ffx_plugin,
     ffx_fuzz_args::{FuzzCommand, Session},
     fidl_fuchsia_developer_remotecontrol as rcs,
-    std::env,
 };
 
 mod autocomplete;
@@ -41,10 +39,10 @@ mod test_fixtures;
 /// in which `main` has an attribute of `#[fuchsia_async::run_singlethreaded]`.
 ///
 #[ffx_plugin("fuzzing")]
-pub async fn fuzz(remote_control: rcs::RemoteControlProxy, command: FuzzCommand) -> Result<()> {
+pub async fn fuzz(rc: rcs::RemoteControlProxy, command: FuzzCommand) -> Result<()> {
     let session = command.as_session();
     let (is_tty, muted, use_colors) = match session {
-        Session::Interactive => (true, false, true),
+        Session::Interactive(_) => (true, false, true),
         Session::Quiet(_) => (false, true, false),
         Session::Verbose(_) => (false, false, false),
     };
@@ -52,33 +50,14 @@ pub async fn fuzz(remote_control: rcs::RemoteControlProxy, command: FuzzCommand)
     writer.mute(muted);
     writer.use_colors(use_colors);
     match session {
-        Session::Interactive => run_session(remote_control, ShellReader::new(), &writer).await,
+        Session::Interactive(json_file) => {
+            Shell::new(json_file, rc, ShellReader::new(), &writer).run().await
+        }
         Session::Quiet(commands) => {
-            run_session(remote_control, CommandReader::new(commands), &writer).await
+            Shell::new(None, rc, CommandReader::new(commands), &writer).run().await
         }
         Session::Verbose(commands) => {
-            run_session(remote_control, CommandReader::new(commands), &writer).await
+            Shell::new(None, rc, CommandReader::new(commands), &writer).run().await
         }
     }
-}
-
-async fn run_session<R: Reader, O: OutputSink>(
-    rc: rcs::RemoteControlProxy,
-    reader: R,
-    writer: &Writer<O>,
-) -> Result<()> {
-    let fuchsia_dir = match env::var("FUCHSIA_DIR") {
-        Ok(fuchsia_dir) => fuchsia_dir,
-        _ => {
-            let err_msgs = vec![
-                "FUCHSIA_DIR is not set.\n",
-                "See `https://fuchsia.dev/fuchsia-src/get-started/get_fuchsia_source",
-                "#set-up-environment-variables`\n",
-                "for additional details on setting up a Fuchsia build environment.",
-            ];
-            ffx_bail!("{}", err_msgs.join(""));
-        }
-    };
-    let mut shell = Shell::new(&fuchsia_dir, rc, reader, writer);
-    shell.run().await
 }

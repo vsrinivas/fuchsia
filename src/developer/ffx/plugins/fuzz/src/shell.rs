@@ -19,7 +19,6 @@ use {
     std::cell::RefCell,
     std::convert::TryInto,
     std::fs,
-    std::path::{Path, PathBuf},
     std::sync::{Arc, Mutex},
     termion::{self, clear, cursor},
     url::Url,
@@ -30,7 +29,7 @@ pub const DEFAULT_FUZZING_OUTPUT_VARIABLE: &str = "fuzzer.output";
 
 /// Interactive fuzzing shell.
 pub struct Shell<R: Reader, O: OutputSink> {
-    fuchsia_dir: PathBuf,
+    tests_json: Option<String>,
     rc: rcs::RemoteControlProxy,
     state: Arc<Mutex<FuzzerState>>,
     fuzzer: RefCell<Option<Fuzzer<O>>>,
@@ -59,17 +58,17 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
     ///
     /// The shell may be interactive or scripted, depending on its `reader`. It will produce output
     /// using its `writer`. The fuzzers available for the shell to interact with are discovered
-    /// by examining the `fuchsia_dir`.
-    pub fn new<P: AsRef<Path>>(
-        fuchsia_dir: P,
+    /// by examining the `tests_json`.
+    pub fn new(
+        tests_json: Option<String>,
         rc: rcs::RemoteControlProxy,
         mut reader: R,
         writer: &Writer<O>,
     ) -> Self {
         let state = Arc::new(Mutex::new(FuzzerState::Detached));
-        reader.start(fuchsia_dir.as_ref(), Arc::clone(&state));
+        reader.start(tests_json.clone(), Arc::clone(&state));
         Self {
-            fuchsia_dir: PathBuf::from(fuchsia_dir.as_ref()),
+            tests_json,
             rc,
             state,
             fuzzer: RefCell::new(None),
@@ -158,9 +157,10 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
     /// May return `NextAction::Retry(_)`.
     async fn execute_any(&self, args: FuzzShellCommand) -> Result<NextAction> {
         match args.command {
-            FuzzShellSubcommand::List(ListSubcommand { pattern }) => {
+            FuzzShellSubcommand::List(ListSubcommand { json_file, pattern }) => {
+                let tests_json = json_file.or(self.tests_json.clone());
                 let mut urls =
-                    get_fuzzer_urls(&self.fuchsia_dir).context("failed to get URLs to list")?;
+                    get_fuzzer_urls(&tests_json).context("failed to get URLs to list")?;
                 if let Some(pattern) = pattern {
                     let globbed = glob::Pattern::new(&pattern)
                         .context("failed to create glob from pattern")?;
@@ -616,13 +616,15 @@ mod test_fixtures {
     impl ShellScript {
         /// Creates a shell with fakes suitable for testing.
         pub fn try_new(test: &mut Test) -> Result<Self> {
-            let fuchsia_dir = test.root_dir().to_path_buf();
-            let proxy = test.rcs().context("failed to serve RCS")?;
-            let reader = ScriptReader::new();
-            let shell = Shell::new(fuchsia_dir, proxy, reader, test.writer());
             let url = Url::parse(TEST_URL).context("failed to parse test URL")?;
             let urls = vec![&url];
-            test.create_tests_json(urls.iter()).context("failed to write URLs for shell script")?;
+            let tests_json = test
+                .create_tests_json(urls.iter())
+                .context("failed to write URLs for shell script")?;
+            let tests_json = Some(tests_json.to_string_lossy().to_string());
+            let proxy = test.rcs().context("failed to serve RCS")?;
+            let reader = ScriptReader::new();
+            let shell = Shell::new(tests_json, proxy, reader, test.writer());
             Ok(Self {
                 shell,
                 state: FuzzerState::Detached,
