@@ -61,8 +61,9 @@ class InspectTestHelper {
     EXPECT_EQ(expected_value.value(), actual_value->value());
   }
 
-  // Printers for debugging purpose
+  // Printers for debugging purpose.
   static void PrintAllProperties(const inspect::NodeValue& node);
+  static void PrintAllProperties(const inspect::Hierarchy& hierarchy);
 
  private:
   fpromise::result<inspect::Hierarchy> hierarchy_;

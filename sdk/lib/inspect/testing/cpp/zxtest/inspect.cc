@@ -80,4 +80,18 @@ void InspectTestHelper::PrintAllProperties(const inspect::NodeValue& node) {
   }
 }
 
+void InspectTestHelper::PrintAllProperties(const inspect::Hierarchy& hierarchy) {
+  auto* log_sink = zxtest::Runner::GetInstance()->mutable_reporter()->mutable_log_sink();
+  std::deque<const Hierarchy*> to_visit{&hierarchy};
+  while (!to_visit.empty()) {
+    const auto* next_hierarchy = to_visit.front();
+    log_sink->Write("%s: \n", next_hierarchy->name().c_str());
+    PrintAllProperties(next_hierarchy->node());
+    for (const auto& child : next_hierarchy->children()) {
+      to_visit.push_back(&child);
+    }
+    to_visit.pop_front();
+  }
+}
+
 }  // namespace inspect
