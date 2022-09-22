@@ -16,6 +16,7 @@ test("nxpfmac_test") {
     "client_connection_test.cc",
     "data_plane_test.cc",
     "event_handler_test.cc",
+    "ies_test.cc",
     "ioctl_adapter_test.cc",
     "scanner_test.cc",
     "test_data_plane.cc",

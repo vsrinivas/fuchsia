@@ -46,6 +46,7 @@ source_set("core") {
     "data_plane.cc",
     "device.cc",
     "event_handler.cc",
+    "ies.cc",
     "ioctl_adapter.cc",
     "moal_shim.cc",
     "scanner.cc",
