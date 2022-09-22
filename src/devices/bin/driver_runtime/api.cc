@@ -200,10 +200,6 @@ __EXPORT void fdf_internal_destroy_all_dispatchers() {
   return driver_runtime::DispatcherCoordinator::DestroyAllDispatchers();
 }
 
-__EXPORT void fdf_internal_wait_until_dispatcher_idle(fdf_dispatcher_t* dispatcher) {
-  return dispatcher->WaitUntilIdle();
-}
-
 __EXPORT zx_status_t fdf_internal_shutdown_dispatchers_async(
     const void* driver, fdf_internal_driver_shutdown_observer_t* observer) {
   return driver_runtime::DispatcherCoordinator::ShutdownDispatchersAsync(driver, observer);

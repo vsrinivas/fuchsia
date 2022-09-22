@@ -62,6 +62,10 @@ class DispatcherTest : public RuntimeTestCase {
                                      libsync::Completion* entered_callback,
                                      libsync::Completion* complete_blocking_read);
 
+  static void WaitUntilIdle(fdf_dispatcher_t* dispatcher) {
+    static_cast<driver_runtime::Dispatcher*>(dispatcher)->WaitUntilIdle();
+  }
+
   static constexpr async_loop_config_t MakeConfig() {
     async_loop_config_t config = kAsyncLoopConfigNoAttachToCurrentThread;
     config.irq_support = true;
@@ -345,8 +349,8 @@ TEST_F(DispatcherTest, SyncDispatcherDisallowsParallelCallbacksReentrant) {
     ASSERT_OK(local[i].entered_callback.Wait(zx::time::infinite()));
   }
 
-  fdf_internal_wait_until_dispatcher_idle(dispatcher);
-  fdf_internal_wait_until_dispatcher_idle(dispatcher2);
+  WaitUntilIdle(dispatcher);
+  WaitUntilIdle(dispatcher2);
 
   for (uint32_t i = 0; i < kNumClients; i++) {
     fdf_handle_close(local[i].channel);
@@ -479,7 +483,7 @@ TEST_F(DispatcherTest, UnsyncDispatcherAllowsParallelCallbacksReentrant) {
   }
 
   ASSERT_OK(sync_completion_wait(&all_threads_running, ZX_TIME_INFINITE));
-  fdf_internal_wait_until_dispatcher_idle(dispatcher);
+  WaitUntilIdle(dispatcher);
   ASSERT_EQ(num_callbacks, kNumClients);
 
   for (uint32_t i = 0; i < kNumClients; i++) {
@@ -520,7 +524,7 @@ TEST_F(DispatcherTest, AllowSyncCallsDoesNotDirectlyCall) {
   // Signal and wait for the blocking read handler to return.
   complete_blocking_read.Signal();
 
-  fdf_internal_wait_until_dispatcher_idle(blocking_dispatcher);
+  WaitUntilIdle(blocking_dispatcher);
 }
 
 // Tests that a blocking dispatcher does not block the global async loop shared between
@@ -573,8 +577,8 @@ TEST_F(DispatcherTest, AllowSyncCallsDoesNotBlockGlobalLoop) {
   // Signal and wait for the blocking read handler to return.
   complete_blocking_read.Signal();
 
-  fdf_internal_wait_until_dispatcher_idle(dispatcher);
-  fdf_internal_wait_until_dispatcher_idle(blocking_dispatcher);
+  WaitUntilIdle(dispatcher);
+  WaitUntilIdle(blocking_dispatcher);
 
   fdf_handle_close(blocking_local_ch);
   fdf_handle_close(blocking_remote_ch);
@@ -745,7 +749,7 @@ TEST_F(DispatcherTest, ReentrancyManyDrivers) {
 
   ASSERT_OK(sync_completion_wait(&completion, ZX_TIME_INFINITE));
   for (uint32_t i = 0; i < kNumDrivers; i++) {
-    fdf_internal_wait_until_dispatcher_idle(dispatchers_[i]);
+    WaitUntilIdle(dispatchers_[i]);
   }
   for (uint32_t i = 0; i < kNumDrivers; i++) {
     fdf_handle_close(ch_to_prev[i]);
@@ -1947,7 +1951,7 @@ TEST_F(DispatcherTest, WaitUntilIdle) {
       CreateDispatcher(0, __func__, "scheduler_role", CreateFakeDriver(), &dispatcher));
 
   ASSERT_TRUE(dispatcher->IsIdle());
-  fdf_internal_wait_until_dispatcher_idle(dispatcher);
+  WaitUntilIdle(dispatcher);
   ASSERT_TRUE(dispatcher->IsIdle());
 }
 
@@ -1980,7 +1984,7 @@ TEST_F(DispatcherTest, WaitUntilIdleWithDirectCall) {
   libsync::Completion wait_complete;
   std::thread t2 = std::thread([&] {
     wait_started.Signal();
-    fdf_internal_wait_until_dispatcher_idle(dispatcher);
+    WaitUntilIdle(dispatcher);
     ASSERT_TRUE(dispatcher->IsIdle());
     wait_complete.Signal();
   });
@@ -2020,7 +2024,7 @@ TEST_F(DispatcherTest, WaitUntilIdleWithAsyncLoop) {
   ASSERT_FALSE(dispatcher->IsIdle());
 
   complete_blocking_read.Signal();
-  fdf_internal_wait_until_dispatcher_idle(dispatcher);
+  WaitUntilIdle(dispatcher);
   ASSERT_TRUE(dispatcher->IsIdle());
 }
 
@@ -2048,7 +2052,7 @@ TEST_F(DispatcherTest, WaitUntilIdleCanceledRead) {
 
   loop_.StartThread();
 
-  fdf_internal_wait_until_dispatcher_idle(dispatcher);
+  WaitUntilIdle(dispatcher);
 }
 
 TEST_F(DispatcherTest, WaitUntilIdlePendingWait) {
@@ -2068,7 +2072,7 @@ TEST_F(DispatcherTest, WaitUntilIdlePendingWait) {
                  [](async_dispatcher_t* async_dispatcher, async::WaitOnce* wait, zx_status_t status,
                     const zx_packet_signal_t* signal) { ASSERT_FALSE(true); }));
   ASSERT_TRUE(dispatcher->IsIdle());
-  fdf_internal_wait_until_dispatcher_idle(dispatcher);
+  WaitUntilIdle(dispatcher);
 }
 
 TEST_F(DispatcherTest, WaitUntilIdleDelayedTask) {
@@ -2088,7 +2092,7 @@ TEST_F(DispatcherTest, WaitUntilIdleDelayedTask) {
   ASSERT_OK(task.PostForTime(async_dispatcher, zx::deadline_after(zx::sec(100))));
 
   ASSERT_TRUE(dispatcher->IsIdle());
-  fdf_internal_wait_until_dispatcher_idle(dispatcher);
+  WaitUntilIdle(dispatcher);
 
   ASSERT_OK(task.Cancel());  // Task should not be running yet.
 }
@@ -2145,7 +2149,7 @@ TEST_F(DispatcherTest, WaitUntilIdleWithAsyncLoopMultipleThreads) {
     local[i].complete_blocking_read.Signal();
   }
 
-  fdf_internal_wait_until_dispatcher_idle(dispatcher);
+  WaitUntilIdle(dispatcher);
 
   for (uint32_t i = 0; i < kNumClients; i++) {
     ASSERT_TRUE(local[i].complete_blocking_read.signaled());
@@ -2177,10 +2181,10 @@ TEST_F(DispatcherTest, WaitUntilIdleMultipleDispatchers) {
 
   ASSERT_FALSE(dispatcher->IsIdle());
   ASSERT_TRUE(dispatcher2->IsIdle());
-  fdf_internal_wait_until_dispatcher_idle(dispatcher2);
+  WaitUntilIdle(dispatcher2);
 
   complete_blocking_read.Signal();
-  fdf_internal_wait_until_dispatcher_idle(dispatcher);
+  WaitUntilIdle(dispatcher);
   ASSERT_TRUE(dispatcher->IsIdle());
 }
 
@@ -2304,7 +2308,7 @@ TEST_F(DispatcherTest, GetCurrentDispatcher) {
   }));
 
   ASSERT_OK(got_reply.Wait(zx::time::infinite()));
-  fdf_internal_wait_until_dispatcher_idle(dispatcher2);
+  WaitUntilIdle(dispatcher2);
 }
 
 TEST_F(DispatcherTest, GetCurrentDispatcherShutdownCallback) {
@@ -2380,7 +2384,7 @@ TEST_F(DispatcherTest, HasQueuedTasks) {
   ASSERT_OK(entered_task.Wait());
   ASSERT_FALSE(dispatcher->HasQueuedTasks());
 
-  fdf_internal_wait_until_dispatcher_idle(dispatcher);
+  WaitUntilIdle(dispatcher);
   ASSERT_FALSE(dispatcher->HasQueuedTasks());
 }
 
