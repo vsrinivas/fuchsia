@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {argh::FromArgs, diagnostics_data::Severity, fidl_fuchsia_test_manager::RunBuilderMarker};
+use {
+    argh::FromArgs,
+    diagnostics_data::Severity,
+    fidl_fuchsia_test_manager::{LogsIteratorOption, RunBuilderMarker},
+};
 
 #[derive(FromArgs, Default, PartialEq, Eq, Debug)]
 /// Entry point for executing tests.
@@ -142,7 +146,7 @@ async fn main() {
         },
         experimental_parallel_execution: None,
         accumulate_debug_data: true, // must be true to support coverage via scp
-        log_protocol: None,
+        log_protocol: Some(LogsIteratorOption::ArchiveIterator),
     };
 
     let outcome = run_test_suite_lib::run_tests_and_get_outcome(
