@@ -99,6 +99,9 @@ void GuestInteractionTest::SetUp() {
 
   FX_LOGS(INFO) << "Starting Debian Guest";
   ASSERT_OK(guest_manager_->LaunchGuest(std::move(cfg), guest_.NewRequest(), &res));
+  if (res.is_err()) {
+    FAIL() << "Failed to launch guest with error: " << static_cast<uint32_t>(res.err());
+  }
 
   // Start a GuestConsole.  When the console starts, it waits until it
   // receives some sensible output from the guest to ensure that the guest is
