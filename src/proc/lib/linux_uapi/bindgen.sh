@@ -14,9 +14,25 @@ readonly RAW_LINES="// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![allow(non_snake_case)]
+
 use zerocopy::{AsBytes, FromBytes};
 
-pub use crate::x86_64_types::*;"
+pub use crate::x86_64_types::*;
+
+unsafe impl<Storage> AsBytes for __BindgenBitfieldUnit<Storage>
+where
+    Storage: AsBytes,
+{
+    fn only_derive_is_allowed_to_implement_this_trait() {}
+}
+
+unsafe impl<Storage> FromBytes for __BindgenBitfieldUnit<Storage>
+where
+    Storage: FromBytes,
+{
+    fn only_derive_is_allowed_to_implement_this_trait() {}
+}"
 
 PATH="$PWD/prebuilt/third_party/rust/linux-x64/bin:$PATH" \
 ./prebuilt/third_party/rust_bindgen/linux-x64/bindgen \
@@ -65,5 +81,6 @@ function auto_derive_from_bytes_for() {
 
 auto_derive_from_bytes_for binder_transaction_data
 auto_derive_from_bytes_for flat_binder_object
+auto_derive_from_bytes_for bpf_attr
 
 scripts/fx format-code --files=src/proc/lib/linux_uapi/src/x86_64.rs

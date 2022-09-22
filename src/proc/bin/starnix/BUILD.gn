@@ -111,6 +111,7 @@ if (target_cpu == "x64" && !is_asan) {
 
     sources = [
       "auth.rs",
+      "bpf.rs",
       "collections/mod.rs",
       "collections/range_map.rs",
       "device/binder.rs",

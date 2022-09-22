@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use paste::paste;
-use zerocopy::{AsBytes, FromBytes};
 
 use crate::fs::FdNumber;
 use crate::syscalls::{decls::Syscall, CurrentTask, SyscallResult};
@@ -42,6 +41,7 @@ pub fn dispatch_syscall(
     current_task: &mut CurrentTask,
     syscall: &Syscall,
 ) -> Result<SyscallResult, Errno> {
+    use crate::bpf::*;
     use crate::fs::socket::syscalls::*;
     use crate::fs::syscalls::*;
     use crate::mm::syscalls::*;
@@ -58,6 +58,7 @@ pub fn dispatch_syscall(
         access[2],
         arch_prctl[2],
         bind[3],
+        bpf[3],
         brk[1],
         capget[2],
         capset[2],
@@ -274,8 +275,8 @@ impl_from_syscall_arg! { for FileMode: arg => Self::from_bits(arg as u32) }
 impl_from_syscall_arg! { for DeviceType: arg => Self::from_bits(arg) }
 impl_from_syscall_arg! { for UncheckedSignal: arg => Self::new(arg) }
 
-impl<T: AsBytes + FromBytes> FromSyscallArg for UserRef<T> {
+impl<T> FromSyscallArg for UserRef<T> {
     fn from_arg(arg: u64) -> UserRef<T> {
-        UserRef::<T>::new(UserAddress::from(arg))
+        Self::new(UserAddress::from(arg))
     }
 }

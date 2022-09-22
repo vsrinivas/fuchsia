@@ -17,6 +17,7 @@
 #include <asm/ucontext.h>
 #include <linux/android/binder.h>
 #include <linux/auxvec.h>
+#include <linux/bpf.h>
 #include <linux/capability.h>
 #include <linux/errno.h>
 #include <linux/eventpoll.h>

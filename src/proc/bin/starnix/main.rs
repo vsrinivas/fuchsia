@@ -16,6 +16,7 @@ use futures::{StreamExt, TryStreamExt};
 use std::sync::Arc;
 
 mod auth;
+mod bpf;
 mod collections;
 mod device;
 mod execution;
