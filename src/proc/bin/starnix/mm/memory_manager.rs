@@ -64,6 +64,8 @@ struct Mapping {
     filename: Option<NamespaceNode>,
 
     /// A name associated with the mapping. Set by prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME, ...).
+    /// TODO(tbodt): Investigate whether it's correct to consider this field when merging adjacent
+    /// mappings.
     name: CString,
 }
 
@@ -1092,12 +1094,17 @@ impl MemoryManager {
         name: CString,
     ) -> Result<(), Errno> {
         let mut state = self.state.write();
-        let (range, mapping) = state.mappings.get_mut(&addr).ok_or_else(|| errno!(EINVAL))?;
+        let (range, mapping) = state.mappings.get(&addr).ok_or_else(|| errno!(EINVAL))?;
         if range.end - addr < length {
             return error!(EINVAL);
         }
+        // There's no get_mut on RangeMap, because it would be hard to implement correctly in
+        // combination with merging of adjacent mappings. Instead, make a copy, change the copy,
+        // and insert the copy.
+        let (mut mapping, range) = (mapping.clone(), range.clone());
         let _result = mapping.vmo.set_name(&name);
         mapping.name = name;
+        state.mappings.insert(range, mapping);
         Ok(())
     }
 

@@ -6,7 +6,6 @@ use std::borrow::Borrow;
 use std::cmp::{Eq, Ord, Ordering, PartialOrd};
 use std::collections::BTreeMap;
 use std::iter::Iterator;
-use std::ops::Bound;
 use std::ops::Range;
 
 /// Keys for the map inside RangeMap.
@@ -14,14 +13,12 @@ use std::ops::Range;
 /// This object holds a Range but implements the ordering traits according to
 /// the start of the range. Using this struct lets us store both ends of the
 /// range in the BTreeMap and recover ranges by querying for their start point.
+#[derive(Clone)]
 struct RangeStart<T> {
     range: Range<T>,
 }
 
-impl<T> RangeStart<T>
-where
-    T: Clone,
-{
+impl<T: Clone> RangeStart<T> {
     /// Wrap the given range in a RangeStart.
     ///
     /// Used in the BTreeMap to order the entries by the start of the range but
@@ -38,43 +35,25 @@ where
     }
 }
 
-impl<T> Clone for RangeStart<T>
-where
-    T: Clone,
-{
-    fn clone(&self) -> Self {
-        RangeStart { range: self.range.clone() }
-    }
-}
-
 /// PartialEq according to the start of the Range.
-impl<T> PartialEq for RangeStart<T>
-where
-    T: PartialEq,
-{
+impl<T: PartialEq> PartialEq for RangeStart<T> {
     fn eq(&self, other: &Self) -> bool {
         self.range.start.eq(&other.range.start)
     }
 }
 
 /// Eq according to the start of the Range.
-impl<T> Eq for RangeStart<T> where T: Eq {}
+impl<T: Eq> Eq for RangeStart<T> {}
 
 /// PartialOrd according to the start of the Range.
-impl<T> PartialOrd for RangeStart<T>
-where
-    T: PartialOrd,
-{
+impl<T: Ord> PartialOrd for RangeStart<T> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.range.start.partial_cmp(&other.range.start)
     }
 }
 
 /// Ord according to the start of the Range.
-impl<T> Ord for RangeStart<T>
-where
-    T: Ord,
-{
+impl<T: Ord> Ord for RangeStart<T> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.range.start.cmp(&other.range.start)
     }
@@ -102,7 +81,7 @@ pub struct RangeMap<K, V> {
 impl<K, V> Default for RangeMap<K, V>
 where
     K: Ord + Clone,
-    V: Clone,
+    V: Clone + Eq,
 {
     /// By default, a RangeMap is empty.
     fn default() -> Self {
@@ -113,7 +92,7 @@ where
 impl<K, V> RangeMap<K, V>
 where
     K: Ord + Clone,
-    V: Clone,
+    V: Clone + Eq,
 {
     /// Returns an empty RangeMap.
     pub fn new() -> Self {
@@ -131,20 +110,7 @@ where
     /// associated with empty ranges are dropped.
     pub fn get(&self, point: &K) -> Option<(&Range<K>, &V)> {
         self.map
-            .range((Bound::Unbounded, Bound::Included(RangeStart::from_point(point))))
-            .next_back()
-            .filter(|(k, _)| k.range.contains(point))
-            .map(|(k, v)| (&k.range, v))
-    }
-
-    /// Returns the range (and associated mutable value) that contains the
-    /// given point, if any.
-    ///
-    /// Similar to "get", but the value is returned as a mutable reference,
-    /// which lets the caller modify the value stored in the map.
-    pub fn get_mut(&mut self, point: &K) -> Option<(&Range<K>, &mut V)> {
-        self.map
-            .range_mut((Bound::Unbounded, Bound::Included(RangeStart::from_point(point))))
+            .range(..=RangeStart::from_point(point))
             .next_back()
             .filter(|(k, _)| k.range.contains(point))
             .map(|(k, v)| (&k.range, v))
@@ -159,11 +125,39 @@ where
     /// This method can cause one or more values in the map to be dropped if
     /// the all of the keys associated with those values are contained within
     /// the given range.
-    pub fn insert(&mut self, range: Range<K>, value: V) {
-        if range.start < range.end {
-            self.remove(&range);
-            self.map.insert(RangeStart::new(range), value);
+    ///
+    /// If the inserted range is directly adjacent to another range with an equal value, the
+    /// inserted range will be merged with the adjacent ranges.
+    pub fn insert(&mut self, mut range: Range<K>, value: V) {
+        if range.end <= range.start {
+            return;
         }
+        self.remove(&range);
+
+        // Check for a range directly before this one. If it exists, it will be the last range with
+        // start < range.start.
+        if let Some((prev_range, prev_value)) =
+            self.map.range(..RangeStart::from_point(&range.start)).next_back()
+        {
+            let prev_range = &prev_range.range;
+            if prev_range.end == range.start && &value == prev_value {
+                range.start = prev_range.start.clone();
+                self.remove_exact_range(prev_range.clone());
+            }
+        }
+        // Check for a range directly after. If it exists, we can look it up by exact start value
+        // of range.end.
+        if let Some((next_range, next_value)) =
+            self.map.get_key_value(&RangeStart::from_point(&range.end))
+        {
+            let next_range = &next_range.range;
+            if next_range.start == range.end && &value == next_value {
+                range.end = next_range.end.clone();
+                self.remove_exact_range(next_range.clone());
+            }
+        }
+
+        self.insert_into_empty_range(range, value);
     }
 
     /// Remove the given range from the map.
@@ -188,7 +182,7 @@ where
             self.get(&range.start).map(|(range, v)| (range.clone(), v.clone()))
         {
             // Remove that range from the map.
-            self.remove_exact_range(&old_range);
+            self.remove_exact_range(old_range.clone());
 
             // If the removed range extends after the end of the given range,
             // re-insert the part of the old range that extends beyond the end
@@ -219,16 +213,13 @@ where
         // range.
         if let Some((old_range, v)) = self
             .map
-            .range((
-                Bound::Included(RangeStart::from_point(&range.start)),
-                Bound::Excluded(RangeStart::from_point(&range.end)),
-            ))
+            .range(RangeStart::from_point(&range.start)..RangeStart::from_point(&range.end))
             .next_back()
             .filter(|(k, _)| k.range.contains(&range.end))
             .map(|(k, v)| (k.range.clone(), v.clone()))
         {
             // Remove that range from the map.
-            self.remove_exact_range(&old_range);
+            self.remove_exact_range(old_range.clone());
 
             // If the removed range extends after the end of the given range,
             // re-insert the part of the old range that extends beyond the end
@@ -247,10 +238,7 @@ where
         // during the iteration.
         let doomed: Vec<_> = self
             .map
-            .range((
-                Bound::Included(RangeStart::from_point(&range.start)),
-                Bound::Excluded(RangeStart::from_point(&range.end)),
-            ))
+            .range(RangeStart::from_point(&range.start)..RangeStart::from_point(&range.end))
             .map(|(k, _)| k.clone())
             .collect();
 
@@ -266,9 +254,7 @@ where
 
     /// Iterate over the ranges in the map, starting at the first range starting after or at the given point.
     pub fn iter_starting_at(&self, point: &K) -> impl Iterator<Item = (&Range<K>, &V)> {
-        self.map
-            .range((Bound::Included(RangeStart::from_point(point)), Bound::Unbounded))
-            .map(|(k, value)| (&k.range, value))
+        self.map.range(RangeStart::from_point(point)..).map(|(k, value)| (&k.range, value))
     }
 
     /// Iterate over the ranges in the map that intersect the requested range.
@@ -279,10 +265,7 @@ where
         let range = range.borrow();
         let start = self.get(&range.start).map(|(r, _)| &r.start).unwrap_or(&range.start);
         self.map
-            .range((
-                Bound::Included(RangeStart::from_point(start)),
-                Bound::Excluded(RangeStart::from_point(&range.end)),
-            ))
+            .range(RangeStart::from_point(start)..RangeStart::from_point(&range.end))
             .map(|(k, value)| (&k.range, value))
     }
 
@@ -298,8 +281,8 @@ where
     ///
     /// Callers must ensure that the exact range provided as an argument is
     /// contained in the map.
-    fn remove_exact_range(&mut self, range: &Range<K>) {
-        self.map.remove(&RangeStart::new(range.clone()));
+    fn remove_exact_range(&mut self, range: Range<K>) {
+        self.map.remove(&RangeStart::new(range));
     }
 }
 
@@ -326,7 +309,6 @@ mod test {
 
         assert_eq!((&(10..34), &-14), map.get(&12).unwrap());
         assert_eq!((&(10..34), &-14), map.get(&10).unwrap());
-        assert_eq!((&(10..34), &mut -14), map.get_mut(&10).unwrap());
         assert!(map.get(&9).is_none());
         assert_eq!((&(10..34), &-14), map.get(&33).unwrap());
         assert!(map.get(&34).is_none());
@@ -467,5 +449,26 @@ mod test {
         assert_eq!(iter.next(), Some((&(1..2), &-20)));
         assert_eq!(iter.next(), Some((&(2..3), &-30)));
         assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn test_merging() {
+        let mut map = RangeMap::<u32, i32>::new();
+
+        map.insert(1..2, -10);
+        assert_eq!(map.iter().collect::<Vec<_>>(), vec![(&(1..2), &-10)]);
+        map.insert(3..4, -10);
+        assert_eq!(map.iter().collect::<Vec<_>>(), vec![(&(1..2), &-10), (&(3..4), &-10)]);
+        map.insert(2..3, -10);
+        assert_eq!(map.iter().collect::<Vec<_>>(), vec![(&(1..4), &-10)]);
+        map.insert(0..1, -10);
+        assert_eq!(map.iter().collect::<Vec<_>>(), vec![(&(0..4), &-10)]);
+        map.insert(4..5, -10);
+        assert_eq!(map.iter().collect::<Vec<_>>(), vec![(&(0..5), &-10)]);
+        map.insert(2..3, -20);
+        assert_eq!(
+            map.iter().collect::<Vec<_>>(),
+            vec![(&(0..2), &-10), (&(2..3), &-20), (&(3..5), &-10)]
+        );
     }
 }
