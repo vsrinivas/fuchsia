@@ -26,6 +26,12 @@ where
         Self { map: HashMap::new(), node }
     }
 
+    /// Returns a reference to the underlying map. Clients should not insert values into the
+    /// map through this reference.
+    pub fn map(&self) -> &HashMap<String, V> {
+        &self.map
+    }
+
     /// Returns a mutable reference to the underlying map. Clients should not insert values into the
     /// map through this reference.
     pub fn map_mut(&mut self) -> &mut HashMap<String, V> {
@@ -39,6 +45,23 @@ where
         let value_with_inspect =
             value.with_inspect(&self.node, &key).expect("Failed to attach new map entry");
         self.map.insert(key, value_with_inspect)
+    }
+
+    /// Inserts the given value into the map and attaches it to the inspect tree with a different
+    /// name. Returns the previous value with the given map key, if any.
+    ///
+    /// This is useful for cases where the unique key for the map is not useful for actually
+    /// recording to inspect.
+    pub fn insert_with_property_name(
+        &mut self,
+        map_key: String,
+        property_name: String,
+        value: V,
+    ) -> Option<V> {
+        // `with_inspect` will only return an error on types with interior mutability.
+        let value_with_inspect =
+            value.with_inspect(&self.node, &property_name).expect("Failed to attach new map entry");
+        self.map.insert(map_key, value_with_inspect)
     }
 
     /// Returns a mutable reference to the value at the given key, inserting a value if not present.
@@ -125,6 +148,36 @@ mod tests {
         assert_data_tree!(inspector, root: {
             managed_node: {
                 "key2": "value2"
+            }
+        });
+    }
+
+    // Tests that inserting items with a different property name shows the intended property name in
+    // inspect.
+    #[test]
+    fn test_map_insert_with_property_name() {
+        let inspector = Inspector::new();
+
+        let mut map = ManagedInspectMap::<IValue<String>>::with_node(
+            inspector.root().create_child("managed_node"),
+        );
+
+        let _ = map.insert_with_property_name(
+            "key1".to_string(),
+            "property_name_1".to_string(),
+            "value1".to_string().into(),
+        );
+
+        // This will overwrite the previous insert due to using the same map key.
+        let _ = map.insert_with_property_name(
+            "key1".to_string(),
+            "property_name_2".to_string(),
+            "value2".to_string().into(),
+        );
+
+        assert_data_tree!(inspector, root: {
+            managed_node: {
+                "property_name_2": "value2"
             }
         });
     }

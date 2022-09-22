@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 //! The inspect mod defines the [SettingProxyInspectAgent], which is responsible for logging
-//! relevant service activity to Inspect. Since this activity might happen
-//! before agent lifecycle states are communicated (due to agent priority
-//! ordering), the [SettingProxyInspectAgent] begins listening to requests immediately
-//! after creation.
+//! the contents of requests and responses, as well as timestamps and counts to Inspect. Since this
+//! activity might happen before agent lifecycle states are communicated (due to agent priority
+//! ordering), the [SettingProxyInspectAgent] begins listening to requests immediately after
+//! creation.
 //!
 //! [SettingProxyInspectAgent]: inspect::SettingProxyInspectAgent
 
@@ -22,14 +22,15 @@ use crate::message::receptor::Receptor;
 use crate::service::TryFromWithClient;
 use crate::{service, trace};
 use settings_inspect_utils::inspect_writable_map::InspectWritableMap;
+use settings_inspect_utils::joinable_inspect_vecdeque::JoinableInspectVecDeque;
+use settings_inspect_utils::managed_inspect_map::ManagedInspectMap;
 use settings_inspect_utils::managed_inspect_queue::ManagedInspectQueue;
 
 use fuchsia_async as fasync;
-use fuchsia_inspect::{self as inspect, component, NumericProperty, Property};
+use fuchsia_inspect::{self as inspect, component, NumericProperty};
 use fuchsia_inspect_derive::{IValue, Inspect, WithInspect};
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
-
 use std::sync::Arc;
 
 blueprint_definition!(
@@ -37,32 +38,22 @@ blueprint_definition!(
     crate::agent::inspect::setting_proxy::SettingProxyInspectAgent::create
 );
 
-const INSPECT_REQUESTS_COUNT: usize = 15;
+/// The maximum number of pending requests to store in inspect per setting. There should generally
+/// be fairly few of these unless a setting is changing rapidly, so a slightly larger size allows us
+/// to avoid dropping requests.
+const MAX_PENDING_REQUESTS: usize = 20;
 
-/// Information about a setting to be written to inspect.
-#[derive(Default, Inspect)]
-struct SettingTypeInspectInfo {
-    /// Map from the name of the Request variant to a RequestInspectInfo that holds a list of
-    /// recent requests.
-    requests_by_type: InspectWritableMap<ManagedInspectQueue<RequestInspectInfo>>,
+/// The maximum number of unique request + response pairs to store per request type in each setting.
+const MAX_REQUEST_RESPONSE_PAIRS: usize = 10;
 
-    /// Incrementing count for all requests of this setting type.
-    ///
-    /// Count is used across all request types to easily see the order that requests occurred in.
-    #[inspect(skip)]
-    count: u64,
+/// The maximum number of request or response timestamps to store per request + response pair.
+const MAX_REQUEST_RESPONSE_TIMESTAMPS: usize = 10;
 
-    /// Node of this info.
-    inspect_node: inspect::Node,
-}
+/// Name of the top-level node under root used to store the contents of requests and responses.
+const REQUEST_RESPONSE_NODE_NAME: &str = "requests_and_responses";
 
-impl SettingTypeInspectInfo {
-    fn new(node: &inspect::Node, key: &str) -> Self {
-        Self::default()
-            .with_inspect(node, key)
-            .expect("Failed to create SettingTypeInspectInfo node")
-    }
-}
+/// Name of the top-level node under root used to store request counts.
+const RESPONSE_COUNTS_NODE_NAME: &str = "response_counts";
 
 #[derive(Default, Inspect)]
 /// Information about response counts to be written to inspect.
@@ -71,14 +62,6 @@ struct SettingTypeResponseCountInfo {
     /// of occurrences of that response.
     response_counts_by_type: InspectWritableMap<ResponseTypeCount>,
     inspect_node: inspect::Node,
-}
-
-impl SettingTypeResponseCountInfo {
-    fn new(node: &inspect::Node, key: &str) -> Self {
-        Self::default()
-            .with_inspect(node, key)
-            .expect("Failed to create SettingTypeResponseCountInfo node")
-    }
 }
 
 #[derive(Default, Inspect)]
@@ -94,80 +77,138 @@ impl ResponseTypeCount {
     }
 }
 
-/// Information about a request to be written to inspect.
-#[derive(Debug, Default, Inspect)]
-struct RequestInspectInfo {
-    /// Debug string representation of this Request. Must be an IValue in order
-    /// to be properly attached by inspect utils.
-    request: IValue<String>,
+/// Inspect information on the requests and responses of one setting.
+#[derive(Inspect)]
+struct SettingTypeRequestResponseInfo {
+    /// Map from request type to a map containing [RequestResponsePairInfo].
+    ///
+    /// The first-level map's keys are the enum variant names from [Request::to_inspect], to allow
+    /// different request types to be recorded separately. The second-level map's keys are the
+    /// concatenation of the debug representation of the request and response and holds up to
+    /// [REQUEST_RESPONSE_COUNT] of the most recently seen unique request + response pairs.
+    #[inspect(rename = "requests_and_responses")]
+    requests_and_responses_by_type: ManagedInspectMap<ManagedInspectMap<RequestResponsePairInfo>>,
 
-    /// Milliseconds since creation that this request arrived. Must be an IValue in order
-    /// to be properly attached by inspect utils.
-    request_timestamp: IValue<String>,
+    /// Queue of pending requests that have been sent but have not received a response yet.
+    pending_requests: ManagedInspectQueue<PendingRequestInspectInfo>,
 
-    /// Debug string representation of a corresponding Response.
-    response: inspect::StringProperty,
-
-    /// Milliseconds since creation that this response is recorded to the inspect.
-    response_timestamp: inspect::StringProperty,
-
-    /// Node of this info.
+    /// Inspect node to which this setting's data is written.
     inspect_node: inspect::Node,
 
-    /// A string that links request and response. The value is the request_timestamp.
+    /// Incrementing count for all requests of this setting type.
+    ///
+    /// The same counter is used across all request types to easily see the order that requests
+    /// occurred in.
     #[inspect(skip)]
-    link_str_request_timestamp: String,
+    count: u64,
 }
 
-impl RequestInspectInfo {
-    fn new(request: String, timestamp: String) -> Self {
-        let mut info = Self::default();
-        info.request.iset(request);
-        info.request_timestamp.iset(timestamp.clone());
-        info.link_str_request_timestamp = timestamp;
-        info
+impl SettingTypeRequestResponseInfo {
+    fn new() -> Self {
+        Self {
+            requests_and_responses_by_type: Default::default(),
+            pending_requests: ManagedInspectQueue::<PendingRequestInspectInfo>::new(
+                MAX_PENDING_REQUESTS,
+            ),
+            inspect_node: Default::default(),
+            count: 0,
+        }
     }
 }
 
-/// Store linking information about a response and its request.
-struct RequestResponseLinkInfo {
-    /// The setting type of a request.
-    setting_type: SettingType,
+/// Information to be written to inspect about a request that has not yet received a response.
+#[derive(Debug, Default, Inspect)]
+struct PendingRequestInspectInfo {
+    /// Debug string representation of the request.
+    request: IValue<String>,
 
-    /// The Request variant for inspect.
-    key: String,
+    /// The request type of the request, from [Request::to_inspect]. Used to bucket by request type
+    /// when recording responses.
+    #[inspect(skip)]
+    request_type: String,
 
-    /// The linking string to link response and its request using request timestamp.
-    link_str_request_timestamp: String,
+    /// Time this request was sent, in milliseconds of uptime. Uses the system monotonic clock
+    /// (zx_clock_get_monotonic).
+    timestamp: IValue<String>,
+
+    /// Request count within the setting for this request.
+    #[inspect(skip)]
+    count: u64,
+
+    /// Inspect node this request will be recorded at.
+    inspect_node: inspect::Node,
+}
+
+/// Information about a request and response pair to be written to inspect.
+///
+/// Timestamps are recorded upon receiving a response, so [request_timestamp] and
+/// [response_timestamp] will always be the same length and the timestamps at index N of each array
+/// belong to the same request + response round trip.
+#[derive(Default, Inspect)]
+struct RequestResponsePairInfo {
+    /// Debug string representation of the request.
+    request: IValue<String>,
+
+    /// Debug string representation of the response.
+    response: IValue<String>,
+
+    /// Request count of the most recently received request + response.
+    #[inspect(skip)]
+    request_count: u64,
+
+    /// List of timestamps at which this request was seen.
+    ///
+    /// Timestamps are recorded as milliseconds of system uptime. Uses the system monotonic clock
+    /// (zx_clock_get_monotonic).
+    request_timestamps: IValue<JoinableInspectVecDeque>,
+
+    /// List of timestamps at which this response was seen.
+    ///
+    /// Timestamps are recorded as milliseconds of system uptime. Uses the system monotonic clock
+    /// (zx_clock_get_monotonic).
+    response_timestamps: IValue<JoinableInspectVecDeque>,
+
+    /// Inspect node at which this info is stored.
+    inspect_node: inspect::Node,
+}
+
+impl RequestResponsePairInfo {
+    fn new(request: String, response: String, count: u64) -> Self {
+        Self {
+            request: IValue::new(request),
+            response: IValue::new(response),
+            request_count: count,
+            request_timestamps: Default::default(),
+            response_timestamps: Default::default(),
+            inspect_node: Default::default(),
+        }
+    }
 }
 
 /// The SettingProxyInspectAgent is responsible for listening to requests to the setting
-/// handlers and recording the requests to Inspect.
+/// handlers and recording the requests and responses to Inspect.
 pub(crate) struct SettingProxyInspectAgent {
-    inspect_node: inspect::Node,
-    /// Inspect node for the response type accumulation counts.
-    response_counts_node: inspect::Node,
-    /// Last requests for inspect to save.
-    last_requests: InspectWritableMap<SettingTypeInspectInfo>,
     /// Response type accumulation info.
-    response_counts: InspectWritableMap<SettingTypeResponseCountInfo>,
+    response_counts: ManagedInspectMap<SettingTypeResponseCountInfo>,
+
+    /// Information for each setting on requests and responses.
+    setting_request_response_info: ManagedInspectMap<SettingTypeRequestResponseInfo>,
 }
 
 impl SettingProxyInspectAgent {
     async fn create(context: Context) {
-        // TODO(fxbug.dev/71295): Rename child node as switchboard is no longer in use.
         Self::create_with_node(
             context,
-            component::inspector().root().create_child("switchboard"),
-            component::inspector().root().create_child("response_counts"),
+            component::inspector().root().create_child(REQUEST_RESPONSE_NODE_NAME),
+            component::inspector().root().create_child(RESPONSE_COUNTS_NODE_NAME),
         )
         .await;
     }
 
     async fn create_with_node(
         context: Context,
-        node: inspect::Node,
-        request_counts_node: inspect::Node,
+        request_response_inspect_node: inspect::Node,
+        response_counts_node: inspect::Node,
     ) {
         let (_, message_rx) = context
             .delegate
@@ -184,10 +225,13 @@ impl SettingProxyInspectAgent {
             .expect("should receive client");
 
         let mut agent = SettingProxyInspectAgent {
-            inspect_node: node,
-            response_counts_node: request_counts_node,
-            last_requests: InspectWritableMap::<SettingTypeInspectInfo>::new(),
-            response_counts: InspectWritableMap::<SettingTypeResponseCountInfo>::new(),
+            response_counts: ManagedInspectMap::<SettingTypeResponseCountInfo>::with_node(
+                response_counts_node,
+            ),
+            setting_request_response_info:
+                ManagedInspectMap::<SettingTypeRequestResponseInfo>::with_node(
+                    request_response_inspect_node,
+                ),
         };
 
         fasync::Task::spawn({
@@ -209,23 +253,23 @@ impl SettingProxyInspectAgent {
                             id,
                             "message_event"
                         );
-                        if let Some((link_info, mut reply_receptor)) =
+                        if let Some((setting_type, count, mut reply_receptor)) =
                             agent.process_message_event(message_event) {
                                 unordered.push(async move {
                                     let payload = reply_receptor.next_payload().await;
-                                    (link_info, payload)
+                                    (setting_type, count, payload)
                                 });
                         };
                     },
                     reply = unordered.select_next_some() => {
-                        let (link_info, payload) = reply;
+                        let (setting_type, count, payload) = reply;
                         if let Ok((
                             service::Payload::Setting(
                                 HandlerPayload::Response(response)),
                             _,
                         )) = payload
                         {
-                            agent.record_response(link_info, response);
+                            agent.record_response(setting_type, count, response);
                         }
                     },
                     agent_message = agent_event.select_next_some() => {
@@ -252,10 +296,8 @@ impl SettingProxyInspectAgent {
     fn process_message_event(
         &mut self,
         event: service::message::MessageEvent,
-    ) -> Option<(
-        RequestResponseLinkInfo,
-        Receptor<service::Payload, service::Address, service::Role>,
-    )> {
+    ) -> Option<(SettingType, u64, Receptor<service::Payload, service::Address, service::Role>)>
+    {
         if let Ok((HandlerPayload::Request(request), mut client)) =
             HandlerPayload::try_from_with_client(event)
         {
@@ -264,17 +306,12 @@ impl SettingProxyInspectAgent {
                     setting_type,
                 )) = target
                 {
-                    let link_str_request_timestamp = self.record_request(setting_type, &request);
                     // A Listen request will always send a Get request. We can always get the Get's
                     // response. However, Listen will return the Get's response only when it is
                     // considered updated. Therefore, we ignore Listen response.
                     if request != Request::Listen {
-                        let response_info = RequestResponseLinkInfo {
-                            setting_type,
-                            key: request.for_inspect().to_string(),
-                            link_str_request_timestamp,
-                        };
-                        return Some((response_info, client.spawn_observer()));
+                        let count = self.record_request(setting_type, request);
+                        return Some((setting_type, count, client.spawn_observer()));
                     }
                 }
             }
@@ -282,53 +319,147 @@ impl SettingProxyInspectAgent {
         None
     }
 
-    /// Write a request to inspect.
-    fn record_request(&mut self, setting_type: SettingType, request: &Request) -> String {
-        let inspect_node = &self.inspect_node;
+    /// Writes a pending request to inspect.
+    ///
+    /// Returns the request count of this request.
+    fn record_request(&mut self, setting_type: SettingType, request: Request) -> u64 {
         let setting_type_str = format!("{:?}", setting_type);
-        let setting_type_info =
-            self.last_requests.get_or_insert_with(setting_type_str.clone(), || {
-                SettingTypeInspectInfo::new(inspect_node, &setting_type_str)
-            });
-
-        let key = request.for_inspect();
-        let inspect_queue_node = setting_type_info.inspect_node.create_child(key);
-        let inspect_queue =
-            setting_type_info.requests_by_type.get_or_insert_with(key.to_string(), || {
-                ManagedInspectQueue::<RequestInspectInfo>::with_node(
-                    inspect_queue_node,
-                    INSPECT_REQUESTS_COUNT,
-                )
-            });
-
-        let count = setting_type_info.count;
-        setting_type_info.count += 1;
-
         let timestamp = clock::inspect_format_now();
-        inspect_queue.push(
-            &format!("{:020}", count),
-            RequestInspectInfo::new(format!("{:?}", request), timestamp.clone()),
-        );
 
-        timestamp
+        // Get or create the info for this setting type.
+        let request_response_info = self
+            .setting_request_response_info
+            .get_or_insert_with(setting_type_str, SettingTypeRequestResponseInfo::new);
+
+        let request_count = request_response_info.count;
+        request_response_info.count += 1;
+
+        let pending_request_info = PendingRequestInspectInfo {
+            request: format!("{:?}", request).into(),
+            request_type: request.for_inspect().to_string(),
+            timestamp: timestamp.into(),
+            count: request_count,
+            inspect_node: inspect::Node::default(),
+        };
+
+        let count_key = format!("{:020}", request_count);
+        request_response_info.pending_requests.push(&count_key, pending_request_info);
+
+        request_count
     }
 
-    /// Write a response to inspect.
+    /// Writes a response to inspect, matching it up with an already recorded request + response
+    /// pair if possible.
     fn record_response(
         &mut self,
-        link_info: RequestResponseLinkInfo,
+        setting_type: SettingType,
+        count: u64,
         response: Result<Option<SettingInfo>, Error>,
     ) {
-        // Extract the setting type.
-        let setting_type = format!("{:?}", &link_info.setting_type);
+        let setting_type_str = format!("{:?}", setting_type);
+        let timestamp = clock::inspect_format_now();
 
+        // Update the response counter.
+        self.increment_response_count(setting_type_str.clone(), &response);
+
+        // Find the inspect data for this setting. This should always be present as it's created
+        // upon receiving a request, which should happen before the response is recorded.
+        let condensed_setting_type_info = self
+            .setting_request_response_info
+            .map_mut()
+            .get_mut(&setting_type_str)
+            .expect("Missing info for request");
+
+        let pending_requests = &mut condensed_setting_type_info.pending_requests;
+
+        // Find the position of the pending request with the same request count and remove it. This
+        // should generally be the first pending request in the queue if requests are being answered
+        // in order.
+        let position = match pending_requests.iter_mut().position(|info| info.count == count) {
+            Some(position) => position,
+            None => {
+                // We may be unable to find a matching request if requests are piling up faster than
+                // responses, as the number of pending requests is limited.
+                return;
+            }
+        };
+        let pending =
+            pending_requests.items_mut().remove(position).expect("Failed to find pending item");
+
+        // Find the info for this particular request type.
+        let request_type_info_map = condensed_setting_type_info
+            .requests_and_responses_by_type
+            .get_or_insert_with(pending.request_type, || {
+                ManagedInspectMap::<RequestResponsePairInfo>::default()
+            });
+
+        // Request and response pairs are keyed by the concatenation of the request and response,
+        // which uniquely identifies them within a setting.
+        let map_key = format!("{:?}{:?}", pending.request, response);
+
+        // Find this request + response pair in the map and remove it, if it's present. While the
+        // map key is the request + response concatenated, the key displayed in inspect is the
+        // newest request count for that pair. We remove the map entry if it exists so that we can
+        // re-insert to update the key displayed in inspect.
+        let removed_info = request_type_info_map.map_mut().remove(&map_key);
+
+        let response_str = format!("{:?}", response);
+        let mut info = removed_info.unwrap_or_else(|| {
+            RequestResponsePairInfo::new(pending.request.into_inner(), response_str, pending.count)
+        });
+        {
+            // Update the request and response timestamps. We have borrow from the IValues with
+            // as_mut and drop the variables after this scope ends so that the IValues will know to
+            // update the values in inspect.
+            let mut_requests = &mut info.request_timestamps.as_mut().0;
+            let mut_responses = &mut info.response_timestamps.as_mut().0;
+
+            mut_requests.push_back(pending.timestamp.into_inner());
+            mut_responses.push_back(timestamp);
+
+            // If there are too many timestamps, remove earlier ones.
+            if mut_requests.len() > MAX_REQUEST_RESPONSE_TIMESTAMPS {
+                let _ = mut_requests.pop_front();
+            }
+            if mut_responses.len() > MAX_REQUEST_RESPONSE_TIMESTAMPS {
+                let _ = mut_responses.pop_front();
+            }
+        }
+
+        // Insert into the map, but display the key in inspect as the request count.
+        let count_key = format!("{:020}", pending.count);
+        let _ = request_type_info_map.insert_with_property_name(map_key, count_key, info);
+
+        // If there are too many entries, find and remove the oldest.
+        let num_request_response_pairs = request_type_info_map.map().len();
+        if num_request_response_pairs > MAX_REQUEST_RESPONSE_PAIRS {
+            // Find the item with the lowest request count, which means it was the oldest request
+            // received.
+            let mut lowest_count: u64 = u64::MAX;
+            let mut lowest_key: Option<String> = None;
+            for (key, inspect_info) in request_type_info_map.map() {
+                if inspect_info.request_count < lowest_count {
+                    lowest_count = inspect_info.request_count;
+                    lowest_key = Some(key.clone());
+                }
+            }
+
+            if let Some(key_to_remove) = lowest_key {
+                let _ = request_type_info_map.map_mut().remove(&key_to_remove);
+            }
+        }
+    }
+
+    fn increment_response_count(
+        &mut self,
+        setting_type_str: String,
+        response: &Result<Option<SettingInfo>, Error>,
+    ) {
         // Get the response count info for the setting type, creating a new info object
         // if it doesn't exist in the map yet.
-        let response_counts_node = &self.response_counts_node;
-        let response_count_info =
-            self.response_counts.get_or_insert_with(setting_type.clone(), || {
-                SettingTypeResponseCountInfo::new(response_counts_node, &setting_type)
-            });
+        let response_count_info = self
+            .response_counts
+            .get_or_insert_with(setting_type_str, SettingTypeResponseCountInfo::default);
 
         // Get the count for the response type, creating a new count if it doesn't exist
         // in the map yet, then increment the response count
@@ -341,28 +472,6 @@ impl SettingProxyInspectAgent {
                 ResponseTypeCount::new(response_count_info_node, &response_type_str)
             });
         response_count.count.add(1u64);
-
-        // Get the requests object for the setting type.
-        let setting_type_info = self
-            .last_requests
-            .get_mut(&format!("{:?}", &link_info.setting_type))
-            .expect("Should find a SettingTypeInspectInfo node to record the response.");
-
-        // Get the latest requests for the request type.
-        let request_info_queue = setting_type_info
-            .requests_by_type
-            .get_mut(&link_info.key)
-            .expect("Should find a RequestInspectInfo to record the response.");
-
-        // The match should be the last item in the queue if a response replies back immediately.
-        for request in request_info_queue.iter_mut().rev() {
-            if request.link_str_request_timestamp == link_info.link_str_request_timestamp {
-                // Set the response information corresponding to the request.
-                request.response.set(&format!("{:?}", &response));
-                request.response_timestamp.set(&clock::inspect_format_now());
-                return;
-            }
-        }
     }
 }
 
@@ -373,9 +482,8 @@ mod tests {
     use crate::intl::types::{IntlInfo, LocaleId, TemperatureUnit};
     use crate::message::MessageHubUtil;
     use crate::service;
-
     use fuchsia_inspect::assert_data_tree;
-    use fuchsia_inspect::testing::{AnyProperty, TreeAssertion};
+    use fuchsia_inspect::testing::TreeAssertion;
     use fuchsia_zircon::Time;
     use std::collections::HashSet;
 
@@ -391,7 +499,12 @@ mod tests {
             RequestProcessor { delegate }
         }
 
-        async fn send_and_receive(&self, setting_type: SettingType, setting_request: Request) {
+        async fn send_request(
+            &self,
+            setting_type: SettingType,
+            setting_request: Request,
+            should_reply: bool,
+        ) {
             let (messenger, _) =
                 self.delegate.create(MessengerType::Unbound).await.expect("should be created");
 
@@ -410,10 +523,16 @@ mod tests {
 
             if let Some(message_event) = futures::StreamExt::next(&mut receptor).await {
                 if let Ok((_, reply_client)) = HandlerPayload::try_from_with_client(message_event) {
-                    reply_client.reply(HandlerPayload::Response(Ok(None)).into()).send().ack();
+                    if should_reply {
+                        reply_client.reply(HandlerPayload::Response(Ok(None)).into()).send().ack();
+                    }
                 }
             }
             let _ = reply_receptor.next_payload().await;
+        }
+
+        async fn send_and_receive(&self, setting_type: SettingType, setting_request: Request) {
+            self.send_request(setting_type, setting_request, true).await;
         }
     }
 
@@ -432,22 +551,24 @@ mod tests {
         .await
     }
 
+    // Verifies that request + response pairs with the same value and request type are grouped
+    // together.
     #[fuchsia_async::run_until_stalled(test)]
-    async fn test_inspect() {
+    async fn test_inspect_grouped_responses() {
         // Set the clock so that timestamps can be controlled.
         clock::mock::set(Time::from_nanos(0));
 
         let inspector = inspect::Inspector::new();
-        let inspect_node = inspector.root().create_child("switchboard");
-        let response_counts_node = inspector.root().create_child("response_counts");
+        let condense_node = inspector.root().create_child(REQUEST_RESPONSE_NODE_NAME);
+        let response_counts_node = inspector.root().create_child(RESPONSE_COUNTS_NODE_NAME);
         let context = create_context().await;
 
         let request_processor = RequestProcessor::new(context.delegate.clone());
 
-        SettingProxyInspectAgent::create_with_node(context, inspect_node, response_counts_node)
+        SettingProxyInspectAgent::create_with_node(context, condense_node, response_counts_node)
             .await;
 
-        // Send a few requests to make sure they get written to inspect properly.
+        // Send a request to turn off auto brightness.
         let turn_off_auto_brightness = Request::SetDisplayInfo(SetDisplayInfo {
             auto_brightness: Some(false),
             ..SetDisplayInfo::default()
@@ -456,100 +577,82 @@ mod tests {
             .send_and_receive(SettingType::Display, turn_off_auto_brightness.clone())
             .await;
 
-        // Set to a different time so that a response can correctly link to its request.
+        // Increment clock and send a request to turn on auto brightness.
         clock::mock::set(Time::from_nanos(100));
-        request_processor.send_and_receive(SettingType::Display, turn_off_auto_brightness).await;
-
-        // Set to a different time so that a response can correctly link to its request.
-        clock::mock::set(Time::from_nanos(200));
         request_processor
             .send_and_receive(
-                SettingType::Intl,
-                Request::SetIntlInfo(IntlInfo {
-                    locales: Some(vec![LocaleId { id: "en-US".to_string() }]),
-                    temperature_unit: Some(TemperatureUnit::Celsius),
-                    time_zone_id: Some("UTC".to_string()),
-                    hour_cycle: None,
+                SettingType::Display,
+                Request::SetDisplayInfo(SetDisplayInfo {
+                    auto_brightness: Some(true),
+                    ..SetDisplayInfo::default()
                 }),
             )
             .await;
 
-        assert_data_tree!(inspector, root: {
-            switchboard: {
+        // Increment clock and send the same request as the first one. The two should be grouped
+        // together.
+        clock::mock::set(Time::from_nanos(200));
+        request_processor.send_and_receive(SettingType::Display, turn_off_auto_brightness).await;
+
+        assert_data_tree!(inspector, root: contains {
+            requests_and_responses: {
                 "Display": {
-                    "SetDisplayInfo": {
-                        "00000000000000000000": {
-                            request: "SetDisplayInfo(SetDisplayInfo { \
-                                manual_brightness_value: None, \
-                                auto_brightness_value: None, \
-                                auto_brightness: Some(false), \
-                                screen_enabled: None, \
-                                low_light_mode: None, \
-                                theme: None \
-                            })",
-                            request_timestamp: "0.000000000",
-                            response: "Ok(None)",
-                            response_timestamp: "0.000000000",
-                        },
-                        "00000000000000000001": {
-                            request: "SetDisplayInfo(SetDisplayInfo { \
-                                manual_brightness_value: None, \
-                                auto_brightness_value: None, \
-                                auto_brightness: Some(false), \
-                                screen_enabled: None, \
-                                low_light_mode: None, \
-                                theme: None \
-                            })",
-                            request_timestamp: "0.000000100",
-                            response: "Ok(None)",
-                            response_timestamp: "0.000000100",
-                        },
-                    },
-                },
-                "Intl": {
-                    "SetIntlInfo": {
-                        "00000000000000000000": {
-                            request: "SetIntlInfo(IntlInfo { \
-                                locales: Some([LocaleId { id: \"en-US\" }]), \
-                                temperature_unit: Some(Celsius), \
-                                time_zone_id: Some(\"UTC\"), \
-                                hour_cycle: None })",
-                            request_timestamp: "0.000000200",
-                            response: "Ok(None)",
-                            response_timestamp: "0.000000200",
+                    "pending_requests": {},
+                    "requests_and_responses": {
+                        "SetDisplayInfo": {
+                            "00000000000000000001": {
+                                "request": "SetDisplayInfo(SetDisplayInfo { \
+                                    manual_brightness_value: None, \
+                                    auto_brightness_value: None, \
+                                    auto_brightness: Some(true), \
+                                    screen_enabled: None, \
+                                    low_light_mode: None, \
+                                    theme: None \
+                                })",
+                                "request_timestamps": "0.000000100",
+                                "response": "Ok(None)",
+                                "response_timestamps": "0.000000100"
+                            },
+                            "00000000000000000002": {
+                                "request": "SetDisplayInfo(SetDisplayInfo { \
+                                    manual_brightness_value: None, \
+                                    auto_brightness_value: None, \
+                                    auto_brightness: Some(false), \
+                                    screen_enabled: None, \
+                                    low_light_mode: None, \
+                                    theme: None \
+                                })",
+                                "request_timestamps": "0.000000000,0.000000200",
+                                "response": "Ok(None)",
+                                "response_timestamps": "0.000000000,0.000000200"
+                            }
                         }
-                    },
-                }
-            },
-            response_counts: {
-                "Display": {
-                    "OkNone": {
-                        count: 2u64,
-                    },
-                },
-                "Intl": {
-                    "OkNone": {
-                        count: 1u64,
-                    },
+                    }
                 }
             },
         });
     }
 
+    // Test that multiple requests of different request types for the same setting records the
+    // correct inspect data.
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_inspect_mixed_request_types() {
         // Set the clock so that timestamps can be controlled.
         clock::mock::set(Time::from_nanos(0));
 
         let inspector = inspect::Inspector::new();
-        let inspect_node = inspector.root().create_child("switchboard");
-        let response_counts_node = inspector.root().create_child("response_counts");
+        let condense_node = inspector.root().create_child(REQUEST_RESPONSE_NODE_NAME);
+        let response_counts_node = inspector.root().create_child(RESPONSE_COUNTS_NODE_NAME);
         let context = create_context().await;
 
         let request_processor = RequestProcessor::new(context.delegate.clone());
 
-        SettingProxyInspectAgent::create_with_node(context, inspect_node, response_counts_node)
-            .await;
+        let _agent = SettingProxyInspectAgent::create_with_node(
+            context,
+            condense_node,
+            response_counts_node,
+        )
+        .await;
 
         // Interlace different request types to make sure the counter is correct.
         request_processor
@@ -581,52 +684,49 @@ mod tests {
         clock::mock::set(Time::from_nanos(300));
         request_processor.send_and_receive(SettingType::Display, Request::Get).await;
 
-        assert_data_tree!(inspector, root: {
-            switchboard: {
+        assert_data_tree!(inspector, root: contains {
+            requests_and_responses: {
                 "Display": {
-                    "SetDisplayInfo": {
-                        "00000000000000000000": {
-                            request: "SetDisplayInfo(SetDisplayInfo { \
-                                manual_brightness_value: None, \
-                                auto_brightness_value: None, \
-                                auto_brightness: Some(false), \
-                                screen_enabled: None, \
-                                low_light_mode: None, \
-                                theme: None \
-                            })",
-                            request_timestamp: "0.000000000",
-                            response: "Ok(None)",
-                            response_timestamp: "0.000000000",
+                    "pending_requests": {},
+                    "requests_and_responses": {
+                        "Get": {
+                            "00000000000000000003": {
+                                "request": "Get",
+                                "request_timestamps": "0.000000100,0.000000300",
+                                "response": "Ok(None)",
+                                "response_timestamps": "0.000000100,0.000000300"
+                            }
                         },
-                        "00000000000000000002": {
-                            request: "SetDisplayInfo(SetDisplayInfo { \
-                                manual_brightness_value: None, \
-                                auto_brightness_value: None, \
-                                auto_brightness: Some(true), \
-                                screen_enabled: None, \
-                                low_light_mode: None, \
-                                theme: None \
-                            })",
-                            request_timestamp: "0.000000200",
-                            response: "Ok(None)",
-                            response_timestamp: "0.000000200",
-                        },
-                    },
-                    "Get": {
-                        "00000000000000000001": {
-                            request: "Get",
-                            request_timestamp: "0.000000100",
-                            response: "Ok(None)",
-                            response_timestamp: "0.000000100",
-                        },
-                        "00000000000000000003": {
-                            request: "Get",
-                            request_timestamp: "0.000000300",
-                            response: "Ok(None)",
-                            response_timestamp: "0.000000300",
-                        },
-                    },
-                },
+                        "SetDisplayInfo": {
+                            "00000000000000000000": {
+                                "request": "SetDisplayInfo(SetDisplayInfo { \
+                                    manual_brightness_value: None, \
+                                    auto_brightness_value: None, \
+                                    auto_brightness: Some(false), \
+                                    screen_enabled: None, \
+                                    low_light_mode: None, \
+                                    theme: None \
+                                })",
+                                  "request_timestamps": "0.000000000",
+                                  "response": "Ok(None)",
+                                  "response_timestamps": "0.000000000"
+                            },
+                            "00000000000000000002": {
+                                "request": "SetDisplayInfo(SetDisplayInfo { \
+                                    manual_brightness_value: None, \
+                                    auto_brightness_value: None, \
+                                    auto_brightness: Some(true), \
+                                    screen_enabled: None, \
+                                    low_light_mode: None, \
+                                    theme: None \
+                                })",
+                                "request_timestamps": "0.000000200",
+                                "response": "Ok(None)",
+                                "response_timestamps": "0.000000200"
+                            }
+                        }
+                    }
+                }
             },
             response_counts: {
                 "Display": {
@@ -639,19 +739,69 @@ mod tests {
     }
 
     #[fuchsia_async::run_until_stalled(test)]
+    async fn test_pending_request() {
+        // Set the clock so that timestamps can be controlled.
+        clock::mock::set(Time::from_nanos(0));
+
+        let inspector = inspect::Inspector::new();
+        let condense_node = inspector.root().create_child(REQUEST_RESPONSE_NODE_NAME);
+        let request_counts_node = inspector.root().create_child(RESPONSE_COUNTS_NODE_NAME);
+        let context = create_context().await;
+
+        let request_processor = RequestProcessor::new(context.delegate.clone());
+
+        let _agent =
+            SettingProxyInspectAgent::create_with_node(context, condense_node, request_counts_node)
+                .await;
+
+        request_processor
+            .send_request(
+                SettingType::Display,
+                Request::SetDisplayInfo(SetDisplayInfo {
+                    auto_brightness: Some(false),
+                    ..SetDisplayInfo::default()
+                }),
+                false,
+            )
+            .await;
+
+        assert_data_tree!(inspector, root: contains {
+            requests_and_responses: {
+                "Display": {
+                    "pending_requests": {
+                        "00000000000000000000": {
+                            "request": "SetDisplayInfo(SetDisplayInfo { \
+                                manual_brightness_value: None, \
+                                auto_brightness_value: None, \
+                                auto_brightness: Some(false), \
+                                screen_enabled: None, \
+                                low_light_mode: None, \
+                                theme: None \
+                            })",
+                            "timestamp": "0.000000000",
+                        }
+                    },
+                    "requests_and_responses": {}
+                }
+            },
+        });
+    }
+
+    #[fuchsia_async::run_until_stalled(test)]
     async fn test_response_counts_inspect() {
         // Set the clock so that timestamps can be controlled.
         clock::mock::set(Time::from_nanos(0));
 
         let inspector = inspect::Inspector::new();
-        let inspect_node = inspector.root().create_child("switchboard");
-        let request_counts_node = inspector.root().create_child("response_counts");
+        let condense_node = inspector.root().create_child(REQUEST_RESPONSE_NODE_NAME);
+        let request_counts_node = inspector.root().create_child(RESPONSE_COUNTS_NODE_NAME);
         let context = create_context().await;
 
         let request_processor = RequestProcessor::new(context.delegate.clone());
 
-        SettingProxyInspectAgent::create_with_node(context, inspect_node, request_counts_node)
-            .await;
+        let _agent =
+            SettingProxyInspectAgent::create_with_node(context, condense_node, request_counts_node)
+                .await;
 
         request_processor
             .send_and_receive(
@@ -680,53 +830,7 @@ mod tests {
         clock::mock::set(Time::from_nanos(300));
         request_processor.send_and_receive(SettingType::Display, Request::Get).await;
 
-        assert_data_tree!(inspector, root: {
-            switchboard: {
-                "Display": {
-                    "SetDisplayInfo": {
-                        "00000000000000000000": {
-                            request: "SetDisplayInfo(SetDisplayInfo { \
-                                manual_brightness_value: None, \
-                                auto_brightness_value: None, \
-                                auto_brightness: Some(false), \
-                                screen_enabled: None, \
-                                low_light_mode: None, \
-                                theme: None \
-                            })",
-                            request_timestamp: "0.000000000",
-                            response: "Ok(None)",
-                            response_timestamp: "0.000000000",
-                        },
-                        "00000000000000000002": {
-                            request: "SetDisplayInfo(SetDisplayInfo { \
-                                manual_brightness_value: None, \
-                                auto_brightness_value: None, \
-                                auto_brightness: None, \
-                                screen_enabled: None, \
-                                low_light_mode: None, \
-                                theme: None \
-                            })",
-                            request_timestamp: "0.000000200",
-                            response: "Ok(None)",
-                            response_timestamp: "0.000000200",
-                        },
-                    },
-                    "Get": {
-                        "00000000000000000001": {
-                            request: "Get",
-                            request_timestamp: "0.000000100",
-                            response: "Ok(None)",
-                            response_timestamp: "0.000000100",
-                        },
-                        "00000000000000000003": {
-                            request: "Get",
-                            request_timestamp: "0.000000300",
-                            response: "Ok(None)",
-                            response_timestamp: "0.000000300",
-                        },
-                    },
-                },
-            },
+        assert_data_tree!(inspector, root: contains {
             response_counts: {
                 "Display": {
                     "OkNone": {
@@ -737,18 +841,24 @@ mod tests {
         });
     }
 
+    // Verifies that old requests are dropped after MAX_REQUEST_RESPONSE_PAIRS are received for a
+    // given request + response pair.
     #[fuchsia_async::run_until_stalled(test)]
     async fn inspect_queue_test() {
         // Set the clock so that timestamps will always be 0.
         clock::mock::set(Time::from_nanos(0));
         let inspector = inspect::Inspector::new();
-        let inspect_node = inspector.root().create_child("switchboard");
-        let response_counts_node = inspector.root().create_child("response_counts");
+        let condense_node = inspector.root().create_child(REQUEST_RESPONSE_NODE_NAME);
+        let response_counts_node = inspector.root().create_child(RESPONSE_COUNTS_NODE_NAME);
         let context = create_context().await;
         let request_processor = RequestProcessor::new(context.delegate.clone());
 
-        SettingProxyInspectAgent::create_with_node(context, inspect_node, response_counts_node)
-            .await;
+        let _agent = SettingProxyInspectAgent::create_with_node(
+            context,
+            condense_node,
+            response_counts_node,
+        )
+        .await;
 
         request_processor
             .send_and_receive(
@@ -762,13 +872,14 @@ mod tests {
             )
             .await;
 
-        // Send one more than the max requests to make sure they get pushed off the end of the queue
-        for _ in 0..INSPECT_REQUESTS_COUNT + 1 {
+        // Send one more than the max requests to make sure they get pushed off the end of the
+        // queue. The requests must have different values to avoid getting grouped together.
+        for i in 0..MAX_REQUEST_RESPONSE_PAIRS + 1 {
             request_processor
                 .send_and_receive(
                     SettingType::Display,
                     Request::SetDisplayInfo(SetDisplayInfo {
-                        auto_brightness: Some(false),
+                        manual_brightness_value: Some((i as f32) / 100f32),
                         ..SetDisplayInfo::default()
                     }),
                 )
@@ -778,41 +889,39 @@ mod tests {
         // Ensures we have INSPECT_REQUESTS_COUNT items and that the queue dropped the earliest one
         // when hitting the limit.
         fn display_subtree_assertion() -> TreeAssertion {
-            let mut tree_assertion = TreeAssertion::new("Display", true);
+            let mut tree_assertion = TreeAssertion::new("Display", false);
+            let mut request_response_assertion = TreeAssertion::new("requests_and_responses", true);
             let mut request_assertion = TreeAssertion::new("SetDisplayInfo", true);
 
-            for i in 1..INSPECT_REQUESTS_COUNT + 1 {
+            for i in 1..MAX_REQUEST_RESPONSE_PAIRS + 1 {
                 // We don't need to set clock here since we don't do exact match.
                 request_assertion
                     .add_child_assertion(TreeAssertion::new(&format!("{:020}", i), false));
             }
-            tree_assertion.add_child_assertion(request_assertion);
+            request_response_assertion.add_child_assertion(request_assertion);
+            tree_assertion.add_child_assertion(request_response_assertion);
             tree_assertion
         }
 
-        assert_data_tree!(inspector, root: {
-            switchboard: {
+        assert_data_tree!(inspector, root: contains {
+            requests_and_responses: {
                 display_subtree_assertion(),
                 "Intl": {
-                    "SetIntlInfo": {
-                        "00000000000000000000": {
-                            request: AnyProperty,
-                            request_timestamp: "0.000000000",
-                            response: "Ok(None)",
-                            response_timestamp: "0.000000000",
+                    "pending_requests": {},
+                    "requests_and_responses": {
+                        "SetIntlInfo": {
+                            "00000000000000000000": {
+                                "request": "SetIntlInfo(IntlInfo { \
+                                    locales: Some([LocaleId { id: \"en-US\" }]), \
+                                    temperature_unit: Some(Celsius), \
+                                    time_zone_id: Some(\"UTC\"), \
+                                    hour_cycle: None \
+                                })",
+                                "request_timestamps": "0.000000000",
+                                "response": "Ok(None)",
+                                "response_timestamps": "0.000000000"
+                            }
                         }
-                    }
-                }
-            },
-            response_counts: {
-                "Display": {
-                    "OkNone": {
-                        count: 16u64,
-                    },
-                },
-                "Intl": {
-                    "OkNone": {
-                        count: 1u64,
                     }
                 }
             },

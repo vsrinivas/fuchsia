@@ -55,6 +55,12 @@ where
         self.items.iter_mut()
     }
 
+    /// Returns a mutable reference to the underlying queue. Items should be inserted with this
+    /// reference.
+    pub fn items_mut(&mut self) -> &mut VecDeque<V> {
+        &mut self.items
+    }
+
     /// Filters the queue by the condition function [f].
     pub fn retain<F>(&mut self, f: F)
     where

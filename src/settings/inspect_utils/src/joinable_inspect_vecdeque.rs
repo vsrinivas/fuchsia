@@ -15,10 +15,8 @@ use std::collections::VecDeque;
 /// To use this in a a structure that implements [fuchsia_inspect_derive::Inspect], wrap this in the
 /// [fuchsia_inspect_derive::IValue] smart pointer and it will automatically update the value of the
 /// inspect property when updated.
-// TODO(fxbug.dev/103390): remove once used
-#[allow(dead_code)]
 #[derive(Default)]
-struct JoinableInspectVecDeque(VecDeque<String>);
+pub struct JoinableInspectVecDeque(pub VecDeque<String>);
 
 impl JoinableInspectVecDeque {
     fn join(&self) -> String {
