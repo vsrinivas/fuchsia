@@ -39,11 +39,7 @@ type State = state_machine::State<ExitReason>;
 type ReqStream = stream::Fuse<mpsc::Receiver<ManualRequest>>;
 
 pub trait ClientApi {
-    fn connect(
-        &mut self,
-        request: types::ConnectRequest,
-        responder: oneshot::Sender<()>,
-    ) -> Result<(), anyhow::Error>;
+    fn connect(&mut self, request: types::ConnectRequest) -> Result<(), anyhow::Error>;
     fn disconnect(
         &mut self,
         reason: types::DisconnectReason,
@@ -66,13 +62,9 @@ impl Client {
 }
 
 impl ClientApi for Client {
-    fn connect(
-        &mut self,
-        request: types::ConnectRequest,
-        responder: oneshot::Sender<()>,
-    ) -> Result<(), anyhow::Error> {
+    fn connect(&mut self, request: types::ConnectRequest) -> Result<(), anyhow::Error> {
         self.req_sender
-            .try_send(ManualRequest::Connect((request, responder)))
+            .try_send(ManualRequest::Connect(request))
             .map_err(|e| format_err!("failed to send connect request: {:?}", e))
     }
 
@@ -92,7 +84,7 @@ impl ClientApi for Client {
 }
 
 pub enum ManualRequest {
-    Connect((types::ConnectRequest, oneshot::Sender<()>)),
+    Connect(types::ConnectRequest),
     Disconnect((types::DisconnectReason, oneshot::Sender<()>)),
 }
 
@@ -121,17 +113,13 @@ pub async fn serve(
     req_stream: mpsc::Receiver<ManualRequest>,
     update_sender: ClientListenerMessageSender,
     saved_networks_manager: Arc<dyn SavedNetworksManagerApi>,
-    connect_request: Option<(types::ConnectRequest, oneshot::Sender<()>)>,
+    connect_request: Option<types::ConnectRequest>,
     network_selector: Arc<network_selection::NetworkSelector>,
     telemetry_sender: TelemetrySender,
     stats_sender: ConnectionStatsSender,
 ) {
     let next_network = match connect_request {
-        Some((req, sender)) => Some(ConnectingOptions {
-            connect_responder: Some(sender),
-            connect_request: req,
-            attempt_counter: 0,
-        }),
+        Some(req) => Some(ConnectingOptions { connect_request: req, attempt_counter: 0 }),
         None => None,
     };
     let disconnect_options = DisconnectingOptions {
@@ -317,7 +305,6 @@ async fn wait_until_connected(
 }
 
 struct ConnectingOptions {
-    connect_responder: Option<oneshot::Sender<()>>,
     connect_request: types::ConnectRequest,
     /// Count of previous consecutive failed connection attempts to this same network.
     attempt_counter: u8,
@@ -380,7 +367,6 @@ async fn handle_connecting_error_and_retry(
         fasync::Timer::new(zx::Duration::from_millis(backoff_time).after_now()).await;
 
         let next_connecting_options = ConnectingOptions {
-            connect_responder: None,
             connect_request: types::ConnectRequest {
                 reason: types::ConnectReason::RetryAfterFailedConnectAttempt,
                 ..options.connect_request
@@ -410,7 +396,7 @@ async fn handle_connecting_error_and_retry(
 /// - disconnect requests cause a transition to DISCONNECTING state
 async fn connecting_state<'a>(
     mut common_options: CommonStateOptions,
-    mut options: ConnectingOptions,
+    options: ConnectingOptions,
 ) -> Result<State, ExitReason> {
     debug!("Entering connecting state");
 
@@ -432,12 +418,6 @@ async fn connecting_state<'a>(
             }),
         );
     };
-
-    // Let the responder know we've successfully started this connection attempt
-    match options.connect_responder.take() {
-        Some(responder) => responder.send(()).unwrap_or_else(|_| ()),
-        None => {}
-    }
 
     // If detailed station information was not provided, perform a scan to discover it
     let network_selector = common_options.network_selector.clone();
@@ -623,12 +603,11 @@ async fn connecting_state<'a>(
                     };
                     return Ok(to_disconnecting_state(common_options, options));
                 }
-                Some(ManualRequest::Connect((new_connect_request, new_responder))) => {
+                Some(ManualRequest::Connect(new_connect_request)) => {
                     // Check if it's the same network as we're currently connected to.
                     // If yes, dedupe the request.
                     if new_connect_request.target.network == options.connect_request.target.network {
                         info!("Received duplicate connection request, deduping");
-                        new_responder.send(()).unwrap_or_else(|_| ());
                     } else {
                         info!("Cancelling pending connect due to new connection request");
                         send_listener_state_update(
@@ -640,7 +619,6 @@ async fn connecting_state<'a>(
                             }),
                         );
                         let next_connecting_options = ConnectingOptions {
-                            connect_responder: Some(new_responder),
                             connect_request: new_connect_request.clone(),
                             attempt_counter: 0,
                         };
@@ -800,7 +778,6 @@ async fn connected_state(
 
                     if is_sme_idle {
                         let next_connecting_options = ConnectingOptions {
-                            connect_responder: None,
                             connect_request: types::ConnectRequest {
                                 reason: types::ConnectReason::RetryAfterDisconnectDetected,
                                 target: types::ConnectionCandidate {
@@ -856,11 +833,10 @@ async fn connected_state(
                         common_options.telemetry_sender.send(TelemetryEvent::Disconnected { track_subsequent_downtime: false, info });
                         return Ok(disconnecting_state(common_options, options).into_state());
                     }
-                    Some(ManualRequest::Connect((new_connect_request, new_responder))) => {
+                    Some(ManualRequest::Connect(new_connect_request)) => {
                         // Check if it's the same network as we're currently connected to. If yes, reply immediately
                         if new_connect_request.target.network == options.currently_fulfilled_request.target.network {
                             info!("Received connection request for current network, deduping");
-                            new_responder.send(()).unwrap_or_else(|_| ());
                         } else {
                             let disconnect_reason = convert_manual_connect_to_disconnect_reason(&new_connect_request.reason).unwrap_or_else(|()| {
                                 error!("Unexpected connection reason: {:?}", new_connect_request.reason);
@@ -876,7 +852,6 @@ async fn connected_state(
 
 
                             let next_connecting_options = ConnectingOptions {
-                                connect_responder: Some(new_responder),
                                 connect_request: new_connect_request.clone(),
                                 attempt_counter: 0,
                             };
@@ -1147,12 +1122,8 @@ mod tests {
         assert_eq!(false, saved_networks[0].has_ever_connected);
         assert!(saved_networks[0].hidden_probability > 0.0);
 
-        let (connect_sender, mut connect_receiver) = oneshot::channel();
-        let connecting_options = ConnectingOptions {
-            connect_responder: Some(connect_sender),
-            connect_request: connect_request.clone(),
-            attempt_counter: 0,
-        };
+        let connecting_options =
+            ConnectingOptions { connect_request: connect_request.clone(), attempt_counter: 0 };
         let initial_state = connecting_state(test_values.common_options, connecting_options);
         let fut = run_state_machine(initial_state);
         pin_mut!(fut);
@@ -1203,9 +1174,6 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
         process_stash_write(&mut exec, &mut stash_server);
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
-
-        // Check the responder was acknowledged
-        assert_variant!(exec.run_until_stalled(&mut connect_receiver), Poll::Ready(Ok(())));
 
         // Check for a connect update
         let client_state_update = ClientStateUpdate {
@@ -1273,12 +1241,8 @@ mod tests {
                 .expect("failed to create network config");
         test_values.saved_networks_manager.set_lookup_compatible_response(vec![expected_config]);
 
-        let (connect_sender, mut connect_receiver) = oneshot::channel();
-        let connecting_options = ConnectingOptions {
-            connect_responder: Some(connect_sender),
-            connect_request: connect_request.clone(),
-            attempt_counter: 0,
-        };
+        let connecting_options =
+            ConnectingOptions { connect_request: connect_request.clone(), attempt_counter: 0 };
         let initial_state = connecting_state(test_values.common_options, connecting_options);
         let fut = run_state_machine(initial_state);
         pin_mut!(fut);
@@ -1357,9 +1321,6 @@ mod tests {
 
         // Progress the state machine
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
-
-        // Check the responder was acknowledged
-        assert_variant!(exec.run_until_stalled(&mut connect_receiver), Poll::Ready(Ok(())));
 
         // Check for a connect update
         let client_state_update = ClientStateUpdate {
@@ -1499,12 +1460,8 @@ mod tests {
         assert_eq!(false, saved_networks[0].has_ever_connected);
         assert!(saved_networks[0].hidden_probability > 0.0);
 
-        let (connect_sender, _connect_receiver) = oneshot::channel();
-        let connecting_options = ConnectingOptions {
-            connect_responder: Some(connect_sender),
-            connect_request: connect_request.clone(),
-            attempt_counter: 0,
-        };
+        let connecting_options =
+            ConnectingOptions { connect_request: connect_request.clone(), attempt_counter: 0 };
         let common_options = CommonStateOptions {
             proxy: sme_proxy,
             req_stream: client_req_stream.fuse(),
@@ -1725,12 +1682,8 @@ mod tests {
         assert_variant!(executor.run_until_stalled(&mut store_future), Poll::Ready(Ok(None)));
 
         // Create a state machine in the connecting state and begin running it.
-        let (connect_tx, _connect_rx) = oneshot::channel();
-        let connecting_options = ConnectingOptions {
-            connect_responder: Some(connect_tx),
-            connect_request: connect_request.clone(),
-            attempt_counter: 0,
-        };
+        let connecting_options =
+            ConnectingOptions { connect_request: connect_request.clone(), attempt_counter: 0 };
         let common_options = CommonStateOptions {
             proxy: sme_proxy,
             req_stream: client_req_rx.fuse(),
@@ -1869,12 +1822,8 @@ mod tests {
         assert_variant!(executor.run_until_stalled(&mut store_future), Poll::Ready(Ok(None)));
 
         // Create a state machine in the connecting state and begin running it.
-        let (connect_tx, _connect_rx) = oneshot::channel();
-        let connecting_options = ConnectingOptions {
-            connect_responder: Some(connect_tx),
-            connect_request: connect_request.clone(),
-            attempt_counter: 0,
-        };
+        let connecting_options =
+            ConnectingOptions { connect_request: connect_request.clone(), attempt_counter: 0 };
         let common_options = CommonStateOptions {
             proxy: sme_proxy,
             req_stream: client_req_rx.fuse(),
@@ -1928,12 +1877,8 @@ mod tests {
             },
             reason: types::ConnectReason::FidlConnectRequest,
         };
-        let (connect_sender, mut connect_receiver) = oneshot::channel();
-        let connecting_options = ConnectingOptions {
-            connect_responder: Some(connect_sender),
-            connect_request: connect_request.clone(),
-            attempt_counter: 0,
-        };
+        let connecting_options =
+            ConnectingOptions { connect_request: connect_request.clone(), attempt_counter: 0 };
         let initial_state = connecting_state(test_values.common_options, connecting_options);
         let fut = run_state_machine(initial_state);
         pin_mut!(fut);
@@ -1942,9 +1887,6 @@ mod tests {
 
         // Run the state machine
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
-
-        // Check the responder was acknowledged
-        assert_variant!(exec.run_until_stalled(&mut connect_receiver), Poll::Ready(Ok(())));
 
         // Ensure a connect request is sent to the SME
         let mut connect_txn_handle = assert_variant!(
@@ -2116,12 +2058,8 @@ mod tests {
         process_stash_write(&mut exec, &mut stash_server);
         assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(None)));
 
-        let (connect_sender, mut connect_receiver) = oneshot::channel();
-        let connecting_options = ConnectingOptions {
-            connect_responder: Some(connect_sender),
-            connect_request: connect_request.clone(),
-            attempt_counter: 0,
-        };
+        let connecting_options =
+            ConnectingOptions { connect_request: connect_request.clone(), attempt_counter: 0 };
         let common_options = CommonStateOptions {
             proxy: sme_proxy,
             req_stream: client_req_stream.fuse(),
@@ -2139,9 +2077,6 @@ mod tests {
 
         // Run the state machine
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
-
-        // Check the responder was acknowledged
-        assert_variant!(exec.run_until_stalled(&mut connect_receiver), Poll::Ready(Ok(())));
 
         // Ensure a scan request is sent to the SME
         let sme_fut = sme_req_stream.into_future();
@@ -2316,9 +2251,7 @@ mod tests {
             },
             reason: types::ConnectReason::FidlConnectRequest,
         };
-        let (connect_sender, mut connect_receiver) = oneshot::channel();
         let connecting_options = ConnectingOptions {
-            connect_responder: Some(connect_sender),
             connect_request: connect_request.clone(),
             attempt_counter: MAX_CONNECTION_ATTEMPTS - 1,
         };
@@ -2330,9 +2263,6 @@ mod tests {
 
         // Run the state machine
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
-
-        // Check the responder was acknowledged
-        assert_variant!(exec.run_until_stalled(&mut connect_receiver), Poll::Ready(Ok(())));
 
         // Ensure a connect request is sent to the SME
         assert_variant!(
@@ -2456,9 +2386,7 @@ mod tests {
             },
             reason: types::ConnectReason::ProactiveNetworkSwitch,
         };
-        let (connect_sender, mut connect_receiver) = oneshot::channel();
         let connecting_options = ConnectingOptions {
-            connect_responder: Some(connect_sender),
             connect_request: connect_request.clone(),
             attempt_counter: MAX_CONNECTION_ATTEMPTS - 1,
         };
@@ -2470,9 +2398,6 @@ mod tests {
 
         // Run the state machine
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
-
-        // Check the responder was acknowledged
-        assert_variant!(exec.run_until_stalled(&mut connect_receiver), Poll::Ready(Ok(())));
 
         // Ensure a connect request is sent to the SME
         assert_variant!(
@@ -2551,12 +2476,8 @@ mod tests {
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
-        let (connect_sender, mut connect_receiver) = oneshot::channel();
-        let connecting_options = ConnectingOptions {
-            connect_responder: Some(connect_sender),
-            connect_request: connect_request.clone(),
-            attempt_counter: 0,
-        };
+        let connecting_options =
+            ConnectingOptions { connect_request: connect_request.clone(), attempt_counter: 0 };
         let initial_state = connecting_state(test_values.common_options, connecting_options);
         let fut = run_state_machine(initial_state);
         pin_mut!(fut);
@@ -2565,9 +2486,6 @@ mod tests {
 
         // Run the state machine
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
-
-        // Check the responder was acknowledged
-        assert_variant!(exec.run_until_stalled(&mut connect_receiver), Poll::Ready(Ok(())));
 
         // Check for a connecting update
         let client_state_update = ClientStateUpdate {
@@ -2589,7 +2507,6 @@ mod tests {
 
         // Send a duplicate connect request
         let mut client = Client::new(test_values.client_req_sender);
-        let (connect_sender2, mut connect_receiver2) = oneshot::channel();
         let duplicate_request = types::ConnectRequest {
             target: {
                 types::ConnectionCandidate {
@@ -2600,13 +2517,10 @@ mod tests {
             // this incoming request should be deduped regardless of the reason
             reason: types::ConnectReason::ProactiveNetworkSwitch,
         };
-        client.connect(duplicate_request, connect_sender2).expect("failed to make request");
+        client.connect(duplicate_request).expect("failed to make request");
 
         // Progress the state machine
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
-
-        // Check the responder was acknowledged
-        assert_variant!(exec.run_until_stalled(&mut connect_receiver2), Poll::Ready(Ok(())));
 
         // Ensure a connect request is sent to the SME
         let connect_txn_handle = assert_variant!(
@@ -2682,12 +2596,8 @@ mod tests {
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
-        let (connect_sender, mut connect_receiver) = oneshot::channel();
-        let connecting_options = ConnectingOptions {
-            connect_responder: Some(connect_sender),
-            connect_request: connect_request.clone(),
-            attempt_counter: 0,
-        };
+        let connecting_options =
+            ConnectingOptions { connect_request: connect_request.clone(), attempt_counter: 0 };
         let initial_state = connecting_state(test_values.common_options, connecting_options);
         let fut = run_state_machine(initial_state);
         pin_mut!(fut);
@@ -2696,9 +2606,6 @@ mod tests {
 
         // Run the state machine
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
-
-        // Check the responder was acknowledged
-        assert_variant!(exec.run_until_stalled(&mut connect_receiver), Poll::Ready(Ok(())));
 
         // Check for a connecting update
         let client_state_update = ClientStateUpdate {
@@ -2720,7 +2627,6 @@ mod tests {
 
         // Send a different connect request
         let mut client = Client::new(test_values.client_req_sender);
-        let (connect_sender2, mut connect_receiver2) = oneshot::channel();
         let bss_desc2 = random_fidl_bss_description!(Wpa2, ssid: second_network_ssid.clone());
         let connect_request2 = types::ConnectRequest {
             target: types::ConnectionCandidate {
@@ -2738,7 +2644,7 @@ mod tests {
             },
             reason: types::ConnectReason::FidlConnectRequest,
         };
-        client.connect(connect_request2.clone(), connect_sender2).expect("failed to make request");
+        client.connect(connect_request2.clone()).expect("failed to make request");
 
         // Progress the state machine
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
@@ -2813,9 +2719,6 @@ mod tests {
         // Progress the state machine
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
-        // Check the responder was acknowledged
-        assert_variant!(exec.run_until_stalled(&mut connect_receiver2), Poll::Ready(Ok(())));
-
         // Check for a connecting update
         let client_state_update = ClientStateUpdate {
             state: fidl_policy::WlanClientState::ConnectionsEnabled,
@@ -2884,12 +2787,8 @@ mod tests {
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
-        let (connect_sender, mut connect_receiver) = oneshot::channel();
-        let connecting_options = ConnectingOptions {
-            connect_responder: Some(connect_sender),
-            connect_request: connect_request.clone(),
-            attempt_counter: 0,
-        };
+        let connecting_options =
+            ConnectingOptions { connect_request: connect_request.clone(), attempt_counter: 0 };
         let initial_state = connecting_state(test_values.common_options, connecting_options);
         let fut = run_state_machine(initial_state);
         pin_mut!(fut);
@@ -2898,9 +2797,6 @@ mod tests {
 
         // Run the state machine
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
-
-        // Check the responder was acknowledged
-        assert_variant!(exec.run_until_stalled(&mut connect_receiver), Poll::Ready(Ok(())));
 
         // Check for a connecting update
         let client_state_update = ClientStateUpdate {
@@ -2988,12 +2884,8 @@ mod tests {
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
-        let (connect_sender, mut connect_receiver) = oneshot::channel();
-        let connecting_options = ConnectingOptions {
-            connect_responder: Some(connect_sender),
-            connect_request: connect_request.clone(),
-            attempt_counter: 0,
-        };
+        let connecting_options =
+            ConnectingOptions { connect_request: connect_request.clone(), attempt_counter: 0 };
         let initial_state = connecting_state(test_values.common_options, connecting_options);
         let fut = run_state_machine(initial_state);
         pin_mut!(fut);
@@ -3005,9 +2897,6 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
         assert!(exec.wake_next_timer().is_some());
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
-
-        // Expect the responder to have a success, since the connection was attempted
-        assert_variant!(exec.run_until_stalled(&mut connect_receiver), Poll::Ready(Ok(())));
     }
 
     #[fuchsia::test]
@@ -3377,12 +3266,8 @@ mod tests {
             },
             reason: types::ConnectReason::RetryAfterFailedConnectAttempt,
         };
-        let (connect_sender, _connect_receiver) = oneshot::channel();
-        let connecting_options = ConnectingOptions {
-            connect_responder: Some(connect_sender),
-            connect_request: connect_request.clone(),
-            attempt_counter: 0,
-        };
+        let connecting_options =
+            ConnectingOptions { connect_request: connect_request.clone(), attempt_counter: 0 };
         let initial_state = connecting_state(test_values.common_options, connecting_options);
         let state_fut = run_state_machine(initial_state);
         pin_mut!(state_fut);
@@ -3515,17 +3400,13 @@ mod tests {
 
         // Send another duplicate request
         let mut client = Client::new(test_values.client_req_sender);
-        let (sender, mut receiver) = oneshot::channel();
-        client.connect(connect_request.clone(), sender).expect("failed to make request");
+        client.connect(connect_request.clone()).expect("failed to make request");
 
         // Run the state machine
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
         // Ensure nothing was sent to the SME
         assert_variant!(poll_sme_req(&mut exec, &mut sme_fut), Poll::Pending);
-
-        // Check the responder was acknowledged
-        assert_variant!(exec.run_until_stalled(&mut receiver), Poll::Ready(Ok(())));
 
         // No telemetry event is sent
         assert_variant!(telemetry_receiver.try_next(), Err(_));
@@ -3589,7 +3470,6 @@ mod tests {
         // Send a different connect request
         let second_bss_desc = random_fidl_bss_description!(Wpa2, ssid: second_network_ssid.clone());
         let mut client = Client::new(test_values.client_req_sender);
-        let (connect_sender2, mut connect_receiver2) = oneshot::channel();
         let connect_request2 = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -3606,7 +3486,7 @@ mod tests {
             },
             reason: types::ConnectReason::ProactiveNetworkSwitch,
         };
-        client.connect(connect_request2.clone(), connect_sender2).expect("failed to make request");
+        client.connect(connect_request2.clone()).expect("failed to make request");
 
         // Run the state machine
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
@@ -3667,9 +3547,6 @@ mod tests {
                 });
             });
         });
-
-        // Check the responder was acknowledged
-        assert_variant!(exec.run_until_stalled(&mut connect_receiver2), Poll::Ready(Ok(())));
 
         // Check for a connecting update
         let client_state_update = ClientStateUpdate {
@@ -4453,7 +4330,7 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
 
-        let (sender, mut receiver) = oneshot::channel();
+        let (sender, _) = oneshot::channel();
         let disconnecting_options = DisconnectingOptions {
             disconnect_responder: Some(sender),
             previous_network: None,
@@ -4490,9 +4367,6 @@ mod tests {
                 assert!(networks.is_empty());
             }
         );
-
-        // Expect the responder to be acknowledged
-        assert_variant!(exec.run_until_stalled(&mut receiver), Poll::Ready(Ok(())));
     }
 
     #[fuchsia::test]
@@ -4519,12 +4393,8 @@ mod tests {
             },
             reason: types::ConnectReason::ProactiveNetworkSwitch,
         };
-        let (connect_sender, _connect_receiver) = oneshot::channel();
-        let connecting_options = ConnectingOptions {
-            connect_responder: Some(connect_sender),
-            connect_request: connect_request.clone(),
-            attempt_counter: 0,
-        };
+        let connecting_options =
+            ConnectingOptions { connect_request: connect_request.clone(), attempt_counter: 0 };
         let (disconnect_sender, mut disconnect_receiver) = oneshot::channel();
         // Include both a "previous" and "next" network
         let disconnecting_options = DisconnectingOptions {
@@ -4645,7 +4515,6 @@ mod tests {
             },
             reason: types::ConnectReason::IdleInterfaceAutoconnect,
         };
-        let (sender, _receiver) = oneshot::channel();
 
         let fut = serve(
             0,
@@ -4655,7 +4524,7 @@ mod tests {
             client_req_stream,
             test_values.common_options.update_sender,
             test_values.common_options.saved_networks_manager,
-            Some((connect_req, sender)),
+            Some(connect_req),
             test_values.common_options.network_selector,
             test_values.common_options.telemetry_sender,
             test_values.common_options.stats_sender,
@@ -4705,7 +4574,6 @@ mod tests {
             },
             reason: types::ConnectReason::FidlConnectRequest,
         };
-        let (sender, _receiver) = oneshot::channel();
 
         let fut = serve(
             0,
@@ -4715,7 +4583,7 @@ mod tests {
             client_req_stream,
             test_values.common_options.update_sender,
             test_values.common_options.saved_networks_manager,
-            Some((connect_req, sender)),
+            Some(connect_req),
             test_values.common_options.network_selector,
             test_values.common_options.telemetry_sender,
             test_values.common_options.stats_sender,
@@ -4769,7 +4637,6 @@ mod tests {
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
-        let (sender, _receiver) = oneshot::channel();
 
         let fut = serve(
             0,
@@ -4779,7 +4646,7 @@ mod tests {
             client_req_stream,
             test_values.common_options.update_sender,
             test_values.common_options.saved_networks_manager,
-            Some((connect_req, sender)),
+            Some(connect_req),
             test_values.common_options.network_selector,
             test_values.common_options.telemetry_sender,
             test_values.common_options.stats_sender,
@@ -4859,7 +4726,6 @@ mod tests {
             },
             reason: types::ConnectReason::FidlConnectRequest,
         };
-        let (sender, _receiver) = oneshot::channel();
 
         let fut = serve(
             0,
@@ -4869,7 +4735,7 @@ mod tests {
             client_req_stream,
             test_values.common_options.update_sender,
             test_values.common_options.saved_networks_manager,
-            Some((connect_req, sender)),
+            Some(connect_req),
             test_values.common_options.network_selector,
             test_values.common_options.telemetry_sender,
             test_values.common_options.stats_sender,

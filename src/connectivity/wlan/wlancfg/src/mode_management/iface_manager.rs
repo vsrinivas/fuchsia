@@ -85,7 +85,7 @@ async fn create_client_state_machine(
     client_update_sender: listener::ClientListenerMessageSender,
     saved_networks: Arc<dyn SavedNetworksManagerApi>,
     network_selector: Arc<NetworkSelector>,
-    connect_req: Option<(client_types::ConnectRequest, oneshot::Sender<()>)>,
+    connect_req: Option<client_types::ConnectRequest>,
     telemetry_sender: TelemetrySender,
     stats_sender: ConnectionStatsSender,
 ) -> Result<
@@ -422,10 +422,7 @@ impl IfaceManagerService {
         return fut.boxed();
     }
 
-    async fn connect(
-        &mut self,
-        connect_req: client_types::ConnectRequest,
-    ) -> Result<oneshot::Receiver<()>, Error> {
+    async fn connect(&mut self, connect_req: client_types::ConnectRequest) -> Result<(), Error> {
         self.telemetry_sender
             .send(TelemetryEvent::StartEstablishConnection { reset_start_time: true });
 
@@ -440,13 +437,10 @@ impl IfaceManagerService {
         // Set the new config on this client
         client_iface.config = Some(connect_req.target.network.clone());
 
-        // Create the connection request
-        let (sender, receiver) = oneshot::channel();
-
         // Check if there's an existing state machine we can use
         match client_iface.client_state_machine.as_mut() {
             Some(existing_csm) => {
-                existing_csm.connect(connect_req, sender)?;
+                existing_csm.connect(connect_req)?;
             }
             None => {
                 // Create the state machine and controller.
@@ -457,7 +451,7 @@ impl IfaceManagerService {
                     self.client_update_sender.clone(),
                     self.saved_networks.clone(),
                     self.network_selector.clone(),
-                    Some((connect_req, sender)),
+                    Some(connect_req),
                     self.telemetry_sender.clone(),
                     self.stats_sender.clone(),
                 )
@@ -474,7 +468,7 @@ impl IfaceManagerService {
 
         client_iface.last_roam_time = fasync::Time::now();
         self.clients.push(client_iface);
-        Ok(receiver)
+        Ok(())
     }
 
     fn record_idle_client(&mut self, iface_id: u16) {
@@ -541,7 +535,6 @@ impl IfaceManagerService {
                 }
 
                 // Create the state machine and controller.
-                let (sender, _) = oneshot::channel();
                 let (new_client, fut) = create_client_state_machine(
                     client.iface_id,
                     wpa3_supported(client.security_support),
@@ -549,7 +542,7 @@ impl IfaceManagerService {
                     self.client_update_sender.clone(),
                     self.saved_networks.clone(),
                     self.network_selector.clone(),
-                    Some((connect_req.clone(), sender)),
+                    Some(connect_req.clone()),
                     self.telemetry_sender.clone(),
                     self.stats_sender.clone(),
                 )
@@ -1301,7 +1294,7 @@ mod tests {
             channel::mpsc,
             stream::{StreamExt, StreamFuture},
             task::Poll,
-            TryFutureExt, TryStreamExt,
+            TryStreamExt,
         },
         lazy_static::lazy_static,
         pin_utils::pin_mut,
@@ -1561,13 +1554,8 @@ mod tests {
 
     #[async_trait]
     impl client_fsm::ClientApi for FakeClient {
-        fn connect(
-            &mut self,
-            request: client_types::ConnectRequest,
-            responder: oneshot::Sender<()>,
-        ) -> Result<(), Error> {
+        fn connect(&mut self, request: client_types::ConnectRequest) -> Result<(), Error> {
             assert_eq!(Some(request), self.expected_connect_request);
-            let _ = responder.send(());
             Ok(())
         }
         fn disconnect(
@@ -1786,20 +1774,19 @@ mod tests {
         }));
 
         // Ask the IfaceManager to connect.
-        let config = connect_request;
-        let connect_response_fut = {
-            let connect_fut = iface_manager.connect(config);
+        {
+            let connect_fut = iface_manager.connect(connect_request);
             pin_mut!(connect_fut);
 
             // Run the connect request to completion.
             match exec.run_until_stalled(&mut connect_fut) {
                 Poll::Ready(connect_result) => match connect_result {
-                    Ok(receiver) => receiver.into_future(),
+                    Ok(_) => {}
                     Err(e) => panic!("failed to connect with {}", e),
                 },
                 Poll::Pending => panic!("expected the connect request to finish"),
-            }
-        };
+            };
+        }
 
         // Start running the client state machine.
         run_state_machine_futures(&mut exec, &mut iface_manager);
@@ -1807,10 +1794,6 @@ mod tests {
         // Verify that telemetry event has been sent.
         let event = assert_variant!(test_values.telemetry_receiver.try_next(), Ok(Some(ev)) => ev);
         assert_variant!(event, TelemetryEvent::StartEstablishConnection { reset_start_time: true });
-
-        // Verify that the oneshot has been acked.
-        pin_mut!(connect_response_fut);
-        assert_variant!(exec.run_until_stalled(&mut connect_response_fut), Poll::Ready(Ok(())));
 
         // Verify that the ClientIfaceContainer has the correct config.
         assert_eq!(iface_manager.clients.len(), 1);
@@ -1843,8 +1826,8 @@ mod tests {
         process_stash_write(&mut exec, &mut stash_server);
 
         {
-            let connect_response_fut = {
-                let config = create_connect_request(&TEST_SSID, TEST_PASSWORD);
+            let config = create_connect_request(&TEST_SSID, TEST_PASSWORD);
+            {
                 let connect_fut = iface_manager.connect(config);
                 pin_mut!(connect_fut);
 
@@ -1868,12 +1851,12 @@ mod tests {
                 pin_mut!(connect_fut);
                 match exec.run_until_stalled(&mut connect_fut) {
                     Poll::Ready(connect_result) => match connect_result {
-                        Ok(receiver) => receiver.into_future(),
+                        Ok(_) => {}
                         Err(e) => panic!("failed to connect with {}", e),
                     },
                     Poll::Pending => panic!("expected the connect request to finish"),
-                }
-            };
+                };
+            }
 
             // Start running the client state machine.
             run_state_machine_futures(&mut exec, &mut iface_manager);
@@ -1904,10 +1887,6 @@ mod tests {
 
             // Run the state machine future again so that it acks the oneshot.
             run_state_machine_futures(&mut exec, &mut iface_manager);
-
-            // Verify that the oneshot has been acked.
-            pin_mut!(connect_response_fut);
-            assert_variant!(exec.run_until_stalled(&mut connect_response_fut), Poll::Ready(Ok(())));
         }
 
         // Verify that the ClientIfaceContainer has been moved from unconfigured to configured.
@@ -2049,21 +2028,20 @@ mod tests {
         process_stash_write(&mut exec, &mut stash_server);
 
         {
-            let connect_response_fut = {
-                let config = client_types::ConnectRequest {
-                    target: client_types::ConnectionCandidate {
-                        network: network_id.clone().into(),
-                        credential,
-                        scanned: Some(client_types::ScannedCandidate {
-                            bss_description: random_fidl_bss_description!(Wpa3, ssid: TEST_SSID.clone()),
-                            observation: client_types::ScanObservation::Passive,
-                            has_multiple_bss_candidates: true,
-                            security_type_detailed:
-                                client_types::SecurityTypeDetailed::Wpa3Personal,
-                        }),
-                    },
-                    reason: client_types::ConnectReason::FidlConnectRequest,
-                };
+            let config = client_types::ConnectRequest {
+                target: client_types::ConnectionCandidate {
+                    network: network_id.clone().into(),
+                    credential,
+                    scanned: Some(client_types::ScannedCandidate {
+                        bss_description: random_fidl_bss_description!(Wpa3, ssid: TEST_SSID.clone()),
+                        observation: client_types::ScanObservation::Passive,
+                        has_multiple_bss_candidates: true,
+                        security_type_detailed: client_types::SecurityTypeDetailed::Wpa3Personal,
+                    }),
+                },
+                reason: client_types::ConnectReason::FidlConnectRequest,
+            };
+            {
                 let connect_fut = iface_manager.connect(config);
                 pin_mut!(connect_fut);
 
@@ -2086,12 +2064,12 @@ mod tests {
 
                 match exec.run_until_stalled(&mut connect_fut) {
                     Poll::Ready(connect_result) => match connect_result {
-                        Ok(receiver) => receiver.into_future(),
+                        Ok(_) => {}
                         Err(e) => panic!("failed to connect with {}", e),
                     },
                     Poll::Pending => panic!("expected the connect request to finish"),
-                }
-            };
+                };
+            }
 
             // Start running the client state machine.
             run_state_machine_futures(&mut exec, &mut iface_manager);
@@ -2122,10 +2100,6 @@ mod tests {
 
             // Run the state machine future again so that it acks the oneshot.
             run_state_machine_futures(&mut exec, &mut iface_manager);
-
-            // Verify that the oneshot has been acked.
-            pin_mut!(connect_response_fut);
-            assert_variant!(exec.run_until_stalled(&mut connect_response_fut), Poll::Ready(Ok(())));
         }
 
         // Verify that the ClientIfaceContainer has been moved from unconfigured to configured.
@@ -2220,26 +2194,21 @@ mod tests {
         }));
 
         // Ask the IfaceManager to connect to a new network.
-        let connect_response_fut = {
+        {
             let connect_fut = iface_manager.connect(connect_request);
             pin_mut!(connect_fut);
 
             // Run the connect request to completion.
             match exec.run_until_stalled(&mut connect_fut) {
                 Poll::Ready(connect_result) => match connect_result {
-                    Ok(receiver) => receiver.into_future(),
+                    Ok(_) => {}
                     Err(e) => panic!("failed to connect with {}", e),
                 },
                 Poll::Pending => panic!("expected the connect request to finish"),
-            }
-        };
-
+            };
+        }
         // Start running the client state machine.
         run_state_machine_futures(&mut exec, &mut iface_manager);
-
-        // Verify that the oneshot has been acked.
-        pin_mut!(connect_response_fut);
-        assert_variant!(exec.run_until_stalled(&mut connect_response_fut), Poll::Ready(Ok(())));
 
         // Verify that the ClientIfaceContainer has the correct config.
         assert_eq!(iface_manager.clients.len(), 1);
@@ -4250,7 +4219,7 @@ mod tests {
         async fn connect(
             &mut self,
             _connect_req: client_types::ConnectRequest,
-        ) -> Result<oneshot::Receiver<()>, Error> {
+        ) -> Result<(), Error> {
             unimplemented!()
         }
 

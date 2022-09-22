@@ -28,10 +28,7 @@ pub trait IfaceManagerApi {
     /// Selects a client iface, ensures that a ClientSmeProxy and client connectivity state machine
     /// exists for the iface, and then issues a connect request to the client connectivity state
     /// machine.
-    async fn connect(
-        &mut self,
-        connect_req: client_types::ConnectRequest,
-    ) -> Result<oneshot::Receiver<()>, Error>;
+    async fn connect(&mut self, connect_req: client_types::ConnectRequest) -> Result<(), Error>;
 
     /// Marks an existing client interface as unconfigured.
     async fn record_idle_client(&mut self, iface_id: u16) -> Result<(), Error>;
@@ -97,10 +94,7 @@ impl IfaceManagerApi for IfaceManager {
         receiver.await?
     }
 
-    async fn connect(
-        &mut self,
-        connect_req: client_types::ConnectRequest,
-    ) -> Result<oneshot::Receiver<()>, Error> {
+    async fn connect(&mut self, connect_req: client_types::ConnectRequest) -> Result<(), Error> {
         let (responder, receiver) = oneshot::channel();
         let req = ConnectRequest { request: connect_req, responder };
         self.sender.try_send(IfaceManagerRequest::Connect(req))?;
@@ -445,8 +439,7 @@ mod tests {
                 request, responder
             }))) => {
                 assert_eq!(request, req);
-                let (_, receiver) = oneshot::channel();
-                responder.send(Ok(receiver)).expect("failed to send connect response");
+                responder.send(Ok(())).expect("failed to send connect response");
             }
         );
 

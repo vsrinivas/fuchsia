@@ -13,12 +13,10 @@ use {
         telemetry::{TelemetryEvent, TelemetrySender},
         util::listener,
     },
-    anyhow::{format_err, Error},
     fidl::epitaph::ChannelEpitaphExt,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy as fidl_policy,
     fuchsia_zircon as zx,
     futures::{
-        channel::oneshot,
         lock::{Mutex, MutexGuard},
         prelude::*,
         select,
@@ -160,25 +158,13 @@ async fn handle_client_requests(
         log_client_request(&request);
         match request {
             fidl_policy::ClientControllerRequest::Connect { id, responder, .. } => {
-                match handle_client_request_connect(
+                let response = handle_client_request_connect(
                     Arc::clone(&iface_manager),
                     saved_networks.clone(),
                     &id,
                 )
-                .await
-                {
-                    Ok(receiver) => {
-                        let response = match receiver.await {
-                            Ok(()) => fidl_common::RequestStatus::Acknowledged,
-                            Err(_) => fidl_common::RequestStatus::RejectedIncompatibleMode,
-                        };
-                        responder.send(response)?;
-                    }
-                    Err(error) => {
-                        error!("could not connect: {:?}", error);
-                        responder.send(fidl_common::RequestStatus::RejectedIncompatibleMode)?;
-                    }
-                }
+                .await;
+                responder.send(response)?
             }
             fidl_policy::ClientControllerRequest::StartClientConnections { responder } => {
                 telemetry_sender.send(TelemetryEvent::StartClientConnectionsRequest);
@@ -243,15 +229,21 @@ async fn handle_client_request_connect(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     saved_networks: SavedNetworksPtr,
     network: &fidl_policy::NetworkIdentifier,
-) -> Result<oneshot::Receiver<()>, Error> {
-    let network_config = saved_networks
+) -> fidl_common::RequestStatus {
+    let network_config = match saved_networks
         .lookup(&NetworkIdentifier::new(
             client_types::Ssid::from_bytes_unchecked(network.ssid.clone()),
             network.type_.into(),
         ))
         .await
         .pop()
-        .ok_or_else(|| format_err!("Requested network not found in saved networks"))?;
+    {
+        Some(config) => config,
+        None => {
+            error!("Requested network not found in saved networks");
+            return fidl_common::RequestStatus::RejectedNotSupported;
+        }
+    };
 
     let network_id = fidl_policy::NetworkIdentifier {
         ssid: network_config.ssid.into(),
@@ -267,7 +259,13 @@ async fn handle_client_request_connect(
     };
 
     let mut iface_manager = iface_manager.lock().await;
-    iface_manager.connect(connect_req).await
+    match iface_manager.connect(connect_req).await {
+        Ok(_) => fidl_common::RequestStatus::Acknowledged,
+        Err(e) => {
+            error!("failed to connect: {:?}", e);
+            fidl_common::RequestStatus::RejectedIncompatibleMode
+        }
+    }
 }
 
 async fn handle_client_request_scan(
@@ -483,13 +481,14 @@ mod tests {
         super::*,
         crate::{
             access_point::state_machine as ap_fsm,
-            config_management::{self, Credential, NetworkConfig, SecurityType, WPA_PSK_BYTE_LEN},
+            config_management::{Credential, NetworkConfig, SecurityType, WPA_PSK_BYTE_LEN},
             telemetry::{TelemetryEvent, TelemetrySender},
             util::testing::{
                 create_inspect_persistence_channel, create_wlan_hasher,
                 fakes::FakeSavedNetworksManager,
             },
         },
+        anyhow::{format_err, Error},
         async_trait::async_trait,
         fidl::endpoints::{create_proxy, create_request_stream, Proxy},
         fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync,
@@ -502,7 +501,7 @@ mod tests {
         pin_utils::pin_mut,
         std::convert::TryFrom,
         test_case::test_case,
-        wlan_common::{assert_variant, random_fidl_bss_description},
+        wlan_common::assert_variant,
     };
 
     /// Only used to tell us what disconnect request was given to the IfaceManager so that we
@@ -514,7 +513,6 @@ mod tests {
 
     struct FakeIfaceManager {
         pub sme_proxy: fidl_fuchsia_wlan_sme::ClientSmeProxy,
-        pub connect_succeeds: bool,
         // TODO(fxbug.dev/77068): Remove this attribute.
         #[allow(dead_code)]
         pub client_connections_enabled: bool,
@@ -532,7 +530,6 @@ mod tests {
         ) -> Self {
             FakeIfaceManager {
                 sme_proxy: proxy,
-                connect_succeeds: true,
                 client_connections_enabled: false,
                 disconnected_ifaces: Vec::new(),
                 command_sender: command_sender,
@@ -548,7 +545,6 @@ mod tests {
         ) -> Self {
             FakeIfaceManager {
                 sme_proxy: proxy,
-                connect_succeeds: true,
                 client_connections_enabled: false,
                 disconnected_ifaces: Vec::new(),
                 command_sender: command_sender,
@@ -581,43 +577,10 @@ mod tests {
 
         async fn connect(
             &mut self,
-            connect_req: client_types::ConnectRequest,
-        ) -> Result<oneshot::Receiver<()>, Error> {
+            _connect_req: client_types::ConnectRequest,
+        ) -> Result<(), Error> {
             let _ = self.disconnected_ifaces.pop();
-            let ssid: types::Ssid = connect_req.target.network.ssid.into();
-            // SME needs a BssDescription to connect. If none is provided in the connect request,
-            // then static testing BSS information is used. Note that this differs from production
-            // behavior where join scans are issued as needed and network information is aggregated
-            // and stored.
-            let bss_description = connect_req.target.scanned.map_or_else(
-                || random_fidl_bss_description!(Wpa2, ssid: ssid.clone()),
-                |scanned| scanned.bss_description,
-            );
-            let mut req = fidl_sme::ConnectRequest {
-                ssid: ssid.to_vec(),
-                bss_description,
-                authentication: config_management::select_authentication_method(
-                    match connect_req.target.credential {
-                        Credential::None => client_types::SecurityTypeDetailed::Open,
-                        Credential::Password(_) | Credential::Psk(_) => {
-                            types::SecurityTypeDetailed::Wpa2Personal
-                        }
-                    },
-                    connect_req.target.credential,
-                    true,
-                )
-                .unwrap(),
-                deprecated_scan_type: fidl_common::ScanType::Passive,
-                multiple_bss_candidates: false,
-            };
-            self.sme_proxy.connect(&mut req, None)?;
-
-            let (responder, receiver) = oneshot::channel();
-            // Drop the responder in the failing case.
-            if self.connect_succeeds {
-                let _ = responder.send(());
-            }
-            Ok(receiver)
+            Ok(())
         }
 
         async fn record_idle_client(&mut self, iface_id: u16) -> Result<(), Error> {
@@ -720,7 +683,7 @@ mod tests {
     // setup channels and proxies needed for the tests to use use the Client Provider and
     // Client Controller APIs in tests. The stash id should be the test name so that each
     // test will have a unique persistent store behind it.
-    fn test_setup(connect_succeeds: bool) -> TestValues {
+    fn test_setup() -> TestValues {
         let presaved_default_configs = vec![
             (NetworkIdentifier::try_from("foobar", SecurityType::None).unwrap(), Credential::None),
             (
@@ -750,8 +713,7 @@ mod tests {
         let (proxy, server) = create_proxy::<fidl_fuchsia_wlan_sme::ClientSmeMarker>()
             .expect("failed to create ClientSmeProxy");
         let (req_sender, _req_recvr) = mpsc::channel(1);
-        let mut iface_manager = FakeIfaceManager::new(proxy.clone(), req_sender);
-        iface_manager.connect_succeeds = connect_succeeds;
+        let iface_manager = FakeIfaceManager::new(proxy.clone(), req_sender);
         let iface_manager = Arc::new(Mutex::new(iface_manager));
         let sme_stream = server.into_stream().expect("failed to create ClientSmeRequestStream");
 
@@ -776,7 +738,7 @@ mod tests {
     fn connect_request_unknown_network() {
         let ssid = client_types::Ssid::try_from("foobar-unknown").unwrap();
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let test_values = test_setup(true);
+        let test_values = test_setup();
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
             test_values.update_sender,
@@ -807,7 +769,7 @@ mod tests {
 
         assert_variant!(
             exec.run_until_stalled(&mut connect_fut),
-            Poll::Ready(Ok(fidl_common::RequestStatus::RejectedIncompatibleMode))
+            Poll::Ready(Ok(fidl_common::RequestStatus::RejectedNotSupported))
         );
 
         // Unknown network should not have been saved by saved networks manager
@@ -821,7 +783,7 @@ mod tests {
     fn connect_request_open_network() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
-        let mut test_values = test_setup(true);
+        let test_values = test_setup();
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
             test_values.update_sender,
@@ -855,23 +817,13 @@ mod tests {
             exec.run_until_stalled(&mut connect_fut),
             Poll::Ready(Ok(fidl_common::RequestStatus::Acknowledged))
         );
-
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.sme_stream.next()),
-            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Connect {
-                req, ..
-            }))) => {
-                assert_eq!(b"foobar", &req.ssid[..]);
-                assert_eq!(None, req.authentication.credentials);
-            }
-        );
     }
 
     #[fuchsia::test]
     fn connect_request_protected_network() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
-        let mut test_values = test_setup(true);
+        let test_values = test_setup();
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
             test_values.update_sender,
@@ -905,24 +857,13 @@ mod tests {
             exec.run_until_stalled(&mut connect_fut),
             Poll::Ready(Ok(fidl_common::RequestStatus::Acknowledged))
         );
-
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.sme_stream.next()),
-            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Connect {
-                req, ..
-            }))) => {
-                assert_eq!(b"foobar-protected", &req.ssid[..]);
-                assert_eq!(Credential::Password(b"supersecure".to_vec()), req.authentication.credentials)
-                // TODO(hahnr): Send connection response.
-            }
-        );
     }
 
     #[fuchsia::test]
     fn connect_request_protected_psk_network() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
-        let mut test_values = test_setup(true);
+        let test_values = test_setup();
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
             test_values.update_sender,
@@ -956,146 +897,12 @@ mod tests {
             exec.run_until_stalled(&mut connect_fut),
             Poll::Ready(Ok(fidl_common::RequestStatus::Acknowledged))
         );
-
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.sme_stream.next()),
-            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Connect {
-                req, ..
-            }))) => {
-                assert_eq!(b"foobar-psk", &req.ssid[..]);
-                assert_eq!(Credential::Psk([64; WPA_PSK_BYTE_LEN].to_vec()), req.authentication.credentials)
-                // TODO(hahnr): Send connection response.
-            }
-        );
-    }
-
-    #[fuchsia::test]
-    fn connect_request_success() {
-        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = test_setup(true);
-        let serve_fut = serve_provider_requests(
-            test_values.iface_manager,
-            test_values.update_sender,
-            Arc::clone(&test_values.saved_networks),
-            Arc::clone(&test_values.network_selector),
-            test_values.client_provider_lock,
-            test_values.requests,
-            test_values.telemetry_sender,
-        );
-        pin_mut!(serve_fut);
-
-        // No request has been sent yet. Future should be idle.
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
-        // Request a new controller.
-        let (controller, _update_stream) = request_controller(&test_values.provider);
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.listener_updates.next()),
-            Poll::Ready(_)
-        );
-
-        // Issue connect request.
-        let connect_fut = controller.connect(&mut fidl_policy::NetworkIdentifier {
-            ssid: b"foobar".to_vec(),
-            type_: fidl_policy::SecurityType::None,
-        });
-        pin_mut!(connect_fut);
-
-        // Process connect request and verify connect response.
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        assert_variant!(
-            exec.run_until_stalled(&mut connect_fut),
-            Poll::Ready(Ok(fidl_common::RequestStatus::Acknowledged))
-        );
-    }
-
-    #[fuchsia::test]
-    fn connect_request_failure() {
-        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = test_setup(false);
-        let serve_fut = serve_provider_requests(
-            test_values.iface_manager,
-            test_values.update_sender,
-            Arc::clone(&test_values.saved_networks),
-            Arc::clone(&test_values.network_selector),
-            test_values.client_provider_lock,
-            test_values.requests,
-            test_values.telemetry_sender,
-        );
-        pin_mut!(serve_fut);
-
-        // No request has been sent yet. Future should be idle.
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
-        // Request a new controller.
-        let (controller, _update_stream) = request_controller(&test_values.provider);
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.listener_updates.next()),
-            Poll::Ready(_)
-        );
-
-        // Issue connect request.
-        let connect_fut = controller.connect(&mut fidl_policy::NetworkIdentifier {
-            ssid: b"foobar".to_vec(),
-            type_: fidl_policy::SecurityType::None,
-        });
-        pin_mut!(connect_fut);
-
-        // Process connect request and verify connect response.
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        assert_variant!(
-            exec.run_until_stalled(&mut connect_fut),
-            Poll::Ready(Ok(fidl_common::RequestStatus::RejectedIncompatibleMode))
-        );
-    }
-
-    #[fuchsia::test]
-    fn connect_request_bad_password() {
-        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = test_setup(false);
-        let serve_fut = serve_provider_requests(
-            test_values.iface_manager,
-            test_values.update_sender,
-            Arc::clone(&test_values.saved_networks),
-            Arc::clone(&test_values.network_selector),
-            test_values.client_provider_lock,
-            test_values.requests,
-            test_values.telemetry_sender,
-        );
-        pin_mut!(serve_fut);
-
-        // No request has been sent yet. Future should be idle.
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
-        // Request a new controller.
-        let (controller, _update_stream) = request_controller(&test_values.provider);
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.listener_updates.next()),
-            Poll::Ready(_)
-        );
-
-        // Issue connect request.
-        let connect_fut = controller.connect(&mut fidl_policy::NetworkIdentifier {
-            ssid: b"foobar".to_vec(),
-            type_: fidl_policy::SecurityType::None,
-        });
-        pin_mut!(connect_fut);
-
-        // Process connect request and verify connect response.
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        assert_variant!(
-            exec.run_until_stalled(&mut connect_fut),
-            Poll::Ready(Ok(fidl_common::RequestStatus::RejectedIncompatibleMode))
-        );
     }
 
     #[fuchsia::test]
     fn test_connect_wpa3_not_supported() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = test_setup(false);
+        let mut test_values = test_setup();
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -1141,14 +948,14 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
         assert_variant!(
             exec.run_until_stalled(&mut connect_fut),
-            Poll::Ready(Ok(fidl_common::RequestStatus::RejectedIncompatibleMode))
+            Poll::Ready(Ok(fidl_common::RequestStatus::RejectedNotSupported))
         );
     }
 
     #[fuchsia::test]
     fn test_connect_wpa3_is_supported() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let test_values = test_setup(true);
+        let test_values = test_setup();
         let serve_fut = serve_provider_requests(
             Arc::clone(&test_values.iface_manager),
             test_values.update_sender,
@@ -1190,7 +997,7 @@ mod tests {
     #[fuchsia::test]
     fn start_and_stop_client_connections() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = test_setup(true);
+        let mut test_values = test_setup();
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
             test_values.update_sender,
@@ -1270,7 +1077,7 @@ mod tests {
     #[fuchsia::test]
     fn scan_end_to_end() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = test_setup(true);
+        let mut test_values = test_setup();
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
             test_values.update_sender,
@@ -1325,7 +1132,7 @@ mod tests {
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
 
-        let test_values = test_setup(true);
+        let test_values = test_setup();
         let (update_sender, mut listener_updates) = mpsc::unbounded();
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
@@ -1390,7 +1197,7 @@ mod tests {
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
 
-        let test_values = test_setup(true);
+        let test_values = test_setup();
         let (update_sender, mut listener_updates) = mpsc::unbounded();
         let serve_fut = serve_provider_requests(
             test_values.iface_manager.clone(),
@@ -1476,8 +1283,7 @@ mod tests {
         let (proxy, _server) = create_proxy::<fidl_fuchsia_wlan_sme::ClientSmeMarker>()
             .expect("failed to create ClientSmeProxy");
         let (req_sender, mut req_recvr) = mpsc::channel(1);
-        let mut iface_manager = FakeIfaceManager::new(proxy, req_sender);
-        iface_manager.connect_succeeds = true;
+        let iface_manager = FakeIfaceManager::new(proxy, req_sender);
         let iface_manager = Arc::new(Mutex::new(iface_manager));
 
         let serve_fut = serve_provider_requests(
@@ -1547,7 +1353,7 @@ mod tests {
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
 
-        let test_values = test_setup(true);
+        let test_values = test_setup();
         let (update_sender, mut listener_updates) = mpsc::unbounded();
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
@@ -1620,8 +1426,7 @@ mod tests {
         let (proxy, _server) = create_proxy::<fidl_fuchsia_wlan_sme::ClientSmeMarker>()
             .expect("failed to create ClientSmeProxy");
         let (req_sender, mut req_recvr) = mpsc::channel(1);
-        let mut iface_manager = FakeIfaceManager::new(proxy, req_sender);
-        iface_manager.connect_succeeds = true;
+        let iface_manager = FakeIfaceManager::new(proxy, req_sender);
         let iface_manager = Arc::new(Mutex::new(iface_manager));
 
         let serve_fut = serve_provider_requests(
@@ -1759,7 +1564,7 @@ mod tests {
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
 
-        let test_values = test_setup(true);
+        let test_values = test_setup();
         let (update_sender, _listener_updates) = mpsc::unbounded();
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
@@ -1820,7 +1625,7 @@ mod tests {
     #[fuchsia::test]
     fn register_update_listener() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = test_setup(true);
+        let mut test_values = test_setup();
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
             test_values.update_sender,
@@ -1874,7 +1679,7 @@ mod tests {
     #[fuchsia::test]
     fn multiple_controllers_write_attempt() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let test_values = test_setup(true);
+        let test_values = test_setup();
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
             test_values.update_sender,
@@ -1956,7 +1761,7 @@ mod tests {
     #[fuchsia::test]
     fn multiple_controllers_epitaph() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let test_values = test_setup(true);
+        let test_values = test_setup();
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
             test_values.update_sender,
@@ -2011,7 +1816,7 @@ mod tests {
         async fn connect(
             &mut self,
             _connect_req: client_types::ConnectRequest,
-        ) -> Result<oneshot::Receiver<()>, Error> {
+        ) -> Result<(), Error> {
             Err(format_err!("No ifaces"))
         }
 
@@ -2123,7 +1928,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
         assert_variant!(
             exec.run_until_stalled(&mut connect_fut),
-            Poll::Ready(Ok(fidl_common::RequestStatus::RejectedIncompatibleMode))
+            Poll::Ready(Ok(fidl_common::RequestStatus::RejectedNotSupported))
         );
     }
 
@@ -2186,7 +1991,7 @@ mod tests {
     #[fuchsia::test]
     fn multiple_api_clients() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let test_values = test_setup(true);
+        let test_values = test_setup();
         let serve_fut = serve_provider_requests(
             test_values.iface_manager.clone(),
             test_values.update_sender.clone(),

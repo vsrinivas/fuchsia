@@ -830,10 +830,7 @@ mod tests {
             unimplemented!()
         }
 
-        async fn connect(
-            &mut self,
-            _connect_req: types::ConnectRequest,
-        ) -> Result<oneshot::Receiver<()>, Error> {
+        async fn connect(&mut self, _connect_req: types::ConnectRequest) -> Result<(), Error> {
             unimplemented!()
         }
 

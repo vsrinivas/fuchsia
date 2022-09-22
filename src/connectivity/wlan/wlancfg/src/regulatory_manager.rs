@@ -426,7 +426,7 @@ mod tests {
         async fn connect(
             &mut self,
             _connect_req: client_types::ConnectRequest,
-        ) -> Result<oneshot::Receiver<()>, Error> {
+        ) -> Result<(), Error> {
             unimplemented!();
         }
 
