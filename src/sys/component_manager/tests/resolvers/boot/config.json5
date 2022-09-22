@@ -13,7 +13,6 @@
             directory: "boot",
             path: "/boot",
 
-            // TODO(fxbug.dev/37534): Add the execute bit when supported.
             rights: [
                 "r*",
             ],
