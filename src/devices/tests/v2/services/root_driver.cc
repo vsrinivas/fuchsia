@@ -2,56 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <fidl/fuchsia.services.test/cpp/wire.h>
-#include <lib/driver2/logger.h>
-#include <lib/driver2/namespace.h>
-#include <lib/driver2/record_cpp.h>
-#include <lib/sys/component/cpp/outgoing_directory.h>
+#include <lib/driver2/driver2_cpp.h>
 
-namespace fdf {
-using namespace fuchsia_driver_framework;
-}  // namespace fdf
-
-namespace fio = fuchsia_io;
 namespace ft = fuchsia_services_test;
 
 namespace {
 
-class RootDriver : public fidl::WireServer<ft::ControlPlane>,
+class RootDriver : public driver::DriverBase,
+                   public fidl::WireServer<ft::ControlPlane>,
                    public fidl::WireServer<ft::DataPlane> {
  public:
-  RootDriver(async_dispatcher_t* dispatcher, fidl::WireSharedClient<fdf::Node> node,
-             driver::Namespace ns, driver::Logger logger)
-      : dispatcher_(dispatcher),
-        outgoing_(component::OutgoingDirectory::Create(dispatcher)),
-        node_(std::move(node)),
-        ns_(std::move(ns)),
-        logger_(std::move(logger)) {}
+  RootDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher)
+      : driver::DriverBase("root", std::move(start_args), std::move(driver_dispatcher)) {}
 
-  static constexpr const char* Name() { return "root"; }
-
-  static zx::status<std::unique_ptr<RootDriver>> Start(fdf::wire::DriverStartArgs& start_args,
-                                                       fdf::UnownedDispatcher dispatcher,
-                                                       fidl::WireSharedClient<fdf::Node> node,
-                                                       driver::Namespace ns,
-                                                       driver::Logger logger) {
-    auto driver = std::make_unique<RootDriver>(dispatcher->async_dispatcher(), std::move(node),
-                                               std::move(ns), std::move(logger));
-    auto result = driver->Run(std::move(start_args.outgoing_dir()));
-    if (result.is_error()) {
-      return result.take_error();
-    }
-    return zx::ok(std::move(driver));
-  }
-
- private:
-  zx::status<> Run(fidl::ServerEnd<fio::Directory> outgoing_dir) {
-    component::ServiceHandler handler;
+  zx::status<> Start() override {
+    driver::ServiceInstanceHandler handler;
     ft::Device::Handler device(&handler);
 
     auto control = [this](fidl::ServerEnd<ft::ControlPlane> server_end) -> void {
-      fidl::BindServer<fidl::WireServer<ft::ControlPlane>>(dispatcher_, std::move(server_end),
+      fidl::BindServer<fidl::WireServer<ft::ControlPlane>>(dispatcher(), std::move(server_end),
                                                            this);
     };
     auto result = device.add_control(control);
@@ -61,7 +31,7 @@ class RootDriver : public fidl::WireServer<ft::ControlPlane>,
     }
 
     auto data = [this](fidl::ServerEnd<ft::DataPlane> server_end) -> void {
-      fidl::BindServer<fidl::WireServer<ft::DataPlane>>(dispatcher_, std::move(server_end), this);
+      fidl::BindServer<fidl::WireServer<ft::DataPlane>>(dispatcher(), std::move(server_end), this);
     };
     result = device.add_data(data);
     if (result.is_error()) {
@@ -69,28 +39,22 @@ class RootDriver : public fidl::WireServer<ft::ControlPlane>,
       return result.take_error();
     }
 
-    result = outgoing_.AddService<ft::Device>(std::move(handler));
+    result = context().outgoing()->AddService<ft::Device>(std::move(handler));
     if (result.is_error()) {
       FDF_LOG(ERROR, "Failed to add Device service: %s", result.status_string());
       return result.take_error();
     }
-    return outgoing_.Serve(std::move(outgoing_dir));
+    return zx::ok();
   }
 
+ private:
   // fidl::WireServer<ft::ControlPlane>
   void ControlDo(ControlDoCompleter::Sync& completer) override { completer.Reply(); }
 
   // fidl::WireServer<ft::DataPlane>
   void DataDo(DataDoCompleter::Sync& completer) override { completer.Reply(); }
-
-  async_dispatcher_t* dispatcher_;
-  component::OutgoingDirectory outgoing_;
-
-  fidl::WireSharedClient<fdf::Node> node_;
-  driver::Namespace ns_;
-  driver::Logger logger_;
 };
 
 }  // namespace
 
-FUCHSIA_DRIVER_RECORD_CPP_V1(RootDriver);
+FUCHSIA_DRIVER_RECORD_CPP_V2(driver::Record<RootDriver>);
