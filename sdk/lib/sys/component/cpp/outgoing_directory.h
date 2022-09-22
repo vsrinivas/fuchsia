@@ -7,6 +7,7 @@
 
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async/dispatcher.h>
+#include <lib/fidl/cpp/wire/traits.h>
 #include <lib/fit/function.h>
 #include <lib/stdcompat/string_view.h>
 #include <lib/svc/dir.h>
@@ -19,6 +20,7 @@
 #include <map>
 #include <memory>
 #include <stack>
+#include <type_traits>
 
 namespace component {
 
@@ -136,6 +138,8 @@ class OutgoingDirectory final {
   template <typename Protocol>
   zx::status<> AddProtocol(fidl::WireServer<Protocol>* impl,
                            cpp17::string_view name = fidl::DiscoverableProtocolName<Protocol>) {
+    static_assert(fidl::IsProtocol<Protocol>(), "Type of |Protocol| must be FIDL protocol");
+
     return AddProtocolAt(kServiceDirectoryWithNoSlash, impl, name);
   }
 
@@ -144,6 +148,7 @@ class OutgoingDirectory final {
   template <typename Protocol>
   zx::status<> AddProtocol(fidl::Server<Protocol>* impl,
                            cpp17::string_view name = fidl::DiscoverableProtocolName<Protocol>) {
+    static_assert(fidl::IsProtocol<Protocol>(), "Type of |Protocol| must be FIDL protocol");
     if (impl == nullptr || dispatcher_ == nullptr) {
       return zx::make_status(ZX_ERR_INVALID_ARGS);
     }
@@ -183,6 +188,8 @@ class OutgoingDirectory final {
   template <typename Protocol>
   zx::status<> AddProtocol(TypedHandler<Protocol> handler,
                            cpp17::string_view name = fidl::DiscoverableProtocolName<Protocol>) {
+    static_assert(fidl::IsProtocol<Protocol>(), "Type of |Protocol| must be FIDL protocol");
+
     return AddProtocolAt<Protocol>(kServiceDirectoryWithNoSlash, std::move(handler), name);
   }
 
@@ -206,6 +213,7 @@ class OutgoingDirectory final {
   template <typename Protocol>
   zx::status<> AddProtocolAt(cpp17::string_view path, fidl::WireServer<Protocol>* impl,
                              cpp17::string_view name = fidl::DiscoverableProtocolName<Protocol>) {
+    static_assert(fidl::IsProtocol<Protocol>(), "Type of |Protocol| must be FIDL protocol");
     if (impl == nullptr || dispatcher_ == nullptr) {
       return zx::make_status(ZX_ERR_INVALID_ARGS);
     }
@@ -227,6 +235,8 @@ class OutgoingDirectory final {
   template <typename Protocol>
   zx::status<> AddProtocolAt(cpp17::string_view path, TypedHandler<Protocol> handler,
                              cpp17::string_view name = fidl::DiscoverableProtocolName<Protocol>) {
+    static_assert(fidl::IsProtocol<Protocol>(), "Type of |Protocol| must be FIDL protocol");
+
     auto bridge_func = [handler = std::move(handler)](zx::channel request) {
       fidl::ServerEnd<Protocol> server_end(std::move(request));
       (void)handler(std::move(server_end));
@@ -260,6 +270,8 @@ class OutgoingDirectory final {
   template <typename Service>
   zx::status<> AddService(ServiceInstanceHandler handler,
                           cpp17::string_view instance = kDefaultInstance) {
+    static_assert(fidl::IsService<Service>(), "Type of |Service| must be FIDL service");
+
     return AddService(std::move(handler), Service::Name, instance);
   }
 
