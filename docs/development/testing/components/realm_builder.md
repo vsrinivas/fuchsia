@@ -480,7 +480,7 @@ routed using `parent` are now accessible by the test.
 
 ## Advanced Configuration {#advanced}
 
-### Modifying generated manifests (Rust and Dart only) {#modifying-manifests}
+### Modifying generated manifests {#modifying-manifests}
 
 For cases where the capability routing features supported by the add route
 method are not sufficient, you can manually adjust the manifest declarations.
@@ -500,32 +500,46 @@ After [constructing the realm](#construct-realm):
 * {Rust}
 
     ```rust
-    let mut root_manifest = builder.get_realm_decl().await?;
-    // root_manifest is mutated in whatever way is needed
-    builder.replace_realm_decl(root_manifest).await?;
+    let mut root_decl = builder.get_realm_decl().await?;
+    // root_decl is mutated in whatever way is needed
+    builder.replace_realm_decl(root_decl).await?;
 
-    let mut a_manifest = builder.get_component_decl("a").await?;
-    // a_manifest is mutated in whatever way is needed
-    builder.replace_component_decl("a", a_manifest).await?;
+    let mut a_decl = builder.get_component_decl("a").await?;
+    // a_decl is mutated in whatever way is needed
+    builder.replace_component_decl("a", a_decl).await?;
     ```
 
 * {Dart}
 
     ```dart
-    var rootManifest = await builder.getRealmDecl();
+    var rootDecl = await builder.getRealmDecl();
     // ...
-    // Clone and modify the rootManifest as needed, for example, after updating
+    // Clone and modify the rootDecl as needed, for example, after updating
     // the `children` list:
-    rootManifest = rootManifest.$cloneWith(children: fidl.Some(children));
-    await builder.replaceRealmDecl(rootManifest);
+    rootDecl = rootDecl.$cloneWith(children: fidl.Some(children));
+    await builder.replaceRealmDecl(rootDecl);
 
-    var aManifest = await builder.getComponentDecl("a");
+    var aDecl = await builder.getComponentDecl("a");
     // ...
-    // Clone and modify the aManifest as needed, for example, after updating
+    // Clone and modify the aDecl as needed, for example, after updating
     // exposed capabilities:
-    aManifest = aManifest.$cloneWith(exposes: fidl.Some(exposes));
-    await builder.replaceComponentDecl("a", aManifest);
+    aDecl = aDecl.$cloneWith(exposes: fidl.Some(exposes));
+    await builder.replaceComponentDecl("a", aDecl);
     ```
+
+* {C++}
+
+    ```cpp
+    auto root_decl = realm_builder.GetRealmDecl();
+    // ... root_decl is mutated as needed
+    realm_builder.ReplaceRealmDecl(std::move(root_decl));
+
+    auto a_decl = realm_builder.GetComponentDecl("a");
+    // ... a_decl is mutated as needed
+    realm_builder.ReplaceComponentDecl(std::move(a_decl));
+
+    ```
+
 
 When [adding routes](#routing) for modified components, add them directly to
 the **constructed realm** where you obtained the manifest instead of using the
