@@ -354,6 +354,8 @@ void SyncTimeline::OnClose(fidl::UnbindInfo info, zx::channel channel) {
   if (!info.is_user_initiated()) {
     if (info.is_peer_closed()) {
       zxlogf(INFO, "client closed SyncTimeline connection");
+    } else if (info.status() == ZX_ERR_CANCELED) {
+      zxlogf(INFO, "dispatcher cancelled SyncTimeline");
     } else {
       zxlogf(ERROR, "channel internal error: %s", info.FormatDescription().c_str());
     }
