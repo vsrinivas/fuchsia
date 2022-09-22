@@ -109,7 +109,7 @@ func DeserializeSendMsgMeta(buf []byte) (*tcpip.FullAddress, tcpip.SendableContr
 		src := res.cmsg_set.ipv6_pktinfo.addr[:]
 		cmsgSet.IPv6PacketInfo = tcpip.IPv6PacketInfo{
 			NIC:  tcpip.NICID(res.cmsg_set.ipv6_pktinfo.if_index),
-			Addr: tcpip.Address(*(*[]byte)(unsafe.Pointer(&src))),
+			Addr: fidlconv.BytesToAddressDroppingUnspecified(*(*[]byte)(unsafe.Pointer(&src))),
 		}
 	}
 	return addr, cmsgSet, nil

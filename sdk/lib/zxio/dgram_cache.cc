@@ -15,6 +15,8 @@
 #include <utility>
 #include <vector>
 
+#include "sdk/lib/zxio/hash.h"
+
 namespace fnet = fuchsia_net;
 namespace fsocket = fuchsia_posix_socket;
 
@@ -138,12 +140,45 @@ RequestedCmsgResult RequestedCmsgCache::Get(zx_wait_item_t err_wait_item,
   }
 }
 
+// TODO(https://fxbug.dev/7958): remove this custom implementation when FIDL
+// wire types support deep equality.
+bool RouteCache::Key::operator==(const RouteCache::Key& o) const {
+  if (remote_addr != o.remote_addr) {
+    return false;
+  }
+  if (local_iface_and_addr.has_value() != o.local_iface_and_addr.has_value()) {
+    return false;
+  }
+  if (!local_iface_and_addr.has_value()) {
+    return true;
+  }
+  const auto& [iface, addr] = local_iface_and_addr.value();
+  const auto& [other_iface, other_addr] = o.local_iface_and_addr.value();
+  if (iface != other_iface) {
+    return false;
+  }
+  return addr.addr == other_addr.addr;
+}
+
+size_t RouteCache::KeyHasher::operator()(const Key& k) const {
+  size_t h = k.remote_addr.hash();
+  if (k.local_iface_and_addr.has_value()) {
+    const auto& [iface, addr] = k.local_iface_and_addr.value();
+    hash_combine(h, iface);
+    for (const auto& addr_bits : addr.addr) {
+      hash_combine(h, addr_bits);
+    }
+  }
+  return h;
+}
+
 // TODO(https://fxbug.dev/97260): Implement cache eviction strategy to avoid unbounded cache
 // growth.
-using DestinationCacheResult = fitx::result<ErrOrOutCode, uint32_t>;
-DestinationCacheResult DestinationCache::Get(
-    std::optional<SocketAddress>& addr, const zx_wait_item_t& err_wait_item,
-    fidl::WireSyncClient<fsocket::DatagramSocket>& client) {
+using RouteCacheResult = fitx::result<ErrOrOutCode, uint32_t>;
+RouteCacheResult RouteCache::Get(
+    std::optional<SocketAddress>& remote_addr,
+    const std::optional<std::pair<uint64_t, fuchsia_net::wire::Ipv6Address>>& local_iface_and_addr,
+    const zx_wait_item_t& err_wait_item, fidl::WireSyncClient<fsocket::DatagramSocket>& client) {
   // TODO(https://fxbug.dev/103653): Circumvent fast-path pessimization caused by lock
   // contention 1) between multiple fast paths and 2) between fast path and slow path.
   std::lock_guard lock(lock_);
@@ -155,7 +190,8 @@ DestinationCacheResult DestinationCache::Get(
   while (true) {
     std::optional<uint32_t> maximum_size;
     uint32_t num_wait_items = ERR_WAIT_ITEM_IDX + 1;
-    const std::optional<SocketAddress>& addr_to_lookup = addr.has_value() ? addr : connected_;
+    const std::optional<SocketAddress>& addr_to_lookup =
+        remote_addr.has_value() ? remote_addr : connected_;
 
     // NOTE: `addr_to_lookup` might not have a value if we're looking up the
     // connected addr for the first time. We still proceed with the syscall
@@ -165,7 +201,11 @@ DestinationCacheResult DestinationCache::Get(
     // TODO(https://fxbug.dev/103655): Test errors are returned when connected
     // addr looked up for the first time.
     if (addr_to_lookup.has_value()) {
-      if (auto it = cache_.find(addr_to_lookup.value()); it != cache_.end()) {
+      if (auto it = cache_.find({
+              .remote_addr = addr_to_lookup.value(),
+              .local_iface_and_addr = local_iface_and_addr,
+          });
+          it != cache_.end()) {
         const Value& value = it->second;
         ZX_ASSERT_MSG(value.eventpairs.size() + 1 <= ZX_WAIT_MANY_MAX_ITEMS,
                       "number of wait_items (%lu) exceeds maximum allowed (%zu)",
@@ -206,19 +246,21 @@ DestinationCacheResult DestinationCache::Get(
 
     // TODO(https://fxbug.dev/103740): Avoid allocating into this arena.
     fidl::Arena alloc;
-    const fidl::WireResult response = [&client, &alloc, &addr]() {
-      if (addr.has_value()) {
-        return addr.value().WithFIDL([&client, &alloc](fnet::wire::SocketAddress address) {
-          fidl::WireTableBuilder request_builder =
-              fsocket::wire::DatagramSocketSendMsgPreflightRequest::Builder(alloc);
-          request_builder.to(address);
-          return client->SendMsgPreflight(request_builder.Build());
-        });
-      } else {
-        fidl::WireTableBuilder request_builder =
-            fsocket::wire::DatagramSocketSendMsgPreflightRequest::Builder(alloc);
-        return client->SendMsgPreflight(request_builder.Build());
+    const fidl::WireResult response = [&client, &alloc, &remote_addr, &local_iface_and_addr]() {
+      fidl::WireTableBuilder request_builder =
+          fsocket::wire::DatagramSocketSendMsgPreflightRequest::Builder(alloc);
+      if (remote_addr.has_value()) {
+        remote_addr.value().WithFIDL(
+            [&request_builder](fnet::wire::SocketAddress address) { request_builder.to(address); });
       }
+      if (local_iface_and_addr.has_value()) {
+        const auto& [iface, addr] = local_iface_and_addr.value();
+        request_builder.ipv6_pktinfo(fsocket::wire::Ipv6PktInfoSendControlData{
+            .iface = iface,
+            .local_addr = addr,
+        });
+      }
+      return client->SendMsgPreflight(request_builder.Build());
     }();
     if (!response.ok()) {
       ErrOrOutCode err = zx::error(response.status());
@@ -231,12 +273,13 @@ DestinationCacheResult DestinationCache::Get(
     fsocket::wire::DatagramSocketSendMsgPreflightResponse& res = *result.value();
 
     std::optional<SocketAddress> returned_addr;
-    if (!addr.has_value()) {
+    if (!remote_addr.has_value()) {
       if (res.has_to()) {
         returned_addr = SocketAddress::FromFidl(res.to());
       }
     }
-    const std::optional<SocketAddress>& addr_to_store = addr.has_value() ? addr : returned_addr;
+    const std::optional<SocketAddress>& addr_to_store =
+        remote_addr.has_value() ? remote_addr : returned_addr;
 
     if (!addr_to_store.has_value()) {
       return fitx::error(zx::ok(static_cast<int16_t>(EIO)));
@@ -250,10 +293,15 @@ DestinationCacheResult DestinationCache::Get(
     eventpairs.reserve(res.validity().count());
     std::move(res.validity().begin(), res.validity().end(), std::back_inserter(eventpairs));
 
-    cache_[addr_to_store.value()] = {.eventpairs = std::move(eventpairs),
-                                     .maximum_size = res.maximum_size()};
+    cache_[{
+        .remote_addr = addr_to_store.value(),
+        .local_iface_and_addr = local_iface_and_addr,
+    }] = {
+        .eventpairs = std::move(eventpairs),
+        .maximum_size = res.maximum_size(),
+    };
 
-    if (!addr.has_value()) {
+    if (!remote_addr.has_value()) {
       connected_ = addr_to_store.value();
     }
   }

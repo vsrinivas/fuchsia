@@ -519,6 +519,27 @@ type NetworkSocketRecvControlData = table {
 /// These match the POSIX `SOL_SOCKET` control messages.
 type SocketSendControlData = table {};
 
+/// IPv6-specific disposition of sent data.
+///
+/// This is currently a struct instead of a table as it is meant to match
+/// `in6_pktinfo` which is not expected to grow.
+//
+// TODO(https://fxbug.dev/109723): Consider changing this type to better reflect
+// the optionality of its fields.
+type Ipv6PktInfoSendControlData = struct {
+    /// The interface index from which the IPv6 packet should be sent.
+    ///
+    /// 0 indicates that the local interface is unspecified and the
+    /// stack may choose an appropriate interface.
+    iface uint64;
+    /// The source address from which the IPv6 packet should be sent.
+    ///
+    /// All zeroes indicates that the local address is unspecified and
+    /// the stack may choose an appropriate address (i.e. the local
+    /// address to which the socket is bound).
+    local_addr fuchsia.net.Ipv6Address;
+};
+
 /// Network socket (L3) ancillary data that can be sent.
 type NetworkSocketSendControlData = table {
     /// Socket level ancillary data.
@@ -554,22 +575,7 @@ type NetworkSocketSendControlData = table {
 
         /// Information controlling the local interface and/or address used when
         /// sending an IPv6 packet.
-        //
-        // This is a structure instead of a table as it is meant to match
-        // `in6_pktinfo` which is not expected to grow.
-        3: pktinfo @generated_name("Ipv6PktInfoSendControlData") struct {
-            /// The interface index from which the IPv6 packet should be sent.
-            ///
-            /// 0 indicates that the local interface is unspecified and the
-            /// stack may choose an appropriate interface.
-            iface fuchsia.net.interface_id;
-            /// The source address from which the IPv6 packet should be sent.
-            ///
-            /// All zeroes indicates that the local address is unspecified and
-            /// the stack may choose an appropriate address (i.e. the local
-            /// address to which the socket is bound).
-            local_addr fuchsia.net.Ipv6Address;
-        };
+        3: pktinfo Ipv6PktInfoSendControlData;
     };
 };
 
@@ -674,6 +680,15 @@ protocol DatagramSocket {
         ///
         /// Required if the method receiver is not connected.
         1: to fuchsia.net.SocketAddress;
+        /// Information controlling the local interface and/or address used when
+        /// sending an IPv6 packet.
+        ///
+        /// If absent, indicates that the stack is free to choose an appropriate
+        /// outgoing route.
+        //
+        // TODO(https://fxbug.dev/106644): document behavior when this field is
+        // set and the socket is an IPv4 socket.
+        2: ipv6_pktinfo Ipv6PktInfoSendControlData;
     }) -> (resource table {
         /// The validated destination address.
         ///

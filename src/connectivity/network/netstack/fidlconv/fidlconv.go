@@ -240,7 +240,7 @@ func ToZxTime(t tcpip.MonotonicTime) zx.Time {
 	return zx.Time(t.Sub(tcpip.MonotonicTime{}))
 }
 
-func bytesToAddressDroppingUnspecified(b []uint8) tcpip.Address {
+func BytesToAddressDroppingUnspecified(b []uint8) tcpip.Address {
 	for _, e := range b {
 		if e != 0 {
 			return tcpip.Address(b)
@@ -254,13 +254,13 @@ func ToTCPIPFullAddress(addr net.SocketAddress) tcpip.FullAddress {
 	case net.SocketAddressIpv4:
 		return tcpip.FullAddress{
 			NIC:  0,
-			Addr: bytesToAddressDroppingUnspecified(addr.Ipv4.Address.Addr[:]),
+			Addr: BytesToAddressDroppingUnspecified(addr.Ipv4.Address.Addr[:]),
 			Port: addr.Ipv4.Port,
 		}
 	case net.SocketAddressIpv6:
 		return tcpip.FullAddress{
 			NIC:  tcpip.NICID(addr.Ipv6.ZoneIndex),
-			Addr: bytesToAddressDroppingUnspecified(addr.Ipv6.Address.Addr[:]),
+			Addr: BytesToAddressDroppingUnspecified(addr.Ipv6.Address.Addr[:]),
 			Port: addr.Ipv6.Port,
 		}
 	default:
@@ -269,9 +269,9 @@ func ToTCPIPFullAddress(addr net.SocketAddress) tcpip.FullAddress {
 }
 
 func ToTcpIpAddressDroppingUnspecifiedv4(fidl net.Ipv4Address) tcpip.Address {
-	return bytesToAddressDroppingUnspecified(fidl.Addr[:])
+	return BytesToAddressDroppingUnspecified(fidl.Addr[:])
 }
 
 func ToTcpIpAddressDroppingUnspecifiedv6(fidl net.Ipv6Address) tcpip.Address {
-	return bytesToAddressDroppingUnspecified(fidl.Addr[:])
+	return BytesToAddressDroppingUnspecified(fidl.Addr[:])
 }

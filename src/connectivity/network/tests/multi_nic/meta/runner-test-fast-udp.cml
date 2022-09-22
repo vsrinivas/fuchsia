@@ -6,11 +6,11 @@
     children: [
         {
             name: "client-netstack",
-            url: "#meta/configurable-netstack.cm",
+            url: "#meta/configurable-netstack-fast-udp.cm",
         },
         {
             name: "server-netstack",
-            url: "#meta/configurable-netstack.cm",
+            url: "#meta/configurable-netstack-fast-udp.cm",
         },
     ],
 }

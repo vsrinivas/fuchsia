@@ -64,18 +64,32 @@ class RequestedCmsgCache {
   std::mutex lock_;
 };
 
-class DestinationCache {
+class RouteCache {
  public:
   using Result = fitx::result<ErrOrOutCode, uint32_t>;
-  Result Get(std::optional<SocketAddress>& addr, const zx_wait_item_t& err_wait_item,
+
+  Result Get(std::optional<SocketAddress>& remote_addr,
+             const std::optional<std::pair<uint64_t, fuchsia_net::wire::Ipv6Address>>&
+                 local_iface_and_addr,
+             const zx_wait_item_t& err_wait_item,
              fidl::WireSyncClient<fuchsia_posix_socket::DatagramSocket>& client);
 
  private:
+  struct Key {
+    SocketAddress remote_addr;
+    std::optional<std::pair<uint64_t, fuchsia_net::wire::Ipv6Address>> local_iface_and_addr;
+
+    bool operator==(const Key& o) const;
+  };
+  struct KeyHasher {
+    size_t operator()(const Key& k) const;
+  };
   struct Value {
     std::vector<zx::eventpair> eventpairs;
     uint32_t maximum_size;
   };
-  std::unordered_map<SocketAddress, Value> cache_ __TA_GUARDED(lock_);
+
+  std::unordered_map<Key, Value, KeyHasher> cache_ __TA_GUARDED(lock_);
   std::optional<SocketAddress> connected_ __TA_GUARDED(lock_);
   std::mutex lock_;
 };

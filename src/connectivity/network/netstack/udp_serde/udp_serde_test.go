@@ -114,6 +114,38 @@ func TestSerializeThenDeserializeSendMsgMetaWithLinkLocalIPv6Addr(t *testing.T) 
 	}
 }
 
+func TestSerializeThenDeserializeSendMsgMetaWithUnspecifiedIPv6PacketInfoAddr(t *testing.T) {
+	buf := make([]byte, TxUdpPreludeSize())
+	addr := tcpip.FullAddress{
+		Port: testPort,
+		Addr: ipv6LinkLocal,
+		NIC:  testNICID,
+	}
+	cmsgSet := tcpip.SendableControlMessages{
+		HasIPv6PacketInfo: true,
+		IPv6PacketInfo: tcpip.IPv6PacketInfo{
+			Addr: tcpip.Address(""),
+			NIC:  testNICID,
+		},
+	}
+
+	if err := SerializeSendMsgMeta(ipv6.ProtocolNumber, addr, cmsgSet, buf); err != nil {
+		t.Fatalf("got SerializeSendMsgMeta(%d, %#v, %#v, _) = (%#v), want (%#v)", ipv6.ProtocolNumber, addr, cmsgSet, err, nil)
+	}
+
+	deserializedAddr, deserializedCmsg, err := DeserializeSendMsgMeta(buf)
+
+	if err != nil {
+		t.Fatalf("expect DeserializeSendMsgMeta(_) succeeds, got: %s", err)
+	}
+	if got, want := *deserializedAddr, addr; got != want {
+		t.Errorf("got address after serde = (%#v), want (%#v)", got, want)
+	}
+	if got, want := deserializedCmsg, cmsgSet; got != want {
+		t.Errorf("got cmsg after serde = (%#v), want (%#v)", got, want)
+	}
+}
+
 func TestSerializeSendMsgMetaFailures(t *testing.T) {
 	for _, testCase := range []struct {
 		name        string
@@ -281,7 +313,7 @@ func TestSerializeThenDeserializeRecvMsgMeta(t *testing.T) {
 			recvMeta, err := DeserializeRecvMsgMeta(buf)
 
 			if err != nil {
-				t.Fatalf("expect DeserializeSendMsgMeta(_) succeeds, got: %s", err)
+				t.Fatalf("expect DeserializeRecvMsgMeta(_) succeeds, got: %s", err)
 			}
 
 			wantAddr := tcpip.FullAddress{

@@ -1166,19 +1166,45 @@ struct datagram_socket : public socket_with_zx_socket<DatagramSocket> {
     }
     size_t total = opt_total.value();
 
-    std::optional<SocketAddress> addr;
+    std::optional<SocketAddress> remote_addr;
     // Attempt to load socket address if either name or namelen is set.
     // If only one is set, it'll result in INVALID_ARGS.
     if (msg->msg_namelen != 0 || msg->msg_name != nullptr) {
-      zx_status_t status = addr.emplace().LoadSockAddr(static_cast<struct sockaddr*>(msg->msg_name),
-                                                       msg->msg_namelen);
+      zx_status_t status = remote_addr.emplace().LoadSockAddr(
+          static_cast<struct sockaddr*>(msg->msg_name), msg->msg_namelen);
       if (status != ZX_OK) {
         return status;
       }
     }
 
-    DestinationCache::Result result =
-        zxio_datagram_socket().dest_cache.Get(addr, socket_err_wait_item(), GetClient());
+    // TODO(https://fxbug.dev/103740): Avoid allocating into this arena.
+    fidl::Arena alloc;
+    fitx::result cmsg_result = ParseControlMessages<fsocket::wire::DatagramSocketSendControlData>(
+        msg->msg_control, msg->msg_controllen, alloc);
+    if (cmsg_result.is_error()) {
+      *out_code = cmsg_result.error_value();
+      return ZX_OK;
+    }
+    const fsocket::wire::DatagramSocketSendControlData& cdata = cmsg_result.value();
+    const std::optional local_iface_and_addr =
+        [&cdata]() -> std::optional<std::pair<uint64_t, fuchsia_net::wire::Ipv6Address>> {
+      if (!cdata.has_network()) {
+        return {};
+      }
+      const fuchsia_posix_socket::wire::NetworkSocketSendControlData& network = cdata.network();
+      if (!network.has_ipv6()) {
+        return {};
+      }
+      const fuchsia_posix_socket::wire::Ipv6SendControlData& ipv6 = network.ipv6();
+      if (!ipv6.has_pktinfo()) {
+        return {};
+      }
+      const fuchsia_posix_socket::wire::Ipv6PktInfoSendControlData& pktinfo = ipv6.pktinfo();
+      return std::make_pair(pktinfo.iface, pktinfo.local_addr);
+    }();
+
+    RouteCache::Result result = zxio_datagram_socket().route_cache.Get(
+        remote_addr, local_iface_and_addr, socket_err_wait_item(), GetClient());
 
     if (!result.is_ok()) {
       ErrOrOutCode err_value = result.error_value();
@@ -1204,15 +1230,6 @@ struct datagram_socket : public socket_with_zx_socket<DatagramSocket> {
       buf = heap_allocated_buf.get();
     }
 
-    // TODO(https://fxbug.dev/103740): Avoid allocating into this arena.
-    fidl::Arena alloc;
-    fitx::result cmsg_result = ParseControlMessages<fsocket::wire::DatagramSocketSendControlData>(
-        msg->msg_control, msg->msg_controllen, alloc);
-    if (cmsg_result.is_error()) {
-      *out_code = cmsg_result.error_value();
-      return ZX_OK;
-    }
-    const fsocket::wire::DatagramSocketSendControlData& cdata = cmsg_result.value();
     auto meta_builder_with_cdata = [&alloc, &cdata]() {
       fidl::WireTableBuilder meta_builder = fuchsia_posix_socket::wire::SendMsgMeta::Builder(alloc);
       meta_builder.control(cdata);
@@ -1226,8 +1243,8 @@ struct datagram_socket : public socket_with_zx_socket<DatagramSocket> {
         };
 
     SerializeSendMsgMetaError serialize_err;
-    if (addr.has_value()) {
-      serialize_err = addr.value().WithFIDL(
+    if (remote_addr.has_value()) {
+      serialize_err = remote_addr.value().WithFIDL(
           [&build_and_serialize, &meta_builder_with_cdata](fnet::wire::SocketAddress address) {
             fidl::WireTableBuilder meta_builder = meta_builder_with_cdata();
             meta_builder.to(address);

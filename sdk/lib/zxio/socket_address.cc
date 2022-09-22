@@ -17,15 +17,10 @@
 
 #include <netpacket/packet.h>
 
+#include "sdk/lib/zxio/hash.h"
+
 namespace fpacketsocket = fuchsia_posix_socket_packet;
 namespace fnet = fuchsia_net;
-
-// Adapted from: https://www.boost.org/doc/libs/1_64_0/boost/functional/hash/hash.hpp.
-template <class T>
-void hash_combine(size_t& seed, const T& v) {
-  std::hash<T> hasher;
-  seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-}
 
 std::optional<SocketAddress> SocketAddress::FromFidl(
     const fuchsia_net::wire::SocketAddress& from_addr) {
@@ -125,6 +120,8 @@ bool SocketAddress::operator==(const SocketAddress& o) const {
       },
       storage_.value());
 }
+
+bool SocketAddress::operator!=(const SocketAddress& o) const { return !operator==(o); }
 
 size_t SocketAddress::hash() const {
   if (!storage_.has_value()) {

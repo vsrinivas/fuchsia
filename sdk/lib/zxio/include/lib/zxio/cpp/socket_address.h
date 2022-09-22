@@ -22,6 +22,7 @@ class SocketAddress {
   zx_status_t LoadSockAddr(const struct sockaddr* addr, size_t addr_len);
 
   bool operator==(const SocketAddress& o) const;
+  bool operator!=(const SocketAddress& o) const;
 
   size_t hash() const;
 

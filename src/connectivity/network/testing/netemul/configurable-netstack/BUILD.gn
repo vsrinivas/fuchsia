@@ -47,6 +47,15 @@ fuchsia_component("configurable-netstack") {
   ]
 }
 
+fuchsia_component("configurable-netstack-fast-udp") {
+  testonly = true
+  manifest = "meta/configurable-netstack-fast-udp.cml"
+  deps = [
+    ":bin",
+    "//src/connectivity/network/netstack:component-with-fast-udp-debug",
+  ]
+}
+
 fuchsia_unittest_package("configurable-netstack-unit-tests") {
   deps = [ ":bin_test" ]
 }

@@ -320,7 +320,7 @@ func TestBytesToAddressDroppingUnspecified(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			if got := bytesToAddressDroppingUnspecified(test.bytes); got != test.addr {
+			if got := BytesToAddressDroppingUnspecified(test.bytes); got != test.addr {
 				t.Errorf("got BytesToAddressDroppingUnspecified(%+v) = %+v, want %+v", test.bytes, got, test.addr)
 			}
 		})

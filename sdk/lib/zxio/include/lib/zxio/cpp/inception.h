@@ -54,7 +54,7 @@ using zxio_datagram_socket_t = struct zxio_datagram_socket {
   zxio_t io;
   zxio_pipe_t pipe;
   const zxio_datagram_prelude_size_t prelude_size;
-  DestinationCache dest_cache;
+  RouteCache route_cache;
   RequestedCmsgCache cmsg_cache;
   fidl::WireSyncClient<fuchsia_posix_socket::DatagramSocket> client;
 };

@@ -2652,6 +2652,17 @@ func (s *datagramSocketImpl) SendMsgPreflight(_ fidl.Context, req socket.Datagra
 
 	var writeOpts tcpip.WriteOptions
 	writeOpts.To = &addr
+
+	if req.HasIpv6Pktinfo() {
+		writeOpts.ControlMessages = tcpip.SendableControlMessages{
+			HasIPv6PacketInfo: true,
+			IPv6PacketInfo: tcpip.IPv6PacketInfo{
+				Addr: fidlconv.ToTcpIpAddressDroppingUnspecifiedv6(req.Ipv6Pktinfo.LocalAddr),
+				NIC:  tcpip.NICID(req.Ipv6Pktinfo.Iface),
+			},
+		}
+	}
+
 	if epWithPreflight, ok := s.ep.(tcpip.EndpointWithPreflight); ok {
 		if err := epWithPreflight.Preflight(writeOpts); err != nil {
 			return socket.DatagramSocketSendMsgPreflightResultWithErr(tcpipErrorToCode(err)), nil

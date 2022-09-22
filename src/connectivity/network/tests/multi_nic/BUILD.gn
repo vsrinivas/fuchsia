@@ -39,8 +39,21 @@ fuchsia_test_component("test") {
   ]
 }
 
+fuchsia_test_component("test-with-fast-udp") {
+  manifest = "meta/runner-test-fast-udp.cml"
+  deps = [
+    ":client",
+    ":server",
+    "//src/connectivity/network/testing/netemul/configurable-netstack:configurable-netstack-fast-udp",
+    "//src/connectivity/network/testing/netemul/sync-manager",
+  ]
+}
+
 fuchsia_test_package("netstack-multi-nic-tests") {
-  test_components = [ ":test" ]
+  test_components = [
+    ":test",
+    ":test-with-fast-udp",
+  ]
 }
 
 group("tests") {
