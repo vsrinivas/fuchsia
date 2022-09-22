@@ -90,6 +90,10 @@ constexpr size_t kUefiPageSize = 4096;
 
 efi_status PrintTpm2Capability();
 
+// Check whether secure boot is turned on by querying the `SecureBoot` global variable.
+// Returns error if fail to query `SecureBoot`.
+fitx::result<efi_status, bool> IsSecureBootOn();
+
 }  // namespace gigaboot
 
 #endif  // SRC_FIRMWARE_GIGABOOT_CPP_UTILS_H_

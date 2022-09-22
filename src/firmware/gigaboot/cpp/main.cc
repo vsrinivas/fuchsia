@@ -31,6 +31,13 @@ extern "C" char key_prompt(const char* valid_keys, int timeout_s);
 int main(int argc, char** argv) {
   printf("Gigaboot main\n");
 
+  auto is_secureboot_on = gigaboot::IsSecureBootOn();
+  if (is_secureboot_on.is_error()) {
+    printf("Failed to query SecureBoot variable\n");
+  } else {
+    printf("Secure Boot: %s\n", *is_secureboot_on ? "On" : "Off");
+  }
+
   // TODO(b/235489025): We reuse some legacy C gigaboot code for stuff like network stack.
   // This initializes the global variables the legacy code needs. Once these needed features are
   // re-implemented, remove these dependencies.

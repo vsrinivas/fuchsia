@@ -8,6 +8,7 @@
 #include <efi/protocol/disk-io.h>
 #include <efi/protocol/driver-binding.h>
 #include <efi/protocol/file.h>
+#include <efi/protocol/global-variable.h>
 #include <efi/protocol/graphics-output.h>
 #include <efi/protocol/loaded-image.h>
 #include <efi/protocol/managed-network.h>
@@ -40,3 +41,4 @@ const efi_guid UsbIoProtocol = EFI_USB_IO_PROTOCOL_GUID;
 const efi_guid SerialIoProtocol = EFI_SERIAL_IO_PROTOCOL_GUID;
 const efi_guid ShellParametersProtocol = EFI_SHELL_PARAMETERS_PROTOCOL_GUID;
 const efi_guid Tcg2Protocol = EFI_TCG2_PROTOCOL_GUID;
+const efi_guid GlobalVariableGuid = EFI_GLOBAL_VARIABLE;

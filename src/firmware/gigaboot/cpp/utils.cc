@@ -7,6 +7,7 @@
 #include <lib/zbi/zbi.h>
 #include <stdio.h>
 
+#include <efi/protocol/global-variable.h>
 #include <efi/types.h>
 
 namespace gigaboot {
@@ -136,6 +137,20 @@ efi_status PrintTpm2Capability() {
 #undef PRINT_NAMED_BIT
 
   return EFI_SUCCESS;
+}
+
+fitx::result<efi_status, bool> IsSecureBootOn() {
+  size_t size = 1;
+  uint8_t value;
+  char16_t name[] = u"SecureBoot";
+  efi_guid global_var_guid = GlobalVariableGuid;
+  efi_status status =
+      gEfiSystemTable->RuntimeServices->GetVariable(name, &global_var_guid, NULL, &size, &value);
+  if (status != EFI_SUCCESS) {
+    return fitx::error(status);
+  }
+
+  return fitx::ok(value);
 }
 
 }  // namespace gigaboot
