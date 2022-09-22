@@ -4,12 +4,14 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <fuchsia/web/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>
@@ -115,14 +117,14 @@ class WebApp : public fuchsia::ui::app::ViewProvider {
     RunLoopUntil([&] { return view_token_.has_value() || create_view2_args_.has_value(); });
 
     if (view_token_.has_value()) {
-      // If we received a `ViewRef`, we should use `CreateViewWithViewRef`.
-      // Otherwise, use `CreateView`.
-      if (view_ref_.has_value()) {
-        web_frame_->CreateViewWithViewRef(std::move(*view_token_), std::move(*view_ref_control_),
-                                          std::move(*view_ref_));
-      } else {
-        web_frame_->CreateView(std::move(*view_token_));
+      if (!view_ref_.has_value()) {
+        auto view_ref_pair = scenic::ViewRefPair::New();
+        view_ref_.emplace(std::move(view_ref_pair.view_ref));
+        view_ref_control_.emplace(std::move(view_ref_pair.control_ref));
       }
+
+      web_frame_->CreateViewWithViewRef(std::move(*view_token_), std::move(*view_ref_control_),
+                                        std::move(*view_ref_));
     } else {
       // If we received `CreateView2Args`, use `CreateView2`.
       web_frame_->CreateView2(std::move(*create_view2_args_));
