@@ -585,7 +585,7 @@ information, see [FIDL API Compatibility Testing][fidl-api-compatibility-testing
 [example-union-member-add]: /docs/development/languages/fidl/guides/compatibility/union_member_add.md
 [example-union-member-remove]: /docs/development/languages/fidl/guides/compatibility/union_member_remove.md
 [example-union-strict-flexible]: /docs/development/languages/fidl/guides/compatibility/union_strict_flexible.md
-[fidl-api-compatibility-testing]: /docs/development/testing/cts/fidl_api_compatibility_testing.md
+[fidl-api-compatibility-testing]: /docs/development/testing/ctf/fidl_api_compatibility_testing.md
 [rfc-0057-motivation]: /docs/contribute/governance/rfcs/0057_default_no_handles.md#motivation
 [lexicon-tag]: /docs/reference/fidl/language/lexicon.md#union-terms
 [lexicon-type]: /docs/reference/fidl/language/lexicon.md#type-terms

@@ -25,7 +25,7 @@ toc:
     path: /docs/development/testing/nand_testing.md
 - title: "Compatibility Testing"
   section:
-  - include: /docs/development/testing/cts/_toc.yaml
+  - include: /docs/development/testing/ctf/_toc.yaml
 - title: "Component testing"
   section:
   - include: /docs/development/testing/components/_toc.yaml

@@ -277,6 +277,6 @@ Please see the FAQ section about [disabling tests].
 [file a bug]: https://bugs.fuchsia.dev/p/fuchsia/issues/list?q=component%3ADeveloperExperience%3ECTS
 [relative component URL]: /docs/reference/components/url.md#relative
 [CTF bug component]: https://bugs.fuchsia.dev/p/fuchsia/templates/detail?saved=1&template=Fuchsia%20Compatibility%20Test%20Suite%20%28CTS%29&ts=1627669234
-[disabling tests]: /docs/development/testing/cts/faq.md#disable-a-test
-[retiring tests]: /docs/development/testing/cts/faq.md#retire-a-test
+[disabling tests]: /docs/development/testing/ctf/faq.md#disable-a-test
+[retiring tests]: /docs/development/testing/ctf/faq.md#retire-a-test
 [allow list]: /sdk/ctf/build/allowed_ctf_deps.gni

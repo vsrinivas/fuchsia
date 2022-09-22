@@ -45,4 +45,4 @@ cache
 custom_artifacts
 ```
 
-[CTF]: /docs/development/testing/cts/overview.md
+[CTF]: /docs/development/testing/ctf/overview.md

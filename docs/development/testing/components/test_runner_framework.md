@@ -801,7 +801,7 @@ offer: [
 [cf]: /docs/concepts/components/v2/
 [component-manifest]: /docs/concepts/components/v2/component_manifests.md
 [component-unit-tests]: /docs/development/components/build.md#unit-tests
-[CTS test realm]: /docs/development/testing/cts/test_realm.md
+[CTS test realm]: /docs/development/testing/ctf/test_realm.md
 [fidl-test-manager]: /sdk/fidl/fuchsia.test.manager/test_manager.fidl
 [fidl-test-suite]: /sdk/fidl/fuchsia.test/suite.fidl
 [ffx]: /docs/development/tools/ffx/overview.md

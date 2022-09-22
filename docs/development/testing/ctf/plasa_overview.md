@@ -30,7 +30,7 @@ Currently, Plasa provides the following platform surface fragments:
 While this falls short of fully describing the entire Fuchsia System Interface,
 work is underway to backfill the missing platform surface fragments.
 
-[cts]: /docs/development/testing/cts/overview.md
+[cts]: /docs/development/testing/ctf/overview.md
 [fidl]: /docs/concepts/fidl/overview.md
 [fsi]: /docs/concepts/packages/system.md
 [fxdev]: https://fuchsia.dev

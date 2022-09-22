@@ -232,7 +232,7 @@ things, so it makes sense to route them separately.
 
 N/A
 
-[cts]: /docs/development/testing/cts/overview.md
+[cts]: /docs/development/testing/ctf/overview.md
 [inspect-discovery]: /docs/reference/diagnostics/inspect/tree.md
 [migration-diagnostics]: /docs/development/components/v2/migration/diagnostics.md
 [tree-llcpp-bug]: https://fxbug.dev/95806

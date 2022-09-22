@@ -213,7 +213,7 @@ even if CTS coverage never reaches 100% of the platform surface.
 [cfv2-sys-migration]: /docs/development/components/v2/migration/README.md
 [cfv2-sys-migration-build-info]: /docs/development/components/v2/migration/features.md#build-info
 [cpu-trace]: /docs/development/tracing/advanced/recording-a-cpu-performance-trace.md
-[cts]: /docs/development/testing/cts/overview.md
+[cts]: /docs/development/testing/ctf/overview.md
 [decentralized-product-integration]: /docs/contribute/roadmap/2021/decentralized_product_integration.md
 [driver-development]: /docs/development/drivers/developer_guide/driver-development.md
 [ffx]: /docs/development/tools/ffx/overview.md
