@@ -75,12 +75,7 @@ fuchsia_test_package("josh-tests") {
 group("tests") {
   testonly = true
 
-  deps = [
-    "console:shell-console-unittests",
-    "interpreter:shell_server",
-    "interpreter:tests",
-    "parser:shell-parser-unittests",
-  ]
+  deps = []
 
   # TODO(fxbug.dev/107823): Don't block LTO builds on this test passing.
   if (select_variant + [
@@ -103,15 +98,5 @@ fuchsia_shell_package("josh") {
     ":fidl_json",
     "josh/lib:js_libs",
     "//src/developer/shell/josh:bin",
-  ]
-}
-
-# "cliff" is the CLI For Fuchsia.  Need a better name.
-fuchsia_shell_package("cliff") {
-  # TODO(jeremymanson): This is only testonly because sdk:core is.  We should undo that.
-  testonly = true
-  deps = [
-    ":fidl_json",
-    "//src/developer/shell/console:bin",
   ]
 }
