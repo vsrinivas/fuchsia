@@ -379,10 +379,6 @@ fuchsia_package("setui_service") {
     "//:additional_base_packages",
     "//:developer_base_packages",
     "//:legacy_base_packages",
-
-    # TODO(fxbug.dev/98207): remove //garnet/bin visibility once migration is
-    # complete
-    "//garnet/bin/*",
     "//src/developer/forensics/feedback/tests/*",
     "//src/intl/intl_services/tests/*",
   ]
@@ -398,12 +394,8 @@ core_shard("setui_service_core_shard") {
   visibility = []
   visibility = [
     ":*",
-
-    # TODO(fxbug.dev/98207): remove //garnet/bin visibility once migration is
-    # complete
     "//build/images/fuchsia:*",
     "//bundles/assembly_input_groups:*",
-    "//garnet/bin/*",
     "//vendor/google/*",
   ]
   shard_file = "meta/setui_service.core_shard.cml"
@@ -414,11 +406,7 @@ core_shard("setui_service_with_camera_core_shard") {
   visibility = []
   visibility = [
     ":*",
-
-    # TODO(fxbug.dev/98207): remove //garnet/bin visibility once migration is
-    # complete
     "//build/images/fuchsia:*",
-    "//garnet/bin/*",
     "//vendor/google/*",
   ]
   shard_file = "meta/setui_service_with_camera.core_shard.cml"
