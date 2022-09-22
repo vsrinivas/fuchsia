@@ -349,21 +349,7 @@ void Device::OnFirmwareShutdownComplete(zx_status_t status) {
 }
 
 void Device::PerformShutdown() {
-  if (mlan_adapter_) {
-    // The MLAN shutdown functions still rely on the IRQ thread to be running when shutting down.
-    // Shut down MLAN first, then everything else.
-    mlan_status ml_status = mlan_shutdown_fw(mlan_adapter_);
-    if (ml_status != MLAN_STATUS_SUCCESS) {
-      NXPF_ERR("Failed to shutdown firmware: %d", ml_status);
-    }
-    ml_status = mlan_unregister(mlan_adapter_);
-    if (ml_status != MLAN_STATUS_SUCCESS) {
-      NXPF_ERR("Failed to unregister mlan: %d", ml_status);
-      // Don't stop on this error, we need to shut down everything else anyway.
-    }
-    mlan_adapter_ = nullptr;
-  }
-
+  // Shut down the fidl dispatcher first. We don't want any calls coming in while this is happening.
   fidl_dispatcher_.ShutdownAsync();
   zx_status_t status = sync_completion_wait(&fidl_dispatcher_completion_, ZX_TIME_INFINITE);
   if (status != ZX_OK) {
@@ -371,8 +357,25 @@ void Device::PerformShutdown() {
     // Keep going and shut everything else down.
   }
 
-  // Shut down the bus specific device.
-  Shutdown();
+  if (mlan_adapter_) {
+    // The MLAN shutdown functions still rely on the IRQ thread to be running when shutting down.
+    // Shut down MLAN first, then everything else.
+    mlan_status ml_status = mlan_shutdown_fw(mlan_adapter_);
+    if (ml_status != MLAN_STATUS_SUCCESS) {
+      NXPF_ERR("Failed to shutdown firmware: %d", ml_status);
+    }
+
+    // Shut down the bus specific device. This should stop any IRQ thread from running, otherwise it
+    // might access data that will go away during mlan_unregister.
+    Shutdown();
+
+    ml_status = mlan_unregister(mlan_adapter_);
+    if (ml_status != MLAN_STATUS_SUCCESS) {
+      NXPF_ERR("Failed to unregister mlan: %d", ml_status);
+      // Don't stop on this error, we need to shut down everything else anyway.
+    }
+    mlan_adapter_ = nullptr;
+  }
 }
 
 zx_status_t Device::InitFirmware() {
