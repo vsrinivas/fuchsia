@@ -394,3 +394,5 @@ toc:
     path: /docs/contribute/governance/rfcs/0188_component_abi_compatibility.md
   - title: "RFC-0189: Window Management"
     path: /docs/contribute/governance/rfcs/0189_window_management.md
+  - title: "RFC-0190: FIDL Support for Syscalls"
+    path: /docs/contribute/governance/rfcs/0190_fidl_support_for_syscalls.md

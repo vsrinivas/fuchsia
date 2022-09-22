@@ -2471,3 +2471,16 @@
   reviewers: ['abarth@google.com', 'dworsham@google.com', 'thatguy@google.com', 'sanjayc@google.com', 'asz@google.com', 'wez@google.com']
   submitted: '2022-08-12'
   reviewed: '2022-09-20'
+  
+- name: 'RFC-0190'
+  title: 'FIDL Support for Syscalls'
+  short_description: 'Extend FIDL to support syscall declarations and make a FIDL representation of the interface our source-of-truth.'
+  authors: ['joshuaseaton@google.com']
+  file: '0190_fidl_support_for_syscalls.md'
+  area: ['FIDL', 'Kernel']
+  issue: ['110021']
+  gerrit_change_id: ['695882']
+  status: 'Accepted'
+  reviewers: ['abarth@google.com', 'brettw@google.com', 'mcgrathr@google.com', 'hjfreyer@google.com', 'palmer@google.com']
+  submitted: '2022-07-08'
+  reviewed: '2022-09-22'
