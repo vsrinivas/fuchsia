@@ -20,4 +20,18 @@ examples listed in the preceding section. A quick reference of each such
 concept, as well as its example implementations, is listed in the following
 section.
 
+### Data types
+
+#### Alias
+
+<<../concepts/_alias.md>>
+
+#### Enum
+
+<<../concepts/_enum.md>>
+
+#### Named method payload
+
+<<../concepts/_named_payload.md>>
+
 [example-key-value-store]: key-value-store/README.md

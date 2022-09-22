@@ -7,3 +7,7 @@ from the store, iterating over its members, and creating backups.
 ## Creating a write-only key-value store
 
 <<_baseline_tutorial.md>>
+
+## Adding support for reading from the store
+
+<<_add_read_item_tutorial.md>>

@@ -261,6 +261,8 @@ Enum types are denoted by their identifier, which may be qualified if needed.
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="enum-use" %}
 ```
 
+<<../../../development/languages/fidl/widgets/_enum.md>>
+
 ### Arrays
 
 *   Fixed-length sequences of homogeneous elements.
@@ -769,6 +771,8 @@ Here, the `Message` struct contains a string of `MAX_SIZE` bytes called `baselin
 and a vector of up to `5` strings of `MAX_SIZE` called `chapters`.
 
 Note that **`byte`** is a built-in aliases, [see below](#built-in-aliases).
+
+<<../../../development/languages/fidl/widgets/_alias.md>>
 
 ### Built-ins
 
