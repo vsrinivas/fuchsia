@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <projects>
+    <project name="foo"
+             path="third_party/foo"
+             remote="https://fuchsia.googlesource.com/third_party/foo"
+             gerrithost="https://fuchsia-review.googlesource.com"
+             revision="deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"/>
+    <project name="bar"
+             path="third_party/bar/src"
+             remote="https://fuchsia.googlesource.com/third_party/bar"
+             gerrithost="https://fuchsia-review.googlesource.com"
+             revision="deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"/>
+  </projects>
+  </projects>
+</manifest>
+

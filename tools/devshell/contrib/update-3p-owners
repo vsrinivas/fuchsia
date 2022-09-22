@@ -4,12 +4,25 @@
 # found in the LICENSE file.
 
 #### CATEGORY=Source tree
-### updates OWNERS files for Rust third_party dependencies
+### updates OWNERS files for third_party dependencies
 
-## usage: fx update-rust-3p-owners [--no-vendor-and-gn-update] [--num-threads N]
+## usage: fx update-3p-owners [--skip-rustc-3p-update] [--num-threads N]
 ##
-## Updates third_party/rust_crates/vendor/*/OWNERS based on the contents of
-## third_party/rust_crates/Cargo.toml
+## Updates OWNERS files for projects, based on gn target references. For any
+## given project, the tool adds as owners the owners of the projects that depend
+## on that project.
+##
+## By default, the tool updates OWNERS for:
+##   - third_party/rust_crates/vendor/*, for Rust crates specified in
+##     third_party/rust_crates/Cargo.toml
+##   - integration third party projects specified in
+##     integration/third_party/flower.
+##
+## Arguments:
+## --num-threads N:           run on N threads.
+##
+## --skip-rustc-3p-update:    skip updating rustc_library and rustc_binary
+##                            third_party dependencies.
 ##
 ## See https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party.md
 ## for more details.
@@ -29,13 +42,13 @@ while [[ $# -ge 1 ]]; do
       fx-command-help
       exit 0
       ;;
-    --no-vendor-and-gn-update)
-      SKIP_VENDOR_AND_GN_UPDATE="true"
-      ;;
     --num-threads)
       shift
       [[ ! $1 ]] && die "--num-threads requires an argument after it"
       NUM_THREADS="--num-threads $1"
+      ;;
+    --skip-rustc-3p-update)
+      SKIP_RUSTC_3P_UPDATE="true"
       ;;
     -*)
       echo "Cannot understand option $1"
@@ -52,20 +65,21 @@ if [[ ! -n "$NUM_THREADS" ]]; then
 fi
 
 fx-command-run build ${OWNERS_TOOL_TARGET} || ( \
-  fx-error "Failed to build rust owners tool."; \
+  fx-error "Failed to build owners tool."; \
   exit 1
 )
 
-if [[ ! -n "$SKIP_VENDOR_AND_GN_UPDATE" ]]; then
+if [[ ! -n "$SKIP_RUSTC_3P_UPDATE" ]]; then
   fx-command-run update-rustc-third-party || ( \
-    fx-error "Failed to run 3p update script."; \
+    fx-error "Failed to run rustc 3p update script."; \
     exit 1
   )
 fi
 
 (cd $FUCHSIA_DIR; $OWNERS_TOOL_BIN \
   $NUM_THREADS \
+  --rust-metadata $FUCHSIA_BUILD_DIR/rustlang/3p-crates-metadata.json \
+  --jiri-manifest $FUCHSIA_DIR/integration/third_party/flower \
   --overrides $FUCHSIA_DIR/third_party/rust_crates/owners.toml \
-  --metadata $FUCHSIA_BUILD_DIR/rustlang/3p-crates-metadata.json \
   --out-dir $FUCHSIA_BUILD_DIR \
   --gn-bin $PREBUILT_GN)

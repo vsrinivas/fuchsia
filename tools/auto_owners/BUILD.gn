@@ -15,6 +15,7 @@ if (is_host) {
     "//third_party/rust_crates:rayon",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:toml",
+    "//third_party/rust_crates:xml-rs",
     "//tools/cargo-gnaw:cargo-gnaw-lib",
   ]
 
@@ -55,6 +56,7 @@ if (is_host) {
       "tests/common/build/toolchain/BUILD.gn",
       "tests/empty/BUILD.gn",
       "tests/empty/foo/BUILD.gn",
+      "tests/integration/manifest",
       "tests/missing/BUILD.gn",
       "tests/pass/BUILD.gn",
       "tests/pass/foo/BUILD.gn",

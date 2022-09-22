@@ -1,4 +1,4 @@
-# This file controls the output of `fx update-rust-3p-owners` when generating OWNERS files for our
+# This file controls the output of `fx update-3p-owners` when generating OWNERS files for our
 # external Rust crates. For each crate here, the listed paths will be added to the generated file
 # as `include`s. For more information, see the update process' documentation.[0]
 #

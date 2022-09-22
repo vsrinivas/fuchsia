@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use argh::FromArgs;
 use camino::{Utf8Path, Utf8PathBuf};
 use gnaw_lib::CrateOutputMetadata;
@@ -10,20 +10,26 @@ use rayon::prelude::*;
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs::File,
+    io::BufReader,
     path::{Path, PathBuf},
     process::Command,
 };
+use xml::reader::{EventReader, XmlEvent};
 
 /// update OWNERS files for external Rust code
 ///
 /// This tool relies on GN metadata produced from a maximal "kitchen sink" build. When run
-/// outside the context of `fx update-rust-3p-owners`, it also relies on being run after
+/// outside the context of `fx update-3p-owners`, it also relies on being run after
 /// `fx update-rustc-third-party`.
 #[derive(FromArgs)]
 struct Options {
     /// path to the JSON metadata produced by cargo-gnaw
     #[argh(option)]
-    metadata: PathBuf,
+    rust_metadata: PathBuf,
+
+    /// path to the 3P JIRI manifest
+    #[argh(option)]
+    jiri_manifest: PathBuf,
 
     /// path to the ownership overrides config file
     #[argh(option)]
@@ -43,72 +49,93 @@ struct Options {
 }
 
 fn main() -> Result<()> {
-    let Options { overrides, metadata, gn_bin, out_dir, num_threads } = argh::from_env();
+    let Options { rust_metadata, jiri_manifest, overrides, out_dir, gn_bin, num_threads } =
+        argh::from_env();
+
     if let Some(num_threads) = num_threads {
         rayon::ThreadPoolBuilder::new().num_threads(num_threads).build_global().unwrap();
     }
-    OwnersDb::new(overrides, metadata, gn_bin, out_dir)?.update_all_files()
+
+    OwnersDb::new(rust_metadata, jiri_manifest, overrides, gn_bin, out_dir)?.update_all_files()
+}
+
+struct ProjectMetadata {
+    /// name of the project
+    pub name: String,
+
+    /// filesystem path to the project
+    pub path: Utf8PathBuf,
+
+    /// list of GN targets for depending on the project
+    pub targets: Vec<String>,
 }
 
 struct OwnersDb {
-    /// metadata about external crates, indexed by crate name
-    external_crates: Vec<CrateOutputMetadata>,
+    /// metadata about projects
+    projects: Vec<ProjectMetadata>,
 
-    /// metadata about external crates, indexed by //absolute GN target with versions
-    crates_by_versioned_gn_target: BTreeMap<String, CrateOutputMetadata>,
+    /// cache of OWNERS file paths, indexed by target name. Holds the targets for which the
+    /// corresponding OWNERS file path is known; cached to avoid probing the filesystem
+    owners_path_cache: BTreeMap<String, Utf8PathBuf>,
 
-    /// metadata about external crates, indexed by //absolute GN target, no versions
-    crates_by_top_level_gn_target: BTreeMap<String, CrateOutputMetadata>,
+    /// path to the JSON metadata produced by cargo-gnaw
+    rust_metadata: PathBuf,
 
-    /// explicit lists of OWNERS files to include instead of inferring, indexed by crate name
+    /// explicit lists of OWNERS files to include instead of inferring, indexed by project name
     overrides: BTreeMap<String, Vec<Utf8PathBuf>>,
 
-    metadata_path: PathBuf,
     gn_bin: PathBuf,
     out_dir: PathBuf,
 }
 
 impl OwnersDb {
     fn new(
+        rust_metadata: PathBuf,
+        jiri_manifest: PathBuf,
         overrides: Utf8PathBuf,
-        metadata_path: PathBuf,
         gn_bin: PathBuf,
         out_dir: PathBuf,
     ) -> Result<Self> {
-        let overrides: BTreeMap<String, Vec<Utf8PathBuf>> =
-            toml::de::from_str(&std::fs::read_to_string(overrides)?)?;
-        let external_crates: Vec<CrateOutputMetadata> =
-            serde_json::from_reader(File::open(&metadata_path)?)?;
-        let crates_by_versioned_gn_target = external_crates
+        let rust_crates: Vec<CrateOutputMetadata> =
+            serde_json::from_reader(File::open(&rust_metadata)?)?;
+
+        let mut owners_path_cache = rust_crates
             .iter()
-            .map(|metadata| (metadata.canonical_target.clone(), metadata.clone()))
+            .map(|metadata| (metadata.canonical_target.clone(), metadata.path.clone()))
             .collect::<BTreeMap<_, _>>();
-        let crates_by_top_level_gn_target = external_crates
+        let mut path_by_top_level_target = rust_crates
             .iter()
             .filter_map(|metadata| {
-                metadata.shortcut_target.as_ref().map(|t| (t.clone(), metadata.clone()))
+                metadata.shortcut_target.as_ref().map(|t| (t.clone(), metadata.path.clone()))
             })
             .collect::<BTreeMap<_, _>>();
-        Ok(Self {
-            overrides,
-            external_crates,
-            crates_by_versioned_gn_target,
-            crates_by_top_level_gn_target,
-            metadata_path,
-            gn_bin,
-            out_dir,
-        })
+        owners_path_cache.append(&mut path_by_top_level_target);
+
+        let projects = rust_crates
+            .into_iter()
+            .map(|metadata| ProjectMetadata {
+                name: metadata.name,
+                path: metadata.path,
+                targets: toolchain_suffixed_targets(
+                    &metadata.canonical_target,
+                    metadata.shortcut_target.as_ref().map(String::as_str),
+                ),
+            })
+            .chain(parse_jiri_manifest(&jiri_manifest)?)
+            .collect::<Vec<_>>();
+
+        let overrides: BTreeMap<String, Vec<Utf8PathBuf>> =
+            toml::de::from_str(&std::fs::read_to_string(overrides)?)?;
+
+        Ok(Self { projects, owners_path_cache, rust_metadata, overrides, gn_bin, out_dir })
     }
 
-    /// Update all OWNERS files in //third_party/rust_crates.
+    /// Update all OWNERS files for all projects.
     fn update_all_files(&self) -> Result<()> {
         eprintln!("Updating OWNERS files...");
-        self.external_crates
+        self.projects
             .par_iter()
-            .filter(|metadata| {
-                metadata.path.starts_with("third_party/rust_crates")
-                    && !metadata.path.starts_with("third_party/rust_crates/mirrors")
-            })
+            .filter(|metadata| !metadata.path.starts_with("third_party/rust_crates/mirrors"))
             .map(|metadata| self.update_owners_file(metadata))
             .panic_fuse()
             .collect::<Result<()>>()?;
@@ -117,8 +144,8 @@ impl OwnersDb {
         Ok(())
     }
 
-    /// Update the OWNERS file for a single 3p crate.
-    fn update_owners_file(&self, metadata: &CrateOutputMetadata) -> Result<()> {
+    /// Update the OWNERS file for a single 3p project.
+    fn update_owners_file(&self, metadata: &ProjectMetadata) -> Result<()> {
         let file = self.compute_owners_file(metadata)?;
         let owners_path = metadata.path.join("OWNERS");
         if !file.is_empty() {
@@ -132,11 +159,11 @@ impl OwnersDb {
         Ok(())
     }
 
-    fn compute_owners_file(&self, metadata: &CrateOutputMetadata) -> Result<OwnersFile> {
-        if let Some(krate_overrides) = self.overrides.get(&metadata.name) {
+    fn compute_owners_file(&self, metadata: &ProjectMetadata) -> Result<OwnersFile> {
+        if let Some(owners_overrides) = self.overrides.get(&metadata.name) {
             Ok(OwnersFile {
                 path: metadata.path.join("OWNERS"),
-                includes: krate_overrides.iter().map(Clone::clone).collect(),
+                includes: owners_overrides.iter().map(Clone::clone).collect(),
                 source: OwnersSource::Override,
             })
         } else {
@@ -144,19 +171,16 @@ impl OwnersDb {
         }
     }
 
-    /// Run `gn refs` for the crate's GN target(s) and find the OWNERS files that correspond to its
+    /// Run `gn refs` for the project's GN target(s) and find the OWNERS files that correspond to its
     /// reverse deps.
     ///
-    /// cargo-gnaw metadata encodes version-unambiguous GN targets like
+    /// For Rust projects, cargo-gnaw metadata encodes version-unambiguous GN targets like
     /// `//third_party/rust_crates:foo-v1_0_0` but we discourage the use of those targets
     /// throughout the tree. To find dependencies from in-house code we need to also get reverse
     /// deps for the equivalent target without the version, e.g. `//third_party/rust_crates:foo`.
-    fn owners_files_from_reverse_deps(&self, metadata: &CrateOutputMetadata) -> Result<OwnersFile> {
-        let targets = Self::toolchain_suffixed_targets(
-            &metadata.canonical_target,
-            metadata.shortcut_target.as_ref().map(String::as_str),
-        );
-        let deps = targets
+    fn owners_files_from_reverse_deps(&self, metadata: &ProjectMetadata) -> Result<OwnersFile> {
+        let deps = metadata
+            .targets
             .par_iter()
             .map(|target| self.reverse_deps(target))
             .collect::<Result<Vec<_>, _>>()?
@@ -178,18 +202,11 @@ impl OwnersDb {
                 .into_iter()
                 .filter(|i| !metadata.path.starts_with(i.parent().unwrap()))
                 .collect(),
-            source: OwnersSource::ReverseDependencies { targets, deps },
+            source: OwnersSource::ReverseDependencies { targets: metadata.targets.clone(), deps },
         })
     }
 
-    fn toolchain_suffixed_targets(versioned: &str, top_level: Option<&str>) -> Vec<String> {
-        let mut targets = vec![];
-        add_all_toolchain_suffices(versioned, &mut targets);
-        top_level.map(|t| add_all_toolchain_suffices(t, &mut targets));
-        targets
-    }
-
-    /// Run `gn refs $OUT_DIR $CRATE_GN_TARGET` and return a list of GN targets which depend on the
+    /// Run `gn refs $OUT_DIR $GN_TARGET` and return a list of GN targets which depend on the
     /// target.
     fn reverse_deps(&self, target: &str) -> Result<BTreeSet<String>> {
         gn_reverse_deps(&self.gn_bin, &self.out_dir, target)
@@ -207,12 +224,10 @@ impl OwnersDb {
         Ok(if target.starts_with(RUST_EXTERNAL_TARGET_PREFIX) {
             // if the target is for a 3p crate it might not have an owners file yet, so we don't
             // want to rely on probing the filesystem. instead we'll construct a path *a priori*
-            if let Some(krate) = self.crates_by_versioned_gn_target.get(target) {
-                krate.path.join("OWNERS")
-            } else if let Some(krate) = self.crates_by_top_level_gn_target.get(target) {
-                krate.path.join("OWNERS")
+            if let Some(path) = self.owners_path_cache.get(target) {
+                path.join("OWNERS")
             } else {
-                bail!("{} not in {}", target, self.metadata_path.display());
+                bail!("{} not in {}", target, self.rust_metadata.display());
             }
         } else {
             // the target is outside of the 3p directory, so we need to probe for the closest file
@@ -239,6 +254,13 @@ const GN_TOOLCHAIN_SUFFIX_PREFIX: &str = "(//build/toolchain";
 
 /// Prefix found on all generated GN targets for 3p crates.
 const RUST_EXTERNAL_TARGET_PREFIX: &str = "//third_party/rust_crates:";
+
+fn toolchain_suffixed_targets(versioned: &str, top_level: Option<&str>) -> Vec<String> {
+    let mut targets = vec![];
+    add_all_toolchain_suffices(versioned, &mut targets);
+    top_level.map(|t| add_all_toolchain_suffices(t, &mut targets));
+    targets
+}
 
 fn add_all_toolchain_suffices(target: &str, targets: &mut Vec<String>) {
     // TODO(fxbug.dev/73485) support querying explicitly for both linux and mac
@@ -339,6 +361,43 @@ fn should_include(owners_file: &Utf8Path) -> bool {
     owners_file != "OWNERS"
 }
 
+fn parse_jiri_manifest(manifest_path: &PathBuf) -> Result<Vec<ProjectMetadata>> {
+    let parser = EventReader::new(BufReader::new(File::open(&manifest_path)?));
+
+    parser
+        .into_iter()
+        .filter(|e| {
+            matches!(
+                e,
+                Ok(XmlEvent::StartElement { name, .. })
+                    if name.local_name == String::from("project")
+            )
+        })
+        .map(|e| match e {
+            Ok(XmlEvent::StartElement { attributes, .. }) => {
+                let name = &attributes
+                    .iter()
+                    .find(|&a| a.name.local_name == "name")
+                    .ok_or(anyhow!("no name attribute"))?
+                    .value;
+                let path = &attributes
+                    .iter()
+                    .find(|&a| a.name.local_name == "path")
+                    .ok_or(anyhow!("no path attribute"))?
+                    .value
+                    .trim_end_matches("/src");
+                Ok(ProjectMetadata {
+                    name: name.to_string(),
+                    path: Utf8PathBuf::from(path),
+                    // the project can be referred by any of its inner targets.
+                    targets: vec![path.to_string() + "/*"],
+                })
+            }
+            _ => bail!("unreachable"),
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -366,6 +425,23 @@ mod tests {
     #[should_panic] // if the target is altogether missing, it should return an error
     fn parse_gn_target_isnt_in_build() {
         get_rev_deps("missing", "//foo");
+    }
+
+    #[test]
+    fn parse_jiri_manifest_projects() {
+        let projects =
+            parse_jiri_manifest(&PATHS.test_base_dir.join("integration/manifest")).unwrap();
+        assert_eq!(
+            projects
+                .into_iter()
+                .map(|ProjectMetadata { name: _, path, targets: _ }| path
+                    .as_os_str()
+                    .to_str()
+                    .unwrap()
+                    .to_string())
+                .collect::<Vec<String>>(),
+            ["third_party/foo", "third_party/bar"]
+        );
     }
 
     fn get_rev_deps(test_subdir: &str, target: &str) -> BTreeSet<String> {
@@ -425,7 +501,7 @@ mod tests {
         #[allow(unused)]
         test_root_dir: PathBuf,
 
-        /// `.../host_x64/test_data`, this is the root of the runfilfes tree, a
+        /// `.../host_x64/test_data`, this is the root of the runfiles tree, a
         /// path //foo/bar will be copied at `.../host_x64/test_data/foo/bar` for
         /// this test.
         // TODO(fxbug.dev/84729)

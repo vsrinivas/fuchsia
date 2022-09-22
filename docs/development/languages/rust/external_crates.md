@@ -288,7 +288,7 @@ needs the metadata from the completion of a maximal "kitchen sink" build:
 
 1. Include `//bundles/buildbot:core` and `//bundles:kitchen_sink` in your build
 2. Run `fx build`
-3. Run `fx update-rust-3p-owners --num-threads <NUM_THREADS>`. It's usually a good idea to limit
+3. Run `fx update-3p-owners --num-threads <NUM_THREADS>`. It's usually a good idea to limit
    the number of threads to 50% of available CPUs (see [#75382] for details).
 
 [#75382]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=75382
