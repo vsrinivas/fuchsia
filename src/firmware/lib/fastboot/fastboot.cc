@@ -16,6 +16,7 @@
 
 #include <optional>
 #include <string_view>
+#include <thread>
 #include <vector>
 
 #include <sdk/lib/syslog/cpp/macros.h>
@@ -451,6 +452,8 @@ zx::status<> Fastboot::Reboot(const std::string& command, Transport* transport) 
   if (ret.is_error()) {
     return ret;
   }
+  // Wait for 1s to make sure the response is sent over to the transport
+  std::this_thread::sleep_for(std::chrono::seconds(1));
 
   auto resp = connect_result.value()->Reboot(
       fuchsia_hardware_power_statecontrol::RebootReason::kUserRequest);
@@ -492,6 +495,8 @@ zx::status<> Fastboot::RebootBootloader(const std::string& command, Transport* t
   if (ret.is_error()) {
     return ret;
   }
+  // Wait for 1s to make sure the response is sent over to the transport
+  std::this_thread::sleep_for(std::chrono::seconds(1));
 
   auto resp = connect_result.value()->RebootToRecovery();
   if (!resp.ok()) {

@@ -48,9 +48,11 @@ class Transport {
   virtual size_t PeekPacketSize() = 0;
 
   // Send a packet over the transport.
-  // Implementation should block at least until the packet is sent to
-  // transport or copied. Once the method returns, implementation should not
-  // assume the memory backing `packet` is still valid.
+  // Note: Once the method returns, implementation should not assume the
+  // memory backing `packet` is still valid. In the case of `fastboot reboot`
+  // The system might event start power cycle shortly after the method returns.
+  // Thus implementation should block at least until the packet is sent out to the
+  // transport.
   virtual zx::status<> Send(std::string_view packet) = 0;
 };
 

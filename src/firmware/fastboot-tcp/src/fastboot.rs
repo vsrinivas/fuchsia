@@ -40,6 +40,14 @@ extern "C" fn write_packet_callback<T: Read + Write>(
         }
     }
 
+    match stream.flush() {
+        Ok(()) => {}
+        Err(err) => {
+            warn!(%err, "write_cb flush error");
+            return 1;
+        }
+    }
+
     return 0;
 }
 
