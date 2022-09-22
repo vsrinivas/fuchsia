@@ -443,6 +443,7 @@ void x86_feature_debug(void) {
   Printf("\n\n");
 }
 
+// The highest priority mechanism to determine the apic frequency.
 static uint64_t default_apic_freq() {
   // The APIC frequency is the core crystal clock frequency if it is
   // enumerated in the CPUID leaf 0x15, or the processor's bus clock
@@ -455,36 +456,33 @@ static uint64_t default_apic_freq() {
   return 0;
 }
 
-static uint64_t skl_apic_freq() {
+// From Intel SDMv3 section 19.7.3 (Determining the Processor Base Frequency).
+// For cores that have a hard coded bus frequency or crystal clock,
+// fall back to this value if cpuid 15h doesn't fully specify it and we're not
+// running in a hypervisor.
+static uint64_t apic_freq_constant_fallback(const uint64_t hardcoded_apic_freq) {
   uint64_t v = default_apic_freq();
   if (v != 0) {
     return v;
   }
-  return 24ul * 1000 * 1000;
+  if (x86_feature_test(X86_FEATURE_HYPERVISOR)) {
+    return 0;
+  }
+  return hardcoded_apic_freq;
 }
 
-static uint64_t bdw_apic_freq() {
-  uint64_t v = default_apic_freq();
-  if (v != 0) {
-    return v;
-  }
-  uint64_t platform_info;
-  const uint32_t msr_platform_info = 0xce;
-  if (read_msr_safe(msr_platform_info, &platform_info) == ZX_OK) {
-    uint64_t bus_freq_mult = (platform_info >> 8) & 0xf;
-    return bus_freq_mult * 100 * 1000 * 1000;
-  }
-  return 0;
-}
+// From Intel SDMv3 section 19.7.3 (Determining the Processor Base Frequency).
+static uint64_t skl_apic_freq() { return apic_freq_constant_fallback(24ul * 1000 * 1000); }
+
+// From Intel SDMv3 section 19.7.3 (Determining the Processor Base Frequency).
+static uint64_t skl_x_apic_freq() { return apic_freq_constant_fallback(25ul * 1000 * 1000); }
+
+// From Intel SDMv3 section 19.7.3 (Determining the Processor Base Frequency).
+static uint64_t bdw_apic_freq() { return apic_freq_constant_fallback(100ul * 1000 * 1000); }
 
 static uint64_t bulldozer_apic_freq() {
-  uint64_t v = default_apic_freq();
-  if (v != 0) {
-    return v;
-  }
-
   // 15h BKDG documents that is is 100Mhz.
-  return 100ul * 1000 * 1000;
+  return apic_freq_constant_fallback(100ul * 1000 * 1000);
 }
 
 static uint64_t unknown_freq() { return 0; }
@@ -492,7 +490,7 @@ static uint64_t unknown_freq() { return 0; }
 static uint64_t intel_tsc_freq() {
   const uint64_t core_crystal_clock_freq = x86_get_microarch_config()->get_apic_freq();
 
-  // If this leaf is present, then 18.18.3 (Determining the Processor Base
+  // If this leaf is present, then 19.7.3 (Determining the Processor Base
   // Frequency) documents this as the nominal TSC frequency.
   const struct cpuid_leaf* tsc_leaf = x86_get_cpuid_leaf(X86_CPUID_TSC);
   if (tsc_leaf && tsc_leaf->a) {
@@ -567,7 +565,7 @@ static void hsw_reboot_reason(uint64_t reason) {
 static const x86_microarch_config_t icelake_config{
     .x86_microarch = X86_MICROARCH_INTEL_ICELAKE,
 
-    .get_apic_freq = skl_apic_freq,
+    .get_apic_freq = default_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .reboot_system = hsw_reboot_system,
     .reboot_reason = hsw_reboot_reason,
@@ -582,7 +580,7 @@ static const x86_microarch_config_t icelake_config{
 
 static const x86_microarch_config_t tiger_lake_config{
     .x86_microarch = X86_MICROARCH_INTEL_TIGERLAKE,
-    .get_apic_freq = skl_apic_freq,
+    .get_apic_freq = default_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .reboot_system = hsw_reboot_system,
     .reboot_reason = hsw_reboot_reason,
@@ -601,7 +599,7 @@ static const x86_microarch_config_t tiger_lake_config{
 
 static const x86_microarch_config_t alder_lake_config{
     .x86_microarch = X86_MICROARCH_INTEL_ALDERLAKE,
-    .get_apic_freq = skl_apic_freq,
+    .get_apic_freq = default_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .reboot_system = hsw_reboot_system,
     .reboot_reason = hsw_reboot_reason,
@@ -620,7 +618,7 @@ static const x86_microarch_config_t alder_lake_config{
 
 static const x86_microarch_config_t cannon_lake_config{
     .x86_microarch = X86_MICROARCH_INTEL_CANNONLAKE,
-    .get_apic_freq = skl_apic_freq,
+    .get_apic_freq = default_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .reboot_system = hsw_reboot_system,
     .reboot_reason = hsw_reboot_reason,
@@ -662,7 +660,7 @@ static const x86_microarch_config_t skylake_config{
 
 static const x86_microarch_config_t skylake_x_config{
     .x86_microarch = X86_MICROARCH_INTEL_SKYLAKE,
-    .get_apic_freq = skl_apic_freq,
+    .get_apic_freq = skl_x_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .reboot_system = hsw_reboot_system,
     .reboot_reason = hsw_reboot_reason,
