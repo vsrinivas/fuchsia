@@ -8,6 +8,8 @@ import json
 import os
 import sys
 
+from collections import defaultdict
+
 
 def resolve_plasa_files(args):
     """Resolves the plasa fragment file names from a list of files with reference
@@ -70,6 +72,7 @@ def main():
     banjo_deps = []
     fidl_deps = []
     banjo_deps = []
+    fidl_layers = defaultdict(list)
     for idx, spec in enumerate(args.deps):
         with open(spec, 'r') as spec_file:
             data = json.load(spec_file)
@@ -80,16 +83,31 @@ def main():
         if type == 'cc_source_library' or type == 'cc_prebuilt_library':
             deps.append(name)
         elif type == 'fidl_library':
-            if args.dep_names[idx].endswith('banjo_cpp'):
+            dep_name = args.dep_names[idx]
+            if dep_name.endswith('banjo_cpp'):
                 banjo_deps.append(name)
             else:
                 fidl_deps.append(name)
+                # Layer here is defined to be "cpp" plus everything after
+                # "_cpp" in the dependency name
+                if "_cpp" in dep_name:
+                    layer = "cpp" + dep_name.split("_cpp", maxsplit=1)[1]
+                    fidl_layers[layer].append(name)
+                else:
+                    fidl_layers["hlcpp"].append(name)
         else:
             raise Exception('Unsupported dependency type: %s' % type)
+
     metadata['deps'] = sorted(set(deps))
     metadata['banjo_deps'] = sorted(set(banjo_deps))
     metadata['fidl_deps'] = sorted(set(fidl_deps))
     metadata['plasa'] = resolve_plasa_files(args.plasa)
+    metadata['fidl_binding_deps'] = [
+        {
+            "binding_type": layer,
+            "deps": sorted(set(dep))
+        } for layer, dep in fidl_layers.items()
+    ]
 
     with open(args.out, 'w') as out_file:
         json.dump(

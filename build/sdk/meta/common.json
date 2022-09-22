@@ -28,6 +28,24 @@
             ],
             "type": "object"
         },
+        "fidl_binding_type": {
+            "description": "Type of FIDL binding used. Currently defined in //build/cpp/fidl_cpp.gni",
+            "type": "string",
+            "enum": [
+                "cpp_common",
+                "cpp_wire_types",
+                "cpp_wire",
+                "cpp_wire_testing",
+                "cpp_natural_types",
+                "cpp_natural_ostream",
+                "cpp_type_conversions",
+                "cpp",
+                "cpp_driver_wire",
+                "cpp_driver",
+                "cpp_hlcpp_conversion",
+                "hlcpp"
+            ]
+        },
         "fidl_library_name": {
             "description": "Name of a FIDL library",
             "type": "string"

@@ -464,6 +464,9 @@ template("fidl_cpp_family") {
   # All of the layers are generated in a single fidlgen invocation but are
   # exposed as separate source_sets to user code so that it's easy to include
   # just the parts of the bindings that you need.
+  #
+  # New layers must also be added to the list in //build/sdk/meta/common.json
+  # TODO (fxbug.dev/109833) Automatic validation of this would be helpful
 
   llcpp_layers = [
     {

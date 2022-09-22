@@ -28,6 +28,21 @@
                     },
                     "type": "array"
                 },
+                "fidl_binding_deps": {
+                    "description": "List of FIDL libraries this library depends on, separated by binding type",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "binding_type": {
+                                "$ref": "common.json#/definitions/fidl_binding_type"
+                            },
+                            "deps": {
+                                "type": "array"
+                            }
+                        }
+                    },
+                    "type": "array"
+                },
                 "headers": {
                     "description": "List of public headers",
                     "items": {
