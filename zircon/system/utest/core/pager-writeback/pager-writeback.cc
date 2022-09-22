@@ -572,8 +572,15 @@ TEST(PagerWriteback, DirtyRequestsOverlap) {
   ASSERT_TRUE(t2.Start());
   ASSERT_TRUE(t2.WaitForBlocked());
 
-  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 4, 5, ZX_TIME_INFINITE));
-  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 2, 2, ZX_TIME_INFINITE));
+  uint64_t offset, length;
+  ASSERT_TRUE(pager.GetPageDirtyRequest(vmo, ZX_TIME_INFINITE, &offset, &length));
+  printf("saw DIRTY request for [%zu, %zu)\n", offset, offset + length);
+  ASSERT_EQ(4u, offset);
+  ASSERT_EQ(5u, length);
+  ASSERT_TRUE(pager.GetPageDirtyRequest(vmo, ZX_TIME_INFINITE, &offset, &length));
+  printf("saw DIRTY request for [%zu, %zu)\n", offset, offset + length);
+  ASSERT_EQ(2u, offset);
+  ASSERT_EQ(2u, length);
 
   // Dirty the range [4,9).
   ASSERT_TRUE(pager.DirtyPages(vmo, 4, 5));
@@ -612,7 +619,6 @@ TEST(PagerWriteback, DirtyRequestsOverlap) {
 
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 11, 5, ZX_TIME_INFINITE));
   // No remaining requests.
-  uint64_t offset, length;
   ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
 
   // Dirty the range [11,16).
