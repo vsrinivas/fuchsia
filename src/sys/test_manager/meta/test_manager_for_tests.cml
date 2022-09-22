@@ -6,20 +6,6 @@
     program: {
         args: [ "test_manager_for_tests.cm" ],
     },
-
-    // We don't add debugdata.Publisher as a debug protocol in the environment,
-    // as the security policy is enforced based on static absolute monikers.
-    // Since test_manager_for_test will be launched in a dynamically created
-    // realm, we can't allowlist it in the security policy. Instead, we route
-    // DebugData as a regular capability, which lets us test debugdata routing
-    // under a nearly identical setup.
-    offer: [
-        {
-            protocol: "fuchsia.debugdata.Publisher",
-            from: "#debug_data",
-            to: "#tests",
-        },
-    ],
     environments: [
         {
             name: "test-env",

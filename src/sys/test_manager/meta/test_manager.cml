@@ -85,12 +85,6 @@
                     scheme: "realm-builder",
                 },
             ],
-            debug: [
-                {
-                    protocol: "fuchsia.debugdata.Publisher",
-                    from: "#debug_data",
-                },
-            ],
 
             // TODO(fxbug.dev/87330): We need more time to collect logs on
             // coverage bots. Remove this one we have single archivist for all
@@ -185,12 +179,6 @@
                     resolver: "realm_builder_resolver",
                     from: "#realm_builder_server",
                     scheme: "realm-builder",
-                },
-            ],
-            debug: [
-                {
-                    protocol: "fuchsia.debugdata.Publisher",
-                    from: "#debug_data",
                 },
             ],
 

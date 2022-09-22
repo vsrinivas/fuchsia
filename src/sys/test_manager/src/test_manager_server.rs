@@ -5,16 +5,17 @@
 use {
     crate::{
         above_root_capabilities::AboveRootCapabilitiesForTest,
+        constants,
+        debug_data_processor::{DebugDataDirectory, DebugDataProcessor},
         error::TestManagerError,
         facet,
         running_suite::{enumerate_test_cases, RunningSuite},
         self_diagnostics,
         test_suite::{Suite, TestRunBuilder},
     },
-    fidl::endpoints::{create_endpoints, create_proxy},
-    fidl::prelude::*,
+    fidl::endpoints::ControlHandle,
     fidl_fuchsia_component_resolution::ResolverProxy,
-    fidl_fuchsia_test_internal as ftest_internal, fidl_fuchsia_test_manager as ftest_manager,
+    fidl_fuchsia_test_manager as ftest_manager,
     ftest_manager::LaunchError,
     fuchsia_async::{self as fasync},
     fuchsia_zircon as zx,
@@ -27,7 +28,6 @@ use {
 pub async fn run_test_manager(
     mut stream: ftest_manager::RunBuilderRequestStream,
     resolver: Arc<ResolverProxy>,
-    debug_data_controller: Arc<ftest_internal::DebugDataControllerProxy>,
     above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
     inspect_root: &self_diagnostics::RootInspectNode,
 ) -> Result<(), TestManagerError> {
@@ -74,28 +74,9 @@ pub async fn run_test_manager(
                         break;
                     }
                 };
-                let (debug_set_controller, set_controller_server) =
-                    create_proxy::<ftest_internal::DebugDataSetControllerMarker>().unwrap();
-                let (debug_iterator, iterator_server) =
-                    create_endpoints::<ftest_manager::DebugDataIteratorMarker>().unwrap();
-                let accumulate = match scheduling_options.as_ref() {
-                    None => false,
-                    Some(options) => options.accumulate_debug_data.unwrap_or(false),
-                };
-                debug_data_controller
-                    .new_set(iterator_server, set_controller_server, accumulate)
-                    .unwrap();
                 let run_inspect = inspect_root
                     .new_run(&format!("run_{:?}", zx::Time::get_monotonic().into_nanos()));
-                builder
-                    .run(
-                        controller,
-                        debug_set_controller,
-                        debug_iterator,
-                        run_inspect,
-                        scheduling_options,
-                    )
-                    .await;
+                builder.run(controller, run_inspect, scheduling_options).await;
                 // clients should reconnect to run new tests.
                 break;
             }
@@ -121,6 +102,9 @@ pub async fn run_test_manager_query_server(
                         break;
                     }
                 };
+                let (_processor, sender) = DebugDataProcessor::new(DebugDataDirectory::Isolated {
+                    parent: constants::ISOLATED_TMP,
+                });
                 let launch_fut = facet::get_suite_facets(test_url.clone(), resolver.clone())
                     .and_then(|facets| {
                         RunningSuite::launch(
@@ -129,6 +113,7 @@ pub async fn run_test_manager_query_server(
                             None,
                             resolver.clone(),
                             above_root_capabilities_for_test.clone(),
+                            sender,
                         )
                     });
                 match launch_fut.await {

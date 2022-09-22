@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use crate::{
+    debug_data_processor::DebugDataSender,
     self_diagnostics,
     test_suite::{self, Suite},
 };
 use async_trait::async_trait;
-use fidl_fuchsia_test_internal as ftest_internal;
 use futures::channel::oneshot;
 use futures::stream::{self, StreamExt};
 use std::sync::atomic::{AtomicU16, Ordering};
@@ -27,15 +27,14 @@ pub(crate) trait Scheduler {
     ///                  test run. Scheduler::execute should check for stop messages over
     ///                  this channel and try to terminate the test run gracefully.
     ///     - run_id: an id that identifies the test run.
-    ///     -debug_controller: used to control debug data component and get it to process debug
-    ///                        data vmos
+    ///     - debug_data_sender: used to send debug data VMOs for processing
     async fn execute(
         &self,
         suites: Vec<test_suite::Suite>,
         inspect_node_ref: &self_diagnostics::RunInspectNode,
         stop_recv: &mut oneshot::Receiver<()>,
         run_id: u32,
-        debug_controller: &ftest_internal::DebugDataSetControllerProxy,
+        debug_data_sender: DebugDataSender,
     );
 }
 
@@ -48,7 +47,7 @@ pub(crate) trait RunSuiteFn {
     async fn run_suite(
         &self,
         suite: Suite,
-        debug_controller: &ftest_internal::DebugDataSetControllerProxy,
+        debug_data_sender: DebugDataSender,
         instance_name: &str,
         suite_inspect: Arc<self_diagnostics::SuiteInspectNode>,
     );
@@ -64,7 +63,7 @@ impl Scheduler for SerialScheduler {
         inspect_node_ref: &self_diagnostics::RunInspectNode,
         stop_recv: &mut oneshot::Receiver<()>,
         run_id: u32,
-        debug_controller: &ftest_internal::DebugDataSetControllerProxy,
+        debug_data_sender: DebugDataSender,
     ) {
         // run test suites serially for now
         for (suite_idx, suite) in suites.into_iter().enumerate() {
@@ -75,8 +74,13 @@ impl Scheduler for SerialScheduler {
             }
             let instance_name = format!("{:?}-{:?}", run_id, suite_idx);
             let suite_inspect = inspect_node_ref.new_suite(&instance_name, &suite.test_url);
-            test_suite::run_single_suite(suite, debug_controller, &instance_name, suite_inspect)
-                .await;
+            test_suite::run_single_suite(
+                suite,
+                debug_data_sender.clone(),
+                &instance_name,
+                suite_inspect,
+            )
+            .await;
         }
     }
 }
@@ -93,11 +97,11 @@ impl RunSuiteFn for RunSuiteObj {
     async fn run_suite(
         &self,
         suite: Suite,
-        debug_controller: &ftest_internal::DebugDataSetControllerProxy,
+        debug_data_sender: DebugDataSender,
         instance_name: &str,
         suite_inspect: Arc<self_diagnostics::SuiteInspectNode>,
     ) {
-        test_suite::run_single_suite(suite, debug_controller, &instance_name, suite_inspect).await;
+        test_suite::run_single_suite(suite, debug_data_sender, &instance_name, suite_inspect).await;
     }
 }
 
@@ -109,7 +113,7 @@ impl<T: RunSuiteFn + std::marker::Sync + std::marker::Send> Scheduler for Parall
         inspect_node_ref: &self_diagnostics::RunInspectNode,
         _stop_recv: &mut oneshot::Receiver<()>,
         run_id: u32,
-        debug_controller: &ftest_internal::DebugDataSetControllerProxy,
+        debug_data_sender: DebugDataSender,
     ) {
         const MAX_PARALLEL_SUITES_DEFAULT: usize = 8;
         let mut max_parallel_suites = self.max_parallel_suites as usize;
@@ -123,13 +127,14 @@ impl<T: RunSuiteFn + std::marker::Sync + std::marker::Send> Scheduler for Parall
             if max_parallel_suites > 0 { max_parallel_suites } else { MAX_PARALLEL_SUITES_DEFAULT };
         let suite_idx = AtomicU16::new(0);
         let suite_idx_ref = &suite_idx;
+        let debug_data_sender_ref = &debug_data_sender;
         stream::iter(suites)
             .for_each_concurrent(max_parallel_suites, |suite| async move {
                 let suite_idx_local = suite_idx_ref.fetch_add(1, Ordering::Relaxed);
                 let instance_name = format!("{:?}-parallel{:?}", run_id, suite_idx_local);
                 let suite_inspect = inspect_node_ref.new_suite(&instance_name, &suite.test_url);
                 self.suite_runner
-                    .run_suite(suite, debug_controller, &instance_name, suite_inspect)
+                    .run_suite(suite, debug_data_sender_ref.clone(), &instance_name, suite_inspect)
                     .await;
             })
             .await;
@@ -139,11 +144,11 @@ impl<T: RunSuiteFn + std::marker::Sync + std::marker::Send> Scheduler for Parall
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::debug_data_processor::{DebugDataDirectory, DebugDataProcessor};
     use crate::facet;
     use crate::AboveRootCapabilitiesForTest;
     use crate::RootInspectNode;
     use async_trait::async_trait;
-    use fidl::endpoints::create_proxy;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_component_resolution as fresolution;
     use fidl_fuchsia_test_manager::RunOptions;
@@ -186,7 +191,7 @@ mod tests {
         async fn run_suite(
             &self,
             suite: Suite,
-            _debug_controller: &ftest_internal::DebugDataSetControllerProxy,
+            _debug_data_sender: DebugDataSender,
             _instance_name: &str,
             _suite_inspect: Arc<self_diagnostics::SuiteInspectNode>,
         ) {
@@ -211,15 +216,14 @@ mod tests {
             Arc::new(RootInspectNode::new(fuchsia_inspect::component::inspector().root()));
         let run_inspect = root_inspect.new_run(&format!("run_0"));
 
-        let (debug_set_controller, _set_controller_server) =
-            create_proxy::<ftest_internal::DebugDataSetControllerMarker>().unwrap();
+        let sender =
+            DebugDataProcessor::new_for_test(DebugDataDirectory::Isolated { parent: "/tmp" })
+                .sender;
 
         let (_stop_sender, mut stop_recv) = oneshot::channel::<()>();
         let run_id: u32 = rand::random();
 
-        parallel_executor
-            .execute(suite_vec, &run_inspect, &mut stop_recv, run_id, &debug_set_controller)
-            .await;
+        parallel_executor.execute(suite_vec, &run_inspect, &mut stop_recv, run_id, sender).await;
 
         assert!(suite_runner
             .test_vec

@@ -4,15 +4,23 @@
 
 use {
     crate::{
-        above_root_capabilities::AboveRootCapabilitiesForTest, constants::TEST_TYPE_REALM_MAP,
-        debug_data_server, error::*, facet, facet::SuiteFacets, run_events::RunEvent,
-        running_suite, scheduler, scheduler::Scheduler, self_diagnostics,
+        above_root_capabilities::AboveRootCapabilitiesForTest,
+        constants,
+        constants::TEST_TYPE_REALM_MAP,
+        debug_data_processor::{DebugDataDirectory, DebugDataProcessor, DebugDataSender},
+        debug_data_server,
+        error::*,
+        facet,
+        facet::SuiteFacets,
+        run_events::RunEvent,
+        running_suite, scheduler,
+        scheduler::Scheduler,
+        self_diagnostics,
     },
     anyhow::{Context, Error},
-    fidl::endpoints::ClientEnd,
-    fidl::prelude::*,
+    fidl::endpoints::RequestStream,
     fidl_fuchsia_component_resolution::ResolverProxy,
-    fidl_fuchsia_test_internal as ftest_internal, fidl_fuchsia_test_manager as ftest_manager,
+    fidl_fuchsia_test_manager as ftest_manager,
     ftest_manager::{
         LaunchError, RunControllerRequest, RunControllerRequestStream, SchedulingOptions,
         SuiteControllerRequest, SuiteControllerRequestStream, SuiteEvent as FidlSuiteEvent,
@@ -153,32 +161,43 @@ impl TestRunBuilder {
     pub(crate) async fn run(
         self,
         controller: RunControllerRequestStream,
-        debug_controller: ftest_internal::DebugDataSetControllerProxy,
-        debug_iterator: ClientEnd<ftest_manager::DebugDataIteratorMarker>,
         inspect_node: self_diagnostics::RunInspectNode,
         scheduling_options: Option<SchedulingOptions>,
     ) {
         let (stop_sender, mut stop_recv) = oneshot::channel::<()>();
         let (event_sender, event_recv) = mpsc::channel::<RunEvent>(16);
 
-        let debug_event_fut = debug_data_server::send_debug_data_if_produced(
-            event_sender.clone(),
-            debug_controller.take_event_stream(),
-            debug_iterator,
-            &inspect_node,
-        );
         let inspect_node_ref = &inspect_node;
 
-        let max_parallel_suites = match scheduling_options {
+        let max_parallel_suites = match &scheduling_options {
             Some(options) => options.max_parallel_suites,
             None => None,
         };
         let max_parallel_suites_ref = &max_parallel_suites;
+        let debug_data_directory = match scheduling_options
+            .as_ref()
+            .and_then(|options| options.accumulate_debug_data)
+            .unwrap_or(false)
+        {
+            true => DebugDataDirectory::Accumulating { dir: constants::DEBUG_DATA_FOR_SCP },
+            false => DebugDataDirectory::Isolated { parent: constants::ISOLATED_TMP },
+        };
+        let (debug_data_processor, debug_data_sender) =
+            DebugDataProcessor::new(debug_data_directory);
 
         // Generate a random number in an attempt to prevent realm name collisions between runs.
         let run_id: u32 = rand::random();
         let suite_scheduler_fut = async move {
             inspect_node_ref.set_execution_state(self_diagnostics::RunExecutionState::Executing);
+
+            let mut debug_tasks = vec![];
+
+            let sender_clone = event_sender.clone();
+            debug_tasks.push(fasync::Task::local(
+                debug_data_processor
+                    .collect_and_serve(sender_clone)
+                    .unwrap_or_else(|e| warn!("Error serving debug data: {:?}", e)),
+            ));
 
             let serial_executor = scheduler::SerialScheduler {};
 
@@ -201,7 +220,7 @@ impl TestRunBuilder {
                             inspect_node_ref,
                             &mut stop_recv,
                             run_id,
-                            &debug_controller,
+                            debug_data_sender.clone(),
                         )
                         .await;
                     serial_executor
@@ -210,7 +229,7 @@ impl TestRunBuilder {
                             inspect_node_ref,
                             &mut stop_recv,
                             run_id,
-                            &debug_controller,
+                            debug_data_sender.clone(),
                         )
                         .await;
                 }
@@ -221,26 +240,21 @@ impl TestRunBuilder {
                             inspect_node_ref,
                             &mut stop_recv,
                             run_id,
-                            &debug_controller,
+                            debug_data_sender.clone(),
                         )
                         .await;
                 }
             }
 
-            debug_controller
-                .finish()
-                .unwrap_or_else(|e| warn!("Error finishing debug data set: {:?}", e));
+            drop(debug_data_sender); // needed for debug_data_processor to complete.
 
-            // Collect run artifacts
-            let mut kernel_debug_tasks = vec![];
-            kernel_debug_tasks.push(debug_data_server::send_kernel_debug_data(event_sender));
-            join_all(kernel_debug_tasks).await;
+            debug_tasks
+                .push(fasync::Task::local(debug_data_server::send_kernel_debug_data(event_sender)));
+            join_all(debug_tasks).await;
             inspect_node_ref.set_execution_state(self_diagnostics::RunExecutionState::Complete);
         };
 
-        let (remote, remote_handle) = futures::future::join(debug_event_fut, suite_scheduler_fut)
-            .map(|((), ())| ())
-            .remote_handle();
+        let (remote, remote_handle) = suite_scheduler_fut.remote_handle();
 
         let ((), controller_res) = futures::future::join(
             remote,
@@ -340,14 +354,13 @@ impl Suite {
 
 pub(crate) async fn run_single_suite(
     suite: Suite,
-    debug_controller: &ftest_internal::DebugDataSetControllerProxy,
+    debug_data_sender: DebugDataSender,
     instance_name: &str,
     inspect_node: Arc<self_diagnostics::SuiteInspectNode>,
 ) {
     let (mut sender, recv) = mpsc::channel(1024);
     let (stop_sender, stop_recv) = oneshot::channel::<()>();
     let mut maybe_instance = None;
-    let mut realm_moniker = None;
 
     let Suite {
         test_url,
@@ -389,11 +402,6 @@ pub(crate) async fn run_single_suite(
                 }
             }
         };
-        let realm_moniker_ref =
-            realm_moniker.insert(format!("./{}:{}", facets.collection, instance_name));
-        if let Err(e) = debug_controller.add_realm(realm_moniker_ref.as_str(), &test_url).await {
-            warn!("Failed to add realm {} to debug data: {:?}", realm_moniker_ref.as_str(), e);
-        }
         inspect_node.set_execution_state(self_diagnostics::ExecutionState::Launch);
         match running_suite::RunningSuite::launch(
             &test_url,
@@ -401,6 +409,7 @@ pub(crate) async fn run_single_suite(
             Some(instance_name),
             resolver,
             above_root_capabilities_for_test,
+            debug_data_sender,
         )
         .await
         {
@@ -411,7 +420,6 @@ pub(crate) async fn run_single_suite(
                 inspect_node.set_execution_state(self_diagnostics::ExecutionState::TestsDone);
             }
             Err(e) => {
-                let _ = debug_controller.remove_realm(realm_moniker_ref.as_str());
                 sender.send(Err(e.into())).await.unwrap();
             }
         }
@@ -429,12 +437,7 @@ pub(crate) async fn run_single_suite(
         inspect_node.set_execution_state(self_diagnostics::ExecutionState::TearDown);
         if let Err(err) = instance.destroy().await {
             // Failure to destroy an instance could mean that some component events fail to send.
-            // Missing events could cause debug data collection to hang as it relies on events to
-            // understand when a realm has stopped.
             error!(?err, "Failed to destroy instance for {}. Debug data may be lost.", test_url);
-            if let Some(moniker) = realm_moniker {
-                let _ = debug_controller.remove_realm(&moniker);
-            }
         }
     }
     inspect_node.set_execution_state(self_diagnostics::ExecutionState::Complete);

@@ -104,7 +104,7 @@
         },
         {
             name: "debug_data",
-            url: "fuchsia-pkg://fuchsia.com/test_manager#meta/debug_data_rust.cm",
+            url: "fuchsia-pkg://fuchsia.com/test_manager#meta/debug_data_processor.cm",
         },
         {
             name: "early_boot_instrumentation",
@@ -190,7 +190,7 @@
             path: "/debugdata",
         },
         {
-            protocol: "fuchsia.test.internal.DebugDataController",
+            protocol: "fuchsia.test.debug.DebugDataProcessor",
             from: "#debug_data",
         },
         {
@@ -265,11 +265,6 @@
                 "#g3_dart_jit_product_runner",
             ],
             availability: "optional",
-        },
-        {
-            protocol: [ "fuchsia.sys2.EventSource" ],
-            from: "parent",
-            to: [ "#debug_data" ],
         },
 
         // These capabilities are offered for use by certain non-hermetic tests.
@@ -422,34 +417,6 @@
             to: "#fuzz_test_runner",
         },
         {
-            event: "capability_requested",
-            from: "framework",
-            to: "#debug_data",
-            filter: { name: "fuchsia.debugdata.Publisher" },
-        },
-        {
-            event: "started",
-            from: "framework",
-            to: "#debug_data",
-        },
-        {
-            event: "destroyed",
-            from: "framework",
-            to: "#debug_data",
-        },
-        {
-            event_stream: [
-                "capability_requested_v2",
-                "destroyed_v2",
-                "directory_ready_v2",
-                "running_v2",
-                "started_v2",
-                "stopped_v2",
-            ],
-            from: "parent",
-            to: "#debug_data",
-        },
-        {
             protocol: "fuchsia.diagnostics.ArchiveAccessor",
             from: "parent",
             as: "fuchsia.diagnostics.RealArchiveAccessor",
@@ -481,12 +448,6 @@
                 "#tests",
                 "#tier-2-tests",
             ],
-        },
-        {
-            storage: "tmp",
-            from: "parent",
-            to: "#debug_data",
-            rights: [ "rw*" ],
         },
         {
             directory: "root-ssl-certificates",
@@ -539,7 +500,6 @@
             storage: "cache",
             from: "self",
             to: [
-                "#debug_data",
                 "#starnix-tests",
                 "#system-tests",
                 "#tests",

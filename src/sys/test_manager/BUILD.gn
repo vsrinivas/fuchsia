@@ -57,7 +57,6 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.sys:fuchsia.sys_rust",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
     "//sdk/fidl/fuchsia.test:fuchsia.test_rust",
-    "//sdk/fidl/fuchsia.test.internal:fuchsia.test.internal_rust",
     "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager_rust",
     "//src/developer/remote-control/diagnostics-bridge",
     "//src/lib/diagnostics/data/rust",
@@ -123,7 +122,6 @@ rustc_binary("bin") {
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.component.resolution:fuchsia.component.resolution_rust",
-    "//sdk/fidl/fuchsia.test.internal:fuchsia.test.internal_rust",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fuchsia",

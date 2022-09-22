@@ -37,7 +37,6 @@ pub(crate) struct DebugDataSender {
 
 /// Directory used to store collected debug data.
 #[derive(Debug)]
-#[allow(unused)]
 pub enum DebugDataDirectory {
     /// An isolated directory is owned purely by the |DebugDataProcessor| it is given to, and will
     /// be torn down when the |DebugDataProcessor| is terminated.
@@ -51,7 +50,6 @@ impl DebugDataProcessor {
     const MAX_SENT_VMOS: usize = 10;
     /// Create a new |DebugDataProcessor| for processing VMOs, and |DebugDataSender| for passing
     /// it VMOs.
-    #[allow(unused)]
     pub fn new(directory: DebugDataDirectory) -> (Self, DebugDataSender) {
         let (sender, receiver) = futures::channel::mpsc::channel(Self::MAX_SENT_VMOS);
         (
@@ -71,7 +69,7 @@ impl DebugDataProcessor {
     /// it VMOs, and the |fuchsia.test.debug.DebugDataProcessor| stream to which the processor
     /// will connect.
     #[cfg(test)]
-    fn new_for_test(directory: DebugDataDirectory) -> DebugDataForTestResult {
+    pub(crate) fn new_for_test(directory: DebugDataDirectory) -> DebugDataForTestResult {
         let (sender, receiver) = futures::channel::mpsc::channel(Self::MAX_SENT_VMOS);
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<ftest_debug::DebugDataProcessorMarker>()
@@ -90,7 +88,6 @@ impl DebugDataProcessor {
 
     /// Collect debug data produced by the corresponding |DebugDataSender|, and serve the resulting
     /// data. In case debug data is produced, sends the event over |run_event_sender|.
-    #[allow(unused)]
     pub async fn collect_and_serve(
         self,
         run_event_sender: mpsc::Sender<RunEvent>,
@@ -143,10 +140,10 @@ impl DebugDataProcessor {
 }
 
 #[cfg(test)]
-struct DebugDataForTestResult {
-    processor: DebugDataProcessor,
-    sender: DebugDataSender,
-    stream: ftest_debug::DebugDataProcessorRequestStream,
+pub(crate) struct DebugDataForTestResult {
+    pub processor: DebugDataProcessor,
+    pub sender: DebugDataSender,
+    pub stream: ftest_debug::DebugDataProcessorRequestStream,
 }
 
 /// Serve |fuchsia.debugdata.Publisher| as a RealmBuilder mock. Collected VMOs are sent over

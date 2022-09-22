@@ -3,23 +3,11 @@
 // found in the LICENSE file.
 {
     include: [
+        "//sdk/lib/sys/testing/coverage.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
         "syslog/client.shard.cml",
     ],
     program: {
         binary: "bin/debug_data_write_test",
     },
-    use: [
-        {
-            // Note that tests normally access debug data via a debug
-            // capability injected into the environment. Here we use it
-            // as a normal capability as it is not possible to enable debug
-            // capabilities for test_manager_for_test. See test_manager_for_test
-            // in //src/sys/test_manager/meta/test_manager_for_tests.cml for
-            // more details.
-            protocol: "fuchsia.debugdata.Publisher",
-            from: "parent",
-            path: "/svc/fuchsia.debugdata.PublisherForTest",
-        },
-    ],
 }

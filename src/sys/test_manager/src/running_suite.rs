@@ -5,7 +5,8 @@
 use {
     crate::{
         above_root_capabilities::AboveRootCapabilitiesForTest,
-        constants::{HERMETIC_ENVIRONMENT_NAME, HERMETIC_TESTS_COLLECTION, TEST_ROOT_REALM_NAME},
+        constants::{HERMETIC_TESTS_COLLECTION, TEST_ENVIRONMENT_NAME, TEST_ROOT_REALM_NAME},
+        debug_data_processor::{serve_debug_data_publisher, DebugDataSender},
         diagnostics, enclosing_env,
         error::LaunchTestError,
         facet, resolver,
@@ -53,6 +54,7 @@ use {
 
 const WRAPPER_REALM_NAME: &'static str = "test_wrapper";
 const MOCKS_SERVER_REALM_NAME: &'static str = "mocks-server";
+const DEBUG_DATA_REALM_NAME: &'static str = "debug-data";
 const ENCLOSING_ENV_REALM_NAME: &'static str = "enclosing_env";
 
 const ARCHIVIST_REALM_NAME: &'static str = "archivist";
@@ -84,6 +86,7 @@ impl RunningSuite {
         instance_name: Option<&str>,
         resolver: Arc<ResolverProxy>,
         above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
+        debug_data_sender: DebugDataSender,
     ) -> Result<Self, LaunchTestError> {
         info!("Starting '{}' in '{}' collection.", test_url, facets.collection);
 
@@ -97,6 +100,7 @@ impl RunningSuite {
             facets.collection,
             above_root_capabilities_for_test,
             resolver,
+            debug_data_sender,
         )
         .await
         .map_err(LaunchTestError::InitializeTestRealm)?;
@@ -490,6 +494,7 @@ async fn get_realm(
     collection: &str,
     above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
     resolver: Arc<ResolverProxy>,
+    debug_data_sender: DebugDataSender,
 ) -> Result<RealmBuilder, RealmBuilderError> {
     let builder = RealmBuilder::new_with_collection(collection.to_string()).await?;
     let wrapper_realm =
@@ -503,9 +508,53 @@ async fn get_realm(
         )
         .await?;
 
+    let owned_url = test_url.to_string();
+    let debug_data = wrapper_realm
+        .add_local_child(
+            DEBUG_DATA_REALM_NAME,
+            move |handles| {
+                Box::pin(serve_debug_data_publisher(
+                    handles,
+                    owned_url.clone(),
+                    debug_data_sender.clone(),
+                ))
+            },
+            ChildOptions::new(),
+        )
+        .await?;
+    let mut debug_data_decl = wrapper_realm.get_component_decl(&debug_data).await?;
+    debug_data_decl.exposes.push(cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
+        source: cm_rust::ExposeSource::Self_,
+        source_name: cm_rust::CapabilityName(String::from("fuchsia.debugdata.Publisher")),
+        target: cm_rust::ExposeTarget::Parent,
+        target_name: cm_rust::CapabilityName(String::from("fuchsia.debugdata.Publisher")),
+    }));
+    debug_data_decl.capabilities.push(cm_rust::CapabilityDecl::Protocol(cm_rust::ProtocolDecl {
+        name: cm_rust::CapabilityName(String::from("fuchsia.debugdata.Publisher")),
+        source_path: Some(cm_rust::CapabilityPath {
+            dirname: String::from("/svc"),
+            basename: String::from("fuchsia.debugdata.Publisher"),
+        }),
+    }));
+    wrapper_realm.replace_component_decl(&debug_data, debug_data_decl).await?;
+
+    let mut test_env = cm_rust::EnvironmentDecl {
+        name: String::from(TEST_ENVIRONMENT_NAME),
+        extends: fdecl::EnvironmentExtends::Realm,
+        resolvers: vec![],
+        runners: vec![],
+        debug_capabilities: vec![cm_rust::DebugRegistration::Protocol(
+            cm_rust::DebugProtocolRegistration {
+                source_name: cm_rust::CapabilityName(String::from("fuchsia.debugdata.Publisher")),
+                source: cm_rust::RegistrationSource::Child(DEBUG_DATA_REALM_NAME.to_string()),
+                target_name: cm_rust::CapabilityName(String::from("fuchsia.debugdata.Publisher")),
+            },
+        )],
+        stop_timeout_ms: None,
+    };
+
     // If this realm is inside the hermetic tests collections, set up the
     // hermetic resolver local component.
-    let mut test_root_child_opts = ChildOptions::new().eager();
     let mut hermetic_test_package_name = None;
     if collection.eq(HERMETIC_TESTS_COLLECTION) {
         hermetic_test_package_name = Some(Arc::new(test_package.to_owned()));
@@ -552,28 +601,27 @@ async fn get_realm(
             .replace_component_decl(HERMETIC_RESOLVER_REALM_NAME, hermetic_resolver_decl)
             .await?;
 
-        // Create the hermetic environment in the test_wrapper.
-        let mut test_wrapper_decl = wrapper_realm.get_realm_decl().await?;
-        test_wrapper_decl.environments.push(cm_rust::EnvironmentDecl {
-            name: String::from(HERMETIC_ENVIRONMENT_NAME),
-            extends: fdecl::EnvironmentExtends::Realm,
-            resolvers: vec![cm_rust::ResolverRegistration {
-                resolver: cm_rust::CapabilityName(String::from(HERMETIC_RESOLVER_CAPABILITY_NAME)),
-                source: cm_rust::RegistrationSource::Child(String::from(
-                    HERMETIC_RESOLVER_CAPABILITY_NAME,
-                )),
-                scheme: String::from("fuchsia-pkg"),
-            }],
-            runners: vec![],
-            debug_capabilities: vec![],
-            stop_timeout_ms: None,
-        });
-        wrapper_realm.replace_realm_decl(test_wrapper_decl).await?;
-        test_root_child_opts = ChildOptions::new().environment(HERMETIC_ENVIRONMENT_NAME).eager();
+        // Update resolvers in the test environment.
+        test_env.resolvers = vec![cm_rust::ResolverRegistration {
+            resolver: cm_rust::CapabilityName(String::from(HERMETIC_RESOLVER_CAPABILITY_NAME)),
+            source: cm_rust::RegistrationSource::Child(String::from(
+                HERMETIC_RESOLVER_CAPABILITY_NAME,
+            )),
+            scheme: String::from("fuchsia-pkg"),
+        }];
     }
 
-    let test_root =
-        wrapper_realm.add_child(TEST_ROOT_REALM_NAME, test_url, test_root_child_opts).await?;
+    let mut test_wrapper_decl = wrapper_realm.get_realm_decl().await?;
+    test_wrapper_decl.environments.push(test_env);
+    wrapper_realm.replace_realm_decl(test_wrapper_decl).await?;
+
+    let test_root = wrapper_realm
+        .add_child(
+            TEST_ROOT_REALM_NAME,
+            test_url,
+            ChildOptions::new().environment(TEST_ENVIRONMENT_NAME).eager(),
+        )
+        .await?;
     let archivist = wrapper_realm
         .add_child(ARCHIVIST_REALM_NAME, ARCHIVIST_FOR_EMBEDDING_URL, ChildOptions::new().eager())
         .await?;
