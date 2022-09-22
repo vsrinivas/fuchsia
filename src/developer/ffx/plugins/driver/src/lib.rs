@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context, Result},
-    component_hub::select,
+    component_hub::capability,
     ffx_core::ffx_plugin,
     ffx_driver_args::DriverCommand,
     fidl::endpoints::ProtocolMarker,
@@ -75,7 +75,7 @@ impl DriverConnector {
                 .map_err(|i| Status::ok(i).unwrap_err())
                 .context("opening query")?;
 
-            Ok(select::find_instances_that_expose_or_use_capability(
+            Ok(capability::find_instances_that_expose_or_use_capability(
                 capability.to_string(),
                 &explorer_proxy,
                 &query_proxy,

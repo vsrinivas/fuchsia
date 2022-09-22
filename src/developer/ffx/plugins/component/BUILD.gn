@@ -8,6 +8,7 @@ ffx_plugin("ffx_component") {
   version = "0.1.0"
   edition = "2021"
   plugin_deps = [
+    "capability:ffx_component_capability",
     "create:ffx_component_create",
     "destroy:ffx_component_destroy",
     "doctor:ffx_component_doctor",
@@ -17,7 +18,6 @@ ffx_plugin("ffx_component") {
     "reload:ffx_component_reload",
     "resolve:ffx_component_resolve",
     "run:ffx_component_run",
-    "select:ffx_component_select",
     "show:ffx_component_show",
     "start:ffx_component_start",
     "stop:ffx_component_stop",

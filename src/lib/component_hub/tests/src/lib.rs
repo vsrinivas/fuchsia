@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    component_hub::{list, select, show},
+    component_hub::{capability, list, show},
     fidl_fuchsia_sys2 as fsys,
     fuchsia_component::client::connect_to_protocol,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
@@ -99,8 +99,8 @@ async fn select() {
     let explorer = connect_to_protocol::<fsys::RealmExplorerMarker>().unwrap();
     let query = connect_to_protocol::<fsys::RealmQueryMarker>().unwrap();
 
-    let select::MatchingInstances { mut exposed, mut used } =
-        select::find_instances_that_expose_or_use_capability(
+    let capability::MatchingInstances { mut exposed, mut used } =
+        capability::find_instances_that_expose_or_use_capability(
             "fuchsia.foo.Bar".to_string(),
             &explorer,
             &query,
@@ -115,10 +115,14 @@ async fn select() {
     assert!(exposed_component.is_root());
     assert!(used_component.is_root());
 
-    let select::MatchingInstances { mut exposed, used } =
-        select::find_instances_that_expose_or_use_capability("data".to_string(), &explorer, &query)
-            .await
-            .unwrap();
+    let capability::MatchingInstances { mut exposed, used } =
+        capability::find_instances_that_expose_or_use_capability(
+            "data".to_string(),
+            &explorer,
+            &query,
+        )
+        .await
+        .unwrap();
 
     assert_eq!(exposed.len(), 1);
     assert_eq!(used.len(), 0);

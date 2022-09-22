@@ -42,10 +42,10 @@ rustc_library("component_hub") {
   ]
 
   sources = [
+    "src/capability.rs",
     "src/io.rs",
     "src/lib.rs",
     "src/list.rs",
-    "src/select.rs",
     "src/show.rs",
     "src/storage/copy.rs",
     "src/storage/delete.rs",

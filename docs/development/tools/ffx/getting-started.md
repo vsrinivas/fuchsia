@@ -197,7 +197,7 @@ a capability with a given name.
 The following command will display all components that use/expose the `diagnostics` capability:
 
 ```none
-$ fx ffx component select capability diagnostics
+$ fx ffx component capability diagnostics
 Exposed:
   /bootstrap/archivist
   /bootstrap/base_resolver
