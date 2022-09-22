@@ -48,10 +48,10 @@ const (
 
 	// TODO(fxb/73171): Fix this path.
 	// The output data directory for component v2 tests.
-	dataOutputDirV2 = "/tmp/test_manager:0/data/debug"
+	dataOutputDirV2 = "/tmp/test_manager:0/children/debug_data:0/data"
 
 	// The output data directory for early boot coverage.
-	dataOutputDirEarlyBoot = "/tmp/test_manager:0/data/kernel_debug"
+	dataOutputDirEarlyBoot = "/tmp/test_manager:0/data"
 
 	// Various tools for running tests.
 	runtestsName         = "runtests"

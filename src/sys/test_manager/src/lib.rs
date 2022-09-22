@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 mod above_root_capabilities;
-pub mod constants;
+mod constants;
 mod debug_data_processor;
 mod debug_data_server;
 mod diagnostics;

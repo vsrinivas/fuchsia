@@ -4,16 +4,17 @@
 
 use {
     fidl::AsHandleRef, fidl_fuchsia_debugdata::PublisherMarker,
-    fuchsia_component::client::connect_to_protocol, fuchsia_zircon as zx, std::ffi::CStr,
+    fuchsia_component::client::connect_to_protocol_at_path, fuchsia_zircon as zx, std::ffi::CStr,
 };
 
 const VMO_CONTENTS: &[u8] = b"Debug data from test\n";
 const VMO_NAME: &[u8] = b"vmo_name\0";
 const VMO_DATA_SINK: &str = "data_sink";
+const PUBLISHER_PATH: &str = "/svc/fuchsia.debugdata.PublisherForTest";
 
 #[fuchsia::test]
 async fn publish_debug_data() {
-    let publish_data = connect_to_protocol::<PublisherMarker>().unwrap();
+    let publish_data = connect_to_protocol_at_path::<PublisherMarker>(PUBLISHER_PATH).unwrap();
     let vmo = zx::Vmo::create(1024).unwrap();
     vmo.write(VMO_CONTENTS, 0).expect("write to VMO");
     vmo.set_content_size(&(VMO_CONTENTS.len() as u64)).expect("set VMO content size");
@@ -21,7 +22,4 @@ async fn publish_debug_data() {
     let (vmo_token, vmo_server) = zx::EventPair::create().unwrap();
     publish_data.publish(VMO_DATA_SINK, vmo, vmo_server).expect("Publish debugdata");
     drop(vmo_token);
-    // TODO(fxbug.dev/76579): remove timeout once routing requests are guaranteed delivery
-    // before component destruction.
-    fuchsia_async::Timer::new(std::time::Duration::from_secs(5)).await;
 }

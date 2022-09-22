@@ -739,9 +739,16 @@
             {
                 debug: "protocol",
                 environment_name: "test-env",
-                source_moniker: "/core/test_manager/**",
+                source_moniker: "/core/test_manager/debug_data",
                 source_name: "fuchsia.debugdata.Publisher",
-                target_moniker: "/core/test_manager/**",
+                target_moniker: "/core/test_manager",
+            },
+            {
+                debug: "protocol",
+                environment_name: "legacy-test-env",
+                source_moniker: "/core/test_manager/debug_data",
+                source_name: "fuchsia.debugdata.Publisher",
+                target_moniker: "/core/test_manager",
             },
         ],
     },

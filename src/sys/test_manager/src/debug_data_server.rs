@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::run_events::RunEvent,
+    crate::{run_events::RunEvent, self_diagnostics},
     anyhow::{anyhow, Context, Error},
     fidl::endpoints::{create_endpoints, create_request_stream, ClientEnd},
-    fidl_fuchsia_io as fio, fidl_fuchsia_test_manager as ftest_manager,
+    fidl_fuchsia_io as fio, fidl_fuchsia_test_internal as ftest_internal,
+    fidl_fuchsia_test_manager as ftest_manager,
     fidl_fuchsia_test_manager::{DebugData, DebugDataIteratorMarker, DebugDataIteratorRequest},
     fuchsia_async as fasync,
     futures::{
@@ -109,6 +110,24 @@ fn serve_kernel_debug_data(
     };
 
     (client, fut)
+}
+
+pub(crate) async fn send_debug_data_if_produced(
+    mut event_sender: mpsc::Sender<RunEvent>,
+    mut controller_events: ftest_internal::DebugDataSetControllerEventStream,
+    debug_iterator: ClientEnd<ftest_manager::DebugDataIteratorMarker>,
+    inspect_node: &self_diagnostics::RunInspectNode,
+) {
+    inspect_node.set_debug_data_state(self_diagnostics::DebugDataState::PendingDebugDataProduced);
+    match controller_events.next().await {
+        Some(Ok(ftest_internal::DebugDataSetControllerEvent::OnDebugDataProduced {})) => {
+            let _ = event_sender.send(RunEvent::debug_data(debug_iterator).into()).await;
+            inspect_node.set_debug_data_state(self_diagnostics::DebugDataState::DebugDataProduced);
+        }
+        Some(Err(_)) | None => {
+            inspect_node.set_debug_data_state(self_diagnostics::DebugDataState::NoDebugData);
+        }
+    }
 }
 
 const DEBUG_DATA_TIMEOUT_SECONDS: i64 = 15;
