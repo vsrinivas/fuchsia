@@ -1,0 +1,9 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # Whether to emit a stack-size section in the output file
+  # https://clang.llvm.org/docs/ClangCommandLineReference.html#cmdoption-clang-fstack-size-section
+  stack_size_section = false
+}

@@ -4,6 +4,7 @@
 
 import("//build/config/clang/clang.gni")
 import("//build/config/clang/crash_diagnostics.gni")
+import("//build/config/clang/stack_size_section.gni")
 import("//build/config/clang/time_trace.gni")
 import("//build/config/compiler.gni")
 import("//build/config/linker.gni")
@@ -81,6 +82,14 @@ config("crash-diagnostics-dir") {
   }
 }
 
+config("stack-size-section") {
+  if (!is_gcc && stack_size_section) {
+    cflags = [ "-fstack-size-section" ]
+    asmflags = cflags
+    ldflags = cflags
+  }
+}
+
 config("time-trace") {
   if (!is_gcc && time_trace) {
     cflags = [ "-ftime-trace" ]
@@ -98,6 +107,7 @@ config("compiler") {
     ":crash-diagnostics-dir",
     ":time-trace",
     ":toolchain_version_stamp",
+    ":stack-size-section",
   ]
 
   if (!is_gcc) {
