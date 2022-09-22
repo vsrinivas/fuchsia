@@ -6,7 +6,9 @@
 #### CATEGORY=Source tree
 ### updates OWNERS files for third_party dependencies
 
-## usage: fx update-3p-owners [--skip-rustc-3p-update] [--num-threads N]
+## usage: fx update-3p-owners  [--num-threads N]
+##                             [--rust-only | --integration-only]
+##                             [--skip-rustc-3p-update]
 ##
 ## Updates OWNERS files for projects, based on gn target references. For any
 ## given project, the tool adds as owners the owners of the projects that depend
@@ -21,6 +23,12 @@
 ## Arguments:
 ## --num-threads N:           run on N threads.
 ##
+## --rust-only:               update OWNERS files only for Rust crates,
+##                            specified in third_party/rust_crates/Cargo.toml.
+##
+## --integration-only:        update OWNERS files only for projects specified
+##                            in integration/third_party/flower.
+##
 ## --skip-rustc-3p-update:    skip updating rustc_library and rustc_binary
 ##                            third_party dependencies.
 ##
@@ -34,6 +42,8 @@ fx-config-read
 
 OWNERS_TOOL_TARGET="host-tools/auto_owners"
 OWNERS_TOOL_BIN="${FUCHSIA_BUILD_DIR}/${OWNERS_TOOL_TARGET}"
+RUST_METADATA="--rust-metadata $FUCHSIA_BUILD_DIR/rustlang/3p-crates-metadata.json"
+JIRI_MANIFEST="--jiri-manifest $FUCHSIA_DIR/integration/third_party/flower"
 
 # Parse arguments
 while [[ $# -ge 1 ]]; do
@@ -46,6 +56,16 @@ while [[ $# -ge 1 ]]; do
       shift
       [[ ! $1 ]] && die "--num-threads requires an argument after it"
       NUM_THREADS="--num-threads $1"
+      ;;
+    --rust-only)
+      RUST_ONLY="--rust-only"
+      JIRI_MANIFEST=""
+      ;;
+    --integration-only)
+      INTEGRATION_ONLY="--integration-only"
+      RUST_METADATA=""
+      # skip rustc update if not updating rust owners.
+      SKIP_RUSTC_3P_UPDATE="true"
       ;;
     --skip-rustc-3p-update)
       SKIP_RUSTC_3P_UPDATE="true"
@@ -64,6 +84,11 @@ if [[ ! -n "$NUM_THREADS" ]]; then
   exit 1
 fi
 
+if [[ -n "$RUST_ONLY" && -n "$INTEGRATION_ONLY" ]]; then
+  fx-error "Argument --rust-only not allowed with --integration-only."
+  exit 1
+fi
+
 fx-command-run build ${OWNERS_TOOL_TARGET} || ( \
   fx-error "Failed to build owners tool."; \
   exit 1
@@ -78,8 +103,8 @@ fi
 
 (cd $FUCHSIA_DIR; $OWNERS_TOOL_BIN \
   $NUM_THREADS \
-  --rust-metadata $FUCHSIA_BUILD_DIR/rustlang/3p-crates-metadata.json \
-  --jiri-manifest $FUCHSIA_DIR/integration/third_party/flower \
+  $RUST_METADATA \
+  $JIRI_MANIFEST \
   --overrides $FUCHSIA_DIR/third_party/rust_crates/owners.toml \
   --out-dir $FUCHSIA_BUILD_DIR \
   --gn-bin $PREBUILT_GN)

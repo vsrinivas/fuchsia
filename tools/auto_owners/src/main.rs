@@ -25,11 +25,11 @@ use xml::reader::{EventReader, XmlEvent};
 struct Options {
     /// path to the JSON metadata produced by cargo-gnaw
     #[argh(option)]
-    rust_metadata: PathBuf,
+    rust_metadata: Option<PathBuf>,
 
     /// path to the 3P JIRI manifest
     #[argh(option)]
-    jiri_manifest: PathBuf,
+    jiri_manifest: Option<PathBuf>,
 
     /// path to the ownership overrides config file
     #[argh(option)]
@@ -79,7 +79,7 @@ struct OwnersDb {
     owners_path_cache: BTreeMap<String, Utf8PathBuf>,
 
     /// path to the JSON metadata produced by cargo-gnaw
-    rust_metadata: PathBuf,
+    rust_metadata: Option<PathBuf>,
 
     /// explicit lists of OWNERS files to include instead of inferring, indexed by project name
     overrides: BTreeMap<String, Vec<Utf8PathBuf>>,
@@ -90,15 +90,19 @@ struct OwnersDb {
 
 impl OwnersDb {
     fn new(
-        rust_metadata: PathBuf,
-        jiri_manifest: PathBuf,
+        rust_metadata: Option<PathBuf>,
+        jiri_manifest: Option<PathBuf>,
         overrides: Utf8PathBuf,
         gn_bin: PathBuf,
         out_dir: PathBuf,
     ) -> Result<Self> {
-        let rust_crates: Vec<CrateOutputMetadata> =
-            serde_json::from_reader(File::open(&rust_metadata)?)?;
+        let rust_crates: Vec<CrateOutputMetadata> = rust_metadata
+            .as_ref()
+            .map(|metadata| Ok::<_, anyhow::Error>(serde_json::from_reader(File::open(metadata)?)?))
+            .transpose()?
+            .unwrap_or_default();
 
+        // OWNERS path is currently only cached for rust projects.
         let mut owners_path_cache = rust_crates
             .iter()
             .map(|metadata| (metadata.canonical_target.clone(), metadata.path.clone()))
@@ -111,7 +115,7 @@ impl OwnersDb {
             .collect::<BTreeMap<_, _>>();
         owners_path_cache.append(&mut path_by_top_level_target);
 
-        let projects = rust_crates
+        let rust_projects: Vec<ProjectMetadata> = rust_crates
             .into_iter()
             .map(|metadata| ProjectMetadata {
                 name: metadata.name,
@@ -121,8 +125,12 @@ impl OwnersDb {
                     metadata.shortcut_target.as_ref().map(String::as_str),
                 ),
             })
-            .chain(parse_jiri_manifest(&jiri_manifest)?)
-            .collect::<Vec<_>>();
+            .collect();
+        let integration_projects = jiri_manifest
+            .map(|manifest| Ok::<_, anyhow::Error>(parse_jiri_manifest(&manifest)?))
+            .transpose()?
+            .unwrap_or_default();
+        let projects = rust_projects.into_iter().chain(integration_projects).collect::<Vec<_>>();
 
         let overrides: BTreeMap<String, Vec<Utf8PathBuf>> =
             toml::de::from_str(&std::fs::read_to_string(overrides)?)?;
@@ -221,13 +229,17 @@ impl OwnersDb {
         } else {
             target
         };
-        Ok(if target.starts_with(RUST_EXTERNAL_TARGET_PREFIX) {
+        Ok(if target.starts_with(RUST_EXTERNAL_TARGET_PREFIX) && self.rust_metadata.is_some() {
             // if the target is for a 3p crate it might not have an owners file yet, so we don't
             // want to rely on probing the filesystem. instead we'll construct a path *a priori*
             if let Some(path) = self.owners_path_cache.get(target) {
                 path.join("OWNERS")
             } else {
-                bail!("{} not in {}", target, self.rust_metadata.display());
+                bail!(
+                    "{} not in {}",
+                    target,
+                    self.rust_metadata.as_ref().expect("metadata is set").display()
+                );
             }
         } else {
             // the target is outside of the 3p directory, so we need to probe for the closest file
