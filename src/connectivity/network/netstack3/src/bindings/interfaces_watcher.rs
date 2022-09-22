@@ -236,7 +236,7 @@ pub struct AddressState {
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(Clone))]
-enum InterfaceEvent {
+pub(crate) enum InterfaceEvent {
     Added { id: BindingId, properties: InterfaceProperties },
     Changed { id: BindingId, event: InterfaceUpdate },
     Removed(BindingId),
@@ -261,6 +261,14 @@ impl InterfaceEventProducer {
                 e => unreachable!("{:?}", e),
             }
         })
+    }
+
+    #[cfg(test)]
+    pub(crate) fn new(
+        id: BindingId,
+        channel: mpsc::UnboundedSender<InterfaceEvent>,
+    ) -> InterfaceEventProducer {
+        InterfaceEventProducer { id, channel }
     }
 }
 
@@ -298,7 +306,6 @@ pub struct Worker {
     events: mpsc::UnboundedReceiver<InterfaceEvent>,
     watchers: mpsc::Receiver<finterfaces::WatcherRequestStream>,
 }
-
 /// Arbitrarily picked constant to force backpressure on FIDL requests.
 const WATCHER_CHANNEL_CAPACITY: usize = 32;
 

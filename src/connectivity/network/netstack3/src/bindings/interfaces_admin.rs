@@ -840,7 +840,7 @@ async fn run_address_state_provider(
         let device_id = non_sync_ctx.devices.get_core_id(id).expect("interface not found");
         netstack3_core::add_ip_addr_subnet(sync_ctx, non_sync_ctx, device_id, addr_subnet_either)
     };
-    let added_to_core = match add_to_core_result {
+    let should_remove_from_core = match add_to_core_result {
         Err(netstack3_core::error::ExistsError) => {
             close_address_state_provider(
                 *address,
@@ -848,6 +848,8 @@ async fn run_address_state_provider(
                 control_handle,
                 fnet_interfaces_admin::AddressRemovalReason::AlreadyAssigned,
             );
+            // The address already existed, so don't attempt to remove it.
+            // Otherwise we would accidentally remove an address we didn't add!
             false
         }
         Ok(()) => {
@@ -862,7 +864,7 @@ async fn run_address_state_provider(
             // Pass in the `assignment_state_receiver` and `stop_receiver` by
             // ref so that they don't get dropped after the main loop exits
             // (before the senders are removed from `ctx`).
-            address_state_provider_main_loop(
+            match address_state_provider_main_loop(
                 address,
                 id,
                 control_handle,
@@ -871,8 +873,11 @@ async fn run_address_state_provider(
                 initial_assignment_state,
                 &mut stop_receiver,
             )
-            .await;
-            true
+            .await
+            {
+                AddressNeedsExplicitRemovalFromCore::Yes => true,
+                AddressNeedsExplicitRemovalFromCore::No => false,
+            }
         }
     };
 
@@ -892,15 +897,21 @@ async fn run_address_state_provider(
                 panic!("`AddressInfo` unexpectedly missing for {:?}", address)
             }
         };
-    // Only attempt to remove the address from Core if it was added to Core.
-    // Otherwise we might accidentally remove an address we didn't add!
-    if added_to_core {
+    if should_remove_from_core {
         let device_id = non_sync_ctx.devices.get_core_id(id).expect("interface not found");
         assert_matches!(
             netstack3_core::del_ip_addr(sync_ctx, non_sync_ctx, device_id, address),
             Ok(())
         );
     }
+}
+
+enum AddressNeedsExplicitRemovalFromCore {
+    /// The caller is expected to delete the address from Core.
+    Yes,
+    /// The caller need not delete the address from Core (e.g. interface removal,
+    /// which implicitly removes all addresses.)
+    No,
 }
 
 async fn address_state_provider_main_loop(
@@ -915,7 +926,7 @@ async fn address_state_provider_main_loop(
     stop_receiver: &mut futures::channel::oneshot::Receiver<
         fnet_interfaces_admin::AddressRemovalReason,
     >,
-) {
+) -> AddressNeedsExplicitRemovalFromCore {
     // When detached, the lifetime of `req_stream` should not be tied to the
     // lifetime of `address`.
     let mut detached = false;
@@ -931,7 +942,7 @@ async fn address_state_provider_main_loop(
     futures::pin_mut!(req_stream);
     futures::pin_mut!(stop_receiver);
     futures::pin_mut!(assignment_state_receiver);
-    loop {
+    let mut cancelation_reason = loop {
         let next_event = futures::select! {
             req = req_stream.try_next() => AddressStateProviderEvent::Request(req),
             state = assignment_state_receiver.next() => {
@@ -947,7 +958,7 @@ async fn address_state_provider_main_loop(
         match next_event {
             AddressStateProviderEvent::Request(req) => match req {
                 // The client hung up, stop serving.
-                Ok(None) => break,
+                Ok(None) => break None,
                 Ok(Some(request)) => {
                     let e = match dispatch_address_state_provider_request(
                         request,
@@ -973,7 +984,7 @@ async fn address_state_provider_main_loop(
                         e
                     );
                     if should_terminate {
-                        break;
+                        break None;
                     }
                 }
                 Err(e) => {
@@ -985,7 +996,7 @@ async fn address_state_provider_main_loop(
                         id,
                         e
                     );
-                    break;
+                    break None;
                 }
             },
             AddressStateProviderEvent::AssignmentStateChange(state) => {
@@ -1001,22 +1012,25 @@ async fn address_state_provider_main_loop(
             }
             AddressStateProviderEvent::Canceled(reason) => {
                 close_address_state_provider(*address, id, control_handle, reason);
-                // On interface removal, don't bother removing the address.
-                match reason {
-                    fnet_interfaces_admin::AddressRemovalReason::InterfaceRemoved => return,
-                    fnet_interfaces_admin::AddressRemovalReason::Invalid
-                    | fnet_interfaces_admin::AddressRemovalReason::AlreadyAssigned
-                    | fnet_interfaces_admin::AddressRemovalReason::DadFailed
-                    | fnet_interfaces_admin::AddressRemovalReason::UserRemoved => break,
-                }
+                break Some(reason);
             }
         }
-    }
+    };
 
     // If detached, wait to be canceled before exiting.
     if detached && !stop_receiver.is_terminated() {
-        let _reason: fnet_interfaces_admin::AddressRemovalReason =
-            stop_receiver.await.expect("failed to receive stop");
+        cancelation_reason = Some(stop_receiver.await.expect("failed to receive stop"));
+    }
+    // On interface removal, don't bother removing the address.
+    match cancelation_reason {
+        Some(fnet_interfaces_admin::AddressRemovalReason::InterfaceRemoved) => {
+            return AddressNeedsExplicitRemovalFromCore::No
+        }
+        Some(fnet_interfaces_admin::AddressRemovalReason::Invalid)
+        | Some(fnet_interfaces_admin::AddressRemovalReason::AlreadyAssigned)
+        | Some(fnet_interfaces_admin::AddressRemovalReason::DadFailed)
+        | Some(fnet_interfaces_admin::AddressRemovalReason::UserRemoved)
+        | None => AddressNeedsExplicitRemovalFromCore::Yes,
     }
 }
 
@@ -1143,4 +1157,109 @@ fn close_address_state_provider(
             e,
         );
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
+    use net_declare::fidl_subnet;
+    use std::collections::HashMap;
+
+    use crate::bindings::{
+        interfaces_watcher::InterfaceEvent, interfaces_watcher::InterfaceUpdate, util::IntoFidl,
+        InterfaceEventProducer, NetstackContext,
+    };
+
+    // Verifies that when an an interface is removed, its addresses are
+    // implicitly removed, rather then explicitly removed one-by-one. Explicit
+    // removal would be redundant and is unnecessary.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn implicit_address_removal_on_interface_removal() {
+        let ctx: NetstackContext = Default::default();
+        let (control_client_end, control_server_end) =
+            fnet_interfaces_ext::admin::Control::create_endpoints().expect("create control proxy");
+        let (control_sender, control_receiver) =
+            OwnedControlHandle::new_channel_with_owned_handle(control_server_end).await;
+        let (event_sender, event_receiver) = futures::channel::mpsc::unbounded();
+
+        // Add the interface.
+        const MTU: u32 = 65536;
+        let build_fake_dev_info = |id| {
+            const LOOPBACK_NAME: &'static str = "lo";
+            devices::DeviceSpecificInfo::Loopback(devices::LoopbackInfo {
+                common_info: devices::CommonInfo {
+                    mtu: MTU,
+                    admin_enabled: true,
+                    events: InterfaceEventProducer::new(id, event_sender),
+                    name: LOOPBACK_NAME.to_string(),
+                    control_hook: control_sender,
+                    addresses: HashMap::new(),
+                },
+            })
+        };
+        let binding_id = {
+            let mut ctx = ctx.lock().await;
+            let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
+            let core_id = netstack3_core::device::add_loopback_device(sync_ctx, non_sync_ctx, MTU)
+                .expect("failed to add loopback to core");
+            non_sync_ctx
+                .devices
+                .add_device(core_id, build_fake_dev_info)
+                .expect("failed to add loopback to bindings")
+        };
+
+        // Start the interface control worker.
+        let (_stop_sender, stop_receiver) = futures::channel::oneshot::channel();
+        let interface_control_fut =
+            run_interface_control(ctx, binding_id, stop_receiver, control_receiver);
+
+        // Add an address.
+        let (asp_client_end, asp_server_end) =
+            fidl::endpoints::create_proxy::<fnet_interfaces_admin::AddressStateProviderMarker>()
+                .expect("create ASP proxy");
+        let mut addr = fidl_subnet!("1.1.1.1/32");
+        control_client_end
+            .add_address(&mut addr, fnet_interfaces_admin::AddressParameters::EMPTY, asp_server_end)
+            .expect("failed to add address");
+
+        // Observe the `AddressAdded` event.
+        let event_receiver = event_receiver.fuse();
+        let interface_control_fut = interface_control_fut.fuse();
+        futures::pin_mut!(event_receiver);
+        futures::pin_mut!(interface_control_fut);
+        let event = futures::select!(
+            () = interface_control_fut => panic!("interface control unexpectedly ended"),
+            event = event_receiver.next() => event
+        );
+        assert_matches!(event, Some(InterfaceEvent::Changed {
+            id,
+            event: InterfaceUpdate::AddressAdded {
+                addr: address,
+                assignment_state: _,
+                valid_until: _,
+            }
+        }) if (id == binding_id && address.into_fidl() == addr ));
+
+        // Drop the control handle and expect interface control to exit
+        drop(control_client_end);
+        interface_control_fut.await;
+
+        // Expect that the event receiver has closed, and that it does not
+        // contain, an `AddressRemoved` event, which would indicate the address
+        // was explicitly removed.
+        assert_matches!(event_receiver.next().await,
+            Some(InterfaceEvent::Removed( id)) if id == binding_id);
+        assert_matches!(event_receiver.next().await, None);
+
+        // Verify the ASP closed for the correct reason.
+        let fnet_interfaces_admin::AddressStateProviderEvent::OnAddressRemoved { error: reason } =
+            asp_client_end
+                .take_event_stream()
+                .try_next()
+                .await
+                .expect("read AddressStateProvider event")
+                .expect("AddressStateProvider event stream unexpectedly empty");
+        assert_eq!(reason, fnet_interfaces_admin::AddressRemovalReason::InterfaceRemoved)
+    }
 }
