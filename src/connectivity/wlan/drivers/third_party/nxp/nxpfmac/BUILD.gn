@@ -48,6 +48,7 @@ source_set("core") {
     "event_handler.cc",
     "ies.cc",
     "ioctl_adapter.cc",
+    "key_ring.cc",
     "moal_shim.cc",
     "scanner.cc",
     "wlan_interface.cc",
