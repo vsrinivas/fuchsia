@@ -11,8 +11,6 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_rust",
-    "//sdk/fidl/fuchsia.cobalt.test:fuchsia.cobalt.test_rust",
     "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_rust",
     "//sdk/fidl/fuchsia.metrics.test:fuchsia.metrics.test_rust",
     "//src/lib/cobalt/rust/builders",
