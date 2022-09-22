@@ -648,24 +648,10 @@ void Session::DispatchProcessStarting(const debug_ipc::NotifyProcessStarting& no
 
 void Session::DispatchNotifyIO(const debug_ipc::NotifyIO& notify) {
   ProcessImpl* process = system_.ProcessImplFromKoid(notify.process_koid);
-  if (!process) {
-    LOGS(Warn) << "Received io notification for an unexpected process" << notify.process_koid;
-    return;
-  }
 
-  FX_DCHECK(notify.type != debug_ipc::NotifyIO::Type::kLast);
-
-  switch (notify.type) {
-    case debug_ipc::NotifyIO::Type::kStdout:
-      [[fallthrough]];
-    case debug_ipc::NotifyIO::Type::kStderr: {
-      if (process->HandleIO(notify)) {
-        LOGS(Info) << notify.data;
-      }
-      break;
-    }
-    case debug_ipc::NotifyIO::Type::kLast:
-      FX_NOTREACHED() << "Invalid notification type";
+  // If there's no process, it's a general IO which should be printed.
+  if (!process || process->HandleIO(notify)) {
+    LOGS(Info) << notify.data;
   }
 }
 

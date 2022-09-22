@@ -472,7 +472,7 @@ struct NotifyIO {
   };
   static const char* TypeToString(Type);
 
-  uint64_t process_koid = 0;
+  uint64_t process_koid = 0;  // Could be 0 if the output is not from an attached process.
   Type type = Type::kLast;
 
   // Data will be up most kMaxDataSize bytes.

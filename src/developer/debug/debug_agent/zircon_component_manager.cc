@@ -27,11 +27,14 @@
 #include "src/developer/debug/debug_agent/filter.h"
 #include "src/developer/debug/debug_agent/stdio_handles.h"
 #include "src/developer/debug/debug_agent/zircon_utils.h"
+#include "src/developer/debug/ipc/agent_protocol.h"
+#include "src/developer/debug/ipc/message_writer.h"
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/shared/logging/file_line_function.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/shared/status.h"
+#include "src/lib/diagnostics/accessor2logger/log_message.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
@@ -122,6 +125,53 @@ std::string to_string(fuchsia::test::manager::LaunchError err) {
     return "Invalid error";
   }
   return errors[n - 1];
+}
+
+std::string SeverityToString(int32_t severity) {
+  switch (severity) {
+    case syslog::LOG_TRACE:
+      return "TRACE";
+    case syslog::LOG_DEBUG:
+      return "DEBUG";
+    case syslog::LOG_INFO:
+      return "INFO";
+    case syslog::LOG_WARNING:
+      return "WARNING";
+    case syslog::LOG_ERROR:
+      return "ERROR";
+    case syslog::LOG_FATAL:
+      return "FATAL";
+  }
+  return "INVALID";
+}
+
+void SendLogs(DebugAgent* debug_agent, std::vector<fuchsia::diagnostics::FormattedContent> batch) {
+  debug_ipc::NotifyIO notify;
+  notify.timestamp = GetNowTimestamp();
+  notify.process_koid = 0;
+  notify.type = debug_ipc::NotifyIO::Type::kStderr;
+
+  for (auto& content : batch) {
+    auto res =
+        diagnostics::accessor2logger::ConvertFormattedContentToHostLogMessages(std::move(content));
+    if (res.is_error()) {
+      LOGS(Warn) << "Failed to parse log: " << res.error();
+    } else {
+      for (auto& msg : res.value()) {
+        if (msg.is_error()) {
+          LOGS(Warn) << "Failed to parse log: " << msg.error();
+        } else {
+          notify.data += SeverityToString(msg.value().severity) + ": ";
+          notify.data.insert(notify.data.end(), msg.value().msg.begin(), msg.value().msg.end());
+          notify.data.push_back('\n');
+        }
+      }
+    }
+  }
+
+  debug_ipc::MessageWriter writer;
+  debug_ipc::WriteNotifyIO(notify, &writer);
+  debug_agent->stream()->Write(writer.MessageComplete());
 }
 
 }  // namespace
@@ -382,10 +432,12 @@ class ZirconComponentManager::TestLauncher : public fxl::RefCountedThreadSafe<Te
     }
   }
 
-  // Unused but required.
+  // Handle logs.
   void OnLog(fuchsia::diagnostics::BatchIterator_GetNext_Result result) {
     if (result.is_response() && !result.response().batch.empty()) {
-      FX_LOGS_FIRST_N(WARNING, 1) << "Not implemented yet";
+      if (debug_agent_) {
+        SendLogs(debug_agent_.get(), std::move(result.response().batch));
+      }
       log_listener_->GetNext(
           [self = fxl::RefPtr<TestLauncher>(this)](auto res) { self->OnLog(std::move(res)); });
     } else {
