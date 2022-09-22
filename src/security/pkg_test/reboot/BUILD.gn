@@ -13,11 +13,12 @@ rustc_binary("security_pkg_reboot-binary") {
 
   sources = [ "src/main.rs" ]
   deps = [
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust:syslog",
     "//src/sys/pkg/testing/mock-reboot",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:tracing",
   ]
 }
 

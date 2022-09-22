@@ -19,10 +19,10 @@ use {
     fuchsia_fs::directory::readdir,
     fuchsia_hash::Hash,
     fuchsia_merkle::MerkleTree,
-    fuchsia_syslog::fx_log_info,
     futures::{channel::oneshot::channel, join, TryStreamExt},
     security_pkg_test_util::load_config,
     std::fs::File,
+    tracing::info,
 };
 
 /// Flags for bad_signature_update.
@@ -120,7 +120,7 @@ async fn attempt_update(update_url: &str) -> Result<State> {
     while let Some(request) = monitor_stream.try_next().await.unwrap() {
         match request {
             MonitorRequest::OnState { state, responder } => {
-                fx_log_info!("Update state change: {:#?}", state);
+                info!("Update state change: {:#?}", state);
                 responder.send().unwrap();
                 match state {
                     // All terminal states plus `WaitToReboot` (which can only
@@ -144,9 +144,9 @@ async fn attempt_update(update_url: &str) -> Result<State> {
 
 #[fuchsia::test]
 async fn bad_signature_update() {
-    fx_log_info!("Starting bad_signature_update test");
+    info!("Starting bad_signature_update test");
     let args @ Args { v1_update_far_path, test_config_path, .. } = &from_env();
-    fx_log_info!("Initalizing bad_signature_update with {:?}", args);
+    info!(?args, "Initalizing bad_signature_update");
 
     // Load test environment configuration.
     let config = load_config(test_config_path);
@@ -157,7 +157,7 @@ async fn bad_signature_update() {
     // configuration is an empty mutable storage directory.
     assert!(readdir(&pkg_resolver_storage_proxy).await.unwrap().is_empty());
 
-    fx_log_info!("Gathering data and connecting to package server");
+    info!("Gathering data and connecting to package server");
 
     // Setup package server and perform pre-update access check.
     let (update_merkle, package_server_url) = join!(
@@ -165,7 +165,7 @@ async fn bad_signature_update() {
         get_local_package_server_url()
     );
 
-    fx_log_info!("Package server running on {}", package_server_url);
+    info!("Package server running on {}", package_server_url);
 
     // Placeholder assertion for well-formed local URL. Test will eventually use
     // URL to configure network connection for `pkg-resolver`.
@@ -174,7 +174,7 @@ async fn bad_signature_update() {
     let update_url =
         format!("fuchsia-pkg://{}/update/0?hash={}", config.update_domain, update_merkle);
 
-    fx_log_info!("Initiating update: {}", update_url);
+    info!("Initiating update: {}", update_url);
 
     let update_result = attempt_update(&update_url).await.unwrap();
 

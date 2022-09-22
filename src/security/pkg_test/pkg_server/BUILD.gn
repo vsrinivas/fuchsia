@@ -17,11 +17,11 @@ rustc_binary("pkg_server-binary") {
     ":test.security.pkg_rust",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-fs",
     "//src/lib/fuchsia-hyper",
-    "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:futures",
@@ -29,6 +29,7 @@ rustc_binary("pkg_server-binary") {
     "//third_party/rust_crates:rustls",
     "//third_party/rust_crates:tokio",
     "//third_party/rust_crates:tokio-rustls",
+    "//third_party/rust_crates:tracing",
   ]
 }
 

@@ -24,7 +24,6 @@ rustc_test("bad_signature_update-test") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-fs",
-    "//src/lib/syslog/rust:syslog",
     "//src/security/pkg_test/pkg_server:test.security.pkg_rust",
     "//src/security/pkg_test/util",
     "//src/sys/pkg/fidl/fuchsia.update.installer:fuchsia.update.installer_rust",
@@ -33,6 +32,7 @@ rustc_test("bad_signature_update-test") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:tracing",
   ]
   sources = [ "//src/security/pkg_test/tests/bad_signature_update/src/main.rs" ]
 }

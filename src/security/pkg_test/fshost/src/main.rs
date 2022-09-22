@@ -7,7 +7,7 @@ mod storage;
 
 use {
     argh::{from_env, FromArgs},
-    fuchsia_syslog::{fx_log_info, init},
+    tracing::info,
 };
 
 const BLOBFS_MOUNTPOINT: &str = "/blobfs";
@@ -20,15 +20,13 @@ pub struct Args {
     fvm_block_file_path: String,
 }
 
-#[fuchsia_async::run_singlethreaded]
+#[fuchsia::main]
 async fn main() {
-    init().unwrap();
-
-    fx_log_info!("Starting fshost...");
+    info!("Starting fshost...");
 
     let args: Args = from_env();
 
-    fx_log_info!("Initalizing fshost with {:#?}", args);
+    info!(?args, "Initalizing fshost");
 
     fshost::FSHost::new(&args.fvm_block_file_path, BLOBFS_MOUNTPOINT).await.serve().await
 }

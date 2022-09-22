@@ -27,11 +27,11 @@ use {
     },
     fuchsia_hash::Hash,
     fuchsia_merkle::MerkleTree,
-    fuchsia_syslog::fx_log_info,
     fuchsia_zircon::{AsHandleRef, Rights, Status},
     futures::{channel::oneshot::channel, join, TryFutureExt as _, TryStreamExt},
     security_pkg_test_util::load_config,
     std::{convert::TryInto, fs::File},
+    tracing::info,
 };
 
 const PKGFS_PATH: &str = "/pkgfs";
@@ -177,7 +177,7 @@ impl AccessCheckRequest {
         // Open package via pkgfs-versions API.
         let pkgfs_versions_path = format!("{}/versions/{}", PKGFS_PATH, package_merkle);
         let pkgfs_versions_rx_result = if self.selectors.pkgfs_versions {
-            fx_log_info!("Opening package from pkgfs-versions: {}", pkgfs_versions_path);
+            info!(path = %pkgfs_versions_path, "Opening package from pkgfs-versions");
             let package_directory_proxy = open_in_namespace(
                 &pkgfs_versions_path,
                 fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
@@ -188,14 +188,14 @@ impl AccessCheckRequest {
                 self.attempt_executable(&package_directory_proxy).await,
             ))
         } else {
-            fx_log_info!("Skipping open package from pkgfs-versions: {}", pkgfs_versions_path);
+            info!(path = %pkgfs_versions_path, "Skipping open package from pkgfs-versions");
             None
         };
 
         // Open package via pkgfs-packages API.
         let pkgfs_packages_path = format!("{}/packages/{}/0", PKGFS_PATH, self.config.package_name);
         let pkgfs_packages_rx_result = if self.selectors.pkgfs_packages {
-            fx_log_info!("Opening package from pkgfs-packages: {}", pkgfs_packages_path);
+            info!(path = %pkgfs_packages_path, "Opening package from pkgfs-packages");
             let package_directory_proxy = open_in_namespace(
                 &pkgfs_packages_path,
                 fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
@@ -206,13 +206,13 @@ impl AccessCheckRequest {
                 self.attempt_executable(&package_directory_proxy).await,
             ))
         } else {
-            fx_log_info!("Skipping open package from pkgfs-packages: {}", pkgfs_packages_path);
+            info!(path = %pkgfs_packages_path, "Skipping open package from pkgfs-packages");
             None
         };
 
         // Open package as executable via pkg-cache's fuchsia.pkg/PackageCache.Open API.
         let pkg_cache_open_rx_result = if self.selectors.pkg_cache_open {
-            fx_log_info!("Opening package via fuchsia.pkg/PackageCache.Open: {}", package_merkle);
+            info!(%package_merkle, "Opening package via fuchsia.pkg/PackageCache.Open");
             let pkg_cache_proxy = connect_to_protocol::<PackageCacheMarker>().unwrap();
             let (package_directory_proxy, package_directory_server_end) =
                 create_proxy::<fio::DirectoryMarker>().unwrap();
@@ -239,16 +239,16 @@ impl AccessCheckRequest {
                 Err(e) => panic!("unexpected PackageCache.Open error {:?}", e),
             }
         } else {
-            fx_log_info!(
-                "Skipping open package via fuchsia.pkg/PackageCache.Open: {}",
-                package_merkle
+            info!(
+                %package_merkle,
+                "Skipping open package via fuchsia.pkg/PackageCache.Open"
             );
             None
         };
 
         // Open package as executable via pkg-cache's fuchsia.pkg/PackageCache.Get API.
         let pkg_cache_get_rx_result = if self.selectors.pkg_cache_get {
-            fx_log_info!("Opening package via fuchsia.pkg/PackageCache.Get: {}", package_merkle);
+            info!(%package_merkle, "Opening package via fuchsia.pkg/PackageCache.Get");
             // In all of the uses of this check in these tests, the package's blobs are already
             // present in blobfs. This means we should not need to perform any of the parts of the
             // PackageCache.Get protocol (and therefore any of the parts of the
@@ -304,9 +304,9 @@ impl AccessCheckRequest {
                 self.attempt_executable(&package_directory_proxy).await,
             ))
         } else {
-            fx_log_info!(
-                "Skipping open package via fuchsia.pkg/PackageCache.Get: {}",
-                package_merkle
+            info!(
+                %package_merkle,
+                "Skipping open package via fuchsia.pkg/PackageCache.Get"
             );
             None
         };
@@ -317,14 +317,14 @@ impl AccessCheckRequest {
             &self.config.domain_with_hash, &self.config.package_name, &package_merkle
         );
         let pkg_resolver_with_hash_rx_result = if self.selectors.pkg_resolver_with_hash {
-            fx_log_info!("Opening package via pkg-resolver: {}", url_with_hash);
+            info!(%url_with_hash, "Opening package via pkg-resolver");
             let package_directory_proxy = self.resolve_package(&url_with_hash).await;
             Some((
                 self.attempt_readable(&package_directory_proxy).await,
                 self.attempt_executable(&package_directory_proxy).await,
             ))
         } else {
-            fx_log_info!("Skipping open package via pkg-resolver: {}", url_with_hash);
+            info!(%url_with_hash, "Skipping open package via pkg-resolver");
             None
         };
         let url_without_hash = format!(
@@ -332,14 +332,14 @@ impl AccessCheckRequest {
             &self.config.domain_without_hash, &self.config.package_name
         );
         let pkg_resolver_without_hash_rx_result = if self.selectors.pkg_resolver_without_hash {
-            fx_log_info!("Opening package via pkg-resolver: {}", url_without_hash);
+            info!(%url_without_hash, "Opening package via pkg-resolver");
             let package_directory_proxy = self.resolve_package(&url_without_hash).await;
             Some((
                 self.attempt_readable(&package_directory_proxy).await,
                 self.attempt_executable(&package_directory_proxy).await,
             ))
         } else {
-            fx_log_info!("Skipping open package via pkg-resolver: {}", url_without_hash);
+            info!(%url_without_hash, "Skipping open package via pkg-resolver");
             None
         };
 
@@ -383,7 +383,7 @@ impl AccessCheckRequest {
 
     fn check_buffer_consistency(buffers: &Vec<&Box<Buffer>>) {
         if buffers.len() > 1 {
-            fx_log_info!("Checking consistency of {} buffers", buffers.len());
+            info!("Checking consistency of {} buffers", buffers.len());
             let buffer1 = buffers[0];
             for i in 1..buffers.len() {
                 let buffer2 = buffers[i];
@@ -397,7 +397,7 @@ impl AccessCheckRequest {
                 assert_eq!(buffer1_data, buffer2_data);
             }
         } else {
-            fx_log_info!("Skipping buffer consistency check: No buffers");
+            info!("Skipping buffer consistency check: No buffers");
         }
     }
 
@@ -517,7 +517,7 @@ async fn perform_update(update_url: &str) {
     while let Some(request) = monitor_stream.try_next().await.unwrap() {
         match request {
             MonitorRequest::OnState { state, responder } => {
-                fx_log_info!("Update state change: {:#?}", state);
+                info!("Update state change: {:#?}", state);
                 responder.send().unwrap();
                 match state {
                     State::WaitToReboot(_) => {
@@ -539,7 +539,7 @@ async fn perform_update(update_url: &str) {
 
 #[fuchsia::test]
 async fn access_ota_blob_as_executable() {
-    fx_log_info!("Starting access_ota_blob_as_executable test");
+    info!("Starting access_ota_blob_as_executable test");
     let args @ Args {
         hello_world_v0_meta_far_path,
         hello_world_v1_meta_far_path,
@@ -547,7 +547,7 @@ async fn access_ota_blob_as_executable() {
         test_config_path,
         ..
     } = &from_env();
-    fx_log_info!("Initalizing access_ota_blob_as_executable with {:?}", args);
+    info!(?args, "Initalizing access_ota_blob_as_executable");
 
     // Load test environment configuration.
     let config = load_config(test_config_path);
@@ -558,7 +558,7 @@ async fn access_ota_blob_as_executable() {
     // configuration is an empty mutable storage directory.
     assert!(readdir(&pkg_resolver_storage_proxy).await.unwrap().is_empty());
 
-    fx_log_info!("Gathering data and connecting to package server");
+    info!("Gathering data and connecting to package server");
 
     let (
         hello_world_v0_access_check,
@@ -642,7 +642,7 @@ async fn access_ota_blob_as_executable() {
         .unwrap()
         .is_readable_executable_ok());
 
-    fx_log_info!("Package server running on {}", package_server_url);
+    info!("Package server running on {}", package_server_url);
 
     // Placeholder assertion for well-formed local URL. Test will eventually use
     // URL to configure network connection for `pkg-resolver`.
@@ -651,7 +651,7 @@ async fn access_ota_blob_as_executable() {
     let update_url =
         format!("fuchsia-pkg://{}/update/0?hash={}", config.update_domain, update_merkle);
 
-    fx_log_info!("Initiating update: {}", update_url);
+    info!(%update_url, "Initiating update");
 
     perform_update(&update_url).await;
 

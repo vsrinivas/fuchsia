@@ -12,7 +12,6 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_fs::{file, open_file},
     fuchsia_hyper::{Executor, TcpStream},
-    fuchsia_syslog::{fx_log_info, fx_log_warn, init},
     futures::{
         channel::oneshot::{channel, Receiver},
         stream::{Stream, StreamExt, TryStreamExt},
@@ -32,6 +31,7 @@ use {
     },
     tokio::io::{AsyncRead, AsyncWrite},
     tokio_rustls::TlsAcceptor,
+    tracing::{info, warn},
 };
 
 /// Flags for pkg_server.
@@ -83,8 +83,8 @@ impl RequestHandler {
 
     fn not_found(path: &str, err: Option<Error>) -> Result<Response<Body>> {
         match err {
-            Some(err) => fx_log_warn!("Not found: {}: {:?}", path, err),
-            None => fx_log_warn!("Not found: {}", path),
+            Some(err) => warn!(%path, ?err, "Not found"),
+            None => warn!(%path, "Not found"),
         }
         Response::builder()
             .status(StatusCode::NOT_FOUND)
@@ -93,7 +93,7 @@ impl RequestHandler {
     }
 
     fn ok(path: &str, body: Vec<u8>) -> Result<Response<Body>> {
-        fx_log_info!("OK: {}", path);
+        info!(?path, "OK");
         Response::builder().status(StatusCode::OK).body(body.into()).map_err(Error::from)
     }
 
@@ -117,20 +117,20 @@ impl RequestHandler {
 fn serve_package_server_protocol(url_recv: Receiver<String>) {
     let local_url = url_recv.shared();
     Task::spawn(async move {
-        fx_log_info!("Preparing to serve test.security.pkg.PackageServer");
+        info!("Preparing to serve test.security.pkg.PackageServer");
         let mut fs = ServiceFs::new();
         fs.dir("svc").add_fidl_service(move |mut stream: PackageServer_RequestStream| {
             let local_url = local_url.clone();
-            fx_log_info!("New connection to test.security.pkg.PackageServer");
+            info!("New connection to test.security.pkg.PackageServer");
             Task::spawn(async move {
                 while let Some(request) = stream.try_next().await.unwrap() {
                     let local_url = local_url.clone();
                     match request {
                         PackageServer_Request::GetUrl { responder } => {
                             let local_url = local_url.await.unwrap();
-                            fx_log_info!(
-                                "Responding to test.security.pkg.PackageServer.GetUrl request with {}",
-                                local_url
+                            info!(
+                                %local_url,
+                                "Responding to test.security.pkg.PackageServer.GetUrl request",
                             );
                             responder.send(&local_url).unwrap();
                         }
@@ -145,13 +145,12 @@ fn serve_package_server_protocol(url_recv: Receiver<String>) {
     .detach()
 }
 
-#[fuchsia_async::run_singlethreaded]
+#[fuchsia::main]
 async fn main() {
-    init().unwrap();
-    fx_log_info!("Starting pkg_server");
+    info!("Starting pkg_server");
     let args @ Args { tls_certificate_chain_path, tls_private_key_path, repository_path } =
         &from_env();
-    fx_log_info!("Initalizing pkg_server with {:?}", args);
+    info!(?args, "Initalizing pkg_server");
 
     let (url_send, url_recv) = channel();
     serve_package_server_protocol(url_recv);
@@ -210,7 +209,7 @@ async fn main() {
     let server: Server<_, _, Executor> =
         Server::builder(from_stream(connections)).executor(Executor).serve(make_service);
 
-    fx_log_info!("pkg_server listening on {}", addr);
+    info!(%addr, "pkg_server listening");
 
     url_send.send("https://localhost".to_string()).unwrap();
 

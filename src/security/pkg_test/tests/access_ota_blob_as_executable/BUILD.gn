@@ -25,7 +25,6 @@ rustc_test("access_ota_blob_as_executable-test") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-fs",
-    "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/security/pkg_test/pkg_server:test.security.pkg_rust",
     "//src/security/pkg_test/util",
@@ -35,6 +34,7 @@ rustc_test("access_ota_blob_as_executable-test") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:tracing",
   ]
   sources = [
     "//src/security/pkg_test/tests/access_ota_blob_as_executable/src/main.rs",

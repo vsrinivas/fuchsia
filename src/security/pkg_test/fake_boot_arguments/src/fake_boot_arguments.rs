@@ -5,8 +5,8 @@
 use {
     anyhow::Context as _,
     fidl_fuchsia_io as fio,
-    fuchsia_syslog::{fx_log_err, fx_log_info, init},
     futures::stream::{StreamExt as _, TryStreamExt as _},
+    tracing::{error, info},
 };
 
 static TUF_REPO_CONFIG_ARG_KEY: &'static str = "tuf_repo_config";
@@ -21,12 +21,11 @@ pub struct Args {
     system_image_path: String,
 }
 
-#[fuchsia_async::run_singlethreaded]
+#[fuchsia::main]
 async fn main() {
-    init().unwrap();
-    fx_log_info!("Starting fake_boot_arguments...");
+    info!("Starting fake_boot_arguments...");
     let args @ Args { system_image_path } = &argh::from_env();
-    fx_log_info!("Initalizing fake_boot_arguments with {:?}", args);
+    info!(?args, "Initalizing fake_boot_arguments");
 
     let system_image = fuchsia_fs::file::read(
         &fuchsia_fs::file::open_in_namespace(
@@ -47,7 +46,7 @@ async fn main() {
     fs.take_and_serve_directory_handle().unwrap();
     fs.for_each_concurrent(None, |stream| async {
         let () = serve(stream, pkgfs_boot_arg_value.as_str()).await.unwrap_or_else(|err| {
-            fx_log_err!("error handling fuchsia.boot/Arguments stream: {:#}", err)
+            error!("error handling fuchsia.boot/Arguments stream: {:#}", err)
         });
     })
     .await;

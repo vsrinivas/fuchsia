@@ -15,12 +15,13 @@ rustc_binary("security_pkg_dns_resolver-binary") {
   deps = [
     "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
     "//sdk/fidl/fuchsia.net.name:fuchsia.net.name_rust",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust:syslog",
     "//src/security/pkg_test/util",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:tracing",
   ]
 }
 

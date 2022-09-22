@@ -6,8 +6,8 @@ use {
     crate::storage::BlobfsInstance,
     fidl_fuchsia_io as fio,
     fuchsia_runtime::{take_startup_handle, HandleType},
-    fuchsia_syslog::fx_log_info,
     std::ops::Drop,
+    tracing::info,
     vfs::{
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path,
         pseudo_directory, remote::remote_dir,
@@ -20,16 +20,16 @@ pub struct FSHost {
 
 impl FSHost {
     pub async fn new(fvm_path: &str, blobfs_mountpoint: &str) -> Self {
-        fx_log_info!("Starting blobfs from FVM image at {}", fvm_path);
+        info!(path = %fvm_path, "Starting blobfs from FVM image");
         let mut blobfs = BlobfsInstance::new_from_resource(fvm_path).await;
-        fx_log_info!("Mounting blobfs at {}", blobfs_mountpoint);
+        info!(mountpoint = %blobfs_mountpoint, "Mounting blobfs");
         blobfs.mount(blobfs_mountpoint).await;
 
         Self { blobfs }
     }
 
     pub async fn serve(&self) {
-        fx_log_info!("Preparing services via VFS");
+        info!("Preparing services via VFS");
 
         let out_dir = pseudo_directory! {
             "blob" => remote_dir(self.blobfs.open_root_dir()),
@@ -45,7 +45,7 @@ impl FSHost {
             take_startup_handle(HandleType::DirectoryRequest.into()).unwrap().into(),
         );
 
-        fx_log_info!("Serving services via VFS");
+        info!("Serving services via VFS");
 
         let () = scope.wait().await;
     }

@@ -8,10 +8,10 @@ use {
     fidl_fuchsia_net_name::{LookupRequest, LookupRequestStream, LookupResult},
     fuchsia_async::Task,
     fuchsia_component::server::ServiceFs,
-    fuchsia_syslog::{fx_log_info, init},
     futures::{StreamExt, TryStreamExt},
     security_pkg_test_util::load_config,
     std::net::Ipv4Addr,
+    tracing::info,
 };
 
 /// Flags for dns_resolver.
@@ -27,26 +27,24 @@ fn localhost() -> IpAddress {
     IpAddress::Ipv4(Ipv4Address { addr: Ipv4Addr::LOCALHOST.octets() })
 }
 
-#[fuchsia_async::run_singlethreaded]
+#[fuchsia::main]
 async fn main() {
-    init().unwrap();
-
-    fx_log_info!("Starting fake DNS component");
+    info!("Starting fake DNS component");
     let args @ Args { test_config_path } = &from_env();
-    fx_log_info!("Initalizing fake DNS component with {:?}", args);
+    info!(?args, "Initalizing fake DNS component");
 
     let pkg_server_host = load_config(test_config_path).update_domain;
 
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(move |mut stream: LookupRequestStream| {
         let pkg_server_host = pkg_server_host.clone();
-        fx_log_info!("New connection to fuchsia.net.name.Lookup");
+        info!("New connection to fuchsia.net.name.Lookup");
         Task::spawn(async move {
             while let Some(request) = stream.try_next().await.unwrap() {
                 match request {
                     LookupRequest::LookupIp { hostname, options: _, responder } => {
                         assert_eq!(pkg_server_host, hostname);
-                        fx_log_info!("LooupIp: {} => {:#?}", hostname, localhost());
+                        info!(%hostname, localhost = ?localhost(), "LooupIp");
                         responder
                             .send(&mut Ok(LookupResult {
                                 addresses: Some(vec![localhost()]),
@@ -56,7 +54,7 @@ async fn main() {
                     }
                     LookupRequest::LookupHostname { addr, responder } => {
                         assert_eq!(addr, localhost());
-                        fx_log_info!("LookupHostname: {:#?} => {}", addr, pkg_server_host);
+                        info!(?addr, %pkg_server_host, "LookupHostname");
                         responder.send(&mut Ok(pkg_server_host.clone())).unwrap();
                     }
                 }
