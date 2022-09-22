@@ -53,10 +53,6 @@ legacy_universe_package_labels += [
   "//bundles/drivers:conformance-tests",
 ]
 
-# E2E Product Tests. Currently used for Chrome smoke test.
-# They don't produce fuchsia packages, but host executables used by the tests.
-host_labels += [ "//src/experiences/tests/chrome:test" ]
-
 # Set the SWD policy for workstation_eng, details can be found in //build/security/policies_swd.gni.
 policy_labels.swd = "unrestricted"
 
@@ -85,13 +81,6 @@ legacy_cache_package_labels += [
   # Archivist for manual embedding in tests. Note that this archivist won't attribute logs by
   # moniker and is unable to ingest Inspect.
   "//src/diagnostics/archivist:archivist-without-attribution",
-]
-
-# E2E Product Tests. They don't produce fuchsia packages, but host executables
-# used by the tests.
-host_labels += [
-  "//src/experiences/tests/e2e:test",
-  "//src/experiences/tests/performance:test",
 ]
 
 legacy_universe_package_labels += [
