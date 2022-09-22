@@ -9,12 +9,12 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/zx/vmo.h>
-#include <zircon/hw/usb/dfu.h>
 
 #include <algorithm>
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
+#include <usb/dfu.h>
 
 #include "src/devices/usb/drivers/usb-dfu/usb_dfu_bind.h"
 

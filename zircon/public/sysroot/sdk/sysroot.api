@@ -199,7 +199,6 @@
   "include/zircon/hw/pci.h": "76a29114bd88e6767cb5dbdd697b096e",
   "include/zircon/hw/usb.h": "76c23c6a3d2e8151b05718a6186a804d",
   "include/zircon/hw/usb/cdc.h": "b9bdb2898f2faf65e5080dbd70f8d4f7",
-  "include/zircon/hw/usb/dfu.h": "300c6c4d953a3315433861241b37a7f5",
   "include/zircon/hw/usb/hid.h": "033c0de8cb1343b1c2b56faad8a6794c",
   "include/zircon/hw/usb/ums.h": "88ea71867bb2283f0d4e7d95dc8ecf28",
   "include/zircon/limits.h": "564b9d2902c5e1992e2c75cca156ef30",

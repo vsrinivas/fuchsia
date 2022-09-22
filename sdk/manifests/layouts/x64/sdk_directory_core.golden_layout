@@ -228,7 +228,6 @@ arch/x64/sysroot/include/zircon/hw/gpt.h
 arch/x64/sysroot/include/zircon/hw/pci.h
 arch/x64/sysroot/include/zircon/hw/usb.h
 arch/x64/sysroot/include/zircon/hw/usb/cdc.h
-arch/x64/sysroot/include/zircon/hw/usb/dfu.h
 arch/x64/sysroot/include/zircon/hw/usb/hid.h
 arch/x64/sysroot/include/zircon/hw/usb/ums.h
 arch/x64/sysroot/include/zircon/limits.h

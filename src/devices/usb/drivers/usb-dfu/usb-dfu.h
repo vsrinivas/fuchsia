@@ -7,10 +7,10 @@
 
 #include <fidl/fuchsia.hardware.usb.fwloader/cpp/wire.h>
 #include <lib/zx/vmo.h>
-#include <zircon/hw/usb/dfu.h>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
+#include <usb/dfu.h>
 #include <usb/usb.h>
 
 namespace usb {
