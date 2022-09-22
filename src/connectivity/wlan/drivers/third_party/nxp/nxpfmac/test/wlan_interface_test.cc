@@ -42,6 +42,12 @@ struct WlanInterfaceTest : public zxtest::Test, public wlan::nxpfmac::DataPlaneI
     ioctl_adapter_ = std::move(ioctl_adapter.value());
   }
 
+  void TearDown() override {
+    // Destroy the dataplane before the mock device. This ensures a safe destruction before the
+    // parent device of the NetworkDeviceImpl device goes away.
+    test_data_plane_.reset();
+  }
+
   void SetupNetDevice(zx_device* net_device) {
     // Because WlanInterface creates a port for the netdevice we need to provide a limited
     // implementation of the netdevice ifc.

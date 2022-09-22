@@ -53,6 +53,13 @@ DataPlane::DataPlane(zx_device_t *parent, DataPlaneIfc *ifc, BusInterface *bus, 
     : ifc_(ifc), network_device_(parent, this), bus_(bus), mlan_adapter_(mlan_adapter) {}
 
 DataPlane::~DataPlane() {
+  // First just check the completion without waiting, if the completion is signaled it means that
+  // the device was already removed and if we try to call remove again that could cause problems.
+  if (sync_completion_wait(&network_device_released_, 0) == ZX_OK) {
+    // The device was already removed, we're done.
+    return;
+  }
+  // The device is not yet removed, call remove ourselves.
   network_device_.Remove();
   sync_completion_wait(&network_device_released_, ZX_TIME_INFINITE);
 }
