@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"runtime/trace"
 	"time"
@@ -103,6 +104,13 @@ func initialize(c *CheckLicensesConfig) error {
 	}
 	if err := world.Initialize(c.World); err != nil {
 		return err
+	}
+
+	// Save the config file to the out directory (if defined).
+	if b, err := json.MarshalIndent(Config, "", "  "); err != nil {
+		return err
+	} else {
+		plusFile("_config.json", b)
 	}
 
 	return nil

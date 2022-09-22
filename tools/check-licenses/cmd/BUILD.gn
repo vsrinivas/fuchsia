@@ -16,6 +16,7 @@ go_library("main") {
     "include.go",
     "log.go",
     "main.go",
+    "metrics.go",
   ]
   deps = [
     "//tools/check-licenses/directory",
