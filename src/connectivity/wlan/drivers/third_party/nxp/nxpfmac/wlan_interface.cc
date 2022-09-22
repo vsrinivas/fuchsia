@@ -20,26 +20,55 @@
 namespace wlan::nxpfmac {
 
 WlanInterface::WlanInterface(zx_device_t* parent, uint32_t iface_index, wlan_mac_role_t role,
-                             async_dispatcher_t* dispatcher, EventHandler* event_handler,
-                             IoctlAdapter* ioctl_adapter, zx::channel&& mlme_channel)
+                             EventHandler* event_handler, IoctlAdapter* ioctl_adapter,
+                             DataPlane* data_plane, zx::channel&& mlme_channel)
     : WlanInterfaceDeviceType(parent),
+      wlan::drivers::components::NetworkPort(data_plane->NetDevIfcProto(), *this,
+                                             static_cast<uint8_t>(iface_index)),
       role_(role),
       mlme_channel_(std::move(mlme_channel)),
       client_connection_(ioctl_adapter, iface_index),
-      scanner_(&fullmac_ifc_, event_handler, ioctl_adapter, iface_index) {}
+      scanner_(&fullmac_ifc_, event_handler, ioctl_adapter, iface_index),
+      ioctl_adapter_(ioctl_adapter),
+      data_plane_(data_plane) {}
 
 zx_status_t WlanInterface::Create(zx_device_t* parent, const char* name, uint32_t iface_index,
-                                  wlan_mac_role_t role, async_dispatcher_t* dispatcher,
-                                  EventHandler* event_handler, IoctlAdapter* ioctl,
+                                  wlan_mac_role_t role, EventHandler* event_handler,
+                                  IoctlAdapter* ioctl, DataPlane* data_plane,
                                   zx::channel&& mlme_channel, WlanInterface** out_interface) {
   std::unique_ptr<WlanInterface> interface(new WlanInterface(
-      parent, iface_index, role, dispatcher, event_handler, ioctl, std::move(mlme_channel)));
+      parent, iface_index, role, event_handler, ioctl, data_plane, std::move(mlme_channel)));
+  interface->data_plane_ = data_plane;
 
-  zx_status_t status = interface->DdkAdd(name);
+  // Retrieve the MAC address before adding the DDK device. Otherwise the device can bind and
+  // receive calls before the MAC address is ready.
+  zx_status_t status = interface->RetrieveMacAddress();
+  if (status != ZX_OK) {
+    NXPF_ERR("Failed to get interface %u MAC address: %s", iface_index,
+             zx_status_get_string(status));
+    return status;
+  }
+
+  status = interface->DdkAdd(name);
   if (status != ZX_OK) {
     NXPF_ERR("Failed to add fullmac device: %s", zx_status_get_string(status));
     return status;
   }
+
+  NetworkPort::Role net_port_role;
+  switch (role) {
+    case WLAN_MAC_ROLE_CLIENT:
+      net_port_role = NetworkPort::Role::Client;
+      break;
+    case WLAN_MAC_ROLE_AP:
+      net_port_role = NetworkPort::Role::Ap;
+      break;
+    default:
+      NXPF_ERR("Unsupported role %u", role);
+      return ZX_ERR_INVALID_ARGS;
+  }
+
+  interface->NetworkPort::Init(net_port_role);
 
   *out_interface = interface.release();  // This now has its lifecycle managed by the devhost.
   return ZX_OK;
@@ -96,6 +125,8 @@ void WlanInterface::WlanFullmacImplQuery(wlan_fullmac_query_info_t* info) {
   std::lock_guard lock(mutex_);
   info->role = role_;
   info->band_cap_count = 2;
+
+  memcpy(info->sta_addr, mac_address_, sizeof(mac_address_));
 
   // 2.4 GHz
   wlan_fullmac_band_capability* band_cap = &info->band_cap_list[0];
@@ -240,8 +271,68 @@ void WlanInterface::WlanFullmacImplSaeFrameTx(const wlan_fullmac_sae_frame_t* fr
 
 void WlanInterface::WlanFullmacImplWmmStatusReq() {}
 
-void WlanInterface::WlanFullmacImplOnLinkStateChanged(bool online) {
-  NXPF_INFO("%s online: %s", __func__, online ? "true" : "false");
+void WlanInterface::WlanFullmacImplOnLinkStateChanged(bool online) { SetPortOnline(online); }
+
+uint32_t WlanInterface::PortGetMtu() { return 1500u; }
+
+void WlanInterface::MacGetAddress(uint8_t out_mac[MAC_SIZE]) {
+  memcpy(out_mac, mac_address_, MAC_SIZE);
+}
+
+void WlanInterface::MacGetFeatures(features_t* out_features) {
+  *out_features = {
+      .multicast_filter_count = MLAN_MAX_MULTICAST_LIST_SIZE,
+      .supported_modes = MODE_MULTICAST_FILTER | MODE_MULTICAST_PROMISCUOUS | MODE_PROMISCUOUS,
+  };
+}
+
+void WlanInterface::MacSetMode(mode_t mode, cpp20::span<const uint8_t> multicast_macs) {
+  IoctlRequest<mlan_ds_bss> request(MLAN_IOCTL_BSS, MLAN_ACT_SET, PortId(),
+                                    {.sub_command = MLAN_OID_BSS_MULTICAST_LIST});
+
+  auto& multicast_list = request.UserReq().param.multicast_list;
+
+  switch (mode) {
+    case MODE_MULTICAST_FILTER:
+      multicast_list.mode = MLAN_MULTICAST_MODE;
+      if (multicast_macs.size() > sizeof(multicast_list.mac_list)) {
+        NXPF_ERR("Number of multicast macs %zu exceeds maximum value of %zu",
+                 multicast_macs.size() / ETH_ALEN, std::size(multicast_list.mac_list));
+        return;
+      }
+      memcpy(multicast_list.mac_list, multicast_macs.data(), multicast_macs.size());
+      multicast_list.num_multicast_addr = static_cast<uint32_t>(multicast_macs.size() / ETH_ALEN);
+      break;
+    case MODE_MULTICAST_PROMISCUOUS:
+      multicast_list.mode = MLAN_ALL_MULTI_MODE;
+      break;
+    case MODE_PROMISCUOUS:
+      multicast_list.mode = MLAN_PROMISC_MODE;
+      break;
+    default:
+      NXPF_ERR("Unsupported MAC mode %u", mode);
+      return;
+  }
+
+  IoctlStatus io_status = ioctl_adapter_->IssueIoctlSync(&request);
+  if (io_status != IoctlStatus::Success) {
+    NXPF_ERR("Failed to set mac mode: %d", io_status);
+    return;
+  }
+}
+
+zx_status_t WlanInterface::RetrieveMacAddress() {
+  IoctlRequest<mlan_ds_bss> request(MLAN_IOCTL_BSS, MLAN_ACT_GET, PortId(),
+                                    {.sub_command = MLAN_OID_BSS_MAC_ADDR});
+
+  NXPF_INFO("Retrieving MAC address");
+  IoctlStatus io_status = ioctl_adapter_->IssueIoctlSync(&request);
+  if (io_status != IoctlStatus::Success) {
+    NXPF_ERR("Failed to perform get MAC ioctl: %d", io_status);
+    return ZX_ERR_INTERNAL;
+  }
+  memcpy(mac_address_, request.UserReq().param.mac_addr, ETH_ALEN);
+  return ZX_OK;
 }
 
 }  // namespace wlan::nxpfmac

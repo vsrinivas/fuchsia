@@ -32,6 +32,19 @@ class BusInterface {
 
   // Trigger the mlan main process, useful for things that return a pending status such as ioctls.
   virtual zx_status_t TriggerMainProcess() = 0;
+
+  // Called when a VMO needs to be prepared for use by the data path. The bus needs to ensure that
+  // data placed in this VMO can be used for both transmit and receive.
+  virtual zx_status_t PrepareVmo(uint8_t vmo_id, zx::vmo&& vmo, uint8_t* mapped_address,
+                                 size_t mapped_size) = 0;
+  // Called to indicate that a VMO previously prepared by PrepareVmo is no longer needed.
+  virtual zx_status_t ReleaseVmo(uint8_t vmo_id) = 0;
+  // Called to acquire bus specific headroom needed in RX frames.
+  virtual uint16_t GetRxHeadroom() const = 0;
+  // Called to acquire bus specific headroom needed in TX frames.
+  virtual uint16_t GetTxHeadroom() const = 0;
+  // Called to acquire the alignment needed for both RX and TX buffers.
+  virtual uint32_t GetBufferAlignment() const = 0;
 };
 
 }  // namespace wlan::nxpfmac

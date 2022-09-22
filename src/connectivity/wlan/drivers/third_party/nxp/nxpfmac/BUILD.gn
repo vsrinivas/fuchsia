@@ -43,6 +43,7 @@ source_set("debug") {
 source_set("core") {
   sources = [
     "client_connection.cc",
+    "data_plane.cc",
     "device.cc",
     "event_handler.cc",
     "ioctl_adapter.cc",
@@ -59,6 +60,7 @@ source_set("core") {
     "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//sdk/fidl/fuchsia.wlan.wlanphyimpl:fuchsia.wlan.wlanphyimpl_cpp_driver",
     "//sdk/lib/fit",
+    "//src/connectivity/wlan/drivers/lib/components:cpp",
     "//src/connectivity/wlan/drivers/lib/timer:cpp",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/lib/driver:driver_runtime",

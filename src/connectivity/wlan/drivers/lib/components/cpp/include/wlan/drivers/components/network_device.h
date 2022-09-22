@@ -124,6 +124,10 @@ class NetworkDevice final : public ::ddk::NetworkDeviceImplProtocol<NetworkDevic
   // the NetworkDevice to start. The device will show up as deviceName in the device tree.
   zx_status_t Init(const char* deviceName);
 
+  // Remove the NetworkDevice, this calls DdkRemove. The removal is not complete until NetDevRelease
+  // is called on the Callbacks interface.
+  void Remove();
+
   // This is called by the DDK and the device does not need to call this. The device will be
   // notified of this through the Callbacks interface instead.
   void Release();

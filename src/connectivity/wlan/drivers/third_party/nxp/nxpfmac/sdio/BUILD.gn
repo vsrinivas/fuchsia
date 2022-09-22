@@ -17,38 +17,20 @@ config("config_sdio") {
   defines = [ "CONFIG_NXPFMAC_SDIO=1" ]
 }
 
-# Separate the SDIO bus functionality (everything except sdio_device.cc) into its own source set for
-# testing purposes. This creates a separation of components that allows us to mock out all of mlan
-# in our tests through linking. I.e. any reference to mlan function calls in this source set should
-# result in an undefined symbol linker error. That way the test can provide its own implementation
-# of mlan functionality to isolate components for testing.
-source_set("sdio_bus") {
-  sources = [ "sdio_bus.cc" ]
-  public = [ "sdio_bus.h" ]
-  deps = [ "//sdk/lib/fit" ]
-  public_deps = [
-    "//sdk/banjo/fuchsia.hardware.sdio:fuchsia.hardware.sdio_banjo_cpp",
-    "//src/connectivity/wlan/drivers/third_party/nxp/nxpfmac:debug",
-  ]
-  public_configs = [
-    "//src/connectivity/wlan/drivers/third_party/nxp/nxpfmac:mlan_sdio_config",
-  ]
-}
-
-# Based on the discussion above SdioDevice becomes the glue between the core driver and the SDIO
-# part of the driver. Core driver components should not be used in any other source sets to maintain
-# this structure. For calling back to SdioDevice from the rest of the SDIO layer use
-# SdioBusInterface instead.
 source_set("sdio") {
-  sources = [ "sdio_device.cc" ]
-  public = [ "sdio_device.h" ]
+  sources = [
+    "sdio_bus.cc",
+    "sdio_device.cc",
+  ]
+  public = [
+    "sdio_bus.h",
+    "sdio_device.h",
+  ]
   deps = []
   public_deps = [
-    ":sdio_bus",
     "//sdk/banjo/fuchsia.hardware.sdio:fuchsia.hardware.sdio_banjo_cpp",
     "//src/connectivity/wlan/drivers/third_party/nxp/nxpfmac:core",
     "//src/connectivity/wlan/drivers/third_party/nxp/nxpfmac:debug",
-    "//src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan:mlan_sdio",
   ]
   public_configs = [
     ":config_sdio",

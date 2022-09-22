@@ -20,11 +20,15 @@
 
 namespace wlan::nxpfmac {
 
+constexpr uint32_t kMockBusBufferAlignment = 32;
+
 // A mock Device implementation for unit test purposes. Very little functionality is currently
 // supported. Add more as needed.
 class MockBus : public BusInterface {
  public:
-  // Device overrides
+  // BusInterface implementation
+  zx_status_t OnMlanRegistered(void* mlan_adapter) override { return ZX_OK; }
+  zx_status_t OnFirmwareInitialized() override { return ZX_OK; }
   zx_status_t TriggerMainProcess() override {
     if (trigger_main_process_) {
       return trigger_main_process_();
@@ -32,16 +36,38 @@ class MockBus : public BusInterface {
     return ZX_OK;
   }
 
-  zx_status_t OnMlanRegistered(void *mlan_adapter) override { return ZX_OK; }
-  zx_status_t OnFirmwareInitialized() override { return ZX_OK; }
+  zx_status_t PrepareVmo(uint8_t vmo_id, zx::vmo&& vmo, uint8_t* mapped_address,
+                         size_t mapped_size) override {
+    if (prepare_vmo_) {
+      return prepare_vmo_(vmo_id, std::move(vmo), mapped_address, mapped_size);
+    }
+    return ZX_OK;
+  }
+  zx_status_t ReleaseVmo(uint8_t vmo_id) override {
+    if (release_vmo_) {
+      release_vmo_(vmo_id);
+    }
+    return ZX_OK;
+  }
+  uint16_t GetRxHeadroom() const override { return 0; }
+  uint16_t GetTxHeadroom() const override { return 0; }
+  uint32_t GetBufferAlignment() const override { return kMockBusBufferAlignment; }
 
   // Implementation mocks
-  void SetTriggerMainProcess(std::function<zx_status_t(void)> &&trigger_main_process) {
+  void SetTriggerMainProcess(std::function<zx_status_t(void)>&& trigger_main_process) {
     trigger_main_process_ = std::move(trigger_main_process);
+  }
+  void SetPrepareVmo(std::function<zx_status_t(uint8_t, zx::vmo, uint8_t*, size_t)>&& prepare_vmo) {
+    prepare_vmo_ = std::move(prepare_vmo);
+  }
+  void SetReleaseVmo(std::function<zx_status_t(uint8_t)>&& release_vmo) {
+    release_vmo_ = release_vmo;
   }
 
  private:
   std::function<zx_status_t(void)> trigger_main_process_;
+  std::function<zx_status_t(uint8_t, zx::vmo, uint8_t*, size_t)> prepare_vmo_;
+  std::function<zx_status_t(uint8_t)> release_vmo_;
 };
 
 }  // namespace wlan::nxpfmac

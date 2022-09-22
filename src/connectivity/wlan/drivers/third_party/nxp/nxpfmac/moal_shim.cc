@@ -21,6 +21,7 @@
 
 #include <wlan/drivers/timer/timer.h>
 
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/align.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/device.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/ioctl_adapter.h"
@@ -151,7 +152,7 @@ t_void moal_print_netintf(t_void *pmoal, t_u32 bss_index, t_u32 level) {
 t_void moal_assert(t_void *pmoal, t_u32 cond) { NXPF_ERR("%s called", __func__); }
 t_void moal_hist_data_add(t_void *pmoal, t_u32 bss_index, t_u16 rx_rate, t_s8 snr, t_s8 nflr,
                           t_u8 antenna) {
-  NXPF_ERR("%s called", __func__);
+  // Implement this but don't log it for now, this will be called on each received frame.
 }
 t_void moal_updata_peer_signal(t_void *pmoal, t_u32 bss_index, t_u8 *peer_addr, t_s8 snr,
                                t_s8 nflr) {
@@ -162,7 +163,7 @@ void moal_tp_accounting(t_void *pmoal, t_void *buf, t_u32 drop_point) {
   NXPF_ERR("%s called", __func__);
 }
 void moal_tp_accounting_rx_param(t_void *pmoal, unsigned int type, unsigned int rsvd1) {
-  NXPF_ERR("%s called", __func__);
+  // Implement this but don't log it for now, this will be called on each received frame.
 }
 void moal_amsdu_tp_accounting(t_void *pmoal, t_s32 delay, t_s32 copy_delay) {
   NXPF_ERR("%s called", __func__);
@@ -201,8 +202,10 @@ mlan_status moal_shutdown_fw_complete(t_void *pmoal, mlan_status status) {
 }
 
 mlan_status moal_send_packet_complete(t_void *pmoal, pmlan_buffer pmbuf, mlan_status status) {
-  NXPF_ERR("%s called", __func__);
-  return MLAN_STATUS_FAILURE;
+  wlan::nxpfmac::DataPlane *plane = static_cast<wlan::nxpfmac::MoalContext *>(pmoal)->data_plane_;
+  auto frame = reinterpret_cast<wlan::drivers::components::Frame *>(pmbuf->pdesc);
+  plane->CompleteTx(std::move(*frame), status == MLAN_STATUS_SUCCESS ? ZX_OK : ZX_ERR_INTERNAL);
+  return MLAN_STATUS_SUCCESS;
 }
 
 mlan_status moal_recv_complete(t_void *pmoal, pmlan_buffer pmbuf, t_u32 port, mlan_status status) {
@@ -211,8 +214,15 @@ mlan_status moal_recv_complete(t_void *pmoal, pmlan_buffer pmbuf, t_u32 port, ml
 }
 
 mlan_status moal_recv_packet(t_void *pmoal, pmlan_buffer pmbuf) {
-  NXPF_ERR("%s called", __func__);
-  return MLAN_STATUS_FAILURE;
+  wlan::nxpfmac::DataPlane *plane = static_cast<wlan::nxpfmac::MoalContext *>(pmoal)->data_plane_;
+  auto frame = reinterpret_cast<wlan::drivers::components::Frame *>(pmbuf->pdesc);
+
+  uint8_t *data = pmbuf->pbuf + pmbuf->data_offset;
+  frame->ShrinkHead(static_cast<uint32_t>(data - frame->Data()));
+  frame->SetSize(pmbuf->data_len);
+
+  plane->CompleteRx(std::move(*frame));
+  return MLAN_STATUS_SUCCESS;
 }
 
 mlan_status moal_recv_amsdu_packet(t_void *pmoal, pmlan_buffer pmbuf) {
@@ -244,13 +254,51 @@ mlan_status moal_ioctl_complete(t_void *pmoal, pmlan_ioctl_req pioctl_req, mlan_
 }
 
 mlan_status moal_alloc_mlan_buffer(t_void *pmoal, t_u32 size, ppmlan_buffer pmbuf) {
-  NXPF_ERR("%s called", __func__);
-  return MLAN_STATUS_FAILURE;
+  wlan::nxpfmac::DataPlane *plane = static_cast<wlan::nxpfmac::MoalContext *>(pmoal)->data_plane_;
+  std::optional<wlan::drivers::components::Frame> frame = plane->AcquireFrame();
+
+  if (!frame.has_value()) {
+    NXPF_WARN("Failed to acquire RX frame");
+    return MLAN_STATUS_FAILURE;
+  }
+
+  // Align the headroom used for storage to whatever size the bus wants. This ensures that the
+  // actual data transferred is aligned properly.
+  constexpr size_t kOccupiedHeadroom = wlan::nxpfmac::align<size_t>(
+      sizeof(mlan_buffer) + sizeof(wlan::drivers::components::Frame), MLAN_SDIO_BLOCK_SIZE);
+
+  if (size + kOccupiedHeadroom > frame->Size()) {
+    NXPF_ERR("Requested mlan buffer size of %u is too big", size);
+    return MLAN_STATUS_FAILURE;
+  }
+
+  // In order to avoid additional allocation we will place both the Frame object and mlan_buffer
+  // struct at the beginning of the RX frame. Get the location where the Frame will be first.
+  auto frame_ptr = reinterpret_cast<wlan::drivers::components::Frame *>(frame->Data());
+
+  // Then use placement new to allocate a Frame by move construction in this location.
+  new (frame_ptr) wlan::drivers::components::Frame(std::move(*frame));
+
+  // Then place the mlan_buffer after that and clear it.
+  *pmbuf = reinterpret_cast<mlan_buffer *>(frame_ptr->Data() + sizeof(*frame_ptr));
+  memset(*pmbuf, 0, sizeof(**pmbuf));
+
+  // Now all we have to do is remember where our frame is located and point to the actual point in
+  // memory where data should be received.
+  (*pmbuf)->pdesc = frame_ptr;
+  (*pmbuf)->pbuf = frame_ptr->Data() + kOccupiedHeadroom;
+
+  return MLAN_STATUS_SUCCESS;
 }
 
 mlan_status moal_free_mlan_buffer(t_void *pmoal, pmlan_buffer pmbuf) {
-  NXPF_ERR("%s called", __func__);
-  return MLAN_STATUS_FAILURE;
+  auto frame = reinterpret_cast<wlan::drivers::components::Frame *>(pmbuf->pdesc);
+  // Call destructor on frame, if it was received it should have been released from storage and
+  // nothing should really happen. If it failed then it will be returned to frame storage. We call
+  // the destructor and not delete because the frame wasn't allocated, it was just placed in this
+  // location.
+  frame->~Frame();
+  return MLAN_STATUS_SUCCESS;
 }
 
 }  // namespace

@@ -14,13 +14,16 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_NXP_NXPFMAC_WLAN_INTERFACE_H_
 
 #include <fuchsia/hardware/wlan/fullmac/cpp/banjo.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <zircon/types.h>
 
 #include <mutex>
 
 #include <ddktl/device.h>
+#include <wlan/drivers/components/network_port.h>
 
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/client_connection.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/data_plane.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/ioctl_adapter.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/scanner.h"
@@ -31,13 +34,15 @@ class WlanInterface;
 using WlanInterfaceDeviceType = ::ddk::Device<WlanInterface>;
 
 class WlanInterface : public WlanInterfaceDeviceType,
-                      public ::ddk::WlanFullmacImplProtocol<WlanInterface, ::ddk::base_protocol> {
+                      public ::ddk::WlanFullmacImplProtocol<WlanInterface, ::ddk::base_protocol>,
+                      public wlan::drivers::components::NetworkPort,
+                      public wlan::drivers::components::NetworkPort::Callbacks {
  public:
   // Static factory function.  The returned instance is unowned, since its lifecycle is managed by
   // the devhost.
   static zx_status_t Create(zx_device_t* parent, const char* name, uint32_t iface_index,
-                            wlan_mac_role_t role, async_dispatcher_t* dispatcher,
-                            EventHandler* event_handler, IoctlAdapter* ioctl_adapter,
+                            wlan_mac_role_t role, EventHandler* event_handler,
+                            IoctlAdapter* ioctl_adapter, DataPlane* data_plane,
                             zx::channel&& mlme_channel, WlanInterface** out_interface);
 
   // Device operations.
@@ -80,18 +85,30 @@ class WlanInterface : public WlanInterfaceDeviceType,
   void WlanFullmacImplWmmStatusReq();
   void WlanFullmacImplOnLinkStateChanged(bool online);
 
+  // NetworkPort::Callbacks implementation
+  uint32_t PortGetMtu() override;
+  void MacGetAddress(uint8_t out_mac[6]) override;
+  void MacGetFeatures(features_t* out_features) override;
+  void MacSetMode(mode_t mode, cpp20::span<const uint8_t> multicast_macs) override;
+
  private:
   explicit WlanInterface(zx_device_t* parent, uint32_t iface_index, wlan_mac_role_t role,
-                         async_dispatcher_t* dispatcher, EventHandler* event_handler,
-                         IoctlAdapter* ioctl, zx::channel&& mlme_channel);
+                         EventHandler* event_handler, IoctlAdapter* ioctl, DataPlane* data_plane,
+                         zx::channel&& mlme_channel);
+
+  zx_status_t RetrieveMacAddress();
 
   wlan_mac_role_t role_;
   zx::channel mlme_channel_;
 
   ClientConnection client_connection_;
   Scanner scanner_;
+  IoctlAdapter* ioctl_adapter_ = nullptr;
+  DataPlane* data_plane_ = nullptr;
 
   ::ddk::WlanFullmacImplIfcProtocolClient fullmac_ifc_;
+
+  uint8_t mac_address_[ETH_ALEN] = {};
 
   bool is_up_ __TA_GUARDED(mutex_) = false;
   std::mutex mutex_;

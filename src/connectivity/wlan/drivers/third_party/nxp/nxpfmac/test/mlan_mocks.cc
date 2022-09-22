@@ -35,6 +35,18 @@ class MlanMockAdapterImpl {
     }
     return MLAN_STATUS_SUCCESS;
   }
+  mlan_status OnMlanSendPacket(t_void* padapter, pmlan_buffer pmbuf) {
+    if (on_mlan_send_packet_) {
+      return on_mlan_send_packet_(padapter, pmbuf);
+    }
+    return MLAN_STATUS_SUCCESS;
+  }
+  mlan_status OnMlanRxProcess(t_void* padapter, t_u8* rx_pkts) {
+    if (on_mlan_rx_process_) {
+      on_mlan_rx_process_(padapter, rx_pkts);
+    }
+    return MLAN_STATUS_SUCCESS;
+  }
 
  private:
   friend class MlanMockAdapter;
@@ -42,6 +54,8 @@ class MlanMockAdapterImpl {
   std::function<mlan_status(t_u16 msg_id, t_void* padapter)> on_mlan_interrupt_;
   std::function<mlan_status(t_void*)> on_mlan_main_process_;
   std::function<mlan_status(t_void*, pmlan_ioctl_req)> on_mlan_ioctl_;
+  std::function<mlan_status(t_void*, pmlan_buffer)> on_mlan_send_packet_;
+  std::function<mlan_status(t_void*, t_u8*)> on_mlan_rx_process_;
 };
 
 MlanMockAdapter::MlanMockAdapter() { impl_ = std::make_unique<MlanMockAdapterImpl>(); }
@@ -65,6 +79,15 @@ void MlanMockAdapter::SetOnMlanIoctl(
   impl_->on_mlan_ioctl_ = std::move(callback);
 }
 
+void MlanMockAdapter::SetOnMlanSendPacket(
+    std::function<mlan_status(t_void*, pmlan_buffer)>&& callback) {
+  impl_->on_mlan_send_packet_ = std::move(callback);
+}
+
+void MlanMockAdapter::SetOnMlanRxProcess(std::function<mlan_status(t_void*, t_u8*)>&& callback) {
+  impl_->on_mlan_rx_process_ = std::move(callback);
+}
+
 }  // namespace wlan::nxpfmac
 
 extern "C" mlan_status mlan_interrupt(t_u16 msg_id, t_void* padapter) {
@@ -80,4 +103,14 @@ extern "C" mlan_status mlan_main_process(t_void* padapter) {
 extern "C" mlan_status mlan_ioctl(t_void* padapter, pmlan_ioctl_req pioctl_req) {
   auto test = static_cast<wlan::nxpfmac::MlanMockAdapterImpl*>(padapter);
   return test->OnMlanIoctl(padapter, pioctl_req);
+}
+
+extern "C" mlan_status mlan_send_packet(t_void* padapter, pmlan_buffer pmbuf) {
+  auto test = static_cast<wlan::nxpfmac::MlanMockAdapterImpl*>(padapter);
+  return test->OnMlanSendPacket(padapter, pmbuf);
+}
+
+extern "C" mlan_status mlan_rx_process(t_void* padapter, t_u8* rx_pkts) {
+  auto test = static_cast<wlan::nxpfmac::MlanMockAdapterImpl*>(padapter);
+  return test->OnMlanRxProcess(padapter, rx_pkts);
 }

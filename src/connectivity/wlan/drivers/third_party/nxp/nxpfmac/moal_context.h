@@ -16,6 +16,7 @@
 
 namespace wlan::nxpfmac {
 
+class DataPlane;
 class Device;
 class EventHandler;
 class IoctlAdapter;
@@ -27,6 +28,7 @@ struct MoalContext {
   Device* device_;
   EventHandler* event_handler_;
   IoctlAdapter* ioctl_adapter_;
+  DataPlane* data_plane_;
 };
 
 }  // namespace wlan::nxpfmac

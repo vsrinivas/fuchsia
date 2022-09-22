@@ -50,6 +50,8 @@ class MlanMockAdapter {
   void SetOnMlanInterrupt(std::function<mlan_status(t_u16, t_void*)>&& callback);
   void SetOnMlanMainProcess(std::function<mlan_status(t_void*)>&& callback);
   void SetOnMlanIoctl(std::function<mlan_status(t_void*, pmlan_ioctl_req)>&& callback);
+  void SetOnMlanSendPacket(std::function<mlan_status(t_void*, pmlan_buffer)>&& callback);
+  void SetOnMlanRxProcess(std::function<mlan_status(t_void*, t_u8*)>&& callback);
 
  private:
   std::unique_ptr<MlanMockAdapterImpl> impl_;

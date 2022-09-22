@@ -36,6 +36,8 @@ NetworkDevice::~NetworkDevice() = default;
 
 zx_status_t NetworkDevice::Init(const char* deviceName) { return AddNetworkDevice(deviceName); }
 
+void NetworkDevice::Remove() { device_async_remove(device_); }
+
 void NetworkDevice::Release() { callbacks_->NetDevRelease(); }
 
 network_device_ifc_protocol_t NetworkDevice::NetDevIfcProto() const {

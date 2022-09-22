@@ -11,10 +11,12 @@
 // NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
 // OF THIS SOFTWARE.
 
+#define _ALL_SOURCE  // Define this so we can use thrd_create_with_name
+
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/sdio/sdio_bus.h"
 
 #include <inttypes.h>
-#include <lib/fit/defer.h>
+#include <lib/async/cpp/task.h>
 
 #include <wlan/drivers/log.h>
 
@@ -22,15 +24,13 @@
 
 namespace wlan::nxpfmac {
 
-constexpr char kSdioFunction1Name[] = "sdio-function-1";
+// TODO(https://fxbug.dev/110081): Try to find a better way of determining this value.
+// This information doesn't seem to be available from mlan anywhere but with insufficient headroom
+// the mlan logs will mention that this is the required value.
+constexpr uint16_t kSdioBusTxHeadroom = 56u;
 
-namespace IrqPortKey {
-enum IrqPortKey {
-  Interrupt,
-  Process,  // Signal that mlan_main_process needs to run
-  Stop,
-};
-}  // namespace IrqPortKey
+constexpr char kSdioFunction1Name[] = "sdio-function-1";
+constexpr char kMainProcessThreadName[] = "nxpfmac_main_process-worker";
 
 static zx_status_t get_card_type(uint32_t product_id, uint16_t* out_card_type) {
   switch (product_id) {
@@ -140,6 +140,12 @@ zx_status_t SdioBus::Init(mlan_device* mlan_dev) {
     }
   }
 
+  zx_status_t status = main_process_loop_.StartThread(kMainProcessThreadName);
+  if (status != ZX_OK) {
+    NXPF_ERR("Failed to start main process thread; %s", zx_status_get_string(status));
+    return status;
+  }
+
   // Populate bus specific callbacks.
   mlan_dev->callbacks.moal_write_reg = &SdioBus::WriteRegister;
   mlan_dev->callbacks.moal_read_reg = &SdioBus::ReadRegister;
@@ -150,36 +156,22 @@ zx_status_t SdioBus::Init(mlan_device* mlan_dev) {
   sdio_context_.bus_ = this;
   mlan_dev->pmoal_handle = &sdio_context_;
 
-  // Use a port for IRQ signaling, this makes it easy to send other messages to the IRQ thread.
-  zx_status_t status = zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &irq_port_);
-  if (status != ZX_OK) {
-    NXPF_ERR("Failed to create IRQ port: %s", zx_status_get_string(status));
-    return status;
-  }
-  status = interrupt_.bind(irq_port_, IrqPortKey::Interrupt, ZX_INTERRUPT_BIND);
-  if (status != ZX_OK) {
-    NXPF_ERR("Failed to bind interrupt to port: %s", zx_status_get_string(status));
-    return status;
-  }
-
   return ZX_OK;
 }
 
 zx_status_t SdioBus::TriggerMainProcess() {
-  if (!irq_port_.is_valid()) {
-    NXPF_ERR("IRQ port is not valid");
-    return ZX_ERR_NO_RESOURCES;
+  bool expected = false;
+  if (!main_process_queued_.compare_exchange_strong(expected, true)) {
+    // Already queued, no need to queue it again.
+    return ZX_OK;
   }
-  // Tell the IRQ thread to run mlan_main_process
-  zx_port_packet_t packet = {
-      .key = IrqPortKey::Process,
-  };
-  zx_status_t status = irq_port_.queue(&packet);
-  if (status != ZX_OK) {
-    NXPF_ERR("Failed to queue Process packet on IRQ port: %s", zx_status_get_string(status));
-    return status;
-  }
-  return ZX_OK;
+  return async::PostTask(main_process_loop_.dispatcher(), [this]() {
+    // Clear this flag BEFORE mlan_main_process. If we clear it after then mlan_main_process might
+    // be right at the end of its call and will miss out on processing because we skipped queueing
+    // up another call.
+    main_process_queued_ = false;
+    mlan_main_process(mlan_adapter_);
+  });
 }
 
 zx_status_t SdioBus::OnMlanRegistered(void* mlan_adapter) {
@@ -188,6 +180,60 @@ zx_status_t SdioBus::OnMlanRegistered(void* mlan_adapter) {
 }
 
 zx_status_t SdioBus::OnFirmwareInitialized() { return StartIrqThread(); }
+
+zx_status_t SdioBus::PrepareVmo(uint8_t vmo_id, zx::vmo&& vmo, uint8_t* mapped_address,
+                                size_t mapped_size) {
+  std::lock_guard lock(func1_mutex_);
+
+  uint64_t vmo_size = 0;
+  zx_status_t status = vmo.get_size(&vmo_size);
+  if (status != ZX_OK) {
+    NXPF_ERR("Failed to get VMO size: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  // This is not currently supported by the SDIO bus driver for as370, expect a not supported error.
+  status = func1_.RegisterVmo(vmo_id, std::move(vmo), 0, vmo_size,
+                              SDMMC_VMO_RIGHT_READ | SDMMC_VMO_RIGHT_WRITE);
+  if (status == ZX_ERR_NOT_SUPPORTED) {
+    NXPF_WARN("VMO registration not supported yet");
+    return ZX_OK;
+  }
+  if (status != ZX_OK) {
+    NXPF_ERR("Failed to register VMO with SDIO bus: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t SdioBus::ReleaseVmo(uint8_t vmo_id) {
+  std::lock_guard lock(func1_mutex_);
+  zx::vmo unregistered_vmo;
+  zx_status_t status = func1_.UnregisterVmo(vmo_id, &unregistered_vmo);
+  if (status == ZX_ERR_NOT_SUPPORTED) {
+    NXPF_WARN("VMO unregister not supported yet");
+    return ZX_OK;
+  }
+  if (status != ZX_OK) {
+    NXPF_ERR("Failed to unregister VMO from SDIO bus: %s", zx_status_get_string(status));
+    return status;
+  }
+  return ZX_OK;
+}
+
+uint16_t SdioBus::GetRxHeadroom() const {
+  // No headroom needed at this point.
+  return 0u;
+}
+
+uint16_t SdioBus::GetTxHeadroom() const { return kSdioBusTxHeadroom; }
+
+uint32_t SdioBus::GetBufferAlignment() const {
+  // Buffers should be aligned to the block size to make sure buffers can span disjoint physical
+  // memory pages without having to transfer partial blocks.
+  return MLAN_SDIO_BLOCK_SIZE;
+}
 
 zx_status_t SdioBus::StartIrqThread() {
   if (irq_thread_) {
@@ -207,15 +253,19 @@ zx_status_t SdioBus::StartIrqThread() {
 }
 
 void SdioBus::StopAndJoinIrqThread() {
-  if (irq_port_.is_valid()) {
-    // Tell the IRQ thread to shut down.
-    zx_port_packet_t packet = {
-        .key = IrqPortKey::Stop,
-    };
+  if (interrupt_.is_valid()) {
     running_ = false;
-    irq_port_.queue(&packet);
+    // Destroying the interrupt will cause any waits to immediately return with ZX_ERR_CANCELED.
+    // This will cause the IRQ thread to wake and check the running_ flag, causing it to stop.
+    const zx_status_t status = interrupt_.destroy();
+    if (status != ZX_OK) {
+      NXPF_ERR("Failed to destroy interrupt: %s", zx_status_get_string(status));
+      // Don't attempt to join the IRQ thread here, it might hang because the interrupt is in some
+      // unexpected state. At this point there is no reasonable way to recover anyway.
+      return;
+    }
     if (irq_thread_) {
-      // If the thread is running it should finish after the shutdown message, wait for it.
+      // If the thread is running it should finish after the interrupt was destroyed, wait for it.
       int result = 0;
       thrd_join(irq_thread_, &result);
       irq_thread_ = 0;
@@ -227,23 +277,15 @@ void SdioBus::IrqThread() {
   NXPF_INFO("IRQ thread started");
 
   while (running_.load(std::memory_order_relaxed)) {
-    zx_port_packet_t packet;
-    zx_status_t status = irq_port_.wait(zx::time::infinite(), &packet);
-    if (status != ZX_OK) {
-      NXPF_ERR("Error waiting on IRQ port: %s", zx_status_get_string(status));
-      break;
-    }
-    if (packet.key == IrqPortKey::Stop) {
+    const zx_status_t status = interrupt_.wait(nullptr);
+    if (status == ZX_ERR_CANCELED) {
       NXPF_INFO("Received request to stop IRQ thread");
       break;
     }
-    if (packet.key != IrqPortKey::Interrupt && packet.key != IrqPortKey::Process) {
-      NXPF_WARN("Unknown IRQ port key: %" PRIu64, packet.key);
-      continue;
+    if (status != ZX_OK) {
+      NXPF_ERR("Error waiting on IRQ: %s", zx_status_get_string(status));
+      break;
     }
-
-    // At this point we know it's an interrupt, make sure to ack it no matter what.
-    fit::deferred_action ack_irq([&] { interrupt_.ack(); });
 
     mlan_status ml_status = mlan_interrupt(0, mlan_adapter_);
     if (ml_status != MLAN_STATUS_SUCCESS) {

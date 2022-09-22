@@ -25,6 +25,7 @@
 #include <ddktl/device.h>
 
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/bus_interface.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/data_plane.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/event_handler.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/ioctl_adapter.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan.h"
@@ -38,7 +39,9 @@ class DeviceInspect;
 using DeviceType =
     ::ddk::Device<Device, ddk::Initializable, ddk::Suspendable, ddk::ServiceConnectable>;
 
-class Device : public DeviceType, public fdf::WireServer<fuchsia_wlan_wlanphyimpl::WlanphyImpl> {
+class Device : public DeviceType,
+               public fdf::WireServer<fuchsia_wlan_wlanphyimpl::WlanphyImpl>,
+               public DataPlaneIfc {
  public:
   // State accessors.
   virtual async_dispatcher_t* GetDispatcher() = 0;
@@ -63,6 +66,10 @@ class Device : public DeviceType, public fdf::WireServer<fuchsia_wlan_wlanphyimp
   void SetPsMode(SetPsModeRequestView request, fdf::Arena& arena,
                  SetPsModeCompleter::Sync& completer) override;
   void GetPsMode(fdf::Arena& arena, GetPsModeCompleter::Sync& completer) override;
+
+  // DataPlaneIfc implementation
+  void OnEapolTransmitted(wlan::drivers::components::Frame&& frame, zx_status_t status) override;
+  void OnEapolReceived(wlan::drivers::components::Frame&& frame) override;
 
   // MOAL notifications
   void OnFirmwareInitComplete(zx_status_t status);
@@ -103,10 +110,13 @@ class Device : public DeviceType, public fdf::WireServer<fuchsia_wlan_wlanphyimp
 
   EventHandler event_handler_;
   std::unique_ptr<IoctlAdapter> ioctl_adapter_;
+  std::unique_ptr<DataPlane> data_plane_;
 
   // Dispatcher for the FIDL server
   fdf::Dispatcher fidl_dispatcher_;
   sync_completion_t fidl_dispatcher_completion_;
+
+  EventRegistration defer_rx_work_event_;
 };
 
 }  // namespace wlan::nxpfmac

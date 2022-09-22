@@ -8,7 +8,7 @@ test("nxpfmac_sdio_test") {
   sources = [ "sdio_bus_test.cc" ]
   deps = [
     "//sdk/banjo/fuchsia.hardware.sdio:fuchsia.hardware.sdio_banjo_cpp_mock",
-    "//src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/sdio:sdio_bus",
+    "//src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/sdio:sdio",
     "//src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/test:mlan_mocks",
     "//src/devices/testing/mock-ddk",
     "//zircon/system/ulib/mock-function",

@@ -14,19 +14,21 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_NXP_NXPFMAC_SDIO_SDIO_BUS_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_NXP_NXPFMAC_SDIO_SDIO_BUS_H_
 
+#include <fuchsia/hardware/network/device/cpp/banjo.h>
 #include <fuchsia/hardware/sdio/cpp/banjo.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/ddk/device.h>
 #include <lib/zx/interrupt.h>
+#include <threads.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
 #include <atomic>
 #include <memory>
-#include <thread>
+#include <mutex>
 #include <type_traits>
 
-#define _ALL_SOURCE
-#include <threads.h>
+#include <wlan/drivers/components/frame.h>
 
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/bus_interface.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan.h"
@@ -54,6 +56,12 @@ class SdioBus : public BusInterface {
   zx_status_t TriggerMainProcess() override;
   zx_status_t OnMlanRegistered(void* mlan_adapter) override;
   zx_status_t OnFirmwareInitialized() override;
+  zx_status_t PrepareVmo(uint8_t vmo_id, zx::vmo&& vmo, uint8_t* mapped_address,
+                         size_t mapped_size) override;
+  zx_status_t ReleaseVmo(uint8_t vmo_id) override;
+  uint16_t GetRxHeadroom() const override;
+  uint16_t GetTxHeadroom() const override;
+  uint32_t GetBufferAlignment() const override;
 
  private:
   explicit SdioBus(zx_device_t* parent);
@@ -79,10 +87,11 @@ class SdioBus : public BusInterface {
   zx::interrupt interrupt_;
 
   thrd_t irq_thread_ = 0;
-  zx::port irq_port_;
   std::atomic<bool> running_ = true;
   void* mlan_adapter_ = nullptr;
   SdioContext sdio_context_ = {};
+  async::Loop main_process_loop_{&kAsyncLoopConfigNeverAttachToThread};
+  std::atomic<bool> main_process_queued_{false};
 };
 
 }  // namespace wlan::nxpfmac

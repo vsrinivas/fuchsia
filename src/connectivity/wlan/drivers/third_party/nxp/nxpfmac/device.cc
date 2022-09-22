@@ -21,6 +21,7 @@
 #include <ddktl/init-txn.h>
 #include <wlan/common/ieee80211.h>
 
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/align.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/moal_context.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/moal_shim.h"
@@ -37,7 +38,14 @@ constexpr char kTxPwrWWPath[] = "nxpfmac/txpower_WW.bin";
 // constexpr char kTxPwrUSPath[] = "nxpfmac/txpower_US.bin";
 constexpr char kWlanCalDataPath[] = "nxpfmac/WlanCalData_sd8987.conf";
 
-Device::Device(zx_device_t *parent) : DeviceType(parent) {}
+Device::Device(zx_device_t *parent) : DeviceType(parent) {
+  defer_rx_work_event_ =
+      event_handler_.RegisterForEvent(MLAN_EVENT_ID_DRV_DEFER_RX_WORK, [this](pmlan_event event) {
+        if (data_plane_) {
+          data_plane_->DeferRxWork();
+        }
+      });
+}
 
 void Device::DdkInit(ddk::InitTxn txn) {
   const zx_status_t status = [this]() -> zx_status_t {
@@ -190,8 +198,8 @@ void Device::CreateIface(CreateIfaceRequestView request, fdf::Arena &arena,
 
       WlanInterface *interface = nullptr;
       zx_status_t status = WlanInterface::Create(
-          parent(), kClientInterfaceName, kClientInterfaceId, WLAN_MAC_ROLE_CLIENT, GetDispatcher(),
-          &event_handler_, ioctl_adapter_.get(), std::move(request->mlme_channel()), &interface);
+          parent(), kClientInterfaceName, kClientInterfaceId, WLAN_MAC_ROLE_CLIENT, &event_handler_,
+          ioctl_adapter_.get(), data_plane_.get(), std::move(request->mlme_channel()), &interface);
       if (status != ZX_OK) {
         NXPF_ERR("Could not create client interface: %s", zx_status_get_string(status));
         completer.buffer(arena).ReplyError(status);
@@ -212,8 +220,8 @@ void Device::CreateIface(CreateIfaceRequestView request, fdf::Arena &arena,
 
       WlanInterface *interface = nullptr;
       zx_status_t status = WlanInterface::Create(
-          parent(), kApInterfaceName, kApInterfaceId, WLAN_MAC_ROLE_AP, GetDispatcher(),
-          &event_handler_, ioctl_adapter_.get(), std::move(request->mlme_channel()), &interface);
+          parent(), kApInterfaceName, kApInterfaceId, WLAN_MAC_ROLE_AP, &event_handler_,
+          ioctl_adapter_.get(), data_plane_.get(), std::move(request->mlme_channel()), &interface);
       if (status != ZX_OK) {
         NXPF_ERR("Could not create AP interface: %s", zx_status_get_string(status));
         completer.buffer(arena).ReplyError(status);
@@ -314,6 +322,14 @@ void Device::SetPsMode(SetPsModeRequestView request, fdf::Arena &arena,
 void Device::GetPsMode(fdf::Arena &arena, GetPsModeCompleter::Sync &completer) {
   NXPF_ERR("Not supported");
   completer.buffer(arena).ReplyError(ZX_ERR_NOT_SUPPORTED);
+}
+
+void Device::OnEapolTransmitted(wlan::drivers::components::Frame &&frame, zx_status_t status) {
+  // Not yet implemented
+}
+
+void Device::OnEapolReceived(wlan::drivers::components::Frame &&frame) {
+  // Not yet implemented
 }
 
 void Device::OnFirmwareInitComplete(zx_status_t status) {
@@ -420,6 +436,13 @@ zx_status_t Device::InitFirmware() {
     NXPF_ERR("OnFirmwareInitialized failed: %s", zx_status_get_string(status));
     return status;
   }
+
+  status = DataPlane::Create(parent(), this, bus_, mlan_adapter_, &data_plane_);
+  if (status != ZX_OK) {
+    NXPF_ERR("Failed to create data plane: %s", zx_status_get_string(status));
+    return status;
+  }
+  static_cast<MoalContext *>(mlan_device_.pmoal_handle)->data_plane_ = data_plane_.get();
 
   return ZX_OK;
 }
