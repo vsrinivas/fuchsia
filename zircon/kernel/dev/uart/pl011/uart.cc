@@ -133,18 +133,6 @@ static void pl011_uart_irq(void* arg) {
         Guard<MonitoredSpinLock, NoIrqSave> guard{uart_spinlock::Get(), SOURCE_TAG};
         if (uart_rx_buf.Full()) {
           pl011_mask_rx();
-
-          // This is a hack.  Its purpose is to work around an issue in a PL011 implementation where
-          // the device stops delivering interrupts after an RX mask/unmask cycle.  This hack has
-          // two parts, this write to ICR and the one in |pl011_uart_getc| where we unmask RX.
-          //
-          // Writing a zero to the ICR is a effectively a no-op.  It doesn't actually clear any
-          // interrupts.  We're writing a zero for some side effects.  See fxbug.dev/100864 and
-          // fxbug.dev/100984 for details.
-          //
-          // TODO(fxbug.dev/100984): Once the device implementation has been fixed, remove this hack
-          // and the one in |pl011_uart_getc|.
-          UARTREG(uart_base, UART_ICR) = 0;
           break;
         }
       }
