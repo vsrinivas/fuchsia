@@ -64,13 +64,13 @@ pub struct TestCredentialVariants {
     pub wep_64_ascii: TestCredentials,
     pub wep_128_hex: TestCredentials,
     pub wep_128_ascii: TestCredentials,
-    pub wpa_passphrase_min: TestCredentials,
-    pub wpa_passphrase_max: TestCredentials,
+    pub wpa_pass_min: TestCredentials,
+    pub wpa_pass_max: TestCredentials,
     pub wpa_psk: TestCredentials,
 }
 
 lazy_static! {
-    pub static ref TEST_CRED_VARIANTS: TestCredentialVariants = TestCredentialVariants {
+    pub static ref TEST_CREDS: TestCredentialVariants = TestCredentialVariants {
         none: TestCredentials {
             policy: fidl_policy::Credential::None(fidl_policy::Empty),
             sme: None
@@ -99,13 +99,13 @@ lazy_static! {
                 fidl_common_security::WepCredentials { key: b"test1test2345".to_vec() }
             )))
         },
-        wpa_passphrase_min: TestCredentials {
+        wpa_pass_min: TestCredentials {
             policy: fidl_policy::Credential::Password(b"eight111".to_vec()),
             sme: Some(Box::new(fidl_common_security::Credentials::Wpa(
                 fidl_common_security::WpaCredentials::Passphrase(b"eight111".to_vec())
             )))
         },
-        wpa_passphrase_max: TestCredentials {
+        wpa_pass_max: TestCredentials {
             policy: fidl_policy::Credential::Password(
                 b"thisIs63CharactersLong!!!#$#%thisIs63CharactersLong!!!#$#%00009".to_vec()
             ),
@@ -559,54 +559,54 @@ fn security_protocols_from_protection(
     }
 }
 
-use fidl_policy::SecurityType;
-use fidl_sme::Protection;
-#[test_case(SecurityType::None, Protection::Open, TEST_CRED_VARIANTS.none.clone())]
+use fidl_policy::SecurityType as Saved;
+use fidl_sme::Protection as Scanned;
+#[test_case(Saved::None, Scanned::Open, TEST_CREDS.none.clone())]
 // Saved credential: WEP 40/64 bit
-#[test_case(SecurityType::Wep, Protection::Wep, TEST_CRED_VARIANTS.wep_64_ascii.clone())]
-#[test_case(SecurityType::Wep, Protection::Wep, TEST_CRED_VARIANTS.wep_64_hex.clone())]
+#[test_case(Saved::Wep, Scanned::Wep, TEST_CREDS.wep_64_ascii.clone())]
+#[test_case(Saved::Wep, Scanned::Wep, TEST_CREDS.wep_64_hex.clone())]
 // Saved credential: WEP 104/128 bit
-#[test_case(SecurityType::Wep, Protection::Wep, TEST_CRED_VARIANTS.wep_128_ascii.clone())]
-#[test_case(SecurityType::Wep, Protection::Wep, TEST_CRED_VARIANTS.wep_128_hex.clone())]
+#[test_case(Saved::Wep, Scanned::Wep, TEST_CREDS.wep_128_ascii.clone())]
+#[test_case(Saved::Wep, Scanned::Wep, TEST_CREDS.wep_128_hex.clone())]
 // Saved credential: WPA1
-#[test_case(SecurityType::Wpa, Protection::Wpa1, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
-#[test_case(SecurityType::Wpa, Protection::Wpa1, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
-#[test_case(SecurityType::Wpa, Protection::Wpa1, TEST_CRED_VARIANTS.wpa_psk.clone())]
-#[test_case(SecurityType::Wpa, Protection::Wpa1Wpa2Personal, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
-#[test_case(SecurityType::Wpa, Protection::Wpa1Wpa2Personal, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
-#[test_case(SecurityType::Wpa, Protection::Wpa1Wpa2Personal, TEST_CRED_VARIANTS.wpa_psk.clone())]
-#[test_case(SecurityType::Wpa, Protection::Wpa1Wpa2PersonalTkipOnly, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
-#[test_case(SecurityType::Wpa, Protection::Wpa1Wpa2PersonalTkipOnly, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
-#[test_case(SecurityType::Wpa, Protection::Wpa1Wpa2PersonalTkipOnly, TEST_CRED_VARIANTS.wpa_psk.clone())]
-#[test_case(SecurityType::Wpa, Protection::Wpa2Personal, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
-#[test_case(SecurityType::Wpa, Protection::Wpa2Personal, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
-#[test_case(SecurityType::Wpa, Protection::Wpa2Personal, TEST_CRED_VARIANTS.wpa_psk.clone())]
-#[test_case(SecurityType::Wpa, Protection::Wpa2PersonalTkipOnly, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
-#[test_case(SecurityType::Wpa, Protection::Wpa2PersonalTkipOnly, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
-#[test_case(SecurityType::Wpa, Protection::Wpa2PersonalTkipOnly, TEST_CRED_VARIANTS.wpa_psk.clone())]
+#[test_case(Saved::Wpa, Scanned::Wpa1, TEST_CREDS.wpa_pass_min.clone())]
+#[test_case(Saved::Wpa, Scanned::Wpa1, TEST_CREDS.wpa_pass_max.clone())]
+#[test_case(Saved::Wpa, Scanned::Wpa1, TEST_CREDS.wpa_psk.clone())]
+#[test_case(Saved::Wpa, Scanned::Wpa1Wpa2Personal, TEST_CREDS.wpa_pass_min.clone())]
+#[test_case(Saved::Wpa, Scanned::Wpa1Wpa2Personal, TEST_CREDS.wpa_pass_max.clone())]
+#[test_case(Saved::Wpa, Scanned::Wpa1Wpa2Personal, TEST_CREDS.wpa_psk.clone())]
+#[test_case(Saved::Wpa, Scanned::Wpa1Wpa2PersonalTkipOnly, TEST_CREDS.wpa_pass_min.clone())]
+#[test_case(Saved::Wpa, Scanned::Wpa1Wpa2PersonalTkipOnly, TEST_CREDS.wpa_pass_max.clone())]
+#[test_case(Saved::Wpa, Scanned::Wpa1Wpa2PersonalTkipOnly, TEST_CREDS.wpa_psk.clone())]
+#[test_case(Saved::Wpa, Scanned::Wpa2Personal, TEST_CREDS.wpa_pass_min.clone())]
+#[test_case(Saved::Wpa, Scanned::Wpa2Personal, TEST_CREDS.wpa_pass_max.clone())]
+#[test_case(Saved::Wpa, Scanned::Wpa2Personal, TEST_CREDS.wpa_psk.clone())]
+#[test_case(Saved::Wpa, Scanned::Wpa2PersonalTkipOnly, TEST_CREDS.wpa_pass_min.clone())]
+#[test_case(Saved::Wpa, Scanned::Wpa2PersonalTkipOnly, TEST_CREDS.wpa_pass_max.clone())]
+#[test_case(Saved::Wpa, Scanned::Wpa2PersonalTkipOnly, TEST_CREDS.wpa_psk.clone())]
 // TODO(fxbug.dev/85817): reenable credential upgrading
-// #[test_case(SecurityType::Wpa, Protection::Wpa2Wpa3Personal, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
-// #[test_case(SecurityType::Wpa, Protection::Wpa2Wpa3Personal, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
-// #[test_case(SecurityType::Wpa, Protection::Wpa2Wpa3Personal, TEST_CRED_VARIANTS.wpa_psk.clone())]
-// #[test_case(SecurityType::Wpa, Protection::Wpa3Personal, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
-// #[test_case(SecurityType::Wpa, Protection::Wpa3Personal, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
+// #[test_case(Saved::Wpa, Scanned::Wpa2Wpa3Personal, TEST_CREDS.wpa_pass_min.clone())]
+// #[test_case(Saved::Wpa, Scanned::Wpa2Wpa3Personal, TEST_CREDS.wpa_pass_max.clone())]
+// #[test_case(Saved::Wpa, Scanned::Wpa2Wpa3Personal, TEST_CREDS.wpa_psk.clone())]
+// #[test_case(Saved::Wpa, Scanned::Wpa3Personal, TEST_CREDS.wpa_pass_min.clone())]
+// #[test_case(Saved::Wpa, Scanned::Wpa3Personal, TEST_CREDS.wpa_pass_max.clone())]
 // Saved credential: WPA2
-#[test_case(SecurityType::Wpa2, Protection::Wpa2Personal, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
-#[test_case(SecurityType::Wpa2, Protection::Wpa2Personal, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
-#[test_case(SecurityType::Wpa2, Protection::Wpa2Personal, TEST_CRED_VARIANTS.wpa_psk.clone())]
-#[test_case(SecurityType::Wpa2, Protection::Wpa2PersonalTkipOnly, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
-#[test_case(SecurityType::Wpa2, Protection::Wpa2PersonalTkipOnly, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
-#[test_case(SecurityType::Wpa2, Protection::Wpa2PersonalTkipOnly, TEST_CRED_VARIANTS.wpa_psk.clone())]
-#[test_case(SecurityType::Wpa2, Protection::Wpa2Wpa3Personal, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
-#[test_case(SecurityType::Wpa2, Protection::Wpa2Wpa3Personal, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
-#[test_case(SecurityType::Wpa2, Protection::Wpa2Wpa3Personal, TEST_CRED_VARIANTS.wpa_psk.clone())]
-#[test_case(SecurityType::Wpa2, Protection::Wpa3Personal, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
-#[test_case(SecurityType::Wpa2, Protection::Wpa3Personal, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
+#[test_case(Saved::Wpa2, Scanned::Wpa2Personal, TEST_CREDS.wpa_pass_min.clone())]
+#[test_case(Saved::Wpa2, Scanned::Wpa2Personal, TEST_CREDS.wpa_pass_max.clone())]
+#[test_case(Saved::Wpa2, Scanned::Wpa2Personal, TEST_CREDS.wpa_psk.clone())]
+#[test_case(Saved::Wpa2, Scanned::Wpa2PersonalTkipOnly, TEST_CREDS.wpa_pass_min.clone())]
+#[test_case(Saved::Wpa2, Scanned::Wpa2PersonalTkipOnly, TEST_CREDS.wpa_pass_max.clone())]
+#[test_case(Saved::Wpa2, Scanned::Wpa2PersonalTkipOnly, TEST_CREDS.wpa_psk.clone())]
+#[test_case(Saved::Wpa2, Scanned::Wpa2Wpa3Personal, TEST_CREDS.wpa_pass_min.clone())]
+#[test_case(Saved::Wpa2, Scanned::Wpa2Wpa3Personal, TEST_CREDS.wpa_pass_max.clone())]
+#[test_case(Saved::Wpa2, Scanned::Wpa2Wpa3Personal, TEST_CREDS.wpa_psk.clone())]
+#[test_case(Saved::Wpa2, Scanned::Wpa3Personal, TEST_CREDS.wpa_pass_min.clone())]
+#[test_case(Saved::Wpa2, Scanned::Wpa3Personal, TEST_CREDS.wpa_pass_max.clone())]
 // Saved credential: WPA3
-#[test_case(SecurityType::Wpa3, Protection::Wpa2Wpa3Personal, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
-#[test_case(SecurityType::Wpa3, Protection::Wpa2Wpa3Personal, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
-#[test_case(SecurityType::Wpa3, Protection::Wpa3Personal, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
-#[test_case(SecurityType::Wpa3, Protection::Wpa3Personal, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
+#[test_case(Saved::Wpa3, Scanned::Wpa2Wpa3Personal, TEST_CREDS.wpa_pass_min.clone())]
+#[test_case(Saved::Wpa3, Scanned::Wpa2Wpa3Personal, TEST_CREDS.wpa_pass_max.clone())]
+#[test_case(Saved::Wpa3, Scanned::Wpa3Personal, TEST_CREDS.wpa_pass_min.clone())]
+#[test_case(Saved::Wpa3, Scanned::Wpa3Personal, TEST_CREDS.wpa_pass_max.clone())]
 #[fuchsia::test(add_test_attr = false)]
 /// Tests saving and connecting across various security types
 fn save_and_connect(
@@ -807,47 +807,47 @@ fn save_and_connect(
 }
 
 // TODO(fxbug.dev/85817): reenable credential upgrading, which will make these cases connect
-#[test_case(SecurityType::Wpa, Protection::Wpa2Wpa3Personal, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
-#[test_case(SecurityType::Wpa, Protection::Wpa2Wpa3Personal, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
-#[test_case(SecurityType::Wpa, Protection::Wpa2Wpa3Personal, TEST_CRED_VARIANTS.wpa_psk.clone())]
-#[test_case(SecurityType::Wpa, Protection::Wpa3Personal, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
-#[test_case(SecurityType::Wpa, Protection::Wpa3Personal, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
+#[test_case(Saved::Wpa, Scanned::Wpa2Wpa3Personal, TEST_CREDS.wpa_pass_min.clone())]
+#[test_case(Saved::Wpa, Scanned::Wpa2Wpa3Personal, TEST_CREDS.wpa_pass_max.clone())]
+#[test_case(Saved::Wpa, Scanned::Wpa2Wpa3Personal, TEST_CREDS.wpa_psk.clone())]
+#[test_case(Saved::Wpa, Scanned::Wpa3Personal, TEST_CREDS.wpa_pass_min.clone())]
+#[test_case(Saved::Wpa, Scanned::Wpa3Personal, TEST_CREDS.wpa_pass_max.clone())]
 // WPA credentials should never be used for WEP or Open networks
-#[test_case(SecurityType::Wpa, Protection::Open, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
-#[test_case(SecurityType::Wpa, Protection::Open, TEST_CRED_VARIANTS.wpa_psk.clone())]
-#[test_case(SecurityType::Wpa, Protection::Wep, TEST_CRED_VARIANTS.wep_64_hex.clone())] // Use credentials which are valid len for WEP and WPA
-#[test_case(SecurityType::Wpa, Protection::Wep, TEST_CRED_VARIANTS.wpa_psk.clone())]
-#[test_case(SecurityType::Wpa2, Protection::Open, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
-#[test_case(SecurityType::Wpa2, Protection::Open, TEST_CRED_VARIANTS.wpa_psk.clone())]
-#[test_case(SecurityType::Wpa2, Protection::Wep, TEST_CRED_VARIANTS.wep_64_hex.clone())] // Use credentials which are valid len for WEP and WPA
-#[test_case(SecurityType::Wpa2, Protection::Wep, TEST_CRED_VARIANTS.wpa_psk.clone())]
-#[test_case(SecurityType::Wpa3, Protection::Open, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
-#[test_case(SecurityType::Wpa3, Protection::Open, TEST_CRED_VARIANTS.wpa_psk.clone())]
-#[test_case(SecurityType::Wpa3, Protection::Wep, TEST_CRED_VARIANTS.wep_64_hex.clone())] // Use credentials which are valid len for WEP and WPA
-#[test_case(SecurityType::Wpa3, Protection::Wep, TEST_CRED_VARIANTS.wpa_psk.clone())]
+#[test_case(Saved::Wpa, Scanned::Open, TEST_CREDS.wpa_pass_min.clone())]
+#[test_case(Saved::Wpa, Scanned::Open, TEST_CREDS.wpa_psk.clone())]
+#[test_case(Saved::Wpa, Scanned::Wep, TEST_CREDS.wep_64_hex.clone())] // Use credentials which are valid len for WEP and WPA
+#[test_case(Saved::Wpa, Scanned::Wep, TEST_CREDS.wpa_psk.clone())]
+#[test_case(Saved::Wpa2, Scanned::Open, TEST_CREDS.wpa_pass_min.clone())]
+#[test_case(Saved::Wpa2, Scanned::Open, TEST_CREDS.wpa_psk.clone())]
+#[test_case(Saved::Wpa2, Scanned::Wep, TEST_CREDS.wep_64_hex.clone())] // Use credentials which are valid len for WEP and WPA
+#[test_case(Saved::Wpa2, Scanned::Wep, TEST_CREDS.wpa_psk.clone())]
+#[test_case(Saved::Wpa3, Scanned::Open, TEST_CREDS.wpa_pass_min.clone())]
+#[test_case(Saved::Wpa3, Scanned::Open, TEST_CREDS.wpa_psk.clone())]
+#[test_case(Saved::Wpa3, Scanned::Wep, TEST_CREDS.wep_64_hex.clone())] // Use credentials which are valid len for WEP and WPA
+#[test_case(Saved::Wpa3, Scanned::Wep, TEST_CREDS.wpa_psk.clone())]
 // PSKs should never be used for WPA3
-#[test_case(SecurityType::Wpa, Protection::Wpa3Personal, TEST_CRED_VARIANTS.wpa_psk.clone())]
-#[test_case(SecurityType::Wpa2, Protection::Wpa3Personal, TEST_CRED_VARIANTS.wpa_psk.clone())]
+#[test_case(Saved::Wpa, Scanned::Wpa3Personal, TEST_CREDS.wpa_psk.clone())]
+#[test_case(Saved::Wpa2, Scanned::Wpa3Personal, TEST_CREDS.wpa_psk.clone())]
 // Saved credential: WPA2: downgrades are disallowed
-#[test_case(SecurityType::Wpa2, Protection::Wpa1, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
-#[test_case(SecurityType::Wpa2, Protection::Wpa1, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
-#[test_case(SecurityType::Wpa2, Protection::Wpa1, TEST_CRED_VARIANTS.wpa_psk.clone())]
+#[test_case(Saved::Wpa2, Scanned::Wpa1, TEST_CREDS.wpa_pass_min.clone())]
+#[test_case(Saved::Wpa2, Scanned::Wpa1, TEST_CREDS.wpa_pass_max.clone())]
+#[test_case(Saved::Wpa2, Scanned::Wpa1, TEST_CREDS.wpa_psk.clone())]
 // Saved credential: WPA3: downgrades are disallowed
-#[test_case(SecurityType::Wpa3, Protection::Wpa1, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
-#[test_case(SecurityType::Wpa3, Protection::Wpa1, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
-#[test_case(SecurityType::Wpa3, Protection::Wpa1, TEST_CRED_VARIANTS.wpa_psk.clone())]
-#[test_case(SecurityType::Wpa3, Protection::Wpa1Wpa2Personal, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
-#[test_case(SecurityType::Wpa3, Protection::Wpa1Wpa2Personal, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
-#[test_case(SecurityType::Wpa3, Protection::Wpa1Wpa2Personal, TEST_CRED_VARIANTS.wpa_psk.clone())]
-#[test_case(SecurityType::Wpa3, Protection::Wpa1Wpa2PersonalTkipOnly, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
-#[test_case(SecurityType::Wpa3, Protection::Wpa1Wpa2PersonalTkipOnly, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
-#[test_case(SecurityType::Wpa3, Protection::Wpa1Wpa2PersonalTkipOnly, TEST_CRED_VARIANTS.wpa_psk.clone())]
-#[test_case(SecurityType::Wpa3, Protection::Wpa2Personal, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
-#[test_case(SecurityType::Wpa3, Protection::Wpa2Personal, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
-#[test_case(SecurityType::Wpa3, Protection::Wpa2Personal, TEST_CRED_VARIANTS.wpa_psk.clone())]
-#[test_case(SecurityType::Wpa3, Protection::Wpa2PersonalTkipOnly, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
-#[test_case(SecurityType::Wpa3, Protection::Wpa2PersonalTkipOnly, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
-#[test_case(SecurityType::Wpa3, Protection::Wpa2PersonalTkipOnly, TEST_CRED_VARIANTS.wpa_psk.clone())]
+#[test_case(Saved::Wpa3, Scanned::Wpa1, TEST_CREDS.wpa_pass_min.clone())]
+#[test_case(Saved::Wpa3, Scanned::Wpa1, TEST_CREDS.wpa_pass_max.clone())]
+#[test_case(Saved::Wpa3, Scanned::Wpa1, TEST_CREDS.wpa_psk.clone())]
+#[test_case(Saved::Wpa3, Scanned::Wpa1Wpa2Personal, TEST_CREDS.wpa_pass_min.clone())]
+#[test_case(Saved::Wpa3, Scanned::Wpa1Wpa2Personal, TEST_CREDS.wpa_pass_max.clone())]
+#[test_case(Saved::Wpa3, Scanned::Wpa1Wpa2Personal, TEST_CREDS.wpa_psk.clone())]
+#[test_case(Saved::Wpa3, Scanned::Wpa1Wpa2PersonalTkipOnly, TEST_CREDS.wpa_pass_min.clone())]
+#[test_case(Saved::Wpa3, Scanned::Wpa1Wpa2PersonalTkipOnly, TEST_CREDS.wpa_pass_max.clone())]
+#[test_case(Saved::Wpa3, Scanned::Wpa1Wpa2PersonalTkipOnly, TEST_CREDS.wpa_psk.clone())]
+#[test_case(Saved::Wpa3, Scanned::Wpa2Personal, TEST_CREDS.wpa_pass_min.clone())]
+#[test_case(Saved::Wpa3, Scanned::Wpa2Personal, TEST_CREDS.wpa_pass_max.clone())]
+#[test_case(Saved::Wpa3, Scanned::Wpa2Personal, TEST_CREDS.wpa_psk.clone())]
+#[test_case(Saved::Wpa3, Scanned::Wpa2PersonalTkipOnly, TEST_CREDS.wpa_pass_min.clone())]
+#[test_case(Saved::Wpa3, Scanned::Wpa2PersonalTkipOnly, TEST_CREDS.wpa_pass_max.clone())]
+#[test_case(Saved::Wpa3, Scanned::Wpa2PersonalTkipOnly, TEST_CREDS.wpa_psk.clone())]
 #[fuchsia::test(add_test_attr = false)]
 /// Tests saving and connecting across various security types, where the connection is expected to fail
 fn save_and_fail_to_connect(
