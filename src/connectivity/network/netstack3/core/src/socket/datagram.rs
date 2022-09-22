@@ -1046,7 +1046,8 @@ mod test {
         context::testutil::DummyInstant,
         data_structures::socketmap::SocketMap,
         ip::{
-            device::state::IpDeviceStateIpExt, socket::testutil::DummyIpSocketCtx, DummyDeviceId,
+            device::state::IpDeviceStateIpExt, socket::testutil::DummyIpSocketCtx,
+            testutil::DummyDeviceId,
         },
         socket::{IncompatibleError, InsertError, RemoveResult},
         testutil::DummyNonSyncCtx,

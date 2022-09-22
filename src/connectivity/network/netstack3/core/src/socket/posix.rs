@@ -313,7 +313,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        ip::{DummyDeviceId, IpExt},
+        ip::{testutil::DummyDeviceId, IpExt},
         socket::{BoundSocketMap, InsertError, SocketTypeStateMut as _},
     };
 

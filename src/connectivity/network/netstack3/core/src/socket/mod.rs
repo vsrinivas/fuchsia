@@ -850,7 +850,7 @@ mod tests {
     use test_case::test_case;
 
     use crate::{
-        ip::DummyDeviceId,
+        ip::testutil::DummyDeviceId,
         socket::address::{ConnIpAddr, ListenerIpAddr},
         testutil::set_logger_for_test,
     };

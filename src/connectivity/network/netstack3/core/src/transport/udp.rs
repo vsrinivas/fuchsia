@@ -2056,8 +2056,8 @@ mod tests {
                 testutil::{DummyDeviceConfig, DummyIpSocketCtx},
                 BufferIpSocketHandler, IpSockRouteError, IpSockUnroutableError, IpSocketHandler,
             },
-            DummyDeviceId, HopLimits, IpDeviceIdContext, SendIpPacketMeta, TransportIpContext,
-            DEFAULT_HOP_LIMITS,
+            testutil::DummyDeviceId,
+            HopLimits, IpDeviceIdContext, SendIpPacketMeta, TransportIpContext, DEFAULT_HOP_LIMITS,
         },
         testutil::{assert_empty, set_logger_for_test},
     };

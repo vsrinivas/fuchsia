@@ -807,7 +807,8 @@ pub(crate) mod testutil {
         ip::{
             device::state::{AddrConfig, AddressState, AssignedAddress as _, IpDeviceState},
             forwarding::ForwardingTable,
-            DummyDeviceId, IpDeviceId, SendIpPacketMeta,
+            testutil::DummyDeviceId,
+            IpDeviceId, SendIpPacketMeta,
         },
     };
 

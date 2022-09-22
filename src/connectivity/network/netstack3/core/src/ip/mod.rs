@@ -854,40 +854,6 @@ where
     }
 }
 
-/// A dummy device ID for use in testing.
-///
-/// `DummyDeviceId` is provided for use in implementing
-/// `IpDeviceIdContext::DeviceId` in tests. Unlike `()`, it implements the
-/// `Display` trait, which is a requirement of `IpDeviceIdContext::DeviceId`.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-#[cfg(test)]
-pub(crate) struct DummyDeviceId;
-
-#[cfg(test)]
-impl IpDeviceId for DummyDeviceId {
-    fn is_loopback(&self) -> bool {
-        false
-    }
-}
-
-#[cfg(test)]
-impl<I: Ip, S, Meta, D: IpDeviceId + 'static> IpDeviceIdContext<I>
-    for crate::context::testutil::DummySyncCtx<S, Meta, D>
-{
-    type DeviceId = D;
-
-    fn loopback_id(&self) -> Option<Self::DeviceId> {
-        None
-    }
-}
-
-#[cfg(test)]
-impl Display for DummyDeviceId {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "DummyDeviceId")
-    }
-}
-
 /// A builder for IPv4 state.
 #[derive(Copy, Clone, Default)]
 pub struct Ipv4StateBuilder {
@@ -2507,7 +2473,37 @@ pub(crate) mod testutil {
 
     use net_types::{ip::IpAddr, MulticastAddr};
 
-    use crate::{testutil::DummySyncCtx, DeviceId};
+    use crate::testutil::DummySyncCtx;
+
+    impl<I: Ip, S, Meta, D: IpDeviceId + 'static> IpDeviceIdContext<I>
+        for crate::context::testutil::DummySyncCtx<S, Meta, D>
+    {
+        type DeviceId = D;
+
+        fn loopback_id(&self) -> Option<Self::DeviceId> {
+            None
+        }
+    }
+
+    /// A dummy device ID for use in testing.
+    ///
+    /// `DummyDeviceId` is provided for use in implementing
+    /// `IpDeviceIdContext::DeviceId` in tests. Unlike `()`, it implements the
+    /// `Display` trait, which is a requirement of `IpDeviceIdContext::DeviceId`.
+    #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+    pub(crate) struct DummyDeviceId;
+
+    impl IpDeviceId for DummyDeviceId {
+        fn is_loopback(&self) -> bool {
+            false
+        }
+    }
+
+    impl Display for DummyDeviceId {
+        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+            write!(f, "DummyDeviceId")
+        }
+    }
 
     pub(crate) fn is_in_ip_multicast<A: IpAddress>(
         sync_ctx: &DummySyncCtx,

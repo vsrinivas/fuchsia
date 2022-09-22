@@ -432,7 +432,7 @@ mod tests {
                 GmpHandler as _, GroupJoinResult, GroupLeaveResult, MemberState, MulticastGroupSet,
                 QueryReceivedActions, QueryReceivedGenericAction,
             },
-            DummyDeviceId,
+            testutil::DummyDeviceId,
         },
         testutil::{
             assert_empty, new_rng, run_with_many_seeds, DummyEventDispatcherConfig, TestIpExt as _,

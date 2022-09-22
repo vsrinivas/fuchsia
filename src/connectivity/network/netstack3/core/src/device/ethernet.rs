@@ -917,8 +917,7 @@ mod tests {
                 state::AssignedAddress,
             },
             dispatch_receive_ip_packet_name, receive_ip_packet,
-            testutil::is_in_ip_multicast,
-            DummyDeviceId,
+            testutil::{is_in_ip_multicast, DummyDeviceId},
         },
         testutil::{
             add_arp_or_ndp_table_entry, assert_empty, get_counter_val, new_rng,

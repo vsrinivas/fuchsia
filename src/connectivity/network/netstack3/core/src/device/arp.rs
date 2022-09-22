@@ -444,7 +444,7 @@ mod tests {
                 testutil::{assert_dynamic_neighbor_with_addr, assert_neighbor_unknown},
                 BufferNudHandler,
             },
-            DummyDeviceId,
+            testutil::DummyDeviceId,
         },
         testutil::assert_empty,
     };

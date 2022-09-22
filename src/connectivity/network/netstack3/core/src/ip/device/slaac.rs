@@ -1549,7 +1549,7 @@ mod tests {
         device::FrameDestination,
         ip::{
             device::testutil::with_assigned_ipv6_addr_subnets,
-            icmp::REQUIRED_NDP_IP_PACKET_HOP_LIMIT, receive_ipv6_packet, DummyDeviceId,
+            icmp::REQUIRED_NDP_IP_PACKET_HOP_LIMIT, receive_ipv6_packet, testutil::DummyDeviceId,
         },
         testutil::{assert_empty, DummyEventDispatcherConfig, FakeCryptoRng, TestIpExt as _},
         Ctx,

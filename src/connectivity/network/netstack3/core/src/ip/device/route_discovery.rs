@@ -238,7 +238,10 @@ mod tests {
             DummyCtx, DummyInstant, DummyNonSyncCtx, DummySyncCtx, DummyTimerCtxExt as _,
         },
         device::FrameDestination,
-        ip::{device::Ipv6DeviceTimerId, receive_ipv6_packet, DummyDeviceId, IPV6_DEFAULT_SUBNET},
+        ip::{
+            device::Ipv6DeviceTimerId, receive_ipv6_packet, testutil::DummyDeviceId,
+            IPV6_DEFAULT_SUBNET,
+        },
         testutil::{DispatchedEvent, DummyEventDispatcherConfig, TestIpExt as _},
         Ctx, DeviceId, TimerId, TimerIdInner,
     };

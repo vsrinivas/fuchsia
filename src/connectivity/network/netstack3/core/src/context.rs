@@ -1675,7 +1675,7 @@ pub(crate) mod testutil {
     }
 
     mod tests {
-        use crate::ip::DummyDeviceId;
+        use crate::ip::testutil::DummyDeviceId;
 
         use super::*;
 

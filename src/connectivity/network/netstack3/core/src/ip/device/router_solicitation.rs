@@ -229,7 +229,7 @@ mod tests {
             testutil::{DummyCtx, DummyNonSyncCtx, DummySyncCtx, DummyTimerCtxExt as _},
             FrameContext as _, InstantContext as _,
         },
-        ip::DummyDeviceId,
+        ip::testutil::DummyDeviceId,
     };
 
     struct MockRsContext {
