@@ -10,7 +10,7 @@ pub async fn run_test(test_url: &str) -> Result<(Vec<RunEvent>, Vec<String>), an
     let run_builder =
         fuchsia_component::client::connect_to_protocol::<ftest_manager::RunBuilderMarker>()
             .expect("connect to test manager protocol");
-    let builder = test_manager_test_lib::TestBuilder::new(run_builder);
+    let builder = test_manager_test_lib::TestBuilder::new(run_builder).filter_debug_data();
     let suite_instance = builder
         .add_suite(test_url, ftest_manager::RunOptions::EMPTY)
         .await

@@ -22,12 +22,22 @@ use {
 /// Builds and runs test suite(s).
 pub struct TestBuilder {
     proxy: ftest_manager::RunBuilderProxy,
+    filter_debug_data: bool,
 }
 
 impl TestBuilder {
     /// Create new instance
     pub fn new(proxy: ftest_manager::RunBuilderProxy) -> Self {
-        Self { proxy }
+        Self { proxy, filter_debug_data: false }
+    }
+
+    /// Filter out debug data. On coverage builders, tests executed under
+    /// test_manager produce coverage profile. This option is useful for
+    /// ignoring these and ensuring the caller observes the same events on
+    /// all builders.
+    pub fn filter_debug_data(self) -> Self {
+        let Self { proxy, .. } = self;
+        Self { proxy, filter_debug_data: true }
     }
 
     pub fn take_proxy(self) -> ftest_manager::RunBuilderProxy {
@@ -72,20 +82,24 @@ impl TestBuilder {
                     ftest_manager::RunEventPayload::Artifact(
                         ftest_manager::Artifact::DebugData(iterator),
                     ) => {
-                        let proxy = iterator.into_proxy().context("Create proxy")?;
-                        loop {
-                            let data = proxy.get_next().await?;
-                            if data.is_empty() {
-                                break;
-                            }
-                            for data_file in data {
-                                let file_proxy =
-                                    data_file.file.expect("File cannot be empty").into_proxy()?;
-                                events.push(TestRunEvent::debug_data(
-                                    fidl_event.timestamp,
-                                    data_file.name.expect("Name cannot be empty"),
-                                    file_proxy,
-                                ));
+                        if !self.filter_debug_data {
+                            let proxy = iterator.into_proxy().context("Create proxy")?;
+                            loop {
+                                let data = proxy.get_next().await?;
+                                if data.is_empty() {
+                                    break;
+                                }
+                                for data_file in data {
+                                    let file_proxy = data_file
+                                        .file
+                                        .expect("File cannot be empty")
+                                        .into_proxy()?;
+                                    events.push(TestRunEvent::debug_data(
+                                        fidl_event.timestamp,
+                                        data_file.name.expect("Name cannot be empty"),
+                                        file_proxy,
+                                    ));
+                                }
                             }
                         }
                     }
