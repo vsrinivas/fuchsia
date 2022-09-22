@@ -10,6 +10,7 @@
 
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugAranges.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ELFObjectFile.h"

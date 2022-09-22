@@ -26,7 +26,11 @@ const llvm::DWARFDebugInfoEntry* DwarfDieScanner2::Prepare() {
 
   cur_die_ = unit_->getDIEAtIndex(die_index_).getDebugInfoEntry();
 
+#if defined(LLVM_USING_OLD_PREBUILT)
   uint32_t parent_idx = cur_die_->getParentIdx().getValueOr(kNoParent);
+#else
+  uint32_t parent_idx = cur_die_->getParentIdx().value_or(kNoParent);
+#endif
 
   while (!tree_stack_.empty() && tree_stack_.back().index != parent_idx)
     tree_stack_.pop_back();
@@ -60,7 +64,11 @@ void DwarfDieScanner2::Advance() {
 }
 
 uint32_t DwarfDieScanner2::GetParentIndex(uint32_t index) const {
+#if defined(LLVM_USING_OLD_PREBUILT)
   return unit_->getDIEAtIndex(index).getDebugInfoEntry()->getParentIdx().getValueOr(kNoParent);
+#else
+  return unit_->getDIEAtIndex(index).getDebugInfoEntry()->getParentIdx().value_or(kNoParent);
+#endif
 }
 
 }  // namespace zxdb

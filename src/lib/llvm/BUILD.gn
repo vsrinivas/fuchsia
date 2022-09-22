@@ -2,6 +2,22 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# Soft transition when rolling LLVM with API changes. Clients can use LLVM_USING_OLD_PREBUILT macro
+# to detect the LLVM version.
+prebuilt_cipd_version = read_file(
+        "//prebuilt/third_party/llvm/${host_platform}/.versions/llvm.cipd_version",
+        "json")
+prebuilt_instance_id = prebuilt_cipd_version.instance_id
+
+old_prebuilt_instance_ids = [
+  "vALtiR40qd73UUtaHO3yx58Z_3LIFEyOwHA4geG0118C",  # linux-amd64
+  "aR5Tf6CwhG57U-hV6XtKGY75evWZyiYrFIhBYp512MMC",  # linux-arm64
+  "kheygkqQ0zx5YXXssvXjO-16LqFYZDQoAYIbxVyV68AC",  # mac-amd64
+]
+
+using_old_prebuilt = old_prebuilt_instance_ids + [ prebuilt_instance_id ] -
+                     [ prebuilt_instance_id ] != old_prebuilt_instance_ids
+
 config("LLVM_config") {
   visibility = [ ":*" ]
 
@@ -11,6 +27,10 @@ config("LLVM_config") {
   } else if (current_os == "mac") {
     libs =
         [ "//prebuilt/third_party/llvm/${current_platform}/lib/libLLVM.dylib" ]
+  }
+
+  if (using_old_prebuilt) {
+    defines = [ "LLVM_USING_OLD_PREBUILT" ]
   }
 }
 
@@ -29,6 +49,10 @@ config("LLVMHeader_config") {
   cflags = [ "-isystem" +
              rebase_path("//prebuilt/third_party/llvm/${host_platform}/include",
                          root_build_dir) ]
+
+  if (using_old_prebuilt) {
+    defines = [ "LLVM_USING_OLD_PREBUILT" ]
+  }
 }
 
 group("LLVMHeaderOnly") {

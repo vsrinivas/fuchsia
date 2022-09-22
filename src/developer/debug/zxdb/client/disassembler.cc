@@ -145,7 +145,7 @@ Err Disassembler::Init(const ArchInfo* arch) {
                                                       *arch_->register_info()));
   printer_->setPrintHexStyle(llvm::HexStyle::C);  // ::C = 0xff-style.
   printer_->setPrintImmHex(true);
-  printer_->setUseMarkup(true);
+  printer_->setUseMarkup(false);
 
   return Err();
 }
