@@ -732,12 +732,14 @@ enum OptionsError {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 enum RequestLeasesMessageType {
     Request,
+    Renew,
 }
 
 impl std::fmt::Display for RequestLeasesMessageType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Request => write!(f, "Request"),
+            Self::Renew => write!(f, "Renew"),
         }
     }
 }
@@ -823,7 +825,9 @@ fn process_options<B: ByteSlice>(
         ExchangeType::AdvertiseToSolicit => {
             AllowedOptions { preference: true, information_refresh_time: false, ia_na: true }
         }
-        ExchangeType::ReplyWithLeases(RequestLeasesMessageType::Request) => {
+        ExchangeType::ReplyWithLeases(
+            RequestLeasesMessageType::Request | RequestLeasesMessageType::Renew,
+        ) => {
             AllowedOptions {
                 preference: false,
                 // Per RFC 8415, section 21.23
@@ -1070,7 +1074,9 @@ fn process_options<B: ByteSlice>(
             NextContactTime::InformationRefreshTime(refresh_time_option)
         }
         ExchangeType::AdvertiseToSolicit
-        | ExchangeType::ReplyWithLeases(RequestLeasesMessageType::Request) => {
+        | ExchangeType::ReplyWithLeases(
+            RequestLeasesMessageType::Request | RequestLeasesMessageType::Renew,
+        ) => {
             // If not set or 0, choose a value for T1 and T2, per RFC 8415, section
             // 18.2.4:
             //
@@ -1848,6 +1854,16 @@ fn process_ia_na_error_status(
         (RequestLeasesMessageType::Request, v6::ErrorStatusCode::NotOnLink) => {
             IaNaStatusError::Retry { without_hints: true }
         }
+        // NotOnLink is not expected in Reply to Renew. The server indicates
+        // that the IA is not appropriate for the link by setting lifetime 0,
+        // not by using NotOnLink status, per RFC 8415 section 18.3.4:
+        //
+        //    If the server finds that any of the addresses in the IA are
+        //    not appropriate for the link to which the client is attached,
+        //    the server returns the address to the client with lifetimes of 0.
+        (RequestLeasesMessageType::Renew, v6::ErrorStatusCode::NotOnLink) => {
+            IaNaStatusError::Invalid
+        }
         // When responding to Request messages, per section 18.3.2:
         //
         //    If the server [..] cannot assign any IP addresses to an IA,
@@ -1855,13 +1871,20 @@ fn process_ia_na_error_status(
         //    no addresses in the IA and a Status Code option containing
         //    status code NoAddrsAvail in the IA.
         //
+        // When responding to Renew messages, per section 18.3.4:
+        //
+        //    -  If the server is configured to create new bindings as
+        //    a result of processing Renew messages but the server will
+        //    not assign any leases to an IA, the server returns the IA
+        //    option containing a Status Code option with the NoAddrsAvail.
+        //
         // Retry obtaining this IA_NA in subsequent messages.
-        (RequestLeasesMessageType::Request, v6::ErrorStatusCode::NoAddrsAvail)
-        | (RequestLeasesMessageType::Request, v6::ErrorStatusCode::UnspecFail) => {
-            IaNaStatusError::Retry { without_hints: false }
-        }
         (
-            RequestLeasesMessageType::Request,
+            RequestLeasesMessageType::Request | RequestLeasesMessageType::Renew,
+            v6::ErrorStatusCode::NoAddrsAvail | v6::ErrorStatusCode::UnspecFail,
+        ) => IaNaStatusError::Retry { without_hints: false },
+        (
+            RequestLeasesMessageType::Request | RequestLeasesMessageType::Renew,
             v6::ErrorStatusCode::NoBinding
             | v6::ErrorStatusCode::UseMulticast
             | v6::ErrorStatusCode::NoPrefixAvail,
@@ -1874,6 +1897,7 @@ fn process_ia_na_error_status(
 enum StateAfterReplyWithLeases {
     RequestNextServer,
     Assigned,
+    StayRenewingRebinding,
 }
 
 #[derive(Debug)]
@@ -2098,22 +2122,50 @@ fn process_reply_with_leases<B: ByteSlice>(
         warn!("Reply to {}: no usable lease returned", request_type);
         StateAfterReplyWithLeases::RequestNextServer
     } else {
-        StateAfterReplyWithLeases::Assigned
+        match request_type {
+            RequestLeasesMessageType::Request => StateAfterReplyWithLeases::Assigned,
+            RequestLeasesMessageType::Renew => {
+                if current_addresses.keys().any(|iaid| !addresses.contains_key(iaid)) {
+                    // Stay in Renewing/Rebinding if any of the assigned IAs that the client
+                    // is trying to renew are not included in the Reply, per RFC 8451 section
+                    // 18.2.10.1:
+                    //
+                    //    When the client receives a Reply message in response to a Renew or
+                    //    Rebind message, the client: [..] Sends a Renew/Rebind if any of
+                    //    the IAs are not in the Reply message, but as this likely indicates
+                    //    that the server that responded does not support that IA type, sending
+                    //    immediately is unlikely to produce a different result.  Therefore,
+                    //    the client MUST rate-limit its transmissions (see Section 14.1) and
+                    //    MAY just wait for the normal retransmission time (as if the Reply
+                    //    message had not been received).  The client continues to use other
+                    //    bindings for which the server did return information.
+                    //
+                    // TODO(https://fxbug.dev/81086): implement rate limiting.
+                    warn!(
+                        "Reply to {}: allowing retransmit timeout to retry due to missing IA",
+                        request_type
+                    );
+                    StateAfterReplyWithLeases::StayRenewingRebinding
+                } else {
+                    StateAfterReplyWithLeases::Assigned
+                }
+            }
+        }
     };
     // Add configured addresses that were requested by the client but were
     // not received in this Reply.
     for (iaid, addr_entry) in current_addresses {
-        match addr_entry {
+        let _: &mut AddressEntry = addresses.entry(*iaid).or_insert(match addr_entry {
             AddressEntry::ToRequest(address_to_request) => {
-                let _: &mut AddressEntry =
-                    addresses.entry(*iaid).or_insert(AddressEntry::ToRequest(*address_to_request));
+                AddressEntry::ToRequest(*address_to_request)
             }
-            AddressEntry::Assigned(_ia) => {
+            AddressEntry::Assigned(ia) => {
+                AddressEntry::Assigned(*ia)
                 // TODO(https://fxbug.dev/76765): handle assigned addresses
                 // on transitioning from `Renewing` to `Requesting` for IAs
                 // with `NoBinding` status.
             }
-        }
+        });
     }
 
     // TODO(https://fxbug.dev/96674): Add actions to remove addresses.
@@ -2144,7 +2196,8 @@ fn process_reply_with_leases<B: ByteSlice>(
                 })
                 .collect::<Vec<_>>()
         }
-        StateAfterReplyWithLeases::RequestNextServer => Vec::new(),
+        StateAfterReplyWithLeases::RequestNextServer
+        | StateAfterReplyWithLeases::StayRenewingRebinding => Vec::new(),
     };
 
     Ok(ProcessedReplyWithLeases { addresses, dns_servers, actions, next_state })
@@ -2565,7 +2618,7 @@ impl Requesting {
                                 v6::ErrorStatusCode::UseMulticast => {
                                     warn!(
                                         "ignoring Reply to Request: ignoring due to UseMulticast \
-                                    with message '{}', but Request was already using multicast",
+                                        with message '{}', but Request was already using multicast",
                                         message,
                                     );
                                 }
@@ -2616,6 +2669,9 @@ impl Requesting {
             };
 
         match next_state {
+            StateAfterReplyWithLeases::StayRenewingRebinding => {
+                unreachable!("cannot stay in Renewing/Rebinding state while in Requesting state");
+            }
             StateAfterReplyWithLeases::RequestNextServer => {
                 warn!("Reply to Request: trying next server");
                 request_from_alternate_server_or_restart_server_discovery(
@@ -2959,6 +3015,155 @@ impl Renewing {
     ) -> Transition {
         self.send_and_schedule_retransmission(transaction_id, options_to_request, rng, now)
     }
+
+    fn reply_message_received<R: Rng, B: ByteSlice>(
+        self,
+        options_to_request: &[v6::OptionCode],
+        rng: &mut R,
+        msg: v6::Message<'_, B>,
+        now: Instant,
+    ) -> Transition {
+        let Self {
+            client_id,
+            addresses: current_addresses,
+            server_id,
+            collected_advertise,
+            dns_servers: current_dns_servers,
+            first_renew_time,
+            retrans_timeout,
+            mut solicit_max_rt,
+        } = self;
+        let ProcessedReplyWithLeases { addresses, dns_servers, actions, next_state } =
+            match process_reply_with_leases(
+                client_id,
+                &server_id,
+                &current_addresses,
+                &mut solicit_max_rt,
+                &msg,
+                RequestLeasesMessageType::Renew,
+            ) {
+                Ok(processed) => processed,
+                Err(e) => {
+                    match e {
+                        // Per RFC 8415, section 18.2.10:
+                        //
+                        //    If the client receives a Reply message with a status code of
+                        //    UnspecFail, the server is indicating that it was unable to process
+                        //    the client's message due to an unspecified failure condition.  If
+                        //    the client retransmits the original message to the same server to
+                        //    retry the desired operation, the client MUST limit the rate at
+                        //    which it retransmits the message and limit the duration of the
+                        //    time during which it retransmits the message (see Section 14.1).
+                        //
+                        // TODO(https://fxbug.dev/81086): implement rate limiting. Without
+                        // rate limiting support, the client relies on the regular
+                        // retransmission mechanism to rate limit retransmission.
+                        // Similarly, for other status codes indicating failure that are not
+                        // expected in Reply to Renew, the client behaves as if the Reply
+                        // message had not been received. Note the RFC does not specify what
+                        // to do in this case; the client ignores the Reply in order to
+                        // preserve existing bindings.
+                        ReplyWithLeasesError::StatusCodeError(StatusCodeError(
+                            v6::ErrorStatusCode::UnspecFail,
+                            message,
+                        )) => {
+                            warn!(
+                                "ignoring Reply to Renew with status code UnspecFail \
+                                and message '{}'",
+                                message
+                            );
+                        }
+                        ReplyWithLeasesError::StatusCodeError(StatusCodeError(
+                            v6::ErrorStatusCode::UseMulticast,
+                            message,
+                        )) => {
+                            // TODO(https://fxbug.dev/76764): Implement unicast.
+                            warn!(
+                                "ignoring Reply to Renew with status code UseMulticast \
+                                and message '{}' as Reply was already sent as multicast",
+                                message
+                            );
+                        }
+                        ReplyWithLeasesError::StatusCodeError(StatusCodeError(
+                            error_code @ (v6::ErrorStatusCode::NoAddrsAvail
+                            | v6::ErrorStatusCode::NoBinding
+                            | v6::ErrorStatusCode::NotOnLink
+                            | v6::ErrorStatusCode::NoPrefixAvail),
+                            message,
+                        )) => {
+                            warn!(
+                                "ignoring Reply to Renew with unexpected status code {:?} \
+                                and message '{}'",
+                                error_code, message
+                            );
+                        }
+                        e @ (ReplyWithLeasesError::OptionsError(_)
+                        | ReplyWithLeasesError::MismatchedServerId { got: _, want: _ }
+                        | ReplyWithLeasesError::UnexpectedIaNa(_, _)) => {
+                            warn!("ignoring Reply to Renew: {}", e);
+                        }
+                    }
+                    return Transition {
+                        state: ClientState::Renewing(Self {
+                            client_id,
+                            addresses: current_addresses,
+                            server_id,
+                            collected_advertise,
+                            dns_servers: current_dns_servers,
+                            first_renew_time,
+                            retrans_timeout,
+                            solicit_max_rt,
+                        }),
+                        actions: Vec::new(),
+                        transaction_id: None,
+                    };
+                }
+            };
+
+        match next_state {
+            StateAfterReplyWithLeases::RequestNextServer => {
+                request_from_alternate_server_or_restart_server_discovery(
+                    client_id,
+                    to_configured_addresses(current_addresses),
+                    &options_to_request,
+                    collected_advertise,
+                    solicit_max_rt,
+                    rng,
+                    now,
+                )
+            }
+            StateAfterReplyWithLeases::StayRenewingRebinding => Transition {
+                state: ClientState::Renewing(Self {
+                    client_id,
+                    addresses,
+                    server_id,
+                    collected_advertise,
+                    dns_servers: dns_servers.unwrap_or_else(|| Vec::new()),
+                    first_renew_time,
+                    retrans_timeout,
+                    solicit_max_rt,
+                }),
+                actions: Vec::new(),
+                transaction_id: None,
+            },
+            StateAfterReplyWithLeases::Assigned => {
+                // TODO(https://fxbug.dev/72701) Send AddressWatcher update with
+                // assigned addresses.
+                Transition {
+                    state: ClientState::AddressAssigned(AddressAssigned {
+                        client_id,
+                        addresses,
+                        server_id,
+                        collected_advertise,
+                        dns_servers: dns_servers.unwrap_or_else(|| Vec::new()),
+                        solicit_max_rt,
+                    }),
+                    actions,
+                    transaction_id: None,
+                }
+            }
+        }
+    }
 }
 
 /// All possible states of a DHCPv6 client.
@@ -3027,12 +3232,13 @@ impl ClientState {
     ) -> Transition {
         match self {
             ClientState::InformationRequesting(s) => s.reply_message_received(msg),
-            ClientState::Requesting(s) => s.reply_message_received(options_to_request, rng, msg, now),
+            ClientState::Requesting(s) => {
+                s.reply_message_received(options_to_request, rng, msg, now)
+            }
+            ClientState::Renewing(s) => s.reply_message_received(options_to_request, rng, msg, now),
             ClientState::InformationReceived(_)
             | ClientState::ServerDiscovery(_)
-            | ClientState::AddressAssigned(_)
-            // TODO(https://fxbug.dev/76765): process Reply to Renew.
-            | ClientState::Renewing(_) => {
+            | ClientState::AddressAssigned(_) => {
                 Transition { state: self, actions: vec![], transaction_id: None }
             }
         }
@@ -3353,6 +3559,11 @@ pub(crate) mod testconsts {
     pub(crate) const SERVER_ID: [[u8; TEST_SERVER_ID_LEN]; 3] =
         [[100, 101, 102], [110, 111, 112], [120, 121, 122]];
 
+    pub(crate) const RENEW_ADDRESSES: [Ipv6Addr; 3] = [
+        std_ip_v6!("::ffff:4e45:123"),
+        std_ip_v6!("::ffff:4e45:456"),
+        std_ip_v6!("::ffff:4e45:789"),
+    ];
     pub(crate) const REPLY_ADDRESSES: [Ipv6Addr; 3] = [
         std_ip_v6!("::ffff:5447:123"),
         std_ip_v6!("::ffff:5447:456"),
@@ -3372,6 +3583,15 @@ pub(crate) mod testconsts {
         const_unwrap::const_unwrap_option(v6::NonZeroOrMaxU32::new(40));
     pub(crate) const VALID_LIFETIME: v6::NonZeroOrMaxU32 =
         const_unwrap::const_unwrap_option(v6::NonZeroOrMaxU32::new(80));
+
+    pub(crate) const RENEWED_T1: v6::NonZeroOrMaxU32 =
+        const_unwrap::const_unwrap_option(v6::NonZeroOrMaxU32::new(130));
+    pub(crate) const RENEWED_T2: v6::NonZeroOrMaxU32 =
+        const_unwrap::const_unwrap_option(v6::NonZeroOrMaxU32::new(170));
+    pub(crate) const RENEWED_PREFERRED_LIFETIME: v6::NonZeroOrMaxU32 =
+        const_unwrap::const_unwrap_option(v6::NonZeroOrMaxU32::new(140));
+    pub(crate) const RENEWED_VALID_LIFETIME: v6::NonZeroOrMaxU32 =
+        const_unwrap::const_unwrap_option(v6::NonZeroOrMaxU32::new(180));
 }
 
 #[cfg(test)]
@@ -3489,6 +3709,19 @@ pub(crate) mod testutil {
         }
     }
 
+    impl AddressEntry {
+        pub(crate) fn new_assigned(
+            address: Ipv6Addr,
+            preferred_lifetime: v6::NonZeroOrMaxU32,
+            valid_lifetime: v6::NonZeroOrMaxU32,
+        ) -> Self {
+            Self::Assigned(AssignedIa::new(
+                IdentityAssociation::new_finite(address, preferred_lifetime, valid_lifetime),
+                Some(address),
+            ))
+        }
+    }
+
     impl AdvertiseMessage {
         pub(crate) fn new_default(
             server_id: [u8; TEST_SERVER_ID_LEN],
@@ -3552,19 +3785,6 @@ pub(crate) mod testutil {
                 t1: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(T1)),
                 t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(T2)),
             }
-        }
-    }
-
-    impl AddressEntry {
-        pub(crate) fn new_assigned(
-            address: Ipv6Addr,
-            preferred_lifetime: v6::NonZeroOrMaxU32,
-            valid_lifetime: v6::NonZeroOrMaxU32,
-        ) -> Self {
-            Self::Assigned(AssignedIa::new(
-                IdentityAssociation::new_finite(address, preferred_lifetime, valid_lifetime),
-                Some(address),
-            ))
         }
     }
 
@@ -4195,7 +4415,7 @@ mod tests {
         // The client is checked inside `start_and_assert_server_discovery`.
         let _client = testutil::start_and_assert_server_discovery(
             [0, 1, 2],
-            v6::duid_uuid(),
+            CLIENT_ID,
             testutil::to_configured_addresses(address_count, preferred_addresses),
             options_to_request,
             StepRng::new(std::u64::MAX / 2, 0),
@@ -5946,6 +6166,497 @@ mod tests {
             Some(&SERVER_ID[0]),
             &[],
             &expected_addresses_to_renew,
+        );
+    }
+
+    #[test]
+    fn renewing_receive_reply_extends_lifetime() {
+        let time = Instant::now();
+        let mut client = testutil::send_renew_and_assert(
+            CLIENT_ID,
+            SERVER_ID[0],
+            CONFIGURED_ADDRESSES.into_iter().map(TestIdentityAssociation::new_default).collect(),
+            T1,
+            StepRng::new(std::u64::MAX / 2, 0),
+            time,
+        );
+        let ClientStateMachine { transaction_id, options_to_request: _, state: _, rng: _ } =
+            &client;
+        let iaaddr_opts = (0..)
+            .map(v6::IAID::new)
+            .zip(CONFIGURED_ADDRESSES)
+            .map(|(iaid, addr)| {
+                (
+                    iaid,
+                    v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+                        addr,
+                        RENEWED_PREFERRED_LIFETIME.get(),
+                        RENEWED_VALID_LIFETIME.get(),
+                        &[],
+                    )),
+                )
+            })
+            .collect::<HashMap<_, _>>();
+        let options =
+            [v6::DhcpOption::ClientId(&CLIENT_ID), v6::DhcpOption::ServerId(&SERVER_ID[0])]
+                .into_iter()
+                .chain((0..).map(v6::IAID::new).take(CONFIGURED_ADDRESSES.len()).map(|iaid| {
+                    v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                        iaid,
+                        RENEWED_T1.get(),
+                        RENEWED_T2.get(),
+                        std::slice::from_ref(iaaddr_opts.get(&iaid).unwrap()),
+                    ))
+                }))
+                .collect::<Vec<_>>();
+        let builder = v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        let actions = client.handle_message_receive(msg, time);
+        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
+            &client;
+        let expected_addresses = (0..)
+            .map(v6::IAID::new)
+            .zip(CONFIGURED_ADDRESSES.into_iter().map(|addr| {
+                AddressEntry::new_assigned(addr, RENEWED_PREFERRED_LIFETIME, RENEWED_VALID_LIFETIME)
+            }))
+            .collect();
+        assert_matches!(
+            &state,
+            Some(ClientState::AddressAssigned(AddressAssigned {
+                client_id,
+                addresses,
+                server_id,
+                collected_advertise: _,
+                dns_servers,
+                solicit_max_rt,
+            })) if client_id == &CLIENT_ID &&
+                   *addresses == expected_addresses &&
+                   server_id.as_slice() == SERVER_ID[0] &&
+                   dns_servers.as_slice() == &[] as &[Ipv6Addr] &&
+                   *solicit_max_rt == MAX_SOLICIT_TIMEOUT
+        );
+        assert_matches!(
+            &actions[..],
+            [
+                Action::CancelTimer(ClientTimerType::Retransmission),
+                Action::ScheduleTimer(ClientTimerType::Renew, t1)
+                // TODO(https://fxbug.dev/76766) check T2 timer when Rebind is
+                // implemented.
+            ] if *t1 == Duration::from_secs(RENEWED_T1.get().into())
+        );
+    }
+
+    // Tests that receiving a Reply with an error status code other than
+    // UseMulticast results in only SOL_MAX_RT being updated, with the rest
+    // of the message contents ignored.
+    #[test_case(v6::ErrorStatusCode::UnspecFail; "UnspecFail")]
+    #[test_case(v6::ErrorStatusCode::NoBinding; "NoBinding")]
+    #[test_case(v6::ErrorStatusCode::NotOnLink; "NotOnLink")]
+    #[test_case(v6::ErrorStatusCode::NoAddrsAvail; "NoAddrsAvail")]
+    #[test_case(v6::ErrorStatusCode::NoPrefixAvail; "NoPrefixAvail")]
+    fn renewing_receive_reply_with_error_status(error_status_code: v6::ErrorStatusCode) {
+        let time = Instant::now();
+        let addr = CONFIGURED_ADDRESSES[0];
+        let mut client = testutil::send_renew_and_assert(
+            CLIENT_ID,
+            SERVER_ID[0],
+            vec![TestIdentityAssociation::new_default(addr)],
+            T1,
+            StepRng::new(std::u64::MAX / 2, 0),
+            time,
+        );
+        let ClientStateMachine { transaction_id, options_to_request: _, state: _, rng: _ } =
+            &client;
+        let ia_na_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+            addr,
+            RENEWED_PREFERRED_LIFETIME.get(),
+            RENEWED_VALID_LIFETIME.get(),
+            &[],
+        ))];
+        let sol_max_rt = *VALID_MAX_SOLICIT_TIMEOUT_RANGE.start();
+        let options = vec![
+            v6::DhcpOption::ClientId(&CLIENT_ID),
+            v6::DhcpOption::ServerId(&SERVER_ID[0]),
+            v6::DhcpOption::StatusCode(error_status_code.into(), ""),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                v6::IAID::new(0),
+                RENEWED_T1.get(),
+                RENEWED_T2.get(),
+                &ia_na_options,
+            )),
+            v6::DhcpOption::SolMaxRt(sol_max_rt),
+        ];
+        let builder = v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        let actions = client.handle_message_receive(msg, time);
+        assert_eq!(actions, &[]);
+        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
+            &client;
+        let expected_addresses = std::iter::once((
+            v6::IAID::new(0),
+            AddressEntry::new_assigned(addr, PREFERRED_LIFETIME, VALID_LIFETIME),
+        ))
+        .collect::<HashMap<_, _>>();
+        assert_matches!(
+            &state,
+            Some(ClientState::Renewing(Renewing {
+                client_id,
+                addresses,
+                server_id,
+                collected_advertise: _,
+                dns_servers,
+                first_renew_time: _,
+                retrans_timeout: _,
+                solicit_max_rt: got_sol_max_rt,
+            })) if *client_id == CLIENT_ID &&
+                   *addresses == expected_addresses &&
+                   *server_id == SERVER_ID[0] &&
+                   dns_servers.is_empty() &&
+                   *got_sol_max_rt == Duration::from_secs(sol_max_rt.into())
+        );
+        assert_matches!(&actions[..], []);
+    }
+
+    #[test_case(v6::IAID::new(0))]
+    #[test_case(v6::IAID::new(1))]
+    fn renewing_receive_reply_with_missing_ias(present_iaid: v6::IAID) {
+        let addresses = &CONFIGURED_ADDRESSES[0..2];
+        let time = Instant::now();
+        let mut client = testutil::send_renew_and_assert(
+            CLIENT_ID,
+            SERVER_ID[0],
+            addresses.iter().copied().map(TestIdentityAssociation::new_default).collect(),
+            T1,
+            StepRng::new(std::u64::MAX / 2, 0),
+            time,
+        );
+        let ClientStateMachine { transaction_id, options_to_request: _, state: _, rng: _ } =
+            &client;
+
+        // The server includes only the IA with ID equal to `present_iaid` in the
+        // reply.
+        let iaaddr_opt = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+            CONFIGURED_ADDRESSES[present_iaid.get() as usize],
+            RENEWED_PREFERRED_LIFETIME.get(),
+            RENEWED_VALID_LIFETIME.get(),
+            &[],
+        ))];
+        let options =
+            [v6::DhcpOption::ClientId(&CLIENT_ID), v6::DhcpOption::ServerId(&SERVER_ID[0])]
+                .into_iter()
+                .chain(std::iter::once({
+                    v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                        present_iaid,
+                        RENEWED_T1.get(),
+                        RENEWED_T2.get(),
+                        &iaaddr_opt,
+                    ))
+                }))
+                .collect::<Vec<_>>();
+        let builder =
+            v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, options.as_slice());
+        let mut buf = vec![0; builder.bytes_len()];
+        builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        let actions = client.handle_message_receive(msg, time);
+        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
+            &client;
+        // Only the IA that is present will have its lifetimes updated.
+        let expected_addresses = (0..)
+            .map(v6::IAID::new)
+            .zip(addresses)
+            .map(|(iaid, &addr)| {
+                (
+                    iaid,
+                    if iaid == present_iaid {
+                        AddressEntry::new_assigned(
+                            addr,
+                            RENEWED_PREFERRED_LIFETIME,
+                            RENEWED_VALID_LIFETIME,
+                        )
+                    } else {
+                        AddressEntry::new_assigned(addr, PREFERRED_LIFETIME, VALID_LIFETIME)
+                    },
+                )
+            })
+            .collect();
+        {
+            let Renewing {
+                client_id,
+                addresses,
+                server_id,
+                collected_advertise: _,
+                dns_servers,
+                first_renew_time,
+                retrans_timeout: _,
+                solicit_max_rt,
+            } = assert_matches!(
+                &state,
+                Some(ClientState::Renewing(renewing)) => renewing
+            );
+            assert_eq!(*client_id, CLIENT_ID);
+            assert_eq!(*addresses, expected_addresses);
+            assert_eq!(*server_id, SERVER_ID[0]);
+            assert!(first_renew_time.is_some());
+            assert_eq!(dns_servers, &[] as &[Ipv6Addr]);
+            assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
+        }
+        // The client relies on retransmission to send another Renew, so no actions are needed.
+        assert_matches!(&actions[..], []);
+    }
+
+    #[test]
+    fn renewing_receive_reply_with_missing_ia_address_for_assigned_entry_does_not_extend_lifetime()
+    {
+        let time = Instant::now();
+        let mut client = testutil::send_renew_and_assert(
+            CLIENT_ID,
+            SERVER_ID[0],
+            CONFIGURED_ADDRESSES[0..2]
+                .iter()
+                .copied()
+                .map(TestIdentityAssociation::new_default)
+                .collect(),
+            T1,
+            StepRng::new(std::u64::MAX / 2, 0),
+            time,
+        );
+        let ClientStateMachine { transaction_id, options_to_request: _, state: _, rng: _ } =
+            &client;
+        let mut options =
+            vec![v6::DhcpOption::ClientId(&CLIENT_ID), v6::DhcpOption::ServerId(&SERVER_ID[0])];
+        // The server includes an IA Address option in only one of the IAs.
+        let iaaddr_opt_ia1 = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+            CONFIGURED_ADDRESSES[0],
+            RENEWED_PREFERRED_LIFETIME.get(),
+            RENEWED_VALID_LIFETIME.get(),
+            &[],
+        ))];
+
+        options.push(v6::DhcpOption::Iana(v6::IanaSerializer::new(
+            v6::IAID::new(0),
+            RENEWED_T1.get(),
+            RENEWED_T2.get(),
+            &iaaddr_opt_ia1,
+        )));
+        options.push(v6::DhcpOption::Iana(v6::IanaSerializer::new(
+            v6::IAID::new(1),
+            RENEWED_T1.get(),
+            RENEWED_T2.get(),
+            &[],
+        )));
+        let builder = v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        let actions = client.handle_message_receive(msg, time);
+        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
+            &client;
+        let expected_addresses = HashMap::from([
+            (
+                v6::IAID::new(0),
+                AddressEntry::new_assigned(
+                    CONFIGURED_ADDRESSES[0],
+                    RENEWED_PREFERRED_LIFETIME,
+                    RENEWED_VALID_LIFETIME,
+                ),
+            ),
+            (
+                v6::IAID::new(1),
+                AddressEntry::new_assigned(
+                    CONFIGURED_ADDRESSES[1],
+                    PREFERRED_LIFETIME,
+                    VALID_LIFETIME,
+                ),
+            ),
+        ]);
+        // Expect the client to transition to AddressAssigned and only extend
+        // the lifetime for one IA.
+        assert_matches!(
+            &state,
+            Some(ClientState::AddressAssigned(AddressAssigned{
+                client_id,
+                addresses,
+                server_id,
+                collected_advertise: _,
+                dns_servers,
+                solicit_max_rt,
+            })) if *client_id == CLIENT_ID &&
+                   *addresses == expected_addresses &&
+                   *server_id == SERVER_ID[0] &&
+                   dns_servers == &[] as &[Ipv6Addr] &&
+                   *solicit_max_rt == MAX_SOLICIT_TIMEOUT
+        );
+        assert_matches!(
+            &actions[..],
+            [
+                Action::CancelTimer(ClientTimerType::Retransmission),
+                Action::ScheduleTimer(ClientTimerType::Renew, t1)
+                // TODO(https://fxbug.dev/76766) check T2 timer when Rebind is
+                // implemented.
+            ] if *t1 == Duration::from_secs(RENEWED_T1.get().into())
+        );
+    }
+
+    #[test]
+    fn renewing_receive_reply_with_different_address() {
+        let time = Instant::now();
+        let mut client = testutil::send_renew_and_assert(
+            CLIENT_ID,
+            SERVER_ID[0],
+            vec![TestIdentityAssociation::new_default(CONFIGURED_ADDRESSES[0])],
+            T1,
+            StepRng::new(std::u64::MAX / 2, 0),
+            time,
+        );
+        let ClientStateMachine { transaction_id, options_to_request: _, state: _, rng: _ } =
+            &client;
+        let mut options =
+            vec![v6::DhcpOption::ClientId(&CLIENT_ID), v6::DhcpOption::ServerId(&SERVER_ID[0])];
+        // The server includes an IA Address with a different address than
+        // previously assigned.
+        let iaaddr_opt_ia = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+            RENEW_ADDRESSES[0],
+            RENEWED_PREFERRED_LIFETIME.get(),
+            RENEWED_VALID_LIFETIME.get(),
+            &[],
+        ))];
+
+        options.push(v6::DhcpOption::Iana(v6::IanaSerializer::new(
+            v6::IAID::new(0),
+            RENEWED_T1.get(),
+            RENEWED_T2.get(),
+            &iaaddr_opt_ia,
+        )));
+        let builder = v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        let actions = client.handle_message_receive(msg, time);
+        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
+            &client;
+        let expected_addresses = HashMap::from([(
+            v6::IAID::new(0),
+            AddressEntry::Assigned(AssignedIa::new(
+                IdentityAssociation::new_finite(
+                    RENEW_ADDRESSES[0],
+                    RENEWED_PREFERRED_LIFETIME,
+                    RENEWED_VALID_LIFETIME,
+                ),
+                Some(CONFIGURED_ADDRESSES[0]),
+            )),
+        )]);
+        // Expect the client to transition to AddressAssigned and assign the new
+        // address.
+        assert_matches!(
+            &state,
+            Some(ClientState::AddressAssigned(AddressAssigned{
+                client_id,
+                addresses,
+                server_id,
+                collected_advertise: _,
+                dns_servers,
+                solicit_max_rt,
+            })) if *client_id == CLIENT_ID &&
+                   *addresses == expected_addresses &&
+                   *server_id == SERVER_ID[0] &&
+                   dns_servers == &[] as &[Ipv6Addr] &&
+                   *solicit_max_rt == MAX_SOLICIT_TIMEOUT
+        );
+        assert_matches!(
+            &actions[..],
+            [
+                Action::CancelTimer(ClientTimerType::Retransmission),
+                Action::ScheduleTimer(ClientTimerType::Renew, t1)
+                // TODO(https://fxbug.dev/76766) check T2 timer when Rebind is
+                // implemented.
+                // TODO(https://fxbug.dev/96674): expect initial address is
+                // removed.
+                // TODO(https://fxbug.dev/95265): expect new address is added.
+            ] if *t1 == Duration::from_secs(RENEWED_T1.get().into())
+        );
+    }
+
+    // Tests that a Reply message containing:
+    //
+    // 1. an IA_NA with IA Address with renewed lifetimes,
+    // 2. an IA_NA with IA Address with the NoAddrsAvail status code, and
+    // 3. an IA_NA with no options;
+    //
+    // results in T1 and T2 being calculated solely based on the first IA_NA.
+    #[test]
+    fn renewing_receive_reply_calculate_t1_t2() {
+        let time = Instant::now();
+        let mut client = testutil::send_renew_and_assert(
+            CLIENT_ID,
+            SERVER_ID[0],
+            CONFIGURED_ADDRESSES.into_iter().map(TestIdentityAssociation::new_default).collect(),
+            T1,
+            StepRng::new(std::u64::MAX / 2, 0),
+            time,
+        );
+        let ClientStateMachine { transaction_id, options_to_request: _, state: _, rng: _ } =
+            &client;
+        let ia_addr = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+            CONFIGURED_ADDRESSES[0],
+            RENEWED_PREFERRED_LIFETIME.get(),
+            RENEWED_VALID_LIFETIME.get(),
+            &[],
+        ))];
+        let ia_no_addrs_avail = [v6::DhcpOption::StatusCode(
+            v6::ErrorStatusCode::NoAddrsAvail.into(),
+            "No address available.",
+        )];
+        let options = vec![
+            v6::DhcpOption::ClientId(&CLIENT_ID),
+            v6::DhcpOption::ServerId(&SERVER_ID[0]),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                v6::IAID::new(0),
+                RENEWED_T1.get(),
+                RENEWED_T2.get(),
+                &ia_addr,
+            )),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                v6::IAID::new(1),
+                // If the server returns an IA with status code indicating failure, the T1/T2
+                // values for that IA should not be included in the T1/T2 calculation.
+                T1.get(),
+                T2.get(),
+                &ia_no_addrs_avail,
+            )),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                v6::IAID::new(2),
+                // If the server returns an IA with no IA Address option, the T1/T2 values
+                // for that IA should not be included in the T1/T2 calculation.
+                T1.get(),
+                T2.get(),
+                &[],
+            )),
+        ];
+
+        let builder = v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        let actions = client.handle_message_receive(msg, time);
+        assert_matches!(
+            &actions[..],
+            [
+                Action::CancelTimer(ClientTimerType::Retransmission),
+                Action::ScheduleTimer(ClientTimerType::Renew, t1)
+                // TODO(https://fxbug.dev/76766) check T2 timer when Rebind is
+                // implemented.
+            ] if *t1 == Duration::from_secs(RENEWED_T1.get().into())
         );
     }
 
