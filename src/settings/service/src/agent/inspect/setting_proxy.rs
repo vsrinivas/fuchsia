@@ -21,14 +21,13 @@ use crate::message::base::{filter, MessageEvent, MessengerType};
 use crate::message::receptor::Receptor;
 use crate::service::TryFromWithClient;
 use crate::{service, trace};
-use settings_inspect_utils::inspect_writable_map::InspectWritableMap;
 use settings_inspect_utils::joinable_inspect_vecdeque::JoinableInspectVecDeque;
 use settings_inspect_utils::managed_inspect_map::ManagedInspectMap;
 use settings_inspect_utils::managed_inspect_queue::ManagedInspectQueue;
 
 use fuchsia_async as fasync;
 use fuchsia_inspect::{self as inspect, component, NumericProperty};
-use fuchsia_inspect_derive::{IValue, Inspect, WithInspect};
+use fuchsia_inspect_derive::{IValue, Inspect};
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use std::sync::Arc;
@@ -60,8 +59,8 @@ const RESPONSE_COUNTS_NODE_NAME: &str = "response_counts";
 struct SettingTypeResponseCountInfo {
     /// Map from the name of the ResponseType variant to a ResponseCountInfo that holds the number
     /// of occurrences of that response.
-    response_counts_by_type: InspectWritableMap<ResponseTypeCount>,
-    inspect_node: inspect::Node,
+    #[inspect(forward)]
+    response_counts_by_type: ManagedInspectMap<ResponseTypeCount>,
 }
 
 #[derive(Default, Inspect)]
@@ -69,12 +68,6 @@ struct SettingTypeResponseCountInfo {
 struct ResponseTypeCount {
     count: inspect::UintProperty,
     inspect_node: inspect::Node,
-}
-
-impl ResponseTypeCount {
-    fn new(node: &inspect::Node, key: &str) -> Self {
-        Self::default().with_inspect(node, key).expect("Failed to create ResponseTypeCount node")
-    }
 }
 
 /// Inspect information on the requests and responses of one setting.
@@ -464,13 +457,9 @@ impl SettingProxyInspectAgent {
         // Get the count for the response type, creating a new count if it doesn't exist
         // in the map yet, then increment the response count
         let response_type: ResponseType = response.clone().into();
-        let response_type_str = format!("{:?}", response_type);
-        let response_count_info_node = &response_count_info.inspect_node;
         let response_count = response_count_info
             .response_counts_by_type
-            .get_or_insert_with(response_type_str.clone(), || {
-                ResponseTypeCount::new(response_count_info_node, &response_type_str)
-            });
+            .get_or_insert_with(format!("{:?}", response_type), ResponseTypeCount::default);
         response_count.count.add(1u64);
     }
 }
@@ -647,12 +636,8 @@ mod tests {
 
         let request_processor = RequestProcessor::new(context.delegate.clone());
 
-        let _agent = SettingProxyInspectAgent::create_with_node(
-            context,
-            condense_node,
-            response_counts_node,
-        )
-        .await;
+        SettingProxyInspectAgent::create_with_node(context, condense_node, response_counts_node)
+            .await;
 
         // Interlace different request types to make sure the counter is correct.
         request_processor
@@ -750,9 +735,8 @@ mod tests {
 
         let request_processor = RequestProcessor::new(context.delegate.clone());
 
-        let _agent =
-            SettingProxyInspectAgent::create_with_node(context, condense_node, request_counts_node)
-                .await;
+        SettingProxyInspectAgent::create_with_node(context, condense_node, request_counts_node)
+            .await;
 
         request_processor
             .send_request(
@@ -799,9 +783,8 @@ mod tests {
 
         let request_processor = RequestProcessor::new(context.delegate.clone());
 
-        let _agent =
-            SettingProxyInspectAgent::create_with_node(context, condense_node, request_counts_node)
-                .await;
+        SettingProxyInspectAgent::create_with_node(context, condense_node, request_counts_node)
+            .await;
 
         request_processor
             .send_and_receive(
@@ -853,12 +836,8 @@ mod tests {
         let context = create_context().await;
         let request_processor = RequestProcessor::new(context.delegate.clone());
 
-        let _agent = SettingProxyInspectAgent::create_with_node(
-            context,
-            condense_node,
-            response_counts_node,
-        )
-        .await;
+        SettingProxyInspectAgent::create_with_node(context, condense_node, response_counts_node)
+            .await;
 
         request_processor
             .send_and_receive(

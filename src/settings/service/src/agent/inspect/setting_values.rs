@@ -6,10 +6,11 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use fuchsia_async as fasync;
-use fuchsia_inspect::{self as inspect, component, Property};
+use fuchsia_inspect::{self as inspect, component, Property, StringProperty};
 use fuchsia_inspect_derive::{Inspect, WithInspect};
 use fuchsia_syslog::fx_log_err;
 use futures::StreamExt;
+use settings_inspect_utils::managed_inspect_map::ManagedInspectMap;
 
 use crate::agent::{Context, Lifespan, Payload};
 use crate::base::{SettingInfo, SettingType};
@@ -21,7 +22,6 @@ use crate::message::base::{filter, Audience, MessageEvent, MessengerType};
 use crate::service;
 use crate::service::message::Messenger;
 use crate::service::TryFromWithClient;
-use settings_inspect_utils::inspect_writable_map::InspectWritableMap;
 
 const INSPECT_NODE_NAME: &str = "setting_values";
 const SETTING_TYPE_INSPECT_NODE_NAME: &str = "setting_types";
@@ -35,8 +35,7 @@ blueprint_definition!(
 /// values of all settings to inspect.
 pub(crate) struct SettingValuesInspectAgent {
     messenger_client: Messenger,
-    inspect_node: inspect::Node,
-    setting_values: InspectWritableMap<SettingValuesInspectInfo>,
+    setting_values: ManagedInspectMap<SettingValuesInspectInfo>,
     setting_types: HashSet<SettingType>,
     _setting_types_inspect_info: SettingTypesInspectInfo,
 }
@@ -71,10 +70,10 @@ struct SettingValuesInspectInfo {
     inspect_node: inspect::Node,
 
     /// Debug string representation of the value of this setting.
-    value: inspect::StringProperty,
+    value: StringProperty,
 
     /// Milliseconds since Unix epoch that this setting's value was changed.
-    timestamp: inspect::StringProperty,
+    timestamp: StringProperty,
 }
 
 impl SettingValuesInspectAgent {
@@ -136,8 +135,7 @@ impl SettingValuesInspectAgent {
 
         let mut agent = Self {
             messenger_client,
-            inspect_node,
-            setting_values: InspectWritableMap::new(),
+            setting_values: ManagedInspectMap::<SettingValuesInspectInfo>::with_node(inspect_node),
             setting_types: context.available_components.clone(),
             _setting_types_inspect_info: setting_types_inspect_info,
         };
@@ -212,7 +210,6 @@ impl SettingValuesInspectAgent {
         let (key, value) = setting.for_inspect();
         let timestamp = clock::inspect_format_now();
 
-        let setting_values_node = &self.inspect_node;
         let key_str = key.to_string();
         let setting_values = self.setting_values.get_mut(&key_str);
 
@@ -222,12 +219,10 @@ impl SettingValuesInspectAgent {
             setting_values_info.value.set(&value);
         } else {
             // Setting value not recorded yet, create a new inspect node.
-            let inspect_info = SettingValuesInspectInfo::default()
-                .with_inspect(setting_values_node, key)
-                .expect("Failed to create SettingValuesInspectInfo node");
+            let inspect_info =
+                self.setting_values.get_or_insert_with(key_str, SettingValuesInspectInfo::default);
             inspect_info.timestamp.set(&timestamp);
             inspect_info.value.set(&value);
-            let _ = self.setting_values.set(key_str, inspect_info);
         }
     }
 }
@@ -364,7 +359,7 @@ mod tests {
         let _ = delegate
             .create(MessengerType::Unbound)
             .await
-            .expect("seting handler should be created")
+            .expect("setting handler should be created")
             .0
             .message(
                 HandlerPayload::Event(Event::Changed(SettingInfo::Unknown(UnknownInfo(false))))
