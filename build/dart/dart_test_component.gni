@@ -82,7 +82,6 @@ template("dart_test_component") {
   } else {
     generated_target = "${target_name}_generated_manifest"
     fuchsia_test_component_manifest(generated_target) {
-      forward_variables_from(invoker, [ "deps" ])
       visibility = [ ":*" ]
       metadata = {
         test_component_manifest_cml = [
