@@ -5,6 +5,7 @@
 group("lib") {
   testonly = true
   deps = [
+    "actor",
     "cobalt_logger",
     "fake_camera",
     "fake_legacy_stream",
@@ -21,6 +22,7 @@ group("lib") {
 group("tests") {
   testonly = true
   deps = [
+    "actor:tests",
     "fake_camera:tests",
     "fake_legacy_stream:tests",
     "fake_stream:tests",
