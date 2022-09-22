@@ -101,9 +101,14 @@ void MetricsBuffer::SetServiceDirectory(std::shared_ptr<sys::ServiceDirectory> s
   ZX_DEBUG_ASSERT(!!loop_to_stop_outside_lock == !!logger_to_delete_outside_lock);
   if (loop_to_stop_outside_lock) {
     // Need to delete the old MetricsImpl with the same dispatcher that created the old MetricsImpl.
+    sync_completion_t finished;
     async::PostTask(loop_to_stop_outside_lock->dispatcher(),
-                    [&logger_to_delete_outside_lock] { logger_to_delete_outside_lock = nullptr; });
-    loop_to_stop_outside_lock->RunUntilIdle();
+                    [&logger_to_delete_outside_lock, &finished] {
+                      logger_to_delete_outside_lock = nullptr;
+                      sync_completion_signal(&finished);
+                    });
+    ZX_ASSERT(ZX_OK == sync_completion_wait(&finished, ZX_TIME_INFINITE));
+    ZX_DEBUG_ASSERT(!logger_to_delete_outside_lock);
     loop_to_stop_outside_lock->Quit();
     loop_to_stop_outside_lock->JoinThreads();
     loop_to_stop_outside_lock->Shutdown();
