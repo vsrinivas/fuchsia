@@ -15,16 +15,19 @@ ERRCAT_INDEX_FILE_PATH = FUCHSIA_DIR / "docs/reference/fidl/language/errcat.md"
 ERRCAT_DIR_PATH = FUCHSIA_DIR / "docs/reference/fidl/language/error-catalog"
 TEMPLATE_PATH = FUCHSIA_DIR / "tools/fidl/scripts/add_errcat_template.md"
 
+
 def get_index_entry_numeral(line):
     result = re.search('^<<error-catalog\/_fi-(\d+)\.md>>', line)
     if result is None:
         return -1
     return int(result.groups(1)[0])
 
+
 def insert_index_entry(lines, line_num, line):
     lines.insert(line_num, line + "\n\n")
     with open(ERRCAT_INDEX_FILE_PATH, "wt") as f:
         f.write("".join(lines))
+
 
 def main(args):
     """Given an error numeral for the `fi-` domain, create a new markdown file to describe that error,
@@ -86,18 +89,26 @@ def main(args):
 
     # Tell the user what a great job we've done.
     if index_exists and file_exists:
-        print("There is already an index entry and a markdown for %s, nothing to do." % ns)
+        print(
+            "There is already an index entry and a markdown for %s, nothing to do."
+            % ns)
         return -1
     if not index_exists:
         print("Added new entry for fi-%s to %s." % (ns, ERRCAT_INDEX_FILE_PATH))
     if not file_exists:
-        print("Added new markdown file for fi-%s at %s/_fi-%s.md." % (ns, ERRCAT_DIR_PATH, ns))
+        print(
+            "Added new markdown file for fi-%s at %s/_fi-%s.md." %
+            (ns, ERRCAT_DIR_PATH, ns))
 
     return 0
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Add an entry to //docs/references/fidl/language/errcat.md')
-    parser.add_argument('numeral', metavar='N', type=int,
-                    help='The numeral of the error being added to the errcat')
+    parser.add_argument(
+        'numeral',
+        metavar='N',
+        type=int,
+        help='The numeral of the error being added to the errcat')
     main(parser.parse_args())
