@@ -12,11 +12,13 @@ from string import Template
 
 FUCHSIA_DIR = Path(os.environ["FUCHSIA_DIR"])
 ERRCAT_INDEX_FILE_PATH = FUCHSIA_DIR / "docs/reference/fidl/language/errcat.md"
+REDIRECT_FILE_PATH = FUCHSIA_DIR / "docs/error/_redirects.yaml"
 ERRCAT_DIR_PATH = FUCHSIA_DIR / "docs/reference/fidl/language/error-catalog"
 TEMPLATE_PATH = FUCHSIA_DIR / "tools/fidl/scripts/add_errcat_template.md"
 FIDLC_DIAGNOSTICS_FILE_PATH = FUCHSIA_DIR / "tools/fidl/fidlc/include/fidl/diagnostics.h"
 
 REGEX_INDEX_ENTRY = '^<<error-catalog\/_fi-(\d+)\.md>>'
+REGEX_REDIRECT_ENTRY = '^- from: \/fuchsia-src\/error\/fi-(\d+)'
 
 
 def find_line_num(regex, line):
@@ -69,9 +71,9 @@ def insert_entry(path, entry_matcher, num, insert):
 
 def main(args):
     """Given an error numeral for the `fi-` domain, create a new markdown file to describe that
-    error, or add it to the error catalog listing in errcat.md, or flip its entry in diagnostics.h
-    from an `Undocumented[Error|Warning]Def` specialization to a documented one, or any combination
-    thereof.
+    error, add it to the error catalog listing in errcat.md, add it to the redirect list in
+    _redirects.yaml, flip its entry in diagnostics.h from an `Undocumented[Error|Warning]Def`
+    specialization to a documented one, or any combination thereof.
 
     Usage example:
     tools/fidl/scripts/add_errcat_entry.py 123
@@ -87,6 +89,12 @@ def main(args):
     entry = "<<error-catalog/_fi-%s.md>>\n" % ns
     index_written = insert_entry(
         ERRCAT_INDEX_FILE_PATH, REGEX_INDEX_ENTRY, n, entry)
+
+    # Only add a redirect entry for this numeral if none exists.
+    entry = '- from: /fuchsia-src/error/fi-%s\n  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-%s' % (
+        ns, ns)
+    redirect_written = insert_entry(
+        REDIRECT_FILE_PATH, REGEX_REDIRECT_ENTRY, n, entry)
 
     # Only add a markdown file for this numeral if none exists.
     file_created = True
@@ -117,7 +125,7 @@ def main(args):
             f.write(new_text)
 
     # Tell the user what a great job we've done.
-    if not file_created and not index_written and not spec_swapped:
+    if not file_created and not index_written and not redirect_written and not spec_swapped:
         print(
             "There is already an index entry and a markdown for %s, nothing to do."
             % ns)
@@ -127,7 +135,13 @@ def main(args):
             "Added new markdown file for fi-%s at %s/_fi-%s.md." %
             (ns, ERRCAT_DIR_PATH, ns))
     if index_written:
-        print("Added new entry for fi-%s to %s." % (ns, ERRCAT_INDEX_FILE_PATH))
+        print(
+            "Added new index entry for fi-%s to %s." %
+            (ns, ERRCAT_INDEX_FILE_PATH))
+    if redirect_written:
+        print(
+            "Added new redirect entry for fi-%s to %s." %
+            (ns, REDIRECT_FILE_PATH))
     if spec_swapped:
         print(
             "The DiagnosticDef specialization for fi-%s in %s now prints a permalink."
