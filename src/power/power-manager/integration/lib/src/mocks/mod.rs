@@ -4,3 +4,4 @@
 
 pub mod activity_service;
 pub mod input_settings_service;
+pub mod system_controller;
