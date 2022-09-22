@@ -44,7 +44,7 @@ pub(crate) fn serve_syslog(
     let mut provider = IsolatedLogsProvider::new(accessor);
     let logs_iterator_task = match log_iterator {
         ftest_manager::LogsIterator::Archive(iterator) => {
-            Some(provider.spawn_iterator_server(iterator)?)
+            Some(fasync::Task::spawn(provider.run_iterator_server(iterator)?))
         }
         ftest_manager::LogsIterator::Batch(iterator) => {
             provider.start_streaming_logs(iterator)?;

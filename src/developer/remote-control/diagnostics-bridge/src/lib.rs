@@ -22,6 +22,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     futures::{
+        future::BoxFuture,
         prelude::*,
         select,
         stream::{FusedStream, TryStreamExt},
@@ -42,46 +43,43 @@ pub trait ArchiveReaderManager {
         &self,
     ) -> Result<Vec<Data<D>>, StreamError>;
 
-    fn spawn_snapshot_server<D: diagnostics_data::DiagnosticsData + 'static>(
+    async fn run_snapshot_server<D: diagnostics_data::DiagnosticsData + 'static>(
         &self,
         data: Vec<Data<D>>,
         iterator: ServerEnd<ArchiveIteratorMarker>,
-    ) -> fasync::Task<Result<(), Error>> {
-        let task = fasync::Task::spawn(async move {
-            let mut is_sent = false;
-            let mut iter_stream = iterator.into_stream()?;
-            while let Some(request) = iter_stream.next().await {
-                let ArchiveIteratorRequest::GetNext { responder } = request?;
-                if is_sent {
-                    responder.send(&mut Ok(vec![]))?;
-                    continue;
-                }
-                is_sent = true;
-                let data = serde_json::to_string(&data)?;
-                if data.len() <= MAX_DATAGRAM_LEN_BYTES as usize {
-                    let response = vec![ArchiveIteratorEntry {
-                        diagnostics_data: Some(DiagnosticsData::Inline(InlineData {
-                            data,
-                            truncated_chars: 0,
-                        })),
-                        ..ArchiveIteratorEntry::EMPTY
-                    }];
-                    responder.send(&mut Ok(response))?;
-                } else {
-                    let sock_opts = fuchsia_zircon::SocketOpts::STREAM;
-                    let (socket, tx_socket) = fuchsia_zircon::Socket::create(sock_opts)?;
-                    let mut tx_socket = fasync::Socket::from_socket(tx_socket)?;
-                    let response = vec![ArchiveIteratorEntry {
-                        diagnostics_data: Some(DiagnosticsData::Socket(socket)),
-                        ..ArchiveIteratorEntry::EMPTY
-                    }];
-                    responder.send(&mut Ok(response))?;
-                    tx_socket.write_all(data.as_bytes()).await?;
-                }
+    ) -> Result<(), Error> {
+        let mut is_sent = false;
+        let mut iter_stream = iterator.into_stream()?;
+        while let Some(request) = iter_stream.next().await {
+            let ArchiveIteratorRequest::GetNext { responder } = request?;
+            if is_sent {
+                responder.send(&mut Ok(vec![]))?;
+                continue;
             }
-            Ok::<(), Error>(())
-        });
-        task
+            is_sent = true;
+            let data = serde_json::to_string(&data)?;
+            if data.len() <= MAX_DATAGRAM_LEN_BYTES as usize {
+                let response = vec![ArchiveIteratorEntry {
+                    diagnostics_data: Some(DiagnosticsData::Inline(InlineData {
+                        data,
+                        truncated_chars: 0,
+                    })),
+                    ..ArchiveIteratorEntry::EMPTY
+                }];
+                responder.send(&mut Ok(response))?;
+            } else {
+                let sock_opts = fuchsia_zircon::SocketOpts::STREAM;
+                let (socket, tx_socket) = fuchsia_zircon::Socket::create(sock_opts)?;
+                let mut tx_socket = fasync::Socket::from_socket(tx_socket)?;
+                let response = vec![ArchiveIteratorEntry {
+                    diagnostics_data: Some(DiagnosticsData::Socket(socket)),
+                    ..ArchiveIteratorEntry::EMPTY
+                }];
+                responder.send(&mut Ok(response))?;
+                tx_socket.write_all(data.as_bytes()).await?;
+            }
+        }
+        Ok(())
     }
 
     fn start_log_stream(
@@ -92,16 +90,16 @@ pub trait ArchiveReaderManager {
     >;
 
     /// Provides an implementation of an ArchiveIterator server. Intended to be used by clients who
-    /// wish to spawn an ArchiveIterator server given an implementation of `start_log_stream`..
-    fn spawn_iterator_server(
+    /// wish to run an ArchiveIterator server given an implementation of `start_log_stream`..
+    fn run_iterator_server(
         &mut self,
         iterator: ServerEnd<ArchiveIteratorMarker>,
-    ) -> Result<fasync::Task<Result<(), Error>>, StreamError> {
+    ) -> Result<BoxFuture<'static, Result<(), Error>>, StreamError> {
         let stream_result = match self.start_log_stream() {
             Ok(r) => r,
             Err(e) => return Err(e),
         };
-        let task = fasync::Task::spawn(async move {
+        let future = async move {
             let mut iter_stream = iterator.into_stream()?;
             let mut result_stream = stream_result;
 
@@ -157,8 +155,9 @@ pub trait ArchiveReaderManager {
             }
 
             Ok::<(), Error>(())
-        });
-        Ok(task)
+        }
+        .boxed();
+        Ok(future)
     }
 }
 
@@ -240,7 +239,7 @@ impl<E, F, A, Fut> RemoteDiagnosticsBridge<E, F, A, Fut>
 where
     F: Fn(BridgeStreamParameters) -> Fut + Send + Sync + 'static,
     E: Into<anyhow::Error> + Send + Debug + 'static,
-    A: ArchiveReaderManager<Error = E> + Send,
+    A: ArchiveReaderManager<Error = E> + Send + Sync,
     Fut: Future<Output = Result<A>>,
 {
     pub fn new(archive_accessor: F) -> Result<Self> {
@@ -283,16 +282,16 @@ where
 
                     let mut reader = (self.archive_accessor)(parameters).await?;
                     let res = match stream_mode {
-                        StreamMode::SnapshotThenSubscribe => reader.spawn_iterator_server(iterator),
+                        StreamMode::SnapshotThenSubscribe => reader.run_iterator_server(iterator),
                         StreamMode::Snapshot => match data_type {
                             DataType::Logs => reader
                                 .snapshot::<Logs>()
                                 .await
-                                .map(|data| reader.spawn_snapshot_server(data, iterator)),
+                                .map(|data| reader.run_snapshot_server(data, iterator).boxed()),
                             DataType::Inspect => reader
                                 .snapshot::<Inspect>()
                                 .await
-                                .map(|data| reader.spawn_snapshot_server(data, iterator)),
+                                .map(|data| reader.run_snapshot_server(data, iterator).boxed()),
                             DataType::Lifecycle => {
                                 unreachable!("Lifecycle data is being deprecated")
                             }
@@ -303,9 +302,9 @@ where
                         }
                     };
                     match res {
-                        Ok(task) => {
+                        Ok(fut) => {
                             responder.send(&mut Ok(()))?;
-                            task.await?;
+                            fut.await?;
                         }
                         Err(e) => {
                             responder.send(&mut Err(e))?;
@@ -464,7 +463,7 @@ mod test {
     fn setup_diagnostics_bridge_proxy<F, A, Fut>(service: F) -> RemoteDiagnosticsBridgeProxy
     where
         F: Fn(BridgeStreamParameters) -> Fut + std::marker::Send + std::marker::Sync + 'static,
-        A: ArchiveReaderManager<Error = anyhow::Error> + std::marker::Send + 'static,
+        A: ArchiveReaderManager<Error = anyhow::Error> + std::marker::Send + Sync + 'static,
         Fut: Future<Output = Result<A>> + 'static,
     {
         let service = Arc::new(RemoteDiagnosticsBridge::new(service).unwrap());
