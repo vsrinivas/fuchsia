@@ -5,3 +5,4 @@
 pub mod activity_service;
 pub mod input_settings_service;
 pub mod system_controller;
+pub mod temperature_driver;
