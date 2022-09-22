@@ -9,7 +9,6 @@ ffx_plugin("ffx_component") {
   edition = "2021"
   plugin_deps = [
     "create:ffx_component_create",
-    "data:ffx_component_data",
     "destroy:ffx_component_destroy",
     "doctor:ffx_component_doctor",
     "explore:ffx_component_explore",
