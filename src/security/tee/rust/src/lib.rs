@@ -5,9 +5,9 @@
 mod tee_client_api;
 
 use self::tee_client_api::*;
-use log::error;
 use std::mem;
 use std::ptr;
+use tracing::error;
 
 use self::tee_client_api::{
     teec_operation_impl, TEEC_Operation as TeecOperation,

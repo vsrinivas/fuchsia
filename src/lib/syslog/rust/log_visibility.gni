@@ -72,8 +72,6 @@ third_party_rust_crate_log_visibility = [
   "//src/lib/syslog/rust:*",
   "//src/media/stream_processors/test:*",
   "//src/power/power-manager:*",
-  "//src/security/kms:*",
-  "//src/security/tee/rust:*",
   "//src/settings/service:*",
   "//src/settings/storage:*",
   "//src/storage/bin/odu:*",

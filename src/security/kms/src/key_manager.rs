@@ -18,7 +18,6 @@ use fidl_fuchsia_kms::{
 use fidl_fuchsia_mem::Buffer;
 use fuchsia_async as fasync;
 use futures::prelude::*;
-use log::{error, warn};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -26,6 +25,7 @@ use std::io::{Error as IOError, ErrorKind};
 use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::{Arc, Mutex, RwLock};
+use tracing::{error, warn};
 
 const DEFAULT_PROVIDER: KeyProvider = KeyProvider::SoftwareProvider;
 const KEY_FOLDER: &str = "/data/kms";

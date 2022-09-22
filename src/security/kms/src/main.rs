@@ -15,18 +15,17 @@ use anyhow::{format_err, Context as _, Error};
 use fidl_fuchsia_kms::{KeyManagerRequestStream, KeyProvider};
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
-use fuchsia_syslog as syslog;
 use futures::prelude::*;
-use log::{error, info};
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::fs;
 use std::sync::Arc;
+use tracing::{error, info};
 
 const CONFIG_PATH: &str = "/config/data/crypto_provider_config.json";
 
+#[fuchsia::main(logging_tags = ["kms"])]
 fn main() -> Result<(), Error> {
-    syslog::init_with_tags(&["kms"]).expect("syslog init should not fail");
     let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
     let key_manager_ref = Arc::new({
         let mut key_manager = KeyManager::new();

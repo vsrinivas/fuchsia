@@ -11,8 +11,8 @@ use fidl_fuchsia_kms::{
 };
 use fidl_fuchsia_mem::Buffer;
 use fuchsia_zircon as zx;
-use log::error;
 use serde::{Deserialize, Serialize};
+use tracing::error;
 
 /// Different type of key request.
 pub enum KeyRequestType<'a> {
@@ -111,7 +111,7 @@ macro_rules! debug_err {
         // TODO(joshlf): Uncomment once attributes are allowed on expressions
         // #[cfg_attr(feature = "cargo-clippy", allow(block_in_if_condition_stmt))]
         {
-            use ::log::error;
+            use ::tracing::error;
             error!($($arg)*);
             $err
         }
@@ -125,7 +125,7 @@ macro_rules! debug_err {
 macro_rules! debug_err_fn {
     ($return_err:expr, $($arg:tt)*) => (
         |err| {
-            use ::log::error;
+            use ::tracing::error;
             error!($($arg)*, err);
             $return_err
         }
@@ -139,7 +139,7 @@ macro_rules! debug_err_fn {
 macro_rules! debug_err_fn_no_argument {
     ($return_err:expr, $($arg:tt)*) => (
         || {
-            use ::log::error;
+            use ::tracing::error;
             error!($($arg)*);
             $return_err
         }

@@ -6,7 +6,7 @@ use crate::common::{self as common, DataRequest, KeyAttributes, KeyRequestType, 
 use crate::crypto_provider::{CryptoProvider, SealingProviderKey};
 use fidl_fuchsia_kms::{Error, KeyProvider};
 use fidl_fuchsia_mem::Buffer;
-use log::error;
+use tracing::error;
 
 pub static SEALING_KEY_NAME: &str = ".SealingKey";
 
