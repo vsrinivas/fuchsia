@@ -30,7 +30,7 @@
             from: "#data",
         },
         {
-            event_stream: "destroyed_downscoped",
+            event_stream: "destroyed_v2",
             from: "parent",
         },
     ],

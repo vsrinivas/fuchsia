@@ -24,8 +24,7 @@ use {
     ftest::Invocation,
     ftest_manager::{CaseStatus, LaunchError, SuiteEvent as FidlSuiteEvent, SuiteStatus},
     fuchsia_async::{self as fasync, TimeoutExt},
-    fuchsia_component::client::connect_to_protocol,
-    fuchsia_component::server::ServiceFs,
+    fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     fuchsia_component_test::{
         error::Error as RealmBuilderError, Capability, ChildOptions, Event, LocalComponentHandles,
         RealmBuilder, RealmInstance, Ref, Route,
@@ -37,7 +36,7 @@ use {
         future::join_all,
         lock,
         prelude::*,
-        StreamExt,
+        FutureExt,
     },
     moniker::RelativeMonikerBase,
     std::{
@@ -611,50 +610,6 @@ async fn get_realm(
     wrapper_realm
         .add_route(
             Route::new()
-                .capability(Capability::event_stream("started_v2"))
-                .capability(
-                    Capability::event_stream("started_v2")
-                        .as_("started_downscoped")
-                        .with_scope(&test_root),
-                )
-                .capability(Capability::event_stream("running_v2"))
-                .capability(
-                    Capability::event_stream("running_v2")
-                        .as_("running_downscoped")
-                        .with_scope(&test_root),
-                )
-                .capability(Capability::event_stream("stopped_v2"))
-                .capability(
-                    Capability::event_stream("stopped_v2")
-                        .as_("stopped_downscoped")
-                        .with_scope(&test_root),
-                )
-                .capability(Capability::event_stream("destroyed_v2"))
-                .capability(
-                    Capability::event_stream("destroyed_v2")
-                        .as_("destroyed_downscoped")
-                        .with_scope(&test_root),
-                )
-                .capability(Capability::event_stream("capability_requested_v2"))
-                .capability(
-                    Capability::event_stream("capability_requested_v2")
-                        .as_("capability_requested_downscoped")
-                        .with_scope(&test_root),
-                )
-                .capability(Capability::event_stream("directory_ready_v2"))
-                .capability(
-                    Capability::event_stream("directory_ready_v2")
-                        .as_("directory_ready_downscoped")
-                        .with_scope(&test_root),
-                )
-                .from(Ref::parent())
-                .to(&test_root),
-        )
-        .await?;
-
-    wrapper_realm
-        .add_route(
-            Route::new()
                 .capability(Capability::protocol::<fsys::EventSourceMarker>())
                 .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
                 .from(Ref::parent())
@@ -721,6 +676,44 @@ async fn get_realm(
                 ))
             },
             ChildOptions::new(),
+        )
+        .await?;
+
+    wrapper_realm
+        .add_route(
+            Route::new()
+                .capability(
+                    Capability::event_stream("started_v2")
+                        .with_scope(&test_root)
+                        .with_scope(&enclosing_env),
+                )
+                .capability(
+                    Capability::event_stream("running_v2")
+                        .with_scope(&test_root)
+                        .with_scope(&enclosing_env),
+                )
+                .capability(
+                    Capability::event_stream("stopped_v2")
+                        .with_scope(&test_root)
+                        .with_scope(&enclosing_env),
+                )
+                .capability(
+                    Capability::event_stream("destroyed_v2")
+                        .with_scope(&test_root)
+                        .with_scope(&enclosing_env),
+                )
+                .capability(
+                    Capability::event_stream("capability_requested_v2")
+                        .with_scope(&test_root)
+                        .with_scope(&enclosing_env),
+                )
+                .capability(
+                    Capability::event_stream("directory_ready_v2")
+                        .with_scope(&test_root)
+                        .with_scope(&enclosing_env),
+                )
+                .from(Ref::parent())
+                .to(&test_root),
         )
         .await?;
 

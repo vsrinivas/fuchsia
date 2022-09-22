@@ -287,7 +287,10 @@ impl ComponentIdentifier {
         }
 
         if moniker == "." {
-            return Ok(ComponentIdentifier::Moniker(vec![]));
+            return Ok(ComponentIdentifier::Moniker(vec![MonikerSegment {
+                collection: None,
+                name: "<root>".to_string(),
+            }]));
         }
 
         let without_root = moniker
@@ -463,7 +466,7 @@ mod tests {
         assert_eq!(identifier.unique_key(), vec!["a", "coll:comp", "b"].into());
 
         let identifier = ComponentIdentifier::parse_from_moniker(".").unwrap();
-        assert!(identifier.relative_moniker_for_selectors().is_empty());
-        assert!(identifier.unique_key().is_empty());
+        assert_eq!(identifier.relative_moniker_for_selectors(), vec!["<root>"].into());
+        assert_eq!(identifier.unique_key(), vec!["<root>"].into());
     }
 }

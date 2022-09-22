@@ -88,7 +88,6 @@ rustc_library("lib") {
     "//third_party/rust_crates:tracing",
   ]
   test_deps = [
-    "//src/lib/diagnostics/hierarchy/rust",
     "//src/lib/fuchsia",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:maplit",

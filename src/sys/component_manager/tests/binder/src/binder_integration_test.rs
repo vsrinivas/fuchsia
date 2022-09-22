@@ -10,7 +10,7 @@ use {
     futures::stream::{FusedStream, StreamExt},
 };
 
-const CHILD_MONIKER: &str = "./test_root/looper";
+const CHILD_MONIKER: &str = "./looper";
 const NUM_CONNECTIONS: u64 = 3;
 
 #[fuchsia::test]

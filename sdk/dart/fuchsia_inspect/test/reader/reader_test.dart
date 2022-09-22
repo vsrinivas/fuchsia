@@ -70,11 +70,11 @@ void main() async {
 
     final snapshot = await reader.snapshot(
         acceptSnapshot: (snapshot) =>
-            snapshot.length >= 2 &&
+            snapshot.length >= 1 &&
             _monikerList(snapshot)
                 .contains(testTopology.testComponentMoniker()));
 
-    expect(snapshot.length, greaterThanOrEqualTo(2));
+    expect(snapshot.length, greaterThanOrEqualTo(1));
     expect(
         _monikerList(snapshot), contains(testTopology.testComponentMoniker()));
     testTopology.dispose();

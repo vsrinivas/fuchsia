@@ -34,33 +34,28 @@
             to: "#archivist",
         },
         {
-            event_stream: "directory_ready_downscoped",
+            event_stream: "directory_ready_v2",
             from: "parent",
-            as: "directory_ready_v2",
             to: "#archivist",
         },
         {
-            event_stream: "capability_requested_downscoped",
+            event_stream: "capability_requested_v2",
             from: "parent",
-            as: "capability_requested_v2",
             to: "#archivist",
         },
         {
-            event_stream: "running_downscoped",
+            event_stream: "running_v2",
             from: "parent",
-            as: "running_v2",
             to: "#archivist",
         },
         {
-            event_stream: "started_downscoped",
+            event_stream: "started_v2",
             from: "parent",
-            as: "started_v2",
             to: "#archivist",
         },
         {
-            event_stream: "stopped_downscoped",
+            event_stream: "stopped_v2",
             from: "parent",
-            as: "stopped_v2",
             to: "#archivist",
         },
         {
