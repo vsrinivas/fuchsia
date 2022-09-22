@@ -16,18 +16,55 @@ ERRCAT_DIR_PATH = FUCHSIA_DIR / "docs/reference/fidl/language/error-catalog"
 TEMPLATE_PATH = FUCHSIA_DIR / "tools/fidl/scripts/add_errcat_template.md"
 FIDLC_DIAGNOSTICS_FILE_PATH = FUCHSIA_DIR / "tools/fidl/fidlc/include/fidl/diagnostics.h"
 
+REGEX_INDEX_ENTRY = '^<<error-catalog\/_fi-(\d+)\.md>>'
 
-def get_index_entry_numeral(line):
-    result = re.search('^<<error-catalog\/_fi-(\d+)\.md>>', line)
+
+def find_line_num(regex, line):
+    result = re.search(regex, line)
     if result is None:
         return -1
     return int(result.groups(1)[0])
 
 
-def insert_index_entry(lines, line_num, line):
-    lines.insert(line_num, line + "\n\n")
-    with open(ERRCAT_INDEX_FILE_PATH, "wt") as f:
+def insert_lines_at_line_num(path, lines, line_num, line):
+    lines.insert(line_num, line + "\n")
+    with open(path, "wt") as f:
         f.write("".join(lines))
+
+
+def insert_entry(path, entry_matcher, num, insert):
+    # Only add an entry for this numeral if none already exists.
+    already_exists = False
+    with open(path, 'r') as f:
+        lines = f.readlines()
+
+    # Do a pass over the lines in the file to ensure that this entry does not already exist.
+    already_exists = any(line.startswith(insert) for line in lines)
+
+    # If we do need a file do another pass, inserting the supplied text in the correct position.
+    if not already_exists:
+        insert_before = None
+        for line_num in range(len(lines)):
+            line = lines[line_num]
+            entry_num = find_line_num(entry_matcher, line)
+            if entry_num == -1:
+                continue
+
+            insert_before = line_num
+            if entry_num > num:
+                if insert_before is None:
+                    insert_before = line_num
+                insert_lines_at_line_num(path, lines, insert_before, insert)
+                insert_before = None
+                break
+            else:
+                insert_before = line_num
+
+        # Handle the edge case of the entry needing to be placed at the end of the list.
+        if insert_before is not None:
+            insert_lines_at_line_num(path, lines, insert_before + 2, insert)
+
+    return not already_exists
 
 
 def main(args):
@@ -42,47 +79,20 @@ def main(args):
     tools/fidl/scripts/add_errcat_entry.py 1000
     """
 
-    # Create the search string (needle), taking care to appropriately inject leading zeroes.
+    # Create the error id string, taking care to appropriately inject leading zeroes.
     n = args.numeral
     ns = "%04d" % args.numeral
-    needle = "<<error-catalog/_fi-%s.md>>" % ns
 
     # Only add an index entry for this numeral if none exists.
-    index_exists = False
-    with open(ERRCAT_INDEX_FILE_PATH, 'r') as f:
-        lines = f.readlines()
-
-        # Do a pass over the lines in the file to ensure that this entry does not already exist.
-        index_exists = any(line.startswith(needle) for line in lines)
-
-        # If we do need a file do another pass, inserting the needle in the correct position.
-        if not index_exists:
-            insert_before = None
-            for line_num in range(len(lines)):
-                line = lines[line_num]
-                entry_num = get_index_entry_numeral(line)
-                if entry_num == -1:
-                    continue
-
-                insert_before = line_num
-                if entry_num > n:
-                    if insert_before is None:
-                        insert_before = line_num
-                    insert_index_entry(lines, insert_before, needle)
-                    insert_before = None
-                    break
-                else:
-                    insert_before = line_num
-
-            # Handle the edge case of the entry needing to be placed at the end of the list.
-            if insert_before is not None:
-                insert_index_entry(lines, insert_before + 2, needle)
+    entry = "<<error-catalog/_fi-%s.md>>\n" % ns
+    index_written = insert_entry(
+        ERRCAT_INDEX_FILE_PATH, REGEX_INDEX_ENTRY, n, entry)
 
     # Only add a markdown file for this numeral if none exists.
-    file_exists = False
+    file_created = True
     markdown_file = ERRCAT_DIR_PATH / ("_fi-%s.md" % ns)
     if markdown_file.is_file():
-        file_exists = True
+        file_created = False
     else:
         # Create the file for this errcat entry, substituting the proper numeral along the way.
         with open(TEMPLATE_PATH, 'r') as f:
@@ -107,17 +117,17 @@ def main(args):
             f.write(new_text)
 
     # Tell the user what a great job we've done.
-    if index_exists and file_exists and not spec_swapped:
+    if not file_created and not index_written and not spec_swapped:
         print(
             "There is already an index entry and a markdown for %s, nothing to do."
             % ns)
         return 0
-    if not index_exists:
-        print("Added new entry for fi-%s to %s." % (ns, ERRCAT_INDEX_FILE_PATH))
-    if not file_exists:
+    if file_created:
         print(
             "Added new markdown file for fi-%s at %s/_fi-%s.md." %
             (ns, ERRCAT_DIR_PATH, ns))
+    if index_written:
+        print("Added new entry for fi-%s to %s." % (ns, ERRCAT_INDEX_FILE_PATH))
     if spec_swapped:
         print(
             "The DiagnosticDef specialization for fi-%s in %s now prints a permalink."
