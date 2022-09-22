@@ -6,11 +6,10 @@ use {
     anyhow::Error,
     diagnostics_data::{Data, Logs},
     example_tester::{logs_to_str, run_test, Client, Proxy, Server, TestKind},
+    fidl::prelude::*,
     fuchsia_async as fasync,
     fuchsia_component_test::{ChildRef, RealmBuilder},
 };
-
-const PROTOCOL_NAME: &'static str = "test.exampletester.Simple";
 
 // Tests the framework for a single component running locally. This is useful for testing things
 // like local logging and persistent FIDL.
@@ -19,7 +18,7 @@ async fn test_one_component() -> Result<(), Error> {
     let client = Client::new("test_one_component", "#meta/example_tester_example_client.cm");
 
     run_test(
-        PROTOCOL_NAME,
+        fidl_test_exampletester::SimpleMarker::PROTOCOL_NAME,
         TestKind::StandaloneComponent { client: &client },
         |builder: RealmBuilder, client: ChildRef| async move {
             builder.init_mutable_config_to_empty(&client).await?;
@@ -50,7 +49,7 @@ async fn test_two_component() -> Result<(), Error> {
     let server = Server::new(test_name, "#meta/example_tester_example_server.cm");
 
     run_test(
-        PROTOCOL_NAME,
+        fidl_test_exampletester::SimpleMarker::PROTOCOL_NAME,
         TestKind::ClientAndServer { client: &client, server: &server },
         |builder: RealmBuilder, client: ChildRef| async move {
             builder.init_mutable_config_to_empty(&client).await?;
@@ -93,7 +92,7 @@ async fn test_three_component() -> Result<(), Error> {
     let server = Server::new(test_name, "#meta/example_tester_example_server.cm");
 
     run_test(
-        PROTOCOL_NAME,
+        fidl_test_exampletester::SimpleMarker::PROTOCOL_NAME,
         TestKind::ClientProxyAndServer { client: &client, proxy: &proxy, server: &server },
         |builder: RealmBuilder, client: ChildRef| async move {
             builder.init_mutable_config_to_empty(&client).await?;

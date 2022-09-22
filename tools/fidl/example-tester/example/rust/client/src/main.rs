@@ -19,9 +19,9 @@ fn main() -> Result<(), Error> {
     if config.do_in_process {
         println!("Response: {:?}", config.augend + config.addend);
     } else {
-        let (server_end, client_end) = zx::Channel::create()?;
+        let (client_end, server_end) = zx::Channel::create()?;
         connect_channel_to_protocol::<SimpleMarker>(server_end)
-            .context("Failed to connect to echo service")?;
+            .context("Failed to connect to simple service")?;
         println!("Outgoing connection enabled");
 
         let simple = SimpleSynchronousProxy::new(client_end);

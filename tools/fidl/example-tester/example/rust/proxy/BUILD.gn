@@ -8,8 +8,8 @@ rustc_binary("bin") {
   output_name = "proxy_bin"
   output_dir = target_out_dir + "/rust"
   edition = "2021"
-  sources = [ "main.rs" ]
-  source_root = "main.rs"
+  sources = [ "src/main.rs" ]
+  source_root = "src/main.rs"
   deps = [
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",

@@ -18,8 +18,8 @@ rustc_binary("bin") {
   output_name = "client_bin"
   output_dir = target_out_dir + "/rust"
   edition = "2021"
-  sources = [ "main.rs" ]
-  source_root = "main.rs"
+  sources = [ "src/main.rs" ]
+  source_root = "src/main.rs"
   deps = [
     ":config",
     "//src/lib/fuchsia-component",
