@@ -1558,7 +1558,7 @@ async fn test_max_severity(max_severity: Severity, iterator_option: LogsIterator
 [TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] DEBUG: Logging initialized
 [TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] INFO: my info message
 [TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] WARN: my warn message
-[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] ERROR: [../../src/sys/run_test_suite/tests/error_logging_test.rs(12)] my error message
+[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] ERROR: [../../src/sys/run_test_suite/tests/test_data/error_logging_test.rs(12)] my error message
 [PASSED]	log_and_exit
 
 1 out of 1 tests passed...
@@ -1570,7 +1570,7 @@ async fn test_max_severity(max_severity: Severity, iterator_option: LogsIterator
                 "Test fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/error_logging_test.cm produced unexpected high-severity logs:
 ----------------xxxxx----------------
 [TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] WARN: my warn message
-[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] ERROR: [../../src/sys/run_test_suite/tests/error_logging_test.rs(12)] my error message
+[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] ERROR: [../../src/sys/run_test_suite/tests/test_data/error_logging_test.rs(12)] my error message
 
 ----------------xxxxx----------------
 Failing this test. See: https://fuchsia.dev/fuchsia-src/development/diagnostics/test_and_logs#restricting_log_severity
@@ -1582,7 +1582,7 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/error_logging_te
             Outcome::Failed,
             "Test fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/error_logging_test.cm produced unexpected high-severity logs:
 ----------------xxxxx----------------
-[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] ERROR: [../../src/sys/run_test_suite/tests/error_logging_test.rs(12)] my error message
+[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] ERROR: [../../src/sys/run_test_suite/tests/test_data/error_logging_test.rs(12)] my error message
 
 ----------------xxxxx----------------
 Failing this test. See: https://fuchsia.dev/fuchsia-src/development/diagnostics/test_and_logs#restricting_log_severity
@@ -1711,7 +1711,7 @@ async fn test_syslog_to_directory(
     const EXPECTED_SYSLOG: &str =  "[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] DEBUG: Logging initialized\n\
 [TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] INFO: my info message\n\
 [TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] WARN: my warn message\n\
-[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] ERROR: [../../src/sys/run_test_suite/tests/error_logging_test.rs(12)] my error message\n\
+[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] ERROR: [../../src/sys/run_test_suite/tests/test_data/error_logging_test.rs(12)] my error message\n\
 ";
     let expected_test_run = ExpectedTestRun::new(directory::Outcome::Failed)
         .with_suite(
@@ -1729,7 +1729,7 @@ async fn test_syslog_to_directory(
                 assert_output!(actual.as_bytes(), EXPECTED_SYSLOG);
             })
             .with_matching_artifact(directory::ArtifactType::RestrictedLog, "restricted_logs.txt".into(), |actual| {
-                assert!(actual.contains("ERROR: [../../src/sys/run_test_suite/tests/error_logging_test.rs(12)] my error message"))
+                assert!(actual.contains("ERROR: [../../src/sys/run_test_suite/tests/test_data/error_logging_test.rs(12)] my error message"))
             })
             .with_any_start_time()
             .with_any_run_duration()

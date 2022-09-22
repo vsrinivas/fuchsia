@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 {
     include: [
-        "syslog/client.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/logging_test",
+        binary: "bin/stdout_ansi_test",
     },
 }

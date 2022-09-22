@@ -1,0 +1,131 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+
+rustc_test("error_logging_test_bin") {
+  edition = "2021"
+  source_root = "error_logging_test.rs"
+  name = "error_logging_test"
+  deps = [
+    "//src/lib/fuchsia",
+    "//third_party/rust_crates:tracing",
+  ]
+  sources = [ "error_logging_test.rs" ]
+}
+
+rustc_test("logging_test_bin") {
+  edition = "2021"
+  source_root = "logging_test.rs"
+  name = "logging_test"
+  deps = [
+    "//src/lib/fuchsia",
+    "//third_party/rust_crates:tracing",
+  ]
+  sources = [ "logging_test.rs" ]
+}
+
+rustc_test("log_then_hang_test_bin") {
+  edition = "2021"
+  source_root = "log_then_hang.rs"
+  name = "log_then_hang_test"
+  deps = [
+    "//src/lib/fuchsia",
+    "//third_party/rust_crates:tracing",
+  ]
+  sources = [ "log_then_hang.rs" ]
+}
+
+rustc_test("logspam_test_bin") {
+  edition = "2021"
+  source_root = "logspam.rs"
+  name = "logspam_test"
+  deps = [
+    "//examples/components/routing/fidl:echo_rust",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_rust",
+    "//src/lib/diagnostics/log/rust",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:tracing",
+  ]
+  sources = [ "logspam.rs" ]
+}
+
+rustc_test("stdout_ansi_test_bin") {
+  edition = "2021"
+  source_root = "stdout_ansi_test.rs"
+  name = "stdout_ansi_test"
+  deps = [
+    "//src/lib/fuchsia",
+    "//third_party/rust_crates:ansi_term",
+    "//third_party/rust_crates:tracing",
+  ]
+  sources = [ "stdout_ansi_test.rs" ]
+}
+
+rustc_test("long_running_test_bin") {
+  edition = "2021"
+  source_root = "long_running_test.rs"
+  name = "long_running_test"
+  testonly = true
+  deps = [
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+  ]
+  sources = [ "long_running_test.rs" ]
+}
+
+fuchsia_component("long_running_test") {
+  testonly = true
+  deps = [ ":long_running_test_bin" ]
+  manifest = "meta/long_running_test.cml"
+}
+
+fuchsia_component("logging_test") {
+  testonly = true
+  deps = [ ":logging_test_bin" ]
+  manifest = "meta/logging_test.cml"
+}
+
+fuchsia_component("log_then_hang_test") {
+  testonly = true
+  deps = [ ":log_then_hang_test_bin" ]
+  manifest = "meta/log_then_hang_test.cml"
+}
+
+fuchsia_component("logspam_test") {
+  testonly = true
+  deps = [ ":logspam_test_bin" ]
+  manifest = "meta/logspam_test.cml"
+}
+
+fuchsia_component("stdout_ansi_test") {
+  testonly = true
+  deps = [ ":stdout_ansi_test_bin" ]
+  manifest = "meta/stdout_ansi_test.cml"
+}
+
+fuchsia_component("error_logging_test") {
+  testonly = true
+  deps = [ ":error_logging_test_bin" ]
+  manifest = "meta/error_logging_test.cml"
+}
+
+group("test_data") {
+  testonly = true
+  deps = [
+    ":error_logging_test",
+    ":log_then_hang_test",
+    ":logging_test",
+    ":logspam_test",
+    ":long_running_test",
+    ":stdout_ansi_test",
+  ]
+}
