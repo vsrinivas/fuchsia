@@ -17,5 +17,10 @@
             from: "parent",
             to: [ "#realm_builder" ],
         },
+        {
+            storage: "tmp",
+            from: "parent",
+            to: "#realm_builder",
+        },
     ],
 }

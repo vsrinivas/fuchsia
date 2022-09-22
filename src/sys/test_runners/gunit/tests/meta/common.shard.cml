@@ -21,11 +21,16 @@
     offer: [
         {
             protocol: [
+                "fuchsia.component.resolution.Resolver",
                 "fuchsia.logger.LogSink",
                 "fuchsia.process.Launcher",
-                "fuchsia.component.resolution.Resolver",
                 "fuchsia.sys2.EventSource",
             ],
+            from: "parent",
+            to: "#test_manager",
+        },
+        {
+            storage: "tmp",
             from: "parent",
             to: "#test_manager",
         },

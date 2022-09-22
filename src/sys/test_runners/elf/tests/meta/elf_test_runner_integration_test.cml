@@ -46,5 +46,10 @@
             to: "#test_manager",
             scope: "#test_manager",
         },
+        {
+            storage: "tmp",
+            from: "parent",
+            to: "#test_manager",
+        },
     ],
 }

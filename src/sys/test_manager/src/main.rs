@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
+    anyhow::{anyhow, Error},
     fidl_fuchsia_component_resolution as fresolution, fidl_fuchsia_test_internal as ftest_internal,
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
@@ -48,6 +48,10 @@ async fn main() -> Result<(), Error> {
     info!("started");
     let args: TestManagerArgs = std::env::args().try_into()?;
     let mut fs = ServiceFs::new();
+
+    if !std::path::Path::new("/tmp").exists() {
+        return Err(anyhow!("Expected /tmp to be available"));
+    }
 
     inspect_runtime::serve(fuchsia_inspect::component::inspector(), &mut fs)?;
 
