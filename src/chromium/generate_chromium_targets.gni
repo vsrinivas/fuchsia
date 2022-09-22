@@ -7,6 +7,7 @@ import("//build/packages/prebuilt_test_manifest.gni")
 import("//src/chromium/build_args.gni")
 import("//src/chromium/generate_pkg_and_config.gni")
 import("//src/lib/icu/tzdata/icu_tzdata_config_data.gni")
+import("//src/sys/core/build/core_shard.gni")
 
 # Helper template that generates prebuilt Chromium packages.
 #
@@ -109,6 +110,10 @@ template("generate_chromium_targets") {
     # Config data arguments.
     for_pkg = "sysmgr"
     sources = [ "//src/chromium/config/web_context_provider.config" ]
+  }
+
+  core_shard("web_context_provider_core_shard") {
+    shard_file = "config/web_context_provider.core_shard.cml"
   }
 
   icu_tzdata_config_data("tzdata_for_web_engine") {

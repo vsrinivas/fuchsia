@@ -1,0 +1,44 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "context_provider",
+            url: "fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cm",
+            environment: "#core-env",
+        },
+    ],
+    use: [
+        // TODO(crbug.com/1324624): remove once we've migrated the smart session shard to use the
+        // protocol from context_provider directly
+        {
+            protocol: "fuchsia.web.ContextProvider",
+            from: "#context_provider",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#context_provider",
+        },
+        {
+            protocol: [
+                "fuchsia.feedback.ComponentDataRegister",
+                "fuchsia.feedback.CrashReportingProductRegister",
+            ],
+            from: "#feedback",
+            to: "#context_provider",
+        },
+        {
+            protocol: [
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Loader",
+            ],
+            from: "self",
+            to: "#context_provider",
+            dependency: "weak_for_migration",
+        },
+    ],
+}
