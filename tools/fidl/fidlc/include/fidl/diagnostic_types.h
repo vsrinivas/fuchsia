@@ -115,10 +115,30 @@ constexpr void CheckFormatArgs(std::string_view msg) {
 
 using utils::identity_t;
 
+// A tag that indicates whether a diagnostic definition is an error or warning.
+// In the future this could be extended to include hints, suggestions, etc.
+enum class DiagnosticKind {
+  kError,
+  kWarning,
+  kRetired,
+};
+
+// A tag that indicates whether or not a diagnostic definition has an associated
+// markdown file providing further documentation.
+enum class DiagnosticDocumented {
+  kDocumented,
+  kNotDocumented,
+};
+
 struct DiagnosticDef {
-  constexpr explicit DiagnosticDef(std::string_view msg) : msg(msg) {}
+  constexpr explicit DiagnosticDef(ErrorId id, DiagnosticKind kind, DiagnosticDocumented documented,
+                                   std::string_view msg)
+      : id(id), kind(kind), documented(documented), msg(msg) {}
   DiagnosticDef(const DiagnosticDef&) = delete;
 
+  ErrorId id;
+  DiagnosticKind kind;
+  DiagnosticDocumented documented;
   std::string_view msg;
 };
 
@@ -126,7 +146,18 @@ struct DiagnosticDef {
 // Template args define format parameters in the error message.
 template <ErrorId Id, typename... Args>
 struct ErrorDef final : DiagnosticDef {
-  constexpr explicit ErrorDef(std::string_view msg) : DiagnosticDef(msg) {
+  constexpr explicit ErrorDef(std::string_view msg)
+      : DiagnosticDef(Id, DiagnosticKind::kError, DiagnosticDocumented::kDocumented, msg) {
+    internal::CheckFormatArgs<Args...>(msg);
+  }
+};
+
+// TODO(fxbug.dev/108248): Remove once all outstanding errors are documented.
+// Identical to an Error, except it does not print the permalink.
+template <ErrorId Id, typename... Args>
+struct UndocumentedErrorDef final : DiagnosticDef {
+  constexpr explicit UndocumentedErrorDef(std::string_view msg)
+      : DiagnosticDef(Id, DiagnosticKind::kError, DiagnosticDocumented::kNotDocumented, msg) {
     internal::CheckFormatArgs<Args...>(msg);
   }
 };
@@ -135,7 +166,18 @@ struct ErrorDef final : DiagnosticDef {
 // diagnostics.h. Template args define format parameters in the warning message.
 template <ErrorId Id, typename... Args>
 struct WarningDef final : DiagnosticDef {
-  constexpr explicit WarningDef(std::string_view msg) : DiagnosticDef(msg) {
+  constexpr explicit WarningDef(std::string_view msg)
+      : DiagnosticDef(Id, DiagnosticKind::kWarning, DiagnosticDocumented::kDocumented, msg) {
+    internal::CheckFormatArgs<Args...>(msg);
+  }
+};
+
+// TODO(fxbug.dev/108248): Remove once all outstanding warnings are documented.
+// Identical to a Warning, except it does not print the permalink.
+template <ErrorId Id, typename... Args>
+struct UndocumentedWarningDef final : DiagnosticDef {
+  constexpr explicit UndocumentedWarningDef(std::string_view msg)
+      : DiagnosticDef(Id, DiagnosticKind::kWarning, DiagnosticDocumented::kNotDocumented, msg) {
     internal::CheckFormatArgs<Args...>(msg);
   }
 };
@@ -144,17 +186,10 @@ struct WarningDef final : DiagnosticDef {
 // they are merely used to retire error numerals from circulation.
 template <ErrorId Id, typename... Args>
 struct RetiredDef final : DiagnosticDef {
-  constexpr explicit RetiredDef(std::string_view msg) : DiagnosticDef(msg) {
+  constexpr explicit RetiredDef(std::string_view msg)
+      : DiagnosticDef(Id, DiagnosticKind::kRetired, DiagnosticDocumented::kDocumented, msg) {
     internal::CheckFormatArgs<Args...>(msg);
   }
-};
-
-// A tag that indicates whether a diagnostic is an error or warning. In the
-// future this could be extended to include hints, suggestions, etc.
-enum class DiagnosticKind {
-  kError,
-  kWarning,
-  kRetired,
 };
 
 // A Diagnostic is the result of instantiating a DiagnosticDef with arguments.
@@ -162,13 +197,8 @@ enum class DiagnosticKind {
 // arguments. It also stores a SourceSpan indicating where the problem occurred.
 struct Diagnostic {
   template <typename... Args>
-  Diagnostic(ErrorId id, DiagnosticKind kind, const DiagnosticDef& def, SourceSpan span,
-             const Args&... args)
-      : id(id),
-        kind(kind),
-        def(def),
-        span(span),
-        msg(internal::FormatDiagnostic(def.msg, args...)) {}
+  Diagnostic(const DiagnosticDef& def, SourceSpan span, const Args&... args)
+      : def(def), span(span), msg(internal::FormatDiagnostic(def.msg, args...)) {}
   Diagnostic(const Diagnostic&) = delete;
 
   // The factory functions below could be constructors, and std::make_unique
@@ -178,27 +208,55 @@ struct Diagnostic {
   template <ErrorId Id, typename... Args>
   static std::unique_ptr<Diagnostic> MakeError(const ErrorDef<Id, Args...>& def, SourceSpan span,
                                                const identity_t<Args>&... args) {
-    return std::make_unique<Diagnostic>(Id, DiagnosticKind::kError, def, span, args...);
+    return std::make_unique<Diagnostic>(def, span, args...);
+  }
+
+  // TODO(fxbug.dev/108248): Remove once all outstanding errors are documented.
+  template <ErrorId Id, typename... Args>
+  static std::unique_ptr<Diagnostic> MakeError(const UndocumentedErrorDef<Id, Args...>& def,
+                                               SourceSpan span, const identity_t<Args>&... args) {
+    return std::make_unique<Diagnostic>(def, span, args...);
   }
 
   template <ErrorId Id, typename... Args>
   static std::unique_ptr<Diagnostic> MakeWarning(const WarningDef<Id, Args...>& def,
                                                  SourceSpan span, const identity_t<Args>&... args) {
-    return std::make_unique<Diagnostic>(Id, DiagnosticKind::kWarning, def, span, args...);
+    return std::make_unique<Diagnostic>(def, span, args...);
   }
 
-  // Print the error ID in string form.
+  // TODO(fxbug.dev/108248): Remove once all outstanding warnings are documented.
+  template <ErrorId Id, typename... Args>
+  static std::unique_ptr<Diagnostic> MakeWarning(const UndocumentedWarningDef<Id, Args...>& def,
+                                                 SourceSpan span, const identity_t<Args>&... args) {
+    return std::make_unique<Diagnostic>(def, span, args...);
+  }
+
+  // Print the full error ID ("fi-NNNN") in string form.
   std::string PrintId() const {
     char id_str[8];
-    std::snprintf(id_str, 8, "fi-%04d", id);
+    std::snprintf(id_str, 8, "fi-%04d", def.id);
     return id_str;
   }
 
-  // Print the entire error output - first the ID, followed by the human-readable error explanation.
-  std::string Print() const { return msg; }
+  // Print the permalink ("https://fuchsia.dev/error/fi-NNNN") in string form.
+  std::string PrintLink() const {
+    char shortlink_str[34];
+    std::snprintf(shortlink_str, 34, "https://fuchsia.dev/error/%s", PrintId().c_str());
+    return shortlink_str;
+  }
 
-  ErrorId id;
-  DiagnosticKind kind;
+  // Print the full error message.
+  std::string Print() const {
+    if (def.documented == DiagnosticDocumented::kNotDocumented) {
+      return std::string(msg);
+    }
+    return std::string(msg) + " [" + PrintLink() + "]";
+  }
+
+  ErrorId get_id() const { return def.id; }
+
+  DiagnosticKind get_severity() const { return def.kind; }
+
   const DiagnosticDef& def;
   SourceSpan span;
   std::string msg;

@@ -86,6 +86,26 @@ std::nullptr_t Parser::Fail(const ErrorDef<Id, Args...>& err, SourceSpan span,
   return nullptr;
 }
 
+// TODO(fxbug.dev/108248): Remove once all outstanding errors are documented.
+template <ErrorId Id, typename... Args>
+std::nullptr_t Parser::Fail(const UndocumentedErrorDef<Id, Args...>& err,
+                            const identity_t<Args>&... args) {
+  return Fail(err, last_token_, args...);
+}
+template <ErrorId Id, typename... Args>
+std::nullptr_t Parser::Fail(const UndocumentedErrorDef<Id, Args...>& err, Token token,
+                            const identity_t<Args>&... args) {
+  return Fail(err, token.span(), args...);
+}
+template <ErrorId Id, typename... Args>
+std::nullptr_t Parser::Fail(const UndocumentedErrorDef<Id, Args...>& err, SourceSpan span,
+                            const identity_t<Args>&... args) {
+  if (Ok()) {
+    reporter_->Fail(err, span, args...);
+  }
+  return nullptr;
+}
+
 std::unique_ptr<raw::Identifier> Parser::ParseIdentifier(bool is_discarded) {
   ASTScope scope(this, is_discarded);
   std::optional<Token> token = ConsumeToken(OfKind(Token::Kind::kIdentifier));

@@ -246,6 +246,17 @@ class Parser {
   std::nullptr_t Fail(const ErrorDef<Id, Args...>& err, SourceSpan span,
                       const identity_t<Args>&... args);
 
+  // TODO(fxbug.dev/108248): Remove once all outstanding errors are documented.
+  template <ErrorId Id, typename... Args>
+  std::nullptr_t Fail(const UndocumentedErrorDef<Id, Args...>& err,
+                      const identity_t<Args>&... args);
+  template <ErrorId Id, typename... Args>
+  std::nullptr_t Fail(const UndocumentedErrorDef<Id, Args...>& err, Token token,
+                      const identity_t<Args>&... args);
+  template <ErrorId Id, typename... Args>
+  std::nullptr_t Fail(const UndocumentedErrorDef<Id, Args...>& err, SourceSpan span,
+                      const identity_t<Args>&... args);
+
   // Reports an error if |modifiers| contains a modifier whose type is not
   // included in |Allowlist|. The |decl_token| should be "struct", "enum", etc.
   // Marks the error as recovered so that parsing will continue.

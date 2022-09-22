@@ -45,7 +45,7 @@ namespace {
 
 fidl::Finding DiagnosticToFinding(const fidl::Diagnostic& diag) {
   const char* check_id = nullptr;
-  switch (diag.kind) {
+  switch (diag.get_severity()) {
     case fidl::DiagnosticKind::kError:
       check_id = "parse-error";
       break;

@@ -89,7 +89,7 @@ void Reporter::AddWarning(std::unique_ptr<Diagnostic> warning) {
 //        ^~~~
 void Reporter::Report(std::unique_ptr<Diagnostic> diag) {
   ZX_ASSERT_MSG(diag, "should not report nullptr diagnostic");
-  switch (diag->kind) {
+  switch (diag->get_severity()) {
     case DiagnosticKind::kError:
       AddError(std::move(diag));
       break;
@@ -124,11 +124,13 @@ std::vector<Diagnostic*> Reporter::Diagnostics() const {
 
     // If neither diagnostic had a span, or if their spans were ==, sort
     // by kind (errors first) and then message.
-    if (a->kind == DiagnosticKind::kError && b->kind == DiagnosticKind::kWarning)
+    if (a->get_severity() == DiagnosticKind::kError &&
+        b->get_severity() == DiagnosticKind::kWarning)
       return true;
-    if (a->kind == DiagnosticKind::kWarning && b->kind == DiagnosticKind::kError)
+    if (a->get_severity() == DiagnosticKind::kWarning &&
+        b->get_severity() == DiagnosticKind::kError)
       return false;
-    return a->id < b->id;
+    return a->get_id() < b->get_id();
   });
 
   return diagnostics;
@@ -137,7 +139,7 @@ std::vector<Diagnostic*> Reporter::Diagnostics() const {
 void Reporter::PrintReports(bool enable_color) const {
   const auto diags = Diagnostics();
   for (const auto& diag : diags) {
-    std::string qualifier = diag->kind == DiagnosticKind::kError ? "error" : "warning";
+    std::string qualifier = diag->get_severity() == DiagnosticKind::kError ? "error" : "warning";
     auto msg = Format(qualifier, diag->span, diag->Print(), enable_color);
     fprintf(stderr, "%s\n", msg.c_str());
   }
