@@ -16,8 +16,7 @@ zx_status_t zx_nanosleep(zx_time_t deadline);
 ## Description
 
 `zx_nanosleep()` suspends the calling thread execution until *deadline* passes
-on **ZX_CLOCK_MONOTONIC**. A *deadline* value less than or equal to **0** immediately
-yields the thread. *deadline* will be automatically adjusted according to the job's
+on **ZX_CLOCK_MONOTONIC**. *deadline* will be automatically adjusted according to the job's
 [timer slack] policy.
 
 To sleep for a duration, use [`zx_deadline_after()`] and the

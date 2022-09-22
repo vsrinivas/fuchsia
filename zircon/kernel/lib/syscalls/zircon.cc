@@ -54,13 +54,12 @@ zx_status_t sys_nanosleep(zx_time_t deadline) {
 
   if (deadline <= 0) {
     kcounter_add(syscalls_zx_nanosleep_zero_duration, 1);
-    Thread::Current::Yield();
     return ZX_OK;
   }
 
+  const zx_time_t now = current_time();
   const auto up = ProcessDispatcher::GetCurrent();
   const Deadline slackDeadline(deadline, up->GetTimerSlackPolicy());
-  const zx_time_t now = current_time();
 
   ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::SLEEPING);
 
