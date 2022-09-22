@@ -107,7 +107,6 @@ class CobaltTestAppLogger {
   fuchsia::cobalt::ControllerSyncPtr* cobalt_controller_;
 
   fuchsia::cobalt::LoggerSyncPtr logger_;
-  fuchsia::cobalt::LoggerSimpleSyncPtr logger_simple_;
   fuchsia::metrics::MetricEventLoggerSyncPtr metric_event_logger_;
   fuchsia::metrics::MetricEventLoggerSyncPtr control_metric_event_logger_;
   fuchsia::metrics::MetricEventLoggerSyncPtr experimental_metric_event_logger_;

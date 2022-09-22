@@ -37,18 +37,12 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
                                  fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
                                  CreateLoggerFromProjectIdCallback callback);
 
-  void CreateLoggerSimpleFromProjectId(
-      uint32_t project_id, fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
-      CreateLoggerSimpleFromProjectIdCallback callback);
-
   void CreateLoggerFromProjectSpec(uint32_t customer_id, uint32_t project_id,
                                    fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
                                    CreateLoggerFromProjectSpecCallback callback);
 
   fidl::BindingSet<fuchsia::cobalt::Logger, std::unique_ptr<fuchsia::cobalt::Logger>>
       logger_bindings_;
-  fidl::BindingSet<fuchsia::cobalt::LoggerSimple, std::unique_ptr<fuchsia::cobalt::LoggerSimple>>
-      logger_simple_bindings_;
 
   bool shut_down_ = false;
   TimerManager* timer_manager_;             // not owned

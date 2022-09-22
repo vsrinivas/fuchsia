@@ -72,22 +72,6 @@ protocol LoggerFactory {
         status Status;
     });
 
-    /// Creates a LoggerSimple for the project with the given ID, using the
-    /// state of the metrics registry that is bundled with Cobalt. The project
-    /// must be in the "fuchsia" customer.
-    ///
-    /// `project_id` The ID of the client's Cobalt project.
-    ///
-    /// `status` Returns OK on success or INVALID_ARGUMENTS if there is no
-    /// project with the given ID in the version of the metrics registry that
-    /// is bundled with Cobalt.
-    CreateLoggerSimpleFromProjectId(resource struct {
-        project_id uint32;
-        logger server_end:LoggerSimple;
-    }) -> (struct {
-        status Status;
-    });
-
     /// Creates a Logger for the project specified, using the state of the
     /// metrics registry that is bundled with Cobalt.
     ///
@@ -550,39 +534,6 @@ protocol Logger {
     /// a single FIDL call.
     LogCobaltEvents(struct {
         events vector<CobaltEvent>:MAX_BATCHED_EVENTS;
-    }) -> (struct {
-        status Status;
-    });
-};
-
-/////////////////////////////////////////////////////////////////////
-
-// LoggerSimple Interface
-/////////////////////////////////////////////////////////////////////
-
-/// LoggerSimple is an extension of the LoggerBase interface that adds some
-/// additional methods intended to be used by lower-levels of the Fuchsia system.
-///
-/// This interface conforms to the Simple layout so that Simple bindings
-/// may be generated for it.
-@for_deprecated_c_bindings
-protocol LoggerSimple {
-    compose LoggerBase;
-
-    /// Logs a histogram over a set of integer buckets. The meaning of the
-    /// Metric and the buckets is specified in the Metric definition.
-    ///
-    /// See the method LogIntHistogram() in the Logger interface for more
-    /// information. This method is similar except that it adheres to the
-    /// requirements of Simple layout. Instead of a vector of HistogramBucekts
-    /// this version takes two parallel vectors of bucket indices and the
-    /// corresponding bucket counts.
-    LogIntHistogram(struct {
-        metric_id uint32;
-        event_code uint32;
-        component string:MAX_COMPONENT_LENGTH;
-        bucket_indices vector<uint32>:MAX_HISTOGRAM_BUCKETS;
-        bucket_counts vector<uint64>:MAX_HISTOGRAM_BUCKETS;
     }) -> (struct {
         status Status;
     });

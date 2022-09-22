@@ -50,13 +50,6 @@ void LoggerFactoryImpl::CreateLoggerFromProjectId(
                                    std::move(callback), &logger_bindings_);
 }
 
-void LoggerFactoryImpl::CreateLoggerSimpleFromProjectId(
-    uint32_t project_id, fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
-    CreateLoggerSimpleFromProjectIdCallback callback) {
-  CreateAndBindLoggerFromProjectId(kFuchsiaCustomerId, project_id, std::move(request),
-                                   std::move(callback), &logger_simple_bindings_);
-}
-
 void LoggerFactoryImpl::CreateLoggerFromProjectSpec(
     uint32_t customer_id, uint32_t project_id,
     fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
@@ -68,7 +61,6 @@ void LoggerFactoryImpl::CreateLoggerFromProjectSpec(
 void LoggerFactoryImpl::ShutDown() {
   shut_down_ = true;
   logger_bindings_.CloseAll();
-  logger_simple_bindings_.CloseAll();
 }
 
 }  // namespace cobalt

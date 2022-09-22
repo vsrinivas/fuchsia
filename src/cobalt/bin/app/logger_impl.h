@@ -12,12 +12,12 @@
 
 namespace cobalt {
 
-// Implementations of the Logger and LoggerSimple fidl interfaces.
+// Implementations of the Logger fidl interface.
 //
 // To test run:
 //    fx set --with-base //bundles:tools,//src/cobalt/bin:cobalt_tests;
 //    fx test cobalt_testapp_no_network
-class LoggerImpl : public fuchsia::cobalt::Logger, public fuchsia::cobalt::LoggerSimple {
+class LoggerImpl : public fuchsia::cobalt::Logger {
  public:
   LoggerImpl(std::unique_ptr<logger::LoggerInterface> logger, TimerManager* timer_manager);
 
@@ -42,10 +42,6 @@ class LoggerImpl : public fuchsia::cobalt::Logger, public fuchsia::cobalt::Logge
   void LogIntHistogram(uint32_t metric_id, uint32_t event_code, std::string component,
                        std::vector<fuchsia::cobalt::HistogramBucket> histogram,
                        fuchsia::cobalt::Logger::LogIntHistogramCallback callback) override;
-
-  void LogIntHistogram(uint32_t metric_id, uint32_t event_code, std::string component,
-                       std::vector<uint32_t> bucket_indices, std::vector<uint64_t> bucket_counts,
-                       fuchsia::cobalt::LoggerSimple::LogIntHistogramCallback callback) override;
 
   void LogCustomEvent(uint32_t metric_id,
                       std::vector<fuchsia::cobalt::CustomEventValue> event_values,

@@ -140,11 +140,6 @@ component_testing::ScopedChild CobaltTestApp::Connect(const std::string &variant
   logger_factory->CreateLoggerFromProjectId(project_id, logger_.logger_.NewRequest(), &status);
   FX_CHECK(status == fuchsia::cobalt::Status::OK) << "CreateLogger() => " << StatusToString(status);
 
-  logger_factory->CreateLoggerSimpleFromProjectId(project_id, logger_.logger_simple_.NewRequest(),
-                                                  &status);
-  FX_CHECK(status == fuchsia::cobalt::Status::OK)
-      << "CreateLoggerSimple() => " << StatusToString(status);
-
   fuchsia::metrics::MetricEventLoggerFactorySyncPtr metric_event_logger_factory =
       child.ConnectSync<fuchsia::metrics::MetricEventLoggerFactory>();
 

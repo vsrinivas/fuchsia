@@ -65,27 +65,6 @@ void LoggerImpl::LogIntHistogram(uint32_t metric_id, uint32_t event_code, std::s
       logger_->LogIntHistogram(metric_id, {event_code}, component, std::move(histogram_ptr))));
 }
 
-void LoggerImpl::LogIntHistogram(uint32_t metric_id, uint32_t event_code, std::string component,
-                                 std::vector<uint32_t> bucket_indices,
-                                 std::vector<uint64_t> bucket_counts,
-                                 fuchsia::cobalt::LoggerSimple::LogIntHistogramCallback callback) {
-  TRACE_DURATION("cobalt_fidl", "LoggerImpl::LogIntHistogram");
-  if (bucket_indices.size() != bucket_counts.size()) {
-    FX_LOGS(ERROR) << "[" << metric_id << "]: bucket_indices.size() != bucket_counts.size().";
-    callback(FuchsiaStatus::INVALID_ARGUMENTS);
-    return;
-  }
-  logger::HistogramPtr histogram_ptr(new google::protobuf::RepeatedPtrField<HistogramBucket>());
-  for (auto i = 0; i < bucket_indices.size(); i++) {
-    auto bucket = histogram_ptr->Add();
-    bucket->set_index(bucket_indices.at(i));
-    bucket->set_count(bucket_counts.at(i));
-  }
-
-  callback(ToCobaltStatus(
-      logger_->LogIntHistogram(metric_id, {event_code}, component, std::move(histogram_ptr))));
-}
-
 void LoggerImpl::LogCustomEvent(uint32_t metric_id,
                                 std::vector<fuchsia::cobalt::CustomEventValue> event_values,
                                 fuchsia::cobalt::Logger::LogCustomEventCallback callback) {
