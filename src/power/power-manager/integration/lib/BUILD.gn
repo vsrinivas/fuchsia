@@ -13,8 +13,11 @@ rustc_library("lib") {
   with_unit_tests = true
 
   deps = [
+    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_rust",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_rust",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_rust",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.power.manager:fuchsia.power.manager_rust",
     "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
     "//sdk/fidl/fuchsia.ui.activity:fuchsia.ui.activity_rust",
@@ -39,6 +42,7 @@ rustc_library("lib") {
   sources = [
     "src/lib.rs",
     "src/mocks/activity_service.rs",
+    "src/mocks/driver_manager.rs",
     "src/mocks/input_settings_service.rs",
     "src/mocks/mod.rs",
     "src/mocks/system_controller.rs",

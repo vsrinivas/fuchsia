@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 pub mod activity_service;
+pub mod driver_manager;
 pub mod input_settings_service;
 pub mod system_controller;
 pub mod temperature_driver;
