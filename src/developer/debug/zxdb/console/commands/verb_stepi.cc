@@ -49,24 +49,24 @@ Examples
       Steps thread 2 in process 3.
 )";
 
-Err RunVerbStepi(ConsoleContext* context, const Command& cmd) {
-  if (Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "stepi"); err.has_error())
-    return err;
+void RunVerbStepi(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
+  if (Err err = AssertStoppedThreadWithFrameCommand(cmd_context->GetConsoleContext(), cmd, "stepi");
+      err.has_error())
+    return cmd_context->ReportError(err);
 
   uint64_t count = 1;
   if (cmd.args().size() == 1) {
     if (Err err = StringToUint64(cmd.args()[0], &count); err.has_error()) {
-      return err;
+      return cmd_context->ReportError(err);
     }
     if (count == 0) {
-      return Err("<count> must be non-zero.");
+      return cmd_context->ReportError(Err("<count> must be non-zero."));
     }
   } else if (cmd.args().size() > 1) {
-    return Err("Too many arguments for 'stepi'.");
+    return cmd_context->ReportError(Err("Too many arguments for 'stepi'."));
   }
 
   cmd.thread()->StepInstructions(count);
-  return Err();
 }
 
 }  // namespace

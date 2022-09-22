@@ -56,7 +56,7 @@ Examples
       It will NOT break if "foo[5]" changes to point to a different "bar".
 )*";
 
-Err RunVerbWatch(ConsoleContext* context, const Command& cmd) {
+void RunVerbWatch(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   fxl::RefPtr<EvalContext> eval_context = GetEvalContextForCommand(cmd);
 
   BreakpointSettings settings;
@@ -64,19 +64,20 @@ Err RunVerbWatch(ConsoleContext* context, const Command& cmd) {
   settings.scope = ExecutionScopeForCommand(cmd);
 
   auto data_provider = eval_context->GetDataProvider();
-  return EvalCommandExpression(
-      cmd, "watch", eval_context, true, true, [settings, eval_context](ErrOrValue result) mutable {
-        Console* console = Console::get();
-        if (result.has_error()) {
-          console->Output(result.err());
-          return;
-        }
+  Err err = EvalCommandExpression(
+      cmd, "watch", eval_context, true, true,
+      [settings, eval_context, cmd_context](ErrOrValue result) mutable {
+        ConsoleContext* console_context = cmd_context->GetConsoleContext();
+        if (!console_context)
+          return;  // Nothing to do.
+        if (result.has_error())
+          return cmd_context->ReportError(result.err());
 
         // Validate the expression produced something with an address.
         const ExprValue& value = result.value();
         const ExprValueSource& source = value.source();
         if (source.type() != ExprValueSource::Type::kMemory) {
-          console->Output(
+          cmd_context->ReportError(
               Err("This expression's value is stored in a %s location. Only values\n"
                   "stored in memory can be watched.\n"
                   "\n"
@@ -90,20 +91,21 @@ Err RunVerbWatch(ConsoleContext* context, const Command& cmd) {
         }
 
         if (source.is_bitfield()) {
-          console->Output(Err("This expression's result is a bitfield which can't be watched."));
+          cmd_context->ReportError(
+              Err("This expression's result is a bitfield which can't be watched."));
           return;
         }
 
         // Size errors are very common if the object is too big. Catch those early before trying
         // to create a breakpoint.
         uint32_t size = static_cast<uint32_t>(value.data().size());
-        if (Err err = BreakpointSettings::ValidateSize(console->context().session()->arch(),
+        if (Err err = BreakpointSettings::ValidateSize(console_context->session()->arch(),
                                                        settings.type, size);
             err.has_error()) {
           // Rewrite the error to list the size that this produced. Since "watch" implicitly gets
           // the size, the user may have no idea how much they requested.
-          console->Output("Attempting to watch a variable of size " + std::to_string(size) +
-                          ".\n\n" + err.msg());
+          cmd_context->ReportError(Err("Attempting to watch a variable of size " +
+                                       std::to_string(size) + ".\n\n" + err.msg()));
           return;
         }
 
@@ -111,17 +113,18 @@ Err RunVerbWatch(ConsoleContext* context, const Command& cmd) {
         settings.locations.emplace_back(source.address());
         settings.byte_size = size;
 
-        Breakpoint* breakpoint = console->context().session()->system().CreateNewBreakpoint();
-        console->context().SetActiveBreakpoint(breakpoint);
+        Breakpoint* breakpoint = console_context->session()->system().CreateNewBreakpoint();
+        console_context->SetActiveBreakpoint(breakpoint);
         breakpoint->SetSettings(settings);
 
         // Created message.
         OutputBuffer out;
         out.Append("Created ");
-        out.Append(FormatBreakpoint(&console->context(), breakpoint, true));
-        console->Output(out);
+        out.Append(FormatBreakpoint(console_context, breakpoint, true));
+        cmd_context->Output(out);
       });
-  return Err();
+  if (err.has_error())
+    cmd_context->ReportError(err);
 }
 
 }  // namespace

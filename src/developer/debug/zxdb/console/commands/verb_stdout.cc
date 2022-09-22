@@ -27,8 +27,8 @@ std::string OutputContainer(const ContainerType& container) {
   return str;
 }
 
-Err RunVerbStdout(ConsoleContext* context, const Command& cmd) {
-  return RunVerbStdio(Verb::kStdout, cmd, context);
+void RunVerbStdout(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
+  return RunVerbStdio(Verb::kStdout, cmd, cmd_context);
 }
 
 }  // namespace
@@ -60,26 +60,26 @@ Examples
     [ERROR] This is a stderr entry.
 )";
 
-Err RunVerbStdio(Verb io_type, const Command& cmd, ConsoleContext* context) {
+void RunVerbStdio(Verb io_type, const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   FX_DCHECK(io_type == Verb::kStdout || io_type == Verb::kStderr);
 
   // Only a process can be specified.
   if (Err err = cmd.ValidateNouns({Noun::kProcess}); err.has_error())
-    return err;
+    return cmd_context->ReportError(err);
 
   const char* io_name = io_type == Verb::kStdout ? "stdout" : "stderr";
   if (!cmd.args().empty()) {
     auto msg = fxl::StringPrintf("\"%s\" takes no parameters.", io_name);
-    return Err(ErrType::kInput, std::move(msg));
+    return cmd_context->ReportError(Err(ErrType::kInput, std::move(msg)));
   }
 
-  if (Err err = AssertRunningTarget(context, io_name, cmd.target()); err.has_error())
-    return err;
+  if (Err err = AssertRunningTarget(cmd_context->GetConsoleContext(), io_name, cmd.target());
+      err.has_error())
+    return cmd_context->ReportError(err);
 
   Process* process = cmd.target()->GetProcess();
   auto& container = io_type == Verb::kStdout ? process->get_stdout() : process->get_stderr();
-  Console::get()->Output(OutputContainer(container));
-  return Err();
+  cmd_context->Output(OutputContainer(container));
 }
 
 }  // namespace zxdb

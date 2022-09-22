@@ -36,21 +36,19 @@ Example
   process 2 sym-near &x
 )";
 
-Err RunVerbSymNear(ConsoleContext* context, const Command& cmd) {
+void RunVerbSymNear(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   if (Err err = cmd.ValidateNouns({Noun::kProcess}); err.has_error())
-    return err;
-  if (Err err = AssertRunningTarget(context, "sym-near", cmd.target()); err.has_error())
-    return err;
+    return cmd_context->ReportError(err);
+  if (Err err = AssertRunningTarget(cmd_context->GetConsoleContext(), "sym-near", cmd.target());
+      err.has_error())
+    return cmd_context->ReportError(err);
 
-  return EvalCommandAddressExpression(
+  Err err = EvalCommandAddressExpression(
       cmd, "sym-near", GetEvalContextForCommand(cmd),
-      [weak_process = cmd.target()->GetProcess()->GetWeakPtr()](const Err& err, uint64_t address,
-                                                                std::optional<uint64_t> size) {
-        Console* console = Console::get();
-        if (err.has_error()) {
-          console->Output(err);  // Evaluation error.
-          return;
-        }
+      [weak_process = cmd.target()->GetProcess()->GetWeakPtr(), cmd_context](
+          const Err& err, uint64_t address, std::optional<uint64_t> size) {
+        if (err.has_error())
+          cmd_context->ReportError(err);  // Evaluation error.
         if (!weak_process) {
           // Process has been destroyed during evaluation. Normally a message will be printed when
           // that happens so we can skip reporting the error.
@@ -64,8 +62,10 @@ Err RunVerbSymNear(ConsoleContext* context, const Command& cmd) {
         opts.always_show_addresses = true;
         opts.show_file_line = true;
 
-        console->Output(FormatLocation(locations[0], opts));
+        cmd_context->Output(FormatLocation(locations[0], opts));
       });
+  if (err.has_error())
+    cmd_context->ReportError(err);
 }
 
 }  // namespace

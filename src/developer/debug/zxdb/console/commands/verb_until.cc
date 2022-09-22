@@ -80,7 +80,7 @@ Examples
       of them call the function.
 )";
 
-Err RunVerbUntil(ConsoleContext* context, const Command& cmd) {
+void RunVerbUntil(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   // Decode the location.
   //
   // The validation on this is a bit tricky. Most uses apply to the current thread and take some
@@ -91,42 +91,46 @@ Err RunVerbUntil(ConsoleContext* context, const Command& cmd) {
   if (cmd.args().empty()) {
     // No args means use the current location.
     if (!cmd.frame()) {
-      return Err(ErrType::kInput, "There isn't a current frame to take the location from.");
+      return cmd_context->ReportError(
+          Err(ErrType::kInput, "There isn't a current frame to take the location from."));
     }
     locations.emplace_back(cmd.frame()->GetAddress());
   } else if (cmd.args().size() == 1) {
     // One arg = normal location (this function can handle null frames).
     if (Err err = ParseLocalInputLocation(cmd.frame(), cmd.args()[0], &locations); err.has_error())
-      return err;
+      return cmd_context->ReportError(err);
   } else {
-    return Err(ErrType::kInput,
-               "Expecting zero or one arg for the location.\n"
-               "Formats: <function>, <file>:<line#>, <line#>, or 0x<address>");
+    return cmd_context->ReportError(
+        Err(ErrType::kInput,
+            "Expecting zero or one arg for the location.\n"
+            "Formats: <function>, <file>:<line#>, <line#>, or 0x<address>"));
   }
 
-  auto callback = [](const Err& err) {
+  auto callback = [cmd_context](const Err& err) {
     if (err.has_error())
-      Console::get()->Output(err);
+      cmd_context->ReportError(err);
   };
+
+  ConsoleContext* console_context = cmd_context->GetConsoleContext();
 
   // Dispatch the request.
   if (cmd.HasNoun(Noun::kProcess) && !cmd.HasNoun(Noun::kThread) && !cmd.HasNoun(Noun::kFrame)) {
     // Process-wide ("process until ...").
-    if (Err err = AssertRunningTarget(context, "until", cmd.target()); err.has_error())
-      return err;
+    if (Err err = AssertRunningTarget(console_context, "until", cmd.target()); err.has_error())
+      return cmd_context->ReportError(err);
     cmd.target()->GetProcess()->ContinueUntil(locations, callback);
   } else {
     // Thread-specific.
-    if (Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "until"); err.has_error())
-      return err;
+    if (Err err = AssertStoppedThreadWithFrameCommand(console_context, cmd, "until");
+        err.has_error())
+      return cmd_context->ReportError(err);
 
     auto controller = std::make_unique<UntilThreadController>(std::move(locations));
-    cmd.thread()->ContinueWith(std::move(controller), [](const Err& err) {
+    cmd.thread()->ContinueWith(std::move(controller), [cmd_context](const Err& err) {
       if (err.has_error())
-        Console::get()->Output(err);
+        cmd_context->ReportError(err);
     });
   }
-  return Err();
 }
 
 }  // namespace

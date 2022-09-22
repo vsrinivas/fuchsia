@@ -84,23 +84,23 @@ Err CompleteSteps(Thread* thread, TargetPointer ip, const std::vector<AddressRan
   return Err();
 }
 
-Err RunVerbSteps(ConsoleContext* context, const Command& cmd) {
-  if (Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "steps"); err.has_error())
-    return err;
+void RunVerbSteps(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
+  if (Err err = AssertStoppedThreadWithFrameCommand(cmd_context->GetConsoleContext(), cmd, "steps");
+      err.has_error())
+    return cmd_context->ReportError(err);
 
   Process* process = cmd.target()->GetProcess();
   GetSubstatementCallsForLine(process, cmd.frame()->GetLocation(),
-                              [weak_thread = cmd.thread()->GetWeakPtr()](
+                              [weak_thread = cmd.thread()->GetWeakPtr(), cmd_context](
                                   const Err& err, std::vector<SubstatementCall> calls) {
-                                if (!weak_thread)
-                                  Console::get()->Output(Err("Thread terminated."));
-                                else if (err.has_error())
-                                  Console::get()->Output(err);
-                                else
+                                if (!weak_thread) {
+                                  cmd_context->ReportError(Err("Thread terminated."));
+                                } else if (err.has_error()) {
+                                  cmd_context->ReportError(err);
+                                } else {
                                   RunVerbStepsWithSubstatements(weak_thread.get(), calls);
+                                }
                               });
-
-  return Err();
 }
 
 }  // namespace

@@ -201,8 +201,11 @@ using ThreadKoidToStackPointer = std::map<uint64_t, TargetPointer>;
 // Implememnts actually computing the stack statistics. The safe stack pointers are passed in as
 // a map indexed by thread koid.
 void RunStackUsage(Process& process, std::vector<debug_ipc::AddressRegion> map,
-                   const ThreadKoidToStackPointer& unsafe_stack_pointers) {
-  ConsoleContext* console_context = &Console::get()->context();
+                   const ThreadKoidToStackPointer& unsafe_stack_pointers,
+                   fxl::RefPtr<CommandContext> cmd_context) {
+  ConsoleContext* console_context = cmd_context->GetConsoleContext();
+  if (!console_context)
+    return;  // Console gone, nothing to do.
 
   OneStackUsage totals;
 
@@ -308,26 +311,28 @@ void RunStackUsage(Process& process, std::vector<debug_ipc::AddressRegion> map,
   out.Append(std::to_string(totals.total));
   out.Append("\n");
 
-  Console::get()->Output(out);
+  cmd_context->Output(out);
 }
 
 // Implements the command once all threads are stopped, frames are synced, and we have the address
 // space information.
 //
 // Watch out: something could have been resumed out from under us so be tolerant of errors.
-void RunStackUsageOnSyncedFrames(Process& process, std::vector<debug_ipc::AddressRegion> map) {
+void RunStackUsageOnSyncedFrames(Process& process, std::vector<debug_ipc::AddressRegion> map,
+                                 fxl::RefPtr<CommandContext> cmd_context) {
   // The thread callbacks collect their stack pointers in this map.
   auto stack_pointer_map = std::make_shared<ThreadKoidToStackPointer>();
 
   // Collects the callbacks and dispatches the final result to the RunStackUsage() function.
-  auto join = fxl::MakeRefCounted<JoinCallbacks<void>>(
-      [weak_process = process.GetWeakPtr(), map = std::move(map), stack_pointer_map]() {
-        if (!weak_process) {
-          Console::get()->Output(Err("Process exited."));
-        } else {
-          RunStackUsage(*weak_process, map, *stack_pointer_map);
-        }
-      });
+  auto join = fxl::MakeRefCounted<JoinCallbacks<void>>([weak_process = process.GetWeakPtr(),
+                                                        map = std::move(map), stack_pointer_map,
+                                                        cmd_context]() {
+    if (!weak_process) {
+      cmd_context->ReportError(Err("Process exited."));
+    } else {
+      RunStackUsage(*weak_process, map, *stack_pointer_map, cmd_context);
+    }
+  });
 
   // Schedule requesting the unsafe stack pointers.
   for (Thread* thread : process.GetThreads()) {
@@ -343,26 +348,24 @@ void RunStackUsageOnSyncedFrames(Process& process, std::vector<debug_ipc::Addres
   join->Ready();
 }
 
-Err RunVerbStackUsage(ConsoleContext* context, const Command& cmd) {
-  Err err = AssertAllStoppedThreadsCommand(context, cmd, "stack-usage");
+void RunVerbStackUsage(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
+  Err err = AssertAllStoppedThreadsCommand(cmd_context->GetConsoleContext(), cmd, "stack-usage");
   if (err.has_error())
-    return err;
+    return cmd_context->ReportError(err);
 
   // Success, get the address space.
   Process* process = cmd.target()->GetProcess();
-  process->GetAspace(0, [weak_process = process->GetWeakPtr()](
+  process->GetAspace(0, [weak_process = process->GetWeakPtr(), cmd_context](
                             const Err& err, std::vector<debug_ipc::AddressRegion> map) {
     if (err.has_error()) {
-      Console::get()->Output(err);
+      cmd_context->ReportError(err);
     } else if (!weak_process) {
-      Console::get()->Output(Err("Process exited."));
+      cmd_context->ReportError(Err("Process exited."));
     } else {
       // Success.
-      RunStackUsageOnSyncedFrames(*weak_process, std::move(map));
+      RunStackUsageOnSyncedFrames(*weak_process, std::move(map), cmd_context);
     }
   });
-
-  return Err();
 }
 
 }  // namespace

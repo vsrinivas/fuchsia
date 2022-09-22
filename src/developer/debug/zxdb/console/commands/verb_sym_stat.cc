@@ -160,15 +160,15 @@ void DumpBuildIdIndex(SystemSymbols* system_symbols, OutputBuffer* out) {
   out->Append("\n");
 }
 
-Err RunVerbSymStat(ConsoleContext* context, const Command& cmd) {
-  Err err = cmd.ValidateNouns({Noun::kProcess});
-  if (err.has_error())
-    return err;
+void RunVerbSymStat(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
+  if (Err err = cmd.ValidateNouns({Noun::kProcess}); err.has_error())
+    return cmd_context->ReportError(err);
 
   if (!cmd.args().empty())
-    return Err("\"sym-stat\" takes no arguments.");
+    return cmd_context->ReportError(Err("\"sym-stat\" takes no arguments."));
 
-  SystemSymbols* system_symbols = context->session()->system().GetSymbols();
+  SystemSymbols* system_symbols =
+      cmd_context->GetConsoleContext()->session()->system().GetSymbols();
   OutputBuffer out;
 
   if (cmd.HasSwitch(kDumpIndexSwitch)) {
@@ -180,14 +180,13 @@ Err RunVerbSymStat(ConsoleContext* context, const Command& cmd) {
     DumpIndexOverview(system_symbols, &out);
 
     // Process symbol status (if any).
-    if (cmd.target() && cmd.target()->GetProcess())
-      SummarizeProcessSymbolStatus(context, cmd.target()->GetProcess(), &out);
+    if (cmd.target() && cmd.target()->GetProcess()) {
+      SummarizeProcessSymbolStatus(cmd_context->GetConsoleContext(), cmd.target()->GetProcess(),
+                                   &out);
+    }
   }
 
-  Console* console = Console::get();
-  console->Output(out);
-
-  return Err();
+  cmd_context->Output(out);
 }
 
 }  // namespace

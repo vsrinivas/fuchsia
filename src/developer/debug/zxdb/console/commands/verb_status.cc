@@ -27,49 +27,33 @@ const char kStatusHelp[] = R"(status: Show debugger status.
   with suggestions on what to do.
 )";
 
-Err RunVerbStatus(ConsoleContext* context, const Command& cmd, CommandCallback cb = nullptr) {
+void RunVerbStatus(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
+  ConsoleContext* console_context = cmd_context->GetConsoleContext();
+
   OutputBuffer out;
-  out.Append(GetConnectionStatus(context->session()));
+  out.Append(GetConnectionStatus(console_context->session()));
   out.Append("\n");
 
-  if (!context->session()->IsConnected()) {
-    Console::get()->Output(std::move(out));
-    return Err();
-  }
+  if (!console_context->session()->IsConnected())
+    return cmd_context->Output(out);
 
-  out.Append(GetFilterStatus(context));
+  out.Append(GetFilterStatus(console_context));
   out.Append("\n");
-  out.Append(GetProcessStatus(context));
+  out.Append(GetProcessStatus(console_context));
   out.Append("\n");
 
   // Attempt to get the agent's state.
-  context->session()->remote_api()->Status(
-      {}, [out = std::move(out), session = context->session()->GetWeakPtr(), cb = std::move(cb)](
-              const Err& err, debug_ipc::StatusReply reply) mutable {
-        // Call the callback if applicable.
-        Err return_err = err;
-        auto defer = fit::defer([&return_err, cb = std::move(cb)]() mutable {
-          if (cb)
-            cb(return_err);
-        });
+  console_context->session()->remote_api()->Status(
+      {},
+      [out = std::move(out), cmd_context](const Err& err, debug_ipc::StatusReply reply) mutable {
+        if (!cmd_context->GetConsoleContext())
+          return;  // Console gone, nothing to do.
+        if (err.has_error())
+          return cmd_context->ReportError(err);
 
-        if (!session) {
-          return_err = Err("No session found.");
-          return;
-        }
-
-        if (err.has_error()) {
-          return_err = err;
-          return;
-        }
-
-        // Append the Limbo state.
         out.Append(GetLimboStatus(reply.limbo));
-
-        Console::get()->Output(std::move(out));
+        cmd_context->Output(out);
       });
-
-  return Err();
 }
 
 OutputBuffer FormatProcessRecords(std::vector<debug_ipc::ProcessRecord> records, int indent) {

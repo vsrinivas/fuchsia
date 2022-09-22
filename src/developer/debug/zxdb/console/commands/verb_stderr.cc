@@ -13,8 +13,8 @@ namespace {
 
 const char kStderrShortHelp[] = "stderr: Show process error output.";
 
-Err RunVerbStderr(ConsoleContext* context, const Command& cmd) {
-  return RunVerbStdio(Verb::kStderr, cmd, context);
+void RunVerbStderr(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
+  return RunVerbStdio(Verb::kStderr, cmd, cmd_context);
 }
 
 }  // namespace

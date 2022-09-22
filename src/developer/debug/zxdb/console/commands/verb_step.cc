@@ -74,14 +74,15 @@ Examples
       and leave execution at the beginning of the "Print" subroutine.
 )";
 
-Err RunVerbStep(ConsoleContext* context, const Command& cmd) {
-  if (Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "step"); err.has_error())
-    return err;
+void RunVerbStep(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
+  if (Err err = AssertStoppedThreadWithFrameCommand(cmd_context->GetConsoleContext(), cmd, "step");
+      err.has_error())
+    return cmd_context->ReportError(err);
 
   // All controllers do this on completion.
-  auto completion = [](const Err& err) {
+  auto completion = [cmd_context](const Err& err) {
     if (err.has_error())
-      Console::get()->Output(err);
+      cmd_context->ReportError(err);
   };
 
   if (cmd.args().empty()) {
@@ -102,10 +103,8 @@ Err RunVerbStep(ConsoleContext* context, const Command& cmd) {
         });
     cmd.thread()->ContinueWith(std::move(controller), std::move(completion));
   } else {
-    return Err("Too many arguments for 'step'.");
+    return cmd_context->ReportError(Err("Too many arguments for 'step'."));
   }
-
-  return Err();
 }
 
 }  // namespace

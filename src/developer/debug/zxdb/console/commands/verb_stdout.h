@@ -17,7 +17,7 @@ VerbRecord GetStdoutVerbRecord();
 
 // Backend shared between the stdout and stderr verbs.
 extern const char kStdioHelp[];
-Err RunVerbStdio(Verb io_type, const Command& cmd, ConsoleContext* context);
+void RunVerbStdio(Verb io_type, const Command& cmd, fxl::RefPtr<CommandContext> cmd_context);
 
 }  // namespace zxdb
 

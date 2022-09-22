@@ -302,15 +302,16 @@ OutputBuffer DumpLineTable(ProcessSymbols* process_symbols, uint64_t address,
   return result;
 }
 
-Err RunVerbSymDebug(ConsoleContext* context, const Command& cmd) {
+void RunVerbSymDebug(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   if (Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kFrame}); err.has_error())
-    return err;
-  if (Err err = AssertRunningTarget(context, "sym-debug", cmd.target()); err.has_error())
-    return err;
+    return cmd_context->ReportError(err);
+  if (Err err = AssertRunningTarget(cmd_context->GetConsoleContext(), "sym-debug", cmd.target());
+      err.has_error())
+    return cmd_context->ReportError(err);
 
   ErrOr<FormatSymbolOptions> opts = GetFormatSymbolOptionsFromCommand(cmd, kDwarfExprSwitch);
   if (opts.has_error())
-    return opts.err();
+    return cmd_context->ReportError(opts.err());
 
   OutputBuffer (*dumper)(ProcessSymbols*, uint64_t, const FormatSymbolOptions&) = nullptr;
   if (cmd.HasSwitch(kCallReturnSwitch)) {
@@ -322,13 +323,13 @@ Err RunVerbSymDebug(ConsoleContext* context, const Command& cmd) {
       // sees as the current function.
       if (const Frame* frame = cmd.frame()) {
         if (!frame->GetLocation().symbol())
-          return Err("No function symbol for current location.");
-        Console::get()->Output(FormatSymbol(cmd.target()->GetProcess()->GetSymbols(),
-                                            frame->GetLocation().symbol().Get(), opts.value()));
+          return cmd_context->ReportError(Err("No function symbol for current location."));
+        cmd_context->Output(FormatSymbol(cmd.target()->GetProcess()->GetSymbols(),
+                                         frame->GetLocation().symbol().Get(), opts.value()));
       } else {
-        return Err("No current frame, please specify an address.");
+        return cmd_context->ReportError(Err("No current frame, please specify an address."));
       }
-      return Err();
+      return;
     }
 
     // Fall back on address lookup. when a parameter is given.
@@ -340,39 +341,38 @@ Err RunVerbSymDebug(ConsoleContext* context, const Command& cmd) {
   } else if (cmd.HasSwitch(kLineSwitch)) {
     dumper = &DumpLineTable;
   } else {
-    return Err(
-        "Missing a switch to indicate what to print.\n"
-        "See \"help sym-debug\" for available options.");
+    return cmd_context->ReportError(
+        Err("Missing a switch to indicate what to print.\n"
+            "See \"help sym-debug\" for available options."));
   }
 
   if (cmd.args().empty()) {
     // Use the current location.
     if (!cmd.frame())
-      return Err("No current frame, please specify an address.");
+      return cmd_context->ReportError(Err("No current frame, please specify an address."));
 
-    Console::get()->Output(
+    cmd_context->Output(
         dumper(cmd.target()->GetProcess()->GetSymbols(), cmd.frame()->GetAddress(), opts.value()));
-    return Err();
+    return;
   }
 
   // Evaluate the expression to get the location.
-  return EvalCommandAddressExpression(
+  Err err = EvalCommandAddressExpression(
       cmd, "sym-debug", GetEvalContextForCommand(cmd),
-      [weak_process = cmd.target()->GetProcess()->GetWeakPtr(), dumper, opts = opts.value()](
-          const Err& err, uint64_t address, std::optional<uint64_t> size) {
-        Console* console = Console::get();
-        if (err.has_error()) {
-          console->Output(err);  // Evaluation error.
-          return;
-        }
+      [weak_process = cmd.target()->GetProcess()->GetWeakPtr(), dumper, opts = opts.value(),
+       cmd_context](const Err& err, uint64_t address, std::optional<uint64_t> size) {
+        if (err.has_error())
+          return cmd_context->ReportError(err);  // Evaluation error.
         if (!weak_process) {
           // Process has been destroyed during evaluation. Normally a message will be printed when
           // that happens so we can skip reporting the error.
           return;
         }
 
-        console->Output(dumper(weak_process->GetSymbols(), address, opts));
+        cmd_context->Output(dumper(weak_process->GetSymbols(), address, opts));
       });
+  if (err.has_error())
+    cmd_context->ReportError(err);
 }
 
 }  // namespace

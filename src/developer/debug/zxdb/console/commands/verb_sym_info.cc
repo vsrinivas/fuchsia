@@ -63,14 +63,13 @@ std::optional<std::string> DemangleForSymInfo(const ParsedIdentifier& identifier
   return llvm::demangle(full_input);
 }
 
-Err RunVerbSymInfo(ConsoleContext* context, const Command& cmd) {
+void RunVerbSymInfo(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   if (cmd.args().empty())
-    return Err("sym-info expects the name of the symbol to look up.");
+    return cmd_context->ReportError(Err("sym-info expects the name of the symbol to look up."));
 
   ParsedIdentifier identifier;
-  Err err = ExprParser::ParseIdentifier(cmd.args()[0], &identifier);
-  if (err.has_error())
-    return err;
+  if (Err err = ExprParser::ParseIdentifier(cmd.args()[0], &identifier); err.has_error())
+    return cmd_context->ReportError(err);
 
   // See if it looks mangled.
   OutputBuffer out;
@@ -122,7 +121,7 @@ Err RunVerbSymInfo(ConsoleContext* context, const Command& cmd) {
 
   ErrOr<FormatSymbolOptions> opts = GetFormatSymbolOptionsFromCommand(cmd, kDwarfExprSwitch);
   if (opts.has_error())
-    return opts.err();
+    return cmd_context->ReportError(opts.err());
 
   bool found_item = false;
   for (const FoundName& found : found_items) {
@@ -161,8 +160,7 @@ Err RunVerbSymInfo(ConsoleContext* context, const Command& cmd) {
     out.Append("\" found in the current context.\n");
   }
   if (!out.empty())
-    Console::get()->Output(out);
-  return Err();
+    cmd_context->Output(out);
 }
 
 }  // namespace

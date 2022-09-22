@@ -23,11 +23,10 @@ const char kSysInfoHelp[] =
   Get general information about the target system. This includes aspects such as
   build version, number of CPUs, memory, etc.)";
 
-void OnSysInfo(const Err& err, debug_ipc::SysInfoReply sys_info) {
-  if (err.has_error()) {
-    Console::get()->Output(err);
-    return;
-  }
+void OnSysInfo(const Err& err, debug_ipc::SysInfoReply sys_info,
+               fxl::RefPtr<CommandContext> cmd_context) {
+  if (err.has_error())
+    return cmd_context->ReportError(err);
 
   OutputBuffer out;
   out.Append(fxl::StringPrintf("Version: %s\n", sys_info.version.c_str()));
@@ -45,13 +44,15 @@ void OnSysInfo(const Err& err, debug_ipc::SysInfoReply sys_info) {
   out.Append(fxl::StringPrintf("HW Breakpoints: %u\n", sys_info.hw_breakpoint_count));
   out.Append(fxl::StringPrintf("HW Watchpoints: %u\n", sys_info.hw_watchpoint_count));
 
-  Console::get()->Output(std::move(out));
+  cmd_context->Output(out);
 }
 
-Err RunVerbSysInfo(ConsoleContext* context, const Command& cmd) {
+void RunVerbSysInfo(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   debug_ipc::SysInfoRequest request;
-  context->session()->remote_api()->SysInfo(request, &OnSysInfo);
-  return Err();
+  cmd_context->GetConsoleContext()->session()->remote_api()->SysInfo(
+      request, [cmd_context](const Err& err, debug_ipc::SysInfoReply sys_info) {
+        OnSysInfo(err, std::move(sys_info), cmd_context);
+      });
 }
 
 }  // namespace

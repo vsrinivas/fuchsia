@@ -159,13 +159,13 @@ bool DumpModule(const Command& cmd, const IndexNode& node, DumpModuleContext* co
   return false;
 }
 
-Err RunVerbSymSearch(ConsoleContext* context, const Command& cmd) {
+void RunVerbSymSearch(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   if (cmd.args().size() > 1)
-    return Err("Too many arguments. See \"help sym-search\".");
+    return cmd_context->ReportError(Err("Too many arguments. See \"help sym-search\"."));
 
   Process* process = cmd.target()->GetProcess();
   if (!process)
-    return Err("No process is running.");
+    return cmd_context->ReportError(Err("No process is running."));
 
   ProcessSymbols* process_symbols = process->GetSymbols();
   auto process_status = process_symbols->GetStatus();
@@ -177,12 +177,12 @@ Err RunVerbSymSearch(ConsoleContext* context, const Command& cmd) {
               return lhs.name < rhs.name;
             });
 
-  Console* console = Console::get();
-
   debug::Regex regex;
   if (cmd.args().size() == 1) {
-    if (!regex.Init(cmd.args().front()))
-      return Err("Could not initialize regex %s.", cmd.args().front().c_str());
+    if (!regex.Init(cmd.args().front())) {
+      return cmd_context->ReportError(
+          Err("Could not initialize regex %s.", cmd.args().front().c_str()));
+    }
   }
 
   // The collected symbols that pass the filter.
@@ -215,24 +215,22 @@ Err RunVerbSymSearch(ConsoleContext* context, const Command& cmd) {
 
   size_t current_index = 0;
   for (const auto& [module_info, limit] : module_symbol_indices) {
-    console->Output(
+    cmd_context->Output(
         OutputBuffer(Syntax::kHeading, fxl::StringPrintf("%s\n\n", module_info.name.c_str())));
 
     while (current_index < limit) {
-      console->Output(dump[current_index]);
+      cmd_context->Output(dump[current_index]);
       current_index++;
     }
-    console->Output("\n");
+    cmd_context->Output("\n");
   }
 
   if (truncated) {
-    console->Output(
-        Err("Limiting results to %lu. Make a more specific filter or use --all.", dump.size()));
+    cmd_context->Output(fxl::StringPrintf(
+        "Limiting results to %lu. Make a more specific filter or use --all.", dump.size()));
   } else {
-    console->Output(fxl::StringPrintf("Displaying %zu entries.", dump.size()));
+    cmd_context->Output(fxl::StringPrintf("Displaying %zu entries.", dump.size()));
   }
-
-  return Err();
 }
 
 }  // namespace
