@@ -14,6 +14,7 @@ FUCHSIA_DIR = Path(os.environ["FUCHSIA_DIR"])
 ERRCAT_INDEX_FILE_PATH = FUCHSIA_DIR / "docs/reference/fidl/language/errcat.md"
 ERRCAT_DIR_PATH = FUCHSIA_DIR / "docs/reference/fidl/language/error-catalog"
 TEMPLATE_PATH = FUCHSIA_DIR / "tools/fidl/scripts/add_errcat_template.md"
+FIDLC_DIAGNOSTICS_FILE_PATH = FUCHSIA_DIR / "tools/fidl/fidlc/include/fidl/diagnostics.h"
 
 
 def get_index_entry_numeral(line):
@@ -30,8 +31,10 @@ def insert_index_entry(lines, line_num, line):
 
 
 def main(args):
-    """Given an error numeral for the `fi-` domain, create a new markdown file to describe that error,
-    or add it to the error catalog listing in errcat.md, or both.
+    """Given an error numeral for the `fi-` domain, create a new markdown file to describe that
+    error, or add it to the error catalog listing in errcat.md, or flip its entry in diagnostics.h
+    from an `Undocumented[Error|Warning]Def` specialization to a documented one, or any combination
+    thereof.
 
     Usage example:
     tools/fidl/scripts/add_errcat_entry.py 123
@@ -87,18 +90,38 @@ def main(args):
             with open(markdown_file, 'wt') as f:
                 f.write(template.substitute(num=ns))
 
+    # Replace the specialization used in diagnostics.h, if the error already exists in that file.
+    spec_swapped = False
+    with open(FIDLC_DIAGNOSTICS_FILE_PATH, 'rt') as f:
+        text = f.read()
+
+        # Replace the specialization with one that is no longer `Undocumented*`.
+        (new_text, count) = re.subn(
+            "(constexpr )(Undocumented)((?:Error|Warning)Def<%d[,>])" % n,
+            r'\1\3',
+            text,
+            count=1)
+        if count == 1:
+            spec_swapped = True
+        with open(FIDLC_DIAGNOSTICS_FILE_PATH, "wt") as f:
+            f.write(new_text)
+
     # Tell the user what a great job we've done.
-    if index_exists and file_exists:
+    if index_exists and file_exists and not spec_swapped:
         print(
             "There is already an index entry and a markdown for %s, nothing to do."
             % ns)
-        return -1
+        return 0
     if not index_exists:
         print("Added new entry for fi-%s to %s." % (ns, ERRCAT_INDEX_FILE_PATH))
     if not file_exists:
         print(
             "Added new markdown file for fi-%s at %s/_fi-%s.md." %
             (ns, ERRCAT_DIR_PATH, ns))
+    if spec_swapped:
+        print(
+            "The DiagnosticDef specialization for fi-%s in %s now prints a permalink."
+            % (ns, FIDLC_DIAGNOSTICS_FILE_PATH))
 
     return 0
 
