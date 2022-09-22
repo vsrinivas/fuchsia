@@ -315,7 +315,7 @@ impl NetworkSelector {
                     false
                 });
 
-            scan::perform_scan(
+            let _results = scan::perform_scan(
                 iface_manager,
                 self.saved_network_manager.clone(),
                 None,

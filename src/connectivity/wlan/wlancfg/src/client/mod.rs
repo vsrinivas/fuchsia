@@ -280,7 +280,7 @@ async fn handle_client_request_scan(
             false
         });
 
-    scan::perform_scan(
+    let _results = scan::perform_scan(
         iface_manager,
         saved_networks.clone(),
         Some(output_iterator),
@@ -289,7 +289,7 @@ async fn handle_client_request_scan(
         scan::ScanReason::ClientRequest,
         None,
     )
-    .await
+    .await;
 }
 
 /// This function handles requests to save a network by saving the network and sending back to the

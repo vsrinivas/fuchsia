@@ -137,7 +137,7 @@ pub(crate) async fn perform_scan(
     // TODO(fxbug.dev/73821): This should be removed when ScanManager struct is implemented,
     // in favor of a field in the struct itself.
     telemetry_sender: Option<TelemetrySender>,
-) {
+) -> Result<Vec<types::ScanResult>, types::ScanError> {
     async fn output_error(
         output_iterator: Option<fidl::endpoints::ServerEnd<fidl_policy::ScanResultIteratorMarker>>,
         error: types::ScanError,
@@ -158,7 +158,7 @@ pub(crate) async fn perform_scan(
             Err(_) => {
                 warn!("Failed to get sme proxy for passive scan");
                 output_error(output_iterator, types::ScanError::GeneralError).await;
-                return;
+                return Err(types::ScanError::GeneralError);
             }
         };
         match sme_scan(&sme_proxy, scan_request.clone(), telemetry_sender.clone()).await {
@@ -170,12 +170,12 @@ pub(crate) async fn perform_scan(
             Err(scan_err) => match scan_err {
                 types::ScanError::GeneralError => {
                     output_error(output_iterator, scan_err).await;
-                    return;
+                    return Err(scan_err);
                 }
                 types::ScanError::Cancelled => {
                     if iter > 0 {
                         output_error(output_iterator, scan_err).await;
-                        return;
+                        return Err(scan_err);
                     }
                     info!("Driver requested a delay before retrying scan");
                     fasync::Timer::new(zx::Duration::from_millis(SCAN_RETRY_DELAY_MS).after_now())
@@ -266,6 +266,9 @@ pub(crate) async fn perform_scan(
     }
 
     while let Some(_) = scan_result_consumers.next().await {}
+
+    drop(scan_result_consumers);
+    Ok(scan_results)
 }
 
 /// Update the hidden network probabilties of saved networks seen in a
@@ -1408,7 +1411,9 @@ mod tests {
         // Process scan handler
         // Note: this will be Poll::Ready because the scan handler will exit after sending the final
         // scan results.
-        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(()));
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(results) => {
+            assert_eq!(results.unwrap(), internal_aps);
+        });
 
         // Check for results
         assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
@@ -1475,7 +1480,9 @@ mod tests {
         );
 
         // Process response from SME (which is empty) and expect the future to complete.
-        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(()));
+        assert_variant!(exec.run_until_stalled(&mut scan_fut),  Poll::Ready(results) => {
+            assert!(results.unwrap().is_empty());
+        });
 
         // Check for results
         assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
@@ -2018,7 +2025,9 @@ mod tests {
         // Process scan handler
         // Note: this will be Poll::Ready because the scan handler will exit after sending the final
         // scan results.
-        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(()));
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(results) => {
+            assert_eq!(results.unwrap(), passive_internal_aps);
+        });
 
         // Check the FIDL result -- this should be an error, since the active scan failed
         assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
@@ -2189,7 +2198,9 @@ mod tests {
 
         // Process scan handler
         // Note: this will be Poll::Ready because the scan handler will exit since all the consumers are done
-        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(()));
+        assert_variant!(exec.run_until_stalled(&mut scan_fut),  Poll::Ready(results) => {
+            assert_eq!(results.unwrap(), internal_aps);
+        });
 
         // Check both successful scan consumers got results
         assert_eq!(
@@ -2250,7 +2261,9 @@ mod tests {
 
         // Process SME result.
         // Note: this will be Poll::Ready, since the scan handler will quit after sending the error
-        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(()));
+        assert_variant!(exec.run_until_stalled(&mut scan_fut),  Poll::Ready(results) => {
+            assert_eq!(results, Err(types::ScanError::GeneralError));
+        });
 
         // the iterator should have an error on it
         assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
@@ -2366,7 +2379,9 @@ mod tests {
             );
 
             // Process scan future, which should now have a response.
-            assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(()));
+            assert_variant!(exec.run_until_stalled(&mut scan_fut),Poll::Ready(results) => {
+                assert_eq!(results, Err(types::ScanError::Cancelled));
+            });
 
             // Since the retry failed with another cancellation, there should be a Cancelled error
             // code.
@@ -2657,7 +2672,9 @@ mod tests {
         // Process scan handler
         // Note: this will be Poll::Ready because the scan handler will exit after sending the final
         // scan results.
-        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(()));
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(results) => {
+            assert_eq!(results.unwrap(), expected_internal_scans);
+        });
 
         // Check for results
         assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
