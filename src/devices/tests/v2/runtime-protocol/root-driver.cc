@@ -85,22 +85,7 @@ class RootDriver : public driver::DriverBase,
   fitx::result<fdf::wire::NodeError> AddChild() {
     fidl::Arena arena;
 
-    // Set the offers of the node.
-    auto service = fcd::OfferService{{
-        .source_name = ft::Service::Name,
-        .target_name = ft::Service::Name,
-    }};
-
-    auto mapping = fcd::NameMapping{{
-        .source_name = std::string(kChildName),
-        .target_name = "default",
-    }};
-    service.renamed_instances() = std::vector{std::move(mapping)};
-
-    auto instance_filter = std::string("default");
-    service.source_instance_filter() = std::vector{std::move(instance_filter)};
-
-    auto offer = fcd::Offer::WithService(service);
+    auto offer = driver::MakeOffer<ft::Service>(kChildName);
 
     // Set the properties of the node that a driver will bind to.
     auto property = fdf::NodeProperty{
