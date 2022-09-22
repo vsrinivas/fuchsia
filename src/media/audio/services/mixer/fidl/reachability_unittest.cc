@@ -12,6 +12,196 @@
 
 namespace media_audio {
 
+TEST(ReachabilityTest, ComputeDelayOrdinaryNodesOnly) {
+  // Node graph is structured as follows:
+  //
+  // ```
+  //   1     2
+  //   |     |
+  //   |     3
+  //    \   /
+  //      |
+  //      4
+  //      |
+  //      5
+  // ```
+  FakeGraph graph({
+      .edges =
+          {
+              {1, 4},
+              {2, 3},
+              {3, 4},
+              {4, 5},
+          },
+  });
+
+  // Total delays should be all zero by default, since there are no self delay contributions yet.
+  SCOPED_TRACE("no delay");
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(1), nullptr), zx::nsec(0));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(2), nullptr), zx::nsec(0));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(3), graph.node(2)), zx::nsec(0));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(4), graph.node(1)), zx::nsec(0));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(4), graph.node(3)), zx::nsec(0));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(5), graph.node(4)), zx::nsec(0));
+
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(1)), zx::nsec(0));
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(2)), zx::nsec(0));
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(3)), zx::nsec(0));
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(4)), zx::nsec(0));
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(5)), zx::nsec(0));
+
+  // Set delay of 1nsec for node `1`.
+  SCOPED_TRACE("add delay to node 1");
+  graph.node(1)->SetOnGetSelfPresentationDelayForSource([](const NodePtr& source) {
+    FX_CHECK(source == nullptr);
+    return zx::nsec(1);
+  });
+
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(1), nullptr), zx::nsec(1));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(2), nullptr), zx::nsec(0));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(3), graph.node(2)), zx::nsec(0));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(4), graph.node(1)), zx::nsec(0));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(4), graph.node(3)), zx::nsec(0));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(5), graph.node(4)), zx::nsec(0));
+
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(1)), zx::nsec(1));
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(2)), zx::nsec(0));
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(3)), zx::nsec(0));
+  // Upstream delay onwards should pick the maximum of source nodes `1` and `3`.
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(4)), zx::nsec(1));
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(5)), zx::nsec(1));
+
+  // Set delay of 5nsec for node `5`.
+  SCOPED_TRACE("add delay to node 5");
+  graph.node(5)->SetOnGetSelfPresentationDelayForSource([&](const NodePtr& source) {
+    FX_CHECK(source == graph.node(4));
+    return zx::nsec(5);
+  });
+
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(1), nullptr), zx::nsec(6));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(2), nullptr), zx::nsec(5));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(3), graph.node(2)), zx::nsec(5));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(4), graph.node(1)), zx::nsec(5));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(4), graph.node(3)), zx::nsec(5));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(5), graph.node(4)), zx::nsec(5));
+
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(1)), zx::nsec(1));
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(2)), zx::nsec(0));
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(3)), zx::nsec(0));
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(4)), zx::nsec(1));
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(5)), zx::nsec(6));
+
+  // Set variable delay of 1nsec or 3nsec for node `4`, depending on source nodes `1` or `3`.
+  SCOPED_TRACE("add delay to node 4");
+  graph.node(4)->SetOnGetSelfPresentationDelayForSource([&](const NodePtr& source) {
+    FX_CHECK(source == graph.node(1) || source == graph.node(3));
+    return (source == graph.node(1)) ? zx::nsec(1) : zx::nsec(3);
+  });
+
+  // Downstream delay picks node `4` delay for source node `1`, which totals to `5 + 1 + 1 = 7`.
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(1), nullptr), zx::nsec(7));
+  // Downstream delay picks node `4` delay for source node `3`, which totals to `5 + 3 + 0 + 0 = 8`.
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(2), nullptr), zx::nsec(8));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(3), graph.node(2)), zx::nsec(8));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(4), graph.node(1)), zx::nsec(6));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(4), graph.node(3)), zx::nsec(8));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(5), graph.node(4)), zx::nsec(5));
+
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(1)), zx::nsec(1));
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(2)), zx::nsec(0));
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(3)), zx::nsec(0));
+  // Upstream delay onwards picks the maximum of the total delay between source nodes `1` and `3`,
+  // which is `1 + 1 = 2` vs `0 + 3 = 3`.
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(4)), zx::nsec(3));
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(5)), zx::nsec(8));
+}
+
+TEST(ReachabilityTest, ComputeDelayWithMetaNodes) {
+  FakeGraph graph({
+      .meta_nodes =
+          {
+              {
+                  10,
+                  {.source_children = {}, .dest_children = {1, 2}},
+              },
+              {
+                  20,
+                  {.source_children = {3}, .dest_children = {4}},
+              },
+              {
+                  30,
+                  {.source_children = {5}, .dest_children = {}},
+              },
+          },
+      .edges =
+          {
+              {1, 3},
+              {2, 5},
+              {4, 5},
+          },
+  });
+
+  // Total delays should be all zero by default, since there are no self delay contributions yet.
+  SCOPED_TRACE("no delay");
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(1), nullptr), zx::nsec(0));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(2), nullptr), zx::nsec(0));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(3), graph.node(1)), zx::nsec(0));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(4), nullptr), zx::nsec(0));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(5), graph.node(2)), zx::nsec(0));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(5), graph.node(4)), zx::nsec(0));
+
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(1)), zx::nsec(0));
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(2)), zx::nsec(0));
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(3)), zx::nsec(0));
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(4)), zx::nsec(0));
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(5)), zx::nsec(0));
+
+  // Set delay of 1nsec for destination child node `1` of meta node `10`.
+  SCOPED_TRACE("add delay to destination child node 1");
+  graph.node(1)->SetOnGetSelfPresentationDelayForSource([](const NodePtr& source) {
+    FX_CHECK(source == nullptr);
+    return zx::nsec(1);
+  });
+
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(1), nullptr), zx::nsec(1));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(2), nullptr), zx::nsec(0));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(3), graph.node(1)), zx::nsec(0));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(4), nullptr), zx::nsec(0));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(5), graph.node(2)), zx::nsec(0));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(5), graph.node(4)), zx::nsec(0));
+
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(1)), zx::nsec(1));
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(2)), zx::nsec(0));
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(3)), zx::nsec(1));
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(4)), zx::nsec(1));
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(5)), zx::nsec(1));
+
+  // Set variable delay of 4nsec or 2nsec for source child node `5` of meta node `30` depending on
+  // the connected destination child nodes `2` and `4`.
+  SCOPED_TRACE("add delay to source child node 5");
+  graph.node(5)->SetOnGetSelfPresentationDelayForSource([&](const NodePtr& source) {
+    FX_CHECK(source == graph.node(2) || source == graph.node(4));
+    return (source == graph.node(2)) ? zx::nsec(2) : zx::nsec(4);
+  });
+
+  // Downstream delay should pick maximum of destination child nodes `2` and `4`, which will sum up
+  // to `4 + 0 + 0 + 1 = 5`.
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(1), nullptr), zx::nsec(5));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(2), nullptr), zx::nsec(2));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(3), graph.node(1)), zx::nsec(4));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(4), nullptr), zx::nsec(4));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(5), graph.node(2)), zx::nsec(2));
+  EXPECT_EQ(ComputeDownstreamDelay(graph.node(5), graph.node(4)), zx::nsec(4));
+
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(1)), zx::nsec(1));
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(2)), zx::nsec(0));
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(3)), zx::nsec(1));
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(4)), zx::nsec(1));
+  // Upstream delay should pick maximum of destination child nodes `2` and `4`, which will sum up to
+  // `1 + 0 + 0 + 4 = 5`.
+  EXPECT_EQ(ComputeUpstreamDelay(graph.node(5)), zx::nsec(5));
+}
+
 TEST(ReachabilityTest, OrdinaryNodeSelfEdge) {
   FakeGraph graph({
       .edges = {{1, 1}},

@@ -5,9 +5,22 @@
 #ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_REACHABILITY_H_
 #define SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_REACHABILITY_H_
 
+#include <lib/zx/time.h>
+
 #include "src/media/audio/services/mixer/fidl/node.h"
+#include "src/media/audio/services/mixer/fidl/ptr_decls.h"
 
 namespace media_audio {
+
+// Computes the total downstream delay contribution of a given `node` from `source` in a mix graph.
+// If `source` is nullptr, this typically implies that `node` is a producer node where the
+// downstream delay does not depend on an incoming source node.
+// REQUIRED: !node.is_meta()
+zx::duration ComputeDownstreamDelay(const NodePtr& node, const NodePtr& source);
+
+// Computes the total upstream delay contribution of a given `node` in a mix graph.
+// REQUIRED: !node.is_meta()
+zx::duration ComputeUpstreamDelay(const NodePtr& node);
 
 // Reports whether there exists a path from `source` to `dest`. The nodes may be ordinary nodes
 // and/or meta nodes. For any given meta node M, there are implicit paths from M's child source
