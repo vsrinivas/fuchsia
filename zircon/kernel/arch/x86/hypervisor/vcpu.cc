@@ -677,15 +677,17 @@ zx_status_t AutoVmcs::SetControl(VmcsField32 controls, uint64_t true_msr, uint64
   uint32_t allowed_0 = static_cast<uint32_t>(BITS(true_msr, 31, 0));
   uint32_t allowed_1 = static_cast<uint32_t>(BITS_SHIFT(true_msr, 63, 32));
   if ((allowed_1 & set) != set) {
-    dprintf(INFO, "Failed to set VMCS controls %#x\n", static_cast<uint>(controls));
+    dprintf(INFO, "Failed to set VMCS controls %#x, %#x != %#x\n", static_cast<uint>(controls),
+            allowed_1, set);
     return ZX_ERR_NOT_SUPPORTED;
   }
   if ((~allowed_0 & clear) != clear) {
-    dprintf(INFO, "Failed to clear VMCS controls %#x\n", static_cast<uint>(controls));
+    dprintf(INFO, "Failed to clear VMCS controls %#x, %#x != %#x\n", static_cast<uint>(controls),
+            ~allowed_0, clear);
     return ZX_ERR_NOT_SUPPORTED;
   }
   if ((set & clear) != 0) {
-    dprintf(INFO, "Failed to set and clear the same VMCS controls %#x\n",
+    dprintf(INFO, "Attempted to set and clear the same VMCS controls %#x\n",
             static_cast<uint>(controls));
     return ZX_ERR_INVALID_ARGS;
   }
