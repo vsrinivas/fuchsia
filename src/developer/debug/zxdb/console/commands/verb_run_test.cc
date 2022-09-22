@@ -45,18 +45,19 @@ Examples
   run-test fuchsia-pkg://fuchsia.com/pkg#meta/some_test.cm SomeTest.Case1
 )";
 
-Err Exec(ConsoleContext* context, const Command& cmd, CommandCallback callback) {
+void Exec(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   // No nouns should be provided.
   if (Err err = cmd.ValidateNouns({}); err.has_error()) {
-    return err;
+    return cmd_context->ReportError(err);
   }
 
   if (cmd.args().empty()) {
-    return Err("No test to run. Try \"run-test <url>\".");
+    return cmd_context->ReportError(Err("No test to run. Try \"run-test <url>\"."));
   }
 
   if (cmd.args()[0].find("://") == std::string::npos || !StringEndsWith(cmd.args()[0], ".cm")) {
-    return Err("The first argument must be a component URL. Try \"help run-test\".");
+    return cmd_context->ReportError(
+        Err("The first argument must be a component URL. Try \"help run-test\"."));
   }
 
   // Launch the test.
@@ -65,19 +66,14 @@ Err Exec(ConsoleContext* context, const Command& cmd, CommandCallback callback) 
   request.argv = cmd.args();
 
   cmd.target()->session()->remote_api()->Launch(
-      request, [cb = std::move(callback)](Err err, debug_ipc::LaunchReply reply) mutable {
+      request, [cmd_context](Err err, debug_ipc::LaunchReply reply) mutable {
         if (!err.has_error() && reply.status.has_error()) {
           err = Err("Could not start test: %s", reply.status.message().c_str());
         }
         if (err.has_error()) {
-          Console::get()->Output(err);
-        }
-        if (cb) {
-          cb(err);
+          cmd_context->ReportError(err);
         }
       });
-
-  return Err();
 }
 
 }  // namespace

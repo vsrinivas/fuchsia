@@ -50,17 +50,17 @@ Examples
   process 3 thread 2 next
       Steps thread 2 in process 3.
 )";
-Err RunVerbNext(ConsoleContext* context, const Command& cmd) {
-  if (Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "next"); err.has_error())
-    return err;
+void RunVerbNext(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
+  if (Err err = AssertStoppedThreadWithFrameCommand(cmd_context->GetConsoleContext(), cmd, "next");
+      err.has_error())
+    return cmd_context->ReportError(err);
 
   auto controller = std::make_unique<StepOverThreadController>(StepMode::kSourceLine,
                                                                &ScheduleAsyncPrintReturnValue);
-  cmd.thread()->ContinueWith(std::move(controller), [](const Err& err) {
+  cmd.thread()->ContinueWith(std::move(controller), [cmd_context](const Err& err) {
     if (err.has_error())
-      Console::get()->Output(err);
+      cmd_context->ReportError(err);
   });
-  return Err();
 }
 
 }  // namespace

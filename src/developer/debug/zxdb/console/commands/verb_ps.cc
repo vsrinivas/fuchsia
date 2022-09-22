@@ -119,14 +119,12 @@ std::optional<debug_ipc::ProcessTreeRecord> FilterProcessTree(
   return std::nullopt;
 }
 
-void OnListProcessesComplete(const std::string& filter, const Err& err,
+void OnListProcessesComplete(fxl::RefPtr<CommandContext> cmd_context, const std::string& filter,
                              const debug_ipc::ProcessTreeReply& reply) {
   std::set<uint64_t> attached = ComputeAttachedKoidMap();
 
   OutputBuffer out;
-  if (err.has_error()) {
-    out.Append(err);
-  } else if (filter.empty()) {
+  if (filter.empty()) {
     // Output everything.
     OutputProcessTreeRecord(reply.root, 0, attached, &out);
   } else {
@@ -137,7 +135,7 @@ void OnListProcessesComplete(const std::string& filter, const Err& err,
       out.Append("No processes or jobs matching \"" + filter + "\".\n");
     }
   }
-  Console::get()->Output(out);
+  cmd_context->Output(out);
 }
 
 const char kPsShortHelp[] = "ps: Prints the process tree of the debugged system.";
@@ -155,16 +153,17 @@ const char kPsHelp[] =
   Jobs are annotated with "j: <job koid>"
   Processes are annotated with "p: <process koid>")";
 
-Err RunVerbPs(ConsoleContext* context, const Command& cmd) {
+void RunVerbPs(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   std::string filter_string;
   if (!cmd.args().empty())
     filter_string = cmd.args()[0];
 
-  context->session()->system().GetProcessTree(
-      [filter_string](const Err& err, debug_ipc::ProcessTreeReply reply) {
-        OnListProcessesComplete(filter_string, err, reply);
+  cmd_context->GetConsoleContext()->session()->system().GetProcessTree(
+      [filter_string, cmd_context](const Err& err, debug_ipc::ProcessTreeReply reply) {
+        if (err.has_error())
+          return cmd_context->ReportError(err);
+        OnListProcessesComplete(cmd_context, filter_string, reply);
       });
-  return Err();
 }
 
 }  // namespace

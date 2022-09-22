@@ -21,19 +21,14 @@ namespace {
 
 constexpr int kSizeSwitch = 1;
 
-void MemoryReadComplete(const Err& err, MemoryDump dump) {
-  OutputBuffer out;
-  if (err.has_error()) {
-    out.Append(err);
-  } else {
-    MemoryFormatOptions opts;
-    opts.address_mode = MemoryFormatOptions::kAddresses;
-    opts.show_ascii = true;
-    opts.values_per_line = 16;
-    opts.separator_every = 8;
-    out.Append(FormatMemory(dump, dump.address(), static_cast<uint32_t>(dump.size()), opts));
-  }
-  Console::get()->Output(out);
+void MemoryReadComplete(MemoryDump dump, fxl::RefPtr<CommandContext> cmd_context) {
+  MemoryFormatOptions opts;
+  opts.address_mode = MemoryFormatOptions::kAddresses;
+  opts.show_ascii = true;
+  opts.values_per_line = 16;
+  opts.separator_every = 8;
+
+  cmd_context->Output(FormatMemory(dump, dump.address(), static_cast<uint32_t>(dump.size()), opts));
 }
 
 const char kMemReadShortHelp[] = R"(mem-read / x: Read memory from debugged process.)";
@@ -67,38 +62,37 @@ Examples
   mem-read --size=16 0x8f1763a7
   process 3 mem-read 83242384560
 )";
-Err RunVerbMemRead(ConsoleContext* context, const Command& cmd) {
+void RunVerbMemRead(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   // Only a process can have its memory read.
   if (Err err = cmd.ValidateNouns({Noun::kProcess}); err.has_error())
-    return err;
+    return cmd_context->ReportError(err);
 
   // Size argument (optional).
   std::optional<uint64_t> input_size;
   if (cmd.HasSwitch(kSizeSwitch)) {
     uint64_t read_size = 0;
     if (Err err = StringToUint64(cmd.GetSwitchValue(kSizeSwitch), &read_size); err.has_error())
-      return err;
+      return cmd_context->ReportError(err);
     input_size = read_size;
   }
 
-  return EvalCommandAddressExpression(
+  Err err = EvalCommandAddressExpression(
       cmd, "mem-read", GetEvalContextForCommand(cmd),
-      [weak_target = cmd.target()->GetWeakPtr(), input_size](const Err& err, uint64_t address,
-                                                             std::optional<uint64_t> object_size) {
-        Console* console = Console::get();
+      [weak_target = cmd.target()->GetWeakPtr(), input_size, cmd_context](
+          const Err& err, uint64_t address, std::optional<uint64_t> object_size) {
         if (err.has_error()) {
-          console->Output(err);  // Evaluation error.
-          return;
+          return cmd_context->ReportError(err);  // Evaluation error.
         }
-        if (!weak_target) {
-          // Target has been destroyed during evaluation. Normally a message will be printed when
-          // that happens so we can skip reporting the error.
+        ConsoleContext* console_context = cmd_context->GetConsoleContext();
+        if (!weak_target || !console_context) {
+          // Target or cosnole has been destroyed during evaluation. Normally a message will be
+          // printed when that happens so we can skip reporting the error.
           return;
         }
 
-        Err run_err = AssertRunningTarget(&console->context(), "mem-read", weak_target.get());
+        Err run_err = AssertRunningTarget(console_context, "mem-read", weak_target.get());
         if (run_err.has_error()) {
-          console->Output(run_err);
+          cmd_context->ReportError(run_err);
           return;
         }
 
@@ -110,10 +104,17 @@ Err RunVerbMemRead(ConsoleContext* context, const Command& cmd) {
         else
           read_size = 64;
 
-        weak_target->GetProcess()->ReadMemory(address, read_size, &MemoryReadComplete);
+        weak_target->GetProcess()->ReadMemory(address, read_size,
+                                              [cmd_context](const Err& err, MemoryDump dump) {
+                                                if (err.has_error()) {
+                                                  cmd_context->ReportError(err);
+                                                } else {
+                                                  MemoryReadComplete(std::move(dump), cmd_context);
+                                                }
+                                              });
       });
-
-  return Err();
+  if (err.has_error())
+    cmd_context->ReportError(err);
 }
 
 }  // namespace

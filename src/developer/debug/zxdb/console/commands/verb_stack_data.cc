@@ -60,10 +60,11 @@ Examples
 
   stack-data --num=128 0x43011a14bfc8
 )";
-Err RunVerbStackData(ConsoleContext* context, const Command& cmd) {
-  Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "stack-data");
+void RunVerbStackData(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
+  Err err =
+      AssertStoppedThreadWithFrameCommand(cmd_context->GetConsoleContext(), cmd, "stack-data");
   if (err.has_error())
-    return err;
+    return cmd_context->ReportError(err);
 
   AnalyzeMemoryOptions opts;
   opts.process = cmd.target()->GetProcess();
@@ -74,9 +75,9 @@ Err RunVerbStackData(ConsoleContext* context, const Command& cmd) {
     // Explicitly provided start address.
     Err err = StringToUint64(cmd.args()[0], &opts.begin_address);
     if (err.has_error())
-      return err;
+      return cmd_context->ReportError(err);
   } else if (cmd.args().size() > 1) {
-    return Err("Too many args to \"stack-data\", expecting 0 or 1.");
+    return cmd_context->ReportError(Err("Too many args to \"stack-data\", expecting 0 or 1."));
   } else {
     // Use implicit SP from the frame (with optional --offset).
     opts.begin_address = cmd.frame()->GetStackPointer();
@@ -84,7 +85,7 @@ Err RunVerbStackData(ConsoleContext* context, const Command& cmd) {
       int offset = 0;
       Err err = StringToInt(cmd.GetSwitchValue(kOffsetSwitch), &offset);
       if (err.has_error())
-        return err;
+        return cmd_context->ReportError(err);
       opts.begin_address += offset;
     }
   }
@@ -93,30 +94,28 @@ Err RunVerbStackData(ConsoleContext* context, const Command& cmd) {
   std::optional<uint32_t> input_size;
   err = ReadAnalyzeNumAndSizeSwitches(cmd, &input_size);
   if (err.has_error())
-    return err;
+    return cmd_context->ReportError(err);
   if (!input_size)
     opts.bytes_to_read = kDefaultAnalyzeByteSize;
   else
     opts.bytes_to_read = *input_size;
 
-  auto async_output = fxl::MakeRefCounted<AsyncOutputBuffer>();
-  Console::get()->Output(async_output);
-
-  AnalyzeMemory(opts, [bytes_to_read = opts.bytes_to_read, async_output](
+  AnalyzeMemory(opts, [bytes_to_read = opts.bytes_to_read, cmd_context](
                           const Err& err, OutputBuffer output, uint64_t next_addr) {
-    async_output->Append(std::move(output));
-    if (err.has_error()) {
-      async_output->Append(err);
-    } else {
-      // Help text for continuation.
-      async_output->Append(
-          Syntax::kComment,
-          fxl::StringPrintf("↓ For more lines: stack-data -n %d 0x%" PRIx64,
-                            static_cast<int>(bytes_to_read / sizeof(uint64_t)), next_addr));
-    }
-    async_output->Complete();
+    if (err.has_error())
+      return cmd_context->ReportError(err);
+
+    // Group the otuput into one write (not strictly necessary but the current test infrastructure
+    // expects everything to be written in one chunk).
+    OutputBuffer out(output);
+
+    // Help text for continuation.
+    out.Append(OutputBuffer(
+        Syntax::kComment,
+        fxl::StringPrintf("↓ For more lines: stack-data -n %d 0x%" PRIx64,
+                          static_cast<int>(bytes_to_read / sizeof(uint64_t)), next_addr)));
+    cmd_context->Output(out);
   });
-  return Err();
 }
 
 }  // namespace

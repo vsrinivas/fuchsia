@@ -45,6 +45,9 @@ class CommandContext : public fxl::RefCountedThreadSafe<CommandContext> {
 
   // The Console/ConsoleContext may be null if this object has outlived the Console object. In
   // production this probably won't happen but can be triggered in tests more easily.
+  //
+  // If the code calling this function is being used in a synchronous context (i.e. called directly
+  // from a command handler and not from a callback), these pointers are guaranteed non-null.
   Console* console() { return weak_console_.get(); }
   ConsoleContext* GetConsoleContext() const;
 

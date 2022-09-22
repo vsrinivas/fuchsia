@@ -23,17 +23,17 @@ const char kQuitHelp[] =
   processes.
 )";
 
-Err RunVerbQuit(ConsoleContext* context, const Command& cmd) {
+void RunVerbQuit(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   int running_processes = 0;
-  for (Target* t : context->session()->system().GetTargets()) {
+  for (Target* t : cmd_context->GetConsoleContext()->session()->system().GetTargets()) {
     if (t->GetState() != Target::kNone)
       running_processes++;
   }
 
   if (running_processes == 0) {
     // Nothing running, quit immediately.
-    Console::get()->Quit();
-    return Err();
+    cmd_context->console()->Quit();
+    return;
   }
 
   OutputBuffer message;
@@ -52,12 +52,11 @@ Err RunVerbQuit(ConsoleContext* context, const Command& cmd) {
   options.options.push_back("y");
   options.options.push_back("n");
   options.cancel_option = "n";
-  Console::get()->ModalGetOption(options, message, "y/n > ", [](const std::string& answer) {
-    if (answer == "y")
-      Console::get()->Quit();
-  });
-
-  return Err();
+  Console::get()->ModalGetOption(options, message, "y/n > ",
+                                 [cmd_context](const std::string& answer) {
+                                   if (answer == "y")
+                                     cmd_context->console()->Quit();
+                                 });
 }
 
 }  // namespace

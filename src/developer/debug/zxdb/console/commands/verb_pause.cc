@@ -80,86 +80,90 @@ Examples
       if no index is specified).
 )";
 
-Err PauseThread(ConsoleContext* context, Thread* thread, bool clear_state) {
+void PauseThread(fxl::RefPtr<CommandContext> cmd_context, Thread* thread, bool clear_state) {
+  // Guaranteed non-null since we're being called synchronously.
+  ConsoleContext* console_context = cmd_context->GetConsoleContext();
+
   // Only save the thread (for printing source info) if it's the current thread.
   Target* target = thread->GetProcess()->GetTarget();
-  bool show_source =
-      context->GetActiveTarget() == target && context->GetActiveThreadForTarget(target) == thread;
+  bool show_source = console_context->GetActiveTarget() == target &&
+                     console_context->GetActiveThreadForTarget(target) == thread;
 
   if (clear_state)
     thread->CancelAllThreadControllers();
-  thread->Pause([weak_thread = thread->GetWeakPtr(), show_source]() {
-    if (!weak_thread)
+  thread->Pause([weak_thread = thread->GetWeakPtr(), show_source, cmd_context]() {
+    ConsoleContext* console_context = cmd_context->GetConsoleContext();
+    if (!weak_thread || !console_context)
       return;
 
-    Console* console = Console::get();
     if (show_source) {
       // Output the full source location.
-      console->context().OutputThreadContext(weak_thread.get(), StopInfo());
-
+      cmd_context->Output(console_context->GetThreadContext(weak_thread.get(), StopInfo()));
     } else {
       // Not current, just output the one-line description.
       OutputBuffer out("Paused ");
-      out.Append(FormatThread(&console->context(), weak_thread.get()));
-      console->Output(out);
+      out.Append(FormatThread(console_context, weak_thread.get()));
+      cmd_context->Output(out);
     }
   });
-
-  return Err();
 }
 
 // Source information on this thread will be printed out on completion. The current thread may be
 // null.
-Err PauseTarget(ConsoleContext* context, Target* target, Thread* current_thread, bool clear_state) {
+void PauseTarget(fxl::RefPtr<CommandContext> cmd_context, Target* target, Thread* current_thread,
+                 bool clear_state) {
+  // Guaranteed non-null since we're being called synchronously.
+  ConsoleContext* console_context = cmd_context->GetConsoleContext();
+
   Process* process = target->GetProcess();
   if (!process)
-    return Err("Process not running, can't pause.");
+    return cmd_context->ReportError(Err("Process not running, can't pause."));
 
   // Only save the thread (for printing source info) if it's the current thread.
   fxl::WeakPtr<Thread> weak_thread;
-  if (current_thread && context->GetActiveTarget() == target &&
-      context->GetActiveThreadForTarget(target) == current_thread)
+  if (current_thread && console_context->GetActiveTarget() == target &&
+      console_context->GetActiveThreadForTarget(target) == current_thread)
     weak_thread = current_thread->GetWeakPtr();
 
   if (clear_state)
     process->CancelAllThreadControllers();
-  process->Pause([weak_process = process->GetWeakPtr(), weak_thread]() {
-    if (!weak_process)
+  process->Pause([weak_process = process->GetWeakPtr(), weak_thread, cmd_context]() {
+    ConsoleContext* console_context = cmd_context->GetConsoleContext();
+    if (!weak_process || !console_context)
       return;
-    Console* console = Console::get();
+
     OutputBuffer out("Paused");
-    out.Append(FormatTarget(&console->context(), weak_process->GetTarget()));
-    console->Output(out);
+    out.Append(FormatTarget(console_context, weak_process->GetTarget()));
+    cmd_context->Output(out);
 
     if (weak_thread) {
       // Thread is current, show current location.
-      console->context().OutputThreadContext(weak_thread.get(), StopInfo());
+      cmd_context->Output(console_context->GetThreadContext(weak_thread.get(), StopInfo()));
     }
   });
-  return Err();
 }
 
 // Source information on this thread will be printed out on completion.
-Err PauseSystem(System* system, bool clear_state) {
+void PauseSystem(fxl::RefPtr<CommandContext> cmd_context, System* system, bool clear_state) {
   if (Err err = VerifySystemHasRunningProcess(system); err.has_error())
-    return err;
+    return cmd_context->ReportError(err);
 
   if (clear_state)
     system->CancelAllThreadControllers();
-  system->Pause([weak_system = system->GetWeakPtr()]() {
+  system->Pause([weak_system = system->GetWeakPtr(), cmd_context]() {
     // Provide messaging about the system pause.
-    if (!weak_system)
+    ConsoleContext* console_context = cmd_context->GetConsoleContext();
+    if (!weak_system || !console_context)
       return;
     OutputBuffer out;
-    Console* console = Console::get();
 
     // Find the current thread for outputting context. The current thread may have changed from
     // when the command was initiated so always use the current one. In addition, pausing a program
     // immediately after starting or attaching to it won't always sync the threads so there might
     // be no thread context on the original "pause" command.
     Thread* thread = nullptr;
-    if (const Target* target = console->context().GetActiveTarget())
-      thread = console->context().GetActiveThreadForTarget(target);  // May be null if not running.
+    if (const Target* target = console_context->GetActiveTarget())
+      thread = console_context->GetActiveThreadForTarget(target);  // May be null if not running.
 
     // Collect the status of all running processes.
     int paused_process_count = 0;
@@ -167,36 +171,37 @@ Err PauseSystem(System* system, bool clear_state) {
       if (const Process* process = target->GetProcess()) {
         paused_process_count++;
         out.Append(" " + GetBullet() + " ");
-        out.Append(FormatTarget(&console->context(), target));
+        out.Append(FormatTarget(console_context, target));
         out.Append("\n");
       }
     }
     // Skip the process list if there's only one and we're showing the thread info below. Otherwise
     // the one thing paused is duplicated twice and this is the most common case.
     if (paused_process_count > 1 || !thread) {
-      console->Output("Paused:\n");
-      console->Output(out);
-      console->Output("\n");
+      cmd_context->Output("Paused:\n");
+      cmd_context->Output(out);
+      cmd_context->Output("\n");
     }
 
     // Follow with the source context of the current thread if there is one.
     if (thread)
-      console->context().OutputThreadContext(thread, StopInfo());
+      cmd_context->Output(console_context->GetThreadContext(thread, StopInfo()));
   });
-  return Err();
 }
 
-Err RunVerbPause(ConsoleContext* context, const Command& cmd) {
+void RunVerbPause(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   if (Err err = cmd.ValidateNouns({Noun::kGlobal, Noun::kProcess, Noun::kThread}); err.has_error())
-    return err;
+    return cmd_context->ReportError(err);
 
   bool clear_state = cmd.HasSwitch(kClearSwitch);
 
-  if (cmd.HasNoun(Noun::kThread))
-    return PauseThread(context, cmd.thread(), clear_state);
-  if (cmd.HasNoun(Noun::kProcess))
-    return PauseTarget(context, cmd.target(), cmd.thread(), clear_state);
-  return PauseSystem(&context->session()->system(), clear_state);
+  if (cmd.HasNoun(Noun::kThread)) {
+    PauseThread(cmd_context, cmd.thread(), clear_state);
+  } else if (cmd.HasNoun(Noun::kProcess)) {
+    PauseTarget(cmd_context, cmd.target(), cmd.thread(), clear_state);
+  } else {
+    PauseSystem(cmd_context, &cmd_context->GetConsoleContext()->session()->system(), clear_state);
+  }
 }
 
 }  // namespace

@@ -119,19 +119,17 @@ constexpr int kRegsVectorSwitch = 4;
 constexpr int kRegsDebugSwitch = 5;
 constexpr int kRegsExtendedSwitch = 6;
 
-void OnRegsComplete(const Err& cmd_err, const std::vector<debug::RegisterValue>& registers,
+void OnRegsComplete(fxl::RefPtr<CommandContext> cmd_context, const Err& cmd_err,
+                    const std::vector<debug::RegisterValue>& registers,
                     const FormatRegisterOptions& options, bool top_stack_frame) {
-  Console* console = Console::get();
-  if (cmd_err.has_error()) {
-    console->Output(cmd_err);
-    return;
-  }
+  if (cmd_err.has_error())
+    return cmd_context->ReportError(cmd_err);
 
   if (registers.empty()) {
     if (top_stack_frame) {
-      console->Output("No matching registers.");
+      cmd_context->Output("No matching registers.");
     } else {
-      console->Output("No matching registers saved with this non-topmost stack frame.");
+      cmd_context->Output("No matching registers saved with this non-topmost stack frame.");
     }
     return;
   }
@@ -142,7 +140,7 @@ void OnRegsComplete(const Err& cmd_err, const std::vector<debug::RegisterValue>&
     OutputBuffer warning_out;
     warning_out.Append(Syntax::kWarning, GetExclamation());
     warning_out.Append(" Stack frame is not topmost. Only saved registers will be available.\n");
-    console->Output(warning_out);
+    cmd_context->Output(warning_out);
   }
 
   OutputBuffer out;
@@ -151,7 +149,7 @@ void OnRegsComplete(const Err& cmd_err, const std::vector<debug::RegisterValue>&
              "     \"print $registername = newvalue\" to set.)\n\n");
   out.Append(FormatRegisters(options, registers));
 
-  console->Output(out);
+  cmd_context->Output(out);
 }
 
 // When we request more than one category of registers, this collects all of them and keeps track
@@ -166,9 +164,10 @@ struct RegisterCollector {
   bool top_stack_frame;
 };
 
-Err RunVerbRegs(ConsoleContext* context, const Command& cmd) {
-  if (Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "regs"); err.has_error())
-    return err;
+void RunVerbRegs(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
+  if (Err err = AssertStoppedThreadWithFrameCommand(cmd_context->GetConsoleContext(), cmd, "regs");
+      err.has_error())
+    return cmd_context->ReportError(err);
 
   FormatRegisterOptions options;
   options.arch = cmd.thread()->session()->arch();
@@ -177,8 +176,10 @@ Err RunVerbRegs(ConsoleContext* context, const Command& cmd) {
   if (auto found = StringToVectorRegisterFormat(vec_fmt))
     options.vector_format = *found;
 
-  if (!cmd.args().empty())
-    return Err("\"regs\" takes no arguments. To show an individual register, use \"print\".");
+  if (!cmd.args().empty()) {
+    return cmd_context->ReportError(
+        Err("\"regs\" takes no arguments. To show an individual register, use \"print\"."));
+  }
 
   bool top_stack_frame = (cmd.frame() == cmd.thread()->GetStack()[0]);
 
@@ -210,7 +211,7 @@ Err RunVerbRegs(ConsoleContext* context, const Command& cmd) {
     // Any available general registers should be available synchronously.
     auto* regs = cmd.frame()->GetRegisterCategorySync(RegisterCategory::kGeneral);
     FX_DCHECK(regs);
-    OnRegsComplete(Err(), *regs, options, top_stack_frame);
+    OnRegsComplete(cmd_context, Err(), *regs, options, top_stack_frame);
   } else {
     auto collector = std::make_shared<RegisterCollector>();
     collector->remaining_callbacks = static_cast<int>(category_set.size());
@@ -220,7 +221,8 @@ Err RunVerbRegs(ConsoleContext* context, const Command& cmd) {
     for (auto category : category_set) {
       cmd.frame()->GetRegisterCategoryAsync(
           category, true,
-          [collector](const Err& err, const std::vector<debug::RegisterValue>& new_regs) {
+          [collector, cmd_context](const Err& err,
+                                   const std::vector<debug::RegisterValue>& new_regs) {
             // Save the new registers.
             collector->registers.insert(collector->registers.end(), new_regs.begin(),
                                         new_regs.end());
@@ -232,14 +234,12 @@ Err RunVerbRegs(ConsoleContext* context, const Command& cmd) {
             FX_DCHECK(collector->remaining_callbacks > 0);
             collector->remaining_callbacks--;
             if (collector->remaining_callbacks == 0) {
-              OnRegsComplete(collector->err, collector->registers, collector->options,
+              OnRegsComplete(cmd_context, collector->err, collector->registers, collector->options,
                              collector->top_stack_frame);
             }
           });
     }
   }
-
-  return Err();
 }
 
 }  // namespace

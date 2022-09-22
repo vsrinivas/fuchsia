@@ -55,53 +55,44 @@ Err WriteCoreDataToFile(const std::filesystem::path& path, const std::vector<uin
   return Err();
 }
 
-Err RunVerbSaveDump(ConsoleContext* context, const Command& cmd,
-                    CommandCallback callback = nullptr) {
+void RunVerbSaveDump(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   if (cmd.args().empty()) {
-    return Err(ErrType::kInput, "Please specify a file.");
+    return cmd_context->ReportError(Err(ErrType::kInput, "Please specify a file."));
   } else if (cmd.args().size() > 1) {
-    return Err(ErrType::kInput, "Too many arguments.");
+    return cmd_context->ReportError(Err(ErrType::kInput, "Too many arguments."));
   }
 
   std::filesystem::path path = cmd.args()[0];
 
   if (std::filesystem::exists(path)) {
-    return Err(ErrType::kAlreadyExists, "Path: " + path.string() +
-                                            " already exists. Please choose a different file name "
-                                            "or delete the existing file.");
+    return cmd_context->ReportError(
+        Err(ErrType::kAlreadyExists, "Path: " + path.string() +
+                                         " already exists. Please choose a different file name "
+                                         "or delete the existing file."));
   }
 
-  if (Err e = AssertAllStoppedThreadsCommand(context, cmd, "savedump"); e.has_error()) {
-    return e;
+  if (Err e = AssertAllStoppedThreadsCommand(cmd_context->GetConsoleContext(), cmd, "savedump");
+      e.has_error()) {
+    return cmd_context->ReportError(e);
   }
 
   debug_ipc::SaveMinidumpRequest request = {};
   request.process_koid = cmd.target()->GetProcess()->GetKoid();
 
-  context->session()->remote_api()->SaveMinidump(
-      request, [path = path, callback = std::move(callback)](
-                   const Err& err, debug_ipc::SaveMinidumpReply reply) mutable {
-        Err e;
-        if (err.ok()) {
-          Err write_err = WriteCoreDataToFile(path, reply.core_data);
-          if (write_err.ok()) {
-            Console::get()->Output("Minidump written to " + path.string());
-          } else {
-            e = write_err;
-          }
-        } else {
-          Console::get()->Output("Failed to collect minidump: " + err.msg());
-        }
+  cmd_context->GetConsoleContext()->session()->remote_api()->SaveMinidump(
+      request,
+      [path = path, cmd_context](const Err& err, debug_ipc::SaveMinidumpReply reply) mutable {
+        if (err.has_error())
+          return cmd_context->ReportError(Err("Failed to collect minidump: " + err.msg()));
 
-        if (callback) {
-          callback(e);
-        }
+        if (Err write_err = WriteCoreDataToFile(path, reply.core_data); write_err.has_error())
+          return cmd_context->ReportError(write_err);
+        cmd_context->Output("Minidump written to " + path.string());
       });
 
-  Console::get()->Output("Saving minidump...\n");
-
-  return Err();
+  cmd_context->Output("Saving minidump...\n");
 }
+
 }  // namespace
 
 VerbRecord GetSaveDumpVerbRecord() {

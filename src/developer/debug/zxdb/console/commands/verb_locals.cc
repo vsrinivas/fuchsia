@@ -43,16 +43,18 @@ Examples
   f 4 locals -t
       Prints locals with types.
 )";
-Err RunVerbLocals(ConsoleContext* context, const Command& cmd) {
-  if (Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "locals"); err.has_error())
-    return err;
+void RunVerbLocals(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
+  if (Err err =
+          AssertStoppedThreadWithFrameCommand(cmd_context->GetConsoleContext(), cmd, "locals");
+      err.has_error())
+    return cmd_context->ReportError(err);
 
   const Location& location = cmd.frame()->GetLocation();
   if (!location.symbol())
-    return Err("There is no symbol information for the frame.");
+    return cmd_context->ReportError(Err("There is no symbol information for the frame."));
   const Function* function = location.symbol().Get()->As<Function>();
   if (!function)
-    return Err("Symbols are corrupt.");
+    return cmd_context->ReportError(Err("Symbols are corrupt."));
 
   // Walk upward from the innermost lexical block for the current IP to collect local variables.
   // Using the map allows collecting only the innermost version of a given name, and sorts them as
@@ -107,13 +109,13 @@ Err RunVerbLocals(ConsoleContext* context, const Command& cmd) {
   }
 
   if (vars.empty()) {
-    Console::get()->Output("No local variables in scope.");
-    return Err();
+    cmd_context->Output("No local variables in scope.");
+    return;
   }
 
   ErrOr<ConsoleFormatOptions> options = GetPrintCommandFormatOptions(cmd);
   if (options.has_error())
-    return options.err();
+    return cmd_context->ReportError(options.err());
 
   auto output = fxl::MakeRefCounted<AsyncOutputBuffer>();
   for (const auto& pair : vars) {
@@ -122,8 +124,7 @@ Err RunVerbLocals(ConsoleContext* context, const Command& cmd) {
     output->Append("\n");
   }
   output->Complete();
-  Console::get()->Output(std::move(output));
-  return Err();
+  cmd_context->Output(output);
 }
 
 }  // namespace

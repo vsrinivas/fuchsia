@@ -43,52 +43,55 @@ bp rm
   Removes the breakpoint. This is equivalent to "clear".
 )";
 
-Err RunVerbRm(ConsoleContext* context, const Command& cmd) {
+void RunVerbRm(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   // Require exactly one noun to be specified for the type of object.
   if (cmd.nouns().size() != 1u || !cmd.args().empty()) {
-    return Err(
-        "Use \"<object-type> [ <index> ] rm\" to delete an object.\n"
-        "For example, \"filter 2 rm\".");
+    return cmd_context->ReportError(
+        Err("Use \"<object-type> [ <index> ] rm\" to delete an object.\n"
+            "For example, \"filter 2 rm\"."));
   }
+
+  // Guaranteed non-null since this function was called synchronously.
+  ConsoleContext* console_context = cmd_context->GetConsoleContext();
 
   OutputBuffer description;
   switch (cmd.nouns().begin()->first) {
     case Noun::kFilter: {
       if (cmd.filter()) {
-        description = FormatFilter(context, cmd.filter());
-        context->session()->system().DeleteFilter(cmd.filter());
+        description = FormatFilter(console_context, cmd.filter());
+        console_context->session()->system().DeleteFilter(cmd.filter());
       } else {
-        return Err("No filter to remove.");
+        return cmd_context->ReportError(Err("No filter to remove."));
       }
       break;
     }
     case Noun::kProcess: {
       // Commands are guaranteed to have targets.
-      description = FormatTarget(context, cmd.target());
-      if (Err err = context->session()->system().DeleteTarget(cmd.target()); err.has_error())
-        return err;
+      description = FormatTarget(console_context, cmd.target());
+      if (Err err = console_context->session()->system().DeleteTarget(cmd.target());
+          err.has_error())
+        return cmd_context->ReportError(err);
       break;
     }
     case Noun::kBreakpoint: {
       if (cmd.breakpoint()) {
-        description = FormatBreakpoint(context, cmd.breakpoint(), false);
-        context->session()->system().DeleteBreakpoint(cmd.breakpoint());
+        description = FormatBreakpoint(console_context, cmd.breakpoint(), false);
+        console_context->session()->system().DeleteBreakpoint(cmd.breakpoint());
       } else {
-        return Err("No breakpoint to remove.");
+        return cmd_context->ReportError(Err("No breakpoint to remove."));
       }
       break;
     }
     default: {
       std::string noun_name = GetNouns().find(cmd.nouns().begin()->first)->second.aliases[0];
-      return Err("The \"rm\" command is not supported for \"%s\" objects.", noun_name.c_str());
+      return cmd_context->ReportError(
+          Err("The \"rm\" command is not supported for \"%s\" objects.", noun_name.c_str()));
     }
   }
 
   OutputBuffer out("Removed ");
   out.Append(std::move(description));
-  Console::get()->Output(out);
-
-  return Err();
+  cmd_context->Output(out);
 }
 
 }  // namespace

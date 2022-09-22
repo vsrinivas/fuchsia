@@ -44,44 +44,44 @@ process new
     Attached Process 2 [Running] koid=22860 foobar.cmx
 )";
 
-Err RunVerbNew(ConsoleContext* context, const Command& cmd) {
+void RunVerbNew(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   // Require exactly one noun to be specified for the type of object.
   if (cmd.nouns().size() != 1u || !cmd.args().empty()) {
-    return Err(
-        "Use \"<object-type> new\" to create a new object of <object-type>.\n"
-        "For example, \"process new\".");
+    return cmd_context->ReportError(
+        Err("Use \"<object-type> new\" to create a new object of <object-type>.\n"
+            "For example, \"process new\"."));
   }
 
-  Console* console = Console::get();
+  // Guaranteed non-null since this is called synchronously.
+  ConsoleContext* console_context = cmd_context->GetConsoleContext();
 
   switch (cmd.nouns().begin()->first) {
     case Noun::kFilter: {
-      Filter* new_filter = context->session()->system().CreateNewFilter();
-      context->SetActiveFilter(new_filter);
-      console->Output(FormatFilter(context, new_filter));
+      Filter* new_filter = console_context->session()->system().CreateNewFilter();
+      console_context->SetActiveFilter(new_filter);
+      cmd_context->Output(FormatFilter(console_context, new_filter));
       break;
     }
     case Noun::kProcess: {
-      Target* new_target = context->session()->system().CreateNewTarget(cmd.target());
-      context->SetActiveTarget(new_target);
-      console->Output(FormatTarget(context, new_target));
+      Target* new_target = console_context->session()->system().CreateNewTarget(cmd.target());
+      console_context->SetActiveTarget(new_target);
+      cmd_context->Output(FormatTarget(console_context, new_target));
       break;
     }
     case Noun::kBreakpoint: {
       // Creates a disabled-by-default breakpoint with no settings. This isn't very useful but
       // we do this for symmetry.
-      Breakpoint* new_breakpoint = context->session()->system().CreateNewBreakpoint();
-      context->SetActiveBreakpoint(new_breakpoint);
-      console->Output(FormatBreakpoint(context, new_breakpoint, false));
+      Breakpoint* new_breakpoint = console_context->session()->system().CreateNewBreakpoint();
+      console_context->SetActiveBreakpoint(new_breakpoint);
+      cmd_context->Output(FormatBreakpoint(console_context, new_breakpoint, false));
       break;
     }
     default: {
       std::string noun_name = GetNouns().find(cmd.nouns().begin()->first)->second.aliases[0];
-      return Err("The \"new\" command is not supported for \"%s\" objects.", noun_name.c_str());
+      return cmd_context->ReportError(
+          Err("The \"new\" command is not supported for \"%s\" objects.", noun_name.c_str()));
     }
   }
-
-  return Err();
 }
 
 }  // namespace

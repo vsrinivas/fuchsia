@@ -55,17 +55,16 @@ Examples
       Steps thread 2 in process 3.
 )";
 
-Err RunVerbNexti(ConsoleContext* context, const Command& cmd) {
-  Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "nexti");
+void RunVerbNexti(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
+  Err err = AssertStoppedThreadWithFrameCommand(cmd_context->GetConsoleContext(), cmd, "nexti");
   if (err.has_error())
-    return err;
+    return cmd_context->ReportError(err);
 
   auto controller = std::make_unique<StepOverThreadController>(StepMode::kInstruction);
-  cmd.thread()->ContinueWith(std::move(controller), [](const Err& err) {
+  cmd.thread()->ContinueWith(std::move(controller), [cmd_context](const Err& err) {
     if (err.has_error())
-      Console::get()->Output(err);
+      cmd_context->ReportError(err);
   });
-  return Err();
 }
 
 }  // namespace

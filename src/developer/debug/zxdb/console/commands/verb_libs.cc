@@ -34,13 +34,8 @@ Examples
 )";
 
 // Completion callback for DoLibs().
-void OnLibsComplete(const Err& err, std::vector<debug_ipc::Module> modules) {
-  Console* console = Console::get();
-  if (err.has_error()) {
-    console->Output(err);
-    return;
-  }
-
+void OnLibsComplete(std::vector<debug_ipc::Module> modules,
+                    fxl::RefPtr<CommandContext> cmd_context) {
   // Sort by load address.
   std::sort(modules.begin(), modules.end(),
             [](const debug_ipc::Module& a, const debug_ipc::Module& b) { return a.base < b.base; });
@@ -53,22 +48,26 @@ void OnLibsComplete(const Err& err, std::vector<debug_ipc::Module> modules) {
   OutputBuffer out;
   FormatTable({ColSpec(Align::kRight, 0, "Load address", 2), ColSpec(Align::kLeft, 0, "Name", 1)},
               rows, &out);
-  console->Output(out);
+  cmd_context->Output(out);
 }
 
-Err RunVerbLibs(ConsoleContext* context, const Command& cmd) {
+void RunVerbLibs(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   // Only a process can be specified.
   if (Err err = cmd.ValidateNouns({Noun::kProcess}); err.has_error())
-    return err;
+    return cmd_context->ReportError(err);
 
   if (!cmd.args().empty())
-    return Err(ErrType::kInput, "\"libs\" takes no parameters.");
+    return cmd_context->ReportError(Err(ErrType::kInput, "\"libs\" takes no parameters."));
 
-  if (Err err = AssertRunningTarget(context, "libs", cmd.target()); err.has_error())
-    return err;
+  if (Err err = AssertRunningTarget(cmd_context->GetConsoleContext(), "libs", cmd.target());
+      err.has_error())
+    return cmd_context->ReportError(err);
 
-  cmd.target()->GetProcess()->GetModules(&OnLibsComplete);
-  return Err();
+  cmd.target()->GetProcess()->GetModules([cmd_context](auto err, auto modules) {
+    if (err.has_error())
+      return cmd_context->ReportError(err);
+    OnLibsComplete(modules, cmd_context);
+  });
 }
 
 }  // namespace

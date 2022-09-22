@@ -82,30 +82,23 @@ void DoCompleteOpenDump(const Command& cmd, const std::string& prefix,
   }
 }
 
-Err RunVerbOpendump(ConsoleContext* context, const Command& cmd,
-                    CommandCallback callback = nullptr) {
+void RunVerbOpendump(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   std::string path;
 
   if (cmd.args().size() == 0) {
-    return Err(ErrType::kInput, "Need path to open.");
+    return cmd_context->ReportError(Err(ErrType::kInput, "Need path to open."));
   } else if (cmd.args().size() == 1) {
     path = cmd.args()[0];
   } else {
-    return Err(ErrType::kInput, "Too many arguments.");
+    return cmd_context->ReportError(Err(ErrType::kInput, "Too many arguments."));
   }
 
-  context->session()->OpenMinidump(path, [callback = std::move(callback)](const Err& err) mutable {
+  cmd_context->GetConsoleContext()->session()->OpenMinidump(path, [cmd_context](const Err& err) {
     if (err.has_error())
-      Console::get()->Output(err);
-    else
-      Console::get()->Output("Dump loaded successfully.\n");
-
-    if (callback)
-      callback(err);
+      return cmd_context->ReportError(err);
+    cmd_context->Output("Dump loaded successfully.\n");
   });
-  Console::get()->Output("Opening dump file...\n");
-
-  return Err();
+  cmd_context->Output("Opening dump file...\n");
 }
 
 }  // namespace

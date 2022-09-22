@@ -184,10 +184,10 @@ Err ParseListLocation(const TargetSymbols* target_symbols, const ProcessSymbols*
   return Err();
 }
 
-Err RunVerbList(ConsoleContext* context, const Command& cmd) {
+void RunVerbList(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame});
   if (err.has_error())
-    return err;
+    return cmd_context->ReportError(err);
 
   FormatSourceOpts opts;
 
@@ -195,7 +195,8 @@ Err RunVerbList(ConsoleContext* context, const Command& cmd) {
   FileLine file_line;
   if (cmd.args().empty()) {
     if (!cmd.frame()) {
-      return Err(ErrType::kInput, "There isn't a current frame to take the location from.");
+      return cmd_context->ReportError(
+          Err(ErrType::kInput, "There isn't a current frame to take the location from."));
     }
     const Location& loc = cmd.frame()->GetLocation();
     file_line = loc.file_line();
@@ -214,11 +215,12 @@ Err RunVerbList(ConsoleContext* context, const Command& cmd) {
     err = ParseListLocation(cmd.target()->GetSymbols(), process_symbols, cmd.frame(), cmd.args()[0],
                             &file_line);
     if (err.has_error())
-      return err;
+      return cmd_context->ReportError(err);
   } else {
-    return Err(ErrType::kInput,
-               "Expecting zero or one arg for the location.\n"
-               "Formats: <function>, <file>:<line#>, <line#>, or 0x<address>");
+    return cmd_context->ReportError(
+        Err(ErrType::kInput,
+            "Expecting zero or one arg for the location.\n"
+            "Formats: <function>, <file>:<line#>, <line#>, or 0x<address>"));
   }
 
   if (!opts.language) {
@@ -241,7 +243,7 @@ Err RunVerbList(ConsoleContext* context, const Command& cmd) {
     int context_lines = 0;
     err = StringToInt(cmd.GetSwitchValue(kListContextSwitch), &context_lines);
     if (err.has_error())
-      return err;
+      return cmd_context->ReportError(err);
 
     opts.first_line = std::max(0, file_line.line() - context_lines);
     opts.last_line = file_line.line() + context_lines;
@@ -266,10 +268,9 @@ Err RunVerbList(ConsoleContext* context, const Command& cmd) {
   err = FormatSourceFileContext(file_line, SourceFileProviderImpl(cmd.target()->settings()), opts,
                                 &out);
   if (err.has_error())
-    return err;
+    return cmd_context->ReportError(err);
 
-  Console::get()->Output(out);
-  return Err();
+  cmd_context->Output(out);
 }
 
 }  // namespace
