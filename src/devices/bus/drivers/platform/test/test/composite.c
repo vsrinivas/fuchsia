@@ -329,16 +329,6 @@ static zx_status_t test_vreg(vreg_protocol_t* vreg) {
   return ZX_OK;
 }
 
-static zx_status_t test_pci(pci_protocol_t* pci) {
-  pci_device_info_t info = {0};
-  zx_status_t status = pci_get_device_info(pci, &info);
-  if (status == ZX_OK) {
-    status = (info.device_id = PDEV_DID_TEST_PCI) ? ZX_OK : ZX_ERR_INTERNAL;
-  }
-
-  return status;
-}
-
 static zx_status_t test_power_sensor(power_sensor_protocol_t* power_sensor) {
   zx_handle_t client, server;
   zx_status_t status = zx_channel_create(0, &client, &server);
@@ -403,7 +393,6 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
   spi_protocol_t spi;
   pwm_protocol_t pwm;
   vreg_protocol_t vreg;
-  pci_protocol_t pci;
   power_sensor_protocol_t power_sensor;
 
   if (metadata.composite_device_id == PDEV_DID_TEST_COMPOSITE_1) {
@@ -526,11 +515,6 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_VREG", DRIVER_NAME);
       return status;
     }
-    status = device_get_protocol(fragments[FRAGMENT_PCI_2].device, ZX_PROTOCOL_PCI, &pci);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_PCI", DRIVER_NAME);
-      return status;
-    }
     if (strncmp(fragments[FRAGMENT_PCI_2].name, "pci", 32)) {
       zxlogf(ERROR, "%s: Unexpected name: %s", DRIVER_NAME, fragments[FRAGMENT_PCI_2].name);
       return ZX_ERR_INTERNAL;
@@ -565,10 +549,6 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
     }
     if ((status = test_vreg(&vreg)) != ZX_OK) {
       zxlogf(ERROR, "%s: test_vreg failed: %d", DRIVER_NAME, status);
-      return status;
-    }
-    if ((status = test_pci(&pci)) != ZX_OK) {
-      zxlogf(ERROR, "%s: test_pci failed: %d", DRIVER_NAME, status);
       return status;
     }
     if ((status = test_power_sensor(&power_sensor)) != ZX_OK) {

@@ -35,10 +35,15 @@ zx_status_t TestPciDevice::Create(void* ctx, zx_device_t* parent) {
   fuchsia_hardware_pci::wire::DeviceInfo info = {.device_id = PDEV_DID_TEST_PCI};
   dev->SetDeviceInfo(info);
 
-  auto status = dev->DdkAdd("test-pci");
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAdd failed: %d", __func__, status);
-    return status;
+  std::array offers = {
+      fidl::DiscoverableProtocolName<fuchsia_hardware_pci::Device>,
+  };
+
+  zx_status_t ddk_status =
+      dev->DdkAdd(ddk::DeviceAddArgs("test-pci").set_fidl_protocol_offers(offers));
+  if (ddk_status != ZX_OK) {
+    zxlogf(ERROR, "%s: DdkAdd failed: %s", __func__, zx_status_get_string(ddk_status));
+    return ddk_status;
   }
 
   __UNUSED auto ptr = dev.release();

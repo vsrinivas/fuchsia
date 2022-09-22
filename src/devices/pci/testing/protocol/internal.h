@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/pci/c/banjo.h>
-#include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/fake-bti/bti.h>
 #include <zircon/errors.h>
@@ -25,8 +23,7 @@
 
 namespace pci {
 
-class FakePciProtocolInternal
-    : public ddk::PciProtocol<FakePciProtocolInternal, ddk::base_protocol> {
+class FakePciProtocolInternal {
  public:
   static constexpr uint8_t kPciExpressCapabilitySize = 0x3B;
 
@@ -68,10 +65,6 @@ class FakePciProtocolInternal
   zx_status_t PciGetFirstExtendedCapability(uint16_t id, uint16_t* out_offset);
   zx_status_t PciGetNextExtendedCapability(uint16_t id, uint16_t offset, uint16_t* out_offset);
   zx_status_t PciGetBti(uint32_t index, zx::bti* out_bti);
-
-  // Returns a |pci_protocol_t| suitable for use with the C api, or passing to a
-  // ddk::PciProtocolClient.
-  const pci_protocol_t& get_protocol() { return protocol_; }
 
  protected:
   struct FakeBar {
@@ -165,7 +158,6 @@ class FakePciProtocolInternal
   std::optional<bool> bus_master_en_;
   fuchsia_hardware_pci::wire::DeviceInfo info_ = {};
   zx::vmo config_;
-  pci_protocol_t protocol_ = {.ops = &pci_protocol_ops_, .ctx = this};
 };
 
 }  // namespace pci

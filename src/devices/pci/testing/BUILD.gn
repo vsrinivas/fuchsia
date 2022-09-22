@@ -19,7 +19,6 @@ source_set("pci-protocol-fake") {
   public_deps = [
     ":pci-protocol-fake-headers",
     "//src/devices/pci/lib/device-protocol-pci",
-    "//src/devices/pci/lib/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake-resource",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

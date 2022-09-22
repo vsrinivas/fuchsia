@@ -5,7 +5,6 @@
 #define SRC_DEVICES_PCI_TESTING_PCI_PROTOCOL_FAKE_H_
 
 #include <fidl/fuchsia.hardware.pci/cpp/wire_test_base.h>
-#include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
@@ -28,7 +27,7 @@
 namespace pci {
 
 // FakePciProtocol provides a PciProtocol implementation that can be configured
-// to match the layout of a given PCI device. It fulfills ddk::PciProtocol<T>
+// to match the layout of a given PCI device. It implements a PCI FIDL server
 // and can be trivially constructed for tests. All public methods are safe to
 // use and it has been written in mind to validate correctness of the
 // configuration space whenever possible as well as to behave similarly to the

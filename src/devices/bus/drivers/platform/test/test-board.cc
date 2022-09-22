@@ -155,7 +155,7 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_VREG),
   };
   const zx_bind_inst_t pci_match[] = {
-      BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
+      BI_MATCH_IF(EQ, BIND_FIDL_PROTOCOL, ZX_FIDL_PROTOCOL_PCI),
   };
   const zx_bind_inst_t power_sensor_match[] = {
       BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_POWER_SENSOR),
