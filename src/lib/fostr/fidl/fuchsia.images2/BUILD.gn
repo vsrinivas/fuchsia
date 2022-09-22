@@ -1,0 +1,11 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/lib/fostr/build/fostr_fidl.gni")
+
+fostr_fidl("fuchsia.images2") {
+  fidl_target = "//sdk/fidl/fuchsia.images2"
+
+  deps = [ "//src/lib/fostr/fidl/fuchsia.math" ]
+}

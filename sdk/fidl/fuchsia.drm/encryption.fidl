@@ -1,0 +1,81 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.drm;
+
+/// The maximum size of an `EncryptionScheme` string.
+const MAX_ENCRYPTION_SCHEME_SIZE uint32 = 4;
+
+/// The maximum size of a `EncryptionKeyId` blob.
+const MAX_KEY_ID_SIZE uint32 = 16;
+
+/// The maximum size of a `EncryptionInitVector` blob.
+const MAX_INIT_VECTOR_SIZE uint32 = 16;
+
+/// Identifies an encryption scheme.
+// TODO(dalesat): Should this use a flexible enum?
+alias EncryptionScheme = string:MAX_ENCRYPTION_SCHEME_SIZE;
+const ENCRYPTION_SCHEME_CENC string = "cenc";
+const ENCRYPTION_SCHEME_CBC1 string = "cbc1";
+const ENCRYPTION_SCHEME_CENS string = "cens";
+const ENCRYPTION_SCHEME_CBCS string = "cbcs";
+alias EncryptionKeyId = vector<uint8>:MAX_KEY_ID_SIZE;
+alias EncryptionInitVector = vector<uint8>:MAX_INIT_VECTOR_SIZE;
+
+/// A byte range within a sample consisting of a clear byte range
+/// followed by an encrypted byte range. This structure specifies the size of
+/// each range in the subsample.
+type EncryptionSubsampleEntry = struct {
+    clear_bytes uint32;
+    encrypted_bytes uint32;
+};
+
+/// Pattern encryption utilizes a pattern of encrypted and clear 16 byte blocks
+/// over the protected range of a subsample (the encrypted_bytes of a
+/// `SubsampleEntry`). This structure specifies the number of encrypted data
+/// blocks followed by the number of clear data blocks.
+type EncryptionPattern = struct {
+    clear_blocks uint32;
+    encrypted_blocks uint32;
+};
+
+/// The stream format details payload of a decrypting stream processor. This is
+/// a sparsely populated table to specify parameters necessary for decryption
+/// other than the data stream. It is only necessary to update fields if they
+/// changed, but not an error if the same value is repeated.
+// TODO(dalesat): Why are fields below prefixed with 'default_'?
+type Encryption = table {
+    /// Specifies which encryption scheme to use, such as `ENCRYPTION_SCHEME_CENC`.
+    /// Usage:
+    ///  - It is required to be set prior to delivery of input packets.
+    ///  - Changing the scheme mid-stream is only permitted in some scenarios.
+    ///    Once an encrypted scheme is selected for a stream, the scheme may
+    ///    only be set to `ENCRYPTION_SCHEME_UNENCRYPTED` or that
+    ///    same initial encrypted scheme. The scheme may be set to
+    ///    `ENCRYPTION_SCHEME_UNENCRYPTED` at any point.
+    1: scheme EncryptionScheme;
+
+    /// Identifies the key that should be used for decrypting subsequent data.
+    /// Usage:
+    ///  - It is required to be set prior to delivery of input packets to a
+    ///    decryptor.
+    ///  - This may be changed multiple times during a data stream.
+    2: default_key_id EncryptionKeyId;
+
+    /// Used in combination with a key and a block of content
+    /// to create the first cipher block in a chain and derive subsequent cipher
+    /// blocks in a cipher block chain.
+    /// Usage:
+    ///  - It is required to be set prior to the delivery of input packets to a
+    ///    decryptor.
+    ///  - This may be changed multiple times during a data stream.
+    3: default_init_vector EncryptionInitVector;
+
+    /// Used to identify the clear and encrypted blocks for pattern based encryption.
+    /// Usage:
+    /// - This is not allowed for CENC and CBC1 and required for CENS and CBCS.
+    /// - If required, it must be set prior to the delivery of input packets to
+    ///   a decryptor.
+    /// - This may be changed multiple times during a data stream.
+    4: default_pattern EncryptionPattern;
+};

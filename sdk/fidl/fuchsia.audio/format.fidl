@@ -1,0 +1,58 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.audio;
+
+/// Describes a format used for audio streams without reference to compression. Where
+/// compression is supported, this type should be combined with `fuchsia.media2.Compression`.
+/// An uncompressed audio stream uses LPCM encoding.
+type Format = table {
+    /// The type of individual samples.
+    1: sample_type SampleType;
+
+    /// The number of samples per frame.
+    2: channel_count uint32;
+
+    /// The number of frames per second.
+    3: frames_per_second uint32;
+
+    /// The spatial assignment of each channel.
+    4: channel_layout ChannelLayout;
+};
+
+/// Expresses the type of individual audio samples.
+type SampleType = flexible enum {
+    UINT_8 = 1;
+    INT_16 = 2;
+    INT_32 = 3;
+    FLOAT_32 = 4;
+    FLOAT_64 = 5;
+};
+
+/// Expresses the intended assignment of channels in an audio elementary stream.
+type ChannelLayout = flexible union {
+    /// This value describes the assignment of every channel. Channel
+    /// configuration must agree with `channel_count`.
+    1: config ChannelConfig;
+};
+
+/// Spatial assignment of channels.
+type ChannelConfig = flexible enum {
+    /// Front.C (CENTER)
+    MONO = 0x01;
+
+    /// Front.L (LEFT) | Front.R (RIGHT)
+    STEREO = 0x02;
+
+    /// Front.L | Front.R | Back.L | Back.R, aka “Four corners”
+    QUAD = 0x03;
+
+    /// Front.L | Front.R | Back.C, aka “LRS”
+    SURROUND_3 = 0x04;
+
+    /// Front.L | Front.R | Front.C | Back.C, aka “LRCS”
+    SURROUND_4 = 0x05;
+
+    /// Front.L | Front.R | Front.C | LFE | Side.L | Side.R
+    SURROUND_5_1 = 0x06;
+};

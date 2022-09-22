@@ -1,0 +1,74 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+// TODO(dalesat): Consider changing this library name.
+// fuchsia.images is currently occupied by ImagePipe. Will we be able to use that name? When?
+// Is the term 'image' too generic?
+library fuchsia.images2;
+
+using fuchsia.math;
+
+/// Describes the format of images.
+// This is currently a placeholder. Please do not take a dependency on the details of this table
+// yet.
+type ImageFormat = table {
+    /// Describes the manner in which pixels are encoded.
+    1: pixel_format PixelFormat;
+
+    /// Vendor-specific pixel format modifier.
+    2: pixel_format_modifier uint64;
+
+    /// Indicates the color space used to interpret pixel values.
+    3: color_space ColorSpace;
+
+    /// The size of a frame in terms of the number of pixels that
+    /// are represented in a frame payload.
+    4: coded_size fuchsia.math.Size;
+
+    /// The size of a frame in terms of the number of pixels that
+    /// should be displayed. These values will always be less than
+    /// or equal to the corresponding `coded_size` values.
+    5: display_size fuchsia.math.Size;
+
+    /// Aspect ratio of a single pixel as the video is intended to
+    /// be displayed.
+    6: aspect_ratio fuchsia.math.Size;
+
+    /// Number of bytes per row. For planar YUV formats, this is the number of bytes per
+    /// row in the Y plane.
+    7: bytes_per_row uint32;
+};
+
+/// Expresses the manner in which video pixels are encoded.
+type PixelFormat = flexible enum {
+    INVALID = 0;
+    R8G8B8A8 = 1;
+    BGRA32 = 101;
+    I420 = 102;
+    M420 = 103;
+    NV12 = 104;
+    YUY2 = 105;
+    MJPEG = 106;
+    YV12 = 107;
+    BGR24 = 108;
+    RGB565 = 109;
+    RGB332 = 110;
+    RGB2220 = 111;
+    L8 = 112;
+    R8 = 113;
+    R8G8 = 114;
+};
+
+/// Expresses the color space used to interpret video pixel values.
+type ColorSpace = flexible enum {
+    INVALID = 0;
+    PASSTHROUGH = 1;
+    SRGB = 2;
+    REC601_NTSC = 3;
+    REC601_NTSC_FULL_RANGE = 4;
+    REC601_PAL = 5;
+    REC601_PAL_FULL_RANGE = 6;
+    REC709 = 7;
+    REC2020 = 8;
+    REC2100 = 9;
+};

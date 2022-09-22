@@ -8,6 +8,7 @@ fostr_fidl("fuchsia.video") {
   fidl_target = "//sdk/fidl/fuchsia.video"
 
   deps = [
+    "//src/lib/fostr/fidl/fuchsia.images2",
     "//src/lib/fostr/fidl/fuchsia.math",
     "//src/lib/fostr/fidl/fuchsia.media2",
     "//src/lib/fostr/fidl/fuchsia.mediastreams",

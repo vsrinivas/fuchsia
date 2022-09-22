@@ -1,0 +1,13 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.video;
+
+using fuchsia.images2;
+
+/// Describes a format used for video streams without reference to compression. Where
+/// compression is supported, this type should be combined with `fuchsia.media2.Compression`.
+type Format = table {
+    /// Format of individual images.
+    1: image_format fuchsia.images2.ImageFormat;
+};

@@ -1,0 +1,38 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.audio;
+
+/// The maximum size of `Compression.parameters`.
+const MAX_COMPRESSION_PARAMETERS_SIZE uint64 = 32768;
+
+/// Describes the compression applied to a stream.
+type Compression = table {
+    /// The type of compression applied to the stream.
+    1: type CompressionType;
+
+    /// Opaque ‘out-of-band’ parameters describing the compression of the stream. The format of
+    /// this field is a function of the `CompressionType`. It communicates to decoders parameters
+    /// that are required to decompress the described stream. Many compression types do not require
+    /// this field.
+    2: oob_parameters vector<uint8>:<MAX_COMPRESSION_PARAMETERS_SIZE>;
+};
+
+// Type of compression applied to a stream.
+type CompressionType = flexible enum {
+    NONE = 0;
+
+    AAC = 1;
+    AACLATM = 2;
+    AMRNB = 3;
+    AMRWB = 4;
+    APTX = 5;
+    FLAC = 6;
+    GSMMS = 7;
+    MP3 = 8;
+    PCMALAW = 9;
+    PCMMULAW = 10;
+    SBC = 11;
+    VORBIS = 12;
+    OPUS = 13;
+};

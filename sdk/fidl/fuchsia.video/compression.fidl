@@ -1,0 +1,34 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.video;
+
+/// The maximum size of `Compression.parameters`.
+const MAX_COMPRESSION_PARAMETERS_SIZE uint64 = 32768;
+
+/// Describes the compression applied to a stream.
+type Compression = table {
+    /// The type of compression applied to the stream.
+    1: type CompressionType;
+
+    /// Opaque ‘out-of-band’ parameters describing the compression of the stream. The format of
+    /// this field is a function of the `CompressionType`. It communicates to decoders parameters
+    /// that are required to decompress the described stream. Many compression types do not require
+    /// this field.
+    2: oob_parameters vector<uint8>:<MAX_COMPRESSION_PARAMETERS_SIZE>;
+};
+
+// Type of compression applied to a stream.
+type CompressionType = flexible enum {
+    NONE = 0;
+
+    H263 = 1;
+    H264 = 2;
+    MPEG4 = 3;
+    THEORA = 4;
+    VP3 = 5;
+    VP8 = 6;
+    VP9 = 7;
+    HEVC = 8;
+    AV1 = 9;
+};
