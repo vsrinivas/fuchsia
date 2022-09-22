@@ -8,6 +8,7 @@
 #include <fidl/fuchsia.driver.test.logger/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/ddk/driver.h>
+#include <lib/driver2/node_add_args.h>
 #include <lib/fidl/coding.h>
 #include <lib/fit/defer.h>
 #include <lib/zx/clock.h>
@@ -817,4 +818,53 @@ bool Device::DriverLivesInSystemStorage() const {
 bool Device::IsAlreadyBound() const {
   return (flags & DEV_CTX_BOUND) && !(flags & DEV_CTX_ALLOW_MULTI_COMPOSITE) &&
          !(flags & DEV_CTX_MULTI_BIND);
+}
+
+std::shared_ptr<dfv2::Node> Device::GetBoundNode() {
+  if (!dfv2_bound_device_) {
+    return nullptr;
+  }
+  return dfv2_bound_device_->node();
+}
+
+zx::status<std::shared_ptr<dfv2::Node>> Device::CreateDFv2Device() {
+  if (dfv2_bound_device_) {
+    return zx::error(ZX_ERR_ALREADY_EXISTS);
+  }
+
+  char path[fuchsia_device_manager::wire::kDevicePathMax + 1];
+  auto dev = fbl::RefPtr<Device>(this);
+  coordinator->GetTopologicalPath(dev, path, sizeof(path));
+  // The topo_path needs to remove the leading "/dev/".
+  auto topo_path = std::string(path + sizeof("/dev/") - 1);
+
+  std::string name = std::to_string(coordinator->GetNextDfv2DeviceId());
+
+  // Create the DeviceServer for the driver.
+  std::optional<compat::ServiceOffersV1> service_offers;
+  if (has_outgoing_directory()) {
+    // TODO(fxbug.dev/109809): Connect the FIDL offers here.
+    service_offers.emplace(name, clone_outgoing_dir(), compat::FidlServiceOffers());
+  }
+  auto server = compat::DeviceServer(name, protocol_id_, topo_path, compat::MetadataMap(),
+                                     std::move(service_offers));
+
+  // Set the metadata for the DeviceServer.
+  for (auto& metadata : metadata()) {
+    zx_status_t status = server.AddMetadata(metadata.type, metadata.Data(), metadata.length);
+    if (status != ZX_OK) {
+      return zx::error(status);
+    }
+  }
+
+  auto dfv2_device =
+      dfv2::Device::CreateAndServe(topo_path, name, coordinator->dispatcher(),
+                                   coordinator->outgoing(), std::move(server), this, host().get());
+  if (dfv2_device.is_error()) {
+    return dfv2_device.take_error();
+  }
+  dfv2_bound_device_ = std::move(*dfv2_device);
+  flags |= DEV_CTX_BOUND;
+
+  return zx::ok(dfv2_bound_device_->node());
 }

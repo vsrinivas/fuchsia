@@ -28,6 +28,7 @@
 
 #include "src/devices/bin/driver_manager/composite_device.h"
 #include "src/devices/bin/driver_manager/devfs.h"
+#include "src/devices/bin/driver_manager/device_v2.h"
 #include "src/devices/bin/driver_manager/inspect.h"
 #include "src/devices/bin/driver_manager/metadata.h"
 #include "src/devices/bin/driver_manager/v2/node.h"
@@ -504,7 +505,6 @@ class Device final
   const fbl::String& name() const { return name_; }
   const fbl::String& libname() const { return libname_; }
   const fbl::String& args() const { return args_; }
-  std::shared_ptr<dfv2::Node>& bound_node() { return bound_node_; }
 
   Coordinator* coordinator;
   uint32_t flags = 0;
@@ -519,7 +519,9 @@ class Device final
 
   const fbl::String& link_name() const { return link_name_; }
   void set_link_name(fbl::String link_name) { link_name_ = std::move(link_name); }
-  void set_bound_node(std::shared_ptr<dfv2::Node> node) { bound_node_ = std::move(node); }
+
+  std::shared_ptr<dfv2::Node> GetBoundNode();
+  zx::status<std::shared_ptr<dfv2::Node>> CreateDFv2Device();
 
   // TODO(teisenbe): We probably want more states.
 #define STATE_VALUES(macro)                                                                        \
@@ -698,8 +700,8 @@ class Device final
   // This lets us check for unexpected removals and is for testing use only.
   size_t num_removal_attempts_ = 0;
 
-  // If this is not null, there is a DFv2 node and DFv2 driver bound to this device.
-  std::shared_ptr<dfv2::Node> bound_node_;
+  // If this is not null, there is a DFv2 driver bound to this device.
+  std::shared_ptr<dfv2::Device> dfv2_bound_device_;
 
   DeviceInspect inspect_;
 };

@@ -25,6 +25,7 @@
                 "fuchsia.hardware.usb.DeviceWatcher",
             ],
         },
+        { service: "fuchsia.driver.compat.Service" },
 
         // Component runner for drivers
         {
@@ -103,6 +104,10 @@
         },
         {
             runner: "driver",
+            from: "self",
+        },
+        {
+            service: "fuchsia.driver.compat.Service",
             from: "self",
         },
     ],

@@ -30,6 +30,7 @@ fuchsia_driver("lifecycle_driver") {
     ":fuchsia.devfs.test_cpp_wire",
     ":lifecycle_bind",
     "//sdk/fidl/fuchsia.device.fs:fuchsia.device.fs_cpp",
+    "//sdk/fidl/fuchsia.driver.compat:fuchsia.driver.compat_cpp",
     "//sdk/lib/driver2:cpp",
     "//sdk/lib/sys/component/cpp",
     "//src/devices/lib/driver:driver_runtime",

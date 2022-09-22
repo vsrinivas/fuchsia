@@ -19,7 +19,9 @@
 
 class Coordinator;
 
-namespace fdf = fuchsia_driver_framework;
+namespace fdf {
+using namespace fuchsia_driver_framework;
+}  // namespace fdf
 namespace fdi = fuchsia_driver_index;
 
 class DriverLoader {

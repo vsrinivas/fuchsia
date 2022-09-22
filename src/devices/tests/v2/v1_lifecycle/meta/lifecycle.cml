@@ -14,5 +14,6 @@
     },
     use: [
         { protocol: "fuchsia.device.fs.Exporter" },
+        { service: "fuchsia.driver.compat.Service" },
     ],
 }

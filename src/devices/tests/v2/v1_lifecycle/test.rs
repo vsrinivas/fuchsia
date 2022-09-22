@@ -22,7 +22,8 @@ async fn test_devfs_exporter() -> Result<()> {
     instance.driver_test_realm_start(args).await?;
     // Connect to our driver.
     let dev = instance.driver_test_realm_connect_to_dev()?;
-    let node = device_watcher::recursive_wait_and_open_node(&dev, "lifecycle-device").await?;
+    let node =
+        device_watcher::recursive_wait_and_open_node(&dev, "sys/test/lifecycle-device").await?;
     let device = ft::DeviceProxy::new(node.into_channel().unwrap());
     Ok(device.ping().await?)
 }

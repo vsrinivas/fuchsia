@@ -18,7 +18,9 @@
 #include "src/devices/bin/driver_manager/v1/suspend_task.h"
 #include "src/devices/bin/driver_manager/v1/unbind_task.h"
 
-namespace fdf = fuchsia_driver_framework;
+namespace fdf {
+using namespace fuchsia_driver_framework;
+}  // namespace fdf
 namespace fdi = fuchsia_driver_index;
 
 class FakeResolver : public internal::PackageResolverInterface {

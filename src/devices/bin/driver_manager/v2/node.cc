@@ -24,7 +24,10 @@ namespace {
 // The driver's component name is based on the node name, which means that the
 // node name cam only have [a-z0-9-_.] characters. DFv1 composites contain ':'
 // which is not allowed, so replace those characters.
-void TransformToValidName(std::string& name) { std::replace(name.begin(), name.end(), ':', '_'); }
+void TransformToValidName(std::string& name) {
+  std::replace(name.begin(), name.end(), ':', '_');
+  std::replace(name.begin(), name.end(), '/', '.');
+}
 
 template <typename R, typename F>
 std::optional<R> VisitOffer(fdecl::wire::Offer& offer, F apply) {

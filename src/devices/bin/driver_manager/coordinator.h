@@ -61,7 +61,9 @@
 
 namespace statecontrol_fidl = fuchsia_hardware_power_statecontrol;
 using statecontrol_fidl::wire::SystemPowerState;
-namespace fdf = fuchsia_driver_framework;
+namespace fdf {
+using namespace fuchsia_driver_framework;
+}  // namespace fdf
 namespace fdi = fuchsia_driver_index;
 
 class BindDriverManager;
@@ -228,6 +230,8 @@ class Coordinator : public CompositeManagerBridge,
       fidl::ClientEnd<fuchsia_device_manager::SystemStateTransition> system_state_transition,
       fidl::ClientEnd<fuchsia_io::Directory> devfs, RegisterWithPowerManagerCompletion completion);
 
+  uint32_t GetNextDfv2DeviceId() { return next_dfv2_device_id_++; }
+
   const fbl::RefPtr<Device>& root_device() { return root_device_; }
   const fbl::RefPtr<Device>& sys_device() { return sys_device_; }
 
@@ -252,6 +256,8 @@ class Coordinator : public CompositeManagerBridge,
 
   zx::vmo& mexec_kernel_zbi() { return mexec_kernel_zbi_; }
   zx::vmo& mexec_data_zbi() { return mexec_data_zbi_; }
+
+  component::OutgoingDirectory* outgoing() { return outgoing_; }
 
  private:
   // CompositeManagerBridge interface
@@ -329,6 +335,9 @@ class Coordinator : public CompositeManagerBridge,
   std::unique_ptr<DeviceGroupManager> device_group_manager_;
 
   std::unique_ptr<BindDriverManager> bind_driver_manager_;
+
+  uint32_t next_dfv2_device_id_ = 0;
+  component::OutgoingDirectory* outgoing_;
 
   // The runner for DFv2 components. This needs to outlive `coordinator`.
   dfv2::DriverRunner* driver_runner_;

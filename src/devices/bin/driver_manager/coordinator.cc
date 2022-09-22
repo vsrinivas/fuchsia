@@ -538,17 +538,11 @@ zx_status_t Coordinator::NewDriverHost(const char* name, fbl::RefPtr<DriverHost>
 
 zx_status_t Coordinator::CreateAndStartDFv2Component(const Dfv2Driver& driver,
                                                      const fbl::RefPtr<Device>& dev) {
-  char path[fuchsia_device_manager::wire::kDevicePathMax + 1];
-  GetTopologicalPath(dev, path, sizeof(path));
-  std::replace(path, path + sizeof(path), '/', '.');
-
-  dev->flags |= DEV_CTX_BOUND;
-  dev->set_bound_node(std::make_shared<dfv2::Node>(std::string_view(path + 1),
-                                                   std::vector<dfv2::Node*>(), dev.get(),
-                                                   dispatcher_, dev->host().get()));
-
-  return driver_runner_->StartDriver(*dev->bound_node(), driver.url, driver.package_type)
-      .status_value();
+  auto node = dev->CreateDFv2Device();
+  if (node.is_error()) {
+    return node.error_value();
+  }
+  return driver_runner_->StartDriver(*node.value(), driver.url, driver.package_type).status_value();
 }
 
 zx_status_t Coordinator::MakeVisible(const fbl::RefPtr<Device>& dev) {
@@ -1086,6 +1080,7 @@ void Coordinator::PublishDriverDevelopmentService(component::OutgoingDirectory& 
 }
 
 void Coordinator::InitOutgoingServices(component::OutgoingDirectory& outgoing) {
+  outgoing_ = &outgoing;
   auto result = outgoing.AddProtocol<fdm::Administrator>(this);
   ZX_ASSERT(result.is_ok());
 

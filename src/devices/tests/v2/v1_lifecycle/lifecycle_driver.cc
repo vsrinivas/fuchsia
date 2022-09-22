@@ -4,6 +4,7 @@
 
 #include <fidl/fuchsia.devfs.test/cpp/wire.h>
 #include <fidl/fuchsia.device.fs/cpp/fidl.h>
+#include <fidl/fuchsia.driver.compat/cpp/fidl.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <lib/driver2/driver2_cpp.h>
 
@@ -79,12 +80,30 @@ class LifecycleDriver : public driver::DriverBase, public fidl::WireServer<ft::D
       return result.take_error();
     }
 
+    auto compat = component::ConnectAt<fuchsia_driver_compat::Service::Device>(
+        context().incoming()->svc_dir());
+    if (compat.is_error()) {
+      FDF_LOG(ERROR, "Error connecting to compat: %s", compat.status_string());
+      return compat.take_error();
+    }
+    auto compat_client = fidl::SyncClient<fuchsia_driver_compat::Device>(std::move(compat.value()));
+    std::string export_path = "";
+    {
+      auto result = compat_client->GetTopologicalPath();
+      if (!result.is_ok()) {
+        FDF_LOG(ERROR, "Error sending to compat: %s", result.error_value().status_string());
+        return zx::error(ZX_ERR_INTERNAL);
+      }
+      export_path = std::move(result->path());
+    }
+    export_path.append("/lifecycle-device");
+
     const auto kServicePath =
         std::string("svc/") + ft::Service::Name + "/" + component::kDefaultInstance + "/device";
 
     // Export an entry to devfs for fuchsia.hardware.demo as a generic device
     auto devfs_dir =
-        ExportDevfsEntry(context().incoming()->svc_dir(), kServicePath, "lifecycle-device", 0);
+        ExportDevfsEntry(context().incoming()->svc_dir(), kServicePath, export_path, 0);
     if (devfs_dir.is_error()) {
       FDF_SLOG(ERROR, "Failed to export service", KV("status", devfs_dir.status_string()));
       return devfs_dir.take_error();

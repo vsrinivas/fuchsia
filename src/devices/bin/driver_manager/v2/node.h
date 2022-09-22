@@ -115,11 +115,15 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   const DriverComponent* driver_component() const;
   const std::vector<Node*>& parents() const;
   const std::list<std::shared_ptr<Node>>& children() const;
+  fidl::ArenaBase& arena() { return arena_; }
   fidl::VectorView<fuchsia_component_decl::wire::Offer> offers() const;
   fidl::VectorView<fuchsia_driver_framework::wire::NodeSymbol> symbols() const;
   const std::vector<fuchsia_driver_framework::wire::NodeProperty>& properties() const;
 
   void set_collection(Collection collection);
+  void set_offers(std::vector<fuchsia_component_decl::wire::Offer> offers) {
+    offers_ = std::move(offers);
+  }
 
   std::string TopoName() const;
 
