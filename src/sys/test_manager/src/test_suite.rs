@@ -26,7 +26,7 @@ use {
         StreamExt,
     },
     std::sync::Arc,
-    tracing::{error, warn},
+    tracing::{error, info, warn},
 };
 
 pub(crate) struct Suite {
@@ -438,6 +438,7 @@ pub(crate) async fn run_single_suite(
         }
     }
     inspect_node.set_execution_state(self_diagnostics::ExecutionState::Complete);
+    info!("Test destruction complete");
     // Workaround to prevent zx_peer_closed error
     // TODO(fxbug.dev/87976) once fxbug.dev/87890 is fixed, the controller should be dropped as soon as all
     // events are drained.

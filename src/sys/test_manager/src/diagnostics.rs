@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::utilities::LogOnDrop,
     anyhow::Error,
     async_trait::async_trait,
     diagnostics_bridge::ArchiveReaderManager,
@@ -44,7 +45,11 @@ pub(crate) fn serve_syslog(
     let mut provider = IsolatedLogsProvider::new(accessor);
     let logs_iterator_task = match log_iterator {
         ftest_manager::LogsIterator::Archive(iterator) => {
-            Some(fasync::Task::spawn(provider.run_iterator_server(iterator)?))
+            let iterator_fut = provider.run_iterator_server(iterator)?;
+            Some(fasync::Task::spawn(async move {
+                let _on_drop = LogOnDrop("Log iterator task dropped");
+                iterator_fut.await
+            }))
         }
         ftest_manager::LogsIterator::Batch(iterator) => {
             provider.start_streaming_logs(iterator)?;
