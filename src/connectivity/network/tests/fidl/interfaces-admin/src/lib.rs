@@ -368,9 +368,15 @@ async fn add_address_offline<N: Netstack, E: netemul::Endpoint>(name: &str) {
 }
 
 // Verify that a request to `WatchAddressAssignmentState` while an existing
-// request is pending causes the `AddressStateProvider` protocol to close.
+// request is pending causes the `AddressStateProvider` protocol to close,
+// regardless of whether the protocol is detached.
 #[variants_test]
-async fn duplicate_watch_address_assignment_state<N: Netstack, E: netemul::Endpoint>(name: &str) {
+#[test_case(false; "no_detach")]
+#[test_case(true; "detach")]
+async fn duplicate_watch_address_assignment_state<N: Netstack, E: netemul::Endpoint>(
+    name: &str,
+    detach: bool,
+) {
     let sandbox = netemul::TestSandbox::new().expect("new sandbox");
     let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
     let device = sandbox.create_endpoint::<E, _>(name).await.expect("create endpoint");
@@ -393,6 +399,10 @@ async fn duplicate_watch_address_assignment_state<N: Netstack, E: netemul::Endpo
     )
     .await
     .expect("add address failed unexpectedly");
+
+    if detach {
+        address_state_provider.detach().expect("failed to detach");
+    }
 
     // Invoke `WatchAddressAssignmentState` twice and assert that the two
     // requests and the AddressStateProvider protocol are closed.

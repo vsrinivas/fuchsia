@@ -942,7 +942,7 @@ async fn address_state_provider_main_loop(
     futures::pin_mut!(req_stream);
     futures::pin_mut!(stop_receiver);
     futures::pin_mut!(assignment_state_receiver);
-    let mut cancelation_reason = loop {
+    let cancelation_reason = loop {
         let next_event = futures::select! {
             req = req_stream.try_next() => AddressStateProviderEvent::Request(req),
             state = assignment_state_receiver.next() => {
@@ -958,7 +958,16 @@ async fn address_state_provider_main_loop(
         match next_event {
             AddressStateProviderEvent::Request(req) => match req {
                 // The client hung up, stop serving.
-                Ok(None) => break None,
+                Ok(None) => {
+                    // If detached, wait to be canceled before exiting.
+                    if detached {
+                        // N.B. The `Canceled` arm of this match exits the loop,
+                        // meaning we can't already be canceled here.
+                        debug_assert!(!stop_receiver.is_terminated());
+                        break Some(stop_receiver.await.expect("failed to receive stop"));
+                    }
+                    break None;
+                }
                 Ok(Some(request)) => {
                     let e = match dispatch_address_state_provider_request(
                         request,
@@ -1017,11 +1026,6 @@ async fn address_state_provider_main_loop(
         }
     };
 
-    // If detached, wait to be canceled before exiting.
-    if detached && !stop_receiver.is_terminated() {
-        cancelation_reason = Some(stop_receiver.await.expect("failed to receive stop"));
-    }
-    // On interface removal, don't bother removing the address.
     match cancelation_reason {
         Some(fnet_interfaces_admin::AddressRemovalReason::InterfaceRemoved) => {
             return AddressNeedsExplicitRemovalFromCore::No
