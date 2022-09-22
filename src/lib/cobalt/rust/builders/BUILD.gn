@@ -12,13 +12,11 @@ rustc_library("builders") {
   with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_rust",
     "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_rust",
     "//third_party/cobalt/src/lib/client/rust:cobalt-client",
   ]
 
   sources = [
-    "src/cobalt_event_builder.rs",
     "src/lib.rs",
     "src/metric_event_builder.rs",
   ]

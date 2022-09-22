@@ -4,9 +4,8 @@
 
 #![deny(missing_docs)]
 
-//! Helpers for building CobaltEvent and MetricEvent objects
+//! Helpers for building MetricEvent objects
 
-pub mod cobalt_event_builder;
 pub mod metric_event_builder;
 
-pub use {cobalt_event_builder::CobaltEventExt, metric_event_builder::MetricEventExt};
+pub use metric_event_builder::MetricEventExt;
