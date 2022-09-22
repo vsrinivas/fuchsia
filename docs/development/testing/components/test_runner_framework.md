@@ -637,6 +637,7 @@ fuchsia.kernel.RootJobForInspect
 fuchsia.kernel.SmcResource
 fuchsia.kernel.Stats
 fuchsia.kernel.VmexResource
+fuchsia.media.ProfileProvider
 fuchsia.net.http.Loader
 fuchsia.scheduler.ProfileProvider
 fuchsia.sysinfo.SysInfo

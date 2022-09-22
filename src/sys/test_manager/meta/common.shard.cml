@@ -297,6 +297,7 @@
                 "fuchsia.kernel.SmcResource",
                 "fuchsia.kernel.Stats",
                 "fuchsia.kernel.VmexResource",
+                "fuchsia.media.ProfileProvider",
 
                 // Needed for Bluetooth streaming E2E tests.
                 // TODO(fxbug.dev/90434): Consider removing when mediaplayer is v2.
