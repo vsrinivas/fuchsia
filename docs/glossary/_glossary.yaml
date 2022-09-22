@@ -83,6 +83,23 @@
   related_guides: [""]
   area: ["System", "Zircon"]
 
+- term: "Bringup"
+  short_description: "The process of getting Fuchsia to run on a new board."
+  full_description: "Bringup is the catchall term for all of the engineering work related to
+  getting Fuchsia to run on a new board. A board is a complete computer hardware platform with
+  a CPU, memory, peripherals, and so on. The term \"bringup\" should not be used for situations
+  where Fuchsia support for the board already exists. For example, flashing a Fuchsia image onto
+  a VIM3 is not bringup. The original engineering work of implementing the drivers and so on so
+  that Fuchsia can run on the VIM3 is bringup."
+  see_also: [
+    "<a href=\"/docs/development/build/build_system/bringup\">Bringup Product Definition</a>",
+    "<a href=\"/docs/development/boards/bringup\"><Adding support for new boards/a>",
+    "<a href=\"/docs/contribute/governance/rfcs/0111_fuchsia_hardware_specifications#document-definitions\">\"Board\" definition</a>",
+    "<a href=\"/docs/development/hardware/khadas-vim3\">Install Fuchsia on a Khadas VIM3 board</a>"
+  ]
+  related_guides: [""]
+  area: ["System", "Zircon"]
+
 - term: "Bus driver"
   short_description: "A driver for a device that has multiple children."
   full_description: "A  <a href=\"/docs/glossary#driver\">driver</a> for a device that has
