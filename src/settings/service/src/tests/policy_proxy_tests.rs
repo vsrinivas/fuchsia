@@ -38,7 +38,7 @@ static SETTING_RESPONSE_MODIFIED: SettingResponse =
     Ok(Some(SettingInfo::Unknown(SettingUnknownInfo(false))));
 
 static SETTING_RESULT_NO_RESPONSE: SettingResponse = Ok(None);
-static SETTING_RESULT_NO_RESPONSE_SWITCHBOARD: SettingHandlerResult = Ok(None);
+static HANDLER_RESULT_NO_RESPONSE: SettingHandlerResult = Ok(None);
 
 /// `FakePolicyHandler` always returns the provided responses for handling policy/setting requests.
 /// The following mappings are Vectors rather than HashMaps as some of the represented values do not
@@ -320,7 +320,7 @@ async fn test_setting_message_result_replacement() {
                 // transform result, so that the original request is ignored.
                 .add_request_mapping(
                     SETTING_REQUEST.clone(),
-                    RequestTransform::Result(SETTING_RESULT_NO_RESPONSE_SWITCHBOARD.clone()),
+                    RequestTransform::Result(HANDLER_RESULT_NO_RESPONSE.clone()),
                 )
                 .build(),
         ),
@@ -538,7 +538,7 @@ async fn test_multiple_messages() {
                 .set_policy_response(Ok(policy_payload.clone()))
                 .add_request_mapping(
                     SETTING_REQUEST.clone(),
-                    RequestTransform::Result(SETTING_RESULT_NO_RESPONSE_SWITCHBOARD.clone()),
+                    RequestTransform::Result(HANDLER_RESULT_NO_RESPONSE.clone()),
                 )
                 .build(),
         ),

@@ -443,8 +443,7 @@ impl SettingProxy {
         !self.listen_requests.is_empty()
     }
 
-    /// Informs the Switchboard when the controller has indicated the setting
-    /// has changed.
+    /// Informs listeners when the controller has indicated the setting has changed.
     fn notify(&self, setting_info: SettingInfo) {
         if !self.is_listening() {
             return;
