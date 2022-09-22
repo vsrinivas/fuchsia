@@ -1,0 +1,32 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This file contains errcat redirects for each relevant error domain to the page that actually
+# contains the information the user is looking for, which may be behind an anchor tag on its catalog
+# page.
+
+# Errcat redirects for the "fi" domain.
+redirects:
+- from: /fuchsia-src/error/fi-0018
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0018
+- from: /fuchsia-src/error/fi-0033
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0033
+- from: /fuchsia-src/error/fi-0040
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0040
+- from: /fuchsia-src/error/fi-0057
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0057
+- from: /fuchsia-src/error/fi-0066
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0066
+- from: /fuchsia-src/error/fi-0067
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0067
+- from: /fuchsia-src/error/fi-0093
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0093
+- from: /fuchsia-src/error/fi-0110
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0110
+- from: /fuchsia-src/error/fi-0158
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0158
+- from: /fuchsia-src/error/fi-0167
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0167
+- from: /fuchsia-src/error/fi-0178
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0178
