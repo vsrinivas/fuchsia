@@ -24,8 +24,8 @@
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/align.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/device.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/device_context.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/ioctl_adapter.h"
-#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/moal_context.h"
 
 namespace {
 
@@ -87,7 +87,7 @@ mlan_status moal_get_system_time(t_void *pmoal, t_u32 *psec, t_u32 *pusec) {
 mlan_status moal_init_timer(t_void *pmoal, t_void **pptimer,
                             IN t_void (*callback)(t_void *pcontext), t_void *pcontext) {
   using wlan::drivers::timer::Timer;
-  wlan::nxpfmac::Device *device = static_cast<wlan::nxpfmac::MoalContext *>(pmoal)->device_;
+  wlan::nxpfmac::Device *device = static_cast<wlan::nxpfmac::DeviceContext *>(pmoal)->device_;
 
   *pptimer = new Timer(device->GetDispatcher(), callback, pcontext);
 
@@ -190,19 +190,19 @@ mlan_status moal_get_hw_spec_complete(t_void *pmoal, mlan_status status, pmlan_h
 }
 
 mlan_status moal_init_fw_complete(t_void *pmoal, mlan_status status) {
-  wlan::nxpfmac::Device *device = static_cast<wlan::nxpfmac::MoalContext *>(pmoal)->device_;
+  wlan::nxpfmac::Device *device = static_cast<wlan::nxpfmac::DeviceContext *>(pmoal)->device_;
   device->OnFirmwareInitComplete(status == MLAN_STATUS_SUCCESS ? ZX_OK : ZX_ERR_INTERNAL);
   return MLAN_STATUS_SUCCESS;
 }
 
 mlan_status moal_shutdown_fw_complete(t_void *pmoal, mlan_status status) {
-  wlan::nxpfmac::Device *device = static_cast<wlan::nxpfmac::MoalContext *>(pmoal)->device_;
+  wlan::nxpfmac::Device *device = static_cast<wlan::nxpfmac::DeviceContext *>(pmoal)->device_;
   device->OnFirmwareShutdownComplete(status == MLAN_STATUS_SUCCESS ? ZX_OK : ZX_ERR_INTERNAL);
   return MLAN_STATUS_SUCCESS;
 }
 
 mlan_status moal_send_packet_complete(t_void *pmoal, pmlan_buffer pmbuf, mlan_status status) {
-  wlan::nxpfmac::DataPlane *plane = static_cast<wlan::nxpfmac::MoalContext *>(pmoal)->data_plane_;
+  wlan::nxpfmac::DataPlane *plane = static_cast<wlan::nxpfmac::DeviceContext *>(pmoal)->data_plane_;
   auto frame = reinterpret_cast<wlan::drivers::components::Frame *>(pmbuf->pdesc);
   plane->CompleteTx(std::move(*frame), status == MLAN_STATUS_SUCCESS ? ZX_OK : ZX_ERR_INTERNAL);
   return MLAN_STATUS_SUCCESS;
@@ -214,7 +214,7 @@ mlan_status moal_recv_complete(t_void *pmoal, pmlan_buffer pmbuf, t_u32 port, ml
 }
 
 mlan_status moal_recv_packet(t_void *pmoal, pmlan_buffer pmbuf) {
-  wlan::nxpfmac::DataPlane *plane = static_cast<wlan::nxpfmac::MoalContext *>(pmoal)->data_plane_;
+  wlan::nxpfmac::DataPlane *plane = static_cast<wlan::nxpfmac::DeviceContext *>(pmoal)->data_plane_;
   auto frame = reinterpret_cast<wlan::drivers::components::Frame *>(pmbuf->pdesc);
 
   uint8_t *data = pmbuf->pbuf + pmbuf->data_offset;
@@ -231,7 +231,7 @@ mlan_status moal_recv_amsdu_packet(t_void *pmoal, pmlan_buffer pmbuf) {
 }
 
 mlan_status moal_recv_event(t_void *pmoal, pmlan_event pmevent) {
-  static_cast<wlan::nxpfmac::MoalContext *>(pmoal)->event_handler_->OnEvent(pmevent);
+  static_cast<wlan::nxpfmac::DeviceContext *>(pmoal)->event_handler_->OnEvent(pmevent);
   return MLAN_STATUS_SUCCESS;
 }
 
@@ -246,7 +246,7 @@ mlan_status moal_ioctl_complete(t_void *pmoal, pmlan_ioctl_req pioctl_req, mlan_
     return MLAN_STATUS_SUCCESS;
   }
 
-  auto context = static_cast<wlan::nxpfmac::MoalContext *>(pmoal);
+  auto context = static_cast<wlan::nxpfmac::DeviceContext *>(pmoal);
   context->ioctl_adapter_->OnIoctlComplete(pioctl_req, ml_status == MLAN_STATUS_SUCCESS
                                                            ? wlan::nxpfmac::IoctlStatus::Success
                                                            : wlan::nxpfmac::IoctlStatus::Failure);
@@ -254,7 +254,7 @@ mlan_status moal_ioctl_complete(t_void *pmoal, pmlan_ioctl_req pioctl_req, mlan_
 }
 
 mlan_status moal_alloc_mlan_buffer(t_void *pmoal, t_u32 size, ppmlan_buffer pmbuf) {
-  wlan::nxpfmac::DataPlane *plane = static_cast<wlan::nxpfmac::MoalContext *>(pmoal)->data_plane_;
+  wlan::nxpfmac::DataPlane *plane = static_cast<wlan::nxpfmac::DeviceContext *>(pmoal)->data_plane_;
   std::optional<wlan::drivers::components::Frame> frame = plane->AcquireFrame();
 
   if (!frame.has_value()) {

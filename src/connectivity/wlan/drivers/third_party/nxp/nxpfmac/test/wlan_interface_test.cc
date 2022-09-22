@@ -16,6 +16,7 @@
 #include <zxtest/zxtest.h>
 
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/data_plane.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/device_context.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/test/mlan_mocks.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/test/mock_bus.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/test/mock_fullmac_ifc.h"
@@ -40,6 +41,9 @@ struct WlanInterfaceTest : public zxtest::Test, public wlan::nxpfmac::DataPlaneI
     auto ioctl_adapter = wlan::nxpfmac::IoctlAdapter::Create(mlan_mocks_.GetAdapter(), &mock_bus_);
     ASSERT_OK(ioctl_adapter.status_value());
     ioctl_adapter_ = std::move(ioctl_adapter.value());
+    context_.event_handler_ = &event_handler_;
+    context_.ioctl_adapter_ = ioctl_adapter_.get();
+    context_.data_plane_ = test_data_plane_->GetDataPlane();
   }
 
   void TearDown() override {
@@ -95,6 +99,7 @@ struct WlanInterfaceTest : public zxtest::Test, public wlan::nxpfmac::DataPlaneI
   wlan::nxpfmac::MlanMockAdapter mlan_mocks_;
   std::unique_ptr<wlan::nxpfmac::IoctlAdapter> ioctl_adapter_;
   std::unique_ptr<wlan::nxpfmac::TestDataPlane> test_data_plane_;
+  wlan::nxpfmac::DeviceContext context_;
   // This data member MUST BE LAST, because it needs to be destroyed first, ensuring that whatever
   // interface lifetimes are managed by it are destroyed before other data members.
   std::shared_ptr<MockDevice> parent_;
@@ -106,8 +111,7 @@ TEST_F(WlanInterfaceTest, Construct) {
 
   WlanInterface* ifc = nullptr;
   ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacDeviceName, 0, WLAN_MAC_ROLE_CLIENT,
-                                  &event_handler_, ioctl_adapter_.get(),
-                                  test_data_plane_->GetDataPlane(), zx::channel(), &ifc));
+                                  &context_, zx::channel(), &ifc));
 }
 
 TEST_F(WlanInterfaceTest, WlanFullmacImplStart) {
@@ -120,9 +124,8 @@ TEST_F(WlanInterfaceTest, WlanFullmacImplStart) {
   const zx_handle_t mlme_channel_handle = in_mlme_channel.get();
 
   WlanInterface* ifc = nullptr;
-  ASSERT_OK(WlanInterface::Create(
-      parent_.get(), kFullmacDeviceName, 0, WLAN_MAC_ROLE_CLIENT, &event_handler_,
-      ioctl_adapter_.get(), test_data_plane_->GetDataPlane(), std::move(in_mlme_channel), &ifc));
+  ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacDeviceName, 0, WLAN_MAC_ROLE_CLIENT,
+                                  &context_, std::move(in_mlme_channel), &ifc));
 
   const wlan_fullmac_impl_ifc_protocol_t fullmac_ifc{.ops = nullptr, .ctx = this};
   zx::channel out_mlme_channel;
@@ -139,8 +142,7 @@ TEST_F(WlanInterfaceTest, WlanFullmacImplQuery) {
 
   constexpr wlan_mac_role_t kRole = WLAN_MAC_ROLE_AP;
   WlanInterface* ifc = nullptr;
-  ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacDeviceName, 0, kRole, &event_handler_,
-                                  ioctl_adapter_.get(), test_data_plane_->GetDataPlane(),
+  ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacDeviceName, 0, kRole, &context_,
                                   zx::channel(), &ifc));
 
   wlan_fullmac_query_info_t info{};
@@ -168,8 +170,7 @@ TEST_F(WlanInterfaceTest, WlanFullmacImplQueryMacSublayerSupport) {
 
   WlanInterface* ifc = nullptr;
   ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacDeviceName, 0, WLAN_MAC_ROLE_CLIENT,
-                                  &event_handler_, ioctl_adapter_.get(),
-                                  test_data_plane_->GetDataPlane(), zx::channel(), &ifc));
+                                  &context_, zx::channel(), &ifc));
 
   mac_sublayer_support_t sublayer_support;
   ifc->WlanFullmacImplQueryMacSublayerSupport(&sublayer_support);
@@ -210,9 +211,8 @@ TEST_F(WlanInterfaceTest, WlanFullmacImplStartScan) {
   ASSERT_OK(zx::channel::create(0, &in_mlme_channel, &unused));
 
   WlanInterface* ifc = nullptr;
-  ASSERT_OK(WlanInterface::Create(
-      parent_.get(), kFullmacDeviceName, 0, WLAN_MAC_ROLE_CLIENT, &event_handler_,
-      ioctl_adapter_.get(), test_data_plane_->GetDataPlane(), std::move(in_mlme_channel), &ifc));
+  ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacDeviceName, 0, WLAN_MAC_ROLE_CLIENT,
+                                  &context_, std::move(in_mlme_channel), &ifc));
 
   zx::channel out_mlme_channel;
   ifc->WlanFullmacImplStart(mock_fullmac_ifc.proto(), &out_mlme_channel);
@@ -262,9 +262,8 @@ TEST_F(WlanInterfaceTest, WlanFullmacImplConnectReq) {
   ASSERT_OK(zx::channel::create(0, &in_mlme_channel, &unused));
 
   WlanInterface* ifc = nullptr;
-  ASSERT_OK(WlanInterface::Create(
-      parent_.get(), kFullmacDeviceName, 0, WLAN_MAC_ROLE_CLIENT, &event_handler_,
-      ioctl_adapter_.get(), test_data_plane_->GetDataPlane(), std::move(in_mlme_channel), &ifc));
+  ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacDeviceName, 0, WLAN_MAC_ROLE_CLIENT,
+                                  &context_, std::move(in_mlme_channel), &ifc));
 
   zx::channel out_mlme_channel;
   ifc->WlanFullmacImplStart(mock_fullmac_ifc.proto(), &out_mlme_channel);
@@ -328,9 +327,8 @@ TEST_F(WlanInterfaceTest, MacSetMode) {
   ASSERT_OK(zx::channel::create(0, &in_mlme_channel, &unused));
 
   WlanInterface* ifc = nullptr;
-  ASSERT_OK(WlanInterface::Create(
-      parent_.get(), kFullmacDeviceName, 0, WLAN_MAC_ROLE_CLIENT, &event_handler_,
-      ioctl_adapter_.get(), test_data_plane_->GetDataPlane(), std::move(in_mlme_channel), &ifc));
+  ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacDeviceName, 0, WLAN_MAC_ROLE_CLIENT,
+                                  &context_, std::move(in_mlme_channel), &ifc));
 
   constexpr mode_t kMacModes[] = {MODE_MULTICAST_FILTER, MODE_MULTICAST_PROMISCUOUS,
                                   MODE_PROMISCUOUS};

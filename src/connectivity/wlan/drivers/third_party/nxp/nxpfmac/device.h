@@ -34,6 +34,7 @@
 namespace wlan::nxpfmac {
 
 class Device;
+struct DeviceContext;
 class DeviceInspect;
 
 using DeviceType =
@@ -108,6 +109,7 @@ class Device : public DeviceType,
   WlanInterface* client_interface_;
   WlanInterface* ap_interface_;
 
+  DeviceContext* context_ = nullptr;
   EventHandler event_handler_;
   std::unique_ptr<IoctlAdapter> ioctl_adapter_;
   std::unique_ptr<DataPlane> data_plane_;

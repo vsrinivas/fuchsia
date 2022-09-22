@@ -17,28 +17,27 @@
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/data_plane.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/device_context.h"
+
 namespace wlan::nxpfmac {
 
 WlanInterface::WlanInterface(zx_device_t* parent, uint32_t iface_index, wlan_mac_role_t role,
-                             EventHandler* event_handler, IoctlAdapter* ioctl_adapter,
-                             DataPlane* data_plane, zx::channel&& mlme_channel)
+                             DeviceContext* context, zx::channel&& mlme_channel)
     : WlanInterfaceDeviceType(parent),
-      wlan::drivers::components::NetworkPort(data_plane->NetDevIfcProto(), *this,
+      wlan::drivers::components::NetworkPort(context->data_plane_->NetDevIfcProto(), *this,
                                              static_cast<uint8_t>(iface_index)),
       role_(role),
       mlme_channel_(std::move(mlme_channel)),
-      client_connection_(ioctl_adapter, iface_index),
-      scanner_(&fullmac_ifc_, event_handler, ioctl_adapter, iface_index),
-      ioctl_adapter_(ioctl_adapter),
-      data_plane_(data_plane) {}
+      client_connection_(context->ioctl_adapter_, iface_index),
+      scanner_(&fullmac_ifc_, context, iface_index),
+      context_(context) {}
 
 zx_status_t WlanInterface::Create(zx_device_t* parent, const char* name, uint32_t iface_index,
-                                  wlan_mac_role_t role, EventHandler* event_handler,
-                                  IoctlAdapter* ioctl, DataPlane* data_plane,
+                                  wlan_mac_role_t role, DeviceContext* context,
                                   zx::channel&& mlme_channel, WlanInterface** out_interface) {
-  std::unique_ptr<WlanInterface> interface(new WlanInterface(
-      parent, iface_index, role, event_handler, ioctl, data_plane, std::move(mlme_channel)));
-  interface->data_plane_ = data_plane;
+  std::unique_ptr<WlanInterface> interface(
+      new WlanInterface(parent, iface_index, role, context, std::move(mlme_channel)));
 
   // Retrieve the MAC address before adding the DDK device. Otherwise the device can bind and
   // receive calls before the MAC address is ready.
@@ -314,7 +313,7 @@ void WlanInterface::MacSetMode(mode_t mode, cpp20::span<const uint8_t> multicast
       return;
   }
 
-  IoctlStatus io_status = ioctl_adapter_->IssueIoctlSync(&request);
+  IoctlStatus io_status = context_->ioctl_adapter_->IssueIoctlSync(&request);
   if (io_status != IoctlStatus::Success) {
     NXPF_ERR("Failed to set mac mode: %d", io_status);
     return;
@@ -326,7 +325,7 @@ zx_status_t WlanInterface::RetrieveMacAddress() {
                                     {.sub_command = MLAN_OID_BSS_MAC_ADDR});
 
   NXPF_INFO("Retrieving MAC address");
-  IoctlStatus io_status = ioctl_adapter_->IssueIoctlSync(&request);
+  IoctlStatus io_status = context_->ioctl_adapter_->IssueIoctlSync(&request);
   if (io_status != IoctlStatus::Success) {
     NXPF_ERR("Failed to perform get MAC ioctl: %d", io_status);
     return ZX_ERR_INTERNAL;

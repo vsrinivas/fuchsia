@@ -17,6 +17,8 @@
 
 #include <zxtest/zxtest.h>
 
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/device_context.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/event_handler.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/ioctl_adapter.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/test/mlan_mocks.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/test/mock_bus.h"
@@ -32,8 +34,11 @@ struct ScannerTest : public zxtest::Test {
     ASSERT_OK(ioctl_adapter.status_value());
     ioctl_adapter_ = std::move(ioctl_adapter.value());
     mock_fullmac_ifc_client_ = ddk::WlanFullmacImplIfcProtocolClient(mock_fullmac_ifc_.proto());
+    context_.ioctl_adapter_ = ioctl_adapter_.get();
+    context_.event_handler_ = &event_handler_;
   }
 
+  wlan::nxpfmac::DeviceContext context_;
   wlan::nxpfmac::MlanMockAdapter mocks_;
   wlan::nxpfmac::EventHandler event_handler_;
   wlan::nxpfmac::MockBus mock_bus_;
@@ -46,11 +51,11 @@ struct ScannerTest : public zxtest::Test {
 // time out.
 constexpr zx_duration_t kDefaultTimeout = ZX_MSEC(60000000000);
 
-TEST(ScannerTest, Constructible) {
+TEST_F(ScannerTest, Constructible) {
   // Test that a Scanner object can be constructed without crashing.
 
   wlan::nxpfmac::EventHandler event_handler;
-  ASSERT_NO_FATAL_FAILURE(Scanner(nullptr, &event_handler, nullptr, 0));
+  ASSERT_NO_FATAL_FAILURE(Scanner(nullptr, &context_, 0));
 }
 
 TEST_F(ScannerTest, Scan) {
@@ -109,7 +114,7 @@ TEST_F(ScannerTest, Scan) {
     sync_completion_signal(&scan_end_completion);
   });
 
-  Scanner scanner(&mock_fullmac_ifc_client_, &event_handler_, ioctl_adapter_.get(), kBssIndex);
+  Scanner scanner(&mock_fullmac_ifc_client_, &context_, kBssIndex);
 
   // Perform an active scan
   wlan_fullmac_scan_req_t scan_request{
@@ -171,7 +176,7 @@ TEST_F(ScannerTest, StopScan) {
   });
 
   {
-    Scanner scanner(&mock_fullmac_ifc_client_, &event_handler_, ioctl_adapter_.get(), kBssIndex);
+    Scanner scanner(&mock_fullmac_ifc_client_, &context_, kBssIndex);
 
     // Perform an active scan
     wlan_fullmac_scan_req_t scan_request{.txn_id = kTxnId, .scan_type = WLAN_SCAN_TYPE_ACTIVE};
@@ -213,7 +218,7 @@ TEST_F(ScannerTest, StopScanWithNoScanInProgress) {
   // Test that StopScan returns an error when no scan is in progress.
 
   constexpr uint32_t kBssIndex = 0;
-  Scanner scanner(nullptr, &event_handler_, ioctl_adapter_.get(), kBssIndex);
+  Scanner scanner(nullptr, &context_, kBssIndex);
 
   ASSERT_EQ(ZX_ERR_NOT_FOUND, scanner.StopScan());
 }
@@ -257,7 +262,7 @@ TEST_F(ScannerTest, ScanSpecificSsid) {
     sync_completion_signal(&completion);
   });
 
-  Scanner scanner(&mock_fullmac_ifc_client_, &event_handler_, ioctl_adapter_.get(), kBssIndex);
+  Scanner scanner(&mock_fullmac_ifc_client_, &context_, kBssIndex);
 
   ASSERT_OK(scanner.Scan(&scan_request, kDefaultTimeout));
 
@@ -282,7 +287,7 @@ TEST_F(ScannerTest, ScanTooManySsids) {
   scan_request.ssids_count = std::size(kSsids);
   ASSERT_GT(scan_request.ssids_count, 1u);
 
-  Scanner scanner(&mock_fullmac_ifc_client_, &event_handler_, ioctl_adapter_.get(), kBssIndex);
+  Scanner scanner(&mock_fullmac_ifc_client_, &context_, kBssIndex);
 
   // This should immediately fail with an invalid args error.
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, scanner.Scan(&scan_request, kDefaultTimeout));
@@ -327,7 +332,7 @@ TEST_F(ScannerTest, ScanTimeout) {
     sync_completion_signal(&completion);
   });
 
-  Scanner scanner(&mock_fullmac_ifc_client_, &event_handler_, ioctl_adapter_.get(), kBssIndex);
+  Scanner scanner(&mock_fullmac_ifc_client_, &context_, kBssIndex);
 
   ASSERT_OK(scanner.Scan(&scan_request, kShortTimeout));
 

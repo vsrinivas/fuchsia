@@ -22,15 +22,17 @@
 #include <mutex>
 
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/event_handler.h"
-#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/ioctl_adapter.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/ioctl_request.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/waitable_state.h"
 
 namespace wlan::nxpfmac {
 
+struct DeviceContext;
+
 class Scanner {
  public:
-  Scanner(ddk::WlanFullmacImplIfcProtocolClient* fullmac_ifc, EventHandler* event_handler,
-          IoctlAdapter* ioctl_adapter, uint32_t bss_index);
+  Scanner(ddk::WlanFullmacImplIfcProtocolClient* fullmac_ifc, DeviceContext* context,
+          uint32_t bss_index);
   // Destroying the scanner will stop any ongoing scans and wait for all all calls to the fullmac
   // ifc client to complete.
   ~Scanner();
@@ -50,7 +52,7 @@ class Scanner {
   zx_status_t CancelScanIoctl() __TA_REQUIRES(mutex_);
   void EndScan(uint64_t txn_id, wlan_scan_result_t result) __TA_REQUIRES(mutex_);
 
-  IoctlAdapter* ioctl_adapter_ __TA_GUARDED(mutex_) = nullptr;
+  DeviceContext* context_ = nullptr;
   IoctlRequest<mlan_ds_scan> scan_request_ __TA_GUARDED(mutex_);
   IoctlRequest<mlan_ds_scan> scan_results_ __TA_GUARDED(mutex_);
   WaitableState<bool> scan_in_progress_{false};

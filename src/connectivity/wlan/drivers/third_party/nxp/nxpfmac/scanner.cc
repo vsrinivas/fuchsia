@@ -18,6 +18,9 @@
 #include <netinet/if_ether.h>
 
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/debug.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/device_context.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/event_handler.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/ioctl_adapter.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan.h"
 
 namespace {
@@ -28,10 +31,10 @@ constexpr uint32_t kBeaconFixedSize = 12u;
 
 namespace wlan::nxpfmac {
 
-Scanner::Scanner(ddk::WlanFullmacImplIfcProtocolClient* fullmac_ifc, EventHandler* event_handler,
-                 IoctlAdapter* ioctl, uint32_t bss_index)
-    : ioctl_adapter_(ioctl), bss_index_(bss_index), fullmac_ifc_(fullmac_ifc) {
-  on_scan_report_event_ = event_handler->RegisterForInterfaceEvent(
+Scanner::Scanner(ddk::WlanFullmacImplIfcProtocolClient* fullmac_ifc, DeviceContext* context,
+                 uint32_t bss_index)
+    : context_(context), bss_index_(bss_index), fullmac_ifc_(fullmac_ifc) {
+  on_scan_report_event_ = context_->event_handler_->RegisterForInterfaceEvent(
       MLAN_EVENT_ID_DRV_SCAN_REPORT, bss_index, [this](pmlan_event event) { OnScanReport(event); });
 }
 
@@ -121,7 +124,7 @@ zx_status_t Scanner::Scan(const wlan_fullmac_scan_req_t* req, zx_duration_t time
 
   // Issue request
   const IoctlStatus io_status =
-      ioctl_adapter_->IssueIoctl(&scan_request_, std::move(on_ioctl_complete), timeout);
+      context_->ioctl_adapter_->IssueIoctl(&scan_request_, std::move(on_ioctl_complete), timeout);
   if (io_status != IoctlStatus::Pending) {
     // We don't expect anything but pending here, the scan cannot complete immediately so even an
     // IoctlStatus::Success is an error.
@@ -167,7 +170,7 @@ void Scanner::FetchAndProcessScanResults(wlan_scan_result_t result) {
   scan_results_ = IoctlRequest<mlan_ds_scan>(MLAN_IOCTL_SCAN, MLAN_ACT_GET, bss_index_,
                                              mlan_ds_scan{.sub_command = MLAN_OID_SCAN_NORMAL});
 
-  IoctlStatus io_status = ioctl_adapter_->IssueIoctlSync(&scan_results_);
+  IoctlStatus io_status = context_->ioctl_adapter_->IssueIoctlSync(&scan_results_);
   if (io_status != IoctlStatus::Success) {
     NXPF_ERR("Failed to get scan results: %d", io_status);
     EndScan(txn_id_, WLAN_SCAN_RESULT_INTERNAL_ERROR);
@@ -217,7 +220,7 @@ void Scanner::ProcessScanResults(wlan_scan_result_t result) {
 }
 
 zx_status_t Scanner::CancelScanIoctl() {
-  if (!ioctl_adapter_->CancelIoctl(&scan_request_)) {
+  if (!context_->ioctl_adapter_->CancelIoctl(&scan_request_)) {
     NXPF_ERR("Failed to cancel scan ioctl, no ioctl in progress");
     return ZX_ERR_NOT_FOUND;
   }

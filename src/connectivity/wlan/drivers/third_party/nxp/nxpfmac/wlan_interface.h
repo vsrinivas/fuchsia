@@ -23,13 +23,12 @@
 #include <wlan/drivers/components/network_port.h>
 
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/client_connection.h"
-#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/data_plane.h"
-#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/ioctl_adapter.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/scanner.h"
 
 namespace wlan::nxpfmac {
 
+struct DeviceContext;
 class WlanInterface;
 using WlanInterfaceDeviceType = ::ddk::Device<WlanInterface>;
 
@@ -41,8 +40,7 @@ class WlanInterface : public WlanInterfaceDeviceType,
   // Static factory function.  The returned instance is unowned, since its lifecycle is managed by
   // the devhost.
   static zx_status_t Create(zx_device_t* parent, const char* name, uint32_t iface_index,
-                            wlan_mac_role_t role, EventHandler* event_handler,
-                            IoctlAdapter* ioctl_adapter, DataPlane* data_plane,
+                            wlan_mac_role_t role, DeviceContext* context,
                             zx::channel&& mlme_channel, WlanInterface** out_interface);
 
   // Device operations.
@@ -93,8 +91,7 @@ class WlanInterface : public WlanInterfaceDeviceType,
 
  private:
   explicit WlanInterface(zx_device_t* parent, uint32_t iface_index, wlan_mac_role_t role,
-                         EventHandler* event_handler, IoctlAdapter* ioctl, DataPlane* data_plane,
-                         zx::channel&& mlme_channel);
+                         DeviceContext* context, zx::channel&& mlme_channel);
 
   zx_status_t RetrieveMacAddress();
 
@@ -103,8 +100,7 @@ class WlanInterface : public WlanInterfaceDeviceType,
 
   ClientConnection client_connection_;
   Scanner scanner_;
-  IoctlAdapter* ioctl_adapter_ = nullptr;
-  DataPlane* data_plane_ = nullptr;
+  DeviceContext* context_ = nullptr;
 
   ::ddk::WlanFullmacImplIfcProtocolClient fullmac_ifc_;
 

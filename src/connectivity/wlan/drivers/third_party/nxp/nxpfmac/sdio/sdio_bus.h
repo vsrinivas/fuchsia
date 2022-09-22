@@ -31,14 +31,14 @@
 #include <wlan/drivers/components/frame.h>
 
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/bus_interface.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/device_context.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan.h"
-#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/moal_context.h"
 
 namespace wlan::nxpfmac {
 
 class SdioBus;
 
-struct SdioContext : public MoalContext {
+struct SdioContext : public DeviceContext {
   SdioBus* bus_;
 };
 
