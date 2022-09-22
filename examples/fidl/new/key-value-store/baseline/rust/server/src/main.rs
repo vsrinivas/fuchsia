@@ -10,6 +10,7 @@ use {
     lazy_static::lazy_static,
     regex::Regex,
     std::cell::RefCell,
+    std::collections::hash_map::Entry,
     std::collections::HashMap,
 };
 
@@ -34,13 +35,14 @@ fn write_item(store: &mut HashMap<String, Vec<u8>>, attempt: Item) -> Result<(),
     }
 
     // Write to the store, validating that the key did not already exist.
-    match store.insert(attempt.key.clone(), attempt.value) {
-        Some(_) => {
-            println!("Write error: ALREADY_EXISTS, For key: {}", attempt.key);
+    match store.entry(attempt.key) {
+        Entry::Occupied(entry) => {
+            println!("Write error: ALREADY_EXISTS, For key: {}", entry.key());
             Err(WriteError::AlreadyExists)
         }
-        None => {
-            println!("Wrote value at key: {}", attempt.key);
+        Entry::Vacant(entry) => {
+            println!("Wrote value at key: {}", entry.key());
+            entry.insert(attempt.value);
             Ok(())
         }
     }
