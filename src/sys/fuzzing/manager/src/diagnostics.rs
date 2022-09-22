@@ -14,7 +14,7 @@ use {
     std::cell::RefCell,
     std::collections::LinkedList,
     std::rc::Rc,
-    tracing::warn,
+    tracing::{info, warn},
 };
 
 #[derive(Debug)]
@@ -59,7 +59,10 @@ pub async fn forward_all(
                 test_manager::Artifact::Log(test_manager::Syslog::Batch(client_end)) => {
                     syslog_rx.send(client_end).await.context("failed to send syslog artifact")
                 }
-                artifact => unreachable!("unsupported artifact: {:?}", artifact),
+                artifact => {
+                    info!("Ignoring unsupported artifact: {:?}", artifact);
+                    Ok(())
+                }
             }?;
         }
         Ok::<(), Error>(())
