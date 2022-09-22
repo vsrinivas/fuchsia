@@ -1,0 +1,39 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        // TODO(fxbug.dev/109273): remove this line when the linked bug is resolved.
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/client_bin",
+    },
+    use: [
+        { protocol: "examples.keyvaluestore.addreaditem.Store" },
+    ],
+    config: {
+        write_items: {
+            type: "vector",
+            max_count: 16,
+            element: {
+                type: "string",
+                max_size: 64,
+            },
+        },
+
+        // [START add_read_item]
+        read_items: {
+            type: "vector",
+            max_count: 16,
+            element: {
+                type: "string",
+                max_size: 64,
+            },
+        },
+
+        // [END add_read_item]
+    },
+}

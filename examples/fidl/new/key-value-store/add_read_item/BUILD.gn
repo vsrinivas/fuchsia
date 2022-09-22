@@ -1,0 +1,39 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+# Generate the manifest for the client component.
+fuchsia_component_manifest("client_manifest") {
+  component_name = "keyvaluestore_addreaditem_client"
+  manifest = "//examples/fidl/new/key-value-store/add_read_item/meta/client.cml"
+}
+
+# Set structured configuration values for the client component manifest specified above. This
+# provides a means by which to pass arguments to our client component. Such arguments may be set at
+# compile-time, as seen here, or altered for testing purposes via a RealmBuilder. In this case,
+# because this is an example, and will this only ever be executed as a test, we intentionally ignore
+# the compile-time values set here and overwrite them via the RealmBuilder. This can be seen in
+# action in /test/test.rs.
+#
+# Since the `write_items` array will never be under test, we can set it here.  The `read_items` are
+# left empty for tests to overwrite.
+fuchsia_structured_config_values("client_config_values") {
+  cm_label = ":client_manifest"
+  values = {
+    write_items = [
+      "verse_1",
+      "verse_2",
+      "verse_3",
+      "verse_4",
+    ]
+    read_items = []
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = []
+}

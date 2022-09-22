@@ -1,0 +1,12 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+# Create a `realm` component, which may be invoked by an instance of the RealmBuilder to create a
+# new test realm at test runtime.
+fuchsia_component("realm") {
+  manifest =
+      "//examples/fidl/new/key-value-store/add_read_item/realm/meta/realm.cml"
+}
