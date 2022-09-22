@@ -2040,9 +2040,14 @@ TEST(Pager, FailMultipleCommits) {
   }
 
   ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, kNumPages, ZX_TIME_INFINITE));
+  // No more requests seen as after the first all the others should overlap.
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 
   // Fail the entire range.
   ASSERT_TRUE(pager.FailPages(vmo, 0, kNumPages));
+  printf("failed pages [0, %zu)\n", kNumPages);
+
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 
   for (uint64_t i = 0; i < kNumPages; i++) {
     ASSERT_TRUE(threads[i]->WaitForFailure());
