@@ -1,20 +1,33 @@
 # Copyright 2022 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
+"""
+C++ toolchain definitions for Clang.
+"""
+
 load("@bazel_tools//tools/cpp:cc_toolchain_config_lib.bzl", "tool_path")
 load("@prebuilt_clang//:generated_constants.bzl", clang_constants = "constants")
 
 def _prebuilt_clang_cc_toolchain_config_impl(ctx):
     clang_binprefix = "bin/"
+
+    # See CppConfiguration.java class in Bazel sources for the list of
+    # all tool_path() names that must be defined.
     tool_paths = [
-        tool_path(name = "gcc", path = clang_binprefix + "clang++"),
-        tool_path(name = "cpp", path = clang_binprefix + "cpp"),
-        tool_path(name = "ld", path = clang_binprefix + "llvm-ld"),
         tool_path(name = "ar", path = clang_binprefix + "llvm-ar"),
+        tool_path(name = "cpp", path = clang_binprefix + "cpp"),
+        tool_path(name = "gcc", path = clang_binprefix + "clang++"),
+        tool_path(name = "gcov", path = "/usr/bin/false"),
+        tool_path(name = "gcov-tool", path = "/usr/bin/false"),
+        tool_path(name = "ld", path = clang_binprefix + "llvm-ld"),
+        tool_path(name = "llvm-cov", path = clang_binprefix + "llvm-cov"),
         tool_path(name = "nm", path = clang_binprefix + "llvm-nm"),
+        tool_path("objcopy", path = clang_binprefix + "llvm-objcopy"),
         tool_path("objdump", path = clang_binprefix + "llvm-objdump"),
         tool_path("strip", path = clang_binprefix + "llvm-strip"),
-        tool_path(name = "gcov", path = "/usr/bin/false"),
+        tool_path(name = "dwp", path = "/usr/bin/false"),
+        tool_path(name = "llbm-profdata", path = clang_binprefix + "llvm-profdata"),
     ]
 
     return cc_common.create_cc_toolchain_config_info(
@@ -54,6 +67,22 @@ def prebuilt_clang_cc_toolchain(
         target_arch,
         sysroot_files,
         sysroot_path):
+    """Define C++ toolchain related targets for a prebuilt Clang installation.
+
+    This defines cc_toolchain(), cc_toolchain_config() and toolchain() targets
+    for a given Clang prebuilt installation and target (os,arch) pair
+    with a specific sysroot.
+
+    Args:
+       name: Name of the cc_toolchain() target. The corresponding
+         toolchain() target will use "${name}_cc_toolchain", and
+         the cc_toolchain_config() will use "${name}_toolchain_config".
+
+       target_os: Target os string (e.g. "linux" or "fuchsia").
+       target_arch: Target cpu architecture string.
+       sysroot_files: A target list for the sysroot files to be used.
+       sysroot_path: Path to the sysroot directory to be used.
+    """
     empty = "@prebuilt_clang//:empty"
 
     _prebuilt_clang_cc_toolchain_config(
