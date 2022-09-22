@@ -103,7 +103,7 @@ class ProducerStage : public PipelineStage {
     Format format;
 
     // Reference clock of this stage's output stream.
-    zx_koid_t reference_clock_koid;
+    UnreadableClock reference_clock;
 
     // Message queue for pending commands. Will be drained by each call to Advance or Read.
     std::shared_ptr<CommandQueue> command_queue;

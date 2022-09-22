@@ -30,7 +30,7 @@ std::shared_ptr<RingBuffer> RingBuffer::Create(Args args) {
 
 RingBuffer::RingBuffer(Args args)
     : format_(args.format),
-      reference_clock_koid_(args.reference_clock_koid),
+      reference_clock_(std::move(args.reference_clock)),
       buffer_(std::move(args.buffer)),
       total_frames_(buffer_->content_size() / format_.bytes_per_frame()),
       producer_frames_(args.producer_frames),

@@ -29,7 +29,7 @@ std::shared_ptr<MetaProducerNode> MetaProducerNode::Create(Args args) {
     auto& rb = std::get<kRingBufferIndex>(args.data_source);
     FX_CHECK(rb);
     FX_CHECK(args.format == rb->format());
-    FX_CHECK(args.reference_clock_koid == rb->reference_clock_koid());
+    FX_CHECK(args.reference_clock == rb->reference_clock());
   }
 
   return std::make_shared<WithPublicCtor>(std::move(args));
@@ -72,7 +72,7 @@ NodePtr MetaProducerNode::CreateNewChildDest() {
         std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
             .name = child_name,
             .format = format_,
-            .reference_clock_koid = reference_clock_koid(),
+            .reference_clock = reference_clock(),
             .command_queue = queues.packet,
         });
   } else {

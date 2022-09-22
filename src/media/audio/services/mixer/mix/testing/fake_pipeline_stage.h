@@ -26,19 +26,19 @@ class FakePipelineStage : public PipelineStage {
  public:
   struct Args {
     std::string name;
-    std::optional<Format> format;                   // if unspecified, use an arbitrary default
-    std::optional<zx_koid_t> reference_clock_koid;  // if unspecified, use an arbitrary default
+    std::optional<Format> format;                    // if unspecified, use an arbitrary default
+    std::optional<UnreadableClock> reference_clock;  // if unspecified, use an arbitrary default
   };
   static FakePipelineStagePtr Create(Args args) {
     if (!args.format) {
       args.format =
           Format::CreateOrDie({::fuchsia_mediastreams::wire::AudioSampleFormat::kFloat, 2, 48000});
     }
-    if (!args.reference_clock_koid) {
-      args.reference_clock_koid = DefaultClockKoid();
+    if (!args.reference_clock) {
+      args.reference_clock = DefaultClock();
     }
     return FakePipelineStagePtr(
-        new FakePipelineStage(args.name, *args.format, *args.reference_clock_koid));
+        new FakePipelineStage(args.name, *args.format, std::move(*args.reference_clock)));
   }
 
   const std::unordered_set<PipelineStagePtr>& sources() const { return sources_; }
@@ -60,8 +60,8 @@ class FakePipelineStage : public PipelineStage {
   void SetPacketForRead(std::optional<PacketView> packet) { packet_ = packet; }
 
  private:
-  FakePipelineStage(std::string_view name, Format format, zx_koid_t reference_clock_koid)
-      : PipelineStage(name, format, reference_clock_koid) {}
+  FakePipelineStage(std::string_view name, Format format, UnreadableClock reference_clock)
+      : PipelineStage(name, format, std::move(reference_clock)) {}
 
   // Implementation of PipelineStage.
   void AdvanceSelfImpl(Fixed frame) {}

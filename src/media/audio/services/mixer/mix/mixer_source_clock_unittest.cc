@@ -135,7 +135,7 @@ class MixerSourceClockTest : public testing::Test {
         std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
             .name = "packet_queue",
             .format = kDefaultFormat,
-            .reference_clock_koid = source_clock->koid(),
+            .reference_clock = UnreadableClock(source_clock),
         });
     packet_queue->UpdatePresentationTimeToFracFrame(
         direction_ == Direction::kRender ? client_ref_to_frac_frames_ : device_ref_to_frac_frames_);

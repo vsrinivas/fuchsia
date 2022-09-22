@@ -14,8 +14,8 @@
 
 namespace media_audio {
 
-void GainControlRegistry::Add(GainControlId gain_id, zx_koid_t reference_clock_koid) {
-  FX_CHECK(gain_controls_.emplace(gain_id, GainControl(reference_clock_koid)).second);
+void GainControlRegistry::Add(GainControlId gain_id, UnreadableClock reference_clock) {
+  FX_CHECK(gain_controls_.emplace(gain_id, GainControl(reference_clock)).second);
 }
 
 GainControl& GainControlRegistry::Get(GainControlId gain_id) {
@@ -36,7 +36,7 @@ void GainControlRegistry::Remove(GainControlId gain_id) {
 
 void GainControlRegistry::Advance(const ClockSnapshots& clocks, zx::time mono_time) {
   for (auto& [id, gain_control] : gain_controls_) {
-    const auto clock = clocks.SnapshotFor(gain_control.reference_clock_koid());
+    const auto clock = clocks.SnapshotFor(gain_control.reference_clock());
     gain_control.Advance(clock.ReferenceTimeFromMonotonicTime(mono_time));
   }
 }

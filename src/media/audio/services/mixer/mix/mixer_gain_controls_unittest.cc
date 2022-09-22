@@ -31,7 +31,7 @@ TEST(MixerGainControlsTest, AddWithInitialState) {
   EXPECT_FALSE(mixer_gain_controls.NextScheduledStateChange(DefaultClockSnapshots()).has_value());
 
   // Create a gain control with an initial state.
-  GainControl gain_control(DefaultClockKoid());
+  GainControl gain_control(DefaultClock());
   gain_control.SetGain(-1.0f);
   gain_control.ScheduleGain(zx::time(5), 5.0f);
   gain_control.Advance(zx::time(1));
@@ -63,7 +63,7 @@ TEST(MixerGainControlsTest, Advance) {
   ClockSnapshots clock_snapshots;
   for (uint64_t i = 1; i <= 4; ++i) {
     auto clock = clock_realm->CreateClock(std::to_string(i), Clock::kExternalDomain, false);
-    mixer_gain_controls.Add(GainControlId{i}, GainControl(clock->koid()));
+    mixer_gain_controls.Add(GainControlId{i}, GainControl(UnreadableClock(clock)));
     clock_snapshots.AddClock(std::move(clock));
   }
   clock_snapshots.Update(zx::time(0));
@@ -74,7 +74,7 @@ TEST(MixerGainControlsTest, Advance) {
     auto& gain_control = mixer_gain_controls.Get(GainControlId{i});
 
     const auto mono_time = zx::time(4u - i);
-    const auto reference_time = clock_snapshots.SnapshotFor(gain_control.reference_clock_koid())
+    const auto reference_time = clock_snapshots.SnapshotFor(gain_control.reference_clock())
                                     .ReferenceTimeFromMonotonicTime(mono_time);
     gain_control.ScheduleGain(reference_time, static_cast<float>(i));
     EXPECT_THAT(gain_control.NextScheduledStateChange(), Optional(reference_time));

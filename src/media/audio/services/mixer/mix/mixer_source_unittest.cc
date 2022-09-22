@@ -58,7 +58,7 @@ void TestAdvance(int64_t step_size = 1) {
       std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
           .name = "source",
           .format = kDefaultFormat,
-          .reference_clock_koid = source_clock->koid(),
+          .reference_clock = UnreadableClock(source_clock),
       });
   source->UpdatePresentationTimeToFracFrame(kDefaultPresentationTimeToFracFrame);
 
@@ -119,16 +119,16 @@ void TestMix(int64_t step_size = 1) {
   clock_snapshots.AddClock(dest_clock);
   clock_snapshots.AddClock(source_clock);
   clock_snapshots.Update(zx::time(0));
-  mixer_gain_controls.Add(GainControlId{1}, GainControl(source_clock->koid()));
-  mixer_gain_controls.Add(GainControlId{2}, GainControl(source_clock->koid()));
-  mixer_gain_controls.Add(GainControlId{3}, GainControl(dest_clock->koid()));
+  mixer_gain_controls.Add(GainControlId{1}, GainControl(UnreadableClock(source_clock)));
+  mixer_gain_controls.Add(GainControlId{2}, GainControl(UnreadableClock(source_clock)));
+  mixer_gain_controls.Add(GainControlId{3}, GainControl(UnreadableClock(dest_clock)));
   mixer_gain_controls.Advance(clock_snapshots, zx::time(0));
 
   const auto source =
       std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
           .name = "source",
           .format = kDefaultFormat,
-          .reference_clock_koid = source_clock->koid(),
+          .reference_clock = UnreadableClock(source_clock),
       });
   source->UpdatePresentationTimeToFracFrame(kDefaultPresentationTimeToFracFrame);
 
@@ -188,9 +188,9 @@ TEST(MixerSourceTest, MixWithStepSize) { TestMix(/*step_size=*/2); }
 
 TEST(MixerSourceTest, PrepareSourceGainForNextMix) {
   MixerGainControls mixer_gain_controls;
-  mixer_gain_controls.Add(GainControlId{1}, GainControl(DefaultClockKoid()));
-  mixer_gain_controls.Add(GainControlId{2}, GainControl(DefaultClockKoid()));
-  mixer_gain_controls.Add(GainControlId{3}, GainControl(DefaultClockKoid()));
+  mixer_gain_controls.Add(GainControlId{1}, GainControl(DefaultClock()));
+  mixer_gain_controls.Add(GainControlId{2}, GainControl(DefaultClock()));
+  mixer_gain_controls.Add(GainControlId{3}, GainControl(DefaultClock()));
   mixer_gain_controls.Advance(DefaultClockSnapshots(), zx::time(0));
 
   const auto source = MakeDefaultPacketQueue(kDefaultFormat);

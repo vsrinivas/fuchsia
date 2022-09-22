@@ -95,7 +95,7 @@ class ConsumerStage : public PipelineStage {
     Format format;
 
     // Reference clock used by this consumer.
-    zx_koid_t reference_clock_koid;
+    UnreadableClock reference_clock;
 
     // Message queue for pending commands. Will be drained by each call to RunMixJob.
     std::shared_ptr<CommandQueue> command_queue;

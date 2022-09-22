@@ -32,7 +32,7 @@ const auto kDefaultPresentationTimeToFracFrame =
     TimelineFunction(TimelineRate(kOneFrame.raw_value(), 1));
 
 TEST(MixerStageTest, Advance) {
-  MixerStage mixer_stage("mixer", kDefaultFormat, DefaultClockKoid(), 10);
+  MixerStage mixer_stage("mixer", kDefaultFormat, DefaultClock(), 10);
   mixer_stage.UpdatePresentationTimeToFracFrame(kDefaultPresentationTimeToFracFrame);
 
   // Add some sources.
@@ -94,14 +94,14 @@ TEST(MixerStageTest, Advance) {
 }
 
 TEST(MixerStageTest, Read) {
-  MixerStage mixer_stage("mixer", kDefaultFormat, DefaultClockKoid(), 5);
+  MixerStage mixer_stage("mixer", kDefaultFormat, DefaultClock(), 5);
   mixer_stage.UpdatePresentationTimeToFracFrame(kDefaultPresentationTimeToFracFrame);
 
   // Add two destination gain controls with constant gains, resulting in a scale of `10.0f`.
   auto& gain_controls = mixer_stage.gain_controls();
-  gain_controls.Add(GainControlId{10}, GainControl(DefaultClockKoid()));
+  gain_controls.Add(GainControlId{10}, GainControl(DefaultClock()));
   gain_controls.Get(GainControlId{10}).SetGain(ScaleToDb(2.0f));
-  gain_controls.Add(GainControlId{20}, GainControl(DefaultClockKoid()));
+  gain_controls.Add(GainControlId{20}, GainControl(DefaultClock()));
   gain_controls.Get(GainControlId{20}).SetGain(ScaleToDb(5.0f));
   mixer_stage.SetDestGains({GainControlId{10}, GainControlId{20}});
 
@@ -111,7 +111,7 @@ TEST(MixerStageTest, Read) {
   for (int64_t i = 1; i <= source_count; ++i) {
     // Each source data is scaled by its index.
     const auto gain_id = GainControlId{static_cast<uint64_t>(i)};
-    gain_controls.Add(gain_id, GainControl(DefaultClockKoid()));
+    gain_controls.Add(gain_id, GainControl(DefaultClock()));
     gain_controls.Get(gain_id).SetGain(ScaleToDb(static_cast<float>(i)));
 
     const auto source = MakeDefaultPacketQueue(kDefaultFormat, "source" + std::to_string(i));
@@ -182,7 +182,7 @@ TEST(MixerStageTest, Read) {
 
 TEST(MixerStageTest, ReadMoreThanMaxFrameCount) {
   // Set maximum frame count to 5.
-  MixerStage mixer_stage("mixer", kDefaultFormat, DefaultClockKoid(), 5);
+  MixerStage mixer_stage("mixer", kDefaultFormat, DefaultClock(), 5);
   mixer_stage.UpdatePresentationTimeToFracFrame(kDefaultPresentationTimeToFracFrame);
 
   // Add two sources, and push packets to each source with a gap in-between.
@@ -259,13 +259,13 @@ TEST(MixerStageTest, ReadMoreThanMaxFrameCount) {
 }
 
 TEST(MixerStageTest, ReadSilent) {
-  MixerStage mixer_stage("mixer", kDefaultFormat, DefaultClockKoid(), 10);
+  MixerStage mixer_stage("mixer", kDefaultFormat, DefaultClock(), 10);
   mixer_stage.UpdatePresentationTimeToFracFrame(kDefaultPresentationTimeToFracFrame);
 
   // Mute destination gain.
   const auto dest_gain_id = GainControlId{1};
   auto& gain_controls = mixer_stage.gain_controls();
-  gain_controls.Add(dest_gain_id, GainControl(DefaultClockKoid()));
+  gain_controls.Add(dest_gain_id, GainControl(DefaultClock()));
   gain_controls.Get(dest_gain_id).SetMute(true);
   mixer_stage.SetDestGains({dest_gain_id});
 
@@ -297,19 +297,19 @@ TEST(MixerStageTest, ReadSilent) {
 }
 
 TEST(MixerStageTest, ReadNoInput) {
-  MixerStage mixer_stage("mixer", kDefaultFormat, DefaultClockKoid(), 10);
+  MixerStage mixer_stage("mixer", kDefaultFormat, DefaultClock(), 10);
   mixer_stage.UpdatePresentationTimeToFracFrame(kDefaultPresentationTimeToFracFrame);
   EXPECT_FALSE(mixer_stage.Read(DefaultCtx(), Fixed(0), 10).has_value());
 }
 
 TEST(MixerStageTest, SetDestGains) {
-  MixerStage mixer_stage("mixer", kDefaultFormat, DefaultClockKoid(), 1);
+  MixerStage mixer_stage("mixer", kDefaultFormat, DefaultClock(), 1);
   mixer_stage.UpdatePresentationTimeToFracFrame(kDefaultPresentationTimeToFracFrame);
   auto& gain_controls = mixer_stage.gain_controls();
 
   // Add the first source with a source gain control {1} that is set to a constant gain of `10.0f`.
   const auto gain_id_1 = GainControlId{1};
-  gain_controls.Add(gain_id_1, GainControl(DefaultClockKoid()));
+  gain_controls.Add(gain_id_1, GainControl(DefaultClock()));
   gain_controls.Get(gain_id_1).SetGain(ScaleToDb(10.0f));
 
   const auto source_1 = MakeDefaultPacketQueue(kDefaultFormat, "source-1");
@@ -332,7 +332,7 @@ TEST(MixerStageTest, SetDestGains) {
 
   // Add a destination gain control {2} and set it to another constant gain of `4.0f`.
   const auto gain_id_2 = GainControlId{2};
-  gain_controls.Add(gain_id_2, GainControl(DefaultClockKoid()));
+  gain_controls.Add(gain_id_2, GainControl(DefaultClock()));
   gain_controls.Get(gain_id_2).SetGain(ScaleToDb(4.0f));
   mixer_stage.SetDestGains({gain_id_2});
 

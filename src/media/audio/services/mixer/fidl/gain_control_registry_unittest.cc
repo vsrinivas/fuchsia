@@ -26,8 +26,8 @@ TEST(GainControlRegistry, Advance) {
   ClockSnapshots clock_snapshots;
   for (uint64_t i = 1; i <= 4; ++i) {
     auto clock = clock_realm->CreateClock(std::to_string(i), Clock::kExternalDomain, false);
-    gain_control_registry.Add(GainControlId{i}, clock->koid());
-    EXPECT_EQ(gain_control_registry.Get(GainControlId{i}).reference_clock_koid(), clock->koid());
+    gain_control_registry.Add(GainControlId{i}, UnreadableClock(clock));
+    EXPECT_EQ(gain_control_registry.Get(GainControlId{i}).reference_clock(), clock);
     clock_snapshots.AddClock(std::move(clock));
   }
   clock_snapshots.Update(zx::time(0));
@@ -36,7 +36,7 @@ TEST(GainControlRegistry, Advance) {
   for (uint64_t i = 1; i <= 4; ++i) {
     auto& gain_control = gain_control_registry.Get(GainControlId{i});
     const auto mono_time = zx::time(4u - i);
-    const auto reference_time = clock_snapshots.SnapshotFor(gain_control.reference_clock_koid())
+    const auto reference_time = clock_snapshots.SnapshotFor(gain_control.reference_clock())
                                     .ReferenceTimeFromMonotonicTime(mono_time);
     gain_control.ScheduleGain(reference_time, static_cast<float>(i));
     EXPECT_THAT(gain_control.NextScheduledStateChange(), testing::Optional(reference_time));

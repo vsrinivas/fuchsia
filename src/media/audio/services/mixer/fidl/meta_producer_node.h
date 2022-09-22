@@ -36,7 +36,7 @@ class MetaProducerNode : public Node, public std::enable_shared_from_this<MetaPr
     Format format;
 
     // Reference clock of this nodes's destination streams.
-    zx_koid_t reference_clock_koid;
+    UnreadableClock reference_clock;
 
     // Object from which to produce data.
     DataSource data_source;
@@ -66,7 +66,7 @@ class MetaProducerNode : public Node, public std::enable_shared_from_this<MetaPr
   using PacketCommandQueue = SimplePacketQueueProducerStage::CommandQueue;
 
   MetaProducerNode(Args args)
-      : Node(args.name, /*is_meta=*/true, args.reference_clock_koid, args.pipeline_direction,
+      : Node(args.name, /*is_meta=*/true, std::move(args.reference_clock), args.pipeline_direction,
              /*pipeline_stage=*/nullptr,
              /*parent=*/nullptr),
         format_(args.format),

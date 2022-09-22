@@ -7,6 +7,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/media/audio/lib/clock/real_clock.h"
 #include "src/media/audio/services/mixer/fidl/testing/fake_graph.h"
 #include "src/media/audio/services/mixer/mix/simple_packet_queue_producer_stage.h"
 #include "src/media/audio/services/mixer/mix/testing/defaults.h"
@@ -28,7 +29,7 @@ TEST_F(ProducerNodeTest, CreateEdgeCannotAcceptSource) {
       .internal_source =
           std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
               .format = kFormat,
-              .reference_clock_koid = DefaultClockKoid(),
+              .reference_clock = DefaultClock(),
               .command_queue = std::make_shared<SimplePacketQueueProducerStage::CommandQueue>(),
           }),
       .detached_thread = detached_thread_,
@@ -49,8 +50,7 @@ TEST_F(ProducerNodeTest, CreateEdgeCannotAcceptSource) {
 }
 
 TEST_F(ProducerNodeTest, CreateEdgeSuccess) {
-  constexpr zx_koid_t kReferenceClockKoid = 42;
-
+  const auto clock = RealClock::CreateFromMonotonic("ReferenceClock", Clock::kExternalDomain, true);
   auto start_stop_command_queue = std::make_shared<ProducerStage::CommandQueue>();
   auto packet_command_queue = std::make_shared<SimplePacketQueueProducerStage::CommandQueue>();
 
@@ -60,18 +60,18 @@ TEST_F(ProducerNodeTest, CreateEdgeSuccess) {
       .internal_source =
           std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
               .format = kFormat,
-              .reference_clock_koid = kReferenceClockKoid,
+              .reference_clock = UnreadableClock(clock),
               .command_queue = packet_command_queue,
           }),
       .detached_thread = detached_thread_,
   });
 
   EXPECT_EQ(producer->pipeline_direction(), PipelineDirection::kInput);
-  EXPECT_EQ(producer->reference_clock_koid(), kReferenceClockKoid);
+  EXPECT_EQ(producer->reference_clock(), clock);
   EXPECT_EQ(producer->pipeline_stage_thread(), detached_thread_);
   EXPECT_EQ(producer->pipeline_stage()->thread(), detached_thread_);
   EXPECT_EQ(producer->pipeline_stage()->format(), kFormat);
-  EXPECT_EQ(producer->pipeline_stage()->reference_clock_koid(), kReferenceClockKoid);
+  EXPECT_EQ(producer->pipeline_stage()->reference_clock(), clock);
 
   GlobalTaskQueue q;
   FakeGraph graph({

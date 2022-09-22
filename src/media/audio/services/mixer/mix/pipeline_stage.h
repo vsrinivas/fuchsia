@@ -19,6 +19,7 @@
 #include <ffl/string.h>
 
 #include "src/media/audio/lib/clock/clock_synchronizer.h"
+#include "src/media/audio/lib/clock/unreadable_clock.h"
 #include "src/media/audio/lib/format2/fixed.h"
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/lib/processing/sampler.h"
@@ -188,9 +189,9 @@ class PipelineStage {
   // the returned value may change concurrently.
   [[nodiscard]] ThreadPtr thread() const { return std::atomic_load(&thread_); }
 
-  // Returns the koid of the clock used by the stage's destination stream.
+  // Returns the clock used by the stage's destination stream.
   // The source streams may use different clocks.
-  [[nodiscard]] zx_koid_t reference_clock_koid() const { return reference_clock_koid_; }
+  [[nodiscard]] UnreadableClock reference_clock() const { return reference_clock_; }
 
   // Returns a function that translates from presentation time to frame time, where frame time is
   // represented by a `Fixed::raw_value()` while presentation time is represented by a `zx::time`.
@@ -210,10 +211,10 @@ class PipelineStage {
   void set_thread(ThreadPtr thread) { std::atomic_store(&thread_, std::move(thread)); }
 
  protected:
-  PipelineStage(std::string_view name, Format format, zx_koid_t reference_clock_koid)
+  PipelineStage(std::string_view name, Format format, UnreadableClock reference_clock)
       : name_(name),
         format_(format),
-        reference_clock_koid_(reference_clock_koid),
+        reference_clock_(std::move(reference_clock)),
         advance_trace_name_(name_ + std::string("::Advance")),
         read_trace_name_(name_ + std::string("::Read")) {}
 
@@ -305,7 +306,7 @@ class PipelineStage {
 
   const std::string name_;
   const Format format_;
-  const zx_koid_t reference_clock_koid_;
+  const UnreadableClock reference_clock_;
 
   const std::string advance_trace_name_;
   const std::string read_trace_name_;

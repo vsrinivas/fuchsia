@@ -70,7 +70,7 @@ TEST_F(MixThreadRunMixJobsTest, RunAfterDeadline) {
   // consume one period ahead, this is start of the second mix period.
   const auto pt0 = zx::time(0) + kPeriod;
   ConsumerStageWrapper c(kFormat, /*presentation_delay=*/zx::nsec(0), PipelineDirection::kOutput,
-                         mono_clock()->koid());
+                         UnreadableClock(mono_clock()));
   c.command_queue->push(StartCommand{.start_presentation_time = pt0, .start_frame = 0});
   thread().AddConsumer(c.consumer);
   thread().NotifyConsumerStarting(c.consumer);
@@ -94,7 +94,7 @@ TEST_F(MixThreadRunMixJobsTest, OneConsumerUnstarted) {
   ScopedThreadChecker checker(thread().checker());
 
   ConsumerStageWrapper c(kFormat, /*presentation_delay=*/zx::nsec(0), PipelineDirection::kOutput,
-                         mono_clock()->koid());
+                         UnreadableClock(mono_clock()));
   thread().AddConsumer(c.consumer);
   thread().NotifyConsumerStarting(c.consumer);
   thread().AddClock(mono_clock());
@@ -112,7 +112,7 @@ TEST_F(MixThreadRunMixJobsTest, OneConsumerStartCommandQueued) {
   // consume one period ahead, this is start of the second mix period.
   const auto pt0 = zx::time(0) + kPeriod;
   ConsumerStageWrapper c(kFormat, /*presentation_delay=*/zx::nsec(0), PipelineDirection::kOutput,
-                         mono_clock()->koid());
+                         UnreadableClock(mono_clock()));
 
   // The consumer starts after the first mix job.
   c.command_queue->push(StartCommand{
@@ -152,7 +152,7 @@ TEST_F(MixThreadRunMixJobsTest, OneConsumerStarted) {
   // consume one period ahead, this is start of the second mix period.
   const auto pt0 = zx::time(0) + kPeriod;
   ConsumerStageWrapper c(kFormat, /*presentation_delay=*/zx::nsec(0), PipelineDirection::kOutput,
-                         mono_clock()->koid());
+                         UnreadableClock(mono_clock()));
   c.command_queue->push(StartCommand{.start_presentation_time = pt0, .start_frame = 0});
   auto payload0 = c.PushPacket(Fixed(0), kPeriodFrames);
   auto payload1 = c.PushPacket(Fixed(kPeriodFrames), kPeriodFrames);
@@ -193,7 +193,7 @@ TEST_F(MixThreadRunMixJobsTest, OneConsumerStartedNonMonotonicClock) {
   // we consume one period ahead, this is start of the second mix period.
   const auto pt0 = zx::time(0) + kConsumerPeriod;
   ConsumerStageWrapper c(kFormat, /*presentation_delay=*/zx::nsec(0), PipelineDirection::kOutput,
-                         clock->koid());
+                         UnreadableClock(clock));
   c.command_queue->push(StartCommand{.start_presentation_time = pt0, .start_frame = 0});
   thread().AddConsumer(c.consumer);
   thread().NotifyConsumerStarting(c.consumer);
@@ -230,7 +230,7 @@ TEST_F(MixThreadRunMixJobsTest, OneConsumerStopsDuringJob) {
   // consume one period ahead, this is start of the second mix period.
   const auto pt0 = zx::time(0) + kPeriod;
   ConsumerStageWrapper c(kFormat, /*presentation_delay=*/zx::nsec(0), PipelineDirection::kOutput,
-                         mono_clock()->koid());
+                         UnreadableClock(mono_clock()));
   c.command_queue->push(StartCommand{.start_presentation_time = pt0, .start_frame = 0});
   c.command_queue->push(StopCommand{.stop_frame = 1});
   thread().AddConsumer(c.consumer);
@@ -251,11 +251,11 @@ TEST_F(MixThreadRunMixJobsTest, MultipleConsumers) {
   const auto pt0 = zx::time(0) + kPeriod;
 
   ConsumerStageWrapper c0(kFormat, /*presentation_delay=*/zx::nsec(0), PipelineDirection::kOutput,
-                          mono_clock()->koid());
+                          UnreadableClock(mono_clock()));
   ConsumerStageWrapper c1(kFormat, /*presentation_delay=*/zx::nsec(0), PipelineDirection::kOutput,
-                          mono_clock()->koid());
+                          UnreadableClock(mono_clock()));
   ConsumerStageWrapper c2(kFormat, /*presentation_delay=*/zx::nsec(0), PipelineDirection::kOutput,
-                          mono_clock()->koid());
+                          UnreadableClock(mono_clock()));
 
   c0.command_queue->push(StartCommand{.start_presentation_time = pt0, .start_frame = 0});
   c1.command_queue->push(StartCommand{.start_presentation_time = pt0, .start_frame = 0});
@@ -324,9 +324,9 @@ TEST_F(MixThreadRunLoopTest, AddStartedConsumers) {
   // consume one period ahead, this is start of the second mix period.
   const auto pt0 = zx::time(0) + kPeriod;
   ConsumerStageWrapper c0(kFormat, /*presentation_delay=*/zx::nsec(0), PipelineDirection::kOutput,
-                          mono_clock()->koid());
+                          UnreadableClock(mono_clock()));
   ConsumerStageWrapper c1(kFormat, /*presentation_delay=*/zx::nsec(0), PipelineDirection::kOutput,
-                          mono_clock()->koid());
+                          UnreadableClock(mono_clock()));
 
   // Queue start and stop commands for both consumers. Since these are queued before we call
   // AddConsumer, we shouldn't need to call NotifyConsumerStarting.
@@ -373,7 +373,7 @@ TEST_F(MixThreadRunLoopTest, AddRemoveUnstartedConsumers) {
   // consume one period ahead, this is start of the second mix period.
   const auto pt0 = zx::time(0) + kPeriod;
   ConsumerStageWrapper c0(kFormat, /*presentation_delay=*/zx::nsec(0), PipelineDirection::kOutput,
-                          mono_clock()->koid());
+                          UnreadableClock(mono_clock()));
 
   // Add this consumer.
   task_queue().Push(thread().id(), [this, &c0] {
@@ -405,7 +405,7 @@ TEST_F(MixThreadRunLoopTest, AddRemoveUnstartedConsumers) {
 
   // Replace this consumer with another unstarted consumer.
   ConsumerStageWrapper c1(kFormat, /*presentation_delay=*/zx::nsec(0), PipelineDirection::kOutput,
-                          mono_clock()->koid());
+                          UnreadableClock(mono_clock()));
 
   // Add this consumer.
   task_queue().Push(thread().id(), [this, &c0, &c1] {

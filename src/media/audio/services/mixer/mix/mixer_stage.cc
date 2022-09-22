@@ -29,9 +29,9 @@ namespace media_audio {
 
 using ::fuchsia_mediastreams::wire::AudioSampleFormat;
 
-MixerStage::MixerStage(std::string_view name, Format format, zx_koid_t reference_clock_koid,
+MixerStage::MixerStage(std::string_view name, Format format, UnreadableClock reference_clock,
                        int64_t max_dest_frame_count_per_mix)
-    : PipelineStage(name, format, reference_clock_koid),
+    : PipelineStage(name, format, std::move(reference_clock)),
       max_dest_frame_count_per_mix_(max_dest_frame_count_per_mix),
       dest_buffer_(max_dest_frame_count_per_mix_ * format.channels(), 0.0f) {
   FX_CHECK(format.sample_format() == AudioSampleFormat::kFloat);
@@ -82,7 +82,7 @@ void MixerStage::AdvanceSourcesImpl(MixJobContext& ctx, Fixed frame) {
   // `MixerStage` always produces data on integrally-aligned frames.
   frame = Fixed(frame.Floor());
 
-  const auto dest_clock = ctx.clocks().SnapshotFor(reference_clock_koid());
+  const auto dest_clock = ctx.clocks().SnapshotFor(reference_clock());
   const auto dest_time = PresentationTimeFromFrame(frame);
   const auto mono_time = dest_clock.MonotonicTimeFromReferenceTime(dest_time);
   gain_controls_.Advance(ctx.clocks(), mono_time);
@@ -124,7 +124,7 @@ std::optional<PipelineStage::Packet> MixerStage::ReadImpl(MixJobContext& ctx, Fi
 
 void MixerStage::PrepareSourceGains(MixJobContext& ctx, Fixed start_frame, int64_t frame_count) {
   const auto& clocks = ctx.clocks();
-  const auto dest_clock = clocks.SnapshotFor(reference_clock_koid());
+  const auto dest_clock = clocks.SnapshotFor(reference_clock());
 
   // TODO(fxbug.dev/87651): This is actually only needed if a new source, with new set of gain
   // controls which did not already exist in `gain_controls_`, is added to the mixer. Otherwise,

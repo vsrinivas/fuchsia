@@ -41,7 +41,7 @@ class ConsumerNodeTest : public ::testing::Test {
   const std::shared_ptr<ConsumerNode> consumer_node_ = ConsumerNode::Create({
       .pipeline_direction = kPipelineDirection,
       .format = kFormat,
-      .reference_clock_koid = clock_->koid(),
+      .reference_clock = UnreadableClock(clock_),
       .writer = consumer_writer_,
       .thread = mix_thread_,
   });
@@ -119,7 +119,7 @@ TEST_F(ConsumerNodeTest, CreateEdgeSuccess) {
   EXPECT_EQ(consumer_node_->pipeline_stage_thread(), mix_thread_);
   EXPECT_EQ(consumer_stage->thread(), mix_thread_);
   EXPECT_EQ(consumer_stage->format(), kFormat);
-  EXPECT_EQ(consumer_stage->reference_clock_koid(), clock_->koid());
+  EXPECT_EQ(consumer_stage->reference_clock(), clock_);
 
   q.RunForThread(mix_thread_->id());
 

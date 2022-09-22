@@ -10,6 +10,7 @@
 #include <unordered_map>
 
 #include "src/media/audio/lib/clock/clock.h"
+#include "src/media/audio/lib/clock/unreadable_clock.h"
 
 namespace media_audio {
 
@@ -64,6 +65,7 @@ class ClockSnapshots {
   // Returns the most recent snapshot for the clock with the given koid.
   // Update must have been called since this clock was added.
   ClockSnapshot SnapshotFor(zx_koid_t clock_koid) const;
+  ClockSnapshot SnapshotFor(UnreadableClock clock) const;
 
   // Adds a clock to snapshot in future calls to Update.
   //

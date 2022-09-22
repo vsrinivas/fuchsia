@@ -48,7 +48,7 @@ class ProducerNode : public Node {
  private:
   ProducerNode(std::string_view name, PipelineDirection pipeline_direction,
                PipelineStagePtr pipeline_stage, NodePtr parent)
-      : Node(name, /*is_meta=*/false, pipeline_stage->reference_clock_koid(), pipeline_direction,
+      : Node(name, /*is_meta=*/false, pipeline_stage->reference_clock(), pipeline_direction,
              std::move(pipeline_stage), std::move(parent)) {}
 
   NodePtr CreateNewChildSource() final {

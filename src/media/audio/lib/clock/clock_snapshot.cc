@@ -18,6 +18,10 @@ ClockSnapshot ClockSnapshots::SnapshotFor(zx_koid_t koid) const {
   return *it->second.last_snapshot;
 }
 
+ClockSnapshot ClockSnapshots::SnapshotFor(UnreadableClock clock) const {
+  return SnapshotFor(clock.koid());
+}
+
 void ClockSnapshots::AddClock(std::shared_ptr<const Clock> clock) {
   auto koid = clock->koid();
   FX_CHECK(

@@ -26,7 +26,7 @@ namespace media_audio {
 // Stage that mixes multiple source streams into a single destination stream.
 class MixerStage : public PipelineStage {
  public:
-  MixerStage(std::string_view name, Format format, zx_koid_t reference_clock_koid,
+  MixerStage(std::string_view name, Format format, UnreadableClock reference_clock,
              int64_t max_dest_frame_count_per_mix);
 
   // Implements `PipelineStage`.

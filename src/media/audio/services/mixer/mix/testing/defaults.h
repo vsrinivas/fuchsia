@@ -25,7 +25,7 @@ const ClockSnapshots& DefaultClockSnapshots();
 
 // A reference clock to use when any clock will do.
 // This clock is guaranteed to exist in `MixJobContext.clocks()` and `DefaultClockSnapshots()`.
-zx_koid_t DefaultClockKoid();
+UnreadableClock DefaultClock();
 
 // A noop clock synchronizer to use when any will do.
 std::shared_ptr<ClockSynchronizer> DefaultClockSync();
@@ -33,8 +33,8 @@ std::shared_ptr<ClockSynchronizer> DefaultClockSync();
 // A TimelineFunction that defines t=0 to be the presentation time for frame 0.
 TimelineFunction DefaultPresentationTimeToFracFrame(const Format& format);
 
-// Constructs a SimplePacketQueueProducerStage with the given `format`, DefaultClockKoid(), and
-// optional `name`. The returned queue can be mutated via its `push` and `clear` methods.
+// Constructs a SimplePacketQueueProducerStage with the given `format`, DefaultClock(), and optional
+// `name`. The returned queue can be mutated via its `push` and `clear` methods.
 std::shared_ptr<SimplePacketQueueProducerStage> MakeDefaultPacketQueue(
     const Format& format, std::string_view name = "DefaultPacketQueue");
 

@@ -21,10 +21,10 @@ namespace media_audio {
 // This class is not safe for concurrent use.
 class GainControlRegistry {
  public:
-  // Adds new gain control with the given `gain_id` and `reference_clock_koid`.
+  // Adds new gain control with the given `gain_id` and `reference_clock`.
   //
   // Required: A `GainControl` must not exist already with this `gain_id`.
-  void Add(GainControlId gain_id, zx_koid_t reference_clock_koid);
+  void Add(GainControlId gain_id, UnreadableClock reference_clock);
 
   // Returns the gain control with the given `gain_id`.
   //

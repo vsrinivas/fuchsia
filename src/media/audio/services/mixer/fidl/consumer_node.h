@@ -28,7 +28,7 @@ class ConsumerNode : public Node {
     Format format;
 
     // Reference clock used by this consumer.
-    zx_koid_t reference_clock_koid;
+    UnreadableClock reference_clock;
 
     // How to write all consumed packets.
     std::shared_ptr<ConsumerStage::Writer> writer;
@@ -57,7 +57,7 @@ class ConsumerNode : public Node {
   ConsumerNode(std::string_view name, PipelineDirection pipeline_direction,
                ConsumerStagePtr pipeline_stage, const Format& format,
                std::shared_ptr<CommandQueue> command_queue)
-      : Node(name, /*is_meta=*/false, pipeline_stage->reference_clock_koid(), pipeline_direction,
+      : Node(name, /*is_meta=*/false, pipeline_stage->reference_clock(), pipeline_direction,
              pipeline_stage, /*parent=*/nullptr),
         format_(format),
         command_queue_(std::move(command_queue)),

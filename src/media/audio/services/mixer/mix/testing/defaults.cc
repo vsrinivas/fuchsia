@@ -38,7 +38,7 @@ MixJobContext& DefaultCtx() { return *global_defaults.mix_job_ctx; }
 
 const ClockSnapshots& DefaultClockSnapshots() { return global_defaults.clock_snapshots; }
 
-zx_koid_t DefaultClockKoid() { return global_defaults.clock->koid(); }
+UnreadableClock DefaultClock() { return UnreadableClock(global_defaults.clock); }
 
 std::shared_ptr<ClockSynchronizer> DefaultClockSync() {
   return ClockSynchronizer::Create(global_defaults.clock, global_defaults.clock,
@@ -54,7 +54,7 @@ std::shared_ptr<SimplePacketQueueProducerStage> MakeDefaultPacketQueue(const For
   return std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
       .name = name,
       .format = format,
-      .reference_clock_koid = DefaultClockKoid(),
+      .reference_clock = DefaultClock(),
   });
 }
 

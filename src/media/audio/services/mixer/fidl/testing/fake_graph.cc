@@ -24,13 +24,12 @@ const Format kDefaultFormat =
 
 FakeNode::FakeNode(FakeGraph& graph, NodeId id, bool is_meta, PipelineDirection pipeline_direction,
                    FakeNodePtr parent, const Format* format)
-    : Node(std::string("Node") + std::to_string(id), is_meta, DefaultClockKoid(),
-           pipeline_direction,
+    : Node(std::string("Node") + std::to_string(id), is_meta, DefaultClock(), pipeline_direction,
            is_meta ? nullptr
                    : FakePipelineStage::Create({
                          .name = "PipelineStage" + std::to_string(id),
                          .format = *format,
-                         .reference_clock_koid = DefaultClockKoid(),
+                         .reference_clock = DefaultClock(),
                      }),
            std::move(parent)),
       graph_(graph) {}

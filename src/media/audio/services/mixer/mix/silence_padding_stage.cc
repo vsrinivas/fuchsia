@@ -19,10 +19,10 @@
 
 namespace media_audio {
 
-SilencePaddingStage::SilencePaddingStage(Format format, zx_koid_t reference_clock_koid,
+SilencePaddingStage::SilencePaddingStage(Format format, UnreadableClock reference_clock,
                                          Fixed silence_frame_count,
                                          bool round_down_fractional_frames)
-    : PipelineStage("SilencePaddingStage", format, reference_clock_koid),
+    : PipelineStage("SilencePaddingStage", format, std::move(reference_clock)),
       // Round up to generate an integer number of frames.
       silence_frame_count_(silence_frame_count.Ceiling()),
       round_down_fractional_frames_(round_down_fractional_frames),
@@ -33,7 +33,7 @@ void SilencePaddingStage::AddSource(PipelineStagePtr source, AddSourceOptions op
   FX_CHECK(source) << "SilencePaddingStage cannot add null source";
   FX_CHECK(source->format() == format())
       << "SilencePaddingStage format does not match with source format";
-  FX_CHECK(source->reference_clock_koid() == reference_clock_koid())
+  FX_CHECK(source->reference_clock() == reference_clock())
       << "SilencePaddingStage clock does not match with source clock";
   FX_CHECK(options.gain_ids.empty());
   FX_CHECK(!options.clock_sync);

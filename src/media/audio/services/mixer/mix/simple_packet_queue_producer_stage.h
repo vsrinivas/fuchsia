@@ -51,7 +51,7 @@ class SimplePacketQueueProducerStage : public PipelineStage {
     Format format;
 
     // Reference clock of this stage's output stream.
-    zx_koid_t reference_clock_koid;
+    UnreadableClock reference_clock;
 
     // Message queue for pending commands. Will be drained by each call to Advance or Read. If this
     // field is nullptr, the queue can be driven by calls to `clear`, `empty`, and `push` -- this is

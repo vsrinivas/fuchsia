@@ -34,7 +34,7 @@ namespace media_audio {
 class CustomStage : public PipelineStage {
  public:
   CustomStage(std::string_view name, fuchsia_audio_effects::wire::ProcessorConfiguration config,
-              zx_koid_t reference_clock_koid);
+              UnreadableClock reference_clock);
 
   // Implements `PipelineStage`.
   void AddSource(PipelineStagePtr source, AddSourceOptions options) final {

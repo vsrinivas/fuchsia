@@ -29,7 +29,7 @@ Matcher<const GainControl::State&> StateEq(const GainControl::State& state) {
 }
 
 TEST(GainControlTest, ScheduleGain) {
-  GainControl gain_control(DefaultClockKoid());
+  GainControl gain_control(DefaultClock());
   EXPECT_FALSE(gain_control.NextScheduledStateChange().has_value());
   EXPECT_THAT(gain_control.state(), StateEq({kUnityGainDb, false, 0.0f}));
 
@@ -61,7 +61,7 @@ TEST(GainControlTest, ScheduleGain) {
 }
 
 TEST(GainControlTest, ScheduleGainWithRamp) {
-  GainControl gain_control(DefaultClockKoid());
+  GainControl gain_control(DefaultClock());
   EXPECT_FALSE(gain_control.NextScheduledStateChange().has_value());
   EXPECT_THAT(gain_control.state(), StateEq({kUnityGainDb, false, 0.0f}));
 
@@ -109,7 +109,7 @@ TEST(GainControlTest, ScheduleGainWithRamp) {
 }
 
 TEST(GainControlTest, ScheduleGainWithRampWithSingleAdvanceCall) {
-  GainControl gain_control(DefaultClockKoid());
+  GainControl gain_control(DefaultClock());
   EXPECT_FALSE(gain_control.NextScheduledStateChange().has_value());
   EXPECT_THAT(gain_control.state(), StateEq({kUnityGainDb, false, 0.0f}));
 
@@ -127,7 +127,7 @@ TEST(GainControlTest, ScheduleGainWithRampWithSingleAdvanceCall) {
 }
 
 TEST(GainControlTest, ScheduleMute) {
-  GainControl gain_control(DefaultClockKoid());
+  GainControl gain_control(DefaultClock());
   EXPECT_FALSE(gain_control.NextScheduledStateChange().has_value());
   EXPECT_THAT(gain_control.state(), StateEq({kUnityGainDb, false, 0.0f}));
 
@@ -158,7 +158,7 @@ TEST(GainControlTest, ScheduleMute) {
 }
 
 TEST(GainControlTest, ScheduleBeforeAdvanceTime) {
-  GainControl gain_control(DefaultClockKoid());
+  GainControl gain_control(DefaultClock());
   EXPECT_FALSE(gain_control.NextScheduledStateChange().has_value());
   EXPECT_THAT(gain_control.state(), StateEq({kUnityGainDb, false, 0.0f}));
 
@@ -188,7 +188,7 @@ TEST(GainControlTest, ScheduleBeforeAdvanceTime) {
 }
 
 TEST(GainControlTest, ScheduleBeforeAdvanceTimeOutOfOrder) {
-  GainControl gain_control(DefaultClockKoid());
+  GainControl gain_control(DefaultClock());
   EXPECT_FALSE(gain_control.NextScheduledStateChange().has_value());
   EXPECT_THAT(gain_control.state(), StateEq({kUnityGainDb, false, 0.0f}));
 
@@ -224,7 +224,7 @@ TEST(GainControlTest, ScheduleBeforeAdvanceTimeOutOfOrder) {
 }
 
 TEST(GainControlTest, ScheduleBeforeAdvanceTimeOutOfOrderWithSingleAdvanceCall) {
-  GainControl gain_control(DefaultClockKoid());
+  GainControl gain_control(DefaultClock());
   EXPECT_FALSE(gain_control.NextScheduledStateChange().has_value());
   EXPECT_THAT(gain_control.state(), StateEq({kUnityGainDb, false, 0.0f}));
 
@@ -255,7 +255,7 @@ TEST(GainControlTest, ScheduleBeforeAdvanceTimeOutOfOrderWithSingleAdvanceCall) 
 }
 
 TEST(GainControlTest, ScheduleGainBeforeAdvanceTimeOutOfOrder) {
-  GainControl gain_control(DefaultClockKoid());
+  GainControl gain_control(DefaultClock());
   EXPECT_FALSE(gain_control.NextScheduledStateChange().has_value());
   EXPECT_THAT(gain_control.state(), StateEq({kUnityGainDb, false, 0.0f}));
 
@@ -279,7 +279,7 @@ TEST(GainControlTest, ScheduleGainBeforeAdvanceTimeOutOfOrder) {
 }
 
 TEST(GainControlTest, ScheduleMuteBeforeAdvanceTimeOutOfOrder) {
-  GainControl gain_control(DefaultClockKoid());
+  GainControl gain_control(DefaultClock());
   EXPECT_FALSE(gain_control.NextScheduledStateChange().has_value());
   EXPECT_THAT(gain_control.state(), StateEq({kUnityGainDb, false, 0.0f}));
 
@@ -303,7 +303,7 @@ TEST(GainControlTest, ScheduleMuteBeforeAdvanceTimeOutOfOrder) {
 }
 
 TEST(GainControlTest, ScheduleOutOfOrder) {
-  GainControl gain_control(DefaultClockKoid());
+  GainControl gain_control(DefaultClock());
   EXPECT_FALSE(gain_control.NextScheduledStateChange().has_value());
   EXPECT_THAT(gain_control.state(), StateEq({kUnityGainDb, false, 0.0f}));
 
@@ -346,7 +346,7 @@ TEST(GainControlTest, ScheduleOutOfOrder) {
 }
 
 TEST(GainControlTest, ScheduleSameGain) {
-  GainControl gain_control(DefaultClockKoid());
+  GainControl gain_control(DefaultClock());
   EXPECT_FALSE(gain_control.NextScheduledStateChange().has_value());
   EXPECT_THAT(gain_control.state(), StateEq({kUnityGainDb, false, 0.0f}));
 
@@ -364,7 +364,7 @@ TEST(GainControlTest, ScheduleSameGain) {
 }
 
 TEST(GainControlTest, ScheduleGainDuringRamp) {
-  GainControl gain_control(DefaultClockKoid());
+  GainControl gain_control(DefaultClock());
   EXPECT_FALSE(gain_control.NextScheduledStateChange().has_value());
   EXPECT_THAT(gain_control.state(), StateEq({kUnityGainDb, false, 0.0f}));
 
@@ -407,7 +407,7 @@ TEST(GainControlTest, ScheduleGainDuringRamp) {
 }
 
 TEST(GainControlTest, SetGainAndMute) {
-  GainControl gain_control(DefaultClockKoid());
+  GainControl gain_control(DefaultClock());
   EXPECT_FALSE(gain_control.NextScheduledStateChange().has_value());
   EXPECT_THAT(gain_control.state(), StateEq({kUnityGainDb, false, 0.0f}));
 
@@ -453,7 +453,7 @@ TEST(GainControlTest, SetGainAndMute) {
 }
 
 TEST(GainControlTest, SetGainWithRamp) {
-  GainControl gain_control(DefaultClockKoid());
+  GainControl gain_control(DefaultClock());
   EXPECT_FALSE(gain_control.NextScheduledStateChange().has_value());
   EXPECT_THAT(gain_control.state(), StateEq({kUnityGainDb, false, 0.0f}));
 

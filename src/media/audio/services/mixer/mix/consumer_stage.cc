@@ -16,7 +16,7 @@
 namespace media_audio {
 
 ConsumerStage::ConsumerStage(Args args)
-    : PipelineStage(args.name, args.format, args.reference_clock_koid),
+    : PipelineStage(args.name, args.format, std::move(args.reference_clock)),
       pipeline_direction_(args.pipeline_direction),
       presentation_delay_(args.presentation_delay),
       writer_(std::move(args.writer)),

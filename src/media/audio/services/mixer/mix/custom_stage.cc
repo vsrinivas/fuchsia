@@ -40,14 +40,14 @@ zx_koid_t GetKoid(const zx::vmo& vmo) {
 }  // namespace
 
 CustomStage::CustomStage(std::string_view name, ProcessorConfiguration config,
-                         zx_koid_t reference_clock_koid)
-    : PipelineStage(name, Format::CreateOrDie(config.outputs()[0].format()), reference_clock_koid),
+                         UnreadableClock reference_clock)
+    : PipelineStage(name, Format::CreateOrDie(config.outputs()[0].format()), reference_clock),
       block_size_frames_(static_cast<int64_t>(config.block_size_frames())),
       latency_frames_(static_cast<int64_t>(config.outputs()[0].latency_frames())),
       max_frames_per_call_(static_cast<int64_t>(config.max_frames_per_call())),
       fidl_buffers_(config.inputs()[0].buffer(), config.outputs()[0].buffer()),
       fidl_processor_(fidl::WireSyncClient(std::move(config.processor()))),
-      source_(Format::CreateOrDie(config.inputs()[0].format()), reference_clock_koid,
+      source_(Format::CreateOrDie(config.inputs()[0].format()), reference_clock,
               Fixed(latency_frames_ + static_cast<int64_t>(config.outputs()[0].ring_out_frames())),
               /*round_down_fractional_frames=*/false),
       source_buffer_(source_.format(), max_frames_per_call_) {

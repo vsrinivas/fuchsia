@@ -238,7 +238,7 @@ zx::time MixThread::RunMixJobs(const zx::time mono_start_time, const zx::time mo
 
   // Run each consumer that might be started.
   for (auto& c : consumers_) {
-    auto clock = clocks_.SnapshotFor(c.consumer->reference_clock_koid());
+    auto clock = clocks_.SnapshotFor(c.consumer->reference_clock());
     const auto& mono_to_ref = clock.to_clock_mono().Inverse();
 
     // Mix periods are defined relative to the system monotonic clock. Translate this mix period to

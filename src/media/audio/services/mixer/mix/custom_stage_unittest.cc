@@ -193,7 +193,7 @@ fuchsia_mediastreams::wire::AudioFormat DefaultFormatWithChannels(uint32_t chann
 
 PipelineStagePtr MakeCustomStage(ProcessorConfiguration config, PipelineStagePtr source_stage) {
   PipelineStagePtr custom_stage =
-      std::make_shared<CustomStage>("CustomStage", config, DefaultClockKoid());
+      std::make_shared<CustomStage>("CustomStage", config, DefaultClock());
   custom_stage->set_thread(DetachedThread::Create());
   ScopedThreadChecker checker(custom_stage->thread()->checker());
   custom_stage->AddSource(std::move(source_stage), /*options=*/{});

@@ -27,7 +27,7 @@ std::shared_ptr<ConsumerNode> ConsumerNode::Create(Args args) {
       .pipeline_direction = args.pipeline_direction,
       // TODO(fxbug.dev/87651): also presentation_delay
       .format = args.format,
-      .reference_clock_koid = args.reference_clock_koid,
+      .reference_clock = std::move(args.reference_clock),
       .command_queue = command_queue,
       .writer = std::move(args.writer),
   });

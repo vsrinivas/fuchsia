@@ -39,7 +39,7 @@ const GainControl& MixerGainControls::Get(GainControlId gain_id) const {
 
 void MixerGainControls::Advance(const ClockSnapshots& clocks, zx::time mono_time) {
   for (auto& [gain_id, gain_control] : gain_controls_) {
-    const auto clock = clocks.SnapshotFor(gain_control.reference_clock_koid());
+    const auto clock = clocks.SnapshotFor(gain_control.reference_clock());
     gain_control.Advance(clock.ReferenceTimeFromMonotonicTime(mono_time));
   }
 }
@@ -52,7 +52,7 @@ std::optional<zx::time> MixerGainControls::NextScheduledStateChange(
     if (!next_reference_time.has_value()) {
       continue;
     }
-    const auto clock = clocks.SnapshotFor(gain_control.reference_clock_koid());
+    const auto clock = clocks.SnapshotFor(gain_control.reference_clock());
     if (const auto next_mono_time = clock.MonotonicTimeFromReferenceTime(*next_reference_time);
         !min_next_mono_time.has_value() || next_mono_time < *min_next_mono_time) {
       min_next_mono_time = next_mono_time;

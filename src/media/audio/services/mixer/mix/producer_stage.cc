@@ -16,12 +16,12 @@
 namespace media_audio {
 
 ProducerStage::ProducerStage(Args args)
-    : PipelineStage(args.name, args.format, args.reference_clock_koid),
+    : PipelineStage(args.name, args.format, std::move(args.reference_clock)),
       internal_source_(std::move(args.internal_source)),
       pending_commands_(std::move(args.command_queue)) {
   FX_CHECK(internal_source_);
   FX_CHECK(internal_source_->format() == format());
-  FX_CHECK(internal_source_->reference_clock_koid() == reference_clock_koid());
+  FX_CHECK(internal_source_->reference_clock() == reference_clock());
   FX_CHECK(pending_commands_);
 }
 

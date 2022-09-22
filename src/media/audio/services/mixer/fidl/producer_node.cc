@@ -24,7 +24,7 @@ std::shared_ptr<ProducerNode> ProducerNode::Create(Args args) {
   auto pipeline_stage = std::make_shared<ProducerStage>(ProducerStage::Args{
       .name = args.name,
       .format = args.internal_source->format(),
-      .reference_clock_koid = args.internal_source->reference_clock_koid(),
+      .reference_clock = args.internal_source->reference_clock(),
       .command_queue = std::move(args.start_stop_command_queue),
       .internal_source = std::move(args.internal_source),
   });

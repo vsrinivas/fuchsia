@@ -7,6 +7,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/media/audio/lib/clock/real_clock.h"
 #include "src/media/audio/services/mixer/common/memory_mapped_buffer.h"
 #include "src/media/audio/services/mixer/fidl/testing/fake_graph.h"
 #include "src/media/audio/services/mixer/fidl_realtime/testing/test_stream_sink_server_and_client.h"
@@ -48,7 +49,7 @@ class MetaProducerNodeTestStreamSink : public ::testing::Test {
 TEST_F(MetaProducerNodeTestStreamSink, CreateEdgeCannotAcceptSource) {
   auto producer = MetaProducerNode::Create({
       .format = kFormat,
-      .reference_clock_koid = DefaultClockKoid(),
+      .reference_clock = DefaultClock(),
       .data_source = stream_sink().server_ptr(),
       .detached_thread = detached_thread_,
   });
@@ -66,10 +67,10 @@ TEST_F(MetaProducerNodeTestStreamSink, CreateEdgeCannotAcceptSource) {
 }
 
 TEST_F(MetaProducerNodeTestStreamSink, CreateEdgeSuccess) {
-  constexpr zx_koid_t kReferenceClockKoid = 42;
+  const auto clock = RealClock::CreateFromMonotonic("ReferenceClock", Clock::kExternalDomain, true);
   auto producer = MetaProducerNode::Create({
       .format = kFormat,
-      .reference_clock_koid = kReferenceClockKoid,
+      .reference_clock = UnreadableClock(clock),
       .data_source = stream_sink().server_ptr(),
       .detached_thread = detached_thread_,
   });
@@ -95,7 +96,7 @@ TEST_F(MetaProducerNodeTestStreamSink, CreateEdgeSuccess) {
   EXPECT_EQ(producer_child->dest(), dest);
   EXPECT_EQ(producer_child->pipeline_stage()->thread(), detached_thread_);
   EXPECT_EQ(producer_child->pipeline_stage()->format(), kFormat);
-  EXPECT_EQ(producer_child->pipeline_stage()->reference_clock_koid(), kReferenceClockKoid);
+  EXPECT_EQ(producer_child->pipeline_stage()->reference_clock(), clock);
   EXPECT_THAT(dest->sources(), ElementsAre(producer_child));
 
   q.RunForThread(detached_thread_->id());
@@ -152,7 +153,7 @@ TEST_F(MetaProducerNodeTestStreamSink, CreateEdgeSuccess) {
 }
 
 TEST(MetaProducerNodeTestRingBuffer, CreateEdgeSuccess) {
-  constexpr zx_koid_t kReferenceClockKoid = 42;
+  const auto clock = RealClock::CreateFromMonotonic("ReferenceClock", Clock::kExternalDomain, true);
   constexpr int64_t kRingBufferFrames = 10;
 
   auto detached_thread = DetachedThread::Create();
@@ -160,7 +161,7 @@ TEST(MetaProducerNodeTestRingBuffer, CreateEdgeSuccess) {
       MemoryMappedBuffer::CreateOrDie(kRingBufferFrames * kFormat.bytes_per_frame(), true);
   auto ring_buffer = RingBuffer::Create({
       .format = kFormat,
-      .reference_clock_koid = kReferenceClockKoid,
+      .reference_clock = UnreadableClock(clock),
       .buffer = buffer,
       .producer_frames = kRingBufferFrames / 2,
       .consumer_frames = kRingBufferFrames / 2,
@@ -168,7 +169,7 @@ TEST(MetaProducerNodeTestRingBuffer, CreateEdgeSuccess) {
   auto producer = MetaProducerNode::Create({
       .pipeline_direction = PipelineDirection::kInput,
       .format = kFormat,
-      .reference_clock_koid = kReferenceClockKoid,
+      .reference_clock = UnreadableClock(clock),
       .data_source = ring_buffer,
       .detached_thread = detached_thread,
   });
@@ -196,7 +197,7 @@ TEST(MetaProducerNodeTestRingBuffer, CreateEdgeSuccess) {
   EXPECT_EQ(producer_child->pipeline_stage_thread(), detached_thread);
   EXPECT_EQ(producer_child->pipeline_stage()->thread(), detached_thread);
   EXPECT_EQ(producer_child->pipeline_stage()->format(), kFormat);
-  EXPECT_EQ(producer_child->pipeline_stage()->reference_clock_koid(), kReferenceClockKoid);
+  EXPECT_EQ(producer_child->pipeline_stage()->reference_clock(), clock);
   EXPECT_THAT(dest->sources(), ElementsAre(producer_child));
 
   q.RunForThread(detached_thread->id());

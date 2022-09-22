@@ -19,7 +19,7 @@ namespace media_audio {
 
 SimpleRingBufferProducerStage::SimpleRingBufferProducerStage(std::string_view name,
                                                              std::shared_ptr<RingBuffer> buffer)
-    : PipelineStage(name, buffer->format(), buffer->reference_clock_koid()),
+    : PipelineStage(name, buffer->format(), buffer->reference_clock()),
       buffer_(std::move(buffer)) {}
 
 void SimpleRingBufferProducerStage::UpdatePresentationTimeToFracFrame(

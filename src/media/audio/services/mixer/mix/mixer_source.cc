@@ -53,17 +53,17 @@ MixerSource::MixerSource(PipelineStagePtr source, PipelineStage::AddSourceOption
                          const std::unordered_set<GainControlId>& dest_gain_ids,
                          int64_t max_dest_frame_count_per_mix)
     : clock_sync_(std::move(options.clock_sync)),
-      dest_clock_(clock_sync_ ? (source->reference_clock_koid() == clock_sync_->follower()->koid()
+      dest_clock_(clock_sync_ ? (source->reference_clock() == clock_sync_->follower()
                                      ? std::move(clock_sync_->leader())
                                      : std::move(clock_sync_->follower()))
                               : nullptr),
-      source_clock_(clock_sync_ ? (source->reference_clock_koid() == clock_sync_->follower()->koid()
+      source_clock_(clock_sync_ ? (source->reference_clock() == clock_sync_->follower()
                                        ? std::move(clock_sync_->follower())
                                        : std::move(clock_sync_->leader()))
                                 : nullptr),
       sampler_(std::move(options.sampler)),
       source_(std::make_unique<SilencePaddingStage>(
-          source->format(), source->reference_clock_koid(),
+          source->format(), source->reference_clock(),
           sampler_->neg_filter_length() + sampler_->pos_filter_length(),
           /*round_down_fractional_frames=*/true)),
       source_gain_ids_(std::move(options.gain_ids)),
@@ -310,7 +310,7 @@ void MixerSource::PrepareSourceGainForNextMix(MixJobContext& ctx,
                   DbToScale(gain_db));
       }
       // Calculate the ramp increment per frame.
-      const auto gain_control_clock = ctx.clocks().SnapshotFor(gain_control.reference_clock_koid());
+      const auto gain_control_clock = ctx.clocks().SnapshotFor(gain_control.reference_clock());
       const auto gain_control_ns_per_dest_frame = TimelineRate::Product(
           dest_frame_to_mono_time.rate(), gain_control_clock.to_clock_mono().Inverse().rate());
       const float scale = DbToScale(state.gain_db);

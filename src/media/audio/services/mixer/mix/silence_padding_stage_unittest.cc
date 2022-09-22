@@ -27,8 +27,8 @@ const auto kFormat = Format::CreateOrDie({AudioSampleFormat::kSigned16, 1, 48000
 std::shared_ptr<SilencePaddingStage> MakeSilencePaddingStage(
     Fixed silence_frame_count, bool round_down_fractional_frames,
     std::shared_ptr<PipelineStage> source) {
-  auto stage = std::make_shared<SilencePaddingStage>(
-      kFormat, DefaultClockKoid(), silence_frame_count, round_down_fractional_frames);
+  auto stage = std::make_shared<SilencePaddingStage>(kFormat, DefaultClock(), silence_frame_count,
+                                                     round_down_fractional_frames);
   if (source) {
     stage->AddSource(source, /*options=*/{});
   }

@@ -10,6 +10,7 @@
 #include <memory>
 #include <optional>
 
+#include "src/media/audio/lib/clock/unreadable_clock.h"
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/services/mixer/common/memory_mapped_buffer.h"
 #include "src/media/audio/services/mixer/mix/packet_view.h"
@@ -24,7 +25,7 @@ class RingBuffer : public std::enable_shared_from_this<RingBuffer> {
     Format format;
 
     // Reference clock used by this ring buffer.
-    zx_koid_t reference_clock_koid;
+    UnreadableClock reference_clock;
 
     // The actual buffer, which stores `buffer->content_size() / format.bytes_per_frame()` frames
     // per ring.
@@ -57,15 +58,15 @@ class RingBuffer : public std::enable_shared_from_this<RingBuffer> {
   // Returns the format of this buffer.
   [[nodiscard]] const Format& format() const { return format_; }
 
-  // Returns the koid of the clock used by this buffer.
-  [[nodiscard]] zx_koid_t reference_clock_koid() const { return reference_clock_koid_; }
+  // Returns the clock used by this buffer.
+  [[nodiscard]] UnreadableClock reference_clock() const { return reference_clock_; }
 
  private:
   explicit RingBuffer(Args args);
   PacketView PacketForRange(int64_t start_frame, int64_t frame_count);
 
   const Format format_;
-  const zx_koid_t reference_clock_koid_;
+  const UnreadableClock reference_clock_;
   const std::shared_ptr<MemoryMappedBuffer> buffer_;
   const int64_t total_frames_;
   const int64_t producer_frames_;
