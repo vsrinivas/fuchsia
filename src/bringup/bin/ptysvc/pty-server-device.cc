@@ -68,21 +68,17 @@ void PtyServerDevice::Write(WriteRequestView request, WriteCompleter::Sync& comp
   ZX_ASSERT(false);
 }
 
-void PtyServerDevice::Reopen(ReopenRequestView request, ReopenCompleter::Sync& completer) {
+void PtyServerDevice::Clone(CloneRequestView request, CloneCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void PtyServerDevice::Clone(CloneRequestView request, CloneCompleter::Sync& completer) {
+void PtyServerDevice::Clone2(Clone2RequestView request, Clone2Completer::Sync& completer) {
   ZX_ASSERT(false);
 }
 
 void PtyServerDevice::Close(CloseCompleter::Sync& completer) { ZX_ASSERT(false); }
 
 void PtyServerDevice::Query(QueryCompleter::Sync& completer) { ZX_ASSERT(false); }
-
-void PtyServerDevice::GetConnectionInfo(GetConnectionInfoCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
 
 void PtyServerDevice::DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) {
   ZX_ASSERT(false);
@@ -110,8 +106,6 @@ void PtyServerDevice::GetBackingMemory(GetBackingMemoryRequestView request,
                                        GetBackingMemoryCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
-
-void PtyServerDevice::Sync(SyncCompleter::Sync& completer) { ZX_ASSERT(false); }
 
 void PtyServerDevice::SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) {
   ZX_ASSERT(false);

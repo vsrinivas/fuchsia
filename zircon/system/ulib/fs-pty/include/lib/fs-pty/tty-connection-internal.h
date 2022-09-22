@@ -25,6 +25,15 @@ class NullPtyDeviceImpl : public fidl::WireServer<fuchsia_hardware_pty::Device> 
   void SetWindowSize(SetWindowSizeRequestView request,
                      SetWindowSizeCompleter::Sync& completer) final;
 
+  // fuchsia.unknown.Cloneable.
+  void Clone2(Clone2RequestView request, Clone2Completer::Sync& completer) final;
+
+  // fuchsia.unknown.Closeable.
+  void Close(CloseCompleter::Sync& completer) final;
+
+  // fuchsia.unknown.Queryable.
+  void Query(QueryCompleter::Sync& completer) final;
+
   // fuchsia.io.File methods (which were composed by fuchsia.hardware.pty.Device)
   void Read(ReadRequestView request, ReadCompleter::Sync& completer) final;
   void ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) final;
@@ -37,13 +46,8 @@ class NullPtyDeviceImpl : public fidl::WireServer<fuchsia_hardware_pty::Device> 
   void GetBackingMemory(GetBackingMemoryRequestView request,
                         GetBackingMemoryCompleter::Sync& completer) final;
 
-  void Reopen(ReopenRequestView request, ReopenCompleter::Sync& completer) final;
   void Clone(CloneRequestView request, CloneCompleter::Sync& completer) final;
-  void Close(CloseCompleter::Sync& completer) final;
-  void Query(QueryCompleter::Sync& completer) final;
-  void GetConnectionInfo(GetConnectionInfoCompleter::Sync& completer) final;
   void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) final;
-  void Sync(SyncCompleter::Sync& completer) final;
   void GetAttr(GetAttrCompleter::Sync& completer) final;
   void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) final;
   void GetFlags(GetFlagsCompleter::Sync& completer) final;

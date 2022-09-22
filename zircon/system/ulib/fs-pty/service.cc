@@ -73,21 +73,17 @@ void NullPtyDeviceImpl::Write(WriteRequestView request, WriteCompleter::Sync& co
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::Reopen(ReopenRequestView request, ReopenCompleter::Sync& completer) {
+void NullPtyDeviceImpl::Clone(CloneRequestView request, CloneCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::Clone(CloneRequestView request, CloneCompleter::Sync& completer) {
+void NullPtyDeviceImpl::Clone2(Clone2RequestView request, Clone2Completer::Sync& completer) {
   ZX_ASSERT(false);
 }
 
 void NullPtyDeviceImpl::Close(CloseCompleter::Sync& completer) { ZX_ASSERT(false); }
 
 void NullPtyDeviceImpl::Query(QueryCompleter::Sync& completer) { ZX_ASSERT(false); }
-
-void NullPtyDeviceImpl::GetConnectionInfo(GetConnectionInfoCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
 
 void NullPtyDeviceImpl::DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) {
   ZX_ASSERT(false);
@@ -115,8 +111,6 @@ void NullPtyDeviceImpl::GetBackingMemory(GetBackingMemoryRequestView request,
                                          GetBackingMemoryCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
-
-void NullPtyDeviceImpl::Sync(SyncCompleter::Sync& completer) { ZX_ASSERT(false); }
 
 void NullPtyDeviceImpl::SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) {
   ZX_ASSERT(false);

@@ -14,6 +14,7 @@ library fuchsia.hardware.pty;
 
 using fuchsia.device;
 using fuchsia.io;
+using fuchsia.unknown;
 using zx;
 
 /// When Feature Raw is enabled, OOB Events like ^c, ^z, etc are not generated.
@@ -45,6 +46,10 @@ const DEVICE_PROTOCOL_NAME string = "fuchsia.hardware.pty/Device";
 
 @discoverable
 protocol Device {
+    compose fuchsia.unknown.Cloneable;
+    compose fuchsia.unknown.Closeable;
+    compose fuchsia.unknown.Queryable;
+
     // Compose from fuchsia.io/File so we can support Read/Write.
     //
     // NB: File2 does not implement inherent Describe, which prevents

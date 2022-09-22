@@ -44,10 +44,13 @@ type FileInfo = resource table {
     3: stream zx.handle:STREAM;
 };
 
-/// A [`File`] that provides [`FileInfo`].
+/// A [`Node`] which contains a sequence of bytes of definite length.
+///
+/// NOTE: cloned connections do not share their seek offset with their source
+/// connection.
 protocol File {
     compose AdvisoryLocking;
-    compose Node1;
+    compose Node;
     compose File2;
 
     @selector("fuchsia.io/File.Describe")
@@ -57,14 +60,8 @@ protocol File {
 // TODO(https://fxbug.dev/105608): Use a generated constant.
 const FILE_PROTOCOL_NAME string = "fuchsia.io/File";
 
-/// A [`Node2`] which contains a sequence of bytes of definite
-/// length.
-///
-/// NOTE: cloned connections do not share their seek offset with their source
-/// connection.
+/// The non-[`Node`] portion of [`File`], for composition by other protocols.
 protocol File2 {
-    compose Node2;
-
     /// Moves the offset at which the next invocation of [`Read`] or [`Write`]
     /// will occur. The seek offset is specific to each file connection.
     ///

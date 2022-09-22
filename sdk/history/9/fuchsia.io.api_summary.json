@@ -836,39 +836,9 @@
     },
     {
         "kind": "protocol/member",
-        "name": "fuchsia.io/File2.Close",
-        "ordinal": "6540867515453498750",
-        "type": "() -> (fuchsia.unknown/Closeable_Close_Result result)"
-    },
-    {
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File2.GetAttributes",
-        "ordinal": "4414537700416816443",
-        "type": "(fuchsia.io/NodeAttributesQuery query) -> (fuchsia.io/Node2_GetAttributes_Result result)"
-    },
-    {
-        "kind": "protocol/member",
         "name": "fuchsia.io/File2.GetBackingMemory",
         "ordinal": "46911652864194091",
         "type": "(fuchsia.io/VmoFlags flags) -> (fuchsia.io/File2_GetBackingMemory_Result result)"
-    },
-    {
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File2.GetConnectionInfo",
-        "ordinal": "6362521381364198667",
-        "type": "() -> (fuchsia.io/ConnectionInfo payload)"
-    },
-    {
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File2.OnRepresentation",
-        "ordinal": "6679970090861613324",
-        "type": " -> (fuchsia.io/Representation payload)"
-    },
-    {
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File2.Query",
-        "ordinal": "2763219980499352582",
-        "type": "() -> (vector<uint8> protocol)"
     },
     {
         "kind": "protocol/member",
@@ -884,12 +854,6 @@
     },
     {
         "kind": "protocol/member",
-        "name": "fuchsia.io/File2.Reopen",
-        "ordinal": "7675434429343513249",
-        "type": "(box<fuchsia.io/RightsRequest> rights_request,zx/handle:CHANNEL object_request)"
-    },
-    {
-        "kind": "protocol/member",
         "name": "fuchsia.io/File2.Resize",
         "ordinal": "3134648685270758458",
         "type": "(uint64 length) -> (fuchsia.io/File2_Resize_Result result)"
@@ -899,18 +863,6 @@
         "name": "fuchsia.io/File2.Seek",
         "ordinal": "8649041485622956551",
         "type": "(fuchsia.io/SeekOrigin origin,int64 offset) -> (fuchsia.io/File2_Seek_Result result)"
-    },
-    {
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File2.Sync",
-        "ordinal": "3196473584242777161",
-        "type": "() -> (fuchsia.io/Node2_Sync_Result result)"
-    },
-    {
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File2.UpdateAttributes",
-        "ordinal": "3677402239314018056",
-        "type": "(fuchsia.io/MutableNodeAttributes payload) -> (fuchsia.io/Node2_UpdateAttributes_Result result)"
     },
     {
         "kind": "protocol/member",
