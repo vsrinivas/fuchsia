@@ -9,11 +9,15 @@ See //build/bazel/README.md for details about this file.
 
 load("//:build/bazel/toolchains/linux_sysroot.bzl", "linux_sysroot")
 
-# Export these files for the benefit of the //build/bazel/toolchains/clang package.
 exports_files(
+    # Export these files for the benefit of the //build/bazel/toolchains/clang package.
     glob(["prebuilt/third_party/clang/**"]) +
     glob(["prebuilt/third_party/sysroot/linux"]) +
-    glob(["build/bazel/**"]),
+    glob(["build/bazel/**"]) +
+
+    # Used by code generators in vendor/google:
+    glob(["prebuilt/third_party/gn/*/gn"]) +
+    glob(["prebuilt/third_party/buildifier/*/buildifier"]),
 )
 
 linux_sysroot(
