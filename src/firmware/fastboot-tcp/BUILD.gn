@@ -7,6 +7,7 @@
 # If you find something broken, we are eager to review fixes.
 
 import("//build/components.gni")
+import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test.gni")
 import("//src/sys/core/build/core_shard.gni")
@@ -85,4 +86,12 @@ test("fastboot-shared-lib-test") {
 fuchsia_unittest_package("fastboot-shared-lib-test-package") {
   package_name = "fastboot-shared-lib-test"
   deps = [ ":fastboot-shared-lib-test" ]
+}
+
+config_data("fastboot_tcp_mdns_config") {
+  for_pkg = "mdns"
+  sources = [ rebase_path("config/fastboot_tcp.config") ]
+
+  # Ensure exclusion from production builds.
+  deps = [ "//build/validate:non_production_tag" ]
 }

@@ -62,8 +62,6 @@ extern "C" fn read_packet_callback<T: Read + Write>(
         }
     }
 
-    info!("Read packet {:?}", std::str::from_utf8(slice));
-
     return 0;
 }
 
