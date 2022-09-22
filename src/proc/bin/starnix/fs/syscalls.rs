@@ -502,14 +502,31 @@ pub fn sys_mkdirat(
     user_path: UserCString,
     mode: FileMode,
 ) -> Result<(), Errno> {
-    lookup_parent_at(current_task, dir_fd, user_path, |parent, basename| {
-        parent.create_node(
-            current_task,
-            basename,
-            mode.with_type(FileMode::IFDIR),
-            DeviceType::NONE,
-        )
-    })?;
+    let mut buf = [0u8; PATH_MAX as usize];
+    let mut path = current_task.mm.read_c_string(user_path, &mut buf)?;
+
+    // Strip trailing slashes to make mkdir("foo/") valid even if "foo/" doesn't exist. This is a
+    // special case for mkdir. Every other fs operation (including O_CREAT) will handle "foo/" by
+    // attempt to traverse into foo/ and failing if it doesn't exist.
+    while let Some(one_slash_removed) = path.strip_suffix(b"/") {
+        path = one_slash_removed;
+    }
+    let mut end = path.len();
+    while end > 0 && path[end - 1] == b'/' {
+        end -= 1;
+    }
+    let path = &path[..end];
+
+    if path.is_empty() {
+        return error!(ENOENT);
+    }
+    let (parent, basename) = current_task.lookup_parent_at(dir_fd, path)?;
+    parent.create_node(
+        current_task,
+        basename,
+        mode.with_type(FileMode::IFDIR),
+        DeviceType::NONE,
+    )?;
     Ok(())
 }
 
