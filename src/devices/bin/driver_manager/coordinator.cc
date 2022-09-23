@@ -641,10 +641,13 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev,
   char driver_hostname[32];
   snprintf(driver_hostname, sizeof(driver_hostname), "driver_host:%.*s", (int)arg0len, arg0);
 
-  zx_status_t r;
-  if (dev->proxy() == nullptr && (r = dev->CreateProxy()) != ZX_OK) {
-    LOGF(ERROR, "Cannot create proxy device '%s': %s", dev->name().data(), zx_status_get_string(r));
-    return r;
+  if (dev->proxy() == nullptr) {
+    const zx_status_t status = dev->CreateProxy();
+    if (status != ZX_OK) {
+      LOGF(ERROR, "Cannot create proxy device '%s': %s", dev->name().data(),
+           zx_status_get_string(status));
+      return status;
+    }
   }
 
   // if this device has no driver_host, first instantiate it
@@ -655,41 +658,48 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev,
 
     if (need_proxy_rpc || dev == sys_device_) {
       // create rpc channel for proxy device to talk to the busdev it proxies
-      if ((r = zx::channel::create(0, &h0, &h1)) < 0) {
-        return r;
+      const zx_status_t status = zx::channel::create(0, &h0, &h1);
+      if (status != ZX_OK) {
+        return status;
       }
     }
     if (target_driver_host == nullptr) {
-      if ((r = NewDriverHost(driver_hostname, &target_driver_host)) < 0) {
+      const zx_status_t status = NewDriverHost(driver_hostname, &target_driver_host);
+      if (status != ZX_OK) {
         LOGF(ERROR, "Failed to create driver_host '%s': %s", driver_hostname,
-             zx_status_get_string(r));
-        return r;
+             zx_status_get_string(status));
+        return status;
       }
     }
 
     dev->proxy()->set_host(std::move(target_driver_host));
-    if ((r = CreateProxyDevice(dev->proxy(), dev->proxy()->host(), arg1, std::move(h1))) < 0) {
+    if (const zx_status_t status =
+            CreateProxyDevice(dev->proxy(), dev->proxy()->host(), arg1, std::move(h1));
+        status != ZX_OK) {
       LOGF(ERROR, "Failed to create proxy device '%s' in driver_host '%s': %s", dev->name().data(),
-           driver_hostname, zx_status_get_string(r));
-      return r;
+           driver_hostname, zx_status_get_string(status));
+      return status;
     }
     if (need_proxy_rpc) {
-      if (auto result = dev->device_controller()->ConnectProxy(std::move(h0)); !result.ok()) {
+      if (const fidl::Status result = dev->device_controller()->ConnectProxy(std::move(h0));
+          !result.ok()) {
         LOGF(ERROR, "Failed to connect to proxy device '%s' in driver_host '%s': %s",
-             dev->name().data(), driver_hostname, zx_status_get_string(result.status()));
+             dev->name().data(), driver_hostname, result.status_string());
       }
     }
     if (dev == sys_device_) {
-      if ((r = fdio_service_connect(kItemsPath, h0.release())) != ZX_OK) {
-        LOGF(ERROR, "Failed to connect to %s: %s", kItemsPath, zx_status_get_string(r));
+      if (const zx_status_t status = fdio_service_connect(kItemsPath, h0.release());
+          status != ZX_OK) {
+        LOGF(ERROR, "Failed to connect to %s: %s", kItemsPath, zx_status_get_string(status));
       }
     }
     zx::channel client_remote = dev->take_client_remote();
     if (client_remote.is_valid()) {
-      if ((r = devfs_connect(dev->proxy().get(),
-                             fidl::ServerEnd<fio::Node>(std::move(client_remote)))) != ZX_OK) {
+      const zx_status_t status =
+          devfs_connect(dev->proxy().get(), fidl::ServerEnd<fio::Node>(std::move(client_remote)));
+      if (status != ZX_OK) {
         LOGF(ERROR, "Failed to connect to service from proxy device '%s' in driver_host '%s': %s",
-             dev->name().data(), driver_hostname, zx_status_get_string(r));
+             dev->name().data(), driver_hostname, zx_status_get_string(status));
       }
     }
   }
