@@ -14,15 +14,27 @@
 
 #include "beacons.h"
 #include "src/lib/fxl/strings/split_string.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace ble = fuchsia::bluetooth::le;
 
 namespace bt_beacon_reader {
 
+namespace {
+
+std::string UuidToString(const fuchsia::bluetooth::Uuid& uuid) {
+  std::array<uint8_t, 16> value = uuid.value;
+  return fxl::StringPrintf("%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+                           value[15], value[14], value[13], value[12], value[11], value[10],
+                           value[9], value[8], value[7], value[6], value[5], value[4], value[3],
+                           value[2], value[1], value[0]);
+}
+
+}  // namespace
+
 App::App(async::Loop* loop, bool just_tilts)
     : loop_(loop),
       context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
-      central_delegate_(this),
       just_tilts_(just_tilts) {
   FX_DCHECK(context_);
 
@@ -33,74 +45,74 @@ App::App(async::Loop* loop, bool just_tilts)
     printf("Central disconnected\n");
     loop_->Quit();
   });
-
-  // Register with the Control as its delegate.
-  ble::CentralDelegatePtr delegate;
-  central_delegate_.Bind(delegate.NewRequest());
-  central_->SetDelegate(std::move(delegate));
 }
 
 void App::StartScanning() {
-  ble::ScanFilterPtr filter = ble::ScanFilter::New();
-  filter->connectable = fuchsia::bluetooth::Bool::New();
-  filter->connectable->value = false;
-  central_->StartScan(std::move(filter), [](fuchsia::bluetooth::Status status) {});
+  ble::ScanOptions options;
+  ble::Filter filter;
+  filter.set_connectable(false);
+  options.mutable_filters()->push_back(std::move(filter));
+  central_->Scan(std::move(options), result_watcher_.NewRequest(),
+                 [] { printf("scanning stopped\n"); });
+  Watch();
 }
 
-// Called when the scan state changes, e.g. when a scan session terminates due
-// to a call to Central.StopScan() or another unexpected condition.
-void App::OnScanStateChanged(bool scanning) {
-  printf("Device %s scanning.\n", scanning ? "started" : "stopped");
+void App::Watch() {
+  result_watcher_->Watch([this](std::vector<ble::Peer> peers) {
+    for (ble::Peer& peer : peers) {
+      OnPeerDiscovered(peer);
+    }
+    Watch();
+  });
 }
 
-void PrintRDHeader(const ble::RemoteDevice& device) {
-  printf("id: %s ", device.identifier->c_str());
-  if (device.advertising_data && device.advertising_data->appearance) {
-    uint16_t appearance = device.advertising_data->appearance->value;
+void PrintRDHeader(const ble::Peer& peer) {
+  printf("id: %.16lx ", peer.id().value);
+  if (peer.has_data() && peer.data().has_appearance()) {
+    const uint16_t appearance = static_cast<uint16_t>(peer.data().appearance());
     printf("Appearance: %u  ", appearance);
   }
-
-  if (device.advertising_data && device.advertising_data->name) {
-    printf("Name: %s  ", device.advertising_data->name->c_str());
+  if (peer.has_name()) {
+    printf("Name: %s  ", peer.name().c_str());
   }
   printf("\n");
 }
 
-void PrintGeneralBeaconData(const ble::RemoteDevice& device) {
-  if (!device.advertising_data) {
+void PrintGeneralBeaconData(const ble::Peer& peer) {
+  if (!peer.has_data()) {
     return;
   }
-  for (auto& data : *device.advertising_data->service_data) {
-    printf("  S  uuid: %s   data: 0x", data.uuid->c_str());
-    for (auto& byte : *data.data) {
-      printf("%02x", byte);
+
+  if (peer.data().has_service_data()) {
+    for (const ble::ServiceData& data : peer.data().service_data()) {
+      printf("  S  uuid: %s   data: 0x", UuidToString(data.uuid).c_str());
+      for (uint8_t byte : data.data) {
+        printf("%02x", byte);
+      }
+      printf("\n");
     }
-    printf("\n");
   }
-  for (auto& data : *device.advertising_data->manufacturer_specific_data) {
-    printf("  M  cid: 0x%04x   data: 0x", data.company_id);
-    for (auto& byte : *data.data) {
-      printf("%02x", byte);
+  if (peer.data().has_manufacturer_data()) {
+    for (const ble::ManufacturerData& data : peer.data().manufacturer_data()) {
+      printf("  M  cid: 0x%04x   data: 0x", data.company_id);
+      for (uint8_t byte : data.data) {
+        printf("%02x", byte);
+      }
+      printf("\n");
     }
-    printf("\n");
   }
 }
 
-void App::OnDeviceDiscovered(ble::RemoteDevice device) {
+void App::OnPeerDiscovered(const ble::Peer& peer) const {
   if (just_tilts_) {
-    std::unique_ptr<TiltDetection> tilt = TiltDetection::Create(device);
+    std::unique_ptr<TiltDetection> tilt = TiltDetection::Create(peer);
     if (tilt) {
       tilt->Print();
     }
   } else {
-    PrintRDHeader(device);
-    PrintGeneralBeaconData(device);
+    PrintRDHeader(peer);
+    PrintGeneralBeaconData(peer);
   }
 }
 
-// Called when this Central's connection to a peripheral with the given
-// identifier is terminated.
-void App::OnPeripheralDisconnected(::fidl::StringPtr identifier) {
-  printf("Peripheral Disconnected: %s\n", identifier->c_str());
-}
 }  // namespace bt_beacon_reader

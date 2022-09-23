@@ -6,6 +6,7 @@ import("//build/components.gni")
 
 fuchsia_shell_package("bt-shell-examples") {
   deps = [
+    "bt-beacon-reader",
     "bt-le-battery-service",
     "bt-le-heart-rate-peripheral",
   ]

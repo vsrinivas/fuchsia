@@ -2,25 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdio.h>  // snprintf
-
 #include "beacons.h"
+
+#include <stdio.h>  // snprintf
 
 namespace ble = fuchsia::bluetooth::le;
 
 namespace bt_beacon_reader {
 
-std::unique_ptr<IBeaconDetection> IBeaconDetection::Create(const ble::RemoteDevice& device) {
-  if (!device.advertising_data ||
-      device.advertising_data->manufacturer_specific_data->size() != 1) {
+std::unique_ptr<IBeaconDetection> IBeaconDetection::Create(const ble::Peer& peer) {
+  if (!peer.has_data() || !peer.data().has_manufacturer_data() ||
+      peer.data().manufacturer_data().size() != 1) {
     return nullptr;
   }
-  const std::vector<uint8_t>& data =
-      *(*device.advertising_data->manufacturer_specific_data)[0].data;
+  const std::vector<uint8_t>& data = peer.data().manufacturer_data()[0].data;
+  if (data.size() < 21) {
+    return nullptr;
+  }
   if (data[0] != 0x02) {
     return nullptr;
   }
-  if (data[1] != data.size() - 2 || data.size() < 21) {
+  if (data[1] != data.size() - 2) {
     return nullptr;
   }
   std::unique_ptr<IBeaconDetection> beacon(new IBeaconDetection);
@@ -36,16 +38,16 @@ void IBeaconDetection::Read(const std::vector<uint8_t>& data) {
     snprintf(temp, 3, "%02x", data[i]);
     uuid_.append(temp, 2);
   }
-  major_ = (data[18] << 8) + data[19];
-  minor_ = (data[20] << 8) + data[21];
+  major_ = static_cast<uint16_t>((data[18] << 8) + data[19]);
+  minor_ = static_cast<uint16_t>((data[20] << 8) + data[21]);
   // The power level field seems to be optional...
   if (data.size() > 22) {
     power_lvl_ = data[22];
   }
 }
 
-std::unique_ptr<TiltDetection> TiltDetection::Create(const ble::RemoteDevice& device) {
-  std::unique_ptr<IBeaconDetection> beacon = IBeaconDetection::Create(device);
+std::unique_ptr<TiltDetection> TiltDetection::Create(const ble::Peer& peer) {
+  std::unique_ptr<IBeaconDetection> beacon = IBeaconDetection::Create(peer);
   if (!beacon) {
     return nullptr;
   }
@@ -60,7 +62,6 @@ std::unique_ptr<TiltDetection> TiltDetection::Create(const ble::RemoteDevice& de
   // OK, it is a tilt!
   std::unique_ptr<TiltDetection> tilt(new TiltDetection);
   tilt->Read(beacon);
-  tilt->identifier_ = *device.identifier;
   return tilt;
 }
 
@@ -78,9 +79,9 @@ void TiltDetection::Read(const std::unique_ptr<IBeaconDetection>& beacon) {
   // negative gravities are just expressed as their value % 1000.
   // Since a specific gravity of beer at 1.5 is unreasonable, we'll draw the line
   // there.
-  gravity_ = beacon->minor_ / 1000.0;
+  gravity_ = beacon->minor_ / 1000.0f;
   if (beacon->minor_ < 500) {
-    gravity_ += 1.0;
+    gravity_ += 1.0f;
   }
 }
 

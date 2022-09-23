@@ -12,10 +12,11 @@ executable("bt-beacon-reader") {
   ]
 
   deps = [
-    "//garnet/bin/bluetooth/tools/lib",
-    "//sdk/fidl/fuchsia.bluetooth",
+    "//sdk/fidl/fuchsia.bluetooth.le",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
