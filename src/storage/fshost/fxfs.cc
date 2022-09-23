@@ -265,6 +265,7 @@ zx::status<fs_management::MountedVolume*> UnwrapOrInitDataVolume(
     FX_PLOGS(ERROR, crypt.error_value()) << "Failed to connect to Crypt service.";
     return crypt.take_error();
   }
+  // TODO(fxbug.dev/106845): Check the volume before unwrapping it, if configured.
   return volume_fn(kFxfsDataVolumeName, std::move(crypt)->TakeChannel());
 }
 

@@ -167,9 +167,8 @@ TEST_F(FsRecoveryTest, CorruptDataRecoveryTest) {
   fidl::WireSyncClient client{std::move(*client_end)};
   auto res = client->WatchFile();
   ASSERT_EQ(res.status(), ZX_OK);
-  // Crash reporting is only enabled for minfs.
-  // TODO(fxbug.dev/106845): Re-enable this for Fxfs once fsck is running again.
-  unsigned long expected_num_filed = DataFilesystemFormat() == "minfs" ? 1 : 0;
+  // Crash reporting is disabled for f2fs.
+  unsigned long expected_num_filed = DataFilesystemFormat() == "f2fs" ? 0 : 1;
   ASSERT_EQ(res.value().num_filed, expected_num_filed);
 }
 
