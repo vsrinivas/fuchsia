@@ -154,6 +154,7 @@ class HidButtonsDeviceTest : public HidButtonsDevice {
       mock->ExpectConfigOut(ZX_OK, gpio_config.matrix.output_value);
     } else if (gpio_config.type == BUTTONS_GPIO_TYPE_POLL) {
       mock->ExpectConfigIn(ZX_OK, gpio_config.poll.internal_pull);
+      mock->SetDefaultReadValue(0);
     }
   }
 
@@ -569,7 +570,6 @@ TEST(HidButtonsTest, PollOneButton) {
 
   // All GPIOs must have a default read value if polling is being used, as they are all ready
   // every poll period.
-  device.GetGpio(1).SetDefaultReadValue(0);
   device.GetGpio(2).SetDefaultReadValue(0);
 
   std::vector<buttons_input_rpt_t> reports;
