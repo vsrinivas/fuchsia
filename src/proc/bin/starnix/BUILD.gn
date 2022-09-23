@@ -11,6 +11,8 @@ import("//src/sys/core/build/core_shard.gni")
 declare_args() {
   # Whether wayland protocol logging should be enabled
   starnix_wayland_protocol_logging = false
+
+  starnix_restricted_mode = true
 }
 
 group("starnix") {
@@ -250,8 +252,10 @@ if (target_cpu == "x64" && !is_asan) {
       "vmex_resource.rs",
     ]
 
-    features = [ "restricted_mode" ]
-
+    features = []
+    if (starnix_restricted_mode) {
+      features += [ "restricted_mode" ]
+    }
     if (starnix_wayland_protocol_logging) {
       features += [ "wayland_protocol_logging" ]
     }
