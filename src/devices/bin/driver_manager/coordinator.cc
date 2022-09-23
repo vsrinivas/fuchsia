@@ -693,10 +693,8 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev,
         LOGF(ERROR, "Failed to connect to %s: %s", kItemsPath, zx_status_get_string(status));
       }
     }
-    zx::channel client_remote = dev->take_client_remote();
-    if (client_remote.is_valid()) {
-      const zx_status_t status =
-          devfs_connect(dev->proxy().get(), fidl::ServerEnd<fio::Node>(std::move(client_remote)));
+    {
+      const zx_status_t status = dev->proxy()->ConnectClientRemote();
       if (status != ZX_OK) {
         LOGF(ERROR, "Failed to connect to service from proxy device '%s' in driver_host '%s': %s",
              dev->name().data(), driver_hostname, zx_status_get_string(status));

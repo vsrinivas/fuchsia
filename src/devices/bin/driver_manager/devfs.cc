@@ -608,11 +608,6 @@ zx_status_t Devfs::publish(Device& parent, Device& device) {
   return ZX_OK;
 }
 
-zx_status_t devfs_connect(const Device* dev, fidl::ServerEnd<fio::Node> client_remote) {
-  const fidl::Status result = dev->device_controller()->Open({}, 0, ".", std::move(client_remote));
-  return result.status();
-}
-
 void Devfs::connect_diagnostics(fidl::ClientEnd<fio::Directory> diagnostics_channel) {
   this->diagnostics_channel = std::move(diagnostics_channel);
 }

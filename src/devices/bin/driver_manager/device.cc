@@ -594,6 +594,15 @@ zx_status_t Device::CompleteRemove(zx_status_t status) {
   return ZX_OK;
 }
 
+zx_status_t Device::ConnectClientRemote() {
+  if (!client_remote_.is_valid()) {
+    return ZX_OK;
+  }
+  const fidl::Status result =
+      device_controller()->Open({}, 0, ".", fidl::ServerEnd<fio::Node>(std::move(client_remote_)));
+  return result.status();
+}
+
 zx_status_t Device::SetProps(fbl::Array<const zx_device_prop_t> props) {
   // This function should only be called once
   ZX_DEBUG_ASSERT(props_.data() == nullptr);

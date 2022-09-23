@@ -112,8 +112,6 @@ struct Devnode : public fbl::DoublyLinkedListable<Devnode*> {
   uint32_t seqcount_ = 0;
 };
 
-zx_status_t devfs_connect(const Device* dev, fidl::ServerEnd<fuchsia_io::Node> client_remote);
-
 class Devfs {
  public:
   // `device` must outlive `this`.

@@ -487,6 +487,8 @@ class Device final
   // Run the completion for the outstanding remove, if any.
   zx_status_t CompleteRemove(zx_status_t status = ZX_OK);
 
+  zx_status_t ConnectClientRemote();
+
   // Drops the reference to the task.
   // This should be called if the device will not send an init, suspend, unbind or remove request.
   void DropInitTask() { active_init_ = nullptr; }
@@ -494,7 +496,6 @@ class Device final
   void DropUnbindTask() { active_unbind_ = nullptr; }
   void DropRemoveTask() { active_remove_ = nullptr; }
 
-  zx::channel take_client_remote() { return std::move(client_remote_); }
   bool has_outgoing_directory() { return outgoing_dir_.is_valid(); }
   fidl::ClientEnd<fio::Directory> take_outgoing_dir() { return std::move(outgoing_dir_); }
   fidl::ClientEnd<fio::Directory> clone_outgoing_dir() {

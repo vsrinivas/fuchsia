@@ -168,14 +168,10 @@ void DeviceManager::HandleNewDevice(const fbl::RefPtr<Device>& dev) {
   // If the device has a proxy, we actually want to wait for the proxy device to be
   // created and connect to that.
   if (!(dev->flags & DEV_CTX_MUST_ISOLATE)) {
-    zx::channel client_remote = dev->take_client_remote();
-    if (client_remote.is_valid()) {
-      zx_status_t status =
-          devfs_connect(dev.get(), fidl::ServerEnd<fio::Node>(std::move(client_remote)));
-      if (status != ZX_OK) {
-        LOGF(ERROR, "Failed to connect to service from proxy device '%s': %s", dev->name().data(),
-             zx_status_get_string(status));
-      }
+    const zx_status_t status = dev->ConnectClientRemote();
+    if (status != ZX_OK) {
+      LOGF(ERROR, "Failed to connect to service from proxy device '%s': %s", dev->name().data(),
+           zx_status_get_string(status));
     }
   }
 
