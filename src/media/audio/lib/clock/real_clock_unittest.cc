@@ -25,10 +25,10 @@ zx::clock NewClock(zx_rights_t rights = ZX_RIGHT_DUPLICATE | ZX_RIGHT_READ | ZX_
   zx::clock clock;
   auto status = zx::clock::create(
       ZX_CLOCK_OPT_AUTO_START | ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS, nullptr, &clock);
-  FX_DCHECK(status == ZX_OK) << "clock.create failed, status is " << status;
+  FX_CHECK(status == ZX_OK) << "clock.create failed, status is " << status;
 
   status = clock.replace(rights, &clock);
-  FX_DCHECK(status == ZX_OK) << "clock.replace failed, status is " << status;
+  FX_CHECK(status == ZX_OK) << "clock.replace failed, status is " << status;
 
   return clock;
 }
@@ -36,7 +36,7 @@ zx::clock NewClock(zx_rights_t rights = ZX_RIGHT_DUPLICATE | ZX_RIGHT_READ | ZX_
 zx::clock DupClock(const zx::clock& in_clock, zx_rights_t rights = ZX_RIGHT_SAME_RIGHTS) {
   zx::clock out_clock;
   auto status = in_clock.duplicate(rights, &out_clock);
-  FX_DCHECK(status == ZX_OK) << "clock.duplicate failed, status is " << status;
+  FX_CHECK(status == ZX_OK) << "clock.duplicate failed, status is " << status;
   return out_clock;
 }
 
