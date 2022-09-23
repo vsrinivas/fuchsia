@@ -34,14 +34,13 @@ class TestDataPlane {
 
   DataPlane* GetDataPlane() { return data_plane_.get(); }
   zx_device_t* GetParent() { return parent_.get(); }
-  zx_device_t* GetNetDevice() { return net_device_.load(); }
+  zx_device_t* GetNetDevice() { return net_device_.get(); }
 
  private:
   TestDataPlane() = default;
 
   std::unique_ptr<std::thread> async_remove_watcher_;
-  std::atomic<bool> async_remove_watcher_running_{true};
-  std::atomic<zx_device*> net_device_ = nullptr;
+  std::shared_ptr<zx_device_t> net_device_ = nullptr;
   std::unique_ptr<DataPlane> data_plane_;
   std::shared_ptr<MockDevice> parent_{MockDevice::FakeRootParent()};
 };

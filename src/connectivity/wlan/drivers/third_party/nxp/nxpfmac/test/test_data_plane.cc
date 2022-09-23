@@ -16,13 +16,10 @@
 namespace wlan::nxpfmac {
 
 TestDataPlane::~TestDataPlane() {
+  // Deleting the data plane should result in a call to remove the netdevice device.
   data_plane_.reset();
   if (async_remove_watcher_) {
-    async_remove_watcher_running_ = false;
-    // Pretend that an sync remove happened to wake up the async remove watcher thread.
-    if (net_device_) {
-      net_device_.load()->RecordAsyncRemove(ZX_OK);
-    }
+    // Wait for that remove to register and for the the watcher thread to call release and exit.
     async_remove_watcher_->join();
   }
 }
@@ -38,18 +35,19 @@ zx_status_t TestDataPlane::Create(DataPlaneIfc* data_plane_ifc, BusInterface* bu
   if (status != ZX_OK) {
     return status;
   }
-  test_data_plane->net_device_.store(test_data_plane->parent_->GetLatestChild());
+  test_data_plane->net_device_ = test_data_plane->parent_->children().back();
 
   // The mock DDK doesn't call release on mock devices. Create a thread that waits for async
   // remove calls and manually triggers the release calls.
   test_data_plane->async_remove_watcher_ =
       std::make_unique<std::thread>([test_data_plane = test_data_plane.get()]() {
-        while (test_data_plane->net_device_.load() &&
-               test_data_plane->async_remove_watcher_running_.load()) {
-          test_data_plane->net_device_.load()->WaitUntilAsyncRemoveCalled();
-          if (mock_ddk::ReleaseFlaggedDevices(test_data_plane->net_device_) == ZX_OK) {
-            test_data_plane->net_device_.store(nullptr);
-          }
+        // Make a copy of the shared pointer here so we're guaranteed the device is alive for the
+        // duration of this thread.
+        const std::shared_ptr<zx_device_t> net_device = test_data_plane->net_device_;
+
+        if (net_device) {
+          net_device->WaitUntilAsyncRemoveCalled();
+          mock_ddk::ReleaseFlaggedDevices(net_device.get());
         }
       });
 
