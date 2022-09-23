@@ -5,9 +5,11 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_TGL_REGISTERS_DDI_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_TGL_REGISTERS_DDI_H_
 
+#include <lib/ddk/debug.h>
 #include <zircon/assert.h>
 
 #include <cstdint>
+#include <optional>
 
 #include <hwreg/bitfields.h>
 
@@ -726,6 +728,216 @@ class DdiAuxData : public hwreg::RegisterBase<DdiAuxData, uint32_t> {
     static constexpr uint32_t kAuxDataMmioBase = 0x64014;
     return hwreg::RegisterAddr<DdiAuxData>(aux_control.reg_addr() +
                                            (kAuxDataMmioBase - kAuxControlMmioBase));
+  }
+};
+
+// DPCLKA_CFGCR0
+// DPCLKA (DDI Clocks) Configuration Control Register #0
+//
+// Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1, Pages 608-610
+class DdiClockConfigControlRegister0
+    : public hwreg::RegisterBase<DdiClockConfigControlRegister0, uint32_t> {
+ public:
+  // If this bit is set true, the DDI C Clock will be gated off for display
+  // engine.
+  //
+  // Drivers can use `is_clock_off_for_ddi` and `turn_off_clock_for_ddi`
+  // helper methods to read / write to corresponding fields.
+  DEF_BIT(24, ddi_c_clock_off);
+
+  // If this bit is set true, the Type C Port 6 (TC6) Clock will be gated off
+  // for display engine.
+  //
+  // Drivers can use `is_clock_off_for_ddi` and `turn_off_clock_for_ddi`
+  // helper methods to read / write to corresponding fields.
+  DEF_BIT(23, ddi_type_c_6_clock_off);
+
+  // If this bit is set true, the Type C Port 5 (TC5) Clock will be gated off
+  // for display engine.
+  //
+  // Drivers can use `is_clock_off_for_ddi` and `turn_off_clock_for_ddi`
+  // helper methods to read / write to corresponding fields.
+  DEF_BIT(22, ddi_type_c_5_clock_off);
+
+  // If this bit is set true, the Type C Port 4 (TC4) Clock will be gated off
+  // for display engine.
+  //
+  // Drivers can use `is_clock_off_for_ddi` and `turn_off_clock_for_ddi`
+  // helper methods to read / write to corresponding fields.
+  DEF_BIT(21, ddi_type_c_4_clock_off);
+
+  // If this bit is set true, the Type C Port 3 (TC3) Clock will be gated off
+  // for display engine.
+  //
+  // Drivers can use `is_clock_off_for_ddi` and `turn_off_clock_for_ddi`
+  // helper methods to read / write to corresponding fields.
+  DEF_BIT(14, ddi_type_c_3_clock_off);
+
+  // If this bit is set true, the Type C Port 2 (TC2) Clock will be gated off
+  // for display engine.
+  //
+  // Drivers can use `is_clock_off_for_ddi` and `turn_off_clock_for_ddi`
+  // helper methods to read / write to corresponding fields.
+  DEF_BIT(13, ddi_type_c_2_clock_off);
+
+  // If this bit is set true, the Type C Port 1 (TC1) Clock will be gated off
+  // for display engine.
+  //
+  // Drivers can use `is_clock_off_for_ddi` and `turn_off_clock_for_ddi`
+  // helper methods to read / write to corresponding fields.
+  DEF_BIT(12, ddi_type_c_1_clock_off);
+
+  // If this bit is set true, the DDI B Clock will be gated off for display
+  // engine.
+  //
+  // Drivers can use `is_clock_off_for_ddi` and `turn_off_clock_for_ddi`
+  // helper methods to read / write to corresponding fields.
+  DEF_BIT(11, ddi_b_clock_off);
+
+  // If this bit is set true, the DDI A Clock will be gated off for display
+  // engine.
+  //
+  // Drivers can use `is_clock_off_for_ddi` and `turn_off_clock_for_ddi`
+  // helper methods to read / write to corresponding fields.
+  DEF_BIT(10, ddi_a_clock_off);
+
+  // TODO(fxbug.dev/105240): Add DDI A/B/C Clock Select fields.
+
+  // Helper method to read clock off state at `ddi_*_clock_off` fields for
+  // `ddi`.
+  ValueType is_clock_off_for_ddi(Ddi ddi) const {
+    switch (ddi) {
+      case Ddi::DDI_A:
+        return ddi_a_clock_off();
+      case Ddi::DDI_B:
+        return ddi_b_clock_off();
+      case Ddi::DDI_C:
+        return ddi_c_clock_off();
+      case Ddi::DDI_TC_1:
+        return ddi_type_c_1_clock_off();
+      case Ddi::DDI_TC_2:
+        return ddi_type_c_2_clock_off();
+      case Ddi::DDI_TC_3:
+        return ddi_type_c_3_clock_off();
+      case Ddi::DDI_TC_4:
+        return ddi_type_c_4_clock_off();
+      case Ddi::DDI_TC_5:
+        return ddi_type_c_5_clock_off();
+      case Ddi::DDI_TC_6:
+        return ddi_type_c_6_clock_off();
+      default:
+        ZX_ASSERT_MSG(false, "Invalid ddi %d", ddi);
+    }
+  }
+
+  // Helper method to set clock off state at `ddi_*_clock_off` fields for
+  // `ddi`.
+  SelfType& turn_off_clock_for_ddi(Ddi ddi, bool turn_off) {
+    switch (ddi) {
+      case Ddi::DDI_A:
+        return set_ddi_a_clock_off(turn_off);
+      case Ddi::DDI_B:
+        return set_ddi_b_clock_off(turn_off);
+      case Ddi::DDI_C:
+        return set_ddi_c_clock_off(turn_off);
+      case Ddi::DDI_TC_1:
+        return set_ddi_type_c_1_clock_off(turn_off);
+      case Ddi::DDI_TC_2:
+        return set_ddi_type_c_2_clock_off(turn_off);
+      case Ddi::DDI_TC_3:
+        return set_ddi_type_c_3_clock_off(turn_off);
+      case Ddi::DDI_TC_4:
+        return set_ddi_type_c_4_clock_off(turn_off);
+      case Ddi::DDI_TC_5:
+        return set_ddi_type_c_5_clock_off(turn_off);
+      case Ddi::DDI_TC_6:
+        return set_ddi_type_c_6_clock_off(turn_off);
+      default:
+        ZX_ASSERT_MSG(false, "Invalid ddi %d", ddi);
+    }
+  }
+
+  static auto Get() { return hwreg::RegisterAddr<DdiClockConfigControlRegister0>(0x164280); }
+};
+
+// DDI_CLK_SEL
+// Type C DDI Clock Selection
+//
+// Each Type-C DDI has 5 PLL inputs: Type-C PLL, and Thunderbolt PLL with 4
+// different frequencies.
+// Tiger Lake: IHD-OS-TGL-Vol 12-1.22-Rev 2.0, Page 169 "PLL Arrangement"
+//
+// This register selects the clock source for a given Type-C DDI.
+//
+// Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev 2.0 Part 1, Page 356-357
+class TypeCDdiClockSelect : public hwreg::RegisterBase<TypeCDdiClockSelect, uint32_t> {
+ public:
+  // Select which clock to use for this DDI.
+  // Valid values are listed below in `ClockSelect` enum class.
+  //
+  // Driver can use `clock_select` and `set_clock_select` helper methods to
+  // read / write to this field.
+  DEF_FIELD(31, 28, clock_select_raw);
+
+  enum class ClockSelect : uint32_t {
+    kNone = 0b0000,
+    kTypeCPll = 0b1000,
+    kThunderbolt162MHz = 0b1100,
+    kThunderbolt270MHz = 0b1101,
+    kThunderbolt540MHz = 0b1110,
+    kThunderbolt810MHz = 0b1111,
+  };
+
+  // Helper method to read the `clock_select_raw` field and check its validity.
+  std::optional<ClockSelect> clock_select() const {
+    auto raw = clock_select_raw();
+    if (IsValidClockSelect(raw)) {
+      return static_cast<ClockSelect>(raw);
+    }
+    zxlogf(WARNING, "Invalid clock_select field: 0x%x", raw);
+    return std::nullopt;
+  }
+
+  // Helper method to set the `clock_select_raw` field using a strongly-typed
+  // enum class.
+  SelfType& set_clock_select(ClockSelect clock) {
+    return set_clock_select_raw(static_cast<ValueType>(clock));
+  }
+
+  static auto GetForDdi(Ddi ddi) {
+    // Register address at
+    // Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev 2.0 Part 1, Page 356
+    switch (ddi) {
+      case DDI_TC_1:
+        return hwreg::RegisterAddr<SelfType>(0x4610C);
+      case DDI_TC_2:
+        return hwreg::RegisterAddr<SelfType>(0x46110);
+      case DDI_TC_3:
+        return hwreg::RegisterAddr<SelfType>(0x46114);
+      case DDI_TC_4:
+        return hwreg::RegisterAddr<SelfType>(0x46118);
+      case DDI_TC_5:
+        return hwreg::RegisterAddr<SelfType>(0x4611C);
+      case DDI_TC_6:
+        return hwreg::RegisterAddr<SelfType>(0x46120);
+      default:
+        ZX_ASSERT_MSG(false, "DDI_CLK_SEL: Invalid DDI %d", ddi);
+    }
+  }
+
+ private:
+  static bool IsValidClockSelect(uint32_t clock_select_raw) {
+    switch (clock_select_raw) {
+      case 0b0000:
+      case 0b1000:
+      case 0b1100:
+      case 0b1101:
+      case 0b1110:
+      case 0b1111:
+        return true;
+      default:
+        return false;
+    }
   }
 };
 

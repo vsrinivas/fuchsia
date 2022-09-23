@@ -12,11 +12,8 @@
 #include <string>
 #include <unordered_map>
 #include <variant>
-#include <vector>
 
-#include "src/graphics/display/drivers/intel-i915-tgl/registers-ddi.h"
-#include "src/graphics/display/drivers/intel-i915-tgl/registers-dpll.h"
-#include "src/graphics/display/drivers/intel-i915-tgl/registers.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/hardware-common.h"
 
 namespace i915_tgl {
 
@@ -102,7 +99,7 @@ class DisplayPllManager {
   virtual DisplayPll* FindBestDpll(tgl_registers::Ddi ddi, bool is_edp, const DpllState& state) = 0;
 
  protected:
-  std::vector<std::unique_ptr<DisplayPll>> plls_;
+  std::unordered_map<tgl_registers::Dpll, std::unique_ptr<DisplayPll>> plls_;
   std::unordered_map<DisplayPll*, size_t> ref_count_;
   std::unordered_map<tgl_registers::Ddi, DisplayPll*> ddi_to_dpll_;
 };
@@ -146,6 +143,59 @@ class DpllManagerSkylake : public DisplayPllManager {
   // |DisplayPllManager|
   DisplayPll* FindBestDpll(tgl_registers::Ddi ddi, bool is_edp, const DpllState& state) final;
 
+  fdf::MmioBuffer* mmio_space_ = nullptr;
+};
+
+// Dekel PLL (DKL PLL) for Tiger Lake
+//
+// Each Type-C port has a Dekel PLL tied to that port.
+//
+// The programming sequences for Dekel PLL is available at:
+// Tiger Lake: IHD-OS-TGL-Vol 12-1.22-Rev 2.0 "DKL PLL Enable Sequence", Page
+// 188
+class DekelPllTigerLake : public DisplayPll {
+ public:
+  DekelPllTigerLake(fdf::MmioBuffer* mmio_space, tgl_registers::Dpll dpll);
+  ~DekelPllTigerLake() override = default;
+
+  // |DisplayPll|
+  bool Enable(const DpllState& state) final;
+
+  // |DisplayPll|
+  bool Disable() final;
+
+  // Returns DDI enum of the DDI tied to current Dekel PLL.
+  tgl_registers::Ddi ddi_id() const;
+
+ private:
+  bool EnableHdmi(const HdmiDpllState& state);
+  bool EnableDp(const DpDpllState& state);
+
+  fdf::MmioBuffer* mmio_space_ = nullptr;
+  bool enabled_ = false;
+};
+
+class DpllManagerTigerLake : public DisplayPllManager {
+ public:
+  explicit DpllManagerTigerLake(fdf::MmioBuffer* mmio_space);
+  ~DpllManagerTigerLake() override = default;
+
+  // |DisplayPllManager|
+  std::optional<DpllState> LoadState(tgl_registers::Ddi ddi) final;
+
+ private:
+  std::optional<DpllState> LoadTypeCPllState(tgl_registers::Ddi ddi);
+
+  // |DisplayPllManager|
+  bool MapImpl(tgl_registers::Ddi ddi, tgl_registers::Dpll dpll) final;
+
+  // |DisplayPllManager|
+  bool UnmapImpl(tgl_registers::Ddi ddi) final;
+
+  // |DisplayPllManager|
+  DisplayPll* FindBestDpll(tgl_registers::Ddi ddi, bool is_edp, const DpllState& state) final;
+
+  uint32_t reference_clock_khz_ = 0u;
   fdf::MmioBuffer* mmio_space_ = nullptr;
 };
 

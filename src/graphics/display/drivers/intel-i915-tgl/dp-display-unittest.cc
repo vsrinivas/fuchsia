@@ -46,7 +46,6 @@ class TestDpll : public i915_tgl::DisplayPll {
 class TestDpllManager : public i915_tgl::DisplayPllManager {
  public:
   explicit TestDpllManager() {
-    plls_.resize(kDplls.size());
     for (const auto dpll : kDplls) {
       plls_[dpll] = std::make_unique<TestDpll>(dpll);
       ref_count_[plls_[dpll].get()] = 0;

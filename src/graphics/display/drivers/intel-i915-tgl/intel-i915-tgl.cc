@@ -307,7 +307,8 @@ bool Controller::BringUpDisplayEngine(bool resume) {
 
   // Enable CDCLK PLL to 337.5mhz if the BIOS didn't already enable it. If it needs to be
   // something special (i.e. for eDP), assume that the BIOS already enabled it.
-  auto dpll_enable = tgl_registers::DpllEnable::Get(tgl_registers::DPLL_0).ReadFrom(mmio_space());
+  auto dpll_enable =
+      tgl_registers::DpllEnable::GetForSkylakeDpll(tgl_registers::DPLL_0).ReadFrom(mmio_space());
   if (!dpll_enable.enable_dpll()) {
     // Configure DPLL0
     auto dpll_ctl1 = tgl_registers::DpllControl1::Get().ReadFrom(mmio_space());
@@ -2097,7 +2098,11 @@ zx_status_t Controller::Init() {
     pipe_manager_ = std::make_unique<PipeManagerSkylake>(this);
   }
 
-  dpll_manager_ = std::make_unique<DpllManagerSkylake>(mmio_space());
+  if (is_tgl(device_id())) {
+    dpll_manager_ = std::make_unique<DpllManagerTigerLake>(mmio_space());
+  } else {
+    dpll_manager_ = std::make_unique<DpllManagerSkylake>(mmio_space());
+  }
 
   status = DdkAdd(ddk::DeviceAddArgs("intel_i915")
                       .set_inspect_vmo(inspector_.DuplicateVmo())

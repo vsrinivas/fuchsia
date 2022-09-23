@@ -117,21 +117,76 @@ class DpllConfig2 : public hwreg::RegisterBase<DpllConfig2, uint32_t> {
   }
 };
 
-// Virtual register which unifies the dpll enable bits (which are spread
-// across 4 registers)
+// DPLL_ENABLE
+// These registers are used to enable the PLLs for driving the ports.
+//
+// On Tiger Lake, these registers are defined as a single "DPLL_ENABLE"
+// register.
+//
+// On Skylake / Kaby Lake, there is no single "DPLL_ENABLE" register, but we
+// unify enablement registers for 4 different DPLLs into this "Virtual
+// register".
+//
+// Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev 2.0 Part 1, Page 656-657
+// Kaby Lake:
+// - LCPLL1_CTL: IHD-OS-KBL-Vol 2c-1.17 Part 1, Page 1121
+// - LCPLL2_CTL: IHD-OS-KBL-Vol 2c-1.17 Part 1, Page 1122
+// - WRPLL_CTL1 / WRPLL_CTL2: IHD-OS-KBL-Vol 2c-1.17 Part 2, Page 1349-1350
 class DpllEnable : public hwreg::RegisterBase<DpllEnable, uint32_t> {
  public:
   DEF_BIT(31, enable_dpll);
 
-  static auto Get(Dpll dpll) {
-    if (dpll == 0) {
-      return hwreg::RegisterAddr<DpllEnable>(0x46010);  // LCPLL1_CTL
-    } else if (dpll == 1) {
-      return hwreg::RegisterAddr<DpllEnable>(0x46014);  // LCPLL2_CTL
-    } else if (dpll == 2) {
-      return hwreg::RegisterAddr<DpllEnable>(0x46040);  // WRPLL_CTL1
-    } else {                                            // dpll == 3
-      return hwreg::RegisterAddr<DpllEnable>(0x46060);  // WRPLL_CTL2
+  DEF_BIT(30, pll_is_locked);
+
+  // This bit is for Tiger Lake only.
+  DEF_BIT(27, power_enable_request_tiger_lake);
+
+  // This bit is for Tiger Lake only.
+  DEF_BIT(26, power_is_enabled_tiger_lake);
+
+  static auto GetForSkylakeDpll(Dpll dpll) {
+    switch (dpll) {
+      case DPLL_0:
+        return hwreg::RegisterAddr<DpllEnable>(0x46010);  // LCPLL1_CTL
+      case DPLL_1:
+        return hwreg::RegisterAddr<DpllEnable>(0x46014);  // LCPLL2_CTL
+      case DPLL_2:
+        return hwreg::RegisterAddr<DpllEnable>(0x46040);  // WRPLL_CTL1
+      case DPLL_3:
+        return hwreg::RegisterAddr<DpllEnable>(0x46060);  // WRPLL_CTL2
+      default:
+        ZX_DEBUG_ASSERT_MSG(false, "Invalid DPLL (%d)", dpll);
+        return hwreg::RegisterAddr<DpllEnable>(0x0);
+    }
+  }
+
+  static auto GetForTigerLakeDpll(Dpll dpll) {
+    switch (dpll) {
+      // TODO(fxbug.dev/105240): Add DPLL4.
+      case DPLL_0:
+        return hwreg::RegisterAddr<DpllEnable>(0x46010);  // DPLL0_ENABLE
+      case DPLL_1:
+        return hwreg::RegisterAddr<DpllEnable>(0x46014);  // DPLL1_ENABLE
+      case DPLL_2:
+        return hwreg::RegisterAddr<DpllEnable>(0x46020);  // TBT_PLL_ENABLE
+      // Tiger Lake: On IHD-OS-TGL-Vol 2c-1.22-Rev 2.0, Page 656, it mentions
+      // that the MG register instances are used for Type-C in general, so they
+      // can control Dekel PLLs as well (for example, MGPLL1_ENABLE controls
+      // Dekel PLL Type-C Port 1).
+      case DPLL_TC_1:
+        return hwreg::RegisterAddr<DpllEnable>(0x46030);  // MGPLL1_ENABLE
+      case DPLL_TC_2:
+        return hwreg::RegisterAddr<DpllEnable>(0x46034);  // MGPLL2_ENABLE
+      case DPLL_TC_3:
+        return hwreg::RegisterAddr<DpllEnable>(0x46038);  // MGPLL3_ENABLE
+      case DPLL_TC_4:
+        return hwreg::RegisterAddr<DpllEnable>(0x4603C);  // MGPLL4_ENABLE
+      case DPLL_TC_5:
+        return hwreg::RegisterAddr<DpllEnable>(0x46040);  // MGPLL5_ENABLE
+      case DPLL_TC_6:
+        return hwreg::RegisterAddr<DpllEnable>(0x46044);  // MGPLL6_ENABLE
+      default:
+        ZX_ASSERT_MSG(false, "Invalid DPLL (%d)", dpll);
     }
   }
 };

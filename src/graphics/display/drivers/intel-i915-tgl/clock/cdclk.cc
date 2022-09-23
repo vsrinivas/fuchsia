@@ -70,7 +70,8 @@ CoreDisplayClockSkylake::CoreDisplayClockSkylake(fdf::MmioBuffer* mmio_space)
 }
 
 bool CoreDisplayClockSkylake::LoadState() {
-  auto dpll_enable = tgl_registers::DpllEnable::Get(tgl_registers::DPLL_0).ReadFrom(mmio_space_);
+  auto dpll_enable =
+      tgl_registers::DpllEnable::GetForSkylakeDpll(tgl_registers::DPLL_0).ReadFrom(mmio_space_);
   if (!dpll_enable.enable_dpll()) {
     zxlogf(ERROR, "Skylake CDCLK LoadState: DPLL0 is disabled");
     return false;
@@ -136,7 +137,8 @@ bool CoreDisplayClockSkylake::PostChangeFreq(uint32_t freq_khz) {
 }
 
 bool CoreDisplayClockSkylake::CheckFrequency(uint32_t freq_khz) {
-  auto dpll_enable = tgl_registers::DpllEnable::Get(tgl_registers::DPLL_0).ReadFrom(mmio_space_);
+  auto dpll_enable =
+      tgl_registers::DpllEnable::GetForSkylakeDpll(tgl_registers::DPLL_0).ReadFrom(mmio_space_);
   if (!dpll_enable.enable_dpll()) {
     zxlogf(ERROR, "Skylake CDCLK CheckFrequency: DPLL0 is disabled");
     return false;
