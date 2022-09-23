@@ -27,7 +27,7 @@ protocol Empty {};
   ASSERT_NOT_NULL(protocol);
 
   EXPECT_EQ(protocol->methods.size(), 0);
-  EXPECT_EQ(protocol->openness, fidl::types::Openness::kAjar);
+  EXPECT_EQ(protocol->openness, fidl::types::Openness::kOpen);
   EXPECT_EQ(protocol->all_methods.size(), 0);
 }
 
@@ -92,7 +92,7 @@ protocol Empty {};
   ASSERT_NOT_NULL(protocol);
 
   EXPECT_EQ(protocol->methods.size(), 0);
-  EXPECT_EQ(protocol->openness, fidl::types::Openness::kAjar);
+  EXPECT_EQ(protocol->openness, fidl::types::Openness::kOpen);
   EXPECT_EQ(protocol->all_methods.size(), 0);
 }
 

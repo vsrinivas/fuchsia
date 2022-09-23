@@ -484,7 +484,7 @@ void ConsumeStep::ConsumeProtocolDeclaration(
   std::unique_ptr<AttributeList> attributes;
   ConsumeAttributeList(std::move(protocol_declaration->attributes), &attributes);
 
-  auto openness = types::Openness::kAjar;
+  auto openness = types::Openness::kOpen;
   if (protocol_declaration->modifiers != nullptr &&
       protocol_declaration->modifiers->maybe_openness.has_value())
     openness = protocol_declaration->modifiers->maybe_openness->value;
