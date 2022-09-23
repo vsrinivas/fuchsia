@@ -24,7 +24,7 @@
         {{! These should probably be predicated on the host CPU. }}
             "4,threads=2",
         {{#if guest.fvm_image}}
-            "-drive", "file={{guest.fvm_image}},format=raw,if=none,id=vdisk",
+            "-drive", "file={{guest.fvm_image}},format=raw,if=none,id=vdisk,cache=unsafe",
             "-object", "iothread,id=iothread0",
             "-device", "virtio-blk-pci,drive=vdisk,iothread=iothread0",
         {{/if}}
