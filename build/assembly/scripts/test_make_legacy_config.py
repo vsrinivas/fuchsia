@@ -91,6 +91,11 @@ class MakeLegacyConfig(unittest.TestCase):
                 "package_name": "base_driver",
                 "distribution_manifest": distribution_manifest_path
             }
+            shell_commands_file = {
+                'accountctl': ['accountctl'],
+                'activity-ctl': ['activity_ctl'],
+                'audio_listener': ['audio_listener'],
+            }
             # Write out the driver component distribution manifest
             with open(distribution_manifest_path,
                       'w') as distribution_manifest_file:
@@ -125,7 +130,7 @@ class MakeLegacyConfig(unittest.TestCase):
             outdir = "outdir"
             aib, assembly_config, deps = make_legacy_config.copy_to_assembly_input_bundle(
                 image_assembly, [], outdir, [driver_manifest_path],
-                [driver_component_file])
+                [driver_component_file], shell_commands_file)
 
             # Validate the contents of the AssemblyInputBundle itself
             self.assertEqual(
@@ -156,6 +161,7 @@ class MakeLegacyConfig(unittest.TestCase):
                     DriverDetails(
                         "packages/base_drivers/base_driver", ["meta/driver.cm"])
                 ])
+            self.assertEqual(aib.shell_commands, shell_commands_file)
 
             # Make sure all the manifests were created in the correct location.
             for package_set in ["base", "cache", "system"]:

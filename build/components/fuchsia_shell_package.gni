@@ -62,12 +62,14 @@ template("fuchsia_shell_package") {
     fuchsia_package(target_name) {
       forward_variables_from(invoker,
                              [
+                               "shell_commands",
                                "data_deps",
                                "deps",
                                "disable_elf_binaries_checks",
                                "testonly",
                                "visibility",
                              ])
+      is_shell_package = true
       package_name = package_name
       if (!defined(deps)) {
         deps = []

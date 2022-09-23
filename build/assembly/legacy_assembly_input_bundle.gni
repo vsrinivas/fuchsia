@@ -74,6 +74,11 @@ template("legacy_assembly_input_bundle") {
     _base_driver_packages = invoker.base_driver_packages
   }
 
+  _shell_command_packages = []
+  if (defined(invoker.shell_command_packages)) {
+    _shell_command_packages = invoker.shell_command_packages
+  }
+
   labels = {
     # Extract the assembly label's dir and name components:
     image_assembly_name = get_label_info(image_assembly_label, "name")
@@ -94,6 +99,7 @@ template("legacy_assembly_input_bundle") {
     base_driver_package_list = "${target_name}.package_manifest_list.drivers"
     driver_package_component_files =
         "${target_name}_driver_package_component_files"
+    shell_commands_manifest_list = "${target_name}.shell_commands_manifest_list"
   }
 
   files = {
@@ -134,6 +140,8 @@ template("legacy_assembly_input_bundle") {
         "${assembly_input_bundle_dir}.package_manifest_list.drivers"
     driver_package_component_files =
         "${target_gen_dir}/${target_name}.driver_package_component_files"
+    shell_command_manifests_list =
+        "${assembly_input_bundle_dir}.package_manifest_list.shell_commands"
   }
 
   package_manifests_list(labels.base_driver_package_list) {
@@ -156,6 +164,19 @@ template("legacy_assembly_input_bundle") {
     outputs = [ "${files.driver_package_component_files}" ]
     data_keys = [ "driver_package_component_files" ]
     walk_keys = [ "driver_package_component_files_barrier" ]
+    output_conversion = "json"
+  }
+
+  generated_file(labels.shell_commands_manifest_list) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
+    deps = _shell_command_packages
+    outputs = [ "${files.shell_command_manifests_list}" ]
+    data_keys = [ "shell_commands_distribution_manifests" ]
+    walk_keys = [ "shell_commands_barrier" ]
     output_conversion = "json"
   }
 
@@ -193,7 +214,6 @@ template("legacy_assembly_input_bundle") {
 
     outputs = [ files.assembly_input_bundle_config ]
     depfile = files.assembly_input_bundle_depfile
-
     args = [
       "--image-assembly-config",
       rebase_path(files.image_assembly_config, root_build_dir),
@@ -205,6 +225,10 @@ template("legacy_assembly_input_bundle") {
       rebase_path(files.base_driver_package_list, root_build_dir),
       "--base-driver-components-files-list",
       rebase_path(files.driver_package_component_files, root_build_dir),
+
+      # TODO: This flag should be turned on when we're ready to generate the shell commands package through assembly
+      # "--shell-commands-packages-list",
+      # rebase_path(files.shell_command_manifests_list, root_build_dir),
     ]
 
     # If packaging or archiving the AIB, write out the fini manifest needed to
@@ -225,6 +249,7 @@ template("legacy_assembly_input_bundle") {
     deps = [
       ":${labels.base_driver_package_list}",
       ":${labels.driver_package_component_files}",
+      ":${labels.shell_commands_manifest_list}",
       labels.assemble_system_image_assembly_config,
     ]
 

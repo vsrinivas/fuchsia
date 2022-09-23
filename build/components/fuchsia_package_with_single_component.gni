@@ -80,13 +80,21 @@ template("fuchsia_package_with_single_component") {
   fuchsia_component(component_target) {
     forward_variables_from(invoker,
                            [
-                             "data_deps",
                              "deps",
+                             "data_deps",
                              "manifest",
                              "manifest_deps",
                              "restricted_features",
                              "testonly",
                            ])
+    if (!defined(deps)) {
+      deps = []
+    }
+
+    if (defined(invoker.shell_commands)) {
+      deps += invoker.shell_commands
+    }
+
     component_name = component_name
     visibility = [ ":*" ]
   }
@@ -94,6 +102,8 @@ template("fuchsia_package_with_single_component") {
   fuchsia_package(target_name) {
     forward_variables_from(invoker,
                            [
+                             "is_shell_package",
+                             "shell_commands",
                              "disable_elf_binaries_checks",
                              "testonly",
                              "visibility",

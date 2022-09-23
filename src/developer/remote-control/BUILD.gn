@@ -161,6 +161,7 @@ fuchsia_package("pkg") {
     ":remote-control-component",
     ":remote-control-runner_shell_command",
   ]
+  shell_commands = [ "//src/developer/remote-control/runner" ]
 }
 
 # This group is cached in core. Only add dependencies to this

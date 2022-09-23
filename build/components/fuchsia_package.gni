@@ -121,6 +121,16 @@ import("//tools/configc/build/config.gni")
 #     need to be listed as additional `deps` of the `fuchsia_package` target.
 #     Type: list of scopes
 #
+#   shell_commands (optional)
+#     An explicit list of dependencies included as part of the fuchsia package invocation that are
+#     shell command dependencies to include in the shell command distribution manifest and it's
+#     subsequent metadata walk
+#
+#   is_shell_command (optional)
+#     Used internally to implement fuchsia_shell_package(). Use with caution, as this flag marks
+#     all the package's binaries as shell commands and includes them in the shell_commands package
+#     during the generation of the legacy_assembly_input_bundle
+#
 #   data_deps
 #   deps
 #   testonly
@@ -136,6 +146,9 @@ template("fuchsia_package") {
     if (defined(invoker.package_name)) {
       package_name = invoker.package_name
     }
+
+    shell_commands_manifest_target = "${target_name}.shell_commands_manifest"
+    shell_commands_manifest = "$target_out_dir/$shell_commands_manifest_target"
 
     _files = {
       fini_manifest = "$target_out_dir/${target_name}_manifest"
@@ -161,6 +174,43 @@ template("fuchsia_package") {
       }
     }
 
+    _is_shell_package =
+        (defined(invoker.is_shell_package) && invoker.is_shell_package) ||
+        (defined(invoker.shell_commands) && invoker.shell_commands != [])
+
+    if (_is_shell_package) {
+      # Collect all distribution entries from deps.
+      distribution_manifest(shell_commands_manifest_target) {
+        forward_variables_from(invoker, [ "testonly" ])
+        visibility = [ ":*" ]
+
+        package_manifest_path = _files.package_manifest
+
+        if (defined(invoker.shell_commands)) {
+          deps = invoker.shell_commands
+        } else {
+          deps = invoker.deps
+        }
+
+        outputs = [ shell_commands_manifest ]
+
+        metadata = {
+          shell_commands_distribution_manifests = [
+            {
+              manifest_path = rebase_path(package_manifest_path, root_build_dir)
+              package_name = package_name
+            },
+          ]
+          shell_commands_barrier = []
+        }
+      }
+    } else {
+      not_needed([
+                   "shell_commands_manifest_target",
+                   "shell_commands_manifest",
+                 ])
+    }
+
     # Generate package manifest
     package_manifest_target = "${target_name}_manifest"
     fini_manifest(package_manifest_target) {
@@ -172,6 +222,11 @@ template("fuchsia_package") {
       if (!defined(deps)) {
         deps = []
       }
+
+      if (defined(invoker.shell_commands)) {
+        deps += invoker.shell_commands
+      }
+
       deps += [ ":$meta_package_target" ]
       visibility = [ ":*" ]
       outputs = [ _files.fini_manifest ]
@@ -283,6 +338,10 @@ template("fuchsia_package") {
       if (defined(visibility)) {
         visibility += [ ":${invoker.target_name}" ]
       }
+
+      if (_is_shell_package) {
+        deps += [ ":$shell_commands_manifest_target" ]
+      }
     }
 
     group(target_name) {
@@ -292,9 +351,11 @@ template("fuchsia_package") {
                                "visibility",
                              ])
       public_deps = [ ":$_pm_build_target" ]
+      deps = []
       if (_validate_structured_config) {
-        deps = [ ":$_validate_config_target" ]
+        deps += [ ":$_validate_config_target" ]
       }
+
       if (_is_driver_package) {
         metadata = {
           # Allow exclusion of driver packages by assembly

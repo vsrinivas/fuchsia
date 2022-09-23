@@ -9,9 +9,10 @@ removing any other configuration sets from it.
 """
 
 import argparse
+from collections import defaultdict
 import json
 import sys
-from typing import List, Set, Tuple
+from typing import Dict, List, Set, Tuple
 
 from assembly import AssemblyInputBundle, AIBCreator, FileEntry, FilePath, ImageAssemblyConfig
 from depfile import DepFile
@@ -28,7 +29,8 @@ DepSet = Set[FilePath]
 def copy_to_assembly_input_bundle(
     legacy: ImageAssemblyConfig, config_data_entries: FileEntryList,
     outdir: FilePath, base_driver_packages_list: List[str],
-    base_driver_components_files_list: List[dict]
+    base_driver_components_files_list: List[dict], shell_commands: Dict[str,
+                                                                        List]
 ) -> Tuple[AssemblyInputBundle, FilePath, DepSet]:
     """
     Copy all the artifacts from the ImageAssemblyConfig into an AssemblyInputBundle that is in
@@ -56,7 +58,7 @@ def copy_to_assembly_input_bundle(
             " in base_driver_packages: {base_driver_packages_list}")
     aib_creator.base_driver_component_files = base_driver_components_files_list
     aib_creator.config_data = config_data_entries
-
+    aib_creator.shell_commands = shell_commands
     return aib_creator.build()
 
 
@@ -77,6 +79,8 @@ def main():
         "--base-driver-packages-list", type=argparse.FileType('r'))
     parser.add_argument(
         "--base-driver-components-files-list", type=argparse.FileType('r'))
+    parser.add_argument(
+        "--shell-commands-packages-list", type=argparse.FileType('r'))
     args = parser.parse_args()
 
     # Read in the legacy config and the others to subtract from it
@@ -103,11 +107,29 @@ def main():
         base_driver_components_files_list = json.load(
             args.base_driver_components_files_list)
 
+    shell_commands = dict()
+    if args.shell_commands_packages_list:
+        shell_commands = defaultdict(set)
+        for package in json.load(args.shell_commands_packages_list):
+            manifest_path, package_name = package["manifest_path"], package[
+                "package_name"]
+            with open(manifest_path, "r") as fname:
+                package_aib = json.load(fname)
+                shell_commands[package_name].update(
+                    {
+                        blob["path"]
+                        for blob in package_aib["blobs"]
+                        if blob['path'].startswith("bin/")
+                    })
+
     # Create an Assembly Input Bundle from the remaining contents
     (assembly_input_bundle, assembly_config_manifest_path,
      deps) = copy_to_assembly_input_bundle(
          legacy, config_data_entries, args.outdir, base_driver_packages_list,
-         base_driver_components_files_list)
+         base_driver_components_files_list, {
+             package: sorted(list(components))
+             for (package, components) in shell_commands.items()
+         })
 
     # Write out a fini manifest of the files that have been copied, to create a
     # package or archive that contains all of the files in the bundle.

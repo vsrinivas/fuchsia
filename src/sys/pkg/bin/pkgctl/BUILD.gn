@@ -63,7 +63,7 @@ renamed_binary("pkgctl-binary") {
 
 fuchsia_package("pkgctl-bin") {
   package_name = "pkgctl"
-  deps = [ ":pkgctl-binary" ]
+  shell_commands = [ ":pkgctl-binary" ]
 }
 
 fuchsia_unittest_package("pkgctl-tests") {
