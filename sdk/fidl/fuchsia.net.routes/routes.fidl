@@ -17,7 +17,7 @@ type Destination = table {
     /// link that requires a MAC address.
     2: mac fuchsia.net.MacAddress;
     /// The interface identifier over which the destination can be reached.
-    3: interface_id fuchsia.net.interface_id;
+    3: interface_id fuchsia.net.InterfaceId;
     /// The preferred local IP address used to communicate with the destination.
     4: source_address fuchsia.net.IpAddress;
 };

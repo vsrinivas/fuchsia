@@ -18,7 +18,7 @@ const MAX_HOSTNAME_SIZE uint64 = 255;
 alias Hostname = string:MAX_HOSTNAME_SIZE;
 
 /// A unique non-zero interface identifier.
-alias interface_id = uint64;
+alias InterfaceId = uint64;
 
 /// IpVersion is an IP version.
 type IpVersion = strict enum {

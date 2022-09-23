@@ -134,7 +134,7 @@ protocol View {
     // TODO(fxbug.dev/59058): Reading configuration should be moved to
     // interface-scoped protocols in fuchsia.net.interfaces.
     GetUnreachabilityConfig(struct {
-        interface fuchsia.net.interface_id;
+        interface fuchsia.net.InterfaceId;
         ip_version fuchsia.net.IpVersion;
     }) -> (struct {
         config UnreachabilityConfig;
@@ -156,7 +156,7 @@ protocol Controller {
     /// * error `ZX_ERR_NOT_SUPPORTED` if `interface` does not keep a neighbor
     ///     table (e.g. point-to-point links).
     AddEntry(struct {
-        interface fuchsia.net.interface_id;
+        interface fuchsia.net.InterfaceId;
         neighbor fuchsia.net.IpAddress;
         mac fuchsia.net.MacAddress;
     }) -> (struct {}) error zx.status;
@@ -171,7 +171,7 @@ protocol Controller {
     /// * error `ZX_ERR_NOT_SUPPORTED` if `interface` does not keep a neighbor
     ///     table (e.g. point-to-point links).
     RemoveEntry(struct {
-        interface fuchsia.net.interface_id;
+        interface fuchsia.net.InterfaceId;
         neighbor fuchsia.net.IpAddress;
     }) -> (struct {}) error zx.status;
 
@@ -184,7 +184,7 @@ protocol Controller {
     /// * error `ZX_ERR_NOT_SUPPORTED` if `interface` does not keep a neighbor
     ///     table (e.g. point-to-point links).
     ClearEntries(struct {
-        interface fuchsia.net.interface_id;
+        interface fuchsia.net.InterfaceId;
         ip_version fuchsia.net.IpVersion;
     }) -> (struct {}) error zx.status;
 
@@ -206,7 +206,7 @@ protocol Controller {
     // TODO(fxbug.dev/59058): Updating configuration should be moved to
     // interface-scoped protocols in fuchsia.net.interfaces.
     UpdateUnreachabilityConfig(struct {
-        interface fuchsia.net.interface_id;
+        interface fuchsia.net.InterfaceId;
         ip_version fuchsia.net.IpVersion;
         config UnreachabilityConfig;
     }) -> (struct {}) error zx.status;

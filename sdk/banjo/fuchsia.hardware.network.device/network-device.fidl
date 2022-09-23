@@ -115,18 +115,18 @@ const MAX_PORTS uint8 = 32;
 ///
 /// VMO identifiers are reported to devices through
 /// [`NetworkDeviceImpl.PrepareVmo`].
-alias vmo_id = uint8;
+alias VmoId = uint8;
 
 /// Buffer identifier.
 ///
 /// Rx space buffers and tx buffers are identified by these when exchanged
 /// between interface and implementation.
-alias buffer_id = uint32;
+alias BufferId = uint32;
 
 /// Port identifier.
 ///
 /// Port identifiers are always in the range [0, [`MAX_PORTS`]).
-alias port_id = uint8;
+alias PortId = uint8;
 
 /// A contiguous memory region in a VMO.
 ///
@@ -135,7 +135,7 @@ alias port_id = uint8;
 /// memory.
 type BufferRegion = struct {
     /// VMO backing this region.
-    vmo vmo_id;
+    vmo VmoId;
     /// Offset, in bytes, of data chunk in VMO.
     offset uint64;
     /// Length, in bytes, of data chunk in VMO.
@@ -160,7 +160,7 @@ type FrameInfo = strict union {
 /// Metadata associated with a [`TxBuffer`] or an [`RxBuffer`].
 type BufferMetadata = struct {
     /// Destination or source port identifier for this buffer.
-    port port_id;
+    port PortId;
     /// Extra frame metadata information. The type of the
     /// [`FrameInfo`] union is defined by the value in `info_type`.
     info FrameInfo;
@@ -180,7 +180,7 @@ type BufferMetadata = struct {
 /// A transmit buffer containing a single frame.
 type TxBuffer = struct {
     /// Unique buffer identifier.
-    id buffer_id;
+    id BufferId;
     /// Regions of VMO holding frame data.
     data vector<BufferRegion>:MAX_BUFFER_PARTS;
     /// Metadata associated with this buffer.
@@ -201,7 +201,7 @@ type TxBuffer = struct {
 /// always be returned as an [`RxBufferPart`] within an [`RxBuffer`].
 type RxSpaceBuffer = struct {
     /// Unique buffer identifier.
-    id buffer_id;
+    id BufferId;
     /// VMO region where buffer space is located.
     region BufferRegion;
 };
@@ -211,7 +211,7 @@ type RxSpaceBuffer = struct {
 type RxBufferPart = struct {
     /// The buffer identifier informed in the [`RxSpaceBuffer`] that originated
     /// this `RxBuffer`.
-    id buffer_id;
+    id BufferId;
     /// Offset in bytes from [`RxSpaceBuffer`]'s start where inbound data
     /// begins.
     ///
@@ -238,7 +238,7 @@ type RxBuffer = struct {
 type TxResult = struct {
     /// The buffer identifier informed in the [`TxBuffer`] that originated this
     /// `TxResult`.
-    id buffer_id;
+    id BufferId;
     /// The result status to report.
     ///
     /// Error results map to their equivalents in
@@ -320,7 +320,7 @@ protocol NetworkDeviceIfc {
     /// + request `id` port identifier.
     /// + request `new_status` new port's status.
     PortStatusChanged(struct {
-        id port_id;
+        id PortId;
         new_status PortStatus;
     });
     /// Instantiates a new port with `id`.
@@ -335,7 +335,7 @@ protocol NetworkDeviceIfc {
     /// + request `id` new port identifier.
     /// + request `port` handle to network port implementation.
     AddPort(resource struct {
-        id port_id;
+        id PortId;
         port client_end:NetworkPort;
     });
     /// Destroys port with `id`.
@@ -345,7 +345,7 @@ protocol NetworkDeviceIfc {
     ///
     /// + request `id` removed port identifier.
     RemovePort(struct {
-        id port_id;
+        id PortId;
     });
     /// Notifies interface of incoming rx data, contained in [`RxBuffer`].
     ///
@@ -624,7 +624,7 @@ protocol NetworkDeviceImpl {
     /// closed.
     @async
     PrepareVmo(resource struct {
-        id vmo_id;
+        id VmoId;
         vmo zx.handle:VMO;
     }) -> (struct {
         s zx.status;
@@ -638,7 +638,7 @@ protocol NetworkDeviceImpl {
     ///
     /// + request `id` VMO identifier.
     ReleaseVmo(struct {
-        id vmo_id;
+        id VmoId;
     });
     /// Informs the device that it should start or stop reporting snooped
     /// transmit frames through [`NetworkDeviceIfc.Snoop`].

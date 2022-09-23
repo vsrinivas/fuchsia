@@ -21,7 +21,7 @@ protocol Interfaces {
     ///     the interface. Closed without a terminal event if `id` does not
     ///     match an existing interface.
     GetAdmin(resource struct {
-        id fuchsia.net.interface_id;
+        id fuchsia.net.InterfaceId;
         control server_end:fuchsia.net.interfaces.admin.Control;
     });
 
@@ -30,7 +30,7 @@ protocol Interfaces {
     /// + request `id` identifies the interface whose MAC is requested.
     /// - response `mac` is the interface's MAC address, if it has one.
     GetMac(struct {
-        id fuchsia.net.interface_id;
+        id fuchsia.net.InterfaceId;
     }) -> (struct {
         mac box<fuchsia.net.MacAddress>;
     }) error strict enum {
@@ -47,7 +47,7 @@ protocol Interfaces {
     /// + request `id` identifies the interface whose port is granted.
     /// + request `port` grants access to the interface's device port.
     GetPort(resource struct {
-        id fuchsia.net.interface_id;
+        id fuchsia.net.InterfaceId;
         port server_end:fuchsia.hardware.network.Port;
     });
 };

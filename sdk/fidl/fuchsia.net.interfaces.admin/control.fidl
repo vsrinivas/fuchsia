@@ -81,7 +81,7 @@ protocol Control {
     ///
     /// - response `id` the interface identifier.
     GetId() -> (struct {
-        id fuchsia.net.interface_id;
+        id fuchsia.net.InterfaceId;
     });
 
     /// Sets the configuration for the interface.
@@ -204,7 +204,7 @@ protocol DeviceControl {
             /// New interface name.
             ///
             /// If not set, an implementation-defined name will be selected.
-            1: name fuchsia.net.interfaces.name;
+            1: name fuchsia.net.interfaces.Name;
             /// The default metric value used for routes through this interface.
             ///
             /// If not set, the server will use a sensible default.

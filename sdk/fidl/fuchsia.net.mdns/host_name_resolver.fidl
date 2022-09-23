@@ -59,7 +59,7 @@ type HostAddress = struct {
     /// Interface through which the address was received. In the case of the local host, this will
     /// be the interface id of the interface whose address is given by `address`. In the case of
     /// local proxy hosts, this value will be zero.
-    interface fuchsia.net.interface_id;
+    interface fuchsia.net.InterfaceId;
 
     /// Time-to-live of the relevant A or AAAA resource. In the case of the local host or local
     /// proxy hosts, this value will be 2 minutes, the default A/AAAA TTL.

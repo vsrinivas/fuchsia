@@ -14,7 +14,7 @@ using zx;
 const INTERFACE_NAME_LENGTH uint8 = 15;
 
 /// An interface name as a sequence of bytes.
-alias name = string:INTERFACE_NAME_LENGTH;
+alias Name = string:INTERFACE_NAME_LENGTH;
 
 // TODO(https://fxbug.dev/7913): Use built-in empty struct when available.
 type Empty = struct {};
@@ -60,7 +60,7 @@ type PreferredLifetimeInfo = strict union {
 type Properties = table {
     /// An opaque identifier for the interface. Its value will not be reused
     /// even if the device is removed and subsequently re-added. Immutable.
-    1: id fuchsia.net.interface_id;
+    1: id fuchsia.net.InterfaceId;
     /// The addresses currently assigned to the interface.
     ///
     /// Addresses are sorted on [`Address.addr`], and no two addresses can
@@ -104,7 +104,7 @@ type Properties = table {
     /// Whether there is a default IPv6 route through this interface.
     6: has_default_ipv6_route bool;
     /// The name of the interface. Immutable.
-    7: name name;
+    7: name Name;
 };
 
 /// Network interface state inspection and observation.
@@ -166,7 +166,7 @@ protocol Watcher {
             /// All fields are set.
             2: added Properties;
             /// ID of an interface that was removed while watching.
-            3: removed fuchsia.net.interface_id;
+            3: removed fuchsia.net.InterfaceId;
             /// Properties of an interface that changed while watching.
             ///
             /// Only [`Properties.id`] and changed fields are set.

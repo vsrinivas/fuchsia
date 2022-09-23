@@ -45,7 +45,7 @@ type BasePortConfig = table {
     /// Port identifier.
     ///
     /// Required.
-    1: id fuchsia.hardware.network.base_port_id;
+    1: id fuchsia.hardware.network.BasePortId;
     /// Device MTU (maximum transmit unit).
     ///
     /// Valid iff less than or equal to [`MAX_MTU`].
@@ -157,7 +157,7 @@ type Frame = table {
     /// Frame's destination or source port identifier.
     ///
     /// Required.
-    4: port fuchsia.hardware.network.base_port_id;
+    4: port fuchsia.hardware.network.BasePortId;
 };
 
 /// A logical port attached to a [`fuchsia.net.tun/Device`].
@@ -354,7 +354,7 @@ protocol DevicePair {
     /// + request `id` identifier of the port to remove.
     /// * error `ZX_ERR_NOT_FOUND` if `id` does not map to an existing port.
     RemovePort(struct {
-        id fuchsia.hardware.network.base_port_id;
+        id fuchsia.hardware.network.BasePortId;
     }) -> (struct {}) error zx.status;
     /// Connects to the underlying left device endpoint.
     ///
@@ -373,7 +373,7 @@ protocol DevicePair {
     /// + request `id` requested port identifier.
     /// + request `port` grants access to the requested port on the left device.
     GetLeftPort(resource struct {
-        id fuchsia.hardware.network.base_port_id;
+        id fuchsia.hardware.network.BasePortId;
         port server_end:fuchsia.hardware.network.Port;
     });
     /// Connects to an underlying right port.
@@ -381,7 +381,7 @@ protocol DevicePair {
     /// + request `id` requested port identifier.
     /// + request `port` grants access to the requested port on the right device.
     GetRightPort(resource struct {
-        id fuchsia.hardware.network.base_port_id;
+        id fuchsia.hardware.network.BasePortId;
         port server_end:fuchsia.hardware.network.Port;
     });
 };

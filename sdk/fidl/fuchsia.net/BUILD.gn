@@ -13,7 +13,4 @@ fidl("fuchsia.net") {
     "overview.fidl",
     "socket.fidl",
   ]
-
-  # TODO(fxbug.dev/109746): Re-enable.
-  excluded_checks = [ "invalid-case-for-decl-name" ]
 }

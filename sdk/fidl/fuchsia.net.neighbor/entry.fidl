@@ -20,7 +20,7 @@ type Entry = table {
     /// Identifier for the interface used for communicating with the neighbor.
     ///
     /// Required.
-    1: interface fuchsia.net.interface_id;
+    1: interface fuchsia.net.InterfaceId;
 
     /// IP address of the neighbor.
     ///

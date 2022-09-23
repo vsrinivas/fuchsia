@@ -22,7 +22,4 @@ fidl("fuchsia.hardware.network") {
     "//sdk/fidl/fuchsia.net",
     "//zircon/vdso/zx",
   ]
-
-  # TODO(fxbug.dev/109746): Re-enable.
-  excluded_checks = [ "invalid-case-for-decl-name" ]
 }

@@ -12,14 +12,14 @@ const MAX_PORTS uint8 = 32;
 
 /// The base identifier of a port within a device. Always less than
 /// [`MAX_PORTS`].
-alias base_port_id = uint8;
+alias BasePortId = uint8;
 
 /// A device port identifier.
 type PortId = struct {
     /// The base identifier for the port.
     ///
     /// Generally identifies a port instance in hardware.
-    base base_port_id;
+    base BasePortId;
     /// An implementation-defined identifier that is guaranteed to change on
     /// every instantiation of the identified port.
     salt uint8;

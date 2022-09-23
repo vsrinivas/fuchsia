@@ -12,7 +12,4 @@ fidl("fuchsia.net.stack") {
     "//sdk/fidl/fuchsia.net",
     "//sdk/fidl/fuchsia.net.name",
   ]
-
-  # TODO(fxbug.dev/109746): Re-enable.
-  excluded_checks = [ "invalid-case-for-decl-name" ]
 }

@@ -142,11 +142,11 @@ protocol BaseSocket {
 
     /// Set `SOL_SOCKET` -> `SO_BINDTODEVICE`.
     SetBindToDevice(struct {
-        value fuchsia.net.interfaces.name;
+        value fuchsia.net.interfaces.Name;
     }) -> (struct {}) error fuchsia.posix.Errno;
     /// Get `SOL_SOCKET` -> `SO_BINDTODEVICE`.
     GetBindToDevice() -> (struct {
-        value fuchsia.net.interfaces.name;
+        value fuchsia.net.interfaces.Name;
     }) error fuchsia.posix.Errno;
 
     /// Set `SOL_SOCKET` -> `SO_TIMESTAMP`.
@@ -253,7 +253,7 @@ protocol BaseNetworkSocket {
 
     /// Set `SOL_IP` -> `IP_MULTICAST_IF`.
     SetIpMulticastInterface(struct {
-        iface fuchsia.net.interface_id;
+        iface fuchsia.net.InterfaceId;
         address fuchsia.net.Ipv4Address;
     }) -> (struct {}) error fuchsia.posix.Errno;
     /// Get `SOL_IP` -> `IP_MULTICAST_IF`.
@@ -301,11 +301,11 @@ protocol BaseNetworkSocket {
 
     /// Set `SOL_IPV6` -> `IPV6_MULTICAST_IF`.
     SetIpv6MulticastInterface(struct {
-        value fuchsia.net.interface_id;
+        value fuchsia.net.InterfaceId;
     }) -> (struct {}) error fuchsia.posix.Errno;
     /// Get `SOL_IPV6` -> `IPV6_MULTICAST_IF`.
     GetIpv6MulticastInterface() -> (struct {
-        value fuchsia.net.interface_id;
+        value fuchsia.net.InterfaceId;
     }) error fuchsia.posix.Errno;
 
     /// Set `SOL_IPV6` -> `IPV6_UNICAST_HOPS`.
@@ -395,7 +395,7 @@ protocol BaseNetworkSocket {
 /// IPv4 multicast membership options.
 type IpMulticastMembership = struct {
     /// Interface index for membership.
-    iface fuchsia.net.interface_id;
+    iface fuchsia.net.InterfaceId;
     /// Local interface address requesting or relinquishing ownership.
     local_addr fuchsia.net.Ipv4Address;
     /// Address of the multicast group the membership refers to.
@@ -405,7 +405,7 @@ type IpMulticastMembership = struct {
 /// IPv6 multicast membership options.
 type Ipv6MulticastMembership = struct {
     /// Interface index for membership.
-    iface fuchsia.net.interface_id;
+    iface fuchsia.net.InterfaceId;
     /// Address of the multicast group the membership refers to.
     mcast_addr fuchsia.net.Ipv6Address;
 };
@@ -506,7 +506,7 @@ type NetworkSocketRecvControlData = table {
         /// Present if the `SOL_IPV6` -> `IPV6_RECVPKTINFO` option is enabled.
         3: pktinfo @generated_name("Ipv6PktInfoRecvControlData") struct {
             /// The index of the interface on which the IP packet was received.
-            iface fuchsia.net.interface_id;
+            iface fuchsia.net.InterfaceId;
             /// The destination address specified in the received packet's IP
             /// header.
             header_destination_addr fuchsia.net.Ipv6Address;
@@ -1080,7 +1080,7 @@ type InterfaceAddresses = table {
     /// ID of the interface.
     1: id uint64;
     /// Name of the interface.
-    2: name fuchsia.net.interfaces.name;
+    2: name fuchsia.net.interfaces.Name;
     3: reserved;
     /// All addresses currently assigned to the interface.
     4: addresses vector<fuchsia.net.Subnet>:MAX;
@@ -1196,19 +1196,19 @@ protocol Provider {
     InterfaceIndexToName(struct {
         index uint64;
     }) -> (struct {
-        name fuchsia.net.interfaces.name;
+        name fuchsia.net.interfaces.Name;
     }) error zx.status;
     /// Looks up an interface by its name and returns its index. Returns
     /// `ZX_ERR_NOT_FOUND` if the specified name doesn't exist.
     InterfaceNameToIndex(struct {
-        name fuchsia.net.interfaces.name;
+        name fuchsia.net.interfaces.Name;
     }) -> (struct {
         index uint64;
     }) error zx.status;
     /// Looks up an interface by its name and returns its flags. Returns
     /// `ZX_ERR_NOT_FOUND` if the specified name doesn't exist.
     InterfaceNameToFlags(struct {
-        name fuchsia.net.interfaces.name;
+        name fuchsia.net.interfaces.Name;
     }) -> (struct {
         flags InterfaceFlags;
     }) error zx.status;

@@ -101,7 +101,7 @@ protocol Ipv6RoutingTableController {
     WatchRoutingEvents() -> (struct {
         dropped_events uint64;
         addresses Ipv6UnicastSourceAndMulticastDestination;
-        input_interface fuchsia.net.interface_id;
+        input_interface fuchsia.net.InterfaceId;
         event RoutingEvent;
     });
 

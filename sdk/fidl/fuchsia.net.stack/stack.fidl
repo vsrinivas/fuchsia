@@ -8,7 +8,7 @@ using fuchsia.net.name;
 using fuchsia.net;
 
 /// A path to a device node.
-alias device_path = string:255;
+alias DevicePath = string:255;
 
 /// An entry in the forwarding table for the network stack.
 ///
@@ -20,7 +20,7 @@ type ForwardingEntry = struct {
     /// The opaque identifier of the device to which packets should be forwarded. The zero value is
     /// interpreted as unspecified. If unspecified, [`next_hop`] must be set, and will be used by
     /// the server to select an appropriate device.
-    device_id fuchsia.net.interface_id;
+    device_id fuchsia.net.InterfaceId;
 
     /// The IP address of the next hop. Used for link-layer address resolution, if present.
     next_hop fuchsia.net.IpAddress:optional;
@@ -45,15 +45,15 @@ protocol Stack {
     /// Add an Ethernet interface to the network stack. On success, returns the
     /// identifier assigned by the stack for use in subsequent calls.
     AddEthernetInterface(resource struct {
-        topological_path device_path;
+        topological_path DevicePath;
         device client_end:fuchsia.hardware.ethernet.Device;
     }) -> (struct {
-        id fuchsia.net.interface_id;
+        id fuchsia.net.InterfaceId;
     }) error Error;
 
     /// Remove an Ethernet interface from the network stack.
     DelEthernetInterface(struct {
-        id fuchsia.net.interface_id;
+        id fuchsia.net.InterfaceId;
     }) -> (struct {}) error Error;
 
     /// Add an address to the interface. If the interface already has an address
@@ -62,7 +62,7 @@ protocol Stack {
     // TODO(https://fxbug.dev/92767): Remove this when N3 implements Control.
     @deprecated("Use fuchsia.net.interfaces.admin/Control.AddAddress")
     AddInterfaceAddressDeprecated(struct {
-        id fuchsia.net.interface_id;
+        id fuchsia.net.InterfaceId;
         addr fuchsia.net.Subnet;
     }) -> (struct {}) error Error;
 
@@ -71,7 +71,7 @@ protocol Stack {
     // TODO(https://fxbug.dev/92767): Remove this when N3 implements Control.
     @deprecated("Use fuchsia.net.interfaces.admin/Control.RemoveAddress")
     DelInterfaceAddressDeprecated(struct {
-        id fuchsia.net.interface_id;
+        id fuchsia.net.InterfaceId;
         addr fuchsia.net.Subnet;
     }) -> (struct {}) error Error;
 
@@ -101,7 +101,7 @@ protocol Stack {
     // TODO(https://fxbug.dev/94475): Remove this.
     @deprecated("Use fuchsia.net.interfaces.admin/Control.SetConfiguration")
     SetInterfaceIpForwardingDeprecated(struct {
-        id fuchsia.net.interface_id;
+        id fuchsia.net.InterfaceId;
         ip_version fuchsia.net.IpVersion;
         enabled bool;
     }) -> (struct {}) error Error;
@@ -115,7 +115,7 @@ protocol Stack {
     /// TODO(https://fxbug.dev/81593): Remove this once the DHCP client is moved
     /// out of the netstack.
     SetDhcpClientEnabled(resource struct {
-        id fuchsia.net.interface_id;
+        id fuchsia.net.InterfaceId;
         enable bool;
     }) -> (struct {}) error Error;
 };

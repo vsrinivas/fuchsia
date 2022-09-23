@@ -101,7 +101,7 @@ protocol Ipv4RoutingTableController {
     WatchRoutingEvents() -> (struct {
         dropped_events uint64;
         addresses Ipv4UnicastSourceAndMulticastDestination;
-        input_interface fuchsia.net.interface_id;
+        input_interface fuchsia.net.InterfaceId;
         event RoutingEvent;
     });
 

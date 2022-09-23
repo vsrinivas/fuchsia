@@ -36,7 +36,7 @@ type Ipv6SocketAddress = struct {
     /// See [RFC 4007] for terminology and examples.
     ///
     /// [RFC 4007]: https://tools.ietf.org/html/rfc4007
-    zone_index interface_id;
+    zone_index InterfaceId;
 };
 
 /// Represents an IP socket address that may be either v4 or v6.

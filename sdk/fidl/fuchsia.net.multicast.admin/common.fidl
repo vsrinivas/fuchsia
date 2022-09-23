@@ -26,7 +26,7 @@ type Route = table {
     /// The expected input interface for a multicast packet using this route.
     ///
     /// Required.
-    1: expected_input_interface fuchsia.net.interface_id;
+    1: expected_input_interface fuchsia.net.InterfaceId;
 
     /// The action to take for the route.
     ///
@@ -37,7 +37,7 @@ type Route = table {
         /// requirement for the interface.
         1: outgoing_interfaces vector< struct {
             /// The ID for the outgoing interface.
-            id fuchsia.net.interface_id;
+            id fuchsia.net.InterfaceId;
 
             /// The minumum TTL/HopLimit a multicast packet must have to be sent
             /// through the interface.
@@ -75,7 +75,7 @@ type RoutingEvent = strict union {
     /// triggered this event will be dropped without being forwarded.
     2: wrong_input_interface table {
         /// The interface the multicast packet was expected to arrive at.
-        1: expected_input_interface fuchsia.net.interface_id;
+        1: expected_input_interface fuchsia.net.InterfaceId;
     };
 };
 

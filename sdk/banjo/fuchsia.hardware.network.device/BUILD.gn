@@ -10,7 +10,4 @@ fidl("fuchsia.hardware.network.device") {
     "//sdk/banjo/fuchsia.hardware.network.mac",
     "//zircon/vdso/zx",
   ]
-
-  # TODO(fxbug.dev/109746): Re-enable.
-  excluded_checks = [ "invalid-case-for-decl-name" ]
 }

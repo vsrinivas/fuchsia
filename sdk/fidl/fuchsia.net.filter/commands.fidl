@@ -20,7 +20,7 @@ protocol Filter {
     /// + request `id` The id of the network interface.
     /// * error Reports `NOT_FOUND` if `id` is not a valid interface.
     EnableInterface(struct {
-        id fuchsia.net.interface_id;
+        id fuchsia.net.InterfaceId;
     }) -> (struct {}) error strict enum {
         NOT_FOUND = 1;
     };
@@ -33,7 +33,7 @@ protocol Filter {
     /// + request `id` The id of the network interface.
     /// * error Reports `NOT_FOUND` if `id` is not a valid interface.
     DisableInterface(struct {
-        id fuchsia.net.interface_id;
+        id fuchsia.net.InterfaceId;
     }) -> (struct {}) error strict enum {
         NOT_FOUND = 1;
     };

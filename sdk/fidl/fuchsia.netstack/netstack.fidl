@@ -25,7 +25,7 @@ protocol Netstack {
     AddEthernetDevice(resource struct {
         topological_path string:MAX;
         interface_config struct {
-            name fuchsia.net.interfaces.name;
+            name fuchsia.net.interfaces.Name;
 
             /// An unstable file path corresponding to the interface. Used in
             /// watching the creation and destruction of the interface, or in

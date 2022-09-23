@@ -101,7 +101,7 @@ type HardwareAddress = flexible union {
 // querying an interface's L2 properties.
 type InterfaceProperties = struct {
     /// The interface's ID.
-    id fuchsia.net.interface_id;
+    id fuchsia.net.InterfaceId;
 
     /// The interface's hardware address.
     addr HardwareAddress;
@@ -113,7 +113,7 @@ type InterfaceProperties = struct {
 /// Information about a packet.
 type PacketInfo = struct {
     protocol Protocol;
-    interface_id fuchsia.net.interface_id;
+    interface_id fuchsia.net.InterfaceId;
     addr HardwareAddress;
 };
 
@@ -150,7 +150,7 @@ protocol Socket {
         protocol ProtocolAssociation:optional;
         bound_interface_id strict union {
             1: all Empty;
-            2: specified fuchsia.net.interface_id;
+            2: specified fuchsia.net.InterfaceId;
         };
     }) -> (struct {}) error fuchsia.posix.Errno;
 
