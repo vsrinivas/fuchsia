@@ -275,18 +275,16 @@
             to: "#sl4f",
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-temperature",
             to: "#sl4f",
-            subdir: "class/temperature",
+            subdir: "temperature",
         },
         {
-            directory: "dev",
+            directory: "dev-topological",
             from: "parent",
-            as: "dev-virtual-audio",
             to: "#audio_recording",
-            subdir: "sys/platform/00:00:2f",
         },
     ],
 }

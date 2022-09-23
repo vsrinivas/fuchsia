@@ -14,9 +14,9 @@
     ],
     use: [
         {
-            directory: "dev-virtual-audio",
+            directory: "dev-topological",
             rights: [ "r*" ],
-            path: "/dev/sys/platform/00:00:2f",
+            path: "/dev",
         },
     ],
     expose: [
