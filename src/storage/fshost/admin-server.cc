@@ -156,32 +156,37 @@ void AdminServer::GetDevicePath(GetDevicePathRequestView request,
 
 void AdminServer::WriteDataFile(WriteDataFileRequestView request,
                                 WriteDataFileCompleter::Sync& completer) {
+  auto status = WriteDataFileInner(request);
+  if (status.is_ok()) {
+    completer.ReplySuccess();
+  } else {
+    completer.ReplyError(status.status_value());
+  }
+}
+
+zx::status<> AdminServer::WriteDataFileInner(WriteDataFileRequestView request) {
   // Recovery builds set `fvm_ramdisk`, Zedboot builds set `netboot`.  Either way, the data volume
   // won't be automatically mounted in this configuration, which is all we need to ensure.
   if (!config_.fvm_ramdisk() && !config_.netboot()) {
     FX_LOGS(INFO) << "Can't WriteDataFile from a non-recovery build; fvm_ramdisk must be set.";
-    completer.ReplyError(ZX_ERR_BAD_STATE);
-    return;
+    return zx::error(ZX_ERR_BAD_STATE);
   }
   if (!files::IsValidCanonicalPath(request->filename.get())) {
     FX_LOGS(WARNING) << "Bad path " << request->filename.get();
-    completer.ReplyError(ZX_ERR_BAD_PATH);
-    return;
+    return zx::error(ZX_ERR_BAD_PATH);
   }
 
   uint64_t content_size = 0;
   if (zx_status_t status = request->payload.get_prop_content_size(&content_size); status != ZX_OK) {
     if (status = request->payload.get_size(&content_size); status != ZX_OK) {
-      completer.ReplyError(status);
-      return;
+      return zx::error(status);
     }
   }
   ssize_t content_ssize;
   if (!safemath::MakeCheckedNum<size_t>(content_size)
            .Cast<ssize_t>()
            .AssignIfValid(&content_ssize)) {
-    completer.ReplyError(ZX_ERR_INVALID_ARGS);
-    return;
+    return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
   ZX_DEBUG_ASSERT(!config_.ramdisk_prefix().empty());
@@ -192,8 +197,7 @@ void AdminServer::WriteDataFile(WriteDataFileRequestView request,
   auto fvm = OpenPartition(&fvm_matcher, ZX_SEC(5), nullptr);
   if (fvm.is_error()) {
     FX_PLOGS(ERROR, fvm.status_value()) << "Failed to find FVM";
-    completer.ReplyError(fvm.status_value());
-    return;
+    return zx::error(fvm.status_value());
   }
 
   fs_management::DiskFormat format = fs_management::kDiskFormatMinfs;
@@ -219,8 +223,7 @@ void AdminServer::WriteDataFile(WriteDataFileRequestView request,
   auto partition = OpenPartition(&data_matcher, ZX_SEC(5), nullptr);
   if (partition.is_error()) {
     FX_PLOGS(ERROR, partition.status_value()) << "Failed to find data partition";
-    completer.ReplyError(partition.status_value());
-    return;
+    return partition.take_error();
   }
   FX_LOGS(INFO) << "Using data path " << GetTopologicalPath(partition->get());
 
@@ -239,8 +242,7 @@ void AdminServer::WriteDataFile(WriteDataFileRequestView request,
     partition = OpenPartition(&zxcrypt_matcher, ZX_SEC(5), nullptr);
     if (partition.is_error()) {
       FX_PLOGS(ERROR, partition.status_value()) << "Failed to find inner data partition";
-      completer.ReplyError(partition.status_value());
-      return;
+      return partition.take_error();
     }
     inside_zxcrypt = true;
   }
@@ -258,8 +260,7 @@ void AdminServer::WriteDataFile(WriteDataFileRequestView request,
       if (zx_status_t status =
               fdio_fd_clone(partition->get(), block_device.reset_and_get_address());
           status != ZX_OK) {
-        completer.ReplyError(status);
-        return;
+        return zx::error(status);
       }
       fidl::ClientEnd<fuchsia_hardware_block_volume::Volume> volume_client(std::move(block_device));
       uint64_t target_size = config_.data_max_bytes();
@@ -271,14 +272,12 @@ void AdminServer::WriteDataFile(WriteDataFileRequestView request,
       auto actual_size = ResizeVolume(volume_client, target_size, inside_zxcrypt);
       if (actual_size.is_error()) {
         FX_PLOGS(ERROR, actual_size.status_value()) << "Failed to resize volume";
-        completer.ReplyError(actual_size.status_value());
-        return;
+        return actual_size.take_error();
       }
       if (format == fs_management::kDiskFormatF2fs && *actual_size < kDefaultF2fsMinBytes) {
         FX_LOGS(ERROR) << "Only allocated " << *actual_size << " bytes but needed "
                        << kDefaultF2fsMinBytes;
-        completer.ReplyError(ZX_ERR_NO_SPACE);
-        return;
+        return zx::error(ZX_ERR_NO_SPACE);
       } else if (*actual_size < target_size) {
         FX_LOGS(WARNING) << "Only allocated " << *actual_size << " bytes";
       }
@@ -288,22 +287,19 @@ void AdminServer::WriteDataFile(WriteDataFileRequestView request,
       if (zx_status_t status =
               fdio_fd_clone(partition->get(), block_device.reset_and_get_address());
           status != ZX_OK) {
-        completer.ReplyError(status);
-        return;
+        return zx::error(status);
       }
       auto fxfs = FormatFxfsAndInitDataVolume(
           fidl::ClientEnd<fuchsia_hardware_block::Block>(std::move(block_device)), config_);
       if (fxfs.is_error()) {
         FX_PLOGS(ERROR, fxfs.status_value()) << "Failed to format data partition";
-        completer.ReplyError(fxfs.status_value());
-        return;
+        return fxfs.take_error();
       }
       if (auto status = fxfs->second->DataRoot(); status.is_ok()) {
         data_root = std::move(*status);
       } else {
         FX_PLOGS(ERROR, status.status_value()) << "Failed to get data root";
-        completer.ReplyError(status.status_value());
-        return;
+        return status.take_error();
       }
       started_fs.emplace(std::move(fxfs->first));
     } else {
@@ -315,8 +311,7 @@ void AdminServer::WriteDataFile(WriteDataFileRequestView request,
                                                    fs_management::LaunchStdioAsync, options);
           status != ZX_OK) {
         FX_PLOGS(ERROR, status) << "Failed to format data partition";
-        completer.ReplyError(status);
-        return;
+        return zx::error(status);
       }
     }
   }
@@ -328,21 +323,18 @@ void AdminServer::WriteDataFile(WriteDataFileRequestView request,
                                                   fs_management::LaunchStdioAsync);
       if (fxfs.is_error()) {
         FX_PLOGS(ERROR, fxfs.status_value()) << "Failed to open data partition";
-        completer.ReplyError(fxfs.status_value());
-        return;
+        return fxfs.take_error();
       }
       auto data_volume = UnwrapDataVolume(*fxfs, config_);
       if (data_volume.is_error()) {
         FX_PLOGS(ERROR, data_volume.status_value()) << "Failed to unwrap data volume";
-        completer.ReplyError(data_volume.status_value());
-        return;
+        return data_volume.take_error();
       }
       if (auto status = (*data_volume)->DataRoot(); status.is_ok()) {
         data_root = std::move(*status);
       } else {
         FX_PLOGS(ERROR, status.status_value()) << "Failed to get data root";
-        completer.ReplyError(status.status_value());
-        return;
+        return status.take_error();
       }
       started_fs.emplace(std::move(*fxfs));
     } else {
@@ -353,15 +345,13 @@ void AdminServer::WriteDataFile(WriteDataFileRequestView request,
                                      fs_management::LaunchStdioAsync);
       if (fs.is_error()) {
         FX_PLOGS(ERROR, fs.status_value()) << "Failed to open data partition";
-        completer.ReplyError(fs.status_value());
-        return;
+        return fs.take_error();
       }
       if (auto status = fs->DataRoot(); status.is_ok()) {
         data_root = std::move(*status);
       } else {
         FX_PLOGS(ERROR, status.status_value()) << "Failed to get data root";
-        completer.ReplyError(status.status_value());
-        return;
+        return status.take_error();
       }
       started_fs.emplace(std::move(*fs));
     }
@@ -369,28 +359,25 @@ void AdminServer::WriteDataFile(WriteDataFileRequestView request,
   fbl::unique_fd root;
   if (zx_status_t status = fdio_fd_create(data_root.handle()->get(), root.reset_and_get_address());
       status != ZX_OK) {
-    completer.ReplyError(status);
-    return;
+    return zx::error(status);
   }
   fzl::OwnedVmoMapper mapper;
   if (zx_status_t status = mapper.Map(std::move(request->payload), content_size); status != ZX_OK) {
-    completer.ReplyError(status);
-    return;
+    return zx::error(status);
   }
   const std::string path(request->filename.get());
   const std::string base = files::GetDirectoryName(path);
   if (!base.empty() && !files::CreateDirectoryAt(root.get(), base)) {
     FX_LOGS(ERROR) << "Failed to create parent directory " << base;
-    completer.ReplyError(ZX_ERR_IO);
+    return zx::error(ZX_ERR_IO);
   }
-  if (files::WriteFileAt(root.get(), path, static_cast<const char*>(mapper.start()),
-                         content_ssize)) {
-    syncfs(root.get());
-    completer.ReplySuccess();
-  } else {
+  if (!files::WriteFileAt(root.get(), path, static_cast<const char*>(mapper.start()),
+                          content_ssize)) {
     FX_LOGS(ERROR) << "Failed to write file " << request->filename.data();
-    completer.ReplyError(ZX_ERR_IO);
+    return zx::error(ZX_ERR_IO);
   }
+
+  return zx::ok();
 }
 
 }  // namespace fshost
