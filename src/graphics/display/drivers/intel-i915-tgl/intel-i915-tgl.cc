@@ -2095,7 +2095,11 @@ zx_status_t Controller::Init() {
 
   {
     fbl::AutoLock lock(&display_lock_);
-    pipe_manager_ = std::make_unique<PipeManagerSkylake>(this);
+    if (is_tgl(device_id())) {
+      pipe_manager_ = std::make_unique<PipeManagerTigerLake>(this);
+    } else {
+      pipe_manager_ = std::make_unique<PipeManagerSkylake>(this);
+    }
   }
 
   if (is_tgl(device_id())) {

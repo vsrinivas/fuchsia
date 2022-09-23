@@ -637,7 +637,7 @@ bool HdmiDisplay::PipeConfigPreamble(const display_mode_t& mode, tgl_registers::
 
   // Configure Transcoder Clock Select
   auto trans_clk_sel = trans_regs.ClockSelect().ReadFrom(mmio_space());
-  trans_clk_sel.set_trans_clock_select(ddi() + 1);
+  trans_clk_sel.set_ddi_clock_kaby_lake(ddi());
   trans_clk_sel.WriteTo(mmio_space());
 
   return true;
@@ -651,7 +651,7 @@ bool HdmiDisplay::PipeConfigEpilogue(const display_mode_t& mode, tgl_registers::
 
   auto ddi_func = trans_regs.DdiFuncControl().ReadFrom(mmio_space());
   ddi_func.set_trans_ddi_function_enable(1);
-  ddi_func.set_ddi_select(ddi());
+  ddi_func.set_ddi_kaby_lake(ddi());
   ddi_func.set_trans_ddi_mode_select(type() == DisplayDevice::Type::kHdmi
                                          ? tgl_registers::TransDdiFuncControl::kModeHdmi
                                          : tgl_registers::TransDdiFuncControl::kModeDvi);

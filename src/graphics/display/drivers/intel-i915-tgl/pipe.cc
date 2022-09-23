@@ -134,12 +134,18 @@ void Pipe::ResetTrans(tgl_registers::Trans trans, fdf::MmioBuffer* mmio_space) {
   // Disable transcoder ddi select and clock select
   auto trans_ddi_ctl = trans_regs.DdiFuncControl().ReadFrom(mmio_space);
   trans_ddi_ctl.set_trans_ddi_function_enable(0);
-  trans_ddi_ctl.set_ddi_select(0);
+  // This works on both Tiger Lake and Skylake / Kaby Lake, since on Kaby Lake
+  // the highest bit of "ddi_tiger_lake" is reserved to be zero, so it is safe
+  // to set the whole field to zero.
+  trans_ddi_ctl.set_ddi_tiger_lake(std::nullopt);
   trans_ddi_ctl.WriteTo(mmio_space);
 
   if (trans != tgl_registers::TRANS_EDP) {
     auto trans_clk_sel = trans_regs.ClockSelect().ReadFrom(mmio_space);
-    trans_clk_sel.set_trans_clock_select(0);
+    // This works on both Tiger Lake and Skylake / Kaby Lake, since on Kaby Lake
+    // the highest bit of "ddi_clock_tiger_lake" is reserved to be zero, so it
+    // is safe to set the whole field to zero.
+    trans_clk_sel.set_ddi_clock_tiger_lake(std::nullopt);
     trans_clk_sel.WriteTo(mmio_space);
   }
 }

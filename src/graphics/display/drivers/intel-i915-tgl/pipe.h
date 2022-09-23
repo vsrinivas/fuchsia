@@ -168,6 +168,15 @@ class PipeSkylake : public Pipe {
   }
 };
 
+class PipeTigerLake : public Pipe {
+ public:
+  PipeTigerLake(fdf::MmioBuffer* mmio_space, tgl_registers::Pipe pipe, PowerWellRef pipe_power)
+      : Pipe(mmio_space, pipe, std::move(pipe_power)) {}
+  ~PipeTigerLake() override = default;
+
+  tgl_registers::Trans connected_transcoder_id() const override { return tied_transcoder_id(); }
+};
+
 }  // namespace i915_tgl
 
 #endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_TGL_PIPE_H_

@@ -1197,7 +1197,7 @@ bool DpDisplay::PipeConfigPreamble(const display_mode_t& mode, tgl_registers::Pi
   // Configure Transcoder Clock Select
   if (trans != tgl_registers::TRANS_EDP) {
     auto clock_select = trans_regs.ClockSelect().ReadFrom(mmio_space());
-    clock_select.set_trans_clock_select(ddi() + 1);
+    clock_select.set_ddi_clock_kaby_lake(ddi());
     clock_select.WriteTo(mmio_space());
   }
 
@@ -1257,7 +1257,7 @@ bool DpDisplay::PipeConfigEpilogue(const display_mode_t& mode, tgl_registers::Pi
 
   auto ddi_func = trans_regs.DdiFuncControl().ReadFrom(mmio_space());
   ddi_func.set_trans_ddi_function_enable(1);
-  ddi_func.set_ddi_select(ddi());
+  ddi_func.set_ddi_kaby_lake(ddi());
   ddi_func.set_trans_ddi_mode_select(ddi_func.kModeDisplayPortSst);
   ddi_func.set_bits_per_color(ddi_func.k8bbc);  // kPixelFormat
   ddi_func.set_sync_polarity((!!(mode.flags & MODE_FLAG_VSYNC_POSITIVE)) << 1 |

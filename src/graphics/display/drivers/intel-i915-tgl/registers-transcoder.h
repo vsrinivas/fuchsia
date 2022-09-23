@@ -5,6 +5,8 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_TGL_REGISTERS_TRANSCODER_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_TGL_REGISTERS_TRANSCODER_H_
 
+#include <optional>
+
 #include <hwreg/bitfields.h>
 
 #include "src/graphics/display/drivers/intel-i915-tgl/hardware-common.h"
@@ -30,7 +32,84 @@ class TransHVSync : public hwreg::RegisterBase<TransHVSync, uint32_t> {
 class TransDdiFuncControl : public hwreg::RegisterBase<TransDdiFuncControl, uint32_t> {
  public:
   DEF_BIT(31, trans_ddi_function_enable);
-  DEF_FIELD(30, 28, ddi_select);
+
+  // Selects the DDI that the transcoder will connect to.
+  //
+  // This field has a non-trivial value encoding. The ddi_*() and set_ddi_*()
+  // helpers should be preferred to accessing the field directly.
+  //
+  // This field is tagged `_subtle` because the definition matches the bits used
+  // on Tiger Lake, but it's used on all supported models. Kaby Lake and Skylake
+  // have a very similar field, which only takes up bits 30-28. Fortunately, bit
+  // 27 is reserved MBZ (must be zero). So, there's still a 1:1 mapping between
+  // DDI selection and the values of bits 30-27.
+  //
+  // We take advantage of this to avoid forking the entire (fairly large)
+  // register definition by papering over this difference in the helpers
+  // `ddi_kaby_lake()` and `set_ddi_kaby_lake()`.
+  DEF_FIELD(30, 27, ddi_select_subtle);
+
+  // The DDI that the transcoder will connect to.
+  //
+  // This helper works for Kaby Lake and Skylake.
+  //
+  // This field must not be changed while `enabled` is true. Directing multiple
+  // transcoders to the same DDI is only valid for DisplayPort Multi-Streaming.
+  //
+  // The underlying field is ignored by the EDP transcoder, which is attached to
+  // DDI A.
+  std::optional<Ddi> ddi_kaby_lake() const {
+    // The cast is lossless because `ddi_select_subtle()` is a 4-bit field.
+    const int8_t ddi_select_raw_value = static_cast<int8_t>(ddi_select_subtle());
+    if (ddi_select_raw_value == 0) {
+      return std::nullopt;
+    }
+
+    // Convert from the Tiger Lake field representation.
+    const int ddi_index = (ddi_select_raw_value >> 1);
+    return static_cast<Ddi>(ddi_index);
+  }
+
+  // The DDI that the transcoder will connect to.
+  //
+  // This helper works for Tiger Lake.
+  //
+  // This field must not be changed while `enabled` is true. Directing multiple
+  // transcoders to the same DDI is only valid for DisplayPort Multi-Streaming.
+  //
+  // The underlying field is ignored by the DSI transcoders. Each DSI transcoder
+  // is attached to a DDI.
+  std::optional<Ddi> ddi_tiger_lake() const {
+    // The cast is lossless because `ddi_select_subtle()` is a 4-bit field.
+    const int8_t ddi_select_raw_value = static_cast<int8_t>(ddi_select_subtle());
+    if (ddi_select_raw_value == 0) {
+      return std::nullopt;
+    }
+    const int ddi_index = ddi_select_raw_value - 1;
+    return static_cast<Ddi>(ddi_index);
+  }
+
+  // See `ddi_kaby_lake()` for details.
+  SelfType& set_ddi_kaby_lake(std::optional<Ddi> ddi) {
+    if (!ddi.has_value()) {
+      return set_ddi_select_subtle(0);
+    }
+
+    ZX_DEBUG_ASSERT_MSG(*ddi != Ddi::DDI_A, "DDI A cannot be explicitly connected to a transcoder");
+    const int ddi_index = *ddi - Ddi::DDI_A;
+
+    // Convert to the Tiger Lake field representation.
+    return set_ddi_select_subtle(ddi_index << 1);
+  }
+
+  // See `ddi_tiger_lake()` for details.
+  SelfType& set_ddi_tiger_lake(std::optional<Ddi> ddi) {
+    if (!ddi.has_value()) {
+      return set_ddi_select_subtle(0);
+    }
+    const int ddi_index = *ddi - Ddi::DDI_A;
+    return set_ddi_select_subtle(ddi_index + 1);
+  }
 
   DEF_FIELD(26, 24, trans_ddi_mode_select);
   static constexpr uint32_t kModeHdmi = 0;
@@ -62,10 +141,97 @@ class TransConf : public hwreg::RegisterBase<TransConf, uint32_t> {
   DEF_FIELD(22, 21, interlaced_mode);
 };
 
-// TRANS_CLK_SEL
-class TransClockSelect : public hwreg::RegisterBase<TransClockSelect, uint32_t> {
+// TRANS_CLK_SEL (Transcoder Clock Select).
+//
+// On Kaby Lake and Skylake, the EDP transcoder always uses the DDI A clock, so
+// it doesn't have a Clock Select register.
+//
+// Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 2 pages 1365-1366
+// Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 2 pages 947-948
+// Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 2 pages 922-923
+class TranscoderClockSelect : public hwreg::RegisterBase<TranscoderClockSelect, uint32_t> {
  public:
-  DEF_FIELD(31, 29, trans_clock_select);
+  // Selects the DDI whose port clock is used by this transcoder.
+  //
+  // This field has a non-trivial value encoding. The ddi_*() and set_ddi_*()
+  // helpers should be preferred to accessing the field directly.
+  //
+  // This field is tagged `_subtle` because the definition matches the bits used
+  // on Tiger Lake, but it's used on all supported models. Kaby Lake and Skylake
+  // have a very similar field, which only takes up bits 30-28. Fortunately,
+  // bit 27 is reserved, and we can still paper over the field width difference
+  // in the helpers `ddi_clock_kaby_lake()` and `set_ddi_clock_kaby_lake()`.
+  DEF_FIELD(31, 28, ddi_clock_select_subtle);
+
+  // The DDI whose port clock is used by the transcoder.
+  //
+  // This helper works for Kaby Lake and Skylake.
+  //
+  // This field must not be changed while the transcoder is enabled.
+  std::optional<Ddi> ddi_clock_kaby_lake() const {
+    // Shifting converts from the Tiger Lake field width. The cast is lossless
+    // because `ddi_clock_select_subtle()` is a 4-bit field.
+    const int8_t ddi_clock_select_raw_value = static_cast<int8_t>(ddi_clock_select_subtle() >> 1);
+    if (ddi_clock_select_raw_value == 0) {
+      return std::nullopt;
+    }
+    const int ddi_index = ddi_clock_select_raw_value - 1;
+    return static_cast<Ddi>(ddi_index);
+  }
+
+  // The DDI whose port clock is used by the transcoder.
+  //
+  // This helper works for Tiger Lake.
+  //
+  // This field must not be changed while the transcoder is enabled.
+  std::optional<Ddi> ddi_clock_tiger_lake() const {
+    // The cast is lossless because `ddi_clock_select_subtle()` is a 4-bit field.
+    const int8_t ddi_select_raw_value = static_cast<int8_t>(ddi_clock_select_subtle());
+    if (ddi_select_raw_value == 0) {
+      return std::nullopt;
+    }
+    const int ddi_index = ddi_select_raw_value - 1;
+    return static_cast<Ddi>(ddi_index);
+  }
+
+  // See `ddi_clock_kaby_lake()` for details.
+  SelfType& set_ddi_clock_kaby_lake(std::optional<Ddi> ddi) {
+    ZX_DEBUG_ASSERT_MSG(!ddi.has_value() || ddi != Ddi::DDI_A,
+                        "DDI A cannot be explicitly connected to a transcoder");
+
+    const int8_t ddi_select_raw = RawDdiClockSelect(ddi);
+
+    // Convert to the Tiger Lake field representation.
+    const uint32_t reserved_bit = (ddi_clock_select_subtle() & 1);
+    return set_ddi_clock_select_subtle((ddi_select_raw << 1) | reserved_bit);
+  }
+
+  // See `ddi_clock_tiger_lake()` for details.
+  SelfType& set_ddi_clock_tiger_lake(std::optional<Ddi> ddi) {
+    return set_ddi_clock_select_subtle(RawDdiClockSelect(ddi));
+  }
+
+  static auto GetForTranscoder(Trans transcoder) {
+    ZX_ASSERT(transcoder >= Trans::TRANS_A);
+
+    // TODO(fxbug.dev/109278): Allow transcoder D, once we support it.
+    ZX_ASSERT(transcoder <= Trans::TRANS_C);
+
+    const int transcoder_index = transcoder - Trans::TRANS_A;
+    return hwreg::RegisterAddr<TranscoderClockSelect>(0x46140 + 4 * transcoder_index);
+  }
+
+ private:
+  static int8_t RawDdiClockSelect(std::optional<Ddi> ddi) {
+    if (!ddi.has_value()) {
+      return 0;
+    }
+    // The cast is lossless because DDI indices fit in 4 bits.
+    const int8_t ddi_index = static_cast<int8_t>(*ddi - Ddi::DDI_A);
+    // The addition doesn't overflow and the cast is lossless because DDI
+    // indices fit in 4 bits.
+    return static_cast<int8_t>(ddi_index + 1);
+  }
 };
 
 // DATAM
@@ -131,11 +297,8 @@ class TranscoderRegs {
     return GetReg<TransDdiFuncControl>(0x60400);
   }
   hwreg::RegisterAddr<TransConf> Conf() { return GetReg<TransConf>(0x70008); }
-
-  hwreg::RegisterAddr<TransClockSelect> ClockSelect() {
-    ZX_ASSERT(trans_ != TRANS_EDP);
-    // This uses a different offset from the other transcoder registers.
-    return hwreg::RegisterAddr<TransClockSelect>(0x46140 + trans_ * 4);
+  hwreg::RegisterAddr<TranscoderClockSelect> ClockSelect() {
+    return TranscoderClockSelect::GetForTranscoder(trans_);
   }
   hwreg::RegisterAddr<TransDataM> DataM() { return GetReg<TransDataM>(0x60030); }
   hwreg::RegisterAddr<TransDataN> DataN() { return GetReg<TransDataN>(0x60034); }

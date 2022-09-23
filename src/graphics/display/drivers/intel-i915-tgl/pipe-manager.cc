@@ -9,7 +9,6 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/hardware-common.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/intel-i915-tgl.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/pipe.h"
-#include "src/graphics/display/drivers/intel-i915-tgl/registers-pipe.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-transcoder.h"
 
 namespace i915_tgl {
@@ -136,8 +135,8 @@ Pipe* PipeManagerSkylake::GetPipeFromHwState(tgl_registers::Ddi ddi, fdf::MmioBu
                         "The EDP transcoder is not attached to a pipe");
 
     tgl_registers::TranscoderRegs transcoder_regs(tied_transcoder);
-    if (transcoder_regs.ClockSelect().ReadFrom(mmio_space).trans_clock_select() == ddi + 1u &&
-        transcoder_regs.DdiFuncControl().ReadFrom(mmio_space).ddi_select() == ddi) {
+    if (transcoder_regs.ClockSelect().ReadFrom(mmio_space).ddi_clock_kaby_lake() == ddi &&
+        transcoder_regs.DdiFuncControl().ReadFrom(mmio_space).ddi_kaby_lake() == ddi) {
       return pipe;
     }
   }
@@ -151,6 +150,55 @@ std::vector<std::unique_ptr<Pipe>> PipeManagerSkylake::GetPipes(fdf::MmioBuffer*
   for (const auto pipe_enum : tgl_registers::Pipes<tgl_registers::Platform::kSkylake>()) {
     pipes.push_back(std::make_unique<PipeSkylake>(mmio_space, pipe_enum,
                                                   power->GetPipePowerWellRef(pipe_enum)));
+  }
+  return pipes;
+}
+
+PipeManagerTigerLake::PipeManagerTigerLake(Controller* controller)
+    : PipeManager(GetPipes(controller->mmio_space(), controller->power())),
+      mmio_space_(controller->mmio_space()) {
+  ZX_DEBUG_ASSERT(controller);
+}
+
+Pipe* PipeManagerTigerLake::GetAvailablePipe() {
+  for (Pipe* pipe : *this) {
+    if (!pipe->in_use()) {
+      return pipe;
+    }
+  }
+  return nullptr;
+}
+
+Pipe* PipeManagerTigerLake::GetPipeFromHwState(tgl_registers::Ddi ddi,
+                                               fdf::MmioBuffer* mmio_space) {
+  for (Pipe* pipe : *this) {
+    auto transcoder = static_cast<tgl_registers::Trans>(pipe->pipe_id());
+    tgl_registers::TranscoderRegs regs(transcoder);
+    if (regs.ClockSelect().ReadFrom(mmio_space).ddi_clock_tiger_lake() == ddi &&
+        regs.DdiFuncControl().ReadFrom(mmio_space).ddi_tiger_lake() == ddi) {
+      return pipe;
+    }
+  }
+  return nullptr;
+}
+
+void PipeManagerTigerLake::ResetInactiveTranscoders() {
+  for (Pipe* pipe : *this) {
+    if (!pipe->in_use()) {
+      Pipe::ResetTrans(pipe->connected_transcoder_id(), mmio_space_);
+      zxlogf(DEBUG, "Reset unused transcoder %d for pipe %d (pipe inactive)",
+             pipe->connected_transcoder_id(), pipe->pipe_id());
+    }
+  }
+}
+
+// static
+std::vector<std::unique_ptr<Pipe>> PipeManagerTigerLake::GetPipes(fdf::MmioBuffer* mmio_space,
+                                                                  Power* power) {
+  std::vector<std::unique_ptr<Pipe>> pipes;
+  for (const auto pipe_enum : tgl_registers::Pipes<tgl_registers::Platform::kTigerLake>()) {
+    pipes.push_back(std::make_unique<PipeTigerLake>(mmio_space, pipe_enum,
+                                                    power->GetPipePowerWellRef(pipe_enum)));
   }
   return pipes;
 }

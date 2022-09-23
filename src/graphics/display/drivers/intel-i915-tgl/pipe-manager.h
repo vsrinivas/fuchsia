@@ -156,6 +156,23 @@ class PipeManagerSkylake : public PipeManager {
   fdf::MmioBuffer* mmio_space_;
 };
 
+// Instantiation of PipeManager for Tiger Lake
+class PipeManagerTigerLake : public PipeManager {
+ public:
+  explicit PipeManagerTigerLake(Controller* controller);
+  ~PipeManagerTigerLake() override = default;
+
+  void ResetInactiveTranscoders() override;
+
+ private:
+  Pipe* GetAvailablePipe() override;
+  Pipe* GetPipeFromHwState(tgl_registers::Ddi ddi, fdf::MmioBuffer* mmio_space) override;
+
+  static std::vector<std::unique_ptr<Pipe>> GetPipes(fdf::MmioBuffer* mmio_space, Power* power);
+
+  fdf::MmioBuffer* mmio_space_;
+};
+
 }  // namespace i915_tgl
 
 #endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_TGL_PIPE_MANAGER_H_
