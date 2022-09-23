@@ -148,7 +148,7 @@ impl driver_connector::DriverConnector for DriverConnector {
     async fn get_dev_proxy(&self, select: bool) -> Result<fio::DirectoryProxy> {
         self.get_component_with_capability::<fio::DirectoryMarker>(
             "dev",
-            "bootstrap/driver_manager:expose:dev",
+            "bootstrap/driver_manager:expose:dev-topological",
             select,
         )
         .await
