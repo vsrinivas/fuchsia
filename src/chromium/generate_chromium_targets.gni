@@ -25,7 +25,12 @@ template("generate_chromium_targets") {
   # This target is provided for use by //src:src* targets. Dependencies on
   # Chromium-supplied packages should reference specific package(s).
   group(target_name) {
-    visibility = [ "//src:*" ]
+    # TODO(fxbug.dev/108563): Remove //bundles/buildbot/dfv2:core when
+    # //bundles/buildbot/dfv2:core is no longer used.
+    visibility = [
+      "//bundles/buildbot/dfv2/:core",
+      "//src:*",
+    ]
 
     public_deps = [
       ":web_engine",
@@ -250,7 +255,12 @@ template("generate_chromium_targets") {
     group("tests") {
       testonly = true
 
-      visibility = [ "//src:*" ]
+      # TODO(fxbug.dev/108563): Remove //bundles/buildbot/dfv2:core when
+      # //bundles/buildbot/dfv2:core is no longer used.
+      visibility = [
+        "//bundles/buildbot/dfv2:core",
+        "//src:*",
+      ]
 
       deps = [
         ":chromium_cast_runner_tests",
