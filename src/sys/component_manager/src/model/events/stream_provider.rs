@@ -112,12 +112,15 @@ impl EventStreamProvider {
         target_moniker: ExtendedMoniker,
         path: String,
     ) -> Option<Vec<String>> {
-        let mut state = self.state.lock().await;
-        if let Some(subscriptions) = state.subscription_component_lookup.get_mut(&target_moniker) {
-            subscriptions.remove(&AbsolutePath { path, target_moniker })
-        } else {
-            None
+        let state = self.state.lock().await;
+        if let Some(subscriptions) = state.subscription_component_lookup.get(&target_moniker) {
+            if let Some(subscriptions_by_path) =
+                subscriptions.get(&AbsolutePath { path, target_moniker })
+            {
+                return Some(subscriptions_by_path.clone());
+            }
         }
+        None
     }
 
     /// Creates a static event stream for any static capabilities (such as capability_requested)

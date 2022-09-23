@@ -12,7 +12,8 @@ use {
 
 #[fuchsia::main(logging_tags = ["async_reporter"])]
 async fn main() {
-    // Track all the starting child components.
+    let _ = EventStream::open().unwrap();
+    // Validate that subscribing a second time works.
     let mut event_stream = EventStream::open().unwrap();
     let mut instances = vec![];
     let url = "#meta/stub_component_v2.cm".to_string();

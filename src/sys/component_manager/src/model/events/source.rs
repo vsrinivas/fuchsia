@@ -54,7 +54,6 @@ impl EventSourceV2 {
     ) -> Result<EventStream, ModelError> {
         let registry = self.v1.registry.upgrade().ok_or(EventsError::RegistryNotFound)?;
         let mut static_streams = vec![];
-        let mut final_requests = vec![];
         if let Some(stream_provider) = self.v1.stream_provider.upgrade() {
             for request in requests {
                 let moniker = match &self.v1.options.subscription_type {
@@ -69,12 +68,22 @@ impl EventSourceV2 {
                 {
                     static_streams.push(res);
                 } else {
-                    final_requests.push(request);
+                    // Subscribe to events in the registry, discarding prior events
+                    // from before this subscribe call if this is the second
+                    // time opening the event stream.
+                    if request.event_name.to_string() == "capability_requested" {
+                        // Don't support creating a new capability_requested stream.
+                        return Err(ModelError::unsupported(
+                            "capability_requested cannot be taken twice.",
+                        ));
+                    }
+                    let stream = registry.subscribe_v2(&self.v1.options, vec![request]).await?;
+                    static_streams.push(stream);
                 }
             }
         }
         // Create an event stream for the given events
-        let mut stream = registry.subscribe_v2(&self.v1.options, final_requests).await?;
+        let mut stream = registry.subscribe_v2(&self.v1.options, vec![]).await?;
         for mut request in static_streams {
             let mut tx = stream.sender();
             stream.tasks.push(fuchsia_async::Task::spawn(async move {
