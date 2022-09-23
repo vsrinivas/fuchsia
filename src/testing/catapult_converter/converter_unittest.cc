@@ -549,7 +549,9 @@ TEST(CatapultConverter, ConvertWithReleaseVersion) {
 }
 
 TEST(CatapultConverter, ConvertThroughputUnits) {
-  // The example value here is 99 * 1024 * 1024 (99 mebibytes/second).
+  // The example values here are:
+  //    99 * 1024 * 1024 (99 mebibytes/second).
+  //    87 * 1,000,000 (87 megabits/second).
   const char* input_str = R"JSON(
 [
     {
@@ -557,6 +559,12 @@ TEST(CatapultConverter, ConvertThroughputUnits) {
         "test_suite": "my_test_suite",
         "values": [103809024],
         "unit": "bytes/second"
+    },
+    {
+        "label": "ExampleThroughput",
+        "test_suite": "my_test_suite",
+        "values": [87000000],
+        "unit": "bits/second"
     }
 ]
 )JSON";
@@ -624,6 +632,30 @@ TEST(CatapultConverter, ConvertThroughputUnits) {
         "guid": "dummy_guid_5",
         "maxNumSampleValues": 1,
         "numNans": 0
+    },
+    {
+        "name": "ExampleThroughput",
+        "unit": "unitless_biggerIsBetter",
+        "description": "",
+        "diagnostics": {
+            "pointId": "dummy_guid_0",
+            "bots": "dummy_guid_1",
+            "masters": "dummy_guid_2",
+            "logUrls": "dummy_guid_3",
+            "benchmarks": "dummy_guid_4"
+        },
+        "running": [
+            1,
+            "compared_elsewhere",
+            "compared_elsewhere",
+            "compared_elsewhere",
+            "compared_elsewhere",
+            "compared_elsewhere",
+            "compared_elsewhere"
+        ],
+        "guid": "dummy_guid_6",
+        "maxNumSampleValues": 1,
+        "numNans": 0
     }
 ]
 )JSON";
@@ -640,6 +672,13 @@ TEST(CatapultConverter, ConvertThroughputUnits) {
   AssertApproxEqual(&output, &output[5]["running"][4], 99);
   AssertApproxEqual(&output, &output[5]["running"][5], 99);
   AssertApproxEqual(&output, &output[5]["running"][6], 0);
+
+  AssertApproxEqual(&output, &output[6]["running"][1], 87000000);
+  AssertApproxEqual(&output, &output[6]["running"][2], 18.28141);
+  AssertApproxEqual(&output, &output[6]["running"][3], 87000000);
+  AssertApproxEqual(&output, &output[6]["running"][4], 87000000);
+  AssertApproxEqual(&output, &output[6]["running"][5], 87000000);
+  AssertApproxEqual(&output, &output[6]["running"][6], 0);
 
   AssertJsonEqual(output, expected_output);
 }

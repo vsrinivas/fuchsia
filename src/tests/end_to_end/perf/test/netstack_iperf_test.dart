@@ -95,7 +95,7 @@ void main(List<String> args) {
     String unit(String key) {
       switch (key) {
         case 'bits_per_second':
-          return 'count';
+          return 'bits/second';
         case 'lost_packets':
           return 'count';
         case 'jitter_ms':

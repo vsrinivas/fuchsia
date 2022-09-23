@@ -152,6 +152,9 @@ std::string ConvertUnits(const char* input_unit, std::vector<double>* vals) {
     // this as "unitless" here for now.  TODO(mseaborn): Add support for
     // data rate units to Catapult.
     return "unitless_biggerIsBetter";
+  } else if (strcmp(input_unit, "bits/second") == 0) {
+    // See above comment on "bytes/second" for why we report this as "unitless".
+    return "unitless_biggerIsBetter";
   } else if (strcmp(input_unit, "bytes") == 0) {
     return "sizeInBytes_smallerIsBetter";
   } else if (strcmp(input_unit, "frames/second") == 0) {
