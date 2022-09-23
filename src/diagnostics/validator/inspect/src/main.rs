@@ -56,7 +56,7 @@ struct Opt {
 
     /// because the Dart runner adds a "runner" node to the hierarchy
     /// that needs to be removed before comparison.
-    #[argh(switch, long = "is-dart", short = 'v')]
+    #[argh(switch, long = "is-dart")]
     is_dart: bool,
 
     /// tests that the Archive FIDL service output matches the expected values.
