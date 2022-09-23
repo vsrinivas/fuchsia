@@ -34,6 +34,11 @@ template("verify_file_by_build_type") {
          "verify_file_by_build_type() must specify non_eng_golden")
 
   action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
     _output = "${target_out_dir}/${target_name}.verified"
 
     script = "//src/security/policy/build/verify_golden_by_build_type.py"
@@ -129,9 +134,11 @@ template("verify_structured_config_by_build_type") {
   verify_file_by_build_type(target_name) {
     forward_variables_from(invoker,
                            [
-                             "product_assembly_config_file",
-                             "non_eng_golden",
                              "eng_golden",
+                             "non_eng_golden",
+                             "product_assembly_config_file",
+                             "testonly",
+                             "visibility",
                            ])
 
     input = _structured_config_output

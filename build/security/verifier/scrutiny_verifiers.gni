@@ -122,10 +122,6 @@ template("scrutiny_verifiers") {
   assert(defined(invoker.zbi_kernel_cmdline_goldens),
          "zbi_kernel_cmdline_goldens is required for scrutiny_verifiers()")
 
-  if (defined(invoker.testonly)) {
-    testonly = invoker.testonly
-  }
-
   verifiers = []
 
   # TODO(fxbug.dev/102968): There is a need for scrutiny verifiers that process
@@ -134,6 +130,11 @@ template("scrutiny_verifiers") {
   # strategy below.
   verify_structured_config_by_build_type(
       "${invoker.assembly_image_name}_verify_base_resolver_config") {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visiblity",
+                           ])
     product_assembly_config_file = invoker.product_assembly_config_file
     structured_config_target = "//src/sys/base-resolver:values_from_gn"
     non_eng_golden =
@@ -148,6 +149,11 @@ template("scrutiny_verifiers") {
 
   verify_structured_config_by_build_type(
       "${invoker.assembly_image_name}_verify_power_manager_config") {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visiblity",
+                           ])
     product_assembly_config_file = invoker.product_assembly_config_file
     structured_config_target =
         "//src/power/power-manager:default_component_config"
@@ -166,7 +172,11 @@ template("scrutiny_verifiers") {
         invoker.zbi_bootfs_packages_goldens != []) {
       verify_bootfs_filelist(
           "${invoker.assembly_image_name}_verify_bootfs_filelist") {
-        testonly = invoker.testonly
+        forward_variables_from(invoker,
+                               [
+                                 "testonly",
+                                 "visiblity",
+                               ])
         assembly_image_name = invoker.assembly_image_name
         zbi_is_signed = sign_zbi
         image_assembler_target =
@@ -180,7 +190,11 @@ template("scrutiny_verifiers") {
     if (invoker.zbi_kernel_cmdline_goldens != []) {
       verify_kernel_cmdline(
           "${invoker.assembly_image_name}_verify_kernel_cmdline") {
-        testonly = invoker.testonly
+        forward_variables_from(invoker,
+                               [
+                                 "testonly",
+                                 "visiblity",
+                               ])
         assembly_image_name = invoker.assembly_image_name
         zbi_is_signed = sign_zbi
         image_assembler_target =
@@ -193,7 +207,11 @@ template("scrutiny_verifiers") {
     if (invoker.route_sources_config != "") {
       verify_route_sources(
           "${invoker.assembly_image_name}_verify_route_sources") {
-        testonly = invoker.testonly
+        forward_variables_from(invoker,
+                               [
+                                 "testonly",
+                                 "visiblity",
+                               ])
         assembly_image_name = invoker.assembly_image_name
         update_package_target = invoker.update_package_target
         image_assembler_target =
@@ -206,7 +224,11 @@ template("scrutiny_verifiers") {
     if (invoker.verify_component_resolvers_allowlist != "") {
       verify_component_resolvers(
           "${invoker.assembly_image_name}_verify_component_resolvers") {
-        testonly = invoker.testonly
+        forward_variables_from(invoker,
+                               [
+                                 "testonly",
+                                 "visiblity",
+                               ])
         assembly_image_name = invoker.assembly_image_name
         update_package_target = invoker.update_package_target
         image_assembler_target =
@@ -221,7 +243,11 @@ template("scrutiny_verifiers") {
         invoker.verify_routes_exceptions_allowlist_product != [] ||
         invoker.verify_routes_exceptions_allowlist_bootfs != "") {
       verify_routes("${invoker.assembly_image_name}_verify_capability_routes") {
-        testonly = invoker.testonly
+        forward_variables_from(invoker,
+                               [
+                                 "testonly",
+                                 "visiblity",
+                               ])
         assembly_image_name = invoker.assembly_image_name
         update_package_target = invoker.update_package_target
         image_assembler_target =
@@ -248,7 +274,11 @@ template("scrutiny_verifiers") {
 
     if (invoker.static_pkgs_goldens != []) {
       verify_static_pkgs("${invoker.assembly_image_name}_verify_static_pkgs") {
-        testonly = invoker.testonly
+        forward_variables_from(invoker,
+                               [
+                                 "testonly",
+                                 "visiblity",
+                               ])
         assembly_image_name = invoker.assembly_image_name
         update_package_target = invoker.update_package_target
         image_assembler_target =
@@ -263,7 +293,11 @@ template("scrutiny_verifiers") {
         invoker.structured_config_policy != "") {
       verify_assembled_structured_config(
           "${invoker.assembly_image_name}_verify_assembled_structured_config") {
-        testonly = invoker.testonly
+        forward_variables_from(invoker,
+                               [
+                                 "testonly",
+                                 "visiblity",
+                               ])
         update_package_target = invoker.update_package_target
         image_assembler_target =
             ":${invoker.assembly_image_name}.image_assembler"
@@ -277,7 +311,11 @@ template("scrutiny_verifiers") {
 
     extract_assembled_structured_config(
         "${invoker.assembly_image_name}_extract_assembled_structured_config") {
-      testonly = invoker.testonly
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visiblity",
+                             ])
       update_package_target = invoker.update_package_target
       image_assembler_target = ":${invoker.assembly_image_name}.image_assembler"
       assembly_image_name = invoker.assembly_image_name
@@ -305,6 +343,11 @@ template("scrutiny_verifiers") {
   }
 
   group(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
     deps = verifiers
   }
 }

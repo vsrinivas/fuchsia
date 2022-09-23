@@ -9,6 +9,7 @@ assert(
     "Product definitions and assemblies should only be defined in the fuchsia toolchain")
 
 product_assembly_configuration("core") {
+  testonly = true
   platform = {
     build_type = "eng"
   }

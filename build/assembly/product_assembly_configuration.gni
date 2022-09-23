@@ -263,6 +263,7 @@ template("product_assembly_configuration") {
   # as distinct from the cache packages, and validate that they produce all of
   # the manifests whose paths were computed from the labels.
   group_with_inputs(labels.base_package_set) {
+    forward_variables_from(invoker, [ "testonly" ])
     inputs = files.base_package_manifests
     deps = labels.base_package_labels
   }
@@ -279,6 +280,7 @@ template("product_assembly_configuration") {
   # as distinct from the base packages, and validate that they produce all of
   # the manifests whose paths were computed from the labels.
   group_with_inputs(labels.cache_package_set) {
+    forward_variables_from(invoker, [ "testonly" ])
     inputs = files.cache_package_manifests
     deps = labels.cache_package_labels
   }
