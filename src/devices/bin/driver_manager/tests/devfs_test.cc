@@ -21,7 +21,7 @@ TEST(Devfs, Export) {
   Devnode root_node(devfs, nullptr, nullptr, "root");
   std::vector<std::unique_ptr<Devnode>> out;
 
-  ASSERT_OK(devfs.export_dir(&root_node, {}, "svc", "one/two", 0, {}, out));
+  ASSERT_OK(root_node.export_dir({}, "svc", "one/two", 0, {}, out));
 
   ASSERT_EQ(1, root_node.children.size_slow());
   auto& node_one = root_node.children.front();
@@ -36,7 +36,7 @@ TEST(Devfs, Export_ExcessSeparators) {
   Devnode root_node(devfs, nullptr, nullptr, "root");
   std::vector<std::unique_ptr<Devnode>> out;
 
-  ASSERT_OK(devfs.export_dir(&root_node, {}, "svc", "one////two", 0, {}, out));
+  ASSERT_OK(root_node.export_dir({}, "svc", "one////two", 0, {}, out));
 
   ASSERT_EQ(1, root_node.children.size_slow());
   auto& node_one = root_node.children.front();
@@ -51,13 +51,13 @@ TEST(Devfs, Export_OneByOne) {
   Devnode root_node(devfs, nullptr, nullptr, "root");
   std::vector<std::unique_ptr<Devnode>> out;
 
-  ASSERT_OK(devfs.export_dir(&root_node, {}, "svc", "one", 0, {}, out));
+  ASSERT_OK(root_node.export_dir({}, "svc", "one", 0, {}, out));
 
   ASSERT_EQ(1, root_node.children.size_slow());
   auto& node_one = root_node.children.front();
   EXPECT_EQ("one", node_one.name());
 
-  ASSERT_OK(devfs.export_dir(&root_node, {}, "svc", "one/two", 0, {}, out));
+  ASSERT_OK(root_node.export_dir({}, "svc", "one/two", 0, {}, out));
 
   ASSERT_EQ(1, node_one.children.size_slow());
   auto& node_two = node_one.children.front();
@@ -69,19 +69,19 @@ TEST(Devfs, Export_InvalidPath) {
   Devnode root_node(devfs, nullptr, nullptr, "root");
   std::vector<std::unique_ptr<Devnode>> out;
 
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, devfs.export_dir(&root_node, {}, "", "one", 0, {}, out));
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, devfs.export_dir(&root_node, {}, "/svc", "one", 0, {}, out));
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, devfs.export_dir(&root_node, {}, "svc/", "one", 0, {}, out));
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, devfs.export_dir(&root_node, {}, "/svc/", "one", 0, {}, out));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, root_node.export_dir({}, "", "one", 0, {}, out));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, root_node.export_dir({}, "/svc", "one", 0, {}, out));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, root_node.export_dir({}, "svc/", "one", 0, {}, out));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, root_node.export_dir({}, "/svc/", "one", 0, {}, out));
 
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, devfs.export_dir(&root_node, {}, "svc", "", 0, {}, out));
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, devfs.export_dir(&root_node, {}, "svc", "/one/two", 0, {}, out));
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, devfs.export_dir(&root_node, {}, "svc", "one/two/", 0, {}, out));
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, devfs.export_dir(&root_node, {}, "svc", "/one/two/", 0, {}, out));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, root_node.export_dir({}, "svc", "", 0, {}, out));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, root_node.export_dir({}, "svc", "/one/two", 0, {}, out));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, root_node.export_dir({}, "svc", "one/two/", 0, {}, out));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, root_node.export_dir({}, "svc", "/one/two/", 0, {}, out));
 }
 
 TEST(Devfs, Export_WithProtocol) {
-  async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
+  const async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
 
   Devfs devfs(nullptr);
   Devnode* proto_node = devfs.proto_node(ZX_PROTOCOL_BLOCK);
@@ -96,8 +96,8 @@ TEST(Devfs, Export_WithProtocol) {
   ASSERT_OK(endpoints.status_value());
   ASSERT_OK(outgoing.Serve(std::move(endpoints->server)));
 
-  ASSERT_OK(devfs.export_dir(&root_node, std::move(endpoints->client), "svc", "one/two",
-                             ZX_PROTOCOL_BLOCK, {}, out));
+  ASSERT_OK(root_node.export_dir(std::move(endpoints->client), "svc", "one/two", ZX_PROTOCOL_BLOCK,
+                                 {}, out));
 
   ASSERT_EQ(1, root_node.children.size_slow());
   auto& node_one = root_node.children.front();
@@ -116,8 +116,8 @@ TEST(Devfs, Export_AlreadyExists) {
   Devnode root_node(devfs, nullptr, nullptr, "root");
   std::vector<std::unique_ptr<Devnode>> out;
 
-  ASSERT_OK(devfs.export_dir(&root_node, {}, "svc", "one/two", 0, {}, out));
-  ASSERT_EQ(ZX_ERR_ALREADY_EXISTS, devfs.export_dir(&root_node, {}, "svc", "one/two", 0, {}, out));
+  ASSERT_OK(root_node.export_dir({}, "svc", "one/two", 0, {}, out));
+  ASSERT_EQ(ZX_ERR_ALREADY_EXISTS, root_node.export_dir({}, "svc", "one/two", 0, {}, out));
 }
 
 TEST(Devfs, Export_FailedToClone) {
@@ -126,7 +126,7 @@ TEST(Devfs, Export_FailedToClone) {
   std::vector<std::unique_ptr<Devnode>> out;
 
   ASSERT_EQ(ZX_ERR_BAD_HANDLE,
-            devfs.export_dir(&root_node, {}, "svc", "one/two", ZX_PROTOCOL_BLOCK, {}, out));
+            root_node.export_dir({}, "svc", "one/two", ZX_PROTOCOL_BLOCK, {}, out));
 }
 
 TEST(Devfs, Export_DropDevfs) {
@@ -134,7 +134,7 @@ TEST(Devfs, Export_DropDevfs) {
   Devnode root_node(devfs, nullptr, nullptr, "root");
   std::vector<std::unique_ptr<Devnode>> out;
 
-  ASSERT_OK(devfs.export_dir(&root_node, {}, "svc", "one/two", 0, {}, out));
+  ASSERT_OK(root_node.export_dir({}, "svc", "one/two", 0, {}, out));
 
   ASSERT_EQ(1, root_node.children.size_slow());
   {
@@ -311,7 +311,8 @@ TEST(Devfs, ExportWatcherCreateFails) {
 
   ASSERT_OK(loop.StartThread("export-watcher-test-thread"));
 
-  fidl::WireSyncClient<fuchsia_device_fs::Exporter> client(std::move(exporter_endpoints->client));
+  const fidl::WireSyncClient<fuchsia_device_fs::Exporter> client(
+      std::move(exporter_endpoints->client));
 
   // ExportWatcher::Create will fail because we closed the server end of the channel.
   auto result =

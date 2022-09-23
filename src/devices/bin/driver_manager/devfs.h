@@ -38,6 +38,17 @@ struct Devnode : public fbl::DoublyLinkedListable<Devnode*> {
 
   zx::status<Devnode*> walk(std::string_view path);
 
+  // Exports `service_path` from `service_dir` to `devfs_path`, under `dn`. If
+  // `protocol_id` matches a known protocol, `service_path` will also be exposed
+  // under a class path.
+  //
+  // Every Devnode that is created during the export is stored within `out`. As
+  // each of these Devnodes are children of `dn`, they must live as long as `dn`.
+  zx_status_t export_dir(fidl::ClientEnd<fuchsia_io::Directory> service_dir,
+                         std::string_view service_path, std::string_view devfs_path,
+                         uint32_t protocol_id, fuchsia_device_fs::wire::ExportOptions options,
+                         std::vector<std::unique_ptr<Devnode>>& out);
+
   void notify(std::string_view name, fuchsia_io::wire::WatchEvent op);
 
   // This method is exposed for testing. It returns true if the devfs has active watchers.
@@ -114,17 +125,6 @@ class Devfs {
   void advertise(Device& device);
   void advertise_modified(Device& dev);
   void connect_diagnostics(fidl::ClientEnd<fuchsia_io::Directory> diagnostics_channel);
-
-  // Exports `service_path` from `service_dir` to `devfs_path`, under `dn`. If
-  // `protocol_id` matches a known protocol, `service_path` will also be exposed
-  // under a class path.
-  //
-  // Every Devnode that is created during the export is stored within `out`. As
-  // each of these Devnodes are children of `dn`, they must live as long as `dn`.
-  zx_status_t export_dir(Devnode* dn, fidl::ClientEnd<fuchsia_io::Directory> service_dir,
-                         std::string_view service_path, std::string_view devfs_path,
-                         uint32_t protocol_id, fuchsia_device_fs::wire::ExportOptions options,
-                         std::vector<std::unique_ptr<Devnode>>& out);
 
   // For testing only.
   Devnode* proto_node(uint32_t protocol_id);

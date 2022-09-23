@@ -34,7 +34,7 @@ zx::status<std::unique_ptr<ExportWatcher>> ExportWatcher::Create(
   watcher->devfs_path_ = std::string(devfs_path);
   watcher->client_ = fidl::WireClient(std::move(endpoints->client), dispatcher, watcher.get());
 
-  zx_status_t status = devfs.export_dir(root, std::move(service_dir), service_path, devfs_path,
+  zx_status_t status = root->export_dir(std::move(service_dir), service_path, devfs_path,
                                         protocol_id, options, watcher->devnodes_);
   if (status != ZX_OK) {
     return zx::error(status);
@@ -45,10 +45,11 @@ zx::status<std::unique_ptr<ExportWatcher>> ExportWatcher::Create(
 
 zx_status_t ExportWatcher::MakeVisible() {
   for (auto& node : devnodes_) {
-    if (node->service_options != fuchsia_device_fs::wire::ExportOptions::kInvisible) {
+    fdfs::ExportOptions& options = node->service_options;
+    if (options != fuchsia_device_fs::wire::ExportOptions::kInvisible) {
       return ZX_ERR_BAD_STATE;
     }
-    node->service_options &= ~fuchsia_device_fs::wire::ExportOptions::kInvisible;
+    options &= ~fuchsia_device_fs::wire::ExportOptions::kInvisible;
     Devnode* parent = node->parent();
     ZX_ASSERT(parent != nullptr);
     parent->notify(node->name(), fuchsia_io::wire::WatchEvent::kAdded);

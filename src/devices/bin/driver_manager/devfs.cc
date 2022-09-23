@@ -735,10 +735,11 @@ Devfs::Devfs(Device* device)
   }
 }
 
-zx_status_t Devfs::export_dir(Devnode* dn, fidl::ClientEnd<fio::Directory> service_dir,
-                              std::string_view service_path, std::string_view devfs_path,
-                              uint32_t protocol_id, fuchsia_device_fs::wire::ExportOptions options,
-                              std::vector<std::unique_ptr<Devnode>>& out) {
+zx_status_t Devnode::export_dir(fidl::ClientEnd<fio::Directory> service_dir,
+                                std::string_view service_path, std::string_view devfs_path,
+                                uint32_t protocol_id,
+                                fuchsia_device_fs::wire::ExportOptions options,
+                                std::vector<std::unique_ptr<Devnode>>& out) {
   // Check if the `devfs_path` provided is valid.
   const auto is_valid_path = [](std::string_view path) {
     return !path.empty() && path.front() != '/' && path.back() != '/';
@@ -769,6 +770,7 @@ zx_status_t Devfs::export_dir(Devnode* dn, fidl::ClientEnd<fio::Directory> servi
 
   // Walk `devfs_path` and find the last Devnode that exists, so we can create
   // the rest of the path underneath it.
+  Devnode* dn = this;
   Devnode* prev_dn = nullptr;
   walk([&dn, &prev_dn](std::string_view name) {
     prev_dn = dn;
@@ -785,7 +787,7 @@ zx_status_t Devfs::export_dir(Devnode* dn, fidl::ClientEnd<fio::Directory> servi
   // `service_path` on the leaf Devnode.
   dn = prev_dn;
   walk([this, &out, &dn, options](std::string_view name) {
-    out.emplace_back(std::make_unique<Devnode>(*this, dn, nullptr, name));
+    out.emplace_back(std::make_unique<Devnode>(devfs_, dn, nullptr, name));
     auto new_dn = out.back().get();
     new_dn->service_options = options;
     if (!new_dn->is_invisible()) {
@@ -799,13 +801,13 @@ zx_status_t Devfs::export_dir(Devnode* dn, fidl::ClientEnd<fio::Directory> servi
 
   // If a protocol directory exists for `protocol_id`, then create a Devnode
   // under the protocol directory too.
-  if (auto dir = proto_node(protocol_id); dir != nullptr) {
+  if (auto dir = devfs_.proto_node(protocol_id); dir != nullptr) {
     char name[4] = {};
     const zx_status_t status = dir->seq_name(name, sizeof(name));
     if (status != ZX_OK) {
       return status;
     }
-    out.emplace_back(std::make_unique<Devnode>(*this, dir, nullptr, name));
+    out.emplace_back(std::make_unique<Devnode>(devfs_, dir, nullptr, name));
     Devnode* class_dn = out.back().get();
     class_dn->service_options = options;
     if (!class_dn->is_invisible()) {
