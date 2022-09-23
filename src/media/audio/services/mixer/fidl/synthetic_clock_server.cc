@@ -74,12 +74,11 @@ void SyntheticClockRealmServer::CreateClock(CreateClockRequestView request,
     return;
   }
 
+  // We add a new clock to the registry, and also hold a strong reference to the clock so the
+  // registry mapping won't be deleted before ForgetClock.
   auto clock = realm_->CreateClock(name, request->domain(), request->adjustable());
-
-  // This should not fail: since we just created `clock`, no other clock should have the same koid.
-  auto add_result = registry_->AddClock(clock);
-  FX_CHECK(add_result.is_ok()) << "Unexpected failure in ClockRegistry::AddClock: "
-                               << add_result.status_string();
+  registry_->Add(clock);
+  clocks_[clock->koid()] = clock;
 
   // If the user wants explicit control, create a server.
   if (request->has_control()) {
@@ -104,9 +103,33 @@ void SyntheticClockRealmServer::ForgetClock(ForgetClockRequestView request,
     return;
   }
 
-  if (auto result = registry_->ForgetClock(request->handle()); !result.is_ok()) {
-    completer.ReplyError(result.status_value());
-    return;
+  // Lookup the Clock for the given handle, then verify that our strong reference in `clocks_` is
+  // the last remaining strong reference to this clock.
+  zx_koid_t koid;
+  {
+    auto clock_result = registry_->Find(request->handle());
+    if (!clock_result.is_ok()) {
+      completer.ReplyError(clock_result.status_value());
+      return;
+    }
+
+    // There should be two references: `clock` and `clocks_[clock->koid()]`.
+    auto clock = std::move(clock_result.value());
+    if (clock.use_count() != 2) {
+      completer.ReplyError(ZX_ERR_BAD_STATE);
+      return;
+    }
+
+    koid = clock->koid();
+  }
+
+  // Remove our strong reference.
+  clocks_.erase(koid);
+
+  // Invariant: since we verified that `clocks_` held the last strong reference, the above call
+  // should have unregistered the clock. Verify this is true.
+  if (auto result = registry_->Find(koid); !result.is_error()) {
+    FX_LOGS(FATAL) << "clock was not unregistered";
   }
 
   fidl::Arena arena;
@@ -121,7 +144,7 @@ void SyntheticClockRealmServer::ObserveClock(ObserveClockRequestView request,
     return;
   }
 
-  auto clock_result = registry_->FindClock(request->handle());
+  auto clock_result = registry_->Find(request->handle());
   if (!clock_result.is_ok()) {
     completer.ReplyError(clock_result.status_value());
     return;

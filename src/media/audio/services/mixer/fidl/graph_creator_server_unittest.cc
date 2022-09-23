@@ -97,6 +97,7 @@ TEST_F(GraphCreatorServerTest, CreateGraphWithSyntheticClocks) {
   // To make sure we're using synthetic clocks, create a graph-controlled clock and verify it
   // advances with the synthetic realm.
   zx::clock handle;
+  zx::eventpair fence;
 
   {
     auto result = graph_client->CreateGraphControlledReferenceClock();
@@ -104,7 +105,9 @@ TEST_F(GraphCreatorServerTest, CreateGraphWithSyntheticClocks) {
     ASSERT_FALSE(result->is_error()) << result->error_value();
 
     handle = std::move(result->value()->reference_clock());
+    fence = std::move(result->value()->release_fence());
     ASSERT_TRUE(handle.is_valid());
+    ASSERT_TRUE(fence.is_valid());
   }
 
   {

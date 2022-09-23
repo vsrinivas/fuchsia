@@ -55,12 +55,14 @@ protocol SyntheticClockRealm {
     }) error CreateClockError;
 
     /// Forgets about a synthetic clock. This releases internal resources and
-    /// closes the clock's `SyntheticClock` channel. After this returns, our
-    /// parent [`Graph`] will not recognize this handle.
+    /// closes the clock's `SyntheticClock` channel. The clock must not be used
+    /// by any node in our parent [`Graph`]. After this returns, our parent
+    /// [`Graph`] will not recognize this handle.
     ///
     /// * error `ZX_ERR_INVALID_ARGS` if missing a required field
     /// * error `ZX_ERR_NOT_FOUND` if `handle` was not created by
     ///   [`CreateClock`] or if was already forgotten
+    /// * error `ZX_ERR_BAD_STATE` if `handle` is still in use
     ForgetClock(resource table {
         /// The clock to forget.
         ///

@@ -11,6 +11,7 @@
 #include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/fidl/graph_server.h"
 #include "src/media/audio/services/mixer/fidl/real_clock_factory.h"
+#include "src/media/audio/services/mixer/fidl/synthetic_clock_factory.h"
 #include "src/media/audio/services/mixer/fidl/synthetic_clock_server.h"
 
 namespace media_audio {
@@ -51,9 +52,11 @@ void GraphCreatorServer::Create(CreateRequestView request, CreateCompleter::Sync
   if (request->has_synthetic_clock_realm()) {
     auto realm = SyntheticClockRealmServer::Create(thread_ptr(),
                                                    std::move(request->synthetic_clock_realm()));
+    args.clock_factory = std::make_shared<SyntheticClockFactory>(realm->realm());
     args.clock_registry = realm->registry();
   } else {
-    args.clock_registry = std::make_shared<ClockRegistry>(std::make_shared<RealClockFactory>());
+    args.clock_factory = std::make_shared<RealClockFactory>();
+    args.clock_registry = std::make_shared<ClockRegistry>();
   }
 
   // Create a server to control this graph.

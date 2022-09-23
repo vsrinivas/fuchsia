@@ -505,8 +505,7 @@ protocol Graph {
     /// The returned clock has `ZX_RIGHT_READ` and `ZX_RIGHT_DUPLICATE` but not
     /// `ZX_RIGHT_WRITE`. The clock may be duplicated and used wherever a
     /// reference clock is needed. The graph will rate change this clock until
-    /// the clock (or a duplicate of the clock) is passed to
-    /// [`ForgetGraphControlledReferenceClock`].
+    /// the `release_fence` is closed.
     ///
     /// For more details, see "Clocks" under the description for [`Graph`].
     ///
@@ -514,23 +513,12 @@ protocol Graph {
     CreateGraphControlledReferenceClock() -> (resource table {
         /// The new clock.
         1: reference_clock zx.handle:CLOCK;
-    }) error zx.status;
 
-    /// Forgets about a graph-controlled reference clock.
-    ///
-    /// The clock must have been previously created by
-    /// [`CreateGraphControlledReferenceClock`]. The clock will not be deleted (other
-    /// duplicates will still exist) however it will no longer be adjusted by
-    /// this Graph (or by anyone else, since this Graph was the only entity with
-    /// `ZX_RIGHT_WRITE`).
-    ///
-    /// * error `ZX_ERR_NOT_FOUND` if `reference_clock` was not created by
-    /// [`CreateGraphControlledReferenceClock`] or if was already forgotten
-    ForgetGraphControlledReferenceClock(resource table {
-        /// The clock to forget.
-        /// Required.
-        1: reference_clock zx.handle:CLOCK;
-    }) -> (table {}) error zx.status;
+        /// The graph will control `reference_clock` until `release_fence` is
+        /// closed, at which point the clock can still be used but it will no
+        /// longer be rate-adjusted.
+        2: release_fence zx.handle:EVENTPAIR;
+    }) error zx.status;
 
     // TODO(fxbug.dev/87651): Start/Stop methods to control Producer and Consumer nodes
     // TODO(fxbug.dev/87651): Watch method to observe delay (aka lead time) of a node

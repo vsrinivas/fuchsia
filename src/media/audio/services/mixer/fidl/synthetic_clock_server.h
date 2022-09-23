@@ -55,6 +55,9 @@ class SyntheticClockRealmServer
       std::shared_ptr<const FidlThread> thread,
       fidl::ServerEnd<fuchsia_audio_mixer::SyntheticClockRealm> server_end);
 
+  // Returns the underlying realm.
+  std::shared_ptr<SyntheticClockRealm> realm() const { return realm_; }
+
   // Returns the clock registry used by this realm.
   std::shared_ptr<ClockRegistry> registry() const { return registry_; }
 
@@ -75,8 +78,8 @@ class SyntheticClockRealmServer
   SyntheticClockRealmServer() = default;
 
   std::shared_ptr<SyntheticClockRealm> realm_ = SyntheticClockRealm::Create();
-  std::shared_ptr<ClockRegistry> registry_ =
-      std::make_shared<ClockRegistry>(std::make_shared<SyntheticClockFactory>(realm_));
+  std::shared_ptr<ClockRegistry> registry_ = std::make_shared<ClockRegistry>();
+  std::unordered_map<zx_koid_t, std::shared_ptr<Clock>> clocks_;
 };
 
 }  // namespace media_audio

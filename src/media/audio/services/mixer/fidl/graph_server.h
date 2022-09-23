@@ -6,9 +6,11 @@
 #define SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_GRAPH_SERVER_H_
 
 #include <fidl/fuchsia.audio.mixer/cpp/wire.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/zx/profile.h>
 #include <zircon/errors.h>
 
+#include <list>
 #include <memory>
 #include <optional>
 
@@ -22,7 +24,8 @@
 
 namespace media_audio {
 
-class GraphServer : public BaseFidlServer<GraphServer, fuchsia_audio_mixer::Graph> {
+class GraphServer : public BaseFidlServer<GraphServer, fuchsia_audio_mixer::Graph>,
+                    public std::enable_shared_from_this<GraphServer> {
  public:
   struct Args {
     // Name of this graph.
@@ -31,6 +34,9 @@ class GraphServer : public BaseFidlServer<GraphServer, fuchsia_audio_mixer::Grap
 
     // The real-time FIDL thread.
     std::shared_ptr<const FidlThread> realtime_fidl_thread;
+
+    // Factory to create clocks used by this graph.
+    std::shared_ptr<ClockFactory> clock_factory;
 
     // Registry for all clocks used by this graph.
     std::shared_ptr<ClockRegistry> clock_registry;
@@ -64,9 +70,6 @@ class GraphServer : public BaseFidlServer<GraphServer, fuchsia_audio_mixer::Grap
                          DeleteGainControlCompleter::Sync& completer) override;
   void CreateGraphControlledReferenceClock(
       CreateGraphControlledReferenceClockCompleter::Sync& completer) override;
-  void ForgetGraphControlledReferenceClock(
-      ForgetGraphControlledReferenceClockRequestView request,
-      ForgetGraphControlledReferenceClockCompleter::Sync& completer) override;
 
   // Name of this graph.
   // For debugging only: may be empty or not unique.
@@ -80,25 +83,35 @@ class GraphServer : public BaseFidlServer<GraphServer, fuchsia_audio_mixer::Grap
   // Note: args.server_end is consumed by BaseFidlServer.
   explicit GraphServer(Args args);
 
+  void OnShutdown(fidl::UnbindInfo info) final;
   NodeId NextNodeId();
   ThreadId NextThreadId();
 
   const std::string name_;
   const std::shared_ptr<const FidlThread> realtime_fidl_thread_;
-  const DetachedThreadPtr detached_thread_ = DetachedThread::Create();
+  const std::shared_ptr<DetachedThread> detached_thread_ = DetachedThread::Create();
   const std::shared_ptr<GlobalTaskQueue> global_task_queue_ = std::make_shared<GlobalTaskQueue>();
+  const std::shared_ptr<ClockFactory> clock_factory_;
+  const std::shared_ptr<ClockRegistry> clock_registry_;
 
+  // Nodes mapping.
   std::unordered_map<NodeId, NodePtr> nodes_;
   NodeId next_node_id_ = 1;
 
+  // Threads mapping.
   struct MixThreadInfo {
-    MixThreadPtr thread;
-    int64_t num_consumers{0};
+    MixThreadPtr ptr;
+    int64_t num_consumers = 0;
   };
-  std::unordered_map<ThreadId, MixThreadInfo> threads_;
+  std::unordered_map<ThreadId, MixThreadInfo> mix_threads_;
   ThreadId next_thread_id_ = 1;
 
-  std::shared_ptr<ClockRegistry> clock_registry_;
+  // List of pending one-shot waiters. Each waiter is responsible for removing themselves from this
+  // list after they have run.
+  std::list<async::WaitOnce> pending_one_shot_waiters_;
+
+  // How many graph-controlled clocks have been created.
+  int64_t num_graph_controlled_clocks_ = 0;
 };
 
 }  // namespace media_audio

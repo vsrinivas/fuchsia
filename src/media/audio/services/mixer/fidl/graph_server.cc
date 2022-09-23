@@ -6,6 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
+#include <lib/zx/eventpair.h>
 #include <lib/zx/vmo.h>
 
 #include <type_traits>
@@ -36,26 +37,22 @@ std::string ClockNameFromNodeName(std::string_view node_name) {
   return std::string(node_name) + "Clock";
 }
 
-// TODO(fxbug.dev/87651): consider moving this to ClockRegistry
-std::shared_ptr<Clock> LookupClock(ClockRegistry& registry, zx::clock handle, uint32_t domain,
-                                   std::string_view name) {
-  if (auto result = registry.FindClock(handle); result.is_ok()) {
-    return result.value();
+// Looks up a clock by `zx::clock` handle. If none exists in `registry`, creates an unadjustable
+// wrapper clock with `factory` and adds that clock to `registry`.
+zx::status<std::shared_ptr<Clock>> LookupClock(ClockRegistry& registry, ClockFactory& factory,
+                                               zx::clock handle, uint32_t domain,
+                                               std::string_view name) {
+  if (auto result = registry.Find(handle); result.is_ok()) {
+    return zx::ok(result.value());
   }
-  if (auto result = registry.CreateUserControlledClock(std::move(handle), name, domain);
-      result.is_ok()) {
-    return result.value();
+  auto clock_result =
+      factory.CreateWrappedClock(std::move(handle), name, domain, /*adjustable=*/false);
+  if (!clock_result.is_ok()) {
+    return clock_result.take_error();
   }
-  return nullptr;
-}
 
-std::shared_ptr<Clock> LookupClock(ClockRegistry& registry,
-                                   fuchsia_audio_mixer::wire::ReferenceClock& clock,
-                                   std::string_view node_name) {
-  std::string name =
-      clock.has_name() ? std::string(clock.name().get()) : ClockNameFromNodeName(node_name);
-  auto domain = clock.has_domain() ? clock.domain() : Clock::kExternalDomain;
-  return LookupClock(registry, std::move(clock.handle()), domain, name);
+  registry.Add(clock_result.value());
+  return zx::ok(std::move(clock_result.value()));
 }
 
 // Validates `stream_sink` and translates from FIDL types to internal C++ types. This is intended to
@@ -68,7 +65,8 @@ struct StreamSinkInfo {
 template <typename ProducerConsumerT>
 fpromise::result<StreamSinkInfo, fuchsia_audio_mixer::CreateNodeError>  //
 ValidateStreamSink(std::string_view debug_description, std::string_view node_name,
-                   ClockRegistry& clock_registry, ProducerConsumerT& stream_sink, bool writable) {
+                   ClockRegistry& clock_registry, ClockFactory& clock_factory,
+                   ProducerConsumerT& stream_sink, bool writable) {
   bool has_channel;
   if constexpr (std::is_same_v<ProducerConsumerT, fuchsia_audio_mixer::wire::StreamSinkProducer>) {
     has_channel = stream_sink.has_server_end() && stream_sink.server_end().is_valid();
@@ -108,16 +106,20 @@ ValidateStreamSink(std::string_view debug_description, std::string_view node_nam
     return fpromise::error(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
   }
 
-  auto clock = LookupClock(clock_registry, stream_sink.reference_clock(), node_name);
-  if (!clock) {
-    FX_LOGS(WARNING) << debug_description << ": invalid clock";
+  auto& rc = stream_sink.reference_clock();
+  const auto clock_result =
+      LookupClock(clock_registry, clock_factory, std::move(rc.handle()),
+                  rc.has_domain() ? rc.domain() : Clock::kExternalDomain,
+                  rc.has_name() ? std::string(rc.name().get()) : ClockNameFromNodeName(node_name));
+  if (!clock_result.is_ok()) {
+    FX_LOGS(WARNING) << debug_description << ": invalid clock: " << clock_result.status_string();
     return fpromise::error(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
   }
 
   return fpromise::ok(StreamSinkInfo{
       .payload_buffer = std::move(payload_buffer_result.value()),
       .format = format_result.value(),
-      .reference_clock = UnreadableClock(clock),
+      .reference_clock = UnreadableClock(clock_result.value()),
   });
 }
 
@@ -129,8 +131,8 @@ struct RingBufferInfo {
 };
 fpromise::result<RingBufferInfo, fuchsia_audio_mixer::CreateNodeError>  //
 ValidateRingBuffer(std::string_view debug_description, std::string_view node_name,
-                   ClockRegistry& clock_registry, fuchsia_audio::wire::RingBuffer& ring_buffer,
-                   const bool writable) {
+                   ClockRegistry& clock_registry, ClockFactory& clock_factory,
+                   fuchsia_audio::wire::RingBuffer& ring_buffer, const bool writable) {
   if (!ring_buffer.has_vmo() || !ring_buffer.vmo().is_valid() ||  //
       !ring_buffer.has_format() ||                                //
       !ring_buffer.has_producer_bytes() ||                        //
@@ -177,17 +179,18 @@ ValidateRingBuffer(std::string_view debug_description, std::string_view node_nam
   const auto clock_domain = ring_buffer.has_reference_clock_domain()
                                 ? ring_buffer.reference_clock_domain()
                                 : Clock::kExternalDomain;
-  auto clock = LookupClock(clock_registry, std::move(ring_buffer.reference_clock()), clock_domain,
-                           ClockNameFromNodeName(node_name));
-  if (!clock) {
-    FX_LOGS(WARNING) << debug_description << ": invalid clock";
+  auto clock_result =
+      LookupClock(clock_registry, clock_factory, std::move(ring_buffer.reference_clock()),
+                  clock_domain, ClockNameFromNodeName(node_name));
+  if (!clock_result.is_ok()) {
+    FX_LOGS(WARNING) << debug_description << ": invalid clock: " << clock_result.status_string();
     return fpromise::error(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
   }
 
   return fpromise::ok(RingBufferInfo{
       .ring_buffer = RingBuffer::Create({
           .format = format,
-          .reference_clock = UnreadableClock(clock),
+          .reference_clock = UnreadableClock(clock_result.value()),
           .buffer = std::move(mapped_buffer),
           .producer_frames =
               static_cast<int64_t>(ring_buffer.producer_bytes()) / format.bytes_per_frame(),
@@ -195,7 +198,7 @@ ValidateRingBuffer(std::string_view debug_description, std::string_view node_nam
               static_cast<int64_t>(ring_buffer.consumer_bytes()) / format.bytes_per_frame(),
       }),
       .format = format,
-      .reference_clock = UnreadableClock(clock),
+      .reference_clock = UnreadableClock(clock_result.value()),
   });
 }
 
@@ -212,6 +215,7 @@ std::shared_ptr<GraphServer> GraphServer::Create(
 GraphServer::GraphServer(Args args)
     : name_(std::move(args.name)),
       realtime_fidl_thread_(std::move(args.realtime_fidl_thread)),
+      clock_factory_(std::move(args.clock_factory)),
       clock_registry_(std::move(args.clock_registry)) {}
 
 void GraphServer::CreateProducer(CreateProducerRequestView request,
@@ -233,7 +237,7 @@ void GraphServer::CreateProducer(CreateProducerRequestView request,
   if (request->data_source().is_stream_sink()) {
     auto& stream_sink = request->data_source().stream_sink();
     auto result = ValidateStreamSink("CreateProducer(StreamSink)", name, *clock_registry_,
-                                     stream_sink, /*writable=*/false);
+                                     *clock_factory_, stream_sink, /*writable=*/false);
     if (!result.is_ok()) {
       completer.ReplyError(result.error());
       return;
@@ -251,8 +255,9 @@ void GraphServer::CreateProducer(CreateProducerRequestView request,
         });
 
   } else if (request->data_source().is_ring_buffer()) {
-    auto result = ValidateRingBuffer("CreateProducer(RingBuffer)", name, *clock_registry_,
-                                     request->data_source().ring_buffer(), /*writable=*/false);
+    auto result =
+        ValidateRingBuffer("CreateProducer(RingBuffer)", name, *clock_registry_, *clock_factory_,
+                           request->data_source().ring_buffer(), /*writable=*/false);
     if (!result.is_ok()) {
       completer.ReplyError(result.error());
       return;
@@ -296,14 +301,14 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
     return;
   }
 
-  auto thread_it = threads_.find(request->options().thread());
-  if (thread_it == threads_.end()) {
+  auto mix_thread_it = mix_threads_.find(request->options().thread());
+  if (mix_thread_it == mix_threads_.end()) {
     FX_LOGS(WARNING) << "CreateConsumer: invalid thread ID";
     completer.ReplyError(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
     return;
   }
 
-  auto& thread = thread_it->second.thread;
+  auto& mix_thread = mix_thread_it->second.ptr;
   const auto name = NameOrEmpty(*request);
   std::shared_ptr<ConsumerStage::Writer> writer;
   std::optional<Format> format;
@@ -312,7 +317,7 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
   if (request->data_source().is_stream_sink()) {
     auto& stream_sink = request->data_source().stream_sink();
     auto result = ValidateStreamSink("CreateConsumer(StreamSink)", name, *clock_registry_,
-                                     stream_sink, /*writable=*/false);
+                                     *clock_factory_, stream_sink, /*writable=*/false);
     if (!result.is_ok()) {
       completer.ReplyError(result.error());
       return;
@@ -322,8 +327,8 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
     format = result.value().format;
 
     // Packet size defaults to the mix period or the buffer size, whichever is smaller.
-    const int64_t frames_per_mix_period =
-        format->integer_frames_per(thread->mix_period(), media::TimelineRate::RoundingMode::Floor);
+    const int64_t frames_per_mix_period = format->integer_frames_per(
+        mix_thread->mix_period(), media::TimelineRate::RoundingMode::Floor);
     const int64_t frames_per_payload_buffer =
         static_cast<int64_t>(result.value().payload_buffer->content_size()) /
         format->bytes_per_frame();
@@ -354,8 +359,9 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
     });
 
   } else if (request->data_source().is_ring_buffer()) {
-    auto result = ValidateRingBuffer("CreateConsumer(RingBuffer)", name, *clock_registry_,
-                                     request->data_source().ring_buffer(), /*writable=*/true);
+    auto result =
+        ValidateRingBuffer("CreateConsumer(RingBuffer)", name, *clock_registry_, *clock_factory_,
+                           request->data_source().ring_buffer(), /*writable=*/true);
     if (!result.is_ok()) {
       completer.ReplyError(result.error());
       return;
@@ -379,18 +385,19 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
       .format = *format,
       .reference_clock = *reference_clock,
       .writer = std::move(writer),
-      .thread = thread,
+      .thread = mix_thread,
   });
   nodes_[id] = consumer;
 
   // Add this consumer to its thread. Since the consumer was just created, it cannot have been
   // started yet, hence we don't call NotifyConsumerStarting.
-  global_task_queue_->Push(thread->id(), [thread, consumer_stage = consumer->consumer_stage()]() {
-    ScopedThreadChecker checker(thread->checker());
-    thread->AddConsumer(consumer_stage);
-    // TODO(fxbug.dev/87651): thread->AddClock?
-  });
-  thread_it->second.num_consumers++;
+  global_task_queue_->Push(mix_thread->id(),
+                           [mix_thread, consumer_stage = consumer->consumer_stage()]() {
+                             ScopedThreadChecker checker(mix_thread->checker());
+                             mix_thread->AddConsumer(consumer_stage);
+                             // TODO(fxbug.dev/87651): mix_thread->AddClock?
+                           });
+  mix_thread_it->second.num_consumers++;
 
   fidl::Arena arena;
   completer.ReplySuccess(
@@ -456,8 +463,8 @@ void GraphServer::CreateThread(CreateThreadRequestView request,
   }
 
   const auto id = NextThreadId();
-  threads_[id] = {
-      .thread = MixThread::Create({
+  mix_threads_[id] = {
+      .ptr = MixThread::Create({
           .id = id,
           .name = NameOrEmpty(*request),
           .deadline_profile = request->has_deadline_profile()
@@ -466,8 +473,8 @@ void GraphServer::CreateThread(CreateThreadRequestView request,
           .mix_period = zx::nsec(request->period()),
           .cpu_per_period = zx::nsec(request->cpu_per_period()),
           .global_task_queue = global_task_queue_,
-          .timer = clock_registry_->CreateTimer(),
-          .mono_clock = clock_registry_->SystemMonotonicClock(),
+          .timer = clock_factory_->CreateTimer(),
+          .mono_clock = clock_factory_->SystemMonotonicClock(),
       }),
       .num_consumers = 0,
   };
@@ -488,8 +495,8 @@ void GraphServer::DeleteThread(DeleteThreadRequestView request,
     return;
   }
 
-  auto it = threads_.find(request->id());
-  if (it == threads_.end()) {
+  auto it = mix_threads_.find(request->id());
+  if (it == mix_threads_.end()) {
     FX_LOGS(WARNING) << "DeleteThread: thread " << request->id() << " not found";
     completer.ReplyError(fuchsia_audio_mixer::DeleteThreadError::kInvalidId);
     return;
@@ -503,12 +510,12 @@ void GraphServer::DeleteThread(DeleteThreadRequestView request,
   }
 
   // Shutdown this thread and delete it.
-  const auto thread = it->second.thread;
-  global_task_queue_->Push(thread->id(), [thread]() {
-    ScopedThreadChecker checker(thread->checker());
-    thread->Shutdown();
+  const auto mix_thread = it->second.ptr;
+  global_task_queue_->Push(mix_thread->id(), [mix_thread]() {
+    ScopedThreadChecker checker(mix_thread->checker());
+    mix_thread->Shutdown();
   });
-  threads_.erase(it);
+  mix_threads_.erase(it);
 
   fidl::Arena arena;
   completer.ReplySuccess(
@@ -534,26 +541,50 @@ void GraphServer::CreateGraphControlledReferenceClock(
   TRACE_DURATION("audio", "Graph:::CreateGraphControlledReferenceClock");
   ScopedThreadChecker checker(thread().checker());
 
-  auto result = clock_registry_->CreateGraphControlledClock();
-  if (!result.is_ok()) {
-    completer.ReplyError(result.status_value());
+  auto name = std::string("GraphControlledClock") + std::to_string(num_graph_controlled_clocks_);
+  num_graph_controlled_clocks_++;
+
+  // Create and register.
+  auto create_result = clock_factory_->CreateGraphControlledClock(name);
+  if (!create_result.is_ok()) {
+    completer.ReplyError(create_result.status_value());
     return;
   }
 
-  auto handle = std::move(result.value().second);
+  auto [clock, handle] = std::move(create_result.value());
+  clock_registry_->Add(clock);
+
+  // This should not fail.
+  zx::eventpair local_fence;
+  zx::eventpair remote_fence;
+  auto status = zx::eventpair::create(0, &local_fence, &remote_fence);
+  FX_CHECK(status == ZX_OK) << "zx::eventpair::create failed with status " << status;
+
+  // To ensure the client can use `handle` until they close `remote_fence`, `clock` must stay in the
+  // registry for at least that long. Hence, we hold onto `clock` until the peer of `local_fence` is
+  // closed.
+  auto wait_it = pending_one_shot_waiters_.emplace(pending_one_shot_waiters_.end(),
+                                                   local_fence.get(), ZX_EVENTPAIR_PEER_CLOSED, 0);
+  wait_it->Begin(thread().dispatcher(), [this, self = shared_from_this(), clock = std::move(clock),
+                                         fence = std::move(local_fence), wait_it](
+                                            async_dispatcher_t* dispatcher, async::WaitOnce* wait,
+                                            zx_status_t status, const zx_packet_signal_t* signal) {
+    // TODO(fxbug.dev/87651): need to tell clock_registry_ to stop adjusting `clock`
+    pending_one_shot_waiters_.erase(wait_it);
+  });
+
   fidl::Arena arena;
   completer.ReplySuccess(
       fuchsia_audio_mixer::wire::GraphCreateGraphControlledReferenceClockResponse::Builder(arena)
           .reference_clock(std::move(handle))
+          .release_fence(std::move(remote_fence))
           .Build());
 }
 
-void GraphServer::ForgetGraphControlledReferenceClock(
-    ForgetGraphControlledReferenceClockRequestView request,
-    ForgetGraphControlledReferenceClockCompleter::Sync& completer) {
-  TRACE_DURATION("audio", "Graph:::ForgetGraphControlledReferenceClock");
-  ScopedThreadChecker checker(thread().checker());
-  FX_CHECK(false) << "not implemented";
+void GraphServer::OnShutdown(fidl::UnbindInfo info) {
+  // Clearing this list will cancel all pending waiters.
+  pending_one_shot_waiters_.clear();
+  BaseFidlServer::OnShutdown(info);
 }
 
 NodeId GraphServer::NextNodeId() {
