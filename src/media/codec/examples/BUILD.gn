@@ -727,6 +727,14 @@ template("vp9_decoder_canary_conformance_test") {
     md5_file = "//prebuilt/test_data/media/third_party/webm_vp9_canary_conformance_stream/decompressed_md5/Profile_0_8bit/${invoker.test_rel_path}.md5"
   }
 }
+template("vp9_decoder_tiled_canary_conformance_test") {
+  vp9_file_decoder_conformance_test(target_name) {
+    forward_variables_from(invoker, [ "test_specs" ])
+    ivf_file = "//prebuilt/test_data/media/third_party/webm_vp9_canary_conformance_stream/processed/Profile_0_8bit/${invoker.test_rel_path}.webm.ivf"
+    md5_file = "//prebuilt/test_data/media/third_party/webm_vp9_canary_conformance_stream/decompressed_md5/Profile_0_8bit/${invoker.test_rel_path}.md5"
+    y_tiled = true
+  }
+}
 
 vp9_decoder_canary_conformance_test("vp9_decoder_canary_conformance_test_buf") {
   test_rel_path = "buf/crowd_run_256X144_fr15_bd8_8buf_l1"
@@ -746,6 +754,7 @@ vp9_decoder_canary_conformance_test(
   test_rel_path = "frm_resize/crowd_run_384X192_fr30_bd8_frm_resize_l11"
   test_specs = {
     environments = [
+      atlas_env,
       astro_env,
       sherlock_env,
       vim3_env,
@@ -797,6 +806,61 @@ vp9_decoder_canary_conformance_test(
   }
 }
 
+vp9_decoder_tiled_canary_conformance_test(
+    "vp9_decoder_tiled_canary_conformance_test_buf") {
+  test_rel_path = "buf/crowd_run_256X144_fr15_bd8_8buf_l1"
+  test_specs = {
+    environments = [
+      atlas_env,
+      nuc_env,
+    ]
+  }
+}
+
+vp9_decoder_tiled_canary_conformance_test(
+    "vp9_decoder_tiled_canary_conformance_test_frm_resize") {
+  test_rel_path = "frm_resize/crowd_run_384X192_fr30_bd8_frm_resize_l11"
+  test_specs = {
+    environments = [
+      atlas_env,
+      nuc_env,
+    ]
+  }
+}
+
+vp9_decoder_tiled_canary_conformance_test(
+    "vp9_decoder_tiled_canary_conformance_test_gf_dist") {
+  test_rel_path = "gf_dist/crowd_run_256X144_fr15_bd8_gf_dist_4_l1"
+  test_specs = {
+    environments = [
+      atlas_env,
+      nuc_env,
+    ]
+  }
+}
+
+vp9_decoder_tiled_canary_conformance_test(
+    "vp9_decoder_tiled_canary_conformance_test_odd_size") {
+  test_rel_path = "odd_size/crowd_run_248X144_fr15_bd8_odd_size_l1"
+  test_specs = {
+    environments = [
+      atlas_env,
+      nuc_env,
+    ]
+  }
+}
+
+vp9_decoder_tiled_canary_conformance_test(
+    "vp9_decoder_tiled_canary_conformance_test_sub8x8") {
+  test_rel_path = "sub8X8/crowd_run_256X144_fr15_bd8_sub8X8_l1"
+  test_specs = {
+    environments = [
+      atlas_env,
+      nuc_env,
+    ]
+  }
+}
+
 group("vp9_decoder_canary_conformance_tests") {
   testonly = true
   deps = [
@@ -805,5 +869,10 @@ group("vp9_decoder_canary_conformance_tests") {
     ":vp9_decoder_canary_conformance_test_gf_dist",
     ":vp9_decoder_canary_conformance_test_odd_size",
     ":vp9_decoder_canary_conformance_test_sub8x8",
+    ":vp9_decoder_tiled_canary_conformance_test_buf",
+    ":vp9_decoder_tiled_canary_conformance_test_frm_resize",
+    ":vp9_decoder_tiled_canary_conformance_test_gf_dist",
+    ":vp9_decoder_tiled_canary_conformance_test_odd_size",
+    ":vp9_decoder_tiled_canary_conformance_test_sub8x8",
   ]
 }

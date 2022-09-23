@@ -1,0 +1,28 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This component is the same as vp9_decoder_conformance_test.cml with the
+// only exception being that the "--intel_y_tile_output" command line argument
+// is provided to vp9_decoder_conformance_test binary.
+{
+    include: [
+        "//src/media/codec/factory/meta/include_codecfactory.shard.cml",
+        "sys/testing/elf_test_runner.shard.cml",
+        "sys/testing/system-test.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "test/vp9_decoder_conformance_test",
+        args: [ "--intel_y_tile_output" ],
+    },
+    use: [
+        {
+            protocol: "fuchsia.mediacodec.CodecFactory",
+            from: "#codec-factory",
+        },
+        {
+            protocol: [ "fuchsia.sysmem.Allocator" ],
+        },
+    ],
+}
