@@ -17,7 +17,7 @@ use {
     fidl::prelude::*,
     fidl_fuchsia_location_sensor as fidl_location_sensor, fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_sme as fidl_sme,
-    fuchsia_async::{self as fasync, DurationExt},
+    fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon as zx,
     futures::{lock::Mutex, prelude::*},
@@ -33,6 +33,8 @@ use {
 const FIDL_HEADER_AND_ERR_WRAPPED_VEC_HEADER_SIZE: usize = 56;
 // Delay between scanning retries when the firmware returns "ShouldWait" error code
 const SCAN_RETRY_DELAY_MS: i64 = 100;
+// Max time allowed for consumers of scan results to retrieve results
+const SCAN_CONSUMER_MAX_SECONDS_ALLOWED: i64 = 5;
 
 // Inidication of the scan caller, for use in logging caller specific metrics
 pub enum ScanReason {
@@ -265,7 +267,19 @@ pub(crate) async fn perform_scan(
         scan_result_consumers.push(Box::pin(requester_fut));
     }
 
-    while let Some(_) = scan_result_consumers.next().await {}
+    // Send scan results to all consumers, but include a timeout so that a stalled consumer doesn't
+    // stop us from reaching the `return Ok(scan_results)` at the end of this function.
+    // TODO(fxbug.dev/73821): the timeout mechanism is temporary, once the scan manager is
+    // implemented with its own event loop, we can send these results to the consumers in a
+    // separate task, without blocking the return.
+    while let Some(_) = scan_result_consumers
+        .next()
+        .on_timeout(zx::Duration::from_seconds(SCAN_CONSUMER_MAX_SECONDS_ALLOWED), || {
+            error!("Timed out waiting for consumers of scan results");
+            None
+        })
+        .await
+    {}
 
     drop(scan_result_consumers);
     Ok(scan_results)
@@ -2132,6 +2146,9 @@ mod tests {
             assert_eq!(results, fidl_aps);
         });
 
+        // Get the final empty message on the output iterator
+        let _output_iter_fut2 = iter2.get_next();
+
         // Check all successful scan consumers got results
         assert_eq!(
             *exec.run_singlethreaded(network_selector_results1.lock()),
@@ -2149,6 +2166,20 @@ mod tests {
             *exec.run_singlethreaded(location_sensor_results2.lock()),
             Some(internal_aps.clone())
         );
+
+        // The second scan future should also be done now that all consumers are done
+        assert_variant!(exec.run_until_stalled(&mut scan_fut2), Poll::Ready(results) => {
+            assert_eq!(results.unwrap(), internal_aps.clone());
+        });
+
+        // The first scan future is still awaiting its consumers
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+
+        // Time-out the consumption, and ensure the scan future returns
+        assert!(exec.wake_next_timer().is_some());
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(results) => {
+            assert_eq!(results.unwrap(), internal_aps.clone());
+        });
     }
 
     #[fuchsia::test]
