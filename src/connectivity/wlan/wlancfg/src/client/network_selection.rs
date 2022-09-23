@@ -5,7 +5,7 @@
 use {
     crate::{
         client::{
-            scan::{self, ScanReason::NetworkSelection as NetworkSelectionScan, ScanResultUpdate},
+            scan::{self, ScanReason::NetworkSelection as NetworkSelectionScan},
             state_machine::PeriodicConnectionStats,
             types,
         },
@@ -16,7 +16,6 @@ use {
         mode_management::iface_manager_api::IfaceManagerApi,
         telemetry::{self, TelemetryEvent, TelemetrySender},
     },
-    async_trait::async_trait,
     fidl_fuchsia_metrics::{MetricEvent, MetricEventPayload},
     fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_async as fasync,
@@ -29,7 +28,7 @@ use {
     },
     fuchsia_zircon as zx,
     futures::lock::Mutex,
-    log::{debug, error, info, trace},
+    log::{debug, error, info, trace, warn},
     std::{collections::HashMap, convert::TryInto as _, sync::Arc},
     wlan_common::{self, hasher::WlanHasher},
     wlan_inspect::wrappers::InspectWlanChan,
@@ -46,10 +45,6 @@ use {
 
 const RECENT_FAILURE_WINDOW: zx::Duration = zx::Duration::from_seconds(60 * 5); // 5 minutes
 const RECENT_DISCONNECT_WINDOW: zx::Duration = zx::Duration::from_seconds(60 * 15); // 15 minutes
-
-// TODO(fxbug.dev/67791) Remove code or rework cache to be useful
-// TODO(fxbug.dev/61992) Tweak duration
-const STALE_SCAN_AGE: zx::Duration = zx::Duration::from_millis(50);
 
 /// Above or at this RSSI, we'll give 5G networks a preference
 const RSSI_CUTOFF_5G_PREFERENCE: i16 = -64;
@@ -71,18 +66,12 @@ const INSPECT_EVENT_LIMIT_FOR_NETWORK_SELECTIONS: usize = 10;
 
 pub struct NetworkSelector {
     saved_network_manager: Arc<dyn SavedNetworksManagerApi>,
-    scan_result_cache: Arc<Mutex<ScanResultCache>>,
+    last_scan_result_time: Arc<Mutex<zx::Time>>,
     hasher: WlanHasher,
     _inspect_node_root: Arc<Mutex<InspectNode>>,
     inspect_node_for_network_selections: Arc<Mutex<AutoPersist<InspectBoundedListNode>>>,
     telemetry_sender: TelemetrySender,
 }
-
-struct ScanResultCache {
-    updated_at: zx::Time,
-    results: Vec<types::ScanResult>,
-}
-
 #[derive(Debug, PartialEq, Clone)]
 struct InternalSavedNetworkData {
     network_id: types::NetworkIdentifier,
@@ -257,76 +246,13 @@ impl NetworkSelector {
         );
         Self {
             saved_network_manager,
-            scan_result_cache: Arc::new(Mutex::new(ScanResultCache {
-                updated_at: zx::Time::ZERO,
-                results: Vec::new(),
-            })),
+            last_scan_result_time: Arc::new(Mutex::new(zx::Time::ZERO)),
             hasher,
             _inspect_node_root: Arc::new(Mutex::new(inspect_node)),
             inspect_node_for_network_selections: Arc::new(Mutex::new(
                 inspect_node_for_network_selection,
             )),
             telemetry_sender,
-        }
-    }
-
-    pub fn generate_scan_result_updater(&self) -> NetworkSelectorScanUpdater {
-        NetworkSelectorScanUpdater {
-            scan_result_cache: Arc::clone(&self.scan_result_cache),
-            saved_network_manager: Arc::clone(&self.saved_network_manager),
-            telemetry_sender: self.telemetry_sender.clone(),
-            hasher: self.hasher.clone(),
-        }
-    }
-
-    async fn perform_scan(&self, iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>) {
-        // Get the scan age.
-        let scan_result_guard = self.scan_result_cache.lock().await;
-        let last_scan_result_time = scan_result_guard.updated_at;
-        drop(scan_result_guard);
-        let scan_age = zx::Time::get_monotonic() - last_scan_result_time;
-
-        // Log a metric for scan age, to help us optimize the STALE_SCAN_AGE
-        if last_scan_result_time != zx::Time::ZERO {
-            self.telemetry_sender.send(TelemetryEvent::LogMetricEvents {
-                events: vec![MetricEvent {
-                    metric_id: LAST_SCAN_AGE_WHEN_SCAN_REQUESTED_MIGRATED_METRIC_ID,
-                    event_codes: vec![],
-                    payload: MetricEventPayload::IntegerValue(scan_age.into_micros()),
-                }],
-                ctx: "NetworkSelector::perform_scan",
-            });
-        }
-
-        // Determine if a new scan is warranted
-        if scan_age >= STALE_SCAN_AGE {
-            if last_scan_result_time != zx::Time::ZERO {
-                info!("Scan results are {}s old, triggering a scan", scan_age.into_seconds());
-            }
-
-            // Clear out the old scan results
-            let mut scan_result_guard = self.scan_result_cache.lock().await;
-            scan_result_guard.results = vec![];
-            drop(scan_result_guard);
-
-            let wpa3_supported =
-                iface_manager.lock().await.has_wpa3_capable_client().await.unwrap_or_else(|e| {
-                    error!("Failed to determine WPA3 support. Assuming no WPA3 support. {}", e);
-                    false
-                });
-
-            let _results = scan::perform_scan(
-                iface_manager,
-                self.saved_network_manager.clone(),
-                None,
-                self.generate_scan_result_updater(),
-                scan::LocationSensorUpdater { wpa3_supported },
-                NetworkSelectionScan,
-                Some(self.telemetry_sender.clone()),
-            )
-            .await;
-        } else {
-            info!("Using cached scan results from {}s ago", scan_age.into_seconds());
         }
     }
 
@@ -340,32 +266,75 @@ impl NetworkSelector {
         iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
         ignore_list: &Vec<types::NetworkIdentifier>,
     ) -> Option<types::ConnectionCandidate> {
-        self.perform_scan(iface_manager.clone()).await;
-        let scan_result_guard = self.scan_result_cache.lock().await;
-        let networks = merge_saved_networks_and_scan_data(
-            &self.saved_network_manager,
-            &scan_result_guard.results,
-            &self.hasher,
+        // Log a metric for scan age
+        let last_scan_result_time = *self.last_scan_result_time.lock().await;
+        let scan_age = zx::Time::get_monotonic() - last_scan_result_time;
+        if last_scan_result_time != zx::Time::ZERO {
+            info!("Scan results are {}s old, triggering a scan", scan_age.into_seconds());
+            self.telemetry_sender.send(TelemetryEvent::LogMetricEvents {
+                events: vec![MetricEvent {
+                    metric_id: LAST_SCAN_AGE_WHEN_SCAN_REQUESTED_MIGRATED_METRIC_ID,
+                    event_codes: vec![],
+                    payload: MetricEventPayload::IntegerValue(scan_age.into_micros()),
+                }],
+                ctx: "NetworkSelector::perform_scan",
+            });
+        }
+
+        let wpa3_supported =
+            iface_manager.lock().await.has_wpa3_capable_client().await.unwrap_or_else(|e| {
+                error!("Failed to determine WPA3 support. Assuming no WPA3 support. {}", e);
+                false
+            });
+
+        let scan_results = scan::perform_scan(
+            iface_manager.clone(),
+            self.saved_network_manager.clone(),
+            None,
+            scan::LocationSensorUpdater { wpa3_supported },
+            NetworkSelectionScan,
+            Some(self.telemetry_sender.clone()),
         )
         .await;
-        // TODO(fxbug.dev/78170): When there's a scan error, this should be an `Err`, not `Ok(0)`.
-        let num_candidates = Ok(networks.len());
+
+        let (candidate_networks, num_candidates) = match scan_results {
+            Err(e) => {
+                warn!("Failed to get scan results for network selection, {:?}", e);
+                (vec![], Err(()))
+            }
+            Ok(ref scan_results) => {
+                let candidate_networks = merge_saved_networks_and_scan_data(
+                    &self.saved_network_manager,
+                    scan_results,
+                    &self.hasher,
+                )
+                .await;
+
+                *self.last_scan_result_time.lock().await = zx::Time::get_monotonic();
+                record_metrics_on_scan(candidate_networks.clone(), &self.telemetry_sender);
+                let candidate_count = candidate_networks.len();
+                (candidate_networks, Ok(candidate_count))
+            }
+        };
 
         let mut inspect_node = self.inspect_node_for_network_selections.lock().await;
-        let result =
-            match select_best_connection_candidate(networks, ignore_list, &mut inspect_node) {
-                Some((selected, channel, bssid)) => Some(
-                    augment_bss_with_active_scan(
-                        selected,
-                        channel,
-                        bssid,
-                        iface_manager,
-                        self.telemetry_sender.clone(),
-                    )
-                    .await,
-                ),
-                None => None,
-            };
+        let result = match select_best_connection_candidate(
+            candidate_networks,
+            ignore_list,
+            &mut inspect_node,
+        ) {
+            Some((selected, channel, bssid)) => Some(
+                augment_bss_with_active_scan(
+                    selected,
+                    channel,
+                    bssid,
+                    iface_manager,
+                    self.telemetry_sender.clone(),
+                )
+                .await,
+            ),
+            None => None,
+        };
 
         self.telemetry_sender.send(TelemetryEvent::NetworkSelectionDecision {
             network_selection_type: telemetry::NetworkSelectionType::Undirected,
@@ -466,33 +435,6 @@ async fn merge_saved_networks_and_scan_data<'a>(
         }
     }
     merged_networks
-}
-
-pub struct NetworkSelectorScanUpdater {
-    scan_result_cache: Arc<Mutex<ScanResultCache>>,
-    saved_network_manager: Arc<dyn SavedNetworksManagerApi>,
-    telemetry_sender: TelemetrySender,
-    hasher: WlanHasher,
-}
-#[async_trait]
-impl ScanResultUpdate for NetworkSelectorScanUpdater {
-    async fn update_scan_results(&mut self, scan_results: &Vec<types::ScanResult>) {
-        // Update internal scan result cache
-        let scan_results_clone = scan_results.clone();
-        let mut scan_result_guard = self.scan_result_cache.lock().await;
-        scan_result_guard.results = scan_results_clone;
-        scan_result_guard.updated_at = zx::Time::get_monotonic();
-        drop(scan_result_guard);
-
-        // Record metrics for this scan
-        let merged_networks = merge_saved_networks_and_scan_data(
-            &self.saved_network_manager,
-            scan_results,
-            &self.hasher,
-        )
-        .await;
-        record_metrics_on_scan(merged_networks, &self.telemetry_sender);
-    }
 }
 
 fn select_best_connection_candidate<'a>(
@@ -749,12 +691,12 @@ mod tests {
             telemetry::ScanIssue,
             util::testing::{
                 create_inspect_persistence_channel, create_wlan_hasher, generate_channel,
-                generate_random_bss, generate_random_scan_result,
-                poll_for_and_validate_sme_scan_request_and_send_results, random_connection_data,
-                validate_sme_scan_request_and_send_results,
+                generate_random_bss, poll_for_and_validate_sme_scan_request_and_send_results,
+                random_connection_data, validate_sme_scan_request_and_send_results,
             },
         },
         anyhow::Error,
+        async_trait::async_trait,
         fidl::endpoints::create_proxy,
         fidl_fuchsia_wlan_common as fidl_common,
         fidl_fuchsia_wlan_common_security as fidl_security,
@@ -915,30 +857,6 @@ mod tests {
                 past_connections: PastConnectionsByBssid::new(),
             },
         )
-    }
-
-    #[fuchsia::test]
-    async fn scan_results_are_stored() {
-        let mut test_values = test_setup().await;
-        let network_selector = test_values.network_selector;
-
-        // check there are 0 scan results to start with
-        let guard = network_selector.scan_result_cache.lock().await;
-        assert_eq!(guard.results.len(), 0);
-        drop(guard);
-
-        // provide some new scan results
-        let mock_scan_results = vec![generate_random_scan_result(), generate_random_scan_result()];
-        let mut updater = network_selector.generate_scan_result_updater();
-        updater.update_scan_results(&mock_scan_results).await;
-
-        // check that the scan results are stored
-        let guard = network_selector.scan_result_cache.lock().await;
-        assert_eq!(guard.results, mock_scan_results);
-
-        // check there are some telemetry events for the incoming scan results
-        // note: the actual metrics are checked in unit tests for the metric recording function
-        assert!(test_values.telemetry_receiver.try_next().unwrap().is_some());
     }
 
     #[fuchsia::test]
@@ -1930,133 +1848,6 @@ mod tests {
     }
 
     #[fuchsia::test]
-    async fn perform_scan_cache_is_fresh() {
-        let mut test_values = test_setup().await;
-        let network_selector = test_values.network_selector;
-
-        // Set the scan result cache to be fresher than STALE_SCAN_AGE
-        let mut scan_result_guard = network_selector.scan_result_cache.lock().await;
-        let last_scan_age = zx::Duration::from_millis(1);
-        assert!(last_scan_age < STALE_SCAN_AGE);
-        scan_result_guard.updated_at = zx::Time::get_monotonic() - last_scan_age;
-        drop(scan_result_guard);
-
-        network_selector.perform_scan(test_values.iface_manager).await;
-
-        // Metric logged for scan age
-        let metric_events = assert_variant!(test_values.telemetry_receiver.try_next(), Ok(Some(TelemetryEvent::LogMetricEvents { events, .. })) => events);
-        assert_eq!(metric_events.len(), 1);
-        // We need to individually check each field, since the elapsed time is non-deterministic
-        assert_eq!(
-            metric_events[0].metric_id,
-            LAST_SCAN_AGE_WHEN_SCAN_REQUESTED_MIGRATED_METRIC_ID
-        );
-        assert_variant!(&metric_events[0].payload, MetricEventPayload::IntegerValue(value) => {
-            let duration = zx::Duration::from_micros(*value);
-            assert!(duration < STALE_SCAN_AGE);
-        });
-    }
-
-    #[fuchsia::test]
-    fn perform_scan_cache_is_stale() {
-        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = exec.run_singlethreaded(test_setup());
-        let network_selector = test_values.network_selector;
-        let test_start_time = zx::Time::get_monotonic();
-
-        // Set the scan result cache to be older than STALE_SCAN_AGE
-        let mut scan_result_guard =
-            exec.run_singlethreaded(network_selector.scan_result_cache.lock());
-        scan_result_guard.updated_at =
-            zx::Time::get_monotonic() - (STALE_SCAN_AGE + zx::Duration::from_seconds(1));
-        drop(scan_result_guard);
-
-        // Kick off scan
-        let scan_fut = network_selector.perform_scan(test_values.iface_manager);
-        pin_mut!(scan_fut);
-        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
-
-        // Metric logged for scan age
-        let metric_events = assert_variant!(test_values.telemetry_receiver.try_next(), Ok(Some(TelemetryEvent::LogMetricEvents { events, .. })) => events);
-        assert_eq!(metric_events.len(), 1);
-        assert_eq!(
-            metric_events[0].metric_id,
-            LAST_SCAN_AGE_WHEN_SCAN_REQUESTED_MIGRATED_METRIC_ID
-        );
-        assert_variant!(&metric_events[0].payload, MetricEventPayload::IntegerValue(value) => {
-            let duration = zx::Duration::from_micros(*value);
-            assert!(duration > STALE_SCAN_AGE);
-        });
-
-        // Check that a scan request was sent to the sme and send back results
-        let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
-        validate_sme_scan_request_and_send_results(
-            &mut exec,
-            &mut test_values.sme_stream,
-            &expected_scan_request,
-            vec![],
-        );
-        // Process scan
-        exec.run_singlethreaded(&mut scan_fut);
-
-        // Check scan results were updated
-        let scan_result_guard = exec.run_singlethreaded(network_selector.scan_result_cache.lock());
-        assert!(scan_result_guard.updated_at > test_start_time);
-        assert!(scan_result_guard.updated_at < zx::Time::get_monotonic());
-        drop(scan_result_guard);
-    }
-
-    #[fuchsia::test]
-    fn perform_scan_error_doesnt_use_stale_results() {
-        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = exec.run_singlethreaded(test_setup());
-        let network_selector = test_values.network_selector;
-
-        // Set the scan result cache to be older than STALE_SCAN_AGE
-        let mut scan_result_guard =
-            exec.run_singlethreaded(network_selector.scan_result_cache.lock());
-        scan_result_guard.updated_at =
-            zx::Time::get_monotonic() - (STALE_SCAN_AGE + zx::Duration::from_seconds(1));
-        // Add some stale/old results to the cache
-        scan_result_guard.results = vec![types::ScanResult {
-            ssid: types::Ssid::try_from("foo").unwrap(),
-            security_type_detailed: types::SecurityTypeDetailed::Wpa2Wpa3Personal,
-            entries: vec![],
-            compatibility: types::Compatibility::Supported,
-        }];
-        drop(scan_result_guard);
-
-        // Kick off scan
-        let scan_fut = network_selector.perform_scan(test_values.iface_manager);
-        pin_mut!(scan_fut);
-        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
-
-        // Check that a scan request was sent to the sme and send back an error
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.sme_stream.next()),
-            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
-                txn, ..
-            }))) => {
-                // Send failed scan response.
-                let (_stream, ctrl) = txn
-                    .into_stream_and_control_handle().expect("error accessing control handle");
-                ctrl.send_on_error(&mut fidl_sme::ScanError {
-                    code: fidl_sme::ScanErrorCode::InternalError,
-                    message: "Failed to scan".to_string()
-                })
-                    .expect("failed to send scan error");
-            }
-        );
-        // Process scan
-        exec.run_singlethreaded(&mut scan_fut);
-
-        // Check there are no scan results presents for use
-        let scan_result_guard = exec.run_singlethreaded(network_selector.scan_result_cache.lock());
-        assert_eq!(scan_result_guard.results.len(), 0);
-        drop(scan_result_guard);
-    }
-
-    #[fuchsia::test]
     fn augment_bss_with_active_scan_doesnt_run_on_actively_found_networks() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = exec.run_singlethreaded(test_setup());
@@ -2202,6 +1993,69 @@ mod tests {
                 ..connect_req
             }
         );
+    }
+
+    #[fuchsia::test]
+    fn find_best_connection_candidate_scan_error() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut test_values = exec.run_singlethreaded(test_setup());
+        let network_selector = test_values.network_selector;
+        let mut telemetry_receiver = test_values.telemetry_receiver;
+
+        // Kick off network selection
+        let ignore_list = vec![];
+        let network_selection_fut = network_selector
+            .find_best_connection_candidate(test_values.iface_manager.clone(), &ignore_list);
+        pin_mut!(network_selection_fut);
+        assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
+
+        // Check that a scan request was sent to the sme and send back results
+        let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                txn, req, control_handle: _
+            }))) => {
+                // Validate the request
+                assert_eq!(req, expected_scan_request);
+                // Send all the APs
+                let (_stream, ctrl) = txn
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl.send_on_error(&mut fidl_sme::ScanError {
+                    code: fidl_sme::ScanErrorCode::InternalError,
+                    message: "Failed to scan".to_string()
+                })
+                    .expect("failed to send scan data");
+            }
+        );
+
+        // Process scan results
+        assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Ready(None));
+
+        // Check the network selections were logged
+        assert_data_tree!(test_values.inspector, root: {
+            net_select_test: {
+                network_selection: {
+                    "0": {
+                        "@time": inspect::testing::AnyProperty,
+                        "candidates": {},
+                    },
+                }
+            },
+        });
+
+        // Verify two sets of TelemetryEvent for network selection were sent
+        assert_variant!(
+            telemetry_receiver.try_next(),
+            Ok(Some(TelemetryEvent::ScanDefect(ScanIssue::ScanFailure)))
+        );
+        assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
+            assert_variant!(event, TelemetryEvent::NetworkSelectionDecision {
+                network_selection_type: telemetry::NetworkSelectionType::Undirected,
+                num_candidates: Err(()),
+                selected_any: false,
+            });
+        });
     }
 
     #[fuchsia::test]
@@ -2377,15 +2231,6 @@ mod tests {
             })
         );
 
-        // Set the scan result cache's age so it is guaranteed to be old enough to trigger another
-        // passive scan. Without this manual adjustment, the test timing is such that sometimes the
-        // cache is fresh enough to use (therefore no new passive scan is performed).
-        let mut scan_result_guard =
-            exec.run_singlethreaded(network_selector.scan_result_cache.lock());
-        scan_result_guard.updated_at =
-            zx::Time::get_monotonic() - (STALE_SCAN_AGE + zx::Duration::from_millis(1));
-        drop(scan_result_guard);
-
         // Ignore that network, check that we pick the other one
         let ignore_list = vec![test_id_1.clone()];
         let network_selection_fut = network_selector
@@ -2518,110 +2363,6 @@ mod tests {
                 selected_any: true,
             });
         });
-    }
-
-    #[fuchsia::test]
-    fn find_best_connection_candidate_wpa_wpa2() {
-        // Check that if we see a WPA2 network and have WPA and WPA3 credentials saved for it, we
-        // could choose the WPA credential but not the WPA3 credential. In other words we can
-        // upgrade saved networks to higher security but not downgrade.
-        let mut exec = fasync::TestExecutor::new().expect("failed to create executor");
-        let test_values = exec.run_singlethreaded(test_setup());
-        let network_selector = test_values.network_selector;
-
-        // Save networks with WPA and WPA3 security, same SSIDs, and different passwords.
-        let ssid = types::Ssid::try_from("foo").unwrap();
-        let wpa_network_id = types::NetworkIdentifier {
-            ssid: ssid.clone(),
-            security_type: types::SecurityType::Wpa,
-        };
-        let credential = Credential::Password("foo_password".as_bytes().to_vec());
-        assert!(exec
-            .run_singlethreaded(
-                test_values
-                    .saved_network_manager
-                    .store(wpa_network_id.clone().into(), credential.clone()),
-            )
-            .expect("Failed to save network")
-            .is_none());
-        let wpa3_network_id = types::NetworkIdentifier {
-            ssid: ssid.clone(),
-            security_type: types::SecurityType::Wpa3,
-        };
-        let wpa3_credential = Credential::Password("wpa3_only_password".as_bytes().to_vec());
-        assert!(exec
-            .run_singlethreaded(
-                test_values
-                    .saved_network_manager
-                    .store(wpa3_network_id.clone().into(), wpa3_credential.clone()),
-            )
-            .expect("Failed to save network")
-            .is_none());
-
-        // Record passive connects so that the test will not active scan.
-        exec.run_singlethreaded(test_values.saved_network_manager.record_connect_result(
-            wpa_network_id.clone().into(),
-            &credential,
-            types::Bssid([0, 0, 0, 0, 0, 0]),
-            fake_successful_connect_result(),
-            Some(fidl_common::ScanType::Passive),
-        ));
-        exec.run_singlethreaded(test_values.saved_network_manager.record_connect_result(
-            wpa3_network_id.clone().into(),
-            &wpa3_credential,
-            types::Bssid([0, 0, 0, 0, 0, 0]),
-            fake_successful_connect_result(),
-            Some(fidl_common::ScanType::Passive),
-        ));
-
-        let wpa2_scan_result = types::ScanResult {
-            ssid: ssid,
-            security_type_detailed: types::SecurityTypeDetailed::Wpa2Personal,
-            entries: vec![types::Bss {
-                compatible: true,
-                observation: types::ScanObservation::Active, // mark this as active, to avoid an additional scan
-                ..generate_random_bss()
-            }],
-            compatibility: types::Compatibility::Supported,
-        };
-        let mut updater = network_selector.generate_scan_result_updater();
-        exec.run_singlethreaded(updater.update_scan_results(&vec![wpa2_scan_result.clone()]));
-
-        // Set the scan cache's "updated_at" field to the future so that a scan won't be triggered.
-        {
-            let mut cache_guard =
-                exec.run_singlethreaded(network_selector.scan_result_cache.lock());
-            cache_guard.updated_at = zx::Time::INFINITE;
-        }
-
-        // Check that we choose the config saved as WPA
-        let ignore_list = Vec::new();
-        let network_selection_fut = network_selector
-            .find_best_connection_candidate(test_values.iface_manager.clone(), &ignore_list);
-        pin_mut!(network_selection_fut);
-        assert_variant!(
-            exec.run_until_stalled(&mut network_selection_fut),
-            Poll::Ready(Some(connection_candidate)) => {
-                let expected_candidate = types::ConnectionCandidate {
-                    // The network ID should match network config for recording connect results.
-                    network: wpa_network_id.clone(),
-                    credential,
-                    scanned: Some(types::ScannedCandidate {
-                        bss_description: wpa2_scan_result.entries[0].bss_description.clone(),
-                        observation: wpa2_scan_result.entries[0].observation,
-                        has_multiple_bss_candidates: false,
-                        security_type_detailed: types::SecurityTypeDetailed::Wpa2Personal,
-                    }),
-                };
-                assert_eq!(connection_candidate, expected_candidate);
-            }
-        );
-        // If the best network ID is ignored, there is no best connection candidate.
-        let ignore_list = vec![wpa_network_id];
-        let network_selection_fut = network_selector
-            .find_best_connection_candidate(test_values.iface_manager.clone(), &ignore_list);
-        pin_mut!(network_selection_fut);
-        assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Ready(None));
     }
 
     #[fuchsia::test]

@@ -208,7 +208,6 @@ fn test_setup(exec: &mut TestExecutor) -> TestValues {
             iface_manager.clone(),
             client_update_sender,
             saved_networks.clone(),
-            network_selector.clone(),
             client_provider_lock,
             client_provider_requests,
             telemetry_sender,
