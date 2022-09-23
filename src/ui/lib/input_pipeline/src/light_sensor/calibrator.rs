@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(fxbug.dev/100664) Remove allow once used.
-#![cfg_attr(not(test), allow(dead_code))]
-
 use super::types::FileLoader;
 use crate::light_sensor::led_watcher::LedState;
 use crate::light_sensor::types::{Calibration, Parameters, Rgbc};

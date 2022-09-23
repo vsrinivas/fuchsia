@@ -4,7 +4,8 @@
 
 use {
     crate::{
-        consumer_controls_binding, keyboard_binding, mouse_binding, mouse_config, touch_binding,
+        consumer_controls_binding, keyboard_binding, light_sensor_binding, mouse_binding,
+        mouse_config, touch_binding,
     },
     anyhow::{format_err, Error},
     async_trait::async_trait,
@@ -78,6 +79,7 @@ pub struct UnhandledInputEvent {
 #[derive(Clone, Debug, PartialEq)]
 pub enum InputDeviceEvent {
     Keyboard(keyboard_binding::KeyboardEvent),
+    LightSensor(light_sensor_binding::LightSensorEvent),
     ConsumerControls(consumer_controls_binding::ConsumerControlsEvent),
     Mouse(mouse_binding::MouseEvent),
     TouchScreen(touch_binding::TouchScreenEvent),
@@ -99,6 +101,7 @@ pub enum InputDeviceEvent {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum InputDeviceDescriptor {
     Keyboard(keyboard_binding::KeyboardDeviceDescriptor),
+    LightSensor(light_sensor_binding::LightSensorDeviceDescriptor),
     ConsumerControls(consumer_controls_binding::ConsumerControlsDeviceDescriptor),
     Mouse(mouse_binding::MouseDeviceDescriptor),
     TouchScreen(touch_binding::TouchScreenDeviceDescriptor),
@@ -117,6 +120,7 @@ impl From<keyboard_binding::KeyboardDeviceDescriptor> for InputDeviceDescriptor 
 #[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
 pub enum InputDeviceType {
     Keyboard,
+    LightSensor,
     ConsumerControls,
     Mouse,
     Touch,
@@ -245,6 +249,7 @@ pub async fn is_device_type(
         InputDeviceType::Mouse => device_descriptor.mouse.is_some(),
         InputDeviceType::Touch => device_descriptor.touch.is_some(),
         InputDeviceType::Keyboard => device_descriptor.keyboard.is_some(),
+        InputDeviceType::LightSensor => device_descriptor.sensor.is_some(),
     }
 }
 
@@ -278,6 +283,14 @@ pub async fn get_device_binding(
         InputDeviceType::Keyboard => Ok(Box::new(
             keyboard_binding::KeyboardBinding::new(device_proxy, input_event_sender, device_id)
                 .await?,
+        )),
+        InputDeviceType::LightSensor => Ok(Box::new(
+            light_sensor_binding::LightSensorBinding::new(
+                device_proxy,
+                device_id,
+                input_event_sender,
+            )
+            .await?,
         )),
     }
 }

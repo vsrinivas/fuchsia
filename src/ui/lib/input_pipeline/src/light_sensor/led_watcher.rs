@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![cfg_attr(not(test), allow(dead_code))]
-
 use async_utils::hanging_get::client::HangingGetStream;
 use fidl_fuchsia_settings::{LightGroup as LightGroupFidl, LightProxy, LightValue};
 use fidl_fuchsia_ui_brightness::ControlProxy;

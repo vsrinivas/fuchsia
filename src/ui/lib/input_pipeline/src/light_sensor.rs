@@ -4,6 +4,8 @@
 
 mod calibrator;
 mod led_watcher;
+pub mod light_sensor_binding;
+pub mod light_sensor_handler;
 #[cfg(test)]
 mod test_utils;
 mod types;

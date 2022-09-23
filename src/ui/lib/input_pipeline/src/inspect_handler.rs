@@ -13,6 +13,7 @@ use std::rc::Rc;
 #[derive(Debug, Hash, PartialEq, Eq)]
 enum EventType {
     Keyboard,
+    LightSensor,
     ConsumerControls,
     Mouse,
     TouchScreen,
@@ -26,6 +27,7 @@ impl std::fmt::Display for EventType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &*self {
             EventType::Keyboard => write!(f, "keyboard"),
+            EventType::LightSensor => write!(f, "light_sensor"),
             EventType::ConsumerControls => write!(f, "consumer_controls"),
             EventType::Mouse => write!(f, "mouse"),
             EventType::TouchScreen => write!(f, "touch_screen"),
@@ -42,6 +44,7 @@ impl EventType {
     pub fn for_device_event(event: &InputDeviceEvent) -> Self {
         match event {
             InputDeviceEvent::Keyboard(_) => EventType::Keyboard,
+            InputDeviceEvent::LightSensor(_) => EventType::LightSensor,
             InputDeviceEvent::ConsumerControls(_) => EventType::ConsumerControls,
             InputDeviceEvent::Mouse(_) => EventType::Mouse,
             InputDeviceEvent::TouchScreen(_) => EventType::TouchScreen,
