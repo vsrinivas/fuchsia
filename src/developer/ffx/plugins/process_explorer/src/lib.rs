@@ -4,6 +4,7 @@
 
 //! Library that obtains and prints information about all processes of a running fuchsia device.
 
+mod fuchsia_map;
 mod processes_data;
 mod write_human_readable_output;
 
@@ -13,10 +14,12 @@ use {
     ffx_process_explorer_args::{Args, QueryCommand},
     ffx_writer::Writer,
     fidl_fuchsia_process_explorer::QueryProxy,
+    fuchsia_map::json,
     fuchsia_zircon_types::zx_koid_t,
     futures::AsyncReadExt,
     processes_data::{processed, raw},
     std::collections::HashSet,
+    std::io::Write,
     write_human_readable_output::{
         pretty_print_invalid_koids, pretty_print_processes_data,
         pretty_print_processes_name_and_koid,
@@ -37,6 +40,7 @@ pub async fn print_processes_data(
     match cmd.arg {
         Args::List(arg) => list_subcommand(writer, output, arg.verbose),
         Args::Filter(arg) => filter_subcommand(writer, output, arg.process_koids),
+        Args::GenerateFuchsiaMap(_) => generate_fuchsia_map_subcommand(writer, output),
     }
 }
 
@@ -126,6 +130,16 @@ fn filter_subcommand(
     } else {
         pretty_print_processes_data(w, filtered_output)
     }
+}
+
+fn generate_fuchsia_map_subcommand(
+    mut w: Writer,
+    processes_data: processed::ProcessesData,
+) -> Result<()> {
+    let json = json::Json::from(processes_data);
+    let serialized = serde_json::to_string(&json).unwrap();
+    writeln!(w, "{}", serialized)?;
+    Ok(())
 }
 
 #[cfg(test)]

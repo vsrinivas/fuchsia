@@ -23,6 +23,7 @@ ffx_plugin("ffx_process_explorer") {
   args_sources = [ "src/args.rs" ]
 
   sources = [
+    "src/fuchsia_map.rs",
     "src/lib.rs",
     "src/processes_data.rs",
     "src/write_human_readable_output.rs",

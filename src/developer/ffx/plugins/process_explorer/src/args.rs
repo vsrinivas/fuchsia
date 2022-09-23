@@ -17,6 +17,7 @@ pub struct QueryCommand {
 pub enum Args {
     List(ListArg),
     Filter(FilterArg),
+    GenerateFuchsiaMap(GenerateFuchsiaMapArg),
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -43,3 +44,11 @@ pub struct FilterArg {
     #[argh(positional, description = "process koids")]
     pub process_koids: Vec<u64>,
 }
+
+#[derive(FromArgs, PartialEq, Debug)]
+#[argh(
+    subcommand,
+    name = "generate-fuchsia-map",
+    description = "outputs the json required to generate a map of all processes and channels"
+)]
+pub struct GenerateFuchsiaMapArg {}
