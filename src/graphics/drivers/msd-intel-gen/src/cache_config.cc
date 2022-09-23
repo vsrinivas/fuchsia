@@ -82,3 +82,72 @@ void CacheConfig::GetLncfMemoryObjectControlState(std::vector<uint16_t>& mocs) {
     mocs[index++] = LncfMemoryObjectControlState::format(LncfMemoryObjectControlState::UNCACHED);
   }
 }
+
+bool CacheConfig::InitCacheConfigGen12(magma::RegisterIo* register_io) {
+  std::vector<uint32_t> global_mocs;
+  GetMemoryObjectControlStateGen12(global_mocs);
+
+  for (uint32_t i = 0; i < global_mocs.size(); i++) {
+    register_io->Write32(global_mocs[i],
+                         MemoryObjectControlState::kGlobalOffsetGen12 + i * sizeof(uint32_t));
+  }
+
+  std::vector<uint16_t> lncf_mocs;
+  GetLncfMemoryObjectControlStateGen12(lncf_mocs);
+
+  std::vector<uint32_t> lncf_mocs_32;
+  for (uint32_t i = 0; i < lncf_mocs.size(); i += 2) {
+    uint32_t entry = (lncf_mocs[i + 1] << 16) | lncf_mocs[i];
+    lncf_mocs_32.push_back(entry);
+  }
+
+  for (uint32_t i = 0; i < lncf_mocs_32.size(); i++) {
+    register_io->Write32(lncf_mocs_32[i],
+                         LncfMemoryObjectControlState::kOffset + i * sizeof(uint32_t));
+  }
+
+  return true;
+}
+
+void CacheConfig::GetMemoryObjectControlStateGen12(std::vector<uint32_t>& mocs) {
+  mocs.resize(kMemoryObjectControlStateEntries);
+
+  constexpr uint32_t kUncached = MemoryObjectControlState::format(
+      MemoryObjectControlState::UNCACHED, MemoryObjectControlState::LLC,
+      MemoryObjectControlState::LRU_0);
+  constexpr uint32_t kCached = MemoryObjectControlState::format(MemoryObjectControlState::WRITEBACK,
+                                                                MemoryObjectControlState::LLC,
+                                                                MemoryObjectControlState::LRU_3);
+
+  for (uint32_t i = 0; i < kMemoryObjectControlStateEntries; i++) {
+    switch (i) {
+      case 2:   // Used by mesa
+      case 48:  // Used by mesa, with implicit HDC
+      case 60:  // HW special case (CCS)
+        mocs[i] = kCached;
+        break;
+      case 3:  // Used by mesa
+      default:
+        mocs[i] = kUncached;
+        break;
+    }
+  }
+}
+
+void CacheConfig::GetLncfMemoryObjectControlStateGen12(std::vector<uint16_t>& mocs) {
+  mocs.resize(kMemoryObjectControlStateEntries);
+
+  for (uint32_t i = 0; i < kMemoryObjectControlStateEntries; i++) {
+    switch (i) {
+      case 2:   // Used by mesa
+      case 48:  // Use by mesa, with implicit HDC
+        mocs[i] = LncfMemoryObjectControlState::format(LncfMemoryObjectControlState::WRITEBACK);
+        break;
+      case 3:   // Used by mesa
+      case 60:  // HW special case (CCS)
+      default:
+        mocs[i] = LncfMemoryObjectControlState::format(LncfMemoryObjectControlState::UNCACHED);
+        break;
+    }
+  }
+}

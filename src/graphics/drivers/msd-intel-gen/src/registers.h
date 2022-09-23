@@ -699,16 +699,18 @@ class GtInterruptIdentityGen12 : public hwreg::RegisterBase<GtInterruptIdentityG
 class MemoryObjectControlState {
  public:
   static constexpr uint32_t kGraphicsOffset = 0xC800;
+  static constexpr uint32_t kGlobalOffsetGen12 = 0x4000;
 
   static constexpr uint32_t kCacheabilityShift = 0;
   static constexpr uint32_t kCacheShift = 2;
   static constexpr uint32_t kLruManagementShift = 4;
 
   enum Cacheability { PAGETABLE = 0, UNCACHED, WRITETHROUGH, WRITEBACK };
-  enum Cache { LLC_ELLC = 2 };
+  enum Cache { LLC = 1, LLC_ELLC = 2 };
   enum LruManagement { LRU_0 = 0, LRU_3 = 3 };
 
-  static uint32_t format(Cacheability cacheability, Cache cache, LruManagement lru_management) {
+  static constexpr uint32_t format(Cacheability cacheability, Cache cache,
+                                   LruManagement lru_management) {
     return (lru_management << kLruManagementShift) | (cache << kCacheShift) |
            (cacheability << kCacheabilityShift);
   }
@@ -723,7 +725,7 @@ class LncfMemoryObjectControlState {
 
   enum Cacheability { DIRECT = 0, UNCACHED, WRITETHROUGH, WRITEBACK };
 
-  static uint16_t format(Cacheability cacheability) {
+  static constexpr uint16_t format(Cacheability cacheability) {
     return static_cast<uint16_t>(cacheability << kCacheabilityShift);
   }
 };

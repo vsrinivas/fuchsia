@@ -11,6 +11,7 @@
 
 #include <fbl/string_printf.h>
 
+#include "cache_config.h"
 #include "device_id.h"
 #include "forcewake.h"
 #include "magma_intel_gen_defs.h"
@@ -159,6 +160,11 @@ bool MsdIntelDevice::Init(void* device_handle) {
 
   InitEngine(render_engine_cs());
   InitEngine(video_command_streamer());
+
+  if (DeviceId::is_gen12(device_id())) {
+    if (!CacheConfig::InitCacheConfigGen12(register_io()))
+      return DRETF(false, "failed to init cache config");
+  }
 
   return true;
 }
@@ -789,7 +795,6 @@ bool MsdIntelDevice::InitContextForEngine(MsdIntelContext* context,
       if (!command_streamer->InitContextWorkarounds(context))
         return DRETF(false, "failed to init workarounds");
 
-      // TODO(fxbug.dev/109212) - cache config for gen12
       if (!command_streamer->InitContextCacheConfig(context))
         return DRETF(false, "failed to init cache config");
 

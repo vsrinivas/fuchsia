@@ -11,6 +11,7 @@
 
 #include <magma_util/instruction_writer.h>
 
+#include "magma_util/register_io.h"
 #include "types.h"
 
 class CacheConfig {
@@ -21,9 +22,8 @@ class CacheConfig {
   // Assumes there is sufficient space available to write into the instruction stream.
   static bool InitCacheConfig(magma::InstructionWriter* writer, EngineCommandStreamerId engine_id);
 
- private:
-  static void GetLncfMemoryObjectControlState(std::vector<uint16_t>& mocs);
-  static void GetMemoryObjectControlState(std::vector<uint32_t>& mocs);
+  // On gen12 cache config is written directly to registers.
+  static bool InitCacheConfigGen12(magma::RegisterIo* register_io);
 
   static constexpr uint32_t kMemoryObjectControlStateEntries = 62;
   static constexpr uint32_t kLncfMemoryObjectControlStateEntries =
@@ -31,6 +31,13 @@ class CacheConfig {
 
   static_assert(kMemoryObjectControlStateEntries % 2 == 0,
                 "kMemoryObjectControlStateEntries not even");
+
+ private:
+  static void GetLncfMemoryObjectControlState(std::vector<uint16_t>& mocs);
+  static void GetMemoryObjectControlState(std::vector<uint32_t>& mocs);
+
+  static void GetLncfMemoryObjectControlStateGen12(std::vector<uint16_t>& mocs);
+  static void GetMemoryObjectControlStateGen12(std::vector<uint32_t>& mocs);
 
   friend class TestCacheConfig;
 };
