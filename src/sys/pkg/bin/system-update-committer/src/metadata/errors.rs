@@ -35,9 +35,16 @@ pub enum PolicyError {
     CurrentConfigurationUnbootable(paver::Configuration),
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum VerifySource {
     Blobfs,
+}
+
+/// Error condition that may be returned when doing health verification.
+#[derive(Error, Debug)]
+pub enum VerifyErrors {
+    #[error("one or more verifications failed: {_0:?}")]
+    VerifyErrors(Vec<VerifyError>),
 }
 
 /// Error condition that may be returned when doing health verification.
@@ -63,7 +70,7 @@ pub enum VerifyFailureReason {
 #[derive(Error, Debug)]
 pub enum MetadataError {
     #[error("while doing health verification")]
-    Verify(#[source] VerifyError),
+    Verify(#[source] VerifyErrors),
 
     #[error("while signalling EventPair peer")]
     SignalPeer(#[source] Status),

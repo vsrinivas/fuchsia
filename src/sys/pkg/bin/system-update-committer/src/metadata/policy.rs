@@ -5,7 +5,8 @@
 use {
     super::configuration::Configuration,
     super::errors::{
-        BootManagerError, BootManagerResultExt, PolicyError, VerifyError, VerifySource,
+        BootManagerError, BootManagerResultExt, PolicyError, VerifyError, VerifyErrors,
+        VerifySource,
     },
     crate::config::{Config as ComponentConfig, Mode},
     fidl_fuchsia_paver as paver,
@@ -82,15 +83,31 @@ impl PolicyEngine {
 
     /// Filters out any failed verifications if the config says to ignore them.
     pub fn apply_config(
-        res: Result<(), VerifyError>,
+        res: Result<(), VerifyErrors>,
         config: &ComponentConfig,
-    ) -> Result<(), VerifyError> {
-        if let Err(VerifyError::VerifyError(VerifySource::Blobfs, _)) = res {
-            if config.blobfs() == &Mode::Ignore {
-                return Ok(());
-            };
+    ) -> Result<(), VerifyErrors> {
+        match res {
+            Ok(()) => Ok(()),
+            Err(VerifyErrors::VerifyErrors(v)) => {
+                // For any existing verification errors,
+                let errors: Vec<VerifyError> = v
+                    .into_iter()
+                    .filter(|VerifyError::VerifyError(source, _)| {
+                        // filter out the ones which config says to ignore.
+                        match source {
+                            VerifySource::Blobfs => config.blobfs() != &Mode::Ignore,
+                        }
+                    })
+                    .collect();
+
+                // If there are any remaining verification errors, pass them on.
+                if errors.is_empty() {
+                    Ok(())
+                } else {
+                    Err(VerifyErrors::VerifyErrors(errors))
+                }
+            }
         }
-        res
     }
 }
 
@@ -257,16 +274,18 @@ mod tests {
     }
 
     fn test_blobfs_verify_errors(config: ComponentConfig, expect_err: bool) {
-        let timeout_err =
-            Err(VerifyError::VerifyError(VerifySource::Blobfs, VerifyFailureReason::Timeout));
-        let verify_err = Err(VerifyError::VerifyError(
+        let timeout_err = Err(VerifyErrors::VerifyErrors(vec![VerifyError::VerifyError(
+            VerifySource::Blobfs,
+            VerifyFailureReason::Timeout,
+        )]));
+        let verify_err = Err(VerifyErrors::VerifyErrors(vec![VerifyError::VerifyError(
             VerifySource::Blobfs,
             VerifyFailureReason::Verify(verify::VerifyError::Internal),
-        ));
-        let fidl_err = Err(VerifyError::VerifyError(
+        )]));
+        let fidl_err = Err(VerifyErrors::VerifyErrors(vec![VerifyError::VerifyError(
             VerifySource::Blobfs,
             VerifyFailureReason::Fidl(fidl::Error::OutOfRange),
-        ));
+        )]));
 
         assert_eq!(PolicyEngine::apply_config(timeout_err, &config).is_err(), expect_err);
         assert_eq!(PolicyEngine::apply_config(verify_err, &config).is_err(), expect_err);
@@ -277,6 +296,50 @@ mod tests {
     #[test]
     fn test_blobfs_errors_ignored() {
         test_blobfs_verify_errors(ComponentConfig::builder().blobfs(Mode::Ignore).build(), false);
+    }
+
+    #[test]
+    fn test_errors_all_ignored() {
+        let ve1 = VerifyError::VerifyError(VerifySource::Blobfs, VerifyFailureReason::Timeout);
+        let ve2 = VerifyError::VerifyError(
+            VerifySource::Blobfs,
+            VerifyFailureReason::Verify(verify::VerifyError::Internal),
+        );
+
+        let config = ComponentConfig::builder().blobfs(Mode::Ignore).build();
+
+        // TODO(https://fxbug.dev/76636): When there are multiple VerifySource
+        // types, test heterogeneous VerifyErrors lists.
+        assert_matches!(
+            PolicyEngine::apply_config(Err(VerifyErrors::VerifyErrors(vec![ve1, ve2])), &config),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn test_errors_none_ignored() {
+        let ve1 = VerifyError::VerifyError(VerifySource::Blobfs, VerifyFailureReason::Timeout);
+        let ve2 = VerifyError::VerifyError(
+            VerifySource::Blobfs,
+            VerifyFailureReason::Verify(verify::VerifyError::Internal),
+        );
+
+        let config = ComponentConfig::builder().blobfs(Mode::RebootOnFailure).build();
+
+        let filtered_errors = assert_matches!(
+            PolicyEngine::apply_config(Err(VerifyErrors::VerifyErrors(vec![ve1, ve2])), &config),
+            Err(VerifyErrors::VerifyErrors(s)) => s);
+
+        assert_matches!(
+            &filtered_errors[..],
+            [
+                VerifyError::VerifyError(VerifySource::Blobfs, VerifyFailureReason::Timeout),
+                VerifyError::VerifyError(
+                    VerifySource::Blobfs,
+                    VerifyFailureReason::Verify(verify::VerifyError::Internal)
+                )
+            ]
+        );
     }
 
     /// Blobfs errors should NOT be ignored if the config says to reboot on failure.
