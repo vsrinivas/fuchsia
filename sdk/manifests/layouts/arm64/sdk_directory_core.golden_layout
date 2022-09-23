@@ -1434,8 +1434,6 @@ tools/arm64/device-finder
 tools/arm64/device-finder-meta.json
 tools/arm64/far
 tools/arm64/far-meta.json
-tools/arm64/fconfig
-tools/arm64/fconfig-meta.json
 tools/arm64/ffx
 tools/arm64/ffx-meta.json
 tools/arm64/fidl-format
@@ -1486,8 +1484,6 @@ tools/x64/device-finder
 tools/x64/device-finder-meta.json
 tools/x64/far
 tools/x64/far-meta.json
-tools/x64/fconfig
-tools/x64/fconfig-meta.json
 tools/x64/ffx
 tools/x64/ffx-meta.json
 tools/x64/fidl-format

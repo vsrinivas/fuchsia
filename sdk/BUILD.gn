@@ -241,7 +241,6 @@ sdk_molecule("host_tools") {
       "//tools/cmc:cmc_sdk",
       "//tools/configc:configc_sdk",
       "//tools/fvdl:fvdl_sdk",
-      "//tools/sdk-tools/fconfig:fconfig_sdk",
       "//tools/sdk-tools/fpublish:fpublish_sdk",
       "//tools/sdk-tools/fserve:fserve_sdk",
       "//tools/sdk-tools/fssh:fssh_sdk",

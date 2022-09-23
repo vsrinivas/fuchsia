@@ -201,7 +201,6 @@ sdk://tools/arm64/cmc
 sdk://tools/arm64/configc
 sdk://tools/arm64/device-finder
 sdk://tools/arm64/far
-sdk://tools/arm64/fconfig
 sdk://tools/arm64/ffx
 sdk://tools/arm64/fidl-format
 sdk://tools/arm64/fidlc
@@ -227,7 +226,6 @@ sdk://tools/x64/cmc
 sdk://tools/x64/configc
 sdk://tools/x64/device-finder
 sdk://tools/x64/far
-sdk://tools/x64/fconfig
 sdk://tools/x64/ffx
 sdk://tools/x64/fidl-format
 sdk://tools/x64/fidlc

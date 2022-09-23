@@ -6,7 +6,6 @@ group("tools") {
   testonly = true
 
   public_deps = [
-    "//tools/sdk-tools/fconfig:fconfig-host",
     "//tools/sdk-tools/fpublish:fpublish-host",
     "//tools/sdk-tools/fserve:fserve-host",
     "//tools/sdk-tools/fssh:fssh-host",
