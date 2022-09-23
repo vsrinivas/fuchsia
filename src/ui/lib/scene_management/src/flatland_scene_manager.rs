@@ -469,7 +469,10 @@ impl FlatlandSceneManager {
         ) = match display_rotation % 360 {
             0 => Ok((ui_comp::Orientation::Ccw0Degrees, math::Vec_ { x: 0, y: 0 }, false)),
             90 => Ok((
-                ui_comp::Orientation::Ccw90Degrees,
+                // Rotation is specified in the opposite winding direction to gfx (and the
+                // specified |display_rotation| value). Winding in the opposite direction is equal
+                // to -90 degrees, which is equivalent to 270.
+                ui_comp::Orientation::Ccw270Degrees,
                 math::Vec_ { x: display_metrics.width_in_pixels() as i32, y: 0 },
                 true,
             )),
@@ -482,7 +485,10 @@ impl FlatlandSceneManager {
                 false,
             )),
             270 => Ok((
-                ui_comp::Orientation::Ccw270Degrees,
+                // Rotation is specified in the opposite winding direction to gfx (and the
+                // specified |display_rotation| value). Winding in the opposite direction is equal
+                // to -270 degrees, which is equivalent to 90.
+                ui_comp::Orientation::Ccw90Degrees,
                 math::Vec_ { x: 0, y: display_metrics.height_in_pixels() as i32 },
                 true,
             )),
