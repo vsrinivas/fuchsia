@@ -2973,22 +2973,39 @@ static bool vmo_write_does_not_commit_test() {
 static bool vmo_stack_owned_loaned_pages_interval_test() {
   BEGIN_TEST;
 
-  // So far it doesn't seem like we have any way to directly observe priority inheritance happening.
-  // Really that's more of an OwnedWaitQueue concern, but it might be nice to double check here that
-  // a page owning thread can be boosted while there's a higher priority waiter.
-
   // This test isn't stress, but have a few threads to check on multiple waiters per page and
   // multiple waiters per stack_owner.
   constexpr uint32_t kFakePageCount = 8;
   constexpr uint32_t kWaitingThreadsPerPage = 2;
   constexpr uint32_t kWaitingThreadCount = kFakePageCount * kWaitingThreadsPerPage;
+  constexpr int kOwnerThreadBasePriority = LOW_PRIORITY;
+  constexpr int kBlockedThreadBasePriority = DEFAULT_PRIORITY;
+  fbl::AllocChecker ac;
+
+  // Local structures used by the tests.  The kernel stack is pretty small, so
+  // don't take any chances here.  Heap allocate these structures instead of
+  // stack allocating them.
   struct OwningThread {
     Thread* thread = nullptr;
     vm_page_t pages[kFakePageCount] = {};
-    ktl::atomic<bool> ownership_acquired = false;
-    ktl::atomic<bool> release_stack_ownership = false;
-  } ot;
-  for (auto& page : ot.pages) {
+    Event ownership_acquired;
+    Event release_stack_ownership;
+    Event exit_now;
+  };
+
+  auto ot = ktl::make_unique<OwningThread>(&ac);
+  ASSERT_TRUE(ac.check());
+
+  struct WaitingThread {
+    OwningThread* ot = nullptr;
+    uint32_t i = 0;
+    Thread* thread = nullptr;
+  };
+
+  auto waiting_threads = ktl::make_unique<ktl::array<WaitingThread, kWaitingThreadCount>>(&ac);
+  ASSERT_TRUE(ac.check());
+
+  for (auto& page : ot->pages) {
     EXPECT_EQ(vm_page_state::FREE, page.state());
     // Normally this would be under PmmLock; only for testing.
     page.set_is_loaned();
@@ -3007,84 +3024,139 @@ static bool vmo_stack_owned_loaned_pages_interval_test() {
     Guard<MonitoredSpinLock, IrqSave> thread_lock_guard{ThreadLock::Get(), SOURCE_TAG};
     StackOwnedLoanedPagesInterval raii_interval;
     DEBUG_ASSERT(&StackOwnedLoanedPagesInterval::current() == &raii_interval);
-    ot.pages[0].object.set_stack_owner(&StackOwnedLoanedPagesInterval::current());
-    ot.pages[0].object.clear_stack_owner();
+    ot->pages[0].object.set_stack_owner(&StackOwnedLoanedPagesInterval::current());
+    ot->pages[0].object.clear_stack_owner();
   }  // ~raii_interval, ~thread_lock_guard
 
   // Test pages stack owned each with multiple waiters.
-  ot.thread = Thread::Create(
+  ot->thread = Thread::Create(
       "owning_thread",
       [](void* arg) -> int {
+        // Take "stack ownership" of the pages involved in the test, then signal the test thread
+        // that we are ready to proceed.
         OwningThread& ot = *reinterpret_cast<OwningThread*>(arg);
-        StackOwnedLoanedPagesInterval raii_interval;
-        for (auto& page : ot.pages) {
-          DEBUG_ASSERT(&StackOwnedLoanedPagesInterval::current() == &raii_interval);
-          page.object.set_stack_owner(&StackOwnedLoanedPagesInterval::current());
+
+        {
+          StackOwnedLoanedPagesInterval raii_interval;
+          for (auto& page : ot.pages) {
+            DEBUG_ASSERT(&StackOwnedLoanedPagesInterval::current() == &raii_interval);
+            page.object.set_stack_owner(&StackOwnedLoanedPagesInterval::current());
+          }
+          ot.ownership_acquired.Signal();
+
+          // Wait until the test thread tells us it is time to release ownership.
+          ot.release_stack_ownership.Wait();
+
+          // Now release ownership and wait until we are told that we can exit.
+          for (auto& page : ot.pages) {
+            page.object.clear_stack_owner();
+          }
+          // ~raii_interval
         }
-        ot.ownership_acquired.store(true);
-        // We spin here on purpose instead of waiting or sleeping.  We want to see the owning
-        // thread's priority reflect the waiting thread's priority.
-        while (!ot.release_stack_ownership) {
-        }
-        for (auto& page : ot.pages) {
-          page.object.clear_stack_owner();
-        }
-        // ~raii_interval
+
+        ot.exit_now.Wait();
         return 0;
       },
-      &ot, LOWEST_PRIORITY);
-  ot.thread->Resume();
-  while (!ot.ownership_acquired.load()) {
+      ot.get(), kOwnerThreadBasePriority);
+
+  // Let the owner thread run.  If anything goes wrong from here on out, make
+  // sure we drop all of the barriers to the owner thread exiting, and clean
+  // everything up.
+  ot->thread->Resume();
+  auto cleanup = fit::defer([&ot, &waiting_threads]() {
+    int ret;
+
+    ot->release_stack_ownership.Signal();
+    ot->exit_now.Signal();
+    ot->thread->Join(&ret, ZX_TIME_INFINITE);
+
+    for (auto& wt : *waiting_threads) {
+      if (wt.thread != nullptr) {
+        wt.thread->Join(&ret, ZX_TIME_INFINITE);
+      }
+    }
+  });
+
+  // Now wait until the owner thread has taken ownership of the test pages, then
+  // double check to make sure that the owner thread is still running with its
+  // base priority.
+  ot->ownership_acquired.Wait();
+  {
+    Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
+    ASSERT_EQ(kOwnerThreadBasePriority, ot->thread->scheduler_state().effective_priority());
   }
 
-  struct WaitingThread {
-    OwningThread* ot = nullptr;
-    uint32_t i = 0;
-    Thread* thread = nullptr;
-    ktl::atomic<bool> waiting_thread_started = false;
-    ktl::atomic<bool> waiting_thread_wait_done = false;
-  } waiting_threads[kWaitingThreadCount] = {};
+  // Start up all of our waiter threads.
   for (uint32_t i = 0; i < kWaitingThreadCount; ++i) {
-    auto& wt = waiting_threads[i];
-    wt.ot = &ot;
+    auto& wt = waiting_threads->at(i);
+    wt.ot = ot.get();
     wt.i = i;
     wt.thread = Thread::Create(
         "waiting_thread",
         [](void* arg) -> int {
           WaitingThread& wt = *reinterpret_cast<WaitingThread*>(arg);
-          wt.waiting_thread_started.store(true);
           StackOwnedLoanedPagesInterval::WaitUntilContiguousPageNotStackOwned(
               &wt.ot->pages[wt.i / kWaitingThreadsPerPage]);
-          wt.waiting_thread_wait_done.store(true);
           return 0;
         },
-        &wt, DEFAULT_PRIORITY);
-  }
-  for (auto& wt : waiting_threads) {
+        &wt, kBlockedThreadBasePriority);
+    ASSERT_NONNULL(wt.thread);
     wt.thread->Resume();
   }
-  for (auto& wt : waiting_threads) {
-    while (!wt.waiting_thread_started.load()) {
+
+  // Wait until all of the threads have blocked behind the owner of the
+  // StackOwnedLoanedPagesInterval object.
+  for (auto& wt : *waiting_threads) {
+    while (true) {
+      {
+        Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
+        if (wt.thread->state() == THREAD_BLOCKED) {
+          break;
+        }
+      }
+      Thread::Current::SleepRelative(ZX_MSEC(1));
     }
   }
+
+  // Now that we are certain that all threads are blocked in the wait queue, we
+  // should see the priority of the owning thread increased to the base priority
+  // of the blocked threads.
+  {
+    Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
+    ASSERT_EQ(kBlockedThreadBasePriority, ot->thread->scheduler_state().effective_priority());
+  }
+
+  // Wait a bit, the threads should still be blocked.
   Thread::Current::SleepRelative(ZX_MSEC(100));
-  for (auto& wt : waiting_threads) {
-    EXPECT_FALSE(wt.waiting_thread_wait_done.load());
-  }
-  ot.release_stack_ownership.store(true);
-  for (auto& wt : waiting_threads) {
-    while (!wt.waiting_thread_wait_done.load()) {
+  {
+    Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
+    for (auto& wt : *waiting_threads) {
+      ASSERT_EQ(THREAD_BLOCKED, wt.thread->state());
     }
   }
 
-  int ret;
-  ot.thread->Join(&ret, ZX_TIME_INFINITE);
-  EXPECT_EQ(0, ret);
-  for (auto& wt : waiting_threads) {
-    wt.thread->Join(&ret, ZX_TIME_INFINITE);
-    EXPECT_EQ(0, ret);
+  // Tell the owner thread that it can destroy its StackOwnedLoanedPagesInterval
+  // object. This should release all of the blocked thread.  One they are all
+  // unblocked, we expect to see the owner thread's priority relax back down to
+  // its base priority.
+  ot->release_stack_ownership.Signal();
+  for (auto& wt : *waiting_threads) {
+    {
+      Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
+      if (wt.thread->state() != THREAD_BLOCKED) {
+        break;
+      }
+    }
+    Thread::Current::SleepRelative(ZX_MSEC(1));
   }
 
+  // Verify that the priority of the owner thread has relaxed.
+  {
+    Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
+    EXPECT_EQ(kOwnerThreadBasePriority, ot->thread->scheduler_state().effective_priority());
+  }
+
+  // Test is finished.  Let our fit::defer handle all of the cleanup.
   END_TEST;
 }
 

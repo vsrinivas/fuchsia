@@ -29,8 +29,23 @@
 // destructor for OwnedWaitQueue and Thread.  This enforcement is considered
 // to be the reasoning why holding unmanaged pointers is considered to be safe.
 //
-class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedWaitQueue*> {
+class OwnedWaitQueue : protected WaitQueue, public fbl::DoublyLinkedListable<OwnedWaitQueue*> {
  public:
+  // We want to limit access to our base WaitQueue's methods, but not all of
+  // them.  Make public the methods which should be safe for folks to use from
+  // the OwnedWaitQueue level of things.
+  //
+  // This list is pretty short right now, and there are probably other methods
+  // which could be added safely (WakeOne, WakeAll, Peek, etc...) we'd rather
+  // keep the list as short as possible for now, and only expand it when there
+  // is a tangible need, and a thorough review for safety.
+  //
+  // The general rule of thumb here is that code which knows that it using an
+  // OwnedWaitQueue should go through the OWQ specific APIs instead of
+  // attempting to use the base WaitQueue APIs.
+  using WaitQueue::Count;
+  using WaitQueue::IsEmpty;
+
   // A small helper class which can be injected into Wake and Requeue
   // operations to allow calling code to get a callback for each thread which
   // is either woken, or requeued.  This callback serves two purposes...

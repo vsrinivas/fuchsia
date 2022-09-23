@@ -34,7 +34,6 @@ void StackOwnedLoanedPagesInterval::PrepareForWaiter() {
   DEBUG_ASSERT(owning_thread_);
   DEBUG_ASSERT(Thread::Current::Get() != owning_thread_);
   owned_wait_queue_.emplace();
-  owned_wait_queue_->AssignOwner(owning_thread_);
   // The memory_order_release isn't really needed here thanks to release of thread_lock by this
   // thread shortly and acquire of thread_lock by any thread removing the
   // StackOwnedLoanedPagesInterval from the page (before deleting the interval), but for now we're
@@ -105,6 +104,7 @@ void StackOwnedLoanedPagesInterval::WaitUntilContiguousPageNotStackOwned(vm_page
   }
   // PrepareForWaiter() was called previously, either by this thread or a different thread.
   DEBUG_ASSERT(stack_owner.is_ready_for_waiter_.load(ktl::memory_order_acquire));
+
   // At this point we know that the stack_owner won't be changed on the page while we hold
   // thread_lock, which means the OwnedWaitQueue can't be deleted yet either, since deletion is
   // after uninstalling from the page.  So now we just need to block on the OwnedWaitQueue, which
@@ -113,13 +113,20 @@ void StackOwnedLoanedPagesInterval::WaitUntilContiguousPageNotStackOwned(vm_page
   // In all those possible cases, we want to block on the OwnedWaitQueue.  The fact that the
   // OwnedWaitQueue is there is reason enough to block on it, since we want to wait for the page
   // to be outside any stack ownership interval.
-  DEBUG_ASSERT(stack_owner.owned_wait_queue_->owner());
+  //
+  // If this is the first thread blocking in the OWQ, we expect the queue's owner to be nullptr.
+  // For subsequent blocking threads, we expect it to match our owning_thread_.
+  DEBUG_ASSERT((stack_owner.owned_wait_queue_->owner() == nullptr) ||
+               (stack_owner.owned_wait_queue_->owner() == stack_owner.owning_thread_));
   DEBUG_ASSERT(stack_owner.owned_wait_queue_->owner() != Thread::Current::Get());
+
   // This is a brief wait that's guaranteed not to get stuck (short of bugs elsewhere), with
   // priority inheritance propagated to the owning thread.  So no need for a deadline or
   // interruptible.
-  zx_status_t block_status =
-      stack_owner.owned_wait_queue_->Block(Deadline::infinite(), Interruptible::No);
+  zx_status_t block_status = stack_owner.owned_wait_queue_->BlockAndAssignOwner(
+      Deadline::infinite(), stack_owner.owning_thread_, ResourceOwnership::Normal,
+      Interruptible::No);
+
   // For this wait queue, no other status is possible since no other status is ever passed to
   // OwnedWaitQueue::WakeAll() for this wait queue and Block() doesn't have any other sources of
   // failures assuming no bugs here.
@@ -134,6 +141,17 @@ void StackOwnedLoanedPagesInterval::WakeWaitersAndClearOwner(Thread* current_thr
   AnnotatedAutoPreemptDisabler aapd;
   Guard<MonitoredSpinLock, IrqSave> thread_lock_guard{ThreadLock::Get(), SOURCE_TAG};
   DEBUG_ASSERT(owned_wait_queue_->owner() == current_thread);
-  owned_wait_queue_->WakeThreads(ktl::numeric_limits<uint32_t>::max(), {hook, nullptr});
+
+  // Release the ownership before waking all of the threads.  This is a minor
+  // optimization; it causes all of the inherited profile values of the owner
+  // thread to be updated all at once, instead of one woken thread at a time.
+  //
+  // We do not need to be concerned that we will become de-scheduled here as a
+  // result of a loss of profile pressure, as we disabled preemption just a few
+  // lines before this.  This is always a requirement when interacting with an
+  // OwnedWaitQueue in any way which might cause the current thread to become a
+  // less favorable choice than one of the threads its actions affected in the
+  // PI graph.
   owned_wait_queue_->AssignOwner(nullptr);
+  owned_wait_queue_->WakeThreads(ktl::numeric_limits<uint32_t>::max(), {hook, nullptr});
 }

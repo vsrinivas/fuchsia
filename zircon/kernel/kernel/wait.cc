@@ -47,7 +47,19 @@ static inline void WqTraceDepth(const WaitQueueCollection* collection, uint32_t 
 #define DEBUG_ASSERT_MAGIC_CHECK(_queue)                                                 \
   DEBUG_ASSERT_MSG(                                                                      \
       ((_queue)->magic_ == kMagic) || ((_queue)->magic_ == OwnedWaitQueue::kOwnedMagic), \
-      "magic 0x%08x", ((_queue)->magic_));
+      "magic 0x%08x", ((_queue)->magic_))
+
+// There are a limited number of operations which should never be done on a
+// WaitQueue which happens to be an OwnedWaitQueue.  Specifically, blocking.
+// Blocking on an OWQ should always go through the OWQ specific
+// BlockAndAssignOwner.  Add a macro to check for that as well.
+#define DEBUG_ASSERT_MAGIC_AND_NOT_OWQ(_queue)                                          \
+  do {                                                                                  \
+    DEBUG_ASSERT_MSG(((_queue)->magic_ != OwnedWaitQueue::kOwnedMagic),                 \
+                     "This operation should not be performed against the WaitQueue "    \
+                     "API, use the OwnedWaitQueue API intead.");                        \
+    DEBUG_ASSERT_MSG(((_queue)->magic_ == kMagic), "magic 0x%08x", ((_queue)->magic_)); \
+  } while (false)
 
 // Wait queues are building blocks that other locking primitives use to handle
 // blocking threads.
@@ -262,7 +274,7 @@ zx_status_t WaitQueue::BlockEtc(const Deadline& deadline, uint signal_mask,
     TA_REQ(thread_lock) {
   Thread* current_thread = Thread::Current::Get();
 
-  DEBUG_ASSERT_MAGIC_CHECK(this);
+  DEBUG_ASSERT_MAGIC_AND_NOT_OWQ(this);
   DEBUG_ASSERT(current_thread->state() == THREAD_RUNNING);
 
   // Any time a thread blocks, it should be holding exactly one spinlock, and it
