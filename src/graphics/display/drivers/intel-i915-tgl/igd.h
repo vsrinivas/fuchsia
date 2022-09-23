@@ -172,7 +172,13 @@ typedef struct __attribute__((packed)) ddi_config {
   // iboost for all DDI_BUF_TRANS values and overrides the recommended iboost.
   DEF_SUBBIT(flags, 3, has_iboost_override);
 
-  uint8_t unused5[13];
+  uint8_t unused5[9];
+
+  uint8_t type_c_config;
+  DEF_SUBBIT(type_c_config, 0, is_usb_type_c);
+  DEF_SUBBIT(type_c_config, 1, is_thunderbolt);
+
+  uint8_t unused6[3];
 
   uint8_t iboost_levels;
   // The iboost override level, if has_iboost_override is set.
@@ -295,6 +301,9 @@ class IgdOpRegion {
     bool supports_dvi;
     bool supports_dp;
     bool is_edp;
+    bool is_type_c;
+    bool is_thunderbolt;
+
     struct Iboost {
       uint8_t hdmi_iboost = 0;
       uint8_t dp_iboost = 0;

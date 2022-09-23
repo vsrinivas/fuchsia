@@ -109,6 +109,76 @@ static uint8_t iboost_idx_to_level(uint8_t iboost_idx) {
   }
 }
 
+bool IsPortHdmi(uint8_t dvo_port) {
+  switch (dvo_port) {
+    case 0:   // DVO_PORT_HDMIA
+    case 1:   // DVO_PORT_HDMIB
+    case 2:   // DVO_PORT_HDMIC
+    case 3:   // DVO_PORT_HDMID
+    case 12:  // DVO_PORT_HDMIE
+    case 14:  // DVO_PORT_HDMIF
+    case 16:  // DVO_PORT_HDMIG
+    case 18:  // DVO_PORT_HDMIH
+    case 20:  // DVO_PORT_HDMII
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool IsPortDisplayPort(uint8_t dvo_port) {
+  switch (dvo_port) {
+    case 10:  // DVO_PORT_DPA
+    case 7:   // DVO_PORT_DPB
+    case 8:   // DVO_PORT_DPC
+    case 9:   // DVO_PORT_DPD
+    case 11:  // DVO_PORT_DPE
+    case 13:  // DVO_PORT_DPF
+    case 15:  // DVO_PORT_DPG
+    case 17:  // DVO_PORT_DPH
+    case 19:  // DVO_PORT_DPI
+      return true;
+    default:
+      return false;
+  }
+}
+
+std::optional<tgl_registers::Ddi> PortToDdi(uint8_t dvo_port) {
+  switch (dvo_port) {
+    case 0:   // DVO_PORT_HDMIA
+    case 10:  // DVO_PORT_DPA
+      return tgl_registers::DDI_A;
+    case 1:  // DVO_PORT_HDMIB
+    case 7:  // DVO_PORT_DPB
+      return tgl_registers::DDI_B;
+    case 2:  // DVO_PORT_HDMIC
+    case 8:  // DVO_PORT_DPC
+      return tgl_registers::DDI_C;
+    case 3:  // DVO_PORT_HDMID
+    case 9:  // DVO_PORT_DPD
+      // i.e. DDI_TC_1
+      return tgl_registers::DDI_D;
+    case 12:  // DVO_PORT_HDMIE
+    case 11:  // DVO_PORT_DPE
+      // i.e. DDI_TC_2
+      return tgl_registers::DDI_E;
+    case 14:  // DVO_PORT_HDMIF
+    case 13:  // DVO_PORT_DPF
+      return tgl_registers::DDI_TC_3;
+    case 16:  // DVO_PORT_HDMIG
+    case 15:  // DVO_PORT_DPG
+      return tgl_registers::DDI_TC_4;
+    case 18:  // DVO_PORT_HDMIH
+    case 17:  // DVO_PORT_DPH
+      return tgl_registers::DDI_TC_5;
+    case 20:  // DVO_PORT_HDMII
+    case 19:  // DVO_PORT_DPI
+      return tgl_registers::DDI_TC_6;
+    default:
+      return std::nullopt;
+  }
+}
+
 }  // namespace
 
 namespace i915_tgl {
@@ -168,45 +238,36 @@ bool IgdOpRegion::ProcessDdiConfigs() {
     }
 
     auto ddi_flags = DdiFlags::Get().FromValue(cfg->ddi_flags);
-    tgl_registers::Ddi ddi;
-    if (cfg->port_type < 4 || cfg->port_type == 12) {
-      // Types 0, 1, 2, 3, and 12 are HDMI ports A, B, C, D, and E
+    if (IsPortHdmi(cfg->port_type)) {
       if (!ddi_flags.tmds()) {
         zxlogf(WARNING, "Malformed hdmi config");
         continue;
       }
-
-      ddi = cfg->port_type < 4 ? static_cast<tgl_registers::Ddi>(cfg->port_type)
-                               : tgl_registers::DDI_E;
-    } else if (7 <= cfg->port_type && cfg->port_type <= 11) {
-      // Types 7, 8, 9, 10, 11 are DP ports B, C, D, A, E
+    } else if (IsPortDisplayPort(cfg->port_type)) {
       if (!ddi_flags.dp()) {
         zxlogf(WARNING, "Malformed dp config");
         continue;
       }
-
-      if (cfg->port_type <= 9) {
-        ddi = static_cast<tgl_registers::Ddi>(cfg->port_type - 6);
-      } else if (cfg->port_type == 10) {
-        ddi = tgl_registers::DDI_A;
-      } else {
-        ZX_DEBUG_ASSERT(cfg->port_type == 11);
-        ddi = tgl_registers::DDI_E;
-      }
     } else {
+      zxlogf(WARNING, "The port %d is not supported, ignored.", cfg->port_type);
       continue;
     }
 
-    if (ddi_features_.find(ddi) != ddi_features_.end()) {
+    auto ddi = PortToDdi(cfg->port_type);
+    ZX_DEBUG_ASSERT(ddi.has_value());
+
+    if (ddi_features_.find(*ddi) != ddi_features_.end()) {
       zxlogf(WARNING, "Duplicate ddi config");
       continue;
     }
 
-    ddi_features_[ddi] = {
+    ddi_features_[*ddi] = {
         .supports_hdmi = ddi_flags.tmds() && !ddi_flags.not_hdmi(),
         .supports_dvi = static_cast<bool>(ddi_flags.tmds()),
         .supports_dp = static_cast<bool>(ddi_flags.dp()),
         .is_edp = ddi_flags.dp() && ddi_flags.internal(),
+        .is_type_c = static_cast<bool>(cfg->is_usb_type_c()),
+        .is_thunderbolt = (bdb_->version >= 209) ? static_cast<bool>(cfg->is_thunderbolt()) : false,
         .iboosts =
             {
                 .hdmi_iboost = cfg->has_iboost_override()
