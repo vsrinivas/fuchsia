@@ -85,7 +85,9 @@ void VmmController::ScheduleVmmTeardown(fitx::result<GuestError> result) {
   const zx_status_t status =
       async::PostTask(dispatcher_, [this, result]() { DestroyAndRespond(result); });
 
-  if (status != ZX_OK) {
+  // If ZX_OK, the task was successfully scheduled. If ZX_ERR_BAD_STATE, the component is already
+  // shutting down so there is nothing to do.
+  if (status != ZX_OK && status != ZX_ERR_BAD_STATE) {
     FX_LOGS(WARNING) << "Failed to schedule a VMM teardown, so shutting down the component instead";
     stop_component_callback_();
   }
