@@ -298,3 +298,18 @@ void PerProcessGtt::InitPrivatePat(magma::RegisterIo* reg_io) {
 
   registers::PatIndex::write(reg_io, pat);
 }
+
+void PerProcessGtt::InitPrivatePatGen12(magma::RegisterIo* reg_io) {
+  DASSERT(gen_ppat_index(CACHING_WRITE_THROUGH) == 2);
+  DASSERT(gen_ppat_index(CACHING_NONE) == 3);
+  DASSERT(gen_ppat_index(CACHING_LLC) == 4);
+
+  registers::PatIndexGen12::write(reg_io, 0, registers::PatIndexGen12::WRITE_BACK);
+  registers::PatIndexGen12::write(reg_io, 1, registers::PatIndexGen12::WRITE_COMBINING);
+  registers::PatIndexGen12::write(reg_io, 2, registers::PatIndexGen12::WRITE_THROUGH);
+  registers::PatIndexGen12::write(reg_io, 3, registers::PatIndexGen12::UNCACHEABLE);
+  registers::PatIndexGen12::write(reg_io, 4, registers::PatIndexGen12::WRITE_BACK);
+  registers::PatIndexGen12::write(reg_io, 5, registers::PatIndexGen12::WRITE_BACK);
+  registers::PatIndexGen12::write(reg_io, 6, registers::PatIndexGen12::WRITE_BACK);
+  registers::PatIndexGen12::write(reg_io, 7, registers::PatIndexGen12::WRITE_BACK);
+}

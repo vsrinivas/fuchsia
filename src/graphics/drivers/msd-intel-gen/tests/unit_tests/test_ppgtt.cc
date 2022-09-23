@@ -146,6 +146,33 @@ class TestPerProcessGtt {
     EXPECT_EQ(0xA0907u, reg_io->Read32(registers::PatIndex::kOffsetLow));
     EXPECT_EQ(0x3B2B1B0Bu, reg_io->Read32(registers::PatIndex::kOffsetHigh));
   }
+
+  static void PrivatePatGen12() {
+    auto reg_io = std::make_unique<magma::RegisterIo>(MockMmio::Create(8ULL * 1024 * 1024));
+
+    PerProcessGtt::InitPrivatePatGen12(reg_io.get());
+
+    for (uint32_t i = 0; i < registers::PatIndexGen12::kIndexCount; i++) {
+      switch (i) {
+        case 1:
+          EXPECT_EQ(registers::PatIndexGen12::WRITE_COMBINING,
+                    reg_io->Read32(registers::PatIndexGen12::kOffset + i * sizeof(uint32_t)));
+          break;
+        case 2:
+          EXPECT_EQ(registers::PatIndexGen12::WRITE_THROUGH,
+                    reg_io->Read32(registers::PatIndexGen12::kOffset + i * sizeof(uint32_t)));
+          break;
+        case 3:
+          EXPECT_EQ(registers::PatIndexGen12::UNCACHEABLE,
+                    reg_io->Read32(registers::PatIndexGen12::kOffset + i * sizeof(uint32_t)));
+          break;
+        default:
+          EXPECT_EQ(registers::PatIndexGen12::WRITE_BACK,
+                    reg_io->Read32(registers::PatIndexGen12::kOffset + i * sizeof(uint32_t)));
+          break;
+      }
+    }
+  }
 };
 
 TEST(PerProcessGtt, Init) { TestPerProcessGtt::Init(); }
@@ -153,3 +180,5 @@ TEST(PerProcessGtt, Init) { TestPerProcessGtt::Init(); }
 TEST(PerProcessGtt, Insert) { TestPerProcessGtt::Insert(); }
 
 TEST(PerProcessGtt, PrivatePat) { TestPerProcessGtt::PrivatePat(); }
+
+TEST(PerProcessGtt, PrivatePatGen12) { TestPerProcessGtt::PrivatePatGen12(); }

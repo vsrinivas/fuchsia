@@ -214,15 +214,17 @@ bool MsdIntelDevice::BaseInit(void* device_handle) {
 
   if (DeviceId::is_gen12(device_id())) {
     QuerySliceInfoGen12(&subslice_total_, &eu_total_, topology_.get());
+
+    PerProcessGtt::InitPrivatePatGen12(register_io_.get());
   } else {
     QuerySliceInfoGen9(&subslice_total_, &eu_total_, topology_.get());
+
+    PerProcessGtt::InitPrivatePat(register_io_.get());
   }
 
   interrupt_manager_ = InterruptManager::CreateShim(this);
   if (!interrupt_manager_)
     return DRETF(false, "failed to create interrupt manager");
-
-  PerProcessGtt::InitPrivatePat(register_io_.get());
 
   gtt_ = std::shared_ptr<Gtt>(Gtt::CreateShim(this));
 

@@ -79,6 +79,22 @@ class PatIndex {
   }
 };
 
+// PAT_INDEX
+// https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-tgl-vol02c-commandreference-registers-part2-rev2_1.pdf
+// p.645
+class PatIndexGen12 {
+ public:
+  static constexpr uint32_t kOffset = 0x4800;
+  static constexpr uint32_t kIndexCount = 8;
+
+  enum MemType { UNCACHEABLE = 0, WRITE_COMBINING = 1, WRITE_THROUGH = 2, WRITE_BACK = 3 };
+
+  static void write(magma::RegisterIo* register_io, uint32_t index, MemType type) {
+    DASSERT(index < kIndexCount);
+    register_io->Write32(type, kOffset + index * sizeof(uint32_t));
+  }
+};
+
 // from intel-gfx-prm-osrc-bdw-vol02c-commandreference-registers_4.pdf p.438
 // and intel-gfx-prm-osrc-bdw-vol02d-commandreference-structures_3.pdf p.107
 // Note: this register exists in all hardware but ExeclistSubmitQueue is used from gen12.
