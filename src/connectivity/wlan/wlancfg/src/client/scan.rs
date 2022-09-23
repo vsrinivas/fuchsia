@@ -24,7 +24,6 @@ use {
     log::{debug, error, info, warn},
     measure_tape_for_scan_result::Measurable as _,
     std::{collections::HashMap, convert::TryFrom, sync::Arc},
-    stream::FuturesUnordered,
     wlan_common,
 };
 
@@ -125,31 +124,17 @@ async fn sme_scan(
 }
 
 /// Handles incoming scan requests by creating a new SME scan request. Will retry scan once if SME
-/// returns a ScanErrorCode::Cancelled. For the output_iterator, returns scan results and/or errors.
-/// On successful scan, also provides scan results to:
-/// - Emergency Location Provider
-/// - Network Selection Module
+/// returns a ScanErrorCode::Cancelled. On successful scan, also provides scan results to the
+/// Emergency Location Provider.
 pub(crate) async fn perform_scan(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     saved_networks_manager: Arc<dyn SavedNetworksManagerApi>,
-    mut output_iterator: Option<fidl::endpoints::ServerEnd<fidl_policy::ScanResultIteratorMarker>>,
     mut location_sensor_updater: impl ScanResultUpdate,
     scan_reason: ScanReason,
     // TODO(fxbug.dev/73821): This should be removed when ScanManager struct is implemented,
     // in favor of a field in the struct itself.
     telemetry_sender: Option<TelemetrySender>,
 ) -> Result<Vec<types::ScanResult>, types::ScanError> {
-    async fn output_error(
-        output_iterator: Option<fidl::endpoints::ServerEnd<fidl_policy::ScanResultIteratorMarker>>,
-        error: types::ScanError,
-    ) {
-        if let Some(output_iterator) = output_iterator {
-            send_scan_error_over_fidl(output_iterator, error)
-                .await
-                .unwrap_or_else(|e| error!("Failed to send scan error: {}", e));
-        }
-    }
-
     let mut bss_by_network: HashMap<SmeNetworkIdentifier, Vec<types::Bss>> = HashMap::new();
     let scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
     // Passive Scan. If scan returns cancelled error code, wait one second and retry once.
@@ -158,7 +143,6 @@ pub(crate) async fn perform_scan(
             Ok(proxy) => proxy,
             Err(_) => {
                 warn!("Failed to get sme proxy for passive scan");
-                output_error(output_iterator, types::ScanError::GeneralError).await;
                 return Err(types::ScanError::GeneralError);
             }
         };
@@ -170,12 +154,10 @@ pub(crate) async fn perform_scan(
             }
             Err(scan_err) => match scan_err {
                 types::ScanError::GeneralError => {
-                    output_error(output_iterator, scan_err).await;
                     return Err(scan_err);
                 }
                 types::ScanError::Cancelled => {
                     if iter > 0 {
-                        output_error(output_iterator, scan_err).await;
                         return Err(scan_err);
                     }
                     info!("Driver requested a delay before retrying scan");
@@ -235,50 +217,28 @@ pub(crate) async fn perform_scan(
                 insert_bss_to_network_bss_map(&mut bss_by_network, results, false);
             }
             Err(scan_err) => {
-                // There was an error in the active scan. For the FIDL interface, send an error. We
-                // `.take()` the output_iterator here, so it won't be used for sending results
-                // below. We still proceed with any passive results.
-                if let Some(output_iterator) = output_iterator.take() {
-                    send_scan_error_over_fidl(output_iterator, scan_err)
-                        .await
-                        .unwrap_or_else(|e| error!("Failed to send scan error: {}", e));
-                };
-                info!("Proceeding with passive scan results for non-FIDL scan consumers");
+                // There was an error in the active scan, but our passive scan results are still
+                // valid. Return those.
+                info!("Proceeding with passive scan results, error in active scan {:?}", scan_err);
             }
         }
     };
 
     let scan_results = network_bss_map_to_scan_result(bss_by_network);
-    // TODO(b/182569380): use actual wpa3 support in this conversion rather than hardcoding 'false'
-    let fidl_scan_results = scan_result_to_policy_scan_result(&scan_results, false);
-    let mut scan_result_consumers = FuturesUnordered::new();
 
-    // Send scan results to the location sensor
-    scan_result_consumers.push(location_sensor_updater.update_scan_results(&scan_results));
-    // If the requester provided a channel, send the results to them
-    if let Some(output_iterator) = output_iterator {
-        let requester_fut = send_scan_results_over_fidl(output_iterator, &fidl_scan_results)
-            .unwrap_or_else(|e| {
-                error!("Failed to send scan results to requester: {:?}", e);
-            });
-        scan_result_consumers.push(Box::pin(requester_fut));
-    }
-
-    // Send scan results to all consumers, but include a timeout so that a stalled consumer doesn't
+    // Send scan results to Location, but include a timeout so that a stalled consumer doesn't
     // stop us from reaching the `return Ok(scan_results)` at the end of this function.
     // TODO(fxbug.dev/73821): the timeout mechanism is temporary, once the scan manager is
     // implemented with its own event loop, we can send these results to the consumers in a
     // separate task, without blocking the return.
-    while let Some(_) = scan_result_consumers
-        .next()
+    location_sensor_updater
+        .update_scan_results(&scan_results)
         .on_timeout(zx::Duration::from_seconds(SCAN_CONSUMER_MAX_SECONDS_ALLOWED), || {
             error!("Timed out waiting for consumers of scan results");
-            None
+            ()
         })
-        .await
-    {}
+        .await;
 
-    drop(scan_result_consumers);
     Ok(scan_results)
 }
 
@@ -369,8 +329,7 @@ impl ScanResultUpdate for LocationSensorUpdater {
         // Filter out any errors and just log a message.
         // No error recovery, we'll just try again next time a scan result comes in.
         if let Err(e) = send_results(&scan_results).await {
-            // TODO(fxbug.dev/52700) Upgrade this to a "warn!" once the location sensor works.
-            debug!("Failed to send scan results to location sensor: {:?}", e)
+            info!("Failed to send scan results to location sensor: {:?}", e)
         } else {
             debug!("Updated location sensor")
         };
@@ -462,7 +421,7 @@ fn fidl_security_from_sme_protection(
     }
 }
 
-fn scan_result_to_policy_scan_result(
+pub fn scan_result_to_policy_scan_result(
     internal_results: &Vec<types::ScanResult>,
     wpa3_supported: bool,
 ) -> Vec<fidl_policy::ScanResult> {
@@ -520,7 +479,7 @@ fn scan_result_to_policy_scan_result(
 
 /// Send batches of results to the output iterator when getNext() is called on it.
 /// Send empty batch and close the channel when no results are remaining.
-async fn send_scan_results_over_fidl(
+pub async fn send_scan_results_over_fidl(
     output_iterator: fidl::endpoints::ServerEnd<fidl_policy::ScanResultIteratorMarker>,
     scan_results: &Vec<fidl_policy::ScanResult>,
 ) -> Result<(), Error> {
@@ -580,7 +539,7 @@ async fn send_scan_results_over_fidl(
 
 /// On the next request for results, send an error to the output iterator and
 /// shut it down.
-async fn send_scan_error_over_fidl(
+pub async fn send_scan_error_over_fidl(
     output_iterator: fidl::endpoints::ServerEnd<fidl_policy::ScanResultIteratorMarker>,
     error_code: types::ScanError,
 ) -> Result<(), fidl::Error> {
@@ -624,7 +583,7 @@ mod tests {
             },
         },
         anyhow::Error,
-        fidl::endpoints::{create_proxy, Proxy},
+        fidl::endpoints::create_proxy,
         fidl_fuchsia_wlan_common_security as fidl_security, fuchsia_async as fasync,
         fuchsia_zircon as zx,
         futures::{
@@ -1368,22 +1327,15 @@ mod tests {
         let (telemetry_sender, mut telemetry_receiver) = create_telemetry_sender_and_receiver();
 
         // Issue request to scan.
-        let (iter, iter_server) =
-            fidl::endpoints::create_proxy().expect("failed to create iterator");
         let scan_fut = perform_scan(
             client,
             saved_networks_manager,
-            Some(iter_server),
             location_sensor,
             ScanReason::NetworkSelection,
             Some(telemetry_sender),
         );
         pin_mut!(scan_fut);
 
-        // Request a chunk of scan results. Progress until waiting on response from server side of
-        // the iterator.
-        let mut output_iter_fut = iter.get_next();
-        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Pending);
         // Progress scan handler forward so that it will respond to the iterator get next request.
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
 
@@ -1392,7 +1344,7 @@ mod tests {
         let MockScanData {
             passive_input_aps: input_aps,
             passive_internal_aps: internal_aps,
-            passive_fidl_aps: fidl_aps,
+            passive_fidl_aps: _,
             active_input_aps: _,
             combined_internal_aps: _,
             combined_fidl_aps: _,
@@ -1404,30 +1356,9 @@ mod tests {
             input_aps.clone(),
         );
 
-        // Process response from SME
-        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
-
-        // Check for results
-        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
-            let results = result.expect("Failed to get next scan results").unwrap();
-            assert_eq!(results, fidl_aps);
-        });
-
-        // Request the next chunk of scan results. Progress until waiting on response from server side of
-        // the iterator.
-        let mut output_iter_fut = iter.get_next();
-
         // Process scan handler
-        // Note: this will be Poll::Ready because the scan handler will exit after sending the final
-        // scan results.
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(results) => {
             assert_eq!(results.unwrap(), internal_aps);
-        });
-
-        // Check for results
-        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
-            let results = result.expect("Failed to get next scan results").unwrap();
-            assert_eq!(results, vec![]);
         });
 
         // Check scan consumer got results
@@ -1454,23 +1385,16 @@ mod tests {
         let (telemetry_sender, mut telemetry_receiver) = create_telemetry_sender_and_receiver();
 
         // Issue request to scan.
-        let (iter, iter_server) =
-            fidl::endpoints::create_proxy().expect("failed to create iterator");
         let scan_fut = perform_scan(
             client,
             saved_networks_manager,
-            Some(iter_server),
             location_sensor,
             ScanReason::NetworkSelection,
             Some(telemetry_sender),
         );
         pin_mut!(scan_fut);
 
-        // Request a chunk of scan results. Progress until waiting on response from server side of
-        // the iterator.
-        let mut output_iter_fut = iter.get_next();
-        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Pending);
-        // Progress scan handler forward so that it will respond to the iterator get next request.
+        // Progress scan handler
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
 
         // Create mock scan data and send it via the SME
@@ -1485,12 +1409,6 @@ mod tests {
         // Process response from SME (which is empty) and expect the future to complete.
         assert_variant!(exec.run_until_stalled(&mut scan_fut),  Poll::Ready(results) => {
             assert!(results.unwrap().is_empty());
-        });
-
-        // Check for results
-        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
-            let results = result.expect("Failed to get next scan results").unwrap();
-            assert!(results.is_empty());
         });
 
         // Check scan consumer got results
@@ -1516,8 +1434,8 @@ mod tests {
         // Create passive scan info
         let MockScanData {
             passive_input_aps: input_aps,
-            passive_internal_aps: _,
-            passive_fidl_aps: fidl_aps,
+            passive_internal_aps: internal_aps,
+            passive_fidl_aps: _,
             active_input_aps: _,
             combined_internal_aps: _,
             combined_fidl_aps: _,
@@ -1545,24 +1463,16 @@ mod tests {
         assert_eq!(config.hidden_probability, 0.0);
 
         // Issue request to scan.
-        let (iter, iter_server) =
-            fidl::endpoints::create_proxy().expect("failed to create iterator");
         let scan_fut = perform_scan(
             client,
             saved_networks_manager.clone(),
-            Some(iter_server),
             location_sensor,
             ScanReason::NetworkSelection,
             None,
         );
         pin_mut!(scan_fut);
 
-        // Request a chunk of scan results. Progress until waiting on response from server side of
-        // the iterator.
-        let mut output_iter_fut = iter.get_next();
-        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Pending);
-
-        // Progress scan handler forward so that it will respond to the iterator get next request.
+        // Progress scan handler
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
 
         // Create mock scan data and send it via the SME
@@ -1574,13 +1484,9 @@ mod tests {
             input_aps.clone(),
         );
 
-        // Process response from SME
-        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
-
-        // Check for results, verifying no active scan was requested.
-        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
-            let results = result.expect("Failed to get next scan results").unwrap();
-            assert_eq!(results, fidl_aps);
+        // Check for results, verifying no active scan results are included.
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(results) => {
+            assert_eq!(results.unwrap(), internal_aps);
         });
     }
 
@@ -1629,24 +1535,16 @@ mod tests {
             .is_none());
 
         // Issue request to scan.
-        let (iter, iter_server) =
-            fidl::endpoints::create_proxy().expect("failed to create iterator");
         let scan_fut = perform_scan(
             client,
             saved_networks_manager.clone(),
-            Some(iter_server),
             location_sensor,
             ScanReason::NetworkSelection,
             None,
         );
         pin_mut!(scan_fut);
 
-        // Request a chunk of scan results. Progress until waiting on response from server side of
-        // the iterator.
-        let mut output_iter_fut = iter.get_next();
-        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Pending);
-
-        // Progress scan handler forward so that it will respond to the iterator get next request.
+        // Progress scan handler
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
 
         // Create mock scan data and send it via the SME
@@ -1683,8 +1581,8 @@ mod tests {
         // Create the passive scan info
         let MockScanData {
             passive_input_aps,
-            passive_internal_aps: _,
-            passive_fidl_aps,
+            passive_internal_aps,
+            passive_fidl_aps: _,
             active_input_aps: _,
             combined_internal_aps: _,
             combined_fidl_aps: _,
@@ -1717,24 +1615,16 @@ mod tests {
         assert_eq!(config.hidden_probability, 1.0);
 
         // Issue request to scan.
-        let (iter, iter_server) =
-            fidl::endpoints::create_proxy().expect("failed to create iterator");
         let scan_fut = perform_scan(
             client,
             saved_networks_manager.clone(),
-            Some(iter_server),
             location_sensor,
             ScanReason::NetworkSelection,
             None,
         );
         pin_mut!(scan_fut);
 
-        // Request a chunk of scan results. Progress until waiting on response from server side of
-        // the iterator.
-        let mut output_iter_fut = iter.get_next();
-        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Pending);
-
-        // Progress scan handler forward so that it will respond to the iterator get next request.
+        // Progress scan handler
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
 
         // Create mock scan data and send it via the SME
@@ -1748,10 +1638,6 @@ mod tests {
 
         // Process response from SME
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
-
-        // Check iterator is still waiting results, since there should be an
-        // active scan still to come.
-        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Pending);
 
         // Verify record passive scan result was called.
         assert!(
@@ -1771,13 +1657,9 @@ mod tests {
             vec![],
         );
 
-        // Process SME result
-        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
-
         // Get results from scans. Results should just be the passive results.
-        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
-            let results = result.expect("failed to get scan results").unwrap();
-            assert_eq!(results, passive_fidl_aps);
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(results) => {
+            assert_eq!(results.unwrap(), passive_internal_aps);
         });
 
         // Verify that active scan results were recorded.
@@ -1962,24 +1844,16 @@ mod tests {
         );
 
         // Issue request to scan.
-        let (iter, iter_server) =
-            fidl::endpoints::create_proxy().expect("failed to create iterator");
-
         let scan_fut = perform_scan(
             client,
             saved_networks_manager,
-            Some(iter_server),
             location_sensor,
             ScanReason::NetworkSelection,
             None,
         );
         pin_mut!(scan_fut);
 
-        // Request a chunk of scan results. Progress until waiting on response from server side of
-        // the iterator.
-        let mut output_iter_fut = iter.get_next();
-        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Pending);
-        // Progress scan handler forward so that it will respond to the iterator get next request.
+        // Progress scan handler
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
 
         // Respond to the first (passive) scan request
@@ -2017,188 +1891,14 @@ mod tests {
         );
 
         // Process scan handler
-        // Note: this will be Poll::Ready because the scan handler will exit after sending the final
-        // scan results.
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(results) => {
             assert_eq!(results.unwrap(), passive_internal_aps);
         });
 
-        // Check the FIDL result -- this should be an error, since the active scan failed
-        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
-            let result = result.expect("Failed to get next scan results").unwrap_err();
-            assert_eq!(result, types::ScanError::GeneralError);
-        });
-
-        // Check both scan consumers got just the passive scan results, since the active scan failed
+        // Check scan consumer got just the passive scan results, since the active scan failed
         assert_eq!(
             *exec.run_singlethreaded(location_sensor_results.lock()),
             Some(passive_internal_aps.clone())
-        );
-    }
-
-    #[fuchsia::test]
-    fn scan_iterator_never_polled() {
-        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
-        let (location_sensor1, location_sensor_results1) = MockScanResultConsumer::new();
-        let (location_sensor2, location_sensor_results2) = MockScanResultConsumer::new();
-        let saved_networks_manager = Arc::new(FakeSavedNetworksManager::new());
-
-        // Issue request to scan.
-        let (_iter, iter_server) =
-            fidl::endpoints::create_proxy().expect("failed to create iterator");
-        let scan_fut = perform_scan(
-            client.clone(),
-            saved_networks_manager.clone(),
-            Some(iter_server),
-            location_sensor1,
-            ScanReason::NetworkSelection,
-            None,
-        );
-        pin_mut!(scan_fut);
-
-        // Progress scan side forward without ever calling getNext() on the scan result iterator
-        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
-
-        // Create mock scan data and send it via the SME
-        let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
-        let MockScanData {
-            passive_input_aps: input_aps,
-            passive_internal_aps: internal_aps,
-            passive_fidl_aps: fidl_aps,
-            active_input_aps: _,
-            combined_internal_aps: _,
-            combined_fidl_aps: _,
-        } = create_scan_ap_data();
-        validate_sme_scan_request_and_send_results(
-            &mut exec,
-            &mut sme_stream,
-            &expected_scan_request,
-            input_aps.clone(),
-        );
-
-        // Progress scan side forward without progressing the scan result iterator
-        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
-
-        // Issue a second request to scan, to make sure that everything is still
-        // moving along even though the first scan result iterator was never progressed.
-        let (iter2, iter_server2) =
-            fidl::endpoints::create_proxy().expect("failed to create iterator");
-        let scan_fut2 = perform_scan(
-            client,
-            saved_networks_manager,
-            Some(iter_server2),
-            location_sensor2,
-            ScanReason::NetworkSelection,
-            None,
-        );
-        pin_mut!(scan_fut2);
-
-        // Progress scan side forward
-        assert_variant!(exec.run_until_stalled(&mut scan_fut2), Poll::Pending);
-
-        // Create mock scan data and send it via the SME
-        let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
-        validate_sme_scan_request_and_send_results(
-            &mut exec,
-            &mut sme_stream,
-            &expected_scan_request,
-            input_aps.clone(),
-        );
-
-        // Request the results on the second iterator
-        let mut output_iter_fut2 = iter2.get_next();
-
-        // Progress scan side forward
-        assert_variant!(exec.run_until_stalled(&mut scan_fut2), Poll::Pending);
-
-        // Ensure results are present on the iterator
-        assert_variant!(exec.run_until_stalled(&mut output_iter_fut2), Poll::Ready(result) => {
-            let results = result.expect("Failed to get next scan results").unwrap();
-            assert_eq!(results, fidl_aps);
-        });
-
-        // Get the final empty message on the output iterator
-        let _output_iter_fut2 = iter2.get_next();
-
-        // Check all successful scan consumers got results
-        assert_eq!(
-            *exec.run_singlethreaded(location_sensor_results1.lock()),
-            Some(internal_aps.clone())
-        );
-        assert_eq!(
-            *exec.run_singlethreaded(location_sensor_results2.lock()),
-            Some(internal_aps.clone())
-        );
-
-        // The second scan future should also be done now that all consumers are done
-        assert_variant!(exec.run_until_stalled(&mut scan_fut2), Poll::Ready(results) => {
-            assert_eq!(results.unwrap(), internal_aps.clone());
-        });
-
-        // The first scan future is still awaiting its consumers
-        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
-
-        // Time-out the consumption, and ensure the scan future returns
-        assert!(exec.wake_next_timer().is_some());
-        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(results) => {
-            assert_eq!(results.unwrap(), internal_aps.clone());
-        });
-    }
-
-    #[fuchsia::test]
-    fn scan_iterator_shut_down() {
-        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
-        let (location_sensor, location_sensor_results) = MockScanResultConsumer::new();
-        let saved_networks_manager = Arc::new(FakeSavedNetworksManager::new());
-
-        // Issue request to scan.
-        let (iter, iter_server) =
-            fidl::endpoints::create_proxy().expect("failed to create iterator");
-        let scan_fut = perform_scan(
-            client,
-            saved_networks_manager,
-            Some(iter_server),
-            location_sensor,
-            ScanReason::NetworkSelection,
-            None,
-        );
-        pin_mut!(scan_fut);
-
-        // Progress scan handler forward so that it will respond to the iterator get next request.
-        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
-
-        // Create mock scan data and send it via the SME
-        let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
-        let MockScanData {
-            passive_input_aps: input_aps,
-            passive_internal_aps: internal_aps,
-            passive_fidl_aps: _,
-            active_input_aps: _,
-            combined_internal_aps: _,
-            combined_fidl_aps: _,
-        } = create_scan_ap_data();
-        validate_sme_scan_request_and_send_results(
-            &mut exec,
-            &mut sme_stream,
-            &expected_scan_request,
-            input_aps.clone(),
-        );
-
-        // Close the channel
-        drop(iter.into_channel());
-
-        // Process scan handler
-        // Note: this will be Poll::Ready because the scan handler will exit since all the consumers are done
-        assert_variant!(exec.run_until_stalled(&mut scan_fut),  Poll::Ready(results) => {
-            assert_eq!(results.unwrap(), internal_aps);
-        });
-
-        // Check scan consumer got results
-        assert_eq!(
-            *exec.run_singlethreaded(location_sensor_results.lock()),
-            Some(internal_aps.clone())
         );
     }
 
@@ -2210,23 +1910,16 @@ mod tests {
         let saved_networks_manager = Arc::new(FakeSavedNetworksManager::new());
 
         // Issue request to scan.
-        let (iter, iter_server) =
-            fidl::endpoints::create_proxy().expect("failed to create iterator");
         let scan_fut = perform_scan(
             client,
             saved_networks_manager,
-            Some(iter_server),
             location_sensor,
             ScanReason::NetworkSelection,
             None,
         );
         pin_mut!(scan_fut);
 
-        // Request a chunk of scan results. Progress until waiting on response from server side of
-        // the iterator.
-        let mut output_iter_fut = iter.get_next();
-        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Pending);
-        // Progress scan handler forward so that it will respond to the iterator get next request.
+        // Progress scan handler
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
 
         // Check that a scan request was sent to the sme and send back an error
@@ -2247,14 +1940,7 @@ mod tests {
         );
 
         // Process SME result.
-        // Note: this will be Poll::Ready, since the scan handler will quit after sending the error
         assert_variant!(exec.run_until_stalled(&mut scan_fut),  Poll::Ready(results) => {
-            assert_eq!(results, Err(types::ScanError::GeneralError));
-        });
-
-        // the iterator should have an error on it
-        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
-            let results = result.expect("Failed to get next scan results");
             assert_eq!(results, Err(types::ScanError::GeneralError));
         });
 
@@ -2273,23 +1959,16 @@ mod tests {
         let saved_networks_manager = Arc::new(FakeSavedNetworksManager::new());
 
         // Issue request to scan.
-        let (iter, iter_server) =
-            fidl::endpoints::create_proxy().expect("failed to create iterator");
         let scan_fut = perform_scan(
             client,
             saved_networks_manager,
-            Some(iter_server),
             location_sensor,
             ScanReason::NetworkSelection,
             None,
         );
         pin_mut!(scan_fut);
 
-        // Request a chunk of scan results. Progress until waiting on response from server side of
-        // the iterator.
-        let mut output_iter_fut = iter.get_next();
-        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Pending);
-        // Progress scan handler forward so that it will respond to the iterator get next request.
+        // Progress scan handler
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
 
         // Check that a scan request was sent to the sme and send back a cancellation error.
@@ -2324,8 +2003,8 @@ mod tests {
                 fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
             let MockScanData {
                 passive_input_aps: input_aps,
-                passive_internal_aps: _,
-                passive_fidl_aps: fidl_aps,
+                passive_internal_aps: internal_aps,
+                passive_fidl_aps: _,
                 active_input_aps: _,
                 combined_internal_aps: _,
                 combined_fidl_aps: _,
@@ -2337,12 +2016,9 @@ mod tests {
                 input_aps.clone(),
             );
 
-            assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
-
-            // Check the FIDL scan results.
-            assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
-                let result = result.expect("Failed to get next scan results").expect("Got unexpected ScanErrorCode");
-                assert_eq!(result, fidl_aps);
+            // Check the scan results.
+            assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(results) => {
+                assert_eq!(results.unwrap(), internal_aps);
             });
         } else {
             // Send another cancelleation error code.
@@ -2364,13 +2040,6 @@ mod tests {
 
             // Process scan future, which should now have a response.
             assert_variant!(exec.run_until_stalled(&mut scan_fut),Poll::Ready(results) => {
-                assert_eq!(results, Err(types::ScanError::Cancelled));
-            });
-
-            // Since the retry failed with another cancellation, there should be a Cancelled error
-            // code.
-            assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
-                let results = result.expect("Failed to get next scan results");
                 assert_eq!(results, Err(types::ScanError::Cancelled));
             });
 
@@ -2410,23 +2079,16 @@ mod tests {
         let MockScanData {
             passive_input_aps,
             passive_internal_aps,
-            passive_fidl_aps,
+            passive_fidl_aps: _,
             active_input_aps,
             combined_internal_aps,
-            combined_fidl_aps,
+            combined_fidl_aps: _,
         } = create_scan_ap_data();
-
-        // Create two sets of endpoints
-        let (iter0, iter_server0) =
-            fidl::endpoints::create_proxy().expect("failed to create iterator");
-        let (iter1, iter_server1) =
-            fidl::endpoints::create_proxy().expect("failed to create iterator");
 
         // Issue request to scan on both iterator.
         let scan_fut0 = perform_scan(
             client.clone(),
             saved_networks_manager1.clone(),
-            Some(iter_server0),
             location_sensor1,
             ScanReason::NetworkSelection,
             None,
@@ -2436,21 +2098,13 @@ mod tests {
         let scan_fut1 = perform_scan(
             client.clone(),
             saved_networks_manager2,
-            Some(iter_server1),
             location_sensor2,
             ScanReason::NetworkSelection,
             None,
         );
         pin_mut!(scan_fut1);
 
-        // Request a chunk of scan results on both iterators. Progress until waiting on
-        // response from server side of the iterator.
-        let mut output_iter_fut0 = iter0.get_next();
-        assert_variant!(exec.run_until_stalled(&mut output_iter_fut0), Poll::Pending);
-        let mut output_iter_fut1 = iter1.get_next();
-        assert_variant!(exec.run_until_stalled(&mut output_iter_fut1), Poll::Pending);
-
-        // Progress first scan handler forward so that it will respond to the iterator get next request.
+        // Progress first scan handler forward
         assert_variant!(exec.run_until_stalled(&mut scan_fut0), Poll::Pending);
 
         // Check that a scan request was sent to the sme and send back results
@@ -2467,10 +2121,8 @@ mod tests {
                     .expect("failed to send scan data");
                 // Process SME result.
                 assert_variant!(exec.run_until_stalled(&mut scan_fut0), Poll::Pending);
-                // The iterator should not have any data yet, until the sme is done
-                assert_variant!(exec.run_until_stalled(&mut output_iter_fut0), Poll::Pending);
 
-                // Progress second scan handler forward so that it will respond to the iterator get next request.
+                // Progress second scan handler forward
                 assert_variant!(exec.run_until_stalled(&mut scan_fut1), Poll::Pending);
                 // Check that the second scan request was sent to the sme and send back results
                 let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
@@ -2484,12 +2136,8 @@ mod tests {
                 });
                 validate_sme_scan_request_and_send_results(&mut exec, &mut sme_stream, &expected_scan_request, active_input_aps.clone()); // for output_iter_fut1
                 // Process SME result.
-                assert_variant!(exec.run_until_stalled(&mut scan_fut1), Poll::Pending);// The second iterator should have all its data
-
-                assert_variant!(exec.run_until_stalled(&mut output_iter_fut1), Poll::Ready(result) => {
-                    let results = result.expect("Failed to get next scan results").unwrap();
-                    assert_eq!(results.len(), combined_fidl_aps.len());
-                    assert_eq!(results, combined_fidl_aps);
+                assert_variant!(exec.run_until_stalled(&mut scan_fut1), Poll::Ready(results) => {
+                    assert_eq!(results.unwrap(), combined_internal_aps);
                 });
 
                 // Send the remaining APs for the first iterator
@@ -2505,13 +2153,8 @@ mod tests {
         );
 
         // Process response from SME
-        assert_variant!(exec.run_until_stalled(&mut scan_fut0), Poll::Pending);
-
-        // The first iterator should have all its data
-        assert_variant!(exec.run_until_stalled(&mut output_iter_fut0), Poll::Ready(result) => {
-            let results = result.expect("Failed to get next scan results").unwrap();
-            assert_eq!(results.len(), passive_fidl_aps.len());
-            assert_eq!(results, passive_fidl_aps);
+        assert_variant!(exec.run_until_stalled(&mut scan_fut0), Poll::Ready(results) => {
+            assert_eq!(results.unwrap(), passive_internal_aps);
         });
 
         // Check scan consumer got results
@@ -2522,139 +2165,6 @@ mod tests {
         assert_eq!(
             *exec.run_singlethreaded(location_sensor_results2.lock()),
             Some(combined_internal_aps.clone())
-        );
-    }
-
-    #[test_case(true)]
-    #[test_case(false)]
-    #[fuchsia::test(add_test_attr = false)]
-    fn perform_scan_wpa3_supported(wpa3_capable: bool) {
-        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let (location_sensor, location_sensor_results) = MockScanResultConsumer::new();
-        let saved_networks_manager = Arc::new(FakeSavedNetworksManager::new());
-
-        // Create a FakeIfaceManager that returns has_wpa3_iface() based on test value
-        let (sme_proxy, remote) =
-            create_proxy::<fidl_sme::ClientSmeMarker>().expect("error creating proxy");
-        let mut sme_stream = remote.into_stream().expect("failed to create stream");
-        let client = Arc::new(Mutex::new(FakeIfaceManager { sme_proxy, wpa3_capable }));
-
-        // Issue request to scan.
-        let (iter, iter_server) =
-            fidl::endpoints::create_proxy().expect("failed to create iterator");
-        let scan_fut = perform_scan(
-            client,
-            saved_networks_manager,
-            Some(iter_server),
-            location_sensor,
-            ScanReason::NetworkSelection,
-            None,
-        );
-        pin_mut!(scan_fut);
-
-        // Request a chunk of scan results. Progress until waiting on response from server side of
-        // the iterator.
-        let mut output_iter_fut = iter.get_next();
-        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Pending);
-        // Progress scan handler forward so that it will respond to the iterator get next request.
-        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
-
-        // Generate scan results
-        let ssid = types::Ssid::try_from("some_ssid").unwrap();
-        let sme_scan_result = fidl_sme::ScanResult {
-            compatibility: Some(Box::new(fidl_sme::Compatibility {
-                mutual_security_protocols: vec![
-                    fidl_security::Protocol::Wpa3Personal,
-                    fidl_security::Protocol::Wpa2Personal,
-                ],
-            })),
-            timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
-            bss_description: random_fidl_bss_description!(
-                Wpa2Wpa3,
-                ssid: ssid.clone(),
-                channel: types::WlanChan::new(8, types::Cbw::Cbw20),
-            ),
-        };
-        let common_scan_result: wlan_common::scan::ScanResult = sme_scan_result
-            .clone()
-            .try_into()
-            .expect("Failed to convert fidl_sme::ScanResult into wlan_common::scan::ScanResult");
-        let _type_ =
-            if wpa3_capable { types::SecurityType::Wpa3 } else { types::SecurityType::Wpa2 };
-        let expected_scan_results = vec![fidl_policy::ScanResult {
-            id: Some(fidl_policy::NetworkIdentifier {
-                ssid: ssid.to_vec(),
-                // Note: for now, we must always present WPA2/3 networks as WPA2 over our external
-                // interfaces (i.e. to FIDL consumers of scan results). See b/182209070 for more
-                // information.
-                // TODO(b/182569380): change this back to a variable `type_` based on WPA3 support.
-                type_: fidl_policy::SecurityType::Wpa2,
-            }),
-            entries: Some(vec![fidl_policy::Bss {
-                bssid: Some(common_scan_result.bss_description.bssid.0),
-                rssi: Some(common_scan_result.bss_description.rssi_dbm),
-                // For now frequency and timestamp are set to 0 when converting types.
-                frequency: Some(CENTER_FREQ_CHAN_8),
-                timestamp_nanos: Some(common_scan_result.timestamp.into_nanos()),
-                ..fidl_policy::Bss::EMPTY
-            }]),
-            compatibility: Some(types::Compatibility::Supported),
-            ..fidl_policy::ScanResult::EMPTY
-        }];
-        let expected_internal_scans = vec![types::ScanResult {
-            ssid: ssid.clone(),
-            security_type_detailed: types::SecurityTypeDetailed::Wpa2Wpa3Personal,
-            compatibility: fidl_policy::Compatibility::Supported,
-            entries: vec![types::Bss {
-                bssid: common_scan_result.bss_description.bssid,
-                rssi: common_scan_result.bss_description.rssi_dbm,
-                snr_db: common_scan_result.bss_description.snr_db,
-                channel: common_scan_result.bss_description.channel.into(),
-                timestamp: common_scan_result.timestamp,
-                observation: types::ScanObservation::Passive,
-                compatible: common_scan_result.is_compatible(),
-                bss_description: common_scan_result.bss_description.into(),
-            }],
-        }];
-        // Create mock scan data and send it via the SME
-        let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
-        validate_sme_scan_request_and_send_results(
-            &mut exec,
-            &mut sme_stream,
-            &expected_scan_request,
-            vec![sme_scan_result],
-        );
-
-        // Process response from SME
-        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
-
-        // Check for results
-        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
-            let results = result.expect("Failed to get next scan results").unwrap();
-            assert_eq!(results, expected_scan_results);
-        });
-
-        // Request the next chunk of scan results. Progress until waiting on response from server side of
-        // the iterator.
-        let mut output_iter_fut = iter.get_next();
-
-        // Process scan handler
-        // Note: this will be Poll::Ready because the scan handler will exit after sending the final
-        // scan results.
-        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(results) => {
-            assert_eq!(results.unwrap(), expected_internal_scans);
-        });
-
-        // Check for results
-        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
-            let results = result.expect("Failed to get next scan results").unwrap();
-            assert_eq!(results, vec![]);
-        });
-
-        // Check scan consumer got results
-        assert_eq!(
-            *exec.run_singlethreaded(location_sensor_results.lock()),
-            Some(expected_internal_scans.clone())
         );
     }
 

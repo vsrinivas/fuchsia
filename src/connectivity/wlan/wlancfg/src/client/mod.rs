@@ -273,15 +273,33 @@ async fn handle_client_request_scan(
             false
         });
 
-    let _results = scan::perform_scan(
+    let results = scan::perform_scan(
         iface_manager,
         saved_networks.clone(),
-        Some(output_iterator),
         scan::LocationSensorUpdater { wpa3_supported },
         scan::ScanReason::ClientRequest,
         None,
     )
     .await;
+
+    match results {
+        Ok(results) => {
+            // Note: for now, we must always present WPA2/3 networks as WPA2 over our external
+            // interfaces (i.e. to FIDL consumers of scan results). See b/182209070 for more
+            // information.
+            // TODO(b/182569380): use actual wpa3 support in this conversion rather than 'false'
+            let fidl_results = scan::scan_result_to_policy_scan_result(&results, false);
+            if let Err(e) = scan::send_scan_results_over_fidl(output_iterator, &fidl_results).await
+            {
+                warn!("Failed to send scan results to requester: {:?}", e);
+            }
+        }
+        Err(e) => {
+            if let Err(e) = scan::send_scan_error_over_fidl(output_iterator, e).await {
+                warn!("Failed to send scan error to requester: {:?}", e);
+            }
+        }
+    }
 }
 
 /// This function handles requests to save a network by saving the network and sending back to the

@@ -290,7 +290,6 @@ impl NetworkSelector {
         let scan_results = scan::perform_scan(
             iface_manager.clone(),
             self.saved_network_manager.clone(),
-            None,
             scan::LocationSensorUpdater { wpa3_supported },
             NetworkSelectionScan,
             Some(self.telemetry_sender.clone()),
