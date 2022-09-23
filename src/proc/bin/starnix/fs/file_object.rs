@@ -678,21 +678,21 @@ impl FileObject {
     where
         Op: FnMut() -> Result<BlockableOpsResult<T>, Errno>,
     {
-        if self.flags().contains(OpenFlags::NONBLOCK) {
-            return op().map(BlockableOpsResult::value);
+        let is_partial = |result: &Result<BlockableOpsResult<T>, Errno>| match result {
+            Err(e) if e.code == EAGAIN => true,
+            Ok(v) => v.is_partial(),
+            _ => false,
+        };
+
+        // Run the operation a first time without registering a waiter in case no wait is needed.
+        let result = op();
+        if self.flags().contains(OpenFlags::NONBLOCK) || !is_partial(&result) {
+            return result.map(BlockableOpsResult::value);
         }
 
         let waiter = Waiter::new();
         loop {
-            let result = op();
-            let is_partial = match &result {
-                Err(e) if e.code == EAGAIN => true,
-                Ok(v) => v.is_partial(),
-                _ => false,
-            };
-            if !is_partial {
-                return result.map(BlockableOpsResult::value);
-            }
+            // Register the waiter before running the operation to prevent a race.
             self.ops().wait_async(
                 self,
                 current_task,
@@ -701,6 +701,10 @@ impl FileObject {
                 WaitCallback::none(),
                 WaitAsyncOptions::empty(),
             );
+            let result = op();
+            if !is_partial(&result) {
+                return result.map(BlockableOpsResult::value);
+            }
             waiter.wait_until(current_task, deadline.unwrap_or(zx::Time::INFINITE)).map_err(
                 |e| {
                     if e == ETIMEDOUT {
