@@ -29,11 +29,6 @@ import("//build/testing/host_test.gni")
 #     contents of the product assembly config product configuration.
 #     Passed through to the product_assembly_configuration() template
 #
-#   product (optional)
-#     [list, GN scopes] A list of GN scopes containing base driver packages.
-#     Passed through to the product_assembly_configuration() template.
-#     See the documentation for product_assembly_configuration().
-#
 template("test_assembly_config") {
   base_packages_param = []
   if (defined(invoker.base_packages)) {
@@ -96,7 +91,6 @@ template("test_assembly_config") {
                [
                  "product",
                  "platform",
-                 "base_driver_packages",
                ])
   }
 
@@ -111,7 +105,6 @@ template("test_assembly_config") {
                              [
                                "product",
                                "platform",
-                               "base_driver_packages",
                              ])
     }
 

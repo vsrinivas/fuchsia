@@ -12,7 +12,6 @@ if (is_host) {
     deps = [
       "assemble_image",
       "developer_packages",
-      "product_drivers",
       "structured_config",
     ]
   }
