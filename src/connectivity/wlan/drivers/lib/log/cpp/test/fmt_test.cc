@@ -7,8 +7,8 @@
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 
 #include <gtest/gtest.h>
-#include <wlan/drivers/internal/common.h>
 #include <wlan/drivers/log.h>
+#include <wlan/drivers/log_instance.h>
 
 namespace wlan::drivers {
 

@@ -1,7 +1,7 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include <wlan/drivers/internal/common.h>
+#include <wlan/drivers/log_instance.h>
 
 #include "log_test.h"
 #include "zx_ticks_override.h"
@@ -27,7 +27,7 @@ bool is_even(size_t i) { return (i % 2) == 0; }
 
 // Ensure no crashes when going via the DDK library.
 TEST_F(LogTest, ThrottlefbSanity) {
-  Log::SetFilter(0x3);
+  log::Instance::Init(0x3);
   lthrottle_error("error throttle %s", "test");
   lthrottle_warn("warn throttle %s", "test");
   lthrottle_info("info throttle %s", "test");
@@ -48,24 +48,24 @@ TEST_F(LogTest, ThrottleInfo) {
 }
 
 TEST_F(LogTest, ThrottleDebugFiltered) {
-  Log::SetFilter(0);
+  log::Instance::Init(0);
   lthrottle_debug(0x1, kDebugTag, "debug throttle %s", "test");
   ASSERT_FALSE(LogInvoked());
 }
 
 TEST_F(LogTest, ThrottleDebugNotFiltered) {
-  Log::SetFilter(0x1);
+  log::Instance::Init(0x1);
   VALIDATE_THROTTLE(DDK_LOG_DEBUG, lthrottle_debug(0x1, kDebugTag, "debug %s", "test"));
 }
 
 TEST_F(LogTest, ThrottleTraceFiltered) {
-  Log::SetFilter(0);
+  log::Instance::Init(0);
   lthrottle_trace(0x2, kTraceTag, "trace throttle %s", "test");
   ASSERT_FALSE(LogInvoked());
 }
 
 TEST_F(LogTest, ThrottleTraceNotFiltered) {
-  Log::SetFilter(0x2);
+  log::Instance::Init(0x2);
   VALIDATE_THROTTLE(DDK_LOG_TRACE, lthrottle_trace(0x2, kTraceTag, "trace %s", "test"));
 }
 

@@ -1,7 +1,8 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include <wlan/drivers/internal/common.h>
+#include <wlan/drivers/internal/hexdump.h>
+#include <wlan/drivers/log_instance.h>
 
 #include "log_test.h"
 
@@ -18,20 +19,20 @@ class HexDumpTest : public LogTest {
  protected:
   static constexpr uint8_t kDataSize = 100;
   char data_[kDataSize];
-  char outbuf_[Log::kHexDumpMinBufSize];
-  uint8_t data16B_[Log::kHexDumpMaxBytesPerLine] = {
+  char outbuf_[log::kHexDumpMinBufSize];
+  uint8_t data16B_[log::kHexDumpMaxBytesPerLine] = {
       0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,
       0xde, 0xad, 0xbe, 0xef, 0x55, 0x66, 0x01, 0x83,
   };
   static constexpr size_t kStrStartOffset =
-      (Log::kHexDumpMaxBytesPerLine * Log::kCharPerByte) + Log::kSpaceBetHexAndStr;
+      (log::kHexDumpMaxBytesPerLine * log::kCharPerByte) + log::kSpaceBetHexAndStr;
 };
 
 TEST_F(HexDumpTest, HexSanity) {
   lhexdump_error(data_, sizeof(data_));
   lhexdump_warn(data_, sizeof(data_));
   lhexdump_info(data_, sizeof(data_));
-  Log::SetFilter(0x3);
+  log::Instance::Init(0x3);
   lhexdump_debug(0x1, kDebugTag, data_, sizeof(data_));
   lhexdump_trace(0x2, kTraceTag, data_, sizeof(data_));
 }
@@ -52,26 +53,26 @@ TEST_F(HexDumpTest, HexDumpInfo) {
 }
 
 TEST_F(HexDumpTest, HexDumpDebugFiltered) {
-  Log::SetFilter(0);
+  log::Instance::Init(0);
   lhexdump_debug(0x1, kDebugTag, data_, sizeof(data_));
   ASSERT_FALSE(LogInvoked());
 }
 
 TEST_F(HexDumpTest, HexDumpDebugNotFiltered) {
-  Log::SetFilter(0x1);
+  log::Instance::Init(0x1);
   lhexdump_debug(0x1, kDebugTag, data_, sizeof(data_));
   ASSERT_TRUE(LogInvoked());
   Validate(DDK_LOG_DEBUG, kDebugTag);
 }
 
 TEST_F(HexDumpTest, HexDumpTraceFiltered) {
-  Log::SetFilter(0);
+  log::Instance::Init(0);
   lhexdump_trace(0x2, kTraceTag, data_, sizeof(data_));
   ASSERT_FALSE(LogInvoked());
 }
 
 TEST_F(HexDumpTest, HexDumpTraceNotFiltered) {
-  Log::SetFilter(0x2);
+  log::Instance::Init(0x2);
   lhexdump_trace(0x2, kTraceTag, data_, sizeof(data_));
   ASSERT_TRUE(LogInvoked());
   Validate(DDK_LOG_TRACE, kTraceTag);
@@ -80,17 +81,17 @@ TEST_F(HexDumpTest, HexDumpTraceNotFiltered) {
 TEST_F(HexDumpTest, HexDumpErrorHandling) {
   // Insufficient output buffer size.
   outbuf_[0] = 'a';
-  Log::HexDump(data16B_, sizeof(data16B_), outbuf_, sizeof(outbuf_) - 1);
+  log::HexDump(data16B_, sizeof(data16B_), outbuf_, sizeof(outbuf_) - 1);
   ASSERT_EQ('\0', outbuf_[0]);
 
   // Data too large.
   outbuf_[0] = 'a';
-  Log::HexDump(data16B_, sizeof(data16B_) + 1, outbuf_, sizeof(outbuf_));
+  log::HexDump(data16B_, sizeof(data16B_) + 1, outbuf_, sizeof(outbuf_));
   ASSERT_EQ('\0', outbuf_[0]);
 }
 
 TEST_F(HexDumpTest, HexDumpExactly16Bytes) {
-  Log::HexDump(data16B_, sizeof(data16B_), outbuf_, sizeof(outbuf_));
+  log::HexDump(data16B_, sizeof(data16B_), outbuf_, sizeof(outbuf_));
 
   // Hex value part
   EXPECT_EQ('0', outbuf_[0]);  // the first byte: 0x01
@@ -101,11 +102,11 @@ TEST_F(HexDumpTest, HexDumpExactly16Bytes) {
   EXPECT_EQ(' ', outbuf_[15 * 3 + 2]);
 
   // ASCII part
-  EXPECT_EQ(Log::kNP, outbuf_[kStrStartOffset]);          // non-printable
+  EXPECT_EQ(log::kNP, outbuf_[kStrStartOffset]);          // non-printable
   EXPECT_EQ('E', outbuf_[kStrStartOffset + 2]);           // printable
-  EXPECT_EQ(Log::kNP, outbuf_[kStrStartOffset + 4]);      // non-printable
-  EXPECT_EQ(Log::kNP, outbuf_[kStrStartOffset + 5]);      // the last byte: non-printable
-  EXPECT_EQ('\0', outbuf_[Log::kHexDumpMinBufSize - 1]);  // null-terminator
+  EXPECT_EQ(log::kNP, outbuf_[kStrStartOffset + 4]);      // non-printable
+  EXPECT_EQ(log::kNP, outbuf_[kStrStartOffset + 5]);      // the last byte: non-printable
+  EXPECT_EQ('\0', outbuf_[log::kHexDumpMinBufSize - 1]);  // null-terminator
 }
 
 TEST_F(HexDumpTest, HexDumpLessThan16Bytes) {
@@ -113,7 +114,7 @@ TEST_F(HexDumpTest, HexDumpLessThan16Bytes) {
       0x61,
   };
 
-  Log::HexDump(data, sizeof(data), outbuf_, sizeof(outbuf_));
+  log::HexDump(data, sizeof(data), outbuf_, sizeof(outbuf_));
 
   // Hex value part
   EXPECT_EQ('6', outbuf_[0]);  // the first byte: 0x61
@@ -126,13 +127,13 @@ TEST_F(HexDumpTest, HexDumpLessThan16Bytes) {
   // ASCII part
   EXPECT_EQ('a', outbuf_[kStrStartOffset]);               // printable
   EXPECT_EQ(' ', outbuf_[kStrStartOffset + 1]);           // the second byte: not dumped.
-  EXPECT_EQ('\0', outbuf_[Log::kHexDumpMinBufSize - 1]);  // null-terminator
+  EXPECT_EQ('\0', outbuf_[log::kHexDumpMinBufSize - 1]);  // null-terminator
 }
 
 TEST_F(HexDumpTest, HexDumpZeroByte) {
   uint8_t data[] = {};
 
-  Log::HexDump(data, sizeof(data), outbuf_, sizeof(outbuf_));
+  log::HexDump(data, sizeof(data), outbuf_, sizeof(outbuf_));
 
   // Hex value part
   EXPECT_EQ(' ', outbuf_[0]);  // nothing dumped
@@ -141,7 +142,7 @@ TEST_F(HexDumpTest, HexDumpZeroByte) {
 
   // ASCII part
   EXPECT_EQ(' ', outbuf_[kStrStartOffset]);               // nothing dumped
-  EXPECT_EQ('\0', outbuf_[Log::kHexDumpMinBufSize - 1]);  // null-terminator
+  EXPECT_EQ('\0', outbuf_[log::kHexDumpMinBufSize - 1]);  // null-terminator
 }
 
 }  // namespace wlan::drivers

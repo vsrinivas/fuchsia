@@ -1,12 +1,14 @@
 // Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_LIB_LOG_CPP_INCLUDE_WLAN_DRIVERS_INTERNAL_MACRO_HELPERS_H_
-#define SRC_CONNECTIVITY_WLAN_DRIVERS_LIB_LOG_CPP_INCLUDE_WLAN_DRIVERS_INTERNAL_MACRO_HELPERS_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_LIB_LOG_CPP_INCLUDE_COMMON_WLAN_DRIVERS_INTERNAL_MACRO_HELPERS_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_LIB_LOG_CPP_INCLUDE_COMMON_WLAN_DRIVERS_INTERNAL_MACRO_HELPERS_H_
 
-#include <lib/ddk/debug.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <zircon/compiler.h>
+
+#include <wlan/drivers/internal/log_severity.h>
 
 // This file contains internal functions and macros that are used by the public-facing macros.
 // Users should not use any of these functions or macros directly.
@@ -19,7 +21,7 @@
 // to change very often, which is why it's redefined here.
 //
 // In order to catch when this constant does change, there is a static assert that checks that this
-// constant is the same as the FIDL-defined constant in log.cc.
+// constant is the same as the FIDL-defined constant in common_log_funcs.cc.
 #define WLAN_IEEE80211_MAX_SSID_BYTE_LEN (32)
 
 // Defines the maximum length of the SSID as a string. Each byte in the SSID becomes two characters
@@ -29,9 +31,9 @@
 
 __BEGIN_CDECLS
 
-void wlan_drivers_log_with_severity(fx_log_severity_t severity, uint32_t filter, const char* tag,
+void wlan_drivers_log_with_severity(LOG_SEVERITY_TYPE severity, uint32_t filter, const char* tag,
                                     const char* file, int line, const char* fmt, ...);
-void wlan_drivers_log_hexdump(fx_log_severity_t severity, uint32_t filter, const char* tag,
+void wlan_drivers_log_hexdump(LOG_SEVERITY_TYPE severity, uint32_t filter, const char* tag,
                               const char* file, int line, const char* func, const void* data,
                               size_t length);
 
@@ -48,11 +50,12 @@ __END_CDECLS
 // Internal helper macros that insert context through __FILE__/__LINE__/__func__
 //
 #define wlan_drivers_log_internal(severity, filter, tag, fmt, ...)                        \
-  wlan_drivers_log_with_severity(severity, filter, tag, __FILE__, __LINE__, "(%s): " fmt, \
-                                 __func__, ##__VA_ARGS__)
+  wlan_drivers_log_with_severity(LOG_SEVERITY(severity), filter, tag, __FILE__, __LINE__, \
+                                 "(%s): " fmt, __func__, ##__VA_ARGS__)
 
-#define wlan_drivers_log_hexdump_internal(severity, filter, tag, data, length) \
-  wlan_drivers_log_hexdump(severity, filter, tag, __FILE__, __LINE__, __func__, data, length)
+#define wlan_drivers_log_hexdump_internal(severity, filter, tag, data, length)                \
+  wlan_drivers_log_hexdump(LOG_SEVERITY(severity), filter, tag, __FILE__, __LINE__, __func__, \
+                           data, length)
 
 #define wlan_drivers_lthrottle_internal(events_per_second, severity, filter, tag, fmt, ...) \
   do {                                                                                      \
@@ -73,4 +76,4 @@ __END_CDECLS
     }                                                                                       \
   } while (0)
 
-#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_LIB_LOG_CPP_INCLUDE_WLAN_DRIVERS_INTERNAL_MACRO_HELPERS_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_LIB_LOG_CPP_INCLUDE_COMMON_WLAN_DRIVERS_INTERNAL_MACRO_HELPERS_H_

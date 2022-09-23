@@ -10,6 +10,8 @@
 
 #include <mutex>
 
+#include <wlan/drivers/log_instance.h>
+
 #include "debug.h"
 #include "device_dfv2.h"
 #include "driver.h"
@@ -43,7 +45,7 @@ zx_status_t wlanphy_init(void** out_ctx) {
 }
 
 zx_status_t wlanphy_bind(void* ctx, zx_device_t* device) {
-  ::wlan_drivers_log_set_filter(kFiltSetting);
+  wlan::drivers::log::Instance::Init(kFiltSetting);
   ltrace_fn();
   zx_status_t status;
 

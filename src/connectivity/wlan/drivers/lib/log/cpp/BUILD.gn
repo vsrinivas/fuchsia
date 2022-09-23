@@ -1,17 +1,49 @@
 # Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-config("wlan_drivers_log_config") {
-  include_dirs = [ "include" ]
+config("common_config") {
+  include_dirs = [ "include/common" ]
+}
+
+config("dfv1_config") {
+  include_dirs = [ "include/dfv1" ]
+}
+
+config("dfv2_config") {
+  include_dirs = [ "include/dfv2" ]
 }
 
 source_set("cpp") {
-  public_configs = [ ":wlan_drivers_log_config" ]
+  public_configs = [
+    ":common_config",
+    ":dfv1_config",
+  ]
   sources = [
-    "internal/common.cc",
+    "common.cc",
+    "internal/dfv1/log_funcs.cc",
+    "internal/dfv1/log_instance.cc",
+    "internal/hexdump.cc",
     "internal/throttle_counter.cc",
-    "log.cc",
   ]
   deps = [ "//sdk/fidl/fuchsia.wlan.ieee80211" ]
   public_deps = [ "//src/lib/ddk" ]
+}
+
+source_set("dfv2") {
+  public_configs = [
+    ":common_config",
+    ":dfv2_config",
+  ]
+  sources = [
+    "common.cc",
+    "internal/dfv2/log_funcs.cc",
+    "internal/dfv2/log_instance.cc",
+    "internal/hexdump.cc",
+    "internal/throttle_counter.cc",
+  ]
+  deps = [ "//sdk/fidl/fuchsia.wlan.ieee80211" ]
+  public_deps = [
+    "//sdk/lib/driver2:cpp",
+    "//sdk/lib/driver_compat",
+  ]
 }

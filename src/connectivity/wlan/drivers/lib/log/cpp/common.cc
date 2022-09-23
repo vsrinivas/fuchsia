@@ -2,60 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
-#include <lib/ddk/debug.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 
-#include <wlan/drivers/internal/common.h>
+#include <wlan/drivers/internal/hexdump.h>
+#include <wlan/drivers/internal/log_severity.h>
 #include <wlan/drivers/internal/macro_helpers.h>
 
-extern "C" void wlan_drivers_log_set_filter(uint32_t filter) {
-  wlan::drivers::Log::SetFilter(filter);
-}
-
-extern "C" void wlan_drivers_log_with_severity(fx_log_severity_t severity, uint32_t filter,
-                                               const char* tag, const char* file, int line,
-                                               const char* fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-
-  switch (severity) {
-    case DDK_LOG_ERROR:
-    case DDK_LOG_WARNING:
-    case DDK_LOG_INFO:
-      zxlogvf_etc(severity, tag, file, line, fmt, args);
-      break;
-    case DDK_LOG_DEBUG:
-    case DDK_LOG_TRACE:
-      if (unlikely(wlan::drivers::Log::IsFilterOn(filter))) {
-        zxlogvf_etc(severity, tag, file, line, fmt, args);
-      }
-      break;
-    default:
-      zxlogf(WARNING, "Unrecognized log severity: %u. Logging message with WARNING level instead.",
-             severity);
-      zxlogvf_etc(DDK_LOG_WARNING, tag, file, line, fmt, args);
-      break;
-  }
-
-  va_end(args);
-}
-
-extern "C" void wlan_drivers_log_hexdump(fx_log_severity_t severity, uint32_t filter,
+extern "C" void wlan_drivers_log_hexdump(LOG_SEVERITY_TYPE severity, uint32_t filter,
                                          const char* tag, const char* file, int line,
                                          const char* func, const void* data, size_t length) {
   if (!data) {
     return;
   }
 
-  constexpr size_t max_per_line = wlan::drivers::Log::kHexDumpMaxBytesPerLine;
+  constexpr size_t max_per_line = wlan::drivers::log::kHexDumpMaxBytesPerLine;
 
   wlan_drivers_log_with_severity(severity, filter, tag, file, line,
                                  "(%s): dumping data_ptr:%p len:%zu bytes", func, data, length);
 
   for (size_t i = 0; i < length; i += max_per_line) {
-    char buf[wlan::drivers::Log::kHexDumpMinBufSize];
-    wlan::drivers::Log::HexDump(reinterpret_cast<const char*>(data) + i,
+    char buf[wlan::drivers::log::kHexDumpMinBufSize];
+    wlan::drivers::log::HexDump(reinterpret_cast<const char*>(data) + i,
                                 std::min(length - i, max_per_line), buf, sizeof(buf));
     wlan_drivers_log_with_severity(severity, filter, tag, file, line, "(%s): %s", func, buf);
   }

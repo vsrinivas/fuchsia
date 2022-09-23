@@ -2,10 +2,30 @@
 # Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 config("wlan_drivers_log_config") {
-  include_dirs = [ "//src/connectivity/wlan/drivers/lib/log/cpp/include" ]
+  include_dirs =
+      [ "//src/connectivity/wlan/drivers/lib/log/cpp/include/common" ]
+}
+
+config("dfv1_config") {
+  include_dirs = [ "//src/connectivity/wlan/drivers/lib/log/cpp/include/dfv1" ]
+}
+
+config("dfv2_config") {
+  include_dirs = [ "//src/connectivity/wlan/drivers/lib/log/cpp/include/dfv2" ]
 }
 
 source_set("c") {
-  public_configs = [ ":wlan_drivers_log_config" ]
+  public_configs = [
+    ":wlan_drivers_log_config",
+    ":dfv1_config",
+  ]
   public_deps = [ "//src/connectivity/wlan/drivers/lib/log/cpp" ]
+}
+
+source_set("dfv2") {
+  public_configs = [
+    ":wlan_drivers_log_config",
+    ":dfv2_config",
+  ]
+  public_deps = [ "//src/connectivity/wlan/drivers/lib/log/cpp:dfv2" ]
 }

@@ -8,12 +8,14 @@
 #include <lib/ddk/driver.h>
 #include <zircon/status.h>
 
+#include <wlan/drivers/log_instance.h>
+
 #include "debug.h"
 #include "device.h"
 #include "src/connectivity/wlan/drivers/wlanif/wlanif-bind.h"
 
 zx_status_t wlan_fullmac_bind(void* ctx, zx_device_t* device) {
-  ::wlan_drivers_log_set_filter(kFiltSetting);
+  wlan::drivers::log::Instance::Init(kFiltSetting);
   ltrace_fn();
 
   wlan_fullmac_impl_protocol_t wlan_fullmac_impl_proto;
