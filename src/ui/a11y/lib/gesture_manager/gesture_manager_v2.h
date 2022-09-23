@@ -24,8 +24,6 @@ class GestureManagerV2 {
  public:
   explicit GestureManagerV2(fuchsia::ui::pointer::augment::TouchSourceWithLocalHitPtr touch_source);
 
-  ~GestureManagerV2() = default;
-
  private:
   // Call `TouchSourceWithLocalHit.Watch` repeatedly, responding to touch events.
   //

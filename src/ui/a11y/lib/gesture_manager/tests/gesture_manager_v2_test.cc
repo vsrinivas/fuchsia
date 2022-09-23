@@ -55,8 +55,6 @@ class MockTouchSource : public TouchSourceWithLocalHit {
   explicit MockTouchSource(InterfaceRequest<TouchSourceWithLocalHit> server_end)
       : connected_client_(this, std::move(server_end)) {}
 
-  ~MockTouchSource() = default;
-
   // |fuchsia::ui::pointer::augment::TouchSourceWithLocalHit|
   void Watch(std::vector<TouchResponse> responses, WatchCallback callback) override {
     ++num_watch_calls_;
@@ -90,9 +88,6 @@ class MockTouchSource : public TouchSourceWithLocalHit {
 
 class GestureManagerV2Test : public gtest::TestLoopFixture {
  public:
-  GestureManagerV2Test() = default;
-  ~GestureManagerV2Test() = default;
-
   void SetUp() override {
     gtest::TestLoopFixture::SetUp();
 
