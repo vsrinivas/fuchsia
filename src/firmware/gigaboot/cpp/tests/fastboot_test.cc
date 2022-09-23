@@ -267,10 +267,7 @@ class FastbootFlashTest : public ::testing::Test {
     block_device_.InitializeGpt();
   }
 
-  void AddPartition(const gpt_entry_t& new_entry) {
-    block_device_.AddGptPartition(new_entry);
-    block_device_.FinalizeGpt();
-  }
+  void AddPartition(const gpt_entry_t& new_entry) { block_device_.AddGptPartition(new_entry); }
 
   uint8_t* BlockDeviceStart() { return block_device_.fake_disk_io_protocol().contents(0).data(); }
 

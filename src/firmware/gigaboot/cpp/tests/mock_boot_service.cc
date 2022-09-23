@@ -4,6 +4,9 @@
 
 #include "mock_boot_service.h"
 
+#include <lib/cksum.h>
+#include <lib/stdcompat/span.h>
+
 #include "src/lib/utf_conversion/utf_conversion.h"
 
 efi_loaded_image_protocol* gEfiLoadedImage = nullptr;
@@ -11,6 +14,18 @@ efi_system_table* gEfiSystemTable = nullptr;
 efi_handle gEfiImageHandle;
 
 namespace gigaboot {
+
+namespace {
+
+void RecalculateGptCrcs(cpp20::span<const gpt_entry_t> entries, gpt_header_t* header) {
+  header->entries_crc =
+      crc32(0, reinterpret_cast<uint8_t const*>(entries.data()), entries.size_bytes());
+
+  header->crc32 = 0;
+  header->crc32 = crc32(0, reinterpret_cast<uint8_t*>(header), sizeof(*header));
+}
+
+}  // namespace
 
 // A helper that creates a realistic device path protocol
 void Device::InitDevicePathProtocol(std::vector<std::string_view> path_nodes) {
@@ -54,40 +69,82 @@ BlockDevice::BlockDevice(std::vector<std::string_view> paths, size_t blocks)
 
 void BlockDevice::InitializeGpt() {
   ASSERT_GT(total_blocks_, 2 * kGptHeaderBlocks + 1);
-  gpt_header_t primary;
-  primary.magic = GPT_MAGIC;
-  primary.size = GPT_HEADER_SIZE;
-  primary.first = kGptFirstUsableBlocks;
-  primary.last = total_blocks_ - kGptHeaderBlocks - 1;
-  primary.entries = 2;
-  primary.entries_count = kGptEntries;
-  primary.entries_size = GPT_ENTRY_SIZE;
-
+  // Entries start on a block
   uint8_t* start = fake_disk_io_protocol_.contents(0).data();
+
+  gpt_header_t primary = {
+      .magic = GPT_MAGIC,
+      .size = GPT_HEADER_SIZE,
+      .crc32 = 0,
+      .reserved0 = 0,
+      .current = 1,
+      .backup = total_blocks_ - 1,
+      .first = kGptFirstUsableBlocks,
+      .last = total_blocks_ - kGptHeaderBlocks - 1,
+      .entries = 2,
+      .entries_count = kGptEntries,
+      .entries_size = GPT_ENTRY_SIZE,
+      .entries_crc = 0,
+  };
+
+  gpt_header_t backup = {
+      .magic = GPT_MAGIC,
+      .size = GPT_HEADER_SIZE,
+      .crc32 = 0,
+      .reserved0 = 0,
+      .current = total_blocks_ - 1,
+      .backup = 1,
+      .first = kGptFirstUsableBlocks,
+      .last = total_blocks_ - kGptHeaderBlocks - 1,
+      .entries = total_blocks_ - kGptHeaderBlocks,
+      .entries_count = kGptEntries,
+      .entries_size = GPT_ENTRY_SIZE,
+      .entries_crc = 0,
+  };
+
+  primary.entries_crc =
+      crc32(0, start + primary.entries * kBlockSize, primary.entries_size * primary.entries_count);
+  backup.entries_crc = primary.entries_crc;
+
+  primary.crc32 = crc32(0, reinterpret_cast<uint8_t*>(&primary), sizeof(primary));
+  backup.crc32 = crc32(0, reinterpret_cast<uint8_t*>(&backup), sizeof(backup));
 
   // Copy over the primary header. Skip mbr partition.
   memcpy(start + kBlockSize, &primary, sizeof(primary));
 
-  // Initialize partition entries to 0s
-  memset(start + 2 * kBlockSize, 0, kGptEntries * sizeof(gpt_entry_t));
-}
+  // Copy the backup header.
+  memcpy(start + (backup.current * kBlockSize), &backup, sizeof(backup));
 
-void BlockDevice::FinalizeGpt() {
-  // TODO(b/235489025): Implement backup GPT sync and crc computation once we support full
-  // validation and fall back.
+  // Initialize partition entries to 0s
+  memset(start + primary.entries * kBlockSize, 0, kGptEntries * sizeof(gpt_entry_t));
 }
 
 void BlockDevice::AddGptPartition(const gpt_entry_t& new_entry) {
   ASSERT_GE(new_entry.first, kGptFirstUsableBlocks);
   ASSERT_LE(new_entry.last, total_blocks_ - kGptHeaderBlocks - 1);
+
+  uint8_t* const data = fake_disk_io_protocol_.contents(0).data();
+
+  gpt_header_t* primary_header = reinterpret_cast<gpt_header_t*>(data + kBlockSize);
+  gpt_header_t* backup_header =
+      reinterpret_cast<gpt_header_t*>(data + (total_blocks_ - 1) * kBlockSize);
+  gpt_entry_t* primary_entries = reinterpret_cast<gpt_entry_t*>(data + 2 * kBlockSize);
+  gpt_entry_t* backup_entries =
+      reinterpret_cast<gpt_entry_t*>(data + (total_blocks_ - kGptHeaderBlocks) * kBlockSize);
+  cpp20::span<const gpt_entry_t> entries_span(primary_entries, primary_header->entries_count);
+
   // Search for an empty entry
-  uint8_t* start = fake_disk_io_protocol_.contents(0).data() + 2 * kBlockSize;
   for (size_t i = 0; i < kGptEntries; i++) {
-    uint8_t* entry_ptr = start + i * sizeof(gpt_entry_t);
-    gpt_entry_t current;
-    memcpy(&current, entry_ptr, sizeof(gpt_entry_t));
-    if (current.first == 0 && current.last == 0) {
-      memcpy(entry_ptr, &new_entry, sizeof(gpt_entry_t));
+    if (primary_entries[i].first == 0 && primary_entries[i].last == 0) {
+      ASSERT_EQ(backup_entries[i].first, 0UL);
+      ASSERT_EQ(backup_entries[i].last, 0UL);
+
+      memcpy(&primary_entries[i], &new_entry, sizeof(new_entry));
+      memcpy(&backup_entries[i], &new_entry, sizeof(new_entry));
+
+      RecalculateGptCrcs(entries_span, primary_header);
+      RecalculateGptCrcs(entries_span, backup_header);
+
       return;
     }
   }

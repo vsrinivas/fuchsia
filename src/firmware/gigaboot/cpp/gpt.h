@@ -8,6 +8,7 @@
 #include <lib/fitx/result.h>
 #include <zircon/hw/gpt.h>
 
+#include <array>
 #include <optional>
 #include <string_view>
 
@@ -37,6 +38,18 @@ class EfiGptBlockDevice {
   const gpt_entry_t *FindPartition(std::string_view name);
 
   // Load GPT from device.
+  //
+  // Note: this function MAY reset the primary GPT but NOT the backup.
+  // The backup is only read and verified if the primary is corrupted;
+  // if this is the case the primary is restored from the backup.
+  //
+  // There is a hole where the backup is corrupted first.
+  // At some point, if the primary is ever corrupted, the load will fail.
+  // To prevent this we would need to read both tables all the time during boot
+  // and then repair any damage done to either table.
+  // Reading both tables all the time slows down boot in the common case where
+  // both tables are fine. This sort of verification and repair is arguably better
+  // suited to a post-boot daemon.
   fitx::result<efi_status> Load();
 
   // TODO(b/238334864): Add support for initializing/updating GPT.
@@ -48,18 +61,23 @@ class EfiGptBlockDevice {
 
   gpt_header_t gpt_header_;
 
-  struct GptEntryInfo {
-    gpt_entry_t entry;
-    char utf8_name[GPT_NAME_LEN / 2];
-  };
-
-  fbl::Vector<GptEntryInfo> entries_;
+  // These two vectors are tied together:
+  // utf8_names_[i] is the name for entries_[i].
+  // The reason that they are two separate vectors is that it's
+  // much easier to read the entries straight off the disk and
+  // into a vector in a single operation,
+  // and it's also easier to calculate the entries' crc on the raw bytes
+  // as a single, contiguous chunk.
+  fbl::Vector<gpt_entry_t> entries_;
+  fbl::Vector<std::array<char, GPT_NAME_LEN / 2>> utf8_names_;
 
   EfiGptBlockDevice() {}
   size_t BlockSize() { return block_io_protocol_->Media->BlockSize; }
   efi_status Read(void *buffer, size_t offset, size_t length);
   efi_status Write(const void *data, size_t offset, size_t length);
-  const fbl::Vector<GptEntryInfo> &GetGptEntries() { return entries_; }
+
+  fitx::result<efi_status> LoadGptEntries(const gpt_header_t &);
+  fitx::result<efi_status> RestoreFromBackup();
 
   // Check that the given range is within boundary of a partition and returns the absolute offset
   // relative to the storage start.

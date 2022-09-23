@@ -25,6 +25,7 @@ test("gigaboot_unittests") {
     "//src/lib/zbitl",
     "//zircon/kernel/lib/efi",
     "//zircon/kernel/lib/efi/testing",
+    "//zircon/third_party/ulib/cksum",
   ]
 
   include_dirs = [ ".." ]

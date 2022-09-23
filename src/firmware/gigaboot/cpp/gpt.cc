@@ -4,6 +4,7 @@
 
 #include "gpt.h"
 
+#include <lib/cksum.h>
 #include <stdio.h>
 #include <zircon/assert.h>
 
@@ -22,12 +23,86 @@ bool ValidateHeader(const gpt_header_t &header) {
     return false;
   }
 
-  // TODO(b/235489025): Implement checksum validation
+  // The header crc is in the middle of the structure, and
+  // as per the spec is zeroed before the crc is calculated.
+  // An easy way to make that calculation without modifying the header
+  // is to make a copy, zero out its crc, and calculate the checksum on the copy.
+  gpt_header_t copy(header);
+  copy.crc32 = 0;
+  copy.crc32 = crc32(0, reinterpret_cast<uint8_t *>(&copy), sizeof(copy));
 
-  return true;
+  return copy.crc32 == header.crc32;
+}
+
+void RestoreHeaderFromGood(const gpt_header_t &good, gpt_header_t *damaged) {
+  *damaged = good;
+
+  damaged->backup = good.current;
+  damaged->current = good.backup;
+
+  // This is an unfortunate hack: for every other entry in the header,
+  // it doesn't matter whether the damaged header is the primary or the backup,
+  // and similarly for the good header.
+  damaged->entries = (damaged->current == 1) ? 2 : damaged->last + 1;
+
+  damaged->crc32 = 0;
+  damaged->crc32 = crc32(0, reinterpret_cast<uint8_t *>(damaged), sizeof(*damaged));
 }
 
 }  // namespace
+
+fitx::result<efi_status> EfiGptBlockDevice::LoadGptEntries(const gpt_header_t &header) {
+  entries_.resize(header.entries_count);
+  utf8_names_.resize(header.entries_count);
+
+  if (efi_status status = Read(entries_.data(), header.entries * BlockSize(),
+                               header.entries_size * header.entries_count);
+      status != EFI_SUCCESS) {
+    entries_.resize(0);
+    utf8_names_.resize(0);
+
+    return fitx::error(status);
+  }
+
+  return fitx::ok();
+}
+
+fitx::result<efi_status> EfiGptBlockDevice::RestoreFromBackup() {
+  gpt_header_t backup;
+  if (efi_status status =
+          Read(&backup, BlockSize() * block_io_protocol_->Media->LastBlock, sizeof(backup));
+      status != EFI_SUCCESS) {
+    return fitx::error(status);
+  }
+
+  if (!ValidateHeader(backup)) {
+    return fitx::error(EFI_NOT_FOUND);
+  }
+
+  if (fitx::result res = LoadGptEntries(backup); !res.is_ok()) {
+    return res;
+  }
+
+  uint32_t entries_crc =
+      crc32(0, reinterpret_cast<uint8_t *>(entries_.data()), sizeof(entries_[0]) * entries_.size());
+  if (entries_crc != backup.entries_crc) {
+    return fitx::error(EFI_NOT_FOUND);
+  }
+
+  RestoreHeaderFromGood(backup, &gpt_header_);
+  if (efi_status status = Write(&gpt_header_, BlockSize(), sizeof(gpt_header_));
+      status != EFI_SUCCESS) {
+    return fitx::error(status);
+  }
+
+  if (efi_status status = Write(entries_.data(), gpt_header_.entries * BlockSize(),
+                                gpt_header_.entries_count * gpt_header_.entries_size);
+      status != EFI_SUCCESS) {
+    return fitx::error(status);
+  }
+
+  return fitx::ok();
+}
 
 fitx::result<efi_status, EfiGptBlockDevice> EfiGptBlockDevice::Create(efi_handle device_handle) {
   EfiGptBlockDevice ret;
@@ -52,39 +127,52 @@ fitx::result<efi_status, EfiGptBlockDevice> EfiGptBlockDevice::Create(efi_handle
 
 fitx::result<efi_status> EfiGptBlockDevice::Load() {
   // First block is MBR. Read the second block for the GPT header.
-  if (efi_status status = Read(&gpt_header_, BlockSize(), sizeof(gpt_header_t));
+  if (efi_status status = Read(&gpt_header_, BlockSize(), sizeof(gpt_header_));
       status != EFI_SUCCESS) {
     return fitx::error(status);
   }
 
+  // Note: we only read the backup header and entries if the primary is corrupted.
+  // This leaves a potential hole where the backup gets silently corrupted
+  // and this isn't caught until we need to use it to restore the primary,
+  // in which case both headers are corrupted.
+  //
+  // The alternative would be to always read both headers and
+  // potentially restore the backup from the primary.
+  // This slows down boot in the common case where everything is fine;
+  // it is arguably better to leave this task to a post-boot daemon.
   if (!ValidateHeader(gpt_header_)) {
-    // TODO(b/235489025): Implement checksum validation and backup gpt logic.
-    return fitx::error(EFI_NOT_FOUND);
-  }
-
-  // Load all the partition entries
-
-  // Allocate entries buffer
-  entries_.resize(gpt_header_.entries_count);
-  size_t offset = gpt_header_.entries * BlockSize();
-  for (size_t i = 0; i < gpt_header_.entries_count; i++) {
-    GptEntryInfo &new_entry = entries_[i];
-    if (efi_status status = Read(&new_entry.entry, offset, gpt_header_.entries_size);
-        status != EFI_SUCCESS) {
-      return fitx::error(status);
+    auto res = RestoreFromBackup();
+    if (!res.is_ok()) {
+      return res;
+    }
+  } else {
+    if (auto res = LoadGptEntries(gpt_header_); !res.is_ok()) {
+      return res;
     }
 
-    // Pre-compute the utf8 name
-    size_t dst_len = sizeof(new_entry.utf8_name);
+    uint32_t entries_crc = crc32(0, reinterpret_cast<uint8_t *>(entries_.data()),
+                                 sizeof(entries_[0]) * entries_.size());
+
+    if (entries_crc != gpt_header_.entries_crc) {
+      auto res = RestoreFromBackup();
+      if (!res.is_ok()) {
+        return res;
+      }
+    }
+  }
+
+  // At this point we know we have valid primary and backup header and entries on disk
+  // and our in memory copies are synched with data on disk.
+  for (size_t i = 0; i < gpt_header_.entries_count; i++) {
+    size_t dst_len = utf8_names_[i].size();
     zx_status_t conv_status =
-        utf16_to_utf8(reinterpret_cast<const uint16_t *>(new_entry.entry.name), GPT_NAME_LEN / 2,
-                      reinterpret_cast<uint8_t *>(new_entry.utf8_name), &dst_len);
-    if (conv_status != ZX_OK || dst_len > sizeof(new_entry.utf8_name)) {
+        utf16_to_utf8(reinterpret_cast<const uint16_t *>(entries_[i].name), GPT_NAME_LEN / 2,
+                      reinterpret_cast<uint8_t *>(utf8_names_[i].data()), &dst_len);
+    if (conv_status != ZX_OK || dst_len > utf8_names_[i].size()) {
       printf("Failed to convert partition name to utf8, %d, %zu\n", conv_status, dst_len);
       return fitx::error(EFI_UNSUPPORTED);
     }
-
-    offset += gpt_header_.entries_size;
   }
 
   return fitx::ok();
@@ -105,13 +193,9 @@ efi_status EfiGptBlockDevice::Write(const void *data, size_t offset, size_t leng
 }
 
 const gpt_entry_t *EfiGptBlockDevice::FindPartition(std::string_view name) {
-  for (const GptEntryInfo &ele : GetGptEntries()) {
-    const gpt_entry_t &entry = ele.entry;
-    if (entry.first == 0 && entry.last == 0) {
-      continue;
-    }
-
-    if (name == ele.utf8_name) {
+  for (size_t i = 0; i < utf8_names_.size(); i++) {
+    gpt_entry_t const &entry = entries_[i];
+    if (entry.first != 0 && entry.last != 0 && name == utf8_names_[i].data()) {
       return &entry;
     }
   }

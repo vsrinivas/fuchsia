@@ -59,7 +59,6 @@ class BlockDevice : public Device {
   efi::FakeDiskIoProtocol& fake_disk_io_protocol() { return fake_disk_io_protocol_; }
   efi_block_io_media& block_io_media() { return block_io_media_; }
   void InitializeGpt();
-  void FinalizeGpt();
   void AddGptPartition(const gpt_entry_t& new_entry);
   size_t total_blocks() { return total_blocks_; }
 
