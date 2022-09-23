@@ -13,6 +13,10 @@ namespace {
 
 using FblUint64ArrayTestTraits = FblArrayTestTraits<uint64_t>;
 
+TEST(ZbitlImageFblByteArrayTests, ExtendBogusZbi) {
+  ASSERT_NO_FATAL_FAILURE(TestExtendBogusZbiImage<FblByteArrayTestTraits>());
+}
+
 TEST(ZbitlViewFblByteArrayTests, DefaultConstructed) {
   ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<FblByteArrayTestTraits>());
 }

@@ -6,6 +6,7 @@
 #define SRC_LIB_ZBITL_INCLUDE_LIB_ZBITL_IMAGE_H_
 
 #include <lib/cksum.h>
+#include <zircon/boot/image.h>
 
 #include "checking.h"
 #include "view.h"
@@ -177,7 +178,18 @@ class Image : public View<Storage> {
       return fitx::error{ErrorType{"cannot extend by iterator range starting at a view's end."}};
     }
 
-    uint32_t size = static_cast<uint32_t>(this->size_bytes());
+    uint32_t size = 0;
+    if (auto result = this->container_header(); result.is_error()) {
+      auto error = std::move(result).error_value();
+      return fitx::error(ErrorType{
+          .zbi_error = error.zbi_error,
+          .write_offset = error.item_offset,
+          .write_error = std::move(error.storage_error),
+      });
+    } else {
+      size = result->length + sizeof(zbi_header_t);
+    }
+
     uint32_t tail_size =
         (last == view.end() ? static_cast<uint32_t>(view.size_bytes()) : last.item_offset()) -
         first.item_offset();

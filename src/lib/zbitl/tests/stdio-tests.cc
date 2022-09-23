@@ -20,6 +20,10 @@ TEST(ZbitlViewStdioTests, CreateFromBogusZbi) {
   ASSERT_NO_FATAL_FAILURE(TestViewFromBogusZbi<StdioTestTraits>());
 }
 
+TEST(ZbitlImageStdioTests, ExtendBogusZbi) {
+  ASSERT_NO_FATAL_FAILURE(TestExtendBogusZbiImage<StdioTestTraits>());
+}
+
 TEST(ZbitlImageStdioTests, Appending) { ASSERT_NO_FATAL_FAILURE(TestAppending<StdioTestTraits>()); }
 
 TEST(ZbitlBootfsStdioTests, Iteration) {

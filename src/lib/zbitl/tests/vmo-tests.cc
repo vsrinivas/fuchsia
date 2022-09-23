@@ -358,6 +358,9 @@ TEST(ZbitlViewVmoTests, InheritedResizability) {
   ASSERT_NO_FATAL_FAILURE(TestInheritedResizability<VmoTestTraits>());
 }
 
+TEST(ZbitlImageVmoTests, ExtendBogusZbi) {
+  ASSERT_NO_FATAL_FAILURE(TestExtendBogusZbiImage<VmoTestTraits>());
+}
 TEST(ZbitlImageVmoTests, Appending) { ASSERT_NO_FATAL_FAILURE(TestAppending<VmoTestTraits>()); }
 
 TEST(ZbitlBootfsVmoTests, Iteration) {

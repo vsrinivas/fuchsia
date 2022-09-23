@@ -171,6 +171,36 @@ inline void TestViewFromBogusZbi() {
 }
 
 template <typename TestTraits>
+inline void TestExtendBogusZbiImage() {
+  typename TestTraits::Context context;
+  ASSERT_NO_FATAL_FAILURE(TestTraits::Create(sizeof(zbi_header_t), &context));
+
+  // make bogus.
+  auto storage = context.TakeStorage();
+  zbi_header_t container_header = {.length = 100};
+  Bytes bytes(reinterpret_cast<const char*>(&container_header), sizeof(container_header));
+  TestTraits::Write(storage, 0, bytes);
+
+  zbitl::Image bogus_zbi(std::move(storage));
+
+  std::vector<cpp17::byte> good_zbi_buffer(4096, static_cast<cpp17::byte>(1));
+  auto good_zbi = zbitl::Image(cpp20::span(good_zbi_buffer));
+  ASSERT_TRUE(good_zbi.clear().is_ok());
+
+  // 1 item to extend.
+  constexpr std::string_view kCmdline = "abcde=ghijk";
+  auto it_or = good_zbi.Append(
+      {.type = ZBI_TYPE_CMDLINE, .length = static_cast<uint32_t>(kCmdline.length())});
+  ASSERT_TRUE(it_or.is_ok());
+  memcpy(it_or->payload.data(), kCmdline.data(), kCmdline.length());
+
+  auto extend_res = bogus_zbi.Extend(good_zbi.begin(), good_zbi.end());
+  good_zbi.ignore_error();
+  ASSERT_TRUE(extend_res.is_error());
+  ASSERT_EQ(bogus_zbi.size_bytes(), 0u);
+}
+
+template <typename TestTraits>
 inline void TestIteration(TestDataZbiType type) {
   files::ScopedTempDir dir;
 

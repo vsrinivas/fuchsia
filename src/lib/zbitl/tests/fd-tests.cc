@@ -21,6 +21,10 @@ TEST_ITERATION(ZbitlViewFdTests, FdTestTraits)
 
 TEST_MUTATION(ZbitlViewFdTests, FdTestTraits)
 
+TEST(ZbitlImageFdTests, ExtendBogusZbi) {
+  ASSERT_NO_FATAL_FAILURE(TestViewFromBogusZbi<FdTestTraits>());
+}
+
 TEST(ZbitlImageFdTests, Appending) { ASSERT_NO_FATAL_FAILURE(TestAppending<FdTestTraits>()); }
 
 TEST(ZbitlBootfsFdTests, Iteration) {

@@ -32,6 +32,10 @@ TEST_ITERATION(ZbitlViewByteSpanTests, ByteSpanTestTraits)
 
 TEST_MUTATION(ZbitlViewByteSpanTests, ByteSpanTestTraits)
 
+TEST(ZbitlImageByteSpanTests, ExtendBogusZbi) {
+  ASSERT_NO_FATAL_FAILURE(TestViewFromBogusZbi<ByteSpanTestTraits>());
+}
+
 TEST(ZbitlImageByteSpanTests, Appending) {
   ASSERT_NO_FATAL_FAILURE(TestAppending<ByteSpanTestTraits>());
 }
