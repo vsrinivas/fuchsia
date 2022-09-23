@@ -41,7 +41,7 @@ bool WriteToGtMailbox(fdf::MmioBuffer* mmio_space, GtDriverMailboxOp op) {
     }
 
     if (!PollUntil(
-            [&] { return (mmio_space->Read32(kGtDriverMailboxInterface) & 0x80000000) != 0; },
+            [&] { return (mmio_space->Read32(kGtDriverMailboxInterface) & 0x80000000) == 0; },
             zx::usec(1), static_cast<int32_t>(op.poll_busy_timeout_us))) {
       zxlogf(ERROR, "GT Driver Mailbox driver busy");
       return false;
