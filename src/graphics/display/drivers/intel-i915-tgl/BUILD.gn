@@ -115,6 +115,7 @@ test("intel-i915-tgl-test") {
     "poll-until-unittest.cc",
     "power-unittest.cc",
     "registers-ddi-unittest.cc",
+    "registers-typec-unittest.cc",
     "registers-unittest.cc",
   ]
   deps = [
@@ -152,6 +153,7 @@ group("tests") {
 fuchsia_unittest_package("intel-i915-tgl-test-package") {
   package_name = "intel-i915-tgl-test"
   deps = [ ":intel-i915-tgl-test" ]
+  manifest = "meta/intel-i915-tgl-test.cml"
   test_specs = {
     log_settings = {
       max_severity = "ERROR"
