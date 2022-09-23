@@ -59,17 +59,6 @@ TestHarness MakeTestHarness(
   return h;
 }
 
-std::shared_ptr<MemoryMappedBuffer> MakeMemoryMappedBuffer(int64_t bytes) {
-  zx::vmo vmo;
-  if (auto status = zx::vmo::create(static_cast<uint64_t>(bytes), 0, &vmo); status != ZX_OK) {
-    FX_PLOGS(FATAL, status) << "zx::vmo::create failed";
-  }
-
-  auto buffer_result = MemoryMappedBuffer::Create(std::move(vmo), /*writable=*/true);
-  FX_CHECK(buffer_result.is_ok()) << buffer_result.error();
-  return std::move(buffer_result.value());
-}
-
 bool PollUntil(zx::duration timeout, std::function<bool()> fn) {
   const auto deadline = zx::deadline_after(zx::sec(5));
   while (zx::clock::get_monotonic() < deadline) {
@@ -83,8 +72,8 @@ bool PollUntil(zx::duration timeout, std::function<bool()> fn) {
 
 TEST(StreamSinkClientTest, CreatePackets) {
   auto h = MakeTestHarness({
-      {0, MakeMemoryMappedBuffer(30 * kFormat.bytes_per_frame())},
-      {1, MakeMemoryMappedBuffer(25 * kFormat.bytes_per_frame())},
+      {0, MemoryMappedBuffer::CreateOrDie(30 * kFormat.bytes_per_frame(), /*writable=*/true)},
+      {1, MemoryMappedBuffer::CreateOrDie(25 * kFormat.bytes_per_frame(), /*writable=*/true)},
   });
 
   fidl::Arena<> arena;
@@ -147,7 +136,8 @@ TEST(StreamSinkClientTest, RecyclePackets) {
   };
 
   // This test needs just one packet.
-  auto h = MakeTestHarness({{0, MakeMemoryMappedBuffer(kBytesPerPacket)}});
+  auto h =
+      MakeTestHarness({{0, MemoryMappedBuffer::CreateOrDie(kBytesPerPacket, /*writable=*/true)}});
 
   auto server = std::make_shared<StreamSinkServer>();
   auto server_thread = FidlThread::CreateFromNewThread("test_fidl_server_thread");
@@ -229,7 +219,8 @@ TEST(StreamSinkClientTest, Shutdown) {
   };
 
   // This test needs two packets.
-  auto h = MakeTestHarness({{0, MakeMemoryMappedBuffer(2 * kBytesPerPacket)}});
+  auto h = MakeTestHarness(
+      {{0, MemoryMappedBuffer::CreateOrDie(2 * kBytesPerPacket, /*writable=*/true)}});
 
   libsync::Completion server_unbound;
   auto server = std::make_shared<StreamSinkServer>();
