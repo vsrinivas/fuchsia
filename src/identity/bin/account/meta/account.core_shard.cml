@@ -35,6 +35,11 @@
             to: "#session-manager",
         },
         {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            from: "#trace_manager",
+            to: "#account",
+        },
+        {
             storage: "data",
             from: "self",
             to: "#account",

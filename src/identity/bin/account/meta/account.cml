@@ -11,6 +11,10 @@
             name: "credential_manager",
             url: "fuchsia-pkg://fuchsia.com/credential_manager#meta/credential-manager.cm",
         },
+        {
+            name: "account_manager",
+            url: "fuchsia-pkg://fuchsia.com/account_manager#meta/account_manager.cm",
+        },
     ],
     offer: [
         {
@@ -22,6 +26,7 @@
             protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
             to: [
+                "#account_manager",
                 "#credential_manager",
                 "#password_authenticator",
             ],
@@ -30,6 +35,11 @@
             protocol: [ "fuchsia.process.Launcher" ],
             from: "parent",
             to: "#password_authenticator",
+        },
+        {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            from: "parent",
+            to: "#account_manager",
         },
         {
             protocol: [ "fuchsia.tpm.cr50.PinWeaver" ],
@@ -44,12 +54,11 @@
         {
             storage: "data",
             from: "parent",
-            to: "#password_authenticator",
-        },
-        {
-            storage: "data",
-            from: "parent",
-            to: "#credential_manager",
+            to: [
+                "#account_manager",
+                "#credential_manager",
+                "#password_authenticator",
+            ],
         },
     ],
     expose: [

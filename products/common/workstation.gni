@@ -25,7 +25,7 @@ legacy_base_package_labels += [
   "//src/fonts",
   "//src/fonts:open-fonts-collection",
   "//src/graphics/bin/vulkan_loader",
-  "//src/identity/bin:minimal_auth",
+  "//src/identity/bin:account_system",
   "//src/intl/intl_services:pkg",
   "//src/media/audio/bundles:services",
   "//src/media/audio/drivers/configurator:package",
