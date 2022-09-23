@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.devfs.test;
+library fuchsia.lifecycle.test;
 
 @discoverable
 protocol Device {
@@ -11,4 +11,12 @@ protocol Device {
 
 service Service {
     device client_end:Device;
+};
+
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
+protocol Parent {
+    GetString() -> (struct {
+        response string:MAX;
+    });
 };

@@ -45,6 +45,6 @@ group("drivers") {
     "runtime-protocol:leaf",
     "runtime-protocol:root",
     "services:root",
-    "v1_lifecycle:lifecycle",
+    "v1_lifecycle:drivers",
   ]
 }

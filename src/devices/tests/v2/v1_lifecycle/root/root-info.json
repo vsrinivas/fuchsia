@@ -1,0 +1,10 @@
+{
+    "short_description": "Root driver for v1 lifecycle test",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "DriverFramework",
+        "Test"
+    ]
+}

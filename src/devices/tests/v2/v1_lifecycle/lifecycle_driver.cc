@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fuchsia.devfs.test/cpp/wire.h>
 #include <fidl/fuchsia.device.fs/cpp/fidl.h>
 #include <fidl/fuchsia.driver.compat/cpp/fidl.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
+#include <fidl/fuchsia.lifecycle.test/cpp/wire.h>
 #include <lib/driver2/driver2_cpp.h>
 
 namespace fdf {
 using namespace fuchsia_driver_framework;
 }  // namespace fdf
 
-namespace ft = fuchsia_devfs_test;
+namespace ft = fuchsia_lifecycle_test;
 
 namespace {
 
@@ -65,6 +65,8 @@ class LifecycleDriver : public driver::DriverBase, public fidl::WireServer<ft::D
       : DriverBase("lifeycle-driver", std::move(start_args), std::move(driver_dispatcher)) {}
 
   zx::status<> Start() override {
+    FDF_LOG(INFO, "Starting lifecycle driver");
+
     // Serve our Service.
     driver::ServiceInstanceHandler handler;
     ft::Service::Handler service(&handler);

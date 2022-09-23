@@ -11,15 +11,23 @@ group("tests") {
   deps = [ ":dfv2_v1_lifecycle" ]
 }
 
-fidl("fuchsia.devfs.test") {
+group("drivers") {
   testonly = true
-  sources = [ "devfs.test.fidl" ]
+  deps = [
+    ":lifecycle",
+    "root:component",
+  ]
+}
+
+fidl("fuchsia.lifecycle.test") {
+  testonly = true
+  sources = [ "lifecycle.test.fidl" ]
 }
 
 driver_bind_rules("lifecycle_bind") {
   bind_output = "lifecycle.bindbc"
   rules = "lifecycle.bind"
-  deps = [ "//src/devices/bind/fuchsia.test" ]
+  deps = [ "bind:fuchsia.lifecycle" ]
 }
 
 fuchsia_driver("lifecycle_driver") {
@@ -27,7 +35,7 @@ fuchsia_driver("lifecycle_driver") {
   output_name = "v1_lifecycle_driver"
   sources = [ "lifecycle_driver.cc" ]
   deps = [
-    ":fuchsia.devfs.test_cpp_wire",
+    ":fuchsia.lifecycle.test_cpp_wire",
     ":lifecycle_bind",
     "//sdk/fidl/fuchsia.device.fs:fuchsia.device.fs_cpp",
     "//sdk/fidl/fuchsia.driver.compat:fuchsia.driver.compat_cpp",
@@ -52,7 +60,7 @@ rustc_test("bin") {
   source_root = "test.rs"
   sources = [ "test.rs" ]
   deps = [
-    ":fuchsia.devfs.test_rust",
+    ":fuchsia.lifecycle.test_rust",
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_rust",
     "//sdk/lib/device-watcher/rust",
     "//sdk/lib/driver_test_realm/realm_builder/rust",
@@ -66,7 +74,7 @@ rustc_test("bin") {
 fuchsia_unittest_package("dfv2_v1_lifecycle") {
   deps = [
     ":bin",
-    ":lifecycle",
+    ":drivers",
     "//src/devices/misc/drivers/test-parent",
   ]
 }
