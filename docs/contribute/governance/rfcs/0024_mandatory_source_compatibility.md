@@ -90,7 +90,7 @@ Each transitionable source-compatibility rule must specify exactly what
 
 ### Initial Source Compatibility Constraints
 
-The following are a list of changes that must be source-comptabile:
+The following are a list of changes that must be source-compatible:
 
 *   Adding a new top-level item (protocol, type, or constant).
     *   Motivation: users expect that declaring new protocols, types, and
