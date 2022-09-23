@@ -36,6 +36,34 @@ fn basic_example() {
 }
 
 #[test]
+fn generic_example() {
+    use std::fmt::Display;
+    use std::str::FromStr;
+
+    #[derive(FromArgs, PartialEq, Debug)]
+    /// Reach new heights.
+    struct GoUp<S: FromStr>
+    where
+        <S as FromStr>::Err: Display,
+    {
+        /// whether or not to jump
+        #[argh(switch, short = 'j')]
+        jump: bool,
+
+        /// how high to go
+        #[argh(option)]
+        height: usize,
+
+        /// an optional nickname for the pilot
+        #[argh(option)]
+        pilot_nickname: Option<S>,
+    }
+
+    let up = GoUp::<String>::from_args(&["cmdname"], &["--height", "5"]).expect("failed go_up");
+    assert_eq!(up, GoUp::<String> { jump: false, height: 5, pilot_nickname: None });
+}
+
+#[test]
 fn custom_from_str_example() {
     #[derive(FromArgs)]
     /// Goofy thing.
@@ -128,7 +156,7 @@ fn dynamic_subcommand_example() {
             let description = Self::commands().iter().find(|x| x.name == command_name)?.description;
             if args.len() > 1 {
                 Some(Err(argh::EarlyExit::from("Too many arguments".to_owned())))
-            } else if let Some(arg) = args.get(0) {
+            } else if let Some(arg) = args.first() {
                 Some(Ok(DynamicSubCommandImpl { got: format!("{} got {:?}", description, arg) }))
             } else {
                 Some(Err(argh::EarlyExit::from("Not enough arguments".to_owned())))
@@ -425,6 +453,90 @@ Positional Arguments:
   b                 fooey
 
 Options:
+  --help            display usage information
+"###,
+        );
+    }
+
+    #[derive(FromArgs, Debug, PartialEq)]
+    /// Woot
+    struct LastRepeatingGreedy {
+        #[argh(positional)]
+        /// fooey
+        a: u32,
+        #[argh(switch)]
+        /// woo
+        b: bool,
+        #[argh(option)]
+        /// stuff
+        c: Option<String>,
+        #[argh(positional, greedy)]
+        /// fooey
+        d: Vec<String>,
+    }
+
+    #[test]
+    fn positional_greedy() {
+        assert_output(&["5"], LastRepeatingGreedy { a: 5, b: false, c: None, d: vec![] });
+        assert_output(
+            &["5", "foo"],
+            LastRepeatingGreedy { a: 5, b: false, c: None, d: vec!["foo".into()] },
+        );
+        assert_output(
+            &["5", "foo", "bar"],
+            LastRepeatingGreedy { a: 5, b: false, c: None, d: vec!["foo".into(), "bar".into()] },
+        );
+        assert_output(
+            &["5", "--b", "foo", "bar"],
+            LastRepeatingGreedy { a: 5, b: true, c: None, d: vec!["foo".into(), "bar".into()] },
+        );
+        assert_output(
+            &["5", "foo", "bar", "--b"],
+            LastRepeatingGreedy {
+                a: 5,
+                b: false,
+                c: None,
+                d: vec!["foo".into(), "bar".into(), "--b".into()],
+            },
+        );
+        assert_output(
+            &["5", "--c", "hi", "foo", "bar"],
+            LastRepeatingGreedy {
+                a: 5,
+                b: false,
+                c: Some("hi".into()),
+                d: vec!["foo".into(), "bar".into()],
+            },
+        );
+        assert_output(
+            &["5", "foo", "bar", "--c", "hi"],
+            LastRepeatingGreedy {
+                a: 5,
+                b: false,
+                c: None,
+                d: vec!["foo".into(), "bar".into(), "--c".into(), "hi".into()],
+            },
+        );
+        assert_output(
+            &["5", "foo", "bar", "--", "hi"],
+            LastRepeatingGreedy {
+                a: 5,
+                b: false,
+                c: None,
+                d: vec!["foo".into(), "bar".into(), "--".into(), "hi".into()],
+            },
+        );
+        assert_help_string::<LastRepeatingGreedy>(
+            r###"Usage: test_arg_0 <a> [--b] [--c <c>] [d...]
+
+Woot
+
+Positional Arguments:
+  a                 fooey
+
+Options:
+  --b               woo
+  --c               stuff
   --help            display usage information
 "###,
         );
@@ -957,7 +1069,7 @@ Options:
                 None
             } else if args.len() > 1 {
                 Some(Err(argh::EarlyExit::from("Too many arguments".to_owned())))
-            } else if let Some(arg) = args.get(0) {
+            } else if let Some(arg) = args.first() {
                 Some(Ok(HelpExamplePlugin { got: format!("plugin got {:?}", arg) }))
             } else {
                 Some(Ok(HelpExamplePlugin { got: "plugin got no argument".to_owned() }))
@@ -1518,4 +1630,18 @@ fn subcommand_does_not_panic() {
         SubCommand::redact_arg_values(&[], &["5"]).unwrap_err(),
         argh::EarlyExit { output: "no subcommand name".into(), status: Err(()) },
     );
+}
+
+#[test]
+fn long_alphanumeric() {
+    #[derive(FromArgs)]
+    /// Short description
+    struct Cmd {
+        #[argh(option, long = "ac97")]
+        /// fooey
+        ac97: String,
+    }
+
+    let cmd = Cmd::from_args(&["cmdname"], &["--ac97", "bar"]).unwrap();
+    assert_eq!(cmd.ac97, "bar");
 }

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+use std::fmt::Write;
 use {
     crate::{
         errors::Errors,
@@ -26,9 +27,11 @@ pub(crate) fn help(
     fields: &[StructField<'_>],
     subcommand: Option<&StructField<'_>>,
 ) -> TokenStream {
+    #![allow(clippy::format_push_string)]
     let mut format_lit = "Usage: {command_name}".to_string();
 
-    let positional = fields.iter().filter(|f| f.kind == FieldKind::Positional);
+    let positional =
+        fields.iter().filter(|f| f.kind == FieldKind::Positional && f.attrs.greedy.is_none());
     let mut has_positional = false;
     for arg in positional.clone() {
         has_positional = true;
@@ -40,6 +43,13 @@ pub(crate) fn help(
     for option in options.clone() {
         format_lit.push(' ');
         option_usage(&mut format_lit, option);
+    }
+
+    let remain =
+        fields.iter().filter(|f| f.kind == FieldKind::Positional && f.attrs.greedy.is_some());
+    for arg in remain {
+        format_lit.push(' ');
+        positional_usage(&mut format_lit, arg);
     }
 
     if let Some(subcommand) = subcommand {
@@ -108,7 +118,7 @@ pub(crate) fn help(
         for (code, text) in &ty_attrs.error_codes {
             format_lit.push('\n');
             format_lit.push_str(INDENT);
-            format_lit.push_str(&format!("{} {}", code, text.value()));
+            write!(format_lit, "{} {}", code, text.value()).unwrap();
         }
     }
 
@@ -141,13 +151,17 @@ fn positional_usage(out: &mut String, field: &StructField<'_>) {
     if !field.optionality.is_required() {
         out.push('[');
     }
-    out.push('<');
+    if field.attrs.greedy.is_none() {
+        out.push('<');
+    }
     let name = field.arg_name();
     out.push_str(&name);
     if field.optionality == Optionality::Repeating {
         out.push_str("...");
     }
-    out.push('>');
+    if field.attrs.greedy.is_none() {
+        out.push('>');
+    }
     if !field.optionality.is_required() {
         out.push(']');
     }
@@ -225,7 +239,7 @@ fn positional_description(out: &mut String, field: &StructField<'_>) {
 }
 
 fn positional_description_format(out: &mut String, name: &str, description: &str) {
-    let info = argh_shared::CommandInfo { name: &*name, description };
+    let info = argh_shared::CommandInfo { name, description };
     argh_shared::write_description(out, &info);
 }
 
@@ -255,6 +269,6 @@ fn option_description_format(
     }
     name.push_str(long_with_leading_dashes);
 
-    let info = argh_shared::CommandInfo { name: &*name, description };
+    let info = argh_shared::CommandInfo { name: &name, description };
     argh_shared::write_description(out, &info);
 }

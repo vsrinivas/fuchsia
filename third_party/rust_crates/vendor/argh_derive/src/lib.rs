@@ -13,9 +13,10 @@ use {
         errors::Errors,
         parse_attrs::{FieldAttrs, FieldKind, TypeAttrs},
     },
+    heck::ToKebabCase,
     proc_macro2::{Span, TokenStream},
     quote::{quote, quote_spanned, ToTokens},
-    std::str::FromStr,
+    std::{collections::HashMap, str::FromStr},
     syn::{spanned::Spanned, LitStr},
 };
 
@@ -35,16 +36,14 @@ pub fn argh_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 /// as well as all errors that occurred.
 fn impl_from_args(input: &syn::DeriveInput) -> TokenStream {
     let errors = &Errors::default();
-    if !input.generics.params.is_empty() {
-        errors.err(
-            &input.generics,
-            "`#![derive(FromArgs)]` cannot be applied to types with generic parameters",
-        );
-    }
     let type_attrs = &TypeAttrs::parse(errors, input);
     let mut output_tokens = match &input.data {
-        syn::Data::Struct(ds) => impl_from_args_struct(errors, &input.ident, type_attrs, ds),
-        syn::Data::Enum(de) => impl_from_args_enum(errors, &input.ident, type_attrs, de),
+        syn::Data::Struct(ds) => {
+            impl_from_args_struct(errors, &input.ident, type_attrs, &input.generics, ds)
+        }
+        syn::Data::Enum(de) => {
+            impl_from_args_enum(errors, &input.ident, type_attrs, &input.generics, de)
+        }
         syn::Data::Union(_) => {
             errors.err(input, "`#[derive(FromArgs)]` cannot be applied to unions");
             TokenStream::new()
@@ -118,7 +117,7 @@ impl<'a> StructField<'a> {
                 field,
                 concat!(
                     "Missing `argh` field kind attribute.\n",
-                    "Expected one of: `switch`, `option`, `subcommand`, `positional`",
+                    "Expected one of: `switch`, `option`, `remaining`, `subcommand`, `positional`",
                 ),
             );
             return None;
@@ -184,7 +183,7 @@ impl<'a> StructField<'a> {
                     .long
                     .as_ref()
                     .map(syn::LitStr::value)
-                    .unwrap_or_else(|| heck::KebabCase::to_kebab_case(&*name.to_string()));
+                    .unwrap_or_else(|| name.to_string().to_kebab_case());
                 if long_name == "help" {
                     errors.err(field, "Custom `--help` flags are not supported.");
                 }
@@ -207,6 +206,7 @@ fn impl_from_args_struct(
     errors: &Errors,
     name: &syn::Ident,
     type_attrs: &TypeAttrs,
+    generic_args: &syn::Generics,
     ds: &syn::DataStruct,
 ) -> TokenStream {
     let fields = match &ds.fields {
@@ -233,6 +233,7 @@ fn impl_from_args_struct(
         })
         .collect();
 
+    ensure_unique_names(errors, &fields);
     ensure_only_last_positional_is_optional(errors, &fields);
 
     let impl_span = Span::call_site();
@@ -242,11 +243,12 @@ fn impl_from_args_struct(
     let redact_arg_values_method =
         impl_from_args_struct_redact_arg_values(errors, type_attrs, &fields);
 
-    let top_or_sub_cmd_impl = top_or_sub_cmd_impl(errors, name, type_attrs);
+    let top_or_sub_cmd_impl = top_or_sub_cmd_impl(errors, name, type_attrs, generic_args);
 
+    let (impl_generics, ty_generics, where_clause) = generic_args.split_for_impl();
     let trait_impl = quote_spanned! { impl_span =>
         #[automatically_derived]
-        impl argh::FromArgs for #name {
+        impl #impl_generics argh::FromArgs for #name #ty_generics #where_clause {
             #from_args_method
 
             #redact_arg_values_method
@@ -272,6 +274,10 @@ fn impl_from_args_struct_from_args<'a>(
     let last_positional_is_repeating = positional_fields
         .last()
         .map(|field| field.optionality == Optionality::Repeating)
+        .unwrap_or(false);
+    let last_positional_is_greedy = positional_fields
+        .last()
+        .map(|field| field.kind == FieldKind::Positional && field.attrs.greedy.is_some())
         .unwrap_or(false);
 
     let flag_output_table = fields.iter().filter_map(|field| {
@@ -346,6 +352,7 @@ fn impl_from_args_struct_from_args<'a>(
                         )*
                     ],
                     last_is_repeating: #last_positional_is_repeating,
+                    last_is_greedy: #last_positional_is_greedy,
                 },
                 #parse_subcommands,
                 &|| #help,
@@ -381,6 +388,10 @@ fn impl_from_args_struct_redact_arg_values<'a>(
     let last_positional_is_repeating = positional_fields
         .last()
         .map(|field| field.optionality == Optionality::Repeating)
+        .unwrap_or(false);
+    let last_positional_is_greedy = positional_fields
+        .last()
+        .map(|field| field.kind == FieldKind::Positional && field.attrs.greedy.is_some())
         .unwrap_or(false);
 
     let flag_output_table = fields.iter().filter_map(|field| {
@@ -457,6 +468,7 @@ fn impl_from_args_struct_redact_arg_values<'a>(
                         )*
                     ],
                     last_is_repeating: #last_positional_is_repeating,
+                    last_is_greedy: #last_positional_is_greedy,
                 },
                 #redact_subcommands,
                 &|| #help,
@@ -505,15 +517,54 @@ fn ensure_only_last_positional_is_optional(errors: &Errors, fields: &[StructFiel
     }
 }
 
+/// Ensures that only one short or long name is used.
+fn ensure_unique_names(errors: &Errors, fields: &[StructField<'_>]) {
+    let mut seen_short_names = HashMap::new();
+    let mut seen_long_names = HashMap::new();
+
+    for field in fields {
+        if let Some(short_name) = &field.attrs.short {
+            let short_name = short_name.value();
+            if let Some(first_use_field) = seen_short_names.get(&short_name) {
+                errors.err_span_tokens(
+                    first_use_field,
+                    &format!("The short name of \"-{}\" was already used here.", short_name),
+                );
+                errors.err_span_tokens(&field.field, "Later usage here.");
+            }
+
+            seen_short_names.insert(short_name, &field.field);
+        }
+
+        if let Some(long_name) = &field.long_name {
+            if let Some(first_use_field) = seen_long_names.get(&long_name) {
+                errors.err_span_tokens(
+                    *first_use_field,
+                    &format!("The long name of \"{}\" was already used here.", long_name),
+                );
+                errors.err_span_tokens(&field.field, "Later usage here.");
+            }
+
+            seen_long_names.insert(long_name, field.field);
+        }
+    }
+}
+
 /// Implement `argh::TopLevelCommand` or `argh::SubCommand` as appropriate.
-fn top_or_sub_cmd_impl(errors: &Errors, name: &syn::Ident, type_attrs: &TypeAttrs) -> TokenStream {
+fn top_or_sub_cmd_impl(
+    errors: &Errors,
+    name: &syn::Ident,
+    type_attrs: &TypeAttrs,
+    generic_args: &syn::Generics,
+) -> TokenStream {
     let description =
         help::require_description(errors, name.span(), &type_attrs.description, "type");
+    let (impl_generics, ty_generics, where_clause) = generic_args.split_for_impl();
     if type_attrs.is_subcommand.is_none() {
         // Not a subcommand
         quote! {
             #[automatically_derived]
-            impl argh::TopLevelCommand for #name {}
+            impl #impl_generics argh::TopLevelCommand for #name #ty_generics #where_clause {}
         }
     } else {
         let empty_str = syn::LitStr::new("", Span::call_site());
@@ -523,7 +574,7 @@ fn top_or_sub_cmd_impl(errors: &Errors, name: &syn::Ident, type_attrs: &TypeAttr
         });
         quote! {
             #[automatically_derived]
-            impl argh::SubCommand for #name {
+            impl #impl_generics argh::SubCommand for #name #ty_generics #where_clause {
                 const COMMAND: &'static argh::CommandInfo = &argh::CommandInfo {
                     name: #subcommand_name,
                     description: #description,
@@ -844,6 +895,7 @@ fn impl_from_args_enum(
     errors: &Errors,
     name: &syn::Ident,
     type_attrs: &TypeAttrs,
+    generic_args: &syn::Generics,
     de: &syn::DataEnum,
 ) -> TokenStream {
     parse_attrs::check_enum_type_attrs(errors, type_attrs, &de.enum_token.span);
@@ -902,8 +954,9 @@ fn impl_from_args_enum(
         }
     });
 
+    let (impl_generics, ty_generics, where_clause) = generic_args.split_for_impl();
     quote! {
-        impl argh::FromArgs for #name {
+        impl #impl_generics argh::FromArgs for #name #ty_generics #where_clause {
             fn from_args(command_name: &[&str], args: &[&str])
                 -> std::result::Result<Self, argh::EarlyExit>
             {
@@ -945,7 +998,7 @@ fn impl_from_args_enum(
             }
         }
 
-        impl argh::SubCommands for #name {
+        impl #impl_generics argh::SubCommands for #name #ty_generics #where_clause {
             const COMMANDS: &'static [&'static argh::CommandInfo] = &[#(
                 <#variant_ty as argh::SubCommand>::COMMAND,
             )*];

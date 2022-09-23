@@ -12,7 +12,7 @@
 [package]
 edition = "2018"
 name = "argh"
-version = "0.1.8"
+version = "0.1.9"
 authors = [
     "Taylor Cramer <cramertj@google.com>",
     "Benjamin Brittain <bwb@google.com>",
@@ -30,10 +30,13 @@ license = "BSD-3-Clause"
 repository = "https://github.com/google/argh"
 
 [dependencies.argh_derive]
-version = "0.1.8"
+version = "0.1.9"
 
 [dependencies.argh_shared]
-version = "0.1.8"
+version = "0.1.9"
 
 [dev-dependencies.once_cell]
 version = "1.10.0"
+
+[dev-dependencies.trybuild]
+version = "1.0.63"

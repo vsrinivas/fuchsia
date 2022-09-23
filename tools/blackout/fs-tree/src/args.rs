@@ -32,7 +32,7 @@ pub struct FsTreeCommand {
     #[argh(option, short = 'p')]
     pub device_path: Option<String>,
     /// which filesystem format to target.
-    #[argh(option, short = 'f', long = "format")]
+    #[argh(option, long = "format")]
     pub format: FilesystemFormat,
     /// a seed to use for all random operations. Tests are NOT deterministic relative to the
     /// provided seed. The operations will be identical, but because of the non-deterministic
