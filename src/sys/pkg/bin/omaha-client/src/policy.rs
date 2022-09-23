@@ -7,9 +7,8 @@ use crate::{
     timer::FuchsiaTimer,
 };
 use anyhow::{anyhow, Context as _, Error};
-use fidl_fuchsia_ui_activity::{
-    ListenerMarker, ListenerRequest, ProviderMarker, ProviderProxy, State,
-};
+use async_utils::hanging_get::client::HangingGetStream;
+use fidl_fuchsia_input_interaction::{NotifierMarker, NotifierProxy, State};
 use fidl_fuchsia_update::{CommitStatusProviderMarker, CommitStatusProviderProxy};
 use fidl_fuchsia_update_config::{OptOutMarker, OptOutPreference, OptOutProxy};
 use fidl_fuchsia_update_ext::{query_commit_status, CommitStatus};
@@ -481,23 +480,20 @@ where
     }
 }
 
-/// Watches the UI activity state and updates the value in `ui_activity`.
 async fn watch_ui_activity(ui_activity: &Arc<Mutex<UiActivityState>>) -> Result<(), Error> {
-    let provider = connect_to_protocol::<ProviderMarker>()?;
-    watch_ui_activity_impl(ui_activity, provider).await
+    let notifier_proxy = connect_to_protocol::<NotifierMarker>()?;
+    watch_ui_activity_impl(ui_activity, notifier_proxy).await
 }
 
-/// Watches the UI activity state using `provider` proxy and updates the value in `ui_activity`.
 async fn watch_ui_activity_impl(
     ui_activity: &Arc<Mutex<UiActivityState>>,
-    provider: ProviderProxy,
+    notifier_proxy: NotifierProxy,
 ) -> Result<(), Error> {
-    let (listener, mut stream) = fidl::endpoints::create_request_stream::<ListenerMarker>()?;
-    provider.watch_state(listener).context("watch_state")?;
-    while let Some(event) = stream.try_next().await? {
-        let ListenerRequest::OnStateChanged { state, transition_time: _, responder } = event;
+    let mut watch_activity_state_stream =
+        HangingGetStream::new(notifier_proxy, NotifierProxy::watch_state);
+
+    while let Some(state) = watch_activity_state_stream.try_next().await? {
         *ui_activity.lock().await = UiActivityState { state };
-        responder.send()?;
     }
     Ok(())
 }
@@ -533,7 +529,7 @@ struct UiActivityState {
 
 impl UiActivityState {
     fn new() -> Self {
-        Self { state: State::Unknown }
+        Self { state: State::Invalid }
     }
 }
 
@@ -676,13 +672,15 @@ mod tests {
     use assert_matches::assert_matches;
     use cobalt_client::traits::AsEventCode;
     use fidl::endpoints::create_proxy_and_stream;
-    use fidl_fuchsia_ui_activity::ProviderRequest;
+    use fidl_fuchsia_input_interaction::NotifierRequest;
     use fidl_fuchsia_update::{CommitStatusProviderMarker, CommitStatusProviderRequest};
     use fidl_fuchsia_update_config::OptOutRequest;
     use fuchsia_async as fasync;
+    use fuchsia_backoff::retry_or_last_error;
     use fuchsia_zircon::{self as zx, Peered};
     use omaha_client::time::{ComplexTime, MockTimeSource, StandardTimeSource, TimeSource};
     use proptest::prelude::*;
+    use std::iter::repeat;
     use std::sync::atomic::{AtomicU8, Ordering};
     use std::{collections::VecDeque, time::Instant};
     use zx::HandleBased;
@@ -1668,7 +1666,7 @@ mod tests {
             .nop_metrics_reporter()
             .build();
         let ui_activity = *policy_engine.ui_activity.lock().await;
-        assert_eq!(ui_activity.state, State::Unknown);
+        assert_eq!(ui_activity.state, State::Invalid);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1678,22 +1676,40 @@ mod tests {
             .nop_metrics_reporter()
             .build();
         let ui_activity = Arc::clone(&policy_engine.ui_activity);
-        assert_eq!(ui_activity.lock().await.state, State::Unknown);
+        assert_eq!(ui_activity.lock().await.state, State::Invalid);
 
-        let (proxy, mut stream) = create_proxy_and_stream::<ProviderMarker>().unwrap();
+        let (notifier_proxy, mut stream) = create_proxy_and_stream::<NotifierMarker>().unwrap();
         fasync::Task::local(async move {
             let _ = &policy_engine;
-            watch_ui_activity_impl(&policy_engine.ui_activity, proxy).await.unwrap();
+            watch_ui_activity_impl(&policy_engine.ui_activity, notifier_proxy).await.unwrap();
         })
         .detach();
 
-        let ProviderRequest::WatchState { listener, control_handle: _ } =
-            stream.next().await.unwrap().unwrap();
-        let listener = listener.into_proxy().unwrap();
-        listener.on_state_changed(State::Active, 123).await.unwrap();
-        assert_eq!(*ui_activity.lock().await, UiActivityState { state: State::Active });
-        listener.on_state_changed(State::Idle, 456).await.unwrap();
-        assert_eq!(*ui_activity.lock().await, UiActivityState { state: State::Idle });
+        {
+            let NotifierRequest::WatchState { responder } = stream.next().await.unwrap().unwrap();
+            responder.send(State::Idle).unwrap();
+            assert_matches!(
+                retry_or_last_error(repeat(Duration::from_millis(50)).take(20), || async {
+                    let UiActivityState { state } = *ui_activity.lock().await;
+                    (state == State::Idle).then(|| ()).ok_or(state)
+                })
+                .await,
+                Ok(())
+            );
+        }
+
+        {
+            let NotifierRequest::WatchState { responder } = stream.next().await.unwrap().unwrap();
+            responder.send(State::Active).unwrap();
+            assert_matches!(
+                retry_or_last_error(repeat(Duration::from_millis(50)).take(20), || async {
+                    let UiActivityState { state } = *ui_activity.lock().await;
+                    (state == State::Active).then(|| ()).ok_or(state)
+                })
+                .await,
+                Ok(())
+            );
+        }
     }
 
     #[fasync::run_singlethreaded(test)]
