@@ -9,6 +9,7 @@
 ## usage: fx update-3p-owners  [--num-threads N]
 ##                             [--rust-only | --integration-only]
 ##                             [--skip-rustc-3p-update]
+##                             [--skip-existing]
 ##
 ## Updates OWNERS files for projects, based on gn target references. For any
 ## given project, the tool adds as owners the owners of the projects that depend
@@ -28,6 +29,9 @@
 ##
 ## --integration-only:        update OWNERS files only for projects specified
 ##                            in integration/third_party/flower.
+##
+## --skip-existing:           only generate OWNERS files for projects missing
+##                            owners; does not update exiting OWNERS files.
 ##
 ## --skip-rustc-3p-update:    skip updating rustc_library and rustc_binary
 ##                            third_party dependencies.
@@ -70,6 +74,9 @@ while [[ $# -ge 1 ]]; do
     --skip-rustc-3p-update)
       SKIP_RUSTC_3P_UPDATE="true"
       ;;
+    --skip-existing)
+      SKIP_EXISTING="--skip-existing"
+      ;;
     -*)
       echo "Cannot understand option $1"
       exit 1
@@ -107,4 +114,5 @@ fi
   $JIRI_MANIFEST \
   --overrides $FUCHSIA_DIR/third_party/rust_crates/owners.toml \
   --out-dir $FUCHSIA_BUILD_DIR \
-  --gn-bin $PREBUILT_GN)
+  --gn-bin $PREBUILT_GN \
+  $SKIP_EXISTING)

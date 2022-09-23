@@ -46,17 +46,33 @@ struct Options {
     /// path to the prebuilt GN binary
     #[argh(option)]
     gn_bin: PathBuf,
+
+    /// don't updated existing OWNERS files
+    #[argh(switch)]
+    skip_existing: bool,
 }
 
 fn main() -> Result<()> {
-    let Options { rust_metadata, jiri_manifest, overrides, out_dir, gn_bin, num_threads } =
-        argh::from_env();
+    let Options {
+        rust_metadata,
+        jiri_manifest,
+        overrides,
+        out_dir,
+        gn_bin,
+        num_threads,
+        skip_existing,
+    } = argh::from_env();
+    let update_strategy = match skip_existing {
+        true => UpdateStrategy::OnlyMissing,
+        false => UpdateStrategy::AllFiles,
+    };
 
     if let Some(num_threads) = num_threads {
         rayon::ThreadPoolBuilder::new().num_threads(num_threads).build_global().unwrap();
     }
 
-    OwnersDb::new(rust_metadata, jiri_manifest, overrides, gn_bin, out_dir)?.update_all_files()
+    OwnersDb::new(rust_metadata, jiri_manifest, overrides, gn_bin, out_dir, update_strategy)?
+        .update_all_files()
 }
 
 struct ProjectMetadata {
@@ -68,6 +84,15 @@ struct ProjectMetadata {
 
     /// list of GN targets for depending on the project
     pub targets: Vec<String>,
+}
+
+#[derive(PartialEq)]
+enum UpdateStrategy {
+    /// update all the OWNERS files
+    AllFiles,
+
+    /// only add OWNERS files where missing, leaving the existing OWNERS files unchanged
+    OnlyMissing,
 }
 
 struct OwnersDb {
@@ -84,6 +109,7 @@ struct OwnersDb {
     /// explicit lists of OWNERS files to include instead of inferring, indexed by project name
     overrides: BTreeMap<String, Vec<Utf8PathBuf>>,
 
+    update_strategy: UpdateStrategy,
     gn_bin: PathBuf,
     out_dir: PathBuf,
 }
@@ -95,6 +121,7 @@ impl OwnersDb {
         overrides: Utf8PathBuf,
         gn_bin: PathBuf,
         out_dir: PathBuf,
+        update_strategy: UpdateStrategy,
     ) -> Result<Self> {
         let rust_crates: Vec<CrateOutputMetadata> = rust_metadata
             .as_ref()
@@ -135,7 +162,15 @@ impl OwnersDb {
         let overrides: BTreeMap<String, Vec<Utf8PathBuf>> =
             toml::de::from_str(&std::fs::read_to_string(overrides)?)?;
 
-        Ok(Self { projects, owners_path_cache, rust_metadata, overrides, gn_bin, out_dir })
+        Ok(Self {
+            projects,
+            owners_path_cache,
+            rust_metadata,
+            overrides,
+            update_strategy,
+            gn_bin,
+            out_dir,
+        })
     }
 
     /// Update all OWNERS files for all projects.
@@ -154,6 +189,10 @@ impl OwnersDb {
 
     /// Update the OWNERS file for a single 3p project.
     fn update_owners_file(&self, metadata: &ProjectMetadata) -> Result<()> {
+        if self.update_strategy == UpdateStrategy::OnlyMissing && has_owners(&metadata.path) {
+            eprintln!("\n{} has OWNERS file, skipping", metadata.path);
+            return Ok(());
+        }
         let file = self.compute_owners_file(metadata)?;
         let owners_path = metadata.path.join("OWNERS");
         if !file.is_empty() {
@@ -408,6 +447,18 @@ fn parse_jiri_manifest(manifest_path: &PathBuf) -> Result<Vec<ProjectMetadata>> 
             _ => bail!("unreachable"),
         })
         .collect()
+}
+
+/// checks if there is an OWNERS file in `project_path` or one level up (some project paths are
+/// specified by an inner '/src' path).
+fn has_owners(project_path: &Utf8PathBuf) -> bool {
+    let owners_path = project_path.join("OWNERS");
+    owners_path.exists()
+        || if let Some(parent_path) = project_path.parent() {
+            parent_path.join("OWNERS").exists()
+        } else {
+            false
+        }
 }
 
 #[cfg(test)]
