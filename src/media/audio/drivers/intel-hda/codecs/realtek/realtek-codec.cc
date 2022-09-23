@@ -323,6 +323,18 @@ zx_status_t RealtekCodec::SetupDell5420() {
       {35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true, 0, 4)},
       {35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(false, 0, 5)},  // Don't mute this
 
+      // Enable headset microphone as an input.
+      // NID 25 is pin complex.
+      // NID 34 is mixer configured to take input from NID 25.
+      // NID 9 is input codec which takes input from NID 34.
+      {25u, SET_INPUT_AMPLIFIER_GAIN_MUTE(false, 0)},
+      {25u, SET_ANALOG_PIN_WIDGET_CTRL(false, true, false)},
+      {34u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true, 0, 0)},  // Mute all these
+      {34u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true, 0, 2)},
+      {34u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true, 0, 3)},
+      {34u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true, 0, 4)},
+      {34u, SET_INPUT_AMPLIFIER_GAIN_MUTE(false, 0, 1)},  // Don't mute this
+
       // Power up the top level Audio Function group.
       {1u, SET_POWER_STATE(HDA_PS_D0)},
   };
@@ -347,6 +359,7 @@ zx_status_t RealtekCodec::SetupDell5420() {
           .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_HEADPHONE_JACK,
           .mfr_name = "Dell",
           .product_name = "Headphone Jack",
+          .fixups = {FIXUP_DELL1_HEADSET},
       },
 
       // Speakers.
@@ -375,6 +388,20 @@ zx_status_t RealtekCodec::SetupDell5420() {
           .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_MICROPHONE,
           .mfr_name = "Dell",
           .product_name = "Built-in Microphone",
+      },
+
+      // Headset microphone
+      {
+          .stream_id = 4,
+          .afg_nid = 1,
+          .conv_nid = 9,
+          .pc_nid = 25,
+          .is_input = true,
+          .default_conv_gain = 0.0f,
+          .default_pc_gain = 36.0f,
+          .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_HEADSET_JACK,
+          .mfr_name = "Dell",
+          .product_name = "Headset Jack",
       },
   };
 

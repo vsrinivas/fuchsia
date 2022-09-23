@@ -56,6 +56,7 @@ class RealtekStream : public IntelHDAStreamConfigBase {
     const uint16_t nid;
     const CodecVerb verb;
     const Thunk thunk = nullptr;
+    const uint16_t delay_ms = 0;  // After sending, delay this many milliseconds
   };
 
   // Capabilities common to both converters and pin complexes.
@@ -130,6 +131,11 @@ class RealtekStream : public IntelHDAStreamConfigBase {
   float ComputeCurrentGainLocked() __TA_REQUIRES(obj_lock());
   zx_status_t SendGainUpdatesLocked() __TA_REQUIRES(obj_lock());
 
+  // Run hardware implementation fixups.
+  zx_status_t ActivateFixupsLocked() __TA_REQUIRES(obj_lock());
+  std::optional<zx_status_t> PlugFixupsLocked() __TA_REQUIRES(obj_lock());
+  zx_status_t DellHeadsetPreProbeLocked() __TA_REQUIRES(obj_lock());
+
   // Setup state machine methods.
   zx_status_t UpdateSetupProgressLocked(uint32_t stage) __TA_REQUIRES(obj_lock());
   zx_status_t FinalizeSetupLocked() __TA_REQUIRES(obj_lock());
@@ -144,6 +150,8 @@ class RealtekStream : public IntelHDAStreamConfigBase {
   DECLARE_THUNK(ProcessConverterAmpCaps)
   DECLARE_THUNK(ProcessConverterSampleSizeRate)
   DECLARE_THUNK(ProcessConverterSampleFormats)
+  DECLARE_THUNK(DellHeadsetProbeResponse)
+  DECLARE_THUNK(DellHeadsetProbeFinish)
 
   bool can_mute() const __TA_REQUIRES(obj_lock()) {
     return (conv_.has_amp && conv_.amp_caps.can_mute()) || (pc_.has_amp && pc_.amp_caps.can_mute());
@@ -162,6 +170,7 @@ class RealtekStream : public IntelHDAStreamConfigBase {
   bool cur_mute_ __TA_GUARDED(obj_lock()) = false;
   bool plug_state_ __TA_GUARDED(obj_lock()) = true;
   zx_time_t last_plug_time_ __TA_GUARDED(obj_lock()) = 0;
+  bool headset_is_ctia_ __TA_GUARDED(obj_lock()) = true;
 
   // Converter and pin complex capabilities.
   ConverterCaps conv_ __TA_GUARDED(obj_lock());

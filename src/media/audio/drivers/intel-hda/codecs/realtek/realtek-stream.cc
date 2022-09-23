@@ -117,6 +117,9 @@ zx_status_t RealtekStream::RunCmdLocked(const Command& cmd) {
   if ((res == ZX_OK) && want_response)
     pending_cmds_.push_back(std::move(pending_cmd));
 
+  if (cmd.delay_ms)
+    zx::nanosleep(zx::deadline_after(zx::msec(cmd.delay_ms)));
+
   return res;
 }
 
@@ -174,6 +177,10 @@ zx_status_t RealtekStream::OnUnsolicitedResponseLocked(const CodecResponse& resp
     // Update our internal state.
     plug_state_ = plugged;
     last_plug_time_ = zx::clock::get_monotonic().get();
+
+    std::optional<zx_status_t> fixup = PlugFixupsLocked();
+    if (fixup)
+      return *fixup;  // The fixup code will take care of notifies.
 
     // Inform anyone who has registered for notification.
     ZX_DEBUG_ASSERT(pc_.async_plug_det);
@@ -490,10 +497,161 @@ void RealtekStream::DumpAmpCaps(const CommonCaps& caps, const char* tag) {
 
 #define THUNK(_method) (&RealtekStream::_method)
 
+#define SET_ONE_PROCESSING_COEFFICIENT(nid, coeff_index, value) \
+  {nid, SET_COEFFICIENT_INDEX(coeff_index)}, { nid, SET_PROCESSING_COEFFICIENT(value) }
+
+#define SET_ONE_PROCESSING_COEFFICIENT_AND_DELAY_MS(nid, coeff_index, value, delay) \
+  {nid, SET_COEFFICIENT_INDEX(coeff_index)}, {                                      \
+    nid, SET_PROCESSING_COEFFICIENT(value), nullptr, delay                          \
+  }
+
+// Called on stream activation.
+zx_status_t RealtekStream::ActivateFixupsLocked() {
+  for (const auto fixup_id : props_.fixups) {
+    switch (fixup_id) {
+      case FIXUP_DELL1_HEADSET: {
+        const Command FIXUP[] = {
+            // Set External Amplifier Power Down to verb control.
+            SET_ONE_PROCESSING_COEFFICIENT(32, 0x10, 0x20),
+
+            // Set headset jack to defaults.  This appears to be
+            // a similar configuration to the one used for probing below.
+            // Processing Coefficient 0x45: 0xD089, used for probe
+            // Processing Coefficient 0x45: 0xD489, CTIA headset
+            // Processing Coefficient 0x45: 0xE489, OMTP headset
+            SET_ONE_PROCESSING_COEFFICIENT(32, 0x1B, 0x884B),
+            SET_ONE_PROCESSING_COEFFICIENT(32, 0x45, 0xD089),
+            SET_ONE_PROCESSING_COEFFICIENT(32, 0x1B, 0x84B),
+            SET_ONE_PROCESSING_COEFFICIENT(32, 0x46, 0x4),
+            SET_ONE_PROCESSING_COEFFICIENT(32, 0x1B, 0xC4B),
+
+            // Other undocumented magic.
+            SET_ONE_PROCESSING_COEFFICIENT(87, 0x4, 0x8229),
+            SET_ONE_PROCESSING_COEFFICIENT(32, 0x46, 0xF4),
+            SET_ONE_PROCESSING_COEFFICIENT(87, 0x4, 0x822C),
+            SET_ONE_PROCESSING_COEFFICIENT(83, 0x2, 0x8000),
+            SET_ONE_PROCESSING_COEFFICIENT(83, 0x2, 0x0),
+
+            // Configure Realtek PC Beep Hidden Register, then
+            // 50 millisecond delay to let the headphone jack
+            // pin state settle down; without this delay, the
+            // initial pin state polling may return unplugged
+            // when the headset is actually plugged in.
+            SET_ONE_PROCESSING_COEFFICIENT_AND_DELAY_MS(32, 0x36, 0x5757, 50),
+        };
+
+        zx_status_t res = RunCmdListLocked(FIXUP, std::size(FIXUP));
+        if (res != ZX_OK)
+          return res;
+      } break;
+      default:
+        LOG("ERROR: Unknown fixup: %d", static_cast<int>(fixup_id));
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t RealtekStream::DellHeadsetPreProbeLocked() {
+  const Command PREPROBE[] = {
+      // Undocumented -- configure for headset probing.
+      SET_ONE_PROCESSING_COEFFICIENT(32, 0x1B, 0xE4B),
+      SET_ONE_PROCESSING_COEFFICIENT(32, 0x6, 0x6104),
+      SET_ONE_PROCESSING_COEFFICIENT(87, 0x3, 0x9A3),
+
+      // Mute output for the duration of the probe.
+      {33u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(true, 0), nullptr, /*delay_ms=*/80},
+      {33u, SET_ANALOG_PIN_WIDGET_CTRL(false, false, false)},
+      SET_ONE_PROCESSING_COEFFICIENT(32, 0x45, 0xD089),
+
+      // This appears to trigger the actual probe.
+      SET_ONE_PROCESSING_COEFFICIENT_AND_DELAY_MS(32, 0x49, 0x149, 300),
+
+      // Trigger a read of the probe result.
+      {32u, SET_COEFFICIENT_INDEX(0x46)},
+      {32u, GET_PROCESSING_COEFFICIENT, THUNK(DellHeadsetProbeResponse)},
+  };
+
+  return RunCmdListLocked(PREPROBE, std::size(PREPROBE));
+}
+
+zx_status_t RealtekStream::DellHeadsetProbeResponse(const Command& cmd, const CodecResponse& resp) {
+  // Save result of the probe.
+  headset_is_ctia_ = ((resp.data & 0xF0) == 0xF0);
+
+  const Command AFTER_PROBE[] = {
+      SET_ONE_PROCESSING_COEFFICIENT(87, 0x3, 0xDA3),
+      {87u, SET_COEFFICIENT_INDEX(0x5)},
+      {87u, GET_PROCESSING_COEFFICIENT, THUNK(DellHeadsetProbeFinish)},
+  };
+
+  return RunCmdListLocked(AFTER_PROBE, std::size(AFTER_PROBE));
+}
+
+zx_status_t RealtekStream::DellHeadsetProbeFinish(const Command& cmd, const CodecResponse& resp) {
+  const Command FINISH[] = {
+      // This processing coefficient change appears to configure the
+      // headphone output amplifier to verb control.
+      SET_ONE_PROCESSING_COEFFICIENT(87, 0x5, (uint16_t)(resp.data & ~(1 << 14))),
+      {33u, SET_ANALOG_PIN_WIDGET_CTRL(true, false, false), nullptr, /*delay_ms=*/80},
+
+      // Unmute after test
+      {33u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(false, 0)},
+
+      // Configure the headset type.
+      SET_ONE_PROCESSING_COEFFICIENT(32, 0x45, headset_is_ctia_ ? 0xD489 : 0xE489),
+      SET_ONE_PROCESSING_COEFFICIENT(32, 0x1B, 0xE6B),
+  };
+
+  zx_status_t res = RunCmdListLocked(FINISH, std::size(FINISH));
+  if (res != ZX_OK)
+    return res;
+
+  // Headset programming is done.
+  // We need to inform anybody that cares.
+  if (!(setup_progress_ & PLUG_STATE_SETUP_COMPLETE)) {
+    // We're running during initial setup, inform the state machine
+    // that plug state setup is done.
+    UpdateSetupProgressLocked(PLUG_STATE_SETUP_COMPLETE);
+  }
+  NotifyPlugStateLocked(plug_state_, last_plug_time_);
+
+  return ZX_OK;
+}
+
+// Called after any change in the plug state.
+// Returns nullopt if nothing was done, or if any required action
+// was fully completed.  Returns ZX_OK to indicate that the fixup
+// has taken over the state machine; the caller is relieved of
+// any further responsibility.  Error returns represent real errors
+// that should be reported.
+std::optional<zx_status_t> RealtekStream::PlugFixupsLocked() {
+  for (const auto fixup_id : props_.fixups) {
+    switch (fixup_id) {
+      case FIXUP_DELL1_HEADSET:
+        if (plug_state_) {
+          // If something is plugged in, hand over control
+          // to the headset probe state machine.
+          return DellHeadsetPreProbeLocked();
+        }
+        break;
+      default:
+        break;
+    }
+  }
+  return std::nullopt;
+}
+
 zx_status_t RealtekStream::OnActivateLocked() {
   // Start by attempting to put our pin complex and converter into a disabled
   // state.
   zx_status_t res = DisableConverterLocked();
+  if (res != ZX_OK)
+    return res;
+
+  // Run fixups if needed.
+  res = ActivateFixupsLocked();
   if (res != ZX_OK)
     return res;
 
@@ -607,6 +765,11 @@ zx_status_t RealtekStream::ProcessPinCaps(const Command& cmd, const CodecRespons
 zx_status_t RealtekStream::ProcessPinState(const Command& cmd, const CodecResponse& resp) {
   plug_state_ = PinSenseState(resp.data).presence_detect();
   last_plug_time_ = zx::clock::get_monotonic().get();
+
+  std::optional<zx_status_t> fixup = PlugFixupsLocked();
+  if (fixup)
+    return *fixup;  // The fixup code will update the setup progress.
+
   return UpdateSetupProgressLocked(PLUG_STATE_SETUP_COMPLETE);
 }
 
