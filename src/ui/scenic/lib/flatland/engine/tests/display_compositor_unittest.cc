@@ -538,14 +538,14 @@ TEST_F(DisplayCompositorTest, HardwareFrameCorrectnessTest) {
   const TransformHandle parent_image_handle = parent_session.graph().CreateTransform();
 
   // Add the two children to the parent root: link, then image.
-  parent_session.graph().AddChild(parent_root_handle, link_to_child.GetLinkHandle());
+  parent_session.graph().AddChild(parent_root_handle, link_to_child.GetInternalLinkHandle());
   parent_session.graph().AddChild(parent_root_handle, parent_image_handle);
 
   // Create an image handle for the child.
   const TransformHandle child_image_handle = child_session.graph().CreateTransform();
 
-  // Attach that image handle to the link_attachment_point.
-  child_session.graph().AddChild(child_session.GetLinkOrigin(), child_image_handle);
+  // Attach that image handle to the child link transform handle.
+  child_session.graph().AddChild(child_session.GetLinkChildTransformHandle(), child_image_handle);
 
   // Get an UberStruct for the parent session.
   auto parent_struct = parent_session.CreateUberStructWithCurrentTopology(parent_root_handle);
@@ -569,8 +569,8 @@ TEST_F(DisplayCompositorTest, HardwareFrameCorrectnessTest) {
   parent_session.PushUberStruct(std::move(parent_struct));
 
   // Get an UberStruct for the child session. Note that the argument will be ignored anyway.
-  auto child_struct =
-      child_session.CreateUberStructWithCurrentTopology(child_session.GetLinkOrigin());
+  auto child_struct = child_session.CreateUberStructWithCurrentTopology(
+      child_session.GetLinkChildTransformHandle());
 
   // Add an image.
   ImageMetadata child_image_metadata = ImageMetadata{

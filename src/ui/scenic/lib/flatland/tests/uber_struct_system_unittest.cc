@@ -24,11 +24,13 @@ namespace {
 constexpr TransformHandle::InstanceId kLinkInstanceId = 0;
 
 // Gets the test-standard link handle to link to a graph rooted at |instance_id:0|.
-TransformHandle GetLinkHandle(uint64_t instance_id) { return {kLinkInstanceId, instance_id}; }
+TransformHandle GetInternalLinkHandle(uint64_t instance_id) {
+  return {kLinkInstanceId, instance_id};
+}
 
 // Creates a link in |links| to the the graph rooted at |instance_id:0|.
 void MakeLink(flatland::GlobalTopologyData::LinkTopologyMap& links, uint64_t instance_id) {
-  links[GetLinkHandle(instance_id)] = {instance_id, 0};
+  links[GetInternalLinkHandle(instance_id)] = {instance_id, 0};
 }
 
 }  // namespace
@@ -353,16 +355,16 @@ TEST(UberStructSystemTest, BasicTopologyRetrieval) {
 TEST(UberStructSystemTest, GlobalTopologyMultithreadedUpdates) {
   UberStructSystem system;
 
-  auto link_2 = GetLinkHandle(2);
-  auto link_3 = GetLinkHandle(3);
-  auto link_4 = GetLinkHandle(4);
-  auto link_5 = GetLinkHandle(5);
-  auto link_6 = GetLinkHandle(6);
-  auto link_7 = GetLinkHandle(7);
-  auto link_8 = GetLinkHandle(8);
-  auto link_9 = GetLinkHandle(9);
-  auto link12 = GetLinkHandle(12);
-  auto link13 = GetLinkHandle(13);
+  auto link_2 = GetInternalLinkHandle(2);
+  auto link_3 = GetInternalLinkHandle(3);
+  auto link_4 = GetInternalLinkHandle(4);
+  auto link_5 = GetInternalLinkHandle(5);
+  auto link_6 = GetInternalLinkHandle(6);
+  auto link_7 = GetInternalLinkHandle(7);
+  auto link_8 = GetInternalLinkHandle(8);
+  auto link_9 = GetInternalLinkHandle(9);
+  auto link12 = GetInternalLinkHandle(12);
+  auto link13 = GetInternalLinkHandle(13);
 
   // All of the non-leaf graphs have the same shape.
   //

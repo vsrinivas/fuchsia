@@ -85,7 +85,7 @@ void FlatlandDisplay::SetContent(ViewportCreationToken token,
   // TODO(fxbug.dev/76640): In order to replace content from a previous call to SetContent(), need
   // to detach from root_transform_, and otherwise clean up.  Flatland::ReleaseViewport() seems like
   // a good place to start.
-  FX_CHECK(link_to_child_.parent_viewport_watcher_handle == flatland::TransformHandle())
+  FX_CHECK(link_to_child_.parent_transform_handle == flatland::TransformHandle())
       << "Replacing FlatlandDisplay content is not yet supported.";
 
   auto child_transform = transform_graph_.CreateTransform();
@@ -117,16 +117,15 @@ void FlatlandDisplay::SetContent(ViewportCreationToken token,
         // TODO(fxbug.dev/77035): FlatlandDisplay currently has no way to notify clients of errors.
         FX_LOGS(ERROR) << "FlatlandDisplay illegal client usage: " << error_log;
       });
-  FX_CHECK(child_transform == link_to_child_.parent_viewport_watcher_handle);
+  FX_CHECK(child_transform == link_to_child_.parent_transform_handle);
 
   // This is the feed-forward portion of the method, i.e. the part which enqueues an updated
   // UberStruct.
   bool child_added;
-  child_added = transform_graph_.AddChild(link_to_child_.parent_viewport_watcher_handle,
-                                          link_to_child_.link_handle);
+  child_added = transform_graph_.AddChild(link_to_child_.parent_transform_handle,
+                                          link_to_child_.internal_link_handle);
   FX_DCHECK(child_added);
-  child_added =
-      transform_graph_.AddChild(root_transform_, link_to_child_.parent_viewport_watcher_handle);
+  child_added = transform_graph_.AddChild(root_transform_, link_to_child_.parent_transform_handle);
   FX_DCHECK(child_added);
 
   // TODO(fxbug.dev/76640): given this fixed topology, we probably don't need to use
@@ -140,9 +139,8 @@ void FlatlandDisplay::SetContent(ViewportCreationToken token,
   auto uber_struct = std::make_unique<UberStruct>();
   uber_struct->debug_name = "FlatlandDisplay";
   uber_struct->local_topology = std::move(data.sorted_transforms);
-  uber_struct->link_properties[link_to_child_.parent_viewport_watcher_handle] =
-      std::move(properties);
-  uber_struct->local_clip_regions[link_to_child_.parent_viewport_watcher_handle] = {
+  uber_struct->link_properties[link_to_child_.parent_transform_handle] = std::move(properties);
+  uber_struct->local_clip_regions[link_to_child_.parent_transform_handle] = {
       .x = 0,
       .y = 0,
       .width = static_cast<int32_t>(display_->width_in_px()),
@@ -152,7 +150,7 @@ void FlatlandDisplay::SetContent(ViewportCreationToken token,
   // By scaling the local matrix of the uberstruct here by the device pixel ratio, we ensure that
   // internally, the sizes of content on flatland instances that are hooked up to this display are
   // scaled up by the appropriate amount.
-  uber_struct->local_matrices[link_to_child_.parent_viewport_watcher_handle] =
+  uber_struct->local_matrices[link_to_child_.parent_transform_handle] =
       glm::scale(glm::mat3(), kDevicePixelRatio);
 
   auto present_id = scheduling::GetNextPresentId();

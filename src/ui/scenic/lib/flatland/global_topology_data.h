@@ -88,10 +88,11 @@ struct GlobalTopologyData {
   static view_tree::SubtreeSnapshot GenerateViewTreeSnapshot(
       const GlobalTopologyData& data, const std::vector<TransformClipRegion>& global_clip_regions,
       const std::vector<glm::mat3>& global_matrix_vector,
-      // Set from |LinkSystem::GetChildViewWatcherToParentViewportWatcherMapping|. Used to get the
-      // parent viewport watcher handle for a child view watcher handle to fetch its clip region
-      // from |clip_regions|.
-      const std::unordered_map<TransformHandle, TransformHandle>& child_view_watcher_mapping);
+      // Acquired from |LinkSystem::GetLinkChildToParentTransformMap|. Used to get the
+      // TransformHandle of the parent end of a Link using the child's TransformHandle, in order to
+      // fetch its clip region from |global_clip_regions|.
+      const std::unordered_map<TransformHandle, TransformHandle>&
+          link_child_to_parent_transform_map);
 };
 
 }  // namespace flatland

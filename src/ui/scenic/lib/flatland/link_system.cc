@@ -45,46 +45,46 @@ LinkSystem::LinkToChild LinkSystem::CreateLinkToChild(
     std::shared_ptr<utils::DispatcherHolder> dispatcher_holder, ViewportCreationToken token,
     fuchsia::ui::composition::ViewportProperties initial_properties,
     fidl::InterfaceRequest<ChildViewWatcher> child_view_watcher,
-    TransformHandle parent_viewport_watcher_handle, LinkProtocolErrorCallback error_callback) {
+    TransformHandle parent_transform_handle, LinkProtocolErrorCallback error_callback) {
   FX_DCHECK(token.value.is_valid());
   FX_DCHECK(initial_properties.has_logical_size());
   FX_DCHECK(initial_properties.has_inset());
 
   auto impl = std::make_shared<ChildViewWatcherImpl>(dispatcher_holder,
                                                      std::move(child_view_watcher), error_callback);
-  const TransformHandle link_handle = CreateTransformLocked();
+  const TransformHandle internal_link_handle = CreateTransformLocked();
 
   ObjectLinker::ImportLink importer = linker_->CreateImport(
-      LinkToChildInfo{.parent_viewport_watcher_handle = parent_viewport_watcher_handle,
-                      .link_handle = link_handle,
+      LinkToChildInfo{.parent_transform_handle = parent_transform_handle,
+                      .internal_link_handle = internal_link_handle,
                       .initial_logical_size = initial_properties.logical_size(),
                       .initial_inset = initial_properties.inset()},
       std::move(token.value),
       /* error_reporter */ nullptr);
 
-  auto child_view_watcher_map_key = std::make_shared<TransformHandle>();
+  auto child_transform_handle = std::make_shared<TransformHandle>();  // Uninitialized.
   importer.Initialize(
       /* link_resolved = */
-      [ref = shared_from_this(), impl, child_view_watcher_map_key](LinkToParentInfo info) mutable {
-        *child_view_watcher_map_key = info.child_view_watcher_handle;
+      [ref = shared_from_this(), impl, child_transform_handle](LinkToParentInfo info) mutable {
+        *child_transform_handle = info.child_transform_handle;
         if (info.view_ref != nullptr) {
           impl->SetViewRef({.reference = utils::CopyEventpair(info.view_ref->reference)});
         }
         std::scoped_lock lock(ref->mutex_);
-        ref->child_view_watcher_map_[*child_view_watcher_map_key] = impl;
+        ref->child_to_parent_map_[*child_transform_handle] = ParentEnd{.child_view_watcher = impl};
       },
       /* link_invalidated = */
-      [ref = shared_from_this(), impl, child_view_watcher_map_key](bool on_link_destruction) {
-        // We expect |child_view_watcher_map_key| to be assigned by the "link_resolved" closure, but
+      [ref = shared_from_this(), impl, child_transform_handle](bool on_link_destruction) {
+        // We expect |child_transform_handle| to be assigned by the "link_resolved" closure, but
         // this might not happen if the link is being destroyed before it was resolved.
-        FX_DCHECK(child_view_watcher_map_key || on_link_destruction);
+        FX_DCHECK(child_transform_handle || on_link_destruction);
         std::scoped_lock lock(ref->mutex_);
-        ref->child_view_watcher_map_.erase(*child_view_watcher_map_key);
+        ref->child_to_parent_map_.erase(*child_transform_handle);
       });
 
   return LinkToChild({
-      .parent_viewport_watcher_handle = parent_viewport_watcher_handle,
-      .link_handle = link_handle,
+      .parent_transform_handle = parent_transform_handle,
+      .internal_link_handle = internal_link_handle,
       .importer = std::move(importer),
   });
 }
@@ -93,7 +93,7 @@ LinkSystem::LinkToParent LinkSystem::CreateLinkToParent(
     std::shared_ptr<utils::DispatcherHolder> dispatcher_holder, ViewCreationToken token,
     std::optional<fuchsia::ui::views::ViewIdentityOnCreation> view_identity,
     fidl::InterfaceRequest<ParentViewportWatcher> parent_viewport_watcher,
-    TransformHandle child_view_watcher_handle, LinkProtocolErrorCallback error_callback) {
+    TransformHandle child_transform_handle, LinkProtocolErrorCallback error_callback) {
   FX_DCHECK(token.value.is_valid());
 
   std::shared_ptr<fuchsia::ui::views::ViewRef> view_ref;
@@ -106,20 +106,19 @@ LinkSystem::LinkToParent LinkSystem::CreateLinkToParent(
   auto impl = std::make_shared<ParentViewportWatcherImpl>(
       dispatcher_holder, std::move(parent_viewport_watcher), error_callback);
 
-  ObjectLinker::ExportLink exporter =
-      linker_->CreateExport(LinkToParentInfo{.child_view_watcher_handle = child_view_watcher_handle,
-                                             .view_ref = view_ref},
-                            std::move(token.value),
-                            /* error_reporter */ nullptr);
+  ObjectLinker::ExportLink exporter = linker_->CreateExport(
+      LinkToParentInfo{.child_transform_handle = child_transform_handle, .view_ref = view_ref},
+      std::move(token.value),
+      /* error_reporter */ nullptr);
 
-  auto parent_viewport_watcher_map_key = std::make_shared<TransformHandle>();
-  auto topology_map_key = std::make_shared<TransformHandle>();
+  auto parent_transform_handle = std::make_shared<TransformHandle>();  // Uninitialized.
+  auto topology_map_key = std::make_shared<TransformHandle>();         // Uninitialized.
   exporter.Initialize(
       /* link_resolved = */
-      [ref = shared_from_this(), impl, parent_viewport_watcher_map_key, topology_map_key,
-       child_view_watcher_handle, dpr = initial_device_pixel_ratio_](LinkToChildInfo info) {
-        *parent_viewport_watcher_map_key = info.parent_viewport_watcher_handle;
-        *topology_map_key = info.link_handle;
+      [ref = shared_from_this(), impl, parent_transform_handle, topology_map_key,
+       child_transform_handle, dpr = initial_device_pixel_ratio_](LinkToChildInfo info) {
+        *parent_transform_handle = info.parent_transform_handle;
+        *topology_map_key = info.internal_link_handle;
 
         std::scoped_lock lock(ref->mutex_);
         // TODO(fxbug.dev/80603): When the same parent relinks to different children, we might be
@@ -132,29 +131,28 @@ LinkSystem::LinkToParent LinkSystem::CreateLinkToParent(
         layout_info.set_inset(info.initial_inset);
         impl->UpdateLayoutInfo(std::move(layout_info));
 
-        ref->parent_viewport_watcher_map_[*parent_viewport_watcher_map_key] =
-            ParentViewportWatcherData(
-                {.impl = impl, .link_attachment_point = child_view_watcher_handle});
+        ref->parent_to_child_map_[*parent_transform_handle] = ChildEnd{
+            .parent_viewport_watcher = impl, .child_transform_handle = child_transform_handle};
         // The topology is constructed here, instead of in the link_resolved closure of the
-        // LinkToParent object, so that its destruction (which depends on the link_handle) can occur
-        // on the same endpoint.
-        ref->link_topologies_[*topology_map_key] = child_view_watcher_handle;
+        // LinkToParent object, so that its destruction (which depends on the internal_link_handle)
+        // can occur on the same endpoint.
+        ref->link_topologies_[*topology_map_key] = child_transform_handle;
       },
       /* link_invalidated = */
-      [ref = shared_from_this(), impl, parent_viewport_watcher_map_key,
+      [ref = shared_from_this(), impl, parent_transform_handle,
        topology_map_key](bool on_link_destruction) {
-        // We expect |parent_viewport_watcher_map_key| and |topology_map_key| to be assigned by the
+        // We expect |parent_transform_handle| and |topology_map_key| to be assigned by the
         // "link_resolved" closure, but this might not happen if the link is being destroyed before
         // it was resolved.
-        FX_DCHECK((parent_viewport_watcher_map_key && topology_map_key) || on_link_destruction);
+        FX_DCHECK((parent_transform_handle && topology_map_key) || on_link_destruction);
         std::scoped_lock map_lock(ref->mutex_);
-        ref->parent_viewport_watcher_map_.erase(*parent_viewport_watcher_map_key);
+        ref->parent_to_child_map_.erase(*parent_transform_handle);
 
         ref->link_topologies_.erase(*topology_map_key);
         ref->link_graph_.ReleaseTransform(*topology_map_key);
       });
 
-  return LinkToParent({.child_view_watcher_handle = child_view_watcher_handle,
+  return LinkToParent({.child_transform_handle = child_transform_handle,
                        .exporter = std::move(exporter),
                        .view_ref = std::move(view_ref),
                        .view_ref_control = std::move(view_ref_control)});
@@ -169,20 +167,21 @@ void LinkSystem::UpdateLinks(const GlobalTopologyData::TopologyVector& global_to
 
   // Since the global topology may not contain every Flatland instance, manually update the
   // ParentViewportStatus of every ParentViewportWatcher.
-  for (auto& [graph_handle, parent_viewport_watcher] : parent_viewport_watcher_map_) {
+  for (auto& [_, child_end] : parent_to_child_map_) {
     // The child Flatland instance is connected to the display if it is present in the global
     // topology.
-    parent_viewport_watcher.impl->UpdateLinkStatus(
-        live_handles.count(parent_viewport_watcher.link_attachment_point) > 0
+    child_end.parent_viewport_watcher->UpdateLinkStatus(
+        live_handles.count(child_end.child_transform_handle) > 0
             ? ParentViewportStatus::CONNECTED_TO_DISPLAY
             : ParentViewportStatus::DISCONNECTED_FROM_DISPLAY);
   }
 
   // ChildViewWatcher has two hanging get methods, GetStatus() and GetViewRef(), whose responses are
   // generated in the loop below.
-  for (auto& [link_attachment_point, child_view_watcher] : child_view_watcher_map_) {
+  for (auto& [child_transform_handle, parent_end] : child_to_parent_map_) {
+    auto& child_view_watcher = parent_end.child_view_watcher;
     // The ChildViewStatus changes the first time the child presents with a particular parent link.
-    // This is indicated by an UberStruct with the |link_attachment_point| as its first
+    // This is indicated by an UberStruct with the |child_transform_handle| as its first
     // TransformHandle in the snapshot.
     //
     // NOTE: This does not mean the child content is actually appears on-screen; it simply informs
@@ -194,14 +193,14 @@ void LinkSystem::UpdateLinks(const GlobalTopologyData::TopologyVector& global_to
     //       particular ChildViewWatcher if the child presents two CreateView() calls before
     //       UpdateLinks() is called, but in that case, the first Link is destroyed, and therefore
     //       its status does not need to be updated anyway.
-    auto uber_struct_kv = uber_structs.find(link_attachment_point.GetInstanceId());
+    auto uber_struct_kv = uber_structs.find(child_transform_handle.GetInstanceId());
     if (uber_struct_kv != uber_structs.end()) {
       const auto& local_topology = uber_struct_kv->second->local_topology;
 
-      // If the local topology doesn't start with the |link_attachment_point|, the child is linked
+      // If the local topology doesn't start with the |child_transform_handle|, the child is linked
       // to a different parent now, but the link_invalidated callback to remove this entry has not
       // fired yet.
-      if (!local_topology.empty() && local_topology.front().handle == link_attachment_point) {
+      if (!local_topology.empty() && local_topology.front().handle == child_transform_handle) {
         child_view_watcher->UpdateLinkStatus(ChildViewStatus::CONTENT_HAS_PRESENTED);
       }
     }
@@ -210,7 +209,7 @@ void LinkSystem::UpdateLinks(const GlobalTopologyData::TopologyVector& global_to
     // to any caller of GetViewRef().  For example, this means that by the time the watcher receives
     // it, the child view will already exist in the view tree, and therefore an attempt to focus it
     // will succeed.
-    if (live_handles.count(link_attachment_point) > 0) {
+    if (live_handles.count(child_transform_handle) > 0) {
       child_view_watcher->UpdateViewRef();
     }
   }
@@ -223,8 +222,8 @@ void LinkSystem::UpdateLinks(const GlobalTopologyData::TopologyVector& global_to
     // LinkToChild's |graph_handle|. They can show up in either order (ViewportProperties before
     // ParentViewportWatcherImpl if the parent Flatland calls Present() first, other way around if
     // the link resolves first), so one being present without another is not a bug.
-    auto graph_kv = parent_viewport_watcher_map_.find(handle);
-    if (graph_kv != parent_viewport_watcher_map_.end()) {
+    if (auto parent_to_child_kv = parent_to_child_map_.find(handle);
+        parent_to_child_kv != parent_to_child_map_.end()) {
       auto uber_struct_kv = uber_structs.find(handle.GetInstanceId());
       if (uber_struct_kv != uber_structs.end()) {
         auto properties_kv = uber_struct_kv->second->link_properties.find(handle);
@@ -241,7 +240,7 @@ void LinkSystem::UpdateLinks(const GlobalTopologyData::TopologyVector& global_to
           // A transform handle may have multiple parents, resulting in the same handle appearing
           // in the global topology vector multiple times, with multiple global matrices. We only
           // want to update the LayoutInfo for the instance that has the lowest scale value.
-          auto watcher = graph_kv->second.impl;
+          const auto& watcher = parent_to_child_kv->second.parent_viewport_watcher;
           if (layout_map.find(watcher) == layout_map.end()) {
             layout_map[watcher] = std::move(info);
           } else {
@@ -276,12 +275,12 @@ GlobalTopologyData::LinkTopologyMap LinkSystem::GetResolvedTopologyLinks() {
 TransformHandle::InstanceId LinkSystem::GetInstanceId() const { return instance_id_; }
 
 std::unordered_map<TransformHandle, TransformHandle> const
-LinkSystem::GetChildViewWatcherToParentViewportWatcherMapping() {
-  std::unordered_map<TransformHandle, TransformHandle> mapping;
-  for (auto& [handle, data] : parent_viewport_watcher_map_) {
-    mapping.try_emplace(data.link_attachment_point, handle);
+LinkSystem::GetLinkChildToParentTransformMap() {
+  std::unordered_map<TransformHandle, TransformHandle> child_to_parent_map;
+  for (const auto& [parent_transform_handle, child_end] : parent_to_child_map_) {
+    child_to_parent_map.try_emplace(child_end.child_transform_handle, parent_transform_handle);
   }
-  return mapping;
+  return child_to_parent_map;
 }
 
 }  // namespace flatland

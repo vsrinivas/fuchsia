@@ -120,25 +120,26 @@ class DisplayCompositorTestBase : public gtest::RealLoopFixture {
     // Use the TransformGraph API to create and manage transforms and their children.
     TransformGraph& graph() { return graph_; }
 
-    // Returns the child_view_watcher_handle origin for this session.
-    TransformHandle GetLinkOrigin() const {
+    // Returns the LinkToParent::child_transform_handle for this session.
+    TransformHandle GetLinkChildTransformHandle() const {
       EXPECT_TRUE(this->link_to_parent_.has_value());
-      return this->link_to_parent_.value().link_to_parent.child_view_watcher_handle;
+      return this->link_to_parent_.value().link_to_parent.child_transform_handle;
     }
 
     // Clears the LinkToParent for this session, if one exists.
     void ClearLinkToParent() { link_to_parent_.reset(); }
 
     // Holds the ChildViewWatcher and LinkSystem::LinkToChild objects since if they fall out of
-    // scope, the LinkSystem will delete the link. Tests should add |link_to_parent.link_handle| to
-    // their TransformGraphs to use the LinkToChild in a topology.
+    // scope, the LinkSystem will delete the link. Tests should add
+    // |link_to_parent.internal_link_handle| to their TransformGraphs to use the LinkToChild in a
+    // topology.
     struct LinkToChild {
       fidl::InterfacePtr<fuchsia::ui::composition::ChildViewWatcher> child_view_watcher;
       LinkSystem::LinkToChild link_to_child;
 
       // Returns the handle the parent should add as a child in its local topology to include the
       // link in the topology.
-      TransformHandle GetLinkHandle() const { return link_to_child.link_handle; }
+      TransformHandle GetInternalLinkHandle() const { return link_to_child.internal_link_handle; }
     };
 
     // Links this session to |parent_session| and returns the LinkToChild, which should be used with
@@ -147,7 +148,7 @@ class DisplayCompositorTestBase : public gtest::RealLoopFixture {
     LinkToChild CreateView(FakeFlatlandSession& parent_session);
 
     // Allocates a new UberStruct with a local_topology rooted at |local_root|. If this session has
-    // a LinkToParent, the link_attachment_point of that LinkToParent will be used instead.
+    // a LinkToParent, the child_transform_handle of that LinkToParent will be used instead.
     std::unique_ptr<UberStruct> CreateUberStructWithCurrentTopology(TransformHandle local_root);
 
     // Pushes |uber_struct| to the UberStructSystem and updates the system so that it represents
@@ -171,7 +172,7 @@ class DisplayCompositorTestBase : public gtest::RealLoopFixture {
 
     // Holds the ParentViewportWatcher and LinkSystem::LinkToParent objects since if they fall out
     // of scope, the LinkSystem will delete the link. When |link_to_parent_| has a value, the
-    // |link_to_parent.link_attachment_point| from this object is used as the root TransformHandle.
+    // |link_to_parent.child_transform_handle| from this object is used as the root TransformHandle.
     struct LinkToParent {
       fidl::InterfacePtr<fuchsia::ui::composition::ParentViewportWatcher> parent_viewport_watcher;
       LinkSystem::LinkToParent link_to_parent;

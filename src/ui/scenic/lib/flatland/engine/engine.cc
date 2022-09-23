@@ -136,8 +136,7 @@ view_tree::SubtreeSnapshot Engine::GenerateViewTreeSnapshot(
   // synchronization hazard.
   const auto uber_struct_snapshot = uber_struct_system_->Snapshot();
   const auto links = link_system_->GetResolvedTopologyLinks();
-  const auto child_view_watcher_mapping =
-      link_system_->GetChildViewWatcherToParentViewportWatcherMapping();
+  const auto link_child_to_parent_transform_map = link_system_->GetLinkChildToParentTransformMap();
   const auto link_system_id = link_system_->GetInstanceId();
   auto topology_data = GlobalTopologyData::ComputeGlobalTopologyData(
       uber_struct_snapshot, links, link_system_id, root_transform);
@@ -152,7 +151,7 @@ view_tree::SubtreeSnapshot Engine::GenerateViewTreeSnapshot(
                               matrix_vector, uber_struct_snapshot);
 
   return flatland::GlobalTopologyData::GenerateViewTreeSnapshot(
-      topology_data, global_clip_regions, matrix_vector, child_view_watcher_mapping);
+      topology_data, global_clip_regions, matrix_vector, link_child_to_parent_transform_map);
 }
 
 // TODO(fxbug.dev/81842) If we put Screenshot on its own thread, we should make this call thread

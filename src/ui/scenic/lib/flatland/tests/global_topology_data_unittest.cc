@@ -30,11 +30,13 @@ constexpr TransformHandle::InstanceId kLinkInstanceId = 0;
 constexpr float kEpsilon = 1e-3f;
 
 // Gets the test-standard link handle to link to a graph rooted at |instance_id:0|.
-TransformHandle GetLinkHandle(uint64_t instance_id) { return {kLinkInstanceId, instance_id}; }
+TransformHandle GetInternalLinkHandle(uint64_t instance_id) {
+  return {kLinkInstanceId, instance_id};
+}
 
 // Creates a link in |links| to the the graph rooted at |instance_id:0|.
 void MakeLink(flatland::GlobalTopologyData::LinkTopologyMap& links, uint64_t instance_id) {
-  links[GetLinkHandle(instance_id)] = {instance_id, 0};
+  links[GetInternalLinkHandle(instance_id)] = {instance_id, 0};
 }
 
 }  // namespace
@@ -99,7 +101,7 @@ TEST(GlobalTopologyDataTest, GlobalTopologyLinkExpansion) {
   UberStruct::InstanceMap uber_structs;
   GlobalTopologyData::LinkTopologyMap links;
 
-  const auto link_2 = GetLinkHandle(2);
+  const auto link_2 = GetInternalLinkHandle(2);
 
   const TransformGraph::TopologyVector vectors[] = {{{{1, 0}, 1}, {link_2, 0}},  // 1:0 - 0:2
                                                     {{{2, 0}, 0}}};              // 2:0
@@ -132,7 +134,7 @@ TEST(GlobalTopologyDataTest, GlobalTopologyIncompleteLink) {
   UberStruct::InstanceMap uber_structs;
   GlobalTopologyData::LinkTopologyMap links;
 
-  const auto link_2 = GetLinkHandle(2);
+  const auto link_2 = GetInternalLinkHandle(2);
 
   // The link is in the middle of the topology to demonstrate that the topology it links to replaces
   // it in the correct order.
@@ -210,7 +212,7 @@ TEST(GlobalTopologyDataTest, GlobalTopologyLinksMismatchedUberStruct) {
   UberStruct::InstanceMap uber_structs;
   GlobalTopologyData::LinkTopologyMap links;
 
-  const auto link_2 = GetLinkHandle(2);
+  const auto link_2 = GetInternalLinkHandle(2);
 
   const TransformGraph::TopologyVector vectors[] = {{{{1, 0}, 1}, {link_2, 0}},  // 1:0 - 0:2
                                                                                  //
@@ -261,8 +263,8 @@ TEST(GlobalTopologyDataTest, GlobalTopologyDiamondInheritance) {
   UberStruct::InstanceMap uber_structs;
   GlobalTopologyData::LinkTopologyMap links;
 
-  const auto link_2 = GetLinkHandle(2);
-  const auto link_3 = GetLinkHandle(3);
+  const auto link_2 = GetInternalLinkHandle(2);
+  const auto link_3 = GetInternalLinkHandle(3);
 
   const TransformGraph::TopologyVector vectors[] = {
       {{{1, 0}, 2}, {link_2, 0}, {link_3, 0}},  // 1:0 - 0:2
@@ -442,7 +444,7 @@ TEST(GlobalTopologyDataTest, HitTest_TwoOverlappingViews) {
   UberStruct::InstanceMap uber_structs;
   GlobalTopologyData::LinkTopologyMap links;
 
-  const auto link_2 = GetLinkHandle(2);
+  const auto link_2 = GetInternalLinkHandle(2);
 
   auto [control_ref1, view_ref_parent] = scenic::ViewRefPair::New();
   auto [control_ref2, view_ref_child] = scenic::ViewRefPair::New();
@@ -547,8 +549,8 @@ TEST(GlobalTopologyDataTest, HitTest_AnonymousView) {
   UberStruct::InstanceMap uber_structs;
   GlobalTopologyData::LinkTopologyMap links;
 
-  const auto link_2 = GetLinkHandle(2);
-  const auto link_3 = GetLinkHandle(3);
+  const auto link_2 = GetInternalLinkHandle(2);
+  const auto link_3 = GetInternalLinkHandle(3);
 
   auto [control_ref1, view_ref1] = scenic::ViewRefPair::New();
   auto [control_ref3, view_ref3] = scenic::ViewRefPair::New();
@@ -625,7 +627,7 @@ TEST(GlobalTopologyDataTest, HitTest_SandwichTest) {
   UberStruct::InstanceMap uber_structs;
   GlobalTopologyData::LinkTopologyMap links;
 
-  const auto link_2 = GetLinkHandle(2);
+  const auto link_2 = GetInternalLinkHandle(2);
 
   auto [control_ref1, view_ref1] = scenic::ViewRefPair::New();
   auto [control_ref2, view_ref2] = scenic::ViewRefPair::New();
@@ -698,10 +700,10 @@ TEST(GlobalTopologyDataTest, HitTest_StartNodeTest) {
   UberStruct::InstanceMap uber_structs;
   GlobalTopologyData::LinkTopologyMap links;
 
-  const auto link_2 = GetLinkHandle(2);
-  const auto link_2_3 = GetLinkHandle(3);
-  const auto link_2_4 = GetLinkHandle(4);
-  const auto link_5 = GetLinkHandle(5);
+  const auto link_2 = GetInternalLinkHandle(2);
+  const auto link_2_3 = GetInternalLinkHandle(3);
+  const auto link_2_4 = GetInternalLinkHandle(4);
+  const auto link_5 = GetInternalLinkHandle(5);
 
   // 1 = A, 2 = B, etc.
   auto [control_ref1, view_ref_A] = scenic::ViewRefPair::New();
@@ -837,7 +839,7 @@ TEST(GlobalTopologyDataTest, HitTest_ClippedandRotatedChild) {
   UberStruct::InstanceMap uber_structs;
   GlobalTopologyData::LinkTopologyMap links;
 
-  const auto link_2 = GetLinkHandle(2);
+  const auto link_2 = GetInternalLinkHandle(2);
 
   auto [control_ref1, view_ref_parent] = scenic::ViewRefPair::New();
   auto [control_ref2, view_ref_child] = scenic::ViewRefPair::New();
@@ -980,7 +982,7 @@ TEST(GlobalTopologyDataTest, HitTest_NonRelevantClipRegions) {
   UberStruct::InstanceMap uber_structs;
   GlobalTopologyData::LinkTopologyMap links;
 
-  const auto link_2 = GetLinkHandle(2);
+  const auto link_2 = GetInternalLinkHandle(2);
 
   auto [control_ref1, view_ref_parent] = scenic::ViewRefPair::New();
   auto [control_ref2, view_ref_child] = scenic::ViewRefPair::New();
@@ -1091,10 +1093,10 @@ TEST(GlobalTopologyDataTest, PartialScreenViews_HaveCorrectTransforms) {
   UberStruct::InstanceMap uber_structs;
   GlobalTopologyData::LinkTopologyMap links;
 
-  const auto link_2 = GetLinkHandle(2);
-  const auto link_3 = GetLinkHandle(3);
-  const auto link_3_4 = GetLinkHandle(4);
-  const auto link_3_5 = GetLinkHandle(5);
+  const auto link_2 = GetInternalLinkHandle(2);
+  const auto link_3 = GetInternalLinkHandle(3);
+  const auto link_3_4 = GetInternalLinkHandle(4);
+  const auto link_3_5 = GetInternalLinkHandle(5);
 
   auto [control_ref1, view_ref_A] = scenic::ViewRefPair::New();
   auto [control_ref2, view_ref_B] = scenic::ViewRefPair::New();
@@ -1288,7 +1290,7 @@ TEST(GlobalTopologyDataTest, ViewTreeSnapshot) {
   UberStruct::InstanceMap uber_structs;
   GlobalTopologyData::LinkTopologyMap links;
 
-  const auto link_2 = GetLinkHandle(2);
+  const auto link_2 = GetInternalLinkHandle(2);
 
   auto [control_ref1, view_ref1] = scenic::ViewRefPair::New();
   auto [control_ref2, view_ref2] = scenic::ViewRefPair::New();
@@ -1306,20 +1308,19 @@ TEST(GlobalTopologyDataTest, ViewTreeSnapshot) {
                                                              //
       {{{2, 0}, 1}, {{2, 1}, 0}}};                           // 2:0 - 2:1
 
-  // {1,1} acts as a parent_viewport_watcher_handle to {2,1} which is the child's view watcher
+  // {1,1} acts as a parent_transform_handle to {2,1} which is the child's view watcher
   // handle.
-  const auto& parent_viewport_watcher_handle = vectors[0][1].handle;
-  const auto& child_view_watcher_handle = vectors[1][0].handle;
+  const auto& parent_transform_handle = vectors[0][1].handle;
+  const auto& child_transform_handle = vectors[1][0].handle;
   const std::unordered_map<TransformHandle, TransformHandle> child_parent_viewport_watcher_mapping =
-      {{child_view_watcher_handle, parent_viewport_watcher_handle}};
+      {{child_transform_handle, parent_transform_handle}};
   {
     auto uber_struct = std::make_unique<UberStruct>();
     uber_struct->local_topology = vectors[0];
     uber_struct->view_ref = std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_ref1));
     uber_struct->debug_name = "test_instance_1";
     TransformClipRegion clip_region = {.x = 0, .y = 0, .width = kWidth, .height = kHeight};
-    uber_struct->local_clip_regions.try_emplace(parent_viewport_watcher_handle,
-                                                std::move(clip_region));
+    uber_struct->local_clip_regions.try_emplace(parent_transform_handle, std::move(clip_region));
     uber_structs[vectors[0][0].handle.GetInstanceId()] = std::move(uber_struct);
   }
   {
@@ -1365,10 +1366,10 @@ TEST(GlobalTopologyDataTest, ViewTreeSnapshot_AnonymousView) {
   UberStruct::InstanceMap uber_structs;
   GlobalTopologyData::LinkTopologyMap links;
 
-  const auto link_2 = GetLinkHandle(2);
-  const auto link_3 = GetLinkHandle(3);
-  const auto link_3_4 = GetLinkHandle(4);
-  const auto link_3_5 = GetLinkHandle(5);
+  const auto link_2 = GetInternalLinkHandle(2);
+  const auto link_3 = GetInternalLinkHandle(3);
+  const auto link_3_4 = GetInternalLinkHandle(4);
+  const auto link_3_5 = GetInternalLinkHandle(5);
 
   auto [control_ref1, view_ref_1] = scenic::ViewRefPair::New();
   auto [control_ref2, view_ref_2] = scenic::ViewRefPair::New();
@@ -1458,7 +1459,7 @@ TEST(GlobalTopologyDataTest, LastChildEdgeCase_NoLink) {
   UberStruct::InstanceMap uber_structs;
   GlobalTopologyData::LinkTopologyMap links;
 
-  const auto link_2 = GetLinkHandle(2);
+  const auto link_2 = GetInternalLinkHandle(2);
 
   // The link is the middle child in the topology.
   const TransformGraph::TopologyVector vectors[] = {{{{1, 0}, /*One too few*/ 2},
@@ -1498,7 +1499,7 @@ TEST(GlobalTopologyDataTest, LinkEdgeCaseTest2_NoUberStruct) {
   UberStruct::InstanceMap uber_structs;
   GlobalTopologyData::LinkTopologyMap links;
 
-  const auto link_2 = GetLinkHandle(2);
+  const auto link_2 = GetInternalLinkHandle(2);
 
   // The link is the middle child in the topology.
   const TransformGraph::TopologyVector vectors[] = {
@@ -1541,7 +1542,7 @@ TEST(GlobalTopologyDataTest, LinkEdgeCaseTest3_WrongHandle) {
   UberStruct::InstanceMap uber_structs;
   GlobalTopologyData::LinkTopologyMap links;
 
-  const auto link_2 = GetLinkHandle(2);
+  const auto link_2 = GetInternalLinkHandle(2);
 
   // The link is the middle child in the topology.
   const TransformGraph::TopologyVector vectors[] = {

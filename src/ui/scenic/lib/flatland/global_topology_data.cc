@@ -251,19 +251,18 @@ zx_koid_t FindParentView(const size_t index, const zx_koid_t view_ref_koid, cons
   return parent_koid;
 }
 
-// Returns the bounding box of |transform_handle| by findings the clip regions specified by it's
-// view's parent.
+// Returns the bounding box of |transform_handle| by findings the clip regions specified by its
+// View's parent.
 view_tree::BoundingBox ComputeBoundingBox(
     const TransformHandle transform_handle,
     const std::unordered_map<TransformHandle, TransformClipRegion>& clip_regions,
-    const std::unordered_map<TransformHandle, TransformHandle>& child_view_watcher_mapping) {
-  // The clip region coordinates are stored in a view's parent uberstruct. The local clip region for
-  // a viewport is always identical to the local view boundary.
+    const std::unordered_map<TransformHandle, TransformHandle>&
+        link_child_to_parent_transform_map) {
   std::array<float, 2> max_bounds = {0, 0};
-  if (const auto view_watcher_it = child_view_watcher_mapping.find(transform_handle);
-      view_watcher_it != child_view_watcher_mapping.end()) {
-    const auto parent_viewport_watcher_handle = view_watcher_it->second;
-    if (const auto clip_region_it = clip_regions.find(parent_viewport_watcher_handle);
+  if (const auto it = link_child_to_parent_transform_map.find(transform_handle);
+      it != link_child_to_parent_transform_map.end()) {
+    const TransformHandle parent_transform_handle = it->second;
+    if (const auto clip_region_it = clip_regions.find(parent_transform_handle);
         clip_region_it != clip_regions.end()) {
       const auto [_x, _y, width, height] = clip_region_it->second;
       max_bounds = {static_cast<float>(width), static_cast<float>(height)};
@@ -287,9 +286,10 @@ ViewTreeData ComputeViewTree(
     const GlobalTopologyData::ParentIndexVector& parent_indices,
     const GlobalTopologyData::ViewRefMap& view_refs,
     const std::unordered_map<TransformHandle, std::string>& debug_names,
-    const std::unordered_map<TransformHandle, TransformClipRegion>& clip_regions,
+    const std::unordered_map<TransformHandle, TransformClipRegion>& global_clip_regions,
     const std::vector<glm::mat3>& global_matrix_vector,
-    const std::unordered_map<TransformHandle, TransformHandle>& child_view_watcher_mapping) {
+    const std::unordered_map<TransformHandle, TransformHandle>&
+        link_child_to_parent_transform_map) {
   ViewTreeData output;
   for (size_t i = root_index; i < topology_vector.size(); ++i) {
     const auto& transform_handle = topology_vector.at(i);
@@ -319,8 +319,8 @@ ViewTreeData ComputeViewTree(
     const zx_koid_t view_ref_koid = utils::ExtractKoid(*view_ref);
     const zx_koid_t parent_koid =
         FindParentView(i, view_ref_koid, root, topology_vector, parent_indices, view_refs);
-    const view_tree::BoundingBox bounding_box =
-        ComputeBoundingBox(transform_handle, clip_regions, child_view_watcher_mapping);
+    const view_tree::BoundingBox bounding_box = ComputeBoundingBox(
+        transform_handle, global_clip_regions, link_child_to_parent_transform_map);
 
     output.view_tree.emplace(
         view_ref_koid, view_tree::ViewNode{.parent = parent_koid,
@@ -566,16 +566,18 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
 view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
     const GlobalTopologyData& data, const std::vector<TransformClipRegion>& global_clip_regions,
     const std::vector<glm::mat3>& global_matrix_vector,
-    const std::unordered_map<TransformHandle, TransformHandle>& child_view_watcher_mapping) {
+    const std::unordered_map<TransformHandle, TransformHandle>&
+        link_child_to_parent_transform_map) {
   const auto root_values = FindRoot(data.topology_vector, data.view_refs);
   if (!root_values.has_value()) {
     // No root -> Empty ViewTree.
     return {};
   }
   const auto [root_index, root_koid] = root_values.value();
-  auto [view_tree, implicitly_anonymous_views] = ComputeViewTree(
-      root_koid, root_index, data.topology_vector, data.parent_indices, data.view_refs,
-      data.debug_names, data.clip_regions, global_matrix_vector, child_view_watcher_mapping);
+  auto [view_tree, implicitly_anonymous_views] =
+      ComputeViewTree(root_koid, root_index, data.topology_vector, data.parent_indices,
+                      data.view_refs, data.debug_names, data.clip_regions, global_matrix_vector,
+                      link_child_to_parent_transform_map);
 
   // Unconnected_views = all non-anonymous views (those with ViewRefs) not in the ViewTree.
   std::unordered_set<zx_koid_t> unconnected_views;

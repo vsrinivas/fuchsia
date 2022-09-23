@@ -245,7 +245,7 @@ void Flatland::Present(fuchsia::ui::composition::PresentArgs args) {
   for (const auto& [link_id, link_to_child] : links_to_children_) {
     ViewportProperties initial_properties;
     fidl::Clone(link_to_child.properties, &initial_properties);
-    uber_struct->link_properties[link_to_child.link.parent_viewport_watcher_handle] =
+    uber_struct->link_properties[link_to_child.link.parent_transform_handle] =
         std::move(initial_properties);
   }
 
@@ -374,10 +374,10 @@ void Flatland::CreateViewHelper(
   // layout information before this operation has been presented. By initializing the link
   // immediately, parents can inform children of layout changes, and child clients can perform
   // layout decisions before their first call to Present().
-  auto link_attachment_point = transform_graph_.CreateTransform();
+  auto child_transform_handle = transform_graph_.CreateTransform();
   LinkSystem::LinkToParent new_link_to_parent = link_system_->CreateLinkToParent(
       dispatcher_holder_, std::move(token), std::move(view_identity),
-      std::move(parent_viewport_watcher), link_attachment_point,
+      std::move(parent_viewport_watcher), child_transform_handle,
       [ref = weak_from_this(),
        dispatcher_holder = dispatcher_holder_](const std::string& error_log) {
         FX_CHECK(dispatcher_holder->dispatcher() == async_get_default_dispatcher())
@@ -386,19 +386,20 @@ void Flatland::CreateViewHelper(
           impl->ReportLinkProtocolError(error_log);
       });
 
-  FLATLAND_VERBOSE_LOG << "Flatland::CreateView() link-attachment-point: " << link_attachment_point;
+  FLATLAND_VERBOSE_LOG << "Flatland::CreateView() link-attachment-point: "
+                       << child_transform_handle;
 
   // This portion of the method is feed-forward. The parent-child relationship between
-  // |link_attachment_point| and |local_root_| establishes the Transform hierarchy between the two
+  // |child_transform_handle| and |local_root_| establishes the Transform hierarchy between the two
   // instances, but the operation will not be visible until the next Present() call includes that
   // topology.
   if (link_to_parent_.has_value()) {
     bool child_removed =
-        transform_graph_.RemoveChild(link_to_parent_->child_view_watcher_handle, local_root_);
+        transform_graph_.RemoveChild(link_to_parent_->child_transform_handle, local_root_);
     FX_DCHECK(child_removed);
 
     bool transform_released =
-        transform_graph_.ReleaseTransform(link_to_parent_->child_view_watcher_handle);
+        transform_graph_.ReleaseTransform(link_to_parent_->child_transform_handle);
     FX_DCHECK(transform_released);
 
     // Delay the destruction of the previous parent link until the next Present().
@@ -407,9 +408,11 @@ void Flatland::CreateViewHelper(
     });
   }
 
-  bool child_added =
-      transform_graph_.AddChild(new_link_to_parent.child_view_watcher_handle, local_root_);
-  FX_DCHECK(child_added);
+  {
+    const bool child_added =
+        transform_graph_.AddChild(new_link_to_parent.child_transform_handle, local_root_);
+    FX_DCHECK(child_added);
+  }
   link_to_parent_ = std::move(new_link_to_parent);
 }
 
@@ -447,11 +450,11 @@ void Flatland::ReleaseView() {
   // Deleting the old LinkToParent's Transform effectively changes this intance's root back to
   // |local_root_|.
   bool child_removed =
-      transform_graph_.RemoveChild(link_to_parent_->child_view_watcher_handle, local_root_);
+      transform_graph_.RemoveChild(link_to_parent_->child_transform_handle, local_root_);
   FX_DCHECK(child_removed);
 
   bool transform_released =
-      transform_graph_.ReleaseTransform(link_to_parent_->child_view_watcher_handle);
+      transform_graph_.ReleaseTransform(link_to_parent_->child_transform_handle);
   FX_DCHECK(transform_released);
 
   // Move the old parent link into the delayed operation so that it isn't taken into account when
@@ -842,7 +845,7 @@ void Flatland::CreateViewport(ContentId link_id, ViewportCreationToken token,
   FX_DCHECK(link_system_);
 
   // The ViewportProperties and ChildViewWatcherImpl live on a handle from this Flatland instance.
-  auto parent_viewport_watcher_handle = transform_graph_.CreateTransform();
+  const auto parent_transform_handle = transform_graph_.CreateTransform();
 
   // We can initialize the Link importer immediately, since no state changes actually occur before
   // the feed-forward portion of this method. We also forward the initial ViewportProperties through
@@ -851,7 +854,7 @@ void Flatland::CreateViewport(ContentId link_id, ViewportCreationToken token,
   fidl::Clone(properties, &initial_properties);
   LinkSystem::LinkToChild link_to_child = link_system_->CreateLinkToChild(
       dispatcher_holder_, std::move(token), std::move(initial_properties),
-      std::move(child_view_watcher), parent_viewport_watcher_handle,
+      std::move(child_view_watcher), parent_transform_handle,
       [ref = weak_from_this(),
        dispatcher_holder = dispatcher_holder_](const std::string& error_log) {
         FX_CHECK(dispatcher_holder->dispatcher() == async_get_default_dispatcher())
@@ -864,32 +867,29 @@ void Flatland::CreateViewport(ContentId link_id, ViewportCreationToken token,
   // initialize its layout with the desired properties. The Link will not actually result in
   // additions to the Transform hierarchy until it is added to a Transform.
   {
-    const bool child_added = transform_graph_.AddChild(link_to_child.parent_viewport_watcher_handle,
-                                                       link_to_child.link_handle);
+    const bool child_added = transform_graph_.AddChild(link_to_child.parent_transform_handle,
+                                                       link_to_child.internal_link_handle);
     FX_DCHECK(child_added);
   }
 
   FLATLAND_VERBOSE_LOG << "Flatland::CreateViewport() in " << local_root_
-                       << " parent_viewport_watcher_handle: "
-                       << link_to_child.parent_viewport_watcher_handle
-                       << " link_handle: " << link_to_child.link_handle;
+                       << " parent_transform_handle: " << link_to_child.parent_transform_handle
+                       << " internal_link_handle: " << link_to_child.internal_link_handle;
 
   // Default the link size to the logical size, which is just an identity scale matrix, so
   // that future logical size changes will result in the correct scale matrix.
   const SizeU size = properties.logical_size();
 
-  content_handles_[link_id.value] = link_to_child.parent_viewport_watcher_handle;
-  links_to_children_[link_to_child.parent_viewport_watcher_handle] = {
-      .link = std::move(link_to_child),
-      .properties = std::move(properties),
-      .size = std::move(size)};
+  content_handles_[link_id.value] = link_to_child.parent_transform_handle;
+  links_to_children_[link_to_child.parent_transform_handle] = {.link = std::move(link_to_child),
+                                                               .properties = std::move(properties),
+                                                               .size = std::move(size)};
 
   // Set clip bounds on the transform associated with the viewport content.
-  SetClipBoundaryInternal(parent_viewport_watcher_handle,
-                          {.x = 0,
-                           .y = 0,
-                           .width = static_cast<int32_t>(size.width),
-                           .height = static_cast<int32_t>(size.height)});
+  SetClipBoundaryInternal(parent_transform_handle, {.x = 0,
+                                                    .y = 0,
+                                                    .width = static_cast<int32_t>(size.width),
+                                                    .height = static_cast<int32_t>(size.height)});
 }
 
 void Flatland::CreateImage(ContentId image_id,
@@ -1395,15 +1395,16 @@ void Flatland::ReleaseViewport(
 
   LinkToChildData& link_data = link_kv->second;
 
-  // Deleting the LinkToChild's |parent_viewport_watcher_handle| effectively deletes the link from
+  // Deleting the LinkToChild's |parent_transform_handle| effectively deletes the link from
   // the local topology, even if the link object itself is not deleted.
-  bool child_removed = transform_graph_.RemoveChild(link_data.link.parent_viewport_watcher_handle,
-                                                    link_data.link.link_handle);
-  FX_DCHECK(child_removed);
-
-  bool content_released =
-      transform_graph_.ReleaseTransform(link_data.link.parent_viewport_watcher_handle);
-  FX_DCHECK(content_released);
+  {
+    const bool child_removed = transform_graph_.RemoveChild(link_data.link.parent_transform_handle,
+                                                            link_data.link.internal_link_handle);
+    FX_DCHECK(child_removed);
+    const bool content_released =
+        transform_graph_.ReleaseTransform(link_data.link.parent_transform_handle);
+    FX_DCHECK(content_released);
+  }
 
   // Move the old child link into the delayed operation so that the ContentId is immeditely free
   // for re-use, but it doesn't get deleted until after the new UberStruct is published.
@@ -1507,7 +1508,7 @@ void Flatland::OnFramePresented(const std::map<scheduling::PresentId, zx::time>&
 }
 
 TransformHandle Flatland::GetRoot() const {
-  return link_to_parent_ ? link_to_parent_->child_view_watcher_handle : local_root_;
+  return link_to_parent_ ? link_to_parent_->child_transform_handle : local_root_;
 }
 
 std::optional<TransformHandle> Flatland::GetContentHandle(ContentId content_id) const {

@@ -175,8 +175,8 @@ class Flatland : public fuchsia::ui::composition::Flatland,
 
   // For validating the transform hierarchy in tests only. For the sake of testing, the "root" will
   // always be the top-most TransformHandle from the TransformGraph owned by this Flatland. If
-  // currently linked to a parent, that means the link_attachment_point. If not, that means the
-  // local_root_.
+  // currently linked to a parent, that means the Link's child_transform_handle. If not, that means
+  // the local_root_.
   TransformHandle GetRoot() const;
 
   // For validating properties associated with content in tests only. If |content_id| does not

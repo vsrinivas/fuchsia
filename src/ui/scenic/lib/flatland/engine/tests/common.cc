@@ -70,10 +70,10 @@ DisplayCompositorTestBase::FakeFlatlandSession::CreateUberStructWithCurrentTopol
   auto uber_struct = std::make_unique<UberStruct>();
 
   // Only use the supplied |local_root| if no there is no LinkToParent, otherwise use the
-  // |link_attachment_point| from the LinkToParent.
-  const TransformHandle root =
-      link_to_parent_.has_value() ? link_to_parent_.value().link_to_parent.child_view_watcher_handle
-                                  : local_root;
+  // |child_transform_handle| from the LinkToParent.
+  const TransformHandle root = link_to_parent_.has_value()
+                                   ? link_to_parent_.value().link_to_parent.child_transform_handle
+                                   : local_root;
 
   // Compute the local topology and place it in the UberStruct.
   auto local_topology_data = graph_.ComputeAndCleanup(root, std::numeric_limits<uint64_t>::max());
