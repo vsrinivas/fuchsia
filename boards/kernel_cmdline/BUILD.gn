@@ -47,6 +47,8 @@ kernel_cmdline("enable-suspend") {
   deps = [ "//build/validate:non_production_tag" ]
 }
 
+# This group is defined in this way so that it can be included in the board before the
+# `enable_suspend` flag is set as a build argument by developers.
 group("enable-suspend-from-board") {
   if (enable_suspend) {
     deps = [ ":enable-suspend" ]

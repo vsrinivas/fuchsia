@@ -3,5 +3,8 @@
 # found in the LICENSE file.
 
 declare_args() {
+  # While suspend is being developed we define this flag which enables all
+  # suspend features. Developers working on suspend can then simply add this
+  # one flag to their build arguments.
   enable_suspend = false
 }
