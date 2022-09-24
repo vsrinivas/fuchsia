@@ -30,6 +30,7 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-dpll.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-pipe.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-transcoder.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/registers-typec.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers.h"
 #include "src/graphics/display/drivers/intel-i915/pch-engine.h"
 
@@ -718,16 +719,221 @@ bool DpDisplay::DpcdHandleAdjustRequest(dpcd::TrainingLaneSet* training,
     ZX_ASSERT(ddi() == 0 || ddi() == 4);
   }
 
-  tgl_registers::DdiRegs ddi_regs(ddi());
-  auto buffer_control = ddi_regs.BufferControl().ReadFrom(mmio_space());
-  buffer_control.set_display_port_phy_config_kaby_lake(phy_config_index);
-  buffer_control.WriteTo(mmio_space());
+  if (is_tgl(controller()->device_id())) {
+    ConfigureVoltageSwingTigerLake(phy_config_index);
+  } else {
+    ConfigureVoltageSwingKabyLake(phy_config_index);
+  }
 
   return voltage_changed;
 }
 
-bool DpDisplay::LinkTrainingSetup() {
+void DpDisplay::ConfigureVoltageSwingKabyLake(size_t phy_config_index) {
+  tgl_registers::DdiRegs ddi_regs(ddi());
+  auto buffer_control = ddi_regs.BufferControl().ReadFrom(mmio_space());
+  buffer_control.set_display_port_phy_config_kaby_lake(phy_config_index);
+  buffer_control.WriteTo(mmio_space());
+}
+
+void DpDisplay::ConfigureVoltageSwingTigerLake(size_t phy_config_index) {
+  switch (ddi()) {
+    case tgl_registers::DDI_TC_1:
+    case tgl_registers::DDI_TC_2:
+    case tgl_registers::DDI_TC_3:
+    case tgl_registers::DDI_TC_4:
+    case tgl_registers::DDI_TC_5:
+    case tgl_registers::DDI_TC_6:
+      ConfigureVoltageSwingTypeCTigerLake(phy_config_index);
+      return;
+    case tgl_registers::DDI_A:
+    case tgl_registers::DDI_B:
+    case tgl_registers::DDI_C:
+      // TODO(fxbug.dev/105240): Implement Voltage swing for COMBO DDI.
+      ZX_DEBUG_ASSERT_MSG(false, "Unsupported DDI: %d", ddi());
+      return;
+    default:
+      ZX_DEBUG_ASSERT_MSG(false, "Unreachable");
+      return;
+  }
+}
+
+void DpDisplay::ConfigureVoltageSwingTypeCTigerLake(size_t phy_config_index) {
+  // This table is from "Voltage Swing Programming Sequence > DP Voltage Swing
+  // Table" Section of Intel Display Programming Manual. It contains control
+  // register fields for each Voltage Swing Config.
+  //
+  // Tiger Lake: IHD-OS-TGL-Vol 12-1.22-Rev 2.0
+  struct VoltageSwingConfig {
+    uint32_t vswing_control = 0;
+    uint32_t preshoot_control = 0;
+    uint32_t de_emphasis_control = 0;
+  };
+  constexpr VoltageSwingConfig kVoltageSwingConfigTable[] = {
+      {.vswing_control = 0x7, .preshoot_control = 0x0, .de_emphasis_control = 0x0},
+      {.vswing_control = 0x5, .preshoot_control = 0x0, .de_emphasis_control = 0x5},
+      {.vswing_control = 0x2, .preshoot_control = 0x0, .de_emphasis_control = 0xB},
+      // Assume HBR2 is always used for Voltage Swing Level 0, Pre-emphasis 3
+      {.vswing_control = 0x0, .preshoot_control = 0x0, .de_emphasis_control = 0x19},
+      {.vswing_control = 0x5, .preshoot_control = 0x0, .de_emphasis_control = 0x0},
+      {.vswing_control = 0x2, .preshoot_control = 0x0, .de_emphasis_control = 0x8},
+      {.vswing_control = 0x0, .preshoot_control = 0x0, .de_emphasis_control = 0x14},
+      {.vswing_control = 0x2, .preshoot_control = 0x0, .de_emphasis_control = 0x0},
+      {.vswing_control = 0x0, .preshoot_control = 0x0, .de_emphasis_control = 0xB},
+      {.vswing_control = 0x0, .preshoot_control = 0x0, .de_emphasis_control = 0x0},
+  };
+
+  for (auto tx_lane : {0, 1}) {
+    // Flush PMD_LANE_SUS register if display owns this PHY lane.
+    tgl_registers::DekelTransmitterPmdLaneSus::GetForLaneDdi(tx_lane, ddi())
+        .FromValue(0)
+        .WriteTo(mmio_space());
+
+    // Update DisplayPort control registers with appropriate voltage swing and
+    // de-emphasis levels from the table.
+    auto display_port_control_0 =
+        tgl_registers::DekelTransmitterDisplayPortControl0::GetForLaneDdi(tx_lane, ddi())
+            .ReadFrom(mmio_space());
+    display_port_control_0
+        .set_voltage_swing_control_level_transmitter_1(
+            kVoltageSwingConfigTable[phy_config_index].vswing_control)
+        .set_preshoot_coefficient_transmitter_1(
+            kVoltageSwingConfigTable[phy_config_index].preshoot_control)
+        .set_de_emphasis_coefficient_transmitter_1(
+            kVoltageSwingConfigTable[phy_config_index].de_emphasis_control)
+        .WriteTo(mmio_space());
+
+    auto display_port_control_1 =
+        tgl_registers::DekelTransmitterDisplayPortControl1::GetForLaneDdi(tx_lane, ddi())
+            .ReadFrom(mmio_space());
+    display_port_control_1
+        .set_voltage_swing_control_level_transmitter_2(
+            kVoltageSwingConfigTable[phy_config_index].vswing_control)
+        .set_preshoot_coefficient_transmitter_2(
+            kVoltageSwingConfigTable[phy_config_index].preshoot_control)
+        .set_de_emphasis_coefficient_transmitter_2(
+            kVoltageSwingConfigTable[phy_config_index].de_emphasis_control)
+        .WriteTo(mmio_space());
+
+    auto display_port_control_2 =
+        tgl_registers::DekelTransmitterDisplayPortControl2::GetForLaneDdi(tx_lane, ddi())
+            .ReadFrom(mmio_space());
+    display_port_control_2.set_display_port_20bit_mode_supported(0).WriteTo(mmio_space());
+  }
+}
+
+bool DpDisplay::LinkTrainingSetupTigerLake() {
   ZX_ASSERT(capabilities_);
+  ZX_ASSERT(is_tgl(controller()->device_id()));
+  ZX_ASSERT_MSG(pipe(), "LinkTrainingSetup: Display doesn't have valid pipe");
+
+  // Follow the "Enable and Train DisplayPort" procedure at Section
+  // "Sequences for DisplayPort > Enable Sequence":
+  //
+  // Tiger Lake: IHD-OS-TGL-Vol 12-1.22-Rev 2.0, Page 144
+
+  // Transcoder must be disabled while doing link training.
+  tgl_registers::TranscoderRegs trans_regs(pipe()->connected_transcoder_id());
+  auto trans_conf = trans_regs.Conf().ReadFrom(mmio_space());
+  trans_conf.set_transcoder_enable(0).WriteTo(mmio_space());
+  trans_conf.ReadFrom(mmio_space());
+
+  // Configure "Transcoder Clock Select" to direct the Port clock to the
+  // transcoder.
+  auto clock_select = trans_regs.ClockSelect().ReadFrom(mmio_space());
+  clock_select.set_ddi_clock_tiger_lake(ddi());
+  clock_select.WriteTo(mmio_space());
+
+  // Configure "Transcoder DDI Control" to select DDI and DDI mode.
+  auto ddi_func = trans_regs.DdiFuncControl().ReadFrom(mmio_space());
+  ddi_func.set_ddi_tiger_lake(ddi());
+  // No MST set
+  ddi_func.set_trans_ddi_mode_select(tgl_registers::TransDdiFuncControl::kModeDisplayPortSst);
+  ddi_func.WriteTo(mmio_space());
+
+  // Configure and enable "DP Transport Control" register with link training
+  // pattern 1 selected
+  auto dp_transport_control = tgl_registers::DpTransportControl::GetForTigerLakeTranscoder(
+                                  pipe()->connected_transcoder_id())
+                                  .ReadFrom(mmio_space());
+  dp_transport_control.set_enabled(1)
+      .set_is_multi_stream(0)
+      .set_sst_enhanced_framing(capabilities_->enhanced_frame_capability())
+      .set_training_pattern(tgl_registers::DpTransportControl::kTrainingPattern1)
+      .WriteTo(mmio_space());
+
+  // Start link training at the minimum Voltage Swing level.
+  ConfigureVoltageSwingTigerLake(/*phy_config_index=*/0);
+
+  // TODO(fxbug.dev/105240): On PRM it mentions that, for COMBO PHY, the driver
+  // needs to configure PORT_CL_DW10 Static Power Down to power up the used
+  // lanes of the DDI.
+
+  // Configure and enable DDI Buffer.
+  auto buffer_control =
+      tgl_registers::DdiBufferControl::GetForTigerLakeDdi(ddi()).ReadFrom(mmio_space());
+  buffer_control.set_enabled(true)
+      .set_display_port_lane_count(dp_lane_count_)
+      .WriteTo(mmio_space());
+
+  // Wait for DDI Buffer to be enabled, timeout after 1 ms.
+  if (!PollUntil([&] { return !buffer_control.ReadFrom(mmio_space()).is_idle(); }, zx::usec(1),
+                 1000)) {
+    zxlogf(ERROR, "DDI_BUF_CTL DDI idle status timeout");
+    return false;
+  }
+
+  // Configure DPCD registers.
+  //
+  // VESA DP Standard v1.4a Section 3.5.1.2 "Link Training" (Page 618) describes
+  // the procedure for link training.
+  //
+  // This function contains the procedure before starting the link training
+  // tasks (Clock recovery and Channel equalization).
+
+  // Configure Link rate / Link bandwidth.
+  uint16_t link_rate_reg;
+  uint8_t link_rate_val;
+  if (dp_link_rate_table_idx_) {
+    dpcd::LinkRateSet link_rate_set;
+    link_rate_set.set_link_rate_idx(static_cast<uint8_t>(dp_link_rate_table_idx_.value()));
+    link_rate_reg = dpcd::DPCD_LINK_RATE_SET;
+    link_rate_val = link_rate_set.reg_value();
+  } else {
+    uint8_t target_bw;
+    if (dp_link_rate_mhz_ == 1620) {
+      target_bw = dpcd::LinkBw::k1620Mbps;
+    } else if (dp_link_rate_mhz_ == 2700) {
+      target_bw = dpcd::LinkBw::k2700Mbps;
+    } else {
+      ZX_ASSERT(dp_link_rate_mhz_ == 5400);
+      target_bw = dpcd::LinkBw::k5400Mbps;
+    }
+
+    dpcd::LinkBw bw_setting;
+    bw_setting.set_link_bw(target_bw);
+    link_rate_reg = dpcd::DPCD_LINK_BW_SET;
+    link_rate_val = bw_setting.reg_value();
+  }
+
+  // Configure the bandwidth and lane count settings
+  dpcd::LaneCount lc_setting;
+  lc_setting.set_lane_count_set(dp_lane_count_);
+  lc_setting.set_enhanced_frame_enabled(capabilities_->enhanced_frame_capability());
+  if (!DpcdWrite(link_rate_reg, &link_rate_val, 1) ||
+      !DpcdWrite(dpcd::DPCD_COUNT_SET, lc_setting.reg_value_ptr(), 1)) {
+    zxlogf(ERROR, "DP: Link training: failed to configure settings");
+    return false;
+  }
+
+  // TODO(fxbug.dev/109368): The procedure above doesn't fully match that
+  // described in VESA DP Standard v1.4a. For example, DOWNSPREAD_CTRL and
+  // MAIN_LINK_CHANNEL_CODING_SET registers are not set.
+  return true;
+}
+
+bool DpDisplay::LinkTrainingSetupKabyLake() {
+  ZX_ASSERT(capabilities_);
+  ZX_DEBUG_ASSERT(!is_tgl(controller()->device_id()));
 
   tgl_registers::DdiRegs ddi_regs(ddi());
 
@@ -882,16 +1088,25 @@ bool DpDisplay::LinkTrainingStage1(dpcd::TrainingPatternSet* tp_set, dpcd::Train
 bool DpDisplay::LinkTrainingStage2(dpcd::TrainingPatternSet* tp_set, dpcd::TrainingLaneSet* lanes) {
   ZX_ASSERT(capabilities_);
 
-  tgl_registers::DdiRegs ddi_regs(ddi());
-  auto dp_transport_control = ddi_regs.DpTransportControl().ReadFrom(mmio_space());
-
   dpcd::AdjustRequestLane adjust_req[dp_lane_count_];
   dpcd::LaneStatus lane_status[dp_lane_count_];
 
-  dp_transport_control.set_training_pattern(tgl_registers::DpTransportControl::kTrainingPattern2);
-  dp_transport_control.WriteTo(mmio_space());
+  if (is_tgl(controller()->device_id())) {
+    auto dp_transport_control = tgl_registers::DpTransportControl::GetForTigerLakeTranscoder(
+                                    pipe()->connected_transcoder_id())
+                                    .ReadFrom(mmio_space());
+    dp_transport_control.set_training_pattern(tgl_registers::DpTransportControl::kTrainingPattern2);
+    dp_transport_control.WriteTo(mmio_space());
+  } else {
+    tgl_registers::DdiRegs ddi_regs(ddi());
+    auto dp_transport_control = ddi_regs.DpTransportControl().ReadFrom(mmio_space());
+    dp_transport_control.set_training_pattern(tgl_registers::DpTransportControl::kTrainingPattern2);
+    dp_transport_control.WriteTo(mmio_space());
+  }
 
-  tp_set->set_training_pattern_set(tp_set->kTrainingPattern2);
+  (*tp_set)
+      .set_training_pattern_set(dpcd::TrainingPatternSet::kTrainingPattern2)
+      .set_scrambling_disable(1);
   int poll_count = 0;
   auto delay =
       capabilities_->dpcd_reg<dpcd::TrainingAuxRdInterval, dpcd::DPCD_TRAINING_AUX_RD_INTERVAL>();
@@ -919,6 +1134,8 @@ bool DpDisplay::LinkTrainingStage2(dpcd::TrainingPatternSet* tp_set, dpcd::Train
     for (unsigned i = 0; i < dp_lane_count_; i++) {
       symbol_lock_done &= lane_status[i].lane_symbol_locked(i).get();
       channel_eq_done &= lane_status[i].lane_channel_eq_done(i).get();
+      // TODO(fxbug.dev/109368): The driver should also check interlane align
+      // done bits.
     }
     if (symbol_lock_done && channel_eq_done) {
       break;
@@ -926,13 +1143,13 @@ bool DpDisplay::LinkTrainingStage2(dpcd::TrainingPatternSet* tp_set, dpcd::Train
 
     // The training attempt has not succeeded yet.
     if (++poll_count == kPollsPerVoltageLevel) {
-      if (symbol_lock_done) {
+      if (!symbol_lock_done) {
         zxlogf(ERROR, "DP: Link training: symbol lock failed");
-        return false;
-      } else {
-        zxlogf(ERROR, "DP: Link training: channel equalization failed");
-        return false;
       }
+      if (!channel_eq_done) {
+        zxlogf(ERROR, "DP: Link training: channel equalization failed");
+      }
+      return false;
     }
 
     if (!DpcdReadPairedRegs<dpcd::DPCD_ADJUST_REQUEST_LANE0_1, dpcd::AdjustRequestLane>(
@@ -942,8 +1159,19 @@ bool DpDisplay::LinkTrainingStage2(dpcd::TrainingPatternSet* tp_set, dpcd::Train
     DpcdHandleAdjustRequest(lanes, adjust_req);
   }
 
-  dp_transport_control.set_training_pattern(tgl_registers::DpTransportControl::kSendPixelData)
-      .WriteTo(mmio_space());
+  if (is_tgl(controller()->device_id())) {
+    auto dp_transport_control = tgl_registers::DpTransportControl::GetForTigerLakeTranscoder(
+                                    pipe()->connected_transcoder_id())
+                                    .ReadFrom(mmio_space());
+    dp_transport_control.set_training_pattern(tgl_registers::DpTransportControl::kSendPixelData);
+    dp_transport_control.WriteTo(mmio_space());
+  } else {
+    tgl_registers::DdiRegs ddi_regs(ddi());
+    auto dp_transport_control = ddi_regs.DpTransportControl().ReadFrom(mmio_space());
+    dp_transport_control.set_training_pattern(tgl_registers::DpTransportControl::kSendPixelData)
+        .WriteTo(mmio_space());
+    dp_transport_control.WriteTo(mmio_space());
+  }
 
   return true;
 }
@@ -951,11 +1179,17 @@ bool DpDisplay::LinkTrainingStage2(dpcd::TrainingPatternSet* tp_set, dpcd::Train
 bool DpDisplay::DoLinkTraining() {
   // TODO(fxbug.dev/31313): If either of the two training steps fails, we're
   // supposed to try with a reduced bit rate.
-  bool result = LinkTrainingSetup();
+  bool result = true;
+  if (is_tgl(controller()->device_id())) {
+    result &= LinkTrainingSetupTigerLake();
+  } else {
+    result &= LinkTrainingSetupKabyLake();
+  }
   if (result) {
     dpcd::TrainingPatternSet tp_set;
     dpcd::TrainingLaneSet lanes[dp_lane_count_];
-    result = LinkTrainingStage1(&tp_set, lanes) && LinkTrainingStage2(&tp_set, lanes);
+    result &= LinkTrainingStage1(&tp_set, lanes);
+    result &= LinkTrainingStage2(&tp_set, lanes);
   }
 
   // Tell the sink device to end its link training attempt.

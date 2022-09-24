@@ -236,7 +236,14 @@ class DpDisplay : public DisplayDevice {
   bool DpcdReadPairedRegs(hwreg::RegisterBase<T, typename T::ValueType>* status);
   bool DpcdHandleAdjustRequest(dpcd::TrainingLaneSet* training, dpcd::AdjustRequestLane* adjust);
   bool DoLinkTraining();
-  bool LinkTrainingSetup();
+
+  void ConfigureVoltageSwingKabyLake(size_t phy_config_index);
+  void ConfigureVoltageSwingTigerLake(size_t phy_config_index);
+  void ConfigureVoltageSwingTypeCTigerLake(size_t phy_config_index);
+
+  bool LinkTrainingSetupKabyLake();
+  bool LinkTrainingSetupTigerLake();
+
   // For locking Clock Recovery Circuit of the DisplayPort receiver
   bool LinkTrainingStage1(dpcd::TrainingPatternSet* tp_set, dpcd::TrainingLaneSet* lanes);
   // For optimizing equalization, determining symbol  boundary, and achieving inter-lane alignment
