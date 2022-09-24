@@ -27,6 +27,18 @@ template("metrics_logger_config") {
   }
 }
 
+metrics_logger_config("astro_config") {
+  source = "config/astro_config.json"
+}
+
+metrics_logger_config("sherlock_config") {
+  source = "config/sherlock_config.json"
+}
+
+metrics_logger_config("nelson_config") {
+  source = "config/nelson_config.json"
+}
+
 rustc_binary("bin") {
   name = "metrics_logger"
   edition = "2021"

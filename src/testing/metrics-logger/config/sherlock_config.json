@@ -1,0 +1,24 @@
+{
+    "temperature_drivers": [
+        {
+            "name": "soc_ddr",
+            "topological_path": "/dev/sys/platform/05:04:28/thermal"
+        },
+        {
+            "name": "soc_pll",
+            "topological_path": "/dev/aml-thermal-pll/thermal"
+        },
+        {
+            "name": "therm_ambient",
+            "topological_path": "/dev/sys/platform/03:05:27/thermistor-device/therm-ambient"
+        },
+        {
+            "name": "therm_audio",
+            "topological_path": "/dev/sys/platform/03:05:27/thermistor-device/therm-audio"
+        },
+        {
+            "name": "therm_base",
+            "topological_path": "/dev/sys/platform/03:05:27/thermistor-device/therm-base"
+        }
+    ]
+}
