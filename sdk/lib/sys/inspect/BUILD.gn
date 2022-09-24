@@ -2,18 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/cpp/sdk_source_set.gni")
-
-sdk_source_set("tree_service_common") {
-  category = "partner"
-
-  sdk_name = "tree_service_common"
-
-  include_base = "//sdk"
-  sources = [ "tree_handler_settings.h" ]
-  public_deps = [ "//sdk/lib/stdcompat" ]
-}
-
 group("tests") {
   testonly = true
 

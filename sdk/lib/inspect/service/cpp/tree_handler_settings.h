@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_SYS_INSPECT_TREE_HANDLER_SETTINGS_H_
-#define LIB_SYS_INSPECT_TREE_HANDLER_SETTINGS_H_
+#ifndef LIB_INSPECT_SERVICE_CPP_TREE_HANDLER_SETTINGS_H_
+#define LIB_INSPECT_SERVICE_CPP_TREE_HANDLER_SETTINGS_H_
 
 #include <lib/stdcompat/optional.h>
 
@@ -55,4 +55,4 @@ struct TreeHandlerSettings {
 
 }  // namespace inspect
 
-#endif  // LIB_SYS_INSPECT_TREE_HANDLER_SETTINGS_H_
+#endif  // LIB_INSPECT_SERVICE_CPP_TREE_HANDLER_SETTINGS_H_

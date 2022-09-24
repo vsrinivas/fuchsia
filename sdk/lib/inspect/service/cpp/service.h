@@ -7,7 +7,7 @@
 
 #include <fuchsia/inspect/cpp/fidl.h>
 #include <lib/inspect/cpp/inspect.h>
-#include <lib/sys/inspect/tree_handler_settings.h>
+#include <lib/inspect/service/cpp/tree_handler_settings.h>
 
 namespace inspect {
 

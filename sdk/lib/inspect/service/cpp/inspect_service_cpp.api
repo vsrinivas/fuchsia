@@ -1,4 +1,5 @@
 {
   "pkg/inspect_service_cpp/include/lib/inspect/service/cpp/reader.h": "9d3d8c7a4c158670a4a05ce8d7ae6121",
-  "pkg/inspect_service_cpp/include/lib/inspect/service/cpp/service.h": "a51d0fcf4a1042c5f181399d0d926dac"
+  "pkg/inspect_service_cpp/include/lib/inspect/service/cpp/service.h": "7ec08a57b1c429d989389a750e389c8e",
+  "pkg/inspect_service_cpp/include/lib/inspect/service/cpp/tree_handler_settings.h": "336f53e5cc884c9aa4eee02df637222e"
 }

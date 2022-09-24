@@ -15,12 +15,12 @@ sdk_source_set("cpp") {
     "reader.h",
     "service.cc",
     "service.h",
+    "tree_handler_settings.h",
   ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.inspect",
     "//sdk/lib/fit-promise",
-    "//sdk/lib/sys/inspect:tree_service_common",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/inspect",
   ]

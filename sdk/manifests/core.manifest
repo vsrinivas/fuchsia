@@ -187,13 +187,11 @@ sdk://pkg/sysroot
 sdk://pkg/trace
 sdk://pkg/trace-engine
 sdk://pkg/trace-provider-so
-sdk://pkg/tree_service_common
 sdk://pkg/utf-utils
 sdk://pkg/vfs_cpp
 sdk://pkg/vulkan
 sdk://pkg/vulkan_layers
 sdk://pkg/zx
-?sdk://tools/arm64/aemu_internal
 sdk://tools/arm64/blobfs-compression
 sdk://tools/arm64/blobfs_do_not_depend
 sdk://tools/arm64/bootserver

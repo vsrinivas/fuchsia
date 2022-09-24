@@ -15,7 +15,7 @@ executable("inspect_service_llcpp_unittests_bin") {
     "//sdk/fidl/fuchsia.diagnostics",
     "//sdk/fidl/fuchsia.inspect:fuchsia.inspect_cpp_wire",
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
-    "//sdk/lib/inspect/component/cpp:service",
+    "//sdk/lib/inspect/component/cpp:inspect_component_cpp",
     "//sdk/lib/inspect/contrib/cpp:archive_reader",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp",
@@ -32,7 +32,7 @@ executable("program_writing_inspect_bin") {
   sources = [ "program.cc" ]
 
   deps = [
-    "//sdk/lib/inspect/component/cpp:component_inspector",
+    "//sdk/lib/inspect/component/cpp:inspect_component_cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/inspect",

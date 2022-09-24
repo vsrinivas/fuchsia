@@ -6,10 +6,10 @@
 #define LIB_INSPECT_COMPONENT_CPP_COMPONENT_H_
 
 #include <lib/async/cpp/executor.h>
+#include <lib/inspect/component/cpp/tree_handler_settings.h>
 #include <lib/inspect/cpp/health.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
-#include <lib/sys/inspect/tree_handler_settings.h>
 
 namespace inspect {
 class ComponentInspector final {

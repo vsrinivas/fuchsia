@@ -42,7 +42,7 @@ source_set("driver-internals") {
 
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.hiddevice:fuchsia.hardware.hiddevice_banjo_cpp",
-    "//sdk/lib/inspect/component/cpp:component_inspector",
+    "//sdk/lib/inspect/component/cpp:inspect_component_cpp",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//src/ui/input/lib/hid-input-report",

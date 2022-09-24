@@ -1176,6 +1176,7 @@ pkg/inspect/vmo/state.cc
 pkg/inspect/vmo/types.cc
 pkg/inspect_service_cpp/include/lib/inspect/service/cpp/reader.h
 pkg/inspect_service_cpp/include/lib/inspect/service/cpp/service.h
+pkg/inspect_service_cpp/include/lib/inspect/service/cpp/tree_handler_settings.h
 pkg/inspect_service_cpp/meta.json
 pkg/inspect_service_cpp/reader.cc
 pkg/inspect_service_cpp/service.cc
@@ -1315,8 +1316,6 @@ pkg/trace/include/lib/trace/internal/string_traits.h
 pkg/trace/include/lib/trace/observer.h
 pkg/trace/meta.json
 pkg/trace/observer.cc
-pkg/tree_service_common/include/lib/sys/inspect/tree_handler_settings.h
-pkg/tree_service_common/meta.json
 pkg/utf-utils/include/lib/utf-utils/internal/arm-neon.h
 pkg/utf-utils/include/lib/utf-utils/internal/generic-simd.h
 pkg/utf-utils/include/lib/utf-utils/internal/scalar.h

@@ -4,48 +4,29 @@
 
 import("//build/cpp/sdk_source_set.gni")
 
-sdk_source_set("service") {
+sdk_source_set("inspect_component_cpp") {
   category = "internal"
 
-  sdk_name = "inspect_service_llcpp"
-
-  include_base = "//sdk"
-  sources = [
-    "service.cc",
-    "service.h",
-    "testing.cc",
-    "testing.h",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect_cpp_wire",
-    "//sdk/lib/fidl/cpp",
-    "//sdk/lib/sys/inspect:tree_service_common",
-    "//zircon/system/ulib/async:async-cpp",
-    "//zircon/system/ulib/inspect",
-    "//zircon/system/ulib/zx",
-  ]
-
-  public_configs = [ "//sdk/config" ]
-}
-
-sdk_source_set("component_inspector") {
-  category = "internal"
-
-  sdk_name = "llcpp_component_inspector"
+  sdk_name = "inspect_component_cpp"
 
   include_base = "//sdk"
   sources = [
     "component.cc",
     "component.h",
+    "service.cc",
+    "service.h",
+    "testing.cc",
+    "testing.h",
+    "tree_handler_settings.h",
   ]
 
   public_deps = [
-    ":service",
+    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect_cpp_wire",
     "//sdk/lib/sys/component/cpp",
-    "//sdk/lib/sys/inspect:tree_service_common",
+    "//src/lib/fidl/cpp",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zx",
   ]
 
   public_configs = [ "//sdk/config" ]
