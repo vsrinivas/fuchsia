@@ -30,7 +30,7 @@ class Context {
 
  private:
   std::string parent_topological_path_;
-  fidl::Client<fuchsia_driver_compat::Device> parent_device_;
+  fidl::SharedClient<fuchsia_driver_compat::Device> parent_device_;
   driver::DevfsExporter devfs_exporter_;
 };
 

@@ -7,6 +7,8 @@
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <fidl/fuchsia.lifecycle.test/cpp/wire.h>
 #include <lib/driver2/driver2_cpp.h>
+#include <lib/driver_compat/context.h>
+#include <lib/driver_compat/device_server.h>
 
 namespace fdf {
 using namespace fuchsia_driver_framework;
@@ -15,49 +17,6 @@ using namespace fuchsia_driver_framework;
 namespace ft = fuchsia_lifecycle_test;
 
 namespace {
-
-// Connect to the fuchsia.devices.fs.Exporter protocol
-zx::status<fidl::ClientEnd<fuchsia_device_fs::Exporter>> ConnectToDeviceExporter(
-    fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir) {
-  auto exporter = component::ConnectAt<fuchsia_device_fs::Exporter>(svc_dir);
-  if (exporter.is_error()) {
-    return exporter.take_error();
-  }
-  return exporter;
-}
-
-// Create an exported directory handle using fuchsia.devices.fs.Exporter
-zx::status<fidl::ServerEnd<fuchsia_io::Directory>> ExportDevfsEntry(
-    fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir, std::string service_path,
-    std::string devfs_path, uint32_t protocol_id) {
-  // Connect to the devfs exporter service
-  auto exporter_client = ConnectToDeviceExporter(svc_dir);
-  if (exporter_client.is_error()) {
-    return exporter_client.take_error();
-  }
-  fidl::SyncClient exporter{std::move(exporter_client.value())};
-
-  // Serve a connection for devfs clients
-  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
-  if (endpoints.is_error()) {
-    return endpoints.take_error();
-  }
-
-  // Export the client side of the service connection to devfs
-  auto result =
-      exporter->Export({std::move(endpoints->client), service_path, devfs_path, protocol_id});
-  if (result.is_error()) {
-    const auto& error = result.error_value();
-    if (error.is_transport_error()) {
-      // Error occurred in the FIDL transport
-      return zx::error(error.transport_error().status());
-    } else {
-      // Error response returned by the exporter service
-      return zx::error(error.application_error());
-    }
-  }
-  return zx::ok(std::move(endpoints->server));
-}
 
 class LifecycleDriver : public driver::DriverBase, public fidl::WireServer<ft::Device> {
  public:
@@ -82,47 +41,37 @@ class LifecycleDriver : public driver::DriverBase, public fidl::WireServer<ft::D
       return result.take_error();
     }
 
-    auto compat = component::ConnectAt<fuchsia_driver_compat::Service::Device>(
-        context().incoming()->svc_dir());
-    if (compat.is_error()) {
-      FDF_LOG(ERROR, "Error connecting to compat: %s", compat.status_string());
-      return compat.take_error();
-    }
-    auto compat_client = fidl::SyncClient<fuchsia_driver_compat::Device>(std::move(compat.value()));
-    std::string export_path = "";
-    {
-      auto result = compat_client->GetTopologicalPath();
-      if (!result.is_ok()) {
-        FDF_LOG(ERROR, "Error sending to compat: %s", result.error_value().status_string());
-        return zx::error(ZX_ERR_INTERNAL);
-      }
-      export_path = std::move(result->path());
-    }
-    export_path.append("/lifecycle-device");
-
-    const auto kServicePath =
-        std::string("svc/") + ft::Service::Name + "/" + component::kDefaultInstance + "/device";
-
-    // Export an entry to devfs for fuchsia.hardware.demo as a generic device
-    auto devfs_dir =
-        ExportDevfsEntry(context().incoming()->svc_dir(), kServicePath, export_path, 0);
-    if (devfs_dir.is_error()) {
-      FDF_SLOG(ERROR, "Failed to export service", KV("status", devfs_dir.status_string()));
-      return devfs_dir.take_error();
-    }
-
-    // Serve an additional outgoing endpoint for devfs clients
-    auto status = context().outgoing()->Serve(std::move(devfs_dir.value()));
-    if (status.is_error()) {
-      FDF_SLOG(ERROR, "Failed to serve devfs directory", KV("status", status.status_string()));
-      return status.take_error();
-    }
-
+    // Create our compat context, and serve our device when it's created.
+    compat::Context::ConnectAndCreate(
+        &context(), dispatcher(), [this](zx::status<std::shared_ptr<compat::Context>> context) {
+          if (!context.is_ok()) {
+            FDF_LOG(ERROR, "Call to Context::ConnectAndCreate failed: %s", context.status_string());
+            node().reset();
+            return;
+          }
+          compat_context_ = std::move(*context);
+          const auto kDeviceName = "lifecycle-device";
+          child_ = compat::DeviceServer(
+              kDeviceName, 0, compat_context_->TopologicalPath(kDeviceName), compat::MetadataMap());
+          const auto kServicePath =
+              std::string(ft::Service::Name) + "/" + component::kDefaultInstance + "/device";
+          child_->ExportToDevfs(
+              compat_context_->devfs_exporter(), kServicePath, [this](zx_status_t status) {
+                if (status != ZX_OK) {
+                  FDF_LOG(WARNING, "Failed to export to devfs: %s", zx_status_get_string(status));
+                  node().reset();
+                }
+              });
+        });
     return zx::ok();
   }
 
   // fidl::WireServer<ft::Device>
   void Ping(PingCompleter::Sync& completer) override { completer.Reply(); }
+
+ private:
+  std::optional<compat::DeviceServer> child_;
+  std::shared_ptr<compat::Context> compat_context_;
 };
 
 }  // namespace

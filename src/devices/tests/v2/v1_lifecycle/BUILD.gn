@@ -40,6 +40,7 @@ fuchsia_driver("lifecycle_driver") {
     "//sdk/fidl/fuchsia.device.fs:fuchsia.device.fs_cpp",
     "//sdk/fidl/fuchsia.driver.compat:fuchsia.driver.compat_cpp",
     "//sdk/lib/driver2:cpp",
+    "//sdk/lib/driver_compat",
     "//sdk/lib/sys/component/cpp",
     "//src/devices/lib/driver:driver_runtime",
     "//zircon/system/ulib/service:service-llcpp",
