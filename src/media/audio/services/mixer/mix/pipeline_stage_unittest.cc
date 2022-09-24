@@ -22,9 +22,9 @@
 namespace media_audio {
 namespace {
 
-using ::fuchsia_mediastreams::wire::AudioSampleFormat;
+using ::fuchsia_audio::SampleType;
 
-const auto kFormat = Format::CreateOrDie({AudioSampleFormat::kSigned16, 1, 48000});
+const auto kFormat = Format::CreateOrDie({SampleType::kInt16, 1, 48000});
 const auto kBytesPerFrame = kFormat.bytes_per_frame();
 
 // These tests need to check the value of a Packet's payload pointer. Ideally we might put frame 0

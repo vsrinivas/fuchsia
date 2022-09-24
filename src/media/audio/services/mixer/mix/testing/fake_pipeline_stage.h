@@ -31,8 +31,7 @@ class FakePipelineStage : public PipelineStage {
   };
   static FakePipelineStagePtr Create(Args args) {
     if (!args.format) {
-      args.format =
-          Format::CreateOrDie({::fuchsia_mediastreams::wire::AudioSampleFormat::kFloat, 2, 48000});
+      args.format = Format::CreateOrDie({::fuchsia_audio::SampleType::kFloat32, 2, 48000});
     }
     if (!args.reference_clock) {
       args.reference_clock = DefaultClock();

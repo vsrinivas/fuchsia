@@ -12,7 +12,7 @@
 
 #include <ffl/string.h>
 
-#include "fidl/fuchsia.mediastreams/cpp/wire_types.h"
+#include "fidl/fuchsia.audio/cpp/wire_types.h"
 #include "lib/syslog/cpp/macros.h"
 #include "src/media/audio/lib/format2/channel_mapper.h"
 #include "src/media/audio/lib/format2/fixed.h"
@@ -310,24 +310,25 @@ std::unique_ptr<Sampler> SincSampler::Create(const Format& source_format,
                                              const Format& dest_format) {
   TRACE_DURATION("audio", "SincSampler::Create");
 
-  if (dest_format.sample_format() != fuchsia_mediastreams::wire::AudioSampleFormat::kFloat) {
-    FX_LOGS(WARNING) << "SincSampler does not support this dest sample format: "
-                     << static_cast<uint32_t>(dest_format.sample_format());
+  if (dest_format.sample_type() != fuchsia_audio::SampleType::kFloat32) {
+    FX_LOGS(WARNING) << "SincSampler does not support this dest sample type: "
+                     << static_cast<uint32_t>(dest_format.sample_type());
     return nullptr;
   }
 
-  switch (source_format.sample_format()) {
-    case fuchsia_mediastreams::wire::AudioSampleFormat::kUnsigned8:
+  switch (source_format.sample_type()) {
+    case fuchsia_audio::SampleType::kUint8:
       return CreateWith<uint8_t>(source_format, dest_format);
-    case fuchsia_mediastreams::wire::AudioSampleFormat::kSigned16:
+    case fuchsia_audio::SampleType::kInt16:
       return CreateWith<int16_t>(source_format, dest_format);
-    case fuchsia_mediastreams::wire::AudioSampleFormat::kSigned24In32:
+    case fuchsia_audio::SampleType::kInt32:
       return CreateWith<int32_t>(source_format, dest_format);
-    case fuchsia_mediastreams::wire::AudioSampleFormat::kFloat:
+    case fuchsia_audio::SampleType::kFloat32:
       return CreateWith<float>(source_format, dest_format);
     default:
-      FX_LOGS(WARNING) << "SincSampler does not support this source sample format: "
-                       << static_cast<uint32_t>(source_format.sample_format());
+      // TODO(fxbug.dev/87651): support float64?
+      FX_LOGS(WARNING) << "SincSampler does not support this source sample type: "
+                       << static_cast<uint32_t>(source_format.sample_type());
       return nullptr;
   }
 }

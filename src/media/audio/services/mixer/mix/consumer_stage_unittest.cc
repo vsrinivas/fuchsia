@@ -25,12 +25,12 @@ using StartCommand = ConsumerStage::StartCommand;
 using StopCommand = ConsumerStage::StopCommand;
 using StartedStatus = ConsumerStage::StartedStatus;
 using StoppedStatus = ConsumerStage::StoppedStatus;
-using ::fuchsia_mediastreams::wire::AudioSampleFormat;
+using ::fuchsia_audio::SampleType;
 using ::testing::ElementsAre;
 using ::testing::FieldsAre;
 using ::testing::VariantWith;
 
-const Format kFormat = Format::CreateOrDie({AudioSampleFormat::kFloat, 2, 48000});
+const Format kFormat = Format::CreateOrDie({SampleType::kFloat32, 2, 48000});
 
 TEST(ConsumerStageTest, SourceIsEmpty) {
   ConsumerStageWrapper w(kFormat, /*presentation_delay=*/zx::nsec(0));

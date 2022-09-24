@@ -23,11 +23,11 @@ namespace {
 using Packet = StreamSinkConsumerWriter::Packet;
 using PacketQueue = StreamSinkConsumerWriter::PacketQueue;
 
+using ::fuchsia_audio::SampleType;
 using ::fuchsia_media2::wire::PacketTimestamp;
-using ::fuchsia_mediastreams::wire::AudioSampleFormat;
 using ::testing::ElementsAre;
 
-const Format kFormat = Format::CreateOrDie({AudioSampleFormat::kFloat, 2, 48000});
+const Format kFormat = Format::CreateOrDie({SampleType::kFloat32, 2, 48000});
 const int64_t kBytesPerFrame = kFormat.bytes_per_frame();
 constexpr int64_t kFramesPerBuffer = 1024;
 constexpr int64_t kBufferId = 1;

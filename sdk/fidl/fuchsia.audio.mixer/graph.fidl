@@ -5,7 +5,6 @@
 library fuchsia.audio.mixer;
 
 using zx;
-using fuchsia.mediastreams;
 using fuchsia.audio.effects;
 using fuchsia.audio;
 
@@ -247,7 +246,7 @@ protocol Graph {
         /// Encoding of the Mixer's destination stream.
         ///
         /// Required.
-        3: dest_format fuchsia.mediastreams.AudioFormat;
+        3: dest_format fuchsia.audio.Format;
 
         /// Clock for this node's destination stream.
         ///
@@ -284,7 +283,7 @@ protocol Graph {
         /// Encoding of the Splitter's source and destination streams.
         ///
         /// Required.
-        3: format fuchsia.mediastreams.AudioFormat;
+        3: format fuchsia.audio.Format;
 
         /// Splitters are composite nodes that process their source through a
         /// hidden Consumer node. For more details on this behavior, see

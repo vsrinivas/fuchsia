@@ -30,6 +30,7 @@ source_set("mixer") {
   public_deps = [
     ":constants",
     "//sdk/fidl/fuchsia.media",
+    "//src/media/audio/lib/format2",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/ffl",
     "//zircon/system/ulib/trace",
@@ -39,7 +40,6 @@ source_set("mixer") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl:fxl",
     "//src/media/audio/lib/format",
-    "//src/media/audio/lib/format2",
     "//src/media/audio/lib/processing",
     "//src/media/audio/lib/timeline",
   ]

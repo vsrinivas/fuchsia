@@ -19,11 +19,11 @@ namespace {
 
 using Packet = StreamSinkClient::Packet;
 using PacketQueue = StreamSinkClient::PacketQueue;
-using ::fuchsia_mediastreams::wire::AudioSampleFormat;
+using ::fuchsia_audio::SampleType;
 
 // These tests work best if we use a format with >= 2 bytes per frame to ensure we compute frame
 // counts correctly. Other than that constraint, the specific choice of format does not matter.
-const auto kFormat = Format::CreateOrDie({AudioSampleFormat::kFloat, 2, 48000});
+const auto kFormat = Format::CreateOrDie({SampleType::kFloat32, 2, 48000});
 const auto kFramesPerPacket = 10;
 const auto kBytesPerPacket = kFramesPerPacket * kFormat.bytes_per_frame();
 const auto stream_converter = StreamConverter::Create(kFormat, kFormat);

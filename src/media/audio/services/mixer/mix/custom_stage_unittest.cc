@@ -39,7 +39,6 @@ namespace {
 
 using ::fuchsia_audio_effects::Processor;
 using ::fuchsia_audio_effects::wire::ProcessorConfiguration;
-using ::fuchsia_mediastreams::wire::AudioSampleFormat;
 using ::testing::Each;
 using ::testing::FloatEq;
 
@@ -57,12 +56,12 @@ struct ConfigOptions {
   fuchsia_mem::wire::Range input_buffer = {.offset = 0, .size = 0};
   fuchsia_mem::wire::Range output_buffer = {.offset = 0, .size = 0};
   fuchsia_mediastreams::wire::AudioFormat input_format = {
-      .sample_format = AudioSampleFormat::kFloat,
+      .sample_format = fuchsia_mediastreams::wire::AudioSampleFormat::kFloat,
       .channel_count = 1,
       .frames_per_second = 48000,
   };
   fuchsia_mediastreams::wire::AudioFormat output_format = {
-      .sample_format = AudioSampleFormat::kFloat,
+      .sample_format = fuchsia_mediastreams::wire::AudioSampleFormat::kFloat,
       .channel_count = 1,
       .frames_per_second = 48000,
   };
@@ -185,7 +184,7 @@ ProcessorConfiguration MakeProcessorConfig(Arena& arena, ConfigOptions options,
 
 fuchsia_mediastreams::wire::AudioFormat DefaultFormatWithChannels(uint32_t channels) {
   return {
-      .sample_format = AudioSampleFormat::kFloat,
+      .sample_format = fuchsia_mediastreams::wire::AudioSampleFormat::kFloat,
       .channel_count = channels,
       .frames_per_second = 48000,
   };
@@ -326,8 +325,8 @@ class CustomStageTest : public testing::Test {
                                   int64_t read_buffer_frames = 480) {
     const auto input_channels = info.config.inputs()[0].format().channel_count;
     const auto output_channels = info.config.outputs()[0].format().channel_count;
-    const Format input_format = Format::CreateOrDie(info.config.inputs()[0].format());
-    const Format output_format = Format::CreateOrDie(info.config.outputs()[0].format());
+    const Format input_format = Format::CreateLegacyOrDie(info.config.inputs()[0].format());
+    const Format output_format = Format::CreateLegacyOrDie(info.config.outputs()[0].format());
 
     auto producer_stage = MakeDefaultPacketQueue(input_format);
     auto custom_stage = MakeCustomStage(std::move(info.config), producer_stage);
@@ -446,7 +445,7 @@ TEST_F(CustomStageTest, AddOneWithSourceOffset) {
         .output_format = DefaultFormatWithChannels(1),
     });
 
-    const Format source_format = Format::CreateOrDie(info.config.inputs()[0].format());
+    const Format source_format = Format::CreateLegacyOrDie(info.config.inputs()[0].format());
     auto producer_stage = MakeDefaultPacketQueue(source_format);
     auto custom_stage = MakeCustomStage(info.config, producer_stage);
 
@@ -505,7 +504,7 @@ TEST_F(CustomStageTest, AddOneWithReadSmallerThanProcessingBuffer) {
   });
 
   // Push one 480 frames packet.
-  const Format source_format = Format::CreateOrDie(info.config.inputs()[0].format());
+  const Format source_format = Format::CreateLegacyOrDie(info.config.inputs()[0].format());
   auto producer_stage = MakeDefaultPacketQueue(source_format);
   auto custom_stage = MakeCustomStage(info.config, producer_stage);
 
@@ -557,7 +556,7 @@ TEST_F(CustomStageTest, AddOneWithReadSmallerThanProcessingBufferAndSourceOffset
   });
 
   // Push one 480 frames packet starting at frame 720.
-  const Format source_format = Format::CreateOrDie(info.config.inputs()[0].format());
+  const Format source_format = Format::CreateLegacyOrDie(info.config.inputs()[0].format());
   auto producer_stage = MakeDefaultPacketQueue(source_format);
   auto custom_stage = MakeCustomStage(info.config, producer_stage);
 
@@ -818,7 +817,8 @@ TEST_F(CustomStageTest, AddOneWithLatencyMoreThanMaxFramesPerCall) {
       .block_size_frames = 10,
       .latency_frames = 102,
   });
-  const Format source_format = Format::CreateOrDie(processor_info.config.inputs()[0].format());
+  const Format source_format =
+      Format::CreateLegacyOrDie(processor_info.config.inputs()[0].format());
   auto producer_stage = MakeDefaultPacketQueue(source_format);
   auto custom_stage = MakeCustomStage(std::move(processor_info.config), producer_stage);
 
@@ -856,7 +856,8 @@ TEST_F(CustomStageTest, AddOneWithLatencyReadOnePacketWithOffset) {
       .block_size_frames = 15,
       .latency_frames = 2,
   });
-  const Format source_format = Format::CreateOrDie(processor_info.config.inputs()[0].format());
+  const Format source_format =
+      Format::CreateLegacyOrDie(processor_info.config.inputs()[0].format());
   auto producer_stage = MakeDefaultPacketQueue(source_format);
   auto custom_stage = MakeCustomStage(std::move(processor_info.config), producer_stage);
 
@@ -933,7 +934,8 @@ TEST_F(CustomStageTest, AddOneWithLatencyReadTwoPacketsWithGaps) {
       .block_size_frames = 15,
       .latency_frames = 2,
   });
-  const Format source_format = Format::CreateOrDie(processor_info.config.inputs()[0].format());
+  const Format source_format =
+      Format::CreateLegacyOrDie(processor_info.config.inputs()[0].format());
   auto producer_stage = MakeDefaultPacketQueue(source_format);
   auto custom_stage = MakeCustomStage(std::move(processor_info.config), producer_stage);
 
@@ -1016,7 +1018,8 @@ TEST_F(CustomStageTest, AddOneWithLatencyAndRingout) {
       .latency_frames = 4,
       .ring_out_frames = 15,
   });
-  const Format source_format = Format::CreateOrDie(processor_info.config.inputs()[0].format());
+  const Format source_format =
+      Format::CreateLegacyOrDie(processor_info.config.inputs()[0].format());
   auto producer_stage = MakeDefaultPacketQueue(source_format);
   auto custom_stage = MakeCustomStage(std::move(processor_info.config), producer_stage);
 
@@ -1111,7 +1114,7 @@ TEST_F(CustomStageTest, Metrics) {
   auto info = MakeProcessorWithDifferentVmos<ReturnMetricsProcessor>({});
   info.processor.set_metrics(&expected_metrics);
 
-  const Format input_format = Format::CreateOrDie(info.config.inputs()[0].format());
+  const Format input_format = Format::CreateLegacyOrDie(info.config.inputs()[0].format());
   const auto input_channels = info.config.inputs()[0].format().channel_count;
 
   // Enqueue one packet in the source packet queue.

@@ -21,8 +21,7 @@ namespace {
 
 using ::testing::ElementsAre;
 
-const auto kFormat =
-    Format::CreateOrDie({fuchsia_mediastreams::wire::AudioSampleFormat::kFloat, 2, 48000});
+const auto kFormat = Format::CreateOrDie({fuchsia_audio::SampleType::kFloat32, 2, 48000});
 const auto kMediaTicksPerNs = TimelineRate(1, 10'000'000);  // 1 tick per 10ms
 
 class MetaProducerNodeTestStreamSink : public ::testing::Test {

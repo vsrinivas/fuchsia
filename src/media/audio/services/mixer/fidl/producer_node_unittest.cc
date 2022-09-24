@@ -15,8 +15,7 @@
 namespace media_audio {
 namespace {
 
-const Format kFormat =
-    Format::CreateOrDie({fuchsia_mediastreams::wire::AudioSampleFormat::kFloat, 2, 48000});
+const Format kFormat = Format::CreateOrDie({fuchsia_audio::SampleType::kFloat32, 2, 48000});
 
 class ProducerNodeTest : public ::testing::Test {
  protected:

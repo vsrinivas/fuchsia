@@ -11,7 +11,7 @@
 #include <gtest/gtest.h>
 
 #include "ffl/fixed.h"
-#include "fidl/fuchsia.mediastreams/cpp/wire_types.h"
+#include "fidl/fuchsia.audio/cpp/wire_types.h"
 #include "src/media/audio/lib/format2/fixed.h"
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/lib/processing/gain.h"
@@ -21,14 +21,14 @@
 namespace media_audio {
 namespace {
 
-using ::fuchsia_mediastreams::wire::AudioSampleFormat;
+using ::fuchsia_audio::SampleType;
 using ::media::TimelineFunction;
 using ::media::TimelineRate;
 using ::testing::NotNull;
 
 TEST(SamplerTest, CreateWithUnityRate) {
-  const Format source_format = Format::CreateOrDie({AudioSampleFormat::kSigned16, 1, 44100});
-  const Format dest_format = Format::CreateOrDie({AudioSampleFormat::kFloat, 2, 44100});
+  const Format source_format = Format::CreateOrDie({SampleType::kInt16, 1, 44100});
+  const Format dest_format = Format::CreateOrDie({SampleType::kFloat32, 2, 44100});
 
   // Default should return a valid `PointSampler`.
   const auto default_sampler = Sampler::Create(source_format, dest_format);
@@ -45,8 +45,8 @@ TEST(SamplerTest, CreateWithUnityRate) {
 }
 
 TEST(SamplerTest, CreateWithNonUnityRate) {
-  const Format source_format = Format::CreateOrDie({AudioSampleFormat::kFloat, 2, 8000});
-  const Format dest_format = Format::CreateOrDie({AudioSampleFormat::kFloat, 1, 44100});
+  const Format source_format = Format::CreateOrDie({SampleType::kFloat32, 2, 8000});
+  const Format dest_format = Format::CreateOrDie({SampleType::kFloat32, 1, 44100});
 
   // Default should return a valid `SincSampler`.
   const auto default_sampler = Sampler::Create(source_format, dest_format);

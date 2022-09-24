@@ -20,17 +20,18 @@ namespace media_audio {
 namespace {
 
 const Format kFormat = Format::CreateOrDie({
-    .sample_format = ::fuchsia_mediastreams::wire::AudioSampleFormat::kFloat,
-    .channel_count = 2,
+    .sample_type = ::fuchsia_audio::SampleType::kFloat32,
+    .channels = 2,
     .frames_per_second = 48000,
 });
 
-const auto kInvalidFormatFidl = fuchsia_mediastreams::wire::AudioFormat{
-    .sample_format = ::fuchsia_mediastreams::wire::AudioSampleFormat::kFloat,
-    .channel_count = 0,  // illegal
-    .frames_per_second = 48000,
-    .channel_layout = fuchsia_mediastreams::wire::AudioChannelLayout::WithPlaceholder(0),
-};
+fuchsia_audio::wire::Format MakeInvalidFormatFidl(fidl::AnyArena& arena) {
+  return fuchsia_audio::wire::Format::Builder(arena)
+      .sample_type(fuchsia_audio::SampleType::kFloat32)
+      .channel_count(0)  // illegal
+      .frames_per_second(48000)
+      .Build();
+}
 
 zx::clock MakeClock() {
   zx::clock clock;
@@ -74,7 +75,7 @@ fidl::WireTableBuilder<fuchsia_audio_mixer::wire::StreamSinkProducer> MakeDefaul
   auto [stream_sink_client, stream_sink_server] = CreateClientOrDie<fuchsia_media2::StreamSink>();
   auto builder = fuchsia_audio_mixer::wire::StreamSinkProducer::Builder(arena);
   builder.server_end(std::move(stream_sink_server));
-  builder.format(kFormat.ToFidl());
+  builder.format(kFormat.ToFidl(arena));
   builder.reference_clock(MakeReferenceClock(arena));
   builder.payload_buffer(MakeVmo());
   builder.media_ticks_per_second_numerator(1);
@@ -87,7 +88,7 @@ fidl::WireTableBuilder<fuchsia_audio_mixer::wire::StreamSinkConsumer> MakeDefaul
   auto [stream_sink_client, stream_sink_server] = CreateClientOrDie<fuchsia_media2::StreamSink>();
   auto builder = fuchsia_audio_mixer::wire::StreamSinkConsumer::Builder(arena);
   builder.client_end(stream_sink_client.TakeClientEnd());
-  builder.format(kFormat.ToFidl());
+  builder.format(kFormat.ToFidl(arena));
   builder.reference_clock(MakeReferenceClock(arena));
   builder.payload_buffer(MakeVmo());
   builder.media_ticks_per_second_numerator(1);
@@ -99,7 +100,7 @@ fidl::WireTableBuilder<fuchsia_audio::wire::RingBuffer> MakeDefaultRingBuffer(
     fidl::AnyArena& arena) {
   auto builder = fuchsia_audio::wire::RingBuffer::Builder(arena);
   builder.vmo(MakeVmo(1024));
-  builder.format(kFormat.ToFidl());
+  builder.format(kFormat.ToFidl(arena));
   builder.producer_bytes(512);
   builder.consumer_bytes(512);
   builder.reference_clock(MakeClock());
@@ -213,7 +214,7 @@ TEST_F(GraphServerTest, CreateProducerStreamSinkFailsBadFields) {
           .name = "MissingFormat",
           .edit =
               [](auto data_source) {
-                data_source.format(fidl::ObjectView<fuchsia_mediastreams::wire::AudioFormat>());
+                data_source.format(fidl::ObjectView<fuchsia_audio::wire::Format>());
               },
           .expected_error = CreateNodeError::kMissingRequiredField,
       },
@@ -253,7 +254,7 @@ TEST_F(GraphServerTest, CreateProducerStreamSinkFailsBadFields) {
       },
       {
           .name = "InvalidFormat",
-          .edit = [](auto data_source) { data_source.format(kInvalidFormatFidl); },
+          .edit = [this](auto data_source) { data_source.format(MakeInvalidFormatFidl(arena_)); },
           .expected_error = CreateNodeError::kInvalidParameter,
       },
       {
@@ -307,7 +308,7 @@ TEST_F(GraphServerTest, CreateProducerStreamSinkFailsMissingServerEnd) {
           .data_source(fuchsia_audio_mixer::wire::ProducerDataSource::WithStreamSink(
               arena_, fuchsia_audio_mixer::wire::StreamSinkProducer::Builder(arena_)
                           // no server_end()
-                          .format(kFormat.ToFidl())
+                          .format(kFormat.ToFidl(arena_))
                           .reference_clock(MakeReferenceClock(arena_))
                           .payload_buffer(MakeVmo())
                           .media_ticks_per_second_numerator(1)
@@ -330,7 +331,7 @@ TEST_F(GraphServerTest, CreateProducerStreamSinkFailsMissingPayloadBuffer) {
           .data_source(fuchsia_audio_mixer::wire::ProducerDataSource::WithStreamSink(
               arena_, fuchsia_audio_mixer::wire::StreamSinkProducer::Builder(arena_)
                           .server_end(std::move(stream_sink_server))
-                          .format(kFormat.ToFidl())
+                          .format(kFormat.ToFidl(arena_))
                           .reference_clock(MakeReferenceClock(arena_))
                           // no payload_buffer()
                           .media_ticks_per_second_numerator(1)
@@ -371,7 +372,7 @@ TEST_F(GraphServerTest, CreateProducerRingBufferFailsBadFields) {
           .name = "MissingFormat",
           .edit =
               [](auto ring_buffer) {
-                ring_buffer.format(fidl::ObjectView<fuchsia_mediastreams::wire::AudioFormat>());
+                ring_buffer.format(fidl::ObjectView<fuchsia_audio::wire::Format>());
               },
           .expected_error = CreateNodeError::kMissingRequiredField,
       },
@@ -389,7 +390,7 @@ TEST_F(GraphServerTest, CreateProducerRingBufferFailsBadFields) {
       },
       {
           .name = "InvalidFormat",
-          .edit = [](auto ring_buffer) { ring_buffer.format(kInvalidFormatFidl); },
+          .edit = [this](auto ring_buffer) { ring_buffer.format(MakeInvalidFormatFidl(arena_)); },
           .expected_error = CreateNodeError::kInvalidParameter,
       },
       {
@@ -460,7 +461,7 @@ TEST_F(GraphServerTest, CreateProducerRingBufferFailsMissingVmo) {
           .data_source(fuchsia_audio_mixer::wire::ProducerDataSource::WithRingBuffer(
               arena_, fuchsia_audio::wire::RingBuffer::Builder(arena_)
                           // no vmo()
-                          .format(kFormat.ToFidl())
+                          .format(kFormat.ToFidl(arena_))
                           .producer_bytes(512)
                           .consumer_bytes(512)
                           .reference_clock(MakeClock())
@@ -481,7 +482,7 @@ TEST_F(GraphServerTest, CreateProducerRingBufferFailsMissingReferenceClock) {
           .data_source(fuchsia_audio_mixer::wire::ProducerDataSource::WithRingBuffer(
               arena_, fuchsia_audio::wire::RingBuffer::Builder(arena_)
                           .vmo(MakeVmo(1024))
-                          .format(kFormat.ToFidl())
+                          .format(kFormat.ToFidl(arena_))
                           .producer_bytes(512)
                           .consumer_bytes(512)
                           // no reference_clock()
@@ -569,7 +570,7 @@ TEST_F(GraphServerTest, CreateConsumerFailsBadFields) {
             .data_source(fuchsia_audio_mixer::wire::ConsumerDataSource::WithStreamSink(
                 arena_, fuchsia_audio_mixer::wire::StreamSinkConsumer::Builder(arena_)
                             // no client_end()
-                            .format(kFormat.ToFidl())
+                            .format(kFormat.ToFidl(arena_))
                             .reference_clock(MakeReferenceClock(arena_))
                             .payload_buffer(MakeVmo())
                             .media_ticks_per_second_numerator(1)

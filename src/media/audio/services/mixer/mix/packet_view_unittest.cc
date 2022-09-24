@@ -368,13 +368,11 @@ std::vector<IsectTestCase> kIsectTestCasesApiDocs = {
 };
 
 void RunIntersectionTests(const std::vector<IsectTestCase>& test_cases) {
-  const auto format =
-      Format::Create({
-                         .sample_format = fuchsia_mediastreams::wire::AudioSampleFormat::kSigned16,
-                         .channel_count = 2,
-                         .frames_per_second = 48000,
-                     })
-          .take_value();
+  const auto format = Format::CreateOrDie({
+      .sample_type = fuchsia_audio::SampleType::kInt16,
+      .channels = 2,
+      .frames_per_second = 48000,
+  });
 
   for (auto& tc : test_cases) {
     SCOPED_TRACE(std::string("IntersectPacketView([") + ffl::String(tc.packet_start).c_str() +
@@ -447,13 +445,11 @@ TEST(PacketViewTest, IntersectionWithApiDocs) { RunIntersectionTests(kIsectTestC
 
 TEST(PacketViewTest, Slice) {
   constexpr auto kBytesPerFrame = 4;
-  const auto format =
-      Format::Create({
-                         .sample_format = fuchsia_mediastreams::wire::AudioSampleFormat::kSigned16,
-                         .channel_count = 2,
-                         .frames_per_second = 48000,
-                     })
-          .take_value();
+  const auto format = Format::CreateOrDie({
+      .sample_type = fuchsia_audio::SampleType::kInt16,
+      .channels = 2,
+      .frames_per_second = 48000,
+  });
 
   // Although we don't dereference packet_payload_buffer, UBSan requires that it point
   // to valid memory large enough to include the expected payload offset.

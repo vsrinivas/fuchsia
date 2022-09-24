@@ -12,7 +12,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "fidl/fuchsia.mediastreams/cpp/wire_types.h"
+#include "fidl/fuchsia.audio/cpp/wire_types.h"
 #include "lib/syslog/cpp/macros.h"
 #include "src/media/audio/lib/format2/channel_mapper.h"
 #include "src/media/audio/lib/format2/fixed.h"
@@ -24,7 +24,7 @@
 namespace media_audio {
 namespace {
 
-using ::fuchsia_mediastreams::wire::AudioSampleFormat;
+using ::fuchsia_audio::SampleType;
 using ::media::TimelineRate;
 using ::testing::Each;
 using ::testing::FloatEq;
@@ -41,27 +41,26 @@ constexpr uint32_t kFrameRates[] = {
     8000, 11025, 16000, 22050, 24000, 32000, 44100, 48000, 88200, 96000, 176400, 192000,
 };
 
-constexpr AudioSampleFormat kSampleFormats[] = {
-    AudioSampleFormat::kUnsigned8,
-    AudioSampleFormat::kSigned16,
-    AudioSampleFormat::kSigned24In32,
-    AudioSampleFormat::kFloat,
+constexpr SampleType kSampleTypes[] = {
+    SampleType::kUint8,
+    SampleType::kInt16,
+    SampleType::kInt32,
+    SampleType::kFloat32,
 };
 
-Format CreateFormat(uint32_t channel_count, uint32_t frame_rate, AudioSampleFormat sample_format) {
-  return Format::CreateOrDie({sample_format, channel_count, frame_rate});
+Format CreateFormat(int64_t channel_count, int64_t frame_rate, SampleType sample_type) {
+  return Format::CreateOrDie({sample_type, channel_count, frame_rate});
 }
 
 TEST(SincSamplerTest, CreateWithValidConfigs) {
   for (const auto& [source_channel_count, dest_channel_count] : kChannelConfigs) {
     for (const auto& source_frame_rate : kFrameRates) {
       for (const auto& dest_frame_rate : kFrameRates) {
-        for (const auto& sample_format : kSampleFormats) {
-          EXPECT_THAT(
-              SincSampler::Create(
-                  CreateFormat(source_channel_count, source_frame_rate, sample_format),
-                  CreateFormat(dest_channel_count, dest_frame_rate, AudioSampleFormat::kFloat)),
-              NotNull());
+        for (const auto& sample_type : kSampleTypes) {
+          EXPECT_THAT(SincSampler::Create(
+                          CreateFormat(source_channel_count, source_frame_rate, sample_type),
+                          CreateFormat(dest_channel_count, dest_frame_rate, SampleType::kFloat32)),
+                      NotNull());
         }
       }
     }
@@ -75,11 +74,11 @@ TEST(SincSamplerTest, CreateFailsWithUnsupportedChannelConfigs) {
   };
   for (const auto& [source_channel_count, dest_channel_count] : unsupported_channel_configs) {
     for (const auto& frame_rate : kFrameRates) {
-      for (const auto& sample_format : kSampleFormats) {
-        EXPECT_THAT(SincSampler::Create(
-                        CreateFormat(source_channel_count, frame_rate, sample_format),
-                        CreateFormat(dest_channel_count, frame_rate, AudioSampleFormat::kFloat)),
-                    IsNull());
+      for (const auto& sample_type : kSampleTypes) {
+        EXPECT_THAT(
+            SincSampler::Create(CreateFormat(source_channel_count, frame_rate, sample_type),
+                                CreateFormat(dest_channel_count, frame_rate, SampleType::kFloat32)),
+            IsNull());
       }
     }
   }
@@ -88,12 +87,12 @@ TEST(SincSamplerTest, CreateFailsWithUnsupportedChannelConfigs) {
 TEST(SincSamplerTest, CreateFailsWithUnsupportedDestSampleFormats) {
   const uint32_t frame_rate = 44100;
   for (const auto& [source_channel_count, dest_channel_count] : kChannelConfigs) {
-    for (const auto& source_sample_format : kSampleFormats) {
-      for (const auto& dest_sample_format : kSampleFormats) {
-        if (dest_sample_format != fuchsia_mediastreams::AudioSampleFormat::kFloat) {
+    for (const auto& source_sample_type : kSampleTypes) {
+      for (const auto& dest_sample_type : kSampleTypes) {
+        if (dest_sample_type != SampleType::kFloat32) {
           EXPECT_THAT(SincSampler::Create(
-                          CreateFormat(source_channel_count, frame_rate, source_sample_format),
-                          CreateFormat(dest_channel_count, frame_rate, dest_sample_format)),
+                          CreateFormat(source_channel_count, frame_rate, source_sample_type),
+                          CreateFormat(dest_channel_count, frame_rate, dest_sample_type)),
                       IsNull());
         }
       }
@@ -102,8 +101,8 @@ TEST(SincSamplerTest, CreateFailsWithUnsupportedDestSampleFormats) {
 }
 
 TEST(SincSamplerTest, Process) {
-  auto sampler = SincSampler::Create(CreateFormat(1, 48000, AudioSampleFormat::kFloat),
-                                     CreateFormat(1, 48000, AudioSampleFormat::kFloat));
+  auto sampler = SincSampler::Create(CreateFormat(1, 48000, SampleType::kFloat32),
+                                     CreateFormat(1, 48000, SampleType::kFloat32));
   ASSERT_THAT(sampler, NotNull());
 
   const int64_t dest_frame_count = 5;
@@ -132,8 +131,8 @@ TEST(SincSamplerTest, Process) {
 TEST(SincSamplerTest, ProcessDownSample) {
   const uint32_t kSourceFrameRate = 48000;
   const uint32_t kDestFrameRate = 44100;
-  auto sampler = SincSampler::Create(CreateFormat(1, kSourceFrameRate, AudioSampleFormat::kFloat),
-                                     CreateFormat(1, kDestFrameRate, AudioSampleFormat::kFloat));
+  auto sampler = SincSampler::Create(CreateFormat(1, kSourceFrameRate, SampleType::kFloat32),
+                                     CreateFormat(1, kDestFrameRate, SampleType::kFloat32));
   ASSERT_THAT(sampler, NotNull());
 
   const int64_t dest_frame_count = 512;
@@ -173,8 +172,8 @@ TEST(SincSamplerTest, ProcessDownSample) {
 TEST(SincSamplerTest, ProcessUpSample) {
   const uint32_t kSourceFrameRate = 12000;
   const uint32_t kDestFrameRate = 48000;
-  auto sampler = SincSampler::Create(CreateFormat(1, kSourceFrameRate, AudioSampleFormat::kFloat),
-                                     CreateFormat(1, kDestFrameRate, AudioSampleFormat::kFloat));
+  auto sampler = SincSampler::Create(CreateFormat(1, kSourceFrameRate, SampleType::kFloat32),
+                                     CreateFormat(1, kDestFrameRate, SampleType::kFloat32));
   ASSERT_THAT(sampler, NotNull());
 
   const int64_t dest_frame_count = 1024;
@@ -213,8 +212,8 @@ TEST(SincSamplerTest, ProcessUpSample) {
 }
 
 TEST(SincSamplerTest, ProcessWithConstantGain) {
-  auto sampler = SincSampler::Create(CreateFormat(1, 48000, AudioSampleFormat::kFloat),
-                                     CreateFormat(1, 48000, AudioSampleFormat::kFloat));
+  auto sampler = SincSampler::Create(CreateFormat(1, 48000, SampleType::kFloat32),
+                                     CreateFormat(1, 48000, SampleType::kFloat32));
   ASSERT_THAT(sampler, NotNull());
 
   const int64_t dest_frame_count = 5;
@@ -241,8 +240,8 @@ TEST(SincSamplerTest, ProcessWithConstantGain) {
 }
 
 TEST(SincSamplerTest, ProcessWithRampingGain) {
-  auto sampler = SincSampler::Create(CreateFormat(1, 48000, AudioSampleFormat::kFloat),
-                                     CreateFormat(1, 48000, AudioSampleFormat::kFloat));
+  auto sampler = SincSampler::Create(CreateFormat(1, 48000, SampleType::kFloat32),
+                                     CreateFormat(1, 48000, SampleType::kFloat32));
   ASSERT_THAT(sampler, NotNull());
 
   const int64_t dest_frame_count = 5;
@@ -270,8 +269,8 @@ TEST(SincSamplerTest, ProcessWithRampingGain) {
 }
 
 TEST(SincSamplerTest, ProcessWithSilentGain) {
-  auto sampler = SincSampler::Create(CreateFormat(1, 48000, AudioSampleFormat::kFloat),
-                                     CreateFormat(1, 48000, AudioSampleFormat::kFloat));
+  auto sampler = SincSampler::Create(CreateFormat(1, 48000, SampleType::kFloat32),
+                                     CreateFormat(1, 48000, SampleType::kFloat32));
   ASSERT_THAT(sampler, NotNull());
 
   const int64_t dest_frame_count = 5;
@@ -305,8 +304,8 @@ TEST(SincSamplerTest, ProcessWithSilentGain) {
 }
 
 TEST(SincSamplerTest, ProcessWithSourceOffsetAtFrameBoundary) {
-  auto sampler = SincSampler::Create(CreateFormat(1, 44100, AudioSampleFormat::kFloat),
-                                     CreateFormat(1, 44100, AudioSampleFormat::kFloat));
+  auto sampler = SincSampler::Create(CreateFormat(1, 44100, SampleType::kFloat32),
+                                     CreateFormat(1, 44100, SampleType::kFloat32));
   ASSERT_THAT(sampler, NotNull());
 
   // Source offset is 46 of 50 frames, destination offset is 1 of 10, which should advance by 4.
@@ -332,8 +331,8 @@ TEST(SincSamplerTest, ProcessWithSourceOffsetAtFrameBoundary) {
 }
 
 TEST(SincSamplerTest, ProcessWithSourceOffsetJustBeforeFrameBoundary) {
-  auto sampler = SincSampler::Create(CreateFormat(1, 44100, AudioSampleFormat::kFloat),
-                                     CreateFormat(1, 44100, AudioSampleFormat::kFloat));
+  auto sampler = SincSampler::Create(CreateFormat(1, 44100, SampleType::kFloat32),
+                                     CreateFormat(1, 44100, SampleType::kFloat32));
   ASSERT_THAT(sampler, NotNull());
 
   // Source offset is 45.99 of 50 frames, destination offset is 1 of 10, which should advance by 5.
@@ -358,8 +357,8 @@ TEST(SincSamplerTest, ProcessWithSourceOffsetJustBeforeFrameBoundary) {
 }
 
 TEST(SincSamplerTest, ProcessWithSourceOffsetAtEnd) {
-  auto sampler = SincSampler::Create(CreateFormat(1, 44100, AudioSampleFormat::kFloat),
-                                     CreateFormat(1, 44100, AudioSampleFormat::kFloat));
+  auto sampler = SincSampler::Create(CreateFormat(1, 44100, SampleType::kFloat32),
+                                     CreateFormat(1, 44100, SampleType::kFloat32));
   ASSERT_THAT(sampler, NotNull());
 
   // Source offset is at the end already, destination offset is 0 of 50, which should not advance.
@@ -382,8 +381,8 @@ TEST(SincSamplerTest, ProcessWithSourceOffsetAtEnd) {
 }
 
 TEST(SincSamplerTest, ProcessWithZeroStepSizeModuloNoRollover) {
-  auto sampler = SincSampler::Create(CreateFormat(1, 44100, AudioSampleFormat::kFloat),
-                                     CreateFormat(1, 44100, AudioSampleFormat::kFloat));
+  auto sampler = SincSampler::Create(CreateFormat(1, 44100, SampleType::kFloat32),
+                                     CreateFormat(1, 44100, SampleType::kFloat32));
   ASSERT_THAT(sampler, NotNull());
 
   auto& state = sampler->state();
@@ -410,8 +409,8 @@ TEST(SincSamplerTest, ProcessWithZeroStepSizeModuloNoRollover) {
 }
 
 TEST(SincSamplerTest, ProcessWithZeroStepSizeModuloWithRollover) {
-  auto sampler = SincSampler::Create(CreateFormat(1, 44100, AudioSampleFormat::kFloat),
-                                     CreateFormat(1, 44100, AudioSampleFormat::kFloat));
+  auto sampler = SincSampler::Create(CreateFormat(1, 44100, SampleType::kFloat32),
+                                     CreateFormat(1, 44100, SampleType::kFloat32));
   ASSERT_THAT(sampler, NotNull());
 
   auto& state = sampler->state();
@@ -438,8 +437,8 @@ TEST(SincSamplerTest, ProcessWithZeroStepSizeModuloWithRollover) {
 }
 
 TEST(SincSamplerTest, ProcessWithNonZeroStepSizeModuloNoRollover) {
-  auto sampler = SincSampler::Create(CreateFormat(1, 44100, AudioSampleFormat::kFloat),
-                                     CreateFormat(1, 44100, AudioSampleFormat::kFloat));
+  auto sampler = SincSampler::Create(CreateFormat(1, 44100, SampleType::kFloat32),
+                                     CreateFormat(1, 44100, SampleType::kFloat32));
   ASSERT_THAT(sampler, NotNull());
 
   auto& state = sampler->state();
@@ -467,8 +466,8 @@ TEST(SincSamplerTest, ProcessWithNonZeroStepSizeModuloNoRollover) {
 }
 
 TEST(SincSamplerTest, ProcessWithNonZeroStepSizeModuloRollover) {
-  auto sampler = SincSampler::Create(CreateFormat(1, 44100, AudioSampleFormat::kFloat),
-                                     CreateFormat(1, 44100, AudioSampleFormat::kFloat));
+  auto sampler = SincSampler::Create(CreateFormat(1, 44100, SampleType::kFloat32),
+                                     CreateFormat(1, 44100, SampleType::kFloat32));
   ASSERT_THAT(sampler, NotNull());
 
   auto& state = sampler->state();
@@ -496,8 +495,8 @@ TEST(SincSamplerTest, ProcessWithNonZeroStepSizeModuloRollover) {
 }
 
 TEST(SincSamplerTest, ProcessWithSourcePostModuloExactRollover) {
-  auto sampler = SincSampler::Create(CreateFormat(1, 44100, AudioSampleFormat::kFloat),
-                                     CreateFormat(1, 44100, AudioSampleFormat::kFloat));
+  auto sampler = SincSampler::Create(CreateFormat(1, 44100, SampleType::kFloat32),
+                                     CreateFormat(1, 44100, SampleType::kFloat32));
   ASSERT_THAT(sampler, NotNull());
 
   auto& state = sampler->state();
@@ -570,14 +569,13 @@ class SincSamplerOutputTest : public testing::Test {
   }
 
   // Tests sampler with a passthrough process of a given `source_samples` with a given
-  // `channel_count` and `source_sample_format`.
+  // `channel_count` and `source_sample_type`.
   template <typename SourceSampleType>
-  static void TestPassthrough(uint32_t channel_count, AudioSampleFormat source_sample_format,
+  static void TestPassthrough(uint32_t channel_count, SampleType source_sample_type,
                               const std::vector<SourceSampleType>& source_samples) {
     // Create sampler.
-    auto sampler =
-        SincSampler::Create(CreateFormat(channel_count, 48000, source_sample_format),
-                            CreateFormat(channel_count, 48000, AudioSampleFormat::kFloat));
+    auto sampler = SincSampler::Create(CreateFormat(channel_count, 48000, source_sample_type),
+                                       CreateFormat(channel_count, 48000, SampleType::kFloat32));
     ASSERT_THAT(sampler, NotNull());
     EXPECT_EQ(sampler->pos_filter_length().raw_value(), SincFilter::kFracSideLength);
     EXPECT_EQ(sampler->neg_filter_length().raw_value(), SincFilter::kFracSideLength);
@@ -614,8 +612,8 @@ class SincSamplerOutputTest : public testing::Test {
                                    const std::vector<float>& expected_dest_samples) {
     // Create sampler.
     auto sampler =
-        SincSampler::Create(CreateFormat(SourceChannelCount, 48000, AudioSampleFormat::kFloat),
-                            CreateFormat(DestChannelCount, 48000, AudioSampleFormat::kFloat));
+        SincSampler::Create(CreateFormat(SourceChannelCount, 48000, SampleType::kFloat32),
+                            CreateFormat(DestChannelCount, 48000, SampleType::kFloat32));
     EXPECT_EQ(sampler->pos_filter_length().raw_value(), SincFilter::kFracSideLength);
     EXPECT_EQ(sampler->neg_filter_length().raw_value(), SincFilter::kFracSideLength);
 
@@ -645,8 +643,8 @@ class SincSamplerOutputTest : public testing::Test {
 };
 
 TEST_F(SincSamplerOutputTest, ProcessOneNoCache) {
-  auto sampler = SincSampler::Create(CreateFormat(1, 44100, AudioSampleFormat::kFloat),
-                                     CreateFormat(1, 44100, AudioSampleFormat::kFloat));
+  auto sampler = SincSampler::Create(CreateFormat(1, 44100, SampleType::kFloat32),
+                                     CreateFormat(1, 44100, SampleType::kFloat32));
   ASSERT_THAT(sampler, NotNull());
 
   // Process a single frame. We use a slightly non-zero position because at true 0, only the sample
@@ -658,8 +656,8 @@ TEST_F(SincSamplerOutputTest, ProcessOneNoCache) {
 }
 
 TEST_F(SincSamplerOutputTest, ProcessOneWithCache) {
-  auto sampler = SincSampler::Create(CreateFormat(1, 44100, AudioSampleFormat::kFloat),
-                                     CreateFormat(1, 44100, AudioSampleFormat::kFloat));
+  auto sampler = SincSampler::Create(CreateFormat(1, 44100, SampleType::kFloat32),
+                                     CreateFormat(1, 44100, SampleType::kFloat32));
   ASSERT_THAT(sampler, NotNull());
   auto neg_length = sampler->neg_filter_length().Floor();
 
@@ -685,8 +683,8 @@ TEST_F(SincSamplerOutputTest, ProcessOneWithCache) {
 }
 
 TEST_F(SincSamplerOutputTest, ProcessFrameByFrameCached) {
-  auto sampler = SincSampler::Create(CreateFormat(1, 44100, AudioSampleFormat::kFloat),
-                                     CreateFormat(1, 44100, AudioSampleFormat::kFloat));
+  auto sampler = SincSampler::Create(CreateFormat(1, 44100, SampleType::kFloat32),
+                                     CreateFormat(1, 44100, SampleType::kFloat32));
   ASSERT_THAT(sampler, NotNull());
   auto neg_length = sampler->neg_filter_length().Floor();
 
@@ -715,13 +713,13 @@ TEST_F(SincSamplerOutputTest, ProcessPassthroughUint8) {
   const std::vector<uint8_t> source_samples = {0x00, 0xFF, 0x27, 0xCD, 0x7F, 0x80, 0xA6, 0x6D};
 
   // Test mono.
-  TestPassthrough<uint8_t>(/*channel_count=*/1, AudioSampleFormat::kUnsigned8, source_samples);
+  TestPassthrough<uint8_t>(/*channel_count=*/1, SampleType::kUint8, source_samples);
 
   // Test stereo.
-  TestPassthrough<uint8_t>(/*channel_count=*/2, AudioSampleFormat::kUnsigned8, source_samples);
+  TestPassthrough<uint8_t>(/*channel_count=*/2, SampleType::kUint8, source_samples);
 
   // Test 4 channels.
-  TestPassthrough<uint8_t>(/*channel_count=*/4, AudioSampleFormat::kUnsigned8, source_samples);
+  TestPassthrough<uint8_t>(/*channel_count=*/4, SampleType::kUint8, source_samples);
 }
 
 TEST_F(SincSamplerOutputTest, ProcessPassthroughInt16) {
@@ -729,13 +727,13 @@ TEST_F(SincSamplerOutputTest, ProcessPassthroughInt16) {
                                                -0x123,  0,      0x2600,  -0x2DCB};
 
   // Test mono.
-  TestPassthrough<int16_t>(/*channel_count=*/1, AudioSampleFormat::kSigned16, source_samples);
+  TestPassthrough<int16_t>(/*channel_count=*/1, SampleType::kInt16, source_samples);
 
   // Test stereo.
-  TestPassthrough<int16_t>(/*channel_count=*/2, AudioSampleFormat::kSigned16, source_samples);
+  TestPassthrough<int16_t>(/*channel_count=*/2, SampleType::kInt16, source_samples);
 
   // Test 4 channels.
-  TestPassthrough<int16_t>(/*channel_count=*/4, AudioSampleFormat::kSigned16, source_samples);
+  TestPassthrough<int16_t>(/*channel_count=*/4, SampleType::kInt16, source_samples);
 }
 
 TEST_F(SincSamplerOutputTest, ProcessPassthroughInt24In32) {
@@ -744,13 +742,13 @@ TEST_F(SincSamplerOutputTest, ProcessPassthroughInt24In32) {
                                                0x26006200,    -0x2DCBA900};
 
   // Test mono.
-  TestPassthrough<int32_t>(/*channel_count=*/1, AudioSampleFormat::kSigned24In32, source_samples);
+  TestPassthrough<int32_t>(/*channel_count=*/1, SampleType::kInt32, source_samples);
 
   // Test stereo.
-  TestPassthrough<int32_t>(/*channel_count=*/2, AudioSampleFormat::kSigned24In32, source_samples);
+  TestPassthrough<int32_t>(/*channel_count=*/2, SampleType::kInt32, source_samples);
 
   // Test 4 channels.
-  TestPassthrough<int32_t>(/*channel_count=*/4, AudioSampleFormat::kSigned24In32, source_samples);
+  TestPassthrough<int32_t>(/*channel_count=*/4, SampleType::kInt32, source_samples);
 }
 
 TEST_F(SincSamplerOutputTest, ProcessPassthroughFloat) {
@@ -758,13 +756,13 @@ TEST_F(SincSamplerOutputTest, ProcessPassthroughFloat) {
       -1.0, 1.0f, -0.809783935f, 0.603912353f, -0.00888061523f, 0.0f, 0.296875f, -0.357757568f};
 
   // Test mono.
-  TestPassthrough<float>(/*channel_count=*/1, AudioSampleFormat::kFloat, source_samples);
+  TestPassthrough<float>(/*channel_count=*/1, SampleType::kFloat32, source_samples);
 
   // Test stereo.
-  TestPassthrough<float>(/*channel_count=*/2, AudioSampleFormat::kFloat, source_samples);
+  TestPassthrough<float>(/*channel_count=*/2, SampleType::kFloat32, source_samples);
 
   // Test 4 channels.
-  TestPassthrough<float>(/*channel_count=*/4, AudioSampleFormat::kFloat, source_samples);
+  TestPassthrough<float>(/*channel_count=*/4, SampleType::kFloat32, source_samples);
 }
 
 TEST_F(SincSamplerOutputTest, ProcessRechannelizationMono) {

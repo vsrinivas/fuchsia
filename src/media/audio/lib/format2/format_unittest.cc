@@ -8,49 +8,51 @@
 
 #include "src/media/audio/lib/format2/fixed.h"
 
-using AudioSampleFormat = fuchsia_mediastreams::wire::AudioSampleFormat;
+using SampleType = fuchsia_audio::SampleType;
 
 namespace media_audio {
 
 TEST(FormatTest, Create) {
   Format format = Format::CreateOrDie({
-      .sample_format = AudioSampleFormat::kSigned24In32,
-      .channel_count = 2,
+      .sample_type = SampleType::kInt32,
+      .channels = 2,
       .frames_per_second = 48000,
   });
 
-  EXPECT_EQ(format.sample_format(), AudioSampleFormat::kSigned24In32);
+  EXPECT_EQ(format.sample_type(), SampleType::kInt32);
   EXPECT_EQ(format.channels(), 2);
   EXPECT_EQ(format.frames_per_second(), 48000);
   EXPECT_EQ(format.bytes_per_frame(), 8);
   EXPECT_EQ(format.bytes_per_sample(), 4);
-  EXPECT_EQ(format.valid_bits_per_sample(), 24);
+  EXPECT_EQ(format.valid_bits_per_sample(), 32);
 }
 
 TEST(FormatTest, ToFidl) {
   Format format = Format::CreateOrDie({
-      .sample_format = AudioSampleFormat::kSigned24In32,
-      .channel_count = 2,
+      .sample_type = SampleType::kInt32,
+      .channels = 2,
       .frames_per_second = 48000,
   });
 
-  auto msg = format.ToFidl();
-  EXPECT_EQ(msg.sample_format, AudioSampleFormat::kSigned24In32);
-  EXPECT_EQ(msg.channel_count, 2u);
-  EXPECT_EQ(msg.frames_per_second, 48000u);
-  // This field must exist otherwise `msg` cannot be encoded on the wire.
-  EXPECT_FALSE(msg.channel_layout.has_invalid_tag());
+  fidl::Arena<> arena;
+  auto msg = format.ToFidl(arena);
+  ASSERT_TRUE(msg.has_sample_type());
+  ASSERT_TRUE(msg.has_channel_count());
+  ASSERT_TRUE(msg.has_frames_per_second());
+  EXPECT_EQ(msg.sample_type(), SampleType::kInt32);
+  EXPECT_EQ(msg.channel_count(), 2u);
+  EXPECT_EQ(msg.frames_per_second(), 48000u);
 }
 
 TEST(FormatTest, OperatorEquals) {
   Format format1 = Format::CreateOrDie({
-      .sample_format = AudioSampleFormat::kFloat,
-      .channel_count = 2,
+      .sample_type = SampleType::kFloat32,
+      .channels = 2,
       .frames_per_second = 48000,
   });
   Format format2 = Format::CreateOrDie({
-      .sample_format = AudioSampleFormat::kFloat,
-      .channel_count = 2,
+      .sample_type = SampleType::kFloat32,
+      .channels = 2,
       .frames_per_second = 48000,
   });
 
@@ -59,13 +61,13 @@ TEST(FormatTest, OperatorEquals) {
 
 TEST(FormatTest, OperatorEqualsDifferentChannels) {
   Format format1 = Format::CreateOrDie({
-      .sample_format = AudioSampleFormat::kFloat,
-      .channel_count = 2,
+      .sample_type = SampleType::kFloat32,
+      .channels = 2,
       .frames_per_second = 48000,
   });
   Format format2 = Format::CreateOrDie({
-      .sample_format = AudioSampleFormat::kFloat,
-      .channel_count = 1,
+      .sample_type = SampleType::kFloat32,
+      .channels = 1,
       .frames_per_second = 48000,
   });
 
@@ -74,28 +76,28 @@ TEST(FormatTest, OperatorEqualsDifferentChannels) {
 
 TEST(FormatTest, OperatorEqualsDifferentRates) {
   Format format1 = Format::CreateOrDie({
-      .sample_format = AudioSampleFormat::kFloat,
-      .channel_count = 2,
+      .sample_type = SampleType::kFloat32,
+      .channels = 2,
       .frames_per_second = 48000,
   });
   Format format2 = Format::CreateOrDie({
-      .sample_format = AudioSampleFormat::kFloat,
-      .channel_count = 2,
+      .sample_type = SampleType::kFloat32,
+      .channels = 2,
       .frames_per_second = 96000,
   });
 
   EXPECT_NE(format1, format2);
 }
 
-TEST(FormatTest, OperatorEqualsDifferentSampleFormats) {
+TEST(FormatTest, OperatorEqualsDifferentSampleTypes) {
   Format format1 = Format::CreateOrDie({
-      .sample_format = AudioSampleFormat::kFloat,
-      .channel_count = 2,
+      .sample_type = SampleType::kFloat32,
+      .channels = 2,
       .frames_per_second = 48000,
   });
   Format format2 = Format::CreateOrDie({
-      .sample_format = AudioSampleFormat::kUnsigned8,
-      .channel_count = 2,
+      .sample_type = SampleType::kUint8,
+      .channels = 2,
       .frames_per_second = 48000,
   });
 
@@ -104,8 +106,8 @@ TEST(FormatTest, OperatorEqualsDifferentSampleFormats) {
 
 TEST(FormatTest, IntegerFramesPer) {
   Format format = Format::CreateOrDie({
-      .sample_format = AudioSampleFormat::kFloat,
-      .channel_count = 2,
+      .sample_type = SampleType::kFloat32,
+      .channels = 2,
       .frames_per_second = 48000,
   });
 
@@ -123,8 +125,8 @@ TEST(FormatTest, IntegerFramesPer) {
 
 TEST(FormatTest, FracFramesPer) {
   Format format = Format::CreateOrDie({
-      .sample_format = AudioSampleFormat::kFloat,
-      .channel_count = 2,
+      .sample_type = SampleType::kFloat32,
+      .channels = 2,
       .frames_per_second = 48000,
   });
 
@@ -151,8 +153,8 @@ TEST(FormatTest, FracFramesPer) {
 
 TEST(FormatTest, BytesPer) {
   Format format = Format::CreateOrDie({
-      .sample_format = AudioSampleFormat::kFloat,
-      .channel_count = 2,
+      .sample_type = SampleType::kFloat32,
+      .channels = 2,
       .frames_per_second = 48000,
   });
 

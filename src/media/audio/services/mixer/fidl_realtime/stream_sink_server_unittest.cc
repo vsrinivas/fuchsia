@@ -21,14 +21,14 @@
 namespace media_audio {
 namespace {
 
-using ::fuchsia_mediastreams::wire::AudioSampleFormat;
+using ::fuchsia_audio::SampleType;
 using CommandQueue = SimplePacketQueueProducerStage::CommandQueue;
 using ClearCommand = SimplePacketQueueProducerStage::ClearCommand;
 using PushPacketCommand = SimplePacketQueueProducerStage::PushPacketCommand;
 
 // These tests work best if we use a format with >= 2 bytes per frame to ensure we compute frame
 // counts correctly. Other than that constraint, the specific choice of format does not matter.
-const auto kFormat = Format::CreateOrDie({AudioSampleFormat::kFloat, 2, 48000});
+const auto kFormat = Format::CreateOrDie({SampleType::kFloat32, 2, 48000});
 const auto kMediaTicksPerNs = TimelineRate(1, 10'000'000);  // 1 tick per 10ms
 constexpr uint32_t kBufferId = 0;
 constexpr uint64_t kBufferSize = 4096;

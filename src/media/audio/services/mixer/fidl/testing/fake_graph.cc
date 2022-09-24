@@ -17,8 +17,7 @@ namespace media_audio {
 
 namespace {
 
-const Format kDefaultFormat =
-    Format::CreateOrDie({fuchsia_mediastreams::wire::AudioSampleFormat::kSigned16, 1, 16000});
+const Format kDefaultFormat = Format::CreateOrDie({fuchsia_audio::SampleType::kInt16, 1, 16000});
 
 }  // namespace
 

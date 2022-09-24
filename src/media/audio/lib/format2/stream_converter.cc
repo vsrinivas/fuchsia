@@ -12,7 +12,7 @@
 
 namespace media_audio {
 
-using AudioSampleFormat = fuchsia_mediastreams::wire::AudioSampleFormat;
+using SampleType = fuchsia_audio::SampleType;
 
 class StreamConverter::CopyImpl {
  public:
@@ -83,31 +83,30 @@ class CopyWithConvert : public StreamConverter::CopyImpl {
 
 template <typename SourceSampleType>
 std::unique_ptr<StreamConverter::CopyImpl> CreateCopyWithConvert(const Format& dest) {
-  switch (dest.sample_format()) {
-    case AudioSampleFormat::kUnsigned8:
+  switch (dest.sample_type()) {
+    case SampleType::kUint8:
       if constexpr (std::is_same_v<SourceSampleType, uint8_t>) {
         __builtin_unreachable();  // should use memcpy
       }
       return std::make_unique<CopyWithConvert<SourceSampleType, uint8_t>>(dest.channels());
 
-    case AudioSampleFormat::kSigned16:
+    case SampleType::kInt16:
       if constexpr (std::is_same_v<SourceSampleType, int16_t>) {
         __builtin_unreachable();  // should use memcpy
       }
       return std::make_unique<CopyWithConvert<SourceSampleType, int16_t>>(dest.channels());
 
-    case AudioSampleFormat::kSigned24In32:
-    case AudioSampleFormat::kSigned32:
+    case SampleType::kInt32:
       if constexpr (std::is_same_v<SourceSampleType, int32_t>) {
         __builtin_unreachable();  // should use memcpy
       }
       return std::make_unique<CopyWithConvert<SourceSampleType, int32_t>>(dest.channels());
 
-    case AudioSampleFormat::kFloat:
+    case SampleType::kFloat32:
       return std::make_unique<CopyWithConvert<SourceSampleType, float>>(dest.channels());
 
     default:
-      FX_LOGS(FATAL) << static_cast<int>(dest.sample_format());
+      FX_LOGS(FATAL) << static_cast<int>(dest.sample_type());
       __builtin_unreachable();
   }
 }
@@ -118,24 +117,22 @@ std::unique_ptr<StreamConverter::CopyImpl> CreateCopyImpl(const Format& source,
   FX_CHECK(source.channels() == dest.channels());
 
   // If the formats are the same and don't require clamping, use a memcpy implementation.
-  if (source.sample_format() == dest.sample_format() &&
-      source.sample_format() != AudioSampleFormat::kFloat) {
+  if (source.sample_type() == dest.sample_type() && source.sample_type() != SampleType::kFloat32) {
     return std::make_unique<CopyWithMemcpy>(source.bytes_per_frame());
   }
 
   // Otherwise use an implementation that does type conversion and clamping.
-  switch (source.sample_format()) {
-    case AudioSampleFormat::kUnsigned8:
+  switch (source.sample_type()) {
+    case SampleType::kUint8:
       return CreateCopyWithConvert<uint8_t>(dest);
-    case AudioSampleFormat::kSigned16:
+    case SampleType::kInt16:
       return CreateCopyWithConvert<int16_t>(dest);
-    case AudioSampleFormat::kSigned24In32:
-    case AudioSampleFormat::kSigned32:
+    case SampleType::kInt32:
       return CreateCopyWithConvert<int32_t>(dest);
-    case AudioSampleFormat::kFloat:
+    case SampleType::kFloat32:
       return CreateCopyWithConvert<float>(dest);
     default:
-      FX_LOGS(FATAL) << static_cast<int>(source.sample_format());
+      FX_LOGS(FATAL) << static_cast<int>(source.sample_type());
       __builtin_unreachable();
   }
 }
@@ -160,9 +157,9 @@ std::shared_ptr<StreamConverter> StreamConverter::Create(const Format& source_fo
 // static
 std::shared_ptr<StreamConverter> StreamConverter::CreateFromFloatSource(const Format& dest_format) {
   auto source_format = Format::CreateOrDie({
-      .sample_format = AudioSampleFormat::kFloat,
-      .channel_count = static_cast<uint32_t>(dest_format.channels()),
-      .frames_per_second = static_cast<uint32_t>(dest_format.frames_per_second()),
+      .sample_type = SampleType::kFloat32,
+      .channels = dest_format.channels(),
+      .frames_per_second = dest_format.frames_per_second(),
   });
   return Create(source_format, dest_format, CreateCopyWithConvert<float>(dest_format));
 }
@@ -190,7 +187,7 @@ void StreamConverter::CopyAndClip(const void* source_data, void* dest_data,
 }
 
 void StreamConverter::WriteSilence(void* dest_data, int64_t frame_count) const {
-  if (dest_format().sample_format() == AudioSampleFormat::kUnsigned8) {
+  if (dest_format().sample_type() == SampleType::kUint8) {
     std::memset(dest_data, kInt8ToUint8, frame_count * dest_format().channels());
   } else {
     // All other sample formats represent silence with zeroes.

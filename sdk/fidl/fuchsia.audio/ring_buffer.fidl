@@ -4,7 +4,6 @@
 
 library fuchsia.audio;
 
-using fuchsia.mediastreams;
 using zx;
 
 /// A ring buffer of audio data.
@@ -130,9 +129,7 @@ type RingBuffer = resource table {
 
     /// Encoding of audio data in the buffer.
     /// Required.
-    //
-    // TODO(fxbug.dev/105130): Adopt `fuchsia.mediastreams.AudioEncoding` once that lands.
-    2: format fuchsia.mediastreams.AudioFormat;
+    2: format Format;
 
     /// The number of bytes allocated to the producer.
     ///

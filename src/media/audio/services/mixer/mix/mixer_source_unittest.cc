@@ -33,7 +33,7 @@
 namespace media_audio {
 namespace {
 
-using ::fuchsia_mediastreams::wire::AudioSampleFormat;
+using ::fuchsia_audio::SampleType;
 using ::testing::Each;
 using ::testing::UnorderedElementsAre;
 
@@ -42,7 +42,7 @@ constexpr uint32_t kDefaultFrameRate = 48000;
 constexpr uint32_t kDefaultMaxDestFrameCountPerMix = 240;
 
 const auto kDefaultFormat =
-    Format::CreateOrDie({AudioSampleFormat::kFloat, kDefaultNumChannels, kDefaultFrameRate});
+    Format::CreateOrDie({SampleType::kFloat32, kDefaultNumChannels, kDefaultFrameRate});
 // Timeline rate of 1 fractional frame per nanosecond with respect to `kDefaultFrameRate`.
 const TimelineFunction kDefaultPresentationTimeToFracFrame = TimelineFunction(
     TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs()));

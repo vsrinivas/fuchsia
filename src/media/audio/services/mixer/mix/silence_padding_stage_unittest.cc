@@ -20,9 +20,9 @@
 namespace media_audio {
 namespace {
 
-using ::fuchsia_mediastreams::wire::AudioSampleFormat;
+using ::fuchsia_audio::SampleType;
 
-const auto kFormat = Format::CreateOrDie({AudioSampleFormat::kSigned16, 1, 48000});
+const auto kFormat = Format::CreateOrDie({SampleType::kInt16, 1, 48000});
 
 std::shared_ptr<SilencePaddingStage> MakeSilencePaddingStage(
     Fixed silence_frame_count, bool round_down_fractional_frames,

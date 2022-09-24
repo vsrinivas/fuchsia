@@ -22,9 +22,9 @@
 namespace media_audio {
 namespace {
 
-using ::fuchsia_mediastreams::wire::AudioSampleFormat;
+using ::fuchsia_audio::SampleType;
 
-const Format kFormat = Format::CreateOrDie({AudioSampleFormat::kFloat, 2, 48000});
+const Format kFormat = Format::CreateOrDie({SampleType::kFloat32, 2, 48000});
 constexpr int64_t kRingBufferFrames = 100;
 
 // Since Read and PrepareToWrite have the same implementations (ignoring cache invalidation and

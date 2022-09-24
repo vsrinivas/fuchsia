@@ -52,7 +52,7 @@
 namespace media_audio {
 namespace {
 
-using ::fuchsia_mediastreams::wire::AudioSampleFormat;
+using ::fuchsia_audio::SampleType;
 namespace clock = ::media::audio::clock;
 
 enum class ClockMode { kSame, kWithOffset, kRateAdjust };
@@ -61,7 +61,7 @@ enum class Direction { kRender, kCapture };
 constexpr uint32_t kDefaultNumChannels = 2;
 constexpr uint32_t kDefaultFrameRate = 48000;
 const auto kDefaultFormat =
-    Format::CreateOrDie({AudioSampleFormat::kFloat, kDefaultNumChannels, kDefaultFrameRate});
+    Format::CreateOrDie({SampleType::kFloat32, kDefaultNumChannels, kDefaultFrameRate});
 
 // These multipliers (scaled by `rate_adjust_ppm`) determine worst-case primary/secondary error
 // limits. Error is calculated by; taking the actual long-running source position (maintained from

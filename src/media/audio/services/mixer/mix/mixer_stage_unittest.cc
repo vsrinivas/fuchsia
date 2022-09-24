@@ -22,12 +22,12 @@
 namespace media_audio {
 namespace {
 
-using ::fuchsia_mediastreams::wire::AudioSampleFormat;
+using ::fuchsia_audio::SampleType;
 using ::testing::FloatEq;
 using ::testing::Pointee;
 
 // One frame per nanosecond.
-const auto kDefaultFormat = Format::CreateOrDie({AudioSampleFormat::kFloat, 1, zx::sec(1).get()});
+const auto kDefaultFormat = Format::CreateOrDie({SampleType::kFloat32, 1, zx::sec(1).get()});
 const auto kDefaultPresentationTimeToFracFrame =
     TimelineFunction(TimelineRate(kOneFrame.raw_value(), 1));
 

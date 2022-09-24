@@ -16,42 +16,46 @@
 namespace media_audio {
 namespace {
 
-using AudioSampleFormat = fuchsia_mediastreams::wire::AudioSampleFormat;
-constexpr auto kUnsigned8 = AudioSampleFormat::kUnsigned8;
-constexpr auto kSigned16 = AudioSampleFormat::kSigned16;
-constexpr auto kSigned32 = AudioSampleFormat::kSigned32;
-constexpr auto kFloat = AudioSampleFormat::kFloat;
+using SampleType = fuchsia_audio::SampleType;
+constexpr auto kUint8 = SampleType::kUint8;
+constexpr auto kInt16 = SampleType::kInt16;
+constexpr auto kInt32 = SampleType::kInt32;
+constexpr auto kFloat32 = SampleType::kFloat32;
 
-template <typename SampleType>
-AudioSampleFormat ToAudioSampleFormat();
+template <typename NumberType>
+SampleType ToSampleType();
 
 template <>
-AudioSampleFormat ToAudioSampleFormat<uint8_t>() {
-  return kUnsigned8;
+SampleType ToSampleType<uint8_t>() {
+  return kUint8;
 }
 template <>
-AudioSampleFormat ToAudioSampleFormat<int16_t>() {
-  return kSigned16;
+SampleType ToSampleType<int16_t>() {
+  return kInt16;
 }
 template <>
-AudioSampleFormat ToAudioSampleFormat<int32_t>() {
-  return kSigned32;
+SampleType ToSampleType<int32_t>() {
+  return kInt32;
 }
 template <>
-AudioSampleFormat ToAudioSampleFormat<float>() {
-  return kFloat;
+SampleType ToSampleType<float>() {
+  return kFloat32;
 }
 
-template <AudioSampleFormat SampleFormat, typename SampleType>
-void TestSilence(SampleType expected_silent_value) {
+// The first parameter is a value of type `fuchsia_audio::SampleType`. C++ template parameters must
+// be types or primitive values. Since SampleType is a flexible enum, it's represented by a C++
+// class (not a C++ enum), hence the first template parameter cannot be a value of type SampleType.
+// We work-around this by using SampleType's underlying type (`uint32_t`).
+template <uint32_t SampleTypeValue, typename NumberType>
+void TestSilence(NumberType expected_silent_value) {
   Format format = Format::CreateOrDie({
-      .sample_format = SampleFormat,
-      .channel_count = 2,
+      .sample_type = SampleType(SampleTypeValue),
+      .channels = 2,
       .frames_per_second = 48000,
   });
 
   constexpr int64_t kNumFrames = 4;
-  std::vector<SampleType> vec(kNumFrames * format.channels());
+  std::vector<NumberType> vec(kNumFrames * format.channels());
 
   auto converter = StreamConverter::Create(format, format);
   converter->WriteSilence(vec.data(), kNumFrames);
@@ -61,10 +65,10 @@ void TestSilence(SampleType expected_silent_value) {
   }
 }
 
-TEST(StreamConverterTest, SilenceUnsigned8) { TestSilence<kUnsigned8, uint8_t>(0x80); }
-TEST(StreamConverterTest, SilenceSigned16) { TestSilence<kSigned16, int16_t>(0); }
-TEST(StreamConverterTest, SilenceSigned32) { TestSilence<kSigned32, int32_t>(0); }
-TEST(StreamConverterTest, SilenceFloat) { TestSilence<AudioSampleFormat::kFloat, float>(0.0f); }
+TEST(StreamConverterTest, SilenceUnsigned8) { TestSilence<kUint8, uint8_t>(0x80); }
+TEST(StreamConverterTest, SilenceSigned16) { TestSilence<kInt16, int16_t>(0); }
+TEST(StreamConverterTest, SilenceSigned32) { TestSilence<kInt32, int32_t>(0); }
+TEST(StreamConverterTest, SilenceFloat) { TestSilence<kFloat32, float>(0.0f); }
 
 // When we specify source data in uint8/int16/int32 formats, it improves readability to specify
 // expected values in that format as well. The expected array itself is float[], so we use this
@@ -80,23 +84,23 @@ void ShiftRightBy(std::vector<float>& floats, int32_t shift_by) {
   }
 }
 
-template <typename SourceSampleType, typename DestSampleType>
-void TestCopy(const std::vector<DestSampleType>& expected_dest,
-              const std::vector<SourceSampleType>& source, uint32_t channels, bool clip = false) {
+template <typename SourceNumberType, typename DestNumberType>
+void TestCopy(const std::vector<DestNumberType>& expected_dest,
+              const std::vector<SourceNumberType>& source, uint32_t channels, bool clip = false) {
   ASSERT_EQ(expected_dest.size(), source.size());
 
   auto source_format = Format::CreateOrDie({
-      .sample_format = ToAudioSampleFormat<SourceSampleType>(),
-      .channel_count = channels,
+      .sample_type = ToSampleType<SourceNumberType>(),
+      .channels = channels,
       .frames_per_second = 48000,
   });
   auto dest_format = Format::CreateOrDie({
-      .sample_format = ToAudioSampleFormat<DestSampleType>(),
-      .channel_count = channels,
+      .sample_type = ToSampleType<DestNumberType>(),
+      .channels = channels,
       .frames_per_second = 48000,
   });
 
-  auto dest = std::vector<DestSampleType>(expected_dest.size());
+  auto dest = std::vector<DestNumberType>(expected_dest.size());
   auto converter = StreamConverter::Create(source_format, dest_format);
 
   if (clip) {
@@ -380,8 +384,8 @@ TEST(StreamConverterTest, CopyBetweenInt32Int32) {
 
 TEST(StreamConverterTest, ClipInfinitiesFloat32) {
   auto format = Format::CreateOrDie({
-      .sample_format = kFloat,
-      .channel_count = 1,
+      .sample_type = kFloat32,
+      .channels = 1,
       .frames_per_second = 48000,
   });
 
@@ -404,8 +408,8 @@ TEST(StreamConverterTest, ClipInfinitiesFloat32) {
 // TODO(fxbug.dev/84260): Consider a mode where we eliminate NANs (presumably emitting 0 instead).
 TEST(StreamConverterTest, DISABLED_NanFloat32) {
   auto format = Format::CreateOrDie({
-      .sample_format = kFloat,
-      .channel_count = 1,
+      .sample_type = kFloat32,
+      .channels = 1,
       .frames_per_second = 48000,
   });
 
@@ -424,8 +428,8 @@ TEST(StreamConverterTest, DISABLED_NanFloat32) {
 // TODO(fxbug.dev/84260): Consider a mode where we detect subnormals and round to zero.
 TEST(StreamConverterTest, DISABLED_SubnormalsFloat32) {
   auto format = Format::CreateOrDie({
-      .sample_format = kFloat,
-      .channel_count = 1,
+      .sample_type = kFloat32,
+      .channels = 1,
       .frames_per_second = 48000,
   });
 

@@ -7,7 +7,6 @@ library fuchsia.audio.mixer;
 using fuchsia.audio;
 using fuchsia.audio.effects;
 using fuchsia.media2;
-using fuchsia.mediastreams;
 using fuchsia.hardware.audio;
 using zx;
 
@@ -33,7 +32,7 @@ type StreamSinkProducer = resource table {
     /// Encoding of this audio stream.
     ///
     /// Required.
-    2: format fuchsia.mediastreams.AudioFormat;
+    2: format fuchsia.audio.Format;
 
     /// Clock for this node's destination streams.
     ///
@@ -62,7 +61,7 @@ type StreamSinkConsumer = resource table {
     /// Encoding of this audio stream.
     ///
     /// Required.
-    2: format fuchsia.mediastreams.AudioFormat;
+    2: format fuchsia.audio.Format;
 
     /// Clock for this node's source stream.
     ///

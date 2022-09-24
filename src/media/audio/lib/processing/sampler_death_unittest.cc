@@ -9,14 +9,14 @@
 
 #include <gtest/gtest.h>
 
-#include "fidl/fuchsia.mediastreams/cpp/wire_types.h"
+#include "fidl/fuchsia.audio/cpp/wire_types.h"
 #include "src/media/audio/lib/processing/sampler.h"
 #include "src/media/audio/lib/timeline/timeline_rate.h"
 
 namespace media_audio {
 namespace {
 
-using ::fuchsia_mediastreams::wire::AudioSampleFormat;
+using ::fuchsia_audio::SampleType;
 using ::media::TimelineRate;
 
 constexpr int64_t kFrameCount = 3;
@@ -26,9 +26,8 @@ class SamplerDeathTest : public testing::TestWithParam<Sampler::Type> {
   SamplerDeathTest() : source_samples_(kFrameCount), dest_samples_(kFrameCount) {}
 
   void SetUp() override {
-    sampler_ =
-        Sampler::Create(Format::CreateOrDie({AudioSampleFormat::kFloat, 1, 48000}),
-                        Format::CreateOrDie({AudioSampleFormat::kFloat, 1, 48000}), GetParam());
+    sampler_ = Sampler::Create(Format::CreateOrDie({SampleType::kFloat32, 1, 48000}),
+                               Format::CreateOrDie({SampleType::kFloat32, 1, 48000}), GetParam());
     ASSERT_NE(sampler_, nullptr) << "Sampler could not be created with default parameters";
   }
 

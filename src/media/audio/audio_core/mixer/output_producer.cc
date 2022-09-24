@@ -46,24 +46,24 @@ std::unique_ptr<OutputProducer> OutputProducer::Select(
     return nullptr;
   }
 
-  fuchsia_mediastreams::wire::AudioSampleFormat dest_sample_format;
+  fuchsia_audio::SampleType dest_sample_type;
   int32_t bytes_per_sample;
 
   switch (format.sample_format) {
     case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
-      dest_sample_format = fuchsia_mediastreams::wire::AudioSampleFormat::kUnsigned8;
+      dest_sample_type = fuchsia_audio::SampleType::kUint8;
       bytes_per_sample = sizeof(uint8_t);
       break;
     case fuchsia::media::AudioSampleFormat::SIGNED_16:
-      dest_sample_format = fuchsia_mediastreams::wire::AudioSampleFormat::kSigned16;
+      dest_sample_type = fuchsia_audio::SampleType::kInt16;
       bytes_per_sample = sizeof(int16_t);
       break;
     case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
-      dest_sample_format = fuchsia_mediastreams::wire::AudioSampleFormat::kSigned24In32;
+      dest_sample_type = fuchsia_audio::SampleType::kInt32;
       bytes_per_sample = sizeof(int32_t);
       break;
     case fuchsia::media::AudioSampleFormat::FLOAT:
-      dest_sample_format = fuchsia_mediastreams::wire::AudioSampleFormat::kFloat;
+      dest_sample_type = fuchsia_audio::SampleType::kFloat32;
       bytes_per_sample = sizeof(float);
       break;
     default:
@@ -72,8 +72,8 @@ std::unique_ptr<OutputProducer> OutputProducer::Select(
   }
 
   auto dest_format = ::media_audio::Format::CreateOrDie({
-      .sample_format = dest_sample_format,
-      .channel_count = format.channels,
+      .sample_type = dest_sample_type,
+      .channels = format.channels,
       .frames_per_second = format.frames_per_second,
   });
 

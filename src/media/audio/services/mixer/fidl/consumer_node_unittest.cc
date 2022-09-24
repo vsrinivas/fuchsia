@@ -16,11 +16,11 @@
 namespace media_audio {
 namespace {
 
-using AudioSampleFormat = fuchsia_mediastreams::wire::AudioSampleFormat;
+using SampleType = fuchsia_audio::SampleType;
 using ::testing::ElementsAre;
 
-const Format kFormat = Format::CreateOrDie({AudioSampleFormat::kFloat, 2, 10000});
-const Format kWrongFormat = Format::CreateOrDie({AudioSampleFormat::kFloat, 1, 10000});
+const Format kFormat = Format::CreateOrDie({SampleType::kFloat32, 2, 10000});
+const Format kWrongFormat = Format::CreateOrDie({SampleType::kFloat32, 1, 10000});
 const auto kPipelineDirection = PipelineDirection::kOutput;
 
 // At 10kHz fps, 1ms is 10 frames.

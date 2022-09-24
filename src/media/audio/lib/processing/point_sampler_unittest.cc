@@ -12,7 +12,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "fidl/fuchsia.mediastreams/cpp/wire_types.h"
+#include "fidl/fuchsia.audio/cpp/wire_types.h"
 #include "src/media/audio/lib/format2/channel_mapper.h"
 #include "src/media/audio/lib/format2/fixed.h"
 #include "src/media/audio/lib/format2/sample_converter.h"
@@ -21,7 +21,7 @@
 namespace media_audio {
 namespace {
 
-using ::fuchsia_mediastreams::wire::AudioSampleFormat;
+using ::fuchsia_audio::SampleType;
 using ::testing::Each;
 using ::testing::FloatEq;
 using ::testing::IsNull;
@@ -37,24 +37,24 @@ constexpr uint32_t kFrameRates[] = {
     8000, 11025, 16000, 22050, 24000, 32000, 44100, 48000, 88200, 96000, 176400, 192000,
 };
 
-constexpr AudioSampleFormat kSampleFormats[] = {
-    AudioSampleFormat::kUnsigned8,
-    AudioSampleFormat::kSigned16,
-    AudioSampleFormat::kSigned24In32,
-    AudioSampleFormat::kFloat,
+constexpr SampleType kSampleTypes[] = {
+    SampleType::kUint8,
+    SampleType::kInt16,
+    SampleType::kInt32,
+    SampleType::kFloat32,
 };
 
-Format CreateFormat(uint32_t channel_count, uint32_t frame_rate, AudioSampleFormat sample_format) {
+Format CreateFormat(uint32_t channel_count, uint32_t frame_rate, SampleType sample_format) {
   return Format::CreateOrDie({sample_format, channel_count, frame_rate});
 }
 
 TEST(PointSamplerTest, CreateWithValidConfigs) {
   for (const auto& [source_channel_count, dest_channel_count] : kChannelConfigs) {
     for (const auto& frame_rate : kFrameRates) {
-      for (const auto& sample_format : kSampleFormats) {
+      for (const auto& sample_format : kSampleTypes) {
         EXPECT_THAT(PointSampler::Create(
                         CreateFormat(source_channel_count, frame_rate, sample_format),
-                        CreateFormat(dest_channel_count, frame_rate, AudioSampleFormat::kFloat)),
+                        CreateFormat(dest_channel_count, frame_rate, SampleType::kFloat32)),
                     NotNull());
       }
     }
@@ -62,7 +62,7 @@ TEST(PointSamplerTest, CreateWithValidConfigs) {
 }
 
 TEST(PointSamplerTest, CreateFailsWithMismatchingFrameRates) {
-  const AudioSampleFormat sample_format = AudioSampleFormat::kFloat;
+  const SampleType sample_format = SampleType::kFloat32;
   for (const auto& [source_channel_count, dest_channel_count] : kChannelConfigs) {
     for (const auto& source_frame_rate : kFrameRates) {
       for (const auto& dest_frame_rate : kFrameRates) {
@@ -84,10 +84,10 @@ TEST(PointSamplerTest, CreateFailsWithUnsupportedChannelConfigs) {
   };
   for (const auto& [source_channel_count, dest_channel_count] : unsupported_channel_configs) {
     for (const auto& frame_rate : kFrameRates) {
-      for (const auto& sample_format : kSampleFormats) {
+      for (const auto& sample_format : kSampleTypes) {
         EXPECT_THAT(PointSampler::Create(
                         CreateFormat(source_channel_count, frame_rate, sample_format),
-                        CreateFormat(dest_channel_count, frame_rate, AudioSampleFormat::kFloat)),
+                        CreateFormat(dest_channel_count, frame_rate, SampleType::kFloat32)),
                     IsNull());
       }
     }
@@ -97,9 +97,9 @@ TEST(PointSamplerTest, CreateFailsWithUnsupportedChannelConfigs) {
 TEST(PointSamplerTest, CreateFailsWithUnsupportedDestSampleFormats) {
   const uint32_t frame_rate = 44100;
   for (const auto& [source_channel_count, dest_channel_count] : kChannelConfigs) {
-    for (const auto& source_sample_format : kSampleFormats) {
-      for (const auto& dest_sample_format : kSampleFormats) {
-        if (dest_sample_format != fuchsia_mediastreams::AudioSampleFormat::kFloat) {
+    for (const auto& source_sample_format : kSampleTypes) {
+      for (const auto& dest_sample_format : kSampleTypes) {
+        if (dest_sample_format != SampleType::kFloat32) {
           EXPECT_THAT(PointSampler::Create(
                           CreateFormat(source_channel_count, frame_rate, source_sample_format),
                           CreateFormat(dest_channel_count, frame_rate, dest_sample_format)),
@@ -112,8 +112,8 @@ TEST(PointSamplerTest, CreateFailsWithUnsupportedDestSampleFormats) {
 
 TEST(PointSamplerTest, Process) {
   // Create sampler.
-  auto sampler = PointSampler::Create(CreateFormat(1, 48000, AudioSampleFormat::kFloat),
-                                      CreateFormat(1, 48000, AudioSampleFormat::kFloat));
+  auto sampler = PointSampler::Create(CreateFormat(1, 48000, SampleType::kFloat32),
+                                      CreateFormat(1, 48000, SampleType::kFloat32));
   ASSERT_THAT(sampler, NotNull());
 
   const std::vector<float> source_samples = {0.1f, -0.2f, 0.3f, -0.4f, 0.5f};
@@ -137,8 +137,8 @@ TEST(PointSamplerTest, Process) {
 
 TEST(PointSamplerTest, ProcessWithConstantGain) {
   // Create sampler.
-  auto sampler = PointSampler::Create(CreateFormat(1, 48000, AudioSampleFormat::kFloat),
-                                      CreateFormat(1, 48000, AudioSampleFormat::kFloat));
+  auto sampler = PointSampler::Create(CreateFormat(1, 48000, SampleType::kFloat32),
+                                      CreateFormat(1, 48000, SampleType::kFloat32));
   ASSERT_THAT(sampler, NotNull());
 
   const std::vector<float> source_samples = {0.1f, -0.2f, 0.3f, -0.4f, 0.5f};
@@ -163,8 +163,8 @@ TEST(PointSamplerTest, ProcessWithConstantGain) {
 
 TEST(PointSamplerTest, ProcessWithRampingGain) {
   // Create sampler.
-  auto sampler = PointSampler::Create(CreateFormat(1, 48000, AudioSampleFormat::kFloat),
-                                      CreateFormat(1, 48000, AudioSampleFormat::kFloat));
+  auto sampler = PointSampler::Create(CreateFormat(1, 48000, SampleType::kFloat32),
+                                      CreateFormat(1, 48000, SampleType::kFloat32));
   ASSERT_THAT(sampler, NotNull());
 
   const std::vector<float> source_samples = {0.1f, -0.2f, 0.3f, -0.4f, 0.5f};
@@ -190,8 +190,8 @@ TEST(PointSamplerTest, ProcessWithRampingGain) {
 
 TEST(PointSamplerTest, ProcessWithSilentGain) {
   // Create sampler.
-  auto sampler = PointSampler::Create(CreateFormat(1, 48000, AudioSampleFormat::kFloat),
-                                      CreateFormat(1, 48000, AudioSampleFormat::kFloat));
+  auto sampler = PointSampler::Create(CreateFormat(1, 48000, SampleType::kFloat32),
+                                      CreateFormat(1, 48000, SampleType::kFloat32));
   ASSERT_THAT(sampler, NotNull());
 
   const std::vector<float> source_samples = {0.1f, -0.2f, 0.3f, -0.4f, 0.5f};
@@ -226,8 +226,8 @@ TEST(PointSamplerTest, ProcessWithSilentGain) {
 
 TEST(PointSamplerTest, ProcessWithSourceOffsetEqualsDest) {
   // Create sampler.
-  auto sampler = PointSampler::Create(CreateFormat(1, 48000, AudioSampleFormat::kFloat),
-                                      CreateFormat(1, 48000, AudioSampleFormat::kFloat));
+  auto sampler = PointSampler::Create(CreateFormat(1, 48000, SampleType::kFloat32),
+                                      CreateFormat(1, 48000, SampleType::kFloat32));
   ASSERT_THAT(sampler, NotNull());
 
   const std::vector<float> source_samples = {0.1f, -0.2f, 0.3f, -0.4f, 0.5f};
@@ -251,8 +251,8 @@ TEST(PointSamplerTest, ProcessWithSourceOffsetEqualsDest) {
 
 TEST(PointSamplerTest, ProcessWithSourceOffsetExceedsDest) {
   // Create sampler.
-  auto sampler = PointSampler::Create(CreateFormat(1, 48000, AudioSampleFormat::kFloat),
-                                      CreateFormat(1, 48000, AudioSampleFormat::kFloat));
+  auto sampler = PointSampler::Create(CreateFormat(1, 48000, SampleType::kFloat32),
+                                      CreateFormat(1, 48000, SampleType::kFloat32));
   ASSERT_THAT(sampler, NotNull());
 
   const std::vector<float> source_samples = {0.1f, -0.2f, 0.3f, -0.4f, 0.5f};
@@ -276,8 +276,8 @@ TEST(PointSamplerTest, ProcessWithSourceOffsetExceedsDest) {
 
 TEST(PointSamplerTest, ProcessWithDestOffsetExceedsSource) {
   // Create sampler.
-  auto sampler = PointSampler::Create(CreateFormat(1, 48000, AudioSampleFormat::kFloat),
-                                      CreateFormat(1, 48000, AudioSampleFormat::kFloat));
+  auto sampler = PointSampler::Create(CreateFormat(1, 48000, SampleType::kFloat32),
+                                      CreateFormat(1, 48000, SampleType::kFloat32));
   ASSERT_THAT(sampler, NotNull());
 
   const std::vector<float> source_samples = {0.1f, -0.2f, 0.3f, -0.4f, 0.5f};
@@ -301,8 +301,8 @@ TEST(PointSamplerTest, ProcessWithDestOffsetExceedsSource) {
 
 TEST(PointSamplerTest, ProcessWithSourceOffsetAtEnd) {
   // Create sampler.
-  auto sampler = PointSampler::Create(CreateFormat(1, 48000, AudioSampleFormat::kFloat),
-                                      CreateFormat(1, 48000, AudioSampleFormat::kFloat));
+  auto sampler = PointSampler::Create(CreateFormat(1, 48000, SampleType::kFloat32),
+                                      CreateFormat(1, 48000, SampleType::kFloat32));
   ASSERT_THAT(sampler, NotNull());
 
   const std::vector<float> source_samples = {0.1f, -0.2f, 0.3f, -0.4f, 0.5f};
@@ -328,12 +328,11 @@ TEST(PointSamplerTest, ProcessWithSourceOffsetAtEnd) {
 class ProcessWithFractionalSourceOffsetTest : public testing::TestWithParam<Fixed> {
  protected:
   template <typename SourceSampleType>
-  void TestPassthrough(uint32_t channel_count, AudioSampleFormat source_sample_format,
+  void TestPassthrough(uint32_t channel_count, SampleType source_sample_format,
                        const std::vector<SourceSampleType>& source_samples) {
     // Create sampler.
-    auto sampler =
-        PointSampler::Create(CreateFormat(channel_count, 48000, source_sample_format),
-                             CreateFormat(channel_count, 48000, AudioSampleFormat::kFloat));
+    auto sampler = PointSampler::Create(CreateFormat(channel_count, 48000, source_sample_format),
+                                        CreateFormat(channel_count, 48000, SampleType::kFloat32));
     ASSERT_THAT(sampler, NotNull());
     EXPECT_EQ(sampler->pos_filter_length(), Fixed::FromRaw(kFracHalfFrame + 1));
     EXPECT_EQ(sampler->neg_filter_length(), kHalfFrame);
@@ -363,8 +362,8 @@ class ProcessWithFractionalSourceOffsetTest : public testing::TestWithParam<Fixe
                             const std::vector<float>& expected_dest_samples) {
     // Create sampler.
     auto sampler =
-        PointSampler::Create(CreateFormat(SourceChannelCount, 48000, AudioSampleFormat::kFloat),
-                             CreateFormat(DestChannelCount, 48000, AudioSampleFormat::kFloat));
+        PointSampler::Create(CreateFormat(SourceChannelCount, 48000, SampleType::kFloat32),
+                             CreateFormat(DestChannelCount, 48000, SampleType::kFloat32));
     EXPECT_EQ(sampler->pos_filter_length(), Fixed::FromRaw(kFracHalfFrame + 1));
     EXPECT_EQ(sampler->neg_filter_length(), kHalfFrame);
 
@@ -390,13 +389,13 @@ TEST_P(ProcessWithFractionalSourceOffsetTest, PassthroughUint8) {
   const std::vector<uint8_t> source_samples = {0x00, 0xFF, 0x27, 0xCD, 0x7F, 0x80, 0xA6, 0x6D};
 
   // Test mono.
-  TestPassthrough<uint8_t>(/*channel_count=*/1, AudioSampleFormat::kUnsigned8, source_samples);
+  TestPassthrough<uint8_t>(/*channel_count=*/1, SampleType::kUint8, source_samples);
 
   // Test stereo.
-  TestPassthrough<uint8_t>(/*channel_count=*/2, AudioSampleFormat::kUnsigned8, source_samples);
+  TestPassthrough<uint8_t>(/*channel_count=*/2, SampleType::kUint8, source_samples);
 
   // Test 4 channels.
-  TestPassthrough<uint8_t>(/*channel_count=*/4, AudioSampleFormat::kUnsigned8, source_samples);
+  TestPassthrough<uint8_t>(/*channel_count=*/4, SampleType::kUint8, source_samples);
 }
 
 TEST_P(ProcessWithFractionalSourceOffsetTest, PassthroughInt16) {
@@ -404,13 +403,13 @@ TEST_P(ProcessWithFractionalSourceOffsetTest, PassthroughInt16) {
                                                -0x123,  0,      0x2600,  -0x2DCB};
 
   // Test mono.
-  TestPassthrough<int16_t>(/*channel_count=*/1, AudioSampleFormat::kSigned16, source_samples);
+  TestPassthrough<int16_t>(/*channel_count=*/1, SampleType::kInt16, source_samples);
 
   // Test stereo.
-  TestPassthrough<int16_t>(/*channel_count=*/2, AudioSampleFormat::kSigned16, source_samples);
+  TestPassthrough<int16_t>(/*channel_count=*/2, SampleType::kInt16, source_samples);
 
   // Test 4 channels.
-  TestPassthrough<int16_t>(/*channel_count=*/4, AudioSampleFormat::kSigned16, source_samples);
+  TestPassthrough<int16_t>(/*channel_count=*/4, SampleType::kInt16, source_samples);
 }
 
 TEST_P(ProcessWithFractionalSourceOffsetTest, PassthroughInt24In32) {
@@ -419,13 +418,13 @@ TEST_P(ProcessWithFractionalSourceOffsetTest, PassthroughInt24In32) {
                                                0x26006200,    -0x2DCBA900};
 
   // Test mono.
-  TestPassthrough<int32_t>(/*channel_count=*/1, AudioSampleFormat::kSigned24In32, source_samples);
+  TestPassthrough<int32_t>(/*channel_count=*/1, SampleType::kInt32, source_samples);
 
   // Test stereo.
-  TestPassthrough<int32_t>(/*channel_count=*/2, AudioSampleFormat::kSigned24In32, source_samples);
+  TestPassthrough<int32_t>(/*channel_count=*/2, SampleType::kInt32, source_samples);
 
   // Test 4 channels.
-  TestPassthrough<int32_t>(/*channel_count=*/4, AudioSampleFormat::kSigned24In32, source_samples);
+  TestPassthrough<int32_t>(/*channel_count=*/4, SampleType::kInt32, source_samples);
 }
 
 TEST_P(ProcessWithFractionalSourceOffsetTest, PassthroughFloat) {
@@ -433,13 +432,13 @@ TEST_P(ProcessWithFractionalSourceOffsetTest, PassthroughFloat) {
       -1.0, 1.0f, -0.809783935f, 0.603912353f, -0.00888061523f, 0.0f, 0.296875f, -0.357757568f};
 
   // Test mono.
-  TestPassthrough<float>(/*channel_count=*/1, AudioSampleFormat::kFloat, source_samples);
+  TestPassthrough<float>(/*channel_count=*/1, SampleType::kFloat32, source_samples);
 
   // Test stereo.
-  TestPassthrough<float>(/*channel_count=*/2, AudioSampleFormat::kFloat, source_samples);
+  TestPassthrough<float>(/*channel_count=*/2, SampleType::kFloat32, source_samples);
 
   // Test 4 channels.
-  TestPassthrough<float>(/*channel_count=*/4, AudioSampleFormat::kFloat, source_samples);
+  TestPassthrough<float>(/*channel_count=*/4, SampleType::kFloat32, source_samples);
 }
 
 TEST_P(ProcessWithFractionalSourceOffsetTest, RechannelizationMono) {

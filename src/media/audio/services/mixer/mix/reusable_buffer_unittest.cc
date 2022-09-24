@@ -14,10 +14,10 @@
 namespace media_audio {
 namespace {
 
-using ::fuchsia_mediastreams::wire::AudioSampleFormat;
+using ::fuchsia_audio::SampleType;
 
-const auto kFormatOneChan = Format::CreateOrDie({AudioSampleFormat::kSigned16, 1, 48000});
-const auto kFormatTwoChan = Format::CreateOrDie({AudioSampleFormat::kSigned16, 2, 48000});
+const auto kFormatOneChan = Format::CreateOrDie({SampleType::kInt16, 1, 48000});
+const auto kFormatTwoChan = Format::CreateOrDie({SampleType::kInt16, 2, 48000});
 
 TEST(ReusableBufferTest, AppendDataOneChan) {
   ReusableBuffer buffer(kFormatOneChan, 20);

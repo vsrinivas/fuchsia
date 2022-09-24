@@ -42,10 +42,11 @@ source_set("processing") {
     "sinc_sampler.h",
   ]
 
+  public_deps = [ "//src/media/audio/lib/format2" ]
+
   deps = [
     ":coefficient_table",
     "//sdk/lib/syslog/cpp",
-    "//src/media/audio/lib/format2",
     "//zircon/system/ulib/trace",
   ]
 

@@ -17,12 +17,12 @@ namespace {
 
 using StartCommand = ConsumerStage::StartCommand;
 using StopCommand = ConsumerStage::StopCommand;
+using ::fuchsia_audio::SampleType;
 using ::fuchsia_audio_mixer::PipelineDirection;
-using ::fuchsia_mediastreams::wire::AudioSampleFormat;
 using ::testing::ElementsAre;
 using ::testing::FieldsAre;
 
-const Format kFormat = Format::CreateOrDie({AudioSampleFormat::kFloat, 2, 48000});
+const Format kFormat = Format::CreateOrDie({SampleType::kFloat32, 2, 48000});
 
 }  // namespace
 

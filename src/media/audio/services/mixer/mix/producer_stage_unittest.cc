@@ -25,10 +25,10 @@
 namespace media_audio {
 namespace {
 
-using ::fuchsia_mediastreams::wire::AudioSampleFormat;
+using ::fuchsia_audio::SampleType;
 using ::testing::ElementsAre;
 
-const Format kFormat = Format::CreateOrDie({AudioSampleFormat::kFloat, 2, 48000});
+const Format kFormat = Format::CreateOrDie({SampleType::kFloat32, 2, 48000});
 
 // The majority of test cases use a packet queue for the internal source because packet queues are
 // easier to setup than ring buffers.

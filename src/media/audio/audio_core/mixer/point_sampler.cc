@@ -10,7 +10,7 @@
 #include <memory>
 #include <utility>
 
-#include "fidl/fuchsia.mediastreams/cpp/wire_types.h"
+#include "fidl/fuchsia.audio/cpp/wire_types.h"
 #include "src/media/audio/lib/format2/fixed.h"
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/lib/processing/gain.h"
@@ -24,24 +24,26 @@ namespace {
 using ::media_audio::Fixed;
 using ::media_audio::Sampler;
 
-fuchsia_mediastreams::wire::AudioSampleFormat ToNewSampleFormat(
-    fuchsia::media::AudioSampleFormat sample_format) {
+fuchsia_audio::SampleType ToNewSampleType(fuchsia::media::AudioSampleFormat sample_format) {
   switch (sample_format) {
     case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
-      return fuchsia_mediastreams::wire::AudioSampleFormat::kUnsigned8;
+      return fuchsia_audio::SampleType::kUint8;
     case fuchsia::media::AudioSampleFormat::SIGNED_16:
-      return fuchsia_mediastreams::wire::AudioSampleFormat::kSigned16;
+      return fuchsia_audio::SampleType::kInt16;
     case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
-      return fuchsia_mediastreams::wire::AudioSampleFormat::kSigned24In32;
+      return fuchsia_audio::SampleType::kInt32;
     case fuchsia::media::AudioSampleFormat::FLOAT:
     default:
-      return fuchsia_mediastreams::wire::AudioSampleFormat::kFloat;
+      return fuchsia_audio::SampleType::kFloat32;
   }
 }
 
 media_audio::Format ToNewFormat(const fuchsia::media::AudioStreamType& format) {
-  return media_audio::Format::CreateOrDie(
-      {ToNewSampleFormat(format.sample_format), format.channels, format.frames_per_second});
+  return media_audio::Format::CreateOrDie({
+      .sample_type = ToNewSampleType(format.sample_format),
+      .channels = format.channels,
+      .frames_per_second = format.frames_per_second,
+  });
 }
 
 }  // namespace

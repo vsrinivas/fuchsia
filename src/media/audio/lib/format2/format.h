@@ -5,7 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_LIB_FORMAT2_FORMAT_H_
 #define SRC_MEDIA_AUDIO_LIB_FORMAT2_FORMAT_H_
 
-#include <fidl/fuchsia.mediastreams/cpp/natural_types.h>
+#include <fidl/fuchsia.audio/cpp/wire_types.h>
 #include <fidl/fuchsia.mediastreams/cpp/wire_types.h>
 #include <lib/fpromise/result.h>
 #include <stdint.h>
@@ -18,16 +18,30 @@
 
 namespace media_audio {
 
-// Format wraps a `fuchsia.mediastreams/AudioFormat` FIDL struct.
+// Format wraps a `fuchsia.audio.Format` FIDL struct.
 class Format {
  public:
-  // Creates a Format from a FIDL struct,
+  // Creates a Format from a FIDL table.
   // Returns an error if the struct contains invalid parameters.
-  static fpromise::result<Format, std::string> Create(fuchsia_mediastreams::wire::AudioFormat fidl);
+  static fpromise::result<Format, std::string> Create(fuchsia_audio::wire::Format fidl);
 
-  // Creates a Format from a FIDL struct.
+  // Creates a Format from a FIDL table.
   // Crashes if the the struct contains invalid parameters.
-  static Format CreateOrDie(fuchsia_mediastreams::wire::AudioFormat fidl);
+  static Format CreateOrDie(fuchsia_audio::wire::Format fidl);
+
+  // TODO(fxbug.dev/87651): remove when fuchsia.audio.effects has migrated to the new types
+  static fpromise::result<Format, std::string> CreateLegacy(
+      fuchsia_mediastreams::wire::AudioFormat fidl);
+  static Format CreateLegacyOrDie(fuchsia_mediastreams::wire::AudioFormat fidl);
+
+  // Creates a Format from an inline struct.
+  // Crashes if the the struct contains invalid parameters.
+  struct Args {
+    fuchsia_audio::SampleType sample_type;
+    int64_t channels;
+    int64_t frames_per_second;
+  };
+  static Format CreateOrDie(Args args);
 
   Format(const Format&) = default;
   Format& operator=(const Format&) = default;
@@ -35,8 +49,8 @@ class Format {
   bool operator==(const Format& rhs) const;
   bool operator!=(const Format& rhs) const { return !(*this == rhs); }
 
-  fuchsia_mediastreams::wire::AudioFormat ToFidl() const;
-  fuchsia_mediastreams::wire::AudioSampleFormat sample_format() const { return sample_format_; }
+  fuchsia_audio::wire::Format ToFidl(fidl::AnyArena& arena) const;
+  fuchsia_audio::SampleType sample_type() const { return sample_type_; }
   int64_t channels() const { return channels_; }
   int64_t frames_per_second() const { return frames_per_second_; }
 
@@ -66,11 +80,10 @@ class Format {
                                                media::TimelineRate::RoundingMode::Ceiling) const;
 
  private:
-  Format(fuchsia_mediastreams::wire::AudioSampleFormat sample_format, int64_t channels,
-         int64_t frames_per_second);
+  Format(fuchsia_audio::SampleType sample_type, int64_t channels, int64_t frames_per_second);
 
-  // TODO(fxbug.dev/87651): include channel_layout once that is defined
-  fuchsia_mediastreams::wire::AudioSampleFormat sample_format_;
+  // TODO(fxbug.dev/87651): include channel_layout
+  fuchsia_audio::SampleType sample_type_;
   int64_t channels_;
   int64_t frames_per_second_;
   int64_t bytes_per_frame_;

@@ -12,8 +12,5 @@ fidl("fuchsia.audio") {
     "ring_buffer.fidl",
   ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.mediastreams",
-    "//zircon/vdso/zx",
-  ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

@@ -13,20 +13,22 @@
 
 namespace media_audio {
 
-// Conversion constants for `AudioSampleFormat::kUnsigned8`.
+// Conversion constants for `SampleType::kUint8`.
 inline constexpr int8_t kMaxInt8 = std::numeric_limits<int8_t>::max();
 inline constexpr int8_t kMinInt8 = std::numeric_limits<int8_t>::min();
 inline constexpr int32_t kFloatToInt8 = -kMinInt8;
 inline constexpr int32_t kInt8ToUint8 = std::numeric_limits<uint8_t>::min() - kMinInt8;
 inline constexpr float kInt8ToFloat = 1.0f / static_cast<float>(kFloatToInt8);
 
-// Conversion constants for `AudioSampleFormat::kSigned16`.
+// Conversion constants for `SampleType::kInt16`.
 inline constexpr int16_t kMaxInt16 = std::numeric_limits<int16_t>::max();
 inline constexpr int16_t kMinInt16 = std::numeric_limits<int16_t>::min();
 inline constexpr int32_t kFloatToInt16 = -kMinInt16;
 inline constexpr float kInt16ToFloat = 1.0f / static_cast<float>(kFloatToInt16);
 
-// Conversion constants for `AudioSampleFormat::kSigned24In32`.
+// Conversion constants for `SampleType::kInt32`.
+// TODO(fxbug.dev/87651): should we switch to pure int32? this code is kept for backwards
+// compatibility, where the old APIs used int24in32, not int32.
 inline constexpr int32_t kMaxInt24 = std::numeric_limits<int32_t>::max() >> 8;
 inline constexpr int32_t kMinInt24 = std::numeric_limits<int32_t>::min() >> 8;
 inline constexpr int32_t kMaxInt24In32 = kMaxInt24 * 0x100;
@@ -45,7 +47,7 @@ inline constexpr int64_t kFloatToInt24In32 = -static_cast<int64_t>(kMinInt24In32
 template <typename SampleType>
 struct SampleConverter;
 
-// Sample converter for `AudioSampleFormat::kUnsigned8`.
+// Sample converter for `SampleType::kUnsigned8`.
 template <>
 struct SampleConverter<uint8_t> {
   static inline constexpr uint8_t FromFloat(float sample) {
@@ -59,7 +61,7 @@ struct SampleConverter<uint8_t> {
   }
 };
 
-// Sample converter for `AudioSampleFormat::kSigned16`.
+// Sample converter for `SampleType::kSigned16`.
 template <>
 struct SampleConverter<int16_t> {
   static inline constexpr int16_t FromFloat(float sample) {
@@ -71,7 +73,7 @@ struct SampleConverter<int16_t> {
   }
 };
 
-// Sample converter for `AudioSampleFormat::kSigned24In32`.
+// Sample converter for `SampleType::kSigned24In32`.
 template <>
 struct SampleConverter<int32_t> {
   static inline constexpr int32_t FromFloat(float sample) {
@@ -84,7 +86,7 @@ struct SampleConverter<int32_t> {
   }
 };
 
-// Sample converter for `AudioSampleFormat::kFloat`.
+// Sample converter for `SampleType::kFloat`.
 template <>
 struct SampleConverter<float> {
   static inline constexpr float FromFloat(float sample) { return sample; }
