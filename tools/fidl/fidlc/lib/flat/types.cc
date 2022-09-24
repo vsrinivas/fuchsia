@@ -308,10 +308,7 @@ bool TransportSideType::ApplyConstraints(TypeResolver* resolver, const TypeConst
                           layout.resolved().name());
   }
   if (!protocol_decl && !out_params->protocol_decl) {
-    // TODO(fxbug.dev/87619): There are no constraints so this should use the
-    // layout span rather than relying on the constraints.span fallback.
-    return resolver->Fail(ErrProtocolConstraintRequired, constraints.span.value(),
-                          layout.resolved().name());
+    return resolver->Fail(ErrProtocolConstraintRequired, layout.span(), layout.resolved().name());
   }
   const Decl* merged_protocol = protocol_decl;
   if (out_params->protocol_decl)

@@ -701,6 +701,7 @@ protocol P {
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrProtocolConstraintRequired);
+  EXPECT_EQ(library.errors()[0]->span.data(), "server_end");
 }
 
 TEST(ProtocolTests, BadRequestCannotHaveSize) {

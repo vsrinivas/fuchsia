@@ -816,10 +816,7 @@ bool ConsumeStep::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> r
   }
 
   std::vector<std::unique_ptr<Constant>> constraints;
-  // TODO(fxbug.dev/87619): Here we fall back to the type ctor span to make
-  // ErrProtocolConstraintRequired work. We should remove this.
-  SourceSpan constraints_span = raw_type_ctor->layout_ref->span();
-
+  std::optional<SourceSpan> constraints_span;
   if (raw_type_ctor->constraints) {
     constraints_span = raw_type_ctor->constraints->span();
     for (auto& c : raw_type_ctor->constraints->items) {
