@@ -9,6 +9,7 @@
 ## Run "fx build recovery_image" first.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+fx-config-read
 
 qemu_dir="${PREBUILT_QEMU_DIR}/bin"
 
