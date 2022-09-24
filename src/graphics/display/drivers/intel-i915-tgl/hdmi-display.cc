@@ -596,7 +596,7 @@ bool HdmiDisplay::ComputeDpllState(uint32_t pixel_clock_10khz, DpllState* config
 bool HdmiDisplay::DdiModeset(const display_mode_t& mode) {
   pipe()->Reset();
   pipe()->ResetActiveTranscoder();
-  controller()->ResetDdi(ddi());
+  controller()->ResetDdi(ddi(), pipe()->connected_transcoder_id());
 
   // Calculate and the HDMI DPLL parameters
   HdmiDpllState hdmi;

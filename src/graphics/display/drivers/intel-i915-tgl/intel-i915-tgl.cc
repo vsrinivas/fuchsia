@@ -421,7 +421,7 @@ void Controller::ResetPipePlaneBuffers(tgl_registers::Pipe pipe) {
   }
 }
 
-bool Controller::ResetDdi(tgl_registers::Ddi ddi) {
+bool Controller::ResetDdi(tgl_registers::Ddi ddi, std::optional<tgl_registers::Trans> transcoder) {
   tgl_registers::DdiRegs ddi_regs(ddi);
 
   // Disable the port
@@ -429,10 +429,21 @@ bool Controller::ResetDdi(tgl_registers::Ddi ddi) {
   const bool was_enabled = ddi_buffer_control.enabled();
   ddi_buffer_control.set_enabled(false).WriteTo(mmio_space());
 
-  auto dp_transport_control = ddi_regs.DpTransportControl().ReadFrom(mmio_space());
-  dp_transport_control.set_enabled(false)
-      .set_training_pattern(tgl_registers::DpTransportControl::kTrainingPattern1)
-      .WriteTo(mmio_space());
+  if (!is_tgl(device_id_)) {
+    auto dp_transport_control = ddi_regs.DpTransportControl().ReadFrom(mmio_space());
+    dp_transport_control.set_enabled(false)
+        .set_training_pattern(tgl_registers::DpTransportControl::kTrainingPattern1)
+        .WriteTo(mmio_space());
+  } else {
+    if (transcoder.has_value()) {
+      auto dp_transport_control =
+          tgl_registers::DpTransportControl::GetForTigerLakeTranscoder(*transcoder)
+              .ReadFrom(mmio_space());
+      dp_transport_control.set_enabled(false)
+          .set_training_pattern(tgl_registers::DpTransportControl::kTrainingPattern1)
+          .WriteTo(mmio_space());
+    }
+  }
 
   if (was_enabled && !PollUntil([&] { return ddi_buffer_control.ReadFrom(mmio_space()).is_idle(); },
                                 zx::msec(1), 8)) {
@@ -520,7 +531,8 @@ void Controller::InitDisplays() {
 
   // Make a note of what needs to be reset, so we can finish querying the hardware state
   // before touching it, and so we can make sure transcoders are reset before ddis.
-  std::vector<tgl_registers::Ddi> ddi_needs_reset;
+  std::vector<std::pair<tgl_registers::Ddi, std::optional<tgl_registers::Trans>>>
+      ddi_trans_needs_reset;
   std::vector<DisplayDevice*> device_needs_init;
 
   for (const auto ddi : ddis_) {
@@ -533,10 +545,13 @@ void Controller::InitDisplays() {
     }
 
     if (device == nullptr) {
-      ddi_needs_reset.push_back(ddi);
+      ddi_trans_needs_reset.emplace_back(ddi, std::nullopt);
     } else {
-      if (!LoadHardwareState(ddi, device)) {
-        ddi_needs_reset.push_back(ddi);
+      if (!LoadHardwareState(ddi, device) || is_tgl(device_id_)) {
+        auto transcoder_maybe = device->pipe()
+                                    ? std::make_optional(device->pipe()->connected_transcoder_id())
+                                    : std::nullopt;
+        ddi_trans_needs_reset.emplace_back(ddi, transcoder_maybe);
         device_needs_init.push_back(device);
       } else {
         device->InitBacklight();
@@ -549,8 +564,8 @@ void Controller::InitDisplays() {
 
   // Reset any ddis which don't have a restored display. If we failed to restore a
   // display, try to initialize it here.
-  for (const auto& ddi : ddi_needs_reset) {
-    ResetDdi(ddi);
+  for (const auto& [ddi, transcoder_maybe] : ddi_trans_needs_reset) {
+    ResetDdi(ddi, transcoder_maybe);
   }
 
   for (auto* device : device_needs_init) {

@@ -56,7 +56,7 @@ DisplayDevice::~DisplayDevice() {
     controller_->ResetPipePlaneBuffers(pipe_->pipe_id());
   }
   if (inited_) {
-    controller_->ResetDdi(ddi());
+    controller_->ResetDdi(ddi(), pipe()->connected_transcoder_id());
   }
   if (display_ref_) {
     fbl::AutoLock lock(&display_ref_->mtx);
