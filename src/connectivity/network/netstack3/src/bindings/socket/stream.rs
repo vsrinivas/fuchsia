@@ -8,7 +8,10 @@ use std::{
     convert::Infallible as Never,
     num::{NonZeroU16, NonZeroUsize},
     ops::{ControlFlow, DerefMut as _},
-    sync::Arc,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Weak,
+    },
 };
 
 use assert_matches::assert_matches;
@@ -23,7 +26,7 @@ use fidl_fuchsia_posix as fposix;
 use fidl_fuchsia_posix_socket as fposix_socket;
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, Peered as _};
-use futures::StreamExt as _;
+use futures::{stream::FusedStream, task::AtomicWaker, Stream, StreamExt as _};
 use net_types::{
     ip::{IpAddress, IpVersion, IpVersionMarker, Ipv4, Ipv6},
     SpecifiedAddr, ZonedAddr,
@@ -38,7 +41,7 @@ use crate::bindings::{
 use netstack3_core::{
     ip::IpExt,
     transport::tcp::{
-        buffer::{Buffer, IntoBuffers, ReceiveBuffer, RingBuffer},
+        buffer::{Buffer, IntoBuffers, ReceiveBuffer, RingBuffer, SendBuffer, SendPayload},
         segment::Payload,
         socket::{
             accept_v4, accept_v6, bind, connect_bound, connect_unbound, create_socket,
@@ -54,14 +57,17 @@ use netstack3_core::{
 
 #[derive(Debug)]
 enum SocketId {
-    Unbound(UnboundId, LocalZirconSocket),
-    Bound(BoundId, LocalZirconSocket),
+    Unbound(UnboundId, LocalZirconSocketAndNotifier),
+    Bound(BoundId, LocalZirconSocketAndNotifier),
     Connection(ConnectionId),
     Listener(ListenerId),
 }
 
 pub(crate) trait SocketWorkerDispatcher:
-    TcpNonSyncContext<ProvidedBuffers = LocalZirconSocket, ReturnedBuffers = zx::Socket>
+    TcpNonSyncContext<
+    ProvidedBuffers = LocalZirconSocketAndNotifier,
+    ReturnedBuffers = PeerZirconSocketAndWatcher,
+>
 {
     /// Registers a newly created listener with its local zircon socket.
     ///
@@ -88,30 +94,45 @@ impl SocketWorkerDispatcher for crate::bindings::BindingsNonSyncCtxImpl {
 /// Local end of a zircon socket pair which will be later provided to state
 /// machine inside Core.
 #[derive(Debug)]
-pub(crate) struct LocalZirconSocket(zx::Socket);
+pub(crate) struct LocalZirconSocketAndNotifier(Arc<zx::Socket>, NeedsDataNotifier);
 
-impl IntoBuffers<ReceiveBufferWithZirconSocket, RingBuffer> for LocalZirconSocket {
-    fn into_buffers(self) -> (ReceiveBufferWithZirconSocket, RingBuffer) {
-        let Self(socket) = self;
+impl IntoBuffers<ReceiveBufferWithZirconSocket, SendBufferWithZirconSocket>
+    for LocalZirconSocketAndNotifier
+{
+    fn into_buffers(self) -> (ReceiveBufferWithZirconSocket, SendBufferWithZirconSocket) {
+        let Self(socket, notifier) = self;
         socket
             .signal_peer(zx::Signals::NONE, ZXSIO_SIGNAL_CONNECTED)
             .expect("failed to signal that the connection is established");
-        (ReceiveBufferWithZirconSocket::new(Arc::new(socket)), RingBuffer::default())
+        notifier.schedule();
+        (
+            ReceiveBufferWithZirconSocket::new(Arc::clone(&socket)),
+            SendBufferWithZirconSocket::new(socket, notifier),
+        )
     }
 }
 
-impl Takeable for LocalZirconSocket {
+impl Takeable for LocalZirconSocketAndNotifier {
     fn take(&mut self) -> Self {
-        let Self(socket) = self;
-        Self(std::mem::replace(socket, zx::Socket::from_handle(zx::Handle::invalid())))
+        let Self(socket, notifier) = self;
+        Self(Arc::clone(socket), notifier.clone())
     }
+}
+
+/// The peer end of the zircon socket that will later be vended to application,
+/// together with objects that are used to receive signals from application.
+#[derive(Debug)]
+pub(crate) struct PeerZirconSocketAndWatcher {
+    peer: zx::Socket,
+    watcher: NeedsDataWatcher,
+    socket: Arc<zx::Socket>,
 }
 
 impl TcpNonSyncContext for crate::bindings::BindingsNonSyncCtxImpl {
     type ReceiveBuffer = ReceiveBufferWithZirconSocket;
-    type SendBuffer = RingBuffer;
-    type ReturnedBuffers = zx::Socket;
-    type ProvidedBuffers = LocalZirconSocket;
+    type SendBuffer = SendBufferWithZirconSocket;
+    type ReturnedBuffers = PeerZirconSocketAndWatcher;
+    type ProvidedBuffers = LocalZirconSocketAndNotifier;
 
     fn on_new_connection(&mut self, listener: ListenerId) {
         self.tcp_listeners
@@ -125,8 +146,12 @@ impl TcpNonSyncContext for crate::bindings::BindingsNonSyncCtxImpl {
     {
         let (local, peer) =
             zx::Socket::create(zx::SocketOpts::STREAM).expect("failed to create sockets");
-        let (rbuf, sbuf) = LocalZirconSocket(local).into_buffers();
-        (rbuf, sbuf, peer)
+        let socket = Arc::new(local);
+        let notifier = NeedsDataNotifier::new();
+        let watcher = notifier.watcher();
+        let (rbuf, sbuf) =
+            LocalZirconSocketAndNotifier(Arc::clone(&socket), notifier).into_buffers();
+        (rbuf, sbuf, PeerZirconSocketAndWatcher { peer, socket, watcher })
     }
 }
 
@@ -201,6 +226,174 @@ impl ReceiveBuffer for ReceiveBufferWithZirconSocket {
     }
 }
 
+#[derive(Debug)]
+pub(crate) struct SendBufferWithZirconSocket {
+    capacity: usize,
+    socket: Arc<zx::Socket>,
+    ready_to_send: RingBuffer,
+    notifier: NeedsDataNotifier,
+}
+
+impl Buffer for SendBufferWithZirconSocket {
+    fn len(&self) -> usize {
+        let info = self.socket.info().expect("failed to get socket info");
+        info.rx_buf_size + self.ready_to_send.len()
+    }
+
+    fn cap(&self) -> usize {
+        self.capacity
+    }
+}
+
+impl Takeable for SendBufferWithZirconSocket {
+    fn take(&mut self) -> Self {
+        let Self { capacity, socket, ready_to_send: data, notifier } = self;
+        Self {
+            capacity: *capacity,
+            socket: Arc::clone(socket),
+            ready_to_send: std::mem::replace(data, RingBuffer::new(0)),
+            notifier: notifier.clone(),
+        }
+    }
+}
+
+impl SendBufferWithZirconSocket {
+    fn new(socket: Arc<zx::Socket>, notifier: NeedsDataNotifier) -> Self {
+        let ready_to_send = RingBuffer::default();
+        let info = socket.info().expect("failed to get socket info");
+        let capacity = info.rx_buf_max + ready_to_send.cap();
+        Self { capacity, socket, ready_to_send, notifier }
+    }
+
+    fn poll(&mut self) {
+        let want_bytes = self.ready_to_send.cap() - self.ready_to_send.len();
+        if want_bytes == 0 {
+            return;
+        }
+        let write_result =
+            self.ready_to_send.writable_regions().into_iter().try_fold(0, |acc, b| {
+                match self.socket.read(b) {
+                    Ok(n) => {
+                        if n == b.len() {
+                            ControlFlow::Continue(acc + n)
+                        } else {
+                            ControlFlow::Break(acc + n)
+                        }
+                    }
+                    Err(zx::Status::SHOULD_WAIT | zx::Status::PEER_CLOSED) => {
+                        ControlFlow::Break(acc)
+                    }
+                    Err(e) => panic!("unexpected error: {:?}", e),
+                }
+            });
+        let (ControlFlow::Continue(bytes_written) | ControlFlow::Break(bytes_written)) =
+            write_result;
+
+        self.ready_to_send.make_readable(bytes_written);
+        if bytes_written < want_bytes {
+            debug_assert!(write_result.is_break());
+            self.notifier.schedule();
+        }
+    }
+}
+
+/// A signal used between Core and Bindings, whenever Bindings receive a
+/// notification by the protocol (Core), it should start monitoring the readable
+/// signal on the zircon socket and call into Core to send data.
+#[derive(Debug)]
+struct NeedsData {
+    ready: AtomicBool,
+    waker: AtomicWaker,
+}
+
+impl NeedsData {
+    fn new() -> Self {
+        Self { ready: AtomicBool::new(false), waker: AtomicWaker::new() }
+    }
+
+    fn poll_ready(&self, cx: &mut std::task::Context<'_>) -> std::task::Poll<()> {
+        self.waker.register(cx.waker());
+        match self.ready.compare_exchange(true, false, Ordering::AcqRel, Ordering::Relaxed) {
+            Ok(_) => std::task::Poll::Ready(()),
+            Err(_) => std::task::Poll::Pending,
+        }
+    }
+
+    fn schedule(&self) {
+        self.ready.store(true, Ordering::Release);
+        self.waker.wake();
+    }
+}
+
+/// The notifier side of the underlying signal struct, it is meant to be held
+/// by the Core side and schedule signals to be received by the Bindings.
+#[derive(Debug, Clone)]
+struct NeedsDataNotifier {
+    inner: Arc<NeedsData>,
+}
+
+impl NeedsDataNotifier {
+    fn schedule(&self) {
+        self.inner.schedule()
+    }
+
+    fn new() -> NeedsDataNotifier {
+        Self { inner: Arc::new(NeedsData::new()) }
+    }
+
+    fn watcher(&self) -> NeedsDataWatcher {
+        NeedsDataWatcher { inner: Arc::downgrade(&self.inner) }
+    }
+}
+
+/// The receiver side of the underlying signal struct, it is meant to be held
+/// by the Bindings side. It is a [`Stream`] of wakeups scheduled by the Core
+/// and upon receiving those wakeups, Bindings should poll for available data
+/// that has been written by the user.
+#[derive(Debug)]
+struct NeedsDataWatcher {
+    inner: Weak<NeedsData>,
+}
+
+impl Stream for NeedsDataWatcher {
+    type Item = ();
+
+    fn poll_next(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let this = self.get_mut();
+        match this.inner.upgrade() {
+            None => std::task::Poll::Ready(None),
+            Some(needs_data) => {
+                std::task::Poll::Ready(Some(std::task::ready!(needs_data.poll_ready(cx))))
+            }
+        }
+    }
+}
+
+/// The watcher terminates when the underlying has been dropped by Core.
+impl FusedStream for NeedsDataWatcher {
+    fn is_terminated(&self) -> bool {
+        self.inner.strong_count() == 0
+    }
+}
+
+impl SendBuffer for SendBufferWithZirconSocket {
+    fn mark_read(&mut self, count: usize) {
+        self.ready_to_send.mark_read(count);
+        self.poll()
+    }
+
+    fn peek_with<'a, F, R>(&'a mut self, offset: usize, f: F) -> R
+    where
+        F: FnOnce(SendPayload<'a>) -> R,
+    {
+        self.poll();
+        self.ready_to_send.peek_with(offset, f)
+    }
+}
+
 struct SocketWorker<I: IpExt, C> {
     id: SocketId,
     ctx: C,
@@ -227,6 +420,7 @@ where
 {
     let (local, peer) = zx::Socket::create(zx::SocketOpts::STREAM)
         .map_err(|_: zx::Status| fposix::Errno::Enobufs)?;
+    let socket = Arc::new(local);
     match (domain, proto) {
         (fposix_socket::Domain::Ipv4, fposix_socket::StreamSocketProtocol::Tcp) => {
             let id = {
@@ -234,7 +428,7 @@ where
                 let Ctx { sync_ctx, non_sync_ctx } = guard.deref_mut();
                 SocketId::Unbound(
                     create_socket::<Ipv4, _>(sync_ctx, non_sync_ctx),
-                    LocalZirconSocket(local),
+                    LocalZirconSocketAndNotifier(Arc::clone(&socket), NeedsDataNotifier::new()),
                 )
             };
             let worker = SocketWorker::<Ipv4, C>::new(id, ctx.clone(), peer);
@@ -246,7 +440,7 @@ where
                 let Ctx { sync_ctx, non_sync_ctx } = guard.deref_mut();
                 SocketId::Unbound(
                     create_socket::<Ipv6, _>(sync_ctx, non_sync_ctx),
-                    LocalZirconSocket(local),
+                    LocalZirconSocketAndNotifier(Arc::clone(&socket), NeedsDataNotifier::new()),
                 )
             };
             let worker = SocketWorker::<Ipv6, C>::new(id, ctx.clone(), peer);
@@ -280,6 +474,37 @@ impl IntoErrno for ConnectError {
             ConnectError::NoPort => fposix::Errno::Eaddrnotavail,
         }
     }
+}
+
+/// Spawns a task that sends more data from the `socket` each time we observe
+/// a wakeup through the `watcher`.
+fn spawn_send_task<I: IpExt, C>(
+    ctx: C,
+    socket: Arc<zx::Socket>,
+    watcher: NeedsDataWatcher,
+    id: ConnectionId,
+) where
+    C: LockableContext,
+    C: Clone + Send + Sync + 'static,
+    C::NonSyncCtx: SocketWorkerDispatcher,
+{
+    fasync::Task::spawn(async move {
+        watcher
+            .for_each(|()| async {
+                let observed = fasync::OnSignals::new(&*socket, zx::Signals::SOCKET_READABLE)
+                    .await
+                    .expect("failed to observe signals on zircon socket");
+                assert!(observed.contains(zx::Signals::SOCKET_READABLE));
+                let mut guard = ctx.lock().await;
+                let Ctx { sync_ctx, non_sync_ctx } = guard.deref_mut();
+                netstack3_core::transport::tcp::socket::do_send::<I, _>(sync_ctx, non_sync_ctx, id)
+                    .unwrap_or_else(|err| {
+                        log::error!("failed to send on connection {:?}: {:?}", id, err)
+                    });
+            })
+            .await
+    })
+    .detach();
 }
 
 impl<I: IpSockAddrExt + IpExt, C> SocketWorker<I, C>
@@ -362,34 +587,35 @@ where
         let port = NonZeroU16::new(addr.port()).ok_or(fposix::Errno::Einval)?;
         let mut guard = self.ctx.lock().await;
         let Ctx { sync_ctx, non_sync_ctx } = guard.deref_mut();
-        match self.id {
-            SocketId::Bound(bound, ref mut local_socket) => {
-                let connected = connect_bound::<I, _>(
+        let (connection, socket, watcher) = match self.id {
+            SocketId::Bound(bound, LocalZirconSocketAndNotifier(ref socket, ref notifier)) => {
+                let connection = connect_bound::<I, _>(
                     sync_ctx,
                     non_sync_ctx,
                     bound,
                     SocketAddr { ip, port },
-                    local_socket.take(),
+                    LocalZirconSocketAndNotifier(Arc::clone(socket), notifier.clone()),
                 )
                 .map_err(IntoErrno::into_errno)?;
-                self.id = SocketId::Connection(connected);
-                Ok(())
+                Ok((connection, Arc::clone(socket), notifier.watcher()))
             }
-            SocketId::Unbound(unbound, ref mut local_socket) => {
+            SocketId::Unbound(unbound, LocalZirconSocketAndNotifier(ref socket, ref notifier)) => {
                 let connected = connect_unbound::<I, _>(
                     sync_ctx,
                     non_sync_ctx,
                     unbound,
                     SocketAddr { ip, port },
-                    local_socket.take(),
+                    LocalZirconSocketAndNotifier(Arc::clone(socket), notifier.clone()),
                 )
                 .map_err(IntoErrno::into_errno)?;
-                self.id = SocketId::Connection(connected);
-                Ok(())
+                Ok((connected, Arc::clone(socket), notifier.watcher()))
             }
             SocketId::Listener(_) => Err(fposix::Errno::Einval),
             SocketId::Connection(_) => Err(fposix::Errno::Eisconn),
-        }
+        }?;
+        spawn_send_task::<I, _>(self.ctx.clone(), socket, watcher, connection);
+        self.id = SocketId::Connection(connection);
+        Ok(())
     }
 
     async fn listen(&mut self, backlog: i16) -> Result<(), fposix::Errno> {
@@ -399,9 +625,13 @@ where
                 let Ctx { sync_ctx, non_sync_ctx } = guard.deref_mut();
                 let backlog = NonZeroUsize::new(backlog as usize).ok_or(fposix::Errno::Einval)?;
                 let listener = listen::<I, _>(sync_ctx, non_sync_ctx, bound, backlog);
-                let LocalZirconSocket(local) = local_socket.take();
-                non_sync_ctx.register_listener(listener, local);
+                let LocalZirconSocketAndNotifier(local, _) = local_socket.take();
                 self.id = SocketId::Listener(listener);
+                non_sync_ctx.register_listener(
+                    listener,
+                    Arc::try_unwrap(local)
+                        .expect("the local end of the socket should never be shared"),
+                );
                 Ok(())
             }
             SocketId::Unbound(_, _) | SocketId::Connection(_) | SocketId::Listener(_) => {
@@ -463,33 +693,41 @@ where
             SocketId::Listener(listener) => {
                 let mut guard = self.ctx.lock().await;
                 let Ctx { sync_ctx, non_sync_ctx } = guard.deref_mut();
-                let (accepted, addr, peer) = match I::VERSION {
-                    IpVersion::V4 => {
-                        let (accepted, SocketAddr { ip, port }, peer) =
-                            accept_v4(sync_ctx, non_sync_ctx, listener)
-                                .map_err(IntoErrno::into_errno)?;
-                        (
-                            accepted,
-                            fnet::Ipv4SocketAddress::new(Some(ZonedAddr::Unzoned(ip)), port.get())
+                let (accepted, addr, PeerZirconSocketAndWatcher { peer, watcher, socket }) =
+                    match I::VERSION {
+                        IpVersion::V4 => {
+                            let (accepted, SocketAddr { ip, port }, peer) =
+                                accept_v4(sync_ctx, non_sync_ctx, listener)
+                                    .map_err(IntoErrno::into_errno)?;
+                            (
+                                accepted,
+                                fnet::Ipv4SocketAddress::new(
+                                    Some(ZonedAddr::Unzoned(ip)),
+                                    port.get(),
+                                )
                                 .into_sock_addr(),
-                            peer,
-                        )
-                    }
-                    IpVersion::V6 => {
-                        let (accepted, SocketAddr { ip, port }, peer) =
-                            accept_v6(sync_ctx, non_sync_ctx, listener)
-                                .map_err(IntoErrno::into_errno)?;
-                        (
-                            accepted,
-                            fnet::Ipv6SocketAddress::new(Some(ZonedAddr::Unzoned(ip)), port.get())
+                                peer,
+                            )
+                        }
+                        IpVersion::V6 => {
+                            let (accepted, SocketAddr { ip, port }, peer) =
+                                accept_v6(sync_ctx, non_sync_ctx, listener)
+                                    .map_err(IntoErrno::into_errno)?;
+                            (
+                                accepted,
+                                fnet::Ipv6SocketAddress::new(
+                                    Some(ZonedAddr::Unzoned(ip)),
+                                    port.get(),
+                                )
                                 .into_sock_addr(),
-                            peer,
-                        )
-                    }
-                };
+                                peer,
+                            )
+                        }
+                    };
                 let (client, request_stream) =
                     fidl::endpoints::create_request_stream::<fposix_socket::StreamSocketMarker>()
                         .expect("failed to create new fidl endpoints");
+                spawn_send_task::<I, _>(self.ctx.clone(), socket, watcher, accepted);
                 let worker = SocketWorker::<I, C>::new(
                     SocketId::Connection(accepted),
                     self.ctx.clone(),
@@ -526,7 +764,6 @@ where
                     .peer
                     .duplicate_handle(zx::Rights::SAME_RIGHTS)
                     .expect("failed to duplicate the socket handle");
-                log::info!("describing: {:?}, zx::socket: {:?}", self.id, socket);
                 responder_send!(
                     responder,
                     &mut fio::NodeInfoDeprecated::StreamSocket(fio::StreamSocket { socket })
@@ -537,7 +774,6 @@ where
                     .peer
                     .duplicate_handle(zx::Rights::SAME_RIGHTS)
                     .expect("failed to duplicate the socket handle");
-                log::info!("describing: {:?}, zx::socket: {:?}", self.id, socket);
                 responder_send!(
                     responder,
                     fposix_socket::StreamSocketDescribe2Response {
@@ -963,12 +1199,13 @@ where
 mod tests {
     use super::*;
 
+    const TEST_BYTES: &'static [u8] = b"Hello";
+
     #[test]
     fn receive_buffer() {
         let (local, peer) =
             zx::Socket::create(zx::SocketOpts::STREAM).expect("failed to create zircon socket");
         let mut rbuf = ReceiveBufferWithZirconSocket::new(Arc::new(local));
-        const TEST_BYTES: &'static [u8] = b"Hello";
         assert_eq!(rbuf.write_at(0, &TEST_BYTES), TEST_BYTES.len());
         assert_eq!(rbuf.write_at(TEST_BYTES.len() * 2, &TEST_BYTES), TEST_BYTES.len());
         assert_eq!(rbuf.write_at(TEST_BYTES.len(), &TEST_BYTES), TEST_BYTES.len());
@@ -977,5 +1214,25 @@ mod tests {
         assert_eq!(rbuf.len(), TEST_BYTES.len() * 3);
         assert_eq!(peer.read(&mut buf), Ok(TEST_BYTES.len() * 3));
         assert_eq!(&buf, b"HelloHelloHello");
+    }
+
+    #[test]
+    fn send_buffer() {
+        let (local, peer) =
+            zx::Socket::create(zx::SocketOpts::STREAM).expect("failed to create zircon socket");
+        let notifier = NeedsDataNotifier::new();
+        let mut sbuf = SendBufferWithZirconSocket::new(Arc::new(local), notifier);
+        assert_eq!(peer.write(TEST_BYTES), Ok(TEST_BYTES.len()));
+        assert_eq!(sbuf.len(), TEST_BYTES.len());
+        sbuf.peek_with(0, |avail| {
+            assert_eq!(avail, SendPayload::Contiguous(TEST_BYTES));
+        });
+        assert_eq!(peer.write(TEST_BYTES), Ok(TEST_BYTES.len()));
+        assert_eq!(sbuf.len(), TEST_BYTES.len() * 2);
+        sbuf.mark_read(TEST_BYTES.len());
+        assert_eq!(sbuf.len(), TEST_BYTES.len());
+        sbuf.peek_with(0, |avail| {
+            assert_eq!(avail, SendPayload::Contiguous(TEST_BYTES));
+        });
     }
 }

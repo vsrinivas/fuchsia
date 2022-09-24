@@ -32,10 +32,7 @@ use netstack3_core::{
         IpExt,
     },
     transport::{
-        tcp::{
-            buffer::RingBuffer,
-            socket::{ListenerId, TcpNonSyncContext},
-        },
+        tcp::socket::{ListenerId, TcpNonSyncContext},
         udp::{BufferUdpContext, UdpBoundId, UdpContext},
     },
     Ctx, NonSyncContext, TimerId,
@@ -186,9 +183,9 @@ impl InstantContext for TestNonSyncCtx {
 
 impl TcpNonSyncContext for TestNonSyncCtx {
     type ReceiveBuffer = stream::ReceiveBufferWithZirconSocket;
-    type SendBuffer = RingBuffer;
-    type ReturnedBuffers = fuchsia_zircon::Socket;
-    type ProvidedBuffers = stream::LocalZirconSocket;
+    type SendBuffer = stream::SendBufferWithZirconSocket;
+    type ReturnedBuffers = stream::PeerZirconSocketAndWatcher;
+    type ProvidedBuffers = stream::LocalZirconSocketAndNotifier;
 
     fn on_new_connection(&mut self, _listener: ListenerId) {}
 

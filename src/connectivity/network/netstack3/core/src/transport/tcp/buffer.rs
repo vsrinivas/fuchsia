@@ -8,6 +8,7 @@
 
 use alloc::{vec, vec::Vec};
 use core::{cmp, convert::TryFrom, fmt::Debug, mem, num::TryFromIntError, ops::Range};
+use either::Either;
 
 use crate::transport::tcp::{
     segment::Payload,
@@ -219,6 +220,21 @@ impl RingBuffer {
         let nwritten = self.write_at(0, &data);
         self.make_readable(nwritten);
         nwritten
+    }
+
+    /// Returns the writable regions of the [`RingBuffer`].
+    ///
+    /// The [`RingBuffer`] itself holds the memory regions that are readable, so
+    /// anything else that is not readable, i.e., outside the readable regions
+    /// are deemed as available to write.
+    pub fn writable_regions(&mut self) -> impl IntoIterator<Item = &mut [u8]> {
+        if self.head + self.len > self.storage.len() {
+            let available = self.storage.len() - self.len;
+            Either::Left([&mut self.storage[self.head - available..self.head]].into_iter())
+        } else {
+            let (b1, b2) = self.storage[..].split_at_mut(self.head + self.len);
+            Either::Right([b2, &mut b1[..self.head]].into_iter())
+        }
     }
 }
 
@@ -560,6 +576,25 @@ mod test {
         }
 
         #[test]
+        fn ring_buffer_writable_regions(mut rb in ring_buffer::arb_ring_buffer()) {
+            const BYTE_TO_WRITE: u8 = 0x42;
+            let writable_len = rb.writable_regions().into_iter().fold(0, |acc, slice| {
+                slice.fill(BYTE_TO_WRITE);
+                acc + slice.len()
+            });
+            assert_eq!(writable_len + rb.len(), rb.cap());
+            for i in 0..rb.cap() {
+                let expected = if i < rb.len() {
+                    0
+                } else {
+                    BYTE_TO_WRITE
+                };
+                let idx = (rb.head + i) % rb.storage.len();
+                assert_eq!(rb.storage[idx], expected);
+            }
+        }
+
+        #[test]
         fn send_payload_len((payload, _idx) in send_payload::with_index()) {
             assert_eq!(payload.len(), TEST_BYTES.len())
         }
@@ -709,6 +744,14 @@ mod test {
             (1..=32usize).prop_flat_map(|cap| {
                 //  cap      head     len
                 (Just(cap), 0..cap, 0..=cap)
+            })
+        }
+
+        pub(super) fn arb_ring_buffer() -> impl Strategy<Value = RingBuffer> {
+            arb_ring_buffer_args().prop_map(|(cap, head, len)| RingBuffer {
+                storage: vec![0; cap],
+                head,
+                len,
             })
         }
 

@@ -29,9 +29,7 @@ use net_declare::{
 use netemul::{RealmTcpListener as _, RealmTcpStream as _, RealmUdpSocket as _, TestInterface};
 use netstack_testing_common::{
     ping,
-    realms::{
-        Netstack, Netstack2, Netstack2WithFastUdp, Netstack3, NetstackVersion, TestSandboxExt as _,
-    },
+    realms::{Netstack, Netstack2, Netstack2WithFastUdp, NetstackVersion, TestSandboxExt as _},
     Result,
 };
 use netstack_testing_macros::variants_test;
@@ -700,7 +698,7 @@ async fn tcp_socket_accept_cross_ns<
     Fut: Future,
     F: FnOnce(fasync::net::TcpStream, fasync::net::TcpStream) -> Fut,
 >(
-    name: String,
+    name: &str,
     f: F,
 ) -> Fut::Output {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
@@ -745,32 +743,24 @@ async fn tcp_socket_accept_cross_ns<
 
 #[variants_test]
 async fn tcp_socket_accept<E: netemul::Endpoint, Client: Netstack, Server: Netstack>(name: &str) {
-    tcp_socket_accept_cross_ns::<Client, Server, E, _, _>(
-        String::from(name),
-        |_client, _server| async {},
-    )
-    .await
+    tcp_socket_accept_cross_ns::<Client, Server, E, _, _>(name, |_client, _server| async {}).await
 }
 
-// TODO(https://fxbug.dev/109349): Parametrize netstack versions using variants_test.
 #[variants_test]
-async fn tcp_socket_send_recv<E: netemul::Endpoint>(name: &str) {
-    tcp_socket_accept_cross_ns::<Netstack2, Netstack3, E, _, _>(
-        format!("{}_2to3", name),
-        |mut ns2_sender, mut ns3_receiver| async move {
-            const PAYLOAD: &'static [u8] = b"Hello World";
-            let write_count =
-                ns2_sender.write(PAYLOAD).await.expect("write to tcp client stream failed");
+async fn tcp_socket_send_recv<E: netemul::Endpoint, Client: Netstack, Server: Netstack>(
+    name: &str,
+) {
+    async fn send_recv(mut sender: fasync::net::TcpStream, mut receiver: fasync::net::TcpStream) {
+        const PAYLOAD: &'static [u8] = b"Hello World";
+        let write_count = sender.write(PAYLOAD).await.expect("write to tcp client stream failed");
 
-            assert_eq!(write_count, PAYLOAD.len());
-            let mut buf = [0u8; 16];
-            let read_count =
-                ns3_receiver.read(&mut buf).await.expect("read from tcp server stream failed");
-            assert_eq!(read_count, write_count);
-            assert_eq!(&buf[..read_count], PAYLOAD);
-        },
-    )
-    .await;
+        assert_eq!(write_count, PAYLOAD.len());
+        let mut buf = [0u8; 16];
+        let read_count = receiver.read(&mut buf).await.expect("read from tcp server stream failed");
+        assert_eq!(read_count, write_count);
+        assert_eq!(&buf[..read_count], PAYLOAD);
+    }
+    tcp_socket_accept_cross_ns::<Client, Server, E, _, _>(name, send_recv).await
 }
 
 #[variants_test]
