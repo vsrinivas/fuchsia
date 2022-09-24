@@ -356,6 +356,8 @@ class RequestPool : operation::OperationPool<Request<Storage>, OperationTraits, 
     return std::nullopt;
   }
 
+  using BaseClass::is_empty;
+
   using BaseClass::Release;
 };
 
