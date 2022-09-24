@@ -24,10 +24,12 @@
                 "fuchsia.timezone.Timezone",
                 "fuchsia.ultrasound.Factory",
                 "fuchsia.weave.Provisioner",
-                "fuchsia.web.ContextProvider",
                 "google.cast.cryptokey.NamedKeyProvider",
                 "google.cast.multizone.Leader",
             ],
+        },
+        {
+            protocol: "fuchsia.web.ContextProvider",
         },
     ],
 
@@ -42,12 +44,17 @@
                 "fuchsia.sys.Loader",
                 "fuchsia.timezone.Timezone",
                 "fuchsia.ultrasound.Factory",
-                "fuchsia.web.ContextProvider",
                 "google.cast.cryptokey.NamedKeyProvider",
                 "google.cast.multizone.Leader",
             ],
             from: "self",
             to: [ "#session-manager" ],
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: "fuchsia.web.ContextProvider",
+            from: "self",
+            to: "#session-manager",
             dependency: "weak_for_migration",
         },
         {
