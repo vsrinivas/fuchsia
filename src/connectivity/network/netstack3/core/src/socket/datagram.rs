@@ -61,6 +61,21 @@ pub(crate) struct ListenerState<A: Eq + Hash, D: Hash + Eq> {
 #[derive(Debug)]
 pub(crate) struct ConnState<I: IpExt, D: Eq + Hash> {
     pub(crate) socket: IpSock<I, D, IpOptions<I::Addr, D>>,
+    /// Determines whether a call to disconnect this socket should also clear
+    /// the device on the socket address.
+    ///
+    /// This will only be `true` if
+    ///   1) the corresponding address has a bound device
+    ///   2) the local address does not require a zone
+    ///   3) the remote address does require a zone
+    ///   4) the device was not set via [`set_unbound_device`]
+    ///
+    /// In that case, when the socket is disconnected, the device should be
+    /// cleared since it was set as part of a `connect` call, not explicitly.
+    ///
+    /// TODO(http://fxbug.dev/110370): Implement this by changing socket
+    /// addresses.
+    pub(crate) clear_device_on_disconnect: bool,
 }
 
 #[derive(Clone, Debug, Derivative)]
@@ -354,12 +369,13 @@ where
     S::ConnAddrState: SocketMapAddrStateSpec<Id = S::ConnId, SharingState = S::ConnSharingState>,
     A::IpVersion: IpExt,
 {
-    let (ConnState { socket }, addr) = sync_ctx.with_sockets_mut(|state| {
-        let DatagramSockets { bound, unbound: _ } = state;
-        let (state, _sharing, addr): (_, S::ConnSharingState, _) =
-            bound.conns_mut().remove(&id).expect("UDP connection not found");
-        (state, addr)
-    });
+    let (ConnState { socket, clear_device_on_disconnect: _ }, addr) =
+        sync_ctx.with_sockets_mut(|state| {
+            let DatagramSockets { bound, unbound: _ } = state;
+            let (state, _sharing, addr): (_, S::ConnSharingState, _) =
+                bound.conns_mut().remove(&id).expect("UDP connection not found");
+            (state, addr)
+        });
     let IpOptions { multicast_memberships, hop_limits: _ } = socket.into_options();
 
     leave_all_joined_groups(sync_ctx, ctx, multicast_memberships);
@@ -559,10 +575,15 @@ where
         let (state, sharing, addr): (_, S::ConnSharingState, _) =
             bound.conns_mut().remove(&id).expect("connection not found");
 
-        let ConnState { socket } = state;
+        let ConnState { socket, clear_device_on_disconnect } = state;
         let ip_options = socket.into_options();
 
-        let ConnAddr { ip: ConnIpAddr { local: (local_ip, identifier), remote: _ }, device } = addr;
+        let ConnAddr { ip: ConnIpAddr { local: (local_ip, identifier), remote: _ }, mut device } =
+            addr;
+        if clear_device_on_disconnect {
+            device = None
+        }
+
         let addr = ListenerAddr { ip: ListenerIpAddr { addr: Some(local_ip), identifier }, device };
 
         bound
@@ -656,7 +677,7 @@ where
                 )));
             }
 
-            let ConnState { socket } = state;
+            let ConnState { socket, clear_device_on_disconnect: _ } = state;
             Ok((*local_ip, *remote_ip, socket.proto()))
         })?;
 
@@ -685,9 +706,15 @@ where
         };
         // Since the move was successful, replace the old socket with
         // the new one but move the options over.
-        let ConnState { socket } = entry.get_state_mut();
+        let ConnState { socket, clear_device_on_disconnect } = entry.get_state_mut();
         let _: IpOptions<_, _> = new_socket.replace_options(socket.take_options());
         *socket = new_socket;
+
+        // If this operation explicitly sets the device for the socket, it
+        // should no longer be cleared on disconnect.
+        if device_id.is_some() {
+            *clear_device_on_disconnect = false;
+        }
         Ok(())
     })
 }
@@ -891,8 +918,11 @@ where
                 ip_options
             }
             DatagramSocketId::Bound(DatagramBoundId::Connected(id)) => {
-                let (ConnState { socket }, _, _): (_, &S::ConnSharingState, &ConnAddr<_, _, _, _>) =
-                    bound.conns_mut().get_by_id_mut(&id).expect("Connected socket not found");
+                let (ConnState { socket, clear_device_on_disconnect: _ }, _, _): (
+                    _,
+                    &S::ConnSharingState,
+                    &ConnAddr<_, _, _, _>,
+                ) = bound.conns_mut().get_by_id_mut(&id).expect("Connected socket not found");
                 socket.options_mut()
             }
         };
@@ -941,11 +971,12 @@ where
             (ip_options, device)
         }
         DatagramSocketId::Bound(DatagramBoundId::Connected(id)) => {
-            let (ConnState { socket }, _, ConnAddr { device, ip: _ }): &(
+            let (
+                ConnState { socket, clear_device_on_disconnect: _ },
                 _,
-                S::ConnSharingState,
-                _,
-            ) = bound.conns().get_by_id(&id).expect("connected socket not found");
+                ConnAddr { device, ip: _ },
+            ): &(_, S::ConnSharingState, _) =
+                bound.conns().get_by_id(&id).expect("connected socket not found");
             (socket.options(), device)
         }
     }
@@ -977,8 +1008,11 @@ where
             ip_options
         }
         DatagramSocketId::Bound(DatagramBoundId::Connected(id)) => {
-            let (ConnState { socket }, _, _): (_, &S::ConnSharingState, &ConnAddr<_, _, _, _>) =
-                bound.conns_mut().get_by_id_mut(&id).expect("connected socket not found");
+            let (ConnState { socket, clear_device_on_disconnect: _ }, _, _): (
+                _,
+                &S::ConnSharingState,
+                &ConnAddr<_, _, _, _>,
+            ) = bound.conns_mut().get_by_id_mut(&id).expect("connected socket not found");
             socket.options_mut()
         }
     }

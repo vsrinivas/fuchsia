@@ -1104,7 +1104,7 @@ pub fn send_udp_conn<
     let (sock, local_ip, local_port, remote_ip, remote_port) = sync_ctx.with_sockets(|state| {
         let UdpSockets { sockets: DatagramSockets { bound, unbound: _ }, lazy_port_alloc: _ } =
             state;
-        let (ConnState { socket }, _sharing, addr) =
+        let (ConnState { socket, clear_device_on_disconnect: _ }, _sharing, addr) =
             bound.conns().get_by_id(&conn).expect("no such connection");
         let sock = socket.clone();
         let ConnAddr {
@@ -1148,8 +1148,11 @@ pub fn send_udp_conn_to<
     let ((local_ip, local_port), device, ip_options) = sync_ctx.with_sockets(|state| {
         let UdpSockets { sockets: DatagramSockets { bound, unbound: _ }, lazy_port_alloc: _ } =
             state;
-        let (ConnState { socket }, _, addr): &(_, PosixSharingOptions, _) =
-            bound.conns().get_by_id(&conn).expect("no such connection");
+        let (ConnState { socket, clear_device_on_disconnect: _ }, _, addr): &(
+            _,
+            PosixSharingOptions,
+            _,
+        ) = bound.conns().get_by_id(&conn).expect("no such connection");
         let ConnAddr { ip: ConnIpAddr { local, remote: _ }, device } = *addr;
 
         // This must clone the socket options because we don't yet have access
@@ -1422,22 +1425,33 @@ pub fn connect_udp<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I
         )
         .map_err(UdpSockCreationError::Zone)?;
 
-    create_udp_conn(sync_ctx, ctx, None, None, device, remote_ip, remote_port, sharing, ip_options)
-        .map_err(|(e, ip_options)| {
-            assert_matches::assert_matches!(
-                sync_ctx.with_sockets_mut(|state| {
-                    let UdpSockets {
-                        sockets: DatagramSockets { unbound, bound: _ },
-                        lazy_port_alloc: _,
-                    } = state;
-                    unbound.insert(id.into(), UnboundSocketState { device, sharing, ip_options })
-                }),
-                None,
-                "just-cleared-entry for {:?} is occupied",
-                id
-            );
-            e
-        })
+    create_udp_conn(
+        sync_ctx,
+        ctx,
+        None,
+        None,
+        device,
+        remote_ip,
+        remote_port,
+        sharing,
+        ip_options,
+        false,
+    )
+    .map_err(|(e, ip_options)| {
+        assert_matches::assert_matches!(
+            sync_ctx.with_sockets_mut(|state| {
+                let UdpSockets {
+                    sockets: DatagramSockets { unbound, bound: _ },
+                    lazy_port_alloc: _,
+                } = state;
+                unbound.insert(id.into(), UnboundSocketState { device, sharing, ip_options })
+            }),
+            None,
+            "just-cleared-entry for {:?} is occupied",
+            id
+        );
+        e
+    })
 }
 
 fn create_udp_conn<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>(
@@ -1450,6 +1464,7 @@ fn create_udp_conn<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I
     remote_port: NonZeroU16,
     sharing: PosixSharingOptions,
     ip_options: IpOptions<I::Addr, SC::DeviceId>,
+    clear_device_on_disconnect: bool,
 ) -> Result<UdpConnId<I>, (UdpSockCreationError, IpOptions<I::Addr, SC::DeviceId>)> {
     let ip_sock = match sync_ctx.new_ip_socket(
         ctx,
@@ -1490,11 +1505,18 @@ fn create_udp_conn<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I
             ip: ConnIpAddr { local: (local_ip, local_port), remote: (remote_ip, remote_port) },
             device,
         };
-        bound.conns_mut().try_insert(c, ConnState { socket: ip_sock }, sharing).map_err(
-            |(_, ConnState { socket }, _): (InsertError, _, PosixSharingOptions)| {
-                (UdpSockCreationError::SockAddrConflict, socket.into_options())
-            },
-        )
+        bound
+            .conns_mut()
+            .try_insert(c, ConnState { socket: ip_sock, clear_device_on_disconnect }, sharing)
+            .map_err(
+                |(_, ConnState { socket, clear_device_on_disconnect: _ }, _): (
+                    InsertError,
+                    _,
+                    PosixSharingOptions,
+                )| {
+                    (UdpSockCreationError::SockAddrConflict, socket.into_options())
+                },
+            )
     })
 }
 
@@ -1762,20 +1784,36 @@ pub fn connect_udp_listener<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpState
     remote_ip: ZonedAddr<I::Addr, SC::DeviceId>,
     remote_port: NonZeroU16,
 ) -> Result<UdpConnId<I>, (UdpConnectListenerError, UdpListenerId<I>)> {
-    let (ip, remote_ip, device, original_addr, ip_options, sharing) = sync_ctx
-        .with_sockets_mut(|state| {
-            let UdpSockets { sockets: DatagramSockets { bound, unbound: _ }, lazy_port_alloc: _ } =
-                state;
-            let entry = bound.listeners_mut().entry(&id).expect("Invalid UDP listener ID");
-            let (_, _, ListenerAddr { ip, device }): (ListenerState<_, _>, PosixSharingOptions, _) =
-                *entry.get();
+    let (ip, remote_ip, device, original_addr, ip_options, sharing, clear_device_on_disconnect) =
+        sync_ctx
+            .with_sockets_mut(|state| {
+                let UdpSockets {
+                    sockets: DatagramSockets { bound, unbound: _ },
+                    lazy_port_alloc: _,
+                } = state;
+                let entry = bound.listeners_mut().entry(&id).expect("Invalid UDP listener ID");
+                let (_, _, ListenerAddr { ip, device }): (
+                    ListenerState<_, _>,
+                    PosixSharingOptions,
+                    _,
+                ) = *entry.get();
 
-            let (remote_ip, socket_device) = datagram::resolve_addr_with_device(remote_ip, device)?;
+                let (remote_ip, socket_device) =
+                    datagram::resolve_addr_with_device(remote_ip, device)?;
 
-            let (ListenerState { ip_options }, sharing, original_addr) = entry.remove();
-            Ok((ip, remote_ip, socket_device, original_addr, ip_options, sharing))
-        })
-        .map_err(|e| (UdpConnectListenerError::Zone(e), id))?;
+                let (ListenerState { ip_options }, sharing, original_addr) = entry.remove();
+                let clear_device_on_disconnect = device.is_none() && socket_device.is_some();
+                Ok((
+                    ip,
+                    remote_ip,
+                    socket_device,
+                    original_addr,
+                    ip_options,
+                    sharing,
+                    clear_device_on_disconnect,
+                ))
+            })
+            .map_err(|e| (UdpConnectListenerError::Zone(e), id))?;
 
     let ListenerIpAddr { addr: local_ip, identifier: local_port } = ip;
 
@@ -1789,6 +1827,7 @@ pub fn connect_udp_listener<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpState
         remote_port,
         sharing,
         ip_options,
+        clear_device_on_disconnect,
     )
     .map_err(|(e, ip_options)| {
         let e = match e {
@@ -1861,7 +1900,7 @@ pub fn reconnect_udp<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext
             Ok((local, remote_ip, socket_device, original_addr, state, sharing))
         })
         .map_err(|e| (UdpConnectListenerError::Zone(e), id))?;
-    let ConnState { mut socket } = conn_state;
+    let ConnState { mut socket, clear_device_on_disconnect } = conn_state;
     let ip_options = socket.take_options();
 
     create_udp_conn(
@@ -1874,6 +1913,7 @@ pub fn reconnect_udp<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext
         remote_port,
         sharing,
         ip_options,
+        clear_device_on_disconnect,
     )
     .map_err(|(e, ip_options)| {
         let e = match e {
@@ -1891,7 +1931,11 @@ pub fn reconnect_udp<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext
                 state;
             let conn = bound
                 .conns_mut()
-                .try_insert(original_addr, ConnState { socket }, sharing)
+                .try_insert(
+                    original_addr,
+                    ConnState { socket, clear_device_on_disconnect },
+                    sharing,
+                )
                 .unwrap_or_else(|(e, _, _): (_, ConnState<_, _>, PosixSharingOptions)| {
                     unreachable!("reinserting just-removed connected socket failed: {:?}", e)
                 });
@@ -5120,6 +5164,142 @@ mod tests {
             NonZeroU16::new(200),
         );
         assert_matches!(result, Ok(_));
+    }
+
+    #[test_case(None; "removes implicit")]
+    #[test_case(Some(DummyDeviceId); "preserves implicit")]
+    fn test_connect_disconnect_affects_bound_device(bind_device: Option<DummyDeviceId>) {
+        // If a socket is bound to an unzoned address, whether or not it has a
+        // bound device should be restored after `connect` then `disconnect`.
+        let ll_addr = LinkLocalAddr::new(net_ip_v6!("fe80::1234")).unwrap().into_specified();
+        assert!(socket::must_have_zone(&ll_addr));
+
+        let local_ip = local_ip::<Ipv6>();
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            DummyCtx::with_sync_ctx(DummySyncCtx::<Ipv6>::with_state(
+                DummyUdpCtx::with_local_remote_ip_addrs(vec![local_ip], vec![ll_addr]),
+            ));
+
+        let unbound = create_udp_unbound(&mut sync_ctx);
+        set_unbound_udp_device(&mut sync_ctx, &mut non_sync_ctx, unbound, bind_device);
+
+        let listener = listen_udp::<Ipv6, _, _>(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            unbound,
+            Some(ZonedAddr::Unzoned(local_ip)),
+            Some(LOCAL_PORT),
+        )
+        .unwrap();
+        let conn = connect_udp_listener(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            listener,
+            ZonedAddr::Zoned(AddrAndZone::new(ll_addr.get(), DummyDeviceId).unwrap()),
+            REMOTE_PORT,
+        )
+        .expect("connect should succeed");
+
+        assert_eq!(
+            get_udp_bound_device(&sync_ctx, &non_sync_ctx, conn.into()),
+            Some(DummyDeviceId)
+        );
+
+        let listener = disconnect_udp_connected(&mut sync_ctx, &mut non_sync_ctx, conn);
+
+        assert_eq!(get_udp_bound_device(&sync_ctx, &non_sync_ctx, listener.into()), bind_device);
+    }
+
+    #[test]
+    fn test_bind_zoned_addr_connect_disconnect() {
+        // If a socket is bound to a zoned address, the address's device should
+        // be retained after `connect` then `disconnect`.
+        let ll_addr = LinkLocalAddr::new(net_ip_v6!("fe80::1234")).unwrap().into_specified();
+        assert!(socket::must_have_zone(&ll_addr));
+
+        let remote_ip = remote_ip::<Ipv6>();
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            DummyCtx::with_sync_ctx(DummySyncCtx::<Ipv6>::with_state(
+                DummyUdpCtx::with_local_remote_ip_addrs(vec![ll_addr], vec![remote_ip]),
+            ));
+
+        let unbound = create_udp_unbound(&mut sync_ctx);
+        let listener = listen_udp::<Ipv6, _, _>(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            unbound,
+            Some(ZonedAddr::Zoned(AddrAndZone::new(ll_addr.get(), DummyDeviceId).unwrap())),
+            Some(LOCAL_PORT),
+        )
+        .unwrap();
+        let conn = connect_udp_listener(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            listener,
+            ZonedAddr::Unzoned(remote_ip),
+            REMOTE_PORT,
+        )
+        .expect("connect should succeed");
+
+        assert_eq!(
+            get_udp_bound_device(&sync_ctx, &non_sync_ctx, conn.into()),
+            Some(DummyDeviceId)
+        );
+
+        let listener = disconnect_udp_connected(&mut sync_ctx, &mut non_sync_ctx, conn);
+        assert_eq!(
+            get_udp_bound_device(&sync_ctx, &non_sync_ctx, listener.into()),
+            Some(DummyDeviceId)
+        );
+    }
+
+    #[test]
+    fn test_bind_device_after_connect_persists_after_disconnect() {
+        // If a socket is bound to an unzoned address, connected to a zoned address, and then has
+        // its device set, the device should be *retained* after `disconnect`.
+        let ll_addr = LinkLocalAddr::new(net_ip_v6!("fe80::1234")).unwrap().into_specified();
+        assert!(socket::must_have_zone(&ll_addr));
+
+        let local_ip = local_ip::<Ipv6>();
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            DummyCtx::with_sync_ctx(DummySyncCtx::<Ipv6>::with_state(
+                DummyUdpCtx::with_local_remote_ip_addrs(vec![local_ip], vec![ll_addr]),
+            ));
+
+        let unbound = create_udp_unbound(&mut sync_ctx);
+        let listener = listen_udp::<Ipv6, _, _>(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            unbound,
+            Some(ZonedAddr::Unzoned(local_ip)),
+            Some(LOCAL_PORT),
+        )
+        .unwrap();
+        let conn = connect_udp_listener(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            listener,
+            ZonedAddr::Zoned(AddrAndZone::new(ll_addr.get(), DummyDeviceId).unwrap()),
+            REMOTE_PORT,
+        )
+        .expect("connect should succeed");
+
+        assert_eq!(
+            get_udp_bound_device(&sync_ctx, &non_sync_ctx, conn.into()),
+            Some(DummyDeviceId)
+        );
+
+        // This is a no-op functionally since the socket is already bound to the
+        // device but it implies that we shouldn't unbind the device on
+        // disconnect.
+        set_conn_udp_device(&mut sync_ctx, &mut non_sync_ctx, conn, Some(DummyDeviceId))
+            .expect("binding same device should succeed");
+
+        let listener = disconnect_udp_connected(&mut sync_ctx, &mut non_sync_ctx, conn);
+        assert_eq!(
+            get_udp_bound_device(&sync_ctx, &non_sync_ctx, listener.into()),
+            Some(DummyDeviceId)
+        );
     }
 
     #[ip_test]
