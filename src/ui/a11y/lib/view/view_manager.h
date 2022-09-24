@@ -26,6 +26,7 @@
 #include "src/ui/a11y/lib/view/view_injector_factory.h"
 #include "src/ui/a11y/lib/view/view_source.h"
 #include "src/ui/a11y/lib/view/view_wrapper.h"
+#include "src/ui/a11y/lib/virtual_keyboard/virtual_keyboard_manager.h"
 
 namespace a11y {
 
@@ -38,8 +39,10 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
                     public fuchsia::accessibility::virtualkeyboard::Registry,
                     public fuchsia::accessibility::virtualkeyboard::Listener,
                     public InjectorManagerInterface,
+                    // TODO(fxbug.dev/109954): Remove.
                     public SemanticsSource,
-                    public ViewSource {
+                    public ViewSource,
+                    public VirtualKeyboardManager {
  public:
   explicit ViewManager(std::unique_ptr<SemanticTreeServiceFactory> factory,
                        std::unique_ptr<ViewSemanticsFactory> view_semantics_factory,

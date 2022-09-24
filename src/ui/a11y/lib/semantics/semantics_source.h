@@ -27,12 +27,6 @@ class SemanticsSource {
   // Returns true if the view referenced by |view_ref_koid| is providing semantics.
   virtual bool ViewHasSemantics(zx_koid_t view_ref_koid) = 0;
 
-  // Returns true if the view referenced by |view_ref_koid| contains a visible virtual  keyboard.
-  virtual bool ViewHasVisibleVirtualkeyboard(zx_koid_t view_ref_koid) = 0;
-
-  // Returns the koid of the view that has a visible virtual keyboard if any.
-  virtual std::optional<zx_koid_t> GetViewWithVisibleVirtualkeyboard() = 0;
-
   // Returns a clone of the ViewRef referenced by |view_ref_koid| if it is known.
   // TODO(fxbug.dev/47136): Move ViewRefClone from SemanticsSource to ViewRefWrapper.
   virtual std::optional<fuchsia::ui::views::ViewRef> ViewRefClone(zx_koid_t view_ref_koid) = 0;

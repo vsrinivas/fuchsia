@@ -21,6 +21,7 @@
 #include "src/ui/a11y/lib/util/util.h"
 #include "src/ui/a11y/lib/view/tests/mocks/mock_view_semantics.h"
 #include "src/ui/a11y/lib/view/tests/mocks/mock_view_source.h"
+#include "src/ui/a11y/lib/virtual_keyboard/tests/mocks/mock_virtual_keyboard_manager.h"
 
 namespace accessibility_test {
 namespace {
@@ -36,7 +37,7 @@ class A11yFocusManagerTest : public gtest::RealLoopFixture {
     inspector_ = std::make_unique<inspect::Inspector>();
     a11y_focus_manager_ = std::make_unique<a11y::A11yFocusManagerImpl>(
         &mock_focus_chain_requester_, &mock_focus_chain_registry_, &mock_view_source_,
-        inspector_->GetRoot().CreateChild(kInspectNodeName));
+        &mock_virtual_keyboard_manager_, inspector_->GetRoot().CreateChild(kInspectNodeName));
     a11y_focus_manager_->set_on_a11y_focus_updated_callback(
         [this](std::optional<a11y::A11yFocusManager::A11yFocusInfo> focus) {
           a11y_focus_received_in_update_callback_ = std::move(focus);
@@ -143,6 +144,7 @@ class A11yFocusManagerTest : public gtest::RealLoopFixture {
   MockViewSource mock_view_source_;
   MockAccessibilityFocusChainRequester mock_focus_chain_requester_;
   MockAccessibilityFocusChainRegistry mock_focus_chain_registry_;
+  MockVirtualKeyboardManager mock_virtual_keyboard_manager_;
   std::optional<a11y::A11yFocusManager::A11yFocusInfo> a11y_focus_received_in_update_callback_;
   std::unique_ptr<inspect::Inspector> inspector_;
   std::unique_ptr<a11y::A11yFocusManager> a11y_focus_manager_;
@@ -180,6 +182,7 @@ TEST_F(A11yFocusManagerTest, ChangingA11yFocusCausesAFocusChainUpdate) {
   // Chain update.
   mock_focus_chain_requester_.set_will_change_focus(true);
   ViewRefHelper view_ref_helper_2;
+  mock_view_source_.CreateView(view_ref_helper_2);
   bool success_2 = false;
   a11y_focus_manager_->SetA11yFocus(view_ref_helper_2.koid(), 1u,
                                     [&success_2](bool result) { success_2 = result; });
@@ -188,6 +191,9 @@ TEST_F(A11yFocusManagerTest, ChangingA11yFocusCausesAFocusChainUpdate) {
   EXPECT_TRUE(a11y_focus_received_in_update_callback_);
   EXPECT_EQ(a11y_focus_received_in_update_callback_->view_ref_koid, view_ref_helper_2.koid());
   EXPECT_EQ(a11y_focus_received_in_update_callback_->node_id, 1u);
+  EXPECT_TRUE(mock_focus_chain_requester_.ReceivedViewRef());
+  EXPECT_EQ(a11y::GetKoid(*mock_focus_chain_requester_.ReceivedViewRef()),
+            view_ref_helper_2.koid());
 
   // Check that the highlight in the originally focused view is cleared.
   ExpectNoHighlight(view_ref_helper_.koid());
@@ -205,6 +211,7 @@ TEST_F(A11yFocusManagerTest, ChangingA11yFocusCausesAnInspectUpdate) {
   // Chain update.
   mock_focus_chain_requester_.set_will_change_focus(true);
   ViewRefHelper view_ref_helper_2;
+  mock_view_source_.CreateView(view_ref_helper_2);
   a11y_focus_manager_->SetA11yFocus(view_ref_helper_2.koid(), 1u, [](bool result) {});
 
   fpromise::result<inspect::Hierarchy> hierarchy;
@@ -251,6 +258,7 @@ TEST_F(A11yFocusManagerTest, ChangingA11yFocusToTheSameView) {
   // Changes the focus to the same view.
   mock_focus_chain_requester_.set_will_change_focus(true);
   bool success_2 = false;
+  mock_focus_chain_requester_.clear_view_ref();
   a11y_focus_manager_->SetA11yFocus(view_ref_helper_.koid(), 1u,
                                     [&success_2](bool result) { success_2 = result; });
   CheckViewInFocus(view_ref_helper_, 1u);
@@ -258,6 +266,45 @@ TEST_F(A11yFocusManagerTest, ChangingA11yFocusToTheSameView) {
   EXPECT_TRUE(a11y_focus_received_in_update_callback_);
   EXPECT_EQ(a11y_focus_received_in_update_callback_->view_ref_koid, view_ref_helper_.koid());
   EXPECT_EQ(a11y_focus_received_in_update_callback_->node_id, 1u);
+  EXPECT_FALSE(mock_focus_chain_requester_.ReceivedViewRef());
+}
+
+TEST_F(A11yFocusManagerTest, NoFocusChangeIfViewRefMissing) {
+  mock_focus_chain_requester_.set_will_change_focus(true);
+  bool success = false;
+  a11y_focus_manager_->SetA11yFocus(view_ref_helper_.koid(), 2u,
+                                    [&success](bool result) { success = result; });
+  CheckViewInFocus(view_ref_helper_, 2u);
+  EXPECT_TRUE(success);
+
+  // Request to transfer focus to view 2 without first creating the view.
+  mock_focus_chain_requester_.set_will_change_focus(true);
+  ViewRefHelper view_ref_helper_2;
+  mock_focus_chain_requester_.clear_view_ref();
+  a11y_focus_manager_->SetA11yFocus(view_ref_helper_2.koid(), 1u, [](bool result) {});
+
+  CheckViewInFocus(view_ref_helper_, 2u);
+  EXPECT_FALSE(mock_focus_chain_requester_.ReceivedViewRef());
+}
+
+TEST_F(A11yFocusManagerTest, NoFocusChangeToVirtualKeyboardView) {
+  mock_focus_chain_requester_.set_will_change_focus(true);
+  bool success = false;
+  a11y_focus_manager_->SetA11yFocus(view_ref_helper_.koid(), 2u,
+                                    [&success](bool result) { success = result; });
+  CheckViewInFocus(view_ref_helper_, 2u);
+  EXPECT_TRUE(success);
+
+  // Request to transfer focus to view 2, which has a visible virtual keyboard.
+  mock_focus_chain_requester_.set_will_change_focus(true);
+  ViewRefHelper view_ref_helper_2;
+  mock_view_source_.CreateView(view_ref_helper_2);
+  mock_virtual_keyboard_manager_.set_view_with_virtual_keyboard(view_ref_helper_2.koid());
+  mock_focus_chain_requester_.clear_view_ref();
+  a11y_focus_manager_->SetA11yFocus(view_ref_helper_2.koid(), 1u, [](bool result) {});
+
+  CheckViewInFocus(view_ref_helper_2, 1u);
+  EXPECT_FALSE(mock_focus_chain_requester_.ReceivedViewRef());
 }
 
 TEST_F(A11yFocusManagerTest, ListensToFocusChainUpdates) {

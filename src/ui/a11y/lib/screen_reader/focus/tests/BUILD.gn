@@ -30,5 +30,6 @@ executable("focus_manager_tests") {
     "//src/ui/a11y/lib/semantics/tests/mocks",
     "//src/ui/a11y/lib/testing",
     "//src/ui/a11y/lib/view/tests/mocks:mocks",
+    "//src/ui/a11y/lib/virtual_keyboard/tests/mocks",
   ]
 }

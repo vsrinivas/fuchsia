@@ -7,6 +7,8 @@
 
 #include <fuchsia/ui/views/cpp/fidl.h>
 
+#include <optional>
+
 #include "src/ui/a11y/lib/focus_chain/accessibility_focus_chain_requester.h"
 
 namespace accessibility_test {
@@ -18,16 +20,18 @@ class MockAccessibilityFocusChainRequester : public a11y::AccessibilityFocusChai
 
   // For testing only:
   void set_will_change_focus(bool result);
-  zx_koid_t ReceivedKoid() const;
+  const std::optional<fuchsia::ui::views::ViewRef>& ReceivedViewRef() const;
+  void clear_view_ref() { view_ref_.reset(); }
 
   // |AccessibilityFocusChainRequester|
-  void ChangeFocusToView(zx_koid_t view_ref_koid, ChangeFocusToViewCallback callback) override;
+  void ChangeFocusToView(fuchsia::ui::views::ViewRef view_ref,
+                         ChangeFocusToViewCallback callback) override;
 
  private:
-  // Weather calls to ChangeFocusToView() will succeed or not.
+  // Whether calls to ChangeFocusToView() will succeed.
   bool will_change_focus = true;
-  // The ViewRef Koid received in the request.
-  zx_koid_t received_koid_ = ZX_KOID_INVALID;
+  // The ViewRef received in the last focus change request.
+  std::optional<fuchsia::ui::views::ViewRef> view_ref_;
 };
 
 }  // namespace accessibility_test

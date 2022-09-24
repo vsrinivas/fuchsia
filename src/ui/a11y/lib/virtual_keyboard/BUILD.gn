@@ -1,0 +1,9 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("virtual_keyboard") {
+  sources = [ "virtual_keyboard_manager.h" ]
+
+  deps = [ "//zircon/system/ulib/zx" ]
+}

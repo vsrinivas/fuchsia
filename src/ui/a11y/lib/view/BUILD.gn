@@ -56,5 +56,6 @@ source_set("view") {
     "//src/ui/a11y/lib/input_injection",
     "//src/ui/a11y/lib/semantics",
     "//src/ui/a11y/lib/semantics/util",
+    "//src/ui/a11y/lib/virtual_keyboard",
   ]
 }

@@ -41,6 +41,12 @@ class A11yFocusManager {
   virtual std::optional<A11yFocusInfo> GetA11yFocus() = 0;
 
   // Sets the a11y focus.
+  //
+  // If the new focus is in a different view from the current focus, then the
+  // focus manager will request a focus chain update from scenic, unless:
+  //
+  // (1) The new view does not provide semantics.
+  // (2) The new view contains a visible virtual keyboard.
   virtual void SetA11yFocus(zx_koid_t koid, uint32_t node_id, SetA11yFocusCallback callback) = 0;
 
   // Clears existing a11y focus.

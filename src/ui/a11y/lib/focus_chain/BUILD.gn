@@ -20,7 +20,6 @@ source_set("focus_chain") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
-    "//src/ui/a11y/lib/semantics",
     "//src/ui/a11y/lib/util",
   ]
 }

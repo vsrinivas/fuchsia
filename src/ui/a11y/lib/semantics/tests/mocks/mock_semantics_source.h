@@ -31,24 +31,6 @@ class MockSemanticsSource : public a11y::SemanticsSource {
   // |SemanticsSource|
   bool ViewHasSemantics(zx_koid_t view_ref_koid) override;
 
-  // |SemanticsSource|
-  bool ViewHasVisibleVirtualkeyboard(zx_koid_t view_ref_koid) override {
-    return has_visible_keyboard_;
-  }
-
-  // Sets the return value for |GetViewWithVisibleVirtualkeyboard()|.
-  void set_view_with_visible_keyboard(std::optional<zx_koid_t> view) {
-    view_with_visible_keyboard_ = view;
-  }
-
-  // |SemanticsSource|
-  std::optional<zx_koid_t> GetViewWithVisibleVirtualkeyboard() override {
-    return view_with_visible_keyboard_;
-  }
-
-  // Sets if this provider has a visible virtual keyboard.
-  void set_has_visible_keyboard(bool visible) { has_visible_keyboard_ = visible; }
-
   // Sets perform accessibility action return value.
   void set_perform_accessibility_action_callback_value(bool value) {
     perform_accessibility_action_callback_value_ = value;
@@ -143,9 +125,6 @@ class MockSemanticsSource : public a11y::SemanticsSource {
   // Map of koid to return value for actions requested in corresponding view.
   std::map<zx_koid_t, bool> action_results_;
 
-  // Whether this provider has a visible virtual keyboard.
-  bool has_visible_keyboard_ = false;
-
   // Semantic transform to be returned by GetNodeToRootTransform().
   std::optional<a11y::SemanticTransform> transform_to_return_ = std::nullopt;
 
@@ -165,8 +144,6 @@ class MockSemanticsSource : public a11y::SemanticsSource {
   // Return value for ViewHasSemantics.
   // Default to true since it's the more common testing use case.
   bool view_has_semantics_ = true;
-
-  std::optional<zx_koid_t> view_with_visible_keyboard_;
 };
 
 }  // namespace accessibility_test

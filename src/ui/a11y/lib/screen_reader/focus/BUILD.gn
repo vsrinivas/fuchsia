@@ -24,5 +24,6 @@ source_set("focus") {
     "//src/lib/fsl",
     "//src/ui/a11y/lib/annotation",
     "//src/ui/a11y/lib/focus_chain",
+    "//src/ui/a11y/lib/virtual_keyboard",
   ]
 }

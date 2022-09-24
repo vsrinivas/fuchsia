@@ -17,9 +17,12 @@ namespace a11y {
 
 A11yFocusManagerImpl::A11yFocusManagerImpl(AccessibilityFocusChainRequester* focus_chain_requester,
                                            AccessibilityFocusChainRegistry* registry,
-                                           ViewSource* view_source, inspect::Node inspect_node)
+                                           ViewSource* view_source,
+                                           VirtualKeyboardManager* virtual_keyboard_manager,
+                                           inspect::Node inspect_node)
     : focus_chain_requester_(focus_chain_requester),
       view_source_(view_source),
+      virtual_keyboard_manager_(virtual_keyboard_manager),
       weak_ptr_factory_(this),
       inspect_node_(std::move(inspect_node)),
       inspect_property_current_focus_koid_(
@@ -46,15 +49,28 @@ std::optional<A11yFocusManager::A11yFocusInfo> A11yFocusManagerImpl::GetA11yFocu
 
 void A11yFocusManagerImpl::SetA11yFocus(zx_koid_t koid, uint32_t node_id,
                                         SetA11yFocusCallback set_focus_callback) {
-  // Same view a11y focus change.
-  if (koid == currently_focused_view_) {
+  // We don't want to request a focus chain update if we're transferring focus
+  // within the same view OR the newly focused view contains a visible virtual
+  // keyboard.
+  if (koid == currently_focused_view_ ||
+      virtual_keyboard_manager_->ViewHasVisibleVirtualkeyboard(koid)) {
     UpdateFocus(koid, node_id);
     set_focus_callback(true);
     return;
   }
+
+  // Retrieve the view's ViewRef.
+  auto view = view_source_->GetViewWrapper(koid);
+  if (!view) {
+    set_focus_callback(false);
+    return;
+  }
+  auto view_ref = view->ViewRefClone();
+
   // Different view, a Focus Chain Update is necessary.
   focus_chain_requester_->ChangeFocusToView(
-      koid, [this, koid, node_id, callback = std::move(set_focus_callback)](bool success) {
+      std::move(view_ref),
+      [this, koid, node_id, callback = std::move(set_focus_callback)](bool success) {
         if (!success) {
           callback(false);
         } else {

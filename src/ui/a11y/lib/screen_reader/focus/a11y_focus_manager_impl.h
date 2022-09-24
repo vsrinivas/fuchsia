@@ -14,6 +14,7 @@
 #include "src/ui/a11y/lib/focus_chain/accessibility_focus_chain_requester.h"
 #include "src/ui/a11y/lib/screen_reader/focus/a11y_focus_manager.h"
 #include "src/ui/a11y/lib/view/view_source.h"
+#include "src/ui/a11y/lib/virtual_keyboard/virtual_keyboard_manager.h"
 
 namespace a11y {
 
@@ -39,6 +40,7 @@ class A11yFocusManagerImpl : public A11yFocusManager, public AccessibilityFocusC
   // |focus_chain_requester| and |registry| must outlive this object.
   explicit A11yFocusManagerImpl(AccessibilityFocusChainRequester* focus_chain_requester,
                                 AccessibilityFocusChainRegistry* registry, ViewSource* view_source,
+                                VirtualKeyboardManager* virtual_keyboard_manager,
                                 inspect::Node inspect_node = inspect::Node());
   ~A11yFocusManagerImpl() override;
 
@@ -105,6 +107,9 @@ class A11yFocusManagerImpl : public A11yFocusManager, public AccessibilityFocusC
 
   // Used to retrieve semantic tree data and manipulate highlights.
   ViewSource* const view_source_ = nullptr;
+
+  // Used to retrieve information about visible virtual keyboards.
+  VirtualKeyboardManager* const virtual_keyboard_manager_ = nullptr;
 
   OnA11yFocusUpdatedCallback on_a11y_focus_updated_callback_;
 

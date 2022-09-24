@@ -18,12 +18,11 @@ class AccessibilityFocusChainRequester {
   AccessibilityFocusChainRequester() = default;
   virtual ~AccessibilityFocusChainRequester() = default;
 
-  // Changes the Focus Chain to the View pointed by |view_ref_koid|, invoking |callback| when the
+  // Changes the Focus Chain to the View pointed by |view_ref|, invoking |callback| when the
   // request is finished processing. The callback receives the return value informaing whether the
   // request was granted or not.
-  // For now, requests are granted only to Views that are providing semantics.
-  // TODO(fxbug.dev/73940): Refactor a11y code to have a single owner of focus chain updates.
-  virtual void ChangeFocusToView(zx_koid_t view_ref_koid, ChangeFocusToViewCallback callback) = 0;
+  virtual void ChangeFocusToView(fuchsia::ui::views::ViewRef view_ref,
+                                 ChangeFocusToViewCallback callback) = 0;
 };
 
 }  // namespace a11y

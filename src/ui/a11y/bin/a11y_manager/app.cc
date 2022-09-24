@@ -75,8 +75,7 @@ App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
   }
 
   // Inits Focus Chain focuser support / listening Focus Chain updates.
-  focus_chain_manager_ =
-      std::make_unique<a11y::FocusChainManager>(view_manager_->a11y_view(), view_manager_);
+  focus_chain_manager_ = std::make_unique<a11y::FocusChainManager>(view_manager_->a11y_view());
 
   // |focus_chain_manager_| listens for Focus Chain updates. Connects to the listener registry and
   // start listening.
@@ -298,7 +297,7 @@ A11yManagerState A11yManagerState::withSettings(
 
 std::unique_ptr<a11y::ScreenReader> App::InitializeScreenReader() {
   auto a11y_focus_manager = std::make_unique<a11y::A11yFocusManagerImpl>(
-      focus_chain_manager_.get(), focus_chain_manager_.get(), view_manager_,
+      focus_chain_manager_.get(), focus_chain_manager_.get(), view_manager_, view_manager_,
       inspect_node_.CreateChild("focus_manager"));
   std::string locale_id = "en-US";
   if (i18n_profile_ && i18n_profile_->has_locales() && !i18n_profile_->locales().empty()) {

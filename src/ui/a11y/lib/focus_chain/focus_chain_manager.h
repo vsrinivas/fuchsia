@@ -13,7 +13,6 @@
 
 #include "src/ui/a11y/lib/focus_chain/accessibility_focus_chain_listener.h"
 #include "src/ui/a11y/lib/focus_chain/accessibility_focus_chain_requester.h"
-#include "src/ui/a11y/lib/semantics/semantics_source.h"
 #include "src/ui/a11y/lib/view/accessibility_view.h"
 
 namespace a11y {
@@ -30,9 +29,7 @@ class FocusChainManager : public fuchsia::ui::focus::FocusChainListener,
  public:
   // |a11y_view| is a pointer to the a11y view object, which has focuser
   // capabilities. Note that the focus chain manager does NOT own the a11y view.
-  // |semantics_source| object must outlive FocusChainManager.
-  FocusChainManager(std::shared_ptr<AccessibilityViewInterface> a11y_view,
-                    SemanticsSource* semantics_source);
+  explicit FocusChainManager(std::shared_ptr<AccessibilityViewInterface> a11y_view);
   ~FocusChainManager() = default;
 
   // |fuchsia.ui.focus.FocusChainListener|
@@ -43,7 +40,8 @@ class FocusChainManager : public fuchsia::ui::focus::FocusChainListener,
   void Register(fxl::WeakPtr<AccessibilityFocusChainListener> listener) override;
 
   // |AccessibilityFocusChainRequester|
-  void ChangeFocusToView(zx_koid_t view_ref_koid, ChangeFocusToViewCallback callback) override;
+  void ChangeFocusToView(fuchsia::ui::views::ViewRef view_ref,
+                         ChangeFocusToViewCallback callback) override;
 
  private:
   // A ViewRefWatcher holds a ViewRef and watches for any signaling on the ViewRef.
@@ -85,11 +83,6 @@ class FocusChainManager : public fuchsia::ui::focus::FocusChainListener,
 
   // Responsible for requesting Focus Chain updates.
   std::shared_ptr<AccessibilityViewInterface> a11y_view_;
-
-  // Right now, this manager only responds to Focus Chain Requests to Views that
-  // are providing semantics. It uses |semantics_source_| to validate if a
-  // view is providing semantics before doing the request.
-  SemanticsSource* const semantics_source_ = nullptr;
 };
 }  // namespace a11y
 

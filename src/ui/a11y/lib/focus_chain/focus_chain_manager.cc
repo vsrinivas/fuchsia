@@ -13,11 +13,9 @@
 
 namespace a11y {
 
-FocusChainManager::FocusChainManager(std::shared_ptr<AccessibilityViewInterface> a11y_view,
-                                     SemanticsSource* semantics_source)
-    : a11y_view_(a11y_view), semantics_source_(semantics_source) {
+FocusChainManager::FocusChainManager(std::shared_ptr<AccessibilityViewInterface> a11y_view)
+    : a11y_view_(a11y_view) {
   FX_DCHECK(a11y_view_);
-  FX_DCHECK(semantics_source_);
 }
 
 FocusChainManager::ViewRefWatcher::ViewRefWatcher(fuchsia::ui::views::ViewRef view_ref,
@@ -89,25 +87,9 @@ void FocusChainManager::ViewRefWatcher::OnViewRefSignaled(async_dispatcher_t* di
   callback_();
 }
 
-void FocusChainManager::ChangeFocusToView(zx_koid_t view_ref_koid,
+void FocusChainManager::ChangeFocusToView(fuchsia::ui::views::ViewRef view_ref,
                                           ChangeFocusToViewCallback callback) {
-  if (!semantics_source_->ViewHasSemantics(view_ref_koid)) {
-    callback(false);
-    return;
-  }
-  if (semantics_source_->ViewHasVisibleVirtualkeyboard(view_ref_koid)) {
-    callback(true);
-    return;
-  }
-
-  auto view_ref = semantics_source_->ViewRefClone(view_ref_koid);
-
-  if (!view_ref.has_value()) {
-    callback(false);
-    return;
-  }
-
-  a11y_view_->RequestFocus(std::move(*view_ref), [callback = std::move(callback)](auto result) {
+  a11y_view_->RequestFocus(std::move(view_ref), [callback = std::move(callback)](auto result) {
     if (result.is_err()) {
       callback(false);
     } else {
