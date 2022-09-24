@@ -97,22 +97,6 @@ const std::unordered_set<std::string> kAllowedSystemServices = {
 };
 // [END allowed_system_services]
 
-// These tests do not run in continuous integration because they make real network requests. Do not
-// add to this list under any circumstances. If your tests require real network access, consider
-// writing them as end-to-end tests. See docs/development/testing/create_a_new_end_to_end_test.md.
-//
-// TODO(fxbug.dev/57076): migrate these tests and remove this list.
-const std::unordered_set<std::string> kNetworkUsingTestsThatShouldBeE2E = {
-    "aml-widevine-cdm-integration-tests.cmx",
-    "widevine-cdm-integration-tests.cmx",
-    "playready-cdm-integration-tests.cmx",
-};
-
-const std::unordered_set<std::string> kRealNetworkServices = {
-    fuchsia::net::name::Lookup::Name_,
-    fuchsia::posix::socket::Provider::Name_,
-};
-
 }  // namespace
 
 TestMetadata::TestMetadata() {}
@@ -173,13 +157,9 @@ bool TestMetadata::ParseFromString(const std::string& cmx_data, const std::strin
           }
           std::string service = val.GetString();
           if (kAllowedSystemServices.count(service) == 0) {
-            if ((kRealNetworkServices.count(service) == 0 ||
-                 kNetworkUsingTestsThatShouldBeE2E.count(
-                     std::filesystem::path(filename).filename()) == 0)) {
-              json_parser_.ReportError(
-                  fxl::Substitute("'$0' cannot contain '$1'.", kSystemServices, service));
-              return false;
-            }
+            json_parser_.ReportError(
+                fxl::Substitute("'$0' cannot contain '$1'.", kSystemServices, service));
+            return false;
           }
           system_services_.push_back(service);
         };
