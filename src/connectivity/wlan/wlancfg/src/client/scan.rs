@@ -1556,10 +1556,12 @@ mod tests {
             input_aps.clone(),
         );
 
-        // Process response from SME
-        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+        // Process response from SME. If an active scan is requested for the unseen network this
+        // will be pending, otherwise it will be ready.
+        let _ = exec.run_until_stalled(&mut scan_fut);
 
-        // Verify that the passive scan results were recorded.
+        // Verify that the passive scan results were recorded. The network seen in passive scan
+        // results should have a lowered probability of being hidden.
         assert!(
             *exec.run_singlethreaded(saved_networks_manager.passive_scan_result_recorded.lock())
         );
