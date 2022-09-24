@@ -149,7 +149,6 @@ rustc_library("lib") {
     "src/factory_reset/factory_reset_controller.rs",
     "src/factory_reset/factory_reset_fidl_handler.rs",
     "src/factory_reset/types.rs",
-    "src/fidl_common.rs",
     "src/handler.rs",
     "src/handler/base.rs",
     "src/handler/setting_handler.rs",

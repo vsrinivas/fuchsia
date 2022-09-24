@@ -116,7 +116,6 @@ pub mod task;
 pub mod agent;
 pub mod base;
 pub mod config;
-pub mod fidl_common;
 pub mod handler;
 pub mod ingress;
 pub mod inspect;
