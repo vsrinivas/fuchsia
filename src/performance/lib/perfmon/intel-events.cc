@@ -6,6 +6,7 @@
 // When needed separate files will describe non-Intel x64 events.
 
 #include <iterator>
+#include <cpuid.h>
 
 #include "src/performance/lib/perfmon/event-registry.h"
 #include "src/performance/lib/perfmon/events.h"
@@ -13,6 +14,42 @@
 namespace perfmon {
 
 namespace {
+
+enum class Microarch {
+  kSkylake,
+  kGoldmont,
+  kUnknown
+};
+
+bool is_intel() {
+  uint32_t a, b, c, d;
+  __get_cpuid(0, &a, &b, &c, &d);
+  return (b == signature_INTEL_ebx) &&
+         (d == signature_INTEL_edx) &&
+         (c == signature_INTEL_ecx);
+}
+Microarch microarch() {
+  uint32_t a, b, c, d;
+  __get_cpuid(1, &a, &b, &c, &d);
+  uint32_t family = ((a >> 8) & 0xf) | ((a >> 16) & 0xff0);
+  uint32_t model = ((a >> 4) & 0xf) | ((a >> 12) & 0xf0);
+
+  if (family != 0x6) {
+    return Microarch::kUnknown;
+  }
+  switch (model) {
+  case 0x4E:  // Skylake-Y, -U
+  case 0x5E:  // Skylake-DT, -H, -S
+  case 0x8E:  // Kabylake-Y, -U; Whiskey Lake-U; Amber Lake-Y; Comet Lake-U
+  case 0x9E:  // Kabylake-DT, -H, -S, -X; Coffee Lake-S, -H, -E; Comet Lake-S, -H
+  case 0x55:  // Skylake-SP, Cascade Lake-SP
+    return Microarch::kSkylake;
+  case 0x5C:  // Apollo Lake
+    return Microarch::kGoldmont;
+  default:
+    return Microarch::kUnknown;
+  }
+}
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wc99-designator"
@@ -80,8 +117,20 @@ void RegisterIntelGoldmontEvents(internal::EventRegistry* registry) {
 namespace internal {
 
 void RegisterAllIntelModelEvents(internal::EventRegistry* registry) {
-  RegisterIntelSkylakeEvents(registry);
-  RegisterIntelGoldmontEvents(registry);
+  if (!is_intel()) {
+    return;
+  }
+
+  switch (microarch()) {
+  case Microarch::kSkylake:
+    RegisterIntelSkylakeEvents(registry);
+    break;
+  case Microarch::kGoldmont:
+    RegisterIntelGoldmontEvents(registry);
+    break;
+  case Microarch::kUnknown:
+    break;
+  }
 }
 
 }  // namespace internal
