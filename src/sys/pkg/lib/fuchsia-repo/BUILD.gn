@@ -51,6 +51,8 @@ if (is_host) {
     ]
 
     test_deps = [
+      "//src/developer/ffx/lib/pkg:empty-repo-keys",
+      "//src/developer/ffx/lib/pkg:empty-repo-metadata",
       "//src/lib/fuchsia",
       "//src/lib/fuchsia-hyper",
       "//src/sys/pkg/lib/fuchsia-pkg",
