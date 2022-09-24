@@ -25,7 +25,7 @@ async fn test_list() {
     test.assert(AssertionParameters {
         command: IqueryCommand::List,
         golden_basename: "list_test",
-        iquery_args: vec![],
+        iquery_args: vec!["--accessor", "archivist:expose:fuchsia.diagnostics.ArchiveAccessor"],
         opts: vec![AssertionOption::Retry],
     })
     .await;
@@ -37,7 +37,7 @@ async fn test_list_no_duplicates() {
     test.assert(AssertionParameters {
         command: IqueryCommand::List,
         golden_basename: "list_no_dups",
-        iquery_args: vec![],
+        iquery_args: vec!["--accessor", "archivist:expose:fuchsia.diagnostics.ArchiveAccessor"],
         opts: vec![AssertionOption::Retry],
     })
     .await;
@@ -56,7 +56,12 @@ async fn test_list_filter_manifest() {
     test.assert(AssertionParameters {
         command: IqueryCommand::List,
         golden_basename: "list_filter_manifest",
-        iquery_args: vec!["--manifest", "basic_component.cm"],
+        iquery_args: vec![
+            "--manifest",
+            "basic_component.cm",
+            "--accessor",
+            "archivist:expose:fuchsia.diagnostics.ArchiveAccessor",
+        ],
         opts: vec![AssertionOption::Retry],
     })
     .await;
@@ -75,7 +80,11 @@ async fn test_list_with_urls() {
     test.assert(AssertionParameters {
         command: IqueryCommand::List,
         golden_basename: "list_with_url",
-        iquery_args: vec!["--with-url"],
+        iquery_args: vec![
+            "--accessor",
+            "archivist:expose:fuchsia.diagnostics.ArchiveAccessor",
+            "--with-url",
+        ],
         opts: vec![AssertionOption::Retry],
     })
     .await;
@@ -87,7 +96,7 @@ async fn list_archive() {
     test.assert(AssertionParameters {
         command: IqueryCommand::List,
         golden_basename: "list_archive",
-        iquery_args: vec!["--accessor-path", "/svc/fuchsia.diagnostics.ArchiveAccessor"],
+        iquery_args: vec!["--accessor", "archivist:expose:fuchsia.diagnostics.ArchiveAccessor"],
         opts: vec![AssertionOption::Retry],
     })
     .await;
@@ -137,7 +146,7 @@ async fn log() {
     test.assert(AssertionParameters {
         command: IqueryCommand::Logs,
         golden_basename: "log",
-        iquery_args: vec![],
+        iquery_args: vec!["--accessor", "archivist:expose:fuchsia.diagnostics.ArchiveAccessor"],
         opts: vec![AssertionOption::Retry],
     })
     .await;
@@ -168,6 +177,8 @@ async fn test_selectors() {
         command: IqueryCommand::Selectors,
         golden_basename: "selectors_test",
         iquery_args: vec![
+            "--accessor",
+            "archivist:expose:fuchsia.diagnostics.ArchiveAccessor",
             &format!("{}/basic-1:root/fuchsia.inspect.Health", prefix),
             &format!("{}/basic-2:root", prefix),
             &format!("{}/test", prefix),
@@ -190,7 +201,13 @@ async fn test_selectors_filter() {
     test.assert(AssertionParameters {
         command: IqueryCommand::Selectors,
         golden_basename: "selectors_filter_test",
-        iquery_args: vec!["--manifest", "basic_component.cm", "root/fuchsia.inspect.Health"],
+        iquery_args: vec![
+            "--accessor",
+            "archivist:expose:fuchsia.diagnostics.ArchiveAccessor",
+            "--manifest",
+            "basic_component.cm",
+            "root/fuchsia.inspect.Health",
+        ],
         opts: vec![AssertionOption::Retry],
     })
     .await;
@@ -205,8 +222,8 @@ async fn selectors_archive() {
         golden_basename: "selectors_archive",
         iquery_args: vec![
             &format!("{}/basic:root", prefix),
-            "--accessor-path",
-            "/svc/fuchsia.diagnostics.ArchiveAccessor",
+            "--accessor",
+            "archivist:expose:fuchsia.diagnostics.ArchiveAccessor",
         ],
         opts: vec![AssertionOption::Retry],
     })
@@ -270,25 +287,6 @@ async fn inspect_vmo_file_directly() {
 // Show
 
 #[fuchsia::test]
-async fn test_no_selectors() {
-    let test = TestBuilder::new()
-        .await
-        .add_basic_component("basic-1")
-        .await
-        .add_basic_component("basic-2")
-        .await
-        .start()
-        .await;
-    test.assert(AssertionParameters {
-        command: IqueryCommand::Show,
-        golden_basename: "show_all_test",
-        iquery_args: vec![],
-        opts: vec![AssertionOption::Retry, AssertionOption::RemoveArchivist],
-    })
-    .await;
-}
-
-#[fuchsia::test]
 async fn show_test() {
     let test = TestBuilder::new()
         .await
@@ -305,6 +303,8 @@ async fn show_test() {
         command: IqueryCommand::Show,
         golden_basename: "show_test",
         iquery_args: vec![
+            "--accessor",
+            "archivist:expose:fuchsia.diagnostics.ArchiveAccessor",
             &format!("{}/basic-1:root/fuchsia.inspect.Health", prefix),
             &format!("{}/basic-2:root:iquery", prefix),
             &format!("{}/basic-3", prefix),
@@ -320,13 +320,19 @@ async fn empty_result_on_null_payload() {
     let prefix = format!("realm_builder\\:{}", test.instance_child_name());
     let result =
         utils::execute_command(&["show", &format!("{}/basic:root/nothing:here", prefix)]).await;
-    assert_matches!(result, Ok(res) if res == "" || res.contains("payload: null"));
+    assert_matches!(result, Err(_));
 }
 
 #[fuchsia::test]
 async fn show_component_doesnt_exist() {
-    let result = utils::execute_command(&["show", "doesnt_exist"]).await;
-    assert_matches!(result, Ok(res) if res == "");
+    let result = utils::execute_command(&[
+        "show",
+        "--accessor",
+        "archivist:expose:fuchsia.diagnostics.ArchiveAccessor",
+        "doesnt_exist",
+    ])
+    .await;
+    assert_matches!(result, Ok(_));
 }
 
 #[fuchsia::test]
@@ -342,7 +348,13 @@ async fn show_filter_manifest() {
     test.assert(AssertionParameters {
         command: IqueryCommand::Show,
         golden_basename: "show_filter_test",
-        iquery_args: vec!["--manifest", "basic_component.cm", "root/fuchsia.inspect.Health"],
+        iquery_args: vec![
+            "--accessor",
+            "archivist:expose:fuchsia.diagnostics.ArchiveAccessor",
+            "--manifest",
+            "basic_component.cm",
+            "root/fuchsia.inspect.Health",
+        ],
         opts: vec![AssertionOption::Retry],
     })
     .await;
@@ -361,7 +373,12 @@ async fn show_filter_manifest_no_selectors() {
     test.assert(AssertionParameters {
         command: IqueryCommand::Show,
         golden_basename: "show_filter_no_selectors_test",
-        iquery_args: vec!["--manifest", "basic_component.cm"],
+        iquery_args: vec![
+            "--accessor",
+            "archivist:expose:fuchsia.diagnostics.ArchiveAccessor",
+            "--manifest",
+            "basic_component.cm",
+        ],
         opts: vec![AssertionOption::Retry],
     })
     .await;
@@ -376,8 +393,8 @@ async fn show_archive() {
         golden_basename: "show_archive",
         iquery_args: vec![
             &format!("{}/basic:root", prefix),
-            "--accessor-path",
-            "/svc/fuchsia.diagnostics.ArchiveAccessor",
+            "--accessor",
+            "archivist:expose:fuchsia.diagnostics.ArchiveAccessor",
         ],
         opts: vec![AssertionOption::Retry],
     })
@@ -387,7 +404,6 @@ async fn show_archive() {
 #[fuchsia::test]
 async fn list_accessors() {
     let test = TestBuilder::new().await.start().await;
-    std::env::set_current_dir(Path::new(&format!("/svc"))).expect("change dir");
     test.assert(AssertionParameters {
         command: IqueryCommand::ListAccessors,
         golden_basename: "list_accessors",

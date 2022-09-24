@@ -5,28 +5,95 @@
     include: [
         "//src/sys/test_runners/rust/default.shard.cml",
         "//src/sys/test_runners/tmp_storage.shard.cml",
-        "sys/component/realm_builder.shard.cml",
         "syslog/client.shard.cml",
     ],
     program: {
         binary: "bin/iquery_test",
     },
-    use: [
+    children: [
         {
-            protocol: [
-                "fuchsia.diagnostics.ArchiveAccessor",
-                "fuchsia.sys2.EventSource",
-            ],
+            name: "archivist",
+            url: "#meta/archivist-for-embedding.cm",
+            startup: "eager",
         },
         {
-            event: "started",
+            name: "realm_builder_server",
+            url: "#meta/realm_builder_server.cm",
+        },
+    ],
+    collections: [
+        {
+            name: "realm_builder",
+            environment: "#realm_builder_env",
+            durability: "transient",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.component.Realm",
             from: "framework",
+        },
+        {
+            protocol: "fuchsia.sys2.RealmExplorer",
+            from: "framework",
+            path: '/svc/fuchsia.sys2.RealmExplorer.root',
+        },
+        {
+            protocol: "fuchsia.sys2.RealmQuery",
+            from: "framework",
+            path: '/svc/fuchsia.sys2.RealmQuery.root',
         },
         {
             directory: "hub",
             from: "framework",
             rights: [ "rw*" ],
             path: "/hub",
+        },
+        {
+            protocol: "fuchsia.diagnostics.ArchiveAccessor",
+            from: "#archivist",
+        },
+    ],
+    offer: [
+        {
+            event_stream: [
+                "capability_requested_v2",
+                "directory_ready_v2",
+                "running_v2",
+                "started_v2",
+                "stopped_v2",
+            ],
+            from: "parent",
+            to: "#archivist",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "#archivist",
+            to: [ "#realm_builder_server" ],
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "#archivist",
+            to: [ "#realm_builder" ],
+        },
+    ],
+    environments: [
+        {
+            name: "realm_builder_env",
+            extends: "realm",
+            runners: [
+                {
+                    runner: "realm_builder",
+                    from: "#realm_builder_server",
+                },
+            ],
+            resolvers: [
+                {
+                    resolver: "realm_builder_resolver",
+                    from: "#realm_builder_server",
+                    scheme: "realm-builder",
+                },
+            ],
         },
     ],
 }

@@ -24,6 +24,8 @@ pub async fn list_accessors(
     run_command(rcs_proxy, diagnostics_proxy, iq::ListAccessorsCommand::from(cmd), writer).await
 }
 
+/// Test for `ffx inspect list-accessors`.
+/// The test fixtures lives in `//src/diagnostics/iquery/src/test_support`.
 #[cfg(test)]
 mod test {
     use {
@@ -46,9 +48,10 @@ mod test {
         .unwrap();
 
         let expected = serde_json::to_string(&vec![
-            String::from("/hub-v2/dir1/fuchsia.diagnostics.FooBarArchiveAccessor"),
-            String::from("/hub-v2/dir2/child3/fuchsia.diagnostics.Some.Other.ArchiveAccessor"),
-            String::from("/hub-v2/dir2/child5/fuchsia.diagnostics.OneMoreArchiveAccessor"),
+            String::from("example/component:expose:fuchsia.diagnostics.ArchiveAccessor"),
+            String::from("other/component:out:fuchsia.diagnostics.MagicArchiveAccessor"),
+            String::from("foo/component:expose:fuchsia.diagnostics.FeedbackArchiveAccessor"),
+            String::from("foo/bar/thing:expose:fuchsia.diagnostics.FeedbackArchiveAccessor"),
         ])
         .unwrap();
         let output = writer.test_output().expect("unable to get test output.");
@@ -56,9 +59,9 @@ mod test {
     }
 
     #[fuchsia::test]
-    async fn test_list_accessors_subdirectory() {
+    async fn test_list_accessors_subcomponent() {
         let writer = Writer::new_test(Some(Format::Json));
-        let cmd = ListAccessorsCommand { paths: vec!["dir2".into()] };
+        let cmd = ListAccessorsCommand { paths: vec!["foo".into()] };
         run_command(
             setup_fake_rcs(),
             setup_fake_diagnostics_bridge(vec![]),
@@ -69,8 +72,8 @@ mod test {
         .unwrap();
 
         let expected = serde_json::to_string(&vec![
-            String::from("/hub-v2/dir2/child3/fuchsia.diagnostics.Some.Other.ArchiveAccessor"),
-            String::from("/hub-v2/dir2/child5/fuchsia.diagnostics.OneMoreArchiveAccessor"),
+            String::from("foo/component:expose:fuchsia.diagnostics.FeedbackArchiveAccessor"),
+            String::from("foo/bar/thing:expose:fuchsia.diagnostics.FeedbackArchiveAccessor"),
         ])
         .unwrap();
         let output = writer.test_output().expect("unable to get test output.");
@@ -80,7 +83,7 @@ mod test {
     #[fuchsia::test]
     async fn test_list_accessors_deeper_subdirectory() {
         let writer = Writer::new_test(Some(Format::Json));
-        let cmd = ListAccessorsCommand { paths: vec!["dir2/child3".into()] };
+        let cmd = ListAccessorsCommand { paths: vec!["foo/bar".into()] };
         run_command(
             setup_fake_rcs(),
             setup_fake_diagnostics_bridge(vec![]),
@@ -91,7 +94,7 @@ mod test {
         .unwrap();
 
         let expected = serde_json::to_string(&vec![String::from(
-            "/hub-v2/dir2/child3/fuchsia.diagnostics.Some.Other.ArchiveAccessor",
+            "foo/bar/thing:expose:fuchsia.diagnostics.FeedbackArchiveAccessor",
         )])
         .unwrap();
         let output = writer.test_output().expect("unable to get test output.");
@@ -101,7 +104,7 @@ mod test {
     #[fuchsia::test]
     async fn test_list_accessors_multiple_paths() {
         let writer = Writer::new_test(Some(Format::Json));
-        let cmd = ListAccessorsCommand { paths: vec!["dir1".into(), "dir2/child5".into()] };
+        let cmd = ListAccessorsCommand { paths: vec!["example".into(), "foo/bar/".into()] };
         run_command(
             setup_fake_rcs(),
             setup_fake_diagnostics_bridge(vec![]),
@@ -112,8 +115,8 @@ mod test {
         .unwrap();
 
         let expected = serde_json::to_string(&vec![
-            String::from("/hub-v2/dir1/fuchsia.diagnostics.FooBarArchiveAccessor"),
-            String::from("/hub-v2/dir2/child5/fuchsia.diagnostics.OneMoreArchiveAccessor"),
+            String::from("example/component:expose:fuchsia.diagnostics.ArchiveAccessor"),
+            String::from("foo/bar/thing:expose:fuchsia.diagnostics.FeedbackArchiveAccessor"),
         ])
         .unwrap();
         let output = writer.test_output().expect("unable to get test output.");

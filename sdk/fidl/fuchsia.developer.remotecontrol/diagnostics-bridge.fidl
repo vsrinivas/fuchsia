@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 library fuchsia.developer.remotecontrol;
 
-using fuchsia.io;
 using fuchsia.logger as logger;
 using fuchsia.diagnostics as diagnostics;
 using zx;
@@ -25,7 +24,7 @@ type BridgeStreamParameters = table {
     1: stream_mode diagnostics.StreamMode;
     2: data_type diagnostics.DataType;
     3: client_selector_configuration diagnostics.ClientSelectorConfiguration;
-    4: accessor_path fuchsia.io.Path;
+    4: accessor diagnostics.Selector;
 };
 
 type ArchiveIteratorEntry = resource table {
@@ -60,6 +59,11 @@ protocol ArchiveIterator {
     }) error ArchiveIteratorError;
 };
 
+/// This protocol is necessary as a bridge between `fuchsia.diagnsotics.*ArchiveAccessor`
+/// and the host due to the limitation of Overnet not supporting sending VMOs at the
+/// moment.
+/// When there's support for sending VMOs over Overnet, ffx tooling will be able
+/// to talk directly to `fuchsia.diagnostics.ArchiveAccessor` instead of this protocol.
 @discoverable
 protocol RemoteDiagnosticsBridge {
     StreamDiagnostics(resource struct {

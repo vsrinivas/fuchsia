@@ -514,6 +514,8 @@
             protocol: [
                 "fuchsia.diagnostics.ArchiveAccessor",
                 "fuchsia.logger.LogSink",
+                "fuchsia.sys2.RealmExplorer.root",
+                "fuchsia.sys2.RealmQuery.root",
             ],
             from: "parent",
             to: "#remote-diagnostics-bridge",

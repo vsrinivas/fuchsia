@@ -143,11 +143,16 @@ pub struct ListCommand {
     pub with_url: bool,
 
     #[argh(option)]
-    /// the path from where to get the ArchiveAccessor connection. If the given path is a
-    /// directory, the command will look for a `fuchsia.diagnostics.ArchiveAccessor` service file.
-    /// If the given path is a service file, the command will attempt to connect to it as an
-    /// ArchiveAccessor.
-    pub accessor_path: Option<String>,
+    /// A selector specifying what `fuchsia.diagnostics.ArchiveAccessor` to connect to.
+    /// The selector will be in the form of:
+    /// <moniker>:<directory>:fuchsia.diagnostics.ArchiveAccessorName
+    ///
+    /// Typically this is the output of `iquery list-accessors`.
+    ///
+    /// For example: `bootstrap/archivist:expose:fuchsia.diagnostics.FeedbackArchiveAccessor`
+    /// means that the command will connect to the `FeedbackArchiveAccecssor`
+    /// exposed by `bootstrap/archivist`.
+    pub accessor: Option<String>,
 }
 
 #[async_trait]
@@ -155,7 +160,7 @@ impl Command for ListCommand {
     type Result = Vec<ListResponseItem>;
 
     async fn execute<P: DiagnosticsProvider>(&self, provider: &P) -> Result<Self::Result, Error> {
-        let inspect = provider.snapshot::<Inspect>(&self.accessor_path, &[]).await?;
+        let inspect = provider.snapshot::<Inspect>(&self.accessor, &[]).await?;
         let components = components_from_inspect_data(inspect);
         let results =
             list_response_items_from_components(&self.manifest, self.with_url, components);

@@ -7,15 +7,23 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 
 iquery_deps = [
+  "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
+  "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
   "//src/lib/diagnostics/data/rust",
   "//src/lib/diagnostics/hierarchy/rust",
   "//src/lib/diagnostics/selectors",
+  "//src/lib/fidl/rust/fidl",
+  "//src/lib/fuchsia-fs",
   "//third_party/rust_crates:anyhow",
   "//third_party/rust_crates:argh",
   "//third_party/rust_crates:async-trait",
   "//third_party/rust_crates:derivative",
+  "//third_party/rust_crates:futures",
+  "//third_party/rust_crates:itertools",
+  "//third_party/rust_crates:lazy_static",
   "//third_party/rust_crates:nom",
   "//third_party/rust_crates:num-traits",
+  "//third_party/rust_crates:regex",
   "//third_party/rust_crates:serde",
   "//third_party/rust_crates:serde_json",
   "//third_party/rust_crates:thiserror",
@@ -31,14 +39,9 @@ if (is_fuchsia) {
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fdio/rust:fdio",
-    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-component",
-    "//src/lib/fuchsia-fs",
     "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:glob",
-    "//third_party/rust_crates:lazy_static",
-    "//third_party/rust_crates:regex",
   ]
 }
 
@@ -80,7 +83,11 @@ rustc_library("lib") {
 
   deps = iquery_deps
 
-  test_deps = [ "//src/lib/fuchsia" ]
+  test_deps = [
+    "//src/diagnostics/iquery/test_support:iquery_test_support",
+    "//src/lib/fuchsia",
+    "//third_party/rust_crates:assert_matches",
+  ]
 
   sources = iquery_sources
   sources += [ "src/lib.rs" ]
@@ -105,11 +112,18 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
+fuchsia_unittest_package("test_iquery_lib_unittests") {
+  deps = [
+    ":lib_test",
+    "//src/diagnostics/iquery/test_support:iquery_test_support",
+    "//third_party/rust_crates:assert_matches",
+  ]
+}
+
 rustc_test("iquery_test") {
   edition = "2021"
   output_name = "iquery_test"
   source_root = "src/main.rs"
-
   deps = [
     ":lib",
     "//src/lib/fuchsia",
@@ -125,14 +139,12 @@ rustc_test("iquery_test") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
   ]
-
   sources = [
     "src/main.rs",
     "src/tests/commands.rs",
     "src/tests/mod.rs",
     "src/tests/utils.rs",
   ]
-
   inputs = [
     "test_data/list_accessors.json",
     "test_data/list_accessors.text",
@@ -179,6 +191,7 @@ fuchsia_component("iquery-test") {
   testonly = true
   manifest = "meta/iquery-test.cml"
   deps = [ ":iquery_test" ]
+  check_includes = false
 }
 
 fuchsia_test_package("iquery-tests") {
@@ -188,6 +201,7 @@ fuchsia_test_package("iquery-tests") {
     "test/basic_component:basic_component_with_logs",
     "test/test_component",
     "test_data:goldens",
+    "//src/diagnostics/archivist:archivist-for-embedding-v2",
   ]
 }
 
@@ -197,6 +211,7 @@ group("tests") {
   deps = [
     ":iquery-tests",
     ":lib_test($host_toolchain)",
+    ":test_iquery_lib_unittests",
   ]
 }
 

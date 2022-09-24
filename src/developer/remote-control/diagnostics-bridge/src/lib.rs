@@ -27,14 +27,14 @@ use {
         select,
         stream::{FusedStream, TryStreamExt},
     },
-    iquery::commands::connect_to_archive_accessor,
+    iquery::commands::connect_to_archivist_selector,
     selectors,
     std::fmt::Debug,
     std::sync::Arc,
     tracing::{error, info, warn},
 };
 
-// This lets us mock out the ArchiveReader in tests
+// This lets us mock out the ArchiveReader in tests.
 #[async_trait]
 pub trait ArchiveReaderManager {
     type Error: Debug + Send + 'static;
@@ -168,7 +168,7 @@ struct ArchiveReaderManagerImpl {
 impl ArchiveReaderManagerImpl {
     async fn new(parameters: BridgeStreamParameters) -> Result<Self> {
         let archive: ArchiveAccessorProxy =
-            connect_to_archive_accessor(&parameters.accessor_path).await?;
+            connect_to_archivist_selector(&parameters.accessor).await?;
         let mut reader = ArchiveReader::new();
         reader.with_archive(archive).retry_if_empty(false);
         match parameters.client_selector_configuration {

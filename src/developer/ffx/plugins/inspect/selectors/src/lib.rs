@@ -51,7 +51,7 @@ mod test {
         };
         let expected_responses = Arc::new(vec![]);
         let writer = Writer::new_test(Some(Format::Json));
-        let cmd = SelectorsCommand { manifest: None, selectors: vec![], accessor_path: None };
+        let cmd = SelectorsCommand { manifest: None, selectors: vec![], accessor: None };
         assert!(run_command(
             setup_fake_rcs(),
             setup_fake_diagnostics_bridge(vec![FakeBridgeData::new(
@@ -80,7 +80,7 @@ mod test {
         let cmd = SelectorsCommand {
             manifest: Some(String::from("some-bad-moniker")),
             selectors: vec![],
-            accessor_path: None,
+            accessor: None,
         };
         assert!(run_command(
             setup_fake_rcs(),
@@ -103,7 +103,7 @@ mod test {
         let cmd = SelectorsCommand {
             manifest: Some(String::from("moniker1")),
             selectors: vec![],
-            accessor_path: None,
+            accessor: None,
         };
         let lifecycle_data = inspect_bridge_data(
             ClientSelectorConfiguration::SelectAll(true),
@@ -145,7 +145,7 @@ mod test {
         let cmd = SelectorsCommand {
             manifest: None,
             selectors: vec![String::from("test/moniker1:name:hello_3")],
-            accessor_path: None,
+            accessor: None,
         };
         let lifecycle_data = inspect_bridge_data(
             ClientSelectorConfiguration::SelectAll(true),

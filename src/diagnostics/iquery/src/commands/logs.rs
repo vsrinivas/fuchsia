@@ -17,11 +17,16 @@ use {
 #[argh(subcommand, name = "logs")]
 pub struct LogsCommand {
     #[argh(option)]
-    /// the path from where to get the ArchiveAccessor connection. If the given path is a
-    /// directory, the command will look for a `fuchsia.diagnostics.ArchiveAccessor` service file.
-    /// If the given path is a service file, the command will attempt to connect to it as an
-    /// ArchiveAccessor.
-    pub accessor_path: Option<String>,
+    /// A selector specifying what `fuchsia.diagnostics.ArchiveAccessor` to connect to.
+    /// The selector will be in the form of:
+    /// <moniker>:<directory>:fuchsia.diagnostics.ArchiveAccessorName
+    ///
+    /// Typically this is the output of `iquery list-accessors`.
+    ///
+    /// For example: `bootstrap/archivist:expose:fuchsia.diagnostics.FeedbackArchiveAccessor`
+    /// means that the command will connect to the `FeedbackArchiveAccecssor`
+    /// exposed by `bootstrap/archivist`.
+    pub accessor: Option<String>,
 }
 
 impl ToText for Vec<LogsData> {
@@ -35,7 +40,7 @@ impl Command for LogsCommand {
     type Result = Vec<LogsData>;
 
     async fn execute<P: DiagnosticsProvider>(&self, provider: &P) -> Result<Self::Result, Error> {
-        let mut results = provider.snapshot::<Logs>(&self.accessor_path, &[]).await?;
+        let mut results = provider.snapshot::<Logs>(&self.accessor, &[]).await?;
         for result in results.iter_mut() {
             if let Some(hierarchy) = &mut result.payload {
                 hierarchy.sort();

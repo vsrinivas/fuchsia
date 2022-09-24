@@ -8,6 +8,7 @@ use {
     diagnostics_data::Data,
     errors::ffx_error,
     ffx_writer::Writer,
+    fidl,
     fidl::{endpoints::create_proxy, AsyncSocket},
     fidl_fuchsia_developer_remotecontrol::{
         ArchiveIteratorMarker, BridgeStreamParameters, DiagnosticsData, RemoteControlProxy,
@@ -17,23 +18,18 @@ use {
         ClientSelectorConfiguration::{SelectAll, Selectors},
         SelectorArgument,
     },
-    fidl_fuchsia_io as fio,
-    fuchsia_async::Duration,
-    fuchsia_fs,
-    futures::future::join_all,
+    fidl_fuchsia_sys2 as fsys2,
     futures::AsyncReadExt as _,
-    futures::StreamExt,
     iquery::{
-        commands::DiagnosticsProvider,
+        commands::{get_accessor_selectors, DiagnosticsProvider},
         types::{Error, ToText},
     },
     lazy_static::lazy_static,
-    regex::Regex,
-    std::{collections::BTreeSet, io::Write, path::PathBuf},
+    selectors,
+    std::io::Write,
 };
 
 lazy_static! {
-    static ref EXPECTED_FILE_RE: &'static str = r"fuchsia\.diagnostics\..*ArchiveAccessor$";
     static ref READDIR_TIMEOUT_SECONDS: u64 = 15;
 }
 
@@ -48,8 +44,9 @@ pub async fn run_command(
     if writer.is_machine() {
         writer.machine(&result).context("Unable to write structured output to destination.")
     } else {
+        // Ensure trailing newline.
         writer
-            .write_fmt(format_args!("{}", result.to_text()))
+            .write_fmt(format_args!("{}\n", result.to_text()))
             .context("Unable to write to destination.")
     }
 }
@@ -69,7 +66,7 @@ impl DiagnosticsBridgeProvider {
 
     pub async fn snapshot_diagnostics_data<D>(
         &self,
-        accessor_path: &Option<String>,
+        accessor: &Option<String>,
         selectors: &[String],
     ) -> Result<Vec<Data<D>>, Error>
     where
@@ -80,10 +77,20 @@ impl DiagnosticsBridgeProvider {
         } else {
             Selectors(selectors.iter().cloned().map(|s| SelectorArgument::RawSelector(s)).collect())
         };
+
+        let accessor_selector = match accessor {
+            Some(ref s) => {
+                Some(selectors::parse_selector::<selectors::VerboseError>(s).map_err(|e| {
+                    Error::ParseSelector("unable to parse selector".to_owned(), anyhow!("{:?}", e))
+                })?)
+            }
+            None => None,
+        };
+
         let params = BridgeStreamParameters {
             stream_mode: Some(fidl_fuchsia_diagnostics::StreamMode::Snapshot),
             data_type: Some(D::DATA_TYPE),
-            accessor_path: accessor_path.clone(),
+            accessor: accessor_selector,
             client_selector_configuration: Some(selectors),
             ..BridgeStreamParameters::EMPTY
         };
@@ -158,65 +165,44 @@ impl DiagnosticsProvider for DiagnosticsBridgeProvider {
     }
 
     async fn get_accessor_paths(&self, paths: &Vec<String>) -> Result<Vec<String>, Error> {
-        let paths = if paths.is_empty() { vec!["".to_string()] } else { paths.clone() };
-
-        let mut result = BTreeSet::new();
-        let path_futs = paths.iter().map(|path| all_accessors(&self.rcs_proxy, path));
-        for paths_result in join_all(path_futs).await {
-            let paths =
-                paths_result.map_err(|e| Error::ListAccessors("querying path".into(), e.into()))?;
-            result.extend(paths.into_iter());
-        }
-        Ok(result.into_iter().collect::<Vec<_>>())
+        let (mut query_proxy, mut explorer_proxy) = connect_realm_proxies(&self.rcs_proxy).await?;
+        get_accessor_selectors(&mut explorer_proxy, &mut query_proxy, paths).await
     }
 }
 
-async fn all_accessors(
+/// Connect to Root `RealmExplorer` and Root `RealmQuery` with the provided `RemoteControlProxy`.
+async fn connect_realm_proxies(
     rcs_proxy: &RemoteControlProxy,
-    root: impl AsRef<str>,
-) -> Result<Vec<String>, Error> {
-    let (hub_root, dir_server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
-        .map_err(|e| Error::IOError("create directory marker proxy".into(), e.into()))?;
-    rcs_proxy
-        .open_hub(dir_server)
-        .await
-        .map_err(|e| Error::ListAccessors("talking to RemoteControlProxy".into(), e.into()))?
-        .map_err(|e| Error::ListAccessors("open hub".into(), anyhow!("{:?}", e)))?;
-    let dir_proxy = if root.as_ref().is_empty() {
-        hub_root
-    } else {
-        fuchsia_fs::open_directory(
-            &hub_root,
-            std::path::Path::new(root.as_ref()),
-            fuchsia_fs::OpenFlags::RIGHT_READABLE,
-        )
-        .map_err(|e| Error::IOError(format!("Open dir {}", root.as_ref()), e.into()))?
-    };
-    let expected_file_re = Regex::new(&EXPECTED_FILE_RE).unwrap();
-
-    let paths = fuchsia_fs::directory::readdir_recursive(
-        &dir_proxy,
-        Some(Duration::from_secs(*READDIR_TIMEOUT_SECONDS)),
+) -> Result<(fsys2::RealmQueryProxy, fsys2::RealmExplorerProxy), Error> {
+    let (realm_explorer_proxy, realm_explorer_server_end) =
+        fidl::endpoints::create_proxy::<fsys2::RealmExplorerMarker>()
+            .map_err(|e| Error::IOError("create realm explorer proxy".into(), e.into()))?;
+    // Connect to RootRealmExplorer.
+    flatten_proxy_connection(
+        rcs_proxy.root_realm_explorer(realm_explorer_server_end).await,
+        "RootRealmExplorer",
     )
-    .filter_map(|result| async {
-        match result {
-            Err(err) => {
-                eprintln!("{}", err);
-                None
-            }
-            Ok(entry) => {
-                if expected_file_re.is_match(&entry.name) {
-                    let mut path = PathBuf::from("/hub-v2");
-                    path.push(root.as_ref());
-                    path.push(&entry.name);
-                    Some(path.to_string_lossy().to_string())
-                } else {
-                    None
-                }
-            }
-        }
-    })
-    .collect::<Vec<String>>()
-    .await;
-    Ok(paths)
+    .await?;
+
+    // Connect RootRealmQuery.
+    let (realm_query_proxy, realm_query_server_end) =
+        fidl::endpoints::create_proxy::<fsys2::RealmQueryMarker>()
+            .map_err(|e| Error::IOError("create realm query proxy".into(), e.into()))?;
+    flatten_proxy_connection(
+        rcs_proxy.root_realm_query(realm_query_server_end).await,
+        "RootRealmQuery",
+    )
+    .await?;
+
+    Ok((realm_query_proxy, realm_explorer_proxy))
+}
+
+/// Helper method to unwrap `RemoteControlProxy` creation.
+async fn flatten_proxy_connection(
+    entry_point: Result<Result<(), i32>, fidl::Error>,
+    step_name: &str,
+) -> Result<(), Error> {
+    entry_point
+        .map_err(|e| Error::IOError("talking to RemoteControlProxy".into(), e.into()))?
+        .map_err(|e| Error::IOError(step_name.into(), anyhow!("{:?}", e)))
 }

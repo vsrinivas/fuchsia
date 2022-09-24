@@ -13,7 +13,11 @@
     ],
     use: [
         {
-            protocol: [ "fuchsia.diagnostics.ArchiveAccessor" ],
+            protocol: [
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.sys2.RealmExplorer.root",
+                "fuchsia.sys2.RealmQuery.root",
+            ],
         },
     ],
     expose: [
