@@ -553,6 +553,11 @@ TEST(PagerWriteback, DirtyRequestsOverlap) {
   std::vector<uint8_t> expected(kNumPages * zx_system_get_page_size(), 0);
   vmo->GenerateBufferContents(expected.data(), kNumPages, 0);
 
+  // We should not have any page requests yet.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+
   TestThread t1([vmo]() -> bool {
     // write pages [4,9).
     uint8_t data[5 * zx_system_get_page_size()];
@@ -572,7 +577,6 @@ TEST(PagerWriteback, DirtyRequestsOverlap) {
   ASSERT_TRUE(t2.Start());
   ASSERT_TRUE(t2.WaitForBlocked());
 
-  uint64_t offset, length;
   ASSERT_TRUE(pager.GetPageDirtyRequest(vmo, ZX_TIME_INFINITE, &offset, &length));
   printf("saw DIRTY request for [%zu, %zu)\n", offset, offset + length);
   ASSERT_EQ(4u, offset);
