@@ -20,8 +20,8 @@ use thiserror::Error;
 
 use crate::{
     ip::{
-        socket::DefaultSendOptions, BufferIpTransportContext, BufferTransportIpContext, IpExt,
-        TransportReceiveError,
+        socket::{DefaultSendOptions, IpSock},
+        BufferIpTransportContext, BufferTransportIpContext, IpExt, TransportReceiveError,
     },
     socket::{
         address::{AddrVecIter, ConnAddr, ConnIpAddr, IpPortSpec, ListenerAddr},
@@ -33,7 +33,8 @@ use crate::{
         seqnum::WindowSize,
         socket::{
             Acceptor, Connection, ConnectionId, ListenerId, MaybeListener, SocketAddr,
-            TcpIpTransportContext, TcpNonSyncContext, TcpSockets, TcpSyncContext, TimerId,
+            TcpIpTransportContext, TcpNonSyncContext, TcpSocketHandler, TcpSockets, TcpSyncContext,
+            TimerId,
         },
         state::{BufferProvider, Closed, Initial, ListenOnSegmentDisposition, State},
         Control, UserError,
@@ -107,6 +108,12 @@ where
         let mut addrs_to_search =
             AddrVecIter::<IpPortSpec<I, SC::DeviceId>>::with_device(conn_addr.into(), device);
 
+        struct PostReceiveActions<I: IpExt, D, O, PassiveOpen> {
+            try_send_on: Option<ConnectionId>,
+            reply_with: Option<(Segment<()>, IpSock<I, D, O>)>,
+            new_connection: Option<(ConnectionId, PassiveOpen)>,
+        }
+
         let find_result = addrs_to_search.find_map(|addr| {
             match addr {
                 // Connections are always searched before listeners because they
@@ -129,7 +136,15 @@ where
                         // memory that `send_ip_packet` consults inside `sync_ctx`. If
                         // that is possible we can use the reference directly.
                         let (seg, passive_open) = state.on_segment::<_, C>(incoming, now);
-                        (seg.map(|seg| (seg, ip_sock.clone())), passive_open.map(|p| (conn_id, p)))
+                        // Note: There are cases where `do_send` isn't needed,
+                        // for example if we don't have anything to send, we
+                        // can optimize for those cases later if an extra call
+                        // to do_send causes noticeable performance difference.
+                        PostReceiveActions {
+                            try_send_on: Some(conn_id),
+                            reply_with: seg.map(|seg| (seg, ip_sock.clone())),
+                            new_connection: passive_open.map(|p| (conn_id, p)),
+                        }
                     })
                 }),
                 AddrVec::Listen(listener_addr) => {
@@ -263,7 +278,11 @@ where
                             }
                         },
                     );
-                    Some((reply.map(|reply| (reply, ip_sock)), None))
+                    Some(PostReceiveActions {
+                        reply_with: reply.map(|reply| (reply, ip_sock)),
+                        new_connection: None,
+                        try_send_on: None,
+                    })
                 }
             }
         });
@@ -306,8 +325,8 @@ where
                     }
                 }
             }
-            Some((reply, passive_open)) => {
-                if let Some((seg, ip_sock)) = reply {
+            Some(PostReceiveActions { reply_with, new_connection, try_send_on }) => {
+                if let Some((seg, ip_sock)) = reply_with {
                     let body = tcp_serialize_segment(seg, conn_addr);
                     match sync_ctx.send_ip_packet(ctx, &ip_sock, body, None) {
                         Ok(()) => {}
@@ -318,7 +337,7 @@ where
                     }
                 }
 
-                if let Some((conn_id, passive_open)) = passive_open {
+                if let Some((conn_id, passive_open)) = new_connection {
                     sync_ctx.with_tcp_sockets_mut(|sockets| {
                         let (conn, _, _): (_, &(), &ConnAddr<_, _, _, _>) = sockets
                             .socketmap
@@ -345,6 +364,10 @@ where
                         acceptor.ready.push_back((conn, passive_open));
                         ctx.on_new_connection(acceptor_id);
                     })
+                }
+
+                if let Some(conn_id) = try_send_on {
+                    TcpSocketHandler::do_send(sync_ctx, ctx, conn_id);
                 }
             }
         }
