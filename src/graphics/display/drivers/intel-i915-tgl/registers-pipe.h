@@ -25,7 +25,7 @@ class PipeSourceSize : public hwreg::RegisterBase<PipeSourceSize, uint32_t> {
   static constexpr uint32_t kBaseAddr = 0x6001c;
 
   DEF_FIELD(28, 16, horizontal_source_size);
-  DEF_FIELD(11, 0, vertical_source_size);
+  DEF_FIELD(12, 0, vertical_source_size);
 };
 
 // PIPE_BOTTOM_COLOR
@@ -73,7 +73,7 @@ class PlaneSurfaceStride : public hwreg::RegisterBase<PlaneSurfaceStride, uint32
  public:
   static constexpr uint32_t kBaseAddr = 0x70188;
 
-  DEF_FIELD(9, 0, stride);
+  DEF_FIELD(10, 0, stride);
 };
 
 // PLANE_SIZE
@@ -81,8 +81,25 @@ class PlaneSurfaceSize : public hwreg::RegisterBase<PlaneSurfaceSize, uint32_t> 
  public:
   static constexpr uint32_t kBaseAddr = 0x70190;
 
-  DEF_FIELD(27, 16, height_minus_1);
+  DEF_FIELD(28, 16, height_minus_1);
   DEF_FIELD(12, 0, width_minus_1);
+};
+
+// PLANE_COLOR_CTL (TGL+)
+class PlaneColorControl : public hwreg::RegisterBase<PlaneColorControl, uint32_t> {
+ public:
+  static constexpr uint32_t kBaseAddr = 0x701CC;
+
+  DEF_BIT(30, pipe_gamma_enable);  // deprecated
+  DEF_BIT(29, remove_yuv_offset);
+  DEF_BIT(28, yuv_range_correction_disable);
+  DEF_BIT(23, pipe_csc_enable);  // deprecated
+
+  DEF_BIT(21, plane_csc_enable);
+  DEF_BIT(20, plane_input_csc_enable);
+
+  DEF_BIT(14, plane_pre_csc_gamma_enable);
+  DEF_BIT(13, plane_gamma_disable);
 };
 
 // PLANE_CTL
@@ -91,14 +108,26 @@ class PlaneControl : public hwreg::RegisterBase<PlaneControl, uint32_t> {
   static constexpr uint32_t kBaseAddr = 0x70180;
 
   DEF_BIT(31, plane_enable);
+  // Skylake / Kaby Lake only
   DEF_BIT(30, pipe_gamma_enable);
+  // Skylake / Kaby Lake only
   DEF_BIT(29, remove_yuv_offset);
+  // Skylake / Kaby Lake only
   DEF_BIT(28, yuv_range_correction_disable);
 
-  DEF_FIELD(27, 24, source_pixel_format);
-  static constexpr uint32_t kFormatRgb8888 = 4;
+  static constexpr uint32_t kFormatRgb8888 = 0b1000;
 
-  DEF_BIT(23, pipe_csc_enable);
+  SelfType& set_source_pixel_format_tiger_lake(uint32_t format) {
+    hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), 27, 23).set(format);
+    return *this;
+  }
+
+  SelfType& set_source_pixel_format_kaby_lake(uint32_t format) {
+    hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), 27, 24).set(format);
+    return *this;
+  }
+
+  DEF_BIT(23, pipe_csc_enable_kaby_lake);
   DEF_FIELD(22, 21, key_enable);
   DEF_BIT(20, rgb_color_order);
   static constexpr uint32_t kOrderBgrx = 0;
@@ -136,10 +165,10 @@ class PlaneControl : public hwreg::RegisterBase<PlaneControl, uint32_t> {
 class PlaneBufCfg : public hwreg::RegisterBase<PlaneBufCfg, uint32_t> {
  public:
   static constexpr uint32_t kBaseAddr = 0x7017c;
-  static constexpr uint32_t kBufferCount = 892;
+  static constexpr uint32_t kBufferCount = 1023;
 
-  DEF_FIELD(25, 16, buffer_end);
-  DEF_FIELD(9, 0, buffer_start);
+  DEF_FIELD(26, 16, buffer_end);
+  DEF_FIELD(10, 0, buffer_start);
 };
 
 // PLANE_WM
@@ -149,7 +178,7 @@ class PlaneWm : public hwreg::RegisterBase<PlaneWm, uint32_t> {
 
   DEF_BIT(31, enable);
   DEF_FIELD(18, 14, lines);
-  DEF_FIELD(9, 0, blocks);
+  DEF_FIELD(10, 0, blocks);
 };
 
 // PLANE_KEYMSK
@@ -222,7 +251,7 @@ class PipeScalerWinPosition : public hwreg::RegisterBase<PipeScalerWinPosition, 
   static constexpr uint32_t kBaseAddr = 0x68170;
 
   DEF_FIELD(28, 16, x_pos);
-  DEF_FIELD(11, 0, y_pos);
+  DEF_FIELD(12, 0, y_pos);
 };
 
 // PS_WIN_SIZE
@@ -230,8 +259,8 @@ class PipeScalerWinSize : public hwreg::RegisterBase<PipeScalerWinSize, uint32_t
  public:
   static constexpr uint32_t kBaseAddr = 0x68174;
 
-  DEF_FIELD(28, 16, x_size);
-  DEF_FIELD(11, 0, y_size);
+  DEF_FIELD(29, 16, x_size);
+  DEF_FIELD(12, 0, y_size);
 };
 
 // DE_PIPE_INTERRUPT
@@ -358,6 +387,10 @@ class PipeRegs {
   }
   hwreg::RegisterAddr<tgl_registers::PlaneSurfaceSize> PlaneSurfaceSize(int32_t plane_num) {
     return GetPlaneReg<tgl_registers::PlaneSurfaceSize>(plane_num);
+  }
+  hwreg::RegisterAddr<tgl_registers::PlaneColorControl> PlaneColorControlTigerLake(
+      int32_t plane_num) {
+    return GetPlaneReg<tgl_registers::PlaneColorControl>(plane_num);
   }
   hwreg::RegisterAddr<tgl_registers::PlaneControl> PlaneControl(int32_t plane_num) {
     return GetPlaneReg<tgl_registers::PlaneControl>(plane_num);

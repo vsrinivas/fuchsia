@@ -1428,8 +1428,14 @@ bool DpDisplay::PipeConfigPreamble(const display_mode_t& mode, tgl_registers::Pi
                                    tgl_registers::Trans trans) {
   tgl_registers::TranscoderRegs trans_regs(trans);
 
+  // Transcoder should be disabled first before reconfiguring the transcoder
+  // clock. Will be re-enabled at `PipeConfigEpilogue()`.
+  auto trans_conf = trans_regs.Conf().ReadFrom(mmio_space());
+  trans_conf.set_transcoder_enable(0).WriteTo(mmio_space());
+  trans_conf.ReadFrom(mmio_space());
+
   // Configure Transcoder Clock Select
-  if (trans != tgl_registers::TRANS_EDP) {
+  if (!is_tgl(controller()->device_id()) && trans != tgl_registers::TRANS_EDP) {
     auto clock_select = trans_regs.ClockSelect().ReadFrom(mmio_space());
     clock_select.set_ddi_clock_kaby_lake(ddi());
     clock_select.WriteTo(mmio_space());
@@ -1491,21 +1497,28 @@ bool DpDisplay::PipeConfigEpilogue(const display_mode_t& mode, tgl_registers::Pi
 
   auto ddi_func = trans_regs.DdiFuncControl().ReadFrom(mmio_space());
   ddi_func.set_trans_ddi_function_enable(1);
-  ddi_func.set_ddi_kaby_lake(ddi());
+  if (is_tgl(controller()->device_id())) {
+    ddi_func.set_ddi_tiger_lake(ddi());
+  } else {
+    ddi_func.set_ddi_kaby_lake(ddi());
+  }
   ddi_func.set_trans_ddi_mode_select(ddi_func.kModeDisplayPortSst);
   ddi_func.set_bits_per_color(ddi_func.k8bbc);  // kPixelFormat
   ddi_func.set_sync_polarity((!!(mode.flags & MODE_FLAG_VSYNC_POSITIVE)) << 1 |
                              (!!(mode.flags & MODE_FLAG_HSYNC_POSITIVE)));
-  ddi_func.set_port_sync_mode_enable(0);
   ddi_func.set_dp_vc_payload_allocate(0);
-  ddi_func.set_edp_input_select(
-      pipe == tgl_registers::PIPE_A
-          ? ddi_func.kPipeA
-          : (pipe == tgl_registers::PIPE_B ? ddi_func.kPipeB : ddi_func.kPipeC));
+  if (!is_tgl(controller()->device_id())) {
+    // These fields don't exist on Tiger Lake.
+    ddi_func.set_port_sync_mode_enable(0);
+    ddi_func.set_edp_input_select(
+        pipe == tgl_registers::PIPE_A
+            ? ddi_func.kPipeA
+            : (pipe == tgl_registers::PIPE_B ? ddi_func.kPipeB : ddi_func.kPipeC));
+  }
   ddi_func.set_dp_port_width_selection(dp_lane_count_ - 1);
   ddi_func.WriteTo(mmio_space());
 
-  auto trans_conf = trans_regs.Conf().FromValue(0);
+  auto trans_conf = trans_regs.Conf().ReadFrom(mmio_space());
   trans_conf.set_transcoder_enable(1);
   trans_conf.set_interlaced_mode(!!(mode.flags & MODE_FLAG_INTERLACED));
   trans_conf.WriteTo(mmio_space());

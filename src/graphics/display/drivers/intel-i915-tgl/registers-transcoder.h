@@ -17,15 +17,21 @@ namespace tgl_registers {
 // TRANS_VTOTAL, TRANS_VBLANK
 class TransHVTotal : public hwreg::RegisterBase<TransHVTotal, uint32_t> {
  public:
-  DEF_FIELD(28, 16, count_total);  // same as blank_start
-  DEF_FIELD(12, 0, count_active);  // same as blank_end
+  DEF_FIELD(29, 16, count_total);  // same as blank_end
+  DEF_FIELD(13, 0, count_active);  // same as blank_start
 };
 
 // TRANS_HSYNC, TRANS_VSYNC
 class TransHVSync : public hwreg::RegisterBase<TransHVSync, uint32_t> {
  public:
-  DEF_FIELD(28, 16, sync_end);
-  DEF_FIELD(12, 0, sync_start);
+  DEF_FIELD(29, 16, sync_end);
+  DEF_FIELD(13, 0, sync_start);
+};
+
+// TRANS_VSYNCSHIFT
+class TransVSyncShift : public hwreg::RegisterBase<TransVSyncShift, uint32_t> {
+ public:
+  DEF_FIELD(12, 0, second_field_vsync_shift);
 };
 
 // TRANS_DDI_FUNC_CTL
@@ -293,6 +299,7 @@ class TranscoderRegs {
   hwreg::RegisterAddr<TransHVTotal> VTotal() { return GetReg<TransHVTotal>(0x6000c); }
   hwreg::RegisterAddr<TransHVTotal> VBlank() { return GetReg<TransHVTotal>(0x60010); }
   hwreg::RegisterAddr<TransHVSync> VSync() { return GetReg<TransHVSync>(0x60014); }
+  hwreg::RegisterAddr<TransVSyncShift> VSyncShift() { return GetReg<TransVSyncShift>(0x60028); }
   hwreg::RegisterAddr<TransDdiFuncControl> DdiFuncControl() {
     return GetReg<TransDdiFuncControl>(0x60400);
   }

@@ -12,13 +12,10 @@
 #include <cstdint>
 #include <memory>
 
-#include "src/graphics/display/drivers/intel-i915-tgl/display-device.h"
-#include "src/graphics/display/drivers/intel-i915-tgl/intel-i915-tgl.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/hardware-common.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/poll-until.h"
-#include "src/graphics/display/drivers/intel-i915-tgl/registers-dpll.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-pipe.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-transcoder.h"
-#include "src/graphics/display/drivers/intel-i915-tgl/registers.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/tiling.h"
 
 namespace {
@@ -75,15 +72,23 @@ uint32_t encode_pipe_color_component(uint8_t component) {
 
 namespace i915_tgl {
 
-Pipe::Pipe(fdf::MmioBuffer* mmio_space, tgl_registers::Pipe pipe, PowerWellRef pipe_power)
-    : mmio_space_(mmio_space), pipe_(pipe), pipe_power_(std::move(pipe_power)) {}
+Pipe::Pipe(fdf::MmioBuffer* mmio_space, tgl_registers::Platform platform, tgl_registers::Pipe pipe,
+           PowerWellRef pipe_power)
+    : mmio_space_(mmio_space),
+      platform_(platform),
+      pipe_(pipe),
+      pipe_power_(std::move(pipe_power)) {}
 
 // static
 void Pipe::ResetPipe(tgl_registers::Pipe pipe, fdf::MmioBuffer* mmio_space) {
   tgl_registers::PipeRegs pipe_regs(pipe);
 
   // Disable planes, bottom color, and cursor
-  for (int i = 0; i < 3; i++) {
+  // TODO(fxbug.dev/109368): Add support for Skylake/Kaby Lake (num of panels'
+  // = 3).
+  constexpr size_t kNumPanelsTigerLake = 7;
+
+  for (size_t i = 0; i < kNumPanelsTigerLake; i++) {
     pipe_regs.PlaneControl(i).FromValue(0).WriteTo(mmio_space);
     pipe_regs.PlaneSurface(i).FromValue(0).WriteTo(mmio_space);
   }
@@ -203,6 +208,12 @@ void Pipe::ApplyModeConfig(const display_mode_t& mode) {
   v_sync_reg.set_sync_start(v_sync_start);
   v_sync_reg.set_sync_end(v_sync_end);
   v_sync_reg.WriteTo(mmio_space_);
+
+  // Assume it is not interlacing...
+  trans_regs.VSyncShift()
+      .ReadFrom(mmio_space_)
+      .set_second_field_vsync_shift(0)
+      .WriteTo(mmio_space_);
 
   // The Intel docs say that H/VBlank should be programmed with the same H/VTotal
   trans_regs.HBlank().FromValue(h_total_reg.reg_value()).WriteTo(mmio_space_);
@@ -353,7 +364,9 @@ void Pipe::ApplyConfiguration(const display_config_t* config, const config_stamp
   }
   ConfigureCursorPlane(cursor, !!config->cc_flags, &regs, current_config_stamp_seqno);
 
-  pipe_regs.CscMode().FromValue(regs.csc_mode).WriteTo(mmio_space_);
+  if (platform_ != tgl_registers::Platform::kTigerLake) {
+    pipe_regs.CscMode().FromValue(regs.csc_mode).WriteTo(mmio_space_);
+  }
   pipe_regs.PipeBottomColor().FromValue(regs.pipe_bottom_color).WriteTo(mmio_space_);
   pipe_regs.CursorBase().FromValue(regs.cur_base).WriteTo(mmio_space_);
   pipe_regs.CursorPos().FromValue(regs.cur_pos).WriteTo(mmio_space_);
@@ -379,6 +392,7 @@ void Pipe::ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* prim
     regs->plane_surf[plane_num] = 0;
     return;
   }
+  plane_ctrl.set_render_decompression(false).set_allow_double_buffer_update_disable(1);
 
   const image_t* image = &primary->image;
 
@@ -426,14 +440,18 @@ void Pipe::ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* prim
 
     auto ps_ctrl = pipe_regs.PipeScalerCtrl(*scaler_1_claimed).ReadFrom(mmio_space_);
     ps_ctrl.set_mode(ps_ctrl.kDynamic);
-    if (primary->src_frame.width > 2048) {
-      float max_dynamic_height = static_cast<float>(plane_height) *
-                                 tgl_registers::PipeScalerCtrl::kDynamicMaxVerticalRatio2049;
-      if (static_cast<uint32_t>(max_dynamic_height) < primary->dest_frame.height) {
-        // TODO(stevensd): This misses some cases where 7x5 can be used.
-        ps_ctrl.set_enable(ps_ctrl.k7x5);
+    if (platform_ != tgl_registers::Platform::kTigerLake) {
+      // The mode bits are different in Tiger Lake.
+      if (primary->src_frame.width > 2048) {
+        float max_dynamic_height = static_cast<float>(plane_height) *
+                                   tgl_registers::PipeScalerCtrl::kDynamicMaxVerticalRatio2049;
+        if (static_cast<uint32_t>(max_dynamic_height) < primary->dest_frame.height) {
+          // TODO(stevensd): This misses some cases where 7x5 can be used.
+          ps_ctrl.set_enable(ps_ctrl.k7x5);
+        }
       }
     }
+
     ps_ctrl.set_binding(plane_num + 1);
     ps_ctrl.set_enable(1);
     ps_ctrl.WriteTo(mmio_space_);
@@ -466,6 +484,15 @@ void Pipe::ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* prim
   stride_reg.set_stride(stride);
   stride_reg.WriteTo(mmio_space_);
 
+  if (platform_ == tgl_registers::Platform::kTigerLake) {
+    auto plane_color_ctl = pipe_regs.PlaneColorControlTigerLake(0).ReadFrom(mmio_space_);
+    plane_color_ctl.set_pipe_gamma_enable(0)
+        .set_pipe_csc_enable(enable_csc)
+        .set_plane_input_csc_enable(0)
+        .set_plane_gamma_disable(1)
+        .WriteTo(mmio_space_);
+  }
+
   auto plane_key_mask = pipe_regs.PlaneKeyMask(plane_num).FromValue(0);
   if (primary->alpha_mode != ALPHA_DISABLE && !isnan(primary->alpha_layer_val)) {
     plane_key_mask.set_plane_alpha_enable(1);
@@ -489,8 +516,14 @@ void Pipe::ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* prim
   }
 
   plane_ctrl.set_plane_enable(1);
-  plane_ctrl.set_pipe_csc_enable(enable_csc);
-  plane_ctrl.set_source_pixel_format(plane_ctrl.kFormatRgb8888);
+  if (platform_ != tgl_registers::Platform::kTigerLake) {
+    plane_ctrl.set_pipe_csc_enable_kaby_lake(enable_csc);
+  }
+  if (platform_ == tgl_registers::Platform::kTigerLake) {
+    plane_ctrl.set_source_pixel_format_tiger_lake(plane_ctrl.kFormatRgb8888);
+  } else {
+    plane_ctrl.set_source_pixel_format_kaby_lake(plane_ctrl.kFormatRgb8888);
+  }
   if (primary->image.pixel_format == ZX_PIXEL_FORMAT_ABGR_8888 ||
       primary->image.pixel_format == ZX_PIXEL_FORMAT_BGR_888x) {
     plane_ctrl.set_rgb_color_order(plane_ctrl.kOrderRgbx);
@@ -517,7 +550,10 @@ void Pipe::ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* prim
     ZX_ASSERT(primary->transform_mode == FRAME_TRANSFORM_ROT_270);
     plane_ctrl.set_plane_rotation(plane_ctrl.k270deg);
   }
-  plane_ctrl.WriteTo(mmio_space_);
+  if (platform_ == tgl_registers::Platform::kTigerLake) {
+    plane_ctrl.set_render_decompression(false).set_allow_double_buffer_update_disable(true).WriteTo(
+        mmio_space_);
+  }
 
   auto plane_surface = pipe_regs.PlaneSurface(plane_num).ReadFrom(mmio_space_);
   plane_surface.set_surface_base_addr(base_address >> plane_surface.kRShiftCount);

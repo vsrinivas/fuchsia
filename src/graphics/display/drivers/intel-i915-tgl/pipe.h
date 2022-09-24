@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/display/controller/c/banjo.h>
 #include <lib/edid/edid.h>
 #include <lib/fit/function.h>
+#include <lib/mmio/mmio-buffer.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/vmo.h>
 
@@ -18,12 +19,12 @@
 #include <ddktl/device.h>
 #include <region-alloc/region-alloc.h>
 
-#include "gtt.h"
-#include "lib/mmio/mmio-buffer.h"
-#include "power.h"
-#include "registers-ddi.h"
-#include "registers-pipe.h"
-#include "registers-transcoder.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/gtt.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/hardware-common.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/power.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/registers-ddi.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/registers-pipe.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/registers-transcoder.h"
 
 namespace i915_tgl {
 
@@ -32,7 +33,8 @@ class DisplayDevice;
 
 class Pipe {
  public:
-  Pipe(fdf::MmioBuffer* mmio_space, tgl_registers::Pipe pipe, PowerWellRef pipe_power);
+  Pipe(fdf::MmioBuffer* mmio_space, tgl_registers::Platform platform, tgl_registers::Pipe pipe,
+       PowerWellRef pipe_power);
   virtual ~Pipe() = default;
 
   Pipe(const Pipe&) = delete;
@@ -100,6 +102,7 @@ class Pipe {
 
  protected:
   bool attached_edp() const { return attached_edp_; }
+  tgl_registers::Platform platform() const { return platform_; }
 
  private:
   // Borrowed reference to Controller instance
@@ -115,6 +118,7 @@ class Pipe {
   uint64_t attached_display_ = INVALID_DISPLAY_ID;
   bool attached_edp_ = false;
 
+  tgl_registers::Platform platform_;
   tgl_registers::Pipe pipe_;
 
   PowerWellRef pipe_power_;
@@ -160,7 +164,7 @@ class Pipe {
 class PipeSkylake : public Pipe {
  public:
   PipeSkylake(fdf::MmioBuffer* mmio_space, tgl_registers::Pipe pipe, PowerWellRef pipe_power)
-      : Pipe(mmio_space, pipe, std::move(pipe_power)) {}
+      : Pipe(mmio_space, tgl_registers::Platform::kSkylake, pipe, std::move(pipe_power)) {}
   ~PipeSkylake() override = default;
 
   tgl_registers::Trans connected_transcoder_id() const override {
@@ -171,7 +175,7 @@ class PipeSkylake : public Pipe {
 class PipeTigerLake : public Pipe {
  public:
   PipeTigerLake(fdf::MmioBuffer* mmio_space, tgl_registers::Pipe pipe, PowerWellRef pipe_power)
-      : Pipe(mmio_space, pipe, std::move(pipe_power)) {}
+      : Pipe(mmio_space, tgl_registers::Platform::kTigerLake, pipe, std::move(pipe_power)) {}
   ~PipeTigerLake() override = default;
 
   tgl_registers::Trans connected_transcoder_id() const override { return tied_transcoder_id(); }
