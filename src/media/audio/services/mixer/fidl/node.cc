@@ -208,6 +208,12 @@ void Node::set_pipeline_stage_thread(ThreadPtr t) {
   pipeline_stage_thread_ = t;
 }
 
+void Node::ClearAllChildNodes() {
+  FX_CHECK(is_meta_);
+  child_sources_.clear();
+  child_dests_.clear();
+}
+
 fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdgeInner(
     GlobalTaskQueue& global_queue, NodePtr source, NodePtr dest) {
   // Create a node in source->child_dests() if needed.

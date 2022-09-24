@@ -152,6 +152,11 @@ class Node {
   // Kind of pipeline this node participates in.
   [[nodiscard]] PipelineDirection pipeline_direction() const { return pipeline_direction_; }
 
+  // Clears all child nodes of this meta node. This is useful to make sure all parent references in
+  // children are cleared up before destroying parent.
+  // REQUIRED: is_meta()
+  void ClearAllChildNodes();
+
   // Returns total "self" presentation delay contribution for this node if reached through `source`.
   // This typically consists of the internal processing delay contribution of this node with respect
   // to `source` edge.
@@ -223,23 +228,27 @@ class Node {
   // REQUIRED: !is_meta()
   virtual bool AllowsDest() const = 0;
 
- private:
-  friend class FakeGraph;
+  // TODO(fxbug.dev/87651): Below methods are moved here to have "protected" visibility in order to
+  // allow `CustomNode` to create its built-in child source and destination nodes. Ideally, we'd
+  // like the hide this implementation detail back to "private" scope.
 
-  static fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> CreateEdgeInner(
-      GlobalTaskQueue& global_queue, NodePtr source, NodePtr dest);
-
-  // Implementation of CreateEdge.
+  // Implementation of `CreateEdge`.
   void AddSource(NodePtr source);
   void SetDest(NodePtr dest);
   void AddChildSource(NodePtr child_source);
   void AddChildDest(NodePtr child_dest);
 
-  // Implementation of DeleteEdge.
+  // Implementation of `DeleteEdge`.
   void RemoveSource(NodePtr source);
   void RemoveDest(NodePtr dest);
   void RemoveChildSource(NodePtr child_source);
   void RemoveChildDest(NodePtr child_dest);
+
+ private:
+  friend class FakeGraph;
+
+  static fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> CreateEdgeInner(
+      GlobalTaskQueue& global_queue, NodePtr source, NodePtr dest);
 
   const std::string name_;
   const bool is_meta_;
