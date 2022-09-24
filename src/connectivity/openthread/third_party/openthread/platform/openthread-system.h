@@ -51,7 +51,6 @@ extern "C" {
  *
  */
 typedef struct otPlatformConfig {
-  uint32_t m_speed_up_factor;  ///< Speed up factor.
   bool reset_rcp;
 } otPlatformConfig;
 

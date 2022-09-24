@@ -7,14 +7,12 @@ use openthread::prelude::*;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct otPlatformConfig {
-    pub m_speedup_factor: u32,
     pub reset_rcp: bool,
 }
 
 extern "C" {
     pub fn otSysInit(a_platform_config: *mut otPlatformConfig) -> bool;
     pub fn otSysDeinit();
-    pub fn platformAlarmProcess(instance: *mut otsys::otInstance);
     pub fn platformRadioProcess(instance: *mut otsys::otInstance);
     pub fn platformInfraIfInit(infra_if_idx: ot::NetifIndex) -> i32;
     pub fn platformInfraIfOnReceiveIcmp6Msg(instance: *mut otsys::otInstance);

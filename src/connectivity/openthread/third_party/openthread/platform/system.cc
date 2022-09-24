@@ -45,7 +45,6 @@ void platformRandomInit(void);
 void platformAlarmInit(uint32_t a_speed_up_factor);
 
 void otSysInit(otPlatformConfig *a_platform_config) {
-  platformAlarmInit(a_platform_config->m_speed_up_factor);
   platformRadioInit(a_platform_config);
   platformRandomInit();
 }

@@ -22,6 +22,7 @@ mod reset;
 mod trel;
 mod udp;
 
+pub(crate) use alarm::*;
 pub(crate) use infra_if::InfraIfInstance;
 use openthread::ot::NetifIdentifier;
 pub(crate) use reset::PlatformResetRequested;
@@ -30,8 +31,7 @@ pub(crate) use udp::*;
 pub(super) struct PlatformBacking {
     pub(super) ot_to_rcp_sender: RefCell<mpsc::Sender<Vec<u8>>>,
     pub(super) rcp_to_ot_receiver: RefCell<mpsc::Receiver<Vec<u8>>>,
-    pub(super) task_alarm: Cell<Option<fasync::Task<()>>>,
-    pub(super) timer_sender: fmpsc::Sender<usize>,
+    pub(super) alarm: AlarmInstance,
     pub(super) netif_index_thread: Option<ot::NetifIndex>,
     pub(super) netif_index_backbone: Option<ot::NetifIndex>,
     pub(super) trel: RefCell<Option<trel::TrelInstance>>,

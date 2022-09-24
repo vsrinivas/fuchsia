@@ -24,16 +24,10 @@ use futures::channel::mpsc as fmpsc;
 use futures::Stream;
 use log::*;
 use lowpan_driver_common::spinel::*;
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
 use std::task::{Context, Poll};
-
-// Number of entries in the timer wakeup buffer.
-// This value was chosen somewhat arbitrarily, with the only
-// requirement being that it be larger than what should happen
-// during normal operation.
-const TIMER_BUFFER_LEN: usize = 20;
 
 // Number of entries in the frame-ready channel.
 // This length doesn't need to be very large, as it
@@ -112,7 +106,7 @@ impl Platform {
         SpinelStream: Stream<Item = Result<Vec<u8>, anyhow::Error>> + 'static + Unpin + Send,
     {
         // OpenThread to RCP data-pump and related machinery.
-        let (timer_sender, timer_receiver) = fmpsc::channel(TIMER_BUFFER_LEN);
+        let (alarm, timer_receiver) = backing::AlarmInstance::new();
         let (ot_to_rcp_sender, ot_to_rcp_receiver) = mpsc::channel::<Vec<u8>>();
         let ot_to_rcp_task = fasync::Task::spawn(async move {
             spinel_sink.open().await.expect("Unable to open spinel stream");
@@ -174,8 +168,7 @@ impl Platform {
             PlatformBacking::set_singleton(PlatformBacking {
                 ot_to_rcp_sender: RefCell::new(ot_to_rcp_sender),
                 rcp_to_ot_receiver: RefCell::new(rcp_to_ot_receiver),
-                task_alarm: Cell::new(None),
-                timer_sender,
+                alarm,
                 netif_index_thread: builder.thread_netif_index,
                 netif_index_backbone: builder.backbone_netif_index,
                 trel: RefCell::new(None),
@@ -184,8 +177,7 @@ impl Platform {
             });
 
             // Initialize the lower-level platform implementation
-            otSysInit(&mut otPlatformConfig { m_speedup_factor: 1, reset_rcp: false }
-                as *mut otPlatformConfig);
+            otSysInit(&mut otPlatformConfig { reset_rcp: false } as *mut otPlatformConfig);
         };
 
         Platform { timer_receiver, rcp_to_ot_frame_ready_receiver, ot_to_rcp_task, rcp_to_ot_task }
@@ -223,22 +215,6 @@ impl ot::Platform for Platform {
 }
 
 impl Platform {
-    fn process_poll_alarm(&mut self, instance: &ot::Instance, cx: &mut Context<'_>) {
-        let instance_ptr = instance.as_ot_ptr();
-
-        while let Poll::Ready(Some(ptr_usize)) = self.timer_receiver.poll_next_unpin(cx) {
-            trace!("Firing platformAlarmProcess");
-            assert_eq!(instance_ptr as usize, ptr_usize, "Got wrong pointer from timer receiver");
-
-            // SAFETY: Must be called with a valid pointer to otInstance,
-            //         must also only be called from the main OpenThread thread,
-            //         which is a guarantee of this method.
-            unsafe {
-                platformAlarmProcess(instance_ptr);
-            }
-        }
-    }
-
     fn process_poll_radio(&mut self, instance: &ot::Instance, cx: &mut Context<'_>) {
         let instance_ptr = instance.as_ot_ptr();
 

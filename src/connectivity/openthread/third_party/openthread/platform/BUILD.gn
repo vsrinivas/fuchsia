@@ -6,12 +6,9 @@ import("//third_party/openthread/openthread_upstream_version.gni")
 
 source_set("platform") {
   sources = [
-    "alarm.cc",
-    "alarm.h",
     "bootstrap_fidl_impl.cc",
     "bootstrap_fidl_impl.h",
     "entropy.cc",
-    "fuchsia_platform_alarm.cc",
     "infra_if.cc",
     "infra_if.h",
     "logging.cc",
