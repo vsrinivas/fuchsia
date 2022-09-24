@@ -166,6 +166,11 @@ recovery_is_recovery_eng =
     get_label_info("//build/images/recovery:recovery-eng",
                    "label_with_toolchain")
 
+recovery_is_recovery_fastboot =
+    get_label_info(recovery_label, "label_with_toolchain") ==
+    get_label_info("//build/images/recovery:recovery-fastboot",
+                   "label_with_toolchain")
+
 assert(custom_signing_script == "" || !use_vboot,
        "custom_signing_script and use_vboot cannot be used together!")
 

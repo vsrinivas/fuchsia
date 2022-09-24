@@ -101,9 +101,13 @@ files = {
     recovery_zbi = "${zedboot_assembly_outdir}/zedboot.${_image_suffix}"
     recovery_vbmeta = "${zedboot_assembly_outdir}/zedboot.vbmeta"
   } else if (recovery_is_recovery_eng) {
-    _recovery_outdir = assembly_outdir
-    recovery_zbi = "${assembly_outdir}/obj/build/images/recovery/recovery-eng/recovery-eng.${_image_suffix}"
-    recovery_vbmeta = "${assembly_outdir}/obj/build/images/recovery/recovery-eng/recovery-eng.vbmeta"
+    _recovery_outdir = root_out_dir
+    recovery_zbi = "${root_out_dir}/obj/build/images/recovery/recovery-eng/recovery-eng.${_image_suffix}"
+    recovery_vbmeta = "${root_out_dir}/obj/build/images/recovery/recovery-eng/recovery-eng.vbmeta"
+  } else if (recovery_is_recovery_fastboot) {
+    _recovery_outdir = root_out_dir
+    recovery_zbi = "${root_out_dir}/obj/build/images/recovery/recovery-fastboot/recovery-fastboot.${_image_suffix}"
+    recovery_vbmeta = "${root_out_dir}/obj/build/images/recovery/recovery-fastboot/recovery-fastboot.vbmeta"
   } else {
     # The standard recovery image and vbmeta locations.
     _recovery_outdir = root_out_dir

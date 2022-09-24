@@ -4,6 +4,7 @@
 
 import("//build/assembly/assembled_system.gni")
 import("//build/board.gni")
+import("//build/images/paths.gni")
 import("//build/images/vboot/vboot.gni")
 import("//build/images/zedboot/zedboot_args.gni")
 import("//build/testing/host_test_data.gni")
@@ -205,6 +206,61 @@ if (is_fuchsia) {
   assembled_system("recovery-eng") {
     forward_variables_from(recovery_base, "*")
     base_packages = recovery_eng_packages + [ ":core-eng" ]
+  }
+
+  # A minimal recovery image that runs userspace fastboot on tcp.
+  assembled_system("recovery-fastboot") {
+    forward_variables_from(recovery_base, "*")
+    base_packages = []
+    base_packages = [
+      ":core-eng",
+      "//build/info:build-info",
+      "//src/connectivity/network",
+      "//src/connectivity/network/netcfg:config-default",
+      "//src/devices/sysmem/bin/sysmem_connector",
+      "//src/sys/appmgr",
+      "//src/sys/appmgr:appmgr_scheme_config",
+      "//src/sys/appmgr:component_id_index_no_restrict_storage",
+      "//src/sys/sysmgr",
+      "//src/firmware/fastboot-tcp",
+      "//src/connectivity/network/mdns/bundles:services",
+      "//src/firmware/fastboot-tcp:fastboot_tcp_mdns_config",
+      "//src/sys/pkg:recovery-core",
+    ]
+
+    bootfs_labels = []
+    bootfs_labels = [
+      ":root",
+      "//build/info:bootfs",
+      "//build/input:recovery_bootfs",
+      "//bundles:bootstrap",
+      "//bundles/drivers:bootstrap",
+      "//bundles/drivers:usb-host-stack",
+      "//bundles/drivers:usb-peripheral-stack",
+      "//src/sys/component_manager:component_manager_bootfs_config",
+      "//src/diagnostics/archivist:default-service-config",
+      "//src/devices/bundles:debugging",
+    ]
+
+    if (recovery_is_recovery_fastboot) {
+      image_metadata_overrides = {
+        zbi = {
+          name = "zircon-r"
+        }
+
+        if (sign_zbi) {
+          zbi_signed = {
+            name = "zircon-r.signed"
+          }
+        }
+
+        if (use_vbmeta) {
+          vbmeta = {
+            name = "zircon-r"
+          }
+        }
+      }
+    }
   }
 
   assembled_system("recovery-fdr") {
