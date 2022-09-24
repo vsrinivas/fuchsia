@@ -8,6 +8,7 @@
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/closure-queue/closure_queue.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/zx/bti.h>
@@ -119,13 +120,17 @@ class CodecAdapterH264Multi : public AmlogicCodecAdapter,
       uint32_t length);
 
   void OnCoreCodecFailStream(fuchsia::media::StreamError error);
-  CodecPacket* GetFreePacket();
+  // The passed-in buffer will be set on the returned packet until the packet is no longer in
+  // flight.
+  CodecPacket* GetFreePacket(const CodecBuffer* buffer);
   std::list<CodecInputItem> CoreCodecStopStreamInternal();
 
   bool IsPortSecureRequired(CodecPort port);
   bool IsPortSecurePermitted(CodecPort port);
   bool IsPortSecure(CodecPort port);
   bool IsOutputSecure();
+
+  void MidStreamOutputBufferConfigInternal(bool did_reallocate_buffers);
 
   DeviceCtx* device_ = nullptr;
   AmlogicVideo* video_ = nullptr;
@@ -144,6 +149,8 @@ class CodecAdapterH264Multi : public AmlogicCodecAdapter,
   // should then block on the task's completion. The reason for this is that stream control
   // operation are assumed to be synchronous.
   async::Loop resource_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
+
+  std::optional<ClosureQueue> shared_fidl_thread_closure_queue_;
 
   bool have_queued_trigger_decoder_ = false;
 

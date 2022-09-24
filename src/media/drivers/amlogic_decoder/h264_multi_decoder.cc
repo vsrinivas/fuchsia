@@ -411,6 +411,7 @@ H264MultiDecoder::H264MultiDecoder(Owner* owner, Client* client, FrameDataProvid
               StreamProcessorEvents2MigratedMetricDimensionImplementation_AmlogicDecoderH264,
           owner, client, is_secure),
       frame_data_provider_(provider) {
+  DLOG("create");
   media_decoder_ = std::make_unique<media::H264Decoder>(std::make_unique<MultiAccelerator>(this),
                                                         media::H264PROFILE_HIGH);
   use_parser_ = true;
@@ -426,6 +427,7 @@ H264MultiDecoder::~H264MultiDecoder() {
     owner_->core()->WaitForIdle();
   }
   BarrierBeforeRelease();
+  DLOG("delete");
 }
 
 zx_status_t H264MultiDecoder::Initialize() {
@@ -950,19 +952,26 @@ void H264MultiDecoder::ConfigureDpb() {
   static constexpr uint32_t max_frame_count = 24;
 
   // Now we determine if new buffers are needed, and whether we need to re-config the decoder's
-  // notion of the buffers.
-  bool new_buffers_needed = false;
+  // notion of the buffers.  The "new" in this variable name does not prevent the buffers we get
+  // later from being buffers that were previously used by a previous H264MultiDecoder instance.
+  // This allows us to continue using the same buffers across a seek, or across any two consecutive
+  // streams at the StreamProcessor level, as long as the old buffers are suitable for the new
+  // config (buffer size big enough, enough buffers, sysmem image format constraints are ok, etc).
+  bool new_frames_needed = false;
   bool config_update_needed = false;
   if (video_frames_.empty()) {
-    new_buffers_needed = true;
+    // The frames this decoder instance gets in InitializedFrames() _may_ be using the same buffers
+    // as were previously used by a previous H264MultiDecoder instance.
+    new_frames_needed = true;
     config_update_needed = true;
   }
-  if (!new_buffers_needed && !client_->IsCurrentOutputBufferCollectionUsable(
-                                 min_frame_count, max_frame_count, coded_width, coded_height,
-                                 stride, display_width, display_height)) {
-    new_buffers_needed = true;
+  if (!new_frames_needed && !client_->IsCurrentOutputBufferCollectionUsable(
+                                min_frame_count, max_frame_count, coded_width, coded_height, stride,
+                                display_width, display_height)) {
+    DLOG("!IsCurrentOutputBufferCollectionUsable()");
+    new_frames_needed = true;
   }
-  if (new_buffers_needed) {
+  if (new_frames_needed) {
     config_update_needed = true;
   }
   if (!config_update_needed) {
@@ -972,17 +981,24 @@ void H264MultiDecoder::ConfigureDpb() {
       config_update_needed = true;
     }
   }
-  ZX_DEBUG_ASSERT(!new_buffers_needed || config_update_needed);
-  // For the moment, force new_buffers_needed if config_update_needed.
+  ZX_DEBUG_ASSERT(!new_frames_needed || config_update_needed);
+
+  // Force new_frames_needed if config_update_needed.
   //
-  // TODO(dustingreen): Don't do this, and make sure we leave still-used downstream frames intact
-  // until they're returned despite switching the frames to new image size within the existing
-  // buffers (in preparation for emitting them again later at the new size).
+  // However, the "new" frames provided in InitializedBuffers() can actually still be using the same
+  // buffers, as long as those buffers are still usable for the new config.  We handle it this way
+  // to share more code with seeking / stream switching, which ends up giving the same buffers to
+  // a new H264MultiDecoder instance, vs. a config_update_needed which is a single H264MultiDecoder
+  // instance.
+  //
+  // In particular, the HW frame config update is happening in InitializedFrames(), whether the
+  // "update" is initializing frames for a new H264MultiDecoder (seek / new stream), or
+  // re-configuring frames of an existing H264MultiDecoder (mid-stream config update).
   if (config_update_needed) {
-    new_buffers_needed = true;
+    new_frames_needed = true;
   }
 
-  if (!new_buffers_needed && !config_update_needed) {
+  if (!new_frames_needed && !config_update_needed) {
     // Tell HW to continue immediately.
     AvScratch0::Get()
         .FromValue(static_cast<uint32_t>((next_max_reference_size_ << 24) |
@@ -994,7 +1010,7 @@ void H264MultiDecoder::ConfigureDpb() {
     return;
   }
 
-  if (new_buffers_needed) {
+  if (new_frames_needed) {
     // This also excludes separate_colour_plane_flag true.
     if (sequence_info.chroma_format_idc() != static_cast<uint32_t>(ChromaFormatIdc::k420) &&
         sequence_info.chroma_format_idc() != static_cast<uint32_t>(ChromaFormatIdc::kMonochrome)) {
@@ -1052,13 +1068,8 @@ void H264MultiDecoder::ConfigureDpb() {
     return;
   }
 
-  if (config_update_needed) {
-    // To be implemented and made reachable later maybe - higher priority would be keeping the same
-    // buffers on seeking a stream though.  Presently the HW frame config update is happening in
-    // InitializedFrames() directly, but we could factor that out and share it with this location.
-    // This path would require not clearing video_frames_.
-    ZX_PANIC("currently unreachable");
-  }
+  // Not necessarily new buffers, but new frames.
+  ZX_DEBUG_ASSERT_MSG(!config_update_needed, "config update implies 'new' frames");
 }
 
 bool H264MultiDecoder::InitializeRefPics(
@@ -2397,8 +2408,8 @@ void H264MultiDecoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_
     }
 
     video_frames_.push_back(std::shared_ptr<ReferenceFrame>(
-        new ReferenceFrame{false, false, false, i, std::move(frame), std::move(y_canvas),
-                           std::move(uv_canvas), create_result.take_value()}));
+        new ReferenceFrame{!!frames[i].initial_usage_count(), false, false, i, std::move(frame),
+                           std::move(y_canvas), std::move(uv_canvas), create_result.take_value()}));
   }
 
   for (auto& frame : video_frames_) {

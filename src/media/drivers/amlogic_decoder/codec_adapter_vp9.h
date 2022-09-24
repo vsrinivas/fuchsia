@@ -7,6 +7,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/closure-queue/closure_queue.h>
 #include <lib/media/codec_impl/codec_adapter.h>
 #include <lib/media/codec_impl/codec_diagnostics.h>
 #include <lib/zx/bti.h>
@@ -109,7 +110,7 @@ class CodecAdapterVp9 : public AmlogicCodecAdapter, public Vp9Decoder::FrameData
 
   void OnCoreCodecEos();
   void OnCoreCodecFailStream(fuchsia::media::StreamError error);
-  CodecPacket* GetFreePacket();
+  CodecPacket* GetFreePacket(const CodecBuffer* buffer);
   bool IsPortSecureRequired(CodecPort port);
   bool IsPortSecurePermitted(CodecPort port);
   bool IsPortSecure(CodecPort port);
@@ -121,6 +122,8 @@ class CodecAdapterVp9 : public AmlogicCodecAdapter, public Vp9Decoder::FrameData
                                 uint32_t vaddr_size);
 
   std::list<CodecInputItem> CoreCodecStopStreamInternal();
+
+  void MidStreamOutputBufferConfigInternal(bool did_reallocate_buffers);
 
   DeviceCtx* device_ = nullptr;
   AmlogicVideo* video_ = nullptr;
@@ -146,6 +149,8 @@ class CodecAdapterVp9 : public AmlogicCodecAdapter, public Vp9Decoder::FrameData
   async::Loop input_processing_loop_;
   thrd_t input_processing_thread_ = 0;
   bool is_process_input_queued_ = false;
+
+  std::optional<ClosureQueue> shared_fidl_thread_closure_queue_;
 
   std::optional<DriverCodecDiagnostics> codec_diagnostics_;
 

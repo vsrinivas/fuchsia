@@ -807,8 +807,7 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
 
   void StartIgnoringClientOldOutputConfig(std::unique_lock<std::mutex>& lock);
 
-  void GenerateAndSendNewOutputConstraints(std::unique_lock<std::mutex>& lock,
-                                           bool buffer_constraints_action_required);
+  void GenerateAndSendNewOutputConstraints(std::unique_lock<std::mutex>& lock);
 
   void MidStreamOutputConstraintsChange(uint64_t stream_lifetime_ordinal);
 

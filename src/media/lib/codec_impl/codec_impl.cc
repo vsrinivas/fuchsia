@@ -660,6 +660,10 @@ void CodecImpl::CloseCurrentStream_StreamControl(uint64_t stream_lifetime_ordina
     EnsureBuffersNotConfigured(lock, kInputPort);
   }
   if (release_output_buffers) {
+    // This prevents RecycleOutputPacket() on output domain running concurrently with
+    // EnsureBuffersNotConfigured(kOutputPort) on StreamControl.  All EnsureBuffersNotConfigured()
+    // called from StreamControl must call this first.
+    StartIgnoringClientOldOutputConfig(lock);
     EnsureBuffersNotConfigured(lock, kOutputPort);
   }
 }
@@ -2331,7 +2335,7 @@ bool CodecImpl::StartNewStream(std::unique_lock<std::mutex>& lock,
     // at the start of a stream - it's still while a stream is active, and still
     // prevents this stream from outputting any data to the Codec client until
     // the Codec client re-configures output while this stream is active.
-    GenerateAndSendNewOutputConstraints(lock, true);
+    GenerateAndSendNewOutputConstraints(lock);
 
     // Now we can wait for the client to catch up to the current output config
     // or for the client to tell the server to discard the current stream.
@@ -2695,13 +2699,11 @@ void CodecImpl::StartIgnoringClientOldOutputConfig(std::unique_lock<std::mutex>&
   ZX_DEBUG_ASSERT(is_output_ordering_domain_done_with_recycle_output_packet);
 }
 
-void CodecImpl::GenerateAndSendNewOutputConstraints(std::unique_lock<std::mutex>& lock,
-                                                    bool buffer_constraints_action_required) {
+void CodecImpl::GenerateAndSendNewOutputConstraints(std::unique_lock<std::mutex>& lock) {
   // When client action is required, this can only happen on the StreamControl
   // ordering domain.  When client action is not required, it can happen from
   // the InputData ordering domain.
-  ZX_DEBUG_ASSERT(buffer_constraints_action_required && thrd_current() == stream_control_thread_ ||
-                  !buffer_constraints_action_required && IsPotentiallyCoreCodecThread());
+  ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
 
   uint64_t current_stream_lifetime_ordinal = stream_lifetime_ordinal_;
   uint64_t new_output_buffer_constraints_version_ordinal =
@@ -2713,9 +2715,8 @@ void CodecImpl::GenerateAndSendNewOutputConstraints(std::unique_lock<std::mutex>
   // ensure any output config messages from the client are ignored until the
   // client catches up to at least
   // last_required_buffer_constraints_version_ordinal_.
-  ZX_DEBUG_ASSERT(!buffer_constraints_action_required ||
-                  (last_required_buffer_constraints_version_ordinal_[kOutputPort] ==
-                   new_output_buffer_constraints_version_ordinal));
+  ZX_DEBUG_ASSERT(last_required_buffer_constraints_version_ordinal_[kOutputPort] ==
+                  new_output_buffer_constraints_version_ordinal);
 
   std::unique_ptr<const fuchsia::media::StreamOutputConstraints> output_constraints;
   {  // scope unlock
@@ -2728,7 +2729,7 @@ void CodecImpl::GenerateAndSendNewOutputConstraints(std::unique_lock<std::mutex>
     // CodecImpl using this stack.
     output_constraints = CoreCodecBuildNewOutputConstraints(
         current_stream_lifetime_ordinal, new_output_buffer_constraints_version_ordinal,
-        buffer_constraints_action_required);
+        /*buffer_constraints_action_required=*/true);
   }  // ~unlock
 
   // We only call GenerateAndSendNewOutputConstraints() from contexts that won't
@@ -2799,7 +2800,7 @@ void CodecImpl::MidStreamOutputConstraintsChange(uint64_t stream_lifetime_ordina
     EnsureBuffersNotConfigured(lock, kOutputPort);
 
     VLOGF("GenerateAndSendNewOutputConstraints()...");
-    GenerateAndSendNewOutputConstraints(lock, true);
+    GenerateAndSendNewOutputConstraints(lock);
 
     // Now we can wait for the client to catch up to the current output config
     // or for the client to tell the server to discard the current stream.
@@ -3433,20 +3434,11 @@ void CodecImpl::onCoreCodecMidStreamOutputConstraintsChange(bool output_re_confi
   // For now, the core codec thread is the only thread this gets called from.
   ZX_DEBUG_ASSERT(IsPotentiallyCoreCodecThread());
 
-  // For a OMX_EventPortSettingsChanged that doesn't demand output buffer
-  // re-config before more output data, this translates to an ordered emit
-  // of a no-action-required OnOutputConstraints() that just updates to the new
-  // format, without demanding output buffer re-config.  HDR info could be
-  // conveyed this way, ordered with respect to output frames.
-  if (!output_re_config_required) {
-    std::unique_lock<std::mutex> lock(lock_);
-    GenerateAndSendNewOutputConstraints(lock,
-                                        false);  // buffer_constraints_action_required
-    return;
-  }
-
-  // We have an output constraints change that does demand output buffer
-  // re-config before more output data.
+  // Passing false for this parameter is deprecated (and not done by any current CodecAdapter).
+  // The old use of false here has been superseded by onCoreCodecOutputFormatChange().
+  //
+  // We have an output constraints change that does demand output buffer re-config before more
+  // output data.
   ZX_DEBUG_ASSERT(output_re_config_required);
 
   // We post over to StreamControl domain because we need to synchronize
@@ -3578,6 +3570,7 @@ void CodecImpl::onCoreCodecOutputPacket(CodecPacket* packet, bool error_detected
         output_format = CoreCodecGetOutputFormat(stream_lifetime_ordinal,
                                                  new_output_format_details_version_ordinal);
       }  // ~unlock
+      ZX_DEBUG_ASSERT(output_format.has_format_details());
       // Stream change while unlocked above won't happen because we're on
       // InputData domain which is fenced as part of stream switch.
       ZX_DEBUG_ASSERT(stream_lifetime_ordinal == stream_lifetime_ordinal_);

@@ -142,12 +142,29 @@ CodecAdapterVp9::CodecAdapterVp9(std::mutex& lock, CodecAdapterEvents* codec_ada
     : AmlogicCodecAdapter(lock, codec_adapter_events),
       device_(device),
       video_(device_->video()),
-      input_processing_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
+      input_processing_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
+      shared_fidl_thread_closure_queue_(std::in_place,
+                                        device->driver()->shared_fidl_loop()->dispatcher(),
+                                        device->driver()->shared_fidl_thread()) {
   ZX_DEBUG_ASSERT(device_);
   ZX_DEBUG_ASSERT(video_);
 }
 
 CodecAdapterVp9::~CodecAdapterVp9() {
+  // We need to delete the shared_fidl_thread_closure_queue_ on its dispatcher thread, per the
+  // rules of ~ClosureQueue.
+  sync_completion_t shared_fidl_finished;
+  auto run_on_shared_fidl = [this, &shared_fidl_finished] {
+    shared_fidl_thread_closure_queue_.reset();
+    sync_completion_signal(&shared_fidl_finished);
+  };
+  if (thrd_current() == device_->driver()->shared_fidl_thread()) {
+    run_on_shared_fidl();
+  } else {
+    shared_fidl_thread_closure_queue_->Enqueue(run_on_shared_fidl);
+  }
+  sync_completion_wait(&shared_fidl_finished, ZX_TIME_INFINITE);
+
   // TODO(dustingreen): Remove the printfs or switch them to VLOG.
   input_processing_loop_.Quit();
   input_processing_loop_.JoinThreads();
@@ -450,11 +467,11 @@ void CodecAdapterVp9::OnFrameReady(std::shared_ptr<VideoFrame> frame) {
     return;
   }
 
-  CodecPacket* packet = GetFreePacket();
+  // Also associates buffer with packet under lock_.
+  CodecPacket* packet = GetFreePacket(buffer);
   // We know there will be a free packet thanks to SetCheckOutputReady().
   ZX_DEBUG_ASSERT(packet);
 
-  packet->SetBuffer(buffer);
   packet->SetStartOffset(0);
   packet->SetValidLengthBytes(static_cast<uint32_t>(total_size_bytes));
 
@@ -711,7 +728,6 @@ void CodecAdapterVp9::CoreCodecRecycleOutputPacket(CodecPacket* packet) {
   ZX_DEBUG_ASSERT(!packet->is_new());
 
   const CodecBuffer* buffer = packet->buffer();
-  packet->SetBuffer(nullptr);
 
   // Getting the buffer is all we needed the packet for, so note that the packet
   // is free fairly early, to side-step any issues with early returns.  The
@@ -719,6 +735,7 @@ void CodecAdapterVp9::CoreCodecRecycleOutputPacket(CodecPacket* packet) {
   // re-used until after it goes on the free list here.
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
+    packet->SetBuffer(nullptr);
     free_output_packets_.push_back(packet->packet_index());
   }  // ~lock
 
@@ -850,6 +867,10 @@ void CodecAdapterVp9::CoreCodecMidStreamOutputBufferReConfigPrepare() {
 }
 
 void CodecAdapterVp9::CoreCodecMidStreamOutputBufferReConfigFinish() {
+  MidStreamOutputBufferConfigInternal(true);
+}
+
+void CodecAdapterVp9::MidStreamOutputBufferConfigInternal(bool did_reallocate_buffers) {
   // Now that the client has configured output buffers, we need to hand those
   // back to the core codec via return of InitializedFrames
 
@@ -863,6 +884,31 @@ void CodecAdapterVp9::CoreCodecMidStreamOutputBufferReConfigFinish() {
     for (uint32_t i = 0; i < all_output_buffers_.size(); i++) {
       ZX_DEBUG_ASSERT(all_output_buffers_[i]->index() == i);
       frames.emplace_back(*all_output_buffers_[i]);
+      frames.back().initial_usage_count() = 0;
+    }
+    for (auto* codec_packet : all_output_packets_) {
+      // The buffer() being non-null corresponds to the packet index not being in
+      // free_output_packets_.  In other words, the non-null buffer() fields among all packets is
+      // all the used buffers.  The buffer indexes and frames indexes are the same due to how frames
+      // is populated above.
+      if (codec_packet->buffer()) {
+        // This won't happen if we're doing a CoreCodecMidStreamOutputBufferReConfigFinish().  In
+        // that case we cleared all the packets and buffers and allocated new ones, so there won't
+        // be any packet with an assigned buffer, since there aren't any packets from before.
+        //
+        // On the other hand if we're telling an H264MultiDecoder about buffers that aren't new and
+        // may still be in flight on output, we some are not initially free ("initially" as in when
+        // InitializedFrames() is called).
+        //
+        // When !did_reallocate_buffers, we know that CoreCodecRecycleOutputPacket() won't be
+        // running for the entire MidStreamOutputBufferConfigInternal().  It's really that fact
+        // rather than the present lock_ interval that makes this initial_usage_count() stuff
+        // synchronize properly with CoreCodecRecycleOutputPacket().
+        ZX_DEBUG_ASSERT(!did_reallocate_buffers);
+        // Due to show_existing_frame, we may find that the same buffer is in use by more than one
+        // packet.  So we count them.
+        ++frames[codec_packet->buffer()->index()].initial_usage_count();
+      }
     }
     coded_width = coded_width_;
     coded_height = coded_height_;
@@ -1492,6 +1538,32 @@ zx_status_t CodecAdapterVp9::InitializeFrames(uint32_t min_frame_count, uint32_t
     display_height_ = display_height;
   }  // ~lock
 
+  // After a stream switch, the new Vp9Decoder won't have any frames, and needs InitializedFrames()
+  // to get called to set up the frames, and the Vp9Decoder won't have checked
+  // IsCurrentOutputBufferCollectionUsable() itself since it knows it needs frames configured using
+  // InitializedFrames().  However, we can still check here whether the current buffer collection,
+  // that was (before the stream switch) used with a previous Vp9Decoder instance, can still
+  // be used with the new Vp9Decoder instance.  This does require that we be able to indicate
+  // via InitializedFrames() the downstream usage count of each frame (0 if initially free).
+  if (IsCurrentOutputBufferCollectionUsable(static_cast<uint32_t>(all_output_buffers_.size()),
+                                            static_cast<uint32_t>(all_output_buffers_.size()),
+                                            coded_width, coded_height, stride, display_width,
+                                            display_height)) {
+    DLOG("IsCurrentOutputBufferCollectionUsable() true");
+    // The core codec won't output any more packets until we call InitializedFrames(), but when the
+    // core codec does output more packets, we need to send updated format info first.
+    //
+    // TODO(dustingreen): This may be unnecessary / redundant.
+    events_->onCoreCodecOutputFormatChange();
+    shared_fidl_thread_closure_queue_->Enqueue([this] {
+      // We have to run this on the shared fidl thread since that's what CodecImpl is using to
+      // process RecycleOutputPacket(); we need to avoid this running concurrently with
+      // CoreCodecRecycleOutputPacket().
+      MidStreamOutputBufferConfigInternal(false);
+    });
+    return ZX_OK;
+  }
+
   // This will snap the current stream_lifetime_ordinal_, and call
   // CoreCodecMidStreamOutputBufferReConfigPrepare() and
   // CoreCodecMidStreamOutputBufferReConfigFinish() from the StreamControl
@@ -1521,11 +1593,13 @@ void CodecAdapterVp9::OnCoreCodecFailStream(fuchsia::media::StreamError error) {
   events_->onCoreCodecFailStream(error);
 }
 
-CodecPacket* CodecAdapterVp9::GetFreePacket() {
+CodecPacket* CodecAdapterVp9::GetFreePacket(const CodecBuffer* buffer) {
   std::lock_guard<std::mutex> lock(lock_);
   uint32_t free_index = free_output_packets_.back();
   free_output_packets_.pop_back();
-  return all_output_packets_[free_index];
+  auto* packet = all_output_packets_[free_index];
+  packet->SetBuffer(buffer);
+  return packet;
 }
 
 bool CodecAdapterVp9::IsPortSecureRequired(CodecPort port) {

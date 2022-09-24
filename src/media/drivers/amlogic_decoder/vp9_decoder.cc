@@ -611,6 +611,11 @@ void Vp9Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t code
     io_buffer_cache_flush_invalidate(&video_frame->buffer, 0,
                                      io_buffer_size(&video_frame->buffer, 0));
     frames_[i]->on_deck_frame = std::move(video_frame);
+
+    // Apply the initial_usage_count().  The frame needs to be returned this many times before it
+    // can be reused, unless buffers are reallocated sooner.
+    frames_[i]->client_refcount += frames[i].initial_usage_count();
+    frames_[i]->refcount += frames[i].initial_usage_count();
   }
   valid_frames_count_ = truncate_to_32(frames.size());
   BarrierAfterFlush();
@@ -630,8 +635,16 @@ void Vp9Decoder::ReturnFrame(std::shared_ptr<VideoFrame> frame) {
   // back any more, so the caller doesn't call ReturnFrame().
   ZX_DEBUG_ASSERT(frame->index < frames_.size());
   auto& ref_frame = frames_[frame->index];
+  assert(ref_frame->client_refcount >= 1);
   // Frame must still be valid if the refcount is > 0.
-  assert(ref_frame->frame == frame);
+  //
+  // We only expect to see ref_frame->on_deck_frame == frame if the decoder was recently deleted and
+  // re-created while preserving the same buffers and re-establishing free/busy status per frame
+  // (and re-connecting the CodecBuffer to the new VideoFrame).  In that case we do expect to see
+  // ReturnFrame(), but ref_frame only has an on_deck_frame, not a ref_frame->frame yet.  It looks
+  // as if a frame that's never been emitted yet is being returned, which is a bit strange, but
+  // expected in that particular situation.
+  assert(ref_frame->frame == frame || !ref_frame->frame && ref_frame->on_deck_frame == frame);
   ref_frame->client_refcount--;
   assert(ref_frame->client_refcount >= 0);
   ref_frame->Deref();
