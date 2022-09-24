@@ -351,14 +351,9 @@ fidl::VectorView<fuchsia_component_decl::wire::Offer> Node::offers() const {
 }
 
 fidl::VectorView<fdf::wire::NodeSymbol> Node::symbols() const {
-  auto primary_parent = PrimaryParent(parents_);
-  // If this node is colocated with its parent, then provide the symbols.
-  if (primary_parent != nullptr && primary_parent->driver_host_ == driver_host_) {
-    // TODO(fxbug.dev/7999): Remove const_cast once VectorView supports const.
-    return fidl::VectorView<fdf::wire::NodeSymbol>::FromExternal(
-        const_cast<decltype(symbols_)&>(symbols_));
-  }
-  return {};
+  // TODO(fxbug.dev/7999): Remove const_cast once VectorView supports const.
+  return fidl::VectorView<fdf::wire::NodeSymbol>::FromExternal(
+      const_cast<decltype(symbols_)&>(symbols_));
 }
 
 const std::vector<fdf::wire::NodeProperty>& Node::properties() const { return properties_; }
@@ -591,6 +586,11 @@ zx::status<> Node::StartDriver(
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
+  auto symbols = fidl::VectorView<fdf::wire::NodeSymbol>();
+  if (colocate) {
+    symbols = this->symbols();
+  }
+
   // Launch a driver host if we are not colocated.
   if (!colocate) {
     auto result = (*node_manager_)->CreateDriverHost();
@@ -611,8 +611,8 @@ zx::status<> Node::StartDriver(
 
   LOGF(INFO, "Binding %.*s to  %s", static_cast<int>(url.size()), url.data(), name().c_str());
   // Start the driver within the driver host.
-  auto start =
-      (*driver_host_)->Start(std::move(endpoints->client), symbols(), std::move(start_info));
+  auto start = (*driver_host_)
+                   ->Start(std::move(endpoints->client), std::move(symbols), std::move(start_info));
   if (start.is_error()) {
     return zx::error(start.error_value());
   }
