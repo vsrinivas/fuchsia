@@ -128,6 +128,7 @@ mod tests {
 
         // Download the older metadata before we refresh it.
         let mut tuf_client = get_tuf_client(&repo).await.unwrap();
+        tuf_client.update().await.unwrap();
 
         let root1 = (*tuf_client.database().trusted_root()).clone();
         let targets1 = tuf_client.database().trusted_targets().cloned().unwrap();
@@ -181,6 +182,7 @@ mod tests {
 
         // Download the older metadata before we refresh it.
         let mut tuf_client = get_tuf_client(&repo).await.unwrap();
+        tuf_client.update().await.unwrap();
 
         let root1 = (*tuf_client.database().trusted_root()).clone();
         let targets1 = tuf_client.database().trusted_targets().cloned().unwrap();

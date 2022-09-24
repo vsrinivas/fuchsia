@@ -24,7 +24,8 @@ pub async fn cmd_download(cmd: DownloadCommand) -> Result<()> {
         Url::parse(&cmd.tuf_url)?,
         Url::parse(&cmd.blob_url)?,
     ));
-    let repo = RepoClient::new("repo", backend).await?;
+    let mut repo = RepoClient::new("repo", backend).await?;
+    repo.update().await?;
 
     let blobs_dir = cmd.output_path.join("blobs");
     std::fs::create_dir_all(&blobs_dir)?;

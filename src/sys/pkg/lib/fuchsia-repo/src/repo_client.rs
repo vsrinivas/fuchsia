@@ -9,6 +9,7 @@ use {
         resource::Resource,
     },
     anyhow::{anyhow, Context as _, Result},
+    chrono::{DateTime, Utc},
     fidl_fuchsia_developer_ffx::{ListFields, PackageEntry, RepositoryPackage},
     fidl_fuchsia_developer_ffx_ext::RepositorySpec,
     fidl_fuchsia_pkg_ext::{
@@ -130,7 +131,15 @@ impl RepoClient {
 
     /// Update client to the latest available metadata.
     pub async fn update(&mut self) -> Result<bool, Error> {
-        Ok(self.tuf_client.update().await?)
+        self.update_with_start_time(&Utc::now()).await
+    }
+
+    /// Update client to the latest available metadata relative to the specified update start time.
+    pub async fn update_with_start_time(
+        &mut self,
+        start_time: &DateTime<Utc>,
+    ) -> Result<bool, Error> {
+        Ok(self.tuf_client.update_with_start_time(start_time).await?)
     }
 
     /// Return a stream of bytes for the metadata resource.
@@ -469,12 +478,9 @@ where
         RawSignedMetadata::<Json, _>::new(buf)
     };
 
-    let mut client =
+    let client =
         TufClient::with_trusted_root(Config::default(), &raw_signed_meta, metadata_repo, tuf_repo)
             .await?;
-
-    // Update tuf to the latest metadata version.
-    client.update().await?;
 
     Ok(client)
 }
@@ -577,8 +583,9 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
-        let repo =
+        let mut repo =
             RepoClient::new(REPO_NAME, Box::new(make_pm_repository(&dir).await)).await.unwrap();
+        repo.update().await.unwrap();
 
         // Look up the timestamp for the meta.far for the modified setting.
         let pkg1_modified = get_modtime(dir.join("repository").join("blobs").join(PKG1_HASH));
@@ -618,7 +625,8 @@ mod tests {
         let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
         let backend = Box::new(make_pm_repository(&dir).await);
-        let repo = RepoClient::new(REPO_NAME, backend).await.unwrap();
+        let mut repo = RepoClient::new(REPO_NAME, backend).await.unwrap();
+        repo.update().await.unwrap();
 
         // Look up the timestamp for the meta.far for the modified setting.
         let pkg1_modified = get_modtime(dir.join("repository").join("blobs").join(PKG1_HASH));
@@ -732,7 +740,8 @@ mod tests {
         let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
         let backend = Box::new(make_pm_repository(&dir).await);
-        let repo = RepoClient::new(REPO_NAME, backend).await.unwrap();
+        let mut repo = RepoClient::new(REPO_NAME, backend).await.unwrap();
+        repo.update().await.unwrap();
 
         // Look up the timestamps for the blobs.
         let blob_dir = dir.join("repository").join("blobs");

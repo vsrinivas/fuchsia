@@ -127,10 +127,9 @@ pub async fn resolve_package(
 ) -> Result<Hash> {
     let output_blobs_dir = output_blobs_dir.as_ref();
 
-    let desc = repo
-        .get_target_description(package_path)
-        .await?
-        .context("missing target description here")?;
+    let desc = repo.get_target_description(package_path).await?.with_context(|| {
+        format!("repository is missing missing target description for {}", package_path)
+    })?;
 
     let meta_far_hash = merkle_from_description(&desc)?;
 
