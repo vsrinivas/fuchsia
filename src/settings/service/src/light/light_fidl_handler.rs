@@ -9,23 +9,20 @@ use std::hash::Hasher;
 
 use fidl::prelude::*;
 use fidl_fuchsia_settings::{
-    LightError, LightGroup, LightMarker, LightRequest, LightSetLightGroupValuesResponder,
+    LightError, LightGroup, LightRequest, LightSetLightGroupValuesResponder,
     LightSetLightGroupValuesResult, LightState, LightWatchLightGroupResponder,
     LightWatchLightGroupsResponder,
 };
-use fuchsia_syslog::{fx_log_err, fx_log_warn};
+use fuchsia_syslog::fx_log_warn;
 use fuchsia_zircon::Status;
 
 use crate::base::{SettingInfo, SettingType};
-use crate::fidl_common::FidlResponseErrorLogger;
 use crate::handler;
 use crate::handler::base::{Request, Response};
-use crate::hanging_get_handler::Sender;
 use crate::ingress::{request, watch, Scoped};
 use crate::job::source::Error as JobError;
 use crate::job::Job;
 use crate::light::light_controller::ARG_NAME;
-use crate::shutdown_responder_with_error;
 
 impl watch::Responder<Vec<LightGroup>, fuchsia_zircon::Status> for LightWatchLightGroupsResponder {
     fn respond(self, response: Result<Vec<LightGroup>, fuchsia_zircon::Status>) {
@@ -143,51 +140,11 @@ impl TryFrom<LightRequest> for Job {
         }
     }
 }
-
-impl Sender<Vec<LightGroup>> for LightWatchLightGroupsResponder {
-    fn send_response(self, data: Vec<LightGroup>) {
-        self.send(&mut data.into_iter()).log_fidl_response_error(LightMarker::DEBUG_NAME);
-    }
-
-    fn on_error(self, error: &anyhow::Error) {
-        fx_log_err!(
-            "error occurred watching for service: {:?}. Error is: {:?}",
-            LightMarker::DEBUG_NAME,
-            error
-        );
-        shutdown_responder_with_error!(self, error);
-    }
-}
-
 /// Responder that wraps LightWatchLightGroupResponder to filter the vector of light groups down to
 /// the single light group the client is watching.
 struct IndividualLightGroupResponder {
     responder: LightWatchLightGroupResponder,
     light_group_name: String,
-}
-
-impl Sender<Vec<LightGroup>> for IndividualLightGroupResponder {
-    fn send_response(self, data: Vec<LightGroup>) {
-        let light_group_name = self.light_group_name;
-        self.responder
-            .send(
-                data.into_iter()
-                    .find(|group| {
-                        group.name.as_ref().map(|n| *n == light_group_name).unwrap_or(false)
-                    })
-                    .unwrap_or_else(|| panic!("failed to find light group {:?}", light_group_name)),
-            )
-            .log_fidl_response_error(LightMarker::DEBUG_NAME);
-    }
-
-    fn on_error(self, error: &anyhow::Error) {
-        fx_log_err!(
-            "error occurred watching light group {} for service: {:?}",
-            self.light_group_name,
-            LightMarker::DEBUG_NAME
-        );
-        shutdown_responder_with_error!(self.responder, error);
-    }
 }
 
 #[cfg(test)]

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use crate::base::{SettingInfo, SettingType};
-use crate::fidl_hanging_get_responder;
 use crate::handler::base::Request;
 use crate::ingress::{request, watch, Scoped};
 use crate::job::source::{Error as JobError, ErrorResponder};
@@ -13,13 +12,10 @@ use crate::setup::types::{
 };
 use fidl::prelude::*;
 use fidl_fuchsia_settings::{
-    SetupMarker, SetupRequest, SetupSetResponder, SetupSetResult, SetupSettings,
-    SetupWatchResponder,
+    SetupRequest, SetupSetResponder, SetupSetResult, SetupSettings, SetupWatchResponder,
 };
 use fuchsia_syslog::fx_log_warn;
 use std::convert::TryFrom;
-
-fidl_hanging_get_responder!(SetupMarker, SetupSettings, SetupWatchResponder);
 
 impl ErrorResponder for SetupSetResponder {
     fn id(&self) -> &'static str {
@@ -145,7 +141,7 @@ mod tests {
     use super::*;
     use crate::job::{execution, work};
     use assert_matches::assert_matches;
-    use fidl_fuchsia_settings::SetupRequestStream;
+    use fidl_fuchsia_settings::{SetupMarker, SetupRequestStream};
     use futures::StreamExt;
 
     #[test]

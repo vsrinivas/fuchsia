@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use crate::base::{SettingInfo, SettingType};
-use crate::fidl_hanging_get_responder;
 use crate::handler::base::{Request, Response};
 use crate::ingress::Scoped;
 use crate::ingress::{request, watch};
@@ -11,15 +10,13 @@ use crate::job::source::ErrorResponder;
 use crate::job::Job;
 use fidl::prelude::*;
 use fidl_fuchsia_settings::{
-    Error, FactoryResetMarker, FactoryResetRequest, FactoryResetSetResponder,
-    FactoryResetSetResult, FactoryResetSettings, FactoryResetWatchResponder,
+    Error, FactoryResetRequest, FactoryResetSetResponder, FactoryResetSetResult,
+    FactoryResetSettings, FactoryResetWatchResponder,
 };
 use fuchsia_syslog::fx_log_warn;
 use std::convert::TryFrom;
 
 use crate::job::source::Error as JobError;
-
-fidl_hanging_get_responder!(FactoryResetMarker, FactoryResetSettings, FactoryResetWatchResponder,);
 
 impl ErrorResponder for FactoryResetSetResponder {
     fn id(&self) -> &'static str {
@@ -98,7 +95,7 @@ mod tests {
     use super::*;
     use crate::job::{execution, work};
     use assert_matches::assert_matches;
-    use fidl_fuchsia_settings::FactoryResetRequestStream;
+    use fidl_fuchsia_settings::{FactoryResetMarker, FactoryResetRequestStream};
     use futures::StreamExt;
 
     #[test]

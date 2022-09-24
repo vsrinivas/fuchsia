@@ -1,5 +1,3 @@
-use crate::handler::base::Error;
-
 use fuchsia_syslog::fx_log_warn;
 
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
@@ -134,13 +132,6 @@ macro_rules! fidl_process {
     };
 }
 
-pub(crate) fn convert_to_epitaph(error: &anyhow::Error) -> fuchsia_zircon::Status {
-    match error.root_cause().downcast_ref::<Error>() {
-        Some(Error::UnhandledType(_)) => fuchsia_zircon::Status::UNAVAILABLE,
-        _ => fuchsia_zircon::Status::INTERNAL,
-    }
-}
-
 /// Shuts down the given fidl `responder` using a zircon epitaph generated from
 /// the given `error`.
 #[macro_export]
@@ -153,55 +144,6 @@ macro_rules! shutdown_responder_with_error {
                 .control_handle()
                 .shutdown_with_epitaph(crate::fidl_common::convert_to_epitaph($error))
         }
-    };
-}
-
-/// Implements the Sender trait for the given FIDL responder(s) that send typed data.
-#[macro_export]
-macro_rules! fidl_hanging_get_responder {
-    ($marker_type:ty $(, $setting_type:ty, $responder_type:ty)+$(,)*) => {
-
-        $(impl $crate::hanging_get_handler::Sender<$setting_type> for $responder_type {
-            fn send_response(self, data: $setting_type) {
-                use $crate::fidl_common::FidlResponseErrorLogger;
-
-                self.send(data).log_fidl_response_error(
-                    <$marker_type as ::fidl::endpoints::ProtocolMarker>::DEBUG_NAME);
-            }
-
-            fn on_error(self, error: &anyhow::Error) {
-                ::fuchsia_syslog::fx_log_err!(
-                    "error occurred watching for service: {:?}. Error is: {:?}",
-                    <$marker_type as ::fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
-                    error
-                );
-                crate::shutdown_responder_with_error!(self, error);
-            }
-        })+
-    };
-}
-
-/// Implements the Sender trait for the given FIDL responder(s) that send a result type.
-#[macro_export]
-macro_rules! fidl_result_sender_for_responder {
-    ($marker_type:ty $(, $result_type:ty, $responder_type:ty)+$(,)*) => {
-        $(impl $crate::hanging_get_handler::Sender<$result_type> for $responder_type {
-            fn send_response(self, mut result: $result_type) {
-                use $crate::fidl_common::FidlResponseErrorLogger;
-
-                self.send(&mut result).log_fidl_response_error(
-                <$marker_type as ::fidl::endpoints::ProtocolMarker>::DEBUG_NAME);
-            }
-
-            fn on_error(self, error:&anyhow::Error) {
-                ::fuchsia_syslog::fx_log_err!(
-                    "error occurred watching for service: {:?}. Error is: {:?}",
-                    <$marker_type as ::fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
-                    error
-                );
-                crate::shutdown_responder_with_error!(self, error);
-            }
-        })+
     };
 }
 

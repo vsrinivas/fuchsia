@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use crate::base::{SettingInfo, SettingType};
-use crate::fidl_hanging_get_responder;
 use crate::handler::base::Request;
 use crate::ingress::{request, watch, Scoped};
 use crate::job::source::{Error as JobError, ErrorResponder};
@@ -11,14 +10,12 @@ use crate::job::Job;
 use crate::keyboard::types::{Autorepeat, KeyboardInfo, KeymapId};
 use fidl::prelude::*;
 use fidl_fuchsia_settings::{
-    KeyboardMarker, KeyboardRequest, KeyboardSetResponder, KeyboardSetSetResult, KeyboardSettings,
+    KeyboardRequest, KeyboardSetResponder, KeyboardSetSetResult, KeyboardSettings,
     KeyboardWatchResponder,
 };
 use fuchsia_syslog::{fx_log_err, fx_log_warn};
 use fuchsia_zircon as zx;
 use std::convert::TryFrom;
-
-fidl_hanging_get_responder!(KeyboardMarker, KeyboardSettings, KeyboardWatchResponder,);
 
 impl ErrorResponder for KeyboardSetResponder {
     fn id(&self) -> &'static str {
@@ -103,7 +100,7 @@ mod tests {
     use super::*;
     use crate::job::{execution, work};
     use assert_matches::assert_matches;
-    use fidl_fuchsia_settings::KeyboardRequestStream;
+    use fidl_fuchsia_settings::{KeyboardMarker, KeyboardRequestStream};
     use futures::StreamExt;
 
     #[test]

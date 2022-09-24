@@ -100,7 +100,6 @@ mod display;
 mod do_not_disturb;
 mod event;
 mod factory_reset;
-mod hanging_get_handler;
 mod input;
 mod intl;
 mod job;

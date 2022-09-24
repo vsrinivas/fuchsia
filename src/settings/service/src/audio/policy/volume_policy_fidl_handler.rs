@@ -3,19 +3,14 @@
 // found in the LICENSE file.
 
 use crate::audio::policy::{self as audio, PolicyId, Response, Transform};
-use crate::fidl_common::FidlResponseErrorLogger;
-use crate::hanging_get_handler::Sender;
 use crate::ingress::{policy_request, Scoped};
 use crate::job::source::{Error as JobError, PolicyErrorResponder};
 use crate::job::Job;
 use crate::policy::{response, PolicyInfo, PolicyType, Request};
-use crate::shutdown_responder_with_error;
-use fidl::endpoints::ProtocolMarker;
 use fidl_fuchsia_settings_policy::{
     Property, VolumePolicyControllerAddPolicyResponder, VolumePolicyControllerAddPolicyResult,
-    VolumePolicyControllerGetPropertiesResponder, VolumePolicyControllerMarker,
-    VolumePolicyControllerRemovePolicyResponder, VolumePolicyControllerRemovePolicyResult,
-    VolumePolicyControllerRequest,
+    VolumePolicyControllerGetPropertiesResponder, VolumePolicyControllerRemovePolicyResponder,
+    VolumePolicyControllerRemovePolicyResult, VolumePolicyControllerRequest,
 };
 use fuchsia_syslog::{fx_log_err, fx_log_warn};
 use std::convert::TryFrom;
@@ -90,24 +85,6 @@ impl TryFrom<VolumePolicyControllerRequest> for Job {
                 Err(JobError::Unsupported)
             }
         }
-    }
-}
-
-/// Custom sender implementation for the GetProperty call, since the return is a vector and not a
-/// single item.
-impl Sender<Vec<Property>> for VolumePolicyControllerGetPropertiesResponder {
-    fn send_response(self, data: Vec<Property>) {
-        self.send(&mut data.into_iter())
-            .log_fidl_response_error(VolumePolicyControllerMarker::DEBUG_NAME);
-    }
-
-    fn on_error(self, error: &anyhow::Error) {
-        fx_log_err!(
-            "error occurred watching for service: {:?}. Error is: {:?}",
-            VolumePolicyControllerMarker::DEBUG_NAME,
-            error
-        );
-        shutdown_responder_with_error!(self, error);
     }
 }
 
