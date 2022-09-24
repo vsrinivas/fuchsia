@@ -235,6 +235,11 @@ class DpDisplay : public DisplayDevice {
   template <uint32_t addr, typename T>
   bool DpcdReadPairedRegs(hwreg::RegisterBase<T, typename T::ValueType>* status);
   bool DpcdHandleAdjustRequest(dpcd::TrainingLaneSet* training, dpcd::AdjustRequestLane* adjust);
+
+  bool TypeCConnectTigerLake();
+  bool TypeCDisconnectTigerLake();
+  bool ProgramDpModeTigerLake();
+
   bool DoLinkTraining();
 
   void ConfigureVoltageSwingKabyLake(size_t phy_config_index);
@@ -291,6 +296,13 @@ class DpDisplay : public DisplayDevice {
 
   // The backlight brightness coefficient, in the range [min brightness, 1].
   double backlight_brightness_ = 1.0f;
+
+  enum class DisplayType {
+    Unknown = 0,
+    Legacy,
+    DpAlternate,
+    Thunderbolt,
+  } display_type_ = DisplayType::Unknown;
 
   // Debug
   inspect::Node inspect_node_;

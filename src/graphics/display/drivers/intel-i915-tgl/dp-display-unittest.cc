@@ -220,6 +220,7 @@ TEST_F(DpDisplayTest, LinkRateSelectionViaInit) {
   panel_status.WriteTo(mmio_buffer());
 
   controller()->power()->SetDdiIoPowerState(tgl_registers::DDI_A, /* enable */ true);
+  controller()->power()->SetAuxIoPowerState(tgl_registers::DDI_A, /* enable */ true);
 
   fake_dpcd()->registers[dpcd::DPCD_LANE0_1_STATUS] = 0xFF;
   fake_dpcd()->SetMaxLinkRate(dpcd::LinkBw::k5400Mbps);

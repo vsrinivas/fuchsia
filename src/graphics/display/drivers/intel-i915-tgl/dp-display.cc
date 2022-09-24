@@ -7,6 +7,7 @@
 #include <endian.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
+#include <lib/fit/defer.h>
 #include <lib/stdcompat/span.h>
 #include <lib/zx/status.h>
 #include <lib/zx/time.h>
@@ -22,6 +23,7 @@
 
 #include "src/graphics/display/drivers/intel-i915-tgl/ddi-aux-channel.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/dpll.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/hardware-common.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/intel-i915-tgl.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/pci-ids.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/pipe.h"
@@ -1176,6 +1178,79 @@ bool DpDisplay::LinkTrainingStage2(dpcd::TrainingPatternSet* tp_set, dpcd::Train
   return true;
 }
 
+bool DpDisplay::ProgramDpModeTigerLake() {
+  if (ddi() < tgl_registers::Ddi::DDI_TC_1 || ddi() > tgl_registers::Ddi::DDI_TC_6 ||
+      display_type_ == DisplayType::Thunderbolt) {
+    zxlogf(INFO, "Skip programming display mode for DDI %d", ddi());
+    return true;
+  }
+
+  auto dp_mode_0 =
+      tgl_registers::DekelDisplayPortMode::GetForLaneDdi(0, ddi()).ReadFrom(mmio_space());
+  auto dp_mode_1 =
+      tgl_registers::DekelDisplayPortMode::GetForLaneDdi(1, ddi()).ReadFrom(mmio_space());
+
+  auto pin_assignment = tgl_registers::DynamicFlexIoDisplayPortPinAssignment::GetForDdi(ddi())
+                            .ReadFrom(mmio_space())
+                            .pin_assignment_for_ddi(ddi());
+  if (!pin_assignment.has_value()) {
+    zxlogf(ERROR, "Cannot get pin assignment for ddi %d", ddi());
+    return false;
+  }
+
+  // Reset DP lane mode.
+  dp_mode_0.set_x1_mode(0).set_x2_mode(0);
+  dp_mode_1.set_x1_mode(0).set_x2_mode(0);
+
+  switch (*pin_assignment) {
+    using PinAssignment = tgl_registers::DynamicFlexIoDisplayPortPinAssignment::PinAssignment;
+    case PinAssignment::kNone:  // Fixed/Static
+      if (dp_lane_count_ == 1) {
+        dp_mode_1.set_x1_mode(1);
+      } else {
+        dp_mode_0.set_x2_mode(1);
+        dp_mode_1.set_x2_mode(1);
+      }
+      break;
+    case PinAssignment::kA:
+      if (dp_lane_count_ == 4) {
+        dp_mode_0.set_x2_mode(1);
+        dp_mode_1.set_x2_mode(1);
+      }
+      break;
+    case PinAssignment::kB:
+      if (dp_lane_count_ == 2) {
+        dp_mode_0.set_x2_mode(1);
+        dp_mode_1.set_x2_mode(1);
+      }
+      break;
+    case PinAssignment::kC:
+    case PinAssignment::kE:
+      if (dp_lane_count_ == 1) {
+        dp_mode_0.set_x1_mode(1);
+        dp_mode_1.set_x1_mode(1);
+      } else {
+        dp_mode_0.set_x2_mode(1);
+        dp_mode_1.set_x2_mode(1);
+      }
+      break;
+    case PinAssignment::kD:
+    case PinAssignment::kF:
+      if (dp_lane_count_ == 1) {
+        dp_mode_0.set_x1_mode(1);
+        dp_mode_1.set_x1_mode(1);
+      } else {
+        dp_mode_0.set_x2_mode(1);
+        dp_mode_1.set_x2_mode(1);
+      }
+      break;
+  }
+
+  dp_mode_0.WriteTo(mmio_space());
+  dp_mode_1.WriteTo(mmio_space());
+  return true;
+}
+
 bool DpDisplay::DoLinkTraining() {
   // TODO(fxbug.dev/31313): If either of the two training steps fails, we're
   // supposed to try with a reduced bit rate.
@@ -1254,9 +1329,226 @@ DpDisplay::DpDisplay(Controller* controller, uint64_t id, tgl_registers::Ddi ddi
   dp_link_rate_mhz_inspect_ = inspect_node_.CreateUint("dp_link_rate_mhz", 0);
 }
 
-DpDisplay::~DpDisplay() = default;
+DpDisplay::~DpDisplay() {
+  if (display_type_ == DisplayType::DpAlternate) {
+    TypeCDisconnectTigerLake();
+  }
+}
+
+bool DpDisplay::TypeCConnectTigerLake() {
+  // This step only applies to Tiger Lake for Type C PHYs.
+  // In other cases, we simply skip the connect procedure.
+  if (!is_tgl(controller()->device_id()) || ddi() < tgl_registers::DDI_TC_1 ||
+      ddi() > tgl_registers::DDI_TC_6) {
+    display_type_ = DisplayType::Legacy;
+    return true;
+  }
+
+  int count = 0;
+  for (;;) {
+    // display software uses gt driver mailbox to block tccold
+    constexpr uint32_t kGtDriverMailboxInterface = 0x138124;
+    constexpr uint32_t kGtDriverMailboxData0 = 0x138128;
+    constexpr uint32_t kGtDriverMailboxData1 = 0x13812c;
+    mmio_space()->Write32(0x00000000, kGtDriverMailboxData0);
+    mmio_space()->Write32(0x00000000, kGtDriverMailboxData1);
+    mmio_space()->Write32(0x80000026, kGtDriverMailboxInterface);
+
+    if (!PollUntil(
+            [&] { return (mmio_space()->Read32(kGtDriverMailboxInterface) & 0x80000000) == 0; },
+            zx::usec(1), 200)) {
+      zxlogf(ERROR, "GT Driver Mailbox driver busy");
+      return false;
+    }
+    if ((mmio_space()->Read32(kGtDriverMailboxData0) & 0x1) == 0) {
+      break;
+    }
+    if (count++ == 12) {
+      zxlogf(ERROR, "Failed to block tccold");
+      return false;
+    }
+    zx_nanosleep(zx_deadline_after(ZX_USEC(50)));
+  }
+
+  fit::deferred_callback unblock_tccold([mmio_space = mmio_space(), ddi = ddi()] {
+    // If connect flow is aborted at any point, clear DFLEXDPCSSS.DPPMSTC to '0'
+    // if it had been set, then use GT driver mailbox to unblock TCCOLD.
+
+    auto dp_csss =
+        tgl_registers::DynamicFlexIoDisplayPortControllerSafeStateSettings::GetForDdi(ddi).ReadFrom(
+            mmio_space);
+    dp_csss.set_safe_mode_disabled_for_ddi(ddi, /*disabled=*/false);
+    dp_csss.WriteTo(mmio_space);
+
+    constexpr uint32_t kGtDriverMailboxInterface = 0x138124;
+    constexpr uint32_t kGtDriverMailboxData0 = 0x138128;
+    constexpr uint32_t kGtDriverMailboxData1 = 0x13812c;
+    mmio_space->Write32(0x00000001, kGtDriverMailboxData0);
+    mmio_space->Write32(0x00000000, kGtDriverMailboxData1);
+    mmio_space->Write32(0x80000026, kGtDriverMailboxInterface);
+
+    if (!PollUntil(
+            [&] { return (mmio_space->Read32(kGtDriverMailboxInterface) & 0x80000000) == 0; },
+            zx::usec(1), 200)) {
+      zxlogf(ERROR, "unblock_tccold: GT Driver Mailbox driver busy");
+    }
+  });
+
+  // 2. Display software reads DFLEXDPPMS.DPPMSTC which should be '1' to indicate the SOC uC
+  // has switched the Lane into DP Mode, else abort connect flow.
+  zxlogf(INFO, "TypeCConnect: ddi = %d", ddi());
+
+  zxlogf(INFO, "TypeCConnect: DFLEXDPPMS = 0x%08x",
+         tgl_registers::DynamicFlexIoDisplayPortPhyModeStatus::GetForDdi(ddi())
+             .ReadFrom(mmio_space())
+             .reg_value());
+
+  auto phy_is_ready = tgl_registers::DynamicFlexIoDisplayPortPhyModeStatus::GetForDdi(ddi())
+                          .ReadFrom(mmio_space())
+                          .phy_is_ready_for_ddi(ddi());
+  if (!phy_is_ready) {
+    zxlogf(ERROR, "DDI %d: lane not in DP mode", ddi());
+    return false;
+  }
+
+  // 3. Display software sets DFLEXDPCSSS.DPPMSTC to '1' indicating that display controller is not
+  // in safe mode anymore.
+  auto dp_csss =
+      tgl_registers::DynamicFlexIoDisplayPortControllerSafeStateSettings::GetForDdi(ddi()).ReadFrom(
+          mmio_space());
+  dp_csss.set_safe_mode_disabled_for_ddi(ddi(), /*disabled=*/true);
+  dp_csss.WriteTo(mmio_space());
+  dp_csss.ReadFrom(mmio_space());
+
+  zxlogf(INFO, "TypeCConnect: after write DFLEXDPCSSS (*0x%08x) = 0x%08x", dp_csss.reg_addr(),
+         dp_csss.ReadFrom(mmio_space()).reg_value());
+
+  // (DP Alternate: Step 4. Display software reads DFLEXDPSP to verify port has not become
+  // disconnected)
+  auto dp_sp = tgl_registers::DynamicFlexIoScratchPad::GetForDdi(ddi()).ReadFrom(mmio_space());
+  auto type_c_live_state = dp_sp.type_c_live_state(ddi());
+
+  zxlogf(INFO, "TypeCConnect: DFLEXDPSP (*0x%08x) = 0x%08x", dp_sp.reg_addr(), dp_sp.reg_value());
+
+  zxlogf(INFO, "DDI %d: type C live state (0x%x)", ddi(), type_c_live_state);
+  switch (type_c_live_state) {
+    using TypeCLiveState = tgl_registers::DynamicFlexIoScratchPad::TypeCLiveState;
+    case TypeCLiveState::kNoHotplugDisplay:
+      display_type_ = DisplayType::Legacy;
+      break;
+    case TypeCLiveState::kTypeCHotplugDisplay:
+      display_type_ = DisplayType::DpAlternate;
+      break;
+    case TypeCLiveState::kThunderboltHotplugDisplay:
+      display_type_ = DisplayType::Thunderbolt;
+      break;
+    default:
+      ZX_DEBUG_ASSERT_MSG(false, "DDI %d: type C live state (0x%x)", ddi(), type_c_live_state);
+  }
+
+  // 4. Set PWR_WELL_CTL_AUX non-Thunderbolt IO Power Request.
+  controller()->power()->SetAuxIoPowerState(ddi(), /* enable */ true);
+
+  fit::deferred_callback disable_aux_io_power([ddi = ddi(), power = controller()->power()] {
+    power->SetAuxIoPowerState(ddi, /* enable */ false);
+  });
+
+  // 5. Poll for PWR_WELL_CTL_AUX non-Thunderbolt IO Power State == Enabled, timeout and fail
+  // after 1.5 milliseconds (typically takes <150us).
+  if (!PollUntil([&] { return controller()->power()->GetAuxIoPowerState(ddi()); }, zx::usec(1),
+                 1500)) {
+    zxlogf(ERROR, "DDI %d: failed to enable AUX power for ddi", ddi());
+    return false;
+  }
+
+  if (display_type_ == DisplayType::Legacy || display_type_ == DisplayType::DpAlternate) {
+    // For every typeC port (static/fixed/legacy/native and DP-alternate, but not thunderbolt),
+    // after enabling aux power request and receiving aux power ack, wait for uc_health bit (Dekel
+    // PHY register DKL_CMN_UC_DW27 @BASE + 0x236c bit [15]) to assert. Timeout and fail after 10us.
+    if (!PollUntil(
+            [&] {
+              return tgl_registers::DekelCommonConfigMicroControllerDword27::GetForDdi(ddi())
+                  .ReadFrom(mmio_space())
+                  .microcontroller_firmware_is_ready();
+            },
+            zx::usec(1), 10)) {
+      zxlogf(ERROR, "DDI %d: microcontroller health bit is not set!", ddi());
+      return false;
+    }
+  }
+
+  switch (display_type_) {
+    case DisplayType::Legacy: {
+      // 6. Set DDI_AUX_CTL IO Select field to legacy for DP. Don't care for HDMI.
+      auto ddi_aux_ctl =
+          tgl_registers::DdiAuxControl::GetForTigerLakeDdi(ddi()).ReadFrom(mmio_space());
+      ddi_aux_ctl.set_use_thunderbolt(0);  // 0 for legacy io
+      ddi_aux_ctl.WriteTo(mmio_space());
+
+      break;
+    }
+
+    case DisplayType::DpAlternate: {
+      dp_lane_count_ = dp_sp.display_port_assigned_tx_lane_count(ddi());
+      zxlogf(DEBUG, "DDI %d: DisplayPort Alternate mode: Lane count %u", ddi(), dp_lane_count_);
+      break;
+    }
+
+    case DisplayType::Thunderbolt: {
+      zxlogf(ERROR, "DDI %d: Thunderbolt is not supported yet.", ddi());
+      return false;
+    }
+
+    case DisplayType::Unknown:
+      return false;
+  }
+
+  unblock_tccold.cancel();
+  disable_aux_io_power.cancel();
+
+  zxlogf(DEBUG, "TypeCConnect: Connect Flow finished for ddi %d", ddi());
+  return true;
+}
+
+bool DpDisplay::TypeCDisconnectTigerLake() {
+  // Disables Aux power and waits for Aux power state to disable.
+  controller()->power()->SetAuxIoPowerState(ddi(), /* enable */ false);
+
+  if (!PollUntil([&] { return controller()->power()->GetAuxIoPowerState(ddi()); }, zx::usec(1),
+                 1500)) {
+    zxlogf(ERROR, "DDI %d: failed to disable AUX power for ddi", ddi());
+    return false;
+  }
+
+  auto dp_csss =
+      tgl_registers::DynamicFlexIoDisplayPortControllerSafeStateSettings::GetForDdi(ddi()).ReadFrom(
+          mmio_space());
+  dp_csss.set_safe_mode_disabled_for_ddi(ddi(), /*disabled=*/false);
+  dp_csss.WriteTo(mmio_space());
+
+  constexpr uint32_t kGtDriverMailboxInterface = 0x138124;
+  constexpr uint32_t kGtDriverMailboxData0 = 0x138128;
+  constexpr uint32_t kGtDriverMailboxData1 = 0x13812c;
+  mmio_space()->Write32(0x00000001, kGtDriverMailboxData0);
+  mmio_space()->Write32(0x00000000, kGtDriverMailboxData1);
+  mmio_space()->Write32(0x80000026, kGtDriverMailboxInterface);
+
+  if (!PollUntil(
+          [&] { return (mmio_space()->Read32(kGtDriverMailboxInterface) & 0x80000000) == 0; },
+          zx::usec(1), 200)) {
+    zxlogf(ERROR, "unblock_tccold: GT Driver Mailbox driver busy");
+  }
+  return true;
+}
 
 bool DpDisplay::Query() {
+  if (is_tgl(controller()->device_id())) {
+    if (!TypeCConnectTigerLake()) {
+      zxlogf(ERROR, "Type-C PHY Connect flow failed!");
+      return false;
+    }
+  }
+
   // For eDP displays, assume that the BIOS has enabled panel power, given
   // that we need to rely on it properly configuring panel power anyway. For
   // general DP displays, the default power state is D0, so we don't have to
@@ -1277,19 +1569,25 @@ bool DpDisplay::Query() {
   }
 
   uint8_t lane_count = capabilities_->max_lane_count();
-  // On Kaby Lake and Skylake, DDI E takes over two of DDI A's four lanes. In
-  // other words, if DDI E is enabled, DDI A only has two lanes available. DDI E
-  // always has two lanes available.
-  //
-  // Kaby Lake: IHD-OS-KBL-Vol 12-1.17 "Display Connections" > "DDIs" page 107
-  // Skylake: IHD-OS-SKL-Vol 12-05.16 "Display Connections" > "DDIs" page 105
-  if (ddi() == tgl_registers::DDI_A || ddi() == tgl_registers::DDI_E) {
-    const bool ddi_e_enabled = !tgl_registers::DdiRegs(tgl_registers::DDI_A)
-                                    .BufferControl()
-                                    .ReadFrom(mmio_space())
-                                    .ddi_e_disabled_kaby_lake();
-    if (ddi_e_enabled) {
-      lane_count = std::min<uint8_t>(lane_count, 2);
+  if (is_tgl(controller()->device_id())) {
+    if (display_type_ == DisplayType::DpAlternate) {
+      lane_count = std::min(lane_count, dp_lane_count_);
+    }
+  } else {
+    // On Kaby Lake and Skylake, DDI E takes over two of DDI A's four lanes. In
+    // other words, if DDI E is enabled, DDI A only has two lanes available. DDI E
+    // always has two lanes available.
+    //
+    // Kaby Lake: IHD-OS-KBL-Vol 12-1.17 "Display Connections" > "DDIs" page 107
+    // Skylake: IHD-OS-SKL-Vol 12-05.16 "Display Connections" > "DDIs" page 105
+    if (ddi() == tgl_registers::DDI_A || ddi() == tgl_registers::DDI_E) {
+      const bool ddi_e_enabled = !tgl_registers::DdiRegs(tgl_registers::DDI_A)
+                                      .BufferControl()
+                                      .ReadFrom(mmio_space())
+                                      .ddi_e_disabled_kaby_lake();
+      if (ddi_e_enabled) {
+        lane_count = std::min<uint8_t>(lane_count, 2);
+      }
     }
   }
 
@@ -1342,6 +1640,30 @@ bool DpDisplay::InitDdi() {
     return true;
   }
 
+  // 3.b. Program DFLEXDPMLE.DPMLETC* to maximum number of lanes allowed as determined by
+  // FIA and panel lane count.
+  if (is_tgl(controller()->device_id()) && ddi() >= tgl_registers::DDI_TC_1 &&
+      ddi() <= tgl_registers::DDI_TC_6) {
+    auto main_link_lane_enabled =
+        tgl_registers::DynamicFlexIoDisplayPortMainLinkLaneEnabled::GetForDdi(ddi()).ReadFrom(
+            mmio_space());
+    switch (dp_lane_count_) {
+      case 1:
+        main_link_lane_enabled.set_enabled_display_port_main_link_lane_bits(ddi(), 0b0001);
+        break;
+      case 2:
+        // 1100b cannot be used with Type-C Alt connections.
+        main_link_lane_enabled.set_enabled_display_port_main_link_lane_bits(ddi(), 0b0011);
+        break;
+      case 4:
+        main_link_lane_enabled.set_enabled_display_port_main_link_lane_bits(ddi(), 0b1111);
+        break;
+      default:
+        ZX_DEBUG_ASSERT(false);
+    }
+    main_link_lane_enabled.WriteTo(mmio_space());
+  }
+
   // Determine the current link rate if one hasn't been assigned.
   if (dp_link_rate_mhz_ == 0) {
     ZX_ASSERT(!capabilities_->supported_link_rates_mbps().empty());
@@ -1349,6 +1671,12 @@ bool DpDisplay::InitDdi() {
     // Pick the maximum supported link rate.
     uint8_t index = static_cast<uint8_t>(capabilities_->supported_link_rates_mbps().size() - 1);
     uint32_t link_rate = capabilities_->supported_link_rates_mbps()[index];
+
+    // When there are 4 lanes, the link training failure rate when using 5.4GHz
+    // link rate is very high. So we limit the maximum link rate here.
+    if (dp_lane_count_ == 4) {
+      link_rate = std::min(2700u, link_rate);
+    }
 
     zxlogf(INFO, "Selected maximum supported DisplayPort link rate: %u Mbps/lane", link_rate);
     SetLinkRate(link_rate);
@@ -1361,13 +1689,14 @@ bool DpDisplay::InitDdi() {
       .dp_bit_rate_mhz = dp_link_rate_mhz_,
   };
 
+  // 4. Enable Port PLL
   DisplayPll* dpll = controller()->dpll_manager()->Map(ddi(), type() == Type::kEdp, state);
   if (dpll == nullptr) {
     zxlogf(ERROR, "Cannot find an available DPLL for DP display on DDI %d", ddi());
     return false;
   }
 
-  // Enable power for this DDI.
+  // 5. Enable power for this DDI.
   controller()->power()->SetDdiIoPowerState(ddi(), /* enable */ true);
   if (!PollUntil([&] { return controller()->power()->GetDdiIoPowerState(ddi()); }, zx::usec(1),
                  20)) {
@@ -1375,7 +1704,14 @@ bool DpDisplay::InitDdi() {
     return false;
   }
 
-  // Do link training
+  // 6. Program DP mode
+  if (is_tgl(controller()->device_id()) && display_type_ == DisplayType::DpAlternate &&
+      !ProgramDpModeTigerLake()) {
+    zxlogf(ERROR, "DDI %d: Cannot program DP mode", ddi());
+    return false;
+  }
+
+  // 7. Do link training
   if (!DoLinkTraining()) {
     zxlogf(ERROR, "DDI %d: DisplayPort link training failed", ddi());
     return false;

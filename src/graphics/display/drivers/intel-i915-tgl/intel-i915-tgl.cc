@@ -508,6 +508,11 @@ uint64_t Controller::SetupGttImage(const image_t* image, uint32_t rotation) {
 
 std::unique_ptr<DisplayDevice> Controller::QueryDisplay(tgl_registers::Ddi ddi) {
   fbl::AllocChecker ac;
+  if (!igd_opregion_.HasDdi(ddi)) {
+    zxlogf(INFO, "ddi %d not available.", ddi);
+    return nullptr;
+  }
+
   if (igd_opregion_.SupportsDp(ddi)) {
     zxlogf(DEBUG, "Checking for DisplayPort monitor at DDI %d", ddi);
     auto dp_disp = fbl::make_unique_checked<DpDisplay>(&ac, this, next_id_, ddi, &dp_auxs_[ddi],
@@ -523,7 +528,7 @@ std::unique_ptr<DisplayDevice> Controller::QueryDisplay(tgl_registers::Ddi ddi) 
       return hdmi_disp;
     }
   }
-
+  zxlogf(TRACE, "Nothing found for ddi %d!", ddi);
   return nullptr;
 }
 
