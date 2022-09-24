@@ -417,8 +417,13 @@ impl RunningSuite {
         max_pipelined: Option<usize>,
     ) -> Self {
         // Stream of fidl responses, with multiple concurrently active requests.
-        let unprocessed_event_stream = futures::stream::repeat_with(move || proxy.get_events())
-            .buffered(max_pipelined.unwrap_or(Self::DEFAULT_PIPELINED_REQUESTS));
+        let unprocessed_event_stream = futures::stream::repeat_with(move || {
+            proxy.get_events().inspect(|events_result| match events_result {
+                Ok(Ok(ref events)) => info!("Latest suite event: {:?}", events.last()),
+                _ => (),
+            })
+        })
+        .buffered(max_pipelined.unwrap_or(Self::DEFAULT_PIPELINED_REQUESTS));
         // Terminate the stream after we get an error or empty list of events.
         let terminated_event_stream =
             unprocessed_event_stream.take_until_stop_after(|result| match &result {

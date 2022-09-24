@@ -310,7 +310,9 @@ impl Suite {
                             }
                         }
                         if events.len() >= EVENTS_THRESHOLD {
+                            let last_event_repr = format!("{:?}", events.last());
                             responder.send(&mut Ok(events)).map_err(TestManagerError::Response)?;
+                            info!("Latest suite event sent: {}", last_event_repr);
                             continue 'controller_loop;
                         }
                         e = match event_recv.next().now_or_never() {
@@ -319,8 +321,10 @@ impl Suite {
                         }
                     }
 
+                    let last_event_repr = format!("{:?}", events.last());
                     let len = events.len();
                     responder.send(&mut Ok(events)).map_err(TestManagerError::Response)?;
+                    info!("Latest suite event sent: {}", last_event_repr);
                     if len == 0 {
                         break;
                     }
