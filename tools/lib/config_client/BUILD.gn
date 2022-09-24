@@ -17,11 +17,13 @@ if (is_host) {
     inputs = [
       "templates/cpp_elf.h.hbs",
       "templates/cpp_elf.cc.hbs",
+      "templates/cpp_elf_hlcpp.cc.hbs",
       "templates/cpp_driver.cc.hbs",
       "templates/cpp_driver.h.hbs",
+      "templates/helpers.cc.hbs",
       "templates/typedef.h.hbs",
       "templates/vmo_parse.cc.hbs",
-      "templates/helpers.cc.hbs",
+      "templates/vmo_parse_helpers.cc.hbs",
     ]
     deps = [
       "//src/sys/lib/cm_rust",

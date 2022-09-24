@@ -1,0 +1,76 @@
+#include <{{fidl_cpp_header_prefix}}/cpp/fidl.h>
+
+#include <zircon/assert.h>
+#include <zircon/processargs.h>
+
+#include "{{cpp_namespace}}.h"
+
+namespace {{cpp_namespace}} {
+
+{{> helpers }}
+
+Config Config::TakeFromStartupHandle() noexcept {
+  // Get the VMO containing FIDL config
+  zx_handle_t config_vmo_handle = zx_take_startup_handle(PA_VMO_COMPONENT_CONFIG);
+  ZX_ASSERT_MSG(config_vmo_handle != ZX_HANDLE_INVALID, "Could not obtain Config VMO Handle");
+  zx::vmo config_vmo(config_vmo_handle);
+
+  // Get the size of the VMO
+  uint64_t content_size_prop = 0;
+  zx_status_t status = config_vmo.get_prop_content_size(&content_size_prop);
+  ZX_ASSERT_MSG(status == ZX_OK, "Could not get content size of config VMO");
+  size_t vmo_content_size = static_cast<size_t>(content_size_prop);
+
+  // Checksum length must be correct
+  uint16_t checksum_length = 0;
+  status = config_vmo.read(&checksum_length, 0, 2);
+  ZX_ASSERT_MSG(status == ZX_OK, "Could not read checksum length from config VMO");
+
+  // Verify Checksum
+  std::vector<uint8_t> checksum(checksum_length);
+  status = config_vmo.read(checksum.data(), 2, checksum_length);
+  ZX_ASSERT_MSG(status == ZX_OK, "Could not read checksum from config VMO");
+  std::vector<uint8_t> expected_checksum {
+  {{#each expected_checksum}}
+  {{(hex_byte this)}}{{#unless @last}},{{/unless}}
+  {{/each}}
+  };
+  ZX_ASSERT_MSG(checksum == expected_checksum, "Invalid checksum for config VMO");
+
+  // Read the FIDL struct into memory
+  // Skip the checksum length + checksum + FIDL persistent header
+  // Align the struct pointer to 8 bytes (as required by FIDL)
+  size_t header = 2 + checksum_length + 8;
+  size_t fidl_struct_size = vmo_content_size - header;
+  std::unique_ptr<uint8_t[]> fidl_struct(new uint8_t[fidl_struct_size]);
+  status = config_vmo.read(fidl_struct.get(), header, fidl_struct_size);
+  ZX_ASSERT_MSG(status == ZX_OK, "Could not read FIDL struct from config VMO");
+
+  // Decode the FIDL struct
+  fidl::HLCPPIncomingBody body(fidl::BytePart(fidl_struct.get(),
+                               static_cast<uint32_t>(fidl_struct_size),
+                               static_cast<uint32_t>(fidl_struct_size)),
+                               fidl::HandleInfoPart());
+
+  const char* error = nullptr;
+  ZX_ASSERT_MSG(ZX_OK == body.Decode(fidl::internal::WireFormatMetadataForVersion(
+                            fidl::internal::WireFormatVersion::kV2),
+                        {{fidl_cpp_namespace}}::Config::FidlType, &error),
+            "Could not decode FIDL struct from config VMO: %s", error);
+
+  fidl::Decoder decoder(std::move(body));
+  {{fidl_cpp_namespace}}::Config fidl_config;
+  {{fidl_cpp_namespace}}::Config::Decode(&decoder, &fidl_config, 0);
+
+  // Convert the configuration into a new struct
+  Config c\{{
+  {{#each fields}}
+      .{{ident}} = fidl_config.{{ident}}
+      {{~#unless @last}},{{/unless}}
+  {{~/each~}}
+  }};
+
+  return c;
+}
+
+}

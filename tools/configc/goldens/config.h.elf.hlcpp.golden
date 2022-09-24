@@ -1,0 +1,157 @@
+#ifndef __MY_CONFIG_LIB_H__
+#define __MY_CONFIG_LIB_H__
+
+#include <lib/inspect/cpp/inspect.h>
+
+#include <iostream>
+#include <string>
+#include <vector>
+
+namespace cpp_elf_hlcpp_config_lib {
+struct Config {
+ public:
+  static Config TakeFromStartupHandle() noexcept;
+
+ private:
+  struct Storage_;
+
+ public:
+  Config(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  Config() = default;
+#pragma clang diagnostic pop
+
+  void RecordInspect(inspect::Node* node);
+
+  const bool& my_flag() const { return storage_.my_flag; }
+  bool& my_flag() { return storage_.my_flag; }
+
+  const int16_t& my_int16() const { return storage_.my_int16; }
+  int16_t& my_int16() { return storage_.my_int16; }
+
+  const int32_t& my_int32() const { return storage_.my_int32; }
+  int32_t& my_int32() { return storage_.my_int32; }
+
+  const int64_t& my_int64() const { return storage_.my_int64; }
+  int64_t& my_int64() { return storage_.my_int64; }
+
+  const int8_t& my_int8() const { return storage_.my_int8; }
+  int8_t& my_int8() { return storage_.my_int8; }
+
+  const std::string& my_string() const { return storage_.my_string; }
+  std::string& my_string() { return storage_.my_string; }
+
+  const uint16_t& my_uint16() const { return storage_.my_uint16; }
+  uint16_t& my_uint16() { return storage_.my_uint16; }
+
+  const uint32_t& my_uint32() const { return storage_.my_uint32; }
+  uint32_t& my_uint32() { return storage_.my_uint32; }
+
+  const uint64_t& my_uint64() const { return storage_.my_uint64; }
+  uint64_t& my_uint64() { return storage_.my_uint64; }
+
+  const uint8_t& my_uint8() const { return storage_.my_uint8; }
+  uint8_t& my_uint8() { return storage_.my_uint8; }
+
+  const std::vector<bool>& my_vector_of_flag() const {
+    return storage_.my_vector_of_flag;
+  }
+  std::vector<bool>& my_vector_of_flag() { return storage_.my_vector_of_flag; }
+
+  const std::vector<int16_t>& my_vector_of_int16() const {
+    return storage_.my_vector_of_int16;
+  }
+  std::vector<int16_t>& my_vector_of_int16() {
+    return storage_.my_vector_of_int16;
+  }
+
+  const std::vector<int32_t>& my_vector_of_int32() const {
+    return storage_.my_vector_of_int32;
+  }
+  std::vector<int32_t>& my_vector_of_int32() {
+    return storage_.my_vector_of_int32;
+  }
+
+  const std::vector<int64_t>& my_vector_of_int64() const {
+    return storage_.my_vector_of_int64;
+  }
+  std::vector<int64_t>& my_vector_of_int64() {
+    return storage_.my_vector_of_int64;
+  }
+
+  const std::vector<int8_t>& my_vector_of_int8() const {
+    return storage_.my_vector_of_int8;
+  }
+  std::vector<int8_t>& my_vector_of_int8() {
+    return storage_.my_vector_of_int8;
+  }
+
+  const std::vector<std::string>& my_vector_of_string() const {
+    return storage_.my_vector_of_string;
+  }
+  std::vector<std::string>& my_vector_of_string() {
+    return storage_.my_vector_of_string;
+  }
+
+  const std::vector<uint16_t>& my_vector_of_uint16() const {
+    return storage_.my_vector_of_uint16;
+  }
+  std::vector<uint16_t>& my_vector_of_uint16() {
+    return storage_.my_vector_of_uint16;
+  }
+
+  const std::vector<uint32_t>& my_vector_of_uint32() const {
+    return storage_.my_vector_of_uint32;
+  }
+  std::vector<uint32_t>& my_vector_of_uint32() {
+    return storage_.my_vector_of_uint32;
+  }
+
+  const std::vector<uint64_t>& my_vector_of_uint64() const {
+    return storage_.my_vector_of_uint64;
+  }
+  std::vector<uint64_t>& my_vector_of_uint64() {
+    return storage_.my_vector_of_uint64;
+  }
+
+  const std::vector<uint8_t>& my_vector_of_uint8() const {
+    return storage_.my_vector_of_uint8;
+  }
+  std::vector<uint8_t>& my_vector_of_uint8() {
+    return storage_.my_vector_of_uint8;
+  }
+
+ private:
+  // TODO(https://fxbug.dev/100147) store a natural types object here instead
+  struct Storage_ final {
+    bool my_flag;
+    int16_t my_int16;
+    int32_t my_int32;
+    int64_t my_int64;
+    int8_t my_int8;
+    std::string my_string;
+    uint16_t my_uint16;
+    uint32_t my_uint32;
+    uint64_t my_uint64;
+    uint8_t my_uint8;
+    std::vector<bool> my_vector_of_flag;
+    std::vector<int16_t> my_vector_of_int16;
+    std::vector<int32_t> my_vector_of_int32;
+    std::vector<int64_t> my_vector_of_int64;
+    std::vector<int8_t> my_vector_of_int8;
+    std::vector<std::string> my_vector_of_string;
+    std::vector<uint16_t> my_vector_of_uint16;
+    std::vector<uint32_t> my_vector_of_uint32;
+    std::vector<uint64_t> my_vector_of_uint64;
+    std::vector<uint8_t> my_vector_of_uint8;
+  };
+
+  Storage_ storage_;
+};
+
+std::ostream& operator<<(std::ostream& os,
+                         const cpp_elf_hlcpp_config_lib::Config& c);
+}  // namespace cpp_elf_hlcpp_config_lib
+
+#endif

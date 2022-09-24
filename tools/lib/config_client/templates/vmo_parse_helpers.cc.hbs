@@ -1,0 +1,18 @@
+template <class T>
+std::vector<T> from_vector_view(fidl::VectorView<T> v) {
+    size_t count = v.count();
+    std::vector<T> data(count);
+    for (size_t i = 0; i < count; i++) {
+        data[i] = v[i];
+    }
+    return data;
+}
+
+std::vector<std::string> from_vector_string_view(fidl::VectorView<fidl::StringView> v) {
+    size_t count = v.count();
+    std::vector<std::string> data(count);
+    for (size_t i = 0; i < count; i++) {
+        data[i] = std::string(v[i].get());
+    }
+    return data;
+}

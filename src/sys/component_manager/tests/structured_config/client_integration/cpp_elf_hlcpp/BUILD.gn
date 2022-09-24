@@ -1,0 +1,151 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+executable("bin") {
+  testonly = true
+  output_name = "structured_config_cpp_elf_hlcpp_receiver"
+  sources = [ "src/main.cc" ]
+  deps = [
+    ":config_lib",
+    "//sdk/lib/sys/cpp:cpp",
+    "//sdk/lib/sys/inspect/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/sys/component_manager/tests/structured_config/fidl:test.structuredconfig.receiver_hlcpp",
+    "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_component_manifest("manifest") {
+  testonly = true
+  component_name = "cpp_elf_hlcpp_receiver"
+  manifest = "meta/receiver.cml"
+}
+
+fidl_library_name = "cf.sc.internal"
+namespace = "receiver_config"
+
+fidl_source_target = "config_lib_fidl_config_lib_source"
+cpp_elf_source_target = "config_lib_cpp_elf_config_lib_source"
+cpp_elf_headers_target = "config_lib_cpp_elf_config_lib_headers"
+
+if (current_toolchain == default_toolchain) {
+  manifest_outputs = get_target_outputs(":manifest")
+  compiled_manifest = manifest_outputs[0]
+
+  # generate the client library FIDL source
+  fidl_config_client_lib_source(fidl_source_target) {
+    testonly = true
+    name = fidl_library_name
+    compiled_manifest = compiled_manifest
+    deps = [ ":manifest" ]
+  }
+
+  # generate the C++ source
+  cpp_config_client_lib_source(cpp_elf_source_target) {
+    testonly = true
+    namespace = namespace
+    fidl_library_name = fidl_library_name
+    compiled_manifest = compiled_manifest
+    flavor = "elf-hlcpp"
+    deps = [ ":manifest" ]
+  }
+} else {
+  group(fidl_source_target) {
+    testonly = true
+    deps = [ ":${fidl_source_target}($default_toolchain)" ]
+  }
+  group(cpp_elf_source_target) {
+    testonly = true
+    deps = [ ":${cpp_elf_source_target}($default_toolchain)" ]
+  }
+}
+
+# Cannot call get_target_outputs on `client_lib_source`, so we must get the path to the
+# generated source files manually.
+source_gen_dir = get_label_info(":bogus($default_toolchain)", "target_out_dir")
+fidl_source_file = "${source_gen_dir}/${fidl_source_target}.fidl"
+cpp_elf_cc_source_file = "${source_gen_dir}/${namespace}.cc"
+
+# generate the FIDL library
+fidl_library_target = "config_lib_fidl_internal"
+
+fidl(fidl_library_target) {
+  name = fidl_library_name
+  testonly = true
+  sources = [ fidl_source_file ]
+  non_fidl_deps = [ ":${fidl_source_target}($default_toolchain)" ]
+  should_lint = false  # disables copyright and library name checks
+}
+
+library_headers(cpp_elf_headers_target) {
+  testonly = true
+  include_dir = "$root_build_dir/obj"
+  headers = [ "${namespace}/config.h" ]
+  public_deps = [ ":${cpp_elf_source_target}($default_toolchain)" ]
+}
+
+# generate the wrapper C++ library
+source_set("config_lib") {
+  testonly = true
+  sources = [ cpp_elf_cc_source_file ]
+  deps = [
+    ":${fidl_library_target}_hlcpp",
+    "//sdk/lib/fidl",
+    "//sdk/lib/sys/cpp",
+  ]
+
+  public_deps = [
+    ":${cpp_elf_headers_target}",
+    ":${cpp_elf_source_target}($default_toolchain)",
+    "//sdk/lib/sys/inspect/cpp",
+  ]
+
+  # prevent manifest from getting into package this way
+  metadata = {
+    distribution_entries_barrier = []
+  }
+}
+
+fuchsia_component("component") {
+  testonly = true
+  cm_label = ":manifest"
+  deps = [ ":bin" ]
+}
+
+fuchsia_structured_config_values("values") {
+  testonly = true
+  cm_label = ":manifest"
+  values_source = "../config/values.json5"
+}
+
+rustc_test("cpp_elf_hlcpp_sc_client_test_bin") {
+  edition = "2021"
+  source_root = "src/test.rs"
+  sources = [ "src/test.rs" ]
+  deps = [
+    "..:sc_client_integration_support",
+    "//src/lib/fuchsia",
+  ]
+}
+
+fuchsia_test_component("test_component") {
+  manifest = "meta/test.cml"
+  deps = [ ":cpp_elf_hlcpp_sc_client_test_bin" ]
+}
+
+fuchsia_test_package("cpp_elf_hlcpp") {
+  package_name = "sc_cpp_elf_hlcpp_client_integration_test"
+  test_components = [ ":test_component" ]
+  deps = [
+    ":component",
+    ":values",
+
+    # fxbug.dev/101490: Dep included for affected tests presubmit
+    "//src/sys/component_manager:component-manager-realm-builder-cmp",
+  ]
+}

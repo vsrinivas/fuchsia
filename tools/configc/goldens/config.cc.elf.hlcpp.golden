@@ -1,0 +1,251 @@
+#include <my/config/lib/cpp/fidl.h>
+#include <zircon/assert.h>
+#include <zircon/processargs.h>
+
+#include "cpp_elf_hlcpp_config_lib.h"
+
+namespace cpp_elf_hlcpp_config_lib {
+
+void Config::RecordInspect(inspect::Node* node) {
+  node->RecordBool("my_flag", this->my_flag());
+  node->RecordInt("my_int16", this->my_int16());
+  node->RecordInt("my_int32", this->my_int32());
+  node->RecordInt("my_int64", this->my_int64());
+  node->RecordInt("my_int8", this->my_int8());
+  node->RecordString("my_string", this->my_string());
+  node->RecordUint("my_uint16", this->my_uint16());
+  node->RecordUint("my_uint32", this->my_uint32());
+  node->RecordUint("my_uint64", this->my_uint64());
+  node->RecordUint("my_uint8", this->my_uint8());
+  auto my_vector_of_flag_array_ = node->CreateUintArray(
+      "my_vector_of_flag", this->my_vector_of_flag().size());
+  for (size_t i = 0; i < this->my_vector_of_flag().size(); i++) {
+    my_vector_of_flag_array_.Set(i, this->my_vector_of_flag()[i]);
+  }
+  node->Record(std::move(my_vector_of_flag_array_));
+  auto my_vector_of_int16_array_ = node->CreateIntArray(
+      "my_vector_of_int16", this->my_vector_of_int16().size());
+  for (size_t i = 0; i < this->my_vector_of_int16().size(); i++) {
+    my_vector_of_int16_array_.Set(i, this->my_vector_of_int16()[i]);
+  }
+  node->Record(std::move(my_vector_of_int16_array_));
+  auto my_vector_of_int32_array_ = node->CreateIntArray(
+      "my_vector_of_int32", this->my_vector_of_int32().size());
+  for (size_t i = 0; i < this->my_vector_of_int32().size(); i++) {
+    my_vector_of_int32_array_.Set(i, this->my_vector_of_int32()[i]);
+  }
+  node->Record(std::move(my_vector_of_int32_array_));
+  auto my_vector_of_int64_array_ = node->CreateIntArray(
+      "my_vector_of_int64", this->my_vector_of_int64().size());
+  for (size_t i = 0; i < this->my_vector_of_int64().size(); i++) {
+    my_vector_of_int64_array_.Set(i, this->my_vector_of_int64()[i]);
+  }
+  node->Record(std::move(my_vector_of_int64_array_));
+  auto my_vector_of_int8_array_ = node->CreateIntArray(
+      "my_vector_of_int8", this->my_vector_of_int8().size());
+  for (size_t i = 0; i < this->my_vector_of_int8().size(); i++) {
+    my_vector_of_int8_array_.Set(i, this->my_vector_of_int8()[i]);
+  }
+  node->Record(std::move(my_vector_of_int8_array_));
+  auto my_vector_of_string_array_ = node->CreateStringArray(
+      "my_vector_of_string", this->my_vector_of_string().size());
+  for (size_t i = 0; i < this->my_vector_of_string().size(); i++) {
+    auto ref = std::string_view(this->my_vector_of_string()[i].data());
+    my_vector_of_string_array_.Set(i, ref);
+  }
+  node->Record(std::move(my_vector_of_string_array_));
+  auto my_vector_of_uint16_array_ = node->CreateUintArray(
+      "my_vector_of_uint16", this->my_vector_of_uint16().size());
+  for (size_t i = 0; i < this->my_vector_of_uint16().size(); i++) {
+    my_vector_of_uint16_array_.Set(i, this->my_vector_of_uint16()[i]);
+  }
+  node->Record(std::move(my_vector_of_uint16_array_));
+  auto my_vector_of_uint32_array_ = node->CreateUintArray(
+      "my_vector_of_uint32", this->my_vector_of_uint32().size());
+  for (size_t i = 0; i < this->my_vector_of_uint32().size(); i++) {
+    my_vector_of_uint32_array_.Set(i, this->my_vector_of_uint32()[i]);
+  }
+  node->Record(std::move(my_vector_of_uint32_array_));
+  auto my_vector_of_uint64_array_ = node->CreateUintArray(
+      "my_vector_of_uint64", this->my_vector_of_uint64().size());
+  for (size_t i = 0; i < this->my_vector_of_uint64().size(); i++) {
+    my_vector_of_uint64_array_.Set(i, this->my_vector_of_uint64()[i]);
+  }
+  node->Record(std::move(my_vector_of_uint64_array_));
+  auto my_vector_of_uint8_array_ = node->CreateUintArray(
+      "my_vector_of_uint8", this->my_vector_of_uint8().size());
+  for (size_t i = 0; i < this->my_vector_of_uint8().size(); i++) {
+    my_vector_of_uint8_array_.Set(i, this->my_vector_of_uint8()[i]);
+  }
+  node->Record(std::move(my_vector_of_uint8_array_));
+}
+
+std::ostream& operator<<(std::ostream& os, const Config& c) {
+  if (c.my_flag()) {
+    os << "my_flag; ";
+  }
+  os << "my_int16=" << c.my_int16() << "; ";
+  os << "my_int32=" << c.my_int32() << "; ";
+  os << "my_int64=" << c.my_int64() << "; ";
+  os << "my_int8=" << c.my_int8() << "; ";
+  os << "my_string=" << c.my_string() << "; ";
+  os << "my_uint16=" << c.my_uint16() << "; ";
+  os << "my_uint32=" << c.my_uint32() << "; ";
+  os << "my_uint64=" << c.my_uint64() << "; ";
+  os << "my_uint8=" << c.my_uint8() << "; ";
+  os << "my_vector_of_flag: [";
+  for (auto iter = c.my_vector_of_flag().begin();
+       iter != c.my_vector_of_flag().end(); iter++) {
+    if (iter != c.my_vector_of_flag().begin()) os << ", ";
+    os << *iter;
+  }
+  os << "]";
+  os << "my_vector_of_int16: [";
+  for (auto iter = c.my_vector_of_int16().begin();
+       iter != c.my_vector_of_int16().end(); iter++) {
+    if (iter != c.my_vector_of_int16().begin()) os << ", ";
+    os << *iter;
+  }
+  os << "]";
+  os << "my_vector_of_int32: [";
+  for (auto iter = c.my_vector_of_int32().begin();
+       iter != c.my_vector_of_int32().end(); iter++) {
+    if (iter != c.my_vector_of_int32().begin()) os << ", ";
+    os << *iter;
+  }
+  os << "]";
+  os << "my_vector_of_int64: [";
+  for (auto iter = c.my_vector_of_int64().begin();
+       iter != c.my_vector_of_int64().end(); iter++) {
+    if (iter != c.my_vector_of_int64().begin()) os << ", ";
+    os << *iter;
+  }
+  os << "]";
+  os << "my_vector_of_int8: [";
+  for (auto iter = c.my_vector_of_int8().begin();
+       iter != c.my_vector_of_int8().end(); iter++) {
+    if (iter != c.my_vector_of_int8().begin()) os << ", ";
+    os << *iter;
+  }
+  os << "]";
+  os << "my_vector_of_string: [";
+  for (auto iter = c.my_vector_of_string().begin();
+       iter != c.my_vector_of_string().end(); iter++) {
+    if (iter != c.my_vector_of_string().begin()) os << ", ";
+    os << *iter;
+  }
+  os << "]";
+  os << "my_vector_of_uint16: [";
+  for (auto iter = c.my_vector_of_uint16().begin();
+       iter != c.my_vector_of_uint16().end(); iter++) {
+    if (iter != c.my_vector_of_uint16().begin()) os << ", ";
+    os << *iter;
+  }
+  os << "]";
+  os << "my_vector_of_uint32: [";
+  for (auto iter = c.my_vector_of_uint32().begin();
+       iter != c.my_vector_of_uint32().end(); iter++) {
+    if (iter != c.my_vector_of_uint32().begin()) os << ", ";
+    os << *iter;
+  }
+  os << "]";
+  os << "my_vector_of_uint64: [";
+  for (auto iter = c.my_vector_of_uint64().begin();
+       iter != c.my_vector_of_uint64().end(); iter++) {
+    if (iter != c.my_vector_of_uint64().begin()) os << ", ";
+    os << *iter;
+  }
+  os << "]";
+  os << "my_vector_of_uint8: [";
+  for (auto iter = c.my_vector_of_uint8().begin();
+       iter != c.my_vector_of_uint8().end(); iter++) {
+    if (iter != c.my_vector_of_uint8().begin()) os << ", ";
+    os << *iter;
+  }
+  os << "]";
+  return os;
+}
+
+Config Config::TakeFromStartupHandle() noexcept {
+  // Get the VMO containing FIDL config
+  zx_handle_t config_vmo_handle =
+      zx_take_startup_handle(PA_VMO_COMPONENT_CONFIG);
+  ZX_ASSERT_MSG(config_vmo_handle != ZX_HANDLE_INVALID,
+                "Could not obtain Config VMO Handle");
+  zx::vmo config_vmo(config_vmo_handle);
+
+  // Get the size of the VMO
+  uint64_t content_size_prop = 0;
+  zx_status_t status = config_vmo.get_prop_content_size(&content_size_prop);
+  ZX_ASSERT_MSG(status == ZX_OK, "Could not get content size of config VMO");
+  size_t vmo_content_size = static_cast<size_t>(content_size_prop);
+
+  // Checksum length must be correct
+  uint16_t checksum_length = 0;
+  status = config_vmo.read(&checksum_length, 0, 2);
+  ZX_ASSERT_MSG(status == ZX_OK,
+                "Could not read checksum length from config VMO");
+
+  // Verify Checksum
+  std::vector<uint8_t> checksum(checksum_length);
+  status = config_vmo.read(checksum.data(), 2, checksum_length);
+  ZX_ASSERT_MSG(status == ZX_OK, "Could not read checksum from config VMO");
+  std::vector<uint8_t> expected_checksum{
+      0xcd, 0x57, 0xb2, 0xa2, 0x89, 0xbb, 0xb6, 0x11, 0xcf, 0x81, 0x50,
+      0xec, 0x06, 0xc5, 0x06, 0x4c, 0x7c, 0xae, 0x79, 0x0f, 0xaa, 0x73,
+      0x0b, 0x6f, 0xa1, 0x02, 0xc3, 0x53, 0x7b, 0x94, 0xee, 0x1a};
+  ZX_ASSERT_MSG(checksum == expected_checksum,
+                "Invalid checksum for config VMO");
+
+  // Read the FIDL struct into memory
+  // Skip the checksum length + checksum + FIDL persistent header
+  // Align the struct pointer to 8 bytes (as required by FIDL)
+  size_t header = 2 + checksum_length + 8;
+  size_t fidl_struct_size = vmo_content_size - header;
+  std::unique_ptr<uint8_t[]> fidl_struct(new uint8_t[fidl_struct_size]);
+  status = config_vmo.read(fidl_struct.get(), header, fidl_struct_size);
+  ZX_ASSERT_MSG(status == ZX_OK, "Could not read FIDL struct from config VMO");
+
+  // Decode the FIDL struct
+  fidl::HLCPPIncomingBody body(
+      fidl::BytePart(fidl_struct.get(), static_cast<uint32_t>(fidl_struct_size),
+                     static_cast<uint32_t>(fidl_struct_size)),
+      fidl::HandleInfoPart());
+
+  const char* error = nullptr;
+  ZX_ASSERT_MSG(
+      ZX_OK == body.Decode(fidl::internal::WireFormatMetadataForVersion(
+                               fidl::internal::WireFormatVersion::kV2),
+                           my::config::lib::Config::FidlType, &error),
+      "Could not decode FIDL struct from config VMO: %s", error);
+
+  fidl::Decoder decoder(std::move(body));
+  my::config::lib::Config fidl_config;
+  my::config::lib::Config::Decode(&decoder, &fidl_config, 0);
+
+  // Convert the configuration into a new struct
+  Config c{{.my_flag = fidl_config.my_flag,
+            .my_int16 = fidl_config.my_int16,
+            .my_int32 = fidl_config.my_int32,
+            .my_int64 = fidl_config.my_int64,
+            .my_int8 = fidl_config.my_int8,
+            .my_string = fidl_config.my_string,
+            .my_uint16 = fidl_config.my_uint16,
+            .my_uint32 = fidl_config.my_uint32,
+            .my_uint64 = fidl_config.my_uint64,
+            .my_uint8 = fidl_config.my_uint8,
+            .my_vector_of_flag = fidl_config.my_vector_of_flag,
+            .my_vector_of_int16 = fidl_config.my_vector_of_int16,
+            .my_vector_of_int32 = fidl_config.my_vector_of_int32,
+            .my_vector_of_int64 = fidl_config.my_vector_of_int64,
+            .my_vector_of_int8 = fidl_config.my_vector_of_int8,
+            .my_vector_of_string = fidl_config.my_vector_of_string,
+            .my_vector_of_uint16 = fidl_config.my_vector_of_uint16,
+            .my_vector_of_uint32 = fidl_config.my_vector_of_uint32,
+            .my_vector_of_uint64 = fidl_config.my_vector_of_uint64,
+            .my_vector_of_uint8 = fidl_config.my_vector_of_uint8}};
+
+  return c;
+}
+
+}  // namespace cpp_elf_hlcpp_config_lib

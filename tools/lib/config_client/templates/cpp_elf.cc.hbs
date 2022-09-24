@@ -19,6 +19,8 @@ namespace {{cpp_namespace}} {
 
 {{> helpers }}
 
+{{> vmo_parse_helpers }}
+
 Config Config::TakeFromStartupHandle() noexcept {
   // Get the VMO containing FIDL config
   zx_handle_t config_vmo_handle = zx_take_startup_handle(PA_VMO_COMPONENT_CONFIG);

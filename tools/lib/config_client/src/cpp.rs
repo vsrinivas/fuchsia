@@ -11,21 +11,27 @@ use std::str::FromStr;
 static CC_ELF_SOURCE_TEMPLATE: &str = include_str!("../templates/cpp_elf.cc.hbs");
 static H_ELF_SOURCE_TEMPLATE: &str = include_str!("../templates/cpp_elf.h.hbs");
 
+static CC_ELF_HLCPP_SOURCE_TEMPLATE: &str = include_str!("../templates/cpp_elf_hlcpp.cc.hbs");
+
 static CC_DRIVER_SOURCE_TEMPLATE: &str = include_str!("../templates/cpp_driver.cc.hbs");
 static H_DRIVER_SOURCE_TEMPLATE: &str = include_str!("../templates/cpp_driver.h.hbs");
 
 static HELPERS_SOURCE_TEMPLATE: &str = include_str!("../templates/helpers.cc.hbs");
 static TYPEDEF_SOURCE_TEMPLATE: &str = include_str!("../templates/typedef.h.hbs");
 static VMO_PARSE_SOURCE_TEMPLATE: &str = include_str!("../templates/vmo_parse.cc.hbs");
+static VMO_PARSE_HELPERS_SOURCE_TEMPLATE: &str =
+    include_str!("../templates/vmo_parse_helpers.cc.hbs");
 
 pub struct CppSource {
     pub cc_source: String,
     pub h_source: String,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Flavor {
     ElfProcess,
+    // TODO(https://fxbug.dev/108880) delete once unified FIDL available OOT
+    ElfHlcpp,
     Driver,
 }
 
@@ -43,6 +49,7 @@ impl FromStr for Flavor {
 
         match string.as_str() {
             "elf" => Ok(Flavor::ElfProcess),
+            "elf-hlcpp" => Ok(Flavor::ElfHlcpp),
             "driver" => Ok(Flavor::Driver),
             _ => Err(FlavorParseError::UnknownFlavor(string)),
         }
@@ -57,10 +64,11 @@ pub fn create_cpp_wrapper(
 ) -> Result<CppSource, SourceGenError> {
     let (cc_source_template, h_source_template) = match flavor {
         Flavor::ElfProcess => (CC_ELF_SOURCE_TEMPLATE, H_ELF_SOURCE_TEMPLATE),
+        Flavor::ElfHlcpp => (CC_ELF_HLCPP_SOURCE_TEMPLATE, H_ELF_SOURCE_TEMPLATE),
         Flavor::Driver => (CC_DRIVER_SOURCE_TEMPLATE, H_DRIVER_SOURCE_TEMPLATE),
     };
 
-    let vars = TemplateVars::from_decl(config_decl, cpp_namespace, fidl_library_name);
+    let vars = TemplateVars::from_decl(config_decl, cpp_namespace, fidl_library_name, flavor);
 
     let mut hbars = Handlebars::new();
     hbars.set_strict_mode(true);
@@ -77,6 +85,9 @@ pub fn create_cpp_wrapper(
     hbars.register_template_string("helpers", HELPERS_SOURCE_TEMPLATE).pretty_unwrap();
     hbars.register_template_string("typedef", TYPEDEF_SOURCE_TEMPLATE).pretty_unwrap();
     hbars.register_template_string("vmo_parse", VMO_PARSE_SOURCE_TEMPLATE).pretty_unwrap();
+    hbars
+        .register_template_string("vmo_parse_helpers", VMO_PARSE_HELPERS_SOURCE_TEMPLATE)
+        .pretty_unwrap();
     let cc_source = hbars.render("cc_source", &vars).pretty_unwrap();
     let h_source = hbars.render("h_source", &vars).pretty_unwrap();
     Ok(CppSource { cc_source, h_source })
@@ -90,6 +101,9 @@ struct TemplateVars {
     fidl_cpp_namespace: String,
     expected_checksum: Vec<u8>,
     fields: Vec<Field>,
+
+    // TODO(https://fxbug.dev/108880) delete once unified FIDL available OOT
+    fidl_cpp_header_prefix: String,
 }
 
 impl TemplateVars {
@@ -97,10 +111,19 @@ impl TemplateVars {
         config_decl: &ConfigDecl,
         cpp_namespace: String,
         fidl_library_name: String,
+        flavor: Flavor,
     ) -> Self {
         let cpp_namespace = cpp_namespace.replace('.', "_").replace('-', "_").to_ascii_lowercase();
         let header_guard = fidl_library_name.replace('.', "_").to_ascii_uppercase();
-        let fidl_cpp_namespace = fidl_library_name.replace('.', "_").to_ascii_lowercase();
+        let (fidl_cpp_namespace, fidl_cpp_header_prefix) = if let Flavor::ElfHlcpp = flavor {
+            (
+                fidl_library_name.replace('.', "::").to_ascii_lowercase(),
+                fidl_library_name.replace('.', "/").to_ascii_lowercase(),
+            )
+        } else {
+            let ns = fidl_library_name.replace('.', "_").to_ascii_lowercase();
+            (ns.clone(), ns)
+        };
         let ConfigChecksum::Sha256(expected_checksum) = &config_decl.checksum;
         let expected_checksum = expected_checksum.to_vec();
 
@@ -109,6 +132,7 @@ impl TemplateVars {
             header_guard,
             fidl_library_name,
             fidl_cpp_namespace,
+            fidl_cpp_header_prefix,
             cpp_namespace,
             expected_checksum,
         }

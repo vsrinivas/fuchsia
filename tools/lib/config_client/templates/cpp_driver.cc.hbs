@@ -19,6 +19,8 @@ namespace {{cpp_namespace}} {
 
 {{> helpers }}
 
+{{> vmo_parse_helpers }}
+
 Config Config::TakeFromStartArgs(fuchsia_driver_framework::wire::DriverStartArgs& start_args) noexcept {
   // Get the VMO containing FIDL config
   ZX_ASSERT_MSG(start_args.has_config(), "No config found in driver start args");

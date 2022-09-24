@@ -89,6 +89,16 @@ cpp_config_client_lib_source("cpp_elf_config_lib") {
   testonly = true
 }
 
+# TODO(https://fxbug.dev/108880) delete the HLCPP goldens once no longer needed
+cpp_config_client_lib_source("cpp_elf_hlcpp_config_lib") {
+  manifest_outputs = get_target_outputs(":config_manifest")
+  compiled_manifest = manifest_outputs[0]
+  fidl_library_name = "my.config.lib"
+  deps = [ ":config_manifest" ]
+  flavor = "elf-hlcpp"
+  testonly = true
+}
+
 cpp_config_client_lib_source("cpp_driver_config_lib") {
   manifest_outputs = get_target_outputs(":config_manifest")
   compiled_manifest = manifest_outputs[0]
@@ -122,6 +132,7 @@ dump_structured_config("dump_example_values") {
 fidl_lib_outputs = get_target_outputs(":fidl_config_lib")
 rust_lib_outputs = get_target_outputs(":rust_config_lib")
 cpp_elf_lib_outputs = get_target_outputs(":cpp_elf_config_lib")
+cpp_elf_hlcpp_lib_outputs = get_target_outputs(":cpp_elf_hlcpp_config_lib")
 cpp_driver_lib_outputs = get_target_outputs(":cpp_driver_config_lib")
 
 golden_files("golden_tests") {
@@ -143,6 +154,16 @@ golden_files("golden_tests") {
       golden = "goldens/config.h.elf.golden"
       candidate = cpp_elf_lib_outputs[1]
     },
+
+    # TODO(https://fxbug.dev/108880) delete the HLCPP goldens once no longer needed
+    {
+      golden = "goldens/config.cc.elf.hlcpp.golden"
+      candidate = cpp_elf_hlcpp_lib_outputs[0]
+    },
+    {
+      golden = "goldens/config.h.elf.hlcpp.golden"
+      candidate = cpp_elf_hlcpp_lib_outputs[1]
+    },
     {
       golden = "goldens/config.cc.driver.golden"
       candidate = cpp_driver_lib_outputs[0]
@@ -159,6 +180,7 @@ golden_files("golden_tests") {
   deps = [
     ":cpp_driver_config_lib",
     ":cpp_elf_config_lib",
+    ":cpp_elf_hlcpp_config_lib",
     ":dump_example_values",
     ":fidl_config_lib",
     ":rust_config_lib",
