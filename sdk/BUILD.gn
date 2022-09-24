@@ -22,8 +22,6 @@ _sdk_public_deps = [
 ]
 
 # This default target should contain all public or partner SDKs.
-# Any public or partner SDKs added to this target should also be
-# added to ALLOWED_CTS_SDKS in //sdk/ctf/build/allowed_ctf_deps.gni.
 group("sdk") {
   testonly = true
 
@@ -61,10 +59,9 @@ generated_file("compatibility_testing_goldens") {
   data_keys = [ "compatibility_testing_goldens" ]
 }
 
-# TODO(96110): Remove this and use //sdk/ctf:plasa_manifest.
 # Contains the list of all plasa fragment files, which have a dump of the
 # public API surfaces.
-generated_file("plasa") {
+generated_file("plasa_manifest") {
   testonly = true
   data_keys = [ "plasa" ]
   outputs = [ "$root_build_dir/manifest.plasa.json" ]

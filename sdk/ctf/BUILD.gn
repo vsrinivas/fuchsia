@@ -25,7 +25,6 @@ group("ctf") {
   testonly = true
   deps = [
     ":host_test_manifest",
-    ":plasa_manifest",
     ":test_manifest",
     ":tests",
     ":verify_idk_deps",
@@ -62,19 +61,6 @@ generated_file("host_test_manifest") {
 
   metadata = {
     cts_artifacts = [ "cts/host_test_manifest.json" ]
-  }
-}
-
-# A manifest of the plasa elements that are vended in CTS.
-generated_file("plasa_manifest") {
-  testonly = true
-  outputs = [ "$root_build_dir/cts/manifest.ctf.plasa.json" ]
-  output_conversion = "json"
-  data_keys = [ "plasa" ]
-  deps = [ "//sdk/fidl:plasa" ]
-
-  metadata = {
-    cts_artifacts = [ "cts/manifest.ctf.plasa.json" ]
   }
 }
 

@@ -61,7 +61,7 @@ if (current_toolchain == toolchain_variant.base) {
       "--output",
       rebase_path(_plasa_output, root_build_dir),
     ]
-    deps = [ "//sdk:plasa" ]
+    deps = [ "//sdk:plasa_manifest" ]
   }
 }
 
