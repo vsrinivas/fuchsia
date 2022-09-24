@@ -18,8 +18,10 @@ use {
     tempfile::{NamedTempFile, TempPath},
 };
 
-#[ffx_core::ffx_plugin()]
-pub async fn core(rcs: RemoteControlProxy, cmd: ffx_debug_core_args::CoreCommand) -> Result<()> {
+pub async fn ffx_plugin_impl(
+    injector: &dyn ffx_core::Injector,
+    cmd: ffx_debug_core_args::CoreCommand,
+) -> Result<()> {
     if let Err(e) = symbol_index::ensure_symbol_index_registered().await {
         eprintln!("ensure_symbol_index_registered failed, error was: {:#?}", e);
     }
@@ -28,6 +30,7 @@ pub async fn core(rcs: RemoteControlProxy, cmd: ffx_debug_core_args::CoreCommand
     let minidump = match cmd.minidump {
         Some(file) => file,
         None => {
+            let rcs: RemoteControlProxy = injector.remote_factory().await?;
             _temp_minidump_path = Some(choose_and_copy_remote_minidumps(&rcs).await?);
             _temp_minidump_path.as_ref().unwrap().to_str().unwrap().to_owned()
         }
@@ -45,6 +48,14 @@ pub async fn core(rcs: RemoteControlProxy, cmd: ffx_debug_core_args::CoreCommand
     } else {
         Err(ffx_error!("zxdb terminated by signal").into())
     }
+}
+
+pub fn ffx_plugin_writer_output() -> String {
+    String::from("Not supported")
+}
+
+pub fn ffx_plugin_is_machine_supported() -> bool {
+    false
 }
 
 // Must be kept in sync with //src/sys/core/core_component_id_index.json5.
