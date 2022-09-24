@@ -528,10 +528,10 @@ void PageSource::Dump(uint depth) const {
       for (uint i = 0; i < depth; ++i) {
         printf("  ");
       }
-      printf("  vmo 0x%lx/k%lu %s req [0x%lx, 0x%lx) pending 0x%lx overlap %lu\n",
+      printf("  vmo 0x%lx/k%lu %s req [0x%lx, 0x%lx) pending 0x%lx overlap %lu %s\n",
              req.vmo_debug_info_.vmo_ptr, req.vmo_debug_info_.vmo_id,
              PageRequestTypeToString(page_request_type(type)), req.offset_, req.GetEnd(),
-             req.pending_size_, req.overlap_.size_slow());
+             req.pending_size_, req.overlap_.size_slow(), req.provider_owned_ ? "[sent]" : "");
     }
   }
   page_provider_->Dump(depth);
