@@ -289,7 +289,7 @@ bool Controller::BringUpDisplayEngine(bool resume) {
   // Wait for Power Well 0 distribution
   if (!PollUntil(
           [&] { return tgl_registers::FuseStatus::Get().ReadFrom(mmio_space()).pg0_dist_status(); },
-          zx::usec(1), 5)) {
+          zx::usec(1), 20)) {
     zxlogf(ERROR, "Power Well 0 distribution failed");
     return false;
   }
@@ -305,38 +305,74 @@ bool Controller::BringUpDisplayEngine(bool resume) {
     cd_clk_power_well_ = power_->GetCdClockPowerWellRef();
   }
 
-  // Enable CDCLK PLL to 337.5mhz if the BIOS didn't already enable it. If it needs to be
-  // something special (i.e. for eDP), assume that the BIOS already enabled it.
-  auto dpll_enable =
-      tgl_registers::DpllEnable::GetForSkylakeDpll(tgl_registers::DPLL_0).ReadFrom(mmio_space());
-  if (!dpll_enable.enable_dpll()) {
-    // Configure DPLL0
-    auto dpll_ctl1 = tgl_registers::DpllControl1::Get().ReadFrom(mmio_space());
-    dpll_ctl1.SetLinkRate(tgl_registers::DPLL_0, tgl_registers::DpllControl1::LinkRate::k810Mhz);
-    dpll_ctl1.dpll_override(tgl_registers::DPLL_0).set(1);
-    dpll_ctl1.dpll_hdmi_mode(tgl_registers::DPLL_0).set(0);
-    dpll_ctl1.dpll_ssc_enable(tgl_registers::DPLL_0).set(0);
-    dpll_ctl1.WriteTo(mmio_space());
+  if (is_tgl(device_id_)) {
+    auto pwr_well_ctrl = tgl_registers::PowerWellControl::Get().ReadFrom(mmio_space());
+    pwr_well_ctrl.power_request(1).set(1);
+    pwr_well_ctrl.WriteTo(mmio_space());
 
-    // Enable DPLL0 and wait for it
-    dpll_enable.set_enable_dpll(1);
-    dpll_enable.WriteTo(mmio_space());
     if (!PollUntil(
-            [&] { return tgl_registers::Lcpll1Control::Get().ReadFrom(mmio_space()).pll_lock(); },
-            zx::msec(1), 5)) {
-      zxlogf(ERROR, "Failed to configure dpll0");
+            [&] {
+              return tgl_registers::PowerWellControl::Get()
+                  .ReadFrom(mmio_space())
+                  .power_state(0)
+                  .get();
+            },
+            zx::usec(1), 30)) {
+      zxlogf(ERROR, "Power Well 1 state failed");
+      return false;
+    }
+
+    if (!PollUntil(
+            [&] {
+              return tgl_registers::FuseStatus::Get().ReadFrom(mmio_space()).pg1_dist_status();
+            },
+            zx::usec(1), 20)) {
+      zxlogf(ERROR, "Power Well 1 distribution failed");
       return false;
     }
 
     // Enable cd_clk and set the frequency to minimum.
-    cd_clk_ = std::make_unique<CoreDisplayClockSkylake>(mmio_space());
-    if (!cd_clk_->SetFrequency(337'500)) {
+    cd_clk_ = std::make_unique<CoreDisplayClockTigerLake>(mmio_space());
+    // PLL ratio for 38.4MHz: 16 -> CDCLK 307.2 MHz
+    if (!cd_clk_->SetFrequency(307'200)) {
       zxlogf(ERROR, "Failed to configure CD clock frequency");
       return false;
     }
   } else {
-    cd_clk_ = std::make_unique<CoreDisplayClockSkylake>(mmio_space());
-    zxlogf(INFO, "CDCLK already assigned by BIOS: frequency: %u KHz", cd_clk_->current_freq_khz());
+    // Enable CDCLK PLL to 337.5mhz if the BIOS didn't already enable it. If it needs to be
+    // something special (i.e. for eDP), assume that the BIOS already enabled it.
+    auto dpll_enable =
+        tgl_registers::DpllEnable::GetForSkylakeDpll(tgl_registers::DPLL_0).ReadFrom(mmio_space());
+    if (!dpll_enable.enable_dpll()) {
+      // Configure DPLL0
+      auto dpll_ctl1 = tgl_registers::DpllControl1::Get().ReadFrom(mmio_space());
+      dpll_ctl1.SetLinkRate(tgl_registers::DPLL_0, tgl_registers::DpllControl1::LinkRate::k810Mhz);
+      dpll_ctl1.dpll_override(tgl_registers::DPLL_0).set(1);
+      dpll_ctl1.dpll_hdmi_mode(tgl_registers::DPLL_0).set(0);
+      dpll_ctl1.dpll_ssc_enable(tgl_registers::DPLL_0).set(0);
+      dpll_ctl1.WriteTo(mmio_space());
+
+      // Enable DPLL0 and wait for it
+      dpll_enable.set_enable_dpll(1);
+      dpll_enable.WriteTo(mmio_space());
+      if (!PollUntil(
+              [&] { return tgl_registers::Lcpll1Control::Get().ReadFrom(mmio_space()).pll_lock(); },
+              zx::usec(1), 5)) {
+        zxlogf(ERROR, "Failed to configure dpll0");
+        return false;
+      }
+
+      // Enable cd_clk and set the frequency to minimum.
+      cd_clk_ = std::make_unique<CoreDisplayClockSkylake>(mmio_space());
+      if (!cd_clk_->SetFrequency(337'500)) {
+        zxlogf(ERROR, "Failed to configure CD clock frequency");
+        return false;
+      }
+    } else {
+      cd_clk_ = std::make_unique<CoreDisplayClockSkylake>(mmio_space());
+      zxlogf(INFO, "CDCLK already assigned by BIOS: frequency: %u KHz",
+             cd_clk_->current_freq_khz());
+    }
   }
 
   // Enable and wait for DBUF
@@ -1211,7 +1247,10 @@ bool Controller::CheckDisplayLimits(cpp20::span<const display_config_t*> display
 
     uint64_t max_pipe_pixel_rate;
     auto cd_freq = tgl_registers::CdClockCtl::Get().ReadFrom(mmio_space()).cd_freq_decimal();
-    if (cd_freq == tgl_registers::CdClockCtl::FreqDecimal(308570)) {
+
+    if (cd_freq == tgl_registers::CdClockCtl::FreqDecimal(307200)) {
+      max_pipe_pixel_rate = 307200000;
+    } else if (cd_freq == tgl_registers::CdClockCtl::FreqDecimal(308570)) {
       max_pipe_pixel_rate = 308570000;
     } else if (cd_freq == tgl_registers::CdClockCtl::FreqDecimal(337500)) {
       max_pipe_pixel_rate = 337500000;
