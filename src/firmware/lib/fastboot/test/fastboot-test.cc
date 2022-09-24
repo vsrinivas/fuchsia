@@ -801,21 +801,37 @@ class FastbootFshostTest : public FastbootDownloadTest,
 
   ~FastbootFshostTest() { loop_.Shutdown(); }
 
-  fidl::ClientEnd<fuchsia_io::Directory>& svc_chan() { return svc_local_; }
-  const std::string& data_file_name() { return data_file_name_; }
-  const std::string& data_file_content() { return data_file_content_; }
-  uint64_t data_file_vmo_content_size() { return data_file_vmo_content_size_; }
+  fidl::ClientEnd<fuchsia_io::Directory>& svc_chan() {
+    fbl::AutoLock al(&lock_);
+    return svc_local_;
+  }
+
+  const std::string& data_file_name() {
+    fbl::AutoLock al(&lock_);
+    return data_file_name_;
+  }
+
+  const std::string& data_file_content() {
+    fbl::AutoLock al(&lock_);
+    return data_file_content_;
+  }
+
+  uint64_t data_file_vmo_content_size() {
+    fbl::AutoLock al(&lock_);
+    return data_file_vmo_content_size_;
+  }
 
  private:
   void WriteDataFile(WriteDataFileRequestView request,
                      WriteDataFileCompleter::Sync& completer) override {
+    fbl::AutoLock al(&lock_);
     data_file_name_ = std::string(request->filename.data(), request->filename.size());
     uint64_t size;
     ASSERT_OK(request->payload.get_size(&size));
     data_file_content_.resize(size);
     ASSERT_OK(request->payload.read(data_file_content_.data(), 0, size));
-    completer.ReplySuccess();
     ASSERT_OK(request->payload.get_prop_content_size(&data_file_vmo_content_size_));
+    completer.ReplySuccess();
   }
 
   void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
@@ -826,9 +842,11 @@ class FastbootFshostTest : public FastbootDownloadTest,
   component::OutgoingDirectory outgoing_;
   fidl::ClientEnd<fuchsia_io::Directory> svc_local_;
 
-  std::string data_file_name_;
-  std::string data_file_content_;
-  uint64_t data_file_vmo_content_size_;
+  std::string data_file_name_ TA_GUARDED(lock_);
+  std::string data_file_content_ TA_GUARDED(lock_);
+  uint64_t data_file_vmo_content_size_ TA_GUARDED(lock_);
+
+  mutable fbl::Mutex lock_;
 };
 
 TEST_F(FastbootFshostTest, OemAddStagedBootloaderFile) {
