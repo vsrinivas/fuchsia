@@ -29,6 +29,7 @@ source_set("lib") {
   public_configs = [ ":include" ]
   public_deps = [
     ":fastboot-base",
+    "//sdk/fidl/fuchsia.buildinfo:fuchsia.buildinfo_cpp_wire",
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_cpp_wire",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver_cpp_wire",

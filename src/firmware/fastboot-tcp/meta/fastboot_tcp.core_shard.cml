@@ -25,5 +25,10 @@
             from: "parent",
             to: [ "#fastboot-tcp" ],
         },
+        {
+            protocol: "fuchsia.buildinfo.Provider",
+            from: "#build-info",
+            to: "#fastboot-tcp",
+        },
     ],
 }

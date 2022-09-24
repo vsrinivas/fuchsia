@@ -29,6 +29,7 @@
         // List your component's dependencies here, ex:
         {
             protocol: [
+                "fuchsia.buildinfo.Provider",
                 "fuchsia.fshost.Admin",
                 "fuchsia.hardware.power.statecontrol.Admin",
                 "fuchsia.paver.Paver",

@@ -29,12 +29,6 @@ class __EXPORT Fastboot : public FastbootBase {
   Fastboot(size_t max_download_size, fidl::ClientEnd<fuchsia_io::Directory> svc_root);
 
  private:
-  enum class State {
-    kCommand,
-    kDownload,
-  };
-
-  State state_ = State::kCommand;
   size_t max_download_size_;
   fzl::OwnedVmoMapper download_vmo_mapper_;
   // Channel to svc.
@@ -48,6 +42,7 @@ class __EXPORT Fastboot : public FastbootBase {
   zx::status<std::string> GetVarMaxDownloadSize(const std::vector<std::string_view> &, Transport *);
   zx::status<std::string> GetVarSlotCount(const std::vector<std::string_view> &, Transport *);
   zx::status<std::string> GetVarIsUserspace(const std::vector<std::string_view> &, Transport *);
+  zx::status<std::string> GetVarHwRevision(const std::vector<std::string_view> &, Transport *);
   zx::status<> Flash(const std::string &command, Transport *transport);
   zx::status<> SetActive(const std::string &command, Transport *transport);
   zx::status<> Reboot(const std::string &command, Transport *transport);
@@ -55,7 +50,6 @@ class __EXPORT Fastboot : public FastbootBase {
   zx::status<> Continue(const std::string &command, Transport *transport);
   zx::status<> OemAddStagedBootloaderFile(const std::string &command, Transport *transport);
 
-  void ClearDownload();
   zx::status<fidl::WireSyncClient<fuchsia_paver::Paver>> ConnectToPaver();
   zx::status<fidl::WireSyncClient<fuchsia_hardware_power_statecontrol::Admin>>
   ConnectToPowerStateControl();

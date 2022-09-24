@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.buildinfo/cpp/wire.h>
 #include <fidl/fuchsia.fshost/cpp/wire.h>
 #include <fidl/fuchsia.paver/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -112,6 +113,7 @@ const Fastboot::VariableHashTable& Fastboot::GetVariableTable() {
       {"max-download-size", &Fastboot::GetVarMaxDownloadSize},
       {"slot-count", &Fastboot::GetVarSlotCount},
       {"is-userspace", &Fastboot::GetVarIsUserspace},
+      {"hw-revision", &Fastboot::GetVarHwRevision},
   });
   return *kVariableTable;
 }
@@ -172,6 +174,28 @@ zx::status<> Fastboot::GetVar(const std::string& command, Transport* transport) 
 zx::status<std::string> Fastboot::GetVarMaxDownloadSize(const std::vector<std::string_view>&,
                                                         Transport*) {
   return zx::ok(fxl::StringPrintf("0x%08zx", max_download_size_));
+}
+
+zx::status<std::string> Fastboot::GetVarHwRevision(const std::vector<std::string_view>&,
+                                                   Transport*) {
+  auto svc_root = GetSvcRoot();
+  if (svc_root.is_error()) {
+    return zx::error(svc_root.status_value());
+  }
+
+  auto connect_result = service::ConnectAt<fuchsia_buildinfo::Provider>(*svc_root.value());
+  if (connect_result.is_error()) {
+    return zx::error(connect_result.status_value());
+  }
+
+  auto provider = fidl::WireSyncClient(std::move(connect_result.value()));
+
+  auto resp = provider->GetBuildInfo();
+  if (!resp.ok()) {
+    return zx::error(resp.status());
+  }
+
+  return zx::ok(resp->build_info.board_config().data());
 }
 
 zx::status<std::string> Fastboot::GetVarSlotCount(const std::vector<std::string_view>&,

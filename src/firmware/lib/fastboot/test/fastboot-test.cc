@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.buildinfo/cpp/wire.h>
+#include <fidl/fuchsia.buildinfo/cpp/wire_test_base.h>
 #include <fidl/fuchsia.fshost/cpp/wire.h>
 #include <fidl/fuchsia.fshost/cpp/wire_test_base.h>
 #include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
@@ -1002,6 +1004,62 @@ TEST(FastbootBase, ExtractCommandArgsMultipleBySpace) {
   EXPECT_EQ(args.args[2], "arg2");
   EXPECT_EQ(args.args[3], "arg3");
   EXPECT_EQ(args.args[4], "");
+}
+
+constexpr char kTestBoardConfig[] = "test-board-config";
+
+class FastbootBuildInfoTest : public FastbootDownloadTest,
+                              public fidl::testing::WireTestBase<fuchsia_buildinfo::Provider> {
+ public:
+  FastbootBuildInfoTest()
+      : loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
+        outgoing_(component::OutgoingDirectory::Create(loop_.dispatcher())) {
+    ASSERT_OK(outgoing_.AddProtocol<fuchsia_buildinfo::Provider>(this));
+    auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    ASSERT_TRUE(endpoints.is_ok());
+    ASSERT_EQ(ZX_OK, outgoing_.Serve(std::move(endpoints->server)).status_value());
+    auto svc_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    ASSERT_TRUE(svc_endpoints.is_ok());
+    ASSERT_OK(fidl::WireCall(endpoints->client)
+                  ->Open(fuchsia_io::wire::OpenFlags::kRightWritable |
+                             fuchsia_io::wire::OpenFlags::kRightReadable,
+                         0, "svc",
+                         fidl::ServerEnd<fuchsia_io::Node>(svc_endpoints->server.TakeChannel())));
+    svc_local_ = std::move(svc_endpoints->client);
+    loop_.StartThread("fastboot-buildinfo-test-loop");
+  }
+
+  ~FastbootBuildInfoTest() { loop_.Shutdown(); }
+
+  fidl::ClientEnd<fuchsia_io::Directory>& svc_chan() { return svc_local_; }
+
+ private:
+  void GetBuildInfo(GetBuildInfoCompleter::Sync& completer) override {
+    fidl::Arena arena;
+    auto res = fuchsia_buildinfo::wire::BuildInfo::Builder(arena)
+                   .board_config(fidl::StringView(kTestBoardConfig))
+                   .Build();
+    completer.Reply(res);
+  }
+
+  void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
+    FAIL("Unexpected call to BuildInfo: %s", name.c_str());
+  }
+
+  async::Loop loop_;
+  component::OutgoingDirectory outgoing_;
+  fidl::ClientEnd<fuchsia_io::Directory> svc_local_;
+};
+
+TEST_F(FastbootBuildInfoTest, GetVarHwRevision) {
+  Fastboot fastboot(0x40000, std::move(svc_chan()));
+  const char command[] = "getvar:hw-revision";
+  TestTransport transport;
+  transport.AddInPacket(command, strlen(command));
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+  Packets expected_packets = {"OKAY" + std::string(kTestBoardConfig)};
+  ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
 }
 
 }  // namespace
