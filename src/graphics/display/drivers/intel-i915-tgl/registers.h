@@ -511,7 +511,17 @@ class DbufCtl : public hwreg::RegisterBase<DbufCtl, uint32_t> {
   DEF_BIT(31, power_request);
   DEF_BIT(30, power_state);
 
-  static auto Get() { return hwreg::RegisterAddr<DbufCtl>(0x45008); }
+  static auto GetForSlice(size_t slice) {
+    ZX_DEBUG_ASSERT(slice >= 1 && slice <= 2);
+    switch (slice) {
+      case 1:
+        return hwreg::RegisterAddr<DbufCtl>(0x45008);
+      case 2:
+        return hwreg::RegisterAddr<DbufCtl>(0x44fe8);
+      default:
+        ZX_ASSERT(false);
+    }
+  }
 };
 
 // VGA_CONTROL

@@ -340,14 +340,22 @@ bool Controller::BringUpDisplayEngine(bool resume) {
   }
 
   // Enable and wait for DBUF
-  auto dbuf_ctl = tgl_registers::DbufCtl::Get().ReadFrom(mmio_space());
-  dbuf_ctl.set_power_request(1);
-  dbuf_ctl.WriteTo(mmio_space());
+  std::vector<int> supported_dbuf_slices = is_tgl(device_id_) ? std::vector{1, 2} : std::vector{1};
+  for (auto dbuf_slice : supported_dbuf_slices) {
+    auto dbuf_ctl = tgl_registers::DbufCtl::GetForSlice(dbuf_slice).ReadFrom(mmio_space());
+    dbuf_ctl.set_power_request(1);
+    dbuf_ctl.WriteTo(mmio_space());
 
-  if (!PollUntil([&] { return tgl_registers::DbufCtl::Get().ReadFrom(mmio_space()).power_state(); },
-                 zx::usec(1), 10)) {
-    zxlogf(ERROR, "Failed to enable DBUF");
-    return false;
+    if (!PollUntil(
+            [&] {
+              return tgl_registers::DbufCtl::GetForSlice(dbuf_slice)
+                  .ReadFrom(mmio_space())
+                  .power_state();
+            },
+            zx::usec(1), 10)) {
+      zxlogf(ERROR, "Failed to enable DBUF");
+      return false;
+    }
   }
 
   // We never use VGA, so just disable it at startup
