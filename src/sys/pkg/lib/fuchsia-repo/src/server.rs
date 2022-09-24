@@ -3,12 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        manager::RepositoryManager,
-        range::Range,
-        repo_client::{RepoClient, RepositoryId},
-        repository::Error,
-    },
+    crate::{manager::RepositoryManager, range::Range, repo_client::RepoClient, repository::Error},
     anyhow::Result,
     async_lock::RwLock as AsyncRwLock,
     async_net::{TcpListener, TcpStream},
@@ -19,7 +14,7 @@ use {
     hyper::{body::Body, header::RANGE, service::service_fn, Request, Response, StatusCode},
     serde::{Deserialize, Serialize},
     std::{
-        collections::{hash_map::Entry, HashMap},
+        collections::HashMap,
         convert::Infallible,
         future::Future,
         io,
@@ -41,7 +36,7 @@ const MAX_PARSE_RETRIES: usize = 5000;
 // FIXME: This value was chosen basically at random.
 const PARSE_RETRY_DELAY: Duration = Duration::from_micros(100);
 
-type SseResponseCreatorMap = SyncRwLock<HashMap<RepositoryId, Arc<SseResponseCreator>>>;
+type SseResponseCreatorMap = SyncRwLock<HashMap<String, Arc<SseResponseCreator>>>;
 
 /// RepositoryManager represents the web server that serves [Repositories](Repository) to a target.
 #[derive(Debug)]
@@ -378,7 +373,14 @@ async fn handle_request(
     let resource = match resource_path {
         "auto" => {
             if repo.read().await.supports_watch() {
-                return handle_auto(executor, server_stopped, repo, sse_response_creators).await;
+                return handle_auto(
+                    executor,
+                    server_stopped,
+                    repo_name,
+                    repo,
+                    sse_response_creators,
+                )
+                .await;
             } else {
                 // The repo doesn't support watching.
                 return status_response(StatusCode::NOT_FOUND);
@@ -431,11 +433,11 @@ async fn handle_request(
 async fn handle_auto(
     executor: TaskExecutor<()>,
     mut server_stopped: Shared<futures::channel::oneshot::Receiver<()>>,
+    repo_name: &str,
     repo: Arc<AsyncRwLock<RepoClient>>,
     sse_response_creators: Arc<SseResponseCreatorMap>,
 ) -> Response<Body> {
-    let id = repo.read().await.id();
-    let response_creator = sse_response_creators.read().unwrap().get(&id).map(Arc::clone);
+    let response_creator = sse_response_creators.read().unwrap().get(repo_name).map(Arc::clone);
 
     // Exit early if we've already created an auto-handler.
     if let Some(response_creator) = response_creator {
@@ -454,15 +456,18 @@ async fn handle_auto(
 
     // Next, create a response creator. It's possible we raced another call, which could have
     // already created a creator for us. This is denoted by `sender` being `None`.
-    let (response_creator, sender) = match sse_response_creators.write().unwrap().entry(id) {
-        Entry::Occupied(entry) => (Arc::clone(entry.get()), None),
-        Entry::Vacant(entry) => {
+    let (response_creator, sender) = {
+        let mut sse_response_creators = sse_response_creators.write().unwrap();
+
+        if let Some(response_creator) = sse_response_creators.get(repo_name) {
+            (Arc::clone(response_creator), None)
+        } else {
             // Next, create a response creator.
             let (response_creator, sender) =
                 SseResponseCreator::with_additional_buffer_size(AUTO_BUFFER_SIZE);
 
             let response_creator = Arc::new(response_creator);
-            entry.insert(Arc::clone(&response_creator));
+            sse_response_creators.insert(repo_name.to_owned(), Arc::clone(&response_creator));
 
             (response_creator, Some(sender))
         }
@@ -478,6 +483,7 @@ async fn handle_auto(
         let mut repo_dropped = repo.read().await.on_dropped_signal();
 
         // Downgrade our repository handle, so we won't block it being deleted.
+        let repo_name = repo_name.to_owned();
         let repo = Arc::downgrade(&repo);
 
         executor.spawn(async move {
@@ -493,7 +499,7 @@ async fn handle_auto(
 
             // Clean up our SSE creators.
             if let Some(sse_response_creators) = sse_response_creators.upgrade() {
-                sse_response_creators.write().unwrap().remove(&id);
+                sse_response_creators.write().unwrap().remove(&repo_name);
             }
         });
     };
@@ -785,13 +791,13 @@ mod tests {
 
         for (devhost, bodies) in &test_cases {
             let dir = dir.join(devhost);
-            let repo = make_writable_empty_repository(*devhost, dir.clone()).await.unwrap();
+            let repo = make_writable_empty_repository(dir.clone()).await.unwrap();
 
             for body in &bodies[..] {
                 write_file(&dir.join("repository").join(body), body.as_bytes());
             }
 
-            manager.add(repo);
+            manager.add(*devhost, repo);
         }
 
         run_test(manager, |server_url| async move {
@@ -816,13 +822,13 @@ mod tests {
 
         for (devhost, bodies) in &test_cases {
             let dir = dir.join(devhost);
-            let repo = make_writable_empty_repository(*devhost, dir.clone()).await.unwrap();
+            let repo = make_writable_empty_repository(dir.clone()).await.unwrap();
 
             for body in &bodies[..] {
                 write_file(&dir.join("repository").join(body), body.as_bytes());
             }
 
-            manager.add(repo);
+            manager.add(*devhost, repo);
         }
 
         run_test(manager, |server_url| async move {
@@ -858,13 +864,13 @@ mod tests {
 
         for (devhost, bodies) in &test_cases {
             let dir = dir.join(devhost);
-            let repo = make_writable_empty_repository(*devhost, dir.clone()).await.unwrap();
+            let repo = make_writable_empty_repository(dir.clone()).await.unwrap();
 
             for body in &bodies[..] {
                 write_file(&dir.join("repository").join(body), body.as_bytes());
             }
 
-            manager.add(repo);
+            manager.add(*devhost, repo);
         }
 
         run_test(manager, |server_url| async move {
@@ -886,7 +892,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let dir = Utf8Path::from_path(tmp.path()).unwrap().join("devhost");
 
-        let repo = make_writable_empty_repository("devhost", dir.clone()).await.unwrap();
+        let repo = make_writable_empty_repository(dir.clone()).await.unwrap();
 
         let timestamp_file = dir.join("repository").join("timestamp.json");
         write_file(
@@ -896,7 +902,7 @@ mod tests {
                 .as_bytes(),
         );
 
-        manager.add(repo);
+        manager.add("devhost", repo);
 
         run_test(manager, |server_url| {
             let timestamp_file = timestamp_file.clone();
@@ -963,7 +969,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let dir = Utf8Path::from_path(tmp.path()).unwrap().join("devhost");
 
-        let repo = make_writable_empty_repository("devhost", dir.clone()).await.unwrap();
+        let repo = make_writable_empty_repository(dir.clone()).await.unwrap();
 
         let timestamp_file = dir.join("repository").join("timestamp.json");
         write_file(
@@ -973,7 +979,7 @@ mod tests {
                 .as_bytes(),
         );
 
-        manager.add(repo);
+        manager.add("devhost", repo);
 
         let addr = (Ipv4Addr::LOCALHOST, 0).into();
         let (server_fut, _, server) =

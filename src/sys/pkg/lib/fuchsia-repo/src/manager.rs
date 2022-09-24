@@ -25,11 +25,9 @@ impl RepositoryManager {
     }
 
     /// Add a [Repository] to the [RepositoryManager].
-    pub fn add(&self, repo: RepoClient) {
-        self.repositories
-            .write()
-            .unwrap()
-            .insert(repo.name().to_string(), Arc::new(AsyncRwLock::new(repo)));
+    pub fn add(&self, repo_name: impl Into<String>, repo: RepoClient) {
+        let repo_name = repo_name.into();
+        self.repositories.write().unwrap().insert(repo_name, Arc::new(AsyncRwLock::new(repo)));
     }
 
     /// Get a [Repository].
@@ -73,10 +71,10 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_add() {
-        let repo = make_readonly_empty_repository(REPO_NAME).await.unwrap();
+        let repo = make_readonly_empty_repository().await.unwrap();
 
         let manager = RepositoryManager::new();
-        manager.add(repo);
+        manager.add(REPO_NAME, repo);
 
         assert_eq!(
             manager.repositories().map(|(name, _)| name).collect::<Vec<_>>(),
@@ -85,11 +83,21 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_add_accepts_valid_names() {
+        for name in ["fuchsia.com", "my-repository", "hello.there.world"] {
+            let repo = make_readonly_empty_repository().await.unwrap();
+
+            let manager = RepositoryManager::new();
+            manager.add(name, repo);
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn test_remove() {
-        let repo = make_readonly_empty_repository(REPO_NAME).await.unwrap();
+        let repo = make_readonly_empty_repository().await.unwrap();
 
         let manager = RepositoryManager::new();
-        manager.add(repo);
+        manager.add(REPO_NAME, repo);
 
         assert_eq!(
             manager.repositories().map(|(name, _)| name).collect::<Vec<_>>(),
@@ -102,12 +110,12 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_clear() {
-        let repo1 = make_readonly_empty_repository("repo1").await.unwrap();
-        let repo2 = make_readonly_empty_repository("repo2").await.unwrap();
+        let repo1 = make_readonly_empty_repository().await.unwrap();
+        let repo2 = make_readonly_empty_repository().await.unwrap();
 
         let manager = RepositoryManager::new();
-        manager.add(repo1);
-        manager.add(repo2);
+        manager.add("repo1", repo1);
+        manager.add("repo2", repo2);
 
         manager.clear();
 

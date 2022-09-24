@@ -24,7 +24,7 @@ pub async fn cmd_download(cmd: DownloadCommand) -> Result<()> {
         Url::parse(&cmd.tuf_url)?,
         Url::parse(&cmd.blob_url)?,
     ));
-    let mut repo = RepoClient::new("repo", backend).await?;
+    let mut repo = RepoClient::new(backend).await?;
     repo.update().await?;
 
     let blobs_dir = cmd.output_path.join("blobs");
@@ -77,9 +77,9 @@ mod tests {
 
         // Create a server.
         let backend = Box::new(make_pm_repository(&repo_path).await);
-        let repo = RepoClient::new("tuf", backend).await.unwrap();
+        let repo = RepoClient::new(backend).await.unwrap();
         let manager = RepositoryManager::new();
-        manager.add(repo);
+        manager.add("tuf", repo);
 
         let addr = (Ipv4Addr::LOCALHOST, 0).into();
         let (server_fut, _, server) =

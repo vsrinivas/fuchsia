@@ -385,7 +385,7 @@ mod tests {
         let src_repo_dir = dir.join("src");
         let src_metadata_dir = src_repo_dir.join("metadata");
         let src_blobs_dir = src_repo_dir.join("blobs");
-        let repo = make_file_system_repository("tuf", &src_metadata_dir, &src_blobs_dir).await;
+        let repo = make_file_system_repository(&src_metadata_dir, &src_blobs_dir).await;
 
         // Store downloaded artifacts in this directory.
         let result_dir = dir.join("results");
@@ -423,7 +423,7 @@ mod tests {
         let src_repo_dir = dir.join("src");
         let src_metadata_dir = src_repo_dir.join("metadata");
         let src_blobs_dir = src_repo_dir.join("blobs");
-        let repo = make_file_system_repository("tuf", &src_metadata_dir, &src_blobs_dir).await;
+        let repo = make_file_system_repository(&src_metadata_dir, &src_blobs_dir).await;
 
         // Download the repository.
         let dst_repo_dir = dir.join("dst");

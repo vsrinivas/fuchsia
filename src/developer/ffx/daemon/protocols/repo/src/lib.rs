@@ -25,6 +25,7 @@ use {
         repository::{self, FileSystemRepository, HttpRepository, PmRepository, RepoProvider},
         server::RepositoryServer,
     },
+    fuchsia_url::RepositoryUrl,
     fuchsia_zircon_status::Status,
     futures::{FutureExt as _, StreamExt as _},
     itertools::Itertools as _,
@@ -246,7 +247,7 @@ async fn add_repository(
 
     // Create the repository.
     let backend = repo_spec_to_backend(&repo_spec, &inner).await?;
-    let repo = RepoClient::new(repo_name, backend).await.map_err(|err| {
+    let repo = RepoClient::new(backend).await.map_err(|err| {
         tracing::error!("Unable to create repository: {:#?}", err);
 
         match err {
@@ -267,7 +268,7 @@ async fn add_repository(
 
     // Finally add the repository.
     let mut inner = inner.write().await;
-    inner.manager.add(repo);
+    inner.manager.add(repo_name, repo);
 
     // The repository server is only started when repositories are added to the
     // daemon. Now that we added one, make sure the server has started.
@@ -350,14 +351,25 @@ async fn register_target(
     // Make sure the repository is up to date.
     update_repository(repo_name, &repo).await?;
 
+    let repo_url = RepositoryUrl::parse_host(repo_name.to_owned()).map_err(|err| {
+        tracing::error!("failed to parse repository name {}: {:#}", repo_name, err);
+        ffx::RepositoryError::InvalidUrl
+    })?;
+
+    let mirror_url = format!("http://{}/{}", repo_host, repo_name);
+    let mirror_url = mirror_url.parse().map_err(|err| {
+        tracing::error!("failed to parse mirror url {}: {:#}", mirror_url, err);
+        ffx::RepositoryError::InvalidUrl
+    })?;
+
     let config = repo
         .read()
         .await
         .get_config(
-            &format!("{}/{}", repo_host, repo_name),
+            repo_url,
+            mirror_url,
             target_info.storage_type.as_ref().map(|storage_type| storage_type.clone().into()),
         )
-        .await
         .map_err(|e| {
             tracing::error!("failed to get config: {}", e);
             return ffx::RepositoryError::RepositoryManagerError;
@@ -2863,9 +2875,9 @@ mod tests {
             let repo_path = fs::canonicalize(EMPTY_REPO_PATH).unwrap();
             let pm_backend = PmRepository::new(repo_path.try_into().unwrap()).unwrap();
 
-            let pm_repo = RepoClient::new("tuf", Box::new(pm_backend)).await.unwrap();
+            let pm_repo = RepoClient::new(Box::new(pm_backend)).await.unwrap();
             let manager = RepositoryManager::new();
-            manager.add(pm_repo);
+            manager.add("tuf", pm_repo);
 
             let addr = (Ipv4Addr::LOCALHOST, 0).into();
             let (server_fut, _, server) =

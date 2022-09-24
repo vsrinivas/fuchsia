@@ -264,10 +264,10 @@ mod tests {
 
             // Create a repository and serve it with the server.
             let remote_backend = Box::new(make_pm_repository(&dir).await);
-            let remote_repo = RepoClient::new("tuf", remote_backend).await.unwrap();
+            let remote_repo = RepoClient::new(remote_backend).await.unwrap();
 
             let manager = RepositoryManager::new();
-            manager.add(remote_repo);
+            manager.add("tuf", remote_repo);
 
             let addr = (Ipv4Addr::LOCALHOST, 0).into();
             let (server_fut, _, server) =

@@ -27,7 +27,6 @@ use {
     },
     std::{
         fmt::{self, Debug},
-        sync::atomic::{AtomicUsize, Ordering},
         time::SystemTime,
     },
     tuf::{
@@ -47,24 +46,7 @@ use {
 
 const LIST_PACKAGE_CONCURRENCY: usize = 5;
 
-/// A unique ID which is given to every repository.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct RepositoryId(usize);
-
-impl RepositoryId {
-    fn new() -> Self {
-        static NEXT_ID: AtomicUsize = AtomicUsize::new(0);
-        RepositoryId(NEXT_ID.fetch_add(1, Ordering::Relaxed))
-    }
-}
-
 pub struct RepoClient {
-    /// The url of the repository.
-    repo_url: RepositoryUrl,
-
-    /// A unique ID for the repository, scoped to this instance of the daemon.
-    id: RepositoryId,
-
     /// _tx_on_drop is a channel that will emit a `Cancelled` message to `rx_on_drop` when this
     /// repository is dropped. This is a convenient way to notify any downstream users to clean up
     /// any side tables that associate a repository to some other data.
@@ -78,40 +60,18 @@ pub struct RepoClient {
 }
 
 impl RepoClient {
-    pub async fn new(name: &str, backend: Box<dyn RepoProvider>) -> Result<Self, Error> {
-        // Validate that the name can be used as a repo url.
-        let repo_url =
-            RepositoryUrl::parse_host(name.to_string()).context("creating repository")?;
-
+    pub async fn new(backend: Box<dyn RepoProvider>) -> Result<Self, Error> {
         let tuf_client = get_tuf_client(backend).await?;
 
         let (tx_on_drop, rx_on_drop) = futures::channel::oneshot::channel();
         let rx_on_drop = rx_on_drop.shared();
 
-        Ok(Self {
-            repo_url,
-            id: RepositoryId::new(),
-            tuf_client,
-            _tx_on_drop: tx_on_drop,
-            rx_on_drop,
-        })
+        Ok(Self { tuf_client, _tx_on_drop: tx_on_drop, rx_on_drop })
     }
 
     /// Returns a receiver that will receive a `Canceled` signal when the repository is dropped.
     pub fn on_dropped_signal(&self) -> Shared<futures::channel::oneshot::Receiver<()>> {
         self.rx_on_drop.clone()
-    }
-
-    pub fn id(&self) -> RepositoryId {
-        self.id
-    }
-
-    pub fn repo_url(&self) -> &RepositoryUrl {
-        &self.repo_url
-    }
-
-    pub fn name(&self) -> &str {
-        self.repo_url.host()
     }
 
     /// Get a [RepositorySpec] for this [Repository].
@@ -176,16 +136,15 @@ impl RepoClient {
         }
     }
 
-    pub async fn get_config(
+    pub fn get_config(
         &self,
-        mirror_url: &str,
+        repo_url: RepositoryUrl,
+        mirror_url: http::Uri,
         repo_storage_type: Option<RepositoryStorageType>,
     ) -> Result<RepositoryConfig, Error> {
-        let mirror_url: http::Uri = format!("http://{}", mirror_url).parse()?;
-
         let trusted_root = self.tuf_client.database().trusted_root();
 
-        let mut repo_config_builder = RepositoryConfigBuilder::new(self.repo_url().clone())
+        let mut repo_config_builder = RepositoryConfigBuilder::new(repo_url)
             .root_version(trusted_root.version())
             .root_threshold(trusted_root.root().threshold())
             .add_mirror(
@@ -421,11 +380,7 @@ impl RepoClient {
 
 impl Debug for RepoClient {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Repository")
-            .field("repo_url", &self.repo_url)
-            .field("id", &self.id)
-            .field("tuf_client", &self.tuf_client)
-            .finish_non_exhaustive()
+        f.debug_struct("Repository").field("tuf_client", &self.tuf_client).finish_non_exhaustive()
     }
 }
 
@@ -490,13 +445,12 @@ mod tests {
     use {
         super::*,
         crate::{
-            repository::{FileSystemRepository, PmRepository},
+            repository::PmRepository,
             test_utils::{
-                make_pm_repository, make_readonly_empty_repository, make_repository, repo_key,
-                repo_private_key, PKG1_BIN_HASH, PKG1_HASH, PKG1_LIB_HASH, PKG2_HASH,
+                make_pm_repository, make_readonly_empty_repository, repo_key, repo_private_key,
+                PKG1_BIN_HASH, PKG1_HASH, PKG1_LIB_HASH, PKG2_HASH,
             },
         },
-        assert_matches::assert_matches,
         camino::{Utf8Path, Utf8PathBuf},
         fidl_fuchsia_pkg_ext::RepositoryConfigBuilder,
         pretty_assertions::assert_eq,
@@ -505,8 +459,6 @@ mod tests {
             database::Database, repo_builder::RepoBuilder, repository::FileSystemRepositoryBuilder,
         },
     };
-
-    const REPO_NAME: &str = "fake-repo";
 
     fn get_modtime(path: Utf8PathBuf) -> u64 {
         std::fs::metadata(path)
@@ -519,47 +471,14 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_constructor_accepts_valid_names() {
-        let tmp = tempfile::tempdir().unwrap();
-        let dir = Utf8Path::from_path(tmp.path()).unwrap();
-        let metadata_dir = dir.join("metadata");
-        let blobs_dir = dir.join("blobs");
-        make_repository(metadata_dir.as_std_path(), blobs_dir.as_std_path()).await;
-
-        for name in ["fuchsia.com", "my-repository", "hello.there.world"] {
-            let backend =
-                FileSystemRepository::new(metadata_dir.clone(), blobs_dir.clone()).unwrap();
-
-            assert_matches!(RepoClient::new(name, Box::new(backend)).await, Ok(_))
-        }
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_constructor_rejects_invalid_names() {
-        let tmp = tempfile::tempdir().unwrap();
-        let dir = Utf8Path::from_path(tmp.path()).unwrap();
-        let metadata_dir = dir.join("metadata");
-        let blobs_dir = dir.join("blobs");
-        make_repository(metadata_dir.as_std_path(), blobs_dir.as_std_path()).await;
-
-        for name in ["", "my_repo", "MyRepo", "😀"] {
-            let backend =
-                FileSystemRepository::new(metadata_dir.clone(), blobs_dir.clone()).unwrap();
-
-            assert_matches!(RepoClient::new(name, Box::new(backend)).await, Err(_))
-        }
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_config() {
-        let repo = make_readonly_empty_repository(REPO_NAME).await.unwrap();
+        let repo = make_readonly_empty_repository().await.unwrap();
 
-        let repo_url: RepositoryUrl = format!("fuchsia-pkg://{}", REPO_NAME).parse().unwrap();
-        let server_url = "some-url:1234";
-        let mirror_url: http::Uri = format!("http://{}", server_url).parse().unwrap();
+        let repo_url: RepositoryUrl = "fuchsia-pkg://fake-repo".parse().unwrap();
+        let mirror_url: http::Uri = "http://some-url:1234".parse().unwrap();
 
         assert_eq!(
-            repo.get_config(server_url, None).await.unwrap(),
+            repo.get_config(repo_url.clone(), mirror_url.clone(), None).unwrap(),
             RepositoryConfigBuilder::new(repo_url.clone())
                 .add_root_key(repo_key())
                 .add_mirror(
@@ -569,7 +488,12 @@ mod tests {
         );
 
         assert_eq!(
-            repo.get_config(server_url, Some(RepositoryStorageType::Persistent)).await.unwrap(),
+            repo.get_config(
+                repo_url.clone(),
+                mirror_url.clone(),
+                Some(RepositoryStorageType::Persistent)
+            )
+            .unwrap(),
             RepositoryConfigBuilder::new(repo_url)
                 .add_root_key(repo_key())
                 .add_mirror(MirrorConfigBuilder::new(mirror_url).unwrap().subscribe(true).build())
@@ -583,8 +507,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
-        let mut repo =
-            RepoClient::new(REPO_NAME, Box::new(make_pm_repository(&dir).await)).await.unwrap();
+        let mut repo = RepoClient::new(Box::new(make_pm_repository(&dir).await)).await.unwrap();
         repo.update().await.unwrap();
 
         // Look up the timestamp for the meta.far for the modified setting.
@@ -625,7 +548,7 @@ mod tests {
         let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
         let backend = Box::new(make_pm_repository(&dir).await);
-        let mut repo = RepoClient::new(REPO_NAME, backend).await.unwrap();
+        let mut repo = RepoClient::new(backend).await.unwrap();
         repo.update().await.unwrap();
 
         // Look up the timestamp for the meta.far for the modified setting.
@@ -726,12 +649,12 @@ mod tests {
             .unwrap();
 
         let backend = PmRepository::new(dir.to_path_buf()).unwrap();
-        let _repo = RepoClient::new("name", Box::new(backend)).await.unwrap();
+        let _repo = RepoClient::new(Box::new(backend)).await.unwrap();
 
         std::fs::remove_file(dir.join("repository").join("1.root.json")).unwrap();
 
         let backend = PmRepository::new(dir.to_path_buf()).unwrap();
-        let _repo = RepoClient::new("name", Box::new(backend)).await.unwrap();
+        let _repo = RepoClient::new(Box::new(backend)).await.unwrap();
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -740,7 +663,7 @@ mod tests {
         let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
         let backend = Box::new(make_pm_repository(&dir).await);
-        let mut repo = RepoClient::new(REPO_NAME, backend).await.unwrap();
+        let mut repo = RepoClient::new(backend).await.unwrap();
         repo.update().await.unwrap();
 
         // Look up the timestamps for the blobs.
