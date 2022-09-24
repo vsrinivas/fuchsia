@@ -1603,12 +1603,18 @@ zx_status_t VmObjectPaged::SupplyPages(uint64_t offset, uint64_t len, VmPageSpli
     uint64_t supply_len = 0;
     zx_status_t status = cow_pages_locked()->SupplyPagesLocked(
         offset, len, pages, /*new_zeroed_pages=*/false, &supply_len, &page_request);
-    if (status != ZX_ERR_SHOULD_WAIT || status != ZX_OK) {
+    if (status != ZX_ERR_SHOULD_WAIT && status != ZX_OK) {
       return status;
     }
-    // Record the completed portion.
+    // We would only have failed to supply anything if status was not ZX_OK, which in this case
+    // would be ZX_ERR_SHOULD_WAIT as that is the only non-OK status we can reach here with.
     DEBUG_ASSERT(supply_len > 0 || status == ZX_ERR_SHOULD_WAIT);
+    // We shoud have supplied the entire range requested if the status was ZX_OK.
+    DEBUG_ASSERT(status != ZX_OK || supply_len == len);
+    // We should not have supplied any more than the requested range.
     DEBUG_ASSERT(supply_len <= len);
+
+    // Record the completed portion.
     offset += supply_len;
     len -= supply_len;
 
