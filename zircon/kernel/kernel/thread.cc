@@ -182,13 +182,13 @@ void Thread::set_name(ktl::string_view name) {
   memset(name_ + name.size(), 0, ZX_MAX_NAME_LEN - name.size());
 }
 
-void init_thread_struct(Thread* t, const char* name) {
+void construct_thread(Thread* t, const char* name) {
   // Placement new to trigger any special construction requirements of the
   // Thread structure.
   //
   // TODO(johngro): now that we have converted Thread over to C++, consider
   // switching to using C++ constructors/destructors and new/delete to handle
-  // all of this instead of using init_thread_struct and free_thread_resources
+  // all of this instead of using construct_thread and free_thread_resources
   new (t) Thread();
 
   t->set_name(name);
@@ -205,6 +205,17 @@ zx_status_t TaskState::Join(zx_time_t deadline) {
 }
 
 void TaskState::WakeJoiners(zx_status_t status) { retcode_wait_queue_.WakeAll(status); }
+
+static void free_thread_resources(Thread* t) {
+  // free the thread structure itself.  Manually trigger the struct's
+  // destructor so that DEBUG_ASSERTs present in the owned_wait_queues member
+  // get triggered.
+  bool thread_needs_free = t->free_struct();
+  t->~Thread();
+  if (thread_needs_free) {
+    free(t);
+  }
+}
 
 void Thread::Trampoline() {
   // Release the incoming lock held across reschedule.
@@ -261,16 +272,14 @@ Thread* Thread::CreateEtc(Thread* t, const char* name, thread_start_routine entr
   // assert that t is at least as aligned as the Thread is supposed to be
   DEBUG_ASSERT(IS_ALIGNED(t, alignof(Thread)));
 
-  init_thread_struct(t, name);
+  construct_thread(t, name);
 
   t->task_state_.Init(entry, arg);
   Scheduler::InitializeThread(t, priority);
 
   zx_status_t status = t->stack_.Init();
   if (status != ZX_OK) {
-    if (flags & THREAD_FLAG_FREE_STRUCT) {
-      free(t);
-    }
+    free_thread_resources(t);
     return nullptr;
   }
 
@@ -296,17 +305,6 @@ Thread* Thread::CreateEtc(Thread* t, const char* name, thread_start_routine entr
 
 Thread* Thread::Create(const char* name, thread_start_routine entry, void* arg, int priority) {
   return Thread::CreateEtc(nullptr, name, entry, arg, priority, nullptr);
-}
-
-static void free_thread_resources(Thread* t) {
-  // free the thread structure itself.  Manually trigger the struct's
-  // destructor so that DEBUG_ASSERTs present in the owned_wait_queues member
-  // get triggered.
-  bool thread_needs_free = t->free_struct();
-  t->~Thread();
-  if (thread_needs_free) {
-    free(t);
-  }
 }
 
 /**
@@ -1223,7 +1221,7 @@ cpu_num_t Thread::LastCpuLocked() const { return scheduler_state_.last_cpu_; }
 void thread_construct_first(Thread* t, const char* name) {
   DEBUG_ASSERT(arch_ints_disabled());
 
-  init_thread_struct(t, name);
+  construct_thread(t, name);
   t->set_detached(true);
 
   // Setup the scheduler state.

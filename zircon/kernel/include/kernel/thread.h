@@ -1662,7 +1662,7 @@ Thread* Thread::Current::Get() { return arch_get_current_thread(); }
 //
 // Normal users should only ever need to call either Thread::Create, or
 // Thread::CreateEtc.
-void init_thread_struct(Thread* t, const char* name);
+void construct_thread(Thread* t, const char* name);
 
 // Other thread-system bringup functions.
 void thread_init_early();
