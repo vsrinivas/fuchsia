@@ -444,8 +444,7 @@ case $ARCH in
           # distributions yet.
           if [[ "$(uname -s)" == "Linux" ]]; then
             if [[ "$(lsmod | grep kvm_amd)" != "" ]]; then
-              # Add topoext to properly report hyperthreading on AMD CPUs
-              ARGS+=",-smap,-xsaves,+topoext"
+              ARGS+=",-smap,-xsaves"
             fi
           fi
         else
