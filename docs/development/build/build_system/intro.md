@@ -96,7 +96,7 @@ Args can also be set using the `fx set` command, which invokes `gn gen`. For
 example to set `foxtrot` to ' `true` via `fx set`:
 
 ```sh
-$ fx set <your configuration> --args 'foxtrot = true'
+$ fx set <your configuration> --args 'foxtrot=true'
 ```
 
 See [GN Build Arguments](/docs/gen/build_arguments.md), for details.
