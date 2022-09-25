@@ -27,6 +27,7 @@ class Mpeg12Decoder : public VideoDecoder {
     power_ref_ = std::make_unique<PowerReference>(owner_->core());
   }
 
+  void ForceStopDuringRemoveLocked() override;
   ~Mpeg12Decoder() override;
 
   zx_status_t Initialize() override;

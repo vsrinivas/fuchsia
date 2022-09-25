@@ -139,6 +139,11 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   // running.
   void RemoveDecoder(VideoDecoder* decoder);
   void RemoveDecoderLocked(VideoDecoder* decoder) __TA_REQUIRES(video_decoder_lock_);
+  // The callback is called after the decoder is force-stopped (as needed), but before the decoder
+  // is deleted.  This allows extracting DecoderSubClass::InternalBuffers safely.
+  void RemoveDecoderWithCallbackLocked(VideoDecoder* decoder,
+                                       fit::function<void(DecoderInstance*)> callback)
+      __TA_REQUIRES(video_decoder_lock_);
 
   [[nodiscard]] zx_status_t InitializeStreamBuffer(bool use_parser, uint32_t size, bool is_secure);
   [[nodiscard]] zx_status_t InitializeEsParser();
@@ -185,6 +190,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   void AssertVideoDecoderLockHeld() __TA_ASSERT(video_decoder_lock_) {}
 
   [[nodiscard]] zx_status_t AllocateStreamBuffer(StreamBuffer* buffer, uint32_t size,
+                                                 std::optional<InternalBuffer> saved_stream_buffer,
                                                  bool use_parser, bool is_secure);
 
   // This gets started connecting to sysmem, but returns an InterfaceHandle

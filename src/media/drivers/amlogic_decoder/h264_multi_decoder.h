@@ -87,6 +87,32 @@ class H264MultiDecoder : public VideoDecoder {
     virtual void AsyncResetStreamAfterCurrentFrame() = 0;
   };
 
+  // We allow extracting internal buffers from an old instance and adding internal buffers to a new
+  // instance, to reduce the cost of switching to a new H264MultiDecoder instance without giving up
+  // the advantages of fully re-initializing the new H264MultiDecoder in every other way.  In other
+  // words, we don't want to have a Reset(), because runng the actual destructor then constructor is
+  // much less brittle.
+  //
+  // Any buffers that are missing or not big enough will still be reallocated desipte transferring
+  // InternalBuffers from an old instance to a new instance.
+  class InternalBuffers {
+   public:
+    InternalBuffers() = default;
+    InternalBuffers(InternalBuffers&& to_move) = default;
+    InternalBuffers& operator=(InternalBuffers&& to_move) = default;
+    InternalBuffers(const InternalBuffers& to_copy) = delete;
+    InternalBuffers& operator=(const InternalBuffers& to_copy) = delete;
+
+   private:
+    friend class H264MultiDecoder;
+    std::optional<InternalBuffer> firmware_;
+    std::optional<InternalBuffer> secondary_firmware_;
+    std::optional<InternalBuffer> codec_data_;
+    std::optional<InternalBuffer> aux_buf_;
+    std::optional<InternalBuffer> lmem_;
+    std::vector<InternalBuffer> reference_mv_buffers_;
+  };
+
   enum class DecoderState : uint32_t {
     // The hardware's state doesn't reflect that of the H264MultiDecoder.
     kSwappedOut,
@@ -103,9 +129,10 @@ class H264MultiDecoder : public VideoDecoder {
   static const char* DecoderStateName(DecoderState state);
 
   H264MultiDecoder(Owner* owner, Client* client, FrameDataProvider* frame_data_provider,
-                   bool is_secure);
+                   std::optional<InternalBuffers> internal_buffers, bool is_secure);
   H264MultiDecoder(const H264MultiDecoder&) = delete;
 
+  void ForceStopDuringRemoveLocked() override;
   ~H264MultiDecoder() override;
 
   [[nodiscard]] zx_status_t Initialize() override;
@@ -156,6 +183,8 @@ class H264MultiDecoder : public VideoDecoder {
 
   void* SecondaryFirmwareVirtualAddressForTesting() { return secondary_firmware_->virt_base(); }
   void set_use_parser(bool use_parser) { use_parser_ = use_parser; }
+
+  InternalBuffers TakeInternalBuffers();
 
  private:
   // This struct contains parameters for the current frame that are dumped from
@@ -345,6 +374,8 @@ class H264MultiDecoder : public VideoDecoder {
   void RequestStreamReset();
   uint32_t GetStreamBufferSize();
 
+  void GiveInternalBuffers(InternalBuffers internal_buffers);
+
   FrameDataProvider* frame_data_provider_;
   bool fatal_error_ = false;
   bool input_eos_queued_ = false;
@@ -360,6 +391,12 @@ class H264MultiDecoder : public VideoDecoder {
   std::optional<InternalBuffer> codec_data_;
   std::optional<InternalBuffer> aux_buf_;
   std::optional<InternalBuffer> lmem_;
+
+  // Once InitializedFrames() has run, some of on_dec_internal_buffers_.reference_mv_buffers_ can be
+  // !present().  The overall ordering of MV buffers is logically the MV buffers in frames_ followed
+  // by the remaining present() MV buffers in on_deck_internal_buffers_.reference_mv_buffers_.
+  // Essentially the !present() MV buffers here are in frames_ instead.
+  std::optional<InternalBuffers> on_deck_internal_buffers_;
 
   // HW state.  We separately track some similar SW state with bool values such as
   // waiting_for_input_.

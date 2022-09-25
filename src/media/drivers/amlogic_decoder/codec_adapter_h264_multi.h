@@ -204,6 +204,9 @@ class CodecAdapterH264Multi : public AmlogicCodecAdapter,
 
   bool is_input_end_of_stream_queued_to_core_ = false;
 
+  std::optional<H264MultiDecoder::InternalBuffers> decoder_internal_buffers_;
+  std::optional<InternalBuffer> saved_stream_buffer_;
+
   CodecAdapterH264Multi() = delete;
   DISALLOW_COPY_ASSIGN_AND_MOVE(CodecAdapterH264Multi);
 };

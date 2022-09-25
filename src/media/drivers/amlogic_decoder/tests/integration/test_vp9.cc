@@ -161,7 +161,7 @@ class TestVP9 {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       video->SetDefaultInstance(
           std::make_unique<Vp9Decoder>(video.get(), &client, Vp9Decoder::InputType::kSingleStream,
-                                       use_compressed_output, false),
+                                       std::nullopt, use_compressed_output, false),
           true);
     }
     EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(use_parser, PAGE_SIZE, /*is_secure=*/false));
@@ -270,7 +270,7 @@ class TestVP9 {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       video->SetDefaultInstance(
           std::make_unique<Vp9Decoder>(video.get(), &client, Vp9Decoder::InputType::kSingleStream,
-                                       false, false),
+                                       std::nullopt, false, false),
           true);
     }
 
@@ -346,7 +346,7 @@ class TestVP9 {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       video->SetDefaultInstance(
           std::make_unique<Vp9Decoder>(video.get(), &client, Vp9Decoder::InputType::kMultiStream,
-                                       false, false),
+                                       std::nullopt, false, false),
           true);
     }
     // Don't use parser, because we need to be able to save and restore the read
@@ -437,8 +437,9 @@ class TestVP9 {
     for (uint32_t i = 0; i < 2; i++) {
       auto client = std::make_unique<Vp9TestClient>(video.get());
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      auto decoder = std::make_unique<Vp9Decoder>(
-          video.get(), client.get(), Vp9Decoder::InputType::kMultiStream, false, false);
+      auto decoder = std::make_unique<Vp9Decoder>(video.get(), client.get(),
+                                                  Vp9Decoder::InputType::kMultiStream, std::nullopt,
+                                                  false, false);
       frame_providers.push_back(std::make_unique<TestFrameProvider>());
       decoder->SetFrameDataProvider(frame_providers.back().get());
       client->set_decoder(decoder.get());
@@ -447,7 +448,8 @@ class TestVP9 {
       video->swapped_out_instances_.push_back(
           std::make_unique<DecoderInstance>(std::move(decoder), video->hevc_core_.get()));
       StreamBuffer* buffer = video->swapped_out_instances_.back()->stream_buffer();
-      EXPECT_EQ(ZX_OK, video->AllocateStreamBuffer(buffer, PAGE_SIZE * 1024, /*use_parser=*/false,
+      EXPECT_EQ(ZX_OK, video->AllocateStreamBuffer(buffer, PAGE_SIZE * 1024, std::nullopt,
+                                                   /*use_parser=*/false,
                                                    /*is_secure=*/false));
       frame_providers.back()->set_instance(video->swapped_out_instances_.back().get());
     }
@@ -608,6 +610,7 @@ class TestVP9 {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       video->SetDefaultInstance(
           std::make_unique<Vp9Decoder>(video.get(), &client, Vp9Decoder::InputType::kSingleStream,
+                                       std::nullopt,
                                        /*use_compressed_output=*/false, false),
           true);
       client.SetErrorHandler([&first_wait_valid]() {

@@ -34,6 +34,8 @@ CodecBuffer::~CodecBuffer() {
   }
   if (pinned_) {
     status = pinned_.unpin();
+    ZX_ASSERT(status == ZX_OK);
+    ZX_ASSERT(!pinned_);
     if (status != ZX_OK) {
       parent_->FailFatalLocked("CodecBuffer::~CodecBuffer() failed unpin() - status: %d", status);
     }

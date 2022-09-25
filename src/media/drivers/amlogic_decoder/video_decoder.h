@@ -213,6 +213,8 @@ class VideoDecoder {
     }
   }
 
+  virtual void ForceStopDuringRemoveLocked() = 0;
+
   virtual ~VideoDecoder();
 
   __WARN_UNUSED_RESULT PtsManager* pts_manager() { return pts_manager_.get(); }

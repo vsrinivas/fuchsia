@@ -535,8 +535,11 @@ void CodecAdapterVp9::CoreCodecStartStream() {
     std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
     // Must create under lock to ensure that a potential other instance that incremented power
     // ref(s) first is fully done un-gating clocks.
-    auto decoder = std::make_unique<Vp9Decoder>(video_, this, Vp9Decoder::InputType::kMultiStream,
-                                                false, IsOutputSecure());
+    auto decoder =
+        std::make_unique<Vp9Decoder>(video_, this, Vp9Decoder::InputType::kMultiStream,
+                                     std::move(decoder_internal_buffers_), false, IsOutputSecure());
+    // Moving a std::optional<> doesn't reset() the source.
+    decoder_internal_buffers_.reset();
     decoder->SetFrameDataProvider(this);
     if (codec_diagnostics_) {
       decoder->SetCodecDiagnostics(&codec_diagnostics_.value());
@@ -549,7 +552,10 @@ void CodecAdapterVp9::CoreCodecStartStream() {
 
     auto instance = std::make_unique<DecoderInstance>(std::move(decoder), video_->hevc_core());
     // The video decoder can read from non-secure buffers even in secure mode.
+    std::optional<InternalBuffer> saved_stream_buffer = std::move(saved_stream_buffer_);
+    saved_stream_buffer_.reset();
     status = video_->AllocateStreamBuffer(instance->stream_buffer(), kStreamBufferSize,
+                                          std::move(saved_stream_buffer),
                                           /*use_parser=*/use_parser_,
                                           /*is_secure=*/IsPortSecure(kInputPort));
     if (status != ZX_OK) {
@@ -643,7 +649,17 @@ std::list<CodecInputItem> CodecAdapterVp9::CoreCodecStopStreamInternal() {
     {  // scope lock
       std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
       // If the decoder's still running this will stop it as well.
-      video_->RemoveDecoderLocked(decoder_to_remove);
+      video_->RemoveDecoderWithCallbackLocked(
+          decoder_to_remove, [this, decoder_to_remove](DecoderInstance* instance) {
+            // Stash the internal buffers so next decoder instance won't need to allocate new ones
+            // unless the buffers are the wrong size or wrong is_secure() etc.  This saves time
+            // during seek and can save time during dimension changes when achieved by stream
+            // switching (in contrast to dimension changes achieved within a single stream, which
+            // don't remove the decoder during the dimension change when successful).
+            decoder_internal_buffers_.emplace(decoder_to_remove->TakeInternalBuffers());
+            ZX_DEBUG_ASSERT(!saved_stream_buffer_);
+            saved_stream_buffer_ = std::move(instance->stream_buffer()->optional_buffer());
+          });
       decoder_ = nullptr;
     }  // ~lock
   }
@@ -842,6 +858,7 @@ fuchsia::media::StreamOutputFormat CodecAdapterVp9::CoreCodecGetOutputFormat(
   video_uncompressed.image_format.pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12;
   video_uncompressed.image_format.coded_width = output_coded_width_;
   video_uncompressed.image_format.coded_height = output_coded_height_;
+  DLOG("vp9 coded_width: %u coded_height: %u", output_coded_width_, output_coded_height_);
   video_uncompressed.image_format.bytes_per_row = output_stride_;
   video_uncompressed.image_format.display_width = output_display_width_;
   video_uncompressed.image_format.display_height = output_display_height_;

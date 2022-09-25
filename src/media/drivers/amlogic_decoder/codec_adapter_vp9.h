@@ -205,6 +205,9 @@ class CodecAdapterVp9 : public AmlogicCodecAdapter, public Vp9Decoder::FrameData
 
   Vp9Decoder* decoder_ = nullptr;
 
+  std::optional<Vp9Decoder::InternalBuffers> decoder_internal_buffers_;
+  std::optional<InternalBuffer> saved_stream_buffer_;
+
   CodecAdapterVp9() = delete;
   DISALLOW_COPY_ASSIGN_AND_MOVE(CodecAdapterVp9);
 };

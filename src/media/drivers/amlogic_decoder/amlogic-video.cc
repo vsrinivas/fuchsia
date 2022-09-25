@@ -41,6 +41,7 @@
 #include "pts_manager.h"
 #include "registers.h"
 #include "src/lib/fsl/handles/object_info.h"
+#include "src/media/lib/internal_buffer/internal_buffer.h"
 #include "src/media/lib/memory_barriers/memory_barriers.h"
 #include "util.h"
 #include "vdec1.h"
@@ -196,10 +197,18 @@ void AmlogicVideo::RemoveDecoder(VideoDecoder* decoder) {
 }
 
 void AmlogicVideo::RemoveDecoderLocked(VideoDecoder* decoder) {
+  return RemoveDecoderWithCallbackLocked(decoder, [](DecoderInstance* unused) {});
+}
+
+void AmlogicVideo::RemoveDecoderWithCallbackLocked(VideoDecoder* decoder,
+                                                   fit::function<void(DecoderInstance*)> callback) {
   TRACE_DURATION("media", "AmlogicVideo::RemoveDecoderLocked", "decoder", decoder);
   DLOG("Removing decoder: %p", decoder);
   ZX_DEBUG_ASSERT(decoder);
   if (current_instance_ && current_instance_->decoder() == decoder) {
+    video_decoder_->ForceStopDuringRemoveLocked();
+    BarrierBeforeRelease();
+    callback(current_instance_.get());
     current_instance_ = nullptr;
     video_decoder_ = nullptr;
     stream_buffer_ = nullptr;
@@ -210,26 +219,45 @@ void AmlogicVideo::RemoveDecoderLocked(VideoDecoder* decoder) {
   for (auto it = swapped_out_instances_.begin(); it != swapped_out_instances_.end(); ++it) {
     if ((*it)->decoder() != decoder)
       continue;
+    callback((*it).get());
     swapped_out_instances_.erase(it);
     return;
   }
+  ZX_PANIC("attempted removal of non-existent decoder\n");
 }
 
-zx_status_t AmlogicVideo::AllocateStreamBuffer(StreamBuffer* buffer, uint32_t size, bool use_parser,
-                                               bool is_secure) {
+zx_status_t AmlogicVideo::AllocateStreamBuffer(StreamBuffer* buffer, uint32_t size,
+                                               std::optional<InternalBuffer> saved_stream_buffer,
+                                               bool use_parser, bool is_secure) {
   TRACE_DURATION("media", "AmlogicVideo::AllocateStreamBuffer");
   // So far, is_secure can only be true if use_parser is also true.
   ZX_DEBUG_ASSERT(!is_secure || use_parser);
   // is_writable is always true because we either need to write into this buffer using the CPU, or
   // using the parser - either way we'll be writing.
-  auto create_result =
-      InternalBuffer::Create("AMLStreamBuffer", &sysmem_sync_ptr_, zx::unowned_bti(bti_), size,
-                             is_secure, /*is_writable=*/true, /*is_mapping_needed=*/!use_parser);
-  if (!create_result.is_ok()) {
-    DECODE_ERROR("Failed to make video fifo: %d", create_result.error());
-    return create_result.error();
+  constexpr bool kStreamBufferIsWritable = true;
+  if (saved_stream_buffer.has_value() &&
+      (saved_stream_buffer->size() != size || saved_stream_buffer->is_secure() != is_secure ||
+       saved_stream_buffer->is_mapping_needed() != !use_parser)) {
+    saved_stream_buffer.reset();
   }
-  buffer->optional_buffer().emplace(create_result.take_value());
+  std::optional<InternalBuffer> stream_buffer;
+  if (saved_stream_buffer.has_value()) {
+    ZX_DEBUG_ASSERT(saved_stream_buffer->size() == size);
+    ZX_DEBUG_ASSERT(saved_stream_buffer->is_secure() == is_secure);
+    ZX_DEBUG_ASSERT(saved_stream_buffer->is_writable() == kStreamBufferIsWritable);
+    ZX_DEBUG_ASSERT(saved_stream_buffer->is_mapping_needed() == !use_parser);
+    stream_buffer = std::move(saved_stream_buffer);
+  } else {
+    auto create_result = InternalBuffer::Create(
+        "AMLStreamBuffer", &sysmem_sync_ptr_, zx::unowned_bti(bti_), size, is_secure,
+        /*is_writable=*/kStreamBufferIsWritable, /*is_mapping_needed=*/!use_parser);
+    if (!create_result.is_ok()) {
+      DECODE_ERROR("Failed to make video fifo: %d", create_result.error());
+      return create_result.error();
+    }
+    stream_buffer.emplace(create_result.take_value());
+  }
+  buffer->optional_buffer() = std::move(stream_buffer);
 
   // Sysmem guarantees that the newly-allocated buffer starts out zeroed and cache clean, to the
   // extent possible based on is_secure.
@@ -296,7 +324,8 @@ void AmlogicVideo::InitializeStreamInput(bool use_parser) {
 
 zx_status_t AmlogicVideo::InitializeStreamBuffer(bool use_parser, uint32_t size, bool is_secure) {
   TRACE_DURATION("media", "AmlogicVideo::InitializeStreamBuffer");
-  zx_status_t status = AllocateStreamBuffer(stream_buffer_, size, use_parser, is_secure);
+  zx_status_t status =
+      AllocateStreamBuffer(stream_buffer_, size, std::nullopt, use_parser, is_secure);
   if (status != ZX_OK) {
     return status;
   }

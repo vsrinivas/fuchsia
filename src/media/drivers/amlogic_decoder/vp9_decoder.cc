@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <memory>
 
 #include <fbl/algorithm.h>
 
@@ -113,6 +114,9 @@ union Vp9Decoder::HardwareRenderParams {
 // How much padding to put after buffers to validate their size  (in terms of
 // how much data the HW/firmware actually writes to them). If 0, validation is
 // skipped.
+//
+// Non-zero values only work when !is_secure, as we can't use REE CPU to check
+// for overrun of a secure buffer.
 constexpr uint32_t kBufferOverrunPaddingBytes = 0;
 
 // The VP9 format needs 8 reference pictures, plus 1 to decode into.
@@ -129,6 +133,7 @@ void Vp9Decoder::BufferAllocator::Register(WorkingBuffer* buffer) { buffers_.pus
 
 zx_status_t Vp9Decoder::BufferAllocator::AllocateBuffers(VideoDecoder::Owner* owner,
                                                          bool is_secure) {
+  ZX_DEBUG_ASSERT(kBufferOverrunPaddingBytes == 0 || !is_secure);
   for (auto* buffer : buffers_) {
     bool buffer_is_secure = is_secure && buffer->can_be_protected();
     uint64_t rounded_up_size = fbl::round_up(buffer->size() + kBufferOverrunPaddingBytes,
@@ -190,7 +195,8 @@ Vp9Decoder::WorkingBuffer::~WorkingBuffer() {}
 uint32_t Vp9Decoder::WorkingBuffer::addr32() { return truncate_to_32(buffer_->phys_base()); }
 
 Vp9Decoder::Vp9Decoder(Owner* owner, Client* client, InputType input_type,
-                       bool use_compressed_output, bool is_secure)
+                       std::optional<InternalBuffers> internal_buffers, bool use_compressed_output,
+                       bool is_secure)
     : VideoDecoder(
           media_metrics::
               StreamProcessorEvents2MigratedMetricDimensionImplementation_AmlogicDecoderVp9,
@@ -203,17 +209,24 @@ Vp9Decoder::Vp9Decoder(Owner* owner, Client* client, InputType input_type,
   assert(!is_secure || !use_compressed_output_);
   InitializeLoopFilterData();
   power_ref_ = std::make_unique<PowerReference>(owner_->hevc_core());
+  if (internal_buffers.has_value()) {
+    GiveInternalBuffers(std::move(*internal_buffers));
+  }
+}
+
+void Vp9Decoder::ForceStopDuringRemoveLocked() {
+  ZX_DEBUG_ASSERT(owner_->IsDecoderCurrent(this));
+  owner_->core()->StopDecoding();
+  owner_->core()->WaitForIdle();
+  owner_->watchdog()->Cancel();
+  working_buffers_->CheckBuffers();
 }
 
 Vp9Decoder::~Vp9Decoder() {
-  if (owner_->IsDecoderCurrent(this)) {
-    owner_->core()->StopDecoding();
-    owner_->core()->WaitForIdle();
-    owner_->watchdog()->Cancel();
-  }
-
-  BarrierBeforeRelease();  // For all working buffers
-  working_buffers_.CheckBuffers();
+  // We can't do working_buffers_->CheckBuffers() here since they've already been moved out, but we
+  // do working_buffers_->CheckBuffers() just before buffers are moved out, and also just after
+  // force-stopping the decoder if ForceStopDuringRemoveLocked() gets called, but that only happens
+  // when the decoder is current at the time it's removed.
 }
 
 void Vp9Decoder::UpdateLoopFilterThresholds() {
@@ -301,14 +314,121 @@ zx_status_t Vp9Decoder::Initialize() {
 
 zx_status_t Vp9Decoder::InitializeBuffers() {
   TRACE_DURATION("media", "Vp9Decoder::InitializeBuffers");
-  zx_status_t status = working_buffers_.AllocateBuffers(owner_, is_secure());
+
+  //
+  // working buffers
+  //
+
+  std::optional<WorkingBuffers> working_buffers;
+  ZX_DEBUG_ASSERT(!on_deck_internal_buffers_.has_value() ||
+                  !on_deck_internal_buffers_->working_buffers_.has_value() ||
+                  (on_deck_internal_buffers_->working_buffers_->rpm.has_buffer() &&
+                   on_deck_internal_buffers_->working_buffers_->rpm.buffer().present()));
+  if (on_deck_internal_buffers_.has_value() &&
+      on_deck_internal_buffers_->working_buffers_.has_value() &&
+      on_deck_internal_buffers_->working_buffers_->short_term_rps.buffer().is_secure() !=
+          is_secure()) {
+    on_deck_internal_buffers_->working_buffers_.reset();
+  }
+  if (on_deck_internal_buffers_.has_value() &&
+      on_deck_internal_buffers_->working_buffers_.has_value()) {
+    ZX_DEBUG_ASSERT(
+        on_deck_internal_buffers_->working_buffers_->short_term_rps.buffer().is_secure() ==
+        is_secure());
+    working_buffers = std::move(on_deck_internal_buffers_->working_buffers_);
+  } else {
+    working_buffers.emplace();
+    zx_status_t status = working_buffers->AllocateBuffers(owner_, is_secure());
+    if (status != ZX_OK) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_AllocationError);
+      LOG(ERROR, "working_buffers_->AllocateBuffers() failed");
+      return status;
+    }
+    ZX_DEBUG_ASSERT(working_buffers.has_value());
+    ZX_DEBUG_ASSERT(working_buffers->rpm.has_buffer());
+    ZX_DEBUG_ASSERT(working_buffers->rpm.buffer().present());
+  }
+  // Only assign if all working buffers got allocated, to make sure it's impossible to ever have
+  // InternalBuffers.working_buffers_ that's only got some of the working buffers allocated.
+  working_buffers_ = std::move(working_buffers);
+
+  //
+  // frames
+  //
+
+  zx_status_t status = AllocateFrames();
   if (status != ZX_OK) {
     LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_AllocationError);
-    LOG(ERROR, "working_buffers_.AllocateBuffers() failed");
+    LOG(INFO, "AllocateFrames() failed - status: %d", status);
     return status;
   }
-  status = AllocateFrames();
-  BarrierAfterFlush();  // For all frames and working buffers.
+
+  //
+  // mpred buffers
+  //
+
+  // We need a small fixed # of mpred buffers to avoid ever needing to allocate an mpred buffer
+  // while decoding.
+  constexpr uint32_t kNumMpredBuffers = 2;
+  // We've already put any previous-instance mpred buffers in cached_mpred_buffers_; they aren't
+  // still in on_deck_internal_buffers_.
+  ZX_DEBUG_ASSERT(!on_deck_internal_buffers_.has_value() ||
+                  on_deck_internal_buffers_->mpred_buffers_.empty());
+  // The largest coding unit is assumed to be 64x32.
+  constexpr uint32_t kLcuMvBytes = 0x240;
+  // Round up 1080 to 1088 and 2160 to 2176 so that all dimensions are divisible by 64, in case of
+  // decoding a portrait mode video.
+  constexpr uint32_t kLcuCount = kUseLessRam ? 1920 * 1088 / (64 * 32) : 4096 * 2176 / (64 * 32);
+  uint64_t rounded_up_size =
+      fbl::round_up(kLcuCount * kLcuMvBytes, static_cast<uint64_t>(PAGE_SIZE));
+  constexpr uint32_t kMpredAlignment = (1 << 16);
+  constexpr bool kMpredIsWritable = true;
+  constexpr bool kMpredIsMappingNeeded = false;
+  // We'll likely end up moving these back into cached_mpred_buffers_, after we make sure their
+  // properties are suitable.
+  std::vector<std::unique_ptr<InternalBuffer>> cached_mpred_buffers(
+      std::move(cached_mpred_buffers_));
+  ZX_DEBUG_ASSERT(cached_mpred_buffers_.empty());
+  for (uint32_t i = 0; i < kNumMpredBuffers; ++i) {
+    std::unique_ptr<InternalBuffer> mpred_buffer;
+    if (!cached_mpred_buffers.empty() && cached_mpred_buffers.back()->is_secure() != is_secure()) {
+      cached_mpred_buffers.clear();
+    }
+    if (!cached_mpred_buffers.empty()) {
+      auto cached_mpred_buffer = std::move(cached_mpred_buffers.back());
+      cached_mpred_buffers.pop_back();
+      ZX_DEBUG_ASSERT(cached_mpred_buffer->size() == rounded_up_size);
+      ZX_DEBUG_ASSERT(cached_mpred_buffer->alignment() == kMpredAlignment);
+      ZX_DEBUG_ASSERT(cached_mpred_buffer->is_secure() == is_secure());
+      ZX_DEBUG_ASSERT(cached_mpred_buffer->is_writable() == kMpredIsWritable);
+      ZX_DEBUG_ASSERT(cached_mpred_buffer->is_mapping_needed() == kMpredIsMappingNeeded);
+      mpred_buffer = std::move(cached_mpred_buffer);
+    } else {
+      auto internal_buffer = InternalBuffer::CreateAligned(
+          "Vp9MpredData", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(), rounded_up_size,
+          kMpredAlignment, is_secure(), /*is_writable=*/kMpredIsWritable,
+          /*is_mapping_needed=*/kMpredIsMappingNeeded);
+      if (!internal_buffer.is_ok()) {
+        LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_AllocationError);
+        LOG(ERROR, "Alloc buffer error: %d", internal_buffer.error());
+        return internal_buffer.error();
+      }
+      mpred_buffer = std::make_unique<InternalBuffer>(internal_buffer.take_value());
+    }
+    ZX_DEBUG_ASSERT(mpred_buffer && mpred_buffer->present());
+    mpred_buffer->CacheFlushInvalidate(0, rounded_up_size);
+    cached_mpred_buffers_.emplace_back(std::move(mpred_buffer));
+    ZX_DEBUG_ASSERT(cached_mpred_buffers_.back() && cached_mpred_buffers_.back()->present());
+  }
+  // If this ever triggers, why do we need more?
+  ZX_ASSERT(cached_mpred_buffers.empty());
+  // If somehow we end up with extras, those will be deleted when ~cached_mpred_buffers during
+  // return below.
+
+  // For all frames and working buffers (for those that didn't already flush or invalidate, if any;
+  // a flush or invalidate includes the relevant barrier(s)).
+  BarrierAfterFlush();
+
   return status;
 }
 
@@ -316,7 +436,7 @@ zx_status_t Vp9Decoder::InitializeHardware() {
   TRACE_DURATION("media", "Vp9Decoder::InitializeHardware");
   ZX_DEBUG_ASSERT(state_ == DecoderState::kSwappedOut);
   assert(owner_->IsDecoderCurrent(this));
-  working_buffers_.CheckBuffers();
+  working_buffers_->CheckBuffers();
   zx_status_t status =
       owner_->SetProtected(VideoDecoder::Owner::ProtectableHardwareUnit::kHevc, is_secure());
   if (status != ZX_OK) {
@@ -363,27 +483,29 @@ zx_status_t Vp9Decoder::InitializeHardware() {
     }
   }
 
-  HevcRpmBuffer::Get().FromValue(working_buffers_.rpm.addr32()).WriteTo(owner_->dosbus());
+  HevcRpmBuffer::Get().FromValue(working_buffers_->rpm.addr32()).WriteTo(owner_->dosbus());
   HevcShortTermRps::Get()
-      .FromValue(working_buffers_.short_term_rps.addr32())
+      .FromValue(working_buffers_->short_term_rps.addr32())
       .WriteTo(owner_->dosbus());
   HevcPpsBuffer::Get()
-      .FromValue(working_buffers_.picture_parameter_set.addr32())
+      .FromValue(working_buffers_->picture_parameter_set.addr32())
       .WriteTo(owner_->dosbus());
-  HevcStreamSwapBuffer::Get().FromValue(working_buffers_.swap.addr32()).WriteTo(owner_->dosbus());
-  HevcStreamSwapBuffer2::Get().FromValue(working_buffers_.swap2.addr32()).WriteTo(owner_->dosbus());
+  HevcStreamSwapBuffer::Get().FromValue(working_buffers_->swap.addr32()).WriteTo(owner_->dosbus());
+  HevcStreamSwapBuffer2::Get()
+      .FromValue(working_buffers_->swap2.addr32())
+      .WriteTo(owner_->dosbus());
   HevcLmemDumpAdr::Get()
-      .FromValue(working_buffers_.local_memory_dump.addr32())
+      .FromValue(working_buffers_->local_memory_dump.addr32())
       .WriteTo(owner_->dosbus());
   HevcdIppLinebuffBase::Get()
-      .FromValue(working_buffers_.ipp_line_buffer.addr32())
+      .FromValue(working_buffers_->ipp_line_buffer.addr32())
       .WriteTo(owner_->dosbus());
-  HevcSaoUp::Get().FromValue(working_buffers_.sao_up.addr32()).WriteTo(owner_->dosbus());
-  HevcScaleLut::Get().FromValue(working_buffers_.scale_lut.addr32()).WriteTo(owner_->dosbus());
+  HevcSaoUp::Get().FromValue(working_buffers_->sao_up.addr32()).WriteTo(owner_->dosbus());
+  HevcScaleLut::Get().FromValue(working_buffers_->scale_lut.addr32()).WriteTo(owner_->dosbus());
 
   if (IsDeviceAtLeast(owner_->device_type(), DeviceType::kG12A)) {
     HevcDblkCfgE::Get()
-        .FromValue(working_buffers_.deblock_parameters2.addr32())
+        .FromValue(working_buffers_->deblock_parameters2.addr32())
         .WriteTo(owner_->dosbus());
   }
 
@@ -391,12 +513,12 @@ zx_status_t Vp9Decoder::InitializeHardware() {
   // cause the hardware to write some data to physical address 0 and corrupt
   // memory.
   HevcDblkCfg4::Get()
-      .FromValue(working_buffers_.deblock_parameters.addr32())
+      .FromValue(working_buffers_->deblock_parameters.addr32())
       .WriteTo(owner_->dosbus());
 
   // The firmware expects the deblocking data to always follow the parameters.
   HevcDblkCfg5::Get()
-      .FromValue(working_buffers_.deblock_parameters.addr32() +
+      .FromValue(working_buffers_->deblock_parameters.addr32() +
                  WorkingBuffers::kDeblockParametersSize)
       .WriteTo(owner_->dosbus());
 
@@ -408,10 +530,12 @@ zx_status_t Vp9Decoder::InitializeHardware() {
   HevcdMppDecompCtl2::Get().FromValue(0).WriteTo(owner_->dosbus());
 
   if (use_compressed_output_) {
-    HevcSaoMmuVh0Addr::Get().FromValue(working_buffers_.mmu_vbh.addr32()).WriteTo(owner_->dosbus());
+    HevcSaoMmuVh0Addr::Get()
+        .FromValue(working_buffers_->mmu_vbh.addr32())
+        .WriteTo(owner_->dosbus());
     HevcSaoMmuVh1Addr::Get()
-        .FromValue(
-            truncate_to_32(working_buffers_.mmu_vbh.addr32() + working_buffers_.mmu_vbh.size() / 2))
+        .FromValue(truncate_to_32(working_buffers_->mmu_vbh.addr32() +
+                                  working_buffers_->mmu_vbh.size() / 2))
         .WriteTo(owner_->dosbus());
     HevcSaoCtrl5::Get()
         .ReadFrom(owner_->dosbus())
@@ -419,22 +543,24 @@ zx_status_t Vp9Decoder::InitializeHardware() {
         .WriteTo(owner_->dosbus());
   }
 
-  Vp9SegMapBuffer::Get().FromValue(working_buffers_.segment_map.addr32()).WriteTo(owner_->dosbus());
+  Vp9SegMapBuffer::Get()
+      .FromValue(working_buffers_->segment_map.addr32())
+      .WriteTo(owner_->dosbus());
   Vp9ProbSwapBuffer::Get()
-      .FromValue(working_buffers_.probability_buffer.addr32())
+      .FromValue(working_buffers_->probability_buffer.addr32())
       .WriteTo(owner_->dosbus());
   Vp9CountSwapBuffer::Get()
-      .FromValue(working_buffers_.count_buffer.addr32())
+      .FromValue(working_buffers_->count_buffer.addr32())
       .WriteTo(owner_->dosbus());
 
   if (use_compressed_output_) {
     if (IsDeviceAtLeast(owner_->device_type(), DeviceType::kG12A)) {
       HevcAssistMmuMapAddr::Get()
-          .FromValue(working_buffers_.frame_map_mmu.addr32())
+          .FromValue(working_buffers_->frame_map_mmu.addr32())
           .WriteTo(owner_->dosbus());
     } else {
       Vp9MmuMapBuffer::Get()
-          .FromValue(working_buffers_.frame_map_mmu.addr32())
+          .FromValue(working_buffers_->frame_map_mmu.addr32())
           .WriteTo(owner_->dosbus());
     }
   }
@@ -540,8 +666,21 @@ void Vp9Decoder::ProcessCompletedFrames() {
   last_frame_ = current_frame_;
   current_frame_ = nullptr;
 
-  cached_mpred_buffer_ = std::move(last_mpred_buffer_);
+  if (last_mpred_buffer_) {
+    ZX_DEBUG_ASSERT(last_mpred_buffer_);
+    ZX_DEBUG_ASSERT(last_mpred_buffer_->present());
+    cached_mpred_buffers_.emplace_back(std::move(last_mpred_buffer_));
+    ZX_DEBUG_ASSERT(!last_mpred_buffer_);
+    ZX_DEBUG_ASSERT(cached_mpred_buffers_.back());
+    ZX_DEBUG_ASSERT(cached_mpred_buffers_.back()->present());
+  }
+
+  ZX_DEBUG_ASSERT(current_mpred_buffer_);
+  ZX_DEBUG_ASSERT(current_mpred_buffer_->present());
   last_mpred_buffer_ = std::move(current_mpred_buffer_);
+  ZX_DEBUG_ASSERT(!current_mpred_buffer_);
+  ZX_DEBUG_ASSERT(last_mpred_buffer_);
+  ZX_DEBUG_ASSERT(last_mpred_buffer_->present());
 }
 
 void Vp9Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t coded_width,
@@ -763,18 +902,18 @@ void Vp9Decoder::AdaptProbabilityCoefficients(uint32_t adapt_prob_status) {
 
     // TODO(dustingreen): (comment from jbauman@) We probably don't need to
     // invalidate the entire buffer, but good enough for now.
-    working_buffers_.probability_buffer.buffer().CacheFlushInvalidate(
-        0, working_buffers_.probability_buffer.buffer().size());
-    working_buffers_.count_buffer.buffer().CacheFlushInvalidate(
-        0, working_buffers_.count_buffer.buffer().size());
+    working_buffers_->probability_buffer.buffer().CacheFlushInvalidate(
+        0, working_buffers_->probability_buffer.buffer().size());
+    working_buffers_->count_buffer.buffer().CacheFlushInvalidate(
+        0, working_buffers_->count_buffer.buffer().size());
 
     uint32_t frame_context_idx = adapt_prob_status >> 8;
-    uint8_t* previous_prob_buffer = working_buffers_.probability_buffer.buffer().virt_base() +
+    uint8_t* previous_prob_buffer = working_buffers_->probability_buffer.buffer().virt_base() +
                                     frame_context_idx * kFrameContextSize;
-    uint8_t* current_prob_buffer = working_buffers_.probability_buffer.buffer().virt_base() +
+    uint8_t* current_prob_buffer = working_buffers_->probability_buffer.buffer().virt_base() +
 
                                    kVp9FrameContextCount * kFrameContextSize;
-    uint8_t* count_buffer = working_buffers_.count_buffer.buffer().virt_base();
+    uint8_t* count_buffer = working_buffers_->count_buffer.buffer().virt_base();
 
     adapt_coef_proc_cfg config{};
     config.pre_pr_buf = reinterpret_cast<unsigned int*>(previous_prob_buffer);
@@ -787,10 +926,10 @@ void Vp9Decoder::AdaptProbabilityCoefficients(uint32_t adapt_prob_status) {
     // TODO(dustingreen): (comment from jbauman@) We probably only need to flush
     // the portions of the probability buffer that were modified (and none of
     // the count buffer), but this should be fine for now.
-    working_buffers_.probability_buffer.buffer().CacheFlush(
-        0, working_buffers_.probability_buffer.buffer().size());
-    working_buffers_.count_buffer.buffer().CacheFlush(
-        0, working_buffers_.count_buffer.buffer().size());
+    working_buffers_->probability_buffer.buffer().CacheFlush(
+        0, working_buffers_->probability_buffer.buffer().size());
+    working_buffers_->count_buffer.buffer().CacheFlush(
+        0, working_buffers_->count_buffer.buffer().size());
     Vp9AdaptProbReg::Get().FromValue(0).WriteTo(owner_->dosbus());
   }
 }
@@ -909,8 +1048,6 @@ void Vp9Decoder::ConfigureMcrcc() {
   HevcdMcrccCtl1::Get().FromValue(0xff0).WriteTo(owner_->dosbus());
 }
 
-Vp9Decoder::MpredBuffer::~MpredBuffer() {}
-
 void Vp9Decoder::ConfigureMotionPrediction() {
   TRACE_DURATION("media", "Vp9Decoder::ConfigureMotionPrediction");
   // Intra frames and frames after intra frames can't use the previous
@@ -926,7 +1063,7 @@ void Vp9Decoder::ConfigureMotionPrediction() {
   // Not sure what this value means.
   HevcMpredCtrl3::Get().FromValue(0x24122412).WriteTo(owner_->dosbus());
   HevcMpredAbvStartAddr::Get()
-      .FromValue(working_buffers_.motion_prediction_above.addr32())
+      .FromValue(working_buffers_->motion_prediction_above.addr32())
       .WriteTo(owner_->dosbus());
 
   bool last_frame_has_mv = last_frame_ && !last_frame_data_.keyframe &&
@@ -939,18 +1076,18 @@ void Vp9Decoder::ConfigureMotionPrediction() {
       .set_use_prev_frame_mvs(last_frame_has_mv)
       .WriteTo(owner_->dosbus());
 
-  uint32_t mv_mpred_addr = truncate_to_32(current_mpred_buffer_->mv_mpred_buffer->phys_base());
+  ZX_DEBUG_ASSERT(current_mpred_buffer_);
+  uint32_t mv_mpred_addr = truncate_to_32(current_mpred_buffer_->phys_base());
   HevcMpredMvWrStartAddr::Get().FromValue(mv_mpred_addr).WriteTo(owner_->dosbus());
   HevcMpredMvWptr::Get().FromValue(mv_mpred_addr).WriteTo(owner_->dosbus());
   if (last_mpred_buffer_) {
-    uint32_t last_mv_mpred_addr = truncate_to_32(last_mpred_buffer_->mv_mpred_buffer->phys_base());
+    uint32_t last_mv_mpred_addr = truncate_to_32(last_mpred_buffer_->phys_base());
     HevcMpredMvRdStartAddr::Get().FromValue(last_mv_mpred_addr).WriteTo(owner_->dosbus());
     HevcMpredMvRptr::Get().FromValue(last_mv_mpred_addr).WriteTo(owner_->dosbus());
 
     // This is the maximum allowable size, which can be greater than the intended allocated size if
     // the size was rounded up.
-    uint32_t last_end_addr =
-        truncate_to_32(last_mv_mpred_addr + last_mpred_buffer_->mv_mpred_buffer->size());
+    uint32_t last_end_addr = truncate_to_32(last_mv_mpred_addr + last_mpred_buffer_->size());
     HevcMpredMvRdEndAddr::Get().FromValue(last_end_addr).WriteTo(owner_->dosbus());
   }
 }
@@ -1031,13 +1168,13 @@ void Vp9Decoder::ConfigureFrameOutput(bool bit_depth_8) {
     {
       uint32_t frame_count = frame_buffer_size / PAGE_SIZE;
       uint32_t* mmu_data =
-          reinterpret_cast<uint32_t*>(working_buffers_.frame_map_mmu.buffer().virt_base());
-      ZX_DEBUG_ASSERT(frame_count * 4 <= working_buffers_.frame_map_mmu.size());
+          reinterpret_cast<uint32_t*>(working_buffers_->frame_map_mmu.buffer().virt_base());
+      ZX_DEBUG_ASSERT(frame_count * 4 <= working_buffers_->frame_map_mmu.size());
       for (uint32_t i = 0; i < frame_count; i++) {
         ZX_DEBUG_ASSERT(current_frame_->compressed_data.phys_list[i] != 0);
         mmu_data[i] = static_cast<uint32_t>(current_frame_->compressed_data.phys_list[i] >> 12);
       }
-      working_buffers_.frame_map_mmu.buffer().CacheFlush(0, frame_count * 4);
+      working_buffers_->frame_map_mmu.buffer().CacheFlush(0, frame_count * 4);
     }
   }
 
@@ -1200,8 +1337,8 @@ void Vp9Decoder::PrepareNewFrame(bool params_checked_previously) {
   HardwareRenderParams params;
   // BarrierBeforeInvalidate() and BarrierAfterFlush() are handled within
   // CacheFlushInvalidate():
-  working_buffers_.rpm.buffer().CacheFlushInvalidate(0, sizeof(HardwareRenderParams));
-  uint16_t* input_params = reinterpret_cast<uint16_t*>(working_buffers_.rpm.buffer().virt_base());
+  working_buffers_->rpm.buffer().CacheFlushInvalidate(0, sizeof(HardwareRenderParams));
+  uint16_t* input_params = reinterpret_cast<uint16_t*>(working_buffers_->rpm.buffer().virt_base());
 
   // Convert from middle-endian.
   for (uint32_t i = 0; i < std::size(params.data_words); i += 4) {
@@ -1523,29 +1660,16 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
   current_frame_->refcount++;
   current_frame_->decoded_index = decoded_frame_count_++;
 
-  if (cached_mpred_buffer_) {
-    current_mpred_buffer_ = std::move(cached_mpred_buffer_);
-  } else {
-    current_mpred_buffer_ = std::make_unique<MpredBuffer>();
-    // The largest coding unit is assumed to be 64x32.
-    constexpr uint32_t kLcuMvBytes = 0x240;
-    // Round up 1080 to 1088 and 2160 to 2176 so that all dimensions are divisible by 64, in case of
-    // decoding a portrait mode video.
-    constexpr uint32_t kLcuCount = kUseLessRam ? 1920 * 1088 / (64 * 32) : 4096 * 2176 / (64 * 32);
-    uint64_t rounded_up_size =
-        fbl::round_up(kLcuCount * kLcuMvBytes, static_cast<uint64_t>(PAGE_SIZE));
-    auto internal_buffer = InternalBuffer::CreateAligned(
-        "Vp9MpredData", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(), rounded_up_size,
-        (1 << 16), is_secure(), /*is_writable=*/true, /*is_mapping_needed=*/false);
-    if (!internal_buffer.is_ok()) {
-      LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_AllocationError);
-      LOG(ERROR, "Alloc buffer error: %d", internal_buffer.error());
-      CallErrorHandler();
-      return false;
-    }
-    current_mpred_buffer_->mv_mpred_buffer.emplace(internal_buffer.take_value());
-    current_mpred_buffer_->mv_mpred_buffer->CacheFlushInvalidate(0, rounded_up_size);
-  }
+  // get a free mpred buffer; we allocate 3 of these up-front during init to avoid needing to
+  // allocate here; these are always build-time fixed size (at least for now)
+  ZX_DEBUG_ASSERT(!cached_mpred_buffers_.empty());
+  ZX_DEBUG_ASSERT(cached_mpred_buffers_.back());
+  ZX_DEBUG_ASSERT(cached_mpred_buffers_.back()->present());
+  ZX_DEBUG_ASSERT(cached_mpred_buffers_.back()->is_secure() == is_secure());
+  current_mpred_buffer_ = std::move(cached_mpred_buffers_.back());
+  cached_mpred_buffers_.pop_back();
+  ZX_DEBUG_ASSERT(current_mpred_buffer_);
+  ZX_DEBUG_ASSERT(current_mpred_buffer_->present());
 
   return true;
 }
@@ -1633,15 +1757,43 @@ zx_status_t Vp9Decoder::AllocateFrames() {
     auto frame = std::make_unique<Frame>(this);
     if (use_compressed_output_) {
       constexpr uint32_t kCompressedHeaderSize = 0x48000;
-      auto internal_buffer = InternalBuffer::CreateAligned(
-          "Vp9CompressedFrameHeader", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(),
-          kCompressedHeaderSize, 1 << 16, false, /*is_writable=*/true, /*is_mapping_neede=*/true);
-      if (!internal_buffer.is_ok()) {
-        LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_AllocationError);
-        LOG(ERROR, "Alloc buffer error: %d", internal_buffer.error());
-        return internal_buffer.error();
+      constexpr uint32_t kCompressedHeaderAlignment = 1 << 16;
+      constexpr bool kCompressedHeaderIsSecure = false;
+      constexpr bool kCompressedHeaderIsWritable = true;
+      constexpr bool kCompressedHeaderIsMappingNeeded = true;
+
+      std::optional<InternalBuffer> compressed_header;
+      ZX_DEBUG_ASSERT(!on_deck_internal_buffers_.has_value() ||
+                      i >= on_deck_internal_buffers_->compressed_headers_.size() ||
+                      on_deck_internal_buffers_->compressed_headers_[i].present());
+      if (on_deck_internal_buffers_.has_value() &&
+          i < on_deck_internal_buffers_->compressed_headers_.size()) {
+        auto& on_deck = on_deck_internal_buffers_->compressed_headers_[i];
+        ZX_DEBUG_ASSERT(on_deck.size() == kCompressedHeaderSize);
+        ZX_DEBUG_ASSERT(on_deck.alignment() == kCompressedHeaderAlignment);
+        ZX_DEBUG_ASSERT(on_deck.is_secure() == kCompressedHeaderIsSecure);
+        ZX_DEBUG_ASSERT(on_deck.is_writable() == kCompressedHeaderIsWritable);
+        ZX_DEBUG_ASSERT(on_deck.is_mapping_needed() == kCompressedHeaderIsMappingNeeded);
+        compressed_header.emplace(std::move(on_deck));
+        ZX_DEBUG_ASSERT(!on_deck_internal_buffers_->compressed_headers_[i].present());
+      } else {
+        auto internal_buffer = InternalBuffer::CreateAligned(
+            "Vp9CompressedFrameHeader", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(),
+            kCompressedHeaderSize, kCompressedHeaderAlignment, kCompressedHeaderIsSecure,
+            kCompressedHeaderIsWritable, kCompressedHeaderIsMappingNeeded);
+        if (!internal_buffer.is_ok()) {
+          LogEvent(
+              media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_AllocationError);
+          LOG(ERROR, "Alloc buffer error: %d", internal_buffer.error());
+          return internal_buffer.error();
+        }
+        compressed_header.emplace(internal_buffer.take_value());
       }
-      frame->compressed_header.emplace(internal_buffer.take_value());
+      ZX_DEBUG_ASSERT(compressed_header.has_value());
+
+      frame->compressed_header = std::move(compressed_header);
+      compressed_header.reset();
+
       frame->compressed_header->CacheFlushInvalidate(0, kCompressedHeaderSize);
     }
     frame->index = i;
@@ -1819,6 +1971,100 @@ void Vp9Decoder::OnSignaledWatchdog() {
 
 zx_status_t Vp9Decoder::SetupProtection() {
   return owner_->SetProtected(VideoDecoder::Owner::ProtectableHardwareUnit::kHevc, is_secure());
+}
+
+Vp9Decoder::InternalBuffers Vp9Decoder::TakeInternalBuffers() {
+  InternalBuffers result;
+
+  // We extract any in-use, cached, or on_deck buffers that we can find, but only if the
+  // InternalBuffer is fully present().  Some of the checking for present() isn't presently needed
+  // and could be asserted instead, but it's more obviously correct to check everything here.
+
+  //
+  // working buffers
+  //
+
+  if (working_buffers_.has_value()) {
+    result.working_buffers_ = std::move(working_buffers_);
+    working_buffers_.reset();
+  } else if (on_deck_internal_buffers_.has_value() &&
+             on_deck_internal_buffers_->working_buffers_.has_value() &&
+             on_deck_internal_buffers_->working_buffers_->rpm.has_buffer() &&
+             on_deck_internal_buffers_->working_buffers_->rpm.buffer().present()) {
+    result.working_buffers_ = std::move(on_deck_internal_buffers_->working_buffers_);
+    on_deck_internal_buffers_->working_buffers_.reset();
+  }
+
+  //
+  // mpred buffers
+  //
+
+  if (current_mpred_buffer_ && current_mpred_buffer_->present()) {
+    result.mpred_buffers_.emplace_back(std::move(*current_mpred_buffer_));
+    current_mpred_buffer_.reset();
+  }
+
+  if (last_mpred_buffer_ && last_mpred_buffer_->present()) {
+    result.mpred_buffers_.emplace_back(std::move(*last_mpred_buffer_));
+    last_mpred_buffer_.reset();
+  }
+
+  for (auto& mpred_buffer : cached_mpred_buffers_) {
+    ZX_DEBUG_ASSERT(mpred_buffer);
+    ZX_DEBUG_ASSERT(mpred_buffer->present());
+    if (!mpred_buffer || !mpred_buffer->present()) {
+      continue;
+    }
+    result.mpred_buffers_.emplace_back(std::move(*mpred_buffer));
+    ZX_DEBUG_ASSERT(!mpred_buffer->present());
+  }
+  cached_mpred_buffers_.clear();
+
+  // We eagerly move into cached_mpred_buffers_ during GiveInternalBuffers() so we'll never see
+  // non-empty here.
+  ZX_ASSERT(!on_deck_internal_buffers_.has_value() ||
+            on_deck_internal_buffers_->mpred_buffers_.empty());
+
+  //
+  // compressed headers
+  //
+
+  for (auto& frame_ptr : frames_) {
+    auto& frame = *frame_ptr;
+    if (!frame.compressed_header.has_value() || !frame.compressed_header.value().present()) {
+      continue;
+    }
+    result.compressed_headers_.emplace_back(std::move(frame.compressed_header.value()));
+    frame.compressed_header.reset();
+  }
+  if (on_deck_internal_buffers_.has_value()) {
+    for (auto& on_deck_compressed_header : on_deck_internal_buffers_->compressed_headers_) {
+      if (!on_deck_compressed_header.present()) {
+        continue;
+      }
+      result.compressed_headers_.emplace_back(std::move(on_deck_compressed_header));
+      ZX_DEBUG_ASSERT(!on_deck_compressed_header.present());
+    }
+    on_deck_internal_buffers_->compressed_headers_.clear();
+  }
+
+  on_deck_internal_buffers_.reset();
+
+  return result;
+}
+
+void Vp9Decoder::GiveInternalBuffers(Vp9Decoder::InternalBuffers internal_buffers) {
+  on_deck_internal_buffers_.emplace(std::move(internal_buffers));
+  //  on_deck_internal_buffers_->working_buffers_->Zero();
+
+  // pre-move into cached_mpred_buffers_ to avoid needing to check two places when we need a free
+  // mpred buffer, and avoid needing to create an InternalBuffers early just to have a place to
+  // stash cached mpred buffers
+  for (auto& mpred_buffer : on_deck_internal_buffers_->mpred_buffers_) {
+    cached_mpred_buffers_.emplace_back(std::make_unique<InternalBuffer>(std::move(mpred_buffer)));
+    ZX_DEBUG_ASSERT(cached_mpred_buffers_.back() && cached_mpred_buffers_.back()->present());
+  }
+  on_deck_internal_buffers_->mpred_buffers_.clear();
 }
 
 }  // namespace amlogic_decoder

@@ -158,7 +158,10 @@ class CodecBuffer {
   // page-aligned.
   zx_paddr_t contiguous_paddr_base_ = {};
 
-  DISALLOW_COPY_ASSIGN_AND_MOVE(CodecBuffer);
+  CodecBuffer(const CodecBuffer& to_copy) = delete;
+  CodecBuffer& operator=(const CodecBuffer& to_copy) = delete;
+  CodecBuffer(CodecBuffer&& to_move) = delete;
+  CodecBuffer& operator=(CodecBuffer&& to_move) = delete;
 };
 
 #endif  // SRC_MEDIA_LIB_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_BUFFER_H_

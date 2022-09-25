@@ -101,10 +101,9 @@ class Vp9Decoder : public VideoDecoder {
 
   static const char* DecoderStateName(DecoderState state);
 
-  Vp9Decoder(Owner* owner, Client* client, InputType input_type, bool use_compressed_output,
-             bool is_secure);
   Vp9Decoder(const Vp9Decoder&) = delete;
 
+  void ForceStopDuringRemoveLocked() override;
   ~Vp9Decoder() override;
 
   __WARN_UNUSED_RESULT zx_status_t Initialize() override;
@@ -189,6 +188,11 @@ class Vp9Decoder : public VideoDecoder {
 
     ~WorkingBuffer();
 
+    WorkingBuffer(const WorkingBuffer& to_copy) = delete;
+    WorkingBuffer& operator=(const WorkingBuffer& to_copy) = delete;
+    WorkingBuffer(WorkingBuffer&& to_move) = default;
+    WorkingBuffer& operator=(WorkingBuffer&& to_move) = default;
+
     uint32_t addr32();
     size_t size() const { return size_; }
     const char* name() const { return name_; }
@@ -207,6 +211,11 @@ class Vp9Decoder : public VideoDecoder {
 
   struct WorkingBuffers : public BufferAllocator {
     WorkingBuffers() {}
+
+    WorkingBuffers(const WorkingBuffers& to_copy) = delete;
+    WorkingBuffers& operator=(const WorkingBuffers& to_copy) = delete;
+    WorkingBuffers(WorkingBuffers&& to_move) = default;
+    WorkingBuffers& operator=(WorkingBuffers&& to_move) = default;
 
 // Sizes are large enough for 4096x2304.
 #define DEF_BUFFER(name, can_be_protected, size) \
@@ -233,6 +242,39 @@ class Vp9Decoder : public VideoDecoder {
     DEF_BUFFER(frame_map_mmu, false, 0x1200 * 4);
 #undef DEF_BUFFER
   };
+
+ public:
+  // We allow extracting internal buffers from an old instance and adding internal buffers to a new
+  // instance, to reduce the cost of switching to a new Vp9Decoder instance without giving up
+  // the advantages of fully re-initializing the new Vp9Decoder in every other way.  In other
+  // words, we don't want to have a Reset(), because runng the actual destructor then constructor is
+  // much less brittle.
+  //
+  // Any buffers that are missing or not big enough will still be reallocated desipte transferring
+  // InternalBuffers from an old instance to a new instance.
+  class InternalBuffers {
+   public:
+    InternalBuffers() = default;
+    InternalBuffers(InternalBuffers&& to_move) = default;
+    InternalBuffers& operator=(InternalBuffers&& to_move) = default;
+    InternalBuffers(const InternalBuffers& to_copy) = delete;
+    InternalBuffers& operator=(const InternalBuffers& to_copy) = delete;
+
+   private:
+    friend class Vp9Decoder;
+    std::optional<WorkingBuffers> working_buffers_;
+    // per-frame compressed_headers
+    std::vector<InternalBuffer> compressed_headers_;
+    // all the MpredBuffer(s); no more than 2-3.
+    std::vector<InternalBuffer> mpred_buffers_;
+  };
+  InternalBuffers TakeInternalBuffers();
+  Vp9Decoder(Owner* owner, Client* client, InputType input_type,
+             std::optional<InternalBuffers> internal_buffers, bool use_compressed_output,
+             bool is_secure);
+
+ private:
+  void GiveInternalBuffers(InternalBuffers internal_buffers);
 
   struct Frame {
     Frame(Vp9Decoder* parent);
@@ -284,13 +326,6 @@ class Vp9Decoder : public VideoDecoder {
     void ReleaseIfNonreference();
   };
 
-  struct MpredBuffer {
-    ~MpredBuffer();
-    // This stores the motion vectors used to decode a frame for use in calculating motion vectors
-    // for the next frame.
-    std::optional<InternalBuffer> mv_mpred_buffer;
-  };
-
   struct PictureData {
     bool keyframe = false;
     bool intra_only = false;
@@ -327,7 +362,7 @@ class Vp9Decoder : public VideoDecoder {
 
   FrameDataProvider* frame_data_provider_ = nullptr;
 
-  WorkingBuffers working_buffers_;
+  std::optional<WorkingBuffers> working_buffers_;
   DiagnosticStateWrapper<DecoderState> state_{[this]() { UpdateDiagnostics(); },
                                               DecoderState::kSwappedOut, &DecoderStateName};
   std::unique_ptr<PowerReference> power_ref_;
@@ -382,12 +417,22 @@ class Vp9Decoder : public VideoDecoder {
   PictureData last_frame_data_;
   PictureData current_frame_data_;
 
-  std::unique_ptr<MpredBuffer> last_mpred_buffer_;
-  std::unique_ptr<MpredBuffer> current_mpred_buffer_;
+  // This stores the motion vectors used to decode a frame for use in calculating motion vectors
+  // for the next frame.
+  //
+  // The choice of unique_ptr<> vs std::optional<> here seems fine either way; it'd be moving a few
+  // fields vs. currently chasing a couple extra pointers per frame.  Unlikely to make any notable
+  // performance difference either way.
+  std::unique_ptr<InternalBuffer> last_mpred_buffer_;
+  std::unique_ptr<InternalBuffer> current_mpred_buffer_;
 
-  // One previously-used buffer is kept around so a new buffer doesn't have to be allocated each
-  // frame.
-  std::unique_ptr<MpredBuffer> cached_mpred_buffer_;
+  // Previously-used buffers kept around so a new buffer doesn't have to be allocated each frame.
+  // This will hold no more than 3 buffers shortly after GiveInternalBuffers(), but up to 1 buffer
+  // in the middle of a stream.
+  //
+  // The full properties of a buffer are checked before re-use since these can come from a previous
+  // Vp9Decoder instance.
+  std::vector<std::unique_ptr<InternalBuffer>> cached_mpred_buffers_;
 
   // The VP9 specification requires that 8 reference frames can be stored - they're saved in this
   // structure.
@@ -404,6 +449,15 @@ class Vp9Decoder : public VideoDecoder {
   bool already_got_watchdog_ = false;
 
   bool has_keyframe_ = false;
+
+  // When present, these are InternalBuffer(s) that we can re-use if their properties are suitable.
+  //
+  // Also, since we move these into use, not all InternalBuffer(s) within are necessarily present()
+  // (may have been moved out, but not fully deleted / cleared), so care is taken to check both
+  // has_value() and present() before re-using an optional InternalBuffer within.  While we could
+  // potentially simplify this by making InternalBuffer be more like std::optional<> to avoid the
+  // std::optional<> wrapping, that currently doesn't seem like it'd necessarily pay for itself.
+  std::optional<InternalBuffers> on_deck_internal_buffers_;
 };
 
 }  // namespace amlogic_decoder

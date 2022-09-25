@@ -288,7 +288,8 @@ void CodecAdapterH264Multi::CoreCodecStartStream() {
     //
     // Must create under lock to ensure that a potential other instance that incremented power
     // ref(s) first is fully done un-gating clocks.
-    auto decoder = std::make_unique<H264MultiDecoder>(video_, this, this, IsOutputSecure());
+    auto decoder = std::make_unique<H264MultiDecoder>(
+        video_, this, this, std::move(decoder_internal_buffers_), IsOutputSecure());
     if (codec_diagnostics_) {
       decoder->SetCodecDiagnostics(&codec_diagnostics_.value());
     }
@@ -301,8 +302,10 @@ void CodecAdapterH264Multi::CoreCodecStartStream() {
         std::make_unique<DecoderInstance>(std::move(decoder), video_->vdec1_core());
     StreamBuffer* buffer = decoder_instance->stream_buffer();
     video_->AddNewDecoderInstance(std::move(decoder_instance));
-    if (video_->AllocateStreamBuffer(buffer, kStreamBufferSize, /*use_parser=*/true,
-                                     IsOutputSecure()) != ZX_OK) {
+    std::optional<InternalBuffer> saved_stream_buffer = std::move(saved_stream_buffer_);
+    saved_stream_buffer_.reset();
+    if (video_->AllocateStreamBuffer(buffer, kStreamBufferSize, std::move(saved_stream_buffer),
+                                     /*use_parser=*/true, IsOutputSecure()) != ZX_OK) {
       // Log here instead of in AllocateStreamBuffer() since video_ doesn't know which codec this is
       // for.
       events_->onCoreCodecLogEvent(
@@ -383,7 +386,16 @@ std::list<CodecInputItem> CodecAdapterH264Multi::CoreCodecStopStreamInternal() {
     TRACE_DURATION("media", "Decoder Destruction");
     std::lock_guard<std::mutex> decoder_lock(*video_->video_decoder_lock());
     if (decoder_) {
-      video_->RemoveDecoderLocked(decoder_);
+      video_->RemoveDecoderWithCallbackLocked(decoder_, [this](DecoderInstance* instance) {
+        // Stash the internal buffers so next decoder instance won't need to allocate new ones
+        // unless the buffers are the wrong size or wrong is_secure() etc.  This saves time during
+        // seek and can save time during dimension changes when achieved by stream switching (in
+        // contrast to dimension changes achieved within a single stream, which don't remove the
+        // decoder during the dimension change when successful).
+        decoder_internal_buffers_.emplace(decoder_->TakeInternalBuffers());
+        ZX_DEBUG_ASSERT(!saved_stream_buffer_);
+        saved_stream_buffer_ = std::move(instance->stream_buffer()->optional_buffer());
+      });
       decoder_ = nullptr;
     }
   });
@@ -740,6 +752,7 @@ fuchsia::media::StreamOutputFormat CodecAdapterH264Multi::CoreCodecGetOutputForm
   video_uncompressed.image_format.pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12;
   video_uncompressed.image_format.coded_width = width_;
   video_uncompressed.image_format.coded_height = height_;
+  DLOG("h264 coded_width: %u coded_height: %u", width_, height_);
   video_uncompressed.image_format.bytes_per_row = output_stride_;
   video_uncompressed.image_format.display_width = display_width_;
   video_uncompressed.image_format.display_height = display_height_;

@@ -48,6 +48,10 @@ class InternalBuffer {
   InternalBuffer& operator=(InternalBuffer&& other);
   InternalBuffer(const InternalBuffer& other) = delete;
   InternalBuffer& operator=(const InternalBuffer& other) = delete;
+  // No default-construct, at least for now.
+  InternalBuffer() = delete;
+
+  bool present() { return !is_moved_out_; }
 
   // This will assert in debug if !is_mapping_needed.
   uint8_t* virt_base();
@@ -55,6 +59,10 @@ class InternalBuffer {
   zx_paddr_t phys_base();
 
   size_t size();
+  size_t alignment();
+  bool is_secure();
+  bool is_writable();
+  bool is_mapping_needed();
 
   const zx::vmo& vmo();
 
@@ -75,6 +83,7 @@ class InternalBuffer {
   void CacheFlushPossibleInvalidate(size_t offset, size_t length, bool invalidate);
 
   size_t size_{};
+  size_t alignment_{};
   bool is_secure_{};
   bool is_writable_{};
   bool is_mapping_needed_{};
@@ -83,6 +92,7 @@ class InternalBuffer {
   size_t real_size_{};
   uint8_t* real_virt_base_{};
   uintptr_t alignment_offset_{};
+  fit::closure check_pin_;
   zx::pmt pin_;
   zx_paddr_t phys_base_{};
   fidl::InterfaceHandle<fuchsia::sysmem::BufferCollection> buffer_collection_;

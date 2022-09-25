@@ -35,13 +35,16 @@ using MregFrameOffset = AvScratchD;
 using MregWaitBuffer = AvScratchE;
 using MregFatalError = AvScratchF;
 
-Mpeg12Decoder::~Mpeg12Decoder() {
+void Mpeg12Decoder::ForceStopDuringRemoveLocked() {
+  // This decoder isn't actually available or used, but if it were, the current method would always
+  // be called because this decoder can't be swapped out, so it would always be current when
+  // removed.
+  ZX_DEBUG_ASSERT(owner_->IsDecoderCurrent(this));
   owner_->core()->StopDecoding();
   owner_->core()->WaitForIdle();
-
-  BarrierBeforeRelease();
-  io_buffer_release(&workspace_buffer_);
 }
+
+Mpeg12Decoder::~Mpeg12Decoder() { io_buffer_release(&workspace_buffer_); }
 
 void Mpeg12Decoder::ResetHardware() {
   auto old_vld = PowerCtlVld::Get().ReadFrom(owner_->dosbus());

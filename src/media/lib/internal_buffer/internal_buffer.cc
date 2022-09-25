@@ -42,6 +42,7 @@ InternalBuffer::~InternalBuffer() { DeInit(); }
 
 InternalBuffer::InternalBuffer(InternalBuffer&& other)
     : size_(other.size_),
+      alignment_(other.alignment_),
       is_secure_(other.is_secure_),
       is_writable_(other.is_writable_),
       is_mapping_needed_(other.is_mapping_needed_),
@@ -55,21 +56,24 @@ InternalBuffer::InternalBuffer(InternalBuffer&& other)
       vmo_(std::move(other.vmo_)) {
   ZX_DEBUG_ASSERT(!is_moved_out_);
   other.is_moved_out_ = true;
+  ZX_ASSERT(!other.pin_);
+  check_pin_ = [this] { ZX_ASSERT(!pin_); };
 }
 
 InternalBuffer& InternalBuffer::operator=(InternalBuffer&& other) {
   // Let's just use a new variable instead of letting this happen, even though this isn't prevented
   // by C++ rules.
-  ZX_DEBUG_ASSERT(!is_moved_out_);
-  ZX_DEBUG_ASSERT(!other.is_moved_out_);
+  ZX_ASSERT(!is_moved_out_);
+  ZX_ASSERT(!other.is_moved_out_);
   DeInit();
-  ZX_DEBUG_ASSERT(!pin_);
+  ZX_ASSERT(!pin_);
   size_ = other.size_;
+  alignment_ = other.alignment_;
   is_secure_ = other.is_secure_;
   is_writable_ = other.is_writable_;
   is_mapping_needed_ = other.is_mapping_needed_;
   // Let's only move instances that returned success from Init() and haven't been moved out.
-  ZX_DEBUG_ASSERT(other.pin_ && !other.is_moved_out_);
+  ZX_ASSERT(other.pin_ && !other.is_moved_out_);
   pin_ = std::move(other.pin_);
   virt_base_ = other.virt_base_;
   real_size_ = other.real_size_;
@@ -98,6 +102,30 @@ size_t InternalBuffer::size() {
   ZX_DEBUG_ASSERT(!is_moved_out_);
   ZX_DEBUG_ASSERT(pin_);
   return size_;
+}
+
+size_t InternalBuffer::alignment() {
+  ZX_DEBUG_ASSERT(!is_moved_out_);
+  ZX_DEBUG_ASSERT(pin_);
+  return alignment_;
+}
+
+bool InternalBuffer::is_secure() {
+  ZX_DEBUG_ASSERT(!is_moved_out_);
+  ZX_DEBUG_ASSERT(pin_);
+  return is_secure_;
+}
+
+bool InternalBuffer::is_writable() {
+  ZX_DEBUG_ASSERT(!is_moved_out_);
+  ZX_DEBUG_ASSERT(pin_);
+  return is_writable_;
+}
+
+bool InternalBuffer::is_mapping_needed() {
+  ZX_DEBUG_ASSERT(!is_moved_out_);
+  ZX_DEBUG_ASSERT(pin_);
+  return is_mapping_needed_;
 }
 
 const zx::vmo& InternalBuffer::vmo() {
@@ -150,9 +178,10 @@ InternalBuffer::InternalBuffer(size_t size, bool is_secure, bool is_writable,
       is_mapping_needed_(is_mapping_needed) {
   ZX_DEBUG_ASSERT(size_);
   ZX_DEBUG_ASSERT(size_ % ZX_PAGE_SIZE == 0);
-  ZX_DEBUG_ASSERT(!pin_);
+  ZX_ASSERT(!pin_);
   ZX_DEBUG_ASSERT(!is_moved_out_);
   ZX_DEBUG_ASSERT(!is_mapping_needed_ || !is_secure_);
+  check_pin_ = [this] { ZX_ASSERT(!pin_); };
 }
 
 zx_status_t InternalBuffer::Init(const char* name, fuchsia::sysmem::AllocatorSyncPtr* sysmem,
@@ -160,7 +189,7 @@ zx_status_t InternalBuffer::Init(const char* name, fuchsia::sysmem::AllocatorSyn
   ZX_DEBUG_ASSERT(!is_moved_out_);
   // Init() should only be called on newly-constructed instances using a constructor other than the
   // move constructor.
-  ZX_DEBUG_ASSERT(!pin_);
+  ZX_ASSERT(!pin_);
 
   // Let's interact with BufferCollection sync, since we're the only participant.
   fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
@@ -176,6 +205,7 @@ zx_status_t InternalBuffer::Init(const char* name, fuchsia::sysmem::AllocatorSyn
   constraints.max_buffer_count = 1;
 
   // Allocate enough so that some portion must be aligned and large enough.
+  alignment_ = alignment;
   real_size_ = size_ + alignment;
   ZX_DEBUG_ASSERT(real_size_ < std::numeric_limits<uint32_t>::max());
   constraints.has_buffer_memory_constraints = true;
@@ -279,6 +309,8 @@ zx_status_t InternalBuffer::Init(const char* name, fuchsia::sysmem::AllocatorSyn
     phys_base_ = new_phys_base;
   }
   pin_ = std::move(pin);
+  ZX_ASSERT(!pin);
+  ZX_ASSERT(pin_);
   // We keep the buffer_collection_ channel alive, but we don't listen for channel failure.  This
   // isn't ideal, since we should listen for channel failure so that sysmem can request that we
   // close the VMO handle ASAP, but so far sysmem won't try to force relinquishing buffers anyway,
@@ -295,11 +327,12 @@ zx_status_t InternalBuffer::Init(const char* name, fuchsia::sysmem::AllocatorSyn
 
 void InternalBuffer::DeInit() {
   if (is_moved_out_) {
+    ZX_ASSERT(!pin_);
     return;
   }
   if (pin_) {
     pin_.unpin();
-    pin_.reset();
+    ZX_ASSERT(!pin_);
   }
   if (virt_base_) {
     zx_status_t status =

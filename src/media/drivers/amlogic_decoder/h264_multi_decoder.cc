@@ -405,7 +405,7 @@ static bool ProfileHasChromaFormatIdc(uint32_t profile_idc) {
 }
 
 H264MultiDecoder::H264MultiDecoder(Owner* owner, Client* client, FrameDataProvider* provider,
-                                   bool is_secure)
+                                   std::optional<InternalBuffers> internal_buffers, bool is_secure)
     : VideoDecoder(
           media_metrics::
               StreamProcessorEvents2MigratedMetricDimensionImplementation_AmlogicDecoderH264,
@@ -416,6 +416,19 @@ H264MultiDecoder::H264MultiDecoder(Owner* owner, Client* client, FrameDataProvid
                                                         media::H264PROFILE_HIGH);
   use_parser_ = true;
   power_ref_ = std::make_unique<PowerReference>(owner_->vdec1_core());
+
+  if (internal_buffers.has_value()) {
+    GiveInternalBuffers(std::move(internal_buffers.value()));
+  }
+}
+
+void H264MultiDecoder::ForceStopDuringRemoveLocked() {
+  ZX_DEBUG_ASSERT(owner_->IsDecoderCurrent(this));
+  owner_->watchdog()->Cancel();
+  is_hw_active_ = false;
+  owner_->core()->StopDecoding();
+  is_decoder_started_ = false;
+  owner_->core()->WaitForIdle();
 }
 
 H264MultiDecoder::~H264MultiDecoder() {
@@ -453,34 +466,44 @@ zx_status_t H264MultiDecoder::LoadSecondaryFirmware(const uint8_t* data, uint32_
   constexpr uint32_t kFirmwareSectionCount = 9;
   constexpr uint32_t kSecondaryFirmwareBufferSize = kSecondaryFirmwareSize * kFirmwareSectionCount;
   constexpr uint32_t kBufferAlignShift = 16;
-  auto result = InternalBuffer::CreateAligned(
-      "H264MultiSecondaryFirmware", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(),
-      kSecondaryFirmwareBufferSize, 1 << kBufferAlignShift, /*is_secure*/ false,
-      /*is_writable=*/true, /*is_mapping_needed*/ true);
-  if (!result.is_ok()) {
-    LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_AllocationError);
-    LOG(ERROR, "Failed to make second firmware buffer: %d", result.error());
-    return result.error();
+
+  if (on_deck_internal_buffers_.has_value() &&
+      on_deck_internal_buffers_->secondary_firmware_.has_value()) {
+    auto& on_deck_secondary_firmware = on_deck_internal_buffers_->secondary_firmware_;
+    ZX_DEBUG_ASSERT(on_deck_secondary_firmware->size() == kSecondaryFirmwareBufferSize);
+    ZX_DEBUG_ASSERT(on_deck_secondary_firmware->alignment() == 1 << kBufferAlignShift);
+    ZX_DEBUG_ASSERT(on_deck_secondary_firmware->is_secure() == false);
+    ZX_DEBUG_ASSERT(on_deck_secondary_firmware->is_writable() == true);
+    ZX_DEBUG_ASSERT(on_deck_secondary_firmware->is_mapping_needed() == true);
+    secondary_firmware_ = std::move(on_deck_secondary_firmware);
+    on_deck_secondary_firmware.reset();
+  } else {
+    auto result = InternalBuffer::CreateAligned(
+        "H264MultiSecondaryFirmware", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(),
+        kSecondaryFirmwareBufferSize, 1 << kBufferAlignShift, /*is_secure*/ false,
+        /*is_writable=*/true, /*is_mapping_needed*/ true);
+    if (!result.is_ok()) {
+      LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_AllocationError);
+      LOG(ERROR, "Failed to make second firmware buffer: %d", result.error());
+      return result.error();
+    }
+    secondary_firmware_.emplace(result.take_value());
+    auto addr = static_cast<uint8_t*>(secondary_firmware_->virt_base());
+    // The secondary firmware is in a different order in the file than the main
+    // firmware expects it to have.
+    memcpy(addr + 0, data + 0x4000, kSecondaryFirmwareSize);                // header
+    memcpy(addr + 0x1000, data + 0x2000, kSecondaryFirmwareSize);           // data
+    memcpy(addr + 0x2000, data + 0x6000, kSecondaryFirmwareSize);           // mmc
+    memcpy(addr + 0x3000, data + 0x3000, kSecondaryFirmwareSize);           // list
+    memcpy(addr + 0x4000, data + 0x5000, kSecondaryFirmwareSize);           // slice
+    memcpy(addr + 0x5000, data, 0x2000);                                    // main
+    memcpy(addr + 0x5000 + 0x2000, data + 0x2000, kSecondaryFirmwareSize);  // data copy 2
+    memcpy(addr + 0x5000 + 0x3000, data + 0x5000, kSecondaryFirmwareSize);  // slice copy 2
+    ZX_DEBUG_ASSERT(0x5000 + 0x3000 + kSecondaryFirmwareSize == kSecondaryFirmwareBufferSize);
+
+    // Flush the secondary firmware out to RAM.
+    secondary_firmware_->CacheFlush(0, kSecondaryFirmwareBufferSize);
   }
-
-  secondary_firmware_.emplace(result.take_value());
-
-  auto addr = static_cast<uint8_t*>(secondary_firmware_->virt_base());
-  // The secondary firmware is in a different order in the file than the main
-  // firmware expects it to have.
-  memcpy(addr + 0, data + 0x4000, kSecondaryFirmwareSize);                // header
-  memcpy(addr + 0x1000, data + 0x2000, kSecondaryFirmwareSize);           // data
-  memcpy(addr + 0x2000, data + 0x6000, kSecondaryFirmwareSize);           // mmc
-  memcpy(addr + 0x3000, data + 0x3000, kSecondaryFirmwareSize);           // list
-  memcpy(addr + 0x4000, data + 0x5000, kSecondaryFirmwareSize);           // slice
-  memcpy(addr + 0x5000, data, 0x2000);                                    // main
-  memcpy(addr + 0x5000 + 0x2000, data + 0x2000, kSecondaryFirmwareSize);  // data copy 2
-  memcpy(addr + 0x5000 + 0x3000, data + 0x5000, kSecondaryFirmwareSize);  // slice copy 2
-  ZX_DEBUG_ASSERT(0x5000 + 0x3000 + kSecondaryFirmwareSize == kSecondaryFirmwareBufferSize);
-
-  // Flush the secondary firmware out to RAM.
-  secondary_firmware_->CacheFlush(0, kSecondaryFirmwareBufferSize);
-  BarrierAfterFlush();
 
   return ZX_OK;
 }
@@ -490,6 +513,10 @@ constexpr uint32_t kAuxBufSuffixSize = 0;
 
 zx_status_t H264MultiDecoder::InitializeBuffers() {
   TRACE_DURATION("media", "H264MultiDecoder::InitializeBuffers");
+
+  const uint32_t kBufferAlignShift = 16;
+  const uint32_t kBufferAlignment = 1 << kBufferAlignShift;
+
   // If the TEE is available, we'll do secure loading of the firmware in InitializeHardware().
   if (!owner_->is_tee_available()) {
     // TODO(fxbug.dev/43496): Fix this up in "CL4" to filter to the current SoC as we're loading
@@ -506,18 +533,31 @@ zx_status_t H264MultiDecoder::InitializeBuffers() {
     if (status != ZX_OK)
       return status;
     static constexpr uint32_t kFirmwareSize = 4 * 4096;
-    const uint32_t kBufferAlignShift = 16;
     if (firmware_size < kFirmwareSize) {
       LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_FirmwareSizeError);
       LOG(ERROR, "Firmware too small");
       return ZX_ERR_INTERNAL;
     }
 
-    {
+    constexpr uint32_t kFirmwareAlignment = kBufferAlignment;
+    constexpr uint32_t kFirmwareIsSecure = false;
+    constexpr uint32_t kFirmwareIsWritable = true;
+    constexpr uint32_t kFirmwareIsMappingNeeded = true;
+    if (on_deck_internal_buffers_.has_value() && on_deck_internal_buffers_->firmware_.has_value()) {
+      auto& on_deck_firmware = on_deck_internal_buffers_->firmware_;
+      ZX_DEBUG_ASSERT(on_deck_firmware->size() == kFirmwareSize);
+      ZX_DEBUG_ASSERT(on_deck_firmware->alignment() == kFirmwareAlignment);
+      ZX_DEBUG_ASSERT(on_deck_firmware->is_secure() == kFirmwareIsSecure);
+      ZX_DEBUG_ASSERT(on_deck_firmware->is_writable() == kFirmwareIsWritable);
+      ZX_DEBUG_ASSERT(on_deck_firmware->is_mapping_needed() == kFirmwareIsMappingNeeded);
+      firmware_ = std::move(on_deck_firmware);
+      on_deck_firmware.reset();
+    } else {
       auto create_result = InternalBuffer::CreateAligned(
           "H264MultiFirmware", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(), kFirmwareSize,
-          1 << kBufferAlignShift, /*is_secure=*/false, /*is_writable=*/true,
-          /*is_mapping_needed=*/true);
+          1 << kBufferAlignShift, /*is_secure=*/kFirmwareIsSecure,
+          /*is_writable=*/kFirmwareIsWritable,
+          /*is_mapping_needed=*/kFirmwareIsMappingNeeded);
       if (!create_result.is_ok()) {
         LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_AllocationError);
         LOG(ERROR, "Failed to make firmware buffer - %d", create_result.error());
@@ -525,55 +565,102 @@ zx_status_t H264MultiDecoder::InitializeBuffers() {
       }
       firmware_ = create_result.take_value();
       memcpy(firmware_->virt_base(), data, kFirmwareSize);
-
       // Flush the firmware out to RAM.
       firmware_->CacheFlush(0, kFirmwareSize);
-      BarrierAfterFlush();
     }
+
     status = LoadSecondaryFirmware(data, firmware_size);
     if (status != ZX_OK) {
       return status;
     }
   }
 
-  constexpr uint32_t kBufferAlignment = 1 << 16;
   constexpr uint32_t kCodecDataSize = 0x200000;
-  auto codec_data_create_result =
-      InternalBuffer::CreateAligned("H264MultiCodecData", &owner_->SysmemAllocatorSyncPtr(),
-                                    owner_->bti(), kCodecDataSize, kBufferAlignment, is_secure(),
-                                    /*is_writable=*/true, /*is_mapping_needed*/ false);
-  if (!codec_data_create_result.is_ok()) {
-    LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_AllocationError);
-    LOG(ERROR, "Failed to make codec data buffer - status: %d", codec_data_create_result.error());
-    return codec_data_create_result.error();
+  constexpr uint32_t kCodecDataAlignment = kBufferAlignment;
+  constexpr uint32_t kCodecDataIsWritable = true;
+  constexpr uint32_t kCodecDataIsMappingNeeded = false;
+  if (on_deck_internal_buffers_.has_value() && on_deck_internal_buffers_->codec_data_.has_value() &&
+      (on_deck_internal_buffers_->codec_data_->is_secure() != is_secure())) {
+    // For now we free this rather than keeping both secure and non-secure around, since switching
+    // isn't likely to happen much within a single CodecAdapterH264Multi.
+    on_deck_internal_buffers_->codec_data_.reset();
   }
-  codec_data_.emplace(codec_data_create_result.take_value());
+  if (on_deck_internal_buffers_.has_value() && on_deck_internal_buffers_->codec_data_.has_value()) {
+    auto& on_deck_codec_data = on_deck_internal_buffers_->codec_data_;
+    ZX_DEBUG_ASSERT(on_deck_codec_data->size() == kCodecDataSize);
+    ZX_DEBUG_ASSERT(on_deck_codec_data->alignment() == kCodecDataAlignment);
+    ZX_DEBUG_ASSERT(on_deck_codec_data->is_secure() == is_secure());
+    ZX_DEBUG_ASSERT(on_deck_codec_data->is_writable() == kCodecDataIsWritable);
+    ZX_DEBUG_ASSERT(on_deck_codec_data->is_mapping_needed() == kCodecDataIsMappingNeeded);
+    codec_data_ = std::move(on_deck_codec_data);
+    on_deck_codec_data.reset();
+  } else {
+    auto codec_data_create_result = InternalBuffer::CreateAligned(
+        "H264MultiCodecData", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(), kCodecDataSize,
+        kCodecDataAlignment, is_secure(),
+        /*is_writable=*/kCodecDataIsWritable, /*is_mapping_needed*/ kCodecDataIsMappingNeeded);
+    if (!codec_data_create_result.is_ok()) {
+      LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_AllocationError);
+      LOG(ERROR, "Failed to make codec data buffer - status: %d", codec_data_create_result.error());
+      return codec_data_create_result.error();
+    }
+    codec_data_.emplace(codec_data_create_result.take_value());
+  }
 
   // Aux buf seems to be used for reading SEI data.
   constexpr uint32_t kAuxBufSize = kAuxBufPrefixSize + kAuxBufSuffixSize;
-  auto aux_buf_create_result =
-      InternalBuffer::CreateAligned("H264AuxBuf", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(),
-                                    kAuxBufSize, kBufferAlignment, /*is_secure=*/false,
-                                    /*is_writable=*/true, /*is_mapping_needed*/ false);
-  if (!aux_buf_create_result.is_ok()) {
-    LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_AllocationError);
-    LOG(ERROR, "Failed to make aux buffer - status: %d", aux_buf_create_result.error());
-    return aux_buf_create_result.error();
+  constexpr uint32_t kAuxBufAlignment = kBufferAlignment;
+  constexpr uint32_t kAuxBufIsSecure = false;
+  constexpr uint32_t kAuxBufIsWritable = true;
+  constexpr uint32_t kAuxBufIsMappingNeeded = false;
+  if (on_deck_internal_buffers_.has_value() && on_deck_internal_buffers_->aux_buf_.has_value()) {
+    auto& on_deck_aux_buf = on_deck_internal_buffers_->aux_buf_;
+    ZX_DEBUG_ASSERT(on_deck_aux_buf->size() == kAuxBufSize);
+    ZX_DEBUG_ASSERT(on_deck_aux_buf->alignment() == kAuxBufAlignment);
+    ZX_DEBUG_ASSERT(on_deck_aux_buf->is_secure() == kAuxBufIsSecure);
+    ZX_DEBUG_ASSERT(on_deck_aux_buf->is_writable() == kAuxBufIsWritable);
+    ZX_DEBUG_ASSERT(on_deck_aux_buf->is_mapping_needed() == kAuxBufIsMappingNeeded);
+    aux_buf_ = std::move(on_deck_aux_buf);
+    on_deck_aux_buf.reset();
+  } else {
+    auto aux_buf_create_result = InternalBuffer::CreateAligned(
+        "H264AuxBuf", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(), kAuxBufSize,
+        kAuxBufAlignment, /*is_secure=*/kAuxBufIsSecure,
+        /*is_writable=*/kAuxBufIsWritable, /*is_mapping_needed*/ kAuxBufIsMappingNeeded);
+    if (!aux_buf_create_result.is_ok()) {
+      LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_AllocationError);
+      LOG(ERROR, "Failed to make aux buffer - status: %d", aux_buf_create_result.error());
+      return aux_buf_create_result.error();
+    }
+    aux_buf_.emplace(aux_buf_create_result.take_value());
   }
-  aux_buf_.emplace(aux_buf_create_result.take_value());
 
   // Lmem is used to dump the AMRISC's local memory, which is needed for updating the DPB.
-  constexpr uint32_t kLmemBufSize = 4096;
-  auto lmem_create_result =
-      InternalBuffer::CreateAligned("H264Lmem", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(),
-                                    kLmemBufSize, kBufferAlignment, /*is_secure=*/false,
-                                    /*is_writable=*/true, /*is_mapping_needed*/ true);
-  if (!lmem_create_result.is_ok()) {
-    LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_AllocationError);
-    LOG(ERROR, "Failed to make lmem buffer - status: %d", lmem_create_result.error());
-    return lmem_create_result.error();
+  constexpr uint32_t kLmemSize = 4096;
+  constexpr uint32_t kLmemAlignment = kBufferAlignment;
+  constexpr uint32_t kLmemIsSecure = false;
+  constexpr uint32_t kLmemIsWritable = true;
+  constexpr uint32_t kLmemIsMappingNeeded = true;
+  if (on_deck_internal_buffers_.has_value() && on_deck_internal_buffers_->lmem_.has_value()) {
+    auto& on_deck_lmem = on_deck_internal_buffers_->lmem_;
+    ZX_DEBUG_ASSERT(on_deck_lmem->size() == kLmemSize);
+    ZX_DEBUG_ASSERT(on_deck_lmem->alignment() == kLmemAlignment);
+    ZX_DEBUG_ASSERT(on_deck_lmem->is_secure() == kLmemIsSecure);
+    ZX_DEBUG_ASSERT(on_deck_lmem->is_mapping_needed() == kLmemIsMappingNeeded);
+    lmem_ = std::move(on_deck_lmem);
+    on_deck_lmem.reset();
+  } else {
+    auto lmem_create_result = InternalBuffer::CreateAligned(
+        "H264Lmem", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(), kLmemSize, kLmemAlignment,
+        /*is_secure=*/kLmemIsSecure,
+        /*is_writable=*/kLmemIsWritable, /*is_mapping_needed*/ kLmemIsMappingNeeded);
+    if (!lmem_create_result.is_ok()) {
+      LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_AllocationError);
+      LOG(ERROR, "Failed to make lmem buffer - status: %d", lmem_create_result.error());
+      return lmem_create_result.error();
+    }
+    lmem_.emplace(lmem_create_result.take_value());
   }
-  lmem_.emplace(lmem_create_result.take_value());
 
   return ZX_OK;
 }
@@ -1041,6 +1128,24 @@ void H264MultiDecoder::ConfigureDpb() {
     }
     OutputReadyFrames();
     ZX_DEBUG_ASSERT(frames_to_output_.empty());
+
+    // Stash any reference_mv_buffer(s) in case they're already big enough to keep and use with the
+    // new frames.  We'll check the sizes in InitializedFrames().
+    for (auto& frame : video_frames_) {
+      auto mv_buffer = std::move(frame->reference_mv_buffer);
+      if (!on_deck_internal_buffers_.has_value()) {
+        on_deck_internal_buffers_.emplace();
+      }
+      auto& on_deck_reference_mv_buffers = on_deck_internal_buffers_->reference_mv_buffers_;
+      if (on_deck_reference_mv_buffers.size() == frame->index) {
+        on_deck_reference_mv_buffers.emplace_back(std::move(mv_buffer));
+      } else {
+        ZX_DEBUG_ASSERT(frame->index < on_deck_reference_mv_buffers.size());
+        ZX_DEBUG_ASSERT(!on_deck_reference_mv_buffers[frame->index].present());
+        on_deck_reference_mv_buffers[frame->index] = std::move(mv_buffer);
+      }
+    }
+
     video_frames_.clear();
 
     // TODO(fxbug.dev/13483): Reset initial I frame tracking if FW doesn't do that itself.
@@ -2396,21 +2501,66 @@ void H264MultiDecoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_
     uint64_t colocated_buffer_size =
         fbl::round_up(mb_width * mb_height * kMvRefDataSizePerMb, ZX_PAGE_SIZE);
 
-    auto create_result =
-        InternalBuffer::Create("H264ReferenceMvs", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(),
-                               colocated_buffer_size, is_secure_,
-                               /*is_writable=*/true, /*is_mapping_needed*/ false);
-    if (!create_result.is_ok()) {
-      LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_AllocationError);
-      LOG(ERROR, "Couldn't allocate reference mv buffer - status: %d", create_result.error());
-      OnFatalError();
-      return;
+    std::optional<InternalBuffer> mv_buffer;
+    std::optional<InternalBuffer> on_deck_mv_buffer;
+    if (on_deck_internal_buffers_.has_value() &&
+        i < on_deck_internal_buffers_->reference_mv_buffers_.size() &&
+        on_deck_internal_buffers_->reference_mv_buffers_[i].present()) {
+      on_deck_mv_buffer = std::move(on_deck_internal_buffers_->reference_mv_buffers_[i]);
+      ZX_DEBUG_ASSERT(on_deck_mv_buffer->present());
+      ZX_DEBUG_ASSERT(!on_deck_internal_buffers_->reference_mv_buffers_[i].present());
+    }
+    if (on_deck_mv_buffer.has_value()) {
+      if (on_deck_mv_buffer->size() < colocated_buffer_size) {
+        // For frame index i, we'll replace a buffer that's too small with a buffer that's big
+        // enough.
+        on_deck_mv_buffer = std::nullopt;
+      } else if (on_deck_mv_buffer->is_secure() != is_secure_) {
+        // The if condition is essentially using is_secure() of the first on-deck MV buffer as an
+        // indicator of whether all the rest of the on-deck MV buffers are also mis-matched
+        // is_secure().
+        //
+        // Can't use this buffer.
+        on_deck_mv_buffer = std::nullopt;
+        // Go ahead and deallocate these early.  By design we don't keep MV buffers around in case
+        // we happen to stream switch back to is_secure() matching again.  In other words we don't
+        // keep a mix of is_secure() and !is_secure() MV buffers (since we can't re-use / temporally
+        // share any when is_secure() differs).
+        on_deck_internal_buffers_->reference_mv_buffers_.clear();
+      }
+    }
+    constexpr bool kMvBufferIsWritable = true;
+    constexpr bool kMvBufferIsMappingNeeded = false;
+    if (on_deck_mv_buffer.has_value()) {
+      ZX_DEBUG_ASSERT(on_deck_mv_buffer->size() >= colocated_buffer_size);
+      ZX_DEBUG_ASSERT(on_deck_mv_buffer->is_secure() == is_secure_);
+      ZX_DEBUG_ASSERT(on_deck_mv_buffer->is_writable() == kMvBufferIsWritable);
+      ZX_DEBUG_ASSERT(on_deck_mv_buffer->is_mapping_needed() == kMvBufferIsMappingNeeded);
+      mv_buffer = std::move(on_deck_mv_buffer);
+      on_deck_mv_buffer.reset();
+    } else {
+      auto create_result = InternalBuffer::Create(
+          "H264ReferenceMvs", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(),
+          colocated_buffer_size, is_secure_,
+          /*is_writable=*/kMvBufferIsWritable, /*is_mapping_needed*/ kMvBufferIsMappingNeeded);
+      if (!create_result.is_ok()) {
+        LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_AllocationError);
+        LOG(ERROR, "Couldn't allocate reference mv buffer - status: %d", create_result.error());
+        OnFatalError();
+        return;
+      }
+      mv_buffer.emplace(create_result.take_value());
     }
 
-    video_frames_.push_back(std::shared_ptr<ReferenceFrame>(
-        new ReferenceFrame{!!frames[i].initial_usage_count(), false, false, i, std::move(frame),
-                           std::move(y_canvas), std::move(uv_canvas), create_result.take_value()}));
+    video_frames_.push_back(std::shared_ptr<ReferenceFrame>(new ReferenceFrame{
+        !!frames[i].initial_usage_count(), false, false, i, std::move(frame), std::move(y_canvas),
+        std::move(uv_canvas), std::move(mv_buffer.value())}));
   }
+  // Intentionally leave any on-deck mv buffers we don't need for now in
+  // on_deck_reference_mv_buffers_, to avoid deallocating and re-allocating if an app is switching
+  // between streams with higher and lower DPB count.  We keep the overall ordering consistent so
+  // that two streams with fewer larger frames and more smaller frames can still share MV buffers
+  // without leading to having more of the bigger MV buffers than we need.
 
   for (auto& frame : video_frames_) {
     VdecAssistCanvasBlk32::Get()
@@ -2883,6 +3033,62 @@ std::shared_ptr<H264MultiDecoder::ReferenceFrame> H264MultiDecoder::GetUnusedRef
     }
   }
   return nullptr;
+}
+
+H264MultiDecoder::InternalBuffers H264MultiDecoder::TakeInternalBuffers() {
+  InternalBuffers result;
+
+  if (firmware_.has_value()) {
+    result.firmware_ = std::move(firmware_);
+    firmware_.reset();
+  }
+
+  if (secondary_firmware_.has_value()) {
+    result.secondary_firmware_ = std::move(secondary_firmware_);
+    secondary_firmware_.reset();
+  }
+
+  if (codec_data_.has_value()) {
+    result.codec_data_ = std::move(codec_data_);
+    codec_data_.reset();
+  }
+
+  if (aux_buf_.has_value()) {
+    result.aux_buf_ = std::move(aux_buf_);
+    aux_buf_.reset();
+  }
+
+  if (lmem_.has_value()) {
+    result.lmem_ = std::move(lmem_);
+    lmem_.reset();
+  }
+
+  // Preserve ordering so that two streams with fewer big buffers and more smaller buffers can still
+  // share the overall set of MV buffers without needing extra bigger MV buffers.
+  for (auto& frame : video_frames_) {
+    result.reference_mv_buffers_.emplace_back(std::move(frame->reference_mv_buffer));
+    ZX_DEBUG_ASSERT(!frame->reference_mv_buffer.present());
+  }
+  if (on_deck_internal_buffers_.has_value()) {
+    for (auto& on_deck_mv_buffer : on_deck_internal_buffers_->reference_mv_buffers_) {
+      if (!on_deck_mv_buffer.present()) {
+        // The buffer that was here was obtained just above from video_frames_.
+        continue;
+      }
+      result.reference_mv_buffers_.emplace_back(std::move(on_deck_mv_buffer));
+      ZX_DEBUG_ASSERT(!on_deck_mv_buffer.present());
+    }
+  }
+
+  on_deck_internal_buffers_.reset();
+
+  return result;
+}
+
+void H264MultiDecoder::GiveInternalBuffers(InternalBuffers internal_buffers) {
+  ZX_DEBUG_ASSERT(video_frames_.empty());
+  ZX_DEBUG_ASSERT(!on_deck_internal_buffers_.has_value());
+  on_deck_internal_buffers_.emplace(std::move(internal_buffers));
 }
 
 zx_status_t H264MultiDecoder::SetupProtection() {
