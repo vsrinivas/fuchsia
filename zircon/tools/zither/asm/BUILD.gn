@@ -18,7 +18,6 @@ go_library("asm") {
   ]
   deps = [
     "..:common",
-    "../c",
     "//tools/fidl/lib/fidlgen",
   ]
 }

@@ -5,8 +5,8 @@
 // DO NOT EDIT.
 // Generated from FIDL library `zither.multifile` by zither, a Fuchsia platform tool.
 
-#ifndef ZITHER_MULTIFILE_C_H_
-#define ZITHER_MULTIFILE_C_H_
+#ifndef LIB_ZITHER_MULTIFILE_ASM_C_H_
+#define LIB_ZITHER_MULTIFILE_ASM_C_H_
 
 #include "a.h"
 #include "b.h"
@@ -16,4 +16,4 @@
 #define ZITHER_MULTIFILE_C_A (0)
 #define ZITHER_MULTIFILE_C_B2 (4)
 
-#endif  // ZITHER_MULTIFILE_C_H_
+#endif  // LIB_ZITHER_MULTIFILE_ASM_C_H_

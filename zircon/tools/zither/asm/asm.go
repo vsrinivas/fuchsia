@@ -27,7 +27,7 @@ type Generator struct {
 func NewGenerator(formatter fidlgen.Formatter) *Generator {
 	gen := fidlgen.NewGenerator("AsmTemplates", templates, formatter, template.FuncMap{
 		"MemberName":               MemberName,
-		"HeaderGuard":              c.HeaderGuard,
+		"HeaderGuard":              HeaderGuard,
 		"UpperCaseWithUnderscores": c.UpperCaseWithUnderscores,
 		"ConstValue":               ConstValue,
 	})
@@ -39,12 +39,9 @@ func (gen Generator) DeclOrder() zither.DeclOrder {
 }
 
 func (gen *Generator) Generate(summaries []zither.FileSummary, outputDir string) ([]string, error) {
-	parts := summaries[0].Library.Parts()
-	outputDir = filepath.Join(outputDir, filepath.Join(parts...))
-
 	var outputs []string
 	for _, summary := range summaries {
-		output := filepath.Join(outputDir, summary.Name+".h")
+		output := filepath.Join(outputDir, zither.HeaderPath(summary, "asm"))
 		if err := gen.GenerateFile(output, "GenerateAsmFile", summary); err != nil {
 			return nil, err
 		}
@@ -56,6 +53,10 @@ func (gen *Generator) Generate(summaries []zither.FileSummary, outputDir string)
 //
 // Template functions.
 //
+
+func HeaderGuard(summary zither.FileSummary) string {
+	return zither.HeaderGuard(summary, "asm")
+}
 
 func MemberName(decl zither.Decl, member zither.Member) string {
 	return c.UpperCaseWithUnderscores(decl) + "_" + c.UpperCaseWithUnderscores(member)

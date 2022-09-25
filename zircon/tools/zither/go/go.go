@@ -41,15 +41,13 @@ func (gen Generator) DeclOrder() zither.DeclOrder {
 }
 
 func (gen *Generator) Generate(summaries []zither.FileSummary, outputDir string) ([]string, error) {
-	libParts := summaries[0].Library.Parts()
-	libPath := filepath.Join(libParts...)
-	outputDir = filepath.Join(outputDir, libPath)
+	pkgPath := filepath.Join(summaries[0].Library.Parts()...)
+	outputDir = filepath.Join(outputDir, pkgPath)
 
 	var outputs []string
-
 	// Generate a file containing the package's name
 	pkgName := filepath.Join(outputDir, "pkg_name.txt")
-	if err := fidlgen.WriteFileIfChanged(pkgName, []byte(libPath)); err != nil {
+	if err := fidlgen.WriteFileIfChanged(pkgName, []byte(pkgPath)); err != nil {
 		return nil, err
 	}
 	outputs = append(outputs, pkgName)

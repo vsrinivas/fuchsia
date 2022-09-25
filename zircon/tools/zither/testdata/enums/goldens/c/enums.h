@@ -5,8 +5,8 @@
 // DO NOT EDIT.
 // Generated from FIDL library `zither.enums` by zither, a Fuchsia platform tool.
 
-#ifndef ZITHER_ENUMS_ENUMS_H_
-#define ZITHER_ENUMS_ENUMS_H_
+#ifndef LIB_ZITHER_ENUMS_C_ENUMS_H_
+#define LIB_ZITHER_ENUMS_C_ENUMS_H_
 
 #include <stdint.h>
 
@@ -126,4 +126,4 @@ typedef uint16_t zither_enums_enum_with_many_line_comment_t;
 }
 #endif
 
-#endif  // ZITHER_ENUMS_ENUMS_H_
+#endif  // LIB_ZITHER_ENUMS_C_ENUMS_H_

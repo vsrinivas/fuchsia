@@ -5,8 +5,8 @@
 // DO NOT EDIT.
 // Generated from FIDL library `zither.structs` by zither, a Fuchsia platform tool.
 
-#ifndef ZITHER_STRUCTS_STRUCTS_H_
-#define ZITHER_STRUCTS_STRUCTS_H_
+#ifndef LIB_ZITHER_STRUCTS_C_STRUCTS_H_
+#define LIB_ZITHER_STRUCTS_C_STRUCTS_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -71,4 +71,4 @@ typedef struct {
 }
 #endif
 
-#endif  // ZITHER_STRUCTS_STRUCTS_H_
+#endif  // LIB_ZITHER_STRUCTS_C_STRUCTS_H_

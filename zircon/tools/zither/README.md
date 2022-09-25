@@ -12,9 +12,9 @@ Here we document the supported zither backends and their particularities.
 Consider a FIDL library by the name of `${id1}.${id2}.....${idn}`:
 
 ### C
-* One header `<${id1}/${id2}/.../${idn}/${idn}/${filename}.h>` is generated
-per original FIDL source file, containing the bindings for the declarations
-defined there.
+* One header `<lib/${id1}/${id2}/.../${idn}/${idn}/c/${filename}.h>` is
+generated per original FIDL source file, containing the bindings for the
+declarations defined there.
 * Type translation from FIDL to C is as follows:
   - `{u,}int{8,16,32,64}`map to `{u,}int{8,16,32,64}_t`, respectively;
   - `bool` maps to `bool`;
@@ -32,9 +32,9 @@ type with a name of `LowerSnakeCase(${id1}_${id2}_..._${idn}_${declname}_t)`;
 obvious mapping of members.
 
 ### Assembly
-* One header `<${id1}/${id2}/.../${idn}/${idn}/${filename}.h>` is generated
-per original FIDL source file, containing the bindings for the declarations
-defined there.
+* One header `<lib/${id1}/${id2}/.../${idn}/${idn}/asm/${filename}.h>` is
+generated per original FIDL source file, containing the bindings for the
+declarations defined there.
 * A constant declaration yields a preprocessor variable of name
 `UpperSnakeCase(${id1}_${id2}_..._${idn}_${declname})`;
 * An enum member yields a preprocessor variable of name

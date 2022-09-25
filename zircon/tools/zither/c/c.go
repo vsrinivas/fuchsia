@@ -47,12 +47,9 @@ func (gen Generator) DeclOrder() zither.DeclOrder {
 }
 
 func (gen *Generator) Generate(summaries []zither.FileSummary, outputDir string) ([]string, error) {
-	parts := summaries[0].Library.Parts()
-	outputDir = filepath.Join(outputDir, filepath.Join(parts...))
-
 	var outputs []string
 	for _, summary := range summaries {
-		output := filepath.Join(outputDir, summary.Name+".h")
+		output := filepath.Join(outputDir, zither.HeaderPath(summary, "c"))
 		if err := gen.GenerateFile(output, "GenerateCFile", summary); err != nil {
 			return nil, err
 		}
@@ -106,11 +103,8 @@ func ConstMemberName(parent zither.Decl, member zither.Member) string {
 	return UpperCaseWithUnderscores(parent) + "_" + UpperCaseWithUnderscores(member)
 }
 
-// HeaderGuard returns the header guard preprocessor variable for a given file.
 func HeaderGuard(summary zither.FileSummary) string {
-	parts := append(strings.Split(summary.Name, "."), "h")
-	parts = append(summary.Library.Parts(), parts...)
-	return fidlgen.ConstNameToAllCapsSnake(strings.Join(parts, "_")) + "_"
+	return zither.HeaderGuard(summary, "c")
 }
 
 // StandardIncludes gives the list of language standard headers used by a file.

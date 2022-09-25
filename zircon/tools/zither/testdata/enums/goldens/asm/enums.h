@@ -5,8 +5,8 @@
 // DO NOT EDIT.
 // Generated from FIDL library `zither.enums` by zither, a Fuchsia platform tool.
 
-#ifndef ZITHER_ENUMS_ENUMS_H_
-#define ZITHER_ENUMS_ENUMS_H_
+#ifndef LIB_ZITHER_ENUMS_ASM_ENUMS_H_
+#define LIB_ZITHER_ENUMS_ASM_ENUMS_H_
 
 #define ZITHER_ENUMS_COLOR_RED (0)
 #define ZITHER_ENUMS_COLOR_ORANGE (1)
@@ -93,4 +93,4 @@
 
 #define ZITHER_ENUMS_INT64_MAX ZITHER_ENUMS_INT64_LIMITS_MAX
 
-#endif  // ZITHER_ENUMS_ENUMS_H_
+#endif  // LIB_ZITHER_ENUMS_ASM_ENUMS_H_

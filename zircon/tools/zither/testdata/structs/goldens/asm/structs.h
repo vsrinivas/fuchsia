@@ -5,8 +5,8 @@
 // DO NOT EDIT.
 // Generated from FIDL library `zither.structs` by zither, a Fuchsia platform tool.
 
-#ifndef ZITHER_STRUCTS_STRUCTS_H_
-#define ZITHER_STRUCTS_STRUCTS_H_
+#ifndef LIB_ZITHER_STRUCTS_ASM_STRUCTS_H_
+#define LIB_ZITHER_STRUCTS_ASM_STRUCTS_H_
 
 #define ZITHER_STRUCTS_EMPTY_SIZEOF (1)
 
@@ -59,4 +59,4 @@
 
 #define ZITHER_STRUCTS_STRUCT_WITH_MANY_LINE_COMMENT_MEMBER (0)
 
-#endif  // ZITHER_STRUCTS_STRUCTS_H_
+#endif  // LIB_ZITHER_STRUCTS_ASM_STRUCTS_H_

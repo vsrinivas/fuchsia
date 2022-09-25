@@ -5,8 +5,8 @@
 // DO NOT EDIT.
 // Generated from FIDL library `zither.constants` by zither, a Fuchsia platform tool.
 
-#ifndef ZITHER_CONSTANTS_CONSTANTS_H_
-#define ZITHER_CONSTANTS_CONSTANTS_H_
+#ifndef LIB_ZITHER_CONSTANTS_C_CONSTANTS_H_
+#define LIB_ZITHER_CONSTANTS_C_CONSTANTS_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -123,4 +123,4 @@ extern "C" {
 }
 #endif
 
-#endif  // ZITHER_CONSTANTS_CONSTANTS_H_
+#endif  // LIB_ZITHER_CONSTANTS_C_CONSTANTS_H_

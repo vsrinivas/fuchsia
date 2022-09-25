@@ -5,8 +5,8 @@
 // DO NOT EDIT.
 // Generated from FIDL library `zither.bits` by zither, a Fuchsia platform tool.
 
-#ifndef ZITHER_BITS_BITS_H_
-#define ZITHER_BITS_BITS_H_
+#ifndef LIB_ZITHER_BITS_ASM_BITS_H_
+#define LIB_ZITHER_BITS_ASM_BITS_H_
 
 #define ZITHER_BITS_UINT8_BITS_ONE_SHIFT (0)
 #define ZITHER_BITS_UINT8_BITS_ONE (1 << ZITHER_BITS_UINT8_BITS_ONE_SHIFT)
@@ -129,4 +129,4 @@
 
 #define ZITHER_BITS_U64_POW_63 ZITHER_BITS_UINT64_BITS_POW_63
 
-#endif  // ZITHER_BITS_BITS_H_
+#endif  // LIB_ZITHER_BITS_ASM_BITS_H_

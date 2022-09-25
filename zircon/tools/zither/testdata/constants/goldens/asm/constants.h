@@ -5,8 +5,8 @@
 // DO NOT EDIT.
 // Generated from FIDL library `zither.constants` by zither, a Fuchsia platform tool.
 
-#ifndef ZITHER_CONSTANTS_CONSTANTS_H_
-#define ZITHER_CONSTANTS_CONSTANTS_H_
+#ifndef LIB_ZITHER_CONSTANTS_ASM_CONSTANTS_H_
+#define LIB_ZITHER_CONSTANTS_ASM_CONSTANTS_H_
 
 #define ZITHER_CONSTANTS_UINT8_ZERO (0)
 
@@ -112,4 +112,4 @@
 //             comment.
 #define ZITHER_CONSTANTS_CONSTANT_MANY_LINE_COMMENT ""
 
-#endif  // ZITHER_CONSTANTS_CONSTANTS_H_
+#endif  // LIB_ZITHER_CONSTANTS_ASM_CONSTANTS_H_

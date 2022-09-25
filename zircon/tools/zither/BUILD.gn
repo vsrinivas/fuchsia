@@ -54,6 +54,7 @@ if (is_host) {
       "//tools/fidl/lib/fidlgen_cpp",
     ]
     sources = [
+      "c_family.go",
       "names.go",
       "zither_ir.go",
       "zither_ir_test.go",
@@ -155,8 +156,28 @@ template("zither_golden_test") {
     }
     case_deps += [ ":$goldens_target" ]
 
+    # Clear from previous iteration.
+    backend_info = {
+    }
+    output_subdir_info = {
+    }
+
+    # Reconstruct the output subdirectory per `zither_library()` documentation.
+    backend_info = supported_zither_backend_info[case.backend]
+    output_subdir_info = {
+      prefix = ""
+      suffix = ""
+      name_separator = "."
+      forward_variables_from(backend_info["output_subdir"], "*")
+      path = prefix
+      path += string_replace(library_target, ".", name_separator)
+      path += suffix
+    }
+    output_subdir = output_subdir_info.path
+
     # A per (backend, case) output directory for use below, if needed.
-    output_dir = "$target_gen_dir/${target_name}-${case.backend}"
+    # Not related to the zither output directory.
+    case_output_dir = "$target_gen_dir/${target_name}-${case.backend}"
 
     # Now verify that the bindings give valid code.
     if (case.backend == "c" || case.backend == "asm") {
@@ -166,7 +187,7 @@ template("zither_golden_test") {
       if (case.backend == "asm") {
         suffix = "S"
       }
-      source = "$output_dir/compile-check.$suffix"
+      source = "$case_output_dir/compile-check.$suffix"
       action(create_source_target) {
         visibility = [ ":*" ]
         testonly = true
@@ -178,7 +199,7 @@ template("zither_golden_test") {
           rebase_path(source, root_build_dir),
         ]
         foreach(file, case.files) {
-          args += [ "zither/${case_name}/${file}" ]
+          args += [ "${output_subdir}/${file}" ]
         }
         outputs = [ source ]
       }
@@ -199,7 +220,7 @@ template("zither_golden_test") {
       # will feed into our compilation check. There is unfortunately no real
       # equivalent of `source_set()` in our go build.
       create_main_target = "${compilation_check_target}.create_main"
-      main_file = "$output_dir/main.go"
+      main_file = "$case_output_dir/main.go"
       generated_file(create_main_target) {
         visibility = [ ":*" ]
         testonly = true
@@ -208,7 +229,7 @@ template("zither_golden_test") {
           "package main",
           "",
           "import (",
-          "  _ \"zither/${case_name}\"",  # `_` to avoid usage complaints
+          "  _ \"${output_subdir}\"",  # `_` to avoid usage complaints
           "  _ \"syscall/zx\"",  # Required by fuchsia support quirks.
           ")",
           "",
@@ -220,13 +241,13 @@ template("zither_golden_test") {
 
       # The generated main file now needs to be declared in a package/library.
       main_library_target = "${compilation_check_target}.main_library"
-      main_pkg_name = rebase_path(output_dir, root_build_dir)
+      main_pkg_name = rebase_path(case_output_dir, root_build_dir)
       go_library(main_library_target) {
         visibility = [ ":*" ]
         testonly = true
 
         name = main_pkg_name
-        source_dir = output_dir
+        source_dir = case_output_dir
         sources = [ rebase_path(main_file, source_dir) ]
         deps = [ backend_label ]
         non_go_deps = [ ":$create_main_target" ]

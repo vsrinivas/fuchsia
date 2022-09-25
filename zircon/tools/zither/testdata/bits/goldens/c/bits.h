@@ -5,8 +5,8 @@
 // DO NOT EDIT.
 // Generated from FIDL library `zither.bits` by zither, a Fuchsia platform tool.
 
-#ifndef ZITHER_BITS_BITS_H_
-#define ZITHER_BITS_BITS_H_
+#ifndef LIB_ZITHER_BITS_C_BITS_H_
+#define LIB_ZITHER_BITS_C_BITS_H_
 
 #include <stdint.h>
 
@@ -93,4 +93,4 @@ typedef uint16_t zither_bits_bits_with_many_line_comment_t;
 }
 #endif
 
-#endif  // ZITHER_BITS_BITS_H_
+#endif  // LIB_ZITHER_BITS_C_BITS_H_
