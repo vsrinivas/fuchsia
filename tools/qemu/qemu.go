@@ -185,7 +185,7 @@ func (q *QEMUCommandBuilder) SetTarget(target Target, kvm bool) {
 			q.SetFlag("-cpu", "host,migratable=no,+invtsc")
 			q.SetFlag("-enable-kvm")
 		} else {
-			q.SetFlag("-cpu", "Haswell,+smap,-check,-fsgsbase")
+			q.SetFlag("-cpu", "Skylake-Client,-check")
 		}
 	default:
 		q.recordError(fmt.Errorf("invalid target: %q", target))

@@ -449,7 +449,7 @@ case $ARCH in
             fi
           fi
         else
-          ARGS+=" -cpu Haswell,+smap,-check,-fsgsbase"
+          ARGS+=" -cpu Skylake-Client,-check"
         fi
 
         if (( $SERIAL )); then

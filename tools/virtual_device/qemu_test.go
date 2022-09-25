@@ -63,7 +63,7 @@ func TestQEMUCommand(t *testing.T) {
 			"-fw_cfg",
 			"name=etc/sercon-port,string=0",
 			"-cpu",
-			"Haswell,+smap,-check,-fsgsbase",
+			"Skylake-Client,-check",
 			"-net",
 			"none",
 			"-append",
