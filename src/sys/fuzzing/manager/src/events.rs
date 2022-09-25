@@ -30,7 +30,6 @@ pub async fn handle_run_events(
             }
             result = events_fut => result.context("fuchsia.test.manager.RunController/GetEvents")
         }?;
-        // let events = run_proxy.get_events().await.context("fuchsia.test.manager.RunController/GetEvents")?;
         if events.is_empty() {
             break;
         }

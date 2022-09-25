@@ -243,30 +243,122 @@ pub struct AttachShellSubcommand {
     /// where to send fuzzer logs and artifacts; overrides `fuzzer.output` config value if present
     #[argh(option, short = 'o')]
     pub output: Option<String>,
+
+    /// disables forwarding standard output from the fuzzer
+    #[argh(switch)]
+    pub no_stdout: bool,
+
+    /// disables forwarding standard error from the fuzzer
+    #[argh(switch)]
+    pub no_stderr: bool,
+
+    /// disables forwarding system logs from the fuzzer
+    #[argh(switch)]
+    pub no_syslog: bool,
 }
 
 impl Autocomplete for AttachShellSubcommand {
     const POSITIONAL_TYPES: &'static [ParameterType] = &[ParameterType::Url];
-    const OPTION_TYPES: &'static [(&'static str, Option<ParameterType>)] =
-        &[("--output", Some(ParameterType::Path))];
+    const OPTION_TYPES: &'static [(&'static str, Option<ParameterType>)] = &[
+        ("--output", Some(ParameterType::Path)),
+        ("--no-stdout", None),
+        ("--no-stderr", None),
+        ("--no-syslog", None),
+    ];
 }
 
 impl AttachShellSubcommand {
     fn from(args: &FuzzCommand) -> Option<Self> {
-        let (url, output) = match &args.command {
-            FuzzSubcommand::Get(GetSubcommand { url, output, .. }) => (url, output),
-            FuzzSubcommand::Set(SetSubcommand { url, output, .. }) => (url, output),
-            FuzzSubcommand::Add(AddSubcommand { url, output, .. }) => (url, output),
-            FuzzSubcommand::Try(TrySubcommand { url, output, .. }) => (url, output),
-            FuzzSubcommand::Run(RunSubcommand { url, output, .. }) => (url, output),
-            FuzzSubcommand::Cleanse(CleanseSubcommand { url, output, .. }) => (url, output),
-            FuzzSubcommand::Minimize(MinimizeSubcommand { url, output, .. }) => (url, output),
-            FuzzSubcommand::Merge(MergeSubcommand { url, output, .. }) => (url, output),
-            FuzzSubcommand::Status(StatusSubcommand { url, output, .. }) => (url, output),
-            FuzzSubcommand::Fetch(FetchSubcommand { url, output, .. }) => (url, output),
+        let (url, output, no_stdout, no_stderr, no_syslog) = match &args.command {
+            FuzzSubcommand::Get(GetSubcommand {
+                url,
+                output,
+                no_stdout,
+                no_stderr,
+                no_syslog,
+                ..
+            }) => (url, output, no_stdout, no_stderr, no_syslog),
+            FuzzSubcommand::Set(SetSubcommand {
+                url,
+                output,
+                no_stdout,
+                no_stderr,
+                no_syslog,
+                ..
+            }) => (url, output, no_stdout, no_stderr, no_syslog),
+            FuzzSubcommand::Add(AddSubcommand {
+                url,
+                output,
+                no_stdout,
+                no_stderr,
+                no_syslog,
+                ..
+            }) => (url, output, no_stdout, no_stderr, no_syslog),
+            FuzzSubcommand::Try(TrySubcommand {
+                url,
+                output,
+                no_stdout,
+                no_stderr,
+                no_syslog,
+                ..
+            }) => (url, output, no_stdout, no_stderr, no_syslog),
+            FuzzSubcommand::Run(RunSubcommand {
+                url,
+                output,
+                no_stdout,
+                no_stderr,
+                no_syslog,
+                ..
+            }) => (url, output, no_stdout, no_stderr, no_syslog),
+            FuzzSubcommand::Cleanse(CleanseSubcommand {
+                url,
+                output,
+                no_stdout,
+                no_stderr,
+                no_syslog,
+                ..
+            }) => (url, output, no_stdout, no_stderr, no_syslog),
+            FuzzSubcommand::Minimize(MinimizeSubcommand {
+                url,
+                output,
+                no_stdout,
+                no_stderr,
+                no_syslog,
+                ..
+            }) => (url, output, no_stdout, no_stderr, no_syslog),
+            FuzzSubcommand::Merge(MergeSubcommand {
+                url,
+                output,
+                no_stdout,
+                no_stderr,
+                no_syslog,
+                ..
+            }) => (url, output, no_stdout, no_stderr, no_syslog),
+            FuzzSubcommand::Status(StatusSubcommand {
+                url,
+                output,
+                no_stdout,
+                no_stderr,
+                no_syslog,
+                ..
+            }) => (url, output, no_stdout, no_stderr, no_syslog),
+            FuzzSubcommand::Fetch(FetchSubcommand {
+                url,
+                output,
+                no_stdout,
+                no_stderr,
+                no_syslog,
+                ..
+            }) => (url, output, no_stdout, no_stderr, no_syslog),
             _ => return None,
         };
-        Some(Self { url: url.to_string(), output: output.clone() })
+        Some(Self {
+            url: url.to_string(),
+            output: output.clone(),
+            no_stdout: *no_stdout,
+            no_stderr: *no_stderr,
+            no_syslog: *no_syslog,
+        })
     }
 }
 
@@ -553,6 +645,9 @@ mod test_fixtures {
             FuzzShellSubcommand::Attach(AttachShellSubcommand {
                 url: TEST_URL.to_string(),
                 output: output.and_then(|s| Some(s.to_string())),
+                no_stdout: false,
+                no_stderr: false,
+                no_syslog: false,
             }),
             cmd.clone(),
             FuzzShellSubcommand::Exit(ExitShellSubcommand {}),

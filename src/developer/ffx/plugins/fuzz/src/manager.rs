@@ -5,7 +5,7 @@
 use {
     crate::fuzzer::Fuzzer,
     crate::writer::{OutputSink, Writer},
-    anyhow::{anyhow, bail, Context as _, Result},
+    anyhow::{anyhow, bail, Context as _, Error, Result},
     fidl::endpoints::{create_proxy, ProtocolMarker},
     fidl_fuchsia_developer_remotecontrol as rcs, fidl_fuchsia_fuzzer as fuzz,
     fuchsia_zircon_status as zx,
@@ -58,17 +58,27 @@ impl<O: OutputSink> Manager<O> {
     /// `artifact_dir`, and outputs such as logs can optionally be saved to the `output_dir`.
     ///
     /// Returns an object representing the connected fuzzer, or an error.
-    pub async fn connect<P: AsRef<Path>>(&self, url: Url, output_dir: P) -> Result<Fuzzer<O>> {
+    pub async fn connect<P: AsRef<Path>>(&self, url: &Url, output_dir: P) -> Result<Fuzzer<O>> {
         let (proxy, server_end) = create_proxy::<fuzz::ControllerMarker>()
             .context("failed to create fuchsia.fuzzer.Controller proxy")?;
-        let result =
-            self.proxy.connect(url.as_str(), server_end).await.context(fidl_name("Connect"))?;
-        match result {
-            Ok((stdout, stderr, syslog)) => {
-                Fuzzer::try_new(url, proxy, stdout, stderr, syslog, output_dir, &self.writer)
-            }
-            Err(e) => bail!("failed to connect to fuzzer: {}", zx::Status::from_raw(e)),
+        let raw = self
+            .proxy
+            .connect(url.as_str(), server_end)
+            .await
+            .context("fuchsia.fuzzer.Manager/Connect")?;
+        if raw != zx::Status::OK.into_raw() {
+            bail!("fuchsia.fuzzer.Manager/Connect returned ZX_ERR_{}", zx::Status::from_raw(raw));
         }
+        Fuzzer::try_new(&url, proxy, output_dir, &self.writer)
+    }
+
+    /// Returns a socket that provides the given type of fuzzer output.
+    pub async fn get_output(&self, url: &Url, output: fuzz::TestOutput) -> Result<fidl::Socket> {
+        let (rx, tx) = fidl::Socket::create(fidl::SocketOpts::STREAM)
+            .map_err(Error::msg)
+            .context("failed to create socket pair")?;
+        self.proxy.get_output(url.as_str(), output, tx).await.context("failed to get output")?;
+        Ok(rx)
     }
 
     /// Requests that the `fuzz-manager` stop a running fuzzer instance.
@@ -97,7 +107,7 @@ pub mod test_fixtures {
         crate::test_fixtures::create_task,
         crate::writer::test_fixtures::BufferSink,
         crate::writer::Writer,
-        anyhow::{bail, Result},
+        anyhow::{Context as _, Result},
         fidl::endpoints::ServerEnd,
         fidl_fuchsia_fuzzer as fuzz, fuchsia_zircon_status as zx,
         futures::StreamExt,
@@ -112,17 +122,24 @@ pub mod test_fixtures {
         let mut stream = server_end.into_stream()?;
         let mut task = None;
         while let Some(request) = stream.next().await {
+            let request = request.context("fuchsia.fuzzer.Manager")?;
             match request {
-                Ok(fuzz::ManagerRequest::Connect { fuzzer_url, controller, responder }) => {
+                fuzz::ManagerRequest::Connect { fuzzer_url, controller, responder } => {
                     let stream = controller.into_stream()?;
                     fuzzer.set_url(fuzzer_url);
-                    let (stdout, stderr, syslog) = fuzzer.connect()?;
-                    let mut response = Ok((stdout, stderr, syslog));
-                    responder.send(&mut response)?;
+                    responder.send(zx::Status::OK.into_raw())?;
                     task =
                         Some(create_task(serve_controller(stream, fuzzer.clone()), writer.clone()));
                 }
-                Ok(fuzz::ManagerRequest::Stop { fuzzer_url, responder }) => {
+                fuzz::ManagerRequest::GetOutput { fuzzer_url, output, socket, responder } => {
+                    let running = fuzzer.url().unwrap_or(String::default());
+                    if fuzzer_url == running {
+                        responder.send(fuzzer.set_output(output, socket))?;
+                    } else {
+                        responder.send(zx::Status::NOT_FOUND.into_raw())?;
+                    }
+                }
+                fuzz::ManagerRequest::Stop { fuzzer_url, responder } => {
                     let running = fuzzer.url().unwrap_or(String::default());
                     fuzzer.set_url(&fuzzer_url);
                     if fuzzer_url == running {
@@ -132,7 +149,6 @@ pub mod test_fixtures {
                         responder.send(zx::Status::NOT_FOUND.into_raw())?;
                     }
                 }
-                Err(e) => bail!("error serving `Manager`: {:?}", e),
             };
         }
         if let Some(task) = task.take() {
@@ -158,7 +174,7 @@ mod tests {
         let manager = Manager::with_remote_control(&proxy, test.writer()).await?;
 
         let url = Url::parse(TEST_URL)?;
-        manager.connect(url.clone(), test.root_dir()).await?;
+        manager.connect(&url, test.root_dir()).await?;
 
         let actual = test.fuzzer().url();
         let expected = Some(url.to_string());

@@ -106,6 +106,18 @@ pub fn derive_subcommand(_attr: TokenStream, item: TokenStream) -> TokenStream {
             #[argh(switch, short = 'q')]
             pub quiet: bool,
 
+            /// disables forwarding standard output from the fuzzer
+            #[argh(switch)]
+            pub no_stdout: bool,
+
+            /// disables forwarding standard error from the fuzzer
+            #[argh(switch)]
+            pub no_stderr: bool,
+
+            /// disables forwarding system logs from the fuzzer
+            #[argh(switch)]
+            pub no_syslog: bool,
+
             #fields_inner
         }
 

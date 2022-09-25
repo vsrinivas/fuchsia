@@ -195,9 +195,16 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
             other => return other,
         };
         match args.command {
-            FuzzShellSubcommand::Attach(AttachShellSubcommand { url, output }) => {
-                self.attach(&url, output).await.context("failed to attach fuzzer")
-            }
+            FuzzShellSubcommand::Attach(AttachShellSubcommand {
+                url,
+                output,
+                no_stdout,
+                no_stderr,
+                no_syslog,
+            }) => self
+                .attach(&url, output, no_stdout, no_stderr, no_syslog)
+                .await
+                .context("failed to attach fuzzer"),
             FuzzShellSubcommand::Status(StatusShellSubcommand {}) => {
                 self.writer.println("No fuzzer attached.");
                 Ok(NextAction::Prompt)
@@ -382,7 +389,14 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
     // Subroutines used by the execution routines above.
 
     // Connects to a fuzzer given by the `url`.
-    async fn attach(&self, url: &str, output: Option<String>) -> Result<NextAction> {
+    async fn attach(
+        &self,
+        url: &str,
+        output: Option<String>,
+        no_stdout: bool,
+        no_stderr: bool,
+        no_syslog: bool,
+    ) -> Result<NextAction> {
         let url = Url::parse(url).context("invalid fuzzer URL")?;
         let output = match (output, ffx_config::get(DEFAULT_FUZZING_OUTPUT_VARIABLE).await) {
             (Some(output), _) | (None, Ok(output)) => output,
@@ -408,12 +422,27 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
 
         // Pre-emptively pause, and then resume if the fuzzer is currently running.
         self.writer.pause();
-
         self.writer.println(format!("Attaching to '{}'...", url));
         let manager = Manager::with_remote_control(&self.rc, &self.writer)
             .await
             .context("failed to connect to manager")?;
-        let fuzzer = manager.connect(url, output).await.context("failed to connect to fuzzer")?;
+        let mut fuzzer =
+            manager.connect(&url, output).await.context("failed to connect to fuzzer")?;
+        if !no_stdout {
+            let output = fuzz::TestOutput::Stdout;
+            let rx = manager.get_output(&url, output).await.context("failed to get stdout")?;
+            fuzzer.set_output(rx, output).context("failed to set stdout")?;
+        }
+        if !no_stderr {
+            let output = fuzz::TestOutput::Stderr;
+            let rx = manager.get_output(&url, output).await.context("failed to get stderr")?;
+            fuzzer.set_output(rx, output).context("failed to set stderr")?;
+        }
+        if !no_syslog {
+            let output = fuzz::TestOutput::Syslog;
+            let rx = manager.get_output(&url, output).await.context("failed to get syslog")?;
+            fuzzer.set_output(rx, output).context("failed to set syslog")?;
+        }
         let status = fuzzer.status().await.context("failed to get status from fuzzer")?;
         self.put_fuzzer(fuzzer);
         match status.running {

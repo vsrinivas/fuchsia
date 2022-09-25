@@ -36,13 +36,19 @@ async fn connect(
 ) -> (fuzz::ControllerProxy, fasync::Task<String>) {
     let (controller, server_end) =
         create_proxy::<fuzz::ControllerMarker>().expect("failed to create proxy");
-    let response =
+    let status =
         fuzz_manager.connect(FUZZER_URL, server_end).await.expect(&manager_name("Connect"));
-    let (_, _, log) = response.map_err(|e| zx::Status::from_raw(e)).expect("failed to get syslog");
+    assert_eq!(status, zx::Status::OK.into_raw());
 
     // Forward syslog. This isn't strictly necessary for testing, but is very useful when debugging.
+    let (rx, tx) = zx::Socket::create(zx::SocketOpts::empty()).expect("failed to create sockets");
+    let status = fuzz_manager
+        .get_output(FUZZER_URL, fuzz::TestOutput::Syslog, tx)
+        .await
+        .expect(&manager_name("GetOutput"));
+    assert_eq!(status, zx::Status::OK.into_raw());
     let log_task = fasync::Task::spawn(async move {
-        let mut socket = fasync::Socket::from_socket(log).unwrap();
+        let mut socket = fasync::Socket::from_socket(rx).unwrap();
         let mut buf: [u8; BUF_SIZE as usize] = [0; BUF_SIZE as usize];
         let mut logs = Vec::new();
         loop {

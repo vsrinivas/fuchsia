@@ -453,7 +453,11 @@ mod tests {
 
         // 'attach' takes a flag as an argument.
         let result = helper.complete("attach -", 0)?;
-        verify_pairs(result.1, vec!["--output"], Replacements::except("-"));
+        verify_pairs(
+            result.1,
+            vec!["--output", "--no-stdout", "--no-stderr", "--no-syslog"],
+            Replacements::except("-"),
+        );
 
         Ok(())
     }

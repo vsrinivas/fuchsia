@@ -22,8 +22,6 @@ protocol Manager {
     ///
     /// See |fuchsia.test.manager.LaunchError| for details on ways test_manager can fail.
     ///
-    /// Returns sockets that forward the fuzzer's standard output, error, and system log streams.
-    ///
     /// Returns ZX_ERR_NO_RESOURCES if test_manager reports needed resources are unavailable.
     /// Returns ZX_ERR_NOT_FOUND if the fuzzer URL was not recognized by test_manager.
     /// Returns ZX_ERR_INVALID_ARGS if test_manager reports invalid arguments.
@@ -34,11 +32,26 @@ protocol Manager {
     Connect(resource struct {
         fuzzer_url fuchsia.url.Url;
         controller server_end:Controller;
-    }) -> (resource struct {
-        out_socket zx.handle:SOCKET;
-        err_socket zx.handle:SOCKET;
-        log_socket zx.handle:SOCKET;
-    }) error zx.status;
+    }) -> (struct {
+        result zx.status;
+    });
+
+    /// Forwards the fuzzer's output of the given type to the provided socket.
+    ///
+    /// If this method is called multiple times for the same output type, the socket from the
+    /// subsequent call replaces the socket from the earlier call, which is closed.
+    ///
+    /// Returns ZX_ERR_INVALID_ARGS if the URL cannot be parsed.
+    /// Returns ZX_ERR_NOT_FOUND if the fuzzer URL was not recognized by test_manager.
+    /// Returns ZX_ERR_BAD_STATE if the fuzzer is not connected.
+    GetOutput(resource struct {
+        fuzzer_url fuchsia.url.Url;
+        output TestOutput;
+        socket zx.handle:SOCKET;
+    }) -> (struct {
+        result zx.status;
+    });
+
 
     /// Stops the associated fuzzer immediately, ending any workflows in progress.
     ///
@@ -49,6 +62,22 @@ protocol Manager {
     }) -> (struct {
         result zx.status;
     });
+};
+
+/// Represents types of fuzzer output.
+///
+/// These correspond to the subset of the `fuchsia.test_manager.Artifact`s that fuzz-manager can
+/// forward. The name "artifact" is avoided as it has a distinct connotation for fuzzers; namely,
+/// `fuchsia.fuzzer.Artifact`.
+type TestOutput = flexible enum {
+    /// Standard output from fuzzer.
+    STDOUT = 1;
+
+    /// Standard error from fuzzer.
+    STDERR = 2;
+
+    /// System logs from fuzzer.
+    SYSLOG = 3;
 };
 
 /// Command line flag requesting fuzzing to be performed.

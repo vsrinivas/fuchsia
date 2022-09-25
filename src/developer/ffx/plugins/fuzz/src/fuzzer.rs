@@ -38,20 +38,17 @@ impl<O: OutputSink> Fuzzer<O> {
     /// `output_dir`. Any diagnostic output sent from the fuzzer via `stdout`, `stderr` or `syslog`
     /// will be written using the `writer`.
     pub fn try_new<P: AsRef<Path>>(
-        url: Url,
+        url: &Url,
         proxy: fuzz::ControllerProxy,
-        stdout: fidl::Socket,
-        stderr: fidl::Socket,
-        syslog: fidl::Socket,
         output_dir: P,
         writer: &Writer<O>,
     ) -> Result<Self> {
         let output_dir = PathBuf::from(output_dir.as_ref());
         let logs_dir =
             create_dir_at(&output_dir, "logs").context("failed to create 'logs' directory")?;
-        let forwarder = Forwarder::try_new(stdout, stderr, syslog, logs_dir, writer)
-            .context("failed to create log forwarder")?;
-        Ok(Self { proxy, url, output_dir, forwarder, writer: writer.clone() })
+        let forwarder =
+            Forwarder::try_new(logs_dir, writer).context("failed to create log forwarder")?;
+        Ok(Self { proxy, url: url.clone(), output_dir, forwarder, writer: writer.clone() })
     }
 
     /// Returns the URL of the attached fuzzer.
@@ -67,6 +64,16 @@ impl<O: OutputSink> Fuzzer<O> {
     /// Returns the path where this fuzzer stores the corpus of the given |corpus_type|.
     pub fn corpus_dir(&self, corpus_type: fuzz::Corpus) -> PathBuf {
         create_corpus_dir(&self.output_dir, corpus_type).unwrap()
+    }
+
+    /// Registers the provided standard output socket with the forwarder.
+    pub fn set_output(&mut self, socket: fidl::Socket, output: fuzz::TestOutput) -> Result<()> {
+        match output {
+            fuzz::TestOutput::Stdout => self.forwarder.set_stdout(socket),
+            fuzz::TestOutput::Stderr => self.forwarder.set_stderr(socket),
+            fuzz::TestOutput::Syslog => self.forwarder.set_syslog(socket),
+            _ => unimplemented!(),
+        }
     }
 
     /// Writes a fuzzer's configured value(s) for one of more option to the internal `Writer`.
@@ -607,9 +614,8 @@ pub mod test_fixtures {
         let (proxy, stream) = create_proxy_and_stream::<fuzz::ControllerMarker>()
             .context("failed to create FIDL connection")?;
         let fake = FakeFuzzer::new();
-        let (stdout, stderr, syslog) = fake.connect().context("failed to connect test fake")?;
         let writer = test.writer();
-        let fuzzer = Fuzzer::try_new(url, proxy, stdout, stderr, syslog, test.root_dir(), &writer)?;
+        let fuzzer = Fuzzer::try_new(&url, proxy, test.root_dir(), &writer)?;
         let task = create_task(serve_controller(stream, fake.clone()), writer.clone());
         Ok((fake, fuzzer, task))
     }
@@ -664,21 +670,25 @@ pub mod test_fixtures {
             *url_mut = Some(url.as_ref().to_string());
         }
 
-        /// Simulates a call to `fuchsia.fuzzer.Manager/Connect` without a `fuzz-manager`.
-        pub fn connect(&self) -> Result<(fidl::Socket, fidl::Socket, fidl::Socket)> {
-            let (stdout_rx, stdout_tx) = fidl::Socket::create(fidl::SocketOpts::STREAM)?;
-            let (stderr_rx, stderr_tx) = fidl::Socket::create(fidl::SocketOpts::STREAM)?;
-            let (syslog_rx, syslog_tx) = fidl::Socket::create(fidl::SocketOpts::STREAM)?;
-            let stdout = fasync::Socket::from_socket(stdout_tx)?;
-            let stderr = fasync::Socket::from_socket(stderr_tx)?;
-            let syslog = fasync::Socket::from_socket(syslog_tx)?;
-            let mut stdout_mut = self.stdout.borrow_mut();
-            *stdout_mut = Some(stdout);
-            let mut stderr_mut = self.stderr.borrow_mut();
-            *stderr_mut = Some(stderr);
-            let mut syslog_mut = self.syslog.borrow_mut();
-            *syslog_mut = Some(syslog);
-            Ok((stdout_rx, stderr_rx, syslog_rx))
+        /// Simulates a call to `fuchsia.fuzzer.Manager/GetOutput` without a `fuzz-manager`.
+        pub fn set_output(&self, output: fuzz::TestOutput, socket: fidl::Socket) -> i32 {
+            let socket = fasync::Socket::from_socket(socket).expect("failed to create sockets");
+            match output {
+                fuzz::TestOutput::Stdout => {
+                    let mut stdout_mut = self.stdout.borrow_mut();
+                    *stdout_mut = Some(socket);
+                }
+                fuzz::TestOutput::Stderr => {
+                    let mut stderr_mut = self.stderr.borrow_mut();
+                    *stderr_mut = Some(socket);
+                }
+                fuzz::TestOutput::Syslog => {
+                    let mut syslog_mut = self.syslog.borrow_mut();
+                    *syslog_mut = Some(socket);
+                }
+                _ => todo!("not supported"),
+            }
+            zx::Status::OK.into_raw()
         }
 
         /// Returns the type of corpus received via FIDL requests.
@@ -755,18 +765,27 @@ pub mod test_fixtures {
         /// Simulates sending a `msg` to a fuzzer's standard output, standard error, and system log.
         async fn send_output(&self, msg: &str) -> Result<()> {
             let msg_str = format!("{}\n", msg);
-            let mut stdout = self.stdout.borrow_mut().take().unwrap();
-            let mut stderr = self.stderr.borrow_mut().take().unwrap();
-            let mut syslog = self.syslog.borrow_mut().take().unwrap();
-            stdout.write_all(msg_str.as_bytes()).await?;
-            stderr.write_all(msg_str.as_bytes()).await?;
-            send_log_entry(&mut syslog, msg).await?;
-            let mut stdout_mut = self.stdout.borrow_mut();
-            *stdout_mut = Some(stdout);
-            let mut stderr_mut = self.stderr.borrow_mut();
-            *stderr_mut = Some(stderr);
-            let mut syslog_mut = self.syslog.borrow_mut();
-            *syslog_mut = Some(syslog);
+            {
+                let mut stdout_mut = self.stdout.borrow_mut();
+                if let Some(mut stdout) = stdout_mut.take() {
+                    stdout.write_all(msg_str.as_bytes()).await?;
+                    *stdout_mut = Some(stdout);
+                }
+            }
+            {
+                let mut stderr_mut = self.stderr.borrow_mut();
+                if let Some(mut stderr) = stderr_mut.take() {
+                    stderr.write_all(msg_str.as_bytes()).await?;
+                    *stderr_mut = Some(stderr);
+                }
+            }
+            {
+                let mut syslog_mut = self.syslog.borrow_mut();
+                if let Some(mut syslog) = syslog_mut.take() {
+                    send_log_entry(&mut syslog, msg).await?;
+                    *syslog_mut = Some(syslog);
+                }
+            }
             Ok(())
         }
     }

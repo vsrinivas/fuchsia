@@ -4,104 +4,92 @@
 
 use {
     crate::manager::DEFAULT_TIMEOUT_IN_SECONDS,
-    anyhow::{Context as _, Error, Result},
+    anyhow::{Context as _, Result},
     async_trait::async_trait,
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_diagnostics as diagnostics, fidl_fuchsia_test_manager as test_manager,
     fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::channel::{mpsc, oneshot},
+    futures::channel::mpsc,
     futures::{join, pin_mut, select, AsyncWriteExt, FutureExt, SinkExt, StreamExt},
     std::cell::RefCell,
     std::collections::LinkedList,
     std::rc::Rc,
+    test_manager::Artifact,
     tracing::{info, warn},
 };
 
-#[derive(Debug)]
-pub struct SocketTrio {
-    pub stdout: zx::Socket,
-    pub stderr: zx::Socket,
-    pub syslog: zx::Socket,
+/// Dispatches `test_manager` artifacts to the `ArtifactBridge`s used to forward data to `ffx fuzz`.
+///
+/// This object receives the artifacts extracted and forwarded from the `RunEventHandler` and
+/// `SuiteEventHandler`.
+pub struct ArtifactHandler {
+    artifact_receiver: mpsc::UnboundedReceiver<Artifact>,
+    stdout: Option<mpsc::UnboundedSender<zx::Socket>>,
+    stderr: Option<mpsc::UnboundedSender<zx::Socket>>,
+    syslog: Option<mpsc::UnboundedSender<ClientEnd<diagnostics::BatchIteratorMarker>>>,
 }
 
-impl SocketTrio {
-    pub fn create() -> Result<(Self, Self)> {
-        let (out_rx, out_tx) =
-            zx::Socket::create(zx::SocketOpts::empty()).context("failed to create socket")?;
-        let (err_rx, err_tx) =
-            zx::Socket::create(zx::SocketOpts::empty()).context("failed to create socket")?;
-        let (log_rx, log_tx) =
-            zx::Socket::create(zx::SocketOpts::empty()).context("failed to create socket")?;
-        Ok((
-            Self { stdout: out_rx, stderr: err_rx, syslog: log_rx },
-            Self { stdout: out_tx, stderr: err_tx, syslog: log_tx },
-        ))
+impl ArtifactHandler {
+    /// Wraps the artifact channel in a handler.
+    pub fn new(artifact_receiver: mpsc::UnboundedReceiver<Artifact>) -> Self {
+        Self { artifact_receiver, stdout: None, stderr: None, syslog: None }
     }
-}
 
-pub async fn forward_all(
-    mut artifacts: mpsc::UnboundedReceiver<test_manager::Artifact>,
-    mut sockets: mpsc::UnboundedReceiver<SocketTrio>,
-    stop: oneshot::Receiver<()>,
-) -> Result<()> {
-    let (stdout_rc, mut stdout_rx, mut stdout_tx) = SocketBridge::create();
-    let (stderr_rc, mut stderr_rx, mut stderr_tx) = SocketBridge::create();
-    let (syslog_rc, mut syslog_rx, mut syslog_tx) = LogBridge::create();
-    let artifacts_fut = || async move {
-        while let Some(artifact) = artifacts.next().await {
+    /// Creates an artifact bridge for forwarding stdout from `test_manager` to `ffx fuzz`.
+    pub fn create_stdout_bridge(
+        &mut self,
+        socket_receiver: mpsc::UnboundedReceiver<zx::Socket>,
+    ) -> SocketBridge {
+        let (artifact_sender, artifact_receiver) = mpsc::unbounded::<zx::Socket>();
+        self.stdout = Some(artifact_sender);
+        SocketBridge::new(artifact_receiver, socket_receiver)
+    }
+
+    /// Creates an artifact bridge for forwarding stderr from `test_manager` to `ffx fuzz`.
+    pub fn create_stderr_bridge(
+        &mut self,
+        socket_receiver: mpsc::UnboundedReceiver<zx::Socket>,
+    ) -> SocketBridge {
+        let (artifact_sender, artifact_receiver) = mpsc::unbounded::<zx::Socket>();
+        self.stderr = Some(artifact_sender);
+        SocketBridge::new(artifact_receiver, socket_receiver)
+    }
+
+    /// Creates an artifact bridge for forwarding syslog from `test_manager` to `ffx fuzz`.
+    pub fn create_syslog_bridge(
+        &mut self,
+        socket_receiver: mpsc::UnboundedReceiver<zx::Socket>,
+    ) -> LogBridge {
+        let (artifact_sender, artifact_receiver) =
+            mpsc::unbounded::<ClientEnd<diagnostics::BatchIteratorMarker>>();
+        self.syslog = Some(artifact_sender);
+        LogBridge::new(artifact_receiver, socket_receiver)
+    }
+
+    /// Handles `Artifact`s and dispatches them to the appropriate bridge.
+    pub async fn run(&mut self) -> Result<()> {
+        while let Some(artifact) = self.artifact_receiver.next().await {
             match artifact {
                 test_manager::Artifact::Stdout(socket) => {
-                    stdout_rx.send(socket).await.context("failed to send stdout artifact")
+                    if let Some(mut stdout) = self.stdout.as_ref() {
+                        stdout.send(socket).await.context("failed to send stdout artifact")?;
+                    }
                 }
                 test_manager::Artifact::Stderr(socket) => {
-                    stderr_rx.send(socket).await.context("failed to send stderr artifact")
+                    if let Some(mut stderr) = self.stderr.as_ref() {
+                        stderr.send(socket).await.context("failed to send stderr artifact")?;
+                    }
                 }
                 test_manager::Artifact::Log(test_manager::Syslog::Batch(client_end)) => {
-                    syslog_rx.send(client_end).await.context("failed to send syslog artifact")
+                    if let Some(mut syslog) = self.syslog.as_ref() {
+                        syslog.send(client_end).await.context("failed to send syslog artifact")?;
+                    }
                 }
-                artifact => {
-                    info!("Ignoring unsupported artifact: {:?}", artifact);
-                    Ok(())
-                }
-            }?;
-        }
-        Ok::<(), Error>(())
-    };
-    let sockets_fut = || async move {
-        let stop_fut = stop.fuse();
-        pin_mut!(stop_fut);
-        loop {
-            let sockets_fut = sockets.next().fuse();
-            pin_mut!(sockets_fut);
-            let trio = select! {
-                _ = stop_fut => None,
-                trio = sockets_fut => trio,
+                artifact => info!("Ignoring unsupported artifact: {:?}", artifact),
             };
-            let trio = match trio {
-                Some(trio) => trio,
-                None => break,
-            };
-            let results = join!(
-                stdout_tx.send(trio.stdout),
-                stderr_tx.send(trio.stderr),
-                syslog_tx.send(trio.syslog)
-            );
-            results.0.context("failed to send stdout socket")?;
-            results.1.context("failed to send stderr socket")?;
-            results.2.context("failed to send syslog socket")?;
         }
-        Ok::<(), Error>(())
-    };
-    let results = join!(
-        artifacts_fut(),
-        sockets_fut(),
-        stdout_rc.forward(),
-        stderr_rc.forward(),
-        syslog_rc.forward()
-    );
-    results.0.context("failed to forward artifacts")?;
-    results.1.context("failed to forward sockets")?;
-    Ok(())
+        Ok(())
+    }
 }
 
 struct Message {
@@ -118,7 +106,13 @@ impl Message {
 }
 
 #[async_trait(?Send)]
-trait ArtifactBridge {
+pub trait ArtifactBridge {
+    /// Forwards data from `test_manager` artifacts to `ffx fuzz` sockets.
+    async fn forward(&self);
+}
+
+#[async_trait(?Send)]
+trait ArtifactBridgeInternal: ArtifactBridge {
     // Waits to get an |artifact| for this object.
     async fn get_artifact(&self);
 
@@ -126,8 +120,9 @@ trait ArtifactBridge {
     // read fails.
     async fn read_from_artifact(&self) -> Vec<u8>;
 
-    // Returns a future that reads from a received artfact and writes to received sockets. This
-    // future only completes on error or when the receiver channels are closed.
+    /// Returns a future that reads from a received artfact and writes to received sockets.
+    ///
+    /// This future only completes on error or when the receiver channels are closed.
     async fn forward_impl(&self, socket_receiver: mpsc::UnboundedReceiver<zx::Socket>) {
         // Cap the number of outstanding, unexpired message that can be queued.
         let (msg_sender, msg_receiver) = mpsc::channel::<Message>(0x1000);
@@ -135,6 +130,7 @@ trait ArtifactBridge {
         join!(self.recv(msg_sender), self.send(msg_receiver, socket_receiver));
     }
 
+    /// Reads data from the artifact and encapsulate it as timestamped `Message`s.
     async fn recv(&self, mut msg_sender: mpsc::Sender<Message>) {
         loop {
             let data = self.read_from_artifact().await;
@@ -153,6 +149,7 @@ trait ArtifactBridge {
         }
     }
 
+    /// Reads `Message`s and sends them to sockets as they become available.
     async fn send(
         &self,
         mut msg_receiver: mpsc::Receiver<Message>,
@@ -216,8 +213,9 @@ trait ArtifactBridge {
     }
 }
 
+/// Forwards stdio from a persistent socket to a replaceable one.
 #[derive(Debug)]
-struct SocketBridge {
+pub struct SocketBridge {
     artifact: RefCell<Option<fasync::Socket>>,
     artifact_receiver: RefCell<mpsc::UnboundedReceiver<zx::Socket>>,
     socket_receiver: RefCell<Option<mpsc::UnboundedReceiver<zx::Socket>>>,
@@ -234,13 +232,10 @@ impl SocketBridge {
             socket_receiver: RefCell::new(Some(socket_receiver)),
         }
     }
+}
 
-    fn create() -> (Self, mpsc::UnboundedSender<zx::Socket>, mpsc::UnboundedSender<zx::Socket>) {
-        let (artifact_sender, artifact_receiver) = mpsc::unbounded::<zx::Socket>();
-        let (socket_sender, socket_receiver) = mpsc::unbounded::<zx::Socket>();
-        (SocketBridge::new(artifact_receiver, socket_receiver), artifact_sender, socket_sender)
-    }
-
+#[async_trait(?Send)]
+impl ArtifactBridge for SocketBridge {
     async fn forward(&self) {
         let socket_receiver = self.socket_receiver.borrow_mut().take().unwrap();
         self.forward_impl(socket_receiver).await
@@ -248,7 +243,7 @@ impl SocketBridge {
 }
 
 #[async_trait(?Send)]
-impl ArtifactBridge for SocketBridge {
+impl ArtifactBridgeInternal for SocketBridge {
     async fn get_artifact(&self) {
         let mut artifact_receiver = self.artifact_receiver.borrow_mut();
         if let Some(socket) = artifact_receiver.next().await {
@@ -272,8 +267,9 @@ impl ArtifactBridge for SocketBridge {
     }
 }
 
+/// Forwards JSON-encoded syslogs from a `BatchIterator` client to a replaceable socket.
 #[derive(Debug)]
-struct LogBridge {
+pub struct LogBridge {
     artifact: RefCell<Option<diagnostics::BatchIteratorProxy>>,
     queue: RefCell<LinkedList<diagnostics::FormattedContent>>,
     artifact_receiver:
@@ -293,18 +289,10 @@ impl LogBridge {
             socket_receiver: RefCell::new(Some(socket_receiver)),
         }
     }
+}
 
-    fn create() -> (
-        Self,
-        mpsc::UnboundedSender<ClientEnd<diagnostics::BatchIteratorMarker>>,
-        mpsc::UnboundedSender<zx::Socket>,
-    ) {
-        let (artifact_sender, artifact_receiver) =
-            mpsc::unbounded::<ClientEnd<diagnostics::BatchIteratorMarker>>();
-        let (socket_sender, socket_receiver) = mpsc::unbounded::<zx::Socket>();
-        (LogBridge::new(artifact_receiver, socket_receiver), artifact_sender, socket_sender)
-    }
-
+#[async_trait(?Send)]
+impl ArtifactBridge for LogBridge {
     async fn forward(&self) {
         let socket_receiver = self.socket_receiver.borrow_mut().take().unwrap();
         self.forward_impl(socket_receiver).await
@@ -312,7 +300,7 @@ impl LogBridge {
 }
 
 #[async_trait(?Send)]
-impl ArtifactBridge for LogBridge {
+impl ArtifactBridgeInternal for LogBridge {
     async fn get_artifact(&self) {
         let mut artifact_receiver = self.artifact_receiver.borrow_mut();
         if let Some(client_end) = artifact_receiver.next().await {
