@@ -415,20 +415,6 @@ case $ARCH in
 
         if (( $DO_KVM )); then
           ARGS+=" -enable-kvm -cpu host,migratable=no,+invtsc"
-          # fxbug.dev/33174: Work around KVM bug on AMD Zen machines
-          # where SMAP and CPL=3 MMIO accesses trigger a loop
-          # in the Linux kernel.
-          #
-          # fxbug.dev/63110: Work around KVM bug on AMD Zen machines
-          # where XSAVES is enumerated but the IA32_XSS MSR is not
-          # available. The bug fix is in 864e2ab2b46db1ac266c46a7c
-          # in upstream Linux but has not percolated to popular
-          # distributions yet.
-          if [[ "$(uname -s)" == "Linux" ]]; then
-            if [[ "$(lsmod | grep kvm_amd)" != "" ]]; then
-              ARGS+=",-smap,-xsaves"
-            fi
-          fi
         else
           ARGS+=" -cpu Skylake-Client,-check"
         fi
