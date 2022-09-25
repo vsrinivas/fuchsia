@@ -25,12 +25,12 @@ type Generator struct {
 
 func NewGenerator(formatter fidlgen.Formatter) *Generator {
 	gen := fidlgen.NewGenerator("GoTemplates", templates, formatter, template.FuncMap{
-		"PackageBasename":  PackageBasename,
-		"Name":             zither.UpperCamelCase,
-		"ConstMemberName":  ConstMemberName,
-		"ConstType":        ConstType,
-		"ConstValue":       ConstValue,
-		"StructMemberType": StructMemberType,
+		"PackageBasename": PackageBasename,
+		"Name":            zither.UpperCamelCase,
+		"ConstMemberName": ConstMemberName,
+		"ConstType":       ConstType,
+		"ConstValue":      ConstValue,
+		"DescribeType":    DescribeType,
 	})
 	return &Generator{*gen}
 }
@@ -114,11 +114,7 @@ func ConstValue(c zither.Const) string {
 	}
 }
 
-func StructMemberType(member zither.StructMember) string {
-	return structMemberType(member.Type)
-}
-
-func structMemberType(desc zither.TypeDescriptor) string {
+func DescribeType(desc zither.TypeDescriptor) string {
 	switch desc.Kind {
 	case zither.TypeKindBool, zither.TypeKindInteger:
 		return desc.Type
@@ -126,7 +122,7 @@ func structMemberType(desc zither.TypeDescriptor) string {
 		layout, _ := fidlgen.MustReadName(desc.Type).SplitMember()
 		return fidlgen.ToUpperCamelCase(layout.DeclarationName())
 	case zither.TypeKindArray:
-		return fmt.Sprintf("[%d]", *desc.ElementCount) + structMemberType(*desc.ElementType)
+		return fmt.Sprintf("[%d]", *desc.ElementCount) + DescribeType(*desc.ElementType)
 	default:
 		panic(fmt.Sprintf("unsupported type kind: %v", desc.Kind))
 	}

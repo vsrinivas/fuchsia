@@ -11,7 +11,7 @@ typedef struct {
 {{- end }}
 {{- end }}
 {{- $name := LowerCaseWithUnderscores . }}
-{{- $info := StructMemberTypeInfo . }}
+{{- $info := DescribeType .Type }}
     {{ $info.Type }} {{ Append $name $info.ArraySuffix }};
 {{- end }}
 } {{ TypeName . }};

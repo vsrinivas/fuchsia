@@ -15,6 +15,7 @@ go_library("c") {
     "templates/enum.tmpl",
     "templates/file.tmpl",
     "templates/struct.tmpl",
+    "templates/type_alias.tmpl",
   ]
   deps = [
     "..:common",

@@ -21,6 +21,7 @@ group("tests") {
     ":enums",
     ":multifile",
     ":structs",
+    ":type_aliases",
   ]
 }
 
@@ -97,7 +98,10 @@ if (is_host) {
 #  * sources
 #    - Required: FIDL files comprising a single library, from which bindings
 #      will be generated, relative to the case FIDL directory. The name of this
-#      library is assumed to be "zither.${case_name}".
+#      library is assumed to be `"zither." + string_replace(case_name, "_", ".")`.
+#      We derive the FIDL library name with character replacement since
+#      underscores are not a permitted as library name characters and a period
+#      is the defined separator.
 #    - Type: list of relative paths
 #
 #  * cases
@@ -120,7 +124,7 @@ template("zither_golden_test") {
   assert(defined(invoker.cases) && invoker.cases != [], "no test cases defined")
 
   main_target = target_name
-  library_target = "zither.${target_name}"
+  library_target = "zither." + string_replace(target_name, "_", ".")
 
   case_name = target_name
   case_data_dir = "testdata/${case_name}"
@@ -400,6 +404,26 @@ zither_golden_test("multifile") {
         "a.go",
         "b.go",
         "c.go",
+        "pkg_name.txt",
+      ]
+    },
+  ]
+}
+
+# FIDL: testdata/type_aliases/
+# Goldens: testdata/type_aliases/goldens/${backend}/
+zither_golden_test("type_aliases") {
+  sources = [ "type_aliases.test.fidl" ]
+
+  cases = [
+    {
+      backend = "c"
+      files = [ "type_aliases.h" ]
+    },
+    {
+      backend = "go"
+      files = [
+        "type_aliases.go",
         "pkg_name.txt",
       ]
     },

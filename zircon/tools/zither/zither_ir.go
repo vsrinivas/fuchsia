@@ -58,6 +58,7 @@ var _ = []Element{
 	(*BitsMember)(nil),
 	(*Struct)(nil),
 	(*StructMember)(nil),
+	(*TypeAlias)(nil),
 }
 
 // Decl represents a summarized FIDL declaration.
@@ -71,6 +72,7 @@ var _ = []Decl{
 	(*Enum)(nil),
 	(*Bits)(nil),
 	(*Struct)(nil),
+	(*TypeAlias)(nil),
 }
 
 type decl struct {
@@ -177,6 +179,15 @@ func (decl DeclWrapper) AsStruct() Struct {
 	return *decl.value.(*Struct)
 }
 
+func (decl DeclWrapper) IsTypeAlias() bool {
+	_, ok := decl.value.(*TypeAlias)
+	return ok
+}
+
+func (decl DeclWrapper) AsTypeAlias() TypeAlias {
+	return *decl.value.(*TypeAlias)
+}
+
 // FileSummary is a summarized representation of a FIDL source file.
 type FileSummary struct {
 	// Library is the associated FIDL library.
@@ -251,6 +262,7 @@ func Summarize(ir fidlgen.Root, order DeclOrder) ([]FileSummary, error) {
 		name := filepath.Base(location.Filename)
 		name = strings.TrimSuffix(name, ".test.fidl")
 		name = strings.TrimSuffix(name, ".fidl")
+		name = strings.ReplaceAll(name, ".", "_")
 
 		file, ok := filesByName[name]
 		if !ok {
@@ -294,6 +306,8 @@ func Summarize(ir fidlgen.Root, order DeclOrder) ([]FileSummary, error) {
 			}
 		case *fidlgen.Struct:
 			decl, err = newStruct(*fidlDecl, processedDecls, typeKinds)
+		case *fidlgen.TypeAlias:
+			decl, err = newTypeAlias(*fidlDecl, processedDecls, typeKinds)
 		default:
 			return nil, fmt.Errorf("unsupported declaration type: %s", fidlgen.GetDeclType(fidlDecl))
 		}
@@ -575,14 +589,27 @@ type TypeDescriptor struct {
 	ElementCount *int
 }
 
-func deriveType(typ fidlgen.Type, decls declMap, typeKinds map[TypeKind]struct{}) (*TypeDescriptor, error) {
+// Represents an recursively-defined type, effectively abstracting
+// fidlgen.Type and fidlgen.PartialTypeConstructor.
+type recursiveType interface {
+	GetKind() fidlgen.TypeKind
+	GetPrimitiveSubtype() fidlgen.PrimitiveSubtype
+	GetIdentifierType() fidlgen.EncodedCompoundIdentifier
+	GetElementType() recursiveType
+	GetElementCount() *int
+}
+
+// Resolves a recursively-defined type into a type descriptor. This process
+// requires a map of previously processed declarations for consulting, as well
+// as map of type kinds to record those seen during the resolution.
+func resolveType(typ recursiveType, decls declMap, typeKinds map[TypeKind]struct{}) (*TypeDescriptor, error) {
 	desc := TypeDescriptor{}
-	switch typ.Kind {
+	switch typ.GetKind() {
 	case fidlgen.PrimitiveType:
-		if typ.PrimitiveSubtype.IsFloat() {
+		if typ.GetPrimitiveSubtype().IsFloat() {
 			return nil, fmt.Errorf("floats are unsupported")
 		}
-		desc.Type = string(typ.PrimitiveSubtype)
+		desc.Type = string(typ.GetPrimitiveSubtype())
 		if desc.Type == string(fidlgen.Bool) {
 			desc.Kind = TypeKindBool
 		} else {
@@ -591,7 +618,7 @@ func deriveType(typ fidlgen.Type, decls declMap, typeKinds map[TypeKind]struct{}
 	case fidlgen.StringType:
 		return nil, fmt.Errorf("strings are only supported as constants")
 	case fidlgen.IdentifierType:
-		desc.Type = string(typ.Identifier)
+		desc.Type = string(typ.GetIdentifierType())
 		desc.Decl = decls[desc.Type]
 		switch desc.Decl.(type) {
 		case *Enum:
@@ -606,19 +633,36 @@ func deriveType(typ fidlgen.Type, decls declMap, typeKinds map[TypeKind]struct{}
 
 	case fidlgen.ArrayType:
 		desc.Kind = TypeKindArray
-		desc.ElementCount = typ.ElementCount
-		nested, err := deriveType(*typ.ElementType, decls, typeKinds)
+		desc.ElementCount = typ.GetElementCount()
+		nested, err := resolveType(typ.GetElementType(), decls, typeKinds)
 		if err != nil {
 			return nil, err
 		}
 		desc.ElementType = nested
 	default:
-		return nil, fmt.Errorf("%s: unsupported type kind: %s", desc.Type, typ.Kind)
+		return nil, fmt.Errorf("%s: unsupported type kind: %s", desc.Type, typ.GetKind())
 	}
 
 	typeKinds[desc.Kind] = struct{}{}
 	return &desc, nil
 }
+
+// A thin wrapper implementing `recursiveType`.
+type fidlgenType fidlgen.Type
+
+func (typ fidlgenType) GetKind() fidlgen.TypeKind { return typ.Kind }
+
+func (typ fidlgenType) GetPrimitiveSubtype() fidlgen.PrimitiveSubtype {
+	return typ.PrimitiveSubtype
+}
+
+func (typ fidlgenType) GetIdentifierType() fidlgen.EncodedCompoundIdentifier {
+	return typ.Identifier
+}
+
+func (typ fidlgenType) GetElementType() recursiveType { return fidlgenType(*typ.ElementType) }
+
+func (typ fidlgenType) GetElementCount() *int { return typ.ElementCount }
 
 // Struct represents a FIDL struct declaration.
 type Struct struct {
@@ -652,7 +696,7 @@ func newStruct(strct fidlgen.Struct, decls declMap, typeKinds map[TypeKind]struc
 		Size: strct.TypeShapeV2.InlineSize,
 	}
 	for _, member := range strct.Members {
-		typ, err := deriveType(member.Type, decls, typeKinds)
+		typ, err := resolveType(fidlgenType(member.Type), decls, typeKinds)
 		if err != nil {
 			return nil, fmt.Errorf("%s.%s: failed to derive type: %w", s.Name, member.Name, err)
 		}
@@ -664,4 +708,83 @@ func newStruct(strct fidlgen.Struct, decls declMap, typeKinds map[TypeKind]struc
 	}
 	return s, nil
 
+}
+
+// TypeAlias represents a FIDL type alias declaratin.
+type TypeAlias struct {
+	decl
+
+	// Value is the type under alias (i.e., the right-hand side of the
+	// declaration).
+	Value TypeDescriptor
+}
+
+func newTypeAlias(alias fidlgen.TypeAlias, decls declMap, typeKinds map[TypeKind]struct{}) (*TypeAlias, error) {
+	unresolved := fidlgenTypeCtor(alias.PartialTypeConstructor)
+	typ, err := resolveType(unresolved, decls, typeKinds)
+	if err != nil {
+		return nil, err
+	}
+	return &TypeAlias{
+		decl:  newDecl(alias),
+		Value: *typ,
+	}, nil
+}
+
+// An implementation of `recursiveType`.
+type fidlgenTypeCtor fidlgen.PartialTypeConstructor
+
+func (ctor fidlgenTypeCtor) GetKind() fidlgen.TypeKind {
+	if _, err := fidlgen.ReadName(string(ctor.Name)); err == nil {
+		return fidlgen.IdentifierType
+	}
+
+	switch string(ctor.Name) {
+	case string(fidlgen.Bool),
+		string(fidlgen.Int8),
+		string(fidlgen.Int16),
+		string(fidlgen.Int32),
+		string(fidlgen.Int64),
+		string(fidlgen.Uint8),
+		string(fidlgen.Uint16),
+		string(fidlgen.Uint32),
+		string(fidlgen.Uint64),
+		string(fidlgen.Float32),
+		string(fidlgen.Float64):
+		return fidlgen.PrimitiveType
+	case "string":
+		return fidlgen.StringType
+	case "array":
+		return fidlgen.ArrayType
+	default:
+		panic(fmt.Sprintf("unsupported type: %s", ctor.Name))
+	}
+}
+
+func (ctor fidlgenTypeCtor) GetPrimitiveSubtype() fidlgen.PrimitiveSubtype {
+	return fidlgen.PrimitiveSubtype(ctor.Name)
+}
+
+func (ctor fidlgenTypeCtor) GetIdentifierType() fidlgen.EncodedCompoundIdentifier {
+	return ctor.Name
+}
+
+func (ctor fidlgenTypeCtor) GetElementType() recursiveType {
+	if len(ctor.Args) == 0 {
+		return nil
+	}
+	// TODO(fxbug.dev/7660): This list appears to always be empty or a
+	// singleton (and its unclear what further arguments would mean).
+	return fidlgenTypeCtor(ctor.Args[0])
+}
+
+func (ctor fidlgenTypeCtor) GetElementCount() *int {
+	if ctor.MaybeSize == nil {
+		return nil
+	}
+	count, err := strconv.Atoi(ctor.MaybeSize.Value)
+	if err != nil {
+		panic(fmt.Sprintf("could not interpret %s as an int", ctor.MaybeSize.Value))
+	}
+	return &count
 }

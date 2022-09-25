@@ -10,7 +10,7 @@ type {{ Name . }} struct {
 //{{ . }}
 {{- end }}
 {{- end }}
-    {{ Name . }} {{ StructMemberType . }}
+    {{ Name . }} {{ DescribeType .Type }}
 {{- end }}
 };
 

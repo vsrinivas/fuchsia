@@ -1,1 +1,1 @@
-zither/zither/type/aliases
+zither/type/aliases

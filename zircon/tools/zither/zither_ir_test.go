@@ -26,6 +26,7 @@ var cmpOpt = cmp.AllowUnexported(
 	BitsMember{},
 	Struct{},
 	StructMember{},
+	TypeAlias{},
 )
 
 func TestGeneratedFileCount(t *testing.T) {
@@ -786,6 +787,158 @@ type StructWithArrayMembers = struct {
 					},
 					Offset: 16,
 				},
+			},
+		},
+	}
+
+	if diff := cmp.Diff(expected, actual, cmpOpt); diff != "" {
+		t.Error(diff)
+	}
+}
+
+func TestCanSummarizeTypeAliases(t *testing.T) {
+	ir := fidlgentest.EndToEndTest{T: t}.Single(`
+library example;
+
+type Enum = enum : uint16 {
+	ZERO = 0;
+};
+
+type Bits = bits : uint16 {
+	ONE = 1;
+};
+
+type Struct = struct {
+	value uint64;
+};
+
+/// This is a type alias.
+alias Uint8Alias = uint8;
+
+alias EnumAlias = Enum;
+
+alias BitsAlias = Bits;
+
+alias StructAlias = Struct;
+
+alias ArrayAlias = array<uint32, 4>;
+
+alias NestedArrayAlias = array<array<Struct, 8>, 4>;
+
+// TODO(fxbug.dev/105758, fxbug.dev/91360): Type aliases are currently broken.
+// Exercise more complicated aliases (e.g., aliases of aliases) when fixed.
+
+`)
+	summaries, err := Summarize(ir, SourceDeclOrder)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var actual []TypeAlias
+	for _, decl := range summaries[0].Decls {
+		if decl.IsTypeAlias() {
+			actual = append(actual, decl.AsTypeAlias())
+		}
+	}
+
+	enum := Enum{
+		decl:    decl{Name: fidlgen.MustReadName("example/Enum")},
+		Subtype: "uint16",
+		Members: []EnumMember{
+			{
+				member: member{Name: "ZERO"},
+				Value:  "0",
+			},
+		},
+	}
+
+	bits := Bits{
+		decl:    decl{Name: fidlgen.MustReadName("example/Bits")},
+		Subtype: "uint16",
+		Members: []BitsMember{
+			{
+				member: member{Name: "ONE"},
+				Index:  0,
+			},
+		},
+	}
+
+	strct := Struct{
+		decl: decl{Name: fidlgen.MustReadName("example/Struct")},
+		Size: 8,
+		Members: []StructMember{
+			{
+				member: member{Name: "value"},
+				Offset: 0,
+				Type: TypeDescriptor{
+					Type: "uint64",
+					Kind: TypeKindInteger,
+				},
+			},
+		},
+	}
+
+	four, eight := 4, 8
+	expected := []TypeAlias{
+		{
+			decl: decl{
+				Name:     fidlgen.MustReadName("example/Uint8Alias"),
+				Comments: []string{" This is a type alias."},
+			},
+			Value: TypeDescriptor{
+				Type: "uint8",
+				Kind: TypeKindInteger,
+			},
+		},
+		{
+			decl: decl{Name: fidlgen.MustReadName("example/EnumAlias")},
+			Value: TypeDescriptor{
+				Type: "example/Enum",
+				Kind: TypeKindEnum,
+				Decl: &enum,
+			},
+		},
+		{
+			decl: decl{Name: fidlgen.MustReadName("example/BitsAlias")},
+			Value: TypeDescriptor{
+				Type: "example/Bits",
+				Kind: TypeKindBits,
+				Decl: &bits,
+			},
+		},
+		{
+			decl: decl{Name: fidlgen.MustReadName("example/StructAlias")},
+			Value: TypeDescriptor{
+				Type: "example/Struct",
+				Kind: TypeKindStruct,
+				Decl: &strct,
+			},
+		},
+		{
+			decl: decl{Name: fidlgen.MustReadName("example/ArrayAlias")},
+			Value: TypeDescriptor{
+				Kind: TypeKindArray,
+				ElementType: &TypeDescriptor{
+					Type: "uint32",
+					Kind: TypeKindInteger,
+				},
+				ElementCount: &four,
+			},
+		},
+		{
+			decl: decl{Name: fidlgen.MustReadName("example/NestedArrayAlias")},
+			Value: TypeDescriptor{
+				Kind: TypeKindArray,
+				ElementType: &TypeDescriptor{
+					Kind: TypeKindArray,
+					ElementType: &TypeDescriptor{
+						Type: "example/Struct",
+						Kind: TypeKindStruct,
+						Decl: &strct,
+					},
+					ElementCount: &eight,
+				},
+				ElementCount: &four,
 			},
 		},
 	}

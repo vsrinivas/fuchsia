@@ -37,7 +37,7 @@ func NewGenerator(formatter fidlgen.Formatter) *Generator {
 		"ConstValue":               ConstValue,
 		"EnumMemberValue":          EnumMemberValue,
 		"BitsMemberValue":          BitsMemberValue,
-		"StructMemberTypeInfo":     StructMemberTypeInfo,
+		"DescribeType":             DescribeType,
 	})
 	return &Generator{*gen}
 }
@@ -192,19 +192,18 @@ func (info TypeInfo) ArraySuffix() string {
 	return suffix
 }
 
-// StructMemberTypeInfo returns the type info of a given struct member.
-func StructMemberTypeInfo(member zither.StructMember) TypeInfo {
-	return structMemberTypeInfo(member.Type)
+func (info TypeInfo) String() string {
+	return info.Type + info.ArraySuffix()
 }
 
-func structMemberTypeInfo(desc zither.TypeDescriptor) TypeInfo {
+func DescribeType(desc zither.TypeDescriptor) TypeInfo {
 	switch desc.Kind {
 	case zither.TypeKindBool, zither.TypeKindInteger:
 		return TypeInfo{Type: PrimitiveTypeName(fidlgen.PrimitiveSubtype(desc.Type))}
 	case zither.TypeKindEnum, zither.TypeKindBits, zither.TypeKindStruct:
 		return TypeInfo{Type: TypeName(desc.Decl)}
 	case zither.TypeKindArray:
-		info := structMemberTypeInfo(*desc.ElementType)
+		info := DescribeType(*desc.ElementType)
 		info.ArrayCounts = append(info.ArrayCounts, *desc.ElementCount)
 		return info
 	default:

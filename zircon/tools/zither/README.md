@@ -21,6 +21,7 @@ declarations defined there.
   - unbounded `string`s are only permitted in constants and map to string
   literals;
   - TODO(fxbug.dev/51002): Document more as we go.
+* Type aliases are naturally converted into `typedef`s.
 * A constant declaration yields a preprocessor variable of name
 `UpperSnakeCase(${id1}_${id2}_..._${idn}_${declname})`;
 * An enum or bits declaration yields a typedef of the underlying primitive
@@ -59,6 +60,7 @@ defined there.
   - unbounded `string`s are only permitted in constants and map to string
   literals;
   - TODO(fxbug.dev/51002): Document more as we go.
+* Type aliases are converted into naturally into go's notion of a type alias.
 * A constant declaration yields a constant of name
 `UpperCamelCase(${declname})`;
 * An enum or bits declaration yields a new type declaration of the underlying

@@ -5,8 +5,8 @@
 // DO NOT EDIT.
 // Generated from FIDL library `zither.type.aliases` by zither, a Fuchsia platform tool.
 
-#ifndef ZITHER_ZITHER_TYPE_ALIASES_C_TYPE_ALIASES_H_
-#define ZITHER_ZITHER_TYPE_ALIASES_C_TYPE_ALIASES_H_
+#ifndef LIB_ZITHER_TYPE_ALIASES_C_TYPE_ALIASES_H_
+#define LIB_ZITHER_TYPE_ALIASES_C_TYPE_ALIASES_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -74,4 +74,4 @@ typedef uint8_t zither_type_aliases_alias_with_many_line_comment_t;
 }
 #endif
 
-#endif  // ZITHER_ZITHER_TYPE_ALIASES_C_TYPE_ALIASES_H_
+#endif  // LIB_ZITHER_TYPE_ALIASES_C_TYPE_ALIASES_H_
