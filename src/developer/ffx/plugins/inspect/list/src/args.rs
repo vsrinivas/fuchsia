@@ -32,11 +32,11 @@ pub struct ListCommand {
     /// directory, the command will look for a `fuchsia.diagnostics.ArchiveAccessor` service file.
     /// If the given path is a service file, the command will attempt to connect to it as an
     /// ArchiveAccessor.
-    pub accessor: Option<String>,
+    pub accessor_path: Option<String>,
 }
 
 impl From<ListCommand> for iquery::commands::ListCommand {
     fn from(cmd: ListCommand) -> Self {
-        Self { manifest: cmd.manifest, with_url: cmd.with_url, accessor: cmd.accessor }
+        Self { manifest: cmd.manifest, with_url: cmd.with_url, accessor_path: cmd.accessor_path }
     }
 }

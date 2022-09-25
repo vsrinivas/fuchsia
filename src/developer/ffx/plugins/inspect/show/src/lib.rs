@@ -40,7 +40,7 @@ mod test {
     #[fuchsia::test]
     async fn test_show_no_parameters() {
         let writer = Writer::new_test(Some(Format::Json));
-        let cmd = ShowCommand { manifest: None, selectors: vec![], accessor: None };
+        let cmd = ShowCommand { manifest: None, selectors: vec![], accessor_path: None };
         let mut inspects = make_inspects();
         let inspect_data =
             inspect_bridge_data(ClientSelectorConfiguration::SelectAll(true), inspects.clone());
@@ -65,7 +65,7 @@ mod test {
         let cmd = ShowCommand {
             manifest: Some(String::from("some-bad-moniker")),
             selectors: vec![],
-            accessor: None,
+            accessor_path: None,
         };
         let lifecycle_data = inspect_bridge_data(
             ClientSelectorConfiguration::SelectAll(true),
@@ -92,7 +92,7 @@ mod test {
         let cmd = ShowCommand {
             manifest: Some(String::from("moniker1")),
             selectors: vec![],
-            accessor: None,
+            accessor_path: None,
         };
         let lifecycle_data = inspect_bridge_data(
             ClientSelectorConfiguration::SelectAll(true),
@@ -130,7 +130,7 @@ mod test {
         let cmd = ShowCommand {
             manifest: None,
             selectors: vec![String::from("test/moniker1:name:hello_not_real")],
-            accessor: None,
+            accessor_path: None,
         };
         let lifecycle_data = inspect_bridge_data(
             ClientSelectorConfiguration::SelectAll(true),
@@ -162,7 +162,7 @@ mod test {
         let cmd = ShowCommand {
             manifest: None,
             selectors: vec![String::from("test/moniker1:name:hello_6")],
-            accessor: None,
+            accessor_path: None,
         };
         let lifecycle_data = inspect_bridge_data(
             ClientSelectorConfiguration::SelectAll(true),

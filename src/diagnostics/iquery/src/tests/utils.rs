@@ -69,6 +69,7 @@ impl TestBuilder {
 
 pub enum AssertionOption {
     Retry,
+    RemoveArchivist,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -144,6 +145,7 @@ impl TestInExecution {
             for opt in &params.opts {
                 match opt {
                     AssertionOption::Retry => assertion.with_retries(),
+                    AssertionOption::RemoveArchivist => assertion.remove_archivist(),
                 }
             }
             assertion.assert().await;
@@ -167,6 +169,7 @@ pub struct CommandAssertion<'a> {
     max_retry_time_seconds: i64,
     expected: &'a str,
     format: Format,
+    remove_archivist: bool,
     instance_child_name: &'a str,
 }
 
@@ -184,12 +187,17 @@ impl<'a> CommandAssertion<'a> {
             max_retry_time_seconds: 0,
             expected: expected.into(),
             format,
+            remove_archivist: false,
             instance_child_name,
         }
     }
 
     pub fn with_retries(&mut self) {
         self.max_retry_time_seconds = 120;
+    }
+
+    pub fn remove_archivist(&mut self) {
+        self.remove_archivist = true;
     }
 
     pub async fn assert(self) {
@@ -232,12 +240,16 @@ impl<'a> CommandAssertion<'a> {
                     // Also retain paths (for accessor and files lists)
                     val.starts_with("/")
                         || val.starts_with("./")
-                        || val.starts_with("archivist")
                         || val.ends_with("archivist")
                         || val == "realm_builder_server"
                         || val.starts_with(&format!("realm_builder\\:{}", self.instance_child_name))
                         || val.starts_with(&format!("realm_builder:{}", self.instance_child_name))
                 });
+                if self.remove_archivist {
+                    self.retain_with_moniker_match_in_json(&mut result_json, |val| {
+                        !val.ends_with("archivist")
+                    });
+                }
                 // Use 4 spaces for indentation since `fx format-code` enforces that in the
                 // goldens.
                 let mut buf = Vec::new();
@@ -273,6 +285,15 @@ impl<'a> CommandAssertion<'a> {
                     result.push_str(line);
                     result.push_str("\n");
                 }
+                continue;
+            }
+
+            if line.starts_with("archivist") {
+                if !self.remove_archivist {
+                    result.push_str(line);
+                    result.push_str("\n");
+                }
+                include_data = !self.remove_archivist;
                 continue;
             }
 

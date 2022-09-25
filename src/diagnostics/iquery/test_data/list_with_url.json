@@ -1,9 +1,5 @@
 [
     {
-        "component_url": "#meta/archivist-for-embedding.cm",
-        "moniker": "archivist"
-    },
-    {
         "component_url": "fuchsia-pkg://fuchsia.com/iquery-tests#meta/basic_component.cm",
         "moniker": "realm_builder\\:CHILD_NAME/basic"
     },

@@ -31,11 +31,11 @@ pub struct SelectorsCommand {
     /// directory, the command will look for a `fuchsia.diagnostics.ArchiveAccessor` service file.
     /// If the given path is a service file, the command will attempt to connect to it as an
     /// ArchiveAccessor.
-    pub accessor: Option<String>,
+    pub accessor_path: Option<String>,
 }
 
 impl From<SelectorsCommand> for iquery::commands::SelectorsCommand {
     fn from(cmd: SelectorsCommand) -> Self {
-        Self { manifest: cmd.manifest, selectors: cmd.selectors, accessor: cmd.accessor }
+        Self { manifest: cmd.manifest, selectors: cmd.selectors, accessor_path: cmd.accessor_path }
     }
 }

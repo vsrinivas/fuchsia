@@ -5,10 +5,7 @@
 use {
     anyhow::Result,
     byteorder::{LittleEndian, WriteBytesExt},
-    diagnostics_data::{
-        Data, DiagnosticsHierarchy, InspectData, LifecycleData, LifecycleType, Property,
-    },
-    errors as _, ffx_inspect_common as _, ffx_writer as _,
+    diagnostics_data::{Data, DiagnosticsHierarchy, InspectData, Property},
     fidl::endpoints::ServerEnd,
     fidl::prelude::*,
     fidl_fuchsia_developer_remotecontrol::{
@@ -20,7 +17,6 @@ use {
     fidl_fuchsia_io as fio,
     fuchsia_zircon_status::Status,
     futures::{StreamExt, TryStreamExt},
-    iquery_test_support,
     std::{
         collections::HashMap,
         io::Write,
@@ -51,6 +47,26 @@ impl FakeArchiveIteratorResponse {
     pub fn new_with_iterator_error(iterator_error: ArchiveIteratorError) -> Self {
         FakeArchiveIteratorResponse { iterator_error: Some(iterator_error), ..Default::default() }
     }
+}
+
+pub fn setup_fake_rcs() -> RemoteControlProxy {
+    let (proxy, mut stream) = fidl::endpoints::create_proxy_and_stream::<<fidl_fuchsia_developer_remotecontrol::RemoteControlProxy as fidl::endpoints::Proxy>::Protocol>().unwrap();
+    fuchsia_async::Task::local(async move {
+        let hub = Arc::new(fake_hub_directory());
+        while let Ok(Some(req)) = stream.try_next().await {
+            match req {
+                RemoteControlRequest::OpenHub { server, responder } => {
+                    let hub_clone = Arc::clone(&hub);
+                    fuchsia_async::Task::local(async move { hub_clone.serve(server).await })
+                        .detach();
+                    responder.send(&mut Ok(())).unwrap();
+                }
+                _ => assert!(false),
+            }
+        }
+    })
+    .detach();
+    proxy
 }
 
 pub fn setup_fake_bridge_provider(
@@ -132,55 +148,12 @@ pub fn setup_fake_diagnostics_bridge(
     proxy
 }
 
-pub fn make_short_lifecycle(moniker: String, timestamp: i64, typ: LifecycleType) -> LifecycleData {
-    Data::for_lifecycle_event(
-        moniker.clone(),
-        typ,
-        None,
-        format!("fake-url://{}", moniker),
-        timestamp,
-        vec![],
-    )
-}
-
 pub fn make_inspects_for_lifecycle() -> Vec<InspectData> {
     vec![
         make_inspect_with_length(String::from("test/moniker1"), 1, 20),
         make_inspect_with_length(String::from("test/moniker1"), 2, 30),
         make_inspect_with_length(String::from("test/moniker3"), 3, 3),
     ]
-}
-
-pub fn setup_fake_rcs() -> RemoteControlProxy {
-    let mock_realm_explorer = iquery_test_support::MockRealmExplorer::default();
-    let mock_realm_query = iquery_test_support::MockRealmQuery::default();
-    let (proxy, mut stream) = fidl::endpoints::create_proxy_and_stream::<<fidl_fuchsia_developer_remotecontrol::RemoteControlProxy as fidl::endpoints::Proxy>::Protocol>().unwrap();
-    fuchsia_async::Task::local(async move {
-        let explorer = Arc::new(mock_realm_explorer);
-        let querier = Arc::new(mock_realm_query);
-        while let Ok(Some(req)) = stream.try_next().await {
-            match req {
-                RemoteControlRequest::OpenHub { server: _, responder } => {
-                    // OpenHub deprecated.
-                    responder.send(&mut Err(0)).unwrap();
-                }
-                RemoteControlRequest::RootRealmExplorer { server, responder } => {
-                    let explorer = Arc::clone(&explorer);
-                    fuchsia_async::Task::local(async move { explorer.serve(server).await })
-                        .detach();
-                    responder.send(&mut Ok(())).unwrap();
-                }
-                RemoteControlRequest::RootRealmQuery { server, responder } => {
-                    let querier = Arc::clone(&querier);
-                    fuchsia_async::Task::local(async move { querier.serve(server).await }).detach();
-                    responder.send(&mut Ok(())).unwrap();
-                }
-                _ => assert!(false),
-            }
-        }
-    })
-    .detach();
-    proxy
 }
 
 pub fn make_inspect_with_length(moniker: String, timestamp: i64, len: usize) -> InspectData {
@@ -222,6 +195,28 @@ pub fn inspect_bridge_data(
     let value = serde_json::to_string(&inspects).unwrap();
     let expected_responses = Arc::new(vec![FakeArchiveIteratorResponse::new_with_value(value)]);
     FakeBridgeData::new(params, expected_responses)
+}
+
+pub fn fake_hub_directory() -> MockDir {
+    MockDir::new("hub-v2".into())
+        .add_entry(Arc::new(MockDir::new("dir1".into()).add_entry(Arc::new(MockFile::new(
+            "fuchsia.diagnostics.FooBarArchiveAccessor".into(),
+        )))))
+        .add_entry(Arc::new(
+            MockDir::new("dir2".into())
+                .add_entry(Arc::new(MockDir::new("child2".into())))
+                .add_entry(Arc::new(
+                    MockDir::new("child3".into())
+                        .add_entry(Arc::new(MockFile::new("this.is.not.an.Accessor".into())))
+                        .add_entry(Arc::new(MockFile::new(
+                            "fuchsia.diagnostics.Some.Other.ArchiveAccessor".into(),
+                        ))),
+                ))
+                .add_entry(Arc::new(MockDir::new("child4".into())))
+                .add_entry(Arc::new(MockDir::new("child5".into()).add_entry(Arc::new(
+                    MockFile::new("fuchsia.diagnostics.OneMoreArchiveAccessor".into()),
+                )))),
+        ))
 }
 
 pub trait Entry {
@@ -364,6 +359,46 @@ impl Entry for fio::DirectoryProxy {
     }
 }
 
+struct MockFile {
+    name: String,
+}
+
+impl MockFile {
+    pub fn new(name: String) -> Self {
+        MockFile { name }
+    }
+}
+
+impl Entry for MockFile {
+    fn open(
+        self: Arc<Self>,
+        _flags: fio::OpenFlags,
+        _mode: u32,
+        _path: &str,
+        _object: ServerEnd<fio::NodeMarker>,
+    ) {
+        unimplemented!();
+    }
+
+    fn encode(&self, buf: &mut Vec<u8>) {
+        buf.write_u64::<LittleEndian>(fio::INO_UNKNOWN).expect("writing mockdir ino to work");
+        buf.write_u8(self.name.len() as u8).expect("writing mockdir size to work");
+        buf.write_u8(fio::DirentType::File.into_primitive()).expect("writing mockdir type to work");
+        buf.write_all(self.name.as_ref()).expect("writing mockdir name to work");
+    }
+
+    fn name(&self) -> String {
+        self.name.clone()
+    }
+}
+
+fn send_error(object: ServerEnd<fio::NodeMarker>, status: Status) {
+    let stream = object.into_stream().expect("failed to create stream");
+    let control_handle = stream.control_handle();
+    let _ = control_handle.send_on_open_(status.into_raw(), None);
+    control_handle.shutdown_with_epitaph(status);
+}
+
 pub fn get_v1_json_dump() -> serde_json::Value {
     serde_json::json!(
         [
@@ -374,6 +409,7 @@ pub fn get_v1_json_dump() -> serde_json::Value {
                     "component_url": "fuchsia-pkg://fuchsia.com/account#meta/account_manager.cmx",
                     "timestamp":0
                 },
+                "moniker":"realm1/realm2/session5/account_manager.cmx",
                 "moniker":"realm1/realm2/session5/account_manager.cmx",
                 "payload":{
                     "root": {
@@ -423,11 +459,4 @@ pub fn get_v1_single_value_json() -> serde_json::Value {
 
 pub fn get_empty_value_json() -> serde_json::Value {
     serde_json::json!([])
-}
-
-fn send_error(object: ServerEnd<fio::NodeMarker>, status: Status) {
-    let stream = object.into_stream().expect("failed to create stream");
-    let control_handle = stream.control_handle();
-    let _ = control_handle.send_on_open_(status.into_raw(), None);
-    control_handle.shutdown_with_epitaph(status);
 }

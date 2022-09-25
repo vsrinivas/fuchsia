@@ -32,16 +32,11 @@ pub struct SelectorsCommand {
     pub selectors: Vec<String>,
 
     #[argh(option)]
-    /// A selector specifying what `fuchsia.diagnostics.ArchiveAccessor` to connect to.
-    /// The selector will be in the form of:
-    /// <moniker>:<directory>:fuchsia.diagnostics.ArchiveAccessorName
-    ///
-    /// Typically this is the output of `iquery list-accessors`.
-    ///
-    /// For example: `bootstrap/archivist:expose:fuchsia.diagnostics.FeedbackArchiveAccessor`
-    /// means that the command will connect to the `FeedbackArchiveAccecssor`
-    /// exposed by `bootstrap/archivist`.
-    pub accessor: Option<String>,
+    /// the path from where to get the ArchiveAccessor connection. If the given path is a
+    /// directory, the command will look for a `fuchsia.diagnostics.ArchiveAccessor` service file.
+    /// If the given path is a service file, the command will attempt to connect to it as an
+    /// ArchiveAccessor.
+    pub accessor_path: Option<String>,
 }
 
 #[async_trait]
@@ -55,13 +50,12 @@ impl Command for SelectorsCommand {
         let selectors = utils::get_selectors_for_manifest(
             &self.manifest,
             &self.selectors,
-            &self.accessor,
+            &self.accessor_path,
             provider,
         )
         .await?;
         let selectors = utils::expand_selectors(selectors)?;
-
-        let mut results = provider.snapshot::<Inspect>(&self.accessor, &selectors).await?;
+        let mut results = provider.snapshot::<Inspect>(&self.accessor_path, &selectors).await?;
         for result in results.iter_mut() {
             if let Some(hierarchy) = &mut result.payload {
                 hierarchy.sort();

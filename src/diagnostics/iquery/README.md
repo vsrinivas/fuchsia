@@ -1,6 +1,6 @@
 # iquery
 
-Reviewed on: 2022-07-31
+Reviewed on: 2019-07-22
 
 iquery is a command line tool for discovering and retrieving [inspect][inspect]
 data exposed by components. More can be read about iquery [here][iquery].

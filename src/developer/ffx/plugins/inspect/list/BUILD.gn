@@ -20,7 +20,6 @@ ffx_plugin("ffx_inspect_list") {
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_rust",
     "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/plugins/inspect/test_utils:ffx_inspect_test_utils",
-    "//src/lib/diagnostics/selectors",
     "//src/lib/fuchsia",
     "//third_party/rust_crates:serde_json",
   ]

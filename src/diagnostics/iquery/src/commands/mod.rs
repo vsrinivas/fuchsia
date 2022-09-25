@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub use crate::commands::{
-    list::*, list_accessors::*, logs::*, selectors::*, show::*, types::*, utils::*,
-};
+pub use crate::commands::{list::*, list_accessors::*, logs::*, selectors::*, show::*, types::*};
 
 #[cfg(target_os = "fuchsia")]
 pub use crate::commands::{list_files::*, show_file::*, target::*};
