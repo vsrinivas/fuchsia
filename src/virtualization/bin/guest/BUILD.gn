@@ -37,6 +37,7 @@ rustc_binary("bin") {
   ]
 
   test_deps = [
+    "//src/lib/async-utils",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:pretty_assertions",
   ]
@@ -52,6 +53,7 @@ rustc_binary("bin") {
     "src/serial.rs",
     "src/services.rs",
     "src/socat.rs",
+    "src/stop.rs",
     "src/vsockperf.rs",
     "src/wipe.rs",
   ]

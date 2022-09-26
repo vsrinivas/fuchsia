@@ -88,6 +88,7 @@ pub struct GuestOptions {
 #[argh(subcommand)]
 pub enum SubCommands {
     Launch(LaunchArgs),
+    Stop(StopArgs),
     Balloon(BalloonArgs),
     BalloonStats(BalloonStatsArgs),
     Serial(SerialArgs),
@@ -232,4 +233,16 @@ pub struct LaunchArgs {
     /// enable virtio-vsock
     #[argh(option)]
     pub virtio_vsock: Option<bool>,
+}
+
+#[derive(FromArgs, PartialEq, Debug)]
+/// Stop a running guest. Usage: guest stop guest_type [-f]
+#[argh(subcommand, name = "stop")]
+pub struct StopArgs {
+    /// guest type to launch e.g. 'zircon'
+    #[argh(positional)]
+    pub guest_type: GuestType,
+    /// force stop the guest
+    #[argh(switch, short = 'f')]
+    pub force: bool,
 }
