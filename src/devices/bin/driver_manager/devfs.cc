@@ -525,6 +525,7 @@ Devnode::Devnode(Devfs& devfs, Devnode& parent, NoRemote no_remote, fbl::String 
       target_(no_remote),
       name_(std::move(name)),
       ino_(devfs.next_ino++) {
+  ZX_ASSERT_MSG(parent.lookup(name) == nullptr, "name=%s already exists", name.c_str());
   parent.children.push_back(this);
 }
 
@@ -534,6 +535,7 @@ Devnode::Devnode(Devfs& devfs, Devnode& parent, Service service, fbl::String nam
       target_(std::move(service)),
       name_(std::move(name)),
       ino_(devfs.next_ino++) {
+  ZX_ASSERT_MSG(parent.lookup(name) == nullptr, "name=%s already exists", name.c_str());
   parent.children.push_back(this);
 }
 
@@ -543,6 +545,7 @@ Devnode::Devnode(Devfs& devfs, Devnode& parent, Device& device, fbl::String name
       target_(&device),
       name_(std::move(name)),
       ino_(devfs.next_ino++) {
+  ZX_ASSERT_MSG(parent.lookup(name) == nullptr, "name=%s already exists", name.c_str());
   parent.children.push_back(this);
 }
 
