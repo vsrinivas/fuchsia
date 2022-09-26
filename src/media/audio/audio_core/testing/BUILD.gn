@@ -41,7 +41,6 @@ source_set("testing") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/testing/loop_fixture",
     "//src/media/audio/audio_core:audio_core_lib",
-    "//src/media/audio/audio_core/metrics",
     "//src/media/audio/audio_core/mixer",
     "//src/media/audio/drivers/lib/audio-proto-utils",
     "//src/media/audio/lib/analysis",

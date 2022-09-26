@@ -5,17 +5,10 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-#include <memory>
 #include <queue>
-#include <vector>
 
-#include "fidl/fuchsia.io/cpp/markers.h"
-#include "fidl/fuchsia.metrics/cpp/natural_types.h"
-#include "lib/fidl/cpp/wire/internal/transport_channel.h"
-#include "lib/service/llcpp/service.h"
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/media_metrics_registry.cb.h"
-#include "src/media/audio/audio_core/metrics/metrics_impl.h"
 
 namespace media::audio {
 
@@ -62,6 +55,8 @@ class TokenBucket {
 // In a typical worst case, we might expect about 1 RPC every 10ms, or 6000 RPCs per minute.
 // Throttle to 30 per minute.
 static TokenBucket* const cobalt_token_bucket = new TokenBucket(zx::min(1), 30);
+// Buffer up to 5 minutes worth of events.
+static constexpr size_t kMaxCobaltBufferSize = 5 * 30;
 }  // namespace
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -210,8 +205,7 @@ class Reporter::OverflowUnderflowTracker {
 
 class Reporter::ObjectTracker {
  public:
-  ObjectTracker(Reporter::Impl& impl,
-                AudioObjectsCreatedMigratedMetricDimensionObjectType object_type)
+  ObjectTracker(Reporter::Impl& impl, AudioObjectsCreatedMetricDimensionObjectType object_type)
       : impl_(impl), object_type_(object_type) {}
 
   void SetFormat(const Format& f) { format_ = f; }
@@ -219,7 +213,7 @@ class Reporter::ObjectTracker {
   // Marks the object "enabled", which triggers a cobalt metric increment.
   void Enable() {
     // Ignore when cobalt is disabled.
-    auto& logger = impl_.metrics_impl;
+    auto& logger = impl_.cobalt_logger;
     if (!logger) {
       return;
     }
@@ -231,68 +225,69 @@ class Reporter::ObjectTracker {
     }
     enabled_ = true;
 
-    AudioObjectsCreatedMigratedMetricDimensionSampleFormat sample_format;
+    AudioObjectsCreatedMetricDimensionSampleFormat sample_format;
     switch (format_->sample_format()) {
       case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
-        sample_format = AudioObjectsCreatedMigratedMetricDimensionSampleFormat::Uint8;
+        sample_format = AudioObjectsCreatedMetricDimensionSampleFormat::Uint8;
         break;
       case fuchsia::media::AudioSampleFormat::SIGNED_16:
-        sample_format = AudioObjectsCreatedMigratedMetricDimensionSampleFormat::Int16;
+        sample_format = AudioObjectsCreatedMetricDimensionSampleFormat::Int16;
         break;
       case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
-        sample_format = AudioObjectsCreatedMigratedMetricDimensionSampleFormat::Int24;
+        sample_format = AudioObjectsCreatedMetricDimensionSampleFormat::Int24;
         break;
       case fuchsia::media::AudioSampleFormat::FLOAT:
-        sample_format = AudioObjectsCreatedMigratedMetricDimensionSampleFormat::Float32;
+        sample_format = AudioObjectsCreatedMetricDimensionSampleFormat::Float32;
         break;
       default:
-        sample_format = AudioObjectsCreatedMigratedMetricDimensionSampleFormat::Other;
+        sample_format = AudioObjectsCreatedMetricDimensionSampleFormat::Other;
         break;
     }
-    AudioObjectsCreatedMigratedMetricDimensionChannels channels;
+    AudioObjectsCreatedMetricDimensionChannels channels;
     switch (format_->channels()) {
       case 1:
-        channels = AudioObjectsCreatedMigratedMetricDimensionChannels::Chan1;
+        channels = AudioObjectsCreatedMetricDimensionChannels::Chan1;
         break;
       case 2:
-        channels = AudioObjectsCreatedMigratedMetricDimensionChannels::Chan2;
+        channels = AudioObjectsCreatedMetricDimensionChannels::Chan2;
         break;
       case 4:
-        channels = AudioObjectsCreatedMigratedMetricDimensionChannels::Chan4;
+        channels = AudioObjectsCreatedMetricDimensionChannels::Chan4;
         break;
       default:
-        channels = AudioObjectsCreatedMigratedMetricDimensionChannels::Other;
+        channels = AudioObjectsCreatedMetricDimensionChannels::Other;
         break;
     }
-    AudioObjectsCreatedMigratedMetricDimensionFrameRate frame_rate;
+    AudioObjectsCreatedMetricDimensionFrameRate frame_rate;
     switch (format_->frames_per_second()) {
       case 16000:
-        frame_rate = AudioObjectsCreatedMigratedMetricDimensionFrameRate::Rate16000;
+        frame_rate = AudioObjectsCreatedMetricDimensionFrameRate::Rate16000;
         break;
       case 44100:
-        frame_rate = AudioObjectsCreatedMigratedMetricDimensionFrameRate::Rate44100;
+        frame_rate = AudioObjectsCreatedMetricDimensionFrameRate::Rate44100;
         break;
       case 48000:
-        frame_rate = AudioObjectsCreatedMigratedMetricDimensionFrameRate::Rate48000;
+        frame_rate = AudioObjectsCreatedMetricDimensionFrameRate::Rate48000;
         break;
       case 96000:
-        frame_rate = AudioObjectsCreatedMigratedMetricDimensionFrameRate::Rate96000;
+        frame_rate = AudioObjectsCreatedMetricDimensionFrameRate::Rate96000;
         break;
       default:
-        frame_rate = AudioObjectsCreatedMigratedMetricDimensionFrameRate::Other;
+        frame_rate = AudioObjectsCreatedMetricDimensionFrameRate::Other;
         break;
     }
-    std::vector<fuchsia_metrics::MetricEvent> events = {fuchsia_metrics::MetricEvent{
-        kAudioObjectsCreatedMigratedMetricId,
-        {object_type_, sample_format, channels, frame_rate},
-        fuchsia_metrics::MetricEventPayload::WithCount(1),
-    }};
-    logger->LogMetricEvents(std::move(events));
+    auto e = fuchsia::cobalt::CobaltEvent{
+        .metric_id = kAudioObjectsCreatedMetricId,
+        .event_codes = {object_type_, sample_format, channels, frame_rate},
+        .payload =
+            fuchsia::cobalt::EventPayload::WithEventCount(fuchsia::cobalt::CountEvent{.count = 1}),
+    };
+    logger->LogCobaltEvent(std::move(e));
   }
 
  private:
   Reporter::Impl& impl_;
-  AudioObjectsCreatedMigratedMetricDimensionObjectType object_type_;
+  AudioObjectsCreatedMetricDimensionObjectType object_type_;
   std::optional<Format> format_;
   bool enabled_ = false;
 };
@@ -455,7 +450,7 @@ class Reporter::ThermalStateTracker {
   void SetThermalState(uint32_t state);
 
  private:
-  using CobaltStateTransition = AudioThermalStateTransitionsMigratedMetricDimensionStateTransition;
+  using CobaltStateTransition = AudioThermalStateTransitionsMetricDimensionStateTransition;
   static constexpr std::array kCobaltStateTransitions = {
       CobaltStateTransition::Normal, CobaltStateTransition::State1, CobaltStateTransition::State2};
   // Ideally we'd record final cobalt metrics when the component exits, however we can't
@@ -650,9 +645,8 @@ class Reporter::OutputDeviceImpl : public Reporter::OutputDevice {
   OutputDeviceImpl(Reporter::Impl& impl, const std::string& name, const std::string& thread_name)
       : node_(impl.outputs_node.CreateChild(name)),
         thread_name_(node_.CreateString("mixer thread name", thread_name)),
-        driver_info_(node_,
-                     ObjectTracker(
-                         impl, AudioObjectsCreatedMigratedMetricDimensionObjectType::OutputDevice)),
+        driver_info_(
+            node_, ObjectTracker(impl, AudioObjectsCreatedMetricDimensionObjectType::OutputDevice)),
         gain_info_(node_),
         device_underflows_(
             std::make_unique<OverflowUnderflowTracker>(OverflowUnderflowTracker::Args{
@@ -660,8 +654,7 @@ class Reporter::OutputDeviceImpl : public Reporter::OutputDevice {
                 .parent_node = node_,
                 .impl = impl,
                 .is_underflow = true,
-                .cobalt_component_id =
-                    AudioSessionDurationMigratedMetricDimensionComponent::OutputDevice,
+                .cobalt_component_id = AudioSessionDurationMetricDimensionComponent::OutputDevice,
             })),
         pipeline_underflows_(
             std::make_unique<OverflowUnderflowTracker>(OverflowUnderflowTracker::Args{
@@ -669,8 +662,7 @@ class Reporter::OutputDeviceImpl : public Reporter::OutputDevice {
                 .parent_node = node_,
                 .impl = impl,
                 .is_underflow = true,
-                .cobalt_component_id =
-                    AudioSessionDurationMigratedMetricDimensionComponent::OutputPipeline,
+                .cobalt_component_id = AudioSessionDurationMetricDimensionComponent::OutputPipeline,
             })) {
     time_since_death_ = node_.CreateLazyValues("OutputDeviceTimeSinceDeath", [this] {
       inspect::Inspector i;
@@ -725,8 +717,7 @@ class Reporter::InputDeviceImpl : public Reporter::InputDevice {
       : node_(impl.inputs_node.CreateChild(name)),
         thread_name_(node_.CreateString("mixer thread name", thread_name)),
         driver_info_(
-            node_,
-            ObjectTracker(impl, AudioObjectsCreatedMigratedMetricDimensionObjectType::InputDevice)),
+            node_, ObjectTracker(impl, AudioObjectsCreatedMetricDimensionObjectType::InputDevice)),
         gain_info_(node_) {
     time_since_death_ = node_.CreateLazyValues("InputDeviceTimeSinceDeath", [this] {
       inspect::Inspector i;
@@ -831,9 +822,8 @@ class Reporter::RendererImpl : public Reporter::Renderer {
  public:
   RendererImpl(Reporter::Impl& impl)
       : node_(impl.renderers_node.CreateChild(impl.NextRendererName())),
-        client_port_(
-            node_,
-            ObjectTracker(impl, AudioObjectsCreatedMigratedMetricDimensionObjectType::Renderer)),
+        client_port_(node_,
+                     ObjectTracker(impl, AudioObjectsCreatedMetricDimensionObjectType::Renderer)),
         min_lead_time_ns_(node_.CreateUint("min lead time (ns)", 0)),
         pts_continuity_threshold_seconds_(node_.CreateDouble("pts continuity threshold (s)", 0.0)),
         pts_units_per_second_numerator_(node_.CreateUint("pts units numerator", 1'000'000'000)),
@@ -845,7 +835,7 @@ class Reporter::RendererImpl : public Reporter::Renderer {
             .parent_node = node_,
             .impl = impl,
             .is_underflow = true,
-            .cobalt_component_id = AudioSessionDurationMigratedMetricDimensionComponent::Renderer,
+            .cobalt_component_id = AudioSessionDurationMetricDimensionComponent::Renderer,
         })) {
     time_since_death_ = node_.CreateLazyValues("RendererTimeSinceDeath", [this] {
       inspect::Inspector i;
@@ -913,9 +903,8 @@ class Reporter::CapturerImpl : public Reporter::Capturer {
  public:
   CapturerImpl(Reporter::Impl& impl, const std::string& thread_name)
       : node_(impl.capturers_node.CreateChild(impl.NextCapturerName())),
-        client_port_(
-            node_,
-            ObjectTracker(impl, AudioObjectsCreatedMigratedMetricDimensionObjectType::Capturer)),
+        client_port_(node_,
+                     ObjectTracker(impl, AudioObjectsCreatedMetricDimensionObjectType::Capturer)),
         min_fence_time_ns_(node_.CreateUint("min fence time (ns)", 0)),
         usage_(node_.CreateString("usage", "default")),
         thread_name_(node_.CreateString("mixer thread name", thread_name)),
@@ -924,7 +913,7 @@ class Reporter::CapturerImpl : public Reporter::Capturer {
             .parent_node = node_,
             .impl = impl,
             .is_underflow = false,
-            .cobalt_component_id = AudioSessionDurationMigratedMetricDimensionComponent::Capturer,
+            .cobalt_component_id = AudioSessionDurationMetricDimensionComponent::Capturer,
         })) {
     time_since_death_ = node_.CreateLazyValues("CapturerTimeSinceDeath", [this] {
       inspect::Inspector i;
@@ -1038,10 +1027,9 @@ void Reporter::InitInspect() {
 }
 
 void Reporter::InitCobalt() {
-  impl_->metrics_impl = std::make_unique<media::audio::MetricsImpl>(
-      impl_->threading_model.FidlDomain().dispatcher(),
-      fidl::ClientEnd<fuchsia_io::Directory>(service::OpenServiceRoot()->TakeChannel()),
-      kProjectId);
+  impl_->cobalt_logger = ::cobalt::NewCobaltLoggerFromProjectId(
+      impl_->threading_model.FidlDomain().dispatcher(), impl_->component_context.svc(), kProjectId,
+      kMaxCobaltBufferSize);
 }
 
 Reporter::Container<Reporter::OutputDevice, Reporter::kObjectsToCache>::Ptr
@@ -1168,25 +1156,21 @@ Reporter::Impl::~Impl() {}
 namespace {
 constexpr auto kEventSessionStart = 0;
 constexpr auto kEventOverflowUnderflow = 1;
-static_assert(
-    AudioTimeSinceLastOverflowOrSessionStartMigratedMetricDimensionLastEvent::SessionStart == 0);
-static_assert(
-    AudioTimeSinceLastUnderflowOrSessionStartMigratedMetricDimensionLastEvent::SessionStart == 0);
-static_assert(AudioTimeSinceLastOverflowOrSessionStartMigratedMetricDimensionLastEvent::Overflow ==
-              1);
-static_assert(
-    AudioTimeSinceLastUnderflowOrSessionStartMigratedMetricDimensionLastEvent::Underflow == 1);
+static_assert(AudioTimeSinceLastOverflowOrSessionStartMetricDimensionLastEvent::SessionStart == 0);
+static_assert(AudioTimeSinceLastUnderflowOrSessionStartMetricDimensionLastEvent::SessionStart == 0);
+static_assert(AudioTimeSinceLastOverflowOrSessionStartMetricDimensionLastEvent::Overflow == 1);
+static_assert(AudioTimeSinceLastUnderflowOrSessionStartMetricDimensionLastEvent::Underflow == 1);
 }  // namespace
 
 Reporter::OverflowUnderflowTracker::OverflowUnderflowTracker(Args args)
     : state_(State::Stopped),
       impl_(args.impl),
       cobalt_component_id_(args.cobalt_component_id),
-      cobalt_event_duration_metric_id_(args.is_underflow ? kAudioUnderflowDurationMigratedMetricId
-                                                         : kAudioOverflowDurationMigratedMetricId),
+      cobalt_event_duration_metric_id_(args.is_underflow ? kAudioUnderflowDurationMetricId
+                                                         : kAudioOverflowDurationMetricId),
       cobalt_time_since_last_event_or_session_start_metric_id_(
-          args.is_underflow ? kAudioTimeSinceLastUnderflowOrSessionStartMigratedMetricId
-                            : kAudioTimeSinceLastOverflowOrSessionStartMigratedMetricId) {
+          args.is_underflow ? kAudioTimeSinceLastUnderflowOrSessionStartMetricId
+                            : kAudioTimeSinceLastOverflowOrSessionStartMetricId) {
   node_ = args.parent_node.CreateChild(args.event_name);
   event_count_ = node_.CreateUint("count", 0);
   event_duration_ = node_.CreateUint("duration (ns)", 0);
@@ -1235,7 +1219,7 @@ void Reporter::OverflowUnderflowTracker::StopSession(zx::time stop_time) {
     return;
   }
 
-  LogCobaltDuration(kAudioSessionDurationMigratedMetricId, {cobalt_component_id_},
+  LogCobaltDuration(kAudioSessionDurationMetricId, {cobalt_component_id_},
                     stop_time - session_start_time_);
   LogCobaltDuration(cobalt_time_since_last_event_or_session_start_metric_id_,
                     {cobalt_component_id_, kEventSessionStart}, stop_time - last_event_time_);
@@ -1253,7 +1237,7 @@ void Reporter::OverflowUnderflowTracker::RestartSession() {
     return;  // must have been stopped concurrently
   }
 
-  LogCobaltDuration(kAudioSessionDurationMigratedMetricId, {cobalt_component_id_},
+  LogCobaltDuration(kAudioSessionDurationMetricId, {cobalt_component_id_},
                     stop_time - session_start_time_);
   LogCobaltDuration(cobalt_time_since_last_event_or_session_start_metric_id_,
                     {cobalt_component_id_, kEventSessionStart}, stop_time - last_event_time_);
@@ -1303,17 +1287,17 @@ void Reporter::OverflowUnderflowTracker::Report(zx::time start_time, zx::time en
 void Reporter::OverflowUnderflowTracker::LogCobaltDuration(uint32_t metric_id,
                                                            std::vector<uint32_t> event_codes,
                                                            zx::duration d) {
-  auto& logger = impl_.metrics_impl;
+  auto& logger = impl_.cobalt_logger;
   if (!logger || !cobalt_token_bucket->Acquire()) {
     return;
   }
 
-  std::vector<fuchsia_metrics::MetricEvent> events = {fuchsia_metrics::MetricEvent{
-      metric_id,
-      std::move(event_codes),
-      fuchsia_metrics::MetricEventPayload::WithIntegerValue(d.to_nsecs()),
-  }};
-  logger->LogMetricEvents(std::move(events));
+  auto e = fuchsia::cobalt::CobaltEvent{
+      .metric_id = metric_id,
+      .event_codes = event_codes,
+      .payload = fuchsia::cobalt::EventPayload::WithElapsedMicros(d.get()),
+  };
+  logger->LogCobaltEvent(std::move(e));
 }
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -1404,7 +1388,7 @@ void Reporter::ThermalStateTracker::State::Deactivate() {
 ////////////////////////////////////////////////////////////////////////////////////////////////
 void Reporter::ThermalStateTracker::LogCobaltStateTransition(State& state,
                                                              CobaltStateTransition event) {
-  auto& logger = impl_.metrics_impl;
+  auto& logger = impl_.cobalt_logger;
   if (!logger) {
     return;
   }
@@ -1414,15 +1398,15 @@ void Reporter::ThermalStateTracker::LogCobaltStateTransition(State& state,
         << "Cobalt logging of audio_thermal_state_transitions has exceeded maximum of 50: " << event
         << " = " << transition_count << "transitions";
   } else if (cobalt_token_bucket->Acquire()) {
-    std::vector<fuchsia_metrics::HistogramBucket> histogram{
-        fuchsia_metrics::HistogramBucket(transition_count, 1)};
-
-    logger->LogIntegerHistogram(kAudioThermalStateTransitionsMigratedMetricId, histogram, {event});
+    std::vector<fuchsia::cobalt::HistogramBucket> histogram{
+        {.index = transition_count, .count = 1}};
+    logger->LogIntHistogram(kAudioThermalStateTransitionsMetricId, event, "" /*component*/,
+                            histogram);
   }
 }
 
 void Reporter::ThermalStateTracker::LogCobaltStateDuration(State& old_state, State& new_state) {
-  auto& logger = impl_.metrics_impl;
+  auto& logger = impl_.cobalt_logger;
   if (!logger) {
     return;
   }
@@ -1432,13 +1416,13 @@ void Reporter::ThermalStateTracker::LogCobaltStateDuration(State& old_state, Sta
   // Record duration of |old_state|, if interval has started.
   if (auto start_time = old_state.interval_start_time;
       start_time && cobalt_token_bucket->Acquire()) {
-    std::vector<fuchsia_metrics::MetricEvent> events = {fuchsia_metrics::MetricEvent{
-        kAudioThermalStateDurationMigratedMetricId,
-        {active_state_},
-        fuchsia_metrics::MetricEventPayload::WithIntegerValue(
-            (now - start_time.value()).to_nsecs()),
-    }};
-    logger->LogMetricEvents(std::move(events));
+    auto e = fuchsia::cobalt::CobaltEvent{
+        .metric_id = kAudioThermalStateDurationMetricId,
+        .event_codes = {active_state_},
+        .payload =
+            fuchsia::cobalt::EventPayload::WithElapsedMicros((now - start_time.value()).get()),
+    };
+    logger->LogCobaltEvent(std::move(e));
   }
 
   // End |old_state| and start |new_state| logging interval.

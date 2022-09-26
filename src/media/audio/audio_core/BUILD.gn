@@ -177,6 +177,7 @@ source_set("audio_core_lib") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.audio.effects:fuchsia.audio.effects_cpp_wire",
+    "//sdk/fidl/fuchsia.cobalt",
     "//sdk/fidl/fuchsia.hardware.audio",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.media.tuning",
@@ -187,7 +188,6 @@ source_set("audio_core_lib") {
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
-    "//src/media/audio/audio_core/metrics",
     "//src/media/audio/audio_core/mixer",
     "//src/media/audio/lib/analysis",
     "//src/media/audio/lib/clock",
@@ -213,6 +213,7 @@ source_set("audio_core_lib") {
     "//sdk/lib/fit",
     "//sdk/lib/media/audio/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/lib/cobalt/cpp:cobalt_logger",
     "//src/lib/fidl/cpp",
     "//src/lib/fsl",
     "//src/media/audio/drivers/lib/audio-proto-utils",

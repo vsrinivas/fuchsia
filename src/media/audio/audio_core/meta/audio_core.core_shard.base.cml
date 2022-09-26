@@ -34,7 +34,7 @@
             subdir: "audio-output",
         },
         {
-            protocol: "fuchsia.metrics.MetricEventLoggerFactory",
+            protocol: "fuchsia.cobalt.LoggerFactory",
             from: "#cobalt",
             to: "#audio_core",
         },
