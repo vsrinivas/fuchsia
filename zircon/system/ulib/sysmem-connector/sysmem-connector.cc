@@ -180,25 +180,21 @@ zx_status_t SysmemConnector::DeviceAdded(int dirfd, int event, const char* filen
   }
   ZX_DEBUG_ASSERT(event == WATCH_EVENT_ADD_FILE);
 
-  zx::channel driver_connector_client;
-  zx::channel driver_connector_server;
-  zx_status_t status = zx::channel::create(0, &driver_connector_client, &driver_connector_server);
-  if (status != ZX_OK) {
-    printf("SysmemConnector::DeviceAdded() zx::channel::create() failed - status: %d\n", status);
-    ZX_DEBUG_ASSERT(status != ZX_ERR_STOP);
+  zx::status endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
+  if (endpoints.is_error()) {
+    printf("SysmemConnector::DeviceAdded() zx::channel::create() failed - status: %s\n",
+           endpoints.status_string());
     // If channel create fails, give up on this attempt to find a sysmem
     // device instance.  If another request arrives later, we'll try again
     // later.
-    return status;
+    return endpoints.status_value();
   }
+  auto& [client, server] = endpoints.value();
 
-  // We don't intend to close dirfd; all paths should release not close.
-  fbl::unique_fd unique_dirfd(dirfd);
-  fdio_cpp::FdioCaller caller(std::move(unique_dirfd));
+  fdio_cpp::UnownedFdioCaller caller(dirfd);
+  zx_status_t status;
   status =
-      fdio_service_connect_at(caller.borrow_channel(), filename, driver_connector_server.release());
-  // Never close dirfd.
-  caller.release().release();
+      fdio_service_connect_at(caller.borrow_channel(), filename, server.TakeChannel().release());
   if (status != ZX_OK) {
     printf("SysmemConnector::DeviceAdded() fdio_service_connect_at() failed - status: %d\n",
            status);
@@ -210,7 +206,7 @@ zx_status_t SysmemConnector::DeviceAdded(int dirfd, int event, const char* filen
 
   if (terminate_on_sysmem_connection_failure_) {
     wait_sysmem_peer_closed_.set_trigger(ZX_CHANNEL_PEER_CLOSED);
-    wait_sysmem_peer_closed_.set_object(driver_connector_client.get());
+    wait_sysmem_peer_closed_.set_object(client.channel().get());
     status = wait_sysmem_peer_closed_.Begin(process_queue_loop_.dispatcher());
     if (status != ZX_OK) {
       ZX_PANIC("Failed begin wait for sysmem failure - terminating process to trigger reboot.\n");
@@ -225,7 +221,7 @@ zx_status_t SysmemConnector::DeviceAdded(int dirfd, int event, const char* filen
   printf("sysmem-connector: %s connected to sysmem driver %s\n", process_name, filename);
   fflush(stdout);
 
-  driver_connector_client_ = std::move(driver_connector_client);
+  driver_connector_client_ = client.TakeChannel();
   ZX_DEBUG_ASSERT(driver_connector_client_);
   return ZX_ERR_STOP;
 }
