@@ -28,7 +28,7 @@
     use: [
         {
             protocol: [
-                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.thermal.ClientStateConnector",
                 "fuchsia.tracing.provider.Registry",

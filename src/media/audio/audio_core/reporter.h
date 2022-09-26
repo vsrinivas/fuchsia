@@ -5,19 +5,19 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_REPORTER_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_REPORTER_H_
 
-#include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/sys/inspect/cpp/component.h>
 
+#include <memory>
 #include <mutex>
 #include <queue>
 #include <set>
 #include <unordered_map>
 
-#include "src/lib/cobalt/cpp/cobalt_logger.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/audio_admin.h"
+#include "src/media/audio/audio_core/metrics/metrics_impl.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/lib/format/format.h"
@@ -280,7 +280,7 @@ class Reporter {
     sys::ComponentContext& component_context;
     ThreadingModel& threading_model;
     std::unique_ptr<sys::ComponentInspector> inspector;
-    std::unique_ptr<cobalt::CobaltLogger> cobalt_logger;
+    std::unique_ptr<media::audio::MetricsImpl> metrics_impl;
 
     inspect::UintProperty failed_to_open_device_count;
     inspect::UintProperty failed_to_obtain_fdio_service_channel_count;
