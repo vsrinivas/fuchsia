@@ -147,7 +147,7 @@ mod tests {
             unblocker,
             &[&blobfs_verifier],
             &finspect::Node::default(),
-            &Config::default(),
+            &Config::builder().build(),
         )
         .await
         .unwrap();
@@ -182,7 +182,7 @@ mod tests {
             unblocker,
             &[&blobfs_verifier],
             &finspect::Node::default(),
-            &Config::default(),
+            &Config::builder().build(),
         )
         .await
         .unwrap();
@@ -215,7 +215,7 @@ mod tests {
             unblocker,
             &[&blobfs_verifier],
             &finspect::Node::default(),
-            &Config::builder().enabled(false).build(),
+            &Config::builder().enable(false).build(),
         )
         .await
         .unwrap();
@@ -248,7 +248,7 @@ mod tests {
             unblocker,
             &[&blobfs_verifier],
             &finspect::Node::default(),
-            &Config::default(),
+            &Config::builder().build(),
         )
         .await
         .unwrap();
@@ -297,7 +297,7 @@ mod tests {
             unblocker,
             &[&blobfs_verifier],
             &finspect::Node::default(),
-            &Config::default(),
+            &Config::builder().build(),
         )
         .await
         .unwrap();

@@ -8,19 +8,22 @@ use {
     serde::Deserialize,
     std::{fs::File, io::Read},
     thiserror::Error,
+    typed_builder::TypedBuilder,
 };
 
 /// Static service configuration options.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, TypedBuilder)]
 pub struct Config {
+    #[builder(default)]
     blobfs: Mode,
-    enable: bool,
-}
 
-impl Default for Config {
-    fn default() -> Self {
-        Self { blobfs: Mode::default(), enable: true }
-    }
+    #[builder(default)]
+    #[allow(dead_code)]
+    // TODO(https://fxbug.dev/76636): Make use of this config type.
+    netstack: Mode,
+
+    #[builder(default = true)]
+    enable: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
@@ -41,13 +44,14 @@ impl Config {
         &self.blobfs
     }
 
-    pub fn enable(&self) -> bool {
-        self.enable
+    // TODO(https://fxbug.dev/76636): Make use of this method.
+    #[allow(dead_code)]
+    pub fn netstack(&self) -> &Mode {
+        &self.netstack
     }
 
-    #[cfg(test)]
-    pub fn builder() -> tests::ConfigBuilder {
-        tests::ConfigBuilder::new()
+    pub fn enable(&self) -> bool {
+        self.enable
     }
 
     pub fn load_from_config_data_or_default() -> Config {
@@ -55,13 +59,13 @@ impl Config {
             Ok(f) => f,
             Err(e) => {
                 fx_log_info!("no config found, using defaults: {:#}", anyhow!(e));
-                return Config::default();
+                return Config::builder().build();
             }
         };
 
         Self::load(f).unwrap_or_else(|e| {
             fx_log_err!("unable to load config, using defaults: {:#}", anyhow!(e));
-            Config::default()
+            Config::builder().build()
         })
     }
 
@@ -75,13 +79,19 @@ impl Config {
         pub struct ParseConfig {
             #[serde(default = "Mode::default")]
             blobfs: Mode,
+            #[serde(default = "Mode::default")]
+            netstack: Mode,
             #[serde(default = "Config::enable_default")]
             enable: bool,
         }
 
         let parse_config = serde_json::from_reader::<_, ParseConfig>(r)?;
 
-        Ok(Config { blobfs: parse_config.blobfs, enable: parse_config.enable })
+        Ok(Config {
+            blobfs: parse_config.blobfs,
+            netstack: parse_config.netstack,
+            enable: parse_config.enable,
+        })
     }
 }
 
@@ -95,30 +105,6 @@ enum ConfigLoadError {
 pub(crate) mod tests {
 
     use {super::*, assert_matches::assert_matches, serde_json::json};
-
-    #[derive(Default)]
-    pub struct ConfigBuilder {
-        blobfs: Mode,
-        enable: bool,
-    }
-    impl ConfigBuilder {
-        pub fn new() -> Self {
-            ConfigBuilder { blobfs: Default::default(), enable: true }
-        }
-        pub fn blobfs(mut self, mode: Mode) -> Self {
-            self.blobfs = mode;
-            self
-        }
-
-        pub fn enabled(mut self, enabled: bool) -> Self {
-            self.enable = enabled;
-            self
-        }
-
-        pub fn build(self) -> Config {
-            Config { blobfs: self.blobfs, enable: self.enable }
-        }
-    }
 
     fn verify_load(input: serde_json::Value, expected: Config) {
         assert_eq!(
@@ -136,16 +122,18 @@ pub(crate) mod tests {
             verify_load(
                 json!({
                     "blobfs": name,
+                    "netstack": name,
                     "enable": false,
                 }),
-                Config::builder().blobfs(val.clone()).enabled(false).build(),
+                Config::builder().blobfs(val.clone()).netstack(val.clone()).enable(false).build(),
             );
             // ... and that leaving it unset defaults to true.
             verify_load(
                 json!({
                     "blobfs": name,
+                    "netstack": name,
                 }),
-                Config::builder().blobfs(val.clone()).enabled(true).build(),
+                Config::builder().blobfs(val.clone()).netstack(val.clone()).enable(true).build(),
             );
         }
     }
@@ -167,14 +155,14 @@ pub(crate) mod tests {
 
     #[test]
     fn test_no_config_data_is_default() {
-        assert_eq!(Config::load_from_config_data_or_default(), Config::default());
+        assert_eq!(Config::load_from_config_data_or_default(), Config::builder().build());
     }
 
     #[test]
     fn test_load_empty_is_default() {
         assert_matches!(
             Config::load("{}".as_bytes()),
-            Ok(ref config) if config == &Config::default());
+            Ok(ref config) if config == &Config::builder().build());
     }
 
     #[test]

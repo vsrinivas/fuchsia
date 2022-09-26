@@ -31,6 +31,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:typed-builder",
   ]
   test_deps = [
     "//src/sys/pkg/testing/mock-paver",
