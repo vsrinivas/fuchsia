@@ -31,7 +31,7 @@ pub async fn list(storage_admin: StorageAdminProxy, path: String) -> Result<Vec<
         storage_dir.open_dir_readable(remote_path.relative_path)?
     };
 
-    dir.entries().await
+    dir.entry_names().await
 }
 
 ////////////////////////////////////////////////////////////////////////////////

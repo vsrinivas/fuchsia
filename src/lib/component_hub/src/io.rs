@@ -6,9 +6,10 @@
 // Ask for host-side support on the new library (fxr/467217).
 
 use {
-    anyhow::{format_err, Result},
+    anyhow::{format_err, Error, Result},
     fidl_fuchsia_io as fio,
     fuchsia_fs::directory::readdir,
+    fuchsia_fs::directory::DirEntry,
     fuchsia_fs::{
         directory::{clone_no_describe, open_directory_no_describe, open_file_no_describe},
         file::{close, read, read_to_string, write},
@@ -44,6 +45,18 @@ impl Directory {
         Ok(Self { path, proxy, readdir_mutex: Mutex::new(()) })
     }
 
+    // Return a list of directory entries in the directory
+    pub async fn entries(&self) -> Result<Vec<DirEntry>, Error> {
+        let _lock = self.readdir_mutex.lock().await;
+        match readdir(&self.proxy).await {
+            Ok(entries) => Ok(entries),
+            Err(e) => Err(format_err!(
+                "could not get entries of `{}`: {}",
+                self.path.as_path().display(),
+                e
+            )),
+        }
+    }
     // Create a Directory object from a proxy
     pub fn from_proxy(proxy: fio::DirectoryProxy) -> Self {
         let path = PathBuf::from(".");
@@ -131,11 +144,24 @@ impl Directory {
     // Checks if a file with the given `filename` exists in this directory.
     // Function is not recursive. Does not check subdirectories.
     pub async fn exists(&self, filename: &str) -> Result<bool> {
-        match self.entries().await {
+        match self.entry_names().await {
             Ok(entries) => Ok(entries.iter().any(|s| s == filename)),
             Err(e) => Err(format_err!(
                 "could not check if `{}` exists in `{}`: {}",
                 filename,
+                self.path.as_path().display(),
+                e
+            )),
+        }
+    }
+
+    // Finds entry with the given `filename` if it exists in this directory.
+    // Function is not recursive. Does not check subdirectories.
+    pub async fn entry_if_exists(&self, filename: &str) -> Result<Option<DirEntry>> {
+        match self.entries().await {
+            Ok(entries) => Ok(entries.into_iter().find(|e| e.name == filename)),
+            Err(e) => Err(format_err!(
+                "could not get entry names of `{}`: {}",
                 self.path.as_path().display(),
                 e
             )),
@@ -219,13 +245,12 @@ impl Directory {
         }
     }
 
-    // Return a list of directory entries in the directory
-    pub async fn entries(&self) -> Result<Vec<String>> {
-        let _lock = self.readdir_mutex.lock().await;
-        match readdir(&self.proxy).await {
+    // Return a list of directory entry names in the directory
+    pub async fn entry_names(&self) -> Result<Vec<String>> {
+        match self.entries().await {
             Ok(entries) => Ok(entries.into_iter().map(|e| e.name).collect()),
             Err(e) => Err(format_err!(
-                "could not get entries of `{}`: {}",
+                "could not get entry names of `{}`: {}",
                 self.path.as_path().display(),
                 e
             )),

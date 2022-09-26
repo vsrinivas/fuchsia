@@ -364,7 +364,7 @@ async fn parse_cmx_components_in_c_dir(
     children_dir: Directory,
     moniker: AbsoluteMoniker,
 ) -> Result<Vec<Instance>> {
-    let child_component_names = children_dir.entries().await?;
+    let child_component_names = children_dir.entry_names().await?;
     let mut future_children = vec![];
     for child_component_name in child_component_names {
         let child_moniker = ChildMoniker::parse(&child_component_name)?;
@@ -389,7 +389,7 @@ async fn parse_cmx_realms_in_r_dir(
     moniker: AbsoluteMoniker,
 ) -> Result<Vec<Instance>> {
     let mut future_realms = vec![];
-    for child_realm_name in realms_dir.entries().await? {
+    for child_realm_name in realms_dir.entry_names().await? {
         let child_moniker = ChildMoniker::parse(&child_realm_name)?;
         let child_moniker = moniker.child(child_moniker);
         let job_ids_dir = realms_dir.open_dir_readable(&child_realm_name)?;
@@ -409,7 +409,7 @@ async fn parse_cmx_realms_in_r_dir(
 
 async fn open_all_job_ids(job_ids_dir: Directory) -> Result<Vec<Directory>> {
     let dirs = job_ids_dir
-        .entries()
+        .entry_names()
         .await?
         .into_iter()
         .map(|job_id| job_ids_dir.open_dir_readable(&job_id))

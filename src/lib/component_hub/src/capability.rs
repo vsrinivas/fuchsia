@@ -139,13 +139,13 @@ async fn capability_is_exposed_or_used_v1(
 // Get all entries in a capabilities directory. If there is a "svc" directory, traverse it and
 // collect all protocol names as well.
 async fn get_capabilities(capability_dir: Directory) -> Result<Vec<String>> {
-    let mut entries = capability_dir.entries().await?;
+    let mut entries = capability_dir.entry_names().await?;
 
     for (index, name) in entries.iter().enumerate() {
         if name == "svc" {
             entries.remove(index);
             let svc_dir = capability_dir.open_dir_readable("svc")?;
-            let mut svc_entries = svc_dir.entries().await?;
+            let mut svc_entries = svc_dir.entry_names().await?;
             entries.append(&mut svc_entries);
             break;
         }

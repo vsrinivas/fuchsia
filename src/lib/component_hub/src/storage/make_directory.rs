@@ -40,7 +40,7 @@ pub async fn make_directory(storage_admin: StorageAdminProxy, path: String) -> R
     )?;
 
     // Verify that we can actually read the contents of the directory created
-    dir.entries().await?;
+    dir.entry_names().await?;
 
     Ok(())
 }
