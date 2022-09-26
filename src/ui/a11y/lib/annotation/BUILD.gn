@@ -6,6 +6,7 @@ source_set("annotation") {
   sources = [
     "annotation_view.cc",
     "annotation_view.h",
+    "highlight_delegate.h",
   ]
 
   public_deps = [
