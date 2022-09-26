@@ -3,15 +3,19 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Result, errors::ffx_bail, ffx_core::ffx_plugin,
-    ffx_temperature_logger_args as args_mod, fidl_fuchsia_thermal_test as fthermal,
+    anyhow::Result,
+    errors::ffx_bail,
+    ffx_core::ffx_plugin,
+    ffx_temperature_logger_args as args_mod,
+    fidl_fuchsia_metricslogger_test::{self as fmetrics, Metric, StatisticsArgs, Temperature},
 };
 
 #[ffx_plugin(
-    fthermal::TemperatureLoggerProxy = "core/temperature-logger:expose:fuchsia.thermal.test.TemperatureLogger"
+    fmetrics::MetricsLoggerProxy = "core/metrics-logger:expose:fuchsia.metricslogger.test.\
+    MetricsLogger"
 )]
 pub async fn logger(
-    temperature_logger: fthermal::TemperatureLoggerProxy,
+    temperature_logger: fmetrics::MetricsLoggerProxy,
     cmd: args_mod::Command,
 ) -> Result<()> {
     match cmd.subcommand {
@@ -21,178 +25,366 @@ pub async fn logger(
 }
 
 pub async fn start(
-    temperature_logger: fthermal::TemperatureLoggerProxy,
+    temperature_logger: fmetrics::MetricsLoggerProxy,
     cmd: args_mod::StartCommand,
 ) -> Result<()> {
-    if cmd.interval.is_zero() {
-        ffx_bail!("Interval must be nonzero.");
-    }
-    if let Some(duration) = cmd.duration {
-        if duration.is_zero() {
-            ffx_bail!("Duration, if specified, must be nonzero.");
-        }
-        if cmd.interval > duration {
-            ffx_bail!("Interval ({:?}) must not exceed duration ({:?})", cmd.interval, duration);
-        }
-    }
+    let statistics_args = cmd
+        .statistics_interval
+        .map(|i| Box::new(StatisticsArgs { statistics_interval_ms: i.as_millis() as u32 }));
+    let sampling_interval_ms = cmd.sampling_interval.as_millis() as u32;
 
-    let interval_ms = cmd.interval.as_millis() as u32;
-
-    // Dispatch to TemperatureLogger.StartLogging or TemperatureLogger.StartLoggingForever,
+    // Dispatch to MetricsLogger.StartLogging or MetricsLogger.StartLoggingForever,
     // depending on whether a logging duration is specified.
-    if let Some(duration) = cmd.duration {
+    let result = if let Some(duration) = cmd.duration {
         let duration_ms = duration.as_millis() as u32;
-        let result = temperature_logger.start_logging(interval_ms, duration_ms).await?;
-        match result {
-            Err(fthermal::TemperatureLoggerError::InvalidArgument) => ffx_bail!(
-                "TemperatureLogger.StartLogging received an invalid argument \
-                (interval_ms={}, duration_ms={})",
-                interval_ms,
-                duration_ms
-            ),
-            Err(fthermal::TemperatureLoggerError::AlreadyLogging) => ffx_bail!(
-                "Temperature logging is already active. Use \"stop\" subcommand to stop manually."
-            ),
-            Ok(()) => Ok(()),
-        }
+        temperature_logger
+            .start_logging(
+                "ffx_temperature",
+                &mut vec![&mut Metric::Temperature(Temperature {
+                    sampling_interval_ms,
+                    statistics_args,
+                })]
+                .into_iter(),
+                duration_ms,
+                cmd.output_samples_to_syslog,
+                cmd.output_stats_to_syslog,
+            )
+            .await?
     } else {
-        let result = temperature_logger.start_logging_forever(interval_ms).await?;
-        match result {
-            Err(fthermal::TemperatureLoggerError::InvalidArgument) => ffx_bail!(
-                "TemperatureLogger.StartLoggingForever received an invalid argument \
-                (interval_ms={})",
-                interval_ms,
-            ),
-            Err(fthermal::TemperatureLoggerError::AlreadyLogging) => ffx_bail!(
-                "Temperature logging is already active. Use \"stop\" subcommand to stop manually."
-            ),
-            Ok(()) => Ok(()),
+        temperature_logger
+            .start_logging_forever(
+                "ffx_temperature",
+                &mut vec![&mut Metric::Temperature(Temperature {
+                    sampling_interval_ms,
+                    statistics_args,
+                })]
+                .into_iter(),
+                cmd.output_samples_to_syslog,
+                cmd.output_stats_to_syslog,
+            )
+            .await?
+    };
+
+    match result {
+        Err(fmetrics::MetricsLoggerError::InvalidSamplingInterval) => ffx_bail!(
+            "MetricsLogger.StartLogging received an invalid sampling interval. \n\
+            Please check if `sampling-interval` meets the following requirements: \n\
+            1) Must be smaller than `duration` if `duration` is specified; \n\
+            2) Must not be smaller than 500ms if `output_samples_to_syslog` is enabled."
+        ),
+        Err(fmetrics::MetricsLoggerError::AlreadyLogging) => ffx_bail!(
+            "Ffx temperature logging is already active. Use \"stop\" subcommand to stop the active \
+            loggingg manually."
+        ),
+        Err(fmetrics::MetricsLoggerError::NoDrivers) => {
+            ffx_bail!("This device has no sensor for logging temperature.")
         }
+        Err(fmetrics::MetricsLoggerError::TooManyActiveClients) => ffx_bail!(
+            "MetricsLogger is running too many clients. Retry after any other client is stopped."
+        ),
+        Err(fmetrics::MetricsLoggerError::InvalidStatisticsInterval) => ffx_bail!(
+            "MetricsLogger.StartLogging received an invalid statistics interval. \n\
+            Please check if `statistics-interval` meets the following requirements: \n\
+            1) Must be equal to or larger than `sampling-interval`; \n\
+            2) Must be smaller than `duration` if `duration` is specified; \n\
+            3) Must not be smaller than 500ms if `output_stats_to_syslog` is enabled."
+        ),
+        _ => Ok(()),
     }
 }
 
-pub async fn stop(temperature_logger: fthermal::TemperatureLoggerProxy) -> Result<()> {
-    temperature_logger.stop_logging().await?;
+pub async fn stop(temperature_logger: fmetrics::MetricsLoggerProxy) -> Result<()> {
+    if !temperature_logger.stop_logging("ffx_temperature").await? {
+        ffx_bail!("Stop logging returned false; Check if logging is already inactive.");
+    }
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
-    use {super::*, assert_matches::assert_matches, futures::channel::mpsc, std::time::Duration};
+    use {
+        super::*,
+        assert_matches::assert_matches,
+        fidl_fuchsia_metricslogger_test::{self as fmetrics, Metric, StatisticsArgs, Temperature},
+        futures::channel::mpsc,
+        std::time::Duration,
+    };
+
+    // Create a metrics-logger that expects a specific request type (Start, StartForever, or
+    // Stop), and returns a specific error
+    macro_rules! make_logger {
+        ($request_type:tt, $error_type:tt) => {
+            setup_fake_temperature_logger(move |req| match req {
+                fmetrics::MetricsLoggerRequest::$request_type { responder, .. } => {
+                    let mut result = Err(fmetrics::MetricsLoggerError::$error_type);
+                    responder.send(&mut result).unwrap();
+                }
+                _ => panic!(
+                    "Expected MetricsLoggerRequest::{}; got {:?}",
+                    stringify!($request_type),
+                    req
+                ),
+            })
+        };
+    }
 
     const ONE_SEC: Duration = Duration::from_secs(1);
 
-    /// Verify that invalid arguments are rejected
+    /// Confirms that the start logging request is dispatched to FIDL requests as expected.
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_invalid_args() {
-        // Zero interval
-        let result = start(
-            setup_fake_temperature_logger(|_| {}),
-            args_mod::StartCommand { interval: Duration::ZERO, duration: Some(ONE_SEC) },
-        )
-        .await;
-        assert!(result.is_err());
-
-        // Zero duration
-        let result = start(
-            setup_fake_temperature_logger(|_| {}),
-            args_mod::StartCommand { interval: ONE_SEC, duration: Some(Duration::ZERO) },
-        )
-        .await;
-        assert!(result.is_err());
-
-        // Interval exceeds duration
-        let result = start(
-            setup_fake_temperature_logger(|_| {}),
-            args_mod::StartCommand { interval: 2 * ONE_SEC, duration: Some(ONE_SEC) },
-        )
-        .await;
-        assert!(result.is_err());
+    async fn test_request_dispatch_start_logging() {
+        // Start logging: sampling_interval=1s, statistics_interval=2s, duration=4s
+        let args = args_mod::StartCommand {
+            sampling_interval: ONE_SEC,
+            statistics_interval: Some(2 * ONE_SEC),
+            duration: Some(4 * ONE_SEC),
+            output_samples_to_syslog: false,
+            output_stats_to_syslog: false,
+        };
+        let (mut sender, mut receiver) = mpsc::channel(1);
+        let logger = setup_fake_temperature_logger(move |req| match req {
+            fmetrics::MetricsLoggerRequest::StartLogging {
+                client_id,
+                metrics,
+                duration_ms,
+                output_samples_to_syslog,
+                output_stats_to_syslog,
+                responder,
+            } => {
+                assert_eq!(String::from("ffx_temperature"), client_id);
+                assert_eq!(metrics.len(), 1);
+                assert_eq!(
+                    metrics[0],
+                    Metric::Temperature(Temperature {
+                        sampling_interval_ms: 1000,
+                        statistics_args: Some(Box::new(StatisticsArgs {
+                            statistics_interval_ms: 2000
+                        })),
+                    }),
+                );
+                assert_eq!(output_samples_to_syslog, false);
+                assert_eq!(output_stats_to_syslog, false);
+                assert_eq!(duration_ms, 4000);
+                let mut result = Ok(());
+                responder.send(&mut result).unwrap();
+                sender.try_send(()).unwrap();
+            }
+            _ => panic!("Expected MetricsLoggerRequest::StartLogging; got {:?}", req),
+        });
+        start(logger, args).await.unwrap();
+        assert_matches!(receiver.try_next().unwrap(), Some(()));
     }
 
-    /// Confirms that commandline args are dispatched to FIDL requests as expected.
+    /// Confirms that the start logging forever request is dispatched to FIDL requests as expected.
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_request_dispatch() {
-        // Start logging: interval=1s, duration=2s
-        let args = args_mod::StartCommand { interval: ONE_SEC, duration: Some(2 * ONE_SEC) };
+    async fn test_request_dispatch_start_logging_forever() {
+        // Start logging: sampling_interval=1s, statistics_interval=2s, duration=forever
+        let args = args_mod::StartCommand {
+            sampling_interval: ONE_SEC,
+            statistics_interval: Some(2 * ONE_SEC),
+            duration: None,
+            output_samples_to_syslog: false,
+            output_stats_to_syslog: false,
+        };
         let (mut sender, mut receiver) = mpsc::channel(1);
         let logger = setup_fake_temperature_logger(move |req| match req {
-            fthermal::TemperatureLoggerRequest::StartLogging { responder, .. } => {
+            fmetrics::MetricsLoggerRequest::StartLoggingForever {
+                client_id,
+                metrics,
+                output_samples_to_syslog,
+                output_stats_to_syslog,
+                responder,
+                ..
+            } => {
+                assert_eq!(String::from("ffx_temperature"), client_id);
+                assert_eq!(metrics.len(), 1);
+                assert_eq!(
+                    metrics[0],
+                    Metric::Temperature(Temperature {
+                        sampling_interval_ms: 1000,
+                        statistics_args: Some(Box::new(StatisticsArgs {
+                            statistics_interval_ms: 2000
+                        })),
+                    }),
+                );
+                assert_eq!(output_samples_to_syslog, false);
+                assert_eq!(output_stats_to_syslog, false);
                 let mut result = Ok(());
                 responder.send(&mut result).unwrap();
                 sender.try_send(()).unwrap();
             }
-            _ => panic!("Expected TemperatureLoggerRequest::StartLogging; got {:?}", req),
+            _ => panic!("Expected MetricsLoggerRequest::StartLoggingForever; got {:?}", req),
         });
         start(logger, args).await.unwrap();
         assert_matches!(receiver.try_next().unwrap(), Some(()));
+    }
 
-        // Start logging: interval=1s, duration=forever
-        let args = args_mod::StartCommand { interval: ONE_SEC, duration: None };
-        let (mut sender, mut receiver) = mpsc::channel(1);
-        let logger = setup_fake_temperature_logger(move |req| match req {
-            fthermal::TemperatureLoggerRequest::StartLoggingForever { responder, .. } => {
-                let mut result = Ok(());
-                responder.send(&mut result).unwrap();
-                sender.try_send(()).unwrap();
-            }
-            _ => panic!("Expected TemperatureLoggerRequest::StartLoggingForever; got {:?}", req),
-        });
-        start(logger, args).await.unwrap();
-        assert_matches!(receiver.try_next().unwrap(), Some(()));
-
+    /// Confirms that the stop logging request is dispatched to FIDL requests as expected.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_request_dispatch_stop_logging() {
         // Stop logging
         let (mut sender, mut receiver) = mpsc::channel(1);
         let logger = setup_fake_temperature_logger(move |req| match req {
-            fthermal::TemperatureLoggerRequest::StopLogging { responder, .. } => {
-                responder.send().unwrap();
+            fmetrics::MetricsLoggerRequest::StopLogging { client_id, responder } => {
+                assert_eq!(String::from("ffx_temperature"), client_id);
+                responder.send(true).unwrap();
                 sender.try_send(()).unwrap();
             }
-            _ => panic!("Expected TemperatureLoggerRequest::StopLogging; got {:?}", req),
+            _ => panic!("Expected MetricsLoggerRequest::StopLogging; got {:?}", req),
         });
         stop(logger).await.unwrap();
         assert_matches!(receiver.try_next().unwrap(), Some(()));
     }
 
-    // Confirms that errors returned by temperature-logger are handled reasonably.
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_errors() {
-        // Create a temperature-logger that expects a specific request type (Start, StartForever, or
-        // Stop), and returns a specific error
-        macro_rules! make_logger {
-            ($request_type:tt, $error_type:tt) => {
-                setup_fake_temperature_logger(move |req| match req {
-                    fthermal::TemperatureLoggerRequest::$request_type { responder, .. } => {
-                        let mut result = Err(fthermal::TemperatureLoggerError::$error_type);
-                        responder.send(&mut result).unwrap();
-                    }
-                    _ => panic!(
-                        "Expected TemperatureLoggerRequest::{}; got {:?}",
-                        stringify!($request_type),
-                        req
-                    ),
-                })
-            };
-        }
+    async fn test_stop_logging_error() {
+        let logger = setup_fake_temperature_logger(move |req| match req {
+            fmetrics::MetricsLoggerRequest::StopLogging { responder, .. } => {
+                responder.send(false).unwrap();
+            }
+            _ => panic!("Expected MetricsLoggerRequest::StopLogging; got {:?}", req),
+        });
+        let error = stop(logger).await.unwrap_err();
+        assert!(error.to_string().contains("Stop logging returned false"));
+    }
 
-        let args = args_mod::StartCommand { interval: ONE_SEC, duration: Some(2 * ONE_SEC) };
-        let logger = make_logger!(StartLogging, InvalidArgument);
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_start_logging_samplingg_interval_error() {
+        let args = args_mod::StartCommand {
+            sampling_interval: ONE_SEC,
+            statistics_interval: Some(ONE_SEC),
+            duration: Some(2 * ONE_SEC),
+            output_samples_to_syslog: false,
+            output_stats_to_syslog: false,
+        };
+        let logger = make_logger!(StartLogging, InvalidSamplingInterval);
         let error = start(logger, args).await.unwrap_err();
-        assert!(error.to_string().contains("invalid argument"));
+        assert!(error.to_string().contains("invalid sampling interval"));
+    }
 
-        let args = args_mod::StartCommand { interval: ONE_SEC, duration: Some(2 * ONE_SEC) };
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_start_logging_forever_sampling_interval_error() {
+        let args = args_mod::StartCommand {
+            sampling_interval: ONE_SEC,
+            statistics_interval: Some(ONE_SEC),
+            duration: None,
+            output_samples_to_syslog: false,
+            output_stats_to_syslog: false,
+        };
+        let logger = make_logger!(StartLoggingForever, InvalidSamplingInterval);
+        let error = start(logger, args).await.unwrap_err();
+        assert!(error.to_string().contains("invalid sampling interval"));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_start_logging_statistics_interval_error() {
+        let args = args_mod::StartCommand {
+            sampling_interval: ONE_SEC,
+            statistics_interval: Some(ONE_SEC),
+            duration: Some(2 * ONE_SEC),
+            output_samples_to_syslog: false,
+            output_stats_to_syslog: false,
+        };
+        let logger = make_logger!(StartLogging, InvalidStatisticsInterval);
+        let error = start(logger, args).await.unwrap_err();
+        assert!(error.to_string().contains("invalid statistics interval"));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_start_logging_forever_statistics_interval_error() {
+        let args = args_mod::StartCommand {
+            sampling_interval: ONE_SEC,
+            statistics_interval: Some(ONE_SEC),
+            duration: None,
+            output_samples_to_syslog: false,
+            output_stats_to_syslog: false,
+        };
+        let logger = make_logger!(StartLoggingForever, InvalidStatisticsInterval);
+        let error = start(logger, args).await.unwrap_err();
+        assert!(error.to_string().contains("invalid statistics interval"));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_start_logging_already_active_error() {
+        let args = args_mod::StartCommand {
+            sampling_interval: ONE_SEC,
+            statistics_interval: Some(ONE_SEC),
+            duration: Some(2 * ONE_SEC),
+            output_samples_to_syslog: false,
+            output_stats_to_syslog: false,
+        };
         let logger = make_logger!(StartLogging, AlreadyLogging);
         let error = start(logger, args).await.unwrap_err();
         assert!(error.to_string().contains("already active"));
+    }
 
-        let args = args_mod::StartCommand { interval: ONE_SEC, duration: None };
-        let logger = make_logger!(StartLoggingForever, InvalidArgument);
-        let error = start(logger, args).await.unwrap_err();
-        assert!(error.to_string().contains("invalid argument"));
-
-        let args = args_mod::StartCommand { interval: ONE_SEC, duration: None };
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_start_logging_forever_already_active_error() {
+        let args = args_mod::StartCommand {
+            sampling_interval: ONE_SEC,
+            statistics_interval: Some(ONE_SEC),
+            duration: None,
+            output_samples_to_syslog: false,
+            output_stats_to_syslog: false,
+        };
         let logger = make_logger!(StartLoggingForever, AlreadyLogging);
         let error = start(logger, args).await.unwrap_err();
         assert!(error.to_string().contains("already active"));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_start_logging_too_many_clients_error() {
+        let args = args_mod::StartCommand {
+            sampling_interval: ONE_SEC,
+            statistics_interval: Some(ONE_SEC),
+            duration: Some(2 * ONE_SEC),
+            output_samples_to_syslog: false,
+            output_stats_to_syslog: false,
+        };
+        let logger = make_logger!(StartLogging, TooManyActiveClients);
+        let error = start(logger, args).await.unwrap_err();
+        assert!(error.to_string().contains("too many clients"));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_start_logging_forever_too_many_clients_error() {
+        let args = args_mod::StartCommand {
+            sampling_interval: ONE_SEC,
+            statistics_interval: Some(ONE_SEC),
+            duration: None,
+            output_samples_to_syslog: false,
+            output_stats_to_syslog: false,
+        };
+        let logger = make_logger!(StartLoggingForever, TooManyActiveClients);
+        let error = start(logger, args).await.unwrap_err();
+        assert!(error.to_string().contains("too many clients"));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_start_logging_no_sensor_error() {
+        let args = args_mod::StartCommand {
+            sampling_interval: ONE_SEC,
+            statistics_interval: Some(ONE_SEC),
+            duration: Some(2 * ONE_SEC),
+            output_samples_to_syslog: false,
+            output_stats_to_syslog: false,
+        };
+        let logger = make_logger!(StartLogging, NoDrivers);
+        let error = start(logger, args).await.unwrap_err();
+        assert!(error.to_string().contains("no sensor"));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_start_logging_forever_no_sensor_error() {
+        let args = args_mod::StartCommand {
+            sampling_interval: ONE_SEC,
+            statistics_interval: Some(ONE_SEC),
+            duration: None,
+            output_samples_to_syslog: false,
+            output_stats_to_syslog: false,
+        };
+        let logger = make_logger!(StartLoggingForever, NoDrivers);
+        let error = start(logger, args).await.unwrap_err();
+        assert!(error.to_string().contains("no sensor"));
     }
 }

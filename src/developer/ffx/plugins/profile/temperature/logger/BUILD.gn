@@ -11,7 +11,7 @@ ffx_plugin("ffx_temperature_logger") {
   sources = [ "src/lib.rs" ]
   deps = [
     "//src/developer/ffx/lib/errors:lib",
-    "//src/power/temperature-logger/fuchsia.thermal.test:fuchsia.thermal.test_rust",
+    "//src/testing/metrics-logger/fuchsia.metricslogger.test:fuchsia.metricslogger.test_rust",
   ]
   test_deps = [
     "//src/lib/fuchsia-async",

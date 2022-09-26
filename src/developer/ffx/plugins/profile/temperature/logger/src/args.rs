@@ -9,23 +9,24 @@ use {argh::FromArgs, ffx_core::ffx_command, std::time::Duration};
 #[argh(
     subcommand,
     name = "logger",
-    description = "Controls the temperature-logger component",
+    description = "Controls the metrics-logger component to log temperature. Logged temperature \
+samples will be available in syslog, via iquery under core/metrics-logger and via tracing in the \
+metrics_logger category.",
     example = "\
-To log temperatures every 100ms for 30 seconds:
+To poll temperature sensor every 500 ms indefinitely:
 
-    $ ffx profile temperature logger start --interval 100ms --duration 30s
+    $ ffx profile temperature logger start --sampling-interval 500ms
 
-To log temperatures every 1s indefinitely:
+To poll temperature sensor every 500 ms and summarize statistics every 1 second for 30 seconds \
+with output-samples-to-syslog and output-stats-to-syslog enabled:
 
-    $ ffx profile temperature logger start --interval 1s",
+    $ ffx profile temperature logger start --sampling-interval 500ms --statistics-interval 1s \
+    --output-stats-to-syslog --output-samples-to-syslog -d 30s",
     note = "\
-Logged temperatures are not output by this command directly; rather, they will be available via
-iquery under core/temperature-logger and via tracing in the temperature_logger category.
-
-If the temperature-logger component is not available to the target, then this command will not work
-properly."
+If the metrics-logger component is not available to the target, then this command will not work
+properly. Add --with //src/testing/metrics-logger to fx set."
 )]
-/// Top-level command.
+/// Top-level command for "ffx profile temperature logger".
 pub struct Command {
     #[argh(subcommand)]
     pub subcommand: SubCommand,
@@ -42,9 +43,21 @@ pub enum SubCommand {
 /// Start logging on the target
 #[argh(subcommand, name = "start")]
 pub struct StartCommand {
-    #[argh(option, long = "interval", short = 'i', from_str_fn(parse_duration))]
-    /// interval between temperature samples
-    pub interval: Duration,
+    #[argh(option, long = "statistics-interval", short = 'l', from_str_fn(parse_duration))]
+    /// interval for summarizing statistics; if omitted, statistics is disabled
+    pub statistics_interval: Option<Duration>,
+
+    #[argh(option, long = "sampling-interval", short = 's', from_str_fn(parse_duration))]
+    /// interval for polling the sensor
+    pub sampling_interval: Duration,
+
+    #[argh(switch)]
+    /// toggle for logging samples to syslog
+    pub output_samples_to_syslog: bool,
+
+    #[argh(switch)]
+    /// toggle for logging statistics to syslog
+    pub output_stats_to_syslog: bool,
 
     #[argh(option, long = "duration", short = 'd', from_str_fn(parse_duration))]
     /// duration for which to log; if omitted, logging will continue indefinitely
@@ -89,6 +102,12 @@ mod tests {
         assert_eq!(parse_duration("3m"), Ok(Duration::from_secs(180)));
         assert_eq!(parse_duration("10s"), Ok(Duration::from_secs(10)));
         assert_eq!(parse_duration("100ms"), Ok(Duration::from_millis(100)));
+    }
+
+    #[test]
+    fn test_parse_duration_err() {
         assert!(parse_duration("100").is_err());
+        assert!(parse_duration("10 0").is_err());
+        assert!(parse_duration("foobar").is_err());
     }
 }
