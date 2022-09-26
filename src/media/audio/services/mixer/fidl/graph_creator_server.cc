@@ -34,11 +34,14 @@ void GraphCreatorServer::Create(CreateRequestView request, CreateCompleter::Sync
 
   GraphServer::Args args;
 
+  ++num_graphs_;
   if (request->has_name()) {
     args.name = std::string(request->name().get());
+  } else {
+    args.name = "Graph" + std::to_string(num_graphs_);
   }
 
-  args.realtime_fidl_thread = FidlThread::CreateFromNewThread("RealtimeFidlThread");
+  args.realtime_fidl_thread = FidlThread::CreateFromNewThread(args.name + "-RealtimeFidlThread");
   if (request->has_realtime_fidl_thread_deadline_profile() &&
       request->realtime_fidl_thread_deadline_profile().is_valid()) {
     args.realtime_fidl_thread->PostTask(

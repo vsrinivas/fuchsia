@@ -32,6 +32,8 @@ class GraphCreatorServer
   friend class BaseFidlServer;
 
   GraphCreatorServer() = default;
+
+  int64_t num_graphs_ = 0;
 };
 
 }  // namespace media_audio
