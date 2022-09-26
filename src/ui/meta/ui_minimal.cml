@@ -93,6 +93,7 @@
         },
         {
             protocol: [
+                "fuchsia.media.ProfileProvider",
                 "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.stash.Store",

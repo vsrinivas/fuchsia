@@ -182,5 +182,11 @@
             from: "self",
             to: "#ui",
         },
+        {
+            protocol: [ "fuchsia.media.ProfileProvider" ],
+            from: "#audio_core",
+            to: "#ui",
+            source_availability: "unknown",
+        },
     ],
 }
