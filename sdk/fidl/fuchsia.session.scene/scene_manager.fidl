@@ -28,6 +28,11 @@ protocol Manager {
     /// If this ViewRef cannot be returned (e.g. in Flatland case, if the ViewCreationToken is
     /// dropped before it is given to Scenic), then the connection to the `Manager` will be closed.
     ///
+    /// The client can expect that:
+    ///
+    /// (1) Its root view will be focused once it's connected to the scene.
+    /// (2) The logical size and position of its root view match the display.
+    ///
     /// TODO(fxbug.dev/104411): Fix this situation.
     /// NOTE: the ViewRef is only returned after the child view is connected to the scene graph.
     /// Therefore, the caller must guarantee that the child view will eventually be connected before
@@ -46,6 +51,11 @@ protocol Manager {
     /// Subsequent calls will replace the view tree with the one starting at the new root viewport.
     /// The root view is shared between all clients of `Manager`.
     ///
+    /// The client can expect that:
+    ///
+    /// (1) Its root view will be focused once it's connected to the scene.
+    /// (2) The logical size and position of its root view match the display.
+    ///
     /// TODO(fxbug.dev/104411): Fix this situation.
     /// NOTE: this method returns only after the child view is connected to the scene graph.
     /// Therefore, the caller must guarantee that the child view will eventually be connected before
@@ -60,6 +70,11 @@ protocol Manager {
     ///
     /// Subsequent calls will replace the view tree with the one starting at the new root viewport.
     /// The root view is shared between all clients of `Manager`.
+    ///
+    /// The client can expect that:
+    ///
+    /// (1) Its root view will be focused once it's connected to the scene.
+    /// (2) The logical size and position of its root view match the display.
     ///
     /// TODO(fxbug.dev/104411): Fix this situation.
     /// NOTE: this method returns only after the child view is connected to the scene graph.
