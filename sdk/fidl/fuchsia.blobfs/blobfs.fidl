@@ -5,21 +5,8 @@ library fuchsia.blobfs;
 
 using zx;
 
-/// Describes contiguous run of allocated blocks.
-type BlockRegion = struct {
-    offset uint64;
-    length uint64;
-};
-
 @discoverable
 protocol Blobfs {
-    /// Retrieve information about allocated regions on the filesystem.
-    GetAllocatedRegions() -> (resource struct {
-        status zx.status;
-        regions zx.handle:<VMO, optional>;
-        count uint64;
-    });
-
     /// Assign the handler for blob corruption callbacks. Only one handler will receive callbacks at
     /// any given time.
     SetCorruptBlobHandler(resource struct {

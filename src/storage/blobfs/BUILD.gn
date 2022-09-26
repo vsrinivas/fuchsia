@@ -156,6 +156,8 @@ static_library("blobfs") {
       "runner.cc",
       "service/admin.cc",
       "service/admin.h",
+      "service/blobfs.cc",
+      "service/blobfs.h",
       "service/health_check.cc",
       "service/health_check.h",
       "service/lifecycle.cc",

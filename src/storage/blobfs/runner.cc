@@ -11,6 +11,7 @@
 
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/storage/blobfs/service/admin.h"
+#include "src/storage/blobfs/service/blobfs.h"
 #include "src/storage/blobfs/service/health_check.h"
 
 namespace blobfs {
@@ -107,6 +108,9 @@ zx_status_t Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root) {
                                                        [this](fs::FuchsiaVfs::ShutdownCallback cb) {
                                                          this->Shutdown(std::move(cb));
                                                        }));
+
+  outgoing->AddEntry(fidl::DiscoverableProtocolName<fuchsia_blobfs::Blobfs>,
+                     fbl::MakeRefCounted<BlobfsService>(blobfs_->dispatcher(), *blobfs_));
 
   status = ServeDirectory(std::move(outgoing), std::move(root));
   if (status != ZX_OK) {

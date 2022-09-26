@@ -5,7 +5,6 @@
 #include "src/storage/blobfs/directory.h"
 
 #include <fuchsia/device/c/fidl.h>
-#include <lib/fidl-utils/bind.h>
 #include <lib/sync/completion.h>
 #include <stdlib.h>
 #include <string.h>
@@ -172,40 +171,6 @@ void Directory::Sync(SyncCallback closure) {
         cb(status);
         event.SetStatus(status);
       });
-}
-
-void Directory::HandleFsSpecificMessage(fidl::IncomingHeaderAndMessage& msg,
-                                        fidl::Transaction* txn) {
-  fidl::WireDispatch<fuchsia_blobfs::Blobfs>(this, std::move(msg), txn);
-}
-
-void Directory::GetAllocatedRegions(GetAllocatedRegionsCompleter::Sync& completer) {
-  static_assert(sizeof(fuchsia_blobfs::wire::BlockRegion) == sizeof(BlockRegion));
-  static_assert(offsetof(fuchsia_blobfs::wire::BlockRegion, offset) ==
-                offsetof(BlockRegion, offset));
-  static_assert(offsetof(fuchsia_blobfs::wire::BlockRegion, length) ==
-                offsetof(BlockRegion, length));
-  zx::vmo vmo;
-  zx_status_t status = ZX_OK;
-  std::vector<BlockRegion> buffer = blobfs_->GetAllocator()->GetAllocatedRegions();
-  uint64_t allocations = buffer.size();
-  if (allocations != 0) {
-    status = zx::vmo::create(sizeof(BlockRegion) * allocations, 0, &vmo);
-    if (status == ZX_OK) {
-      status = vmo.write(buffer.data(), 0, sizeof(BlockRegion) * allocations);
-    }
-  }
-  if (status == ZX_OK) {
-    completer.Reply(ZX_OK, std::move(vmo), allocations);
-  } else {
-    completer.Reply(status, zx::vmo(), 0);
-  }
-}
-
-void Directory::SetCorruptBlobHandler(SetCorruptBlobHandlerRequestView request,
-                                      SetCorruptBlobHandlerCompleter::Sync& completer) {
-  blobfs_->SetCorruptBlobHandler(std::move(request->handler));
-  completer.Reply(ZX_OK);
 }
 
 }  // namespace blobfs

@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <fidl/fuchsia.blobfs/cpp/markers.h>
 #include <fidl/fuchsia.fs/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/blobfs/cpp/fidl.h>
@@ -157,19 +158,14 @@ TEST_P(BlobfsIntegrationTest, CorruptBlobNotify) {
   ASSERT_EQ(ZX_OK, loop.StartThread("corruption-dispatcher"));
   CorruptBlobHandlerImpl corrupt_blob_handler;
   fidl::Binding<fuchsia::blobfs::CorruptBlobHandler> binding(&corrupt_blob_handler);
-  auto client_end = binding.NewBinding(loop.dispatcher());
+  auto client_end = fidl::ClientEnd<fuchsia_blobfs::CorruptBlobHandler>(
+      binding.NewBinding(loop.dispatcher()).TakeChannel());
 
   // Pass the corrupt blob handler server to blobfs.
-  fbl::unique_fd fd(open(fs().mount_path().c_str(), O_RDONLY | O_DIRECTORY));
-  ASSERT_TRUE(fd.is_valid());
-  fdio_cpp::FdioCaller blobfs_caller(std::move(fd));
-  auto blobfs_channel = blobfs_caller.take_channel();
-  ASSERT_EQ(blobfs_channel.status_value(), ZX_OK);
-  fuchsia::blobfs::BlobfsSyncPtr blobfs_proxy;
-  blobfs_proxy.Bind(std::move(*blobfs_channel));
-  zx_status_t status;
-  ASSERT_EQ(blobfs_proxy->SetCorruptBlobHandler(std::move(client_end), &status), ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  auto blobfs = service::ConnectAt<fuchsia_blobfs::Blobfs>(fs().ServiceDirectory());
+  ASSERT_EQ(blobfs.status_value(), ZX_OK);
+
+  ASSERT_EQ(fidl::WireCall(*blobfs)->SetCorruptBlobHandler(std::move(client_end)).status(), ZX_OK);
 
   blob_fd.reset(open(info->path, O_RDONLY));
   ASSERT_TRUE(blob_fd.is_valid());
@@ -500,55 +496,6 @@ TEST_F(BlobfsWithFvmTest, QueryInfo) {
   }
 
   ASSERT_NO_FATAL_FAILURE(QueryInfo(fs(), 6, total_bytes));
-}
-
-void GetAllocations(fs_test::TestFilesystem& fs, zx::vmo* out_vmo, uint64_t* out_count) {
-  fbl::unique_fd fd(open(fs.mount_path().c_str(), O_RDONLY | O_DIRECTORY));
-  ASSERT_TRUE(fd.is_valid());
-  fdio_cpp::FdioCaller caller(std::move(fd));
-  auto channel = caller.take_channel();
-  ASSERT_EQ(channel.status_value(), ZX_OK);
-  fuchsia::blobfs::BlobfsSyncPtr proxy;
-  proxy.Bind(std::move(*channel));
-  zx_status_t status;
-  ASSERT_EQ(proxy->GetAllocatedRegions(&status, out_vmo, out_count), ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
-}
-
-TEST_P(BlobfsIntegrationTest, GetAllocatedRegions) {
-  zx::vmo vmo;
-  uint64_t count;
-  size_t total_bytes = 0;
-  size_t fidl_bytes = 0;
-
-  // Although we expect this partition to be empty, we check the results of GetAllocations
-  // in case blobfs chooses to store any metadata of pre-initialized data with the
-  // allocated regions.
-  ASSERT_NO_FATAL_FAILURE(GetAllocations(fs(), &vmo, &count));
-
-  std::vector<fuchsia::blobfs::BlockRegion> buffer(count);
-  ASSERT_EQ(vmo.read(buffer.data(), 0, sizeof(fuchsia::blobfs::BlockRegion) * count), ZX_OK);
-  for (size_t i = 0; i < count; i++) {
-    total_bytes += buffer[i].length * kBlobfsBlockSize;
-  }
-
-  for (size_t i = 10; i < 16; i++) {
-    std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << i);
-    std::unique_ptr<MerkleTreeInfo> merkle_tree =
-        CreateMerkleTree(info->data.get(), info->size_data, /*use_compact_format=*/true);
-
-    fbl::unique_fd fd;
-    ASSERT_NO_FATAL_FAILURE(MakeBlob(*info, &fd));
-    total_bytes += fbl::round_up(merkle_tree->merkle_tree_size + info->size_data, kBlobfsBlockSize);
-  }
-  ASSERT_NO_FATAL_FAILURE(GetAllocations(fs(), &vmo, &count));
-
-  buffer.resize(count);
-  ASSERT_EQ(vmo.read(buffer.data(), 0, sizeof(fuchsia::blobfs::BlockRegion) * count), ZX_OK);
-  for (size_t i = 0; i < count; i++) {
-    fidl_bytes += buffer[i].length * kBlobfsBlockSize;
-  }
-  ASSERT_EQ(fidl_bytes, total_bytes);
 }
 
 TEST_P(BlobfsIntegrationTest, UseAfterUnlink) {

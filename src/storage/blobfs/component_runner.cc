@@ -10,9 +10,12 @@
 #include <lib/inspect/service/cpp/service.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include <fbl/ref_ptr.h>
+
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
 #include "src/storage/blobfs/mount.h"
 #include "src/storage/blobfs/service/admin.h"
+#include "src/storage/blobfs/service/blobfs.h"
 #include "src/storage/blobfs/service/health_check.h"
 #include "src/storage/blobfs/service/lifecycle.h"
 #include "src/storage/blobfs/service/startup.h"
@@ -25,7 +28,8 @@ ComponentRunner::ComponentRunner(async::Loop& loop, ComponentOptions config)
   auto startup = fbl::MakeRefCounted<fs::PseudoDir>(this);
   outgoing_->AddEntry("startup", startup);
 
-  FX_LOGS(INFO) << "setting up startup service";
+  FX_LOGS(INFO) << "setting up services";
+
   auto startup_svc = fbl::MakeRefCounted<StartupService>(
       loop_.dispatcher(), config_,
       [this](std::unique_ptr<BlockDevice> device, const MountOptions& options) {
@@ -205,6 +209,8 @@ zx::status<> ComponentRunner::Configure(std::unique_ptr<BlockDevice> device,
                                                       [this](fs::FuchsiaVfs::ShutdownCallback cb) {
                                                         this->Shutdown(std::move(cb));
                                                       }));
+  svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_blobfs::Blobfs>,
+                    fbl::MakeRefCounted<BlobfsService>(loop_.dispatcher(), *blobfs_));
 
   status = ServeDirectory(std::move(svc_dir), std::move(svc_server_end_));
   if (status != ZX_OK) {

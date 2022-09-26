@@ -7,7 +7,6 @@
 #ifndef SRC_STORAGE_BLOBFS_DIRECTORY_H_
 #define SRC_STORAGE_BLOBFS_DIRECTORY_H_
 
-#include <fidl/fuchsia.blobfs/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 
 #include <string_view>
@@ -15,17 +14,15 @@
 #include <fbl/algorithm.h>
 #include <fbl/ref_ptr.h>
 
-#include "src/lib/digest/digest.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
-#include "src/storage/blobfs/blob_cache.h"
 
 namespace blobfs {
 
 class Blobfs;
 
 // The root directory of blobfs. This directory is a flat container of all blobs in the filesystem.
-class Directory final : public fs::Vnode, fidl::WireServer<fuchsia_blobfs::Blobfs> {
+class Directory final : public fs::Vnode {
  public:
   explicit Directory(Blobfs* bs);
   ~Directory() final;
@@ -44,13 +41,6 @@ class Directory final : public fs::Vnode, fidl::WireServer<fuchsia_blobfs::Blobf
   zx::status<std::string> GetDevicePath() const final;
   zx_status_t Unlink(std::string_view name, bool must_be_dir) final;
   void Sync(SyncCallback closure) final;
-
-#ifdef __Fuchsia__
-  void HandleFsSpecificMessage(fidl::IncomingHeaderAndMessage& msg, fidl::Transaction* txn) final;
-  void GetAllocatedRegions(GetAllocatedRegionsCompleter::Sync& completer) final;
-  void SetCorruptBlobHandler(SetCorruptBlobHandlerRequestView request,
-                             SetCorruptBlobHandlerCompleter::Sync& completer) final;
-#endif
 
  private:
   Blobfs* const blobfs_;
