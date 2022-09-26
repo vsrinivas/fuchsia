@@ -17,7 +17,8 @@ group("tests") {
       "gvisor",
       "wayland",
     ]
-    public_deps = [ ":adb_art_test($host_toolchain)" ]
+    # TODO(fxbug.dev/110446): Re-enable once flake is sorted out.
+    # public_deps = [ ":adb_art_test($host_toolchain)" ]
   }
 }
 
