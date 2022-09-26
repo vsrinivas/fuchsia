@@ -13,6 +13,7 @@ rustc_library("lib") {
   with_unit_tests = true
 
   deps = [
+    ":integration-component",
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_rust",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_rust",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_rust",
@@ -20,7 +21,9 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.power.manager:fuchsia.power.manager_rust",
     "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
+    "//sdk/fidl/fuchsia.thermal:fuchsia.thermal_rust",
     "//sdk/fidl/fuchsia.ui.activity:fuchsia.ui.activity_rust",
+    "//src/cobalt/bin/testing/mock_cobalt:component_v2",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -47,6 +50,31 @@ rustc_library("lib") {
     "src/mocks/mod.rs",
     "src/mocks/system_controller.rs",
     "src/mocks/temperature_driver.rs",
+  ]
+}
+
+fuchsia_component_manifest("integration-manifest") {
+  testonly = true
+  manifest = "meta/power-manager-for-integration.cml"
+  component_name = "power-manager"
+}
+
+fuchsia_structured_config_values("integration-structured-config") {
+  testonly = true
+  cm_label = ":integration-manifest"
+  values = {
+    enable_debug_service = false
+    node_config_path = ""
+  }
+}
+
+fuchsia_component("integration-component") {
+  cm_label = ":integration-manifest"
+  testonly = true
+  deps = [
+    ":integration-manifest",
+    ":integration-structured-config",
+    "//src/power/power-manager:bin",
   ]
 }
 
