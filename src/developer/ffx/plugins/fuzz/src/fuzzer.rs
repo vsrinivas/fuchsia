@@ -12,8 +12,11 @@ use {
     anyhow::{bail, Context as _, Error, Result},
     fidl::endpoints::create_request_stream,
     fidl_fuchsia_fuzzer::{self as fuzz, Result_ as FuzzResult},
+    fuchsia_async::{Duration, DurationExt, Timer},
     fuchsia_zircon_status as zx,
+    futures::future::{pending, Either},
     futures::{pin_mut, select, try_join, Future, FutureExt},
+    std::cell::RefCell,
     std::path::{Path, PathBuf},
     url::Url,
     walkdir::WalkDir,
@@ -27,6 +30,7 @@ pub struct Fuzzer<O: OutputSink> {
     forwarder: Forwarder<O>,
     output_dir: PathBuf,
     writer: Writer<O>,
+    timeout: RefCell<Option<i64>>,
 }
 
 impl<O: OutputSink> Fuzzer<O> {
@@ -48,7 +52,14 @@ impl<O: OutputSink> Fuzzer<O> {
             create_dir_at(&output_dir, "logs").context("failed to create 'logs' directory")?;
         let forwarder =
             Forwarder::try_new(logs_dir, writer).context("failed to create log forwarder")?;
-        Ok(Self { proxy, url: url.clone(), output_dir, forwarder, writer: writer.clone() })
+        Ok(Self {
+            proxy,
+            url: url.clone(),
+            output_dir,
+            forwarder,
+            writer: writer.clone(),
+            timeout: RefCell::new(None),
+        })
     }
 
     /// Returns the URL of the attached fuzzer.
@@ -92,6 +103,7 @@ impl<O: OutputSink> Fuzzer<O> {
             .await
             .map_err(Error::msg)
             .context("`fuchsia.fuzzer.Controller/GetOptions` failed")?;
+        self.set_timeout(&fuzz_options);
         match name {
             Some(name) => {
                 let name = name.as_ref();
@@ -487,8 +499,17 @@ impl<O: OutputSink> Fuzzer<O> {
         };
         let send_fut = send_fut().fuse();
         let forward_fut = self.forwarder.forward_all().fuse();
-        pin_mut!(fidl_fut, send_fut, forward_fut);
-        loop {
+        let timer_fut = match self.timeout.take() {
+            Some(timeout) => {
+                let deadline = Duration::from_nanos(timeout as u64).after_now();
+                Either::Left(Timer::new(deadline))
+            }
+            None => Either::Right(pending()),
+        };
+        let timer_fut = timer_fut.fuse();
+        pin_mut!(fidl_fut, send_fut, forward_fut, timer_fut);
+        let mut remaining = 3;
+        while remaining > 0 {
             select! {
                 result = fidl_fut => {
                     let status = result?;
@@ -497,22 +518,29 @@ impl<O: OutputSink> Fuzzer<O> {
                     if status != zx::Status::OK {
                         return Ok(status);
                     }
+                    remaining -= 1;
                 }
                 result = send_fut => {
                     result?;
+                    remaining -= 1;
                 }
                 result = forward_fut => {
                     result?;
+                    remaining -= 1;
                 }
-                complete => return Ok(zx::Status::OK),
+                _ = timer_fut => {
+                    bail!("workflow timed out");
+                }
             };
         }
+        Ok(zx::Status::OK)
     }
 
     // Helper methods for configuring the fuzzer.
 
     async fn configure(&self, options: fuzz::Options) -> Result<()> {
         self.writer.println("Configuring fuzzer...");
+        self.set_timeout(&options);
         let status = match self.proxy.configure(options).await {
             Err(e) => bail!("`fuchsia.fuzzer.Controller/Configure` failed: {:?}", e),
             Ok(raw) => zx::Status::from_raw(raw),
@@ -535,6 +563,20 @@ impl<O: OutputSink> Fuzzer<O> {
                 .context("failed to set 'max_total_time'")?;
         }
         self.configure(fuzz_options).await
+    }
+
+    fn set_timeout(&self, options: &fuzz::Options) {
+        if let Some(max_total_time) = options.max_total_time {
+            let mut timeout_mut = self.timeout.borrow_mut();
+            match max_total_time {
+                0 => {
+                    *timeout_mut = None;
+                }
+                n => {
+                    *timeout_mut = Some(n * 2);
+                }
+            }
+        }
     }
 }
 
@@ -873,12 +915,14 @@ pub mod test_fixtures {
                     fake.send_output(fuzz::DONE_MARKER).await?;
                 }
                 Some(Ok(fuzz::ControllerRequest::Fuzz { responder })) => {
-                    // As a special case, fuzzing indefinitely without any errors will imitate a
-                    // FIDL call that does not complete, and that can be interrupted by the shell.
+                    // As special cases, fuzzing indefinitely without any errors or fuzzing with an
+                    // explicit error of `SHOULD_WAIT` will imitate a FIDL call that does not
+                    // complete. These can be interrupted by the shell or allowed to timeout.
                     let result = fake.get_result();
                     let options = fake.get_options();
                     match (options.runs, options.max_total_time, result) {
-                        (Some(0), Some(0), Ok(FuzzResult::NoErrors)) => {
+                        (Some(0), Some(0), Ok(FuzzResult::NoErrors))
+                        | (_, _, Err(zx::Status::SHOULD_WAIT)) => {
                             let mut status = fake.get_status();
                             status.running = Some(true);
                             fake.set_status(status);
@@ -1097,7 +1141,15 @@ mod tests {
         test_run_once(&fake, &fuzzer, None, None, b"", FuzzResult::Leak, &mut test).await?;
         test_run_once(&fake, &fuzzer, None, None, b"", FuzzResult::Oom, &mut test).await?;
         test_run_once(&fake, &fuzzer, None, None, b"", FuzzResult::Timeout, &mut test).await?;
-        test.verify_output()
+        test.verify_output()?;
+
+        // Simulate a hung fuzzer.
+        fake.set_result(Err(zx::Status::SHOULD_WAIT));
+        let result = fuzzer.run(None, Some("100ms".to_string())).await;
+        assert!(result.is_err());
+        let msg = format!("{}", result.unwrap_err());
+        assert!(msg.contains("workflow timed out"));
+        Ok(())
     }
 
     #[fuchsia::test]
