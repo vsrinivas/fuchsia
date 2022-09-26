@@ -40,35 +40,35 @@ protocol Focuser {
         view_ref ViewRef;
     }) -> (struct {}) error Error;
 
-    // Sets the auto focus target to the View specified by `view_ref`.
-    // To unset the target, pass in an empty table.
-    //
-    // If a target has been set, then whenever the caller's View would receive
-    // focus, an attempt is made to transfer focus directly to the target
-    // instead. In all other cases, setting an auto focus target has no effect.
-    // Setting an auto focus target places no limitations on simultaneous use
-    // of RequestFocus().
-    //
-    // An auto focus target is "valid" only while it is a descendant of the
-    // caller's View in the ViewTree. Specifying an invalid auto focus target is
-    // allowed, since it may become valid later.
-    // It is the client's responsibility to ensure the target is a valid
-    // receiver of auto focus.
-    //
-    // If the target is invalid when the auto focus behavior would trigger, then
-    // the attempt to move focus will silently fail and focus will remain with
-    // the caller's View.
-    // A target may become invalid and then become valid again any number of
-    // times; auto focus will continue to function whenever the target is
-    // in a valid state, and will continue to ignore the target while it's in an
-    // invalid state.
-    //
-    // If the focus would by some further automatic mechanism return to the
-    // caller's View (e.g. if the target is unfocusable), then focus will
-    // remain with the caller's View.
-    //
-    // AutoFocusError is currently never returned, and is reserved for possible
-    // future use.
+    /// Sets the auto focus target to the View specified by `view_ref`.
+    /// To unset the target, pass in an empty table.
+    ///
+    /// If a target has been set, then whenever the caller's View would receive
+    /// focus, an attempt is made to transfer focus immediately to the target
+    /// instead. If the target is unfocusable, the new target is the first
+    /// focusable ancestor of the target instead. Setting an auto focus target
+    /// places no limitations on simultaneous use of RequestFocus().
+    ///
+    /// An auto focus target is "valid" only while it is a descendant of the
+    /// caller's View in the ViewTree. Specifying an invalid auto focus target is
+    /// allowed, since it may become valid later.
+    /// It is the client's responsibility to ensure the target is a valid
+    /// receiver of auto focus.
+    ///
+    /// If the target is invalid when the auto focus behavior would trigger, then
+    /// the attempt to move focus will silently fail and focus will remain with
+    /// the caller's View.
+    /// A target may become invalid and then become valid again any number of
+    /// times; auto focus will continue to function whenever the target is
+    /// in a valid state, and will continue to ignore the target while it's in an
+    /// invalid state.
+    ///
+    /// If the focus would by some further automatic mechanism return to the
+    /// caller's View (e.g. if the target is unfocusable), then focus will
+    /// remain with the caller's View.
+    ///
+    /// AutoFocusError is currently never returned, and is reserved for possible
+    /// future use.
     @available(added=9)
     SetAutoFocus(resource table {
         1: view_ref ViewRef;
