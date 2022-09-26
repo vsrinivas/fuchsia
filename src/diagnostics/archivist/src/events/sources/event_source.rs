@@ -130,6 +130,20 @@ async fn handle_event_stream(tx: UnboundedSender<Event>, event_stream: EventStre
                         return;
                     }
                 }
+                Err(EventError::UnknownResult(fsys::EventResult::Error(fsys::EventError {
+                    error_payload:
+                        Some(fsys::EventErrorPayload::DirectoryReady(fsys::DirectoryReadyError {
+                            ..
+                        })),
+                    ..
+                }))) => {
+                    // The error was intended for cases when a component
+                    // declared it exposes inspect but doesn't actually serve it. Turns out this is
+                    // not very common and leads to spam in tests that end up having to include the
+                    // inspect shard transitevely and correctly do not expose inspect.
+                    // Instead of logging a spammy and confusing error, ignore it, with RFC168 this
+                    // error will be obsolete also.
+                }
                 Err(err) => {
                     warn!(?err, "Failed to interpret event");
                 }
