@@ -26,6 +26,11 @@ func PaveDevice(
 		return fmt.Errorf("device failed to pave: %w", err)
 	}
 
+	if err := d.Reconnect(ctx); err != nil {
+		return fmt.Errorf("device failed to connect after pave: %w", err)
+	}
+
+	logger.Infof(ctx, "device booted")
 	logger.Infof(ctx, "Paving successful in %s", time.Now().Sub(startTime))
 
 	return nil

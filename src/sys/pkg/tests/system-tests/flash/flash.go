@@ -26,6 +26,11 @@ func FlashDevice(
 		return fmt.Errorf("device failed to flash: %w", err)
 	}
 
+	if err := d.Reconnect(ctx); err != nil {
+		return fmt.Errorf("device failed to connect after flash: %w", err)
+	}
+
+	logger.Infof(ctx, "device booted")
 	logger.Infof(ctx, "Flashing successful in %s", time.Now().Sub(startTime))
 
 	return nil

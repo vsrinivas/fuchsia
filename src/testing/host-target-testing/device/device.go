@@ -573,7 +573,7 @@ func (c *Client) StartRpcSession(ctx context.Context, repo *packages.Repository)
 
 // Pave paves the device to the specified build. It assumes the device is
 // already in recovery, since there are multiple ways to get a device into
-// recovery.
+// recovery. Does not reconnect to the device.
 func (c *Client) Pave(ctx context.Context, build artifacts.Build) error {
 	p, err := build.GetPaver(ctx)
 	if err != nil {
@@ -608,17 +608,10 @@ func (c *Client) Pave(ctx context.Context, build artifacts.Build) error {
 
 	logger.Infof(ctx, "paver completed, waiting for device to boot")
 
-	// Reconnect to the device.
-	if err = c.Reconnect(ctx); err != nil {
-		return fmt.Errorf("device failed to connect after pave: %w", err)
-	}
-
-	logger.Infof(ctx, "device booted")
-
 	return nil
 }
 
-// Flash the device to the specified build.
+// Flash the device to the specified build. Does not reconnect to the device.
 func (c *Client) Flash(ctx context.Context, build artifacts.Build) error {
 	f, err := build.GetFlasher(ctx)
 	if err != nil {
@@ -630,13 +623,6 @@ func (c *Client) Flash(ctx context.Context, build artifacts.Build) error {
 	}
 
 	logger.Infof(ctx, "flasher completed, waiting for device to boot")
-
-	// Reconnect to the device.
-	if err = c.Reconnect(ctx); err != nil {
-		return fmt.Errorf("device failed to connect after pave: %w", err)
-	}
-
-	logger.Infof(ctx, "device booted")
 
 	return nil
 }

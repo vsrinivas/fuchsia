@@ -156,7 +156,7 @@ func testOTAs(
 	build artifacts.Build,
 	rpcClient **sl4f.Client,
 ) error {
-	for i := 1; i <= c.cycleCount; i++ {
+	for i := uint(1); i <= c.cycleCount; i++ {
 		logger.Infof(ctx, "OTA Attempt %d", i)
 
 		if err := util.RunWithTimeout(ctx, c.cycleTimeout, func() error {
@@ -195,12 +195,34 @@ func doTestOTAs(
 		return fmt.Errorf("failed to check if device is up to date: %w", err)
 	}
 	if !upToDate {
-		logger.Infof(ctx, "starting OTA from N-1 -> N test")
-		otaTime := time.Now()
-		if err := systemOTA(ctx, device, rpcClient, repo, true); err != nil {
-			return fmt.Errorf("OTA from N-1 -> N failed: %w", err)
+		// Attempt an N-1 -> N OTA, up to downgradeOTAAttempts times.
+		// We optionally retry this OTA because some downgrade builds contain bugs which make them
+		// spuriously reboot. Those builds are already cut, but we still need to test them.
+		// See fxbug.dev/109811 for more details.
+		successfulNMinusOneToN := false
+		var lastError error
+		for i := uint(1); i <= c.downgradeOTAttempts; i++ {
+			logger.Infof(ctx, "starting OTA from N-1 -> N test, attempt %d of %d", i, c.downgradeOTAttempts)
+			otaTime := time.Now()
+			if lastError = systemOTA(ctx, device, rpcClient, repo, true); lastError == nil {
+				logger.Infof(ctx, "OTA from N-1 -> N successful in %s", time.Now().Sub(otaTime))
+				successfulNMinusOneToN = true
+				break
+			}
+			logger.Warningf(ctx, "OTA from N-1 -> N failed, trying again %d times: %v", c.downgradeOTAttempts-i, lastError)
+
+			// Reset our client state since the device has _potentially_ rebooted
+			device.Close()
+			newClient, err := c.deviceConfig.NewDeviceClient(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to create ota test client: %w", err)
+			}
+			*device = *newClient
 		}
-		logger.Infof(ctx, "OTA from N-1 -> N successful in %s", time.Now().Sub(otaTime))
+
+		if !successfulNMinusOneToN {
+			return fmt.Errorf("OTA from N-1 -> N unsuccessful after %d attempts. Last error: %w", c.downgradeOTAttempts, lastError)
+		}
 	}
 
 	logger.Infof(ctx, "starting OTA N -> N' test")
