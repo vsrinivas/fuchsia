@@ -10,8 +10,6 @@
     capabilities: [
         {
             protocol: [
-                "fuchsia.cobalt.LoggerFactory",
-                "fuchsia.cobalt.test.LoggerQuerier",
                 "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.metrics.test.MetricEventLoggerQuerier",
             ],
@@ -20,8 +18,6 @@
     expose: [
         {
             protocol: [
-                "fuchsia.cobalt.LoggerFactory",
-                "fuchsia.cobalt.test.LoggerQuerier",
                 "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.metrics.test.MetricEventLoggerQuerier",
             ],
