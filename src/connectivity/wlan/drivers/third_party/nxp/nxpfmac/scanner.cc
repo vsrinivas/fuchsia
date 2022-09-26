@@ -79,8 +79,11 @@ zx_status_t Scanner::Scan(const wlan_fullmac_scan_req_t* req, zx_duration_t time
   }
 
   if (req->ssids_count == 1) {
+    // Perform a scan for a specific SSID.
+    scan_request_.UserReq().sub_command = MLAN_OID_SCAN_SPECIFIC_SSID;
     const uint8_t len = std::min<uint8_t>(req->ssids_list[0].len, sizeof(scan_req.scan_ssid.ssid));
     memcpy(scan_req.scan_ssid.ssid, req->ssids_list[0].data, len);
+    scan_req.scan_ssid.ssid_len = len;
   }
 
   // Callback for when the scan completes.

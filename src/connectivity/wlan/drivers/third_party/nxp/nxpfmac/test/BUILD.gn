@@ -26,6 +26,7 @@ test("nxpfmac_test") {
   ]
   deps = [
     ":mlan_mocks",
+    "//sdk/banjo/fuchsia.hardware.wlan.fullmac:fuchsia.hardware.wlan.fullmac_banjo_cpp",
     "//src/connectivity/wlan/drivers/third_party/nxp/nxpfmac:core",
     "//src/devices/testing/mock-ddk",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

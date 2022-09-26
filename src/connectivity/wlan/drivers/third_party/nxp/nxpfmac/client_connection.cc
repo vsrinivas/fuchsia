@@ -13,17 +13,23 @@
 
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/client_connection.h"
 
+#include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <netinet/if_ether.h>
 
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/debug.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/ies.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/ioctl_adapter.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/key_ring.h"
 
 namespace wlan::nxpfmac {
 
 constexpr zx_duration_t kConnectionTimeout = ZX_MSEC(6000);
 
-ClientConnection::ClientConnection(IoctlAdapter* ioctl_adapter, uint32_t bss_index)
+ClientConnection::ClientConnection(IoctlAdapter* ioctl_adapter, KeyRing* key_ring,
+                                   uint32_t bss_index)
     : ioctl_adapter_(ioctl_adapter),
+      key_ring_(key_ring),
       bss_index_(bss_index),
       connect_request_(new IoctlRequest<mlan_ds_bss>()) {}
 
@@ -43,11 +49,78 @@ ClientConnection::~ClientConnection() {
   connect_in_progress_.Wait(lock, false);
 }
 
-zx_status_t ClientConnection::Connect(const uint8_t (&bssid)[ETH_ALEN], uint8_t channel,
+zx_status_t ClientConnection::Connect(const wlan_fullmac_connect_req_t* req,
                                       OnConnectCallback&& on_connect) {
   std::lock_guard lock(mutex_);
   if (connect_in_progress_) {
     return ZX_ERR_ALREADY_EXISTS;
+  }
+
+  zx_status_t status = key_ring_->RemoveAllKeys();
+  if (status != ZX_OK) {
+    NXPF_ERR("Could not remove all keys: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  if (req->wep_key.key_count > 0) {
+    // TODO(fxbug.dev/108742): This probably needs additional work in order to support WEP
+    status = key_ring_->AddKey(req->wep_key);
+    if (status != ZX_OK) {
+      NXPF_ERR("Could not set WEP key: %s", zx_status_get_string(status));
+      return status;
+    }
+  }
+
+  status = ConfigureIes(req->selected_bss.ies_list, req->selected_bss.ies_count);
+  if (status != ZX_OK) {
+    NXPF_ERR("Failed to configure IES: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  status = ConfigureIes(req->security_ie_list, req->security_ie_count);
+  if (status != ZX_OK) {
+    NXPF_ERR("Failed to configure security IES: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  status = SetAuthMode(req->auth_type);
+  if (status != ZX_OK) {
+    NXPF_ERR("Failed to set auth mode %u: %s", req->auth_type, zx_status_get_string(status));
+    return status;
+  }
+
+  uint8_t pairwise_cipher_suite = 0;
+  uint8_t group_cipher_suite = 0;
+  status = GetRsnCipherSuites(req->security_ie_list, req->security_ie_count, &pairwise_cipher_suite,
+                              &group_cipher_suite);
+  // ZX_ERR_NOT_FOUND indicates there was no RSN IE, this could happen for an open network for
+  // example. Don't treat this as an error, just use the default values of 0, there doesn't seem to
+  // be a useful constant for this.
+  if (status != ZX_OK && status != ZX_ERR_NOT_FOUND) {
+    NXPF_ERR("Failed to get cipher suite from IEs: %s", zx_status_get_string(status));
+    return status;
+  }
+  if (pairwise_cipher_suite != group_cipher_suite) {
+    NXPF_ERR("Pairwise cipher suite %u and group cipher suite %u do not match, not yet supported",
+             pairwise_cipher_suite, group_cipher_suite);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // The linux driver seems to potentially set both the pairwise and group cipher suite here. But
+  // there is no differentiation in the ioctl to say which is which. So it seems that one would
+  // overwrite the other. Until we know more only set one of them and expect they're both the same.
+  status = SetEncryptMode(pairwise_cipher_suite);
+  if (status != ZX_OK) {
+    NXPF_ERR("Failed to set pairwise cipher suite: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  if (req->security_ie_count > 0) {
+    status = SetWpaEnabled(true);
+    if (status != ZX_OK) {
+      NXPF_ERR("Failed to enable WPA: %s", zx_status_get_string(status));
+      return status;
+    }
   }
 
   on_connect_ = std::move(on_connect);
@@ -72,24 +145,41 @@ zx_status_t ClientConnection::Connect(const uint8_t (&bssid)[ETH_ALEN], uint8_t 
     auto& request = reinterpret_cast<IoctlRequest<mlan_ds_bss>*>(req)->UserReq();
     const mlan_ds_misc_assoc_rsp& assoc_rsp = request.param.ssid_bssid.assoc_rsp;
 
+    const uint8_t* ies = nullptr;
+    size_t ies_size = 0;
+
     StatusCode status_code = StatusCode::kSuccess;
     if (assoc_rsp.assoc_resp_len >= sizeof(IEEEtypes_AssocRsp_t)) {
       auto response = reinterpret_cast<const IEEEtypes_AssocRsp_t*>(assoc_rsp.assoc_resp_buf);
       status_code = static_cast<StatusCode>(response->status_code);
+      ies = response->ie_buffer;
+      ies_size = assoc_rsp.assoc_resp_len - sizeof(IEEEtypes_AssocRsp_t) + 1;
     } else if (io_status != IoctlStatus::Success) {
       status_code = StatusCode::kJoinFailure;
     }
 
-    CompleteConnection(status_code);
+    CompleteConnection(status_code, ies, ies_size);
   };
 
   *connect_request_ = IoctlRequest<mlan_ds_bss>(
       MLAN_IOCTL_BSS, MLAN_ACT_SET, bss_index_,
       mlan_ds_bss{
           .sub_command = MLAN_OID_BSS_START,
-          .param = {.ssid_bssid = {.idx = bss_index_, .channel = channel}},
+          .param = {.ssid_bssid = {.idx = bss_index_,
+                                   .channel = req->selected_bss.channel.primary}},
       });
-  memcpy(connect_request_->UserReq().param.ssid_bssid.bssid, bssid, ETH_ALEN);
+  mlan_ssid_bssid& bss = connect_request_->UserReq().param.ssid_bssid;
+  memcpy(bss.bssid, req->selected_bss.bssid, ETH_ALEN);
+
+  const IeView ies(req->selected_bss.ies_list, req->selected_bss.ies_count);
+
+  std::optional<Ie> ssid_ie = ies.get(SSID);
+  if (!ssid_ie.has_value()) {
+    NXPF_ERR("No SSID found in IEs");
+    return ZX_ERR_INVALID_ARGS;
+  }
+  bss.ssid.ssid_len = std::min<uint32_t>(ssid_ie->size(), sizeof(bss.ssid.ssid));
+  memcpy(bss.ssid.ssid, ssid_ie->data(), bss.ssid.ssid_len);
 
   // This should be set before issuing the ioctl. The ioctl completion could theoretically be called
   // before IssueIoctl even returns.
@@ -131,15 +221,165 @@ zx_status_t ClientConnection::Disconnect() {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-void ClientConnection::TriggerConnectCallback(StatusCode status_code) {
+zx_status_t ClientConnection::GetRsnCipherSuites(const uint8_t* ies, size_t ies_count,
+                                                 uint8_t* out_pairwise_cipher_suite,
+                                                 uint8_t* out_group_cipher_suite) {
+  const IeView ie_view(ies, ies_count);
+
+  const IEEEtypes_Rsn_t* rsn = ie_view.get_as<IEEEtypes_Rsn_t>(RSN_IE);
+  if (!rsn) {
+    return ZX_ERR_NOT_FOUND;
+  }
+
+  if (rsn->pairwise_cipher.count != 1) {
+    // Not equipped to deal with this at this point.
+    NXPF_INFO("Too many cipher counts: %u", rsn->pairwise_cipher.count);
+    return ZX_ERR_INVALID_ARGS;
+  }
+  *out_pairwise_cipher_suite = rsn->pairwise_cipher.list[0].type;
+  *out_group_cipher_suite = rsn->group_cipher.type;
+  return ZX_OK;
+}
+
+zx_status_t ClientConnection::ConfigureIes(const uint8_t* ies, size_t ies_count) {
+  const IeView ie_view(ies, ies_count);
+
+  for (auto& ie : ie_view) {
+    if (ie.type() == MOBILITY_DOMAIN) {
+      // Ignore this IE.
+      continue;
+    }
+    if (ie.raw_size() > std::numeric_limits<uint8_t>::max()) {
+      NXPF_ERR("IE %u of size %u exceeds maximum size %u", ie.type(), ie.raw_size(),
+               std::numeric_limits<uint8_t>::max());
+      continue;
+    }
+    if (ie.is_vendor_specific_oui_type(kOuiMicrosoft, kOuiTypeWmm)) {
+      // Do not include WMM IEs, some APs will reject the association.
+      continue;
+    }
+
+    IoctlRequest<mlan_ds_misc_cfg> request(
+        MLAN_IOCTL_MISC_CFG, MLAN_ACT_SET, bss_index_,
+        mlan_ds_misc_cfg{.sub_command = MLAN_OID_MISC_GEN_IE,
+                         .param{.gen_ie{.type = MLAN_IE_TYPE_GEN_IE, .len = ie.raw_size()}}});
+    memcpy(request.UserReq().param.gen_ie.ie_data, ie.raw_data(), ie.raw_size());
+
+    IoctlStatus io_status = ioctl_adapter_->IssueIoctlSync(&request);
+    if (io_status != IoctlStatus::Success) {
+      NXPF_ERR("Failed to set IE %u: %d", ie.type(), io_status);
+      continue;
+    }
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t ClientConnection::SetAuthMode(wlan_auth_type_t auth_type) {
+  uint32_t auth_mode = 0;
+  switch (auth_type) {
+    case WLAN_AUTH_TYPE_OPEN_SYSTEM:
+      auth_mode = MLAN_AUTH_MODE_OPEN;
+      break;
+    case WLAN_AUTH_TYPE_SHARED_KEY:
+      auth_mode = MLAN_AUTH_MODE_SHARED;
+      break;
+    case WLAN_AUTH_TYPE_FAST_BSS_TRANSITION:
+      auth_mode = MLAN_AUTH_MODE_FT;
+      break;
+    case WLAN_AUTH_TYPE_SAE:
+      auth_mode = MLAN_AUTH_MODE_SAE;
+      break;
+    default:
+      NXPF_ERR("Invalid auth type %u", auth_type);
+      return ZX_ERR_INVALID_ARGS;
+  }
+
+  IoctlRequest<mlan_ds_sec_cfg> request(
+      MLAN_IOCTL_SEC_CFG, MLAN_ACT_SET, bss_index_,
+      mlan_ds_sec_cfg{.sub_command = MLAN_OID_SEC_CFG_AUTH_MODE, .param{.auth_mode = auth_mode}});
+
+  IoctlStatus io_status = ioctl_adapter_->IssueIoctlSync(&request);
+  if (io_status != IoctlStatus::Success) {
+    NXPF_ERR("Failed to set auth mode: %d", io_status);
+    return ZX_ERR_INTERNAL;
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t ClientConnection::SetEncryptMode(uint8_t cipher_suite) {
+  uint32_t encrypt_mode = 0;
+
+  switch (cipher_suite) {
+    case 0:
+      encrypt_mode = MLAN_ENCRYPTION_MODE_NONE;
+      break;
+    case CIPHER_SUITE_TYPE_WEP_40:
+      encrypt_mode = MLAN_ENCRYPTION_MODE_WEP40;
+      break;
+    case CIPHER_SUITE_TYPE_WEP_104:
+      encrypt_mode = MLAN_ENCRYPTION_MODE_WEP104;
+      break;
+    case CIPHER_SUITE_TYPE_TKIP:
+      encrypt_mode = MLAN_ENCRYPTION_MODE_TKIP;
+      break;
+    case CIPHER_SUITE_TYPE_CCMP_128:
+      encrypt_mode = MLAN_ENCRYPTION_MODE_CCMP;
+      break;
+    case CIPHER_SUITE_TYPE_CCMP_256:
+      encrypt_mode = MLAN_ENCRYPTION_MODE_CCMP_256;
+      break;
+    case CIPHER_SUITE_TYPE_GCMP_128:
+      encrypt_mode = MLAN_ENCRYPTION_MODE_GCMP;
+      break;
+    case CIPHER_SUITE_TYPE_GCMP_256:
+      encrypt_mode = MLAN_ENCRYPTION_MODE_GCMP_256;
+      break;
+    default:
+      NXPF_ERR("Unsupported cipher suite: %u", cipher_suite);
+      return ZX_ERR_INVALID_ARGS;
+  }
+
+  IoctlRequest<mlan_ds_sec_cfg> request(
+      MLAN_IOCTL_SEC_CFG, MLAN_ACT_SET, bss_index_,
+      mlan_ds_sec_cfg{.sub_command = MLAN_OID_SEC_CFG_ENCRYPT_MODE,
+                      .param{.encrypt_mode = encrypt_mode}});
+
+  IoctlStatus io_status = ioctl_adapter_->IssueIoctlSync(&request);
+  if (io_status != IoctlStatus::Success) {
+    NXPF_ERR("Failed to set encrypt mode: %d", io_status);
+    return ZX_ERR_INTERNAL;
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t ClientConnection::SetWpaEnabled(bool enabled) {
+  IoctlRequest<mlan_ds_sec_cfg> request(
+      MLAN_IOCTL_SEC_CFG, MLAN_ACT_SET, bss_index_,
+      mlan_ds_sec_cfg{.sub_command = MLAN_OID_SEC_CFG_WPA_ENABLED, .param{.wpa_enabled = enabled}});
+
+  IoctlStatus io_status = ioctl_adapter_->IssueIoctlSync(&request);
+  if (io_status != IoctlStatus::Success) {
+    NXPF_ERR("Failed to %s WPA: %d", enabled ? "enable" : "disable", io_status);
+    return ZX_ERR_INTERNAL;
+  }
+
+  return ZX_OK;
+}
+
+void ClientConnection::TriggerConnectCallback(StatusCode status_code, const uint8_t* ies,
+                                              size_t ies_size) {
   if (on_connect_) {
-    on_connect_(status_code);
+    on_connect_(status_code, ies, ies_size);
     // Clear out the callback after using it.
     on_connect_ = OnConnectCallback();
   }
 }
 
-void ClientConnection::CompleteConnection(StatusCode status_code) {
+void ClientConnection::CompleteConnection(StatusCode status_code, const uint8_t* ies,
+                                          size_t ies_size) {
   if (!connect_in_progress_) {
     NXPF_WARN("Received connection completion with no connection attempt in progress, ignoring.");
     return;
@@ -147,6 +387,6 @@ void ClientConnection::CompleteConnection(StatusCode status_code) {
   connected_ = status_code == StatusCode::kSuccess;
   connect_in_progress_ = false;
 
-  TriggerConnectCallback(status_code);
+  TriggerConnectCallback(status_code, ies, ies_size);
 }
 }  // namespace wlan::nxpfmac

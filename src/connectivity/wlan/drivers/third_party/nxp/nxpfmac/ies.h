@@ -21,6 +21,12 @@
 
 namespace wlan::nxpfmac {
 
+// OUIs
+constexpr uint8_t kOuiMicrosoft[] = {0x00, 0x50, 0xf2};
+
+// OUI types
+constexpr uint8_t kOuiTypeWmm = 0x02;
+
 // Inspects each element to determine its length and ensures they all fit within `size`. Returns
 // true if all elements and their payload fit within `ies` to `ies + size`, false otherwise.
 bool is_valid_ie_range(const uint8_t* ies, size_t size);
@@ -46,6 +52,8 @@ class Ie {
   const uint8_t* data() const { return ie_ + kHdrSize; }
   // Returns a pointer to the raw data of the ie, including header.
   const uint8_t* raw_data() const { return ie_; }
+
+  bool is_vendor_specific_oui_type(const uint8_t (&oui)[3], uint8_t oui_type) const;
 
  private:
   const uint8_t* ie_ = nullptr;

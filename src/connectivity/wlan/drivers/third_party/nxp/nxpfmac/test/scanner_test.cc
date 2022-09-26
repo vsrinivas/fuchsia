@@ -244,7 +244,7 @@ TEST_F(ScannerTest, ScanSpecificSsid) {
     EXPECT_EQ(MLAN_ACT_SET, req->action);
     EXPECT_EQ(MLAN_IOCTL_SCAN, req->req_id);
     auto scan = reinterpret_cast<mlan_ds_scan*>(req->pbuf);
-    EXPECT_EQ(MLAN_OID_SCAN_NORMAL, scan->sub_command);
+    EXPECT_EQ(MLAN_OID_SCAN_SPECIFIC_SSID, scan->sub_command);
     auto& scan_req = scan->param.scan_req;
 
     // Check that the requested SSID is part of the request.

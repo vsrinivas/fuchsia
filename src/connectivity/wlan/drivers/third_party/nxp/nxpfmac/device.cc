@@ -326,11 +326,33 @@ void Device::GetPsMode(fdf::Arena &arena, GetPsModeCompleter::Sync &completer) {
 }
 
 void Device::OnEapolTransmitted(wlan::drivers::components::Frame &&frame, zx_status_t status) {
-  // Not yet implemented
+  auto eth = reinterpret_cast<ethhdr *>(frame.Data());
+
+  switch (frame.PortId()) {
+    case kClientInterfaceId:
+      client_interface_->OnEapolTransmitted(status, eth->h_dest);
+      break;
+    case kApInterfaceId:
+      ap_interface_->OnEapolTransmitted(status, eth->h_dest);
+      break;
+    default:
+      NXPF_ERR("EAPOL transmitted on unknown interface %u", frame.PortId());
+      break;
+  }
 }
 
 void Device::OnEapolReceived(wlan::drivers::components::Frame &&frame) {
-  // Not yet implemented
+  switch (frame.PortId()) {
+    case kClientInterfaceId:
+      client_interface_->OnEapolResponse(std::move(frame));
+      break;
+    case kApInterfaceId:
+      ap_interface_->OnEapolResponse(std::move(frame));
+      break;
+    default:
+      NXPF_ERR("EAPOL received on unknown interface %u", frame.PortId());
+      break;
+  }
 }
 
 void Device::OnFirmwareInitComplete(zx_status_t status) {

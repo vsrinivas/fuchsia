@@ -13,6 +13,8 @@
 
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/ies.h"
 
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan.h"
+
 namespace wlan::nxpfmac {
 
 // Return the actual size of a range of IEs.
@@ -33,6 +35,15 @@ static size_t determine_total_ie_size(const uint8_t* const ies, size_t size) {
 
 bool is_valid_ie_range(const uint8_t* ies, size_t size) {
   return determine_total_ie_size(ies, size) == size;
+}
+
+bool Ie::is_vendor_specific_oui_type(const uint8_t (&oui)[3], uint8_t oui_type) const {
+  if (raw_size() < sizeof(IEEEtypes_VendorHeader_t)) {
+    return false;
+  }
+
+  auto vendor_hdr = reinterpret_cast<const IEEEtypes_VendorHeader_t*>(raw_data());
+  return memcmp(oui, vendor_hdr->oui, sizeof(oui)) == 0 && vendor_hdr->oui_type == oui_type;
 }
 
 IeView::IeView(const uint8_t* ies, size_t length)

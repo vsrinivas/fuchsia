@@ -18,7 +18,9 @@
 
 #include <zxtest/zxtest.h>
 
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/device_context.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/ioctl_adapter.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/key_ring.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/test/mlan_mocks.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/test/mock_bus.h"
 
@@ -26,76 +28,88 @@ namespace {
 
 using wlan::nxpfmac::ClientConnection;
 
+constexpr uint8_t kIesWithSsid[] = {"\x00\x04Test"};
+constexpr uint8_t kTestChannel = 6;
+constexpr uint32_t kTestBssIndex = 3;
+constexpr wlan_fullmac_connect_req_t kMinimumConnectReq = {
+    .selected_bss{.ies_list = kIesWithSsid,
+                  .ies_count = sizeof(kIesWithSsid),
+                  .channel{.primary = kTestChannel}},
+    .auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM};
+
 struct ClientConnectionTest : public zxtest::Test {
   void SetUp() override {
     auto ioctl_adapter = wlan::nxpfmac::IoctlAdapter::Create(mocks_.GetAdapter(), &mock_bus_);
     ASSERT_OK(ioctl_adapter.status_value());
     ioctl_adapter_ = std::move(ioctl_adapter.value());
+    key_ring_ = std::make_unique<wlan::nxpfmac::KeyRing>(ioctl_adapter_.get(), kTestBssIndex);
   }
 
   wlan::nxpfmac::MlanMockAdapter mocks_;
   wlan::nxpfmac::MockBus mock_bus_;
   std::unique_ptr<wlan::nxpfmac::IoctlAdapter> ioctl_adapter_;
+  std::unique_ptr<wlan::nxpfmac::KeyRing> key_ring_;
 };
 
-TEST(ConnectionTest, Constructible) { ASSERT_NO_FATAL_FAILURE(ClientConnection(nullptr, 0)); }
+TEST(ConnectionTest, Constructible) {
+  ASSERT_NO_FATAL_FAILURE(ClientConnection(nullptr, nullptr, 0));
+}
 
 TEST_F(ClientConnectionTest, Connect) {
   constexpr uint8_t kBss[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06};
   constexpr uint32_t kBssIndex = 0;
-  constexpr uint16_t kChannel = 11;
+
+  wlan_fullmac_connect_req_t request = kMinimumConnectReq;
+  memcpy(request.selected_bss.bssid, kBss, sizeof(kBss));
 
   sync_completion_t ioctl_completion;
 
   auto on_ioctl = [&](t_void *, pmlan_ioctl_req req) -> mlan_status {
-    auto request = reinterpret_cast<wlan::nxpfmac::IoctlRequest<mlan_ds_bss> *>(req);
-    auto &user_req = request->UserReq();
-    EXPECT_EQ(MLAN_IOCTL_BSS, request->IoctlReq().req_id);
-    EXPECT_EQ(MLAN_ACT_SET, request->IoctlReq().action);
+    if (req->action == MLAN_ACT_SET && req->req_id == MLAN_IOCTL_BSS) {
+      auto bss = reinterpret_cast<const mlan_ds_bss *>(req->pbuf);
+      if (bss->sub_command == MLAN_OID_BSS_START) {
+        // This is the actual connect ioctl.
 
-    EXPECT_EQ(MLAN_OID_BSS_START, user_req.sub_command);
-    EXPECT_EQ(kBssIndex, user_req.param.ssid_bssid.idx);
-    EXPECT_EQ(kChannel, user_req.param.ssid_bssid.channel);
-    EXPECT_BYTES_EQ(kBss, user_req.param.ssid_bssid.bssid, ETH_ALEN);
+        auto request = reinterpret_cast<wlan::nxpfmac::IoctlRequest<mlan_ds_bss> *>(req);
+        auto &user_req = request->UserReq();
+        EXPECT_EQ(MLAN_IOCTL_BSS, request->IoctlReq().req_id);
+        EXPECT_EQ(MLAN_ACT_SET, request->IoctlReq().action);
 
-    mlan_status return_status = MLAN_STATUS_PENDING;
-    wlan::nxpfmac::IoctlStatus io_status = wlan::nxpfmac::IoctlStatus::Success;
-    if (req->action == MLAN_ACT_CANCEL) {
-      // On cancelation mlan will set the status code to canceled, we must emulated this behavior to
-      // ensure that IoctlAdapter recognized the successful cancelation.
-      req->status_code = MLAN_ERROR_CMD_CANCEL;
-      // The cancel must return success
-      return_status = MLAN_STATUS_SUCCESS;
-      // And it should complete the ioctl as a failure.
-      io_status = wlan::nxpfmac::IoctlStatus::Failure;
+        EXPECT_EQ(MLAN_OID_BSS_START, user_req.sub_command);
+        EXPECT_EQ(kBssIndex, user_req.param.ssid_bssid.idx);
+        EXPECT_EQ(kTestChannel, user_req.param.ssid_bssid.channel);
+        EXPECT_BYTES_EQ(kBss, user_req.param.ssid_bssid.bssid, ETH_ALEN);
+
+        ioctl_adapter_->OnIoctlComplete(req, wlan::nxpfmac::IoctlStatus::Success);
+
+        sync_completion_signal(&ioctl_completion);
+
+        return MLAN_STATUS_PENDING;
+      }
     }
-
-    ioctl_adapter_->OnIoctlComplete(req, io_status);
-
-    sync_completion_signal(&ioctl_completion);
-
-    return return_status;
+    // Other ioctl can just complete immediately.
+    return MLAN_STATUS_SUCCESS;
   };
 
   mocks_.SetOnMlanIoctl(std::move(on_ioctl));
 
-  ClientConnection connection(ioctl_adapter_.get(), kBssIndex);
+  ClientConnection connection(ioctl_adapter_.get(), key_ring_.get(), kBssIndex);
 
   sync_completion_t connect_completion;
-  auto on_connect = [&](ClientConnection::StatusCode status_code) {
+  auto on_connect = [&](ClientConnection::StatusCode status_code, const uint8_t *ies,
+                        size_t ies_size) {
     EXPECT_EQ(ClientConnection::StatusCode::kSuccess, status_code);
     sync_completion_signal(&connect_completion);
   };
-  ASSERT_OK(connection.Connect(kBss, kChannel, std::move(on_connect)));
+
+  ASSERT_OK(connection.Connect(&request, std::move(on_connect)));
 
   ASSERT_OK(sync_completion_wait(&ioctl_completion, ZX_TIME_INFINITE));
   ASSERT_OK(sync_completion_wait(&connect_completion, ZX_TIME_INFINITE));
 }
 
 TEST_F(ClientConnectionTest, CancelConnect) {
-  constexpr uint8_t kBss[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06};
   constexpr uint32_t kBssIndex = 0;
-  constexpr uint16_t kChannel = 11;
 
   auto on_ioctl = [&](t_void *, pmlan_ioctl_req req) -> mlan_status {
     if (req->action == MLAN_ACT_SET && req->req_id == MLAN_IOCTL_BSS) {
@@ -117,13 +131,16 @@ TEST_F(ClientConnectionTest, CancelConnect) {
 
   mocks_.SetOnMlanIoctl(std::move(on_ioctl));
 
-  ClientConnection connection(ioctl_adapter_.get(), kBssIndex);
+  ClientConnection connection(ioctl_adapter_.get(), key_ring_.get(), kBssIndex);
+
+  wlan_fullmac_connect_req_t request = kMinimumConnectReq;
 
   sync_completion_t completion;
-  ASSERT_OK(connection.Connect(kBss, kChannel, [&](ClientConnection::StatusCode status_code) {
-    EXPECT_EQ(ClientConnection::StatusCode::kCanceled, status_code);
-    sync_completion_signal(&completion);
-  }));
+  ASSERT_OK(connection.Connect(
+      &request, [&](ClientConnection::StatusCode status_code, const uint8_t *, size_t) {
+        EXPECT_EQ(ClientConnection::StatusCode::kCanceled, status_code);
+        sync_completion_signal(&completion);
+      }));
 
   ASSERT_OK(connection.CancelConnect());
   ASSERT_OK(sync_completion_wait(&completion, ZX_TIME_INFINITE));

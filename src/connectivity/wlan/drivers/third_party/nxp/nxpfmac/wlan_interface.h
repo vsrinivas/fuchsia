@@ -20,9 +20,11 @@
 #include <mutex>
 
 #include <ddktl/device.h>
+#include <wlan/drivers/components/frame.h>
 #include <wlan/drivers/components/network_port.h>
 
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/client_connection.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/key_ring.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/scanner.h"
 
@@ -45,6 +47,9 @@ class WlanInterface : public WlanInterfaceDeviceType,
 
   // Device operations.
   void DdkRelease();
+
+  void OnEapolResponse(wlan::drivers::components::Frame&& frame);
+  void OnEapolTransmitted(zx_status_t status, const uint8_t* dst_addr);
 
   // ZX_PROTOCOL_WLAN_FULLMAC_IMPL operations.
   zx_status_t WlanFullmacImplStart(const wlan_fullmac_impl_ifc_protocol_t* ifc,
@@ -98,6 +103,7 @@ class WlanInterface : public WlanInterfaceDeviceType,
   wlan_mac_role_t role_;
   zx::channel mlme_channel_;
 
+  KeyRing key_ring_;
   ClientConnection client_connection_;
   Scanner scanner_;
   DeviceContext* context_ = nullptr;

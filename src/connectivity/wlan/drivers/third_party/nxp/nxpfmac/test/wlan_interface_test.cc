@@ -17,6 +17,7 @@
 
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/data_plane.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/device_context.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/ioctl_adapter.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/test/mlan_mocks.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/test/mock_bus.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/test/mock_fullmac_ifc.h"
@@ -274,9 +275,14 @@ TEST_F(WlanInterfaceTest, WlanFullmacImplConnectReq) {
         sync_completion_signal(&on_connect_conf_called);
       });
 
-  const wlan_fullmac_connect_req_t connect_request{
+  constexpr uint8_t kIesWithSsid[] = {"\x00\x04Test"};
+  constexpr uint8_t kTestChannel = 1;
+  const wlan_fullmac_connect_req_t connect_request = {
+      .selected_bss{.ies_list = kIesWithSsid,
+                    .ies_count = sizeof(kIesWithSsid),
+                    .channel{.primary = kTestChannel}},
+      .auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM};
 
-  };
   ifc->WlanFullmacImplConnectReq(&connect_request);
 
   ASSERT_OK(sync_completion_wait(&on_connect_conf_called, ZX_TIME_INFINITE));

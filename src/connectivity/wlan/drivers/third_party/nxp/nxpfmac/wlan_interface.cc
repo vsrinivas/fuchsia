@@ -13,12 +13,17 @@
 
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/wlan_interface.h"
 
+#include <arpa/inet.h>
+#include <lib/async/cpp/task.h>
 #include <stdint.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/data_plane.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/device.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/device_context.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/ioctl_adapter.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/key_ring.h"
 
 namespace wlan::nxpfmac {
 
@@ -29,7 +34,8 @@ WlanInterface::WlanInterface(zx_device_t* parent, uint32_t iface_index, wlan_mac
                                              static_cast<uint8_t>(iface_index)),
       role_(role),
       mlme_channel_(std::move(mlme_channel)),
-      client_connection_(context->ioctl_adapter_, iface_index),
+      key_ring_(context->ioctl_adapter_, iface_index),
+      client_connection_(context->ioctl_adapter_, &key_ring_, iface_index),
       scanner_(&fullmac_ifc_, context, iface_index),
       context_(context) {}
 
@@ -90,6 +96,53 @@ zx_status_t WlanInterface::WlanFullmacImplStart(const wlan_fullmac_impl_ifc_prot
   ZX_DEBUG_ASSERT(out_mlme_channel != nullptr);
   *out_mlme_channel = std::move(mlme_channel_);
   return ZX_OK;
+}
+
+void WlanInterface::OnEapolResponse(wlan::drivers::components::Frame&& frame) {
+  if (!fullmac_ifc_.is_valid()) {
+    NXPF_WARN("Received EAPOL response when interface is shut down");
+    return;
+  }
+
+  // This work cannot be run on this thread since it's triggered from the mlan main process. There
+  // are locks in fullmac that could block this call if fullmac is calling into this driver and
+  // causes something to wait for the mlan main process to run. Unfortunately std::function doesn't
+  // allow capturing of move-only objects, it requires them to be copy-constructible. This means we
+  // can't move capture `frame`, we have to make a copy of the eapol data instead. Fortunately this
+  // is not performance critical.
+  std::vector<uint8_t> eapol(frame.Data(), frame.Data() + frame.Size());
+  zx_status_t status = async::PostTask(context_->device_->GetDispatcher(), [this, eapol] {
+    constexpr size_t kEapolDataOffset = sizeof(ethhdr);
+    wlan_fullmac_eapol_indication_t eapol_ind{
+        .data_list = eapol.data() + kEapolDataOffset,
+        .data_count = eapol.size() - kEapolDataOffset,
+    };
+
+    auto eth = reinterpret_cast<const ethhdr*>(eapol.data());
+    memcpy(eapol_ind.dst_addr, eth->h_dest, sizeof(eapol_ind.dst_addr));
+    memcpy(eapol_ind.src_addr, eth->h_source, sizeof(eapol_ind.src_addr));
+
+    fullmac_ifc_.EapolInd(&eapol_ind);
+  });
+  if (status != ZX_OK) {
+    NXPF_ERR("Failed to schedule EAPOL response: %s", zx_status_get_string(status));
+  }
+}
+
+void WlanInterface::OnEapolTransmitted(zx_status_t status, const uint8_t* dst_addr) {
+  const wlan_eapol_result_t result =
+      status == ZX_OK ? WLAN_EAPOL_RESULT_SUCCESS : WLAN_EAPOL_RESULT_TRANSMISSION_FAILURE;
+  wlan_fullmac_eapol_confirm_t response{.result_code = result};
+  memcpy(response.dst_addr, dst_addr, sizeof(response.dst_addr));
+
+  // This work cannot be run on this thread since it's triggered from the mlan main process. There
+  // are locks in fullmac that could block this call if fullmac is calling into this driver and
+  // causes something to wait for the mlan main process to run.
+  status = async::PostTask(context_->device_->GetDispatcher(),
+                           [this, response] { fullmac_ifc_.EapolConf(&response); });
+  if (status != ZX_OK) {
+    NXPF_ERR("Failed to schedule EAPOL transmit confirmation: %s", zx_status_get_string(status));
+  }
 }
 
 void WlanInterface::WlanFullmacImplStop() {}
@@ -170,7 +223,7 @@ void WlanInterface::WlanFullmacImplQuerySpectrumManagementSupport(
 void WlanInterface::WlanFullmacImplStartScan(const wlan_fullmac_scan_req_t* req) {
   // TODO(fxbug.dev/108408): Consider calculating a more accurate scan timeout based on the max
   // scan time per channel in the scan request.
-  constexpr zx_duration_t kScanTimeout = ZX_MSEC(6000);
+  constexpr zx_duration_t kScanTimeout = ZX_MSEC(12000);
   zx_status_t status = scanner_.Scan(req, kScanTimeout);
   if (status != ZX_OK) {
     NXPF_ERR("Scan failed: %s", zx_status_get_string(status));
@@ -179,16 +232,20 @@ void WlanInterface::WlanFullmacImplStartScan(const wlan_fullmac_scan_req_t* req)
 }
 
 void WlanInterface::WlanFullmacImplConnectReq(const wlan_fullmac_connect_req_t* req) {
-  auto on_connect = [this](ClientConnection::StatusCode status) {
-    wlan_fullmac_connect_confirm_t result = {.result_code = static_cast<uint16_t>(status)};
+  auto on_connect = [this](ClientConnection::StatusCode status_code, const uint8_t* ies,
+                           size_t ies_size) __TA_EXCLUDES(mutex_) {
+    const wlan_fullmac_connect_confirm_t result = {
+        .result_code = static_cast<uint16_t>(status_code),
+        .association_ies_list = ies,
+        .association_ies_count = ies_size};
     fullmac_ifc_.ConnectConf(&result);
   };
 
-  zx_status_t status = client_connection_.Connect(req->selected_bss.bssid,
-                                                  req->selected_bss.channel.primary, on_connect);
-
+  const zx_status_t status = client_connection_.Connect(req, on_connect);
   if (status != ZX_OK) {
-    on_connect(ClientConnection::StatusCode::kJoinFailure);
+    const wlan_fullmac_connect_confirm_t result = {
+        .result_code = static_cast<uint16_t>(ClientConnection::StatusCode::kJoinFailure)};
+    fullmac_ifc_.ConnectConf(&result);
   }
 }
 
@@ -226,15 +283,49 @@ void WlanInterface::WlanFullmacImplStopReq(const wlan_fullmac_stop_req_t* req) {
 
 void WlanInterface::WlanFullmacImplSetKeysReq(const wlan_fullmac_set_keys_req_t* req,
                                               wlan_fullmac_set_keys_resp_t* resp) {
-  NXPF_ERR("%s", __func__);
+  for (uint64_t i = 0; i < req->num_keys; ++i) {
+    const zx_status_t status = key_ring_.AddKey(req->keylist[i]);
+    if (status != ZX_OK) {
+      NXPF_WARN("Error adding key %" PRIu64 ": %s", i, zx_status_get_string(status));
+    }
+    resp->statuslist[i] = status;
+  }
+  resp->num_keys = req->num_keys;
 }
 
 void WlanInterface::WlanFullmacImplDelKeysReq(const wlan_fullmac_del_keys_req_t* req) {
-  NXPF_ERR("%s", __func__);
+  for (uint64_t i = 0; i < req->num_keys; ++i) {
+    const zx_status_t status = key_ring_.RemoveKey(req->keylist[i].key_id, req->keylist[i].address);
+    if (status != ZX_OK) {
+      NXPF_WARN("Error deleting key %" PRIu64 ": %s", i, zx_status_get_string(status));
+    }
+  }
 }
 
 void WlanInterface::WlanFullmacImplEapolReq(const wlan_fullmac_eapol_req_t* req) {
-  NXPF_ERR("%s", __func__);
+  std::optional<wlan::drivers::components::Frame> frame = context_->data_plane_->AcquireFrame();
+  if (!frame.has_value()) {
+    NXPF_ERR("Failed to acquire frame container for EAPOL frame");
+    wlan_fullmac_eapol_confirm_t response{
+        .result_code = WLAN_EAPOL_RESULT_TRANSMISSION_FAILURE,
+    };
+    fullmac_ifc_.EapolConf(&response);
+    return;
+  }
+
+  const uint32_t packet_length =
+      static_cast<uint32_t>(2ul * ETH_ALEN + sizeof(uint16_t) + req->data_count);
+
+  frame->ShrinkHead(1024);
+  frame->SetPortId(PortId());
+  frame->SetSize(packet_length);
+
+  memcpy(frame->Data(), req->dst_addr, ETH_ALEN);
+  memcpy(frame->Data() + ETH_ALEN, req->src_addr, ETH_ALEN);
+  *reinterpret_cast<uint16_t*>(frame->Data() + 2ul * ETH_ALEN) = htons(ETH_P_PAE);
+  memcpy(frame->Data() + 2ul * ETH_ALEN + sizeof(uint16_t), req->data_list, req->data_count);
+
+  context_->data_plane_->NetDevQueueTx(cpp20::span<wlan::drivers::components::Frame>(&*frame, 1u));
 }
 
 zx_status_t WlanInterface::WlanFullmacImplGetIfaceCounterStats(
@@ -264,11 +355,20 @@ void WlanInterface::WlanFullmacImplDataQueueTx(uint32_t options, ethernet_netbuf
 }
 
 void WlanInterface::WlanFullmacImplSaeHandshakeResp(const wlan_fullmac_sae_handshake_resp_t* resp) {
+  NXPF_ERR("%s", __func__);
 }
 
-void WlanInterface::WlanFullmacImplSaeFrameTx(const wlan_fullmac_sae_frame_t* frame) {}
+void WlanInterface::WlanFullmacImplSaeFrameTx(const wlan_fullmac_sae_frame_t* frame) {
+  NXPF_ERR("%s", __func__);
+}
 
-void WlanInterface::WlanFullmacImplWmmStatusReq() {}
+void WlanInterface::WlanFullmacImplWmmStatusReq() {
+  // TODO(https://fxbug.dev/110091): Implement support for this.
+  std::lock_guard lock(mutex_);
+
+  const wlan_wmm_params_t wmm{};
+  fullmac_ifc_.OnWmmStatusResp(ZX_OK, &wmm);
+}
 
 void WlanInterface::WlanFullmacImplOnLinkStateChanged(bool online) { SetPortOnline(online); }
 
