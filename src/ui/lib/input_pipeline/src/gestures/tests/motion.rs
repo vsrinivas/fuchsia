@@ -38,10 +38,8 @@ mod tests {
     async fn motion_keep_contact() {
         let pos0_um = Position { x: 2_000.0, y: 3_000.0 };
         let pos1_um = Position { x: 2_100.0, y: 3_000.0 };
-        let pos2_um = Position {
-            x: 2_100.0,
-            y: 3_000.0 + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
-        };
+        let pos2_um = pos1_um
+            + Position { x: 0.0, y: args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0 };
         let pos3_um = pos2_um.clone();
         let inputs = vec![
             touchpad_event(vec![pos0_um], hashset! {}),
@@ -82,10 +80,11 @@ mod tests {
     #[fuchsia::test(allow_stalls = false)]
     async fn motion_then_lift() {
         let pos0_um = Position { x: 2_000.0, y: 3_000.0 };
-        let pos1_um = Position {
-            x: 2_000.0,
-            y: 3_100.0 + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
-        };
+        let pos1_um = pos0_um
+            + Position {
+                x: 0.0,
+                y: 1_000.0 + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
+            };
         let inputs = vec![
             touchpad_event(vec![pos0_um], hashset! {}),
             touchpad_event(vec![pos1_um], hashset! {}),
@@ -109,10 +108,11 @@ mod tests {
     #[fuchsia::test(allow_stalls = false)]
     async fn motion_then_click() {
         let pos1 = Position { x: 2_000.0, y: 3_000.0 };
-        let pos2 = Position {
-            x: 2_000.0,
-            y: 3_100.0 + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
-        };
+        let pos2 = pos1
+            + Position {
+                x: 0.0,
+                y: 1_000.0 + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
+            };
         let inputs = vec![
             touchpad_event(vec![pos1], hashset! {}),
             touchpad_event(vec![pos2], hashset! {}),
@@ -146,121 +146,134 @@ mod tests {
         });
     }
 
-    #[fuchsia::test(allow_stalls = false)]
-    async fn motion_then_place_2nd_finger_then_lift() {
-        let finger1_pos0_um = Position { x: 2_000.0, y: 3_000.0 };
-        let finger1_pos1_um = Position {
-            x: 2_000.0,
-            y: 3_100.0 + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
+    mod chain {
+        use {
+            super::super::super::utils,
+            super::touchpad_event,
+            crate::{gestures::args, input_device, mouse_binding, Position},
+            assert_matches::assert_matches,
+            maplit::hashset,
+            pretty_assertions::assert_eq,
+            test_util::{assert_gt, assert_near},
         };
-        let finger1_pos2_um = finger1_pos1_um.clone();
-        let finger2_pos2_um = Position { x: 5_000.0, y: 5_000.0 };
-        let inputs = vec![
-            touchpad_event(vec![finger1_pos0_um], hashset! {}),
-            touchpad_event(vec![finger1_pos1_um], hashset! {}),
-            touchpad_event(vec![finger1_pos2_um, finger2_pos2_um], hashset! {}),
-            touchpad_event(vec![], hashset! {}),
-        ];
-        let got = utils::run_gesture_arena_test(inputs).await;
 
-        assert_eq!(got.len(), 4);
-        assert_eq!(got[0].as_slice(), []);
-        assert_matches!(got[1].as_slice(), [
-          utils::expect_mouse_event!(phase: phase_a, location: location_a),
-        ] => {
-          assert_eq!(phase_a, &mouse_binding::MousePhase::Move);
-          assert_near!(location_a.millimeters.x, 0.0, utils::EPSILON);
-          assert_gt!(location_a.millimeters.y, 0.0);
-        });
-        assert_eq!(got[2].as_slice(), []);
-        // Does _not_ trigger secondary-tap detector.
-        assert_eq!(got[3].as_slice(), []);
-    }
+        #[fuchsia::test(allow_stalls = false)]
+        async fn motion_then_place_2nd_finger_then_lift() {
+            let finger1_pos0_um = Position { x: 2_000.0, y: 3_000.0 };
+            let finger1_pos1_um = finger1_pos0_um
+                + Position {
+                    x: 0.0,
+                    y: 1_000.0 + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
+                };
+            let finger1_pos2_um = finger1_pos1_um.clone();
+            let finger2_pos2_um = Position { x: 5_000.0, y: 5_000.0 };
+            let inputs = vec![
+                touchpad_event(vec![finger1_pos0_um], hashset! {}),
+                touchpad_event(vec![finger1_pos1_um], hashset! {}),
+                touchpad_event(vec![finger1_pos2_um, finger2_pos2_um], hashset! {}),
+                touchpad_event(vec![], hashset! {}),
+            ];
+            let got = utils::run_gesture_arena_test(inputs).await;
 
-    // TODO(fxbug.dev/99510): motion then 2 finger click should generate secondary click.
-    #[fuchsia::test(allow_stalls = false)]
-    async fn motion_then_place_2nd_finger_then_click() {
-        let finger1_pos0_um = Position { x: 2_000.0, y: 3_000.0 };
-        let finger1_pos1_um = Position {
-            x: 2_000.0,
-            y: 3_100.0 + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
-        };
-        let finger1_pos2_um = finger1_pos1_um.clone();
-        let finger2_pos2_um = Position { x: 5_000.0, y: 5_000.0 };
-        let finger1_pos3_um = finger1_pos2_um.clone();
-        let finger2_pos3_um = finger2_pos2_um.clone();
-        let inputs = vec![
-            touchpad_event(vec![finger1_pos0_um], hashset! {}),
-            touchpad_event(vec![finger1_pos1_um], hashset! {}),
-            touchpad_event(vec![finger1_pos2_um, finger2_pos2_um], hashset! {1}),
-            touchpad_event(vec![finger1_pos3_um, finger2_pos3_um], hashset! {}),
-            touchpad_event(vec![], hashset! {}),
-        ];
-        let got = utils::run_gesture_arena_test(inputs).await;
+            assert_eq!(got.len(), 4);
+            assert_eq!(got[0].as_slice(), []);
+            assert_matches!(got[1].as_slice(), [
+              utils::expect_mouse_event!(phase: phase_a, location: location_a),
+            ] => {
+              assert_eq!(phase_a, &mouse_binding::MousePhase::Move);
+              assert_near!(location_a.millimeters.x, 0.0, utils::EPSILON);
+              assert_gt!(location_a.millimeters.y, 0.0);
+            });
+            assert_eq!(got[2].as_slice(), []);
+            // Does _not_ trigger secondary-tap detector.
+            assert_eq!(got[3].as_slice(), []);
+        }
 
-        assert_eq!(got.len(), 5);
-        assert_eq!(got[0].as_slice(), []);
-        assert_matches!(got[1].as_slice(), [
-          utils::expect_mouse_event!(phase: phase_a, location: location_a),
-        ] => {
-          assert_eq!(phase_a, &mouse_binding::MousePhase::Move);
-          assert_near!(location_a.millimeters.x, 0.0, utils::EPSILON);
-          assert_gt!(location_a.millimeters.y, 0.0);
-        });
-        assert_eq!(got[2].as_slice(), []);
-        assert_eq!(got[3].as_slice(), []);
-        assert_eq!(got[4].as_slice(), []);
-    }
+        // TODO(fxbug.dev/99510): motion then 2 finger click should generate secondary click.
+        #[fuchsia::test(allow_stalls = false)]
+        async fn motion_then_place_2nd_finger_then_click() {
+            let finger1_pos0_um = Position { x: 2_000.0, y: 3_000.0 };
+            let finger1_pos1_um = finger1_pos0_um
+                + Position {
+                    x: 0.0,
+                    y: 1_000.0 + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
+                };
+            let finger1_pos2_um = finger1_pos1_um.clone();
+            let finger2_pos2_um = Position { x: 5_000.0, y: 5_000.0 };
+            let finger1_pos3_um = finger1_pos2_um.clone();
+            let finger2_pos3_um = finger2_pos2_um.clone();
+            let inputs = vec![
+                touchpad_event(vec![finger1_pos0_um], hashset! {}),
+                touchpad_event(vec![finger1_pos1_um], hashset! {}),
+                touchpad_event(vec![finger1_pos2_um, finger2_pos2_um], hashset! {1}),
+                touchpad_event(vec![finger1_pos3_um, finger2_pos3_um], hashset! {}),
+                touchpad_event(vec![], hashset! {}),
+            ];
+            let got = utils::run_gesture_arena_test(inputs).await;
 
-    #[fuchsia::test(allow_stalls = false)]
-    async fn motion_then_place_2nd_finger_then_scroll() {
-        let finger1_pos0_um = Position { x: 2_000.0, y: 3_000.0 };
-        let finger1_pos1_um = Position {
-            x: 2_000.0,
-            y: 3_100.0 + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
-        };
-        let finger1_pos2_um = finger1_pos1_um.clone();
-        let finger2_pos2_um = Position { x: 5_000.0, y: 5_000.0 };
-        let finger1_pos3_um = Position {
-            x: finger1_pos2_um.x,
-            y: finger1_pos2_um.y
-                + 1_000.0
-                + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
-        };
-        let finger2_pos3_um = Position {
-            x: finger2_pos2_um.x,
-            y: finger2_pos2_um.y
-                + 1_000.0
-                + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
-        };
-        let inputs = vec![
-            touchpad_event(vec![finger1_pos0_um], hashset! {}),
-            touchpad_event(vec![finger1_pos1_um], hashset! {}),
-            touchpad_event(vec![finger1_pos2_um, finger2_pos2_um], hashset! {}),
-            touchpad_event(vec![finger1_pos3_um, finger2_pos3_um], hashset! {}),
-            touchpad_event(vec![], hashset! {}),
-        ];
-        let got = utils::run_gesture_arena_test(inputs).await;
+            assert_eq!(got.len(), 5);
+            assert_eq!(got[0].as_slice(), []);
+            assert_matches!(got[1].as_slice(), [
+              utils::expect_mouse_event!(phase: phase_a, location: location_a),
+            ] => {
+              assert_eq!(phase_a, &mouse_binding::MousePhase::Move);
+              assert_near!(location_a.millimeters.x, 0.0, utils::EPSILON);
+              assert_gt!(location_a.millimeters.y, 0.0);
+            });
+            assert_eq!(got[2].as_slice(), []);
+            assert_eq!(got[3].as_slice(), []);
+            assert_eq!(got[4].as_slice(), []);
+        }
 
-        assert_eq!(got.len(), 5);
-        assert_eq!(got[0].as_slice(), []);
-        assert_matches!(got[1].as_slice(), [
-          utils::expect_mouse_event!(phase: phase_a, location: location_a),
-        ] => {
-          assert_eq!(phase_a, &mouse_binding::MousePhase::Move);
-          assert_near!(location_a.millimeters.x, 0.0, utils::EPSILON);
-          assert_gt!(location_a.millimeters.y, 0.0);
-        });
-        assert_eq!(got[2].as_slice(), []);
-        assert_matches!(got[3].as_slice(), [
-          utils::expect_mouse_event!(phase: phase, delta_v: delta_v, delta_h: delta_h, location: location),
-        ] => {
-          assert_eq!(phase, &mouse_binding::MousePhase::Wheel);
-          assert_matches!(delta_v, utils::extract_wheel_delta!(delta) => {
-            assert_gt!(*delta, 0.0);
-          });
-          assert_eq!(*delta_h, None);
-          assert_eq!(location, &utils::NO_MOVEMENT_LOCATION);
-        });
+        #[fuchsia::test(allow_stalls = false)]
+        async fn motion_then_place_2nd_finger_then_scroll() {
+            let finger1_pos0_um = Position { x: 2_000.0, y: 3_000.0 };
+            let finger1_pos1_um = finger1_pos0_um
+                + Position {
+                    x: 0.0,
+                    y: 1_000.0 + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
+                };
+            let finger1_pos2_um = finger1_pos1_um.clone();
+            let finger2_pos2_um = Position { x: 5_000.0, y: 5_000.0 };
+            let finger1_pos3_um = finger1_pos2_um
+                + Position {
+                    x: 0.0,
+                    y: 1_000.0 + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
+                };
+            let finger2_pos3_um = finger2_pos2_um
+                + Position {
+                    x: 0.0,
+                    y: 1_000.0 + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
+                };
+            let inputs = vec![
+                touchpad_event(vec![finger1_pos0_um], hashset! {}),
+                touchpad_event(vec![finger1_pos1_um], hashset! {}),
+                touchpad_event(vec![finger1_pos2_um, finger2_pos2_um], hashset! {}),
+                touchpad_event(vec![finger1_pos3_um, finger2_pos3_um], hashset! {}),
+                touchpad_event(vec![], hashset! {}),
+            ];
+            let got = utils::run_gesture_arena_test(inputs).await;
+
+            assert_eq!(got.len(), 5);
+            assert_eq!(got[0].as_slice(), []);
+            assert_matches!(got[1].as_slice(), [
+              utils::expect_mouse_event!(phase: phase_a, location: location_a),
+            ] => {
+              assert_eq!(phase_a, &mouse_binding::MousePhase::Move);
+              assert_near!(location_a.millimeters.x, 0.0, utils::EPSILON);
+              assert_gt!(location_a.millimeters.y, 0.0);
+            });
+            assert_eq!(got[2].as_slice(), []);
+            assert_matches!(got[3].as_slice(), [
+              utils::expect_mouse_event!(phase: phase, delta_v: delta_v, delta_h: delta_h, location: location),
+            ] => {
+              assert_eq!(phase, &mouse_binding::MousePhase::Wheel);
+              assert_matches!(delta_v, utils::extract_wheel_delta!(delta) => {
+                assert_gt!(*delta, 0.0);
+              });
+              assert_eq!(*delta_h, None);
+              assert_eq!(location, &utils::NO_MOVEMENT_LOCATION);
+            });
+        }
     }
 }
