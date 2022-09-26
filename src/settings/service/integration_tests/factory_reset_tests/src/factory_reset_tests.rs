@@ -85,4 +85,6 @@ async fn test_set() {
 
     // Verify that the mock receives a value of false for the setting after the set call.
     assert_eq!(Some(false), reset_allowed_receiver.next().await);
+
+    let _ = instance.destroy().await;
 }
