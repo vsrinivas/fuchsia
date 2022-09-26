@@ -714,7 +714,7 @@ async fn tcp_socket_accept_cross_ns<
     client_interface.add_address_and_subnet_route(CLIENT_SUBNET).await.expect("configure address");
 
     let server = sandbox
-        .create_netstack_realm::<Server, _>(format!("{}_client", name))
+        .create_netstack_realm::<Server, _>(format!("{}_server", name))
         .expect("failed to create server realm");
     let server_interface = server
         .join_network::<E, _>(&net, "server-ep")
