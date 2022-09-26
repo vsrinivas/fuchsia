@@ -2034,17 +2034,19 @@ void Controller::DdkResume(ddk::ResumeTxn txn) {
 
   pch_engine_->RestoreNonClockParameters();
 
-  // TODO(fxbug.dev/109227): Intel's documentation states that this field should
-  // only be written once, at system boot. Either delete this, or document an
-  // experiment confirming that this write works as intended.
-  //
-  // Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 1 page 444
-  // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 page 440
-  tgl_registers::DdiRegs(tgl_registers::DDI_A)
-      .BufferControl()
-      .ReadFrom(mmio_space())
-      .set_ddi_e_disabled_kaby_lake(ddi_e_disabled_)
-      .WriteTo(mmio_space());
+  if (!is_tgl(device_id_)) {
+    // TODO(fxbug.dev/109227): Intel's documentation states that this field
+    // should only be written once, at system boot. Either delete this, or
+    // document an experiment confirming that this write works as intended.
+    //
+    // Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 1 page 444
+    // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 page 440
+    tgl_registers::DdiRegs(tgl_registers::DDI_A)
+        .BufferControl()
+        .ReadFrom(mmio_space())
+        .set_ddi_e_disabled_kaby_lake(ddi_e_disabled_)
+        .WriteTo(mmio_space());
+  }
 
   for (auto& disp : display_devices_) {
     if (!disp->Resume()) {
@@ -2120,10 +2122,12 @@ zx_status_t Controller::Init() {
     dp_auxs_[dp_auxs_.size() - 1].aux_channel().Log();
   }
 
-  ddi_e_disabled_ = tgl_registers::DdiRegs(tgl_registers::DDI_A)
-                        .BufferControl()
-                        .ReadFrom(mmio_space())
-                        .ddi_e_disabled_kaby_lake();
+  if (!is_tgl(device_id_)) {
+    ddi_e_disabled_ = tgl_registers::DdiRegs(tgl_registers::DDI_A)
+                          .BufferControl()
+                          .ReadFrom(mmio_space())
+                          .ddi_e_disabled_kaby_lake();
+  }
 
   zxlogf(TRACE, "Initializing interrupts");
   status = interrupts_.Init(fit::bind_member<&Controller::HandlePipeVsync>(this),
