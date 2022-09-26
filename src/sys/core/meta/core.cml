@@ -716,14 +716,6 @@
         },
         {
             protocol: [
-                "fuchsia.device.Controller",
-                "fuchsia.hardware.temperature.Device",
-            ],
-            from: "parent",
-            to: "#temperature-logger",
-        },
-        {
-            protocol: [
                 "fuchsia.boot.Items",
                 "fuchsia.kernel.Stats",
             ],
