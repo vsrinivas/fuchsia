@@ -9,8 +9,6 @@
 #include <lib/zxdump/task.h>
 #include <lib/zxdump/zstd-writer.h>
 
-#include <gtest/gtest.h>
-
 #include "test-file.h"
 #include "test-tool-process.h"
 

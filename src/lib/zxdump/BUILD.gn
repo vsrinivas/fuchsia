@@ -46,6 +46,8 @@ zx_library("zxdump") {
     "dump-file-mmap.h",
     "dump-file-stdio.cc",
     "dump-file-stdio.h",
+    "dump-file-zstd.cc",
+    "dump-file-zstd.h",
     "dump-file.cc",
     "dump-file.h",
     "error.cc",
@@ -59,6 +61,8 @@ zx_library("zxdump") {
 
   # Test code can use private headers from sources.
   friend = [ ":*" ]
+
+  defines = [ "ZSTD_STATIC_LINKING_ONLY" ]
 
   deps = [
     "//src/lib/elfldltl",
@@ -192,6 +196,7 @@ test("zxdump-unittests") {
       "dump-tests.cc",
       "dump-tests.h",
       "gcore-tests.cc",
+      "read-tests.cc",
       "task-tests.cc",
     ]
     deps += [
@@ -199,7 +204,10 @@ test("zxdump-unittests") {
       "//zircon/system/ulib/zx",
       "//zircon/system/ulib/zxc",
     ]
-    data_deps += [ ":gcore(${toolchain_variant.base})" ]
+    data_deps += [
+      ":gcore(${toolchain_variant.base})",
+      "//third_party/sbase:cat_bin(${toolchain_variant.base})",
+    ]
   }
 }
 

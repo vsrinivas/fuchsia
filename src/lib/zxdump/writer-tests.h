@@ -15,7 +15,7 @@ namespace zxdump::testing {
 
 using namespace std::literals;
 
-static ByteView AsBytes(std::string_view s) {
+inline ByteView AsBytes(std::string_view s) {
   return {reinterpret_cast<const std::byte*>(s.data()), s.size()};
 }
 

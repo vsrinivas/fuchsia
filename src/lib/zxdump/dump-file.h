@@ -9,6 +9,7 @@
 #include <lib/zxdump/types.h>
 #include <zircon/assert.h>
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -26,6 +27,8 @@ inline constexpr size_t kHeaderProbeSize = std::max(kMinimumElf, kMinimumArchive
 // The bounds of an archive member file inside the underlying real dump file.
 // Member files inside nested archives have flat offsets into the real file.
 struct FileRange {
+  static constexpr FileRange Unbounded() { return {0, std::numeric_limits<size_t>::max()}; }
+
   bool empty() const { return size == 0; }
 
   // Subdivide this range by a subrange.  The given subrange must be valid with
@@ -73,6 +76,16 @@ class DumpFile {
   static fitx::result<Error, std::unique_ptr<DumpFile>> Open(fbl::unique_fd fd,
                                                              bool try_mmap = true);
 
+  // Returns true if the probed bytes indicate a compressed file.  The buffer
+  // is expected to be at least kHeaderProbeSize to be able to match anything.
+  static bool IsCompressed(ByteView header);
+
+  // Return a new DumpFile that decompresses part of this one by doing
+  // ReadEphemeral calls on it.  The new DumpFile's lifetime must not exceed
+  // this object's lifetime.  The underlying object should not be used for
+  // ReadEphemeral while the decompressor object is being used.
+  fitx::result<Error, std::unique_ptr<DumpFile>> Decompress(FileRange where, ByteView header);
+
   // Return the size of the file.  This may not be known for a streaming input,
   // in which case this value acts only as an upper bound.
   virtual size_t size() const = 0;
@@ -103,6 +116,7 @@ class DumpFile {
   // These are the different implementation subclasses.
   class Stdio;
   class Mmap;
+  class Zstd;
 };
 
 // Helpers for some common errors.

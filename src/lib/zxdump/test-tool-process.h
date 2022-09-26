@@ -38,6 +38,8 @@ class TestToolProcess {
 
     ~File();
 
+    const std::string& tmp_path() const { return owner_->tmp_path(); }
+
     // Return the name of the file as seen by the tool run by Start.
     // This is used in composing the arguments to pass to Start.
     std::string name() const { return owner_->FilePathForTool(*this); }

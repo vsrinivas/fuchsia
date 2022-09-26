@@ -677,18 +677,21 @@ fitx::result<Error, ByteView> Task::get_info_aligned(  //
   return fitx::ok(copy);
 }
 
-fitx::result<Error> TaskHolder::JobTree::Read(DumpFile& file, bool read_memory, FileRange where,
-                                              time_t date) {
-  if (where.size >= kHeaderProbeSize) {
+fitx::result<Error> TaskHolder::JobTree::Read(DumpFile& real_file, bool read_memory,
+                                              FileRange where, time_t date) {
+  // If the file is compressed, this will iterate with the decompressed file.
+  for (DumpFile* file = &real_file; where.size >= kHeaderProbeSize;
+       // Read the whole uncompressed file as a stream.  Its size is unknown.
+       where = FileRange::Unbounded()) {
     ByteView header;
-    if (auto result = file.ReadEphemeral(where / kHeaderProbeSize); result.is_error()) {
+    if (auto result = file->ReadEphemeral(where / kHeaderProbeSize); result.is_error()) {
       return result.take_error();
     } else {
       header = result.value();
     }
 
     if (uint32_t word; memcpy(&word, header.data(), sizeof(word)), word == Elf::Ehdr::kMagic) {
-      return ReadElf(file, where, date, header, read_memory);
+      return ReadElf(*file, where, date, header, read_memory);
     }
 
     std::string_view header_string{
@@ -696,8 +699,22 @@ fitx::result<Error> TaskHolder::JobTree::Read(DumpFile& file, bool read_memory, 
         header.size(),
     };
     if (cpp20::starts_with(header_string, kArchiveMagic)) {
-      return ReadArchive(file, where, header, read_memory);
+      return ReadArchive(*file, where, header, read_memory);
     }
+
+    // If it's not a compressed file, we don't grok it.
+    if (!DumpFile::IsCompressed(header)) {
+      break;
+    }
+
+    // Start streaming decompression to deliver the uncompressed dump file.
+    // Then iterate to read that (streaming) file.
+    auto result = file->Decompress(where, header);
+    if (result.is_error()) {
+      return result.take_error();
+    }
+    file = result.value().get();
+    dumps_.push_front(std::move(result).value());
   }
   return fitx::error(Error{"not an ELF or archive file", ZX_ERR_NOT_FILE});
 }

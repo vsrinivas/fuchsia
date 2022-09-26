@@ -3,15 +3,19 @@
 // found in the LICENSE file.
 
 #include <lib/elfldltl/layout.h>
+#include <lib/fit/function.h>
 #include <lib/stdcompat/string_view.h>
 
 #include <cstdlib>
 
 #include "dump-tests.h"
 #include "job-archive.h"
+#include "test-pipe-reader.h"
 #include "test-tool-process.h"
 
 namespace {
+
+using namespace std::literals;
 
 constexpr const char* kOutputSwitch = "-o";
 constexpr const char* kExcludeMemorySwitch = "--exclude-memory";
@@ -240,7 +244,14 @@ TEST(ZxdumpTests, GcoreProcessDumpPropertiesAndInfo) {
   ASSERT_NO_FATAL_FAILURE(process.CheckDump(holder, false));
 }
 
-TEST(ZxdumpTests, GcoreProcessDumpZstd) {
+// There are versions of this test reading a file already decompressed by the
+// zstd tool; reading a compressed file directly; and reading a compressed dump
+// stream from a pipe.  The post_process function turns the compressed dump
+// file written by gcore into an fd to pass to the reader.
+void GcoreProcessDumpZstdTest(
+    fit::function<void(zxdump::testing::TestToolProcess::File& compressed_dump_file,
+                       fbl::unique_fd& read_fd)>
+        post_process) {
   zxdump::testing::TestProcessForPropertiesAndInfo process;
   ASSERT_NO_FATAL_FAILURE(process.StartChild());
 
@@ -269,15 +280,51 @@ TEST(ZxdumpTests, GcoreProcessDumpZstd) {
   EXPECT_EQ(child.collected_stdout(), "");
   EXPECT_EQ(child.collected_stderr(), "");
 
-  // Decompress the file using the zstd tool.
-  auto& decompressed_file = dump_file.ZstdDecompress();
-  fbl::unique_fd fd = decompressed_file.OpenOutput();
-  ASSERT_TRUE(fd) << decompressed_file.name() << ": " << strerror(errno);
+  fbl::unique_fd fd;
+  ASSERT_NO_FATAL_FAILURE(post_process(dump_file, fd));
 
   zxdump::TaskHolder holder;
   auto read_result = holder.Insert(std::move(fd));
   ASSERT_TRUE(read_result.is_ok()) << read_result.error_value();
   ASSERT_NO_FATAL_FAILURE(process.CheckDump(holder, false));
+}
+
+// Decompress the file using the zstd tool.  This ensures that the compressed
+// output from gcore is compatible with canonical decompression, not just with
+// the reader's decompression.
+TEST(ZxdumpTests, GcoreProcessDumpZstd) {
+  constexpr auto decompress = [](zxdump::testing::TestToolProcess::File& file,
+                                 fbl::unique_fd& read_fd) {
+    auto& decompressed_file = file.ZstdDecompress();
+    read_fd = decompressed_file.OpenOutput();
+    ASSERT_TRUE(read_fd) << decompressed_file.name() << ": " << strerror(errno);
+  };
+  ASSERT_NO_FATAL_FAILURE(GcoreProcessDumpZstdTest(decompress));
+}
+
+// Let the reader automatically decompress the file.
+TEST(ZxdumpTests, GcoreProcessDumpZstdReader) {
+  constexpr auto open_as_is = [](zxdump::testing::TestToolProcess::File& file,
+                                 fbl::unique_fd& read_fd) {
+    read_fd = file.OpenOutput();
+    ASSERT_TRUE(read_fd) << file.name() << ": " << strerror(errno);
+  };
+  ASSERT_NO_FATAL_FAILURE(GcoreProcessDumpZstdTest(open_as_is));
+}
+
+// Let the reader automatically decompress the file but via a pipe so it has to
+// do streaming input for the decompressor.
+TEST(ZxdumpTests, GcoreProcessDumpZstdPipeReader) {
+  zxdump::testing::TestToolProcess cat;
+  auto open_via_pipe = [&cat](zxdump::testing::TestToolProcess::File& file,
+                              fbl::unique_fd& read_fd) mutable {
+    ASSERT_NO_FATAL_FAILURE(cat.Init(file.tmp_path()));
+    std::vector<std::string> args({file.name()});
+    ASSERT_NO_FATAL_FAILURE(cat.Start("cat"s, args));
+    read_fd = std::move(cat.tool_stdout());
+  };
+
+  ASSERT_NO_FATAL_FAILURE(GcoreProcessDumpZstdTest(open_via_pipe));
 }
 
 }  // namespace

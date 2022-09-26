@@ -24,7 +24,7 @@ class ZstdWriter {
   // if the error was from the compressor rather than the filesystem.
   using error_type = std::string_view;
 
-  ZstdWriter() = delete;
+  ZstdWriter() = default;
 
   ZstdWriter(ZstdWriter&& other) noexcept { *this = std::move(other); }
 
