@@ -320,6 +320,15 @@ Devnode* Devnode::lookup(std::string_view name) {
   return nullptr;
 }
 
+const Devnode* Devnode::lookup(std::string_view name) const {
+  for (const Devnode& child : children) {
+    if (child.name() == name) {
+      return &child;
+    }
+  }
+  return nullptr;
+}
+
 namespace {
 
 zx_status_t fill_dirent(vdirent_t* de, size_t delen, uint64_t ino, std::string_view name,

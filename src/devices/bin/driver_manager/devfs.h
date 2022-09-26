@@ -77,22 +77,18 @@ struct Devnode : public fbl::DoublyLinkedListable<Devnode*> {
 
   void notify(std::string_view name, fuchsia_io::wire::WatchEvent op);
 
-  // This method is exposed for testing. It returns true if the devfs has active watchers.
+  // This method is exposed for testing.
   bool has_watchers() const;
+
+  // This method is exposed for testing.
+  Devnode* lookup(std::string_view name);
+  const Devnode* lookup(std::string_view name) const;
 
   Device* device() const;
   Devnode* parent() const;
   std::string_view name() const;
   ExportOptions export_options() const;
   ExportOptions* export_options();
-
-  fbl::DoublyLinkedList<std::unique_ptr<Watcher>> watchers;
-
-  // list of our child devnodes
-  fbl::DoublyLinkedList<Devnode*> children;
-
-  // list of attached iostates
-  fbl::DoublyLinkedList<DcIostate*> iostate;
 
  private:
   friend class DcIostate;
@@ -102,8 +98,6 @@ struct Devnode : public fbl::DoublyLinkedListable<Devnode*> {
   // if it doesn't have a device, or if its device has no rpc handle.
   bool is_dir() const;
   bool is_invisible() const;
-
-  Devnode* lookup(std::string_view name);
 
   void open(async_dispatcher_t* dispatcher, fidl::ServerEnd<fuchsia_io::Node> ipc,
             std::string_view path, fuchsia_io::OpenFlags flags);
@@ -126,6 +120,14 @@ struct Devnode : public fbl::DoublyLinkedListable<Devnode*> {
   // used to assign unique small device numbers
   // for class device links
   uint32_t seqcount_ = 0;
+
+  fbl::DoublyLinkedList<std::unique_ptr<Watcher>> watchers;
+
+  // list of our child devnodes
+  fbl::DoublyLinkedList<Devnode*> children;
+
+  // list of attached iostates
+  fbl::DoublyLinkedList<DcIostate*> iostate;
 };
 
 class Devfs {

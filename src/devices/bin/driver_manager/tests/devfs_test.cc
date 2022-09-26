@@ -25,12 +25,12 @@ TEST(Devfs, Export) {
 
   ASSERT_OK(root_node.export_dir({}, "svc", "one/two", 0, {}, out));
 
-  ASSERT_EQ(1, root_node.children.size_slow());
-  auto& node_one = root_node.children.front();
-  EXPECT_EQ("one", node_one.name());
-  ASSERT_EQ(1, node_one.children.size_slow());
-  auto& node_two = node_one.children.front();
-  EXPECT_EQ("two", node_two.name());
+  const Devnode* node_one = root_node.lookup("one");
+  ASSERT_NE(node_one, nullptr);
+  EXPECT_EQ("one", node_one->name());
+  const Devnode* node_two = node_one->lookup("two");
+  ASSERT_NE(node_two, nullptr);
+  EXPECT_EQ("two", node_two->name());
 }
 
 TEST(Devfs, Export_ExcessSeparators) {
@@ -41,8 +41,8 @@ TEST(Devfs, Export_ExcessSeparators) {
   std::vector<std::unique_ptr<Devnode>> out;
 
   ASSERT_STATUS(root_node.export_dir({}, "svc", "one////two", 0, {}, out), ZX_ERR_INVALID_ARGS);
-
-  ASSERT_EQ(0, root_node.children.size_slow());
+  ASSERT_EQ(root_node.lookup("one"), nullptr);
+  ASSERT_EQ(root_node.lookup("two"), nullptr);
 }
 
 TEST(Devfs, Export_OneByOne) {
@@ -54,15 +54,15 @@ TEST(Devfs, Export_OneByOne) {
 
   ASSERT_OK(root_node.export_dir({}, "svc", "one", 0, {}, out));
 
-  ASSERT_EQ(1, root_node.children.size_slow());
-  auto& node_one = root_node.children.front();
-  EXPECT_EQ("one", node_one.name());
+  const Devnode* node_one = root_node.lookup("one");
+  ASSERT_NE(node_one, nullptr);
+  EXPECT_EQ("one", node_one->name());
 
   ASSERT_OK(root_node.export_dir({}, "svc", "one/two", 0, {}, out));
 
-  ASSERT_EQ(1, node_one.children.size_slow());
-  auto& node_two = node_one.children.front();
-  EXPECT_EQ("two", node_two.name());
+  const Devnode* node_two = node_one->lookup("two");
+  ASSERT_NE(node_two, nullptr);
+  EXPECT_EQ("two", node_two->name());
 }
 
 TEST(Devfs, Export_InvalidPath) {
@@ -91,10 +91,10 @@ TEST(Devfs, Export_WithProtocol) {
   ASSERT_TRUE(root_slot.has_value());
   Devnode root_node(devfs, nullptr);
 
-  Devnode* proto_node = devfs.proto_node(ZX_PROTOCOL_BLOCK);
+  const Devnode* proto_node = devfs.proto_node(ZX_PROTOCOL_BLOCK);
   ASSERT_NE(proto_node, nullptr);
   EXPECT_EQ("block", proto_node->name());
-  EXPECT_EQ(0, proto_node->children.size_slow());
+  EXPECT_EQ(proto_node->lookup("000"), nullptr);
 
   std::vector<std::unique_ptr<Devnode>> out;
   auto outgoing = component::OutgoingDirectory::Create(loop.dispatcher());
@@ -105,16 +105,17 @@ TEST(Devfs, Export_WithProtocol) {
   ASSERT_OK(root_node.export_dir(std::move(endpoints->client), "svc", "one/two", ZX_PROTOCOL_BLOCK,
                                  {}, out));
 
-  ASSERT_EQ(1, root_node.children.size_slow());
-  auto& node_one = root_node.children.front();
-  EXPECT_EQ("one", node_one.name());
-  ASSERT_EQ(1, node_one.children.size_slow());
-  auto& node_two = node_one.children.front();
-  EXPECT_EQ("two", node_two.name());
+  const Devnode* node_one = root_node.lookup("one");
+  ASSERT_NE(node_one, nullptr);
+  EXPECT_EQ("one", node_one->name());
 
-  ASSERT_EQ(1, proto_node->children.size_slow());
-  auto& node_000 = proto_node->children.front();
-  EXPECT_EQ("000", node_000.name());
+  const Devnode* node_two = node_one->lookup("two");
+  ASSERT_NE(node_two, nullptr);
+  EXPECT_EQ("two", node_two->name());
+
+  const Devnode* node_000 = proto_node->lookup("000");
+  ASSERT_NE(node_000, nullptr);
+  EXPECT_EQ("000", node_000->name());
 }
 
 TEST(Devfs, Export_AlreadyExists) {
@@ -148,18 +149,19 @@ TEST(Devfs, Export_DropDevfs) {
 
   ASSERT_OK(root_node.export_dir({}, "svc", "one/two", 0, {}, out));
 
-  ASSERT_EQ(1, root_node.children.size_slow());
   {
-    auto& node_one = root_node.children.front();
-    EXPECT_EQ("one", node_one.name());
-    ASSERT_EQ(1, node_one.children.size_slow());
-    auto& node_two = node_one.children.front();
-    EXPECT_EQ("two", node_two.name());
+    const Devnode* node_one = root_node.lookup("one");
+    ASSERT_NE(node_one, nullptr);
+    EXPECT_EQ("one", node_one->name());
+
+    const Devnode* node_two = node_one->lookup("two");
+    ASSERT_NE(node_two, nullptr);
+    EXPECT_EQ("two", node_two->name());
   }
 
   out.clear();
 
-  ASSERT_EQ(0, root_node.children.size_slow());
+  ASSERT_EQ(root_node.lookup("one"), nullptr);
 }
 
 TEST(Devfs, ExportWatcher_Export) {
@@ -197,13 +199,14 @@ TEST(Devfs, ExportWatcher_Export) {
   });
 
   // Make sure the directories were set up correctly.
-  ASSERT_EQ(1, root_node.children.size_slow());
   {
-    auto& node_one = root_node.children.front();
-    EXPECT_EQ("one", node_one.name());
-    ASSERT_EQ(1, node_one.children.size_slow());
-    auto& node_two = node_one.children.front();
-    EXPECT_EQ("two", node_two.name());
+    const Devnode* node_one = root_node.lookup("one");
+    ASSERT_NE(node_one, nullptr);
+    EXPECT_EQ("one", node_one->name());
+
+    const Devnode* node_two = node_one->lookup("two");
+    ASSERT_NE(node_two, nullptr);
+    EXPECT_EQ("two", node_two->name());
   }
 
   // Run the loop and make sure ExportWatcher connected to our service.
@@ -211,17 +214,17 @@ TEST(Devfs, ExportWatcher_Export) {
   loop.ResetQuit();
   ASSERT_NE(service_channel.get(), ZX_HANDLE_INVALID);
   ASSERT_FALSE(did_close);
-  ASSERT_EQ(1, root_node.children.size_slow());
+  ASSERT_NE(root_node.lookup("one"), nullptr);
 
   // Close the server end and check that ExportWatcher noticed.
   service_channel.reset();
   loop.Run();
   ASSERT_TRUE(did_close);
-  ASSERT_EQ(1, root_node.children.size_slow());
+  ASSERT_NE(root_node.lookup("one"), nullptr);
 
   // Drop ExportWatcher and make sure the devfs nodes disappeared.
   result.value().reset();
-  ASSERT_EQ(0, root_node.children.size_slow());
+  ASSERT_EQ(root_node.lookup("one"), nullptr);
 }
 
 TEST(Devfs, ExportWatcher_Export_Invisible) {
@@ -260,16 +263,16 @@ TEST(Devfs, ExportWatcher_Export_Invisible) {
   ASSERT_EQ(ZX_OK, loop.RunUntilIdle());
 
   // Make sure the directories were set up correctly.
-  ASSERT_EQ(1, root_node.children.size_slow());
   {
-    const auto& node_one = root_node.children.front();
-    EXPECT_EQ("one", node_one.name());
-    EXPECT_EQ(fuchsia_device_fs::wire::ExportOptions::kInvisible, node_one.export_options());
-    ASSERT_EQ(1, node_one.children.size_slow());
+    const Devnode* node_one = root_node.lookup("one");
+    ASSERT_NE(node_one, nullptr);
+    EXPECT_EQ("one", node_one->name());
+    EXPECT_EQ(fuchsia_device_fs::wire::ExportOptions::kInvisible, node_one->export_options());
 
-    const auto& node_two = node_one.children.front();
-    EXPECT_EQ("two", node_two.name());
-    EXPECT_EQ(fuchsia_device_fs::wire::ExportOptions::kInvisible, node_two.export_options());
+    const Devnode* node_two = node_one->lookup("two");
+    ASSERT_NE(node_two, nullptr);
+    EXPECT_EQ("two", node_two->name());
+    EXPECT_EQ(fuchsia_device_fs::wire::ExportOptions::kInvisible, node_two->export_options());
   }
 
   // Try and make a subdir visible, this will fail because the devfs path has to match exactly with
@@ -289,14 +292,16 @@ TEST(Devfs, ExportWatcher_Export_Invisible) {
   ASSERT_EQ(ZX_OK, loop.RunUntilIdle());
 
   // Make sure the directories were set up correctly.
-  ASSERT_EQ(1, root_node.children.size_slow());
   {
-    const auto& node_one = root_node.children.front();
-    EXPECT_EQ(fuchsia_device_fs::wire::ExportOptions(), node_one.export_options());
-    ASSERT_EQ(1, node_one.children.size_slow());
+    const Devnode* node_one = root_node.lookup("one");
+    ASSERT_NE(node_one, nullptr);
+    EXPECT_EQ("one", node_one->name());
+    EXPECT_EQ(fuchsia_device_fs::wire::ExportOptions(), node_one->export_options());
 
-    const auto& node_two = node_one.children.front();
-    EXPECT_EQ(fuchsia_device_fs::wire::ExportOptions(), node_two.export_options());
+    const Devnode* node_two = node_one->lookup("two");
+    ASSERT_NE(node_two, nullptr);
+    EXPECT_EQ("two", node_two->name());
+    EXPECT_EQ(fuchsia_device_fs::wire::ExportOptions(), node_two->export_options());
   }
 
   // Try and make visible again, this will cause an error.
