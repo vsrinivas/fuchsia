@@ -526,7 +526,8 @@ zx_status_t ThreadDispatcher::GetInfoForUserspace(zx_info_thread_t* info) {
   *info = {};
 
   Guard<CriticalMutex> guard{get_lock()};
-  info->state = ThreadLifecycleToState(state_.lifecycle(), blocked_reason_);
+  info->state =
+      ThreadLifecycleToState(state_.lifecycle(), blocked_reason_.load(ktl::memory_order_acquire));
   info->wait_exception_channel_type = exceptionate_type_;
 
   // If we've exited then return with the lifecycle and exception type, and keep

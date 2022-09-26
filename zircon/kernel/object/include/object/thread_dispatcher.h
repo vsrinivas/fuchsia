@@ -199,11 +199,12 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   class AutoBlocked final {
    public:
     explicit AutoBlocked(Blocked reason)
-        : thread_(ThreadDispatcher::GetCurrent()), prev_reason(thread_->blocked_reason_) {
+        : thread_(ThreadDispatcher::GetCurrent()),
+          prev_reason(thread_->blocked_reason_.load(ktl::memory_order_acquire)) {
       DEBUG_ASSERT(reason != Blocked::NONE);
-      thread_->blocked_reason_ = reason;
+      thread_->blocked_reason_.store(reason, ktl::memory_order_release);
     }
-    ~AutoBlocked() { thread_->blocked_reason_ = prev_reason; }
+    ~AutoBlocked() { thread_->blocked_reason_.store(prev_reason, ktl::memory_order_release); }
 
    private:
     ThreadDispatcher* const thread_;
@@ -287,14 +288,21 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
 
   ThreadState state_ TA_GUARDED(get_lock());
 
-  // This is only valid while |state_.is_running()|.
-  // This is just a volatile, and not something like an atomic, because
-  // the only writer is the thread itself, and readers can just pick up
-  // whatever value is currently here. This value is written when the thread
-  // is likely to be put on a wait queue, and the following context switch
-  // will force this value's visibility to other cpus. If the thread doesn't
-  // get put on a wait queue, the thread was never really blocked.
-  volatile Blocked blocked_reason_ = Blocked::NONE;
+  // This is only valid while |state_.lifecycle()| is RUNNING.
+  //
+  // This field is an atomic because it may be accessed concurrently by multiple
+  // threads.  It may be read by any thread, but may only be updated by the
+  // "this" thread.
+  //
+  // In general, loads of this field should be performed with acquire semantics
+  // and stores with release semantics because this field is used to synchronize
+  // threads (think: wait for a thread to become blocked, then inspect some
+  // state the thread has written).
+  //
+  // Because this is simply an atomic, readers must be OK with observing stale
+  // values.  That is, by the time a reader can take action on the value, the
+  // value may no longer be accurate.
+  ktl::atomic<Blocked> blocked_reason_ = Blocked::NONE;
 
   // Support for sending an exception to an exception handler and then waiting for a response.
   // Exceptionates have internal locking so we don't need to guard it here.
