@@ -17,8 +17,10 @@
 namespace fio = fuchsia_io;
 
 TEST(Devfs, Export) {
-  Devfs devfs(nullptr);
-  Devnode root_node(devfs, nullptr, nullptr, "root");
+  std::optional<Devnode> root_slot;
+  Devfs devfs(root_slot, nullptr);
+  ASSERT_TRUE(root_slot.has_value());
+  Devnode root_node(devfs, nullptr);
   std::vector<std::unique_ptr<Devnode>> out;
 
   ASSERT_OK(root_node.export_dir({}, "svc", "one/two", 0, {}, out));
@@ -32,23 +34,22 @@ TEST(Devfs, Export) {
 }
 
 TEST(Devfs, Export_ExcessSeparators) {
-  Devfs devfs(nullptr);
-  Devnode root_node(devfs, nullptr, nullptr, "root");
+  std::optional<Devnode> root_slot;
+  Devfs devfs(root_slot, nullptr);
+  ASSERT_TRUE(root_slot.has_value());
+  Devnode root_node(devfs, nullptr);
   std::vector<std::unique_ptr<Devnode>> out;
 
-  ASSERT_OK(root_node.export_dir({}, "svc", "one////two", 0, {}, out));
+  ASSERT_STATUS(root_node.export_dir({}, "svc", "one////two", 0, {}, out), ZX_ERR_INVALID_ARGS);
 
-  ASSERT_EQ(1, root_node.children.size_slow());
-  auto& node_one = root_node.children.front();
-  EXPECT_EQ("one", node_one.name());
-  ASSERT_EQ(1, node_one.children.size_slow());
-  auto& node_two = node_one.children.front();
-  EXPECT_EQ("two", node_two.name());
+  ASSERT_EQ(0, root_node.children.size_slow());
 }
 
 TEST(Devfs, Export_OneByOne) {
-  Devfs devfs(nullptr);
-  Devnode root_node(devfs, nullptr, nullptr, "root");
+  std::optional<Devnode> root_slot;
+  Devfs devfs(root_slot, nullptr);
+  ASSERT_TRUE(root_slot.has_value());
+  Devnode root_node(devfs, nullptr);
   std::vector<std::unique_ptr<Devnode>> out;
 
   ASSERT_OK(root_node.export_dir({}, "svc", "one", 0, {}, out));
@@ -65,8 +66,10 @@ TEST(Devfs, Export_OneByOne) {
 }
 
 TEST(Devfs, Export_InvalidPath) {
-  Devfs devfs(nullptr);
-  Devnode root_node(devfs, nullptr, nullptr, "root");
+  std::optional<Devnode> root_slot;
+  Devfs devfs(root_slot, nullptr);
+  ASSERT_TRUE(root_slot.has_value());
+  Devnode root_node(devfs, nullptr);
   std::vector<std::unique_ptr<Devnode>> out;
 
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, root_node.export_dir({}, "", "one", 0, {}, out));
@@ -83,13 +86,16 @@ TEST(Devfs, Export_InvalidPath) {
 TEST(Devfs, Export_WithProtocol) {
   const async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
 
-  Devfs devfs(nullptr);
+  std::optional<Devnode> root_slot;
+  Devfs devfs(root_slot, nullptr);
+  ASSERT_TRUE(root_slot.has_value());
+  Devnode root_node(devfs, nullptr);
+
   Devnode* proto_node = devfs.proto_node(ZX_PROTOCOL_BLOCK);
   ASSERT_NE(proto_node, nullptr);
   EXPECT_EQ("block", proto_node->name());
   EXPECT_EQ(0, proto_node->children.size_slow());
 
-  Devnode root_node(devfs, nullptr, nullptr, "root");
   std::vector<std::unique_ptr<Devnode>> out;
   auto outgoing = component::OutgoingDirectory::Create(loop.dispatcher());
   auto endpoints = fidl::CreateEndpoints<fio::Directory>();
@@ -112,8 +118,10 @@ TEST(Devfs, Export_WithProtocol) {
 }
 
 TEST(Devfs, Export_AlreadyExists) {
-  Devfs devfs(nullptr);
-  Devnode root_node(devfs, nullptr, nullptr, "root");
+  std::optional<Devnode> root_slot;
+  Devfs devfs(root_slot, nullptr);
+  ASSERT_TRUE(root_slot.has_value());
+  Devnode root_node(devfs, nullptr);
   std::vector<std::unique_ptr<Devnode>> out;
 
   ASSERT_OK(root_node.export_dir({}, "svc", "one/two", 0, {}, out));
@@ -121,8 +129,10 @@ TEST(Devfs, Export_AlreadyExists) {
 }
 
 TEST(Devfs, Export_FailedToClone) {
-  Devfs devfs(nullptr);
-  Devnode root_node(devfs, nullptr, nullptr, "root");
+  std::optional<Devnode> root_slot;
+  Devfs devfs(root_slot, nullptr);
+  ASSERT_TRUE(root_slot.has_value());
+  Devnode root_node(devfs, nullptr);
   std::vector<std::unique_ptr<Devnode>> out;
 
   ASSERT_EQ(ZX_ERR_BAD_HANDLE,
@@ -130,8 +140,10 @@ TEST(Devfs, Export_FailedToClone) {
 }
 
 TEST(Devfs, Export_DropDevfs) {
-  Devfs devfs(nullptr);
-  Devnode root_node(devfs, nullptr, nullptr, "root");
+  std::optional<Devnode> root_slot;
+  Devfs devfs(root_slot, nullptr);
+  ASSERT_TRUE(root_slot.has_value());
+  Devnode root_node(devfs, nullptr);
   std::vector<std::unique_ptr<Devnode>> out;
 
   ASSERT_OK(root_node.export_dir({}, "svc", "one/two", 0, {}, out));
@@ -151,9 +163,12 @@ TEST(Devfs, Export_DropDevfs) {
 }
 
 TEST(Devfs, ExportWatcher_Export) {
-  Devfs devfs(nullptr);
-  Devnode root_node(devfs, nullptr, nullptr, "root");
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
+
+  std::optional<Devnode> root_slot;
+  Devfs devfs(root_slot, nullptr);
+  ASSERT_TRUE(root_slot.has_value());
+  Devnode root_node(devfs, nullptr);
 
   // Create a fake service at svc/test.
   auto outgoing = component::OutgoingDirectory::Create(loop.dispatcher());
@@ -210,9 +225,12 @@ TEST(Devfs, ExportWatcher_Export) {
 }
 
 TEST(Devfs, ExportWatcher_Export_Invisible) {
-  Devfs devfs(nullptr);
-  Devnode root_node(devfs, nullptr, nullptr, "root");
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
+
+  std::optional<Devnode> root_slot;
+  Devfs devfs(root_slot, nullptr);
+  ASSERT_TRUE(root_slot.has_value());
+  Devnode root_node(devfs, nullptr);
 
   // Create the export server and client.
   auto exporter = driver_manager::DevfsExporter(devfs, &root_node, loop.dispatcher());
@@ -244,14 +262,14 @@ TEST(Devfs, ExportWatcher_Export_Invisible) {
   // Make sure the directories were set up correctly.
   ASSERT_EQ(1, root_node.children.size_slow());
   {
-    auto& node_one = root_node.children.front();
+    const auto& node_one = root_node.children.front();
     EXPECT_EQ("one", node_one.name());
-    EXPECT_EQ(fuchsia_device_fs::wire::ExportOptions::kInvisible, node_one.service_options);
+    EXPECT_EQ(fuchsia_device_fs::wire::ExportOptions::kInvisible, node_one.export_options());
     ASSERT_EQ(1, node_one.children.size_slow());
 
-    auto& node_two = node_one.children.front();
+    const auto& node_two = node_one.children.front();
     EXPECT_EQ("two", node_two.name());
-    EXPECT_EQ(fuchsia_device_fs::wire::ExportOptions::kInvisible, node_two.service_options);
+    EXPECT_EQ(fuchsia_device_fs::wire::ExportOptions::kInvisible, node_two.export_options());
   }
 
   // Try and make a subdir visible, this will fail because the devfs path has to match exactly with
@@ -273,12 +291,12 @@ TEST(Devfs, ExportWatcher_Export_Invisible) {
   // Make sure the directories were set up correctly.
   ASSERT_EQ(1, root_node.children.size_slow());
   {
-    auto& node_one = root_node.children.front();
-    EXPECT_EQ(fuchsia_device_fs::wire::ExportOptions(), node_one.service_options);
+    const auto& node_one = root_node.children.front();
+    EXPECT_EQ(fuchsia_device_fs::wire::ExportOptions(), node_one.export_options());
     ASSERT_EQ(1, node_one.children.size_slow());
 
-    auto& node_two = node_one.children.front();
-    EXPECT_EQ(fuchsia_device_fs::wire::ExportOptions(), node_two.service_options);
+    const auto& node_two = node_one.children.front();
+    EXPECT_EQ(fuchsia_device_fs::wire::ExportOptions(), node_two.export_options());
   }
 
   // Try and make visible again, this will cause an error.
@@ -292,9 +310,12 @@ TEST(Devfs, ExportWatcher_Export_Invisible) {
 }
 
 TEST(Devfs, ExportWatcherCreateFails) {
-  Devfs devfs(nullptr);
-  Devnode root_node(devfs, nullptr, nullptr, "root");
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
+
+  std::optional<Devnode> root_slot;
+  Devfs devfs(root_slot, nullptr);
+  ASSERT_TRUE(root_slot.has_value());
+  Devnode root_node(devfs, nullptr);
 
   // Create a fake service at svc/test.
   // Export the svc/test.

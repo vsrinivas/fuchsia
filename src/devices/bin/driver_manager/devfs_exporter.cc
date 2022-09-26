@@ -45,11 +45,11 @@ zx::status<std::unique_ptr<ExportWatcher>> ExportWatcher::Create(
 
 zx_status_t ExportWatcher::MakeVisible() {
   for (auto& node : devnodes_) {
-    fdfs::ExportOptions& options = node->service_options;
-    if (options != fuchsia_device_fs::wire::ExportOptions::kInvisible) {
+    Devnode::ExportOptions* options = node->export_options();
+    if (*options != fuchsia_device_fs::wire::ExportOptions::kInvisible) {
       return ZX_ERR_BAD_STATE;
     }
-    options &= ~fuchsia_device_fs::wire::ExportOptions::kInvisible;
+    *options &= ~fuchsia_device_fs::wire::ExportOptions::kInvisible;
     Devnode* parent = node->parent();
     ZX_ASSERT(parent != nullptr);
     parent->notify(node->name(), fuchsia_io::wire::WatchEvent::kAdded);

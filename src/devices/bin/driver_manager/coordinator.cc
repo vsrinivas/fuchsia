@@ -260,15 +260,16 @@ Coordinator::Coordinator(CoordinatorConfig config, InspectManager* inspect_manag
       root_device_(fbl::MakeRefCounted<Device>(this, "root", fbl::String(), "root,", nullptr,
                                                ZX_PROTOCOL_ROOT, zx::vmo(), zx::channel(),
                                                fidl::ClientEnd<fio::Directory>())),
-      devfs_(root_device_.get()),
+      devfs_(root_device_->self, root_device_.get(),
+             [this]() {
+               zx::status diagnostics_client = inspect_manager_->Connect();
+               ZX_ASSERT_MSG(diagnostics_client.is_ok(), "%s", diagnostics_client.status_string());
+               return std::move(diagnostics_client.value());
+             }()),
       system_state_manager_(this),
       package_resolver_(config_.boot_args),
       driver_loader_(config_.boot_args, std::move(config_.driver_index), &base_resolver_,
                      dispatcher, config_.require_system, &package_resolver_) {
-  zx::status diagnostics_client = inspect_manager_->Connect();
-  ZX_ASSERT_MSG(diagnostics_client.is_ok(), "%s", diagnostics_client.status_string());
-  devfs_.connect_diagnostics(std::move(diagnostics_client.value()));
-
   shutdown_system_state_ = config_.default_shutdown_system_state;
 
   root_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE;

@@ -11,6 +11,8 @@
 #include <lib/zx/channel.h>
 #include <zircon/types.h>
 
+#include <variant>
+
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
@@ -21,8 +23,32 @@ class DcIostate;
 struct Watcher;
 
 struct Devnode : public fbl::DoublyLinkedListable<Devnode*> {
+  using ExportOptions = fuchsia_device_fs::wire::ExportOptions;
+  struct NoRemote {
+    mutable ExportOptions export_options;
+  };
+  struct Service {
+    fidl::ClientEnd<fuchsia_io::Directory> remote;
+    std::string path;
+    mutable ExportOptions export_options;
+  };
+
+  using Target = std::variant<NoRemote, Service, Device*>;
+
+  // Constructs a root node.
+  Devnode(Devfs& devfs, Device* device);
+
+  // Constructs a directory node.
+  //
+  // `parent` must outlive `this`.
+  Devnode(Devfs& devfs, Devnode& parent, NoRemote no_remote, fbl::String name);
+
+  // `parent` must outlive `this`.
+  Devnode(Devfs& devfs, Devnode& parent, Service service, fbl::String name);
+
   // `parent` and `device` must outlive `this`.
-  Devnode(Devfs& devfs, Devnode* parent, Device* device, fbl::String name);
+  Devnode(Devfs& devfs, Devnode& parent, Device& device, fbl::String name);
+
   ~Devnode();
 
   Devnode(const Devnode&) = delete;
@@ -46,7 +72,7 @@ struct Devnode : public fbl::DoublyLinkedListable<Devnode*> {
   // each of these Devnodes are children of `dn`, they must live as long as `dn`.
   zx_status_t export_dir(fidl::ClientEnd<fuchsia_io::Directory> service_dir,
                          std::string_view service_path, std::string_view devfs_path,
-                         uint32_t protocol_id, fuchsia_device_fs::wire::ExportOptions options,
+                         uint32_t protocol_id, ExportOptions options,
                          std::vector<std::unique_ptr<Devnode>>& out);
 
   void notify(std::string_view name, fuchsia_io::wire::WatchEvent op);
@@ -57,11 +83,8 @@ struct Devnode : public fbl::DoublyLinkedListable<Devnode*> {
   Device* device() const;
   Devnode* parent() const;
   std::string_view name() const;
-
-  // Set if this devnode is attached to a remote service.
-  fidl::ClientEnd<fuchsia_io::Directory> service_dir;
-  std::string service_path;
-  fuchsia_device_fs::wire::ExportOptions service_options;
+  ExportOptions export_options() const;
+  ExportOptions* export_options();
 
   fbl::DoublyLinkedList<std::unique_ptr<Watcher>> watchers;
 
@@ -80,11 +103,6 @@ struct Devnode : public fbl::DoublyLinkedListable<Devnode*> {
   bool is_dir() const;
   bool is_invisible() const;
 
-  // Local devnodes are ones that we should not hand off OPEN RPCs to the
-  // underlying driver_host.
-  bool is_local() const;
-  bool is_special_ino(uint64_t ino) const;
-
   Devnode* lookup(std::string_view name);
 
   void open(async_dispatcher_t* dispatcher, fidl::ServerEnd<fuchsia_io::Node> ipc,
@@ -100,11 +118,9 @@ struct Devnode : public fbl::DoublyLinkedListable<Devnode*> {
   // children. Our parent must outlive us.
   Devnode* parent_;
 
-  // nullptr if we are a pure directory node,
-  // otherwise the device we are referencing
-  Device* device_;
+  const Target target_;
 
-  const fbl::String name_;
+  const std::optional<fbl::String> name_;
   const uint64_t ino_;
 
   // used to assign unique small device numbers
@@ -114,15 +130,15 @@ struct Devnode : public fbl::DoublyLinkedListable<Devnode*> {
 
 class Devfs {
  public:
-  // `device` must outlive `this`.
-  explicit Devfs(Device* device);
+  // `root` and `device` must outlive `this`.
+  Devfs(std::optional<Devnode>& root, Device* device,
+        std::optional<fidl::ClientEnd<fuchsia_io::Directory>> diagnostics = {});
 
   zx::status<fidl::ClientEnd<fuchsia_io::Directory>> Connect(async_dispatcher_t* dispatcher);
 
   zx_status_t publish(Device& parent, Device& dev);
   void advertise(Device& device);
   void advertise_modified(Device& dev);
-  void connect_diagnostics(fidl::ClientEnd<fuchsia_io::Directory> diagnostics_channel);
 
   // For testing only.
   Devnode* proto_node(uint32_t protocol_id);
@@ -146,10 +162,10 @@ class Devfs {
   Devnode zero_devnode;
 
   // Connection to diagnostics VFS server.
-  std::optional<fidl::ClientEnd<fuchsia_io::Directory>> diagnostics_channel;
+  const std::optional<fidl::ClientEnd<fuchsia_io::Directory>> diagnostics_;
 
   struct ProtocolInfo {
-    const char* name;
+    std::string_view name;
     uint32_t id;
     uint32_t flags;
   };
