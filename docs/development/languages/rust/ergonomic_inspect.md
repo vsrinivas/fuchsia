@@ -46,6 +46,7 @@ When you integrate your Rust code base with this library, be aware that:
   - Lazy nodes, histograms and inspect arrays.
   - `Option<T>` and other enums.
   - Collection types, such as vectors and maps.
+  - StringReferences
 - The library promotes [custom smart pointers](#iowned), which creates another
   layer of data wrapping.
 
