@@ -200,8 +200,12 @@ macro_rules! repo_test_suite {
 
             #[fuchsia_async::run_singlethreaded(test)]
             async fn test_fetch_range() {
+                // We have a number of test cases, so we'll break them up into multiple concurrent
+                // tests.
+
                 let env = $create_env;
 
+                let mut size_cases = vec![];
                 for size in [20, $chunk_size - 1, $chunk_size, $chunk_size + 1, $chunk_size * 2 + 1]
                 {
                     let path = format!("{}", size);
@@ -209,6 +213,13 @@ macro_rules! repo_test_suite {
 
                     env.write_metadata(&path, &body);
                     env.write_blob(&path, &body);
+
+                    size_cases.push((size, path, body));
+                }
+
+                let mut test_cases = vec![];
+                for (size, path, body) in &size_cases {
+                    let size = *size;
 
                     for (range, expected) in [
                         (Range::From { first_byte_pos: 0 }, &body[..]),
@@ -236,21 +247,32 @@ macro_rules! repo_test_suite {
                         (Range::Suffix { len: 5 }, &body[size - 5..]),
                         (Range::Suffix { len: size as u64 }, &body[..]),
                     ] {
-                        if env.supports_range() {
-                            let actual = read_metadata(&env, &path, range.clone()).await.unwrap();
-                            assert_eq!(&actual, &expected, "size: {size} range: {range:?}");
-
-                            let actual = read_blob(&env, &path, range.clone()).await.unwrap();
-                            assert_eq!(&actual, &expected, "size: {size} range: {range:?}");
-                        } else {
-                            let actual = read_metadata(&env, &path, range.clone()).await.unwrap();
-                            assert_eq!(&actual, &body[..], "size: {size} range: {range:?}");
-
-                            let actual = read_blob(&env, &path, range.clone()).await.unwrap();
-                            assert_eq!(&actual, &body[..], "size: {size} range: {range:?}");
-                        }
+                        test_cases.push((size, path.as_str(), body.as_slice(), range, expected));
                     }
                 }
+
+                let mut futs = vec![];
+                for (size, path, body, range, expected) in test_cases {
+                    let env = &env;
+
+                    futs.push(async move {
+                        if env.supports_range() {
+                            let actual = read_metadata(env, &path, range.clone()).await.unwrap();
+                            assert_eq!(&actual, &expected, "size: {size} range: {range:?}");
+
+                            let actual = read_blob(env, &path, range.clone()).await.unwrap();
+                            assert_eq!(&actual, &expected, "size: {size} range: {range:?}");
+                        } else {
+                            let actual = read_metadata(env, &path, range.clone()).await.unwrap();
+                            assert_eq!(&actual, &body[..], "size: {size} range: {range:?}");
+
+                            let actual = read_blob(env, &path, range.clone()).await.unwrap();
+                            assert_eq!(&actual, &body[..], "size: {size} range: {range:?}");
+                        }
+                    });
+                }
+
+                futures::future::join_all(futs).await;
 
                 env.stop().await;
             }
@@ -258,8 +280,12 @@ macro_rules! repo_test_suite {
             // Helper to check that fetching an invalid range returns a NotSatisfiable error.
             #[fuchsia_async::run_singlethreaded(test)]
             async fn test_fetch_range_not_satisfiable() {
+                // We have a number of test cases, so we'll break them up into multiple concurrent
+                // tests.
+
                 let env = $create_env;
 
+                let mut size_cases = vec![];
                 for size in [20, $chunk_size - 1, $chunk_size, $chunk_size + 1, $chunk_size * 2 + 1]
                 {
                     let path = format!("{}", size);
@@ -268,7 +294,13 @@ macro_rules! repo_test_suite {
                     env.write_metadata(&path, &body);
                     env.write_blob(&path, &body);
 
-                    let size = size as u64;
+                    size_cases.push((size, path));
+                }
+
+                let mut test_cases = vec![];
+                for (size, path) in &size_cases {
+                    let size = *size as u64;
+
                     for range in [
                         Range::From { first_byte_pos: size },
                         Range::From { first_byte_pos: size + 1 },
@@ -282,8 +314,17 @@ macro_rules! repo_test_suite {
                         Range::Suffix { len: size + 1 },
                         Range::Suffix { len: size + 5 },
                     ] {
+                        test_cases.push((size, path.as_str(), range));
+                    }
+                }
+
+                let mut futs = vec![];
+                for (size, path, range) in test_cases {
+                    let env = &env;
+
+                    futs.push(async move {
                         assert_matches!(
-                            read_metadata(&env, &path, range.clone()).await,
+                            read_metadata(env, &path, range.clone()).await,
                             Err(Error::RangeNotSatisfiable),
                             "size: {} range: {:?}",
                             size,
@@ -291,14 +332,16 @@ macro_rules! repo_test_suite {
                         );
 
                         assert_matches!(
-                            read_blob(&env, &path, range.clone()).await,
+                            read_blob(env, &path, range.clone()).await,
                             Err(Error::RangeNotSatisfiable),
                             "size: {} range: {:?}",
                             size,
                             range
                         );
-                    }
+                    });
                 }
+
+                futures::future::join_all(futs).await;
 
                 env.stop().await;
             }
