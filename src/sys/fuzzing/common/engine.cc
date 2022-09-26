@@ -172,20 +172,34 @@ zx_status_t Engine::RunTest(ComponentContextPtr context, RunnerPtr runner) {
   auto options = MakeOptions();
   runner->OverrideDefaults(options.get());
 
+  // TODO(fxbug.dev/109100): Rarely, spawned process output may be truncated. `LibFuzzerRunner`
+  // needs to return `ZX_ERR_IO_INVALID` in this case. By retying several times, the probability of
+  // the underlying flake failing a test drops to almost zero.
+  static constexpr const size_t kFuzzerTestRetries = 10;
+
   // In order to make this more testable, the following task does not exit directly. Instead, it
   // repeatedly calls |RunUntilIdle| until it has set an exit code. This allows this method to be
   // called as part of a gTest as well as by the elf_test_runner.
   zx_status_t exitcode = ZX_ERR_NEXT;
   auto task = runner->Configure(options)
-                  .and_then([runner, corpus = std::move(corpus_), execute = ZxFuture<FuzzResult>()](
-                                Context& context) mutable -> ZxResult<FuzzResult> {
-                    if (!execute) {
-                      execute = runner->Execute(std::move(corpus));
+                  .and_then([runner, corpus = std::move(corpus_), execute = ZxFuture<FuzzResult>(),
+                             attempts = 0U](Context& context) mutable -> ZxResult<FuzzResult> {
+                    while (attempts < kFuzzerTestRetries) {
+                      if (!execute) {
+                        execute = runner->Execute(std::move(corpus));
+                      }
+                      if (!execute(context)) {
+                        return fpromise::pending();
+                      }
+                      if (execute.is_ok()) {
+                        return fpromise::ok(execute.take_value());
+                      }
+                      if (auto status = execute.take_error(); status != ZX_ERR_IO_INVALID) {
+                        return fpromise::error(status);
+                      }
+                      attempts++;
                     }
-                    if (!execute(context)) {
-                      return fpromise::pending();
-                    }
-                    return execute.take_result();
+                    return fpromise::error(ZX_ERR_IO_INVALID);
                   })
                   .then([&exitcode](ZxResult<FuzzResult>& result) {
                     if (result.is_error()) {

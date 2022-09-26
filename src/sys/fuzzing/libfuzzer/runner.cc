@@ -493,10 +493,11 @@ ZxPromise<FuzzResult> LibFuzzerRunner::ParseOutput() {
               return fpromise::error(status);
             }
             // TODO(fxbug.dev/109100): Rarely, the process output will be truncated. This causes
-            // problems for tooling like undercoat.
+            // problems for tooling like undercoat. This is the only location in the LibFuzzerRunner
+            // that returns `ZX_ERR_IO_INVALID`.
             if (pid < 0 && !process_.is_killed()) {
               FX_LOGS(ERROR) << "libFuzzer output terminated prematurely.";
-              return fpromise::error(ZX_ERR_IO);
+              return fpromise::error(ZX_ERR_IO_INVALID);
             }
             return fpromise::ok(result);
           }
