@@ -38,6 +38,7 @@ uint8_t GetDefaultNumCpus() {
 
 using ::fuchsia::virtualization::GuestConfig;
 using ::fuchsia::virtualization::GuestDescriptor;
+using ::fuchsia::virtualization::GuestError;
 using ::fuchsia::virtualization::GuestLifecycle_Create_Result;
 using ::fuchsia::virtualization::GuestLifecycle_Run_Result;
 using ::fuchsia::virtualization::GuestManagerError;
@@ -157,9 +158,7 @@ void GuestManager::HandleCreateResult(
     fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
     LaunchGuestCallback callback) {
   if (result.is_err()) {
-    stop_time_ = zx::clock::get_monotonic();
-    state_ = GuestStatus::STOPPED;
-    last_error_ = result.err();
+    HandleGuestStopped(fitx::error(result.err()));
     callback(fpromise::error(GuestManagerError::START_FAILURE));
 
     // TODO(fxbug.dev/104989): Destroy dynamic children so that we don't need to restart the VMM.
@@ -175,14 +174,27 @@ void GuestManager::HandleCreateResult(
 }
 
 void GuestManager::HandleRunResult(GuestLifecycle_Run_Result result) {
-  if (result.is_err()) {
-    last_error_ = result.err();
+  if (result.is_response()) {
+    HandleGuestStopped(fitx::ok());
+  } else {
+    HandleGuestStopped(fitx::error(result.err()));
   }
-  stop_time_ = zx::clock::get_monotonic();
-  state_ = GuestStatus::STOPPED;
 
   // TODO(fxbug.dev/104989): Destroy dynamic children so that we don't need to restart the VMM.
   lifecycle_.Unbind();
+}
+
+void GuestManager::HandleGuestStopped(fitx::result<GuestError> err) {
+  if (err.is_ok()) {
+    last_error_ = std::nullopt;
+  } else {
+    last_error_ = err.error_value();
+  }
+
+  stop_time_ = zx::clock::get_monotonic();
+  state_ = GuestStatus::STOPPED;
+
+  OnGuestStopped();
 }
 
 void GuestManager::ForceShutdownGuest(ForceShutdownGuestCallback callback) {

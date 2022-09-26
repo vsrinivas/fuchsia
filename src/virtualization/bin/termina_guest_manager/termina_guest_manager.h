@@ -28,6 +28,7 @@ class TerminaGuestManager : GuestManager, public fuchsia::virtualization::LinuxM
   fitx::result<::fuchsia::virtualization::GuestManagerError, ::fuchsia::virtualization::GuestConfig>
   GetDefaultGuestConfig() override;
   void OnGuestLaunched() override;
+  void OnGuestStopped() override;
 
  private:
   // |fuchsia::virtualization::LinuxManager|
@@ -44,8 +45,7 @@ class TerminaGuestManager : GuestManager, public fuchsia::virtualization::LinuxM
   std::deque<StartAndGetLinuxGuestInfoCallback> callbacks_;
   std::optional<GuestInfo> info_;
   fuchsia::virtualization::GuestPtr guest_controller_;
-  Guest guest_{structured_config_,
-               fit::bind_member(this, &TerminaGuestManager::OnGuestInfoChanged)};
+  std::unique_ptr<Guest> guest_;
 };
 
 }  // namespace termina_guest_manager

@@ -42,12 +42,14 @@ class GuestManager : public fuchsia::virtualization::GuestManager {
                        ::fuchsia::virtualization::GuestConfig>
   GetDefaultGuestConfig();
   virtual void OnGuestLaunched() {}
+  virtual void OnGuestStopped() {}
 
  private:
   void HandleCreateResult(::fuchsia::virtualization::GuestLifecycle_Create_Result result,
                           fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
                           LaunchGuestCallback callback);
   void HandleRunResult(::fuchsia::virtualization::GuestLifecycle_Run_Result result);
+  void HandleGuestStopped(fitx::result<::fuchsia::virtualization::GuestError> err);
 
   sys::ComponentContext* context_;
   fidl::BindingSet<fuchsia::virtualization::GuestManager> manager_bindings_;

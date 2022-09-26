@@ -36,6 +36,8 @@ TerminaGuestManager::TerminaGuestManager(async_dispatcher_t* dispatcher,
     : GuestManager(dispatcher, context.get()),
       context_(std::move(context)),
       structured_config_(termina_config::Config::TakeFromStartupHandle()) {
+  guest_ = std::make_unique<Guest>(
+      structured_config_, fit::bind_member(this, &TerminaGuestManager::OnGuestInfoChanged));
   context_->outgoing()->AddPublicService<fuchsia::virtualization::LinuxManager>(
       [this](auto request) {
         manager_bindings_.AddBinding(this, std::move(request));
@@ -75,7 +77,7 @@ fitx::result<GuestManagerError, GuestConfig> TerminaGuestManager::GetDefaultGues
   termina_config.mutable_wayland_device()->server = std::move(server_proxy);
 
   // Add the vsock listeners for gRPC services.
-  *termina_config.mutable_vsock_listeners() = guest_.take_vsock_listeners();
+  *termina_config.mutable_vsock_listeners() = guest_->take_vsock_listeners();
 
   return fitx::ok(guest_config::MergeConfigs(std::move(*base_config), std::move(termina_config)));
 }
@@ -96,7 +98,12 @@ void TerminaGuestManager::OnGuestLaunched() {
       FX_CHECK(res.is_response());
     });
   }
-  guest_.OnGuestLaunched(*this, *guest_controller_.get());
+  guest_->OnGuestLaunched(*this, *guest_controller_.get());
+}
+
+void TerminaGuestManager::OnGuestStopped() {
+  guest_ = std::make_unique<Guest>(
+      structured_config_, fit::bind_member(this, &TerminaGuestManager::OnGuestInfoChanged));
 }
 
 void TerminaGuestManager::StartAndGetLinuxGuestInfo(std::string label,
@@ -117,7 +124,7 @@ void TerminaGuestManager::StartAndGetLinuxGuestInfo(std::string label,
   // If the container startup failed, we can request a retry.
   if (info_ && info_->container_status == fuchsia::virtualization::ContainerStatus::FAILED) {
     info_ = std::nullopt;
-    guest_.RetryContainerStartup();
+    guest_->RetryContainerStartup();
   }
 
   if (info_.has_value()) {
