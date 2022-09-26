@@ -1,0 +1,39 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+resource("thermal-client-service-integration-test-resources") {
+  sources = [
+    "config_files/thermal_client_service_test/node_config.json5",
+    "config_files/thermal_client_service_test/thermal_config.json5",
+  ]
+
+  outputs = [ "thermal_client_service_test/{{source_file_part}}" ]
+}
+
+rustc_test("integration-test") {
+  name = "power_manager_integration_test"
+  testonly = true
+  edition = "2021"
+  deps = [
+    "//src/lib/fuchsia",
+    "//src/power/power-manager/integration/lib",
+  ]
+
+  sources = [ "src/lib.rs" ]
+}
+
+fuchsia_unittest_package("integration-test-package") {
+  manifest = "meta/power-manager-integration-test.cml"
+  deps = [
+    ":integration-test",
+    ":thermal-client-service-integration-test-resources",
+  ]
+}
+
+group("test") {
+  testonly = true
+  deps = [ ":integration-test-package" ]
+}

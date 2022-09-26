@@ -1,0 +1,16 @@
+{
+    clients: {
+        client0: [
+            {
+                state: 1,
+                trip_points: [
+                    {
+                        sensor: '/dev/class/thermal/000',
+                        activate_at: 1,
+                        deactivate_below: 1,
+                    },
+                ],
+            },
+        ],
+    },
+}

@@ -1,0 +1,76 @@
+[
+    {
+        type: "DriverManagerHandler",
+        name: "driver_manager_handler",
+        config: {},
+    },
+    {
+        type: "TemperatureHandler",
+        name: "thermal_000",
+        config: {
+            driver_path: "/dev/class/thermal/000",
+            cache_duration_ms: 0,
+        },
+    },
+    {
+        type: "CrashReportHandler",
+        name: "crash_handler",
+    },
+    {
+        type: "PlatformMetrics",
+        name: "platform_metrics",
+        config: {
+            cpu_temperature_poll_interval_s: 1,
+            throttle_debounce_timeout_s: 60,
+        },
+        dependencies: {
+            cpu_temperature_handler_node: "thermal_000",
+            crash_report_handler_node: "crash_handler",
+        },
+    },
+    {
+        type: "SystemShutdownHandler",
+        name: "sys_shutdown",
+        config: {
+            shutdown_timeout_s: 3600,
+        },
+        dependencies: {
+            driver_manager_handler_node: "driver_manager_handler",
+        },
+    },
+    {
+        type: "ThermalStateHandler",
+        name: "thermal_state_handler",
+        config: {
+            thermal_config_path: "/pkg/thermal_client_service_test/thermal_config.json5",
+        },
+        dependencies: {
+            platform_metrics_node: "platform_metrics",
+        },
+    },
+    {
+        type: "ThermalLoadDriver",
+        name: "thermal_load_driver",
+        config: {
+            temperature_input_configs: [
+                {
+                    temperature_handler_node_name: "thermal_000",
+                    onset_temperature_c: 50.0,
+                    reboot_temperature_c: 100.0,
+                    poll_interval_s: 0.01,
+                    filter_time_constant_s: 0.1,
+                },
+            ],
+        },
+        dependencies: {
+            platform_metrics_node: "platform_metrics",
+            system_shutdown_node: "sys_shutdown",
+            thermal_load_notify_nodes: [
+                "thermal_state_handler",
+            ],
+            temperature_handler_node_names: [
+                "thermal_000",
+            ],
+        },
+    },
+]
