@@ -81,6 +81,7 @@ void AmlUsbCrgPhy::InitPll(fdf::MmioBuffer* mmio) {
       .set_reset(0)
       .WriteTo(mmio);
 
+  PLL_REGISTER::Get(0xc).FromValue(0x3c).WriteTo(mmio);
   // PLL
 
   zx::nanosleep(zx::deadline_after(zx::usec(100)));
@@ -92,18 +93,6 @@ void AmlUsbCrgPhy::InitPll(fdf::MmioBuffer* mmio) {
   PLL_REGISTER_38::Get().ReadFrom(mmio).set_threshold(0x2).WriteTo(mmio);
 
   PLL_REGISTER::Get(0x34).FromValue(0x78000).WriteTo(mmio);
-
-  // Tuning
-
-  zx::nanosleep(zx::deadline_after(zx::usec(100)));
-
-  PLL_REGISTER_C::Get().ReadFrom(mmio).set_value(0x7).WriteTo(mmio);
-
-  PLL_REGISTER::Get(0x10).FromValue(0x8000fff).WriteTo(mmio);
-
-  PLL_REGISTER::Get(0x34).FromValue(0x78000).WriteTo(mmio);
-
-  zx::nanosleep(zx::deadline_after(zx::usec(100)));
 }
 
 zx_status_t AmlUsbCrgPhy::InitPhy() {
@@ -455,15 +444,6 @@ void AmlUsbCrgPhy::UsbPhyConnectStatusChanged(bool connected) {
 
   if (udc_connected_ == connected)
     return;
-
-  auto* mmio = &*usbphy_mmio_;
-
-  if (connected) {
-    PLL_REGISTER::Get(0x38).FromValue(pll_settings_[7]).WriteTo(mmio);
-    PLL_REGISTER::Get(0x34).FromValue(pll_settings_[5]).WriteTo(mmio);
-  } else {
-    InitPll(mmio);
-  }
 
   udc_connected_ = connected;
 }

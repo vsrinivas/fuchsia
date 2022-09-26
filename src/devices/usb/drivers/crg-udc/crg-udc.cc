@@ -777,7 +777,6 @@ void CrgUdc::DisableEp(uint8_t ep_num) {
   }
 
   EPENABLED::Get().ReadFrom(mmio).set_ep_enabled(0x1 << ep_num).WriteTo(mmio);
-  CompletePendingRequest(ep);
   enabled_eps_num_--;
 
   ep_cx = reinterpret_cast<EpContext*>(endpoint_context_.vaddr) + (ep_num - 2);
@@ -936,25 +935,28 @@ zx_status_t CrgUdc::InitEventRing() {
   zx_status_t status = ZX_OK;
 
   // Create Event Ring Segment Table
-  alloc_len = sizeof(struct ErstData);
-  status = DmaBufferAlloc(&(ring_info->erst), alloc_len);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "InitEventRing: alloc dma buffer for Event Ring Segment Table:%s",
-           zx_status_get_string(status));
-    return status;
+  if (ring_info->erst.vaddr == nullptr) {
+    alloc_len = sizeof(struct ErstData);
+    status = DmaBufferAlloc(&(ring_info->erst), alloc_len);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "InitEventRing: alloc dma buffer for Event Ring Segment Table:%s",
+             zx_status_get_string(status));
+      return status;
+    }
   }
   ring_info->p_erst = reinterpret_cast<ErstData*>(ring_info->erst.vaddr);
 
   // Create Event Ring
-  alloc_len = CRG_UDC_EVENT_TRB_NUM * sizeof(struct TRBlock);
-  status = DmaBufferAlloc(&(ring_info->event_ring), alloc_len);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "InitEventRing: alloc dma buffer for Event Ring:%s",
-           zx_status_get_string(status));
-    return status;
+  if (ring_info->event_ring.vaddr == nullptr) {
+    alloc_len = CRG_UDC_EVENT_TRB_NUM * sizeof(struct TRBlock);
+    status = DmaBufferAlloc(&(ring_info->event_ring), alloc_len);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "InitEventRing: alloc dma buffer for Event Ring:%s",
+             zx_status_get_string(status));
+      return status;
+    }
   }
   ring_info->evt_dq_pt = reinterpret_cast<TRBlock*>(ring_info->event_ring.vaddr);
-
   ring_info->evt_seg0_last_trb =
       reinterpret_cast<TRBlock*>(ring_info->event_ring.vaddr) + (CRG_UDC_EVENT_TRB_NUM - 1);
   ring_info->CCS = 1;
@@ -998,12 +1000,14 @@ zx_status_t CrgUdc::InitDeviceContext() {
   uint32_t buf_size;
 
   // ep0 is not included in ep contexts in crg udc
-  buf_size = (CRG_UDC_MAX_EPS - 2) * sizeof(struct EpContext);
-  status = DmaBufferAlloc(&endpoint_context_, buf_size);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "InitDeviceContext: alloc dma buffer for device context:%s",
-           zx_status_get_string(status));
-    return status;
+  if (endpoint_context_.vaddr == nullptr) {
+    buf_size = (CRG_UDC_MAX_EPS - 2) * sizeof(struct EpContext);
+    status = DmaBufferAlloc(&endpoint_context_, buf_size);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "InitDeviceContext: alloc dma buffer for device context:%s",
+             zx_status_get_string(status));
+      return status;
+    }
   }
 
   // Device context base address pointer
@@ -1069,10 +1073,12 @@ zx_status_t CrgUdc::InitEp0() {
 
   auto* ep = &endpoints_[0];
   buf_size = CRG_CONTROL_EP_TD_RING_SIZE * sizeof(struct TRBlock);
-  status = DmaBufferAlloc(&(ep->dma_buf), buf_size);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "InitEp0: alloc dma buffer for transfer ring:%s", zx_status_get_string(status));
-    return status;
+  if (ep->dma_buf.vaddr == nullptr) {
+    status = DmaBufferAlloc(&(ep->dma_buf), buf_size);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "InitEp0: alloc dma buffer for transfer ring:%s", zx_status_get_string(status));
+      return status;
+    }
   }
 
   ep->first_trb = reinterpret_cast<TRBlock*>(ep->dma_buf.vaddr);
@@ -1198,11 +1204,14 @@ zx_status_t CrgUdc::UdcReset() {
 
   setup_state_ = SetupState::kWaitForSetup;
   device_state_ = DeviceState::kUsbStateAttached;
+  dev_addr_ = 0;
 
   // Complete any pending requests
   for (uint32_t i = 0; i < CRG_UDC_MAX_EPS; i++) {
     auto* ep = &endpoints_[i];
     CompletePendingRequest(ep);
+    ep->transfer_ring_full = false;
+    ep->ep_state = EpState::kEpStateDisabled;
   }
   enabled_eps_num_ = 0;
 
@@ -1425,8 +1434,25 @@ zx_status_t CrgUdc::HandlePortStatus() {
 
   if (portsc_val & (0x1 << 22)) {
     auto portsc = PORTSC::Get().ReadFrom(mmio);
-    if (portsc.plc() == 0xf) {
+    if (portsc.pls() == 0xf) {
       PORTSC::Get().FromValue(0).set_pls(0).WriteTo(mmio);
+    } else if (portsc.pls() == 0x3) {
+      // The USB cable is unplugged
+      SetConnected(false);
+      for (uint8_t i = 0; i < std::size(endpoints_); i++) {
+        auto* ep = &endpoints_[i];
+        DmaBufferFree(&ep->dma_buf);
+      }
+      auto* event_ring = &eventrings_[0];
+      DmaBufferFree(&event_ring->erst);
+      DmaBufferFree(&event_ring->event_ring);
+      DmaBufferFree(&endpoint_context_);
+
+      UdcReset();
+      ResetDataStruct();
+      InitEp0();
+      device_speed_ = USB_SPEED_UNDEFINED;
+      CableIsConnected();
     }
   }
 

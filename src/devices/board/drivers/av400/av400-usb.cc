@@ -202,7 +202,8 @@ static const pbus_dev_t udc_dev = []() {
 
 zx_status_t Av400::UsbInit() {
   // Power on USB.
-  gpio_impl_.ConfigOut(A5_GPIOD(10), 1);
+  // Force to device mode, use external power
+  gpio_impl_.ConfigOut(A5_GPIOD(10), 0);
 
   // Create USB Phy Device
   zx_status_t status =
