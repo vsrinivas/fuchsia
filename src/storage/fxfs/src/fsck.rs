@@ -444,15 +444,22 @@ impl<'a, F: Fn(&FsckIssue)> Fsck<'a, F> {
         let store =
             filesystem.object_manager().store(store_id).context("open_store failed").unwrap();
 
-        if store.is_locked() {
+        let _relock_guard = if store.is_locked() {
             if let Some(crypt) = &crypt {
-                store.unlock(crypt.clone()).await?;
+                store.unlock_read_only(crypt.clone()).await?;
+                Some(scopeguard::guard(store.clone(), |store| {
+                    if let Err(e) = store.lock_read_only() {
+                        error!(?e, "Failed to re-lock store");
+                    }
+                }))
             } else {
                 return Err(anyhow!("Invalid key"));
             }
         } else {
             crypt = store.crypt();
-        }
+            None
+        };
+
         for layer_file_object_id in store.layer_file_object_ids() {
             self.check_layer_file::<ObjectKey, ObjectValue>(
                 &root_store,

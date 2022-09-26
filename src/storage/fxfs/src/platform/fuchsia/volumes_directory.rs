@@ -313,16 +313,24 @@ impl VolumesDirectory {
         while let Some(request) = requests.try_next().await? {
             match request {
                 VolumeRequest::Check { responder, options } => responder.send(
-                    &mut self.handle_check(store_id, options).await.map_err(map_to_raw_status),
+                    &mut self.handle_check(store_id, options).await.map_err(|e| {
+                        error!(?e, store_id, "Failed to check volume");
+                        map_to_raw_status(e)
+                    }),
                 )?,
                 VolumeRequest::Mount { responder, outgoing_directory, options } => responder.send(
-                    &mut self
-                        .handle_mount(store_id, outgoing_directory, options)
-                        .await
-                        .map_err(map_to_raw_status),
+                    &mut self.handle_mount(store_id, outgoing_directory, options).await.map_err(
+                        |e| {
+                            error!(?e, store_id, "Failed to mount volume");
+                            map_to_raw_status(e)
+                        },
+                    ),
                 )?,
                 VolumeRequest::SetLimit { responder, bytes } => responder.send(
-                    &mut self.handle_set_limit(store_id, bytes).await.map_err(map_to_raw_status),
+                    &mut self.handle_set_limit(store_id, bytes).await.map_err(|e| {
+                        error!(?e, store_id, "Failed to set volume limit");
+                        map_to_raw_status(e)
+                    }),
                 )?,
             }
         }

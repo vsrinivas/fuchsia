@@ -195,15 +195,15 @@ impl Versioned for EncryptedMutations {
 }
 
 impl EncryptedMutations {
-    fn extend(&mut self, other: EncryptedMutations) -> Result<(), Error> {
-        self.transactions.extend(other.transactions);
+    fn extend(&mut self, other: &EncryptedMutations) -> Result<(), Error> {
+        self.transactions.extend_from_slice(&other.transactions[..]);
         self.mutations_key_roll.extend(
             other
                 .mutations_key_roll
-                .into_iter()
-                .map(|(offset, key)| (offset + self.data.len(), key)),
+                .iter()
+                .map(|(offset, key)| (offset + self.data.len(), key.clone())),
         );
-        self.data.extend(other.data);
+        self.data.extend_from_slice(&other.data[..]);
         Ok(())
     }
 
@@ -317,9 +317,16 @@ impl StoreOrReplayInfo {
 }
 
 pub enum LockState {
+    // Contains the encrypted mutations found in the journal during replay.
     Locked(EncryptedMutations),
     Unencrypted,
     Unlocked(Arc<dyn Crypt>),
+    // The store is unlocked, but in a read-only state, and no flushes or other operations will be
+    // performed on the store.  We have to retain the journaled encrypted mutations (see
+    // LockState::Locked), which normally get written out during unlock when we flush the object
+    // store, which we skip in the read-only mode.  This way, when the store is re-locked, we don't
+    // lose these journaled encrypted mutations.
+    UnlockedReadOnly(Arc<dyn Crypt>, EncryptedMutations),
 
     // The store is encrypted but is now in an unusable state (either due to a failure to unlock, or
     // a failure to lock).
@@ -343,6 +350,8 @@ impl LockState {
     fn encrypted_mutations(&self) -> Option<&EncryptedMutations> {
         if let LockState::Locked(m) = self {
             Some(m)
+        } else if let LockState::UnlockedReadOnly(_, m) = self {
+            Some(m)
         } else {
             None
         }
@@ -350,6 +359,8 @@ impl LockState {
 
     fn encrypted_mutations_mut(&mut self) -> Option<&mut EncryptedMutations> {
         if let LockState::Locked(m) = self {
+            Some(m)
+        } else if let LockState::UnlockedReadOnly(_, m) = self {
             Some(m)
         } else {
             None
@@ -363,6 +374,7 @@ impl fmt::Debug for LockState {
             LockState::Locked(_) => "Locked",
             LockState::Unencrypted => "Unencrypted",
             LockState::Unlocked(_) => "Unlocked",
+            LockState::UnlockedReadOnly(..) => "UnlockedReadOnly",
             LockState::Invalid => "Invalid",
             LockState::Unknown => "Unknown",
             LockState::Locking(_) => "Locking",
@@ -693,6 +705,7 @@ impl ObjectStore {
             LockState::Locked(_) => panic!("Store is locked"),
             LockState::Invalid | LockState::Unencrypted | LockState::Unlocking => None,
             LockState::Unlocked(crypt) => Some(crypt.clone()),
+            LockState::UnlockedReadOnly(crypt, _) => Some(crypt.clone()),
             LockState::Locking(crypt) => Some(crypt.clone()),
             LockState::Unknown => {
                 panic!("Store is of unknown lock state; has the journal been replayed yet?")
@@ -1058,7 +1071,8 @@ impl ObjectStore {
                     info.object_count =
                         info.object_count.saturating_add(replay_info.object_count_delta as u64);
                 }
-                encrypted_mutations.extend(std::mem::take(&mut replay_info.encrypted_mutations))?;
+                encrypted_mutations
+                    .extend(&std::mem::take(&mut replay_info.encrypted_mutations))?;
             }
 
             let result = (
@@ -1141,11 +1155,28 @@ impl ObjectStore {
     /// Unlocks a store so that it is ready to be used.
     /// This is not thread-safe.
     pub async fn unlock(&self, crypt: Arc<dyn Crypt>) -> Result<(), Error> {
+        self.unlock_inner(crypt, /*read_only=*/ false).await
+    }
+
+    /// Unlocks a store so that it is ready to be read from.
+    /// The store will generally behave like it is still locked: when flushed, the store will
+    /// write out its mutations into the encrypted mutations file, rather than directly updating
+    /// the layer files of the object store.
+    /// Re-locking the store (which *must* be done with `Self::lock_read_only` will not trigger a
+    /// flush, although the store might still be flushed during other operations.
+    /// This is not thread-safe.
+    pub async fn unlock_read_only(&self, crypt: Arc<dyn Crypt>) -> Result<(), Error> {
+        self.unlock_inner(crypt, /*read_only=*/ true).await
+    }
+
+    async fn unlock_inner(&self, crypt: Arc<dyn Crypt>, read_only: bool) -> Result<(), Error> {
         match &*self.lock_state.lock().unwrap() {
             LockState::Locked(_) => {}
             LockState::Invalid => bail!(FxfsError::Inconsistent),
             LockState::Unencrypted => bail!(FxfsError::InvalidArgs),
-            LockState::Unlocked(_) => bail!(FxfsError::AlreadyBound),
+            LockState::Unlocked(_) | LockState::UnlockedReadOnly(..) => {
+                bail!(FxfsError::AlreadyBound)
+            }
             LockState::Unknown => panic!("Store was unlocked before replay"),
             LockState::Locking(_) => panic!("Store is being locked"),
             LockState::Unlocking => panic!("Store is being unlocked"),
@@ -1205,16 +1236,18 @@ impl ObjectStore {
                 let len = cursor.get_ref().len() as u64;
                 while cursor.position() < len {
                     mutations
-                        .extend(EncryptedMutations::deserialize_with_version(&mut cursor)?.0)?;
+                        .extend(&EncryptedMutations::deserialize_with_version(&mut cursor)?.0)?;
                 }
                 mutations
             }
         };
 
+        let journaled_encrypted_mutations;
         if let LockState::Locked(m) =
             std::mem::replace(&mut *self.lock_state.lock().unwrap(), LockState::Unlocking)
         {
-            mutations.extend(m)?;
+            mutations.extend(&m)?;
+            journaled_encrypted_mutations = m;
         } else {
             unreachable!();
         }
@@ -1245,8 +1278,8 @@ impl ObjectStore {
         }
         mutations_cipher.decrypt(slice);
 
-        // Always roll the mutations key when we unlock which guarantees we won't reuse a previous
-        // key and nonce.
+        // Always roll the mutations key when we unlock which guarantees we won't reuse a
+        // previous key and nonce.
         self.roll_mutations_key(crypt.as_ref()).await?;
 
         let mut cursor = std::io::Cursor::new(data);
@@ -1264,14 +1297,18 @@ impl ObjectStore {
             }
         }
 
-        *self.lock_state.lock().unwrap() = LockState::Unlocked(crypt);
+        *self.lock_state.lock().unwrap() = if read_only {
+            LockState::UnlockedReadOnly(crypt, journaled_encrypted_mutations)
+        } else {
+            LockState::Unlocked(crypt)
+        };
 
         // To avoid unbounded memory growth, we should flush the encrypted mutations now. Otherwise
         // it's possible for more writes to be queued and for the store to be locked before we can
         // flush anything and that can repeat.
         std::mem::drop(guard);
 
-        if !self.filesystem().options().read_only {
+        if !read_only && !self.filesystem().options().read_only {
             self.flush_with_reason(flush::Reason::Unlock).await?;
 
             // Reap purged files within this store.
@@ -1301,9 +1338,9 @@ impl ObjectStore {
 
         // We must flush because we want to discard unencrypted data and we can't easily replay
         // again later if we try and unlock this store again.
-        let result = self.flush_with_reason(flush::Reason::Lock).await;
+        let flush_result = self.flush_with_reason(flush::Reason::Lock).await;
 
-        *self.lock_state.lock().unwrap() = if result.is_err() {
+        *self.lock_state.lock().unwrap() = if flush_result.is_err() {
             LockState::Invalid
         } else {
             // There should have been no concurrent access with the store so there should be nothing
@@ -1313,7 +1350,26 @@ impl ObjectStore {
         };
 
         self.tree.reset();
-        result?;
+        flush_result?;
+        Ok(())
+    }
+
+    // Locks a store which was previously unlocked read-only (see `Self::unlock_read_only`).  Data
+    // is not flushed, and instead any journaled mutations are buffered back into the ObjectStore
+    // and will be replayed next time the store is unlocked.
+    // Whilst this can return an error, the store will be placed into an unusable but safe state
+    // (i.e. no lingering unencrypted data) if an error is encountered.
+    pub fn lock_read_only(&self) -> Result<(), Error> {
+        let mut lock_state = self.lock_state.lock().unwrap();
+        let journaled_encrypted_mutations = if let LockState::UnlockedReadOnly(_, mutations) =
+            std::mem::replace(&mut *lock_state, LockState::Invalid)
+        {
+            mutations
+        } else {
+            panic!("Unexpected lock state: {:?}", &*lock_state);
+        };
+        *lock_state = LockState::Locked(journaled_encrypted_mutations);
+        self.tree.reset();
         Ok(())
     }
 
@@ -1490,7 +1546,10 @@ impl JournalingObject for ObjectStore {
                 LockState::Locked(_) | LockState::Locking(_) => {
                     assert_matches!(mutation, Mutation::BeginFlush | Mutation::EndFlush)
                 }
-                LockState::Unlocking | LockState::Unencrypted | LockState::Unlocked(_) => {}
+                LockState::Unlocking
+                | LockState::Unencrypted
+                | LockState::Unlocked(_)
+                | LockState::UnlockedReadOnly(..) => {}
                 _ => panic!("Unexpected lock state: {:?}", &*lock_state),
             }
         }
@@ -2155,6 +2214,35 @@ mod tests {
         store.lock().await.expect("lock failed");
 
         store.unlock(crypt).await.expect("unlock failed");
+        root_directory.lookup("test").await.expect("lookup failed").expect("not found");
+    }
+
+    #[fasync::run(10, test)]
+    async fn test_unlock_read_only() {
+        let fs = test_filesystem().await;
+        let crypt = Arc::new(InsecureCrypt::new());
+
+        let root_volume = root_volume(fs.clone()).await.expect("root_volume failed");
+        let store =
+            root_volume.new_volume("test", Some(crypt.clone())).await.expect("new_volume failed");
+        let root_directory =
+            Directory::open(&store, store.root_directory_object_id()).await.expect("open failed");
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        root_directory
+            .create_child_file(&mut transaction, "test")
+            .await
+            .expect("create_child_file failed");
+        transaction.commit().await.expect("commit failed");
+        store.lock().await.expect("lock failed");
+
+        store.unlock_read_only(crypt.clone()).await.expect("unlock failed");
+        root_directory.lookup("test").await.expect("lookup failed").expect("not found");
+        store.lock_read_only().expect("lock failed");
+        store.unlock_read_only(crypt).await.expect("unlock failed");
         root_directory.lookup("test").await.expect("lookup failed").expect("not found");
     }
 

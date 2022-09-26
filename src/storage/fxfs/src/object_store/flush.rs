@@ -178,9 +178,8 @@ impl ObjectStore {
 
         let mut old_encrypted_mutations_object_id = INVALID_OBJECT_ID;
 
-        let has_encrypted_mutations =
-            self.lock_state.lock().unwrap().encrypted_mutations().is_some();
-        let (old_layers, new_layers) = if has_encrypted_mutations {
+        let store_is_locked = self.lock_state.lock().unwrap().encrypted_mutations().is_some();
+        let (old_layers, new_layers) = if store_is_locked {
             // The store is locked so we need to either write our encrypted mutations to a new file,
             // or append them to an existing one.
             handle = if new_store_info.encrypted_mutations_object_id == INVALID_OBJECT_ID {
