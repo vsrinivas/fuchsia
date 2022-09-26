@@ -247,7 +247,7 @@ async fn add_repository(
 
     // Create the repository.
     let backend = repo_spec_to_backend(&repo_spec, &inner).await?;
-    let repo = RepoClient::new(backend).await.map_err(|err| {
+    let repo = RepoClient::from_trusted_remote(backend).await.map_err(|err| {
         tracing::error!("Unable to create repository: {:#?}", err);
 
         match err {
@@ -2875,7 +2875,8 @@ mod tests {
             let repo_path = fs::canonicalize(EMPTY_REPO_PATH).unwrap();
             let pm_backend = PmRepository::new(repo_path.try_into().unwrap()).unwrap();
 
-            let pm_repo = RepoClient::new(Box::new(pm_backend)).await.unwrap();
+            let pm_repo =
+                RepoClient::from_trusted_remote(Box::new(pm_backend) as Box<_>).await.unwrap();
             let manager = RepositoryManager::new();
             manager.add("tuf", pm_repo);
 

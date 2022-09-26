@@ -41,6 +41,7 @@ use {
             EphemeralRepository, RepositoryProvider, RepositoryProvider as TufRepositoryProvider,
         },
         verify::Verified,
+        Database,
     },
 };
 
@@ -60,18 +61,46 @@ pub struct RepoClient {
 }
 
 impl RepoClient {
-    pub async fn new(backend: Box<dyn RepoProvider>) -> Result<Self, Error> {
-        let tuf_client = get_tuf_client(backend).await?;
+    /// Creates a [RepoClient] that downloads the initial TUF root metadata from the remote
+    /// [RepoProvider].
+    pub async fn from_trusted_remote(remote: Box<dyn RepoProvider>) -> Result<Self, Error> {
+        let tuf_client = get_tuf_client(remote).await?;
+        Ok(Self::new(tuf_client))
+    }
 
+    /// Creates a [RepoClient] that communicates with the remote [RepoProvider] with a trusted TUF
+    /// [Database].
+    pub async fn from_database(
+        database: Database<Json>,
+        remote: Box<dyn RepoProvider>,
+    ) -> Result<Self> {
+        let local = EphemeralRepository::new();
+        let tuf_client =
+            TufClient::from_database(Config::default(), database, local, remote).await?;
+
+        Ok(Self::new(tuf_client))
+    }
+
+    fn new(tuf_client: TufClient<Json, EphemeralRepository<Json>, Box<dyn RepoProvider>>) -> Self {
         let (tx_on_drop, rx_on_drop) = futures::channel::oneshot::channel();
         let rx_on_drop = rx_on_drop.shared();
 
-        Ok(Self { tuf_client, _tx_on_drop: tx_on_drop, rx_on_drop })
+        Self { tuf_client, _tx_on_drop: tx_on_drop, rx_on_drop }
     }
 
     /// Returns a receiver that will receive a `Canceled` signal when the repository is dropped.
     pub fn on_dropped_signal(&self) -> Shared<futures::channel::oneshot::Receiver<()>> {
         self.rx_on_drop.clone()
+    }
+
+    /// Returns the client's tuf [Database].
+    pub fn database(&self) -> &tuf::Database<Json> {
+        self.tuf_client.database()
+    }
+
+    /// Returns the client's remote repository [RepoProvider].
+    pub fn remote_repo(&self) -> &Box<dyn RepoProvider> {
+        self.tuf_client.remote_repo()
     }
 
     /// Get a [RepositorySpec] for this [Repository].
@@ -507,7 +536,9 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
-        let mut repo = RepoClient::new(Box::new(make_pm_repository(&dir).await)).await.unwrap();
+        let mut repo = RepoClient::from_trusted_remote(Box::new(make_pm_repository(&dir).await))
+            .await
+            .unwrap();
         repo.update().await.unwrap();
 
         // Look up the timestamp for the meta.far for the modified setting.
@@ -548,7 +579,7 @@ mod tests {
         let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
         let backend = Box::new(make_pm_repository(&dir).await);
-        let mut repo = RepoClient::new(backend).await.unwrap();
+        let mut repo = RepoClient::from_trusted_remote(backend).await.unwrap();
         repo.update().await.unwrap();
 
         // Look up the timestamp for the meta.far for the modified setting.
@@ -649,12 +680,12 @@ mod tests {
             .unwrap();
 
         let backend = PmRepository::new(dir.to_path_buf()).unwrap();
-        let _repo = RepoClient::new(Box::new(backend)).await.unwrap();
+        let _repo = RepoClient::from_trusted_remote(Box::new(backend)).await.unwrap();
 
         std::fs::remove_file(dir.join("repository").join("1.root.json")).unwrap();
 
         let backend = PmRepository::new(dir.to_path_buf()).unwrap();
-        let _repo = RepoClient::new(Box::new(backend)).await.unwrap();
+        let _repo = RepoClient::from_trusted_remote(Box::new(backend)).await.unwrap();
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -663,7 +694,7 @@ mod tests {
         let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
         let backend = Box::new(make_pm_repository(&dir).await);
-        let mut repo = RepoClient::new(backend).await.unwrap();
+        let mut repo = RepoClient::from_trusted_remote(backend).await.unwrap();
         repo.update().await.unwrap();
 
         // Look up the timestamps for the blobs.

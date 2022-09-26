@@ -527,7 +527,7 @@ where
         repo_metadata_uri,
         repo_blobs_uri
     );
-    let repo = RepoClient::new(backend).await.with_context(|| {
+    let repo = RepoClient::from_trusted_remote(backend).await.with_context(|| {
         format!(
             "creating package repository, repo_metadata_uri {}, repo_blobs_uri {}",
             repo_metadata_uri, repo_blobs_uri

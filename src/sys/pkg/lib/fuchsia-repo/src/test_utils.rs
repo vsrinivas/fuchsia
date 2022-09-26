@@ -110,7 +110,8 @@ pub fn make_repo_dir(root: &Utf8Path) -> Result<()> {
 
 pub async fn make_readonly_empty_repository() -> Result<RepoClient> {
     let backend = PmRepository::new(Utf8PathBuf::from(EMPTY_REPO_PATH))?;
-    let mut client = RepoClient::new(Box::new(backend)).await.map_err(|e| anyhow!(e))?;
+    let mut client =
+        RepoClient::from_trusted_remote(Box::new(backend)).await.map_err(|e| anyhow!(e))?;
     client.update().await?;
     Ok(client)
 }
@@ -118,7 +119,7 @@ pub async fn make_readonly_empty_repository() -> Result<RepoClient> {
 pub async fn make_writable_empty_repository(root: Utf8PathBuf) -> Result<RepoClient> {
     make_repo_dir(&root)?;
     let backend = PmRepository::new(root)?;
-    let mut client = RepoClient::new(Box::new(backend)).await?;
+    let mut client = RepoClient::from_trusted_remote(Box::new(backend)).await?;
     client.update().await?;
     Ok(client)
 }
@@ -276,7 +277,7 @@ pub async fn make_file_system_repository(
     make_repository(metadata_dir.as_std_path(), blobs_dir.as_std_path()).await;
 
     let backend = FileSystemRepository::new(metadata_dir, blobs_dir).unwrap();
-    let mut client = RepoClient::new(Box::new(backend)).await.unwrap();
+    let mut client = RepoClient::from_trusted_remote(Box::new(backend)).await.unwrap();
     client.update().await.unwrap();
     client
 }

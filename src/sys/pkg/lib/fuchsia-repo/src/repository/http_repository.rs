@@ -264,7 +264,7 @@ mod tests {
 
             // Create a repository and serve it with the server.
             let remote_backend = Box::new(make_pm_repository(&dir).await);
-            let remote_repo = RepoClient::new(remote_backend).await.unwrap();
+            let remote_repo = RepoClient::from_trusted_remote(remote_backend).await.unwrap();
 
             let manager = RepositoryManager::new();
             manager.add("tuf", remote_repo);
