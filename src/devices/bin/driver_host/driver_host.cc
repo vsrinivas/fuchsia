@@ -507,12 +507,19 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
               str_props_list),
   };
 
+  fdm::wire::AddDeviceArgs add_device_args = {
+      .name = fidl::StringView::FromExternal(child->name()),
+      .protocol_id = child->protocol_id(),
+      .property_list = std::move(property_list),
+      .driver_path = fidl::StringView::FromExternal(child->zx_driver()->libname()),
+      .args = fidl::StringView::FromExternal(add_args->proxy_args, proxy_args_len),
+      .device_add_config = add_device_config,
+      .has_init = child->ops()->init != nullptr,
+  };
+
   auto response = coordinator_client.sync()->AddDevice(
-      std::move(coordinator_endpoints->server), std::move(controller_endpoints->client),
-      property_list, ::fidl::StringView::FromExternal(child->name()), child->protocol_id(),
-      ::fidl::StringView::FromExternal(child->zx_driver()->libname()),
-      ::fidl::StringView::FromExternal(add_args->proxy_args, proxy_args_len), add_device_config,
-      child->ops()->init /* has_init */, std::move(inspect), std::move(client_remote),
+      std::move(add_device_args), std::move(coordinator_endpoints->server),
+      std::move(controller_endpoints->client), std::move(inspect), std::move(client_remote),
       std::move(outgoing_dir));
   zx_status_t status = response.status();
   if (status == ZX_OK) {

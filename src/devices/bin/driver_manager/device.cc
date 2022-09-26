@@ -660,22 +660,23 @@ void Device::set_host(fbl::RefPtr<DriverHost> host) {
 // TODO(fxb/74654): Implement support for string properties.
 void Device::AddDevice(AddDeviceRequestView request, AddDeviceCompleter::Sync& completer) {
   auto parent = fbl::RefPtr(this);
-  std::string_view name(request->name.data(), request->name.size());
-  std::string_view driver_path(request->driver_path.data(), request->driver_path.size());
-  std::string_view args(request->args.data(), request->args.size());
+  std::string_view name(request->args.name.data(), request->args.name.size());
+  std::string_view driver_path(request->args.driver_path.data(), request->args.driver_path.size());
+  std::string_view args(request->args.args.data(), request->args.args.size());
 
-  bool skip_autobind = static_cast<bool>(
-      request->device_add_config & fuchsia_device_manager::wire::AddDeviceConfig::kSkipAutobind);
+  bool skip_autobind =
+      static_cast<bool>(request->args.device_add_config &
+                        fuchsia_device_manager::wire::AddDeviceConfig::kSkipAutobind);
 
   fbl::RefPtr<Device> device;
   zx_status_t status = parent->coordinator->device_manager()->AddDevice(
       parent, std::move(request->device_controller), std::move(request->coordinator),
-      request->property_list.props.data(), request->property_list.props.count(),
-      request->property_list.str_props.data(), request->property_list.str_props.count(), name,
-      request->protocol_id, driver_path, args, skip_autobind, request->has_init, kEnableAlwaysInit,
-      std::move(request->inspect), std::move(request->client_remote),
+      request->args.property_list.props.data(), request->args.property_list.props.count(),
+      request->args.property_list.str_props.data(), request->args.property_list.str_props.count(),
+      name, request->args.protocol_id, driver_path, args, skip_autobind, request->args.has_init,
+      kEnableAlwaysInit, std::move(request->inspect), std::move(request->client_remote),
       std::move(request->outgoing_dir), &device);
-  if (device != nullptr && (request->device_add_config &
+  if (device != nullptr && (request->args.device_add_config &
                             fuchsia_device_manager::wire::AddDeviceConfig::kAllowMultiComposite)) {
     device->flags |= DEV_CTX_ALLOW_MULTI_COMPOSITE;
   }

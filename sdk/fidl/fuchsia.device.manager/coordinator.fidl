@@ -261,27 +261,35 @@ protocol DriverHostController {
     });
 };
 
+/// This struct holds non-resource arguments for creating a new device with the
+/// Coordinator.
+type AddDeviceArgs = struct {
+    /// The device name, used for debugging.
+    name string:DEVICE_NAME_MAX;
+    /// The protocol id, used for binding.
+    protocol_id uint32;
+    /// The property list of the device, used for binding.
+    property_list DevicePropertyList;
+    /// The driver path, used for debugging.
+    driver_path string:<DEVICE_PATH_MAX, optional>;
+    /// This should be used only for shadowed device. This will be forwarded to
+    /// the shadowed device.
+    args string:<DEVICE_ARGS_MAX, optional>;
+    device_add_config AddDeviceConfig;
+    has_init bool;
+};
+
 /// Interface for drivers in driver host to coordinate with the driver
 /// manager.
 protocol Coordinator {
-    /// Record the addition of a new device that can be communicated with via `rpc`.
-    /// For binding purposes, it is has properties `props`. `name` and `driver_path`
-    /// are informational and used for debugging.  The device will have `protocol_id`
-    /// as its primary protocol id.  `args` should only be used for shadowed devices,
-    /// and will be forwarded to the shadow device. `client_remote`, if present,
-    /// will be passed to the device as an open connection for the client.
+    /// Record the addition of a new device that can be communicated with via `device_controller`.
+    /// `client_remote`, if present, will be passed to the device as an open connection for the client.
     /// On success, the returned `local_device_id` is the identifier assigned by devmgr.
     // TODO(fxb/74654): String properties are unimplemented.
     AddDevice(resource struct {
+        args AddDeviceArgs;
         coordinator server_end:Coordinator;
         device_controller client_end:DeviceController;
-        property_list DevicePropertyList;
-        name string:DEVICE_NAME_MAX;
-        protocol_id uint32;
-        driver_path string:<DEVICE_PATH_MAX, optional>;
-        args string:<DEVICE_ARGS_MAX, optional>;
-        device_add_config AddDeviceConfig;
-        has_init bool;
         inspect zx.handle:<VMO, optional>;
         client_remote zx.handle:<CHANNEL, optional>;
         outgoing_dir client_end:<fuchsia.io.Directory, optional>;
