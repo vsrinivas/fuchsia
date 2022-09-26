@@ -8,7 +8,6 @@
 /// dynamic rewrite rules have been disabled.
 use {
     fidl_fuchsia_pkg_rewrite_ext::{Rule, RuleConfig},
-    fuchsia_async as fasync,
     fuchsia_zircon::Status,
     lib::{
         get_rules, mock_filesystem, DirOrProxy, EnableDynamicConfig, MountsBuilder, TestEnvBuilder,
@@ -23,7 +22,7 @@ fn make_rule() -> Rule {
     Rule::new("example.com", "example.com", "/", "/").unwrap()
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn load_dynamic_rules() {
     let rule = make_rule();
     let env = TestEnvBuilder::new()
@@ -41,7 +40,7 @@ async fn load_dynamic_rules() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn no_load_dynamic_rules_if_disabled() {
     let env = TestEnvBuilder::new()
         .mounts(
@@ -58,7 +57,7 @@ async fn no_load_dynamic_rules_if_disabled() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn commit_transaction_succeeds() {
     let env = TestEnvBuilder::new().build().await;
 
@@ -73,7 +72,7 @@ async fn commit_transaction_succeeds() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn commit_transaction_fails_if_disabled() {
     let env = TestEnvBuilder::new()
         .mounts(
@@ -97,7 +96,7 @@ async fn commit_transaction_fails_if_disabled() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn attempt_to_open_persisted_dynamic_rules() {
     let (proxy, open_counts) = mock_filesystem::spawn_directory_handler();
     let env = TestEnvBuilder::new()
@@ -118,7 +117,7 @@ async fn attempt_to_open_persisted_dynamic_rules() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn no_attempt_to_open_persisted_dynamic_rules_if_disabled() {
     let (proxy, open_counts) = mock_filesystem::spawn_directory_handler();
     let env = TestEnvBuilder::new()
@@ -139,7 +138,7 @@ async fn no_attempt_to_open_persisted_dynamic_rules_if_disabled() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn dynamic_rewrites_disabled_if_missing_config() {
     let env = TestEnvBuilder::new().mounts(MountsBuilder::new().build()).build().await;
 

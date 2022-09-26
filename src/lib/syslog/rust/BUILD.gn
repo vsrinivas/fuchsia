@@ -95,7 +95,6 @@ rust_fuchsia_syslog_visibility_allowlist = [
   "//src/sys/pkg/lib/package-directory:*",
   "//src/sys/pkg/lib/system-image:*",
   "//src/sys/pkg/tests/pkgdir/pkg-harness:*",
-  "//src/sys/pkg/tests/pkg-resolver:*",
   "//src/ui/bin/brightness_manager:*",
   "//src/ui/bin/input-pipeline:*",
   "//src/ui/bin/text:*",

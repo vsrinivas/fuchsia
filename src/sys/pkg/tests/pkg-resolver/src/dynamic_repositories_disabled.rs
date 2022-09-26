@@ -5,7 +5,6 @@
 /// This module tests pkg_resolver's RepositoryManager when
 /// dynamic repository configs.
 use {
-    fuchsia_async as fasync,
     fuchsia_zircon::Status,
     lib::{
         get_repos, make_repo, make_repo_config, mock_filesystem, DirOrProxy, EnableDynamicConfig,
@@ -13,7 +12,7 @@ use {
     },
 };
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn no_load_dynamic_repos_if_disabled() {
     let env = TestEnvBuilder::new()
         .mounts(
@@ -30,7 +29,7 @@ async fn no_load_dynamic_repos_if_disabled() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn add_succeeds() {
     let env = TestEnvBuilder::new()
         .mounts(
@@ -48,7 +47,7 @@ async fn add_succeeds() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn add_fails_if_disabled() {
     let env = TestEnvBuilder::new()
         .mounts(
@@ -69,7 +68,7 @@ async fn add_fails_if_disabled() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn remove_fails_with_not_found() {
     let env = TestEnvBuilder::new()
         .mounts(
@@ -88,7 +87,7 @@ async fn remove_fails_with_not_found() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn remove_fails_with_access_denied_if_disabled() {
     let env = TestEnvBuilder::new()
         .mounts(
@@ -107,7 +106,7 @@ async fn remove_fails_with_access_denied_if_disabled() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn attempt_to_open_persisted_dynamic_repos() {
     let (proxy, open_counts) = mock_filesystem::spawn_directory_handler();
     let env = TestEnvBuilder::new()
@@ -128,7 +127,7 @@ async fn attempt_to_open_persisted_dynamic_repos() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn no_attempt_to_open_persisted_dynamic_repos_if_disabled() {
     let (proxy, open_counts) = mock_filesystem::spawn_directory_handler();
     let env = TestEnvBuilder::new()
@@ -149,7 +148,7 @@ async fn no_attempt_to_open_persisted_dynamic_repos_if_disabled() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn dynamic_repositories_disabled_if_missing_config() {
     let env = TestEnvBuilder::new().mounts(MountsBuilder::new().build()).build().await;
     let repo = make_repo();
@@ -163,7 +162,7 @@ async fn dynamic_repositories_disabled_if_missing_config() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn load_dynamic_repos() {
     let repo = make_repo();
     let env = TestEnvBuilder::new()

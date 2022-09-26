@@ -8,7 +8,6 @@ use {
     cobalt_sw_delivery_registry as metrics,
     fidl_fuchsia_pkg::{GetInfoError, ResolveError},
     fidl_fuchsia_pkg_ext::CupData,
-    fuchsia_async as fasync,
     fuchsia_pkg_testing::{PackageBuilder, RepositoryBuilder, SystemImageBuilder},
     fuchsia_url::PinnedAbsolutePackageUrl,
     lib::{
@@ -49,7 +48,7 @@ fn make_cup_data(cup_response: &[u8]) -> CupData {
         .build()
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_empty_eager_config() {
     let package_name = "test-package";
     let pkg = PackageBuilder::new(package_name)
@@ -100,7 +99,7 @@ async fn test_empty_eager_config() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_eager_resolve_package() {
     let pkg_name = "test-package";
     let pkg = make_pkg_with_extra_blobs(&pkg_name, 0).await;
@@ -151,7 +150,7 @@ async fn test_eager_resolve_package() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_eager_get_hash() {
     let pkg_name = "test-package";
     let pkg = make_pkg_with_extra_blobs(&pkg_name, 0).await;
@@ -198,7 +197,7 @@ async fn test_eager_get_hash() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_cup_write() {
     let pkg_name = "test-package";
     let pkg = make_pkg_with_extra_blobs(&pkg_name, 0).await;
@@ -291,7 +290,7 @@ async fn test_cup_write() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_cup_get_info_persisted() {
     let pkg_name = "test-package";
     let pkg = make_pkg_with_extra_blobs(&pkg_name, 0).await;

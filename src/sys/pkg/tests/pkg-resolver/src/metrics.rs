@@ -82,7 +82,7 @@ async fn verify_resolve_emits_cobalt_events_with_metric_id(
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn repository_manager_load_static_configs_success() {
     let env = TestEnvBuilder::new()
         .mounts(lib::MountsBuilder::new().static_repository(make_repo()).build())
@@ -98,7 +98,7 @@ async fn repository_manager_load_static_configs_success() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn pkg_resolver_startup_duration() {
     let env = TestEnvBuilder::new().build().await;
 
@@ -112,7 +112,7 @@ async fn pkg_resolver_startup_duration() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn repository_manager_load_static_configs_io() {
     let env = TestEnvBuilder::new().build().await;
 
@@ -125,7 +125,7 @@ async fn repository_manager_load_static_configs_io() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn repository_manager_load_static_configs_parse() {
     let env = TestEnvBuilder::new()
         .mounts(
@@ -145,7 +145,7 @@ async fn repository_manager_load_static_configs_parse() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn repository_manager_load_static_configs_overridden() {
     let json = serde_json::to_string(&make_repo_config(&make_repo())).unwrap();
     let env = TestEnvBuilder::new()
@@ -167,7 +167,7 @@ async fn repository_manager_load_static_configs_overridden() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn resolve_success_regular() {
     let env = TestEnvBuilder::new().build().await;
     let pkg = PackageBuilder::new("just_meta_far").build().await.expect("created pkg");
@@ -197,7 +197,7 @@ async fn resolve_success_regular() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn resolve_failure_regular_unreachable() {
     let env = TestEnvBuilder::new().build().await;
     assert_eq!(
@@ -213,7 +213,7 @@ async fn resolve_failure_regular_unreachable() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn resolve_duration_success() {
     let env = TestEnvBuilder::new().build().await;
 
@@ -248,7 +248,7 @@ async fn resolve_duration_success() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn resolve_duration_failure() {
     let env = TestEnvBuilder::new().build().await;
     assert_eq!(
@@ -268,7 +268,7 @@ async fn resolve_duration_failure() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn resolve_duration_font_test_failure() {
     let env = TestEnvBuilder::new().build().await;
     let (_, server) = create_endpoints().unwrap();
@@ -294,7 +294,7 @@ async fn resolve_duration_font_test_failure() {
 }
 
 // Fetching one blob successfully should emit one success fetch blob event.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn pkg_resolver_fetch_blob_success() {
     verify_resolve_emits_cobalt_events_with_metric_id(
         PackageBuilder::new("just_meta_far").build().await.expect("created pkg"),
@@ -310,7 +310,7 @@ async fn pkg_resolver_fetch_blob_success() {
 }
 
 // Fetching one blob with an HTTP error should emit 2 failure blob events (b/c of retries).
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn pkg_resolver_fetch_blob_failure() {
     let pkg = PackageBuilder::new("just_meta_far").build().await.expect("created pkg");
     let responder = responder::ForPath::new(
@@ -334,7 +334,7 @@ async fn pkg_resolver_fetch_blob_failure() {
     .await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn merkle_for_url_success() {
     verify_resolve_emits_cobalt_events_with_metric_id(
         PackageBuilder::new("just_meta_far").build().await.expect("created pkg"),
@@ -346,7 +346,7 @@ async fn merkle_for_url_success() {
     .await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn merkle_for_url_failure() {
     // Deleting the `targets` stanza from the targets metadata without updating the signature will
     // cause validation during the metadata update to fail, but the pkg-resolver does not fail a
@@ -367,7 +367,7 @@ async fn merkle_for_url_failure() {
 }
 
 // Resolving a package should trigger the creation of a TUF client.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn create_tuf_client_success() {
     verify_resolve_emits_cobalt_events_with_metric_id(
         PackageBuilder::new("just_meta_far").build().await.expect("created pkg"),
@@ -380,7 +380,7 @@ async fn create_tuf_client_success() {
 }
 
 // Resolving a package should trigger the creation of a TUF client.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn create_tuf_client_error() {
     let responder =
         responder::ForPath::new("/1.root.json", responder::StaticResponseCode::not_found());
@@ -394,7 +394,7 @@ async fn create_tuf_client_error() {
     .await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn update_tuf_client_success() {
     verify_resolve_emits_cobalt_events_with_metric_id(
         PackageBuilder::new("just_meta_far").build().await.expect("created pkg"),
@@ -406,7 +406,7 @@ async fn update_tuf_client_success() {
     .await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn update_tuf_client_error() {
     verify_resolve_emits_cobalt_events_with_metric_id(
         PackageBuilder::new("just_meta_far").build().await.expect("created pkg"),
@@ -421,7 +421,7 @@ async fn update_tuf_client_error() {
     .await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn font_resolver_is_font_package_check_not_font() {
     let env = TestEnvBuilder::new().build().await;
     let repo =
@@ -458,7 +458,7 @@ async fn font_resolver_is_font_package_check_not_font() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn font_manager_load_static_registry_success() {
     let json = serde_json::to_string(&json!(["fuchsia-pkg://fuchsia.com/font1"])).unwrap();
     let env = TestEnvBuilder::new()
@@ -475,7 +475,7 @@ async fn font_manager_load_static_registry_success() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn font_manager_load_static_registry_failure_io() {
     let env = TestEnvBuilder::new().build().await;
 
@@ -488,7 +488,7 @@ async fn font_manager_load_static_registry_failure_io() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn font_manager_load_static_registry_failure_parse() {
     let env = TestEnvBuilder::new()
         .mounts(
@@ -506,7 +506,7 @@ async fn font_manager_load_static_registry_failure_parse() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn load_repository_for_channel_success_no_rewrite_rule() {
     let env = TestEnvBuilder::new().build().await;
 

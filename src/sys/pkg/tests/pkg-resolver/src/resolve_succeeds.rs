@@ -31,7 +31,7 @@ use {
     },
 };
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn package_resolution() {
     let env = TestEnvBuilder::new().build().await;
     let mut startup_blobs = env.blobfs.list_blobs().unwrap();
@@ -77,7 +77,7 @@ async fn package_resolution() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn separate_blobs_url() {
     let env = TestEnvBuilder::new().build().await;
 
@@ -172,12 +172,12 @@ fn verify_resolve(pkg: Package) -> impl Future<Output = ()> {
     verify_resolve_with_altered_env(pkg, |_, _| {})
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn meta_far_only() {
     verify_resolve(PackageBuilder::new("uniblob").build().await.unwrap()).await
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn meta_far_and_empty_blob() {
     verify_resolve(
         PackageBuilder::new("emptyblob")
@@ -189,7 +189,7 @@ async fn meta_far_and_empty_blob() {
     .await
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn large_compressible_blobs() {
     let s = "large-compressible-blobs";
     verify_resolve(
@@ -205,7 +205,7 @@ async fn large_compressible_blobs() {
     .await
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn large_uncompressible_blobs() {
     let s = "large-uncompressible-blobs";
 
@@ -226,12 +226,12 @@ async fn large_uncompressible_blobs() {
     .await
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn many_blobs() {
     verify_resolve(make_pkg_with_extra_blobs("many_blobs", 200).await).await
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn pinned_merkle_resolution() {
     let env = TestEnvBuilder::new().build().await;
 
@@ -274,7 +274,7 @@ async fn pinned_merkle_resolution() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn variant_resolution() {
     let env = TestEnvBuilder::new().build().await;
     let pkg = PackageBuilder::new("variant-foo")
@@ -302,9 +302,8 @@ async fn variant_resolution() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test(logging_tags = ["RESOLVE_TEST"])]
 async fn error_codes() {
-    fuchsia_syslog::init_with_tags(&["RESOLVE_TEST"]).expect("syslog init should not fail");
     let env = TestEnvBuilder::new().build().await;
     let pkg = PackageBuilder::new("error-foo")
         .add_resource_at("data/foo", "foo".as_bytes())
@@ -344,7 +343,7 @@ async fn error_codes() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn retries() {
     let env = TestEnvBuilder::new().build().await;
 
@@ -395,7 +394,7 @@ async fn retries() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn handles_429_responses() {
     let env = TestEnvBuilder::new().build().await;
 
@@ -469,7 +468,7 @@ async fn handles_429_responses() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn use_cached_package() {
     let env = TestEnvBuilder::new().build().await;
 
@@ -525,7 +524,7 @@ async fn use_cached_package() {
     served_repository.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn meta_far_already_in_blobfs() {
     verify_resolve_with_altered_env(
         make_pkg_with_extra_blobs("meta_far_already_in_blobfs", 3).await,
@@ -536,7 +535,7 @@ async fn meta_far_already_in_blobfs() {
     .await
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn all_blobs_already_in_blobfs() {
     let s = "all_blobs_already_in_blobfs";
     verify_resolve_with_altered_env(make_pkg_with_extra_blobs(s, 3).await, |env, pkg| {
@@ -549,7 +548,7 @@ async fn all_blobs_already_in_blobfs() {
     .await
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn meta_far_and_one_content_blob_already_in_blobfs() {
     let s = "meta_far_and_one_content_blob_in_blobfs";
     verify_resolve_with_altered_env(make_pkg_with_extra_blobs(s, 3).await, |env, pkg| {
@@ -559,7 +558,7 @@ async fn meta_far_and_one_content_blob_already_in_blobfs() {
     .await
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_concurrent_blob_writes() {
     // Create our test packages and find out the merkle of the duplicate blob
     let duplicate_blob_path = "blob/duplicate";
@@ -647,7 +646,7 @@ async fn test_concurrent_blob_writes() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 #[ignore] // TODO(65855): Fix to support lower concurrency limit.
 async fn dedup_concurrent_content_blob_fetches() {
     let env = TestEnvBuilder::new().build().await;
@@ -775,17 +774,17 @@ async fn test_https_endpoint(pkg_name: &str, bind_addr: impl Into<IpAddr>) {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn https_endpoint_ipv6_only() {
     test_https_endpoint("https_endpoint_ipv6", Ipv6Addr::LOCALHOST).await
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn https_endpoint_ipv4_only() {
     test_https_endpoint("https_endpoint_ipv4", Ipv4Addr::LOCALHOST).await
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn verify_concurrent_resolve() {
     let env = TestEnvBuilder::new().build().await;
 
@@ -833,7 +832,7 @@ async fn verify_concurrent_resolve() {
 // download the meta.far directly from the blob url. This test verifies that the resolver
 // does not use the size of the meta.far found in TUF, since the pinned meta.far could
 // differ in size.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn merkle_pinned_meta_far_size_different_than_tuf_metadata() {
     let env = TestEnvBuilder::new().build().await;
     // Content chunks in FARs are 4k aligned, so a meta.far for an empty package will be 12k
@@ -877,7 +876,7 @@ async fn merkle_pinned_meta_far_size_different_than_tuf_metadata() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn resolve_local_mirror() {
     let pkg = PackageBuilder::new("test")
         .add_resource_at("test_file", "hi there".as_bytes())

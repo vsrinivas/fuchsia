@@ -7,7 +7,6 @@
 /// servicing fuchsia.pkg.PackageResolver.Resolve FIDL requests.
 use {
     assert_matches::assert_matches,
-    fuchsia_async as fasync,
     fuchsia_merkle::MerkleTree,
     fuchsia_pkg_testing::{
         serve::{responder, Domain, HttpResponder},
@@ -60,7 +59,7 @@ async fn verify_resolve_fails_then_succeeds<H: HttpResponder>(
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn second_resolve_succeeds_when_far_404() {
     let pkg = make_pkg_with_extra_blobs("second_resolve_succeeds_when_far_404", 1).await;
     let path_to_override = format!("/blobs/{}", pkg.meta_far_merkle_root());
@@ -73,7 +72,7 @@ async fn second_resolve_succeeds_when_far_404() {
     .await
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn second_resolve_succeeds_when_blob_404() {
     let pkg = make_pkg_with_extra_blobs("second_resolve_succeeds_when_blob_404", 1).await;
     let path_to_override = format!(
@@ -93,7 +92,7 @@ async fn second_resolve_succeeds_when_blob_404() {
     .await
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn second_resolve_succeeds_when_far_errors_mid_download() {
     let pkg = PackageBuilder::new("second_resolve_succeeds_when_far_errors_mid_download")
         .add_resource_at(
@@ -113,7 +112,7 @@ async fn second_resolve_succeeds_when_far_errors_mid_download() {
     .await
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn second_resolve_succeeds_when_blob_errors_mid_download() {
     let blob = vec![0; FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING];
     let pkg = PackageBuilder::new("second_resolve_succeeds_when_blob_errors_mid_download")
@@ -134,7 +133,7 @@ async fn second_resolve_succeeds_when_blob_errors_mid_download() {
     .await
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn second_resolve_succeeds_disconnect_before_far_complete() {
     let pkg = PackageBuilder::new("second_resolve_succeeds_disconnect_before_far_complete")
         .add_resource_at(
@@ -154,7 +153,7 @@ async fn second_resolve_succeeds_disconnect_before_far_complete() {
     .await
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn second_resolve_succeeds_disconnect_before_blob_complete() {
     let blob = vec![0; FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING];
     let pkg = PackageBuilder::new("second_resolve_succeeds_disconnect_before_blob_complete")
@@ -175,7 +174,7 @@ async fn second_resolve_succeeds_disconnect_before_blob_complete() {
     .await
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn second_resolve_succeeds_when_far_corrupted() {
     let pkg = make_pkg_with_extra_blobs("second_resolve_succeeds_when_far_corrupted", 1).await;
     let path_to_override = format!("/blobs/{}", pkg.meta_far_merkle_root());
@@ -188,7 +187,7 @@ async fn second_resolve_succeeds_when_far_corrupted() {
     .await
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn second_resolve_succeeds_when_blob_corrupted() {
     let pkg = make_pkg_with_extra_blobs("second_resolve_succeeds_when_blob_corrupted", 1).await;
     let blob = extra_blob_contents("second_resolve_succeeds_when_blob_corrupted", 0);
@@ -205,7 +204,7 @@ async fn second_resolve_succeeds_when_blob_corrupted() {
     .await
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn second_resolve_succeeds_when_tuf_metadata_update_fails() {
     // pkg-resolver uses tuf::client::Client::with_trusted_root_keys to create its TUF client.
     // That method will only retrieve the specified version of the root metadata (1 for these
@@ -249,7 +248,7 @@ async fn second_resolve_succeeds_when_tuf_metadata_update_fails() {
 // on its hyper clients, so the way this change would sneak in is if the hyper client is changed
 // to use ALPN to prefer http2. The blob server used in this test has ALPN configured to prefer
 // http2.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn blob_timeout_causes_new_tcp_connection() {
     let pkg = PackageBuilder::new("blob_timeout_causes_new_tcp_connection").build().await.unwrap();
     let repo = Arc::new(

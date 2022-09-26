@@ -7,7 +7,6 @@ use {
     assert_matches::assert_matches,
     blobfs_ramdisk::Ramdisk,
     fidl_fuchsia_pkg_rewrite_ext::Rule,
-    fuchsia_async as fasync,
     fuchsia_hash::Hash,
     fuchsia_inspect::assert_data_tree,
     fuchsia_pkg_testing::{
@@ -29,7 +28,7 @@ async fn test_package(name: &str, contents: &str) -> Package {
 }
 
 // The package is in the cache. Networking is totally down. Fallback succeeds.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_cache_fallback_succeeds_no_network() {
     let pkg_name = "test_cache_fallback_succeeds_no_network";
     let cache_pkg = test_package(pkg_name, "cache").await;
@@ -73,7 +72,7 @@ async fn test_cache_fallback_succeeds_no_network() {
 
 // The package is in the cache_packages manifest and has the same hash as the pinned URL. Networking
 // is totally down. Fallback succeeds.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_cache_fallback_succeeds_if_url_merkle_matches() {
     let pkg_name = "test_cache_fallback_succeeds_if_url_merkle_matches";
     let pkg = test_package(pkg_name, "some-contents").await;
@@ -118,7 +117,7 @@ fn make_different_hash(h: &Hash) -> Hash {
 
 // The package is in the cache_packages manifest and has a different hash than the pinned URL.
 // Networking is totally down. Fallback fails.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_cache_fallback_fails_if_url_merkle_differs() {
     let pkg_name = "test_cache_fallback_fails_if_url_merkle_differs";
     let pkg = test_package(pkg_name, "some-contents").await;
@@ -157,7 +156,7 @@ async fn test_cache_fallback_fails_if_url_merkle_differs() {
 }
 
 // The package is in the cache. Fallback is triggered because requests for targets.json fail.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_cache_fallback_succeeds_no_targets() {
     let pkg_name = "test_cache_fallback_succeeds_no_targets";
     let cache_pkg = test_package(pkg_name, "cache").await;
@@ -205,7 +204,7 @@ async fn test_cache_fallback_succeeds_no_targets() {
 }
 
 // The package is in the cache. Rewrite rule applies. Networking is totally down. Fallback succeeds.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_cache_fallback_succeeds_rewrite_rule() {
     let pkg_name = "test_cache_fallback_succeeds_rewrite_rule";
     let cache_pkg = test_package(pkg_name, "cache").await;
@@ -257,7 +256,7 @@ async fn test_cache_fallback_succeeds_rewrite_rule() {
 // If blobfs is out of space, pkg-resolver currently should not fall back to cache_packages if it's
 // asked to resolve a new version of a package in that list, if that package has a very large meta/
 // directory
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_blobfs_out_of_space_does_not_fall_back_to_cache_packages_with_large_meta_far() {
     let pkg_name =
         "test_blobfs_out_of_space_does_not_fall_back_to_cache_packages_with_large_meta_far";
@@ -339,7 +338,7 @@ async fn test_blobfs_out_of_space_does_not_fall_back_to_cache_packages_with_larg
 
 // If blobfs is out of space, pkg-resolver currently should not fall back to cache_packages if it's
 // asked to resolve a new version of a package in that list.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_blobfs_out_of_space_does_not_fall_back_to_cache_packages() {
     let pkg_name = "test_blobfs_out_of_space_does_not_fall_back_to_cache_packages";
 
@@ -398,7 +397,7 @@ async fn test_blobfs_out_of_space_does_not_fall_back_to_cache_packages() {
 
 // If blobfs is out of space, we shouldn't fall back to a previously-resolved version of an
 // ephemeral package.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_blobfs_out_of_space_does_not_fall_back_to_previous_ephemeral_package() {
     let pkg_name = "test_blobfs_out_of_space_fallback_to_previous_version";
     let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}", pkg_name);
@@ -471,7 +470,7 @@ async fn test_blobfs_out_of_space_does_not_fall_back_to_previous_ephemeral_packa
 }
 
 // The package is in the cache but not known to the repository. Don't fall back.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 #[ignore] // TODO(fxbug.dev/50764): reenable this after we've normalized SDK client behavior wrt cache fallback.
 async fn test_resolve_fails_not_in_repo() {
     let pkg_name = "test_resolve_fails_not_in_repo";
@@ -507,7 +506,7 @@ async fn test_resolve_fails_not_in_repo() {
 // The package is in the cache but not known to the repository. Fall back to the on-disk package.
 // TODO(fxbug.dev/50764): This is the wrong behavior. Delete this after we've normalized SDK client behavior
 // wrt cache fallback.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_resolve_falls_back_not_in_repo() {
     let pkg_name = "test_resolve_falls_back_not_in_repo";
 
@@ -573,7 +572,7 @@ async fn test_resolve_falls_back_not_in_repo() {
 }
 
 // A package with the same name is in the cache and the repository. Prefer the repo package.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_resolve_prefers_repo() {
     let pkg_name = "test_resolve_prefers_repo";
     let cache_pkg = test_package(pkg_name, "cache_package").await;

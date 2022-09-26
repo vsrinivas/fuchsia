@@ -59,7 +59,7 @@ rustc_test("dynamic_repositories_disabled") {
 
   deps = [
     ":lib",
-    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia",
     "//src/lib/zircon/rust:fuchsia-zircon",
   ]
 
@@ -74,7 +74,7 @@ rustc_test("persists_tuf_metadata") {
 
   deps = [
     ":lib",
-    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia",
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
   ]
 
@@ -90,7 +90,7 @@ rustc_test("dynamic_rewrite_disabled") {
   deps = [
     ":lib",
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/lib/fidl-fuchsia-pkg-rewrite-ext",
   ]
@@ -107,7 +107,7 @@ rustc_test("pkg_resolve_inspect") {
   deps = [
     ":lib",
     "//src/lib/diagnostics/inspect/rust",
-    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia",
     "//src/sys/lib/fidl-fuchsia-pkg-ext",
     "//src/sys/lib/fidl-fuchsia-pkg-rewrite-ext",
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
@@ -128,7 +128,7 @@ rustc_test("resolve_fails") {
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
-    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia",
     "//src/sys/lib/fidl-fuchsia-pkg-ext",
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//src/sys/pkg/lib/metrics:cobalt_sw_delivery_registry_rustlib",
@@ -149,6 +149,7 @@ rustc_test("resolve_propagates_blobfs_failure") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/pkg/lib/fuchsia-merkle",
@@ -170,7 +171,7 @@ rustc_test("resolve_recovers_from_http_errors") {
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
-    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia",
     "//src/sys/pkg/lib/fuchsia-merkle",
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//third_party/rust_crates:assert_matches",
@@ -188,7 +189,7 @@ rustc_test("resolve_resumes_blob_gets") {
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
-    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia",
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//src/sys/pkg/lib/metrics:cobalt_sw_delivery_registry_rustlib",
     "//third_party/rust_crates:futures",
@@ -210,6 +211,7 @@ rustc_test("resolve_succeeds_with_broken_minfs") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/lib/fidl-fuchsia-pkg-ext",
@@ -232,9 +234,9 @@ rustc_test("resolve_succeeds") {
     ":lib",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
     "//src/lib/diagnostics/inspect/rust",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/http-uri-ext",
-    "//src/lib/syslog/rust:syslog",
     "//src/sys/lib/fidl-fuchsia-pkg-ext",
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//third_party/rust_crates:assert_matches",
@@ -253,7 +255,7 @@ rustc_test("get_hash") {
 
   deps = [
     ":lib",
-    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//third_party/rust_crates:assert_matches",
@@ -273,7 +275,7 @@ rustc_test("system_cache_fallback") {
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/lib/fidl-fuchsia-pkg-rewrite-ext",
     "//src/sys/pkg/lib/fuchsia-hash",
@@ -295,7 +297,7 @@ rustc_test("base_pinning") {
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
-    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//third_party/rust_crates:assert_matches",
@@ -316,6 +318,7 @@ rustc_test("metrics") {
     "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_rust",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
@@ -337,7 +340,7 @@ rustc_test("eager_updates") {
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
-    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-url",
     "//src/sys/lib/fidl-fuchsia-pkg-ext",
     "//src/sys/pkg/lib/fuchsia-pkg-testing",

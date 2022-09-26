@@ -7,7 +7,6 @@ use {
     assert_matches::assert_matches,
     fidl_fuchsia_pkg_ext::RepositoryConfigBuilder,
     fidl_fuchsia_pkg_rewrite_ext::{Rule, RuleConfig},
-    fuchsia_async as fasync,
     fuchsia_inspect::{
         assert_data_tree,
         reader::Property,
@@ -21,7 +20,7 @@ use {
     std::sync::Arc,
 };
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn initial_inspect_state() {
     let env = TestEnvBuilder::new().build().await;
     // Wait for inspect to be created
@@ -70,7 +69,7 @@ async fn initial_inspect_state() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn adding_repo_updates_inspect_state() {
     let env = TestEnvBuilder::new().build().await;
     let config = RepositoryConfigBuilder::new("fuchsia-pkg://example.com".parse().unwrap()).build();
@@ -95,7 +94,7 @@ async fn adding_repo_updates_inspect_state() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn resolving_package_updates_inspect_state() {
     let env = TestEnvBuilder::new().build().await;
 
@@ -168,7 +167,7 @@ async fn resolving_package_updates_inspect_state() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn package_and_blob_queues() {
     // active_package_resolves exports the original and rewritten pkg urls, so we use a rewrite rule
     // and verify that the two exported urls are different.
@@ -309,7 +308,7 @@ async fn package_and_blob_queues() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn channel_in_vbmeta_appears_in_inspect_state() {
     let repo =
         Arc::new(RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH).build().await.unwrap());
@@ -396,7 +395,7 @@ where
     }
 }
 
-#[test]
+#[fuchsia::test]
 fn option_debug_string_property() {
     fn make_string_property(value: &str) -> Property {
         Property::String("name".to_owned(), value.to_owned())

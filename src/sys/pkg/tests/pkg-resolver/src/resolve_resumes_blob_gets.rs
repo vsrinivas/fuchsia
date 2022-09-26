@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    cobalt_sw_delivery_registry as metrics, fuchsia_async as fasync,
+    cobalt_sw_delivery_registry as metrics,
     fuchsia_pkg_testing::{
         serve::{responder, HttpRange},
         Package, PackageBuilder, RepositoryBuilder,
@@ -36,7 +36,7 @@ fn for_not_range_requests<T: fuchsia_pkg_testing::serve::HttpResponder>(
     )
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn single_blob_resume_success() {
     let pkg = PackageBuilder::new("large_meta_far")
         .add_resource_at(
@@ -98,7 +98,7 @@ async fn single_blob_resume_success() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn two_blob_resume_success() {
     let pkg = PackageBuilder::new("large_meta_far")
         .add_resource_at(
@@ -185,7 +185,7 @@ impl fuchsia_pkg_testing::serve::HttpResponder for ContentRangeCorruptor {
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn resume_validates_content_range() {
     let pkg = PackageBuilder::new("large_meta_far")
         .add_resource_at(
@@ -273,7 +273,7 @@ impl fuchsia_pkg_testing::serve::HttpResponder for ContentLengthCorruptor {
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn resume_validates_content_length() {
     let pkg = PackageBuilder::new("large_meta_far")
         .add_resource_at(
@@ -328,7 +328,7 @@ async fn resume_validates_content_length() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn resume_validates_206_status() {
     let pkg = PackageBuilder::new("large_meta_far")
         .add_resource_at(
@@ -383,7 +383,7 @@ async fn resume_validates_206_status() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn resume_enforces_max_resumption_limit() {
     let pkg = PackageBuilder::new("large_meta_far")
         .add_resource_at(

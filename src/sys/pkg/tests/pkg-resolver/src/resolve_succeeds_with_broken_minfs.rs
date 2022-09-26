@@ -574,7 +574,7 @@ async fn verify_pkg_resolution_succeeds_during_minfs_repo_config_and_rewrite_rul
 
 // Test that when pkg-resolver can't open the file for dynamic repo configs, the resolver
 // still works.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn minfs_fails_create_repo_configs() {
     let open_handler = OpenFailOrTempFs::new_failing();
 
@@ -600,7 +600,7 @@ async fn minfs_fails_create_repo_configs() {
 
 // Test that when pkg-resolver can open neither the file for rewrite rules
 // NOR the file for dynamic repositories, the resolver still works.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn minfs_fails_create_rewrite_rules() {
     let open_handler = OpenFailOrTempFs::new_failing();
 
@@ -627,7 +627,7 @@ async fn minfs_fails_create_rewrite_rules() {
 
 // Test that when pkg-resolver can't write to the file for dynamic repo configs,
 // package resolution still works.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn minfs_fails_write_to_repo_configs() {
     let open_handler = WriteFailOrTempFs::new_failing(vec![String::from("repositories.json.new")]);
 
@@ -645,7 +645,7 @@ async fn minfs_fails_write_to_repo_configs() {
 
 // Test that when pkg-resolver can write to neither the file for dynamic repo configs
 // NOR the file for rewrite rules, package resolution still works.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn minfs_fails_write_to_repo_configs_and_rewrite_rules() {
     let open_handler = WriteFailOrTempFs::new_failing(vec![
         String::from("repositories.json.new"),
@@ -670,7 +670,7 @@ async fn minfs_fails_write_to_repo_configs_and_rewrite_rules() {
 // directly to /data instead of going through std::fs::rename. If that's the case, consider
 // extending DirectoryStreamHandler to also have a RenameRequestHandler, and possibly use a
 // std::sync::Weak to coordinate between the DirectoryStreamHandler and RenameRequestHandler.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn minfs_fails_rename_repo_configs() {
     let open_handler = RenameFailOrTempFs::new_failing(vec![String::from("repositories.json.new")]);
 
@@ -689,7 +689,7 @@ async fn minfs_fails_rename_repo_configs() {
 
 // Test that when pkg-resolver can rename neither the file for dynamic repo configs
 // NOR the file for rewrite rules, package resolution still works.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn minfs_fails_rename_repo_configs_and_rewrite_rules() {
     let open_handler = RenameFailOrTempFs::new_failing(vec![
         String::from("repositories.json.new"),

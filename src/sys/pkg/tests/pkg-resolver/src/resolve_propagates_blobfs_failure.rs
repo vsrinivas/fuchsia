@@ -12,7 +12,7 @@ use {
     blobfs_ramdisk::BlobfsRamdisk,
     fidl::endpoints::{ClientEnd, RequestStream, ServerEnd},
     fidl_fuchsia_io as fio,
-    fuchsia_async::{self as fasync, Task},
+    fuchsia_async::Task,
     fuchsia_merkle::{Hash, MerkleTree},
     fuchsia_pkg_testing::{Package, RepositoryBuilder, SystemImageBuilder},
     fuchsia_zircon::Status,
@@ -298,7 +298,7 @@ async fn assert_resolve_package_with_failing_blobfs_fails(
     assert_eq!(failing_file_call_count.load(std::sync::atomic::Ordering::SeqCst), 1);
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn fails_on_open_far_in_install_pkg() {
     let (blobfs, pkg, failing_file_call_count) = make_mock_blobfs_with_failing_install_pkg(
         "fails_on_open_far_in_install_pkg",
@@ -309,7 +309,7 @@ async fn fails_on_open_far_in_install_pkg() {
     assert_resolve_package_with_failing_blobfs_fails(blobfs, pkg, failing_file_call_count).await
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn fails_truncate_far_in_install_pkg() {
     let (blobfs, pkg, failing_file_call_count) = make_mock_blobfs_with_failing_install_pkg(
         "fails_truncate_far_in_install_pkg",
@@ -320,7 +320,7 @@ async fn fails_truncate_far_in_install_pkg() {
     assert_resolve_package_with_failing_blobfs_fails(blobfs, pkg, failing_file_call_count).await
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn fails_write_far_in_install_pkg() {
     let (blobfs, pkg, failing_file_call_count) = make_mock_blobfs_with_failing_install_pkg(
         "fails_write_far_in_install_pkg",
@@ -331,7 +331,7 @@ async fn fails_write_far_in_install_pkg() {
     assert_resolve_package_with_failing_blobfs_fails(blobfs, pkg, failing_file_call_count).await
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn fails_on_open_blob_in_install_blob() {
     let (blobfs, pkg, failing_file_call_count) = make_mock_blobfs_with_failing_install_blob(
         "fails_on_open_blob_in_install_blob",
@@ -342,7 +342,7 @@ async fn fails_on_open_blob_in_install_blob() {
     assert_resolve_package_with_failing_blobfs_fails(blobfs, pkg, failing_file_call_count).await
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn fails_truncate_blob_in_install_blob() {
     let (blobfs, pkg, failing_file_call_count) = make_mock_blobfs_with_failing_install_blob(
         "fails_truncate_blob_in_install_blob",
@@ -353,7 +353,7 @@ async fn fails_truncate_blob_in_install_blob() {
     assert_resolve_package_with_failing_blobfs_fails(blobfs, pkg, failing_file_call_count).await
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn fails_write_blob_in_install_blob() {
     let (blobfs, pkg, failing_file_call_count) = make_mock_blobfs_with_failing_install_blob(
         "fails_write_blob_in_install_blob",

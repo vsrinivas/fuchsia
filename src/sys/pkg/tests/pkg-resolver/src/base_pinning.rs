@@ -5,7 +5,6 @@
 /// This module tests pkg-resolver's behavior when resolving base packages.
 use {
     assert_matches::assert_matches,
-    fuchsia_async as fasync,
     fuchsia_pkg_testing::serve::responder,
     fuchsia_pkg_testing::{Package, PackageBuilder, RepositoryBuilder, SystemImageBuilder},
     fuchsia_zircon::Status,
@@ -22,7 +21,7 @@ async fn test_package(name: &str, contents: &str) -> Package {
         .expect("build package")
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_base_package_found() {
     let pkg_name = "test_base_package_found";
     let base_pkg = test_package(pkg_name, "static").await;
@@ -67,7 +66,7 @@ async fn test_base_package_found() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_base_pinning_rejects_urls_with_resource() {
     let pkg_name = "test_base_pinning_rejects_urls_with_resource";
     let pkg = test_package(pkg_name, "static").await;
@@ -87,7 +86,7 @@ async fn test_base_pinning_rejects_urls_with_resource() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_base_package_with_variant_found() {
     let pkg_name = "test_base_package_with_variant_found";
     let base_pkg = test_package(pkg_name, "static").await;
@@ -126,7 +125,7 @@ async fn test_base_package_with_variant_found() {
 
 // The package is in the static index, but it has a Merkle pin.
 // Use the resolver instead of the base index.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_base_package_with_merkle_pin() {
     let pkg_name = "test_base_package_with_merkle_pin";
     let base_pkg = test_package(pkg_name, "static").await;
@@ -166,7 +165,7 @@ async fn test_base_package_with_merkle_pin() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_base_package_while_tuf_broken() {
     let pkg_name = "test_base_package_while_tuf_broken";
     let base_pkg = test_package(pkg_name, "static").await;
@@ -197,7 +196,7 @@ async fn test_base_package_while_tuf_broken() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_base_package_without_repo_configured() {
     let pkg_name = "test_base_package_without_repo_configured";
     let base_pkg = test_package(pkg_name, "static").await;
@@ -220,7 +219,7 @@ async fn test_base_package_without_repo_configured() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_base_package_while_queue_full() {
     let mut repo = RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH);
     let mut pkg_urls: Vec<String> = vec![];

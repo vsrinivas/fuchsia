@@ -4,7 +4,6 @@
 
 #![cfg(test)]
 use {
-    fuchsia_async as fasync,
     fuchsia_pkg_testing::{Package, PackageBuilder, RepositoryBuilder, SystemImageBuilder},
     lib::{
         EnableDynamicConfig, MountsBuilder, PersistedReposConfig, TestEnvBuilder, EMPTY_REPO_PATH,
@@ -23,7 +22,7 @@ async fn test_package(name: &str, contents: &str) -> Package {
 // When a persisted repository configuration is present, and a dynamic repo is configured to
 // persist metadata, this test validates that pkg-resolver can resolve a previously fetched package
 // across a restart.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_resolve_persisted_package_succeeds() {
     let pkg_name = "test_resolve_persisted_package_succeeds";
 
@@ -86,7 +85,7 @@ async fn test_resolve_persisted_package_succeeds() {
 
 // When a persisted repository configuration is present, but lists an empty string, pkg-resolver
 // should not persist TUF metadata.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_resolve_empty_config_fails() {
     let pkg_name = "test_resolve_empty_config_fails";
 
@@ -150,7 +149,7 @@ async fn test_resolve_empty_config_fails() {
 
 // When a persisted repo config is present, but dynamic repository configurations are disabled, we
 // should not persist the TUF metadata.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_resolve_dynamic_disabled_fails() {
     let pkg_name = "test_resolve_dynamic_disabled_fails";
 
@@ -219,7 +218,7 @@ async fn test_resolve_dynamic_disabled_fails() {
 }
 
 // When a persisted repository configuration is not present, we should not persist TUF metadata.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_resolve_no_config_fails() {
     let pkg_name = "test_resolve_no_config_fails";
 

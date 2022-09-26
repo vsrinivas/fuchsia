@@ -4,13 +4,12 @@
 use {
     cobalt_sw_delivery_registry as metrics,
     fidl_fuchsia_pkg_ext::RepositoryConfigBuilder,
-    fuchsia_async as fasync,
     fuchsia_pkg_testing::{serve::responder, PackageBuilder, RepositoryBuilder},
     lib::{ResolverVariant, TestEnvBuilder, EMPTY_REPO_PATH},
     std::sync::Arc,
 };
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn resolve_disallow_local_mirror_fails() {
     let pkg = PackageBuilder::new("test")
         .add_resource_at("test_file", "hi there".as_bytes())
@@ -42,7 +41,7 @@ async fn resolve_disallow_local_mirror_fails() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn resolve_local_and_remote_mirrors_fails() {
     let pkg = PackageBuilder::new("test")
         .add_resource_at("test_file", "hi there".as_bytes())
@@ -76,7 +75,7 @@ async fn resolve_local_and_remote_mirrors_fails() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn create_tuf_client_timeout() {
     let repo =
         Arc::new(RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH).build().await.unwrap());
@@ -108,7 +107,7 @@ async fn create_tuf_client_timeout() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn update_tuf_client_timeout() {
     let repo =
         Arc::new(RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH).build().await.unwrap());
@@ -152,7 +151,7 @@ async fn update_tuf_client_timeout() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn download_blob_header_timeout() {
     let pkg = PackageBuilder::new("test").build().await.unwrap();
     let repo = Arc::new(
@@ -193,7 +192,7 @@ async fn download_blob_header_timeout() {
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn download_blob_body_timeout() {
     let pkg = PackageBuilder::new("test").build().await.unwrap();
     let repo = Arc::new(
@@ -262,7 +261,7 @@ async fn download_blob_body_timeout() {
 //
 //  Therefore the test passes if the blob server's served blobs counter
 //  <= MAX_CONCURRENT_BLOB_FETCHES + 1 after the second resolve completes.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn failed_resolve_stops_fetching_blobs() {
     let pkg_many_failing_content_blobs = {
         let mut pkg = PackageBuilder::new("many-blobs");
