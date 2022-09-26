@@ -393,11 +393,6 @@ build --incompatible_enable_cc_toolchain_resolution
 # Setup the default platform.
 # TODO(digit): Switch to //build/bazel/platforms:common
 build --platforms=//build/bazel/platforms:linux_x64
-
-# Ensure the local SDK (i.e. out/default/sdk/exported/core is used to
-# populate the @fuchsia_sdk repository. This environment variable definition
-# is expected by @rules_fuchsia//:fuchsia/workspace/fuchsia_sdk_repository.bzl
-build --action_env=LOCAL_FUCHSIA_PLATFORM_BUILD={ninja_output_dir} \
 '''.format(ninja_output_dir=gn_output_dir)
 
     if args.use_bzlmod:

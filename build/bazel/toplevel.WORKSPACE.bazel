@@ -54,6 +54,7 @@ local_repository(
 # buildifier: disable=load-on-top
 load(
     "@rules_fuchsia//fuchsia:deps.bzl",
+    "fuchsia_clang_repository",
     "fuchsia_sdk_repository",
     "rules_fuchsia_deps",
 )
@@ -73,9 +74,15 @@ python_runtime_repository(
 
 fuchsia_sdk_repository(
     name = "fuchsia_sdk",
+    local_path = "../../../../sdk/exported/core",
 )
 
 register_toolchains("@fuchsia_sdk//:fuchsia_toolchain_sdk")
+
+fuchsia_clang_repository(
+    name = "fuchsia_clang",
+    local_path = "prebuilt/third_party/clang/linux-x64",
+)
 
 # buildifier: disable=load-on-top
 load("//:build/bazel/repository_rules.bzl", "bazel_inputs_repository")
