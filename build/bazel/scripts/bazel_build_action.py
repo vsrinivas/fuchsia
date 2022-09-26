@@ -9,6 +9,7 @@ import argparse
 import errno
 import filecmp
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -80,8 +81,16 @@ def main():
         return parser.error(
             'Bazel launcher does not exist: %s' % args.bazel_launcher)
 
-    cmd = [args.bazel_launcher, 'build'] + args.bazel_targets
-    subprocess.check_call(cmd)
+    cmd = [
+        args.bazel_launcher, 'build', '--verbose_failures'
+    ] + args.bazel_targets
+    ret = subprocess.run(cmd)
+    if ret.returncode != 0:
+        print(
+            'ERROR when calling Bazel. To reproduce, run this in the Ninja output directory:\n\n  %s\n'
+            % ' '.join(shlex.quote(c) for c in cmd),
+            file=sys.stderr)
+        return 1
 
     for bazel_out, ninja_out in zip(args.bazel_outputs, args.ninja_outputs):
         src_path = os.path.join(args.workspace_dir, 'bazel-bin', bazel_out)
