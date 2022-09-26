@@ -163,20 +163,21 @@ physical (or device-physical) addresses associated with
 [VMO](/docs/reference/kernel_objects/vm_object.md)s.
 
 In your driver's initialization, call
-**pci_get_bti()**
+**Pci::GetBti()**
 to obtain a [BTI](/docs/reference/kernel_objects/bus_transaction_initiator.md) handle:
 
-```c
-zx_status_t pci_get_bti(const pci_protocol_t* pci,
-                        uint32_t index,
-                        zx_handle_t* bti_handle);
+```cpp
+#include <lib/device-protocol/pci.h>
+
+zx_status_t Pci::GetBti(uint32_t index,
+                        zx::bti* out_bti);
 ```
 
-The **pci_get_bti()**
-function takes a `pci` protocol pointer (just like all the other **pci_...()** functions
-discussed above) and an `index` (reserved for future use, use `0`).
+The **GetBti()**
+function lives on the `ddk::Pci` class (just like all the other PCI functions
+discussed above) and takes an `index` parameter (reserved for future use, use `0`).
 It returns a [BTI](/docs/reference/kernel_objects/bus_transaction_initiator.md)
-handle through the `bti_handle` pointer argument.
+object through the `out_bti` pointer argument.
 
 Next, you need a [VMO](/docs/reference/kernel_objects/vm_object.md).
 Simplistically, you can think of the [VMO](/docs/reference/kernel_objects/vm_object.md)
