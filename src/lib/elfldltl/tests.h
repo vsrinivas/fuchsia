@@ -49,8 +49,9 @@ class ExpectedSingleError {
   bool operator()(Ts&&... args) {
     if constexpr (sizeof...(Args) != sizeof...(Ts)) {
       ADD_FAILURE("Expected %zu args, got %zu\n", sizeof...(Args), sizeof...(Ts));
+    } else {
+      Check(std::make_tuple(args...), std::make_index_sequence<sizeof...(Args)>());
     }
-    Check(std::make_tuple(args...), std::make_index_sequence<sizeof...(Args)>());
     return true;
   }
 
