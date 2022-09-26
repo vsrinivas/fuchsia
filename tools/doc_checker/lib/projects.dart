@@ -8,7 +8,6 @@
 /// List of active repos under fuchsia.googlesource.com which can be linked to.
 const List<String> validProjects = <String>[
   '', // root page of all projects
-  'atom-language-fidl',
   'cobalt',
   'drivers', // This is a family of projects.
   'experiences',
