@@ -15,8 +15,8 @@
 
 namespace media_audio {
 
-class GraphCreatorServer
-    : public BaseFidlServer<GraphCreatorServer, fuchsia_audio_mixer::GraphCreator> {
+class GraphCreatorServer : public BaseFidlServer<GraphCreatorServer, fidl::WireServer,
+                                                 fuchsia_audio_mixer::GraphCreator> {
  public:
   // The returned server will live until the `server_end` channel is closed.
   static std::shared_ptr<GraphCreatorServer> Create(
@@ -28,7 +28,7 @@ class GraphCreatorServer
 
  private:
   static inline constexpr std::string_view kName = "GraphCreatorServer";
-  template <class ServerT, class ProtocolT>
+  template <typename ServerT, template <typename T> typename FidlServerT, typename ProtocolT>
   friend class BaseFidlServer;
 
   GraphCreatorServer() = default;

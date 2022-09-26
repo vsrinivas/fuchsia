@@ -21,8 +21,8 @@
 
 namespace media_audio {
 
-class SyntheticClockServer
-    : public BaseFidlServer<SyntheticClockServer, fuchsia_audio_mixer::SyntheticClock> {
+class SyntheticClockServer : public BaseFidlServer<SyntheticClockServer, fidl::WireServer,
+                                                   fuchsia_audio_mixer::SyntheticClock> {
  public:
   // The returned server will live until the `server_end` channel is closed.
   static std::shared_ptr<SyntheticClockServer> Create(
@@ -35,10 +35,9 @@ class SyntheticClockServer
   void SetRate(SetRateRequestView request, SetRateCompleter::Sync& completer) override;
 
  private:
-  template <class ServerT, class ProtocolT>
-  friend class BaseFidlServer;
-
   static inline const std::string_view kName = "SyntheticClockRealmServer";
+  template <typename ServerT, template <typename T> typename FidlServerT, typename ProtocolT>
+  friend class BaseFidlServer;
 
   explicit SyntheticClockServer(std::shared_ptr<Clock> clock) : clock_(std::move(clock)) {}
 
@@ -47,8 +46,8 @@ class SyntheticClockServer
   const std::shared_ptr<Clock> clock_;
 };
 
-class SyntheticClockRealmServer
-    : public BaseFidlServer<SyntheticClockRealmServer, fuchsia_audio_mixer::SyntheticClockRealm> {
+class SyntheticClockRealmServer : public BaseFidlServer<SyntheticClockRealmServer, fidl::WireServer,
+                                                        fuchsia_audio_mixer::SyntheticClockRealm> {
  public:
   // The returned server will live until the `server_end` channel is closed.
   static std::shared_ptr<SyntheticClockRealmServer> Create(
@@ -70,10 +69,9 @@ class SyntheticClockRealmServer
   void AdvanceBy(AdvanceByRequestView request, AdvanceByCompleter::Sync& completer) override;
 
  private:
-  template <class ServerT, class ProtocolT>
-  friend class BaseFidlServer;
-
   static inline const std::string_view kName = "SyntheticClockRealmServer";
+  template <typename ServerT, template <typename T> typename FidlServerT, typename ProtocolT>
+  friend class BaseFidlServer;
 
   SyntheticClockRealmServer() = default;
 

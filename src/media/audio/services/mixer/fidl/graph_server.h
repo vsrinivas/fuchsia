@@ -24,8 +24,9 @@
 
 namespace media_audio {
 
-class GraphServer : public BaseFidlServer<GraphServer, fuchsia_audio_mixer::Graph>,
-                    public std::enable_shared_from_this<GraphServer> {
+class GraphServer
+    : public BaseFidlServer<GraphServer, fidl::WireServer, fuchsia_audio_mixer::Graph>,
+      public std::enable_shared_from_this<GraphServer> {
  public:
   struct Args {
     // Name of this graph.
@@ -77,7 +78,7 @@ class GraphServer : public BaseFidlServer<GraphServer, fuchsia_audio_mixer::Grap
 
  private:
   static inline constexpr std::string_view kName = "GraphServer";
-  template <class ServerT, class ProtocolT>
+  template <typename ServerT, template <typename T> typename FidlServerT, typename ProtocolT>
   friend class BaseFidlServer;
 
   // Note: args.server_end is consumed by BaseFidlServer.

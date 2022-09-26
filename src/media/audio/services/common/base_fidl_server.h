@@ -40,7 +40,7 @@ class BaseFidlServerUntyped {
 // Base class for FIDL servers. Example of use:
 //
 // ```cpp
-// class ProtocolServer : public BaseFidlServer<ProtocolServer, Protocol> {
+// class ProtocolServer : public BaseFidlServer<ProtocolServer, fidl::WireServer<Protocol>> {
 //  public:
 //    static std::shared_ptr<ProtocolServer> Create(std::shared_ptr<const FidlThread> thread,
 //                                              fidl::ServerEnd<Protocol> server_end,
@@ -53,7 +53,7 @@ class BaseFidlServerUntyped {
 //
 //  private:
 //    static inline const std::string_view kName = "ProtocolServer";
-//    template<class ServerT, class ProtocolT>
+//    template <typename ServerT, template <typename T> typename FidlServerT, typename ProtocolT>
 //    friend class BaseFidlServer;
 //
 //    ProtocolServer(int arg);
@@ -61,9 +61,10 @@ class BaseFidlServerUntyped {
 // ```
 //
 // As shown above, subclasses should be created via a `Create` static method that calls
-// into `BaseFidlServer::Create`.
-template <typename ServerT, typename ProtocolT>
-class BaseFidlServer : public fidl::WireServer<ProtocolT>, public internal::BaseFidlServerUntyped {
+// into `BaseFidlServer::Create`. The `FidlServerT` template argument can be `fidl::Server<>` or
+// `fidl::WireServer`.
+template <typename ServerT, template <typename ProtocolT> typename FidlServerT, typename ProtocolT>
+class BaseFidlServer : public FidlServerT<ProtocolT>, public internal::BaseFidlServerUntyped {
  public:
   using Protocol = ProtocolT;
 

@@ -18,7 +18,8 @@
 
 namespace media_audio {
 
-class StreamSinkServer : public BaseFidlServer<StreamSinkServer, fuchsia_media2::StreamSink> {
+class StreamSinkServer
+    : public BaseFidlServer<StreamSinkServer, fidl::WireServer, fuchsia_media2::StreamSink> {
  public:
   using CommandQueue = SimplePacketQueueProducerStage::CommandQueue;
 
@@ -55,7 +56,7 @@ class StreamSinkServer : public BaseFidlServer<StreamSinkServer, fuchsia_media2:
 
  private:
   static inline constexpr std::string_view kName = "StreamSinkServer";
-  template <class ServerT, class ProtocolT>
+  template <typename ServerT, template <typename T> typename FidlServerT, typename ProtocolT>
   friend class BaseFidlServer;
   friend class TestStreamSinkServerAndClient;
 
