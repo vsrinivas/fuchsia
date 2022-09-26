@@ -48,11 +48,11 @@ Client and server implementations for all languages change as well:
       <devsite-selector style="margin: 0px; padding: 0px;">
         <section>
           <h3>Client</h3>
-          <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key-value-store/add_read_item/rust/client/main.rs" highlight="45,46,47,48,49,50,51,52,53,54,55,56,57" %}</pre>
+          <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key-value-store/add_read_item/rust/client/src/main.rs" highlight="45,46,47,48,49,50,51,52,53,54,55,56,57" %}</pre>
         </section>
         <section>
           <h3>Server</h3>
-          <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key-value-store/add_read_item/rust/server/main.rs" highlight="76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93" %}</pre>
+          <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key-value-store/add_read_item/rust/server/src/main.rs" highlight="76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93" %}</pre>
         </section>
       </devsite-selector>
     </section>
