@@ -636,7 +636,7 @@ mod tests {
                 latency_reports[0],
                 MetricEvent {
                     metric_id: GET_CURRENT_LATENCY_METRIC_ID,
-                    payload: MetricEventPayload::IntegerValue(0),
+                    payload: MetricEventPayload::IntegerValue(_),
                     ..
                 }
             );
