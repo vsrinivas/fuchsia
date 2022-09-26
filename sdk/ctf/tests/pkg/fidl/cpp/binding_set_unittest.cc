@@ -311,6 +311,14 @@ TEST(BindingSet, CloseBindingsHandlesEmptySet) {
   EXPECT_TRUE(empty_set_handled);
 }
 
+TEST(BindingSet, BogusCloseBinding) {
+  BindingSet<fidl::test::frobinator::Frobinator, test::FrobinatorImpl*> binding_set;
+  test::FrobinatorImpl impl;
+  constexpr auto kEpitaphValue = ZX_ERR_ADDRESS_UNREACHABLE;
+  EXPECT_FALSE(binding_set.CloseBinding(&impl, kEpitaphValue));
+  EXPECT_TRUE(binding_set.bindings().empty());
+}
+
 TEST(BindingSet, RemoveBindingDeletesTheBinding) {
   fidl::test::AsyncLoopForTest loop;
 
