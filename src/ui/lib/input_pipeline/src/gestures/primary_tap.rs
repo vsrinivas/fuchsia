@@ -4,8 +4,9 @@
 
 use {
     super::gesture_arena::{
-        self, ExamineEventResult, MismatchData, MismatchDetailsUint, ProcessBufferedEventsResult,
-        RecognizedGesture, TouchpadEvent, VerifyEventResult, PRIMARY_BUTTON,
+        self, ExamineEventResult, MismatchData, MismatchDetailsFloat, MismatchDetailsUint,
+        ProcessBufferedEventsResult, RecognizedGesture, TouchpadEvent, VerifyEventResult,
+        PRIMARY_BUTTON,
     },
     crate::mouse_binding::{MouseEvent, MouseLocation, MousePhase, RelativeLocation},
     crate::utils::{euclidean_distance, Position},
@@ -115,12 +116,19 @@ impl gesture_arena::Contender for FingerContactContender {
         match num_contacts {
             0 => ExamineEventResult::MatchedContender(self.into_matched_contender(event.clone())),
             1 => {
-                if !position_is_in_tap_threshold(
+                let displacement_mm = euclidean_distance(
                     position_from_event(event),
                     position_from_event(&self.finger_down_event),
-                    self.max_finger_displacement_in_mm,
-                ) {
-                    return ExamineEventResult::Mismatch(MismatchData::Basic("too much motion"));
+                );
+                if displacement_mm >= self.max_finger_displacement_in_mm {
+                    return ExamineEventResult::Mismatch(MismatchData::DetailedFloat(
+                        MismatchDetailsFloat {
+                            criterion: "displacement_mm",
+                            min: None,
+                            max: Some(self.max_finger_displacement_in_mm),
+                            actual: displacement_mm,
+                        },
+                    ));
                 }
                 ExamineEventResult::Contender(self)
             }
@@ -225,13 +233,6 @@ impl gesture_arena::MatchedContender for MatchedContender {
 /// assumed to have a single associated TouchContact.
 fn position_from_event(event: &TouchpadEvent) -> Position {
     event.contacts[0].position
-}
-
-/// Returns true iff the Euclidean distance for the displacement indicated
-/// between (pos1.x, pos1.y) and (pos2.x, pos2.y) is less than the tap
-/// threshold.
-fn position_is_in_tap_threshold(pos1: Position, pos2: Position, threshold: f32) -> bool {
-    euclidean_distance(pos1, pos2) < threshold
 }
 
 /// Returns true iff the timestamp for new_event has not exceeded

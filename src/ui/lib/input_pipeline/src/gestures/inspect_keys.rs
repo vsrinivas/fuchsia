@@ -6,9 +6,9 @@ use fuchsia_inspect::StringReference;
 
 pub(super) const ARENA_LOG_ROOT: &'static str = "gestures_event_log";
 
-// Some keys are repeated for every event, which makes for an inefficient
-// use of space in the Inspect VMO. Optimize that space by using
-// `StringReference`s.
+// Some inspect keys are repeated for every event, which makes for an
+// inefficient use of space in the Inspect VMO. Optimize that space by
+// using `StringReference`s.
 lazy_static::lazy_static! {
     // Event types.
     pub(super) static ref TOUCHPAD_EVENT_NODE: StringReference<'static> = "touchpad_event".into();
@@ -84,18 +84,27 @@ lazy_static::lazy_static! {
 //         }
 //       },
 //       "3": {
+//         "mismatch_event": {
+//           "actual": 42.0,
+//           "contender": "utils::StubContender",
+//           "criterion": "teleportation_distance_kilometers",
+//           "max_allowed": 30.5,
+//           "min_allowed": 10.125
+//         }
+//       },
+//       "4": {
 //         "key_event": {
 //           "driver_monotonic_nanos": 11000000,
 //           "entry_latency_micros": 1000
 //         }
 //       },
-//       "4": {
+//       "5": {
 //         "key_event": {
 //           "driver_monotonic_nanos": 13000000,
 //           "entry_latency_micros": 1000
 //         }
 //       },
-//       "5": {
+//       "6": {
 //         "touchpad_event": {
 //           "driver_monotonic_nanos": 18000000,
 //           "entry_latency_micros": 1000,
@@ -110,7 +119,7 @@ lazy_static::lazy_static! {
 //           }
 //         }
 //       },
-//       "6": {
+//       "7": {
 //         "gesture_start": {
 //           "latency_event_count": 1,
 //           "latency_micros": 18987,
@@ -129,109 +138,92 @@ lazy_static::lazy_static! {
 //   metadata:
 //     filename = fuchsia.inspect.Tree
 //     component_url = fuchsia-pkg://fuchsia.com/scene_manager#meta/scene_manager.cm
-//     timestamp = 162271665712
+//     timestamp = 1929093181684
 //   payload:
 //     root:
 //       fuchsia.inspect.Stats:
-//         allocated_blocks = 3199
-//         current_size = 57344
+//         allocated_blocks = 3914
+//         current_size = 65536
 //         deallocated_blocks = 0
 //         failed_allocations = 0
 //         maximum_size = 307200
 //         total_dynamic_children = 1
 //       input_pipeline:
 //         gestures_event_log:
+//           0:
+//             key_event:
+//               driver_monotonic_nanos = 1885655604500
+//               entry_latency_micros = 38411
+//           1:
+//             key_event:
+//               driver_monotonic_nanos = 1885772742472
+//               entry_latency_micros = 1663
 //           /* ... many entries omitted ... */
-//           174:
+//           54:
 //             touchpad_event:
-//               driver_monotonic_nanos = 154248217080
-//               entry_latency_micros = 13621
+//               driver_monotonic_nanos = 1904216026796
+//               entry_latency_micros = 13617
 //               pressed_buttons = []
 //               contacts:
 //                 0:
 //                   height_raw = 3230.000000
-//                   pos_x_mm = 4.664000
-//                   pos_y_mm = 22.540001
+//                   pos_x_mm = 76.378998
+//                   pos_y_mm = 31.892000
 //                   width_raw = 2953.000000
-//           175:
+//           55:
 //             mismatch_event:
 //               actual = 0
 //               contender = one_finger_drag::InitialContender
 //               criterion = num_pressed_buttons
 //               max_allowed = 1
 //               min_allowed = 1
-//           176:
+//           56:
 //             mismatch_event:
 //               actual = 1
 //               contender = scroll::InitialContender
 //               criterion = num_contacts
 //               max_allowed = 2
 //               min_allowed = 2
-//           177:
-//             touchpad_event:
-//               driver_monotonic_nanos = 154263896354
-//               entry_latency_micros = 4758
-//               pressed_buttons = []
-//               contacts:
-//                 0:
-//                   height_raw = 3230.000000
-//                   pos_x_mm = 4.728000
-//                   pos_y_mm = 22.540001
-//                   width_raw = 2953.000000
-//           178:
-//             touchpad_event:
-//               driver_monotonic_nanos = 154271772262
-//               entry_latency_micros = 6506
-//               pressed_buttons = []
-//               contacts:
-//                 0:
-//                   height_raw = 3230.000000
-//                   pos_x_mm = 4.981000
-//                   pos_y_mm = 22.476000
-//                   width_raw = 2953.000000
-//           179:
-//             touchpad_event:
-//               driver_monotonic_nanos = 154279646049
-//               entry_latency_micros = 4900
-//               pressed_buttons = []
-//               contacts:
-//                 0:
-//                   height_raw = 3230.000000
-//                   pos_x_mm = 5.489000
-//                   pos_y_mm = 22.476000
-//                   width_raw = 2953.000000
-//           180:
-//             mismatch_event:
-//               contender = click::UnpressedContender
-//               summary = too much motion
-//           181:
-//             mismatch_event:
-//               contender = primary_tap::FingerContactContender
-//               summary = too much motion
-//           182:
-//             mismatch_event:
-//               contender = secondary_tap::OneFingerContactContender
-//               summary = too much motion
-//           183:
-//             gesture_start:
-//               latency_event_count = 3
-//               latency_micros = 37605
-//               name = motion
-//           184:
-//             touchpad_event:
-//               driver_monotonic_nanos = 154287511367
-//               entry_latency_micros = 6251
-//               pressed_buttons = []
-//               contacts:
-//                 0:
-//                   height_raw = 3230.000000
-//                   pos_x_mm = 6.346000
-//                   pos_y_mm = 22.476000
-//                   width_raw = 3691.000000
 //           /* ... many entries omitted ... */
-//           238:
+//           81:
 //             touchpad_event:
-//               driver_monotonic_nanos = 154713640332
-//               entry_latency_micros = 3531
+//               driver_monotonic_nanos = 1904420677320
+//               entry_latency_micros = 4654
 //               pressed_buttons = []
 //               contacts:
+//                 0:
+//                   height_raw = 3876.000000
+//                   pos_x_mm = 76.855003
+//                   pos_y_mm = 32.145000
+//                   width_raw = 3691.000000
+//           82:
+//             mismatch_event:
+//               actual = 0.539064
+//               contender = click::UnpressedContender
+//               criterion = displacement_mm
+//               max_allowed = 0.500000
+//           83:
+//             mismatch_event:
+//               actual = 0.539064
+//               contender = primary_tap::FingerContactContender
+//               criterion = displacement_mm
+//               max_allowed = 0.500000
+//           84:
+//             mismatch_event:
+//               actual = 0.539064
+//               contender = secondary_tap::OneFingerContactContender
+//               criterion = displacement_mm
+//               max_allowed = 0.500000
+//           85:
+//             gesture_start:
+//               latency_event_count = 25
+//               latency_micros = 210898
+//               name = motion
+//           /* ... many entries omitted ... */
+//           323:
+//             touchpad_event:
+//               driver_monotonic_nanos = 1906294927022
+//               entry_latency_micros = 3550
+//               pressed_buttons = []
+//               contacts:
+// ```

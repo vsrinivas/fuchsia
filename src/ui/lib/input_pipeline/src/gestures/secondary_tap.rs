@@ -4,8 +4,9 @@
 
 use {
     super::gesture_arena::{
-        self, ExamineEventResult, MismatchData, MismatchDetailsUint, ProcessBufferedEventsResult,
-        RecognizedGesture, TouchpadEvent, VerifyEventResult, SECONDARY_BUTTON,
+        self, ExamineEventResult, MismatchData, MismatchDetailsFloat, MismatchDetailsUint,
+        ProcessBufferedEventsResult, RecognizedGesture, TouchpadEvent, VerifyEventResult,
+        SECONDARY_BUTTON,
     },
     crate::mouse_binding::{MouseEvent, MouseLocation, MousePhase, RelativeLocation},
     crate::utils::{euclidean_distance, Position},
@@ -133,22 +134,36 @@ impl gesture_arena::Contender for OneFingerContactContender {
         let num_contacts = event.contacts.len();
         match num_contacts {
             1 => {
-                if !position_is_in_tap_threshold(
+                let displacement_mm = euclidean_distance(
                     position_from_event(event, 0),
                     position_from_event(&self.one_finger_contact_event, 0),
-                    self.max_finger_displacement_in_mm,
-                ) {
-                    return ExamineEventResult::Mismatch(MismatchData::Basic("too much motion"));
+                );
+                if displacement_mm >= self.max_finger_displacement_in_mm {
+                    return ExamineEventResult::Mismatch(MismatchData::DetailedFloat(
+                        MismatchDetailsFloat {
+                            criterion: "displacement_mm",
+                            min: None,
+                            max: Some(self.max_finger_displacement_in_mm),
+                            actual: displacement_mm,
+                        },
+                    ));
                 }
                 ExamineEventResult::Contender(self)
             }
             2 => {
-                if !position_is_in_tap_threshold(
+                let displacement_mm = euclidean_distance(
                     position_from_event(event, 0),
                     position_from_event(&self.one_finger_contact_event, 0),
-                    self.max_finger_displacement_in_mm,
-                ) {
-                    return ExamineEventResult::Mismatch(MismatchData::Basic("too much motion"));
+                );
+                if displacement_mm >= self.max_finger_displacement_in_mm {
+                    return ExamineEventResult::Mismatch(MismatchData::DetailedFloat(
+                        MismatchDetailsFloat {
+                            criterion: "displacement_mm",
+                            min: None,
+                            max: Some(self.max_finger_displacement_in_mm),
+                            actual: displacement_mm,
+                        },
+                    ));
                 }
                 ExamineEventResult::Contender(
                     self.into_two_finger_contacts_contender(event.clone()),
@@ -230,13 +245,16 @@ impl gesture_arena::Contender for TwoFingerContactsContender {
                     .find(|contact| contact.id == event.contacts[0].id)
                 {
                     Some(contact) => {
-                        if !(position_is_in_tap_threshold(
-                            position_from_event(event, 0),
-                            contact.position,
-                            self.max_finger_displacement_in_mm,
-                        )) {
-                            return ExamineEventResult::Mismatch(MismatchData::Basic(
-                                "too much motion for remaining contact",
+                        let displacement_mm =
+                            euclidean_distance(position_from_event(event, 0), contact.position);
+                        if displacement_mm >= self.max_finger_displacement_in_mm {
+                            return ExamineEventResult::Mismatch(MismatchData::DetailedFloat(
+                                MismatchDetailsFloat {
+                                    criterion: "displacement_mm",
+                                    min: None,
+                                    max: Some(self.max_finger_displacement_in_mm),
+                                    actual: displacement_mm,
+                                },
                             ));
                         }
                     }
@@ -251,24 +269,34 @@ impl gesture_arena::Contender for TwoFingerContactsContender {
             }
             2 => {
                 // Acceptable displacement on the first touch contact.
-                if !(position_is_in_tap_threshold(
+                let displacement_mm = euclidean_distance(
                     position_from_event(event, 0),
                     position_from_event(&self.two_finger_contacts_event, 0),
-                    self.max_finger_displacement_in_mm,
-                )) {
-                    return ExamineEventResult::Mismatch(MismatchData::Basic(
-                        "too much motion for first contact",
+                );
+                if displacement_mm >= self.max_finger_displacement_in_mm {
+                    return ExamineEventResult::Mismatch(MismatchData::DetailedFloat(
+                        MismatchDetailsFloat {
+                            criterion: "displacement_mm",
+                            min: None,
+                            max: Some(self.max_finger_displacement_in_mm),
+                            actual: displacement_mm,
+                        },
                     ));
                 }
 
                 // Acceptable displacement on the second touch contact.
-                if !(position_is_in_tap_threshold(
+                let displacement_mm = euclidean_distance(
                     position_from_event(event, 1),
                     position_from_event(&self.two_finger_contacts_event, 1),
-                    self.max_finger_displacement_in_mm,
-                )) {
-                    return ExamineEventResult::Mismatch(MismatchData::Basic(
-                        "too much motion for second contact",
+                );
+                if displacement_mm >= self.max_finger_displacement_in_mm {
+                    return ExamineEventResult::Mismatch(MismatchData::DetailedFloat(
+                        MismatchDetailsFloat {
+                            criterion: "displacement_mm",
+                            min: None,
+                            max: Some(self.max_finger_displacement_in_mm),
+                            actual: displacement_mm,
+                        },
                     ));
                 }
 
@@ -341,13 +369,16 @@ impl gesture_arena::Contender for OneFingerRaisedContender {
                     .find(|contact| contact.id == event.contacts[0].id)
                 {
                     Some(contact) => {
-                        if !(position_is_in_tap_threshold(
-                            position_from_event(event, 0),
-                            contact.position,
-                            self.max_finger_displacement_in_mm,
-                        )) {
-                            return ExamineEventResult::Mismatch(MismatchData::Basic(
-                                "too much motion for remaining contact",
+                        let displacement_mm =
+                            euclidean_distance(position_from_event(event, 0), contact.position);
+                        if displacement_mm >= self.max_finger_displacement_in_mm {
+                            return ExamineEventResult::Mismatch(MismatchData::DetailedFloat(
+                                MismatchDetailsFloat {
+                                    criterion: "displacement_mm",
+                                    min: None,
+                                    max: Some(self.max_finger_displacement_in_mm),
+                                    actual: displacement_mm,
+                                },
                             ));
                         }
                     }
@@ -461,13 +492,6 @@ impl gesture_arena::MatchedContender for MatchedContender {
 /// given index from a TouchpadEvent.
 fn position_from_event(event: &TouchpadEvent, index: usize) -> Position {
     event.contacts[index].position
-}
-
-/// Returns true iff the Euclidean distance for the displacement indicated
-/// between (pos1.x, pos1.y) and (pos2.x, pos2.y) is less than the tap
-/// threshold.
-fn position_is_in_tap_threshold(pos1: Position, pos2: Position, threshold: f32) -> bool {
-    euclidean_distance(pos1, pos2) < threshold
 }
 
 /// Returns true iff the timestamp for new_event has not exceeded
