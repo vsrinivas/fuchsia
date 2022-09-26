@@ -1,0 +1,26 @@
+{
+    include: [
+        // https://fxbug.dev/85839: replace with gunit runner when available.
+        "sys/testing/elf_test_runner.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "test/netstack2-with-fast-udp-socket-tests",
+    },
+    children: [
+        {
+            name: "netstack_debug",
+            url: "#meta/netstack-with-fast-udp-debug.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.posix.socket.packet.Provider",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.posix.socket.raw.Provider",
+            ],
+            from: "#netstack_debug",
+        },
+    ],
+}

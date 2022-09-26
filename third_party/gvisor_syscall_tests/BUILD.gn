@@ -1,0 +1,291 @@
+import("//build/components.gni")
+import("//build/test.gni")
+
+source_set("expectations") {
+  sources = [
+    "expectations.cc",
+    "expectations.h",
+  ]
+  deps = [
+    "//third_party/abseil-cpp/absl/container:flat_hash_set",
+    "//third_party/abseil-cpp/absl/status:statusor",
+    "//third_party/abseil-cpp/absl/strings",
+    "//third_party/abseil-cpp/absl/strings:str_format",
+    "//third_party/abseil-cpp/absl/types:variant",
+    "//third_party/googletest:gtest",
+    "//third_party/re2",
+  ]
+  public_deps = [
+    ":gvisor_test_util",
+    "//third_party/abseil-cpp/absl/container:flat_hash_map",
+  ]
+  testonly = true
+}
+
+config("gvisor_test_util_config") {
+  include_dirs = [ "gvisor" ]
+}
+
+static_library("gvisor_test_util") {
+  testonly = true
+  public = [
+    "gvisor/test/util/capability_util.h",
+    "gvisor/test/util/cleanup.h",
+    "gvisor/test/util/file_descriptor.h",
+    "gvisor/test/util/fs_util.h",
+    "gvisor/test/util/logging.h",
+    "gvisor/test/util/posix_error.h",
+    "gvisor/test/util/save_util.h",
+    "gvisor/test/util/socket_util.h",
+    "gvisor/test/util/temp_path.h",
+    "gvisor/test/util/test_util.h",
+    "gvisor/test/util/thread_util.h",
+    "gvisor/test/util/timer_util.h",
+  ]
+  sources = [
+    "gvisor/test/util/capability_util.h",
+    "gvisor/test/util/cleanup.h",
+    "gvisor/test/util/file_descriptor.h",
+    "gvisor/test/util/fs_util.cc",
+    "gvisor/test/util/fs_util.h",
+    "gvisor/test/util/fuchsia_capability_util.cc",
+    "gvisor/test/util/logging.cc",
+    "gvisor/test/util/logging.h",
+    "gvisor/test/util/posix_error.cc",
+    "gvisor/test/util/posix_error.h",
+    "gvisor/test/util/save_util.cc",
+    "gvisor/test/util/save_util.h",
+    "gvisor/test/util/save_util_other.cc",
+    "gvisor/test/util/socket_util.cc",
+    "gvisor/test/util/socket_util.h",
+    "gvisor/test/util/socket_util_impl.cc",
+    "gvisor/test/util/temp_path.cc",
+    "gvisor/test/util/temp_path.h",
+    "gvisor/test/util/test_util.cc",
+    "gvisor/test/util/test_util.h",
+    "gvisor/test/util/thread_util.h",
+    "gvisor/test/util/timer_util.cc",
+    "gvisor/test/util/timer_util.h",
+  ]
+  deps = [
+    "//third_party/abseil-cpp/absl/base:core_headers",
+    "//third_party/abseil-cpp/absl/flags:flag",
+    "//third_party/abseil-cpp/absl/flags:parse",
+    "//third_party/abseil-cpp/absl/memory",
+    "//third_party/abseil-cpp/absl/strings",
+    "//third_party/abseil-cpp/absl/strings:str_format",
+    "//third_party/abseil-cpp/absl/time",
+    "//third_party/abseil-cpp/absl/types:optional",
+    "//third_party/abseil-cpp/absl/types:variant",
+  ]
+  public_deps = [
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+  public_configs = [ ":gvisor_test_util_config" ]
+}
+
+source_set("netstack2_expectations") {
+  sources = [ "netstack2_expectations.cc" ]
+  deps = [
+    ":expectations",
+    ":gvisor_test_util",
+  ]
+  testonly = true
+}
+
+source_set("netstack2_with_fast_udp_expectations") {
+  sources = [ "netstack2_with_fast_udp_expectations.cc" ]
+  deps = [
+    ":expectations",
+    ":netstack2_expectations",
+  ]
+  testonly = true
+}
+
+source_set("netstack2_with_sync_udp_expectations") {
+  sources = [ "netstack2_with_sync_udp_expectations.cc" ]
+  deps = [
+    ":expectations",
+    ":netstack2_expectations",
+  ]
+  testonly = true
+}
+
+source_set("netstack3_expectations") {
+  sources = [ "netstack3_expectations.cc" ]
+  deps = [
+    ":expectations",
+    ":gvisor_test_util",
+    "//third_party/abseil-cpp/absl/strings",
+  ]
+  testonly = true
+}
+
+source_set("gvisor_syscall_tests") {
+  sources = [
+    "gvisor/test/syscalls/linux/ip_socket_test_util.cc",
+    "gvisor/test/syscalls/linux/ip_socket_test_util.h",
+    "gvisor/test/syscalls/linux/packet_socket.cc",
+    "gvisor/test/syscalls/linux/packet_socket_dgram.cc",
+    "gvisor/test/syscalls/linux/packet_socket_raw.cc",
+    "gvisor/test/syscalls/linux/raw_socket.cc",
+    "gvisor/test/syscalls/linux/raw_socket_hdrincl.cc",
+    "gvisor/test/syscalls/linux/raw_socket_icmp.cc",
+    "gvisor/test/syscalls/linux/socket.cc",
+    "gvisor/test/syscalls/linux/socket_blocking.cc",
+    "gvisor/test/syscalls/linux/socket_blocking.h",
+    "gvisor/test/syscalls/linux/socket_generic.h",
+    "gvisor/test/syscalls/linux/socket_generic_test_cases.cc",
+    "gvisor/test/syscalls/linux/socket_inet_loopback.cc",
+    "gvisor/test/syscalls/linux/socket_inet_loopback_isolated.cc",
+    "gvisor/test/syscalls/linux/socket_ip_loopback_blocking.cc",
+    "gvisor/test/syscalls/linux/socket_ip_tcp_generic.cc",
+    "gvisor/test/syscalls/linux/socket_ip_tcp_generic.h",
+    "gvisor/test/syscalls/linux/socket_ip_tcp_generic_loopback.cc",
+    "gvisor/test/syscalls/linux/socket_ip_tcp_loopback.cc",
+    "gvisor/test/syscalls/linux/socket_ip_tcp_loopback_blocking.cc",
+    "gvisor/test/syscalls/linux/socket_ip_tcp_loopback_nonblock.cc",
+    "gvisor/test/syscalls/linux/socket_ip_tcp_udp_generic.cc",
+    "gvisor/test/syscalls/linux/socket_ip_udp_generic.cc",
+    "gvisor/test/syscalls/linux/socket_ip_udp_generic.h",
+    "gvisor/test/syscalls/linux/socket_ip_udp_loopback.cc",
+    "gvisor/test/syscalls/linux/socket_ip_udp_loopback_blocking.cc",
+    "gvisor/test/syscalls/linux/socket_ip_udp_loopback_nonblock.cc",
+    "gvisor/test/syscalls/linux/socket_ip_unbound.cc",
+    "gvisor/test/syscalls/linux/socket_ipv4_datagram_based_socket_unbound.cc",
+    "gvisor/test/syscalls/linux/socket_ipv4_datagram_based_socket_unbound.h",
+    "gvisor/test/syscalls/linux/socket_ipv4_datagram_based_socket_unbound_loopback.cc",
+    "gvisor/test/syscalls/linux/socket_ipv4_udp_unbound.cc",
+    "gvisor/test/syscalls/linux/socket_ipv4_udp_unbound.h",
+    "gvisor/test/syscalls/linux/socket_ipv4_udp_unbound_external_networking.cc",
+    "gvisor/test/syscalls/linux/socket_ipv4_udp_unbound_external_networking_test.cc",
+    "gvisor/test/syscalls/linux/socket_ipv4_udp_unbound_loopback.cc",
+    "gvisor/test/syscalls/linux/socket_ipv4_udp_unbound_loopback_nogotsan.cc",
+    "gvisor/test/syscalls/linux/socket_ipv6_udp_unbound.cc",
+    "gvisor/test/syscalls/linux/socket_ipv6_udp_unbound.h",
+    "gvisor/test/syscalls/linux/socket_ipv6_udp_unbound_external_networking.cc",
+    "gvisor/test/syscalls/linux/socket_ipv6_udp_unbound_external_networking_test.cc",
+    "gvisor/test/syscalls/linux/socket_ipv6_udp_unbound_loopback.cc",
+    "gvisor/test/syscalls/linux/socket_non_blocking.cc",
+    "gvisor/test/syscalls/linux/socket_non_stream.cc",
+    "gvisor/test/syscalls/linux/socket_non_stream_blocking.cc",
+    "gvisor/test/syscalls/linux/socket_stream_blocking.cc",
+    "gvisor/test/syscalls/linux/tcp_socket.cc",
+    "gvisor/test/syscalls/linux/udp_bind.cc",
+    "gvisor/test/syscalls/linux/udp_socket.cc",
+    "gvisor/test/syscalls/linux/unix_domain_socket_test_util.cc",
+    "gvisor/test/syscalls/linux/unix_domain_socket_test_util.h",
+  ]
+  deps = [
+    ":gvisor_test_util",
+    "//third_party/abseil-cpp/absl/base:core_headers",
+    "//third_party/abseil-cpp/absl/base:endian",
+    "//third_party/abseil-cpp/absl/container:flat_hash_map",
+    "//third_party/abseil-cpp/absl/container:flat_hash_set",
+    "//third_party/abseil-cpp/absl/memory",
+    "//third_party/abseil-cpp/absl/strings",
+    "//third_party/abseil-cpp/absl/strings:str_format",
+    "//third_party/abseil-cpp/absl/time",
+    "//third_party/abseil-cpp/absl/types:optional",
+    "//third_party/abseil-cpp/absl/types:variant",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+
+  testonly = true
+}
+
+source_set("gtest_main") {
+  sources = [ "gtest_main.cc" ]
+  include_dirs = [ "gvisor" ]
+  deps = [
+    ":expectations",
+    ":gvisor_test_util",
+    "//third_party/abseil-cpp/absl/container:flat_hash_set",
+    "//third_party/abseil-cpp/absl/flags:flag",
+    "//third_party/abseil-cpp/absl/flags:parse",
+    "//third_party/abseil-cpp/absl/strings",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+  testonly = true
+}
+
+test("netstack2-with-fast-udp-socket-tests") {
+  deps = [
+    ":gtest_main",
+    ":gvisor_syscall_tests",
+    ":netstack2_with_fast_udp_expectations",
+  ]
+
+  # In-tree executables automatically get a logging backend dep unless we opt
+  # out.
+  disable_syslog_backend = true
+}
+
+test("netstack2-with-sync-udp-socket-tests") {
+  deps = [
+    ":gtest_main",
+    ":gvisor_syscall_tests",
+    ":netstack2_with_sync_udp_expectations",
+  ]
+
+  # In-tree executables automatically get a logging backend dep unless we opt
+  # out.
+  disable_syslog_backend = true
+}
+
+test("netstack3-socket-tests") {
+  deps = [
+    ":gtest_main",
+    ":gvisor_syscall_tests",
+    ":netstack3_expectations",
+  ]
+
+  # In-tree executables automatically get a logging backend dep unless we opt
+  # out.
+  disable_syslog_backend = true
+}
+
+fuchsia_unittest_package("netstack2-with-fast-udp-syscall-tests") {
+  package_name = "netstack2-with-fast-udp-syscall-tests"
+  manifest = "meta/netstack2-with-fast-udp-syscalls-tests.cml"
+  deps = [
+    ":netstack2-with-fast-udp-socket-tests",
+
+    # To include netstack-debug.cm for fuchsia.posix.socket.Provider.
+    "//src/connectivity/network/netstack:component-with-fast-udp-debug",
+  ]
+}
+
+fuchsia_unittest_package("netstack2-with-sync-udp-syscall-tests") {
+  package_name = "netstack2-with-sync-udp-syscall-tests"
+  manifest = "meta/netstack2-syscall-tests.cml"
+  deps = [
+    ":netstack2-with-sync-udp-socket-tests",
+
+    # To include netstack-debug.cm for fuchsia.posix.socket.Provider.
+    "//src/connectivity/network/netstack:component-debug",
+  ]
+}
+
+fuchsia_unittest_package("netstack3-syscall-tests") {
+  package_name = "netstack3-syscall-tests"
+  manifest = "meta/netstack3-syscall-tests.cml"
+  deps = [
+    ":netstack3-socket-tests",
+
+    # To include netstack-debug.cm for fuchsia.posix.socket.Provider.
+    "//src/connectivity/network/netstack3:component",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":netstack2-with-fast-udp-syscall-tests",
+    ":netstack2-with-sync-udp-syscall-tests",
+    ":netstack3-syscall-tests",
+  ]
+}
