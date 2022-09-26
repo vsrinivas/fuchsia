@@ -276,7 +276,9 @@ pub fn intersect_rates(
     ap_rates: ApRates,
     client_rates: ClientRates,
 ) -> Result<Vec<SupportedRate>, IntersectRatesError> {
-    let mut rates = ap_rates.0.to_vec();
+    // Omit BSS membership selectors, which should not be interpreted as BSS rates.
+    let mut rates: Vec<_> =
+        ap_rates.0.iter().copied().filter(|rate| !rate.is_bss_membership_selector()).collect();
     let client_rates = client_rates.0.iter().map(|r| r.rate()).collect::<HashSet<_>>();
     // The client MUST support ALL basic rates specified by the AP.
     if rates.iter().any(|ra| ra.basic() && !client_rates.contains(&ra.rate())) {

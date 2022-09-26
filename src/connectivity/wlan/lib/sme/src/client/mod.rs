@@ -962,15 +962,19 @@ mod tests {
 
     #[test]
     fn verify_rates_compatibility() {
-        // Compatible:
+        // Compatible rates.
         let cfg = ClientConfig::default();
         let device_info = test_utils::fake_device_info([1u8; 6]);
         assert!(
             cfg.has_compatible_channel_and_data_rates(&fake_bss_description!(Open), &device_info)
         );
 
-        // Not compatible:
-        let bss = fake_bss_description!(Open, rates: vec![140, 255]);
+        // Compatible rates with HT BSS membership selector (`0xFF`).
+        let bss = fake_bss_description!(Open, rates: vec![0x8C, 0xFF]);
+        assert!(cfg.has_compatible_channel_and_data_rates(&bss, &device_info));
+
+        // Incompatible rates.
+        let bss = fake_bss_description!(Open, rates: vec![0x81]);
         assert!(!cfg.has_compatible_channel_and_data_rates(&bss, &device_info));
     }
 

@@ -31,6 +31,23 @@ macro_rules! pub_const {
 #[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Unaligned, Clone, Copy)]
 pub struct SupportedRate(pub u8);
 
+impl SupportedRate {
+    /// Returns `true` if the rate is a supported BSS membership selector.
+    ///
+    /// Membership selector rates describe arbitrary features of a BSS in a backwards compatible
+    /// way. These selectors should **not** be interpreted as rates when the corresponding features
+    /// are supported, as they are designed to appear as rate incompatibility to WLAN
+    /// implementations that are unaware of such features.
+    pub fn is_bss_membership_selector(&self) -> bool {
+        match self.0 {
+            // These rates are used for HT and VHT BSS membership selectors. See IEEE Std
+            // 802.11-2016 9.4.2.2 Table 9-78.
+            0xFF | 0xFE => true,
+            _ => false,
+        }
+    }
+}
+
 // IEEE Std 802.11-2016, 9.4.2.4
 #[derive(FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
