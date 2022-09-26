@@ -36,7 +36,7 @@ impl Benchmark for ReadSequentialCold {
     async fn run(&self, fs: &mut dyn Filesystem) -> Vec<OperationDuration> {
         trace::duration!(
             "benchmark",
-            "read_sequential_cold",
+            "ReadSequentialCold",
             "op_size" => self.op_size as u64,
             "op_count" => self.op_count as u64
         );
@@ -54,7 +54,7 @@ impl Benchmark for ReadSequentialCold {
     }
 
     fn name(&self) -> String {
-        format!("read_sequential_cold_{}", self.op_size)
+        format!("ReadSequentialCold/{}", self.op_size)
     }
 }
 
@@ -77,7 +77,7 @@ impl Benchmark for ReadSequentialWarm {
     async fn run(&self, fs: &mut dyn Filesystem) -> Vec<OperationDuration> {
         trace::duration!(
             "benchmark",
-            "read_sequential_warm",
+            "ReadSequentialWarm",
             "op_size" => self.op_size as u64,
             "op_count" => self.op_count as u64
         );
@@ -94,7 +94,7 @@ impl Benchmark for ReadSequentialWarm {
     }
 
     fn name(&self) -> String {
-        format!("read_sequential_warm_{}", self.op_size)
+        format!("ReadSequentialWarm/{}", self.op_size)
     }
 }
 
@@ -117,7 +117,7 @@ impl Benchmark for ReadRandomCold {
     async fn run(&self, fs: &mut dyn Filesystem) -> Vec<OperationDuration> {
         trace::duration!(
             "benchmark",
-            "read_random_cold",
+            "ReadRandomCold",
             "op_size" => self.op_size as u64,
             "op_count" => self.op_count as u64
         );
@@ -136,7 +136,7 @@ impl Benchmark for ReadRandomCold {
     }
 
     fn name(&self) -> String {
-        format!("read_random_cold_{}", self.op_size)
+        format!("ReadRandomCold/{}", self.op_size)
     }
 }
 
@@ -159,7 +159,7 @@ impl Benchmark for ReadRandomWarm {
     async fn run(&self, fs: &mut dyn Filesystem) -> Vec<OperationDuration> {
         trace::duration!(
             "benchmark",
-            "read_random_warm",
+            "ReadRandomWarm",
             "op_size" => self.op_size as u64,
             "op_count" => self.op_count as u64
         );
@@ -176,7 +176,7 @@ impl Benchmark for ReadRandomWarm {
     }
 
     fn name(&self) -> String {
-        format!("read_random_warm_{}", self.op_size)
+        format!("ReadRandomWarm/{}", self.op_size)
     }
 }
 
@@ -198,7 +198,7 @@ impl Benchmark for WriteSequentialCold {
     async fn run(&self, fs: &mut dyn Filesystem) -> Vec<OperationDuration> {
         trace::duration!(
             "benchmark",
-            "write_sequential_cold",
+            "WriteSequentialCold",
             "op_size" => self.op_size as u64,
             "op_count" => self.op_count as u64
         );
@@ -208,7 +208,7 @@ impl Benchmark for WriteSequentialCold {
     }
 
     fn name(&self) -> String {
-        format!("write_sequential_cold_{}", self.op_size)
+        format!("WriteSequentialCold/{}", self.op_size)
     }
 }
 
@@ -231,7 +231,7 @@ impl Benchmark for WriteSequentialWarm {
     async fn run(&self, fs: &mut dyn Filesystem) -> Vec<OperationDuration> {
         trace::duration!(
             "benchmark",
-            "write_sequential_warm",
+            "WriteSequentialWarm",
             "op_size" => self.op_size as u64,
             "op_count" => self.op_count as u64
         );
@@ -247,7 +247,7 @@ impl Benchmark for WriteSequentialWarm {
     }
 
     fn name(&self) -> String {
-        format!("write_sequential_warm_{}", self.op_size)
+        format!("WriteSequentialWarm/{}", self.op_size)
     }
 }
 
@@ -269,7 +269,7 @@ impl Benchmark for WriteRandomCold {
     async fn run(&self, fs: &mut dyn Filesystem) -> Vec<OperationDuration> {
         trace::duration!(
             "benchmark",
-            "write_random_cold",
+            "WriteRandomCold",
             "op_size" => self.op_size as u64,
             "op_count" => self.op_count as u64
         );
@@ -280,7 +280,7 @@ impl Benchmark for WriteRandomCold {
     }
 
     fn name(&self) -> String {
-        format!("write_random_cold_{}", self.op_size)
+        format!("WriteRandomCold/{}", self.op_size)
     }
 }
 
@@ -303,7 +303,7 @@ impl Benchmark for WriteRandomWarm {
     async fn run(&self, fs: &mut dyn Filesystem) -> Vec<OperationDuration> {
         trace::duration!(
             "benchmark",
-            "write_random_warm",
+            "WriteRandomWarm",
             "op_size" => self.op_size as u64,
             "op_count" => self.op_count as u64
         );
@@ -319,7 +319,7 @@ impl Benchmark for WriteRandomWarm {
     }
 
     fn name(&self) -> String {
-        format!("write_random_warm_{}", self.op_size)
+        format!("WriteRandomWarm/{}", self.op_size)
     }
 }
 

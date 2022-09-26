@@ -5,6 +5,8 @@
 // TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
 // @dart=2.9
 
+import 'dart:io' show Platform;
+
 import 'package:sl4f/trace_processing.dart';
 import 'package:test/test.dart';
 
@@ -130,8 +132,39 @@ void _addOduTest(String filesystem, List<String> extraLauncherArgs) {
 
 void main() {
   enableLoggingOutput();
+
+  // TODO(fxbug.dev/94248) Remove the odu based benchmarks. They have been
+  // superseded by the storage-benchmarks component.
   _addOduTest('memfs', []);
   _addOduTest('minfs', ['--zxcrypt']);
   _addOduTest('fxfs', ['--partition-size=${64 * 1024 * 1024}']);
   _addOduTest('f2fs', ['--partition-size=${64 * 1024 * 1024}', '--zxcrypt']);
+
+  test('storage-benchmarks', () async {
+    final helper = await PerfTestHelper.make();
+    final resultsFileFull = await helper.runTestComponentReturningResultsFile(
+        packageName: 'storage-benchmarks',
+        componentName: 'storage-benchmarks.cm',
+        commandArgs:
+            '--output-fuchsiaperf ${PerfTestHelper.componentOutputPath}',
+        resultsFileSuffix: '');
+
+    // Using the fuchsiaperf_full file like this avoids the processing done by
+    // summarize.dart. This is for two reasons:
+    // 1) To keep the initial iterations' times instead of dropping them
+    //    (see src/storage/benchmarks/README.md).
+    // 2) To allow standard deviations to be reported to Chromeperf so that
+    //    Chromeperf displays them in its graphs.
+    const fuchsiaPerfFullSuffix = 'fuchsiaperf_full.json';
+    expect(resultsFileFull.path, endsWith(fuchsiaPerfFullSuffix));
+    final resultsFile = await resultsFileFull.rename(resultsFileFull.path
+        .replaceRange(
+            resultsFileFull.path.length - fuchsiaPerfFullSuffix.length,
+            null,
+            'fuchsiaperf.json'));
+
+    await helper.performance.convertResults(
+        _catapultConverterPath, resultsFile, Platform.environment,
+        expectedMetricNamesFile: 'fuchsia.storage.txt');
+  }, timeout: Timeout.none);
 }

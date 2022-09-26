@@ -262,12 +262,12 @@ impl BenchmarkSetResults {
     /// Writes the benchmark results in the fuchsiaperf.json format to `writer`.
     pub fn write_fuchsia_perf_json<F: Write>(&self, writer: F) {
         const NANOSECONDS: &str = "nanoseconds";
-        const TEST_SUITE: &str = "fuchsia.storage.benchmarks";
+        const TEST_SUITE: &str = "fuchsia.storage";
         let results: Vec<FuchsiaPerfBenchmarkResult> = self
             .results
             .iter()
             .map(|result| FuchsiaPerfBenchmarkResult {
-                label: format!("{}_{}", result.benchmark_name, result.filesystem_name),
+                label: format!("{}/{}", result.benchmark_name, result.filesystem_name),
                 test_suite: TEST_SUITE.to_owned(),
                 unit: NANOSECONDS.to_owned(),
                 values: result.values.iter().map(|d| d.0).collect(),

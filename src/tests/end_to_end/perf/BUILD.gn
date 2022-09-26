@@ -217,6 +217,7 @@ if (is_host) {
     "fuchsia.storage.benchmarks.fxfs.txt",
     "fuchsia.storage.benchmarks.memfs.txt",
     "fuchsia.storage.benchmarks.minfs.txt",
+    "fuchsia.storage.txt",
   ]
 
   host_test_data("runtime_deps") {
@@ -272,6 +273,7 @@ group("package_deps") {
     "//src/ui/examples/simplest_app",
 
     # These are used by storage_benchmarks_test
+    "//src/storage/benchmarks",
     "//src/storage/bin/start-storage-benchmark:start-storage-benchmark",
   ]
 
