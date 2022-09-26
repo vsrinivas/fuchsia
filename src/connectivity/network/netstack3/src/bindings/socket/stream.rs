@@ -497,10 +497,7 @@ fn spawn_send_task<I: IpExt, C>(
                 assert!(observed.contains(zx::Signals::SOCKET_READABLE));
                 let mut guard = ctx.lock().await;
                 let Ctx { sync_ctx, non_sync_ctx } = guard.deref_mut();
-                netstack3_core::transport::tcp::socket::do_send::<I, _>(sync_ctx, non_sync_ctx, id)
-                    .unwrap_or_else(|err| {
-                        log::error!("failed to send on connection {:?}: {:?}", id, err)
-                    });
+                netstack3_core::transport::tcp::socket::do_send::<I, _>(sync_ctx, non_sync_ctx, id);
             })
             .await
     })

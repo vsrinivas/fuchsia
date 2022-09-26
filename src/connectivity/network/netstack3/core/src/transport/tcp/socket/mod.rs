@@ -462,11 +462,7 @@ pub(crate) trait TcpSocketHandler<I: Ip, C: TcpNonSyncContext> {
     fn get_bound_info(&self, id: BoundId) -> BoundInfo<I::Addr>;
     fn get_listener_info(&self, id: ListenerId) -> BoundInfo<I::Addr>;
     fn get_connection_info(&self, id: ConnectionId) -> ConnectionInfo<I::Addr>;
-    fn do_send(
-        &mut self,
-        ctx: &mut C,
-        conn_id: ConnectionId,
-    ) -> Result<(), crate::ip::socket::IpSockSendError>;
+    fn do_send(&mut self, ctx: &mut C, conn_id: ConnectionId);
 }
 
 impl<
@@ -632,11 +628,7 @@ impl<
         .into()
     }
 
-    fn do_send(
-        &mut self,
-        ctx: &mut C,
-        conn_id: ConnectionId,
-    ) -> Result<(), crate::ip::socket::IpSockSendError> {
+    fn do_send(&mut self, ctx: &mut C, conn_id: ConnectionId) {
         let send_more = self.with_tcp_sockets_mut(|sockets| {
             let (conn, (), addr) = sockets.socketmap.conns_mut().get_by_id_mut(&conn_id)?;
             conn.state
@@ -645,13 +637,26 @@ impl<
                 .map(|(ip_sock, ser)| (ip_sock, ser, conn.state.poll_send_at()))
         });
         if let Some((ip_sock, ser, poll_send_at)) = send_more {
-            self.send_ip_packet(ctx, &ip_sock, ser, None).map_err(|(body, err)| err)?;
+            self.send_ip_packet(ctx, &ip_sock, ser, None).unwrap_or_else(|(body, err)| {
+                // Currently there are a few call sites to `do_send` and they
+                // don't really care about the error, with Rust's strict
+                // `unused_result` lint, not returning an error that no one
+                // would care makes the code less cumbersome to write. So We do
+                // not return the error to caller but just log it instead. If
+                // we find a case where the caller is interested in the error,
+                // then we can always come back and change this.
+                log::debug!(
+                    "failed to send an ip packet on {:?}, body: {:?}, err: {:?}",
+                    conn_id,
+                    body,
+                    err
+                )
+            });
             if let Some(instant) = poll_send_at {
                 let _: Option<_> =
                     ctx.schedule_timer_instant(instant, TimerId(conn_id, I::VERSION));
             }
         }
-        Ok(())
     }
 }
 
@@ -981,11 +986,7 @@ pub fn get_connection_v6_info<C: NonSyncContext>(
 /// - A retransmission timer fires.
 /// - An ack received from peer so that our send window is enlarged.
 /// - The user puts data into the buffer and we are notified.
-pub fn do_send<I, C>(
-    sync_ctx: &mut SyncCtx<C>,
-    ctx: &mut C,
-    conn_id: ConnectionId,
-) -> Result<(), crate::ip::socket::IpSockSendError>
+pub fn do_send<I, C>(sync_ctx: &mut SyncCtx<C>, ctx: &mut C, conn_id: ConnectionId)
 where
     I: IpExt,
     C: NonSyncContext,
@@ -1004,13 +1005,9 @@ pub(crate) fn handle_timer<SC, C>(
         + TcpSyncContext<Ipv6, C>
         + BufferTransportIpContext<Ipv6, C, Buf<Vec<u8>>>,
 {
-    let result = match version {
+    match version {
         IpVersion::V4 => TcpSocketHandler::<Ipv4, _>::do_send(sync_ctx, ctx, conn_id),
         IpVersion::V6 => TcpSocketHandler::<Ipv6, _>::do_send(sync_ctx, ctx, conn_id),
-    };
-    match result {
-        Ok(()) => {}
-        Err(err) => log::error!("failed to send ip packet: {:?}", err),
     }
 }
 
@@ -1388,7 +1385,6 @@ mod tests {
         assert_eq!(I::VERSION, version);
         let DummyCtx { sync_ctx, non_sync_ctx } = ctx;
         TcpSocketHandler::<I, _>::do_send(sync_ctx, non_sync_ctx, conn_id)
-            .expect("failed to send ip packet");
     }
 
     /// The following test sets up two connected testing context - one as the
@@ -1520,10 +1516,7 @@ mod tests {
 
         for (c, id) in [(LOCAL, client), (REMOTE, accepted)] {
             net.with_context(c, |TcpCtx { sync_ctx, non_sync_ctx }| {
-                assert_matches!(
-                    TcpSocketHandler::<I, _>::do_send(sync_ctx, non_sync_ctx, id),
-                    Ok(())
-                );
+                TcpSocketHandler::<I, _>::do_send(sync_ctx, non_sync_ctx, id)
             })
         }
         net.run_until_idle(&mut maybe_drop_frame, handle_timer);
