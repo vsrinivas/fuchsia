@@ -84,91 +84,51 @@ group("terminal") {
   testonly = true
 }
 
-# Host-only tests.
-workstation_host_tests = [
-  "//src/experiences/tests/e2e:test($host_toolchain)",
-  "//src/experiences/tests/performance:test($host_toolchain)",
-]
-
-# Host-only tests that only pass in DFv1 and not DFv2.
-# TODO (fxbug.dev/105182): Remove once it is empty.
-workstation_host_tests_dfv1 = [
-  # TODO(fxbug.dev/105182): Move this test to `workstation_tests` when it is
-  # passing with DFv2 enabled.
-  "//src/experiences/tests/chrome:test($host_toolchain)",
-]
-
 group("workstation_host_tests") {
   testonly = true
-  deps = workstation_host_tests
-
-  # TODO(fxbug.dev/105182): Remove when `workstation_host_tests_dfv1` is empty.
-  deps += workstation_host_tests_dfv1
+  deps = [
+    "//src/experiences/tests/chrome:test($host_toolchain)",
+    "//src/experiences/tests/e2e:test($host_toolchain)",
+    "//src/experiences/tests/performance:test($host_toolchain)",
+  ]
 }
-
-# TODO(fxbug.dev/105182): Remove when `workstation_host_tests_dfv1` is empty and
-# all builder bots with DFv2 include `bundles/buildbot:workstation_host` instead
-# of `bundles/buildbot:workstation_host_dfv2` into their host package set.
-group("workstation_host_tests_dfv2") {
-  testonly = true
-  deps = workstation_host_tests
-}
-
-workstation_tests = [
-  # Only for products in which Flutter is supported.
-  "//src/tests/intl/timezone:tests-for-flutter",
-
-  # CFv2 test framework.
-  "//src/sys/run_test_suite",
-
-  # Used for Chromium tests
-  "//src/testing/fidl/intl_property_manager",
-
-  # E2E tests w/ default toolchain that do not produce Fuchsia packages, only host bins.
-  "//src/tests/end_to_end/sl4f:test",
-  "//src/tests/end_to_end/time_sync:test",
-
-  # Other e2e dep bundles
-  "//src/experiences/tests/e2e:end_to_end_deps",
-  "//src/experiences/tests/performance:performance_deps",
-  "//src/tests/end_to_end/bundles:end_to_end_deps",
-
-  # Integration tests
-  "//src/ui/tests:workstation_tests",
-
-  ### Host-only deps below here ###
-  "//src/experiences/tests/e2e:test($host_toolchain)",
-  "//src/experiences/tests/performance:test($host_toolchain)",
-
-  # TODO(fxbug.dev/102651): Remove these tests when Subpackages is made
-  # generally available. Until then, subpackage tests will only run in CQ if
-  # added to the workstation_eng packages, here:
-  "//examples/components/routing/with_subpackages:tests",
-  "//examples/components/subpackages:tests",
-]
 
 # TODO(https://fxbug.dev/94919) split this into target/host groups and move to //products
 group("workstation") {
   testonly = true
-  deps = workstation_tests
+  deps = [
+    # Only for products in which Flutter is supported.
+    "//src/tests/intl/timezone:tests-for-flutter",
+
+    # CFv2 test framework.
+    "//src/sys/run_test_suite",
+
+    # Used for Chromium tests
+    "//src/testing/fidl/intl_property_manager",
+
+    # E2E tests w/ default toolchain that do not produce Fuchsia packages, only host bins.
+    "//src/tests/end_to_end/sl4f:test",
+    "//src/tests/end_to_end/time_sync:test",
+
+    # Other e2e dep bundles
+    "//src/experiences/tests/e2e:end_to_end_deps",
+    "//src/experiences/tests/performance:performance_deps",
+    "//src/tests/end_to_end/bundles:end_to_end_deps",
+
+    # Integration tests
+    "//src/ui/tests:workstation_tests",
+
+    # TODO(fxbug.dev/102651): Remove these tests when Subpackages is made
+    # generally available. Until then, subpackage tests will only run in CQ if
+    # added to the workstation_eng packages, here:
+    "//examples/components/routing/with_subpackages:tests",
+    "//examples/components/subpackages:tests",
+  ]
 
   # Remove when all builder bots that use the workstation_eng product explicitly
   # include workstation_host into their host labels within their fint
   # parameters.
   deps += [ ":workstation_host_tests" ]
-}
-
-# TODO(fxbug.dev/105182): Remove when `workstation_host_dfv2` is no longer a
-# dependency and all builder bots with DFv2 enabled include `workstation`
-# instead of `workstation_dfv2` into their base package set.
-group("workstation_dfv2") {
-  testonly = true
-  deps = workstation_tests
-
-  # Remove when all builder bots that use the workstation_eng_dfv2 product
-  # explicitly include workstation_host_dfv2 into their host labels within their
-  # fint parameters.
-  deps += [ ":workstation_host_tests_dfv2" ]
 }
 
 # "host-tests" targets are for tests which depend on package artifacts such as

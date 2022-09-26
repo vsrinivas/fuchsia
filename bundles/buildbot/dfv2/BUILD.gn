@@ -354,3 +354,73 @@ group("host-tests") {
     deps += []
   }
 }
+
+# The dependencies of this group should be the same as
+# //src/buildbot:workstation_host_tests. If there is a target in
+# //src/buildbot:workstation_host_tests's dependencies that is not in this group
+# then that either means the target includes a test that is failing and has been
+# explicitly omitted or a new target was added to workstation_host_tests's deps
+# and this assign needs to be updated. Explicitly omitted targets may have been
+# expanded into their dependencies and added further down in this group's
+# creation and this may be done recursively with the dependencies of those
+# dependencies. A target that has been explicitly omitted should also have a
+# TODO comment within this group template invocation.
+group("workstation_host_tests") {
+  testonly = true
+
+  # TODO(fxbug.dev/110053): Add
+  # //src/experiences/tests/chrome:test($host_toolchain) to deps when all tests
+  # in //src/experiences/tests/chrome:test($host_toolchain) pass with DFv2
+  # enabled.
+  deps = [
+    "//src/experiences/tests/e2e:test($host_toolchain)",
+    "//src/experiences/tests/performance:test($host_toolchain)",
+  ]
+}
+
+# The dependencies of this group should be the same as
+# //src/buildbot:workstation. If there is a target in
+# //src/buildbot:workstation's dependencies that is not in this group then that
+# either means the target includes a test that is failing and has been
+# explicitly omitted or a new target was added to workstation's deps and this
+# assign needs to be updated. Explicitly omitted targets may have been expanded
+# into their dependencies and added further down in this group's creation and
+# this may be done recursively with the dependencies of those dependencies. A
+# target that has been explicitly omitted should also have a TODO comment within
+# this group template invocation.
+# TODO(fxbug.dev/105182): Remove when all workstation builder bots with DFv2
+# enabled include //src/bundles/buildbot:workstation instead of :workstation
+# into their base package set.
+group("workstation") {
+  testonly = true
+  deps = [
+    # Only for products in which Flutter is supported.
+    "//src/tests/intl/timezone:tests-for-flutter",
+
+    # CFv2 test framework.
+    "//src/sys/run_test_suite",
+
+    # Used for Chromium tests
+    "//src/testing/fidl/intl_property_manager",
+
+    # E2E tests w/ default toolchain that do not produce Fuchsia packages, only host bins.
+    "//src/tests/end_to_end/sl4f:test",
+    "//src/tests/end_to_end/time_sync:test",
+
+    # Other e2e dep bundles
+    "//src/experiences/tests/e2e:end_to_end_deps",
+    "//src/experiences/tests/performance:performance_deps",
+    "//src/tests/end_to_end/bundles:end_to_end_deps",
+
+    # Integration tests
+    "//src/ui/tests:workstation_tests",
+
+    # TODO(fxbug.dev/102651): Remove these tests when Subpackages is made
+    # generally available. Until then, subpackage tests will only run in CQ if
+    # added to the workstation_eng packages, here:
+    "//examples/components/routing/with_subpackages:tests",
+    "//examples/components/subpackages:tests",
+  ]
+
+  deps += [ ":workstation_host_tests" ]
+}
