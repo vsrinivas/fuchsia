@@ -15,6 +15,7 @@
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/hw/gpt.h>
+#include <zircon/time.h>
 
 #include <safemath/safe_math.h>
 
@@ -35,6 +36,12 @@
 #include "src/storage/fshost/utils.h"
 
 namespace fshost {
+
+namespace {
+
+constexpr zx_duration_t kOpenPartitionDuration = ZX_SEC(10);
+
+}  // namespace
 
 fbl::RefPtr<fs::Service> AdminServer::Create(FsManager* fs_manager,
                                              const fshost_config::Config& config,
@@ -194,7 +201,7 @@ zx::status<> AdminServer::WriteDataFileInner(WriteDataFileRequestView request) {
       .detected_disk_format = fs_management::kDiskFormatFvm,
       .ignore_prefix = config_.ramdisk_prefix(),
   };
-  auto fvm = OpenPartition(&fvm_matcher, ZX_SEC(5), nullptr);
+  auto fvm = OpenPartition(&fvm_matcher, kOpenPartitionDuration, nullptr);
   if (fvm.is_error()) {
     FX_PLOGS(ERROR, fvm.status_value()) << "Failed to find FVM";
     return zx::error(fvm.status_value());
@@ -220,7 +227,7 @@ zx::status<> AdminServer::WriteDataFileInner(WriteDataFileRequestView request) {
       .parent_device = fvm_path,
       .ignore_if_path_contains = "zxcrypt/unsealed",
   };
-  auto partition = OpenPartition(&data_matcher, ZX_SEC(5), nullptr);
+  auto partition = OpenPartition(&data_matcher, kOpenPartitionDuration, nullptr);
   if (partition.is_error()) {
     FX_PLOGS(ERROR, partition.status_value()) << "Failed to find data partition";
     return partition.take_error();
@@ -239,7 +246,7 @@ zx::status<> AdminServer::WriteDataFileInner(WriteDataFileRequestView request) {
         .num_labels = 2,
         .parent_device = zxcrypt_path,
     };
-    partition = OpenPartition(&zxcrypt_matcher, ZX_SEC(5), nullptr);
+    partition = OpenPartition(&zxcrypt_matcher, kOpenPartitionDuration, nullptr);
     if (partition.is_error()) {
       FX_PLOGS(ERROR, partition.status_value()) << "Failed to find inner data partition";
       return partition.take_error();
