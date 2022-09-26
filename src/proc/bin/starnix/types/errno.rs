@@ -7,6 +7,7 @@
 use std::fmt::{Debug, Display, Formatter};
 
 use crate::types::uapi;
+use static_assertions::const_assert_eq;
 
 /// Represents the location at which an error was generated.
 ///
@@ -93,6 +94,10 @@ impl ErrnoCode {
             return Self(0);
         }
         Self(-retval as u32)
+    }
+
+    pub fn from_error_code(code: i16) -> Self {
+        Self(code as u32)
     }
 
     pub fn return_value(&self) -> u64 {
@@ -311,6 +316,20 @@ macro_rules! error {
     ($($args:tt)*) => { Err(errno!($($args)*)) };
 }
 
+/// `error_from_code` returns a `Err` containing an `Errno` struct with the given error code and is
+/// tagged with the current file name and line number.
+macro_rules! error_from_code {
+    ($err:expr) => {{
+        let errno = ErrnoCode::from_error_code($err);
+        Err(Errno::new(
+            errno,
+            stringify!($err),
+            None,
+            crate::types::errno::ErrnoSource { file: file!().to_string(), line: line!() },
+        ))
+    }};
+}
+
 // There isn't really a mapping from zx::Status to Errno. The correct mapping is context-speific
 // but this converter is a reasonable first-approximation. The translation matches
 // fdio_status_to_errno. See fxbug.dev/30921 for more context.
@@ -360,7 +379,136 @@ macro_rules! from_status_like_fdio {
     }};
 }
 
+// Fuchsia error codes should match Linux.
+const_assert_eq!(syncio::zxio::EPERM, uapi::EPERM);
+const_assert_eq!(syncio::zxio::ENOENT, uapi::ENOENT);
+const_assert_eq!(syncio::zxio::ESRCH, uapi::ESRCH);
+const_assert_eq!(syncio::zxio::EINTR, uapi::EINTR);
+const_assert_eq!(syncio::zxio::EIO, uapi::EIO);
+const_assert_eq!(syncio::zxio::ENXIO, uapi::ENXIO);
+const_assert_eq!(syncio::zxio::ENOEXEC, uapi::ENOEXEC);
+const_assert_eq!(syncio::zxio::EBADF, uapi::EBADF);
+const_assert_eq!(syncio::zxio::ECHILD, uapi::ECHILD);
+const_assert_eq!(syncio::zxio::EAGAIN, uapi::EAGAIN);
+const_assert_eq!(syncio::zxio::ENOMEM, uapi::ENOMEM);
+const_assert_eq!(syncio::zxio::EACCES, uapi::EACCES);
+const_assert_eq!(syncio::zxio::EFAULT, uapi::EFAULT);
+const_assert_eq!(syncio::zxio::ENOTBLK, uapi::ENOTBLK);
+const_assert_eq!(syncio::zxio::EBUSY, uapi::EBUSY);
+const_assert_eq!(syncio::zxio::EEXIST, uapi::EEXIST);
+const_assert_eq!(syncio::zxio::EXDEV, uapi::EXDEV);
+const_assert_eq!(syncio::zxio::ENODEV, uapi::ENODEV);
+const_assert_eq!(syncio::zxio::ENOTDIR, uapi::ENOTDIR);
+const_assert_eq!(syncio::zxio::EISDIR, uapi::EISDIR);
+const_assert_eq!(syncio::zxio::EINVAL, uapi::EINVAL);
+const_assert_eq!(syncio::zxio::ENFILE, uapi::ENFILE);
+const_assert_eq!(syncio::zxio::EMFILE, uapi::EMFILE);
+const_assert_eq!(syncio::zxio::ENOTTY, uapi::ENOTTY);
+const_assert_eq!(syncio::zxio::ETXTBSY, uapi::ETXTBSY);
+const_assert_eq!(syncio::zxio::EFBIG, uapi::EFBIG);
+const_assert_eq!(syncio::zxio::ENOSPC, uapi::ENOSPC);
+const_assert_eq!(syncio::zxio::ESPIPE, uapi::ESPIPE);
+const_assert_eq!(syncio::zxio::EROFS, uapi::EROFS);
+const_assert_eq!(syncio::zxio::EMLINK, uapi::EMLINK);
+const_assert_eq!(syncio::zxio::EPIPE, uapi::EPIPE);
+const_assert_eq!(syncio::zxio::EDOM, uapi::EDOM);
+const_assert_eq!(syncio::zxio::ERANGE, uapi::ERANGE);
+const_assert_eq!(syncio::zxio::EDEADLK, uapi::EDEADLK);
+const_assert_eq!(syncio::zxio::ENAMETOOLONG, uapi::ENAMETOOLONG);
+const_assert_eq!(syncio::zxio::ENOLCK, uapi::ENOLCK);
+const_assert_eq!(syncio::zxio::ENOSYS, uapi::ENOSYS);
+const_assert_eq!(syncio::zxio::ENOTEMPTY, uapi::ENOTEMPTY);
+const_assert_eq!(syncio::zxio::ELOOP, uapi::ELOOP);
+const_assert_eq!(syncio::zxio::ENOMSG, uapi::ENOMSG);
+const_assert_eq!(syncio::zxio::EIDRM, uapi::EIDRM);
+const_assert_eq!(syncio::zxio::ECHRNG, uapi::ECHRNG);
+const_assert_eq!(syncio::zxio::ELNRNG, uapi::ELNRNG);
+const_assert_eq!(syncio::zxio::EUNATCH, uapi::EUNATCH);
+const_assert_eq!(syncio::zxio::ENOCSI, uapi::ENOCSI);
+const_assert_eq!(syncio::zxio::EBADE, uapi::EBADE);
+const_assert_eq!(syncio::zxio::EBADR, uapi::EBADR);
+const_assert_eq!(syncio::zxio::EXFULL, uapi::EXFULL);
+const_assert_eq!(syncio::zxio::ENOANO, uapi::ENOANO);
+const_assert_eq!(syncio::zxio::EBADRQC, uapi::EBADRQC);
+const_assert_eq!(syncio::zxio::EBADSLT, uapi::EBADSLT);
+const_assert_eq!(syncio::zxio::EBFONT, uapi::EBFONT);
+const_assert_eq!(syncio::zxio::ENOSTR, uapi::ENOSTR);
+const_assert_eq!(syncio::zxio::ENODATA, uapi::ENODATA);
+const_assert_eq!(syncio::zxio::ETIME, uapi::ETIME);
+const_assert_eq!(syncio::zxio::ENOSR, uapi::ENOSR);
+const_assert_eq!(syncio::zxio::ENONET, uapi::ENONET);
+const_assert_eq!(syncio::zxio::ENOPKG, uapi::ENOPKG);
+const_assert_eq!(syncio::zxio::EREMOTE, uapi::EREMOTE);
+const_assert_eq!(syncio::zxio::ENOLINK, uapi::ENOLINK);
+const_assert_eq!(syncio::zxio::EADV, uapi::EADV);
+const_assert_eq!(syncio::zxio::ESRMNT, uapi::ESRMNT);
+const_assert_eq!(syncio::zxio::ECOMM, uapi::ECOMM);
+const_assert_eq!(syncio::zxio::EPROTO, uapi::EPROTO);
+const_assert_eq!(syncio::zxio::EMULTIHOP, uapi::EMULTIHOP);
+const_assert_eq!(syncio::zxio::EDOTDOT, uapi::EDOTDOT);
+const_assert_eq!(syncio::zxio::EBADMSG, uapi::EBADMSG);
+const_assert_eq!(syncio::zxio::EOVERFLOW, uapi::EOVERFLOW);
+const_assert_eq!(syncio::zxio::ENOTUNIQ, uapi::ENOTUNIQ);
+const_assert_eq!(syncio::zxio::EBADFD, uapi::EBADFD);
+const_assert_eq!(syncio::zxio::EREMCHG, uapi::EREMCHG);
+const_assert_eq!(syncio::zxio::ELIBACC, uapi::ELIBACC);
+const_assert_eq!(syncio::zxio::ELIBBAD, uapi::ELIBBAD);
+const_assert_eq!(syncio::zxio::ELIBSCN, uapi::ELIBSCN);
+const_assert_eq!(syncio::zxio::ELIBMAX, uapi::ELIBMAX);
+const_assert_eq!(syncio::zxio::ELIBEXEC, uapi::ELIBEXEC);
+const_assert_eq!(syncio::zxio::EILSEQ, uapi::EILSEQ);
+const_assert_eq!(syncio::zxio::ERESTART, uapi::ERESTART);
+const_assert_eq!(syncio::zxio::ESTRPIPE, uapi::ESTRPIPE);
+const_assert_eq!(syncio::zxio::EUSERS, uapi::EUSERS);
+const_assert_eq!(syncio::zxio::ENOTSOCK, uapi::ENOTSOCK);
+const_assert_eq!(syncio::zxio::EDESTADDRREQ, uapi::EDESTADDRREQ);
+const_assert_eq!(syncio::zxio::EMSGSIZE, uapi::EMSGSIZE);
+const_assert_eq!(syncio::zxio::EPROTOTYPE, uapi::EPROTOTYPE);
+const_assert_eq!(syncio::zxio::ENOPROTOOPT, uapi::ENOPROTOOPT);
+const_assert_eq!(syncio::zxio::EPROTONOSUPPORT, uapi::EPROTONOSUPPORT);
+const_assert_eq!(syncio::zxio::ESOCKTNOSUPPORT, uapi::ESOCKTNOSUPPORT);
+const_assert_eq!(syncio::zxio::EOPNOTSUPP, uapi::EOPNOTSUPP);
+const_assert_eq!(syncio::zxio::EPFNOSUPPORT, uapi::EPFNOSUPPORT);
+const_assert_eq!(syncio::zxio::EAFNOSUPPORT, uapi::EAFNOSUPPORT);
+const_assert_eq!(syncio::zxio::EADDRINUSE, uapi::EADDRINUSE);
+const_assert_eq!(syncio::zxio::EADDRNOTAVAIL, uapi::EADDRNOTAVAIL);
+const_assert_eq!(syncio::zxio::ENETDOWN, uapi::ENETDOWN);
+const_assert_eq!(syncio::zxio::ENETUNREACH, uapi::ENETUNREACH);
+const_assert_eq!(syncio::zxio::ENETRESET, uapi::ENETRESET);
+const_assert_eq!(syncio::zxio::ECONNABORTED, uapi::ECONNABORTED);
+const_assert_eq!(syncio::zxio::ECONNRESET, uapi::ECONNRESET);
+const_assert_eq!(syncio::zxio::ENOBUFS, uapi::ENOBUFS);
+const_assert_eq!(syncio::zxio::EISCONN, uapi::EISCONN);
+const_assert_eq!(syncio::zxio::ENOTCONN, uapi::ENOTCONN);
+const_assert_eq!(syncio::zxio::ESHUTDOWN, uapi::ESHUTDOWN);
+const_assert_eq!(syncio::zxio::ETOOMANYREFS, uapi::ETOOMANYREFS);
+const_assert_eq!(syncio::zxio::ETIMEDOUT, uapi::ETIMEDOUT);
+const_assert_eq!(syncio::zxio::ECONNREFUSED, uapi::ECONNREFUSED);
+const_assert_eq!(syncio::zxio::EHOSTDOWN, uapi::EHOSTDOWN);
+const_assert_eq!(syncio::zxio::EHOSTUNREACH, uapi::EHOSTUNREACH);
+const_assert_eq!(syncio::zxio::EALREADY, uapi::EALREADY);
+const_assert_eq!(syncio::zxio::EINPROGRESS, uapi::EINPROGRESS);
+const_assert_eq!(syncio::zxio::ESTALE, uapi::ESTALE);
+const_assert_eq!(syncio::zxio::EUCLEAN, uapi::EUCLEAN);
+const_assert_eq!(syncio::zxio::ENOTNAM, uapi::ENOTNAM);
+const_assert_eq!(syncio::zxio::ENAVAIL, uapi::ENAVAIL);
+const_assert_eq!(syncio::zxio::EISNAM, uapi::EISNAM);
+const_assert_eq!(syncio::zxio::EREMOTEIO, uapi::EREMOTEIO);
+const_assert_eq!(syncio::zxio::EDQUOT, uapi::EDQUOT);
+const_assert_eq!(syncio::zxio::ENOMEDIUM, uapi::ENOMEDIUM);
+const_assert_eq!(syncio::zxio::EMEDIUMTYPE, uapi::EMEDIUMTYPE);
+const_assert_eq!(syncio::zxio::ECANCELED, uapi::ECANCELED);
+const_assert_eq!(syncio::zxio::ENOKEY, uapi::ENOKEY);
+const_assert_eq!(syncio::zxio::EKEYEXPIRED, uapi::EKEYEXPIRED);
+const_assert_eq!(syncio::zxio::EKEYREVOKED, uapi::EKEYREVOKED);
+const_assert_eq!(syncio::zxio::EKEYREJECTED, uapi::EKEYREJECTED);
+const_assert_eq!(syncio::zxio::EOWNERDEAD, uapi::EOWNERDEAD);
+const_assert_eq!(syncio::zxio::ENOTRECOVERABLE, uapi::ENOTRECOVERABLE);
+const_assert_eq!(syncio::zxio::ERFKILL, uapi::ERFKILL);
+const_assert_eq!(syncio::zxio::EHWPOISON, uapi::EHWPOISON);
+
 // Public re-export of macros allows them to be used like regular rust items.
 pub(crate) use errno;
 pub(crate) use error;
+pub(crate) use error_from_code;
 pub(crate) use from_status_like_fdio;

@@ -88,7 +88,11 @@ impl InetSocket {
                 &mut out_context as *mut *mut c_void,
                 &mut out_code,
             );
-            zx::ok(status).map_err(|status| from_status_like_fdio!(status))?
+            zx::ok(status).map_err(|status| from_status_like_fdio!(status))?;
+        }
+
+        if out_code != 0 {
+            return error_from_code!(out_code);
         }
 
         Ok(InetSocket { zxio: Arc::new(zxio) })
