@@ -22,6 +22,10 @@
 #include <tuple>
 #include <vector>
 
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+
 #include "core.h"
 #include "job-archive.h"
 #include "rights.h"
@@ -278,10 +282,16 @@ constexpr auto kMakeNote = [](uint32_t type) { return NoteHeader<Name.size()>(Na
 //   static constexpr auto MakeHeader = kMakeMember<kFooPrefix>;
 //   static constexpr auto Pad = PadForArchive;
 // ```
-template <const std::string_view& Prefix>
+template <const std::string_view& Prefix, bool NoType = false>
 constexpr auto kMakeMember = [](uint32_t type) {
+  std::string name{Prefix};
+  if constexpr (NoType) {
+    ZX_DEBUG_ASSERT(type == 0);
+  } else {
+    name += std::to_string(type);
+  }
   ArchiveMemberHeader header;
-  header.InitAccumulate(std::string{Prefix} + std::to_string(type));
+  header.InitAccumulate(std::move(name));
   return header;
 };
 
@@ -391,6 +401,43 @@ struct PropertyBaseClass {
   static constexpr auto kSyscall = &zx::object_base::get_property;
 };
 
+template <typename Class>
+class JsonNote : public NoteBase<Class, 0> {
+ public:
+  // The writer object holds a reference to the note object.  When the writer
+  // is destroyed, everything it wrote will be reified into the note contents.
+  class JsonWriter {
+   public:
+    auto& writer() { return writer_; }
+
+    ~JsonWriter() {
+      note_.Emplace({
+          reinterpret_cast<const std::byte*>(note_.data_.GetString()),
+          note_.data_.GetSize(),
+      });
+    }
+
+   private:
+    friend JsonNote;
+    explicit JsonWriter(JsonNote& note) : writer_(note.data_), note_(note) {}
+
+    rapidjson::Writer<rapidjson::StringBuffer> writer_;
+    JsonNote& note_;
+  };
+
+  [[nodiscard]] auto MakeJsonWriter() { return JsonWriter{*this}; }
+
+  [[nodiscard]] bool Set(const rapidjson::Value& value) {
+    return value.Accept(MakeJsonWriter().writer());
+  }
+
+  // CollectNoteData will call this, but it has nothing to do.
+  static constexpr auto Collect = [](auto& note) -> fitx::result<Error> { return fitx::ok(); };
+
+ private:
+  rapidjson::StringBuffer data_;
+};
+
 // These are called via std::apply on ProcessNotes and ThreadNotes tuples.
 
 constexpr auto CollectNoteData =
@@ -436,6 +483,39 @@ constexpr auto DumpNoteData =
   return std::move(data).take();
 };
 
+template <size_t N, typename T>
+void CollectJson(rapidjson::Document& dom, const char (&name)[N], T value) {
+  rapidjson::Value json_value{value};
+  dom.AddMember(name, json_value, dom.GetAllocator());
+}
+
+template <size_t N>
+void CollectJson(rapidjson::Document& dom, const char (&name)[N], std::string_view value) {
+  rapidjson::Value json_value{
+      value.data(),
+      static_cast<rapidjson::SizeType>(value.size()),
+  };
+  dom.AddMember(name, json_value, dom.GetAllocator());
+}
+
+rapidjson::Document CollectSystemJson() {
+  rapidjson::Document dom;
+  dom.SetObject();
+  std::string_view version = zx_system_get_version_string();
+  CollectJson(dom, "version_string", version);
+  CollectJson(dom, "dcache_line_size", zx_system_get_dcache_line_size());
+  CollectJson(dom, "num_cpus", zx_system_get_num_cpus());
+  CollectJson(dom, "page_size", zx_system_get_page_size());
+  CollectJson(dom, "physmem", zx_system_get_physmem());
+  return dom;
+}
+
+constexpr auto CollectSystemNote = [](auto& note) -> fitx::result<Error> {
+  bool ok = note.Set(CollectSystemJson());
+  ZX_ASSERT(ok);
+  return fitx::ok();
+};
+
 }  // namespace
 
 // The public class is just a container for a std::unique_ptr to this private
@@ -474,6 +554,8 @@ class ProcessDumpBase::Collector {
     }
     return fitx::error(Error{"zx_task_suspend", status});
   }
+
+  fitx::result<Error> CollectSystem() { return CollectSystemNote(std::get<SystemNote>(notes_)); }
 
   // This collects information about memory and other process-wide state.  The
   // return value gives the total size of the ET_CORE file to be written.
@@ -665,6 +747,13 @@ class ProcessDumpBase::Collector {
   template <zx_thread_state_topic_t Topic, typename T>
   using ThreadState = PropertyNote<ThreadStateClass, Topic, T>;
 
+  struct SystemClass {
+    static constexpr auto MakeHeader = kMakeNote<kSystemNoteName>;
+    static constexpr auto Pad = PadForElfNote;
+  };
+
+  using SystemNote = JsonNote<SystemClass>;
+
   using ThreadNotes = std::tuple<
       // This lists all the notes that can be extracted from a thread.
       // Ordering of the notes after the first two is not specified and can
@@ -689,6 +778,7 @@ class ProcessDumpBase::Collector {
       // notes after the first two is not specified and can change.
       ProcessInfo<ZX_INFO_HANDLE_BASIC, zx_info_handle_basic_t>,
       ProcessProperty<ZX_PROP_NAME, char[ZX_MAX_NAME_LEN]>,
+      SystemNote,  // Optionally included in any given process.
       ProcessInfo<ZX_INFO_PROCESS, zx_info_process_t>,
       ProcessInfo<ZX_INFO_PROCESS_THREADS, zx_koid_t>,
       ProcessInfo<ZX_INFO_TASK_STATS, zx_info_task_stats_t>,
@@ -1206,6 +1296,8 @@ fitx::result<Error> ProcessDumpBase::SuspendAndCollectThreads() {
   return collector_->SuspendAndCollectThreads();
 }
 
+fitx::result<Error> ProcessDumpBase::CollectSystem() { return collector_->CollectSystem(); }
+
 fitx::result<Error, size_t> ProcessDumpBase::DumpHeadersImpl(DumpCallback dump, size_t limit) {
   return collector_->DumpHeaders(std::move(dump), limit);
 }
@@ -1324,6 +1416,8 @@ class JobDumpBase::Collector {
     return fitx::ok(std::move(processes));
   }
 
+  fitx::result<Error> CollectSystem() { return CollectSystemNote(std::get<SystemNote>(notes_)); }
+
   fitx::result<Error, size_t> DumpHeaders(DumpCallback dump, time_t mtime) {
     size_t offset = 0;
     auto append = [&](ByteView data) -> bool {
@@ -1400,6 +1494,13 @@ class JobDumpBase::Collector {
   template <uint32_t Prop, typename T>
   using JobProperty = PropertyNote<JobPropertyClass, Prop, T>;
 
+  struct SystemClass {
+    static constexpr auto MakeHeader = kMakeMember<kSystemNoteName, true>;
+    static constexpr auto Pad = PadForArchive;
+  };
+
+  using SystemNote = JsonNote<SystemClass>;
+
   // These are named for use by CollectChildren and CollectProcesses.
   using Children = JobInfo<ZX_INFO_JOB_CHILDREN, zx_koid_t>;
   using Processes = JobInfo<ZX_INFO_JOB_PROCESSES, zx_koid_t>;
@@ -1409,6 +1510,7 @@ class JobDumpBase::Collector {
       JobInfo<ZX_INFO_HANDLE_BASIC, zx_info_handle_basic_t>,
       JobProperty<ZX_PROP_NAME, char[ZX_MAX_NAME_LEN]>,
       // Ordering of the other notes is not specified and can change.
+      SystemNote,  // Optionally included in any given job.
       JobInfo<ZX_INFO_JOB, zx_info_job_t>, Children, Processes,
       JobInfo<ZX_INFO_TASK_RUNTIME, zx_info_task_runtime_t>>;
 
@@ -1444,6 +1546,8 @@ class JobDumpBase::Collector {
 JobDumpBase::JobDumpBase(JobDumpBase&&) noexcept = default;
 JobDumpBase& JobDumpBase::operator=(JobDumpBase&&) noexcept = default;
 JobDumpBase::~JobDumpBase() = default;
+
+fitx::result<Error> JobDumpBase::CollectSystem() { return collector_->CollectSystem(); }
 
 fitx::result<Error, size_t> JobDumpBase::CollectJob() { return collector_->CollectJob(); }
 

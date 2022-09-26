@@ -33,8 +33,10 @@ void TestProcessForPropertiesAndInfo::StartChild() {
 }
 
 template <typename Writer>
-void TestProcessForPropertiesAndInfo::Dump(Writer& writer) {
+void TestProcessForPropertiesAndInfo::Dump(Writer& writer, PrecollectFunction precollect) {
   zxdump::ProcessDump<zx::unowned_process> dump(borrow());
+
+  ASSERT_NO_FATAL_FAILURE(precollect(dump));
 
   auto collect_result = dump.CollectProcess(TestProcess::PruneAllMemory);
   ASSERT_TRUE(collect_result.is_ok()) << collect_result.error_value();
@@ -54,8 +56,8 @@ void TestProcessForPropertiesAndInfo::Dump(Writer& writer) {
   EXPECT_EQ(bytes_written, total_with_memory);
 }
 
-template void TestProcessForPropertiesAndInfo::Dump(FdWriter&);
-template void TestProcessForPropertiesAndInfo::Dump(ZstdWriter&);
+template void TestProcessForPropertiesAndInfo::Dump(FdWriter&, PrecollectFunction);
+template void TestProcessForPropertiesAndInfo::Dump(ZstdWriter&, PrecollectFunction);
 
 void TestProcessForPropertiesAndInfo::CheckDump(zxdump::TaskHolder& holder, bool threads_dumped) {
   auto find_result = holder.root_job().find(koid());
@@ -96,6 +98,24 @@ void TestProcessForPropertiesAndInfo::CheckDump(zxdump::TaskHolder& holder, bool
     EXPECT_EQ(info_result->type, ZX_OBJ_TYPE_PROCESS);
     EXPECT_EQ(info_result->koid, koid());
   }
+}
+
+void TestProcessForSystemInfo::StartChild() {
+  SpawnAction({
+      .action = FDIO_SPAWN_ACTION_SET_NAME,
+      .name = {kChildName},
+  });
+  ASSERT_NO_FATAL_FAILURE(TestProcess::StartChild());
+}
+
+void TestProcessForSystemInfo::CheckDump(zxdump::TaskHolder& holder) {
+  EXPECT_EQ(holder.system_get_dcache_line_size(), zx_system_get_dcache_line_size());
+  EXPECT_EQ(holder.system_get_num_cpus(), zx_system_get_num_cpus());
+  EXPECT_EQ(holder.system_get_page_size(), zx_system_get_page_size());
+  EXPECT_EQ(holder.system_get_physmem(), zx_system_get_physmem());
+
+  std::string_view version = zx_system_get_version_string();
+  EXPECT_EQ(holder.system_get_version_string(), version);
 }
 
 namespace {
@@ -265,6 +285,22 @@ TEST(ZxdumpTests, ProcessDumpToZstdPipe) {
   // The zstd tool would complain about a malformed stream.
   EXPECT_EQ(zstd.collected_stderr(), "");
 }
+
+TEST(ZxdumpTests, ProcessDumpSystemInfo) {
+  TestFile file;
+  zxdump::FdWriter writer(file.RewoundFd());
+
+  TestProcessForSystemInfo process;
+  ASSERT_NO_FATAL_FAILURE(process.StartChild());
+  ASSERT_NO_FATAL_FAILURE(process.Dump(writer));
+
+  zxdump::TaskHolder holder;
+  auto read_result = holder.Insert(file.RewoundFd());
+  ASSERT_TRUE(read_result.is_ok()) << read_result.error_value();
+  ASSERT_NO_FATAL_FAILURE(process.CheckDump(holder));
+}
+
+// TODO(mcgrathr): test job archives with system info, nested repeats
 
 }  // namespace
 }  // namespace zxdump::testing

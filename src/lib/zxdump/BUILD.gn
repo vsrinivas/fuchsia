@@ -66,6 +66,7 @@ zx_library("zxdump") {
 
   deps = [
     "//src/lib/elfldltl",
+    "//third_party/rapidjson",
     "//third_party/zstd",
   ]
 

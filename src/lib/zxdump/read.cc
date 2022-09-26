@@ -15,6 +15,8 @@
 #include <forward_list>
 #include <variant>
 
+#include <rapidjson/document.h>
+
 #include "core.h"
 #include "dump-file.h"
 #include "job-archive.h"
@@ -128,6 +130,39 @@ fitx::result<Error> AddNote(std::map<Key, ByteView>& map, Key key, ByteView data
   }
   return fitx::ok();
 }
+
+// rapidjson's built-in features require NUL-terminated strings.
+// Modeled on rapidjson::StringBuffer from <rapidjson/stringbuffer.h>.
+class StringViewStream {
+ public:
+  using Ch = char;
+
+  explicit StringViewStream(std::string_view data) : data_(data) {}
+
+  Ch Peek() const { return data_.empty() ? '\0' : data_.front(); }
+
+  Ch Take() {
+    Ch c = data_.front();
+    data_.remove_prefix(1);
+    return c;
+  }
+
+  size_t Tell() const { return data_.size(); }
+
+  Ch* PutBegin() {
+    RAPIDJSON_ASSERT(false);
+    return 0;
+  }
+  void Put(Ch) { RAPIDJSON_ASSERT(false); }
+  void Flush() { RAPIDJSON_ASSERT(false); }
+  size_t PutEnd(Ch*) {
+    RAPIDJSON_ASSERT(false);
+    return 0;
+  }
+
+ private:
+  std::string_view data_;
+};
 
 constexpr Error kTaskNotFound{"task KOID not found", ZX_ERR_NOT_FOUND};
 
@@ -256,6 +291,9 @@ class TaskHolder::JobTree {
     buffers_.push_front(std::move(owned_buffer));
   }
 
+  template <typename T>
+  T GetSystemData(const char* key) const;
+
  private:
   // This is the actual reader, implemented below.
   fitx::result<Error> Read(DumpFile& file, bool read_memory, FileRange where, time_t date = 0);
@@ -263,6 +301,9 @@ class TaskHolder::JobTree {
                               bool read_memory);
   fitx::result<Error> ReadArchive(DumpFile& file, FileRange archive, ByteView header,
                                   bool read_memory);
+
+  fitx::result<Error> ReadSystemNote(ByteView data);
+  const rapidjson::Value* GetSystemJsonData(const char* key) const;
 
   // Snap the root job pointer to the sole job or back to the superroot.
   // Also clear the cached get_info lists so they'll be regenerated on demand.
@@ -369,6 +410,8 @@ class TaskHolder::JobTree {
 
   std::forward_list<std::unique_ptr<DumpFile>> dumps_;
   std::forward_list<std::unique_ptr<std::byte[]>> buffers_;
+
+  rapidjson::Document system_;
 
   // The superroot holds all the orphaned jobs and processes that haven't been
   // claimed by a parent job.
@@ -833,8 +876,17 @@ fitx::result<Error> TaskHolder::JobTree::ReadElf(DumpFile& file, FileRange where
       }
       name.remove_suffix(1);
 
+      // Check for a system note.
+      if (name == kSystemNoteName) {
+        auto result = ReadSystemNote(desc);
+        if (result.is_error()) {
+          return result.take_error();
+        }
+        continue;
+      }
+
       // Check for a process info note.
-      if (name == std::string_view{kProcessInfoNoteName}) {
+      if (name == kProcessInfoNoteName) {
         if (nhdr.type == ZX_INFO_HANDLE_BASIC) {
           zx_info_handle_basic_t info;
           if (desc.size() < sizeof(info)) {
@@ -855,7 +907,7 @@ fitx::result<Error> TaskHolder::JobTree::ReadElf(DumpFile& file, FileRange where
       }
 
       // Not a process info note.  Check for a process property note.
-      if (name == std::string_view{kProcessPropertyNoteName}) {
+      if (name == kProcessPropertyNoteName) {
         auto result = AddNote(process.properties_, nhdr.type(), desc);
         if (result.is_error()) {
           return result.take_error();
@@ -864,7 +916,7 @@ fitx::result<Error> TaskHolder::JobTree::ReadElf(DumpFile& file, FileRange where
       }
 
       // Not any kind of process note.  Check for a thread info note.
-      if (name == std::string_view{kThreadInfoNoteName}) {
+      if (name == kThreadInfoNoteName) {
         if (nhdr.type == ZX_INFO_HANDLE_BASIC) {
           // This marks the first note of a new thread.  Reify the last one.
           reify_thread();
@@ -907,7 +959,7 @@ fitx::result<Error> TaskHolder::JobTree::ReadElf(DumpFile& file, FileRange where
       }
 
       // Not a thread info note.  Check for a thread property note.
-      if (name == std::string_view{kThreadPropertyNoteName}) {
+      if (name == kThreadPropertyNoteName) {
         if (!thread) {
           return fitx::error(Error{
               "thread property note before thread ZX_INFO_HANDLE_BASIC note",
@@ -923,7 +975,7 @@ fitx::result<Error> TaskHolder::JobTree::ReadElf(DumpFile& file, FileRange where
       }
 
       // Not a thread property note.  Check for a thread state note.
-      if (name == std::string_view{kThreadStateNoteName}) {
+      if (name == kThreadStateNoteName) {
         if (!thread) {
           return fitx::error(Error{
               "thread state note before thread ZX_INFO_HANDLE_BASIC note",
@@ -1130,6 +1182,15 @@ fitx::result<Error> TaskHolder::JobTree::ReadArchive(DumpFile& file, FileRange a
       return AddNote(job.properties_, *property.value(), result.value());
     }
 
+    // Check for a system note.
+    if (member.name == kSystemNoteName) {
+      auto result = file.ReadEphemeral(contents);
+      if (result.is_error()) {
+        return result.take_error();
+      }
+      return ReadSystemNote(result.value());
+    }
+
     // This member file is not a job note.  It's an embedded dump file.
     return Read(file, read_memory, contents, member.date);
   };
@@ -1173,6 +1234,76 @@ fitx::result<Error> TaskHolder::JobTree::ReadArchive(DumpFile& file, FileRange a
 
   // This job archive had some notes but no ZX_INFO_HANDLE_BASIC note.
   return CorruptedDump();
+}
+
+fitx::result<Error> TaskHolder::JobTree::ReadSystemNote(ByteView data) {
+  // If it's already been collected, then ignore new data.
+  if (system_.IsObject()) {
+    return fitx::ok();
+  }
+
+  std::string_view sv{reinterpret_cast<const char*>(data.data()), data.size()};
+  StringViewStream stream{sv};
+  system_.ParseStream(stream);
+
+  return fitx::ok();
+}
+
+const rapidjson::Value* TaskHolder::JobTree::GetSystemJsonData(const char* key) const {
+  if (system_.IsObject()) {
+    auto it = system_.FindMember(key);
+    if (it != system_.MemberEnd()) {
+      return &it->value;
+    }
+  }
+  return nullptr;
+}
+
+template <>
+std::string_view TaskHolder::JobTree::GetSystemData<std::string_view>(const char* key) const {
+  const rapidjson::Value* value = GetSystemJsonData(key);
+  if (!value || !value->IsString()) {
+    return {};
+  }
+  return {value->GetString(), value->GetStringLength()};
+}
+
+template <>
+uint32_t TaskHolder::JobTree::GetSystemData<uint32_t>(const char* key) const {
+  const rapidjson::Value* value = GetSystemJsonData(key);
+  return !value              ? 0
+         : value->IsUint()   ? value->GetUint()
+         : value->IsNumber() ? static_cast<uint32_t>(value->GetDouble())
+                             : 0;
+}
+
+template <>
+uint64_t TaskHolder::JobTree::GetSystemData<uint64_t>(const char* key) const {
+  const rapidjson::Value* value = GetSystemJsonData(key);
+  return !value              ? 0
+         : value->IsUint64() ? value->GetUint64()
+         : value->IsNumber() ? static_cast<uint64_t>(value->GetDouble())
+                             : 0;
+}
+
+std::string_view TaskHolder::system_get_version_string() const {
+  return tree_->GetSystemData<std::string_view>("version_string");
+}
+
+uint32_t TaskHolder::system_get_dcache_line_size() const {
+  return tree_->GetSystemData<uint32_t>("dcache_line_size");
+}
+
+uint32_t TaskHolder::system_get_num_cpus() const {
+  return tree_->GetSystemData<uint32_t>("num_cpus");
+}
+
+uint64_t TaskHolder::system_get_page_size() const {
+  return tree_->GetSystemData<uint64_t>("page_size");
+}
+
+uint64_t TaskHolder::system_get_physmem() const {
+  return tree_->GetSystemData<uint64_t>("physmem");
 }
 
 }  // namespace zxdump

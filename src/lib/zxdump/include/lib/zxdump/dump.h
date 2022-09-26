@@ -138,6 +138,11 @@ class ProcessDumpBase : protected DumpBase {
   // object is destroyed.
   fitx::result<Error> SuspendAndCollectThreads();
 
+  // Collect system-wide information.  This is always optional, but it must
+  // always be called before CollectProcess, if called at all.  The system
+  // information is included in the total size returned by CollectProcess.
+  fitx::result<Error> CollectSystem();
+
   // This can be called first or after SuspendAndCollectThreads.
   //
   // This collects information about memory and other process-wide state.  The
@@ -264,6 +269,11 @@ class JobDumpBase : protected DumpBase {
   JobDumpBase& operator=(JobDumpBase&&) noexcept;
 
   ~JobDumpBase() noexcept;
+
+  // Collect system-wide information.  This is always optional, but it must
+  // always be called first, before CollectJob, if called at all.  The system
+  // information is included in the total size returned by CollectJob.
+  fitx::result<Error> CollectSystem();
 
   // Collect information about the job itself.  The result contains the size of
   // the job archive to dump just that information.  Note that this collection

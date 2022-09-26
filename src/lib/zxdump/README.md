@@ -281,6 +281,27 @@ hierarchical job archive.  However, the hierarchical job archive also ensures
 that the state shown in the dump is synchronized across all the processes in
 the hierarchy since they were all kept suspended while doing all the dumping.
 
+## ZirconSystem.json
+
+The dump-writer may choose to include system-wide information in dumps.  This
+is information collected on the system at the time the dump is taken that may
+be specific to the particular hardware or instance of the system but is not
+specific to any single process or job on the system.  It can be included in a
+job archive, or in an `ET_CORE` file, or both.  When system-wide information is
+included in a job archive, then any child job or process dumps within the
+archive might contain a copy of the same information, or they might omit it
+since it is always the same across the whole job hierarchy.
+
+The system-wide information is encoded in UTF-8 JSON text.  In a job archive,
+it's found in a member file called `ZirconSystem.json`.  In an `ET_CORE` file,
+it's found in the ELF note with name `ZirconSystem.json` and `n_type` of zero.
+
+The JSON schema is subject to future extension, but it's a JSON object
+(i.e. key/value dictionary) with a simple mapping to the `zx::system` kernel
+interfaces, e.g. `"version_string"` maps to a JSON string value that
+`zx_system_get_version_string()` returned, and `"num_cpus"` maps to a JSON
+integer value that `zx_system_get_num_cpus()` returned.
+
 ## Reader API
 
 The `zxdump` C++ library provides an API for reading dumps as well as one for

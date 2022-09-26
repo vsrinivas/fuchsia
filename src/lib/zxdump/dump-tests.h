@@ -6,6 +6,7 @@
 #define SRC_LIB_ZXDUMP_DUMP_TESTS_H_
 
 #include <lib/fdio/spawn.h>
+#include <lib/fit/function.h>
 #include <lib/fitx/result.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
@@ -113,6 +114,8 @@ class TestProcess {
   bool kill_job_ = false;
 };
 
+using PrecollectFunction = fit::function<void(zxdump::ProcessDump<zx::unowned_process>& dump)>;
+
 class TestProcessForPropertiesAndInfo : public TestProcess {
  public:
   // Start a child for basic property & info dump testing.
@@ -120,7 +123,9 @@ class TestProcessForPropertiesAndInfo : public TestProcess {
 
   // Do the basic dump using the dumper API.
   template <typename Writer>
-  void Dump(Writer& writer);
+  void Dump(
+      Writer& writer,
+      PrecollectFunction precollect = [](zxdump::ProcessDump<zx::unowned_process>& dump) {});
 
   // Verify a dump file for that child was inserted and looks right.
   void CheckDump(zxdump::TaskHolder& holder, bool threads_dumped = true);
@@ -130,8 +135,31 @@ class TestProcessForPropertiesAndInfo : public TestProcess {
 };
 
 // The template and its instantiations are defined in dump-tests.cc.
-extern template void TestProcessForPropertiesAndInfo::Dump(FdWriter&);
-extern template void TestProcessForPropertiesAndInfo::Dump(ZstdWriter&);
+extern template void TestProcessForPropertiesAndInfo::Dump(FdWriter&, PrecollectFunction);
+extern template void TestProcessForPropertiesAndInfo::Dump(ZstdWriter&, PrecollectFunction);
+
+class TestProcessForSystemInfo : public TestProcessForPropertiesAndInfo {
+ public:
+  // Start a child for system information dump testing.
+  void StartChild();
+
+  // Do the basic dump using the dumper API.
+  template <typename Writer>
+  void Dump(Writer& writer) {
+    TestProcessForPropertiesAndInfo::Dump(writer, Precollect);
+  }
+
+  // Verify a dump file for that child was inserted and looks right.
+  void CheckDump(zxdump::TaskHolder& holder);
+
+ private:
+  static constexpr const char* kChildName = "zxdump-system-test-child";
+
+  static void Precollect(zxdump::ProcessDump<zx::unowned_process>& dump) {
+    auto result = dump.CollectSystem();
+    ASSERT_TRUE(result.is_ok()) << result.error_value();
+  }
+};
 
 }  // namespace zxdump::testing
 

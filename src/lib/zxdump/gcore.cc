@@ -48,6 +48,8 @@ struct Flags {
   std::string_view output_prefix_ = kOutputPrefix;
   size_t limit_ = zxdump::DefaultLimit();
   bool dump_memory_ = true;
+  bool collect_system_ = false;
+  bool repeat_system_ = false;
   bool collect_threads_ = true;
   bool collect_job_children_ = true;
   bool collect_job_processes_ = true;
@@ -190,7 +192,7 @@ class ProcessDumper : public DumperBase {
   }
 
   // Phase 1: Collect underpants!
-  std::optional<size_t> Collect(const Flags& flags) {
+  std::optional<size_t> Collect(const Flags& flags, bool top) {
     zxdump::SegmentCallback prune = PruneAll;
     if (flags.dump_memory_) {
       // TODO(mcgrathr): more filtering switches
@@ -199,6 +201,14 @@ class ProcessDumper : public DumperBase {
 
     if (flags.collect_threads_) {
       auto result = dumper_.SuspendAndCollectThreads();
+      if (result.is_error()) {
+        Error(result.error_value());
+        return std::nullopt;
+      }
+    }
+
+    if (flags.collect_system_ && (top || flags.repeat_system_)) {
+      auto result = dumper_.CollectSystem();
       if (result.is_error()) {
         Error(result.error_value());
         return std::nullopt;
@@ -273,8 +283,15 @@ class JobDumper : public DumperBase {
   auto* operator->() { return &dumper_; }
 
   // Collect the job-wide data and reify the lists of children and processes.
-  std::optional<size_t> Collect(const Flags& flags) {
+  std::optional<size_t> Collect(const Flags& flags, bool top) {
     date_ = flags.Date();
+    if (flags.collect_system_ && (top || flags.repeat_system_)) {
+      auto result = dumper_.CollectSystem();
+      if (result.is_error()) {
+        Error(result.error_value());
+        return std::nullopt;
+      }
+    }
     size_t size;
     if (auto result = dumper_.CollectJob(); result.is_error()) {
       Error(result.error_value());
@@ -373,7 +390,7 @@ class JobDumper::CollectedJob {
   // Later ok() indicates if any process or child collection failed.
   bool DeepCollect(const Flags& flags) {
     // Collect the job itself.
-    if (auto collected_size = dumper_.Collect(flags)) {
+    if (auto collected_size = dumper_.Collect(flags, false)) {
       content_size_ += *collected_size;
 
       // Collect all its processes and children.
@@ -440,7 +457,7 @@ class JobDumper::CollectedJob {
   void CollectProcess(zx::process process, zx_koid_t pid, const Flags& flags) {
     ProcessDumper dump{std::move(process), pid};
     time_t dump_date = flags.Date();
-    if (auto collected_size = dump.Collect(flags)) {
+    if (auto collected_size = dump.Collect(flags, false)) {
       CollectedProcess core_file{std::move(dump), *collected_size, dump_date};
       content_size_ += core_file.size_bytes();
       processes_.push_back(std::move(core_file));
@@ -476,7 +493,7 @@ bool JobDumper::Dump(Writer& writer, const Flags& flags) {
     // Collect the process and thus discover the ET_CORE file size.
     ProcessDumper process_dump{std::move(process), pid};
     time_t process_dump_date = flags.Date();
-    if (auto collected_size = process_dump.Collect(flags)) {
+    if (auto collected_size = process_dump.Collect(flags, false)) {
       // Dump the member header, now complete with size.
       if (!DumpMemberHeader(writer, process_dump.OutputFile(flags, false),  //
                             *collected_size, process_dump_date)) {
@@ -492,7 +509,7 @@ bool JobDumper::Dump(Writer& writer, const Flags& flags) {
     if (flags.flatten_jobs_) {
       // Collect just this job first.
       JobDumper child{std::move(job), koid};
-      auto collected_job_size = child.Collect(flags);
+      auto collected_job_size = child.Collect(flags, false);
       ok = collected_job_size &&
            // Stream out the member header for just the stub archive alone.
            DumpMemberHeader(writer, child.OutputFile(flags, false),  //
@@ -531,7 +548,7 @@ bool WriteDump(Dumper dumper, const Flags& flags) {
     return false;
   }
   Writer writer{std::move(fd), std::move(outfile), flags.zstd_};
-  return writer.Ok(dumper.Collect(flags) && dumper.Dump(writer, flags));
+  return writer.Ok(dumper.Collect(flags, true) && dumper.Dump(writer, flags));
 }
 
 // "Dump" a job tree by actually just making separate dumps of each process.
@@ -564,7 +581,7 @@ bool WriteManyCoreFiles(JobDumper dumper, const Flags& flags) {
   return ok;
 }
 
-constexpr const char kOptString[] = "hlo:zamtcpJjfDU";
+constexpr const char kOptString[] = "hlo:zamtcpJjfDUsS";
 constexpr const option kLongOpts[] = {
     {"help", no_argument, nullptr, 'h'},                 //
     {"limit", required_argument, nullptr, 'l'},          //
@@ -579,6 +596,8 @@ constexpr const option kLongOpts[] = {
     {"flat-job-archive", no_argument, nullptr, 'f'},     //
     {"no-date", no_argument, nullptr, 'D'},              //
     {"date", no_argument, nullptr, 'U'},                 //
+    {"system", no_argument, nullptr, 's'},               //
+    {"system-recursive", no_argument, nullptr, 'S'},     //
     {"root-job", no_argument, nullptr, 'a'},             //
     {nullptr, no_argument, nullptr, 0},                  //
 };
@@ -607,6 +626,8 @@ int main(int argc, char** argv) {
     --no-processes, -p                 don't dump processes found in jobs
     --no-date, -D                      don't put dates into job archives
     --date, -U                         do put dates into job archives (default)
+    --system, -s                       include system-wide information
+    --system-recursive, -S             ... repeated in each child dump
     --root-job, -a                     dump the root job
 
 By default, each PID must be the KOID of a process.
@@ -705,6 +726,14 @@ essential services.  PID arguments are not allowed with --root-job unless
 
       case 'p':
         flags.collect_job_processes_ = false;
+        continue;
+
+      case 'S':
+        flags.repeat_system_ = true;
+        [[fallthrough]];
+
+      case 's':
+        flags.collect_system_ = true;
         continue;
 
       case 'a':

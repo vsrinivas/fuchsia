@@ -146,6 +146,17 @@ class TaskHolder {
   // inserted, and later start reporting new orphan tasks inserted after that.
   Job& root_job() const;
 
+  // These can't fail, but return empty/zero if no corresponding data is in the
+  // dump.  If multiple dumps supply system-wide information, only the first
+  // dump's data will be used.  There is no checking that the system-wide data
+  // in dumps is valid; malformed data may be treated like no data at all but
+  // still may prevent well-formed data in other dumps from being used.
+  uint32_t system_get_dcache_line_size() const;
+  uint32_t system_get_num_cpus() const;
+  uint64_t system_get_page_size() const;
+  uint64_t system_get_physmem() const;
+  std::string_view system_get_version_string() const;
+
  private:
   friend Task;
   friend Job;

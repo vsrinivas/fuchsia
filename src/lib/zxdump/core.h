@@ -46,6 +46,9 @@ inline constexpr std::string_view kThreadPropertyNoteName{"ZirconThreadProperty"
 // of the note are exactly as returned by read_state.
 inline constexpr std::string_view kThreadStateNoteName{"ZirconThreadState"};
 
+// The contents are JSON, schema based on zx::system methods.
+inline constexpr std::string_view kSystemNoteName{"ZirconSystem.json"};
+
 }  // namespace zxdump
 
 #endif  // SRC_LIB_ZXDUMP_CORE_H_
