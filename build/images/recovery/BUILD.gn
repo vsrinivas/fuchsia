@@ -226,6 +226,7 @@ if (is_fuchsia) {
       "//src/connectivity/network/mdns/bundles:services",
       "//src/firmware/fastboot-tcp:fastboot_tcp_mdns_config",
       "//src/sys/pkg:recovery-core",
+      "//src/developer/build_info:build-info-service",
     ]
 
     bootfs_labels = []
