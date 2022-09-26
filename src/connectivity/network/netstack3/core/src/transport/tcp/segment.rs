@@ -159,15 +159,19 @@ impl<P: Payload> Segment<P> {
             let (new_control, new_data) = {
                 match control {
                     Some(Control::SYN) => {
-                        if seq == new_seq {
+                        if start == 0 {
                             (Some(Control::SYN), data.slice(start..start + new_len - 1))
                         } else {
                             (None, data.slice(start - 1..start + new_len - 1))
                         }
                     }
                     Some(Control::FIN) => {
-                        if seq + len == new_seq + new_len {
-                            (Some(Control::FIN), data.slice(start..start + new_len - 1))
+                        if len == start + new_len {
+                            if new_len > 0 {
+                                (Some(Control::FIN), data.slice(start..start + new_len - 1))
+                            } else {
+                                (None, data.slice(start - 1..start - 1))
+                            }
                         } else {
                             (None, data.slice(start..start + new_len))
                         }
@@ -607,6 +611,13 @@ mod test {
         rcv_nxt: 1,
         rcv_wnd: 1 << 30 - 1,
     } => Some((SeqNum::new(10), None, 0..10)))]
+    #[test_case(OverlapTestArgs{
+        seg_seq: 1,
+        control: Some(Control::FIN),
+        data_len: 1,
+        rcv_nxt: 3,
+        rcv_wnd: 10,
+    } => Some((SeqNum::new(3), None, 1..1)); "regression test for https://fxbug.dev/110391")]
     fn segment_overlap(
         OverlapTestArgs { seg_seq, control, data_len, rcv_nxt, rcv_wnd }: OverlapTestArgs,
     ) -> Option<(SeqNum, Option<Control>, Range<u32>)> {
