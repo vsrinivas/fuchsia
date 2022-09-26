@@ -24,6 +24,17 @@ provided for consuming pre-allocated, fixed-sized buffers.  It's expected that
 users of the library will provide simple chunk allocation functions appropriate
 for their own context.
 
+## PageAllocator
+
+The `trivial_allocator::PageAllocator` template class in
+[<lib/trivial-allocator/page-allocator.h>](include/lib/trivial-allocator/page-allocator.h)
+provides an underlying allocator that gets whole-page chunks from the operating
+system.
+[<lib/trivial-allocator/posix.h>](include/lib/trivial-allocator/posix.h) and
+[<lib/trivial-allocator/zircon.h>](include/lib/trivial-allocator/zircon.h)
+provide classes to specialize `PageAllocator` for using POSIX `mmap`, and for
+using the Zircon VMAR and VMO objects, respectively.
+
 ## `delete` support
 
 A separate companion "stub-delete" library provides no-op `operator delete` and

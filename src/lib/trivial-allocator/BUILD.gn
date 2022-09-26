@@ -14,7 +14,10 @@ zx_library("trivial-allocator") {
   sdk_headers = [
     "lib/trivial-allocator/basic-leaky-allocator.h",
     "lib/trivial-allocator/new.h",
+    "lib/trivial-allocator/page-allocator.h",
+    "lib/trivial-allocator/posix.h",
     "lib/trivial-allocator/single-heap-allocator.h",
+    "lib/trivial-allocator/zircon.h",
   ]
 
   public_deps = [
@@ -89,6 +92,7 @@ test("trivial-allocator-unittests") {
   sources = [
     "basic-leaky-allocator-tests.cc",
     "new-tests.cc",
+    "page-allocator-tests.cc",
     "single-heap-allocator-tests.cc",
   ]
   deps = [
