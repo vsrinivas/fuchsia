@@ -89,6 +89,13 @@
             from: "#scene-manager",
         },
         {
+            protocol: [
+                "fuchsia.input.virtualkeyboard.ControllerCreator",
+                "fuchsia.input.virtualkeyboard.Manager",
+            ],
+            from: "#virtual-keyboard-manager",
+        },
+        {
             // TODO(fxbug.dev/107054): Remove these.
             protocol: [
                 "test.inputsynthesis.Mouse",

@@ -133,7 +133,9 @@ class InputPositionListenerServer : public InputPositionListener, public LocalCo
   fidl::BindingSet<InputPositionListener> bindings_;
 };
 
-class VirtualKeyboardBase : public gtest::RealLoopFixture {
+class VirtualKeyboardBase
+    : public gtest::RealLoopFixture,
+      public ::testing::WithParamInterface<ui_testing::UITestRealm::SceneOwnerType> {
  protected:
   VirtualKeyboardBase() = default;
 
@@ -146,7 +148,7 @@ class VirtualKeyboardBase : public gtest::RealLoopFixture {
     ui_testing::UITestRealm::Config config;
     config.accessibility_owner = ui_testing::UITestRealm::AccessibilityOwnerType::FAKE;
     config.use_input = true;
-    config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER;
+    config.scene_owner = GetParam();
     config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_,
                                     fuchsia::accessibility::semantics::SemanticsManager::Name_,
                                     fuchsia::ui::input3::Keyboard::Name_,
@@ -473,7 +475,10 @@ class WebEngineTest : public VirtualKeyboardBase {
   std::optional<async::Task> inject_retry_task_;
 };
 
-TEST_F(WebEngineTest, ShowAndHideKeyboard) {
+INSTANTIATE_TEST_SUITE_P(WebEngineTestWithParams, WebEngineTest,
+                         ::testing::Values(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER,
+                                           ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER));
+TEST_P(WebEngineTest, ShowAndHideKeyboard) {
   // Launch the chromium view.
   ui_test_manager()->InitializeScene();
   FX_LOGS(INFO) << "Waiting for client view to render";

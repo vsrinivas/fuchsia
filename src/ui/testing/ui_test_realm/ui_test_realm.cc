@@ -71,6 +71,7 @@ constexpr auto kRootPresenterName = "root-presenter";
 constexpr auto kSceneManagerName = "scene-manager";
 constexpr auto kInputPipelineName = "input-pipeline";
 constexpr auto kTextManagerName = "text-manager";
+constexpr auto kVirtualKeyboardManagerName = "virtual-keyboard-manager";
 constexpr auto kSceneProviderName = "scene-provider";
 
 // Contents of config file used to allow scenic to use gfx.
@@ -129,6 +130,22 @@ std::string InputOwnerName(const UITestRealm::Config& config) {
   }
 }
 
+// Returns the name of the virtual keyboard component (if any).
+std::string VirtualKeyboardOwnerName(const UITestRealm::Config& config) {
+  if (!config.scene_owner) {
+    return "";
+  }
+
+  switch (*config.scene_owner) {
+    case UITestRealm::SceneOwnerType::ROOT_PRESENTER:
+      return kRootPresenterName;
+    case UITestRealm::SceneOwnerType::SCENE_MANAGER:
+      return kVirtualKeyboardManagerName;
+    default:
+      return "";
+  }
+}
+
 // List of scenic services available in the test realm.
 std::vector<std::string> ScenicServices(const UITestRealm::Config& config) {
   if (config.use_flatland) {
@@ -164,8 +181,6 @@ std::vector<std::string> SceneOwnerServices(const UITestRealm::Config& config) {
 
   if (config.scene_owner == UITestRealm::SceneOwnerType::ROOT_PRESENTER) {
     return {fuchsia::ui::accessibility::view::Registry::Name_,
-            fuchsia::input::virtualkeyboard::Manager::Name_,
-            fuchsia::input::virtualkeyboard::ControllerCreator::Name_,
             fuchsia::ui::pointerinjector::configuration::Setup::Name_,
             fuchsia::ui::policy::Presenter::Name_};
   } else if (config.scene_owner == UITestRealm::SceneOwnerType::SCENE_MANAGER) {
@@ -215,6 +230,11 @@ std::map<std::string, std::string> GetServiceToComponentMap(UITestRealm::Config 
   if (config.use_input) {
     service_to_component[fuchsia::ui::input::ImeService::Name_] = kTextManagerName;
     service_to_component[fuchsia::ui::input3::Keyboard::Name_] = kTextManagerName;
+
+    service_to_component[fuchsia::input::virtualkeyboard::ControllerCreator::Name_] =
+        VirtualKeyboardOwnerName(config);
+    service_to_component[fuchsia::input::virtualkeyboard::Manager::Name_] =
+        VirtualKeyboardOwnerName(config);
   }
 
   return service_to_component;
