@@ -22,8 +22,28 @@ type FileConfig struct {
 	// Extensions map is the list of filetypes that we can expect
 	// may have license information included in it.
 	Extensions map[string]bool
+
+	// URL overrides can be defined in the config file.
+	FileDataURLs []*FileDataURL `json:"urlReplacements"`
 }
 
+// Prebuilt libraries have licenses that come from various locations.
+// We don't have access to the source URLs for those dependent libraries.
+// FileDataURL lets us maintain a separate mapping of library name -> URL,
+// which we can use in check-licenses to produce the compliance worksheet.
+type FileDataURL struct {
+	Source       string            `json:"source"`
+	Prefix       string            `json:"prefix"`
+	Projects     map[string]bool   `json:"projects"`
+	Products     map[string]bool   `json:"products"`
+	Boards       map[string]bool   `json:"boards"`
+	Replacements map[string]string `json:"replacements"`
+}
+
+// Support replacing individual characters with other ones.
+// For example, sometimes golang processes ` incorrectly, so we can replace
+// instances of that character with ' using Replacement fields in the
+// config file.
 type Replacement struct {
 	Replace string   `json:"replace"`
 	With    string   `json:"with"`
@@ -35,6 +55,7 @@ func NewConfig() *FileConfig {
 		CopyrightSize: 0,
 		Replacements:  make([]*Replacement, 0),
 		Extensions:    make(map[string]bool, 0),
+		FileDataURLs:  make([]*FileDataURL, 0),
 	}
 }
 
@@ -49,4 +70,5 @@ func (c *FileConfig) Merge(other *FileConfig) {
 	for k, v := range other.Extensions {
 		c.Extensions[k] = v
 	}
+	c.FileDataURLs = append(c.FileDataURLs, other.FileDataURLs...)
 }
