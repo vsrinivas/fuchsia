@@ -2649,46 +2649,6 @@
             }
           },
           "MethodDeclarationImpl": {
-            "keyEvents": {
-              "SimpleFormalParameterImpl": {
-                "e": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "e",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "null"
-                },
-                "keyEvents": {
-                  "isConst": false,
-                  "isFinal": true,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "keyEvents",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "List<KeyEvent>"
-                }
-              },
-              "isAbstract": false,
-              "isGetter": false,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "keyEvents",
-              "returnType": "Future<bool>",
-              "type": "MethodDeclarationImpl"
-            },
             "keyPress": {
               "SimpleFormalParameterImpl": {
                 "hidUsageId": {
@@ -3111,42 +3071,6 @@
             }
           },
           "name": "Input",
-          "type": "ClassDeclarationImpl"
-        },
-        "KeyEvent": {
-          "ConstructorDeclarationImpl": {
-            "KeyEvent": {
-              "FieldFormalParameterImpl": {
-                "this._durationSinceStart": {
-                  "name": "this._durationSinceStart",
-                  "type": "FieldFormalParameterImpl"
-                },
-                "this._key": {
-                  "name": "this._key",
-                  "type": "FieldFormalParameterImpl"
-                },
-                "this._type": {
-                  "name": "this._type",
-                  "type": "FieldFormalParameterImpl"
-                }
-              },
-              "name": "KeyEvent",
-              "type": "ConstructorDeclarationImpl"
-            }
-          },
-          "MethodDeclarationImpl": {
-            "toJson": {
-              "isAbstract": false,
-              "isGetter": false,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "toJson",
-              "returnType": "Map<String, dynamic>",
-              "type": "MethodDeclarationImpl"
-            }
-          },
-          "name": "KeyEvent",
           "type": "ClassDeclarationImpl"
         }
       },

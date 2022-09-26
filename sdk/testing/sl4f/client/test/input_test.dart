@@ -7,8 +7,6 @@
 
 import 'dart:math';
 
-import 'package:fidl_fuchsia_input/fidl_async.dart' as finput;
-import 'package:fidl_fuchsia_ui_input3/fidl_async.dart' as finput3;
 import 'package:mockito/mockito.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
@@ -175,22 +173,6 @@ void main(List<String> args) {
       verify(sl4f.request('input_facade.KeyPress', {
         'hid_usage_id': 40,
         'key_press_duration': keyPressDuration.inMilliseconds,
-      }));
-    });
-
-    test('enter key events', () async {
-      await input.keyEvents([
-        KeyEvent(finput.Key.a, Duration(milliseconds: 100),
-            finput3.KeyEventType.pressed),
-      ]);
-      verify(sl4f.request('input_facade.KeyEvents', {
-        'key_events': [
-          {
-            'key': finput.Key.a.$value,
-            'duration_millis': 100,
-            'type': finput3.KeyEventType.pressed.$value,
-          },
-        ],
       }));
     });
 

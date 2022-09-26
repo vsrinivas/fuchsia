@@ -7,8 +7,6 @@
 
 import 'dart:math';
 
-import 'package:fidl_fuchsia_input/fidl_async.dart' as input;
-import 'package:fidl_fuchsia_ui_input3/fidl_async.dart' as input3;
 import 'package:quiver/iterables.dart' show zip;
 
 import 'sl4f_client.dart';
@@ -19,23 +17,6 @@ enum Rotation {
   degrees90,
   degrees180,
   degrees270,
-}
-
-/// Describes  single key event to pass into [Input.keyEvents].
-class KeyEvent {
-  final input.Key _key;
-  final Duration _durationSinceStart;
-  final input3.KeyEventType _type;
-
-  /// Creates a new [KeyEvent].
-  KeyEvent(this._key, this._durationSinceStart, this._type);
-
-  /// Return this as a primitive object that can be JSON-encoded.
-  Map<String, dynamic> toJson() => {
-        'key': _key.$value,
-        'duration_millis': _durationSinceStart.inMilliseconds,
-        'type': _type.$value,
-      };
 }
 
 /// Send screen interactions to the device using Scenic.
@@ -226,7 +207,7 @@ class Input {
     return result == 'Success';
   }
 
-  /// Simulates a sequence of key events (presses and releases) on a
+  /// Simulates a sequence of serialized key events (presses and releases) on a
   /// keyboard.
   ///
   /// Dispatches the supplied `events` into a keyboard device, honoring
@@ -277,16 +258,6 @@ class Input {
   /// ```
   ///
   /// Returns `true` on success, or false otherwise.
-  /// TODO To Deprecate
-  Future<bool> keyEvents(final List<KeyEvent> keyEvents) async {
-    final events = keyEvents.map((e) => e.toJson()).toList();
-    final result = await _sl4f.request('input_facade.KeyEvents', {
-      'key_events': events,
-    });
-    return result == 'Success';
-  }
-
-  /// Method that allows the caller to serialize key events.
   Future<bool> sendKeyEvents(final List<dynamic> events) async {
     final result = await _sl4f.request('input_facade.KeyEvents', {
       'key_events': events,
