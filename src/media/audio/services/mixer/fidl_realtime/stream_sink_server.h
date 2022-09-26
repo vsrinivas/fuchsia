@@ -55,7 +55,7 @@ class StreamSinkServer
   void Clear(ClearRequestView request, ClearCompleter::Sync& completer) override;
 
  private:
-  static inline constexpr std::string_view kName = "StreamSinkServer";
+  static inline constexpr std::string_view kClassName = "StreamSinkServer";
   template <typename ServerT, template <typename T> typename FidlServerT, typename ProtocolT>
   friend class BaseFidlServer;
   friend class TestStreamSinkServerAndClient;

@@ -77,7 +77,7 @@ class GraphServer
   std::string_view name() const { return name_; }
 
  private:
-  static inline constexpr std::string_view kName = "GraphServer";
+  static inline constexpr std::string_view kClassName = "GraphServer";
   template <typename ServerT, template <typename T> typename FidlServerT, typename ProtocolT>
   friend class BaseFidlServer;
 

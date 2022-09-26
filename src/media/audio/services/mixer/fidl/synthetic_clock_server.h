@@ -35,7 +35,7 @@ class SyntheticClockServer : public BaseFidlServer<SyntheticClockServer, fidl::W
   void SetRate(SetRateRequestView request, SetRateCompleter::Sync& completer) override;
 
  private:
-  static inline const std::string_view kName = "SyntheticClockRealmServer";
+  static inline const std::string_view kClassName = "SyntheticClockRealmServer";
   template <typename ServerT, template <typename T> typename FidlServerT, typename ProtocolT>
   friend class BaseFidlServer;
 
@@ -69,7 +69,7 @@ class SyntheticClockRealmServer : public BaseFidlServer<SyntheticClockRealmServe
   void AdvanceBy(AdvanceByRequestView request, AdvanceByCompleter::Sync& completer) override;
 
  private:
-  static inline const std::string_view kName = "SyntheticClockRealmServer";
+  static inline const std::string_view kClassName = "SyntheticClockRealmServer";
   template <typename ServerT, template <typename T> typename FidlServerT, typename ProtocolT>
   friend class BaseFidlServer;
 

@@ -27,7 +27,7 @@ class GraphCreatorServer : public BaseFidlServer<GraphCreatorServer, fidl::WireS
   void Create(CreateRequestView request, CreateCompleter::Sync& completer) override;
 
  private:
-  static inline constexpr std::string_view kName = "GraphCreatorServer";
+  static inline constexpr std::string_view kClassName = "GraphCreatorServer";
   template <typename ServerT, template <typename T> typename FidlServerT, typename ProtocolT>
   friend class BaseFidlServer;
 
