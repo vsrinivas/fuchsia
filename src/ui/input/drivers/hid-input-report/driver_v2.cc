@@ -76,9 +76,8 @@ class InputReportDriver : public driver::DriverBase {
     compat_context_ = std::move(*context);
 
     // Create our child device and export it to devfs.
-    child_ =
-        compat::DeviceServer(kDeviceName, ZX_PROTOCOL_INPUTREPORT,
-                             compat_context_->TopologicalPath(kDeviceName), compat::MetadataMap());
+    child_ = compat::DeviceServer(kDeviceName, ZX_PROTOCOL_INPUTREPORT,
+                                  compat_context_->TopologicalPath(kDeviceName));
     child_->ExportToDevfs(
         compat_context_->devfs_exporter(), child_->name(), [this](zx_status_t status) {
           if (status != ZX_OK) {

@@ -861,8 +861,7 @@ zx::status<std::shared_ptr<dfv2::Node>> Device::CreateDFv2Device() {
     // TODO(fxbug.dev/109809): Connect the FIDL offers here.
     service_offers.emplace(name, clone_outgoing_dir(), compat::FidlServiceOffers());
   }
-  auto server = compat::DeviceServer(name, protocol_id_, topo_path, compat::MetadataMap(),
-                                     std::move(service_offers));
+  auto server = compat::DeviceServer(name, protocol_id_, topo_path, std::move(service_offers));
 
   // Set the metadata for the DeviceServer.
   for (auto& metadata : metadata()) {

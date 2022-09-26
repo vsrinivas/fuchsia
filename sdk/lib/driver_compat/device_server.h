@@ -22,12 +22,13 @@ using MetadataMap = std::unordered_map<uint32_t, const Metadata>;
 // It represents a single device.
 class DeviceServer : public fidl::WireServer<fuchsia_driver_compat::Device> {
  public:
+  DeviceServer() = default;
+
   DeviceServer(std::string name, uint32_t proto_id, std::string topological_path,
-               MetadataMap metadata, std::optional<ServiceOffersV1> service_offers = std::nullopt)
+               std::optional<ServiceOffersV1> service_offers = std::nullopt)
       : name_(std::move(name)),
         topological_path_(std::move(topological_path)),
         proto_id_(proto_id),
-        metadata_(std::move(metadata)),
         service_offers_(std::move(service_offers)) {}
 
   // Functions to implement the DFv1 device API.
@@ -59,7 +60,7 @@ class DeviceServer : public fidl::WireServer<fuchsia_driver_compat::Device> {
 
   std::string name_;
   std::string topological_path_;
-  uint32_t proto_id_;
+  uint32_t proto_id_ = 0;
   MetadataMap metadata_;
   std::optional<ServiceOffersV1> service_offers_;
 

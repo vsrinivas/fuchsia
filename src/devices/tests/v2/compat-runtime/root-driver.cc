@@ -87,7 +87,7 @@ class RootDriver : public driver::DriverBase, public fdf::Server<ft::Root> {
     service_offers.push_back(std::string(ft::Service::Name));
 
     child_ = compat::DeviceServer(
-        "v1", 0, "root/v1", compat::MetadataMap(),
+        "v1", 0, "root/v1",
         compat::ServiceOffersV1("v1", std::move(vfs_client_), std::move(service_offers)));
     zx_status_t status = child_->Serve(dispatcher(), context().outgoing().get());
     if (status != ZX_OK) {

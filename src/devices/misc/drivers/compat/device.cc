@@ -153,8 +153,7 @@ std::vector<fuchsia_driver_framework::wire::NodeProperty> CreateProperties(
 Device::Device(device_t device, const zx_protocol_device_t* ops, Driver* driver,
                std::optional<Device*> parent, driver::Logger& logger,
                async_dispatcher_t* dispatcher)
-    : device_server_(std::string(device.name), device.proto_ops.id, "", MetadataMap()),
-      name_(device.name),
+    : name_(device.name),
       logger_(logger),
       dispatcher_(dispatcher),
       driver_(driver),
@@ -271,7 +270,7 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
   }
 
   device->device_server_ = DeviceServer(outgoing_name, zx_args->proto_id, device->topological_path_,
-                                        MetadataMap(), std::move(service_offers));
+                                        std::move(service_offers));
 
   // Add the metadata from add_args:
   for (size_t i = 0; i < zx_args->metadata_count; i++) {

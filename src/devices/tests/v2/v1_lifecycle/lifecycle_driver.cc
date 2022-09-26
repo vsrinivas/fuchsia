@@ -75,8 +75,8 @@ class LifecycleDriver : public driver::DriverBase, public fidl::WireServer<ft::D
           }
           compat_context_ = std::move(*context);
           const auto kDeviceName = "lifecycle-device";
-          child_ = compat::DeviceServer(
-              kDeviceName, 0, compat_context_->TopologicalPath(kDeviceName), compat::MetadataMap());
+          child_ =
+              compat::DeviceServer(kDeviceName, 0, compat_context_->TopologicalPath(kDeviceName));
           const auto kServicePath =
               std::string(ft::Service::Name) + "/" + component::kDefaultInstance + "/device";
           child_->ExportToDevfs(
