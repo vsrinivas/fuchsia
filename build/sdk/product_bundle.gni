@@ -5,8 +5,8 @@
 import("//build/python/python_action.gni")
 import("//src/developer/ffx/build/ffx_action.gni")
 
-# Generate a manifest that can be passed to 'ffx target flash' to flash
-# images to a target device.
+# Generate a product bundle that can be used to flash, emulate, or update a
+# product onto a Fuchsia target.
 #
 # Arguments
 #   partitions (required)
@@ -24,7 +24,23 @@ import("//src/developer/ffx/build/ffx_action.gni")
 #     [path] The path to the images manifest that describes images intended
 #     for slot R.
 #
-template("flash_manifest") {
+#   partitions_contents (optional)
+#     [list] A list of files referenced in the partitions config that will
+#     be copied into the outputs.
+#
+#   system_a_contents (optional)
+#     [list] A list of files referenced in the system_a config that will
+#     be copied into the outputs.
+#
+#   system_b_contents (optional)
+#     [list] A list of files referenced in the system_b config that will
+#     be copied into the outputs.
+#
+#   system_r_contents (optional)
+#     [list] A list of files referenced in the system_r config that will
+#     be copied into the outputs.
+#
+template("product_bundle") {
   assert(defined(invoker.partitions), "Need to define partitions")
 
   labels = {
@@ -34,7 +50,6 @@ template("flash_manifest") {
   files = {
     hermetic_inputs = "${target_out_dir}/${target_name}_hermetic_inputs"
     outdir = "$target_out_dir/$target_name"
-    flash_manifest = "$outdir/flash.json"
   }
 
   python_action(labels.hermetic_inputs) {
@@ -77,6 +92,7 @@ template("flash_manifest") {
   }
 
   ffx_action(target_name) {
+    no_output_dir_leaks = false
     forward_variables_from(invoker,
                            [
                              "deps",
@@ -87,21 +103,47 @@ template("flash_manifest") {
       deps = []
     }
 
+    outputs = []
+    if (defined(invoker.partitions_contents)) {
+      foreach(file, invoker.partitions_contents) {
+        filename = get_path_info(file, "file")
+        outputs += [ "${files.outdir}/partitions/${filename}" ]
+      }
+    }
+    if (defined(invoker.system_a_contents)) {
+      foreach(file, invoker.system_a_contents) {
+        filename = get_path_info(file, "file")
+        outputs += [ "${files.outdir}/system_a/${filename}" ]
+      }
+    }
+    if (defined(invoker.system_b_contents)) {
+      foreach(file, invoker.system_b_contents) {
+        filename = get_path_info(file, "file")
+        outputs += [ "${files.outdir}/system_b/${filename}" ]
+      }
+    }
+    if (defined(invoker.system_r_contents)) {
+      foreach(file, invoker.system_r_contents) {
+        filename = get_path_info(file, "file")
+        outputs += [ "${files.outdir}/system_r/${filename}" ]
+      }
+    }
+
     hermetic_inputs_target = ":${labels.hermetic_inputs}"
     hermetic_inputs_file = files.hermetic_inputs
 
     args = [
       "--config",
-      "assembly_enabled=true",
-      "assembly",
-      "create-flash-manifest",
+      "product.experimental=true",
+      "product",
+      "create",
       "--partitions",
       rebase_path(invoker.partitions, root_build_dir),
-      "--outdir",
+      "--out-dir",
       rebase_path(files.outdir, root_build_dir),
     ]
 
-    outputs = [ files.flash_manifest ]
+    outputs += [ "${files.outdir}/product_bundle.json" ]
 
     inputs = [ invoker.partitions ]
 

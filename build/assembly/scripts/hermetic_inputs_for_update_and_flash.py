@@ -40,6 +40,10 @@ def main():
     partitions = json.load(args.partitions)
     for bootloader in partitions.get('bootloader_partitions', []):
         inputs.append(bootloader['image'])
+    for bootstrap in partitions.get('bootstrap_partitions', []):
+        inputs.append(bootstrap['image'])
+    for credential in partitions.get('unlock_credentials', []):
+        inputs.append(credential)
 
     # Add all the system images as inputs.
     for manifest_file in args.system:

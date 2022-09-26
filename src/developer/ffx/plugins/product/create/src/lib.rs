@@ -17,7 +17,10 @@ use std::path::{Path, PathBuf};
 /// Create a product bundle.
 #[ffx_plugin("product.experimental")]
 fn pb_create(cmd: CreateCommand) -> Result<()> {
-    // Make sure `out_dir` is created.
+    // Make sure `out_dir` is created and empty.
+    if cmd.out_dir.exists() {
+        std::fs::remove_dir_all(&cmd.out_dir).context("Deleting the out_dir")?;
+    }
     std::fs::create_dir_all(&cmd.out_dir).context("Creating the out_dir")?;
 
     let product_bundle = ProductBundle::V2(ProductBundleV2 {
@@ -103,7 +106,6 @@ fn load_assembly_manifest(
 fn copy_file(source: impl AsRef<Path>, out_dir: impl AsRef<Path>) -> Result<PathBuf> {
     let filename = source.as_ref().file_name().context("getting file name")?;
     let destination = out_dir.as_ref().join(filename);
-    println!("copying {} to {}", source.as_ref().display(), destination.display());
     std::fs::copy(source, &destination).context("copying file")?;
     Ok(destination)
 }

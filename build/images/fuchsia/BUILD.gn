@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/assembly/assembled_system.gni")
-import("//build/assembly/flash_manifest.gni")
 import("//build/assembly/generated_assembly_inputs.gni")
 import("//build/assembly/generated_partitions_config.gni")
 import("//build/assembly/legacy_image_metadata_overrides.gni")
@@ -12,6 +11,7 @@ import("//build/images/args.gni")
 import("//build/images/filesystem_limits.gni")
 import("//build/images/vboot/vboot.gni")
 import("//build/product.gni")
+import("//build/sdk/product_bundle.gni")
 import("//build/security.gni")
 import("//build/security/policies.gni")
 import("//build/security/policies_swd.gni")
@@ -72,9 +72,26 @@ if (is_fuchsia) {
     packages_prime_json = "${outdir_prime}/packages.json"
 
     # Outputs of recovery.
-    recovery_outdir = get_label_info(recovery_label, "target_out_dir") + "/" +
-                      get_label_info(recovery_label, "name")
+    recovery_name = get_label_info(recovery_label, "name")
+    recovery_outdir =
+        get_label_info(recovery_label, "target_out_dir") + "/" + recovery_name
+    recovery_zbi = "${recovery_outdir}/${recovery_name}.zbi"
+    recovery_zbi_signed = "${recovery_outdir}/${recovery_name}.zbi.signed"
+    recovery_vbmeta = "${recovery_outdir}/${recovery_name}.vbmeta"
+    recovery_blobfs = "${recovery_outdir}/blob.blk"
+    recovery_fvm = "${recovery_outdir}/fvm.blk"
+    recovery_fvm_sparse = "${recovery_outdir}/fvm.sparse.blk"
+    recovery_fvm_blob_sparse = "${recovery_outdir}/fvm.blob.sparse.blk"
+    recovery_fvm_fastboot = "${recovery_outdir}/fvm.fastboot.blk"
     recovery_images_json = "${recovery_outdir}/images.json"
+
+    esp_image_path = "${root_build_dir}/fuchsia.esp.blk"
+
+    if (target_cpu == "x64") {
+      qemu_kernel = "$root_build_dir/multiboot.bin"
+    } else {
+      qemu_kernel = "$root_build_dir/qemu-boot-shim.bin"
+    }
   }
 
   fuchsia_base = {
@@ -246,8 +263,8 @@ if (is_fuchsia) {
     public_deps = [
       ":assembly_inputs",
       ":copy_blobfs",
-      ":flash_manifest",
       ":fuchsia_assembly",
+      ":product_bundle",
       ":update",
     ]
 
@@ -284,9 +301,21 @@ if (is_fuchsia) {
     unlock_credentials = board_fastboot_unlock_credentials
 
     if (use_gigaboot) {
-      esp_image_path = "${root_build_dir}/fuchsia.esp.blk"
+      esp_image_path = files.esp_image_path
       deps = [ "//build/images/flash:esp" ]
     }
+  }
+
+  # Create a list of the files that are referenced by the partitions config.
+  _partitions_contents = board_fastboot_unlock_credentials
+  foreach(file, bootstrap_files) {
+    _partitions_contents += [ file.path ]
+  }
+  foreach(file, firmware_prebuilts) {
+    _partitions_contents += [ "${file.path}${firmware_prebuilts_path_suffix}" ]
+  }
+  if (use_gigaboot) {
+    _partitions_contents += [ files.esp_image_path ]
   }
 
   update_package("update") {
@@ -306,7 +335,7 @@ if (is_fuchsia) {
     epoch = "1"
   }
 
-  flash_manifest("flash_manifest") {
+  product_bundle("product_bundle") {
     testonly = fuchsia_zbi_testonly
     deps = [
       ":fuchsia_assembly",
@@ -317,6 +346,47 @@ if (is_fuchsia) {
     system_a = files.images_json
     system_b = files.images_json
     system_r = files.recovery_images_json
+
+    # Create lists of the files that are referenced by the assembly manifests.
+    _assembly_contents = [
+      files.blobfs,
+      files.fvm,
+      files.fvm_sparse,
+      files.fvm_blob_sparse,
+      files.qemu_kernel,
+    ]
+    _recovery_contents = [ files.qemu_kernel ]
+    if (files.recovery_name != "zedboot") {
+      _recovery_contents += [
+        files.recovery_blobfs,
+        files.recovery_fvm,
+        files.recovery_fvm_sparse,
+        files.recovery_fvm_blob_sparse,
+      ]
+    }
+    if (fvm_emmc_partition_size != false || fvm_ftl_nand_block_count != false) {
+      _assembly_contents += [ files.fvm_fastboot ]
+      if (files.recovery_name != "zedboot") {
+        _recovery_contents += [ files.recovery_fvm_fastboot ]
+      }
+    }
+    if (custom_signing_script != "" || use_vboot) {
+      _assembly_contents += [ files.zbi_signed ]
+      _recovery_contents += [ files.recovery_zbi_signed ]
+    } else {
+      _assembly_contents += [ files.zbi ]
+      _recovery_contents += [ files.recovery_zbi ]
+    }
+    if (use_vbmeta) {
+      _assembly_contents += [ files.vbmeta ]
+      _recovery_contents += [ files.recovery_vbmeta ]
+    }
+
+    # List the contents of each input so that the outputs can be calculated.
+    partitions_contents = _partitions_contents
+    system_a_contents = _assembly_contents
+    system_b_contents = system_a_contents
+    system_r_contents = _recovery_contents
   }
 
   generated_assembly_inputs("assembly_inputs") {
