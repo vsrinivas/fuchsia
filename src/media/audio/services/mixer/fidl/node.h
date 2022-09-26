@@ -152,10 +152,9 @@ class Node {
   // Kind of pipeline this node participates in.
   [[nodiscard]] PipelineDirection pipeline_direction() const { return pipeline_direction_; }
 
-  // Clears all child nodes of this meta node. This is useful to make sure all parent references in
-  // children are cleared up before destroying parent.
-  // REQUIRED: is_meta()
-  void ClearAllChildNodes();
+  // Prepares this node to be destroyed by removing all links from it. This is useful to make sure
+  // that all node references are cleared up before destroying this node.
+  void PrepareToDestroy();
 
   // Returns total "self" presentation delay contribution for this node if reached through `source`.
   // This typically consists of the internal processing delay contribution of this node with respect

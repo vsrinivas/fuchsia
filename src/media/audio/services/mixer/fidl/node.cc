@@ -208,10 +208,14 @@ void Node::set_pipeline_stage_thread(ThreadPtr t) {
   pipeline_stage_thread_ = t;
 }
 
-void Node::ClearAllChildNodes() {
-  FX_CHECK(is_meta_);
-  child_sources_.clear();
-  child_dests_.clear();
+void Node::PrepareToDestroy() {
+  if (is_meta_) {
+    child_sources_.clear();
+    child_dests_.clear();
+  } else {
+    sources_.clear();
+    dest_ = nullptr;
+  }
 }
 
 fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdgeInner(
