@@ -195,7 +195,12 @@ class SdioScatterGatherTest : public zxtest::Test {
 };
 
 TEST_F(SdioControllerDeviceTest, MultiplexInterrupts) {
-  EXPECT_OK(dut_->StartSdioIrqThread());
+  EXPECT_OK(dut_->Init());
+
+  sdmmc_.set_command_callback(
+      SDIO_SEND_OP_COND, [](sdmmc_req_t* req) -> void { req->response[0] = OpCondFunctions(7); });
+  EXPECT_OK(dut_->ProbeSdio());
+
   auto stop_thread = fit::defer([&]() { dut_->StopSdioIrqThread(); });
 
   zx::port port;

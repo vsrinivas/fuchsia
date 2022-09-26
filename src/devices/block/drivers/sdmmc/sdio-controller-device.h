@@ -27,7 +27,7 @@
 namespace sdmmc {
 
 class SdioControllerDevice;
-using SdioControllerDeviceType = ddk::Device<SdioControllerDevice>;
+using SdioControllerDeviceType = ddk::Device<SdioControllerDevice, ddk::Unbindable>;
 
 class SdioControllerDevice : public SdioControllerDeviceType,
                              public ddk::InBandInterruptProtocol<SdioControllerDevice> {
@@ -42,6 +42,7 @@ class SdioControllerDevice : public SdioControllerDeviceType,
   static zx_status_t Create(zx_device_t* parent, const SdmmcDevice& sdmmc,
                             std::unique_ptr<SdioControllerDevice>* out_dev);
 
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   zx_status_t ProbeSdio();
@@ -57,7 +58,7 @@ class SdioControllerDevice : public SdioControllerDeviceType,
   zx_status_t SdioDoRwTxn(uint8_t fn_idx, sdio_rw_txn_t* txn) TA_EXCL(lock_);
   zx_status_t SdioDoRwByte(bool write, uint8_t fn_idx, uint32_t addr, uint8_t write_byte,
                            uint8_t* out_read_byte) TA_EXCL(lock_);
-  zx_status_t SdioGetInBandIntr(uint8_t fn_idx, zx::interrupt* out_irq) TA_EXCL(lock_);
+  zx_status_t SdioGetInBandIntr(uint8_t fn_idx, zx::interrupt* out_irq);
   zx_status_t SdioIoAbort(uint8_t fn_idx) TA_EXCL(lock_);
   zx_status_t SdioIntrPending(uint8_t fn_idx, bool* out_pending);
   zx_status_t SdioDoVendorControlRwByte(bool write, uint8_t addr, uint8_t write_byte,
@@ -76,8 +77,8 @@ class SdioControllerDevice : public SdioControllerDeviceType,
     return sdmmc_.Init();
   }
 
-  zx_status_t StartSdioIrqThread();
-  void StopSdioIrqThread();
+  zx_status_t StartSdioIrqThreadIfNeeded() TA_EXCL(irq_thread_lock_);
+  void StopSdioIrqThread() TA_EXCL(irq_thread_lock_);
 
  private:
   struct SdioFuncTuple {
@@ -141,7 +142,8 @@ class SdioControllerDevice : public SdioControllerDeviceType,
 
   int SdioIrqThread();
 
-  thrd_t irq_thread_ = 0;
+  fbl::Mutex irq_thread_lock_;  // Used to make thread start and stop atomic.
+  thrd_t irq_thread_ TA_GUARDED(irq_thread_lock_) = 0;
   sync_completion_t irq_signal_;
 
   fbl::Mutex lock_;

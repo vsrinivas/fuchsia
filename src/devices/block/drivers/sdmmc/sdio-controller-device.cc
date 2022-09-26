@@ -157,10 +157,19 @@ zx_status_t SdioControllerDevice::ProbeSdio() {
     return st;
   }
 
+  const bool sdio_irq_supported =
+      sdmmc_.host().RegisterInBandInterrupt(this, &in_band_interrupt_protocol_ops_) == ZX_OK;
+
   // 0 is the common function. Already initialized
   for (size_t i = 1; i < hw_info_.num_funcs; i++) {
     if ((st = InitFunc(static_cast<uint8_t>(i))) != ZX_OK) {
       zxlogf(ERROR, "Failed to initialize function %zu, retcode = %d", i, st);
+      return st;
+    }
+
+    if (sdio_irq_supported &&
+        (st = zx::interrupt::create({}, 0, ZX_INTERRUPT_VIRTUAL, &sdio_irqs_[i])) != ZX_OK) {
+      zxlogf(ERROR, "Failed to create virtual interrupt for function %zu: %d", i, st);
       return st;
     }
   }
@@ -176,24 +185,31 @@ zx_status_t SdioControllerDevice::ProbeSdio() {
   return ZX_OK;
 }
 
-zx_status_t SdioControllerDevice::StartSdioIrqThread() {
+zx_status_t SdioControllerDevice::StartSdioIrqThreadIfNeeded() {
+  fbl::AutoLock lock(&irq_thread_lock_);
+
+  if (dead_) {
+    return ZX_ERR_CANCELED;
+  }
+  if (irq_thread_) {
+    return ZX_OK;
+  }
+
   auto thread_func = [](void* ctx) -> int {
     return reinterpret_cast<SdioControllerDevice*>(ctx)->SdioIrqThread();
   };
 
-  int rc = thrd_create_with_name(&irq_thread_, thread_func, this, "sdio-controller-worker");
+  int rc = thrd_create_with_name(&irq_thread_, thread_func, this, "sdio-irq-thread");
+  if (rc != thrd_success) {
+    irq_thread_ = 0;
+  }
   return thrd_status_to_zx_status(rc);
 }
 
 zx_status_t SdioControllerDevice::AddDevice() {
   fbl::AutoLock lock(&lock_);
 
-  zx_status_t st = StartSdioIrqThread();
-  if (st != ZX_OK) {
-    return st;
-  }
-
-  st = DdkAdd(ddk::DeviceAddArgs("sdmmc-sdio")
+  zx_status_t st = DdkAdd(ddk::DeviceAddArgs("sdmmc-sdio")
                   .set_inspect_vmo(inspector_.DuplicateVmo())
                   .set_flags(DEVICE_ADD_NON_BINDABLE));
   if (st != ZX_OK) {
@@ -225,12 +241,28 @@ zx_status_t SdioControllerDevice::AddDevice() {
   return ZX_OK;
 }
 
+void SdioControllerDevice::DdkUnbind(ddk::UnbindTxn txn) {
+  StopSdioIrqThread();
+  txn.Reply();
+}
+
 void SdioControllerDevice::StopSdioIrqThread() {
   dead_ = true;
 
-  if (irq_thread_) {
-    sync_completion_signal(&irq_signal_);
-    thrd_join(irq_thread_, nullptr);
+  {
+    fbl::AutoLock lock(&irq_thread_lock_);
+    if (irq_thread_) {
+      sync_completion_signal(&irq_signal_);
+      thrd_join(irq_thread_, nullptr);
+      irq_thread_ = 0;
+    }
+  }
+
+  for (const zx::interrupt& irq : sdio_irqs_) {
+    if (irq.is_valid()) {
+      // Return an error to any waiters.
+      irq.destroy();
+    }
   }
 }
 
@@ -461,6 +493,9 @@ zx_status_t SdioControllerDevice::SdioDoRwTxn(uint8_t fn_idx, sdio_rw_txn_t* txn
   if (!SdioFnIdxValid(fn_idx)) {
     return ZX_ERR_INVALID_ARGS;
   }
+  if (dead_) {
+    return ZX_ERR_CANCELED;
+  }
 
   zx_status_t st = ZX_OK;
   uint32_t addr = txn->addr;
@@ -569,6 +604,9 @@ zx_status_t SdioControllerDevice::SdioDoRwByteLocked(bool write, uint8_t fn_idx,
   if (!SdioFnIdxValid(fn_idx)) {
     return ZX_ERR_INVALID_ARGS;
   }
+  if (dead_) {
+    return ZX_ERR_CANCELED;
+  }
 
   out_read_byte = write ? nullptr : out_read_byte;
   write_byte = write ? write_byte : 0;
@@ -579,24 +617,15 @@ zx_status_t SdioControllerDevice::SdioGetInBandIntr(uint8_t fn_idx, zx::interrup
   if (!SdioFnIdxValid(fn_idx) || fn_idx == 0) {
     return ZX_ERR_INVALID_ARGS;
   }
-
-  fbl::AutoLock lock(&lock_);
-
-  if (sdio_irqs_[fn_idx].is_valid()) {
-    return ZX_ERR_ALREADY_EXISTS;
+  if (!sdio_irqs_[fn_idx].is_valid()) {
+    return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_status_t st =
-      zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &sdio_irqs_[fn_idx]);
-  if (st != ZX_OK) {
+  if (const zx_status_t st = StartSdioIrqThreadIfNeeded(); st != ZX_OK) {
     return st;
   }
 
-  if ((st = sdio_irqs_[fn_idx].duplicate(ZX_RIGHT_SAME_RIGHTS, out_irq)) != ZX_OK) {
-    return st;
-  }
-
-  return sdmmc_.host().RegisterInBandInterrupt(this, &in_band_interrupt_protocol_ops_);
+  return sdio_irqs_[fn_idx].duplicate(ZX_RIGHT_SAME_RIGHTS, out_irq);
 }
 
 void SdioControllerDevice::InBandInterruptCallback() { sync_completion_signal(&irq_signal_); }
@@ -605,6 +634,8 @@ int SdioControllerDevice::SdioIrqThread() {
   for (;;) {
     sync_completion_wait(&irq_signal_, ZX_TIME_INFINITE);
     sync_completion_reset(&irq_signal_);
+
+    const zx::time irq_time = zx::clock::get_monotonic();
 
     if (dead_) {
       return thrd_success;
@@ -618,8 +649,8 @@ int SdioControllerDevice::SdioIrqThread() {
     }
 
     for (uint8_t i = 1; SdioFnIdxValid(i); i++) {
-      if ((intr_byte & (1 << i)) && sdio_irqs_[i].is_valid()) {
-        sdio_irqs_[i].trigger(0, zx::clock::get_monotonic());
+      if (intr_byte & (1 << i)) {
+        sdio_irqs_[i].trigger(0, irq_time);
       }
     }
   }
@@ -668,6 +699,9 @@ zx_status_t SdioControllerDevice::SdioRegisterVmo(uint8_t fn_idx, uint32_t vmo_i
   if (!SdioFnIdxValid(fn_idx) || fn_idx == 0) {
     return ZX_ERR_INVALID_ARGS;
   }
+  if (dead_) {
+    return ZX_ERR_CANCELED;
+  }
 
   fbl::AutoLock lock(&lock_);
   return sdmmc_.host().RegisterVmo(vmo_id, fn_idx, std::move(vmo), offset, size, vmo_rights);
@@ -678,12 +712,19 @@ zx_status_t SdioControllerDevice::SdioUnregisterVmo(uint8_t fn_idx, uint32_t vmo
   if (!SdioFnIdxValid(fn_idx) || fn_idx == 0) {
     return ZX_ERR_INVALID_ARGS;
   }
+  if (dead_) {
+    return ZX_ERR_CANCELED;
+  }
 
   fbl::AutoLock lock(&lock_);
   return sdmmc_.host().UnregisterVmo(vmo_id, fn_idx, out_vmo);
 }
 
 void SdioControllerDevice::SdioRunDiagnostics() {
+  if (dead_) {
+    return;
+  }
+
   fbl::AutoLock lock(&lock_);
   if (tuned_) {
     zx_status_t status = sdmmc_.host().PerformTuning(SD_SEND_TUNING_BLOCK);
@@ -806,6 +847,9 @@ zx::status<SdioControllerDevice::SdioTxnPosition> SdioControllerDevice::DoOneRwT
 zx_status_t SdioControllerDevice::SdioDoRwTxnNew(uint8_t fn_idx, const sdio_rw_txn_new_t* txn) {
   if (!SdioFnIdxValid(fn_idx)) {
     return ZX_ERR_INVALID_ARGS;
+  }
+  if (dead_) {
+    return ZX_ERR_CANCELED;
   }
 
   fbl::AutoLock lock(&lock_);
