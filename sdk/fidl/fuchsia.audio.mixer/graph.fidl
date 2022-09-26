@@ -19,7 +19,7 @@ const INVALID_ID uint64 = 0;
 const MAX_NAME_LENGTH uint32 = 256;
 
 /// Maximum number of GainControls that can be attached to each graph edge.
-const MAX_GAIN_STAGES_PER_EDGE uint32 = 32;
+const MAX_GAIN_CONTROLS_PER_EDGE uint32 = 32;
 
 /// A factory for creating [`Graph`] protocols.
 protocol GraphCreator {
@@ -405,7 +405,7 @@ protocol Graph {
         /// either the source or dest node must be a Mixer.
         ///
         /// Optional. If empty, no gain is applied.
-        4: gain_stages vector<GainControlId>:MAX_GAIN_STAGES_PER_EDGE;
+        4: gain_controls vector<GainControlId>:MAX_GAIN_CONTROLS_PER_EDGE;
     }) -> (table {}) error CreateEdgeError;
 
     /// Deletes the edge connecting the source node to the destination node.
