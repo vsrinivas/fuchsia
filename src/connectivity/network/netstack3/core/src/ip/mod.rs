@@ -2505,6 +2505,31 @@ pub(crate) mod testutil {
         }
     }
 
+    /// A device ID type that supports identifying more than one distinct
+    /// device.
+    #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Ord, PartialOrd)]
+    pub(crate) enum MultipleDevicesId {
+        A,
+        B,
+    }
+    impl MultipleDevicesId {
+        pub(crate) fn all() -> [Self; 2] {
+            [Self::A, Self::B]
+        }
+    }
+
+    impl core::fmt::Display for MultipleDevicesId {
+        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+            core::fmt::Debug::fmt(self, f)
+        }
+    }
+
+    impl IpDeviceId for MultipleDevicesId {
+        fn is_loopback(&self) -> bool {
+            false
+        }
+    }
+
     pub(crate) fn is_in_ip_multicast<A: IpAddress>(
         sync_ctx: &DummySyncCtx,
         device: DeviceId,

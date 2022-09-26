@@ -2100,7 +2100,7 @@ mod tests {
                 testutil::{DummyDeviceConfig, DummyIpSocketCtx},
                 BufferIpSocketHandler, IpSockRouteError, IpSockUnroutableError, IpSocketHandler,
             },
-            testutil::DummyDeviceId,
+            testutil::{DummyDeviceId, MultipleDevicesId},
             HopLimits, IpDeviceIdContext, SendIpPacketMeta, TransportIpContext, DEFAULT_HOP_LIMITS,
         },
         testutil::{assert_empty, set_logger_for_test},
@@ -3473,40 +3473,6 @@ mod tests {
         );
     }
 
-    /// A device ID type that supports identifying more than one distinct
-    /// device.
-    #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Ord, PartialOrd)]
-    enum MultipleDevicesId {
-        A,
-        B,
-    }
-    impl MultipleDevicesId {
-        fn all() -> [Self; 2] {
-            [Self::A, Self::B]
-        }
-    }
-
-    impl From<MultipleDevicesId> for u8 {
-        fn from(id: MultipleDevicesId) -> Self {
-            match id {
-                MultipleDevicesId::A => 0,
-                MultipleDevicesId::B => 1,
-            }
-        }
-    }
-
-    impl core::fmt::Display for MultipleDevicesId {
-        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-            core::fmt::Debug::fmt(self, f)
-        }
-    }
-
-    impl IpDeviceId for MultipleDevicesId {
-        fn is_loopback(&self) -> bool {
-            false
-        }
-    }
-
     type MultiDeviceDummyCtx<I> = DummyDeviceCtx<I, MultipleDevicesId>;
     type MultiDeviceDummySyncCtx<I> = DummyDeviceSyncCtx<I, MultipleDevicesId>;
     type MultiDeviceDummyNonSyncCtx<I> = DummyDeviceNonSyncCtx<I>;
@@ -3847,8 +3813,15 @@ mod tests {
                 .expect("listen should succeed")
         };
 
+        fn index_for_device(id: MultipleDevicesId) -> u8 {
+            match id {
+                MultipleDevicesId::A => 0,
+                MultipleDevicesId::B => 1,
+            }
+        }
+
         let mut receive_packet = |remote_ip: SpecifiedAddr<I::Addr>, device: MultipleDevicesId| {
-            let body = vec![device.into()];
+            let body = vec![index_for_device(device)];
             receive_udp_packet(
                 sync_ctx,
                 &mut non_sync_ctx,
@@ -3871,11 +3844,10 @@ mod tests {
         let listen_data = non_sync_ctx.state().listen_data();
 
         for (device, listener) in bound_on_devices {
-            let device: u8 = device.into();
-            assert_eq!(listen_data[&listener], vec![&[device]]);
+            assert_eq!(listen_data[&listener], vec![&[index_for_device(device)]]);
         }
         let expected_listener_data: &[&[u8]] =
-            &[&[MultipleDevicesId::A.into()], &[MultipleDevicesId::B.into()]];
+            &[&[index_for_device(MultipleDevicesId::A)], &[index_for_device(MultipleDevicesId::B)]];
         assert_eq!(&listen_data[&listener], expected_listener_data);
     }
 
