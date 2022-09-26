@@ -102,6 +102,7 @@ rustc_library("input_pipeline") {
     "src/gestures/tests/click.rs",
     "src/gestures/tests/mod.rs",
     "src/gestures/tests/motion.rs",
+    "src/gestures/tests/one_finger_drag.rs",
     "src/gestures/tests/primary_tap.rs",
     "src/gestures/tests/scroll.rs",
     "src/gestures/tests/secondary_tap.rs",

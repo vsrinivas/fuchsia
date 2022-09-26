@@ -409,5 +409,65 @@ mod test {
             // Does _not_ trigger tap detector.
             assert_eq!(got[3].as_slice(), []);
         }
+
+        #[fuchsia::test(allow_stalls = false)]
+        async fn scroll_lift_1finger_then_one_finger_drag() {
+            let finger1_pos0_um = Position { x: 2_000.0, y: 3_000.0 };
+            let finger2_pos0_um = Position { x: 5_000.0, y: 3_000.0 };
+            let finger1_pos1_um = finger1_pos0_um
+                + Position {
+                    x: 0.0,
+                    y: 1_000.0 + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
+                };
+            let finger2_pos1_um = finger2_pos0_um
+                + Position {
+                    x: 0.0,
+                    y: 1_000.0 + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
+                };
+            let finger1_pos2_um = finger1_pos1_um.clone();
+            let finger1_pos3_um = finger1_pos2_um.clone();
+            let finger1_pos4_um = finger1_pos3_um
+                + Position {
+                    x: 0.0,
+                    y: 1_000.0 + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
+                };
+            let inputs = vec![
+                touchpad_event(vec![finger1_pos0_um, finger2_pos0_um], hashset! {}),
+                touchpad_event(vec![finger1_pos1_um, finger2_pos1_um], hashset! {}),
+                touchpad_event(vec![finger1_pos2_um], hashset! {}),
+                touchpad_event(vec![finger1_pos3_um], hashset! {1}),
+                touchpad_event(vec![finger1_pos4_um], hashset! {1}),
+            ];
+            let got = utils::run_gesture_arena_test(inputs).await;
+
+            assert_eq!(got.len(), 5);
+            assert_eq!(got[0].as_slice(), []);
+            assert_matches!(got[1].as_slice(), [
+              utils::expect_mouse_event!(phase: phase, delta_v: delta_v, delta_h: delta_h, location: location),
+            ] => {
+              assert_eq!(phase, &mouse_binding::MousePhase::Wheel);
+              assert_matches!(delta_v, utils::extract_wheel_delta!(delta) => {
+                assert_gt!(*delta, 0.0);
+              });
+              assert_eq!(*delta_h, None);
+              assert_eq!(location, &utils::NO_MOVEMENT_LOCATION);
+            });
+            assert_eq!(got[2].as_slice(), []);
+            assert_eq!(got[3].as_slice(), []);
+            assert_eq!(got[4].as_slice(), []);
+
+            // TODO(fxbug.dev/109627): Because one_finger_drag does not have one finger
+            // contender, this test is does not detect drag gesture.
+
+            // assert_matches!(got[4].as_slice(), [
+            //   utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
+            // ] => {
+            //   assert_eq!(phase_a, &mouse_binding::MousePhase::Down);
+            //   assert_eq!(pressed_button_a, &hashset! {1});
+            //   assert_eq!(affected_button_a, &hashset! {1});
+            //   assert_near!(location_a.millimeters.x, 0.0, utils::EPSILON);
+            //   assert_gt!(location_a.millimeters.y, 0.0);
+            // });
+        }
     }
 }

@@ -4,6 +4,7 @@
 
 mod click;
 mod motion;
+mod one_finger_drag;
 mod primary_tap;
 mod scroll;
 mod secondary_tap;
