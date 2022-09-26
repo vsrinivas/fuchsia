@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_DRIVER_RUNTIME_INCLUDE_LIB_FDF_CPP_INTERNAL_H_
-#define LIB_DRIVER_RUNTIME_INCLUDE_LIB_FDF_CPP_INTERNAL_H_
+#ifndef LIB_DRIVER_RUNTIME_INCLUDE_LIB_FDF_CPP_ENV_H_
+#define LIB_DRIVER_RUNTIME_INCLUDE_LIB_FDF_CPP_ENV_H_
 
 #include <lib/fdf/cpp/dispatcher.h>
-#include <lib/fdf/internal.h>
+#include <lib/fdf/env.h>
 #include <lib/fit/function.h>
 
 #include <mutex>
 
-namespace fdf_internal {
+namespace fdf_env {
 
 class DispatcherBuilder {
  public:
-  // Creates a |fdf::Dispatcher| which is owned by |driver|.
+  // Same as |fdf::Dispatcher::Create| but allows setting the driver owner for the dispatcher.
   //
   // |driver| is an opaque pointer to the driver object. It will be used to uniquely identify
   // the driver.
@@ -28,7 +28,7 @@ class DispatcherBuilder {
     auto dispatcher_shutdown_context =
         std::make_unique<fdf::Dispatcher::DispatcherShutdownContext>(std::move(shutdown_handler));
     fdf_dispatcher_t* dispatcher;
-    zx_status_t status = fdf_internal_dispatcher_create_with_owner(
+    zx_status_t status = fdf_env_dispatcher_create_with_owner(
         driver, options, name.data(), name.size(), scheduler_role.data(), scheduler_role.size(),
         dispatcher_shutdown_context->observer(), &dispatcher);
     if (status != ZX_OK) {
@@ -40,8 +40,7 @@ class DispatcherBuilder {
 };
 
 // For shutting down all dispatchers owned by a driver.
-// This class is thread-safe.
-class DriverShutdown : public fdf_internal_driver_shutdown_observer_t {
+class DriverShutdown : public fdf_env_driver_shutdown_observer_t {
  public:
   // Called when the asynchronous shutdown of all dispatchers owned by |driver| completes.
   using Handler = fit::callback<void(const void* driver)>;
@@ -57,11 +56,15 @@ class DriverShutdown : public fdf_internal_driver_shutdown_observer_t {
   // If this succeeds, you must keep the |shutdown_handler| object alive until the
   // |shutdown_handler| is notified once the last dispatcher completes shutting down.
   //
-  // This may be called from any thread.
+  // # Thread safety
   //
-  // Returns ZX_OK if successful and |shutdown_handler| will be notified.
-  // Returns ZX_ERR_INVALID_ARGS if no driver matching |driver| was found.
-  // Returns ZX_ERR_BAD_STATE if a driver shutdown observer was already registered.
+  // This class is thread-safe.
+  //
+  // # Errors
+  //
+  // ZX_ERR_INVALID_ARGS: No driver matching |driver| was found.
+  //
+  // ZX_ERR_BAD_STATE: A driver shutdown observer was already registered.
   zx_status_t Begin(const void* driver, Handler shutdown_handler);
 
   // If |Begin| was called successfully, you must keep this alive until the |Handler|
@@ -71,13 +74,13 @@ class DriverShutdown : public fdf_internal_driver_shutdown_observer_t {
   ~DriverShutdown();
 
  private:
-  static void CallHandler(const void* driver, fdf_internal_driver_shutdown_observer_t* observer);
+  static void CallHandler(const void* driver, fdf_env_driver_shutdown_observer_t* observer);
 
   std::mutex lock_;
   const void* driver_ __TA_GUARDED(lock_) = nullptr;
   Handler handler_ __TA_GUARDED(lock_);
 };
 
-}  // namespace fdf_internal
+}  // namespace fdf_env
 
-#endif  // LIB_DRIVER_RUNTIME_INCLUDE_LIB_FDF_CPP_INTERNAL_H_
+#endif  // LIB_DRIVER_RUNTIME_INCLUDE_LIB_FDF_CPP_ENV_H_

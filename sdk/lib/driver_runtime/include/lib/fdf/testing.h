@@ -14,7 +14,7 @@ __BEGIN_CDECLS
 void fdf_testing_push_driver(const void* driver);
 
 // Removes the driver at the top of the thread's current call stack.
-void fdf_testing_pop_driver();
+void fdf_testing_pop_driver(void);
 
 // Blocks the current thread until each runtime dispatcher in the process
 // is observed to enter an idle state. This does not guarantee that all the
@@ -26,7 +26,7 @@ void fdf_testing_pop_driver();
 // or delayed tasks which have been scheduled for a future deadline.
 // This should not be called from a thread managed by the driver runtime,
 // such as from tasks or ChannelRead callbacks.
-void fdf_testing_wait_until_all_dispatchers_idle();
+void fdf_testing_wait_until_all_dispatchers_idle(void);
 
 __END_CDECLS
 

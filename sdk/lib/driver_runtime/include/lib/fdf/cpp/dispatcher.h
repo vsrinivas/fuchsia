@@ -14,10 +14,10 @@
 
 #include <string>
 
-namespace fdf_internal {
+namespace fdf_env {
 // Forward declaration to support friend declaration.
 class DispatcherBuilder;
-}  // namespace fdf_internal
+}  // namespace fdf_env
 
 namespace fdf {
 
@@ -187,7 +187,7 @@ class Dispatcher {
 
  private:
   // Friend declaration is needed because the |DispatcherShutdownContext| is private.
-  friend class fdf_internal::DispatcherBuilder;
+  friend class fdf_env::DispatcherBuilder;
 
   class DispatcherShutdownContext {
    public:

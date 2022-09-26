@@ -1266,7 +1266,7 @@ void DispatcherCoordinator::WaitUntilDispatchersDestroyed() {
 
 // static
 zx_status_t DispatcherCoordinator::ShutdownDispatchersAsync(
-    const void* driver, fdf_internal_driver_shutdown_observer_t* observer) {
+    const void* driver, fdf_env_driver_shutdown_observer_t* observer) {
   std::vector<fbl::RefPtr<Dispatcher>> dispatchers;
 
   {
@@ -1311,6 +1311,8 @@ void DispatcherCoordinator::DestroyAllDispatchers() {
   for (auto& dispatcher : dispatchers) {
     dispatcher->Destroy();
   }
+
+  WaitUntilDispatchersDestroyed();
 }
 
 // static
@@ -1354,7 +1356,7 @@ void DispatcherCoordinator::SetShutdown(Dispatcher& dispatcher) {
 }
 
 void DispatcherCoordinator::NotifyShutdown(Dispatcher& dispatcher) {
-  fdf_internal_driver_shutdown_observer_t* observer = nullptr;
+  fdf_env_driver_shutdown_observer_t* observer = nullptr;
   {
     fbl::AutoLock lock(&lock_);
 

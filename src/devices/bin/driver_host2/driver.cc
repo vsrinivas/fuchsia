@@ -6,7 +6,7 @@
 
 #include <lib/driver2/start_args.h>
 #include <lib/fdf/cpp/dispatcher.h>
-#include <lib/fdf/cpp/internal.h>
+#include <lib/fdf/cpp/env.h>
 #include <lib/fdio/directory.h>
 #include <lib/fit/defer.h>
 #include <zircon/dlfcn.h>
@@ -197,7 +197,7 @@ uint32_t ExtractDefaultDispatcherOpts(const fuchsia_data::wire::Dictionary& prog
 zx::status<fdf::Dispatcher> CreateDispatcher(fbl::RefPtr<Driver> driver, uint32_t dispatcher_opts) {
   auto name = GetManifest(driver->url());
   // The dispatcher must be shutdown before the dispatcher is destroyed.
-  // Usually we will wait for the callback from |fdf_internal::DriverShutdown| before destroying
+  // Usually we will wait for the callback from |fdf_env::DriverShutdown| before destroying
   // the driver object (and hence the dispatcher).
   // In the case where we fail to start the driver, the driver object would be destructed
   // immediately, so here we hold an extra reference to the driver object to ensure the
@@ -205,7 +205,7 @@ zx::status<fdf::Dispatcher> CreateDispatcher(fbl::RefPtr<Driver> driver, uint32_
   //
   // We do not destroy the dispatcher in the shutdown callback, to prevent crashes that
   // would happen if the driver attempts to access the dispatcher in its Stop hook.
-  return fdf_internal::DispatcherBuilder::CreateWithOwner(
+  return fdf_env::DispatcherBuilder::CreateWithOwner(
       driver.get(), dispatcher_opts,
       fbl::StringPrintf("%.*s-default-%p", (int)name.size(), name.data(), driver.get()),
       [driver_ref = driver](fdf_dispatcher_t* dispatcher) {});

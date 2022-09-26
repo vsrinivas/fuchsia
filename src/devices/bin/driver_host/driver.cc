@@ -5,7 +5,7 @@
 #include "src/devices/bin/driver_host/driver.h"
 
 #include <lib/fdf/cpp/dispatcher.h>
-#include <lib/fdf/cpp/internal.h>
+#include <lib/fdf/cpp/env.h>
 
 #include <fbl/ref_ptr.h>
 #include <fbl/string_printf.h>
@@ -15,7 +15,7 @@
 zx::status<fbl::RefPtr<Driver>> Driver::Create(zx_driver_t* zx_driver) {
   auto driver = fbl::MakeRefCounted<Driver>(zx_driver);
 
-  auto dispatcher = fdf_internal::DispatcherBuilder::CreateWithOwner(
+  auto dispatcher = fdf_env::DispatcherBuilder::CreateWithOwner(
       driver.get(), FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS,
       fbl::StringPrintf("%s-default-%p", zx_driver->name(), driver.get()),
       [driver = driver.get()](fdf_dispatcher_t* dispatcher) { driver->released_.Signal(); });
@@ -31,7 +31,7 @@ Driver::~Driver() {
   // Generally, we will shut down the dispatcher when the last device associated with
   // the driver is unbound.
   // However in some tests we don't properly tear down devices so we also shut down here.
-  ZX_ASSERT(!fdf_internal_dispatcher_has_queued_tasks(dispatcher_.get()));
+  ZX_ASSERT(!fdf_env_dispatcher_has_queued_tasks(dispatcher_.get()));
   ZX_ASSERT(device_count_ == 0);
   dispatcher_.ShutdownAsync();
   released_.Wait();

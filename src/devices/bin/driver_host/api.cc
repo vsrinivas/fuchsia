@@ -8,6 +8,7 @@
 #include <lib/ddk/fragment-device.h>
 #include <lib/fdf/cpp/channel.h>
 #include <lib/fdf/cpp/protocol.h>
+#include <lib/fdf/env.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/wire/channel.h>
 #include <lib/syslog/logger.h>
@@ -108,7 +109,7 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
   fbl::AutoLock lock(&api_ctx->api_lock());
 
   fbl::RefPtr<Driver> driver;
-  auto* current = static_cast<Driver*>(const_cast<void*>(fdf_internal_get_current_driver()));
+  auto* current = static_cast<Driver*>(const_cast<void*>(fdf_env_get_current_driver()));
   if (current != nullptr && current->zx_driver() == drv) {
     // We try retrieve the current driver instance from the driver runtime first. If we are
     // currently in a driver hook such as |bind| or |create| this will yield us the correct

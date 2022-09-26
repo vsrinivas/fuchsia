@@ -47,7 +47,7 @@ source_set("common") {
 
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
-    "//sdk/lib/driver_runtime:driver_runtime_internal_cpp",
+    "//sdk/lib/driver_runtime:driver_runtime_env_cpp",
     "//src/devices/lib/driver:driver_runtime",
   ]
 
@@ -58,8 +58,8 @@ source_set("common") {
     "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_cpp_wire",
     "//sdk/lib/driver2:cpp",
     "//sdk/lib/driver_runtime:driver_runtime_cpp",
-    "//sdk/lib/driver_runtime:driver_runtime_internal",
-    "//sdk/lib/driver_runtime:driver_runtime_internal_cpp",
+    "//sdk/lib/driver_runtime:driver_runtime_env",
+    "//sdk/lib/driver_runtime:driver_runtime_env_cpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fit-promise",
     "//src/devices/bin/driver_host2:driver",

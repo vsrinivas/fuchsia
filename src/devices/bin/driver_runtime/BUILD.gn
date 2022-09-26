@@ -37,7 +37,7 @@ source_set("driver_runtime_impl") {
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
   deps = [
-    "//sdk/lib/driver_runtime:driver_runtime_internal",
+    "//sdk/lib/driver_runtime:driver_runtime_env",
     "//sdk/lib/driver_runtime:testing",
     "//sdk/lib/fidl/cpp/wire",
     "//src/devices/lib/log",
@@ -77,7 +77,7 @@ test("driver_runtime_test") {
     ":driver_runtime_impl",
     "//sdk/lib/driver_runtime",
     "//sdk/lib/driver_runtime:driver_runtime_cpp",
-    "//sdk/lib/driver_runtime:driver_runtime_internal_cpp",
+    "//sdk/lib/driver_runtime:driver_runtime_env_cpp",
     "//sdk/lib/fidl/cpp/wire",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/sync",

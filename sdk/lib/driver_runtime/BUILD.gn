@@ -58,10 +58,10 @@ sdk_source_set("driver_runtime_cpp") {
   deps = [ ":driver_runtime" ]
 }
 
-sdk_source_set("driver_runtime_internal") {
+sdk_source_set("driver_runtime_env") {
   category = "experimental"
-  sdk_name = "driver_runtime_internal"
-  sources = [ "include/lib/fdf/internal.h" ]
+  sdk_name = "driver_runtime_env"
+  sources = [ "include/lib/fdf/env.h" ]
   visibility = [
     "//sdk/lib/driver_runtime/*",
     "//src/devices/bin/driver_host/*",
@@ -76,19 +76,19 @@ sdk_source_set("driver_runtime_internal") {
   public_configs = [ ":include" ]
 }
 
-sdk_source_set("driver_runtime_internal_cpp") {
+sdk_source_set("driver_runtime_env_cpp") {
   category = "partner"
-  sdk_name = "driver_runtime_internal_cpp"
-  public = [ "include/lib/fdf/cpp/internal.h" ]
+  sdk_name = "driver_runtime_env_cpp"
+  public = [ "include/lib/fdf/cpp/env.h" ]
   public_configs = [ ":include" ]
   public_deps = [
     ":driver_runtime_cpp",
-    ":driver_runtime_internal",
+    ":driver_runtime_env",
     "//sdk/lib/fit",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]
-  sources = [ "internal.cc" ]
+  sources = [ "env.cc" ]
 }
 
 source_set("testing") {

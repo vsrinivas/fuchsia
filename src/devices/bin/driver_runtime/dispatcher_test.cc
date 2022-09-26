@@ -12,7 +12,7 @@
 #include <lib/fdf/channel.h>
 #include <lib/fdf/cpp/channel_read.h>
 #include <lib/fdf/cpp/dispatcher.h>
-#include <lib/fdf/cpp/internal.h>
+#include <lib/fdf/cpp/env.h>
 #include <lib/fit/defer.h>
 #include <lib/sync/cpp/completion.h>
 #include <lib/zx/event.h>
@@ -1361,7 +1361,7 @@ TEST_F(DispatcherTest, CancelWaitFromWithinCanceledWait) {
     ZX_ASSERT(false);
   }));
 
-  fdf_internal::DriverShutdown driver_shutdown;
+  fdf_env::DriverShutdown driver_shutdown;
   libsync::Completion driver_shutdown_completion;
   ASSERT_OK(driver_shutdown.Begin(fake_driver, [&](const void* driver) {
     ASSERT_EQ(fake_driver, driver);
@@ -1810,7 +1810,7 @@ TEST_F(DispatcherTest, UnbindIrqImmediatelyAfterTriggering) {
   static constexpr uint32_t kNumIrqs = 3000;
   static constexpr uint32_t kNumThreads = 10;
 
-  // TODO(fxbug.dev/102878): this can be replaced by |fdf_internal::DriverShutdown| once it works
+  // TODO(fxbug.dev/102878): this can be replaced by |fdf_env::DriverShutdown| once it works
   // properly.
   libsync::Completion shutdown_completion;
   std::atomic_int num_destructed = 0;
@@ -2406,7 +2406,7 @@ TEST_F(DispatcherTest, ShutdownAllDriverDispatchers) {
   }
 
   // Shutdown the second driver, dispatchers[1] and dispatchers[2] should be shutdown.
-  fdf_internal::DriverShutdown driver2_shutdown;
+  fdf_env::DriverShutdown driver2_shutdown;
   libsync::Completion driver2_shutdown_completion;
   ASSERT_OK(driver2_shutdown.Begin(fake_driver2, [&](const void* driver) {
     ASSERT_EQ(fake_driver2, driver);
@@ -2418,7 +2418,7 @@ TEST_F(DispatcherTest, ShutdownAllDriverDispatchers) {
   ASSERT_OK(driver2_shutdown_completion.Wait());
 
   // Shutdown the first driver, dispatchers[0] should be shutdown.
-  fdf_internal::DriverShutdown driver_shutdown;
+  fdf_env::DriverShutdown driver_shutdown;
   libsync::Completion driver_shutdown_completion;
   ASSERT_OK(driver2_shutdown.Begin(fake_driver, [&](const void* driver) {
     ASSERT_EQ(fake_driver, driver);
@@ -2450,7 +2450,7 @@ TEST_F(DispatcherTest, DriverDestroysDispatcherShutdownByDriverHost) {
   dispatcher = fdf::Dispatcher::Create(0, "", shutdown_handler);
   ASSERT_FALSE(dispatcher.is_error());
 
-  fdf_internal::DriverShutdown driver_shutdown;
+  fdf_env::DriverShutdown driver_shutdown;
   libsync::Completion driver_shutdown_completion;
   ASSERT_OK(driver_shutdown.Begin(fake_driver, [&](const void* driver) {
     ASSERT_EQ(fake_driver, driver);
@@ -2483,7 +2483,7 @@ TEST_F(DispatcherTest, CannotCreateNewDispatcherDuringDriverShutdown) {
   }));
   ASSERT_OK(task_started.Wait(zx::time::infinite()));
 
-  fdf_internal::DriverShutdown driver_shutdown;
+  fdf_env::DriverShutdown driver_shutdown;
   libsync::Completion driver_shutdown_completion;
   ASSERT_OK(driver_shutdown.Begin(fake_driver, [&](const void* driver) {
     ASSERT_EQ(fake_driver, driver);
@@ -2512,7 +2512,7 @@ TEST_F(DispatcherTest, ShutdownAllDispatchersAlreadyShutdown) {
   dispatcher->ShutdownAsync();
   ASSERT_OK(completion.Wait(zx::time::infinite()));
 
-  fdf_internal::DriverShutdown driver_shutdown;
+  fdf_env::DriverShutdown driver_shutdown;
   libsync::Completion driver_shutdown_completion;
   ASSERT_OK(driver_shutdown.Begin(fake_driver, [&](const void* driver) {
     ASSERT_EQ(fake_driver, driver);
@@ -2541,7 +2541,7 @@ TEST_F(DispatcherTest, ShutdownAllDispatchersCurrentlyInShutdownCallback) {
   dispatcher->ShutdownAsync();
   ASSERT_OK(entered_shutdown_handler.Wait());
 
-  fdf_internal::DriverShutdown driver_shutdown;
+  fdf_env::DriverShutdown driver_shutdown;
   libsync::Completion driver_shutdown_completion;
   ASSERT_OK(driver_shutdown.Begin(fake_driver, [&](const void* driver) {
     ASSERT_EQ(fake_driver, driver);
@@ -2575,7 +2575,7 @@ TEST_F(DispatcherTest, DestroyAllDispatchers) {
   }
 
   // Driver host shuts down all drivers.
-  fdf_internal::DriverShutdown driver_shutdown;
+  fdf_env::DriverShutdown driver_shutdown;
   libsync::Completion driver_shutdown_completion;
   ASSERT_OK(driver_shutdown.Begin(fake_driver, [&](const void* driver) {
     ASSERT_EQ(fake_driver, driver);
@@ -2591,12 +2591,12 @@ TEST_F(DispatcherTest, DestroyAllDispatchers) {
   ASSERT_OK(driver_shutdown_completion.Wait());
 
   // This will stop memory from leaking.
-  fdf_internal_destroy_all_dispatchers();
+  fdf_env_destroy_all_dispatchers();
 }
 
-TEST_F(DispatcherTest, WaitUntilAllDispatchersDestroyed) {
+TEST_F(DispatcherTest, WaitUntilDispatchersDestroyed) {
   // No dispatchers, should immediately return.
-  fdf_internal_wait_until_all_dispatchers_destroyed();
+  fdf_env_wait_until_all_dispatchers_destroyed();
 
   constexpr uint32_t kNumDispatchers = 4;
   fdf_dispatcher_t* dispatchers[kNumDispatchers];
@@ -2616,7 +2616,7 @@ TEST_F(DispatcherTest, WaitUntilAllDispatchersDestroyed) {
   std::atomic_bool wait_complete = false;
   std::thread thread = std::thread([&]() {
     thread_started.Signal();
-    fdf_internal_wait_until_all_dispatchers_destroyed();
+    fdf_env_wait_until_all_dispatchers_destroyed();
     wait_complete = true;
   });
 
@@ -2632,7 +2632,7 @@ TEST_F(DispatcherTest, WaitUntilAllDispatchersDestroyed) {
 
 // Tests waiting for all dispatchers to be destroyed when a driver shutdown
 // observer is also registered.
-TEST_F(DispatcherTest, WaitUntilAllDispatchersDestroyedHasDriverShutdownObserver) {
+TEST_F(DispatcherTest, WaitUntilDispatchersDestroyedHasDriverShutdownObserver) {
   auto fake_driver = CreateFakeDriver();
   driver_context::PushDriver(fake_driver);
   auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
@@ -2646,13 +2646,13 @@ TEST_F(DispatcherTest, WaitUntilAllDispatchersDestroyedHasDriverShutdownObserver
   std::atomic_bool wait_complete = false;
   std::thread thread = std::thread([&]() {
     thread_started.Signal();
-    fdf_internal_wait_until_all_dispatchers_destroyed();
+    fdf_env_wait_until_all_dispatchers_destroyed();
     wait_complete = true;
   });
 
   ASSERT_OK(thread_started.Wait());
 
-  fdf_internal::DriverShutdown driver_shutdown;
+  fdf_env::DriverShutdown driver_shutdown;
   libsync::Completion driver_shutdown_completion;
   ASSERT_OK(driver_shutdown.Begin(fake_driver, [&](const void* driver) {
     ASSERT_EQ(fake_driver, driver);
@@ -2664,7 +2664,7 @@ TEST_F(DispatcherTest, WaitUntilAllDispatchersDestroyedHasDriverShutdownObserver
   ASSERT_TRUE(wait_complete);
 }
 
-TEST_F(DispatcherTest, WaitUntilAllDispatchersDestroyedDuringDriverShutdownHandler) {
+TEST_F(DispatcherTest, WaitUntilDispatchersDestroyedDuringDriverShutdownHandler) {
   auto fake_driver = CreateFakeDriver();
   driver_context::PushDriver(fake_driver);
   auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
@@ -2675,7 +2675,7 @@ TEST_F(DispatcherTest, WaitUntilAllDispatchersDestroyedDuringDriverShutdownHandl
   dispatcher->release();  // Destroyed in shutdown handler.
 
   // Block in the driver shutdown handler until we signal.
-  fdf_internal::DriverShutdown driver_shutdown;
+  fdf_env::DriverShutdown driver_shutdown;
   libsync::Completion driver_shutdown_started;
   libsync::Completion complete_driver_shutdown;
   ASSERT_OK(driver_shutdown.Begin(fake_driver, [&](const void* driver) {
@@ -2692,7 +2692,7 @@ TEST_F(DispatcherTest, WaitUntilAllDispatchersDestroyedDuringDriverShutdownHandl
   std::atomic_bool wait_complete = false;
   std::thread thread = std::thread([&]() {
     thread_started.Signal();
-    fdf_internal_wait_until_all_dispatchers_destroyed();
+    fdf_env_wait_until_all_dispatchers_destroyed();
     wait_complete = true;
   });
 
@@ -2909,14 +2909,14 @@ TEST_F(DispatcherTest, ConcurrentDispatcherDestroy) {
   dispatcher->release();
   dispatcher2->release();
 
-  fdf_internal::DriverShutdown driver_shutdown;
+  fdf_env::DriverShutdown driver_shutdown;
   libsync::Completion completion;
   ASSERT_OK(driver_shutdown.Begin(fake_driver, [&](const void* driver) { completion.Signal(); }));
   ASSERT_OK(completion.Wait());
 
   // Wait for the driver to be removed from the dispatcher coordinator's |driver_state_| map as
   // |Reset| expects it to be empty.
-  fdf_internal_wait_until_all_dispatchers_destroyed();
+  fdf_env_wait_until_all_dispatchers_destroyed();
 
   // Reset the number of threads to 1.
   driver_runtime::GetDispatcherCoordinator().Reset();

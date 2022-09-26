@@ -4,9 +4,9 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/fdf/cpp/dispatcher.h>
-#include <lib/fdf/cpp/internal.h>
+#include <lib/fdf/cpp/env.h>
 #include <lib/fdf/dispatcher.h>
-#include <lib/fdf/internal.h>
+#include <lib/fdf/env.h>
 #include <lib/sync/cpp/completion.h>
 #include <stdio.h>
 #include <zircon/compiler.h>
@@ -16,7 +16,7 @@
 __EXPORT int main(int argc, char** argv) {
   setlinebuf(stdout);
   const void* driver = reinterpret_cast<void*>(0x12345678);
-  auto dispatcher = fdf_internal::DispatcherBuilder::CreateWithOwner(
+  auto dispatcher = fdf_env::DispatcherBuilder::CreateWithOwner(
       driver, FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS, "driver-runtime-test-main",
       [](fdf_dispatcher_t*) {});
   if (dispatcher.is_error()) {
@@ -29,17 +29,17 @@ __EXPORT int main(int argc, char** argv) {
     status = RUN_ALL_TESTS(argc, argv);
     completion.Signal();
   });
-  // Dispatcher will be destroyed by |fdf_internal_destroy_all_dispatchers() below.
+  // Dispatcher will be destroyed by |fdf_env_destroy_all_dispatchers() below.
   dispatcher->release();
   completion.Wait();
 
-  class Observer : public fdf_internal_driver_shutdown_observer_t {
+  class Observer : public fdf_env_driver_shutdown_observer_t {
    public:
     Observer()
-        : fdf_internal_driver_shutdown_observer_t(
-              fdf_internal_driver_shutdown_observer_t{.handler = &Observer::Handler}) {}
+        : fdf_env_driver_shutdown_observer_t(
+              fdf_env_driver_shutdown_observer_t{.handler = &Observer::Handler}) {}
 
-    static void Handler(const void* driver, fdf_internal_driver_shutdown_observer_t* observer) {
+    static void Handler(const void* driver, fdf_env_driver_shutdown_observer_t* observer) {
       static_cast<Observer*>(observer)->completion_.Signal();
     }
 
@@ -49,9 +49,9 @@ __EXPORT int main(int argc, char** argv) {
     libsync::Completion completion_;
   };
   Observer observer;
-  fdf_internal_shutdown_dispatchers_async(driver, &observer);
+  fdf_env_shutdown_dispatchers_async(driver, &observer);
   observer.Wait();
 
-  fdf_internal_destroy_all_dispatchers();
+  fdf_env_destroy_all_dispatchers();
   return status;
 }

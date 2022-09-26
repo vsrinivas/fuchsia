@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fdf/cpp/internal.h>
+#include <lib/fdf/cpp/env.h>
 #include <zircon/assert.h>
 
-namespace fdf_internal {
+namespace fdf_env {
 
-DriverShutdown::DriverShutdown() : fdf_internal_driver_shutdown_observer_t{CallHandler} {}
+DriverShutdown::DriverShutdown() : fdf_env_driver_shutdown_observer_t{CallHandler} {}
 
 zx_status_t DriverShutdown::Begin(const void* driver, Handler shutdown_handler) {
   // Since calls to the driver runtime are non-reentrant we can safely hold the lock.
@@ -18,7 +18,7 @@ zx_status_t DriverShutdown::Begin(const void* driver, Handler shutdown_handler) 
   }
   driver_ = driver;
   handler_ = std::move(shutdown_handler);
-  zx_status_t status = fdf_internal_shutdown_dispatchers_async(driver_, this);
+  zx_status_t status = fdf_env_shutdown_dispatchers_async(driver_, this);
   if (status != ZX_OK) {
     driver_ = nullptr;
     handler_ = nullptr;
@@ -33,8 +33,7 @@ DriverShutdown::~DriverShutdown() {
 }
 
 // static
-void DriverShutdown::CallHandler(const void* driver,
-                                 fdf_internal_driver_shutdown_observer_t* observer) {
+void DriverShutdown::CallHandler(const void* driver, fdf_env_driver_shutdown_observer_t* observer) {
   Handler handler;
   {
     auto self = static_cast<DriverShutdown*>(observer);
@@ -46,4 +45,4 @@ void DriverShutdown::CallHandler(const void* driver,
   handler(driver);
 }
 
-}  // namespace fdf_internal
+}  // namespace fdf_env

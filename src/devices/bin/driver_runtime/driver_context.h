@@ -5,8 +5,6 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_RUNTIME_DRIVER_CONTEXT_H_
 #define SRC_DEVICES_BIN_DRIVER_RUNTIME_DRIVER_CONTEXT_H_
 
-#include <lib/fdf/internal.h>
-
 namespace driver_runtime {
 class Dispatcher;
 class DispatcherCoordinator;

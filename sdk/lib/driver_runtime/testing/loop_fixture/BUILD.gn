@@ -7,8 +7,6 @@ source_set("gtest") {
 
   sources = [ "test_loop_fixture.h" ]
 
-  deps = [ "//sdk/lib/driver_runtime:driver_runtime_internal" ]
-
   public_deps = [
     "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//sdk/lib/driver_runtime:testing",

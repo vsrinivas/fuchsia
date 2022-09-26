@@ -8,7 +8,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/driver2/start_args.h>
 #include <lib/fdf/cpp/dispatcher.h>
-#include <lib/fdf/cpp/internal.h>
+#include <lib/fdf/cpp/env.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
@@ -143,7 +143,7 @@ zx::status<> DriverHost::StartDriver(fbl::RefPtr<Driver> driver,
 void DriverHost::ShutdownDriver(Driver* driver, fidl::ServerEnd<fdh::Driver> server) {
   // Request the driver runtime shutdown all dispatchers owned by the driver.
   // Once we get the callback, we will stop the driver.
-  auto driver_shutdown = std::make_unique<fdf_internal::DriverShutdown>();
+  auto driver_shutdown = std::make_unique<fdf_env::DriverShutdown>();
   auto driver_shutdown_ptr = driver_shutdown.get();
   auto shutdown_callback = [this, driver_shutdown = std::move(driver_shutdown), driver,
                             server = std::move(server)](const void* shutdown_driver) mutable {

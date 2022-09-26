@@ -7,7 +7,7 @@
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <lib/driver2/start_args.h>
-#include <lib/fdf/cpp/internal.h>
+#include <lib/fdf/cpp/env.h>
 #include <lib/fdio/directory.h>
 #include <lib/zx/vmo.h>
 #include <zircon/dlfcn.h>
@@ -58,7 +58,7 @@ void internal::DriverHostControllerConnection::Start(StartRequestView request,
 
         // Request the driver runtime shutdown all dispatchers owned by the driver.
         // Once we get the callback, we will stop the driver.
-        auto driver_shutdown = std::make_unique<fdf_internal::DriverShutdown>();
+        auto driver_shutdown = std::make_unique<fdf_env::DriverShutdown>();
         auto driver_shutdown_ptr = driver_shutdown.get();
         auto shutdown_callback = [this, driver_shutdown = std::move(driver_shutdown), driver,
                                   server = std::move(server)](const void* shutdown_driver) mutable {

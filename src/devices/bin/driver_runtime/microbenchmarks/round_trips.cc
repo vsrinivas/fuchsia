@@ -6,8 +6,8 @@
 #include <lib/fdf/cpp/channel.h>
 #include <lib/fdf/cpp/channel_read.h>
 #include <lib/fdf/cpp/dispatcher.h>
-#include <lib/fdf/cpp/internal.h>
-#include <lib/fdf/internal.h>
+#include <lib/fdf/cpp/env.h>
+#include <lib/fdf/env.h>
 #include <lib/fit/function.h>
 #include <lib/sync/completion.h>
 #include <lib/sync/cpp/completion.h>
@@ -75,7 +75,7 @@ class ChannelDispatcherTest {
     server_ = std::move(channel_pair->end1);
 
     {
-      auto dispatcher = fdf_internal::DispatcherBuilder::CreateWithOwner(
+      auto dispatcher = fdf_env::DispatcherBuilder::CreateWithOwner(
           &client_fake_driver_, dispatcher_options, "client",
           fit::bind_member(this, &ChannelDispatcherTest::ShutdownHandler));
       ASSERT_OK(dispatcher.status_value());
@@ -83,7 +83,7 @@ class ChannelDispatcherTest {
     }
 
     {
-      auto dispatcher = fdf_internal::DispatcherBuilder::CreateWithOwner(
+      auto dispatcher = fdf_env::DispatcherBuilder::CreateWithOwner(
           &server_fake_driver_, dispatcher_options, "server",
           fit::bind_member(this, &ChannelDispatcherTest::ShutdownHandler));
       ASSERT_OK(dispatcher.status_value());

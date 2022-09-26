@@ -5,7 +5,7 @@
 #include <lib/fdf/arena.h>
 #include <lib/fdf/channel.h>
 #include <lib/fdf/dispatcher.h>
-#include <lib/fdf/internal.h>
+#include <lib/fdf/env.h>
 #include <lib/fdf/testing.h>
 #include <lib/fdf/token.h>
 #include <lib/fit/defer.h>
@@ -170,11 +170,13 @@ __EXPORT zx_status_t fdf_token_exchange(zx_handle_t token, fdf_handle_t handle) 
   return driver_runtime::DispatcherCoordinator::TokenExchange(token, handle);
 }
 
-__EXPORT void fdf_internal_push_driver(const void* driver) { driver_context::PushDriver(driver); }
+__EXPORT void fdf_env_register_driver_entry(const void* driver) {
+  driver_context::PushDriver(driver);
+}
 
-__EXPORT void fdf_internal_pop_driver() { driver_context::PopDriver(); }
+__EXPORT void fdf_env_register_driver_exit() { driver_context::PopDriver(); }
 
-__EXPORT zx_status_t fdf_internal_dispatcher_create_with_owner(
+__EXPORT zx_status_t fdf_env_dispatcher_create_with_owner(
     const void* driver, uint32_t options, const char* name, size_t name_len,
     const char* scheduler_role, size_t scheduler_role_len,
     fdf_dispatcher_shutdown_observer_t* observer, fdf_dispatcher_t** out_dispatcher) {
@@ -192,24 +194,22 @@ __EXPORT zx_status_t fdf_internal_dispatcher_create_with_owner(
   return ZX_OK;
 }
 
-__EXPORT const void* fdf_internal_get_current_driver() {
-  return driver_context::GetCurrentDriver();
-}
+__EXPORT const void* fdf_env_get_current_driver() { return driver_context::GetCurrentDriver(); }
 
-__EXPORT void fdf_internal_destroy_all_dispatchers() {
-  return driver_runtime::DispatcherCoordinator::DestroyAllDispatchers();
-}
-
-__EXPORT zx_status_t fdf_internal_shutdown_dispatchers_async(
-    const void* driver, fdf_internal_driver_shutdown_observer_t* observer) {
+__EXPORT zx_status_t fdf_env_shutdown_dispatchers_async(
+    const void* driver, fdf_env_driver_shutdown_observer_t* observer) {
   return driver_runtime::DispatcherCoordinator::ShutdownDispatchersAsync(driver, observer);
 }
 
-__EXPORT void fdf_internal_wait_until_all_dispatchers_destroyed() {
+__EXPORT void fdf_env_destroy_all_dispatchers() {
+  return driver_runtime::DispatcherCoordinator::DestroyAllDispatchers();
+}
+
+__EXPORT void fdf_env_wait_until_all_dispatchers_destroyed() {
   return driver_runtime::DispatcherCoordinator::WaitUntilDispatchersDestroyed();
 }
 
-__EXPORT bool fdf_internal_dispatcher_has_queued_tasks(fdf_dispatcher_t* dispatcher) {
+__EXPORT bool fdf_env_dispatcher_has_queued_tasks(fdf_dispatcher_t* dispatcher) {
   return dispatcher->HasQueuedTasks();
 }
 

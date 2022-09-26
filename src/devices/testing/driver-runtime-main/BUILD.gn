@@ -10,7 +10,7 @@ source_set("zxtest") {
   sources = [ "zxtest.cc" ]
   deps = [
     "//sdk/lib/driver_runtime:driver_runtime_cpp",
-    "//sdk/lib/driver_runtime:driver_runtime_internal_cpp",
+    "//sdk/lib/driver_runtime:driver_runtime_env_cpp",
     "//src/devices/lib/driver:driver_runtime",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/sync:sync-cpp",
