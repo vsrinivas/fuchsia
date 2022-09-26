@@ -48,8 +48,8 @@
             to: "#system-update-checker",
         },
         {
-            protocol: "fuchsia.ui.activity.Provider",
-            from: "#activity",
+            protocol: "fuchsia.input.interaction.Notifier",
+            from: "#ui",
             to: "#system-update-checker",
         },
         {

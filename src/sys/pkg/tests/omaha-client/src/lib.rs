@@ -434,7 +434,7 @@ impl TestEnvBuilder {
                             .path("/config/build-info")
                             .rights(fio::R_STAR_DIR),
                     )
-                    .capability(Capability::protocol_by_name("fuchsia.ui.activity.Provider"))
+                    .capability(Capability::protocol_by_name("fuchsia.ui.interaction.Notifier"))
                     .capability(Capability::protocol_by_name("fuchsia.feedback.CrashReporter"))
                     .capability(Capability::protocol_by_name(
                         "fuchsia.feedback.ComponentDataRegister",
