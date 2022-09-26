@@ -4,7 +4,7 @@
 
 use {
     super::gesture_arena::{
-        self, ExamineEventResult, MismatchData, MismatchDetails, ProcessBufferedEventsResult,
+        self, ExamineEventResult, MismatchData, MismatchDetailsUint, ProcessBufferedEventsResult,
         RecognizedGesture, TouchpadEvent, VerifyEventResult, SECONDARY_BUTTON,
     },
     crate::mouse_binding::{MouseEvent, MouseLocation, MousePhase, RelativeLocation},
@@ -54,7 +54,7 @@ impl gesture_arena::Contender for InitialContender {
     fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult {
         let num_pressed_buttons = event.pressed_buttons.len();
         if num_pressed_buttons != 0 {
-            return ExamineEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
+            return ExamineEventResult::Mismatch(MismatchData::DetailedUint(MismatchDetailsUint {
                 criterion: "num_pressed_buttons",
                 min: Some(0),
                 max: Some(0),
@@ -70,12 +70,14 @@ impl gesture_arena::Contender for InitialContender {
             2 => ExamineEventResult::Contender(
                 self.into_two_finger_contacts_contender(event.clone()),
             ),
-            0 | _ => ExamineEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
-                criterion: "num_contacts",
-                min: Some(1),
-                max: Some(2),
-                actual: num_contacts,
-            })),
+            0 | _ => {
+                ExamineEventResult::Mismatch(MismatchData::DetailedUint(MismatchDetailsUint {
+                    criterion: "num_contacts",
+                    min: Some(1),
+                    max: Some(2),
+                    actual: num_contacts,
+                }))
+            }
         }
     }
 
@@ -120,7 +122,7 @@ impl gesture_arena::Contender for OneFingerContactContender {
 
         let num_pressed_buttons = event.pressed_buttons.len();
         if num_pressed_buttons != 0 {
-            return ExamineEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
+            return ExamineEventResult::Mismatch(MismatchData::DetailedUint(MismatchDetailsUint {
                 criterion: "num_pressed_buttons",
                 min: Some(0),
                 max: Some(0),
@@ -152,12 +154,14 @@ impl gesture_arena::Contender for OneFingerContactContender {
                     self.into_two_finger_contacts_contender(event.clone()),
                 )
             }
-            0 | _ => ExamineEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
-                criterion: "num_contacts",
-                min: Some(1),
-                max: Some(2),
-                actual: num_contacts,
-            })),
+            0 | _ => {
+                ExamineEventResult::Mismatch(MismatchData::DetailedUint(MismatchDetailsUint {
+                    criterion: "num_contacts",
+                    min: Some(1),
+                    max: Some(2),
+                    actual: num_contacts,
+                }))
+            }
         }
     }
 }
@@ -206,7 +210,7 @@ impl gesture_arena::Contender for TwoFingerContactsContender {
 
         let num_pressed_buttons = event.pressed_buttons.len();
         if num_pressed_buttons != 0 {
-            return ExamineEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
+            return ExamineEventResult::Mismatch(MismatchData::DetailedUint(MismatchDetailsUint {
                 criterion: "num_pressed_buttons",
                 min: Some(0),
                 max: Some(0),
@@ -270,7 +274,7 @@ impl gesture_arena::Contender for TwoFingerContactsContender {
 
                 ExamineEventResult::Contender(self)
             }
-            3.. => ExamineEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
+            3.. => ExamineEventResult::Mismatch(MismatchData::DetailedUint(MismatchDetailsUint {
                 criterion: "num_contacts",
                 min: Some(0),
                 max: Some(2),
@@ -317,7 +321,7 @@ impl gesture_arena::Contender for OneFingerRaisedContender {
 
         let num_pressed_buttons = event.pressed_buttons.len();
         if num_pressed_buttons != 0 {
-            return ExamineEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
+            return ExamineEventResult::Mismatch(MismatchData::DetailedUint(MismatchDetailsUint {
                 criterion: "num_pressed_buttons",
                 min: Some(0),
                 max: Some(0),
@@ -356,7 +360,7 @@ impl gesture_arena::Contender for OneFingerRaisedContender {
 
                 ExamineEventResult::Contender(self)
             }
-            2.. => ExamineEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
+            2.. => ExamineEventResult::Mismatch(MismatchData::DetailedUint(MismatchDetailsUint {
                 criterion: "num_contacts",
                 min: Some(0),
                 max: Some(1),
@@ -389,7 +393,7 @@ impl gesture_arena::MatchedContender for MatchedContender {
 
         let num_contacts = event.contacts.len();
         if num_contacts != 0 {
-            return VerifyEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
+            return VerifyEventResult::Mismatch(MismatchData::DetailedUint(MismatchDetailsUint {
                 criterion: "num_contacts",
                 min: Some(0),
                 max: Some(0),
@@ -399,7 +403,7 @@ impl gesture_arena::MatchedContender for MatchedContender {
 
         let num_pressed_buttons = event.pressed_buttons.len();
         if num_pressed_buttons != 0 {
-            return VerifyEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
+            return VerifyEventResult::Mismatch(MismatchData::DetailedUint(MismatchDetailsUint {
                 criterion: "num_pressed_buttons",
                 min: Some(0),
                 max: Some(0),

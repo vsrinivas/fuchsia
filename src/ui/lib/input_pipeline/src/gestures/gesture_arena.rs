@@ -85,7 +85,7 @@ pub(super) struct MouseEvent {
 }
 
 #[derive(Debug)]
-pub(super) struct MismatchDetails {
+pub(super) struct MismatchDetailsUint {
     pub(super) criterion: &'static str,
     pub(super) min: Option<u64>,
     pub(super) max: Option<u64>,
@@ -95,7 +95,7 @@ pub(super) struct MismatchDetails {
 #[derive(Debug)]
 pub(super) enum MismatchData {
     Basic(&'static str),
-    Detailed(MismatchDetails),
+    DetailedUint(MismatchDetailsUint),
 }
 
 #[derive(Debug)]
@@ -1007,7 +1007,10 @@ fn log_basic_mismatch(mismatch_event_node: &InspectNode, text: &'static str) {
     mismatch_event_node.record_string(&*inspect_keys::SUMMARY_PROP, text);
 }
 
-fn log_detailed_mismatch(mismatch_event_node: &InspectNode, mismatch_details: MismatchDetails) {
+fn log_detailed_mismatch_uint(
+    mismatch_event_node: &InspectNode,
+    mismatch_details: MismatchDetailsUint,
+) {
     use inspect_keys::*;
     mismatch_event_node.record_string(&*CRITERION_PROP, mismatch_details.criterion);
     mismatch_event_node.record_uint(
@@ -1036,8 +1039,8 @@ fn log_mismatch(
             mismatch_event_node.record_string(&*CONTENDER_PROP, contender_name);
             match mismatch_data {
                 MismatchData::Basic(text) => log_basic_mismatch(mismatch_event_node, text),
-                MismatchData::Detailed(mismatch_details) => {
-                    log_detailed_mismatch(mismatch_event_node, mismatch_details)
+                MismatchData::DetailedUint(mismatch_details) => {
+                    log_detailed_mismatch_uint(mismatch_event_node, mismatch_details)
                 }
             }
         })
@@ -3096,7 +3099,7 @@ mod tests {
             super::{
                 super::{
                     ContenderFactory, ExamineEventResult, GestureArena, InputHandler, MismatchData,
-                    MismatchDetails, ProcessBufferedEventsResult, RecognizedGesture,
+                    MismatchDetailsUint, ProcessBufferedEventsResult, RecognizedGesture,
                 },
                 utils::{
                     make_unhandled_touchpad_event, ContenderFactoryOnceOrPanic, StubContender,
@@ -3129,7 +3132,7 @@ mod tests {
             basic_mismatch_contender
                 .set_next_result(ExamineEventResult::Mismatch(MismatchData::Basic("some reason")));
             detailed_mismatch_contender.set_next_result(ExamineEventResult::Mismatch(
-                MismatchData::Detailed(MismatchDetails {
+                MismatchData::DetailedUint(MismatchDetailsUint {
                     criterion: "num_goats_teleported",
                     min: Some(10),
                     max: Some(30),
