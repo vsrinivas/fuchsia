@@ -124,6 +124,9 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   void set_offers(std::vector<fuchsia_component_decl::wire::Offer> offers) {
     offers_ = std::move(offers);
   }
+  void set_symbols(std::vector<fuchsia_driver_framework::wire::NodeSymbol> symbols) {
+    symbols_ = std::move(symbols);
+  }
 
   std::string TopoName() const;
 

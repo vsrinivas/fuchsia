@@ -281,13 +281,13 @@ TEST_F(CoreTest, RebindHasOneChild) {
     ASSERT_OK(zx_device::Create(&ctx_, "parent", driver_obj_, &parent));
     ASSERT_NO_FATAL_FAILURE(Connect(parent));
     parent->set_ops(&ops);
-    parent->ctx = &unbind_count;
+    parent->set_ctx(&unbind_count);
     {
       fbl::RefPtr<zx_device> child;
       ASSERT_OK(zx_device::Create(&ctx_, "child", driver_obj_, &child));
       ASSERT_NO_FATAL_FAILURE(Connect(child));
       child->set_ops(&ops);
-      child->ctx = &unbind_count;
+      child->set_ctx(&unbind_count);
       parent->add_child(child.get());
       child->set_parent(parent);
 
@@ -327,14 +327,14 @@ TEST_F(CoreTest, RebindHasMultipleChildren) {
     ASSERT_OK(zx_device::Create(&ctx_, "parent", driver_obj_, &parent));
     ASSERT_NO_FATAL_FAILURE(Connect(parent));
     parent->set_ops(&ops);
-    parent->ctx = &unbind_count;
+    parent->set_ctx(&unbind_count);
     {
       std::array<fbl::RefPtr<zx_device>, 5> children;
       for (auto& child : children) {
         ASSERT_OK(zx_device::Create(&ctx_, "child", driver_obj_, &child));
         ASSERT_NO_FATAL_FAILURE(Connect(child));
         child->set_ops(&ops);
-        child->ctx = &unbind_count;
+        child->set_ctx(&unbind_count);
         parent->add_child(child.get());
         child->set_parent(parent);
       }

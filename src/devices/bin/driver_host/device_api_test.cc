@@ -62,7 +62,7 @@ TEST(DeviceApiTest, GetProtocol) {
   zx_protocol_device_t ops = {};
   ops.get_protocol = test_get_protocol;
   dev->set_ops(&ops);
-  dev->ctx = &test_ctx;
+  dev->set_ctx(&test_ctx);
   dev->vnode.reset();
 
   uint8_t out = 0;
@@ -84,7 +84,7 @@ TEST(DeviceApiTest, GetSize) {
   zx_protocol_device_t ops = {};
   ops.get_size = test_get_size;
   dev->set_ops(&ops);
-  dev->ctx = &test_ctx;
+  dev->set_ctx(&test_ctx);
   dev->vnode.reset();
 
   ASSERT_EQ(device_get_size(dev.get()), 42ul);

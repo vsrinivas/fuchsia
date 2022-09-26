@@ -36,6 +36,7 @@
 
 #include "driver.h"
 #include "inspect.h"
+#include "sdk/lib/driver_compat/symbols.h"
 
 class CompositeDevice;
 class ProxyDevice;
@@ -374,14 +375,13 @@ struct zx_device
 
   uintptr_t magic = DEV_MAGIC;
 
-  // reserved for driver use; will not be touched by devmgr
-  void* ctx = nullptr;
-
   const zx_protocol_device_t* ops() const { return ops_; }
   void set_ops(const zx_protocol_device_t* ops) {
     ops_ = ops;
     inspect_->set_ops(ops);
   }
+
+  compat::device_t* get_dfv2_symbol() { return &dfv2_symbol_; }
 
   uint32_t flags() const { return flags_; }
   void set_flag(uint32_t flag) {
@@ -408,14 +408,18 @@ struct zx_device
 
   // most devices implement a single
   // protocol beyond the base device protocol
-  uint32_t protocol_id() const { return protocol_id_; }
+  uint32_t protocol_id() const { return dfv2_symbol_.proto_ops.id; }
 
   void set_protocol_id(uint32_t protocol_id) {
-    protocol_id_ = protocol_id;
+    dfv2_symbol_.proto_ops.id = protocol_id;
     inspect_->set_protocol_id(protocol_id);
   }
 
-  const void* protocol_ops = nullptr;
+  const void* protocol_ops() const { return dfv2_symbol_.proto_ops.ops; }
+  void set_protocol_ops(const void* ops) { dfv2_symbol_.proto_ops.ops = ops; }
+
+  inline void* ctx() const { return dfv2_symbol_.context; }
+  void set_ctx(void* ctx) { dfv2_symbol_.context = ctx; }
 
   cpp20::span<const char*> fidl_offers() { return {fidl_offers_.data(), fidl_offers_.size()}; }
 
@@ -566,13 +570,13 @@ struct zx_device
   // (usually ZX_ERR_NOT_SUPPORTED)
   template <typename RetType, typename... ArgTypes>
   RetType Dispatch(RetType (*op)(void* ctx, ArgTypes...), RetType fallback, ArgTypes... args) {
-    return op ? (*op)(ctx, args...) : fallback;
+    return op ? (*op)(ctx(), args...) : fallback;
   }
 
   template <typename... ArgTypes>
   void Dispatch(void (*op)(void* ctx, ArgTypes...), ArgTypes... args) {
     if (op) {
-      (*op)(ctx, args...);
+      (*op)(ctx(), args...);
     }
   }
 
@@ -604,7 +608,7 @@ struct zx_device
 
   const zx_protocol_device_t* ops_ = nullptr;
 
-  uint32_t protocol_id_ = 0;
+  compat::device_t dfv2_symbol_ = compat::kDefaultDevice;
 
   // parent in the device tree
   fbl::RefPtr<zx_device_t> parent_;

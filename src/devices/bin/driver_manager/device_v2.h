@@ -16,9 +16,9 @@ namespace dfv2 {
 class Device {
  public:
   static zx::status<std::unique_ptr<Device>> CreateAndServe(
-      std::string topological_path, std::string name, async_dispatcher_t* dispatcher,
-      component::OutgoingDirectory* outgoing, compat::DeviceServer server,
-      dfv2::NodeManager* manager, dfv2::DriverHost* driver_host);
+      std::string topological_path, std::string name, uint64_t device_symbol,
+      async_dispatcher_t* dispatcher, component::OutgoingDirectory* outgoing,
+      compat::DeviceServer server, dfv2::NodeManager* manager, dfv2::DriverHost* driver_host);
 
   std::shared_ptr<dfv2::Node>& node() { return node_; }
 

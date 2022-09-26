@@ -9,9 +9,9 @@
 namespace dfv2 {
 
 zx::status<std::unique_ptr<Device>> Device::CreateAndServe(
-    std::string topological_path, std::string name, async_dispatcher_t* dispatcher,
-    component::OutgoingDirectory* outgoing, compat::DeviceServer server, dfv2::NodeManager* manager,
-    dfv2::DriverHost* driver_host) {
+    std::string topological_path, std::string name, uint64_t device_symbol,
+    async_dispatcher_t* dispatcher, component::OutgoingDirectory* outgoing,
+    compat::DeviceServer server, dfv2::NodeManager* manager, dfv2::DriverHost* driver_host) {
   auto device = std::make_unique<Device>();
   // Serve our compat service in the outgoing directory.
   device->server_ = std::move(server);
@@ -32,6 +32,14 @@ zx::status<std::unique_ptr<Device>> Device::CreateAndServe(
   std::vector<fuchsia_component_decl::wire::Offer> offers;
   offers.push_back(fidl::ToWire(device->node_->arena(), offer));
   device->node_->set_offers(std::move(offers));
+
+  // Set the node's symbols.
+  auto symbol = fuchsia_driver_framework::wire::NodeSymbol::Builder(device->node_->arena());
+  symbol.address(device_symbol);
+  symbol.name(device->node_->arena(), "fuchsia.compat.device/Device");
+  std::vector<fuchsia_driver_framework::wire::NodeSymbol> symbols;
+  symbols.push_back(symbol.Build());
+  device->node_->set_symbols(std::move(symbols));
 
   return zx::ok(std::move(device));
 }

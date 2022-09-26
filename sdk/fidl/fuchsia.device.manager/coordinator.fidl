@@ -277,6 +277,10 @@ type AddDeviceArgs = struct {
     args string:<DEVICE_ARGS_MAX, optional>;
     device_add_config AddDeviceConfig;
     has_init bool;
+    /// An address pointing to the DFv2 device symbol, which contains its banjo
+    /// ops. This exists on every DFv1 device, but it is only used by a DFv2
+    /// child.
+    dfv2_device_symbol zx.vaddr;
 };
 
 /// Interface for drivers in driver host to coordinate with the driver

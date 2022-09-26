@@ -1,14 +1,21 @@
 // Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+//
+// This header has to come first, and we define our ZX_PROTOCOL, so that
+// we don't have to edit protodefs.h to add this test protocol.
+#include <bind/fuchsia/lifecycle/cpp/bind.h>
+#define ZX_PROTOCOL_PARENT bind_fuchsia_lifecycle::BIND_PROTOCOL_PARENT
 
 #include <fidl/fuchsia.device.fs/cpp/fidl.h>
 #include <fidl/fuchsia.driver.compat/cpp/fidl.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <fidl/fuchsia.lifecycle.test/cpp/wire.h>
+#include <fuchsia/lifecycle/test/cpp/banjo.h>
 #include <lib/driver2/driver2_cpp.h>
 #include <lib/driver_compat/context.h>
 #include <lib/driver_compat/device_server.h>
+#include <lib/driver_compat/symbols.h>
 
 namespace fdf {
 using namespace fuchsia_driver_framework;
@@ -25,6 +32,23 @@ class LifecycleDriver : public driver::DriverBase, public fidl::WireServer<ft::D
 
   zx::status<> Start() override {
     FDF_LOG(INFO, "Starting lifecycle driver");
+
+    // Get our parent banjo symbol.
+    auto parent_symbol = driver::GetSymbol<compat::device_t*>(symbols(), compat::kDeviceSymbol);
+    if (parent_symbol->proto_ops.id != ZX_PROTOCOL_PARENT) {
+      FDF_LOG(ERROR, "Didn't find PARENT banjo protocol, found protocol id: %d",
+              parent_symbol->proto_ops.id);
+      return zx::error(ZX_ERR_NOT_FOUND);
+    }
+
+    parent_protocol_t proto = {};
+    proto.ctx = parent_symbol->context;
+    proto.ops = reinterpret_cast<const parent_protocol_ops_t*>(parent_symbol->proto_ops.ops);
+    parent_client_ = ddk::ParentProtocolClient(&proto);
+    if (!parent_client_.is_valid()) {
+      FDF_LOG(ERROR, "Failed to create parent client");
+      return zx::error(ZX_ERR_INTERNAL);
+    }
 
     // Serve our Service.
     driver::ServiceInstanceHandler handler;
@@ -69,9 +93,18 @@ class LifecycleDriver : public driver::DriverBase, public fidl::WireServer<ft::D
   // fidl::WireServer<ft::Device>
   void Ping(PingCompleter::Sync& completer) override { completer.Reply(); }
 
+  // fidl::WireServer<ft::Device>
+  void GetString(GetStringCompleter::Sync& completer) override {
+    char str[100];
+    parent_client_.GetString(str, 100);
+    completer.Reply(fidl::StringView::FromExternal(std::string(str)));
+  }
+
  private:
   std::optional<compat::DeviceServer> child_;
   std::shared_ptr<compat::Context> compat_context_;
+
+  ddk::ParentProtocolClient parent_client_;
 };
 
 }  // namespace

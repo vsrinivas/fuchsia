@@ -130,7 +130,7 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
   }
   if (args->proto_id) {
     dev->set_protocol_id(args->proto_id);
-    dev->protocol_ops = args->proto_ops;
+    dev->set_protocol_ops(args->proto_ops);
   }
   if (args->fidl_protocol_offers) {
     dev->set_fidl_offers({args->fidl_protocol_offers, args->fidl_protocol_offer_count});
@@ -315,11 +315,11 @@ struct GenericProtocol {
 __EXPORT zx_status_t device_get_protocol(const zx_device_t* dev, uint32_t proto_id, void* out) {
   auto proto = static_cast<GenericProtocol*>(out);
   if (dev->ops()->get_protocol) {
-    return dev->ops()->get_protocol(dev->ctx, proto_id, out);
+    return dev->ops()->get_protocol(dev->ctx(), proto_id, out);
   }
-  if ((proto_id == dev->protocol_id()) && (dev->protocol_ops != nullptr)) {
-    proto->ops = dev->protocol_ops;
-    proto->ctx = dev->ctx;
+  if ((proto_id == dev->protocol_id()) && (dev->protocol_ops() != nullptr)) {
+    proto->ops = dev->protocol_ops();
+    proto->ctx = dev->ctx();
     return ZX_OK;
   }
   return ZX_ERR_NOT_SUPPORTED;
@@ -328,7 +328,7 @@ __EXPORT zx_status_t device_get_protocol(const zx_device_t* dev, uint32_t proto_
 __EXPORT zx_status_t device_open_protocol_session_multibindable(const zx_device_t* dev,
                                                                 uint32_t proto_id, void* out) {
   if (dev->ops()->open_protocol_session_multibindable) {
-    return dev->ops()->open_protocol_session_multibindable(dev->ctx, proto_id, out);
+    return dev->ops()->open_protocol_session_multibindable(dev->ctx(), proto_id, out);
   }
   return ZX_ERR_NOT_SUPPORTED;
 }
@@ -336,7 +336,7 @@ __EXPORT zx_status_t device_open_protocol_session_multibindable(const zx_device_
 __EXPORT zx_status_t device_close_protocol_session_multibindable(const zx_device_t* dev,
                                                                  void* proto) {
   if (dev->ops()->close_protocol_session_multibindable) {
-    return dev->ops()->close_protocol_session_multibindable(dev->ctx, proto);
+    return dev->ops()->close_protocol_session_multibindable(dev->ctx(), proto);
   }
   return ZX_ERR_NOT_SUPPORTED;
 }

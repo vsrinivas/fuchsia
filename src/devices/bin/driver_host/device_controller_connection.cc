@@ -103,7 +103,7 @@ void DeviceControllerConnection::Resume(ResumeRequestView request,
 void DeviceControllerConnection::ConnectProxy(ConnectProxyRequestView request,
                                               ConnectProxyCompleter::Sync& _completer) {
   VLOGD(1, *dev(), "Connected to proxy for device %p", dev().get());
-  dev()->ops()->rxrpc(dev()->ctx, ZX_HANDLE_INVALID);
+  dev()->ops()->rxrpc(dev()->ctx(), ZX_HANDLE_INVALID);
   // Ignore any errors in the creation for now?
   // TODO(teisenbe): Investigate if this is the right thing
   ProxyIostate::Create(dev(), std::move(request->shadow),

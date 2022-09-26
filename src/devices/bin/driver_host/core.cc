@@ -157,7 +157,7 @@ void DriverHostContext::DeviceDestroy(zx_device_t* dev) {
   dev->magic = 0xdeaddeaddeaddead;
 
   // ensure all pointers are invalid
-  dev->ctx = nullptr;
+  dev->set_ctx(nullptr);
   dev->set_parent(nullptr);
   dev->FreeInspect();
   dev->driver_ref_.Destroy();
@@ -207,7 +207,7 @@ void DriverHostContext::FinalizeDyingDevices() {
     if (dev->flags() & DEV_FLAG_ADDED) {
       if (dev->parent()) {
         api_lock_.Release();
-        dev->parent()->ChildPreReleaseOp(dev->ctx);
+        dev->parent()->ChildPreReleaseOp(dev->ctx());
         api_lock_.Acquire();
       }
 
@@ -350,7 +350,7 @@ zx_status_t DriverHostContext::DeviceCreate(fbl::RefPtr<Driver> drv, const char*
 
   // TODO(teisenbe): Why do we default to dev.get() here?  Why not just
   // nullptr
-  dev->ctx = ctx ? ctx : dev.get();
+  dev->set_ctx(ctx ? ctx : dev.get());
   *out = std::move(dev);
   return ZX_OK;
 }
@@ -682,7 +682,7 @@ zx_status_t DriverHostContext::DeviceClose(fbl::RefPtr<zx_device_t> dev, uint32_
 
 void DriverHostContext::DeviceSystemSuspend(const fbl::RefPtr<zx_device>& dev, uint32_t flags) {
   if (dev->auto_suspend_configured()) {
-    dev->ops()->configure_auto_suspend(dev->ctx, false, DEV_POWER_STATE_D0);
+    dev->ops()->configure_auto_suspend(dev->ctx(), false, DEV_POWER_STATE_D0);
     LOGF(INFO, "System suspend overriding auto suspend for device %p '%s'", dev.get(), dev->name());
   }
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
@@ -716,7 +716,7 @@ void DriverHostContext::DeviceSystemSuspend(const fbl::RefPtr<zx_device>& dev, u
 void DriverHostContext::DeviceSystemResume(const fbl::RefPtr<zx_device>& dev,
                                            uint32_t target_system_state) {
   if (dev->auto_suspend_configured()) {
-    dev->ops()->configure_auto_suspend(dev->ctx, false, DEV_POWER_STATE_D0);
+    dev->ops()->configure_auto_suspend(dev->ctx(), false, DEV_POWER_STATE_D0);
     LOGF(INFO, "System resume overriding auto suspend for device %p '%s'", dev.get(), dev->name());
   }
 
@@ -733,7 +733,7 @@ void DriverHostContext::DeviceSystemResume(const fbl::RefPtr<zx_device>& dev,
       uint32_t performance_state = sys_power_states.at(target_system_state - 1).performance_state;
 
       uint32_t requested_perf_state = internal::get_perf_state(dev, performance_state);
-      dev->ops()->resume(dev->ctx, requested_perf_state);
+      dev->ops()->resume(dev->ctx(), requested_perf_state);
       api_lock_.Acquire();
     }
     enum_lock_release();
@@ -755,7 +755,7 @@ zx_status_t DriverHostContext::DeviceSetPerformanceState(const fbl::RefPtr<zx_de
     return ZX_ERR_INVALID_ARGS;
   }
   if (dev->ops()->set_performance_state) {
-    zx_status_t status = dev->ops()->set_performance_state(dev->ctx, requested_state, out_state);
+    zx_status_t status = dev->ops()->set_performance_state(dev->ctx(), requested_state, out_state);
     if (!(dev->IsPerformanceStateSupported(*out_state))) {
       LOGD(FATAL, *dev,
            "Device %p 'set_performance_state' hook returned an unsupported performance state",

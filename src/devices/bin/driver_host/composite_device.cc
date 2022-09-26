@@ -111,7 +111,7 @@ zx_status_t InitializeCompositeDevice(const fbl::RefPtr<zx_device>& dev,
 
   dev->set_composite(composite, false);
   dev->set_ops(&composite_device_ops);
-  dev->ctx = new_device.release();
+  dev->set_ctx(new_device.release());
   // Flag that when this is cleaned up, we should run its release hook.
   dev->set_flag(DEV_FLAG_ADDED);
   return ZX_OK;
@@ -120,15 +120,15 @@ zx_status_t InitializeCompositeDevice(const fbl::RefPtr<zx_device>& dev,
 CompositeDevice::~CompositeDevice() = default;
 
 uint32_t CompositeDevice::GetFragmentCount() {
-  return static_cast<CompositeDeviceInstance*>(device_->ctx)->GetFragmentCount();
+  return static_cast<CompositeDeviceInstance*>(device_->ctx())->GetFragmentCount();
 }
 
 void CompositeDevice::GetFragments(composite_device_fragment_t* comp_list, size_t comp_count,
                                    size_t* comp_actual) {
-  static_cast<CompositeDeviceInstance*>(device_->ctx)
+  static_cast<CompositeDeviceInstance*>(device_->ctx())
       ->GetFragments(comp_list, comp_count, comp_actual);
 }
 
 bool CompositeDevice::GetFragment(const char* name, zx_device_t** out) {
-  return static_cast<CompositeDeviceInstance*>(device_->ctx)->GetFragment(name, out);
+  return static_cast<CompositeDeviceInstance*>(device_->ctx())->GetFragment(name, out);
 }

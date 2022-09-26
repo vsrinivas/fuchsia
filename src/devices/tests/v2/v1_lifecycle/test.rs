@@ -25,5 +25,10 @@ async fn test_devfs_exporter() -> Result<()> {
     let node = device_watcher::recursive_wait_and_open_node(&dev, "sys/test/root/lifecycle-device")
         .await?;
     let device = ft::DeviceProxy::new(node.into_channel().unwrap());
-    Ok(device.ping().await?)
+    device.ping().await?;
+
+    let response = device.get_string().await.unwrap();
+    assert_eq!(response, "hello world!");
+
+    Ok(())
 }

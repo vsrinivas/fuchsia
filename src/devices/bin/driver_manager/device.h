@@ -701,6 +701,9 @@ class Device final
   // This lets us check for unexpected removals and is for testing use only.
   size_t num_removal_attempts_ = 0;
 
+  // This is the symbol we got from the driver host for the device's banjo protocol.
+  uint64_t dfv2_device_symbol_ = 0;
+
   // If this is not null, there is a DFv2 driver bound to this device.
   std::shared_ptr<dfv2::Device> dfv2_bound_device_;
 

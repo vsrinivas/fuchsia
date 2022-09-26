@@ -67,7 +67,7 @@ void InitializeProxyDevice(const fbl::RefPtr<zx_device>& dev,
 
   dev->set_proxy(proxy);
   dev->set_ops(&proxy_device_ops);
-  dev->ctx = new_device.release();
+  dev->set_ctx(new_device.release());
   // Flag that when this is cleaned up, we should run its release hook.
   dev->set_flag(DEV_FLAG_ADDED);
 }
@@ -88,12 +88,12 @@ fbl::RefPtr<zx_driver> GetProxyDriver(DriverHostContext* ctx) {
 }
 
 zx::status<> ProxyDevice::ConnectToProtocol(const char* protocol, zx::channel request) {
-  return static_cast<ProxyDeviceInstance*>(device_->ctx)
+  return static_cast<ProxyDeviceInstance*>(device_->ctx())
       ->ConnectToProtocol(protocol, std::move(request));
 }
 
 zx::status<> ProxyDevice::ConnectToProtocol(const char* service, const char* protocol,
                                             zx::channel request) {
-  return static_cast<ProxyDeviceInstance*>(device_->ctx)
+  return static_cast<ProxyDeviceInstance*>(device_->ctx())
       ->ConnectToProtocol(service, protocol, std::move(request));
 }

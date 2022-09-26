@@ -676,6 +676,11 @@ void Device::AddDevice(AddDeviceRequestView request, AddDeviceCompleter::Sync& c
       name, request->args.protocol_id, driver_path, args, skip_autobind, request->args.has_init,
       kEnableAlwaysInit, std::move(request->inspect), std::move(request->client_remote),
       std::move(request->outgoing_dir), &device);
+
+  if (device != nullptr) {
+    device->dfv2_device_symbol_ = request->args.dfv2_device_symbol;
+  }
+
   if (device != nullptr && (request->args.device_add_config &
                             fuchsia_device_manager::wire::AddDeviceConfig::kAllowMultiComposite)) {
     device->flags |= DEV_CTX_ALLOW_MULTI_COMPOSITE;
@@ -868,7 +873,7 @@ zx::status<std::shared_ptr<dfv2::Node>> Device::CreateDFv2Device() {
   }
 
   auto dfv2_device =
-      dfv2::Device::CreateAndServe(topo_path, name, coordinator->dispatcher(),
+      dfv2::Device::CreateAndServe(topo_path, name, dfv2_device_symbol_, coordinator->dispatcher(),
                                    coordinator->outgoing(), std::move(server), this, host().get());
   if (dfv2_device.is_error()) {
     return dfv2_device.take_error();

@@ -515,6 +515,7 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
       .args = fidl::StringView::FromExternal(add_args->proxy_args, proxy_args_len),
       .device_add_config = add_device_config,
       .has_init = child->ops()->init != nullptr,
+      .dfv2_device_symbol = reinterpret_cast<uint64_t>(child->get_dfv2_symbol()),
   };
 
   auto response = coordinator_client.sync()->AddDevice(
