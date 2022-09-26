@@ -486,8 +486,11 @@ type ffxFuzzRunConfig struct {
 }
 
 func (f *Fuzzer) parseArgsForFfx(conn Connector) (*ffxFuzzRunConfig, error) {
+	// TODO(fxbug.dev/110231): overnet fails when given too much data on a `zx.socket`. This can be
+	// observed with targets that emit syslogs on every iteration. Since libFuzzer prints all relevant
+	// info to stderr, workaround this issue by disabling stdout and syslog.
 	config := ffxFuzzRunConfig{
-		args: []string{f.url},
+		args: []string{f.url, "--no-stdout", "--no-syslog"},
 	}
 
 	// Split args into files and directories

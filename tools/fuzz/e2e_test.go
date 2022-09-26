@@ -23,12 +23,19 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fuzz"
 )
 
-// To run this test:
-// - fx set core.x64 --with-base //examples/fuzzers --with-base //bundles:tools --fuzz-with asan
-// - fx build
-// - cd tools/fuzz
-// - UNDERCOAT_E2E_TESTS=yes go test -v -logtostderr
+// To build these tests:
+// - fx set core.x64 \
+//     --with-base //tools/fuzz:tests \
+//     --with-base //tools/fuzz/testing:undercoat-test-fuzzers \
+//     --with-base //bundles:tools \
+//     --fuzz-with asan && fx build
 //
+// To run these tests:
+// - UNDERCOAT_E2E_TESTS=1 fx test --host undercoat
+//
+// Or, for an individual test with detailed output:
+// - cd tools/fuzz && UNDERCOAT_E2E_TESTS=1 go test -run <test-name> -v -logtostderr
+
 // Note: The bulk of the testing is done in separate functions called by this
 // test, but for performance reasons (and because ffx uses a global daemon)
 // they currently all run serially on the same instance.
@@ -542,6 +549,38 @@ func TestStopInstanceWithOldHandleVersion(t *testing.T) {
 	}
 
 	runCommandOk(t, "stop_instance", "-handle", handle)
+}
+
+// Test suppressing the stdout and syslog of a noisy fuzzer.
+func TestFuzzNoisy(t *testing.T) {
+	if _, found := os.LookupEnv("UNDERCOAT_E2E_TESTS"); !found {
+		t.Skip("skipping end-to-end test; set UNDERCOAT_E2E_TESTS to enable")
+	}
+
+	out := runCommandOk(t, "start_instance")
+	handle := strings.TrimSpace(out)
+
+	defer runCommandOk(t, "stop_instance", "-handle", handle)
+
+	noisy_fuzzer := "undercoat-test-fuzzers/noisy_fuzzer"
+	out = runCommandOk(t, "prepare_fuzzer", "-handle", handle, "-fuzzer", noisy_fuzzer)
+	glog.Info(out)
+
+	out = runCommandOk(t, "run_fuzzer", "-handle", handle, "-fuzzer", noisy_fuzzer, "--",
+		"-max_total_time=1")
+	glog.Info(out)
+
+	if !strings.Contains(out, "libFuzzer starting") {
+		t.Fatalf("output missing stderr: %s", out)
+	}
+
+	if strings.Contains(out, "stdout-noise") {
+		t.Fatalf("output includes stdout: %s", out)
+	}
+
+	if strings.Contains(out, "syslog-noise") {
+		t.Fatalf("output includes syslog: %s", out)
+	}
 }
 
 // Helper functions:

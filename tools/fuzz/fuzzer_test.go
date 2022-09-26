@@ -418,13 +418,39 @@ func TestParseArgsForFfx(t *testing.T) {
 		{"-minimize_crash=1", "some/file"},
 	}
 
+	expectedBaseArgs := []string{f.url, "--no-stdout", "--no-syslog"}
 	expectedConfigs := []*ffxFuzzRunConfig{
-		{command: "run", args: []string{f.url}},
-		{command: "try", args: []string{f.url, f.AbsPath("some/file")}, testcasePath: "some/file"},
-		{command: "run", args: []string{f.url}, outputCorpus: "some/dir"},
-		{command: "run", args: []string{f.url}, outputCorpus: "out", inputCorpora: []string{"in1", "in2"}},
-		{command: "merge", args: []string{f.url}, outputCorpus: "out", inputCorpora: []string{"in1", "in2"}},
-		{command: "minimize", args: []string{f.url, f.AbsPath("some/file")}, testcasePath: "some/file"},
+		{
+			command: "run",
+			args:    expectedBaseArgs,
+		},
+		{
+			command:      "try",
+			args:         append(expectedBaseArgs, f.AbsPath("some/file")),
+			testcasePath: "some/file",
+		},
+		{
+			command:      "run",
+			args:         expectedBaseArgs,
+			outputCorpus: "some/dir",
+		},
+		{
+			command:      "run",
+			args:         expectedBaseArgs,
+			outputCorpus: "out",
+			inputCorpora: []string{"in1", "in2"},
+		},
+		{
+			command:      "merge",
+			args:         expectedBaseArgs,
+			outputCorpus: "out",
+			inputCorpora: []string{"in1", "in2"},
+		},
+		{
+			command:      "minimize",
+			args:         append(expectedBaseArgs, f.AbsPath("some/file")),
+			testcasePath: "some/file",
+		},
 	}
 
 	for j, args := range testArgs {
