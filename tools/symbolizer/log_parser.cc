@@ -184,7 +184,9 @@ bool LogParser::ProcessDart(std::string_view line) {
       return false;
     }
     symbolizer_->MMap(address, kModuleSize, kModuleId, "", 0);
-  } else if (splitted.size() == 4 && splitted[0] == "isolate_instructions:") {
+  } else if (!splitted.empty() &&
+             (splitted[0] == "os:" || splitted[0] == "isolate_instructions:")) {
+    // os: fuchsia arch: arm64 comp: no sim: no
     // isolate_instructions: f2f9f8e60, vm_instructions: f2f9f4000
   } else if (splitted.size() >= 6 && splitted[0][0] == '#' && splitted[1] == "abs") {
     // #00 abs 0000000f2fbb51c7 virt 00000000016ed1c7 _kDartIsolateSnapshotInstructions+0x1bc367
