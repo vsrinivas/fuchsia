@@ -33,7 +33,7 @@ bool InvokeViewPropertiesChangedCallback(
     const FlatlandAccessibilityView::ViewPropertiesChangedCallback& callback) {
   ViewportProperties viewport_properties;
   viewport_properties.set_logical_size(fidl::Clone(layout_info.logical_size()));
-  return callback(std::move(viewport_properties));
+  return callback(viewport_properties);
 }
 
 void InvokeViewPropertiesChangedCallbacks(
