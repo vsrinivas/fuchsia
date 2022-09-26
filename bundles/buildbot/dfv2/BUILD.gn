@@ -68,10 +68,9 @@ group("core") {
   # tests in //src:e2e_tests pass with DFv2 enabled.
   # TODO(fxbug.dev/108563): Add //src:src_no_e2e to this add-assign when all
   # tests in //src:src_no_e2e pass with DFv2 enabled.
-  deps += [
-    "//src/connectivity",
-    "//src/recovery",
-  ]
+  # TODO(fxbug.dev/108563): Add //src/connectivity to this add-assign when all
+  # tests in //src/connectivity pass with DFv2 enabled.
+  deps += [ "//src/recovery" ]
 
   # Add-assign should contain all deps of //src:src_no_e2e.
   # TODO(fxbug.dev/108563): Remove the following add-assign when all tests in
@@ -80,12 +79,14 @@ group("core") {
   # tests in //src/developer pass with DFv2 enabled.
   # TODO(fxbug.dev/108563): Add //src:tests_no_e2e to this add-assign when all
   # tests in //src:tests_no_e2e pass with DFv2 enabled.
+  # TODO(fxbug.dev/108563): Add //src/connectivity:connectivity_no_e2e to this
+  # add-assign when all tests in //src/connectivity:connectivity_no_e2e pass
+  # with DFv2 enabled.
   deps += [
     "//src/camera",
     "//src/cast",
     "//src/chromium",
     "//src/cobalt",
-    "//src/connectivity:connectivity_no_e2e",
     "//src/dart",
     "//src/devices",
     "//src/diagnostics",
@@ -112,17 +113,34 @@ group("core") {
     "//src/virtualization",
   ]
 
+  # Add-assign should contain all deps of
+  # //src/connectivity:connectivity_no_e2e.
+  # TODO(fxbug.dev/108563): Add //src/connectivity:tests_no_e2e to this
+  # add-assign when all tests in //src/connectivity:tests_no_e2e pass with DFv2
+  # enabled.
+  deps += [
+    "//src/connectivity/bluetooth",
+    "//src/connectivity/location",
+    "//src/connectivity/lowpan",
+    "//src/connectivity/overnet",
+    "//src/connectivity/ppp",
+    "//src/connectivity/weave",
+    "//src/connectivity/wlan",
+  ]
+
   # Add-assign should contain all deps of //src:tests_no_e2e.
   # TODO(fxbug.dev/108563): Remove the following add-assign when all tests in
   # //src:tests_no_e2e pass with DFv2 enabled.
   # TODO(fxbug.dev/108563): Add //src/developer:tests pass to this add-assign
-  # when all tests in //src/developer:tests pass pass with DFv2 enabled.
+  # when all tests in //src/developer:tests pass with DFv2 enabled.
+  # TODO(fxbug.dev/108563): Add //src/connectivity:tests_no_e2e pass to this
+  # add-assign when all tests in //src/connectivity:tests_no_e2e pass with DFv2
+  # enabled.
   deps += [
     "//src/bringup:tests",
     "//src/camera:tests",
     "//src/chromium:tests",
     "//src/cobalt:tests",
-    "//src/connectivity:tests_no_e2e",
     "//src/devices:tests",
     "//src/diagnostics:tests",
     "//src/experiences:tests",
@@ -150,6 +168,77 @@ group("core") {
     "//src/ui:tests",
     "//src/virtualization:tests",
     "//src/zircon:tests",
+  ]
+
+  # Add-assign should contain all deps of //src/connectivity:tests_no_e2e.
+  # TODO(fxbug.dev/108563): Remove the following add-assign when all tests in
+  # //src/connectivity:tests_no_e2e pass with DFv2 enabled.
+  # TODO(fxbug.dev/108563): Add //src/connectivity/network:tests to this
+  # add-assign when all tests in //src/connectivity/network:tests pass with DFv2
+  # enabled.
+  deps += [
+    "//src/connectivity/bluetooth:tests",
+    "//src/connectivity/ethernet:tests",
+    "//src/connectivity/lib:tests",
+    "//src/connectivity/location:tests",
+    "//src/connectivity/lowpan:tests",
+    "//src/connectivity/overnet:tests_no_e2e",
+    "//src/connectivity/ppp:tests",
+    "//src/connectivity/telephony:tests",
+    "//src/connectivity/weave:tests",
+    "//src/connectivity/wlan:tests",
+  ]
+
+  # Add-assign should contain all deps of //src/connectivity/network:tests.
+  # TODO(fxbug.dev/108563): Remove the following add-assign when all tests in
+  # //src/connectivity/network:tests pass with DFv2 enabled.
+  # TODO(fxbug.dev/108563): Add //src/connectivity/network/testing:tests to this
+  # add-assign when all tests in //src/connectivity/network/testing:tests pass
+  # with DFv2 enabled.
+  deps += [
+    "//src/connectivity/network/dhcpv4:tests",
+    "//src/connectivity/network/dhcpv6:tests",
+    "//src/connectivity/network/dns:tests",
+    "//src/connectivity/network/drivers:tests",
+    "//src/connectivity/network/http-client:tests",
+    "//src/connectivity/network/lib:tests",
+    "//src/connectivity/network/mdns:tests",
+    "//src/connectivity/network/net-cli:tests",
+    "//src/connectivity/network/netcfg:tests",
+    "//src/connectivity/network/netstack:component-with-tracing",
+    "//src/connectivity/network/netstack:tests",
+    "//src/connectivity/network/netstack3:tests",
+    "//src/connectivity/network/reachability:tests",
+    "//src/connectivity/network/tests",
+    "//src/connectivity/network/tools:tests",
+    "//src/connectivity/network/tun:tests",
+  ]
+
+  # Add-assign should contain all deps of
+  # //src/connectivity/network/testing:tests.
+  # TODO(fxbug.dev/108563): Remove the following add-assign when all tests in
+  # //src/connectivity/network/testing:tests pass with DFv2 enabled.
+  # TODO(fxbug.dev/108563): Add
+  # //src/connectivity/network/testing/conformance:tests to this add-assign when
+  # all tests in //src/connectivity/network/testing/conformance:tests pass with
+  # DFv2 enabled.
+  deps += [
+    "//src/connectivity/network/testing/netemul:tests",
+    "//src/connectivity/network/testing/network-test-realm:tests",
+  ]
+
+  # Add-assign should contain all deps of
+  # //src/connectivity/network/testing/conformance:tests
+  # TODO(fxbug.dev/108563): Remove the following add-assign when all tests in
+  # //src/connectivity/network/testing/conformance:tests pass with DFv2 enabled.
+  # TODO(fxbug.dev/110460): Add
+  # //src/connectivity/network/testing/conformance/emulator:tests to this
+  # add-assign when all tests in
+  # //src/connectivity/network/testing/conformance/emulator:tests pass with DFv2
+  # enabled.
+  deps += [
+    "//src/connectivity/network/testing/conformance/expect:tests",
+    "//src/connectivity/network/testing/conformance/parseoutput:tests",
   ]
 
   # Add-assign should contain all deps of //src/developer.
