@@ -377,7 +377,7 @@ void Guest::CreateContainer() {
       break;
     case vm_tools::tremplin::CreateContainerResponse::EXISTS:
       FX_LOGS(INFO) << "Container already exists";
-      StartContainer();
+      SetupUser();
       break;
     case vm_tools::tremplin::CreateContainerResponse::FAILED:
       PostContainerFailure("Failed to create container: " + response.failure_reason());
