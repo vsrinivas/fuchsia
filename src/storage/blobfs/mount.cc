@@ -37,6 +37,9 @@ zx_status_t Mount(std::unique_ptr<BlockDevice> device, const MountOptions& optio
 zx::status<> StartComponent(ComponentOptions options, fidl::ServerEnd<fuchsia_io::Directory> root,
                             fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle,
                             zx::resource vmex_resource) {
+  // When the loop is destroyed, it can make calls into runner, so runner *must* be destroyed after
+  // the loop.
+  std::unique_ptr<ComponentRunner> runner;
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   trace::TraceProviderWithFdio provider(loop.dispatcher());
 
@@ -46,7 +49,7 @@ zx::status<> StartComponent(ComponentOptions options, fidl::ServerEnd<fuchsia_io
                      << ". Assuming test environment and continuing";
   }
 
-  std::unique_ptr<ComponentRunner> runner(new ComponentRunner(loop, options));
+  runner = std::make_unique<ComponentRunner>(loop, options);
   auto status = runner->ServeRoot(std::move(root), std::move(lifecycle), std::move(*client_end),
                                   std::move(vmex_resource));
   if (status.is_error()) {
