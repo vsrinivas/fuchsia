@@ -35,6 +35,12 @@ class Protocol : public fdf_token_t {
 
   ~Protocol();
 
+  // Protocol cannot be moved or copied.
+  Protocol(const Protocol&) = delete;
+  Protocol(Protocol&&) = delete;
+  Protocol& operator=(const Protocol&) = delete;
+  Protocol& operator=(Protocol&&) = delete;
+
   // Registers a protocol for |token|.
   //
   // The connect handler will be scheduled to be called on the dispatcher when a client tries
@@ -43,10 +49,13 @@ class Protocol : public fdf_token_t {
   //
   // Transfers ownership of |token| to the runtime.
   //
-  // Returns |ZX_OK| is the protocol was successfully registered.
-  // Returns |ZX_ERR_BAD_HANDLE| if |token| is not a valid channel handle.
-  // Returns |ZX_ERR_INVALID_ARGS| if |handler| or |dispatcher| is NULL.
-  // Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down, or if this
+  // # Errors
+  //
+  // ZX_ERR_BAD_HANDLE: |token| is not a valid channel handle.
+  //
+  // ZX_ERR_INVALID_ARGS: |handler| or |dispatcher| is NULL.
+  //
+  // ZX_ERR_BAD_STATE|: The dispatcher is shutting down, or if this
   // has already registered a protocol.
   zx_status_t Register(zx::channel token, fdf_dispatcher_t* dispatcher);
 
@@ -66,10 +75,12 @@ class Protocol : public fdf_token_t {
 // Transfers ownership of |token| to the runtime, and ownership of |channel| to the driver
 // which registered the protocol.
 //
-// Returns |ZX_OK| if the |channel| has been transferred.
-// Returns |ZX_ERR_BAD_HANDLE| if |token| is not a valid channel handle,
-// or |channel| is not a valid FDF channel handle.
-// Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.
+// # Errors:
+//
+// ZX_ERR_BAD_HANDLE: |token| is not a valid channel handle, or |channel| is not a valid
+// FDF channel handle.
+//
+// ZX_ERR_BAD_STATE: The dispatcher is shutting down.
 zx_status_t ProtocolConnect(zx::channel token, fdf::Channel channel);
 
 }  // namespace fdf

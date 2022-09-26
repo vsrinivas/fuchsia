@@ -31,6 +31,7 @@ class ChannelReadBase {
 
   ~ChannelReadBase();
 
+  // ChannelReadBase cannot be moved or copied.
   ChannelReadBase(const ChannelReadBase&) = delete;
   ChannelReadBase(ChannelReadBase&&) = delete;
   ChannelReadBase& operator=(const ChannelReadBase&) = delete;
