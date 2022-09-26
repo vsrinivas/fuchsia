@@ -13,6 +13,7 @@
 #include <lib/driver2/record.h>
 #include <lib/driver2/start_args.h>
 #include <lib/fdf/cpp/dispatcher.h>
+#include <lib/sys/component/cpp/structured_config.h>
 
 namespace driver {
 
@@ -112,6 +113,20 @@ class DriverBase {
     return node.value();
   }
 
+  template <typename StructuredConfig>
+  StructuredConfig take_config() {
+    static_assert(component::IsDriverStructuredConfigV<StructuredConfig>,
+                  "Invalid type supplied. StructuredConfig must be a driver flavored "
+                  "structured config type. Example usage: take_config<my_driverconfig::Config>().");
+    // TODO(https://fxbug.dev/110078): Remove the wire/natural double convert when TakeFromStartArgs
+    // has support for natural type input.
+    fidl::Arena<> arena;
+    auto wire_start_args = fidl::ToWire(arena, std::move(start_args_));
+    auto config = StructuredConfig::TakeFromStartArgs(wire_start_args);
+    start_args_ = fidl::ToNatural(wire_start_args);
+    return config;
+  }
+
   DriverContext& context() { return driver_context_; }
   const DriverContext& context() const { return driver_context_; }
 
@@ -126,9 +141,6 @@ class DriverBase {
 
   std::optional<std::string>& url() { return start_args_.url(); }
   const std::optional<std::string>& url() const { return start_args_.url(); }
-
-  std::optional<zx::vmo>& config() { return start_args_.config(); }
-  const std::optional<zx::vmo>& config() const { return start_args_.config(); }
 
   std::optional<std::vector<fuchsia_driver_framework::NodeSymbol>>& symbols() {
     return start_args_.symbols();

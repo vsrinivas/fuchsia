@@ -2,119 +2,50 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <fidl/test.structuredconfig.receiver.shim/cpp/wire.h>
-#include <fidl/test.structuredconfig.receiver/cpp/markers.h>
-#include <fidl/test.structuredconfig.receiver/cpp/wire.h>
-#include <fidl/test.structuredconfig.receiver/cpp/wire_types.h>
-#include <lib/async/cpp/executor.h>
-#include <lib/driver2/logger.h>
-#include <lib/driver2/namespace.h>
-#include <lib/driver2/record_cpp.h>
-#include <lib/fidl/cpp/wire/arena.h>
-#include <lib/fidl/cpp/wire/string_view.h>
-#include <lib/fidl/cpp/wire/vector_view.h>
-#include <lib/fpromise/bridge.h>
-#include <lib/fpromise/scope.h>
+#include <lib/driver2/driver2_cpp.h>
 #include <lib/inspect/component/cpp/component.h>
-#include <lib/sys/component/cpp/handlers.h>
-#include <lib/sys/component/cpp/outgoing_directory.h>
-#include <lib/sys/cpp/component_context.h>
-#include <zircon/assert.h>
 
-#include <memory>
-#include <optional>
-#include <vector>
-
-#include "fidl/test.structuredconfig.receiver.shim/cpp/wire_messaging.h"
 #include "src/sys/component_manager/tests/structured_config/client_integration/cpp_driver/receiver_config.h"
-
-namespace fdf {
-using namespace fuchsia_driver_framework;
-}  // namespace fdf
 
 namespace scr = test_structuredconfig_receiver;
 namespace scrs = test_structuredconfig_receiver_shim;
 
-using fpromise::promise;
-
 namespace {
 
-template <typename T>
-class DecodedObject {
+class ReceiverDriver : public driver::DriverBase,
+                       public fidl::WireServer<scr::ConfigReceiverPuppet> {
  public:
-  DecodedObject() = default;
+  ReceiverDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher)
+      : driver::DriverBase("receiver", std::move(start_args), std::move(driver_dispatcher)),
+        config_(take_config<receiver_config::Config>()) {}
 
-  void Set(std::unique_ptr<uint8_t[]> raw_data, uint32_t size) {
-    raw_data_ = std::move(raw_data);
-    decoded_ = std::make_unique<fidl::unstable::DecodedMessage<T>>(
-        fidl::internal::WireFormatVersion::kV2, raw_data_.get(), size);
-    object = *decoded_->PrimaryObject();
-  }
-
-  T& Object() { return object; }
-  bool ok() { return decoded_->ok(); }
-
- private:
-  std::unique_ptr<uint8_t[]> raw_data_;
-  T object;
-  std::unique_ptr<fidl::unstable::DecodedMessage<T>> decoded_;
-};
-
-class ReceiverDriver : public fidl::WireServer<scr::ConfigReceiverPuppet> {
- public:
-  ReceiverDriver(async_dispatcher_t* dispatcher, fidl::WireSharedClient<fdf::Node> node,
-                 driver::Namespace ns, driver::Logger logger, receiver_config::Config config)
-      : dispatcher_(dispatcher),
-        outgoing_(component::OutgoingDirectory::Create(dispatcher)),
-        node_(std::move(node)),
-        ns_(std::move(ns)),
-        logger_(std::move(logger)),
-        config_(std::move(config)) {}
-
-  static constexpr const char* Name() { return "receiver"; }
-
-  static zx::status<std::unique_ptr<ReceiverDriver>> Start(fdf::wire::DriverStartArgs& start_args,
-                                                           fdf::UnownedDispatcher dispatcher,
-                                                           fidl::WireSharedClient<fdf::Node> node,
-                                                           driver::Namespace ns,
-                                                           driver::Logger logger) {
-    auto config = receiver_config::Config::TakeFromStartArgs(start_args);
-    auto driver =
-        std::make_unique<ReceiverDriver>(dispatcher->async_dispatcher(), std::move(node),
-                                         std::move(ns), std::move(logger), std::move(config));
-    auto result = driver->Run(std::move(start_args.outgoing_dir()));
-    if (result.is_error()) {
-      return result.take_error();
-    }
-    return zx::ok(std::move(driver));
-  }
-
- private:
-  zx::status<> Run(fidl::ServerEnd<::fuchsia_io::Directory> outgoing_dir) {
-    component::ServiceHandler handler;
+  zx::status<> Start() override {
+    driver::ServiceInstanceHandler handler;
     scrs::ConfigService::Handler device(&handler);
 
     auto puppet = [this](fidl::ServerEnd<scr::ConfigReceiverPuppet> server_end) -> void {
-      fidl::BindServer<fidl::WireServer<scr::ConfigReceiverPuppet>>(dispatcher_,
+      fidl::BindServer<fidl::WireServer<scr::ConfigReceiverPuppet>>(dispatcher(),
                                                                     std::move(server_end), this);
     };
 
     auto result = device.add_puppet(puppet);
     ZX_ASSERT(result.is_ok());
 
-    result = outgoing_.AddService<scrs::ConfigService>(std::move(handler));
+    result = context().outgoing()->AddService<scrs::ConfigService>(std::move(handler));
     ZX_ASSERT(result.is_ok());
 
     // Serve the inspect data
     auto config_node = inspector_.GetRoot().CreateChild("config");
     config_.RecordInspect(&config_node);
     inspector_.emplace(std::move(config_node));
-    exposed_inspector_.emplace(inspect::ComponentInspector(outgoing_, dispatcher_, inspector_));
+    exposed_inspector_.emplace(
+        inspect::ComponentInspector(context().outgoing()->component(), dispatcher(), inspector_));
 
-    return outgoing_.Serve(std::move(outgoing_dir));
+    return zx::ok();
   }
 
+ private:
   void GetConfig(GetConfigCompleter::Sync& _completer) override {
     scr::wire::ReceiverConfig receiver_config;
 
@@ -162,20 +93,11 @@ class ReceiverDriver : public fidl::WireServer<scr::ConfigReceiverPuppet> {
     _completer.Reply(receiver_config);
   }
 
-  async_dispatcher_t* const dispatcher_;
-  component::OutgoingDirectory outgoing_;
-  fidl::WireSharedClient<fdf::Node> node_;
-  fidl::WireSharedClient<fdf::NodeController> controller_;
-  driver::Namespace ns_;
-  driver::Logger logger_;
   receiver_config::Config config_;
   inspect::Inspector inspector_;
   std::optional<inspect::ComponentInspector> exposed_inspector_ = std::nullopt;
-
-  // NOTE: Must be the last member.
-  fpromise::scope scope_;
 };
 
 }  // namespace
 
-FUCHSIA_DRIVER_RECORD_CPP_V1(ReceiverDriver);
+FUCHSIA_DRIVER_RECORD_CPP_V2(driver::Record<ReceiverDriver>);

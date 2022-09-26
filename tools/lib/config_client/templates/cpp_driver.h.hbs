@@ -11,6 +11,7 @@
 namespace {{cpp_namespace}} {
 struct Config {
 public:
+  static constexpr bool kIsDriverStructuredConfig = true;
   static Config TakeFromStartArgs(fuchsia_driver_framework::wire::DriverStartArgs& start_args) noexcept;
 
   {{> typedef }}

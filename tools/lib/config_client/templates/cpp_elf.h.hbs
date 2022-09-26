@@ -10,6 +10,7 @@
 namespace {{cpp_namespace}} {
 struct Config {
 public:
+  static constexpr bool kIsStructuredConfig = true;
   static Config TakeFromStartupHandle() noexcept;
 
   {{> typedef }}

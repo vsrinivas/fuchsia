@@ -10,6 +10,7 @@
 namespace cpp_elf_config_lib {
 struct Config {
  public:
+  static constexpr bool kIsStructuredConfig = true;
   static Config TakeFromStartupHandle() noexcept;
 
  private:
