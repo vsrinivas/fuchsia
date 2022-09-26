@@ -932,7 +932,7 @@ where
     for registrant in registrants {
         if registrant.get_dependencies().iter().all(|dependency| dependency.is_fulfilled(&entities))
         {
-            registrant.register(&delegate, &job_seeder, &mut service_dir);
+            registrant.register(&job_seeder, &mut service_dir);
         }
     }
 

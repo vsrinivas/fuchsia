@@ -23,7 +23,6 @@ pub(crate) mod registration {
     use super::fidl;
     use crate::base::Dependency;
     use crate::job::source::Seeder;
-    use crate::service::message::Delegate;
     use fuchsia_component::server::{ServiceFsDir, ServiceObj};
     use std::collections::HashSet;
 
@@ -36,8 +35,6 @@ pub(crate) mod registration {
         #[cfg(test)]
         Test(Box<dyn FnOnce() + Send + Sync>),
         #[cfg(test)]
-        TestWithDelegate(Box<dyn FnOnce(&Delegate) + Send + Sync>),
-        #[cfg(test)]
         TestWithSeeder(Box<dyn FnOnce(&Seeder) + Send + Sync>),
     }
 
@@ -46,21 +43,16 @@ pub(crate) mod registration {
         /// [Registrar].
         pub fn register<'a>(
             self,
-            delegate: &Delegate,
             job_seeder: &Seeder,
             service_dir: &mut ServiceFsDir<'_, ServiceObj<'a, ()>>,
         ) {
             match self {
                 Registrar::Fidl(register_fn) => {
-                    register_fn(delegate, job_seeder, service_dir);
+                    register_fn(job_seeder, service_dir);
                 }
                 #[cfg(test)]
                 Registrar::Test(register_fn) => {
                     register_fn();
-                }
-                #[cfg(test)]
-                Registrar::TestWithDelegate(register_fn) => {
-                    register_fn(delegate);
                 }
                 #[cfg(test)]
                 Registrar::TestWithSeeder(register_fn) => {
@@ -86,11 +78,10 @@ pub(crate) mod registration {
 
         pub(crate) fn register<'a>(
             self,
-            delegate: &Delegate,
             job_seeder: &Seeder,
             service_dir: &mut ServiceFsDir<'_, ServiceObj<'a, ()>>,
         ) {
-            self.registrar.register(delegate, job_seeder, service_dir);
+            self.registrar.register(job_seeder, service_dir);
         }
     }
 
@@ -152,7 +143,7 @@ mod tests {
         let job_seeder = Seeder::new(&delegate, job_manager_signature).await;
 
         // Register and consume Registrant.
-        registrant.register(&service::MessageHub::create_hub(), &job_seeder, &mut fs.root_dir());
+        registrant.register(&job_seeder, &mut fs.root_dir());
 
         // Verify registration occurred.
         assert_matches!(rx.await, Ok(()));

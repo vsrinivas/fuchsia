@@ -8,8 +8,6 @@ use crate::agent::{
 use crate::base::{Dependency, Entity, SettingType};
 use crate::blueprint_definition;
 use crate::event::{Event, Payload as EventPayload};
-use crate::handler::base::Payload as HandlerPayload;
-use crate::handler::base::Request;
 use crate::ingress::fidl;
 use crate::ingress::registration;
 use crate::job::source::Error;
@@ -18,7 +16,6 @@ use crate::message::base::{filter, Audience, MessengerType};
 use crate::service::Payload;
 use crate::service_context::ServiceContext;
 use crate::storage::testing::InMemoryStorageFactory;
-use crate::tests::fakes::base::create_setting_handler;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::tests::message_utils::verify_payload;
 use crate::tests::scaffold::workload::channel;
@@ -139,57 +136,6 @@ async fn test_message_hub() {
         None,
     )
     .await;
-}
-
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_bringup() {
-    let setting_type = SettingType::Unknown;
-    let (request_in_tx, mut request_in_rx) = futures::channel::mpsc::unbounded::<Request>();
-    let registrant = registration::Builder::new(registration::Registrar::TestWithDelegate(
-        Box::new(move |delegate| {
-            let delegate = delegate.clone();
-            fasync::Task::spawn(async move {
-                while let Some(request) = request_in_rx.next().await {
-                    let messenger = delegate
-                        .create(MessengerType::Unbound)
-                        .await
-                        .expect("messenger should be created")
-                        .0;
-                    let _ = messenger
-                        .message(
-                            HandlerPayload::Request(request).into(),
-                            Audience::Address(service::Address::Handler(setting_type)),
-                        )
-                        .send();
-                }
-            })
-            .detach();
-        }),
-    ))
-    .add_dependency(Dependency::Entity(Entity::Handler(setting_type)))
-    .build();
-
-    let (request_out_tx, mut request_out_rx) = futures::channel::mpsc::unbounded::<Request>();
-
-    let _ = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
-        .registrants(vec![registrant])
-        .handler(
-            setting_type,
-            create_setting_handler(Box::new(move |request| {
-                let request_out_tx = request_out_tx.clone();
-                Box::pin(async move {
-                    request_out_tx.unbounded_send(request).expect("send should succeed");
-                    Ok(None)
-                })
-            })),
-        )
-        .spawn_nested(ENV_NAME)
-        .await
-        .expect("environment should be built");
-
-    let request = Request::Get;
-    request_in_tx.unbounded_send(request.clone()).expect("sending inbound request should succeed");
-    assert_matches!(request_out_rx.next().await, Some(x) if x == request);
 }
 
 #[fuchsia_async::run_until_stalled(test)]

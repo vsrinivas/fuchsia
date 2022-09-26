@@ -7,7 +7,6 @@ use crate::handler::base::Error;
 use crate::ingress::registration::{self, Registrant, Registrar};
 use crate::job::source::Seeder;
 use crate::policy::PolicyType;
-use crate::service::message::Delegate;
 use fidl_fuchsia_settings::{
     AccessibilityRequestStream, AudioRequestStream, DisplayRequestStream,
     DoNotDisturbRequestStream, FactoryResetRequestStream, InputRequestStream, IntlRequestStream,
@@ -122,9 +121,8 @@ pub mod display {
 /// [Register] defines the closure implemented for interfaces to bring up support. Each interface
 /// handler is given access to the MessageHub [Delegate] for communication within the service and
 /// [ServiceFsDir] to register as the designated handler for the interface.
-pub(crate) type Register = Box<
-    dyn for<'a> FnOnce(&Delegate, &Seeder, &mut ServiceFsDir<'_, ServiceObj<'a, ()>>) + Send + Sync,
->;
+pub(crate) type Register =
+    Box<dyn for<'a> FnOnce(&Seeder, &mut ServiceFsDir<'_, ServiceObj<'a, ()>>) + Send + Sync>;
 
 impl Interface {
     /// Returns the list of [Dependencies](Dependency) that are necessary to provide this Interface.
@@ -190,105 +188,93 @@ impl Interface {
     /// Converts an [Interface] into the closure to bring up the interface in the service environment
     /// as defined by [Register].
     fn registration_fn(self) -> Register {
-        Box::new(
-            // TODO(fxb/79048): Remove the unused _delegate param.
-            move |_delegate: &Delegate,
-                  seeder: &Seeder,
-                  service_dir: &mut ServiceFsDir<'_, ServiceObj<'_, ()>>| {
-                match self {
-                    Interface::Audio => {
-                        let seeder = seeder.clone();
-                        let _ = service_dir.add_fidl_service(move |stream: AudioRequestStream| {
-                            seeder.seed(stream);
-                        });
-                    }
-                    Interface::AudioPolicy => {
-                        let seeder = seeder.clone();
-                        let _ = service_dir.add_fidl_service(
-                            move |stream: VolumePolicyControllerRequestStream| {
-                                seeder.seed(stream);
-                            },
-                        );
-                    }
-                    Interface::Accessibility => {
-                        let seeder = seeder.clone();
-                        let _ = service_dir.add_fidl_service(
-                            move |stream: AccessibilityRequestStream| {
-                                seeder.seed(stream);
-                            },
-                        );
-                    }
-                    Interface::Display(_) => {
-                        let seeder = seeder.clone();
-                        let _ =
-                            service_dir.add_fidl_service(move |stream: DisplayRequestStream| {
-                                seeder.seed(stream);
-                            });
-                    }
-                    Interface::DoNotDisturb => {
-                        let seeder = seeder.clone();
-                        let _ = service_dir.add_fidl_service(
-                            move |stream: DoNotDisturbRequestStream| {
-                                seeder.seed(stream);
-                            },
-                        );
-                    }
-                    Interface::FactoryReset => {
-                        let seeder = seeder.clone();
-                        let _ = service_dir.add_fidl_service(
-                            move |stream: FactoryResetRequestStream| {
-                                seeder.seed(stream);
-                            },
-                        );
-                    }
-                    Interface::Input => {
-                        let seeder = seeder.clone();
-                        let _ = service_dir.add_fidl_service(move |stream: InputRequestStream| {
-                            seeder.seed(stream);
-                        });
-                    }
-                    Interface::Intl => {
-                        let seeder = seeder.clone();
-                        let _ = service_dir.add_fidl_service(move |stream: IntlRequestStream| {
-                            seeder.seed(stream);
-                        });
-                    }
-                    Interface::Keyboard => {
-                        let seeder = seeder.clone();
-                        let _ =
-                            service_dir.add_fidl_service(move |stream: KeyboardRequestStream| {
-                                seeder.seed(stream);
-                            });
-                    }
-                    Interface::Light => {
-                        let seeder = seeder.clone();
-                        let _ = service_dir.add_fidl_service(move |stream: LightRequestStream| {
-                            seeder.seed(stream);
-                        });
-                    }
-                    Interface::NightMode => {
-                        let seeder = seeder.clone();
-                        let _ =
-                            service_dir.add_fidl_service(move |stream: NightModeRequestStream| {
-                                seeder.seed(stream);
-                            });
-                    }
-                    Interface::Privacy => {
-                        let seeder = seeder.clone();
-                        let _ =
-                            service_dir.add_fidl_service(move |stream: PrivacyRequestStream| {
-                                seeder.seed(stream);
-                            });
-                    }
-                    Interface::Setup => {
-                        let seeder = seeder.clone();
-                        let _ = service_dir.add_fidl_service(move |stream: SetupRequestStream| {
-                            seeder.seed(stream);
-                        });
-                    }
+        Box::new(move |seeder: &Seeder, service_dir: &mut ServiceFsDir<'_, ServiceObj<'_, ()>>| {
+            match self {
+                Interface::Audio => {
+                    let seeder = seeder.clone();
+                    let _ = service_dir.add_fidl_service(move |stream: AudioRequestStream| {
+                        seeder.seed(stream);
+                    });
                 }
-            },
-        )
+                Interface::AudioPolicy => {
+                    let seeder = seeder.clone();
+                    let _ = service_dir.add_fidl_service(
+                        move |stream: VolumePolicyControllerRequestStream| {
+                            seeder.seed(stream);
+                        },
+                    );
+                }
+                Interface::Accessibility => {
+                    let seeder = seeder.clone();
+                    let _ =
+                        service_dir.add_fidl_service(move |stream: AccessibilityRequestStream| {
+                            seeder.seed(stream);
+                        });
+                }
+                Interface::Display(_) => {
+                    let seeder = seeder.clone();
+                    let _ = service_dir.add_fidl_service(move |stream: DisplayRequestStream| {
+                        seeder.seed(stream);
+                    });
+                }
+                Interface::DoNotDisturb => {
+                    let seeder = seeder.clone();
+                    let _ =
+                        service_dir.add_fidl_service(move |stream: DoNotDisturbRequestStream| {
+                            seeder.seed(stream);
+                        });
+                }
+                Interface::FactoryReset => {
+                    let seeder = seeder.clone();
+                    let _ =
+                        service_dir.add_fidl_service(move |stream: FactoryResetRequestStream| {
+                            seeder.seed(stream);
+                        });
+                }
+                Interface::Input => {
+                    let seeder = seeder.clone();
+                    let _ = service_dir.add_fidl_service(move |stream: InputRequestStream| {
+                        seeder.seed(stream);
+                    });
+                }
+                Interface::Intl => {
+                    let seeder = seeder.clone();
+                    let _ = service_dir.add_fidl_service(move |stream: IntlRequestStream| {
+                        seeder.seed(stream);
+                    });
+                }
+                Interface::Keyboard => {
+                    let seeder = seeder.clone();
+                    let _ = service_dir.add_fidl_service(move |stream: KeyboardRequestStream| {
+                        seeder.seed(stream);
+                    });
+                }
+                Interface::Light => {
+                    let seeder = seeder.clone();
+                    let _ = service_dir.add_fidl_service(move |stream: LightRequestStream| {
+                        seeder.seed(stream);
+                    });
+                }
+                Interface::NightMode => {
+                    let seeder = seeder.clone();
+                    let _ = service_dir.add_fidl_service(move |stream: NightModeRequestStream| {
+                        seeder.seed(stream);
+                    });
+                }
+                Interface::Privacy => {
+                    let seeder = seeder.clone();
+                    let _ = service_dir.add_fidl_service(move |stream: PrivacyRequestStream| {
+                        seeder.seed(stream);
+                    });
+                }
+                Interface::Setup => {
+                    let seeder = seeder.clone();
+                    let _ = service_dir.add_fidl_service(move |stream: SetupRequestStream| {
+                        seeder.seed(stream);
+                    });
+                }
+            }
+        })
     }
 
     /// Derives a [Registrant] from this [Interface]. This is used convert a list of Interfaces
@@ -350,7 +336,7 @@ mod tests {
             .1;
 
         // Register and consume Registrant.
-        registrant.register(&delegate, &job_seeder, &mut fs.root_dir());
+        registrant.register(&job_seeder, &mut fs.root_dir());
 
         // Spawn nested environment.
         let connector = fs.create_protocol_connector().expect("should create connector");
