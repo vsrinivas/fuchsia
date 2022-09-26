@@ -229,7 +229,6 @@ arch/x64/sysroot/include/zircon/hw/pci.h
 arch/x64/sysroot/include/zircon/hw/usb.h
 arch/x64/sysroot/include/zircon/hw/usb/cdc.h
 arch/x64/sysroot/include/zircon/hw/usb/hid.h
-arch/x64/sysroot/include/zircon/hw/usb/ums.h
 arch/x64/sysroot/include/zircon/limits.h
 arch/x64/sysroot/include/zircon/listnode.h
 arch/x64/sysroot/include/zircon/lookup.h

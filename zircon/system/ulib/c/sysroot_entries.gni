@@ -64,7 +64,6 @@ sysroot_uninstrumented_libc_entries = [
         "zircon/hw/usb.h",
         "zircon/hw/usb/cdc.h",
         "zircon/hw/usb/hid.h",
-        "zircon/hw/usb/ums.h",
         "zircon/limits.h",
         "zircon/listnode.h",
         "zircon/pixelformat.h",

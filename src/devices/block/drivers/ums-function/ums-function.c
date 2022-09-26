@@ -14,10 +14,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/device/usb-peripheral.h>
-#include <zircon/hw/usb/ums.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
+#include <usb/ums.h>
 #include <usb/usb-request.h>
 
 #include "src/devices/block/drivers/ums-function/usb_ums_bind.h"

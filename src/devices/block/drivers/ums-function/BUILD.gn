@@ -37,6 +37,7 @@ fuchsia_driver("ums-function-driver") {
     "//sdk/fidl/fuchsia.hardware.usb.peripheral.block:fuchsia.hardware.usb.peripheral.block_c",
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
+    "//src/devices/usb/lib/usb:ums",
     "//src/lib/ddk",
     "//zircon/system/ulib/sync",
   ]

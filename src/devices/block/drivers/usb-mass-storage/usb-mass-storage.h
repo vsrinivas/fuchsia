@@ -18,7 +18,6 @@
 #include <threads.h>
 #include <zircon/assert.h>
 #include <zircon/hw/usb.h>
-#include <zircon/hw/usb/ums.h>
 #include <zircon/listnode.h>
 
 #include <atomic>
@@ -31,6 +30,7 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <usb/ums.h>
 #include <usb/usb-request.h>
 #include <usb/usb.h>
 

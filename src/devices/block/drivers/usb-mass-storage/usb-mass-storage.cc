@@ -10,10 +10,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <zircon/assert.h>
-#include <zircon/hw/usb/ums.h>
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
+#include <usb/ums.h>
 #include <usb/usb.h>
 
 #include "block.h"

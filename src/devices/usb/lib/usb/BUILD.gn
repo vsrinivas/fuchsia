@@ -57,3 +57,8 @@ zx_library("dfu") {
   sdk = "source"
   sdk_headers = [ "usb/dfu.h" ]
 }
+
+zx_library("ums") {
+  sdk = "source"
+  sdk_headers = [ "usb/ums.h" ]
+}
