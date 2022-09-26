@@ -25,6 +25,7 @@ being used (to be fixed in the future, of course).
 import argparse
 import os
 import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -320,6 +321,28 @@ def main():
     # expected output, copied to the appropriate Ninja output directory
     # location.
     run_fx_command(['build', 'build/bazel/tests/build_action'])
+
+    log('//build/bazel:generate_fuchsia_sdk_repository check')
+    output_base_dir = os.path.join(build_dir, 'gen', 'build', 'bazel', 'output_base')
+    shutil.rmtree(output_base_dir)
+    fuchsia_sdk_symlink = os.path.join(
+        build_dir, 'gen', 'build', 'bazel', 'fuchsia_sdk')
+    if os.path.exists(fuchsia_sdk_symlink):
+        os.unlink(fuchsia_sdk_symlink)
+    run_fx_command(['build', 'build/bazel:generate_fuchsia_sdk_repository'])
+    if not os.path.exists(fuchsia_sdk_symlink):
+        print(
+            'ERROR: Missing symlink to @fuchsia_sdk repository: ' +
+            fuchsia_sdk_symlink,
+            file=sys.stderr)
+        return 1
+    if not os.path.islink(fuchsia_sdk_symlink):
+        print('ERROR: Not a symlink: ' + fuchsia_sdk_symlink, file=sys.stderr)
+        return 1
+    api_version_path = os.path.join(fuchsia_sdk_symlink, 'api_version.bzl')
+    if not os.path.exists(api_version_path):
+        print('ERROR: Missing @fuchsia_sdk file: ' + api_version_path)
+        return 1
 
     log('Done!')
     return 0

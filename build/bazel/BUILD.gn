@@ -108,3 +108,23 @@ action("generate_main_workspace") {
   # setup.
   no_output_dir_leaks = false
 }
+
+# Generate a symlink to the @fuchsia_sdk repository, after ensuring it was
+# properly populated by Bazel. The symlink has a stable path of
+# gen/build/bazel/fuchsia_sdk while the actual location of the repository
+# depends on Bazel internals (e.g. whether BzlMod is enabled or not).
+action("generate_fuchsia_sdk_repository") {
+  script = "//build/bazel/scripts/generate-fuchsia-sdk-symlink.py"
+  outputs = [ "$target_gen_dir/fuchsia_sdk" ]
+  deps = [
+    ":generate_main_workspace",
+    "//sdk:core",
+  ]
+  inputs = get_target_outputs(deps[0])
+  args = [
+    "--bazel-launcher",
+    rebase_path(inputs[0], root_build_dir),
+    "--output-symlink",
+    rebase_path(outputs[0], root_build_dir),
+  ]
+}
