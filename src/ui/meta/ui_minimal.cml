@@ -217,6 +217,7 @@
         {
             protocol: [
                 "fuchsia.input.injection.InputDeviceRegistry", // test-only
+                "fuchsia.input.interaction.Notifier",
                 "fuchsia.recovery.policy.Device",
                 "fuchsia.recovery.ui.FactoryResetCountdown",
                 "fuchsia.session.scene.Manager",
