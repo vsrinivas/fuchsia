@@ -9,8 +9,8 @@
     program: {
         actor_url: "#meta/actor.cm",
         num_instances: "20",
-        action_timeout: "5 * 60", // Action Timeout: 5 minutes
-        test_duration: "60 * 60", // Test Duration: 1 hour
+        action_timeout: "60", // Action Timeout: 1 minute
+        test_duration: "1800", // Test Duration: 30 minutes
     },
     children: [
         {
