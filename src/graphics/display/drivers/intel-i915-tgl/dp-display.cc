@@ -1770,11 +1770,36 @@ bool DpDisplay::PipeConfigPreamble(const display_mode_t& mode, tgl_registers::Pi
   trans_conf.set_transcoder_enable(0).WriteTo(mmio_space());
   trans_conf.ReadFrom(mmio_space());
 
-  // Configure Transcoder Clock Select
-  if (!is_tgl(controller()->device_id()) && trans != tgl_registers::TRANS_EDP) {
+  // Step "Enable Planes, Pipe, and Transcoder" in the "Sequences for
+  // DisplayPort" > "Enable Sequence" section of Intel's display documentation.
+  //
+  // Tiger Lake: IHD-OS-TGL-Vol 12-1.22-Rev2.0 page 144
+  // Kaby Lake: IHD-OS-KBL-Vol 12-1.17 page 114
+  // Skylake: IHD-OS-SKL-Vol 12-05.16 page 112
+  if (is_tgl(controller()->device_id())) {
+    // On Tiger Lake, the transcoder clock for SST (Single-Stream) mode is set
+    // during the "Enable and Train DisplayPort" step (done before this method
+    // is called). This is because Tiger Lake transcoders contain the
+    // DisplayPort Transport modules used for link training.
     auto clock_select = trans_regs.ClockSelect().ReadFrom(mmio_space());
-    clock_select.set_ddi_clock_kaby_lake(ddi());
-    clock_select.WriteTo(mmio_space());
+    const std::optional<tgl_registers::Ddi> ddi_clock_source = clock_select.ddi_clock_tiger_lake();
+    if (!ddi_clock_source.has_value()) {
+      zxlogf(ERROR, "Transcoder %d clock source not set after DisplayPort training", trans);
+      return false;
+    }
+    if (*ddi_clock_source != ddi()) {
+      zxlogf(ERROR, "Transcoder %d clock set to DDI %d instead of %d after DisplayPort training.",
+             trans, ddi(), *ddi_clock_source);
+      return false;
+    }
+  } else {
+    // On Kaby Lake and Skylake, the transcoder clock input must be set during
+    // the pipe, plane and transcoder enablement stage.
+    if (trans != tgl_registers::TRANS_EDP) {
+      auto clock_select = trans_regs.ClockSelect().ReadFrom(mmio_space());
+      clock_select.set_ddi_clock_kaby_lake(ddi());
+      clock_select.WriteTo(mmio_space());
+    }
   }
 
   // Pixel clock rate: The rate at which pixels are sent, in pixels per

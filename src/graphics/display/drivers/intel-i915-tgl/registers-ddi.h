@@ -1040,7 +1040,7 @@ class DpTransportControl : public hwreg::RegisterBase<DpTransportControl, uint32
   // For eDP only. Must not change while the DDI is enabled.
   DEF_BIT(6, alternate_scrambler_reset);
 
-  // For Kaby Lake and Skylake. DisplayPort control is implemented in DDIs.
+  // For Kaby Lake and Skylake. The DisplayPort transport logic is in DDIs.
   static auto GetForKabyLakeDdi(Ddi ddi) {
     ZX_ASSERT(ddi >= Ddi::DDI_A);
     ZX_ASSERT(ddi <= Ddi::DDI_E);
@@ -1049,10 +1049,7 @@ class DpTransportControl : public hwreg::RegisterBase<DpTransportControl, uint32
     return hwreg::RegisterAddr<DpTransportControl>(0x64040 + 0x100 * ddi_index);
   }
 
-  // For Tiger Lake and DG1. Transport control is implemented in transcoders.
-  //
-  // TODO(fxbug.com/109258): Replace `transcoder_index` with an enum once that
-  //                         wouldn't require #including registers-transcoder.h.
+  // For Tiger Lake and DG1. The DisplayPort transport logic is in transcoders.
   static auto GetForTigerLakeTranscoder(Trans transcoder) {
     ZX_ASSERT(transcoder >= Trans::TRANS_A);
 
