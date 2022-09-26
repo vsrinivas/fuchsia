@@ -41,6 +41,7 @@ fuchsia_driver("root-driver") {
     ":root-bind",
     "//sdk/lib/driver2:cpp",
     "//sdk/lib/driver_compat",
+    "//sdk/lib/driver_compat:symbols",
     "//src/devices/bind/fuchsia.test:fuchsia.test_cpp",
     "//src/devices/lib/driver:driver_runtime",
     "//src/lib/ddk",

@@ -7,6 +7,5 @@
 
 #include <lib/driver_compat/device_server.h>
 #include <lib/driver_compat/service_offers.h>
-#include <lib/driver_compat/symbols.h>
 
 #endif  // LIB_DRIVER_COMPAT_COMPAT_H_

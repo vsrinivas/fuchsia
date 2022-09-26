@@ -20,7 +20,6 @@ sdk_source_set("driver_compat") {
     "device_server.h",
     "service_offers.cc",
     "service_offers.h",
-    "symbols.h",
   ]
 
   public_deps = [
@@ -29,6 +28,10 @@ sdk_source_set("driver_compat") {
     "//sdk/lib/driver2:devfs_exporter",
     "//sdk/lib/sys/component/cpp",
   ]
+}
+
+source_set("symbols") {
+  sources = [ "symbols.h" ]
 }
 
 test("test") {
