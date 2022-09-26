@@ -107,8 +107,8 @@ TEST(GlobalMatrixDataTest, GlobalMatricesIncludeParentMatrix) {
 
   // Make a global topology representing the following graph:
   //
-  // 1:0 - 1:1 - 1:2
-  //     \
+  //    1:0 - 1:1 - 1:2
+  //       \
   //       1:3 - 1:4
   GlobalTopologyData::TopologyVector topology_vector = {{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}};
   GlobalTopologyData::ParentIndexVector parent_indices = {0, 0, 1, 0, 3};
@@ -512,11 +512,12 @@ TEST(Rectangle2DTest, OrderOfOperationsTest) {
 }
 
 // Ensure that when a transform node has two parents, that its data is duplicated in
-// the global topology vector, with the proper global data (i.e. matrices, images) for
-// each entry, respecting each separate chain up the hierarchy.
+// the global topology vector, with the proper global data (i.e. matrices, images,
+// clip regions and hit regions) for each entry, respecting each separate chain
+// up the hierarchy. This is used for A11Y Magnification.
 TEST(Rectangle2DTest, MultipleParentTest) {
   // Make a global topology representing the following graph.
-  // We have a diamond patter hierarchy where transform 1:4
+  // We have a diamond pattern hierarchy where transform 1:4
   // is children to both 1:1 and 1:3.
   //
   // 1:0 - 1:1
@@ -525,10 +526,18 @@ TEST(Rectangle2DTest, MultipleParentTest) {
   UberStruct::InstanceMap uber_structs;
   auto uber_struct = std::make_unique<UberStruct>();
 
+  // Set up the uber struct with the above topology. Set the doubly-parented child (1,4) up
+  // with an image, hit region and clip region to make sure those get duplicated properly.
+  const TransformClipRegion kClipRegion = {5, 10, 30, 40};
+  const fuchsia::ui::composition::HitRegion kHitRegion = {.region = {1, 2, 10, 20}};
+  const float kScale = 2.0f;
+
   const uint32_t kImageId = 7;
   uber_struct->local_topology = {{{1, 0}, 2}, {{1, 1}, 1}, {{1, 4}, 0}, {{1, 3}, 1}, {{1, 4}, 0}};
-  uber_struct->local_matrices[{1, 3}] = glm::mat3(2.0);
+  uber_struct->local_matrices[{1, 3}] = glm::mat3(kScale);
   uber_struct->images[{1, 4}].identifier = kImageId;
+  uber_struct->local_hit_regions_map[{1, 4}] = {kHitRegion};
+  uber_struct->local_clip_regions[{1, 4}] = kClipRegion;
   uber_structs[1] = std::move(uber_struct);
 
   auto global_topology_data =
@@ -561,6 +570,51 @@ TEST(Rectangle2DTest, MultipleParentTest) {
   EXPECT_EQ(indices[1], 4U);
   EXPECT_EQ(images[0].identifier, kImageId);
   EXPECT_EQ(images[1].identifier, kImageId);
+
+  // Each entry for the doubly parented node should have different clip regions.
+  {
+    const auto clip_vector = ComputeGlobalTransformClipRegions(topology_vector, parent_indices,
+                                                               matrix_vector, uber_structs);
+    EXPECT_EQ(clip_vector.size(), 5U);
+
+    // The first clip region should match exactly the clip region above.
+    EXPECT_EQ(clip_vector[2].x, kClipRegion.x);
+    EXPECT_EQ(clip_vector[2].y, kClipRegion.y);
+    EXPECT_EQ(clip_vector[2].width, kClipRegion.width);
+    EXPECT_EQ(clip_vector[2].height, kClipRegion.height);
+
+    // The second one should be magnified by the scale factor.
+    EXPECT_EQ(clip_vector[4].x, kScale * kClipRegion.x);
+    EXPECT_EQ(clip_vector[4].y, kScale * kClipRegion.y);
+    EXPECT_EQ(clip_vector[4].width, kScale * kClipRegion.width);
+    EXPECT_EQ(clip_vector[4].height, kScale * kClipRegion.height);
+  }
+
+  // Each entry for the doubly parented node should have different hit regions.
+  {
+    const auto hit_map =
+        ComputeGlobalHitRegions(topology_vector, parent_indices, matrix_vector, uber_structs);
+    auto itr = hit_map.find({1, 4});
+    EXPECT_NE(itr, hit_map.end());
+
+    auto vec = itr->second;
+    EXPECT_EQ(vec.size(), 2U);
+
+    const auto first = vec[0];
+    const auto second = vec[1];
+
+    // The first clip region should match exactly the hit region above.
+    EXPECT_EQ(first.region.x, kHitRegion.region.x);
+    EXPECT_EQ(first.region.y, kHitRegion.region.y);
+    EXPECT_EQ(first.region.width, kHitRegion.region.width);
+    EXPECT_EQ(first.region.height, kHitRegion.region.height);
+
+    // The second one should be magnified by the scale factor.
+    EXPECT_EQ(second.region.x, kScale * kHitRegion.region.x);
+    EXPECT_EQ(second.region.y, kScale * kHitRegion.region.y);
+    EXPECT_EQ(second.region.width, kScale * kHitRegion.region.width);
+    EXPECT_EQ(second.region.height, kScale * kHitRegion.region.height);
+  }
 }
 
 // Check that we can set image color values besides white.
