@@ -6,10 +6,6 @@
         "inspect/client.shard.cml",
         "syslog/client.shard.cml",
     ],
-    program: {
-        runner: "elf",
-        binary: "bin/power_manager",
-    },
     capabilities: [
         {
             protocol: [

@@ -2,5 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "//src/power/power-manager/meta/base.shard.cml" ],
+    include: [
+        "//src/lib/fake-clock/lib/client.shard.cml",
+        "//src/power/power-manager/meta/base.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/power_manager_fake_time",
+    },
 }

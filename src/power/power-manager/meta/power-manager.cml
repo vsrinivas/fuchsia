@@ -4,6 +4,8 @@
 {
     include: [ "//src/power/power-manager/meta/base.shard.cml" ],
     program: {
+        runner: "elf",
+        binary: "bin/power_manager",
         main_process_critical: "true",
     },
 }

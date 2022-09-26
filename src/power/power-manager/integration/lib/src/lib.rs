@@ -11,7 +11,7 @@ use {
         system_controller::MockSystemControllerService, temperature_driver::MockTemperatureDriver,
     },
     fidl::endpoints::DiscoverableProtocolMarker,
-    fidl_fuchsia_thermal as fthermal,
+    fidl_fuchsia_testing as ftesting, fidl_fuchsia_thermal as fthermal,
     fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
     std::collections::HashMap,
     std::sync::Arc,
@@ -20,6 +20,10 @@ use {
 
 const POWER_MANAGER_URL: &str = "#meta/power-manager.cm";
 const MOCK_COBALT_URL: &str = "#meta/mock_cobalt.cm";
+const FAKE_CLOCK_URL: &str = "#meta/fake_clock.cm";
+
+/// Increase the time scale so Power Manager's interval-based operation runs faster for testing.
+const FAKE_TIME_SCALE: u32 = 100;
 
 pub struct TestEnvBuilder {
     power_manager_node_config_path: Option<String>,
@@ -56,6 +60,11 @@ impl TestEnvBuilder {
             .add_child("mock_cobalt", MOCK_COBALT_URL, ChildOptions::new())
             .await
             .expect("Failed to add child: mock_cobalt");
+
+        let fake_clock = realm_builder
+            .add_child("fake_clock", FAKE_CLOCK_URL, ChildOptions::new())
+            .await
+            .expect("Failed to add child: fake_clock");
 
         let activity_service = MockActivityService::new();
         let activity_service_clone = activity_service.clone();
@@ -125,6 +134,27 @@ impl TestEnvBuilder {
             Route::new().capability(Capability::protocol_by_name("fuchsia.logger.LogSink"));
         realm_builder
             .add_route(parent_to_cobalt_routes.from(Ref::parent()).to(&mock_cobalt))
+            .await
+            .unwrap();
+
+        let parent_to_fake_clock_routes =
+            Route::new().capability(Capability::protocol_by_name("fuchsia.logger.LogSink"));
+        realm_builder
+            .add_route(parent_to_fake_clock_routes.from(Ref::parent()).to(&fake_clock))
+            .await
+            .unwrap();
+
+        let fake_clock_to_power_manager_routes =
+            Route::new().capability(Capability::protocol_by_name("fuchsia.testing.FakeClock"));
+        realm_builder
+            .add_route(fake_clock_to_power_manager_routes.from(&fake_clock).to(&power_manager))
+            .await
+            .unwrap();
+
+        let fake_clock_to_parent_routes = Route::new()
+            .capability(Capability::protocol_by_name("fuchsia.testing.FakeClockControl"));
+        realm_builder
+            .add_route(fake_clock_to_parent_routes.from(&fake_clock).to(Ref::parent()))
             .await
             .unwrap();
 
@@ -201,6 +231,10 @@ impl TestEnvBuilder {
         // Finally, build it
         let realm_instance = realm_builder.build().await.expect("Failed to build RealmInstance");
 
+        // Increase the time scale so Power Manager's interval-based operation runs faster for
+        // testing
+        set_fake_time_scale(&realm_instance, FAKE_TIME_SCALE).await;
+
         TestEnv {
             realm_instance: Some(realm_instance),
             mocks: Mocks {
@@ -255,6 +289,26 @@ impl Drop for TestEnv {
     fn drop(&mut self) {
         assert!(self.realm_instance.is_none(), "Must call destroy() to tear down test environment");
     }
+}
+
+/// Increases the time scale so Power Manager's interval-based operation runs faster for testing.
+async fn set_fake_time_scale(realm_instance: &RealmInstance, scale: u32) {
+    let fake_clock_control = realm_instance
+        .root
+        .connect_to_protocol_at_exposed_dir::<ftesting::FakeClockControlMarker>()
+        .unwrap();
+
+    fake_clock_control.pause().await.expect("failed to pause fake time: FIDL error");
+    fake_clock_control
+        .resume_with_increments(
+            fuchsia_zircon::Duration::from_millis(1).into_nanos(),
+            &mut ftesting::Increment::Determined(
+                fuchsia_zircon::Duration::from_millis(scale.into()).into_nanos(),
+            ),
+        )
+        .await
+        .expect("failed to set fake time scale: FIDL error")
+        .expect("failed to set fake time scale: protocol error");
 }
 
 /// Container to hold all of the mocks within the RealmInstance.

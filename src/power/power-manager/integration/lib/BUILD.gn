@@ -24,6 +24,8 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.thermal:fuchsia.thermal_rust",
     "//sdk/fidl/fuchsia.ui.activity:fuchsia.ui.activity_rust",
     "//src/cobalt/bin/testing/mock_cobalt:component_v2",
+    "//src/lib/fake-clock/fidl:fidl_rust",
+    "//src/lib/fake-clock/svc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -74,7 +76,7 @@ fuchsia_component("integration-component") {
   deps = [
     ":integration-manifest",
     ":integration-structured-config",
-    "//src/power/power-manager:bin",
+    "//src/power/power-manager:bin_with_fake_time",
   ]
 }
 
