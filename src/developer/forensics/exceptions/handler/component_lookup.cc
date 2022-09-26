@@ -113,6 +113,8 @@ namespace {
         auto& v2_result = std::get<1>(results);
 
         if (v1_result.is_error() && v2_result.is_error()) {
+          FX_LOGS(INFO) << "Failed v1 and v2 FindComponentByThreadKoid, crash will lack component "
+                           "attribution";
           return ::fpromise::error();
         }
 

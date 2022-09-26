@@ -14,6 +14,7 @@ use {
     lazy_static::lazy_static,
     moniker::AbsoluteMoniker,
     std::sync::Arc,
+    tracing::*,
 };
 
 /// Any stored data is removed after this amount of time
@@ -111,6 +112,9 @@ impl CrashRecords {
             .enumerate()
             .find(|(_, record)| &record.koid == thread_koid)
             .map(|(i, _)| i);
+        if index_to_remove.is_none() {
+            warn!("crash introspection failed to provide attribution for the crashed thread with koid {:?}", thread_koid);
+        }
         index_to_remove.map(|i| records_guard.remove(i).crash_info)
     }
 }
