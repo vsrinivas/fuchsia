@@ -186,8 +186,14 @@ void GuestManager::HandleRunResult(GuestLifecycle_Run_Result result) {
 }
 
 void GuestManager::ForceShutdownGuest(ForceShutdownGuestCallback callback) {
-  // TODO(fxbug.dev/104989): Implement this.
-  FX_CHECK(false) << "Not implemented";
+  if (!lifecycle_.is_bound() || !is_guest_started()) {
+    // VMM component isn't running.
+    callback();
+    return;
+  }
+
+  state_ = GuestStatus::STOPPING;
+  lifecycle_->Stop([callback = std::move(callback)]() { callback(); });
 }
 
 void GuestManager::ConnectToGuest(

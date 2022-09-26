@@ -72,7 +72,7 @@ void VmmController::Run(RunCallback callback) {
 }
 
 void VmmController::Stop(StopCallback callback) {
-  DestroyAndRespond(fitx::error(GuestError::CONTROLLER_FORCED_HALT));
+  ScheduleVmmTeardown(fitx::error(GuestError::CONTROLLER_FORCED_HALT));
   callback();
 }
 

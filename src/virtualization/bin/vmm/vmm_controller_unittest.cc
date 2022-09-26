@@ -219,6 +219,9 @@ TEST_F(VmmControllerTest, ForcedShutdownReturnsError) {
   bool stop_callback_called = false;
   controller_->Stop([&stop_callback_called]() { stop_callback_called = true; });
 
+  // Stop posts a task to the dispatch loop.
+  controller_loop_->RunUntilIdle();
+
   ASSERT_TRUE(stop_callback_called);
   ASSERT_TRUE(run_callback_called);
   ASSERT_TRUE(run_result.is_err());
