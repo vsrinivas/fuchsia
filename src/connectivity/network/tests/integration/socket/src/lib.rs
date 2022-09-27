@@ -156,6 +156,7 @@ enum UdpCacheInvalidationReason {
     InterfaceDisabled,
     IPv6OnlyCalled,
     BroadcastCalled,
+    AddressRemoved,
 }
 
 enum ToAddrExpectation {
@@ -256,6 +257,7 @@ async fn execute_and_validate_preflights(
 #[test_case("iface_disabled", UdpCacheInvalidationReason::InterfaceDisabled)]
 #[test_case("ipv6_only_called", UdpCacheInvalidationReason::IPv6OnlyCalled)]
 #[test_case("broadcast_called", UdpCacheInvalidationReason::BroadcastCalled)]
+#[test_case("address_removed", UdpCacheInvalidationReason::AddressRemoved)]
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_udp_send_msg_preflight_fidl(
     test_name: &str,
@@ -308,13 +310,9 @@ async fn test_udp_send_msg_preflight_fidl(
         .await
         .expect("failed to join network");
 
-    iface
-        .add_address_and_subnet_route(fnet::Subnet {
-            addr: fnet::IpAddress::Ipv4(INSTALLED_ADDR.address),
-            prefix_len: 8,
-        })
-        .await
-        .expect("failed to add subnet route");
+    let mut installed_subnet =
+        fnet::Subnet { addr: fnet::IpAddress::Ipv4(INSTALLED_ADDR.address), prefix_len: 8 };
+    iface.add_address_and_subnet_route(installed_subnet).await.expect("failed to add subnet route");
 
     let successful_preflights = execute_and_validate_preflights(
         [
@@ -403,6 +401,15 @@ async fn test_udp_send_msg_preflight_fidl(
                 .await
                 .expect("set_so_broadcast fidl error")
                 .expect("failed to set so_broadcast");
+        }
+        UdpCacheInvalidationReason::AddressRemoved => {
+            let removed = iface
+                .control()
+                .remove_address(&mut installed_subnet)
+                .await
+                .expect("remove_address fidl error")
+                .expect("failed to remove address");
+            assert!(removed, "address was not removed from interface");
         }
     }
 

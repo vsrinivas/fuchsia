@@ -469,6 +469,7 @@ func (ifs *ifState) removeAddressLocked(protocolAddr tcpip.ProtocolAddress) zx.S
 
 	ifs.ns.onAddressRemoveLocked(ifs.nicid, protocolAddr.AddressWithPrefix, true /* strict */)
 	ifs.mu.addressStateProviders.onAddressRemoveLocked(protocolAddr.AddressWithPrefix.Address)
+	ifs.ns.resetDestinationCache()
 	return zx.ErrOk
 }
 
