@@ -7,7 +7,7 @@
 #include <fidl/fuchsia.process.lifecycle/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/resource.h>
 
 #include <gtest/gtest.h>
@@ -79,7 +79,7 @@ TEST_F(MinfsComponentRunnerTest, ServeAndConfigureStartsMinfs) {
   ASSERT_NO_FATAL_FAILURE(StartServe());
 
   auto svc_dir = GetSvcDir();
-  auto client_end = service::ConnectAt<fuchsia_fs_startup::Startup>(svc_dir.borrow());
+  auto client_end = component::ConnectAt<fuchsia_fs_startup::Startup>(svc_dir.borrow());
   ASSERT_EQ(client_end.status_value(), ZX_OK);
 
   MountOptions options;
@@ -124,7 +124,7 @@ TEST_F(MinfsComponentRunnerTest, RequestsBeforeStartupAreQueuedAndServicedAfter)
   ASSERT_FALSE(query_complete);
 
   auto svc_dir = GetSvcDir();
-  auto client_end = service::ConnectAt<fuchsia_fs_startup::Startup>(svc_dir.borrow());
+  auto client_end = component::ConnectAt<fuchsia_fs_startup::Startup>(svc_dir.borrow());
   ASSERT_EQ(client_end.status_value(), ZX_OK);
 
   MountOptions options;

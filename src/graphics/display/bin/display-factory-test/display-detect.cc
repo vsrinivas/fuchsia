@@ -8,7 +8,7 @@
 #include <fidl/fuchsia.sysinfo/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -70,7 +70,7 @@ Boards GetBoard() {
 }
 
 uint8_t GetGpioValue(const char* gpio_path) {
-  auto client_end = service::Connect<gpio::Gpio>(gpio_path);
+  auto client_end = component::Connect<gpio::Gpio>(gpio_path);
   if (!client_end.is_ok()) {
     return -1;
   }

@@ -175,7 +175,6 @@ source_set("lib") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/inspector",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",

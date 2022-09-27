@@ -6,7 +6,7 @@
 
 #include <fidl/fuchsia.driver.framework/cpp/wire_types.h>
 #include <lib/fidl/cpp/wire/internal/transport.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 
 #include <queue>
 #include <unordered_set>
@@ -189,7 +189,7 @@ void DriverDevelopmentService::GetDeviceInfo(GetDeviceInfoRequestView request,
 
 void DriverDevelopmentService::GetDriverInfo(GetDriverInfoRequestView request,
                                              GetDriverInfoCompleter::Sync& completer) {
-  auto driver_index_client = service::Connect<fdd::DriverIndex>();
+  auto driver_index_client = component::Connect<fdd::DriverIndex>();
   if (driver_index_client.is_error()) {
     LOGF(ERROR, "Failed to connect to service '%s': %s",
          fidl::DiscoverableProtocolName<fdd::DriverIndex>, driver_index_client.status_string());

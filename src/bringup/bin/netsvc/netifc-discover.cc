@@ -10,7 +10,7 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/fdio/directory.h>
 #include <lib/fit/defer.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <stdio.h>
 
 #include <fbl/unique_fd.h>
@@ -241,7 +241,7 @@ std::optional<typename D::Info> netifc_evaluate(cpp17::string_view topological_p
 
   fidl::ClientEnd<typename D::Instance> dev;
   {
-    zx::status status = service::ConnectAt<typename D::Instance>(dir, filename.c_str());
+    zx::status status = component::ConnectAt<typename D::Instance>(dir, filename.c_str());
     if (status.is_error()) {
       printf("netifc: failed to connect to %s/%s: %s\n", dirname.c_str(), filename.c_str(),
              status.status_string());
@@ -302,7 +302,7 @@ zx::status<std::unique_ptr<fsl::DeviceWatcher>> CreateWatcher(
     }
     auto& [client, server] = status.value();
     // TODO(https://fxbug.dev/77059): We shouldn't require the writable right
-    // below, but service::ConnectAt (and fdio_service_connect_at) connect to
+    // below, but component::ConnectAt (and fdio_service_connect_at) connect to
     // protocols with the writable right.
     if (zx_status_t status =
             fdio_open(classdir.c_str(),

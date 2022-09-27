@@ -4,7 +4,7 @@
 
 #include "src/devices/testing/mock-ddk/mock-device.h"
 
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 
 #include <algorithm>
 
@@ -324,7 +324,7 @@ zx_status_t MockDevice::ConnectToFidlProtocol(const char* service_name, const ch
     return ZX_ERR_NOT_FOUND;
   }
   const std::string path = std::string("svc/") + service_name + "/default/" + protocol_name;
-  return service::internal::ConnectAtRaw(ns->second, std::move(request), path.c_str())
+  return component::internal::ConnectAtRaw(ns->second, std::move(request), path.c_str())
       .status_value();
 }
 

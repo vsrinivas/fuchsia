@@ -7,7 +7,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <lib/netboot/netboot.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <stdio.h>
 
 #include "board-info.h"
@@ -30,7 +30,7 @@ FileApi::FileApi(bool is_zedboot, std::unique_ptr<NetCopyInterface> netcp,
   ZX_ASSERT(paver_ != nullptr);
 
   if (!sysinfo_) {
-    zx::status client_end = service::Connect<fuchsia_sysinfo::SysInfo>();
+    zx::status client_end = component::Connect<fuchsia_sysinfo::SysInfo>();
     if (client_end.is_ok()) {
       sysinfo_ = std::move(client_end.value());
     }

@@ -17,7 +17,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/wire/wire_messaging.h>
 #include <lib/fit/defer.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <stdio.h>
 #include <string.h>
 #include <zircon/errors.h>
@@ -146,7 +146,7 @@ zx::status<Configuration> PartitionUuidToConfiguration(const fbl::unique_fd& dev
 
 zx::status<Configuration> QueryBootConfig(const fbl::unique_fd& devfs_root,
                                           fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root) {
-  auto client_end = service::ConnectAt<fuchsia_boot::Arguments>(svc_root);
+  auto client_end = component::ConnectAt<fuchsia_boot::Arguments>(svc_root);
   if (!client_end.is_ok()) {
     return client_end.take_error();
   }

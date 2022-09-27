@@ -6,7 +6,7 @@
 
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <lib/zx/channel.h>
@@ -22,7 +22,7 @@ namespace memory {
 class OSImpl : public OS, public TaskEnumerator {
  private:
   zx_status_t GetKernelStats(fidl::WireSyncClient<fuchsia_kernel::Stats>* stats) override {
-    auto client_end = service::Connect<fuchsia_kernel::Stats>();
+    auto client_end = component::Connect<fuchsia_kernel::Stats>();
     if (!client_end.is_ok()) {
       return client_end.status_value();
     }
@@ -38,7 +38,7 @@ class OSImpl : public OS, public TaskEnumerator {
       fit::function<zx_status_t(int, zx_handle_t, zx_koid_t, zx_koid_t)> cb) override {
     TRACE_DURATION("memory_metrics", "Capture::GetProcesses");
     cb_ = std::move(cb);
-    auto client_end = service::Connect<fuchsia_kernel::RootJobForInspect>();
+    auto client_end = component::Connect<fuchsia_kernel::RootJobForInspect>();
     if (!client_end.is_ok()) {
       return client_end.status_value();
     }

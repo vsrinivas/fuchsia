@@ -6,7 +6,7 @@
 #include <fidl/fuchsia.fs/cpp/wire.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/vfs.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
 
@@ -85,7 +85,7 @@ TEST_F(AdminServerTest, MountAndUnmount) {
   struct statvfs buf;
   ASSERT_EQ(statvfs(root.c_str(), &buf), 0);
 
-  auto fshost_or = service::Connect<fuchsia_fshost::Admin>(kFshostSvcPath);
+  auto fshost_or = component::Connect<fuchsia_fshost::Admin>(kFshostSvcPath);
   ASSERT_EQ(fshost_or.status_value(), ZX_OK);
 
   auto result = fidl::WireCall(*fshost_or)->GetDevicePath(buf.f_fsid);
@@ -190,7 +190,7 @@ TEST_F(AdminServerTest, GetDevicePathForBuiltInFilesystem) {
   struct statvfs buf;
   ASSERT_EQ(fstatvfs(fd.get(), &buf), 0);
 
-  auto fshost_or = service::Connect<fuchsia_fshost::Admin>(kFshostSvcPath);
+  auto fshost_or = component::Connect<fuchsia_fshost::Admin>(kFshostSvcPath);
   ASSERT_EQ(fshost_or.status_value(), ZX_OK);
 
   // The device path is registered in fshost *after* the mount point shows up so this is racy.  It's

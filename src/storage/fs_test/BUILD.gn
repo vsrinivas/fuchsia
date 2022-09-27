@@ -22,6 +22,7 @@ static_library("fs_test") {
     "//sdk/fidl/fuchsia.fs",
     "//sdk/fidl/fuchsia.hardware.ramdisk:fuchsia.hardware.ramdisk_cpp_wire",
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/json_parser",
     "//src/lib/storage/block_client/cpp",
@@ -33,7 +34,6 @@ static_library("fs_test") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
   public_deps = [
     # fs_test.h:
@@ -231,9 +231,9 @@ test("query_filesystem_tests") {
   sources = [ "query_filesystem.cc" ]
   deps = [
     ":fs_test",
+    "//sdk/lib/sys/component/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 
@@ -418,9 +418,9 @@ static_library("crypt_service") {
   ]
   deps = [
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/syslog/cpp:cpp-macros",
     "//src/storage/fxfs:fuchsia.fxfs_cpp_wire",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zxc",
   ]
 }

@@ -10,7 +10,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fdio/watcher.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zircon-internal/paths.h>
 #include <zircon/compiler.h>
@@ -65,7 +65,7 @@ zx::status<ConsoleLauncher> ConsoleLauncher::Create() {
   ConsoleLauncher launcher;
 
   // TODO(fxbug.dev/33957): Remove all uses of the root job.
-  zx::status client_end = service::Connect<fuchsia_kernel::RootJob>();
+  zx::status client_end = component::Connect<fuchsia_kernel::RootJob>();
   if (client_end.is_error()) {
     FX_PLOGS(ERROR, client_end.status_value())
         << "failed to connect to " << fidl::DiscoverableProtocolName<fuchsia_kernel::RootJob>;

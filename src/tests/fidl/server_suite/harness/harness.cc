@@ -4,7 +4,7 @@
 
 #include "harness.h"
 
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 
 namespace server_suite {
 
@@ -29,7 +29,7 @@ void Reporter::ReceivedFlexibleOneWay(ReceivedFlexibleOneWayRequest& request,
 }
 
 void ServerTest::SetUp() {
-  auto runner_service = service::Connect<fidl_serversuite::Runner>();
+  auto runner_service = component::Connect<fidl_serversuite::Runner>();
   ASSERT_OK(runner_service.status_value());
   runner_ = fidl::SyncClient<fidl_serversuite::Runner>(std::move(*runner_service));
 

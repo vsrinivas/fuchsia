@@ -44,12 +44,12 @@ test("test") {
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_cpp_wire",
     "//sdk/lib/driver_test_realm/simple",
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp",
     "//src/lib/ddk",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zx",
   ]
 }

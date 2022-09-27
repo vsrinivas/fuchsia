@@ -90,10 +90,10 @@ test("ddk-power") {
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_cpp_wire",
     "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp",
     "//src/devices/testing/driver-integration-test-shim",
     "//src/lib/ddk",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

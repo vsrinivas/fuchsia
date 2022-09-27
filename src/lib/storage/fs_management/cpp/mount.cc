@@ -19,7 +19,7 @@
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/vfs.h>
 #include <lib/fit/defer.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 #include <string.h>
@@ -72,7 +72,7 @@ zx::status<fidl::ClientEnd<Directory>> InitNativeFs(const char* binary, zx::chan
   }
 
   auto cleanup = fit::defer([&outgoing_directory_or]() {
-    auto admin_client = service::ConnectAt<fuchsia_fs::Admin>(outgoing_directory_or->client);
+    auto admin_client = component::ConnectAt<fuchsia_fs::Admin>(outgoing_directory_or->client);
     if (!admin_client.is_ok()) {
       return;
     }
@@ -98,7 +98,7 @@ zx::status<fidl::ClientEnd<Directory>> InitNativeFs(const char* binary, zx::chan
 
 zx::status<> StartFsComponent(fidl::UnownedClientEnd<Directory> exposed_dir, zx::channel device,
                               const MountOptions& options) {
-  auto startup_client_end = service::ConnectAt<fuchsia_fs_startup::Startup>(exposed_dir);
+  auto startup_client_end = component::ConnectAt<fuchsia_fs_startup::Startup>(exposed_dir);
   if (startup_client_end.is_error())
     return startup_client_end.take_error();
   fidl::WireSyncClient startup_client{std::move(*startup_client_end)};
@@ -404,7 +404,7 @@ zx::status<StartedSingleVolumeMultiVolumeFilesystem> MountMultiVolumeWithDefault
 
 __EXPORT
 zx::status<> Shutdown(fidl::UnownedClientEnd<Directory> svc_dir) {
-  auto admin_or = service::ConnectAt<fuchsia_fs::Admin>(svc_dir);
+  auto admin_or = component::ConnectAt<fuchsia_fs::Admin>(svc_dir);
   if (admin_or.is_error()) {
     return admin_or.take_error();
   }

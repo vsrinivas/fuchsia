@@ -12,8 +12,8 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
-#include <lib/service/llcpp/service.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/event.h>
 #include <lib/zx/port.h>
 #include <lib/zx/resource.h>
@@ -149,7 +149,7 @@ int main(int argc, char** argv) {
     LOGF(INFO, "Failed to redirect stdout to debuglog, assuming test environment and continuing");
   }
 
-  auto args_result = service::Connect<fuchsia_boot::Arguments>();
+  auto args_result = component::Connect<fuchsia_boot::Arguments>();
   if (args_result.is_error()) {
     LOGF(ERROR, "Failed to get boot arguments service handle: %s", args_result.status_string());
     return args_result.error_value();
@@ -205,7 +205,7 @@ int main(int argc, char** argv) {
     config.suspend_timeout = zx::duration::infinite();
   }
 
-  auto driver_index_client = service::Connect<fuchsia_driver_index::DriverIndex>();
+  auto driver_index_client = component::Connect<fuchsia_driver_index::DriverIndex>();
   if (driver_index_client.is_error()) {
     LOGF(ERROR, "Failed to connect to driver_index: %d", driver_index_client.error_value());
     return driver_index_client.error_value();
@@ -253,11 +253,11 @@ int main(int argc, char** argv) {
   devfs_exporter.PublishExporter(outgoing);
 
   // Launch DriverRunner for DFv2 drivers.
-  auto realm_result = service::Connect<fuchsia_component::Realm>();
+  auto realm_result = component::Connect<fuchsia_component::Realm>();
   if (realm_result.is_error()) {
     return realm_result.error_value();
   }
-  auto driver_index_result = service::Connect<fuchsia_driver_index::DriverIndex>();
+  auto driver_index_result = component::Connect<fuchsia_driver_index::DriverIndex>();
   if (driver_index_result.is_error()) {
     LOGF(ERROR, "Failed to connect to driver_index: %d", driver_index_result.error_value());
     return driver_index_result.error_value();

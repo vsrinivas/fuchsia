@@ -6,7 +6,7 @@ executable("dlog") {
   sources = [ "dlog.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_cpp_wire",
-    "//zircon/system/ulib/service:service-llcpp",
+    "//sdk/lib/sys/component/cpp",
     "//zircon/system/ulib/zx",
   ]
 }

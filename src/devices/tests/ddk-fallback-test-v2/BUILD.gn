@@ -47,12 +47,12 @@ test("test") {
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_cpp_wire",
     "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp",
     "//src/lib/ddk",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zx",
   ]
 

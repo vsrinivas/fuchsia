@@ -8,8 +8,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fit/function.h>
-#include <lib/service/llcpp/service.h>
 #include <lib/sync/completion.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 #include <stdio.h>
 
@@ -72,7 +72,7 @@ class RadarIntegrationTest : public zxtest::Test {
   void MakeRadarClient(fit::function<void(const BurstResult&)> burst_handler,
                        fidl::WireSharedClient<BurstReader>* out_client,
                        std::future<void>* out_client_torn_down) {
-    auto provider_client_end_or = service::Connect<BurstReaderProvider>();
+    auto provider_client_end_or = component::Connect<BurstReaderProvider>();
     ASSERT_TRUE(provider_client_end_or.is_ok());
 
     fidl::WireSyncClient<BurstReaderProvider> provider_client(

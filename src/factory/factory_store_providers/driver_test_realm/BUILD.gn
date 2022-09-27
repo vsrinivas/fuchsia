@@ -22,12 +22,12 @@ executable("bin") {
   deps = [
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_cpp_wire",
     "//sdk/lib/device-watcher/cpp",
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/files:files",
     "//src/lib/fsl",
     "//src/lib/storage/block_client/cpp",
     "//src/storage/testing:storage_driver_test_support",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 

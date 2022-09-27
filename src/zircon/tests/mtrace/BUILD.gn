@@ -10,7 +10,7 @@ test("mtrace") {
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_cpp_wire",
     "//sdk/lib/fdio",
-    "//zircon/system/ulib/service:service-llcpp",
+    "//sdk/lib/sys/component/cpp",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",

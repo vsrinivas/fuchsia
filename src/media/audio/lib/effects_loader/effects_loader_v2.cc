@@ -5,7 +5,7 @@
 #include "src/media/audio/lib/effects_loader/effects_loader_v2.h"
 
 #include <lib/fit/defer.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 
@@ -18,7 +18,7 @@ fpromise::result<std::unique_ptr<EffectsLoaderV2>, zx_status_t> EffectsLoaderV2:
   TRACE_DURATION("audio", "EffectsLoaderV2::CreateFromContext");
   auto svc =
       fidl::ClientEnd<fuchsia_io::Directory>(component_context.svc()->CloneChannel().TakeChannel());
-  auto client_end = service::ConnectAt<fuchsia_audio_effects::ProcessorCreator>(svc);
+  auto client_end = component::ConnectAt<fuchsia_audio_effects::ProcessorCreator>(svc);
   if (!client_end.is_ok()) {
     return fpromise::error(client_end.status_value());
   }

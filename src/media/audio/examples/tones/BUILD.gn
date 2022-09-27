@@ -21,6 +21,7 @@ executable("bin") {
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/fit",
     "//sdk/lib/media/cpp",
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
@@ -29,7 +30,6 @@ executable("bin") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 

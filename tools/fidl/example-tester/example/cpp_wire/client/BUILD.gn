@@ -21,8 +21,8 @@ executable("bin") {
 
   deps = [
     ":config",
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/syslog/cpp",
     "//tools/fidl/example-tester/example/fidl:test.exampletester_cpp_wire",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 }

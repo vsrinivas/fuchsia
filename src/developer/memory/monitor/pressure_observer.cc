@@ -7,7 +7,7 @@
 #include <fidl/fuchsia.kernel/cpp/wire.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
@@ -45,7 +45,7 @@ PressureObserver::~PressureObserver() {
 
 // Called from the constructor to set up waiting on kernel memory pressure events.
 zx_status_t PressureObserver::InitMemPressureEvents() {
-  auto client_end = service::Connect<fuchsia_kernel::RootJobForInspect>();
+  auto client_end = component::Connect<fuchsia_kernel::RootJobForInspect>();
   if (!client_end.is_ok()) {
     return client_end.status_value();
   }

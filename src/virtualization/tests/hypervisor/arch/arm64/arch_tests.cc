@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.sysinfo/cpp/wire.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/vcpu.h>
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/syscalls/port.h>
@@ -30,7 +30,7 @@ DECLARE_TEST_FUNCTION(vcpu_enable_disable_mmu)
 namespace {
 
 zx::status<fuchsia_sysinfo::InterruptControllerType> GetInterruptControllerType() {
-  auto client_end = service::Connect<fuchsia_sysinfo::SysInfo>();
+  auto client_end = component::Connect<fuchsia_sysinfo::SysInfo>();
   if (client_end.is_error()) {
     return client_end.take_error();
   }

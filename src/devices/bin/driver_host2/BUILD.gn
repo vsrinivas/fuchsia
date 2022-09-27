@@ -81,7 +81,6 @@ fuchsia_driver("test_driver_driver") {
     "//sdk/lib/driver2:cpp",
     "//sdk/lib/sys/component/cpp",
     "//src/devices/lib/driver:driver_runtime",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 
@@ -124,7 +123,6 @@ executable("unittests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 
   # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
@@ -156,11 +154,11 @@ executable("bin") {
     "//sdk/fidl/fuchsia.inspect:fuchsia.inspect_cpp_wire",
     "//sdk/lib/driver_runtime:driver_runtime_env",
     "//sdk/lib/inspect/service/cpp",
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/vfs/cpp",
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 

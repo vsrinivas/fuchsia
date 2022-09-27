@@ -4,7 +4,7 @@
 
 #include <fidl/fuchsia.kernel/cpp/wire.h>
 #include <getopt.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
@@ -36,7 +36,7 @@ struct Options {
 };
 
 zx::resource AttemptToGetVmexResource() {
-  auto client_end_or = service::Connect<fuchsia_kernel::VmexResource>();
+  auto client_end_or = component::Connect<fuchsia_kernel::VmexResource>();
   if (client_end_or.is_error()) {
     FX_LOGS(WARNING) << "Failed to connect to fuchsia.kernel.VmexResource: "
                      << client_end_or.status_string();

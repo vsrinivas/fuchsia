@@ -8,7 +8,7 @@
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/io.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/time.h>
 #include <poll.h>
 #include <unistd.h>
@@ -113,7 +113,7 @@ TEST(PtyTests, pty_test) {
   // This manifests as a loss of fd signals.
   fbl::unique_fd ps;
   {
-    zx::status client_end = service::Connect<fpty::Device>();
+    zx::status client_end = component::Connect<fpty::Device>();
     ASSERT_OK(client_end.status_value());
 
     ASSERT_OK(fdio_fd_create(client_end->channel().release(), ps.reset_and_get_address()));

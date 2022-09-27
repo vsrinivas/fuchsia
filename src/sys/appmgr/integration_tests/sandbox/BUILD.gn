@@ -49,10 +49,10 @@ test("path_traversal_escape") {
   deps = [
     "//sdk/fidl/fuchsia.sys:fuchsia.sys_cpp_wire",
     "//sdk/lib/fidl",
+    "//sdk/lib/sys/component/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 

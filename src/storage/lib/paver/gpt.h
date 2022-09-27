@@ -7,7 +7,7 @@
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fit/function.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 
 #include <string_view>
@@ -107,7 +107,7 @@ class GptDevicePartitioner {
                        std::unique_ptr<GptDevice> gpt,
                        fuchsia_hardware_block::wire::BlockInfo block_info)
       : devfs_root_(std::move(devfs_root)),
-        svc_root_(service::MaybeClone(svc_root)),
+        svc_root_(component::MaybeClone(svc_root)),
         caller_(std::move(fd)),
         gpt_(std::move(gpt)),
         block_info_(block_info) {}

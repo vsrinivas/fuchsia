@@ -6,7 +6,7 @@
 
 #include <fidl/fuchsia.net.tun/cpp/wire.h>
 #include <lib/fpromise/bridge.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>
 
@@ -102,7 +102,7 @@ class NetDeviceTest : public gtest::RealLoopFixture {
     if (device_endpoints.is_error()) {
       return device_endpoints.take_error();
     }
-    zx::status tunctl = service::Connect<tun::Control>();
+    zx::status tunctl = component::Connect<tun::Control>();
     if (tunctl.is_error()) {
       return tunctl.take_error();
     }
@@ -191,7 +191,7 @@ class NetDeviceTest : public gtest::RealLoopFixture {
     if (device_pair_endpoints.is_error()) {
       return device_pair_endpoints.take_error();
     }
-    zx::status tunctl = service::Connect<tun::Control>();
+    zx::status tunctl = component::Connect<tun::Control>();
     if (tunctl.is_error()) {
       return tunctl.take_error();
     }

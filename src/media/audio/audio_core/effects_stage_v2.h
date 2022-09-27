@@ -7,7 +7,7 @@
 
 #include <fidl/fuchsia.audio.effects/cpp/wire.h>
 #include <lib/fpromise/result.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 
 #include <memory>
 

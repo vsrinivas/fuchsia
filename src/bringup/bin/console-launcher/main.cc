@@ -15,7 +15,7 @@
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fit/defer.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/debuglog.h>
@@ -228,7 +228,7 @@ int main(int argv, char** argc) {
 
   FX_LOGS(INFO) << "running";
 
-  zx::status boot_args = service::Connect<fuchsia_boot::Arguments>();
+  zx::status boot_args = component::Connect<fuchsia_boot::Arguments>();
   if (boot_args.is_error()) {
     FX_PLOGS(FATAL, boot_args.status_value())
         << "failed to connect to " << fidl::DiscoverableProtocolName<fuchsia_boot::Arguments>;
@@ -366,7 +366,7 @@ int main(int argv, char** argc) {
 
   if (!args.virtcon_disable) {
     zx_status_t status = [&]() {
-      zx::status virtcon = service::Connect<fuchsia_virtualconsole::SessionManager>();
+      zx::status virtcon = component::Connect<fuchsia_virtualconsole::SessionManager>();
       if (virtcon.is_error()) {
         FX_PLOGS(ERROR, virtcon.status_value())
             << "failed to connect to "

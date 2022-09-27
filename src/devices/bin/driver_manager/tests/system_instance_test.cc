@@ -7,7 +7,7 @@
 #include <fidl/fuchsia.kernel/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/wire/connect_service.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/process.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/time.h>
@@ -26,7 +26,7 @@ namespace {
 
 // Get the root job from the root job service.
 zx_status_t get_root_job(zx::job* root_job) {
-  auto client_end = service::Connect<fkernel::RootJob>();
+  auto client_end = component::Connect<fkernel::RootJob>();
   if (client_end.is_error()) {
     return client_end.error_value();
   }

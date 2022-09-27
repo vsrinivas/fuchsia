@@ -29,9 +29,9 @@ test("integration-test") {
 
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
+    "//sdk/lib/sys/component/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/predicates",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 

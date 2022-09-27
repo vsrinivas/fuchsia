@@ -6,7 +6,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
 
@@ -43,7 +43,7 @@ zx::status<> StartComponent(ComponentOptions options, fidl::ServerEnd<fuchsia_io
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   trace::TraceProviderWithFdio provider(loop.dispatcher());
 
-  auto client_end = service::Connect<fuchsia_device_manager::Administrator>();
+  auto client_end = component::Connect<fuchsia_device_manager::Administrator>();
   if (!client_end.is_ok()) {
     FX_LOGS(WARNING) << "Failed to connect to device manager: " << client_end.status_string()
                      << ". Assuming test environment and continuing";

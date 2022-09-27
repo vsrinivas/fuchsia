@@ -8,7 +8,7 @@
 #include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <libgen.h>
 
 #include <fbl/string_buffer.h>
@@ -243,7 +243,7 @@ zx::status<> SkipBlockPartitionClient::Trim() { return zx::error(ZX_ERR_NOT_SUPP
 zx::status<> SkipBlockPartitionClient::Flush() { return zx::ok(); }
 
 fidl::ClientEnd<fuchsia_hardware_skipblock::SkipBlock> SkipBlockPartitionClient::GetChannel() {
-  return service::MaybeClone(partition_.client_end(), service::AssumeProtocolComposesNode);
+  return component::MaybeClone(partition_.client_end(), component::AssumeProtocolComposesNode);
 }
 
 fbl::unique_fd SkipBlockPartitionClient::block_fd() { return fbl::unique_fd(); }

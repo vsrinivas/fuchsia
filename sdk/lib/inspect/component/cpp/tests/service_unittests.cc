@@ -14,7 +14,7 @@
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/reader.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -354,8 +354,8 @@ TEST_F(InspectServiceTest, ReadMultiLevelIntoHierarchy) {
 }
 
 TEST_F(InspectServiceTest, ReadFromComponentInspector) {
-  auto svc = service::OpenServiceRoot();
-  auto client_end = service::ConnectAt<fuchsia_component::Binder>(*svc);
+  auto svc = component::OpenServiceRoot();
+  auto client_end = component::ConnectAt<fuchsia_component::Binder>(*svc);
   ASSERT_TRUE(client_end.is_ok());
 
   fidl::WireSyncClient(std::move(*client_end));

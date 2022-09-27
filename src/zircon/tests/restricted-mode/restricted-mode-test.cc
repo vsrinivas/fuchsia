@@ -4,7 +4,7 @@
 
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/time.h>

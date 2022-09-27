@@ -4,7 +4,7 @@
 
 #include <errno.h>
 #include <fidl/fuchsia.boot/cpp/wire.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <unistd.h>
 #include <zircon/syscalls/log.h>
 
@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
     argv++;
   }
 
-  zx::status client = service::Connect<fuchsia_boot::ReadOnlyLog>();
+  zx::status client = component::Connect<fuchsia_boot::ReadOnlyLog>();
   if (client.is_error()) {
     fprintf(stderr, "failed to connect to read only log: %s\n", client.status_string());
     return -1;

@@ -30,12 +30,12 @@ source_set("utils") {
     "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_cpp",
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/lib/sys/component/cpp",
     "//src/lib/fidl/cpp/contrib/connection:service_hub_connector",
     "//src/ui/scenic/lib/scheduling:frame_metrics_registry_cc",
     "//third_party/glm",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 
   deps = [

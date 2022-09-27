@@ -23,7 +23,7 @@
 #include <lib/fidl/cpp/wire/wire_messaging.h>
 #include <lib/fit/defer.h>
 #include <lib/fzl/owned-vmo-mapper.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zbitl/error-string.h>
 #include <lib/zbitl/image.h>
 #include <lib/zbitl/item.h>
@@ -350,7 +350,7 @@ void Coordinator::RegisterWithPowerManager(fidl::ClientEnd<fio::Directory> devfs
     completion(status);
     return;
   }
-  auto result = service::Connect<fpm::DriverManagerRegistration>();
+  auto result = component::Connect<fpm::DriverManagerRegistration>();
   if (result.is_error()) {
     LOGF(ERROR, "Failed to connect to fuchsia.power.manager: %s", result.status_string());
     completion(result.error_value());
@@ -804,7 +804,7 @@ zx_status_t Coordinator::SetMexecZbis(zx::vmo kernel_zbi, zx::vmo data_zbi) {
   }
 
   fidl::WireSyncClient<fuchsia_boot::Items> items;
-  if (auto result = service::Connect<fuchsia_boot::Items>(); result.is_error()) {
+  if (auto result = component::Connect<fuchsia_boot::Items>(); result.is_error()) {
     LOGF(ERROR, "Failed to connect to fuchsia.boot::Items: %s", result.status_string());
     return result.error_value();
   } else {

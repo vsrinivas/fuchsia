@@ -7,8 +7,8 @@
 #include <lib/driver2/start_args.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/epitaph.h>
-#include <lib/service/llcpp/service.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
+#include <lib/sys/component/cpp/service_client.h>
 
 namespace fdf = fuchsia_driver_framework;
 namespace ftest = fuchsia_driverhost_test;
@@ -44,7 +44,7 @@ class TestDriver {
     if (svc_dir.is_error()) {
       return svc_dir.take_error();
     }
-    auto client_end = service::ConnectAt<ftest::Incoming>(svc_dir.value());
+    auto client_end = component::ConnectAt<ftest::Incoming>(svc_dir.value());
     if (!client_end.is_ok()) {
       return client_end.take_error();
     }

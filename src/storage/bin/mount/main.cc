@@ -5,7 +5,7 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.fshost/cpp/wire.h>
 #include <getopt.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -102,13 +102,13 @@ int main(int argc, char** argv) {
     printf("fs_mount: Mounting device [%s] on path [/mnt/%s]\n", devicepath, mount_name.c_str());
   }
 
-  auto block_device_or = service::Connect<fuchsia_hardware_block::Block>(devicepath);
+  auto block_device_or = component::Connect<fuchsia_hardware_block::Block>(devicepath);
   if (block_device_or.is_error()) {
     fprintf(stderr, "Error opening block device: %s\n", block_device_or.status_string());
     return EXIT_FAILURE;
   }
 
-  auto fshost_or = service::Connect<fuchsia_fshost::Admin>(fshost_path.c_str());
+  auto fshost_or = component::Connect<fuchsia_fshost::Admin>(fshost_path.c_str());
   if (fshost_or.is_error()) {
     fprintf(stderr, "Error connecting to fshost (@ %s): %s\n", fshost_path.c_str(),
             fshost_or.status_string());

@@ -15,7 +15,7 @@
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/promise.h>
 #include <lib/fpromise/single_threaded_executor.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <zircon/dlfcn.h>
 
 #include "src/devices/misc/drivers/compat/devfs_vnode.h"

@@ -54,6 +54,7 @@ source_set("fshost-registry") {
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_cpp_wire",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_cpp_wire",
     "//sdk/lib/fit",
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/vfs/cpp",
     "//src/lib/loader_service",
     "//src/lib/storage/fs_management",
@@ -63,7 +64,6 @@ source_set("fshost-registry") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zx",
   ]
   deps = [
@@ -135,6 +135,7 @@ source_set("block-watcher") {
     "//sdk/lib/fdio",
     "//sdk/lib/fidl",
     "//sdk/lib/fit",
+    "//sdk/lib/sys/component/cpp",
     "//src/devices/block/drivers/block-verity:verified-volume-client",
     "//src/lib/digest",
     "//src/lib/files",
@@ -153,7 +154,6 @@ source_set("block-watcher") {
     "//zircon/system/ulib/explicit-memory",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
     "//zircon/system/ulib/zx",
@@ -309,6 +309,7 @@ template("fshost_integration_test") {
       "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
       "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_cpp_wire",
       "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire_testing",
+      "//sdk/lib/sys/component/cpp",
       "//src/developer/forensics/public/fakes:fuchsia.feedback.testing_cpp_wire",
       "//src/lib/files",
       "//src/lib/fxl/test:gtest_main",
@@ -322,7 +323,6 @@ template("fshost_integration_test") {
       "//src/sys/pkg/fidl/fuchsia.update.verify:fuchsia.update.verify_cpp_wire",
       "//third_party/googletest:gmock",
       "//zircon/system/ulib/fidl-async",
-      "//zircon/system/ulib/service:service-llcpp",
     ]
     data_deps = [
       "//src/storage/bin/mount",
@@ -441,6 +441,7 @@ test("disk-migration-test") {
     "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_cpp_wire",
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire_testing",
+    "//sdk/lib/sys/component/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/fs_management",
     "//src/lib/storage/ramdevice_client/cpp",
@@ -448,7 +449,6 @@ test("disk-migration-test") {
     "//src/storage/minfs",
     "//src/storage/testing:storage_driver_test_support",
     "//zircon/system/ulib/fidl-async",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
   defines = [
     "DATA_FILESYSTEM_FORMAT=\"$data_filesystem_format\"",

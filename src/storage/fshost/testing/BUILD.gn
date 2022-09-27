@@ -27,7 +27,7 @@ source_set("integration_test_fixture") {
   ]
   deps = [
     "//sdk/lib/inspect/service/cpp:cpp",
-    "//zircon/system/ulib/service:service-llcpp",
+    "//sdk/lib/sys/component/cpp",
   ]
 }
 

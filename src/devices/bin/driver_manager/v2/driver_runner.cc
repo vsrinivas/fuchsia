@@ -14,7 +14,7 @@
 #include <lib/fidl/cpp/wire/server.h>
 #include <lib/fidl/cpp/wire/wire_messaging.h>
 #include <lib/fit/defer.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <zircon/errors.h>
 #include <zircon/rights.h>
 #include <zircon/status.h>
@@ -523,7 +523,7 @@ zx::status<DriverHost*> DriverRunner::CreateDriverHost() {
     return create.take_error();
   }
 
-  auto client_end = service::ConnectAt<fdh::DriverHost>(endpoints->client);
+  auto client_end = component::ConnectAt<fdh::DriverHost>(endpoints->client);
   if (client_end.is_error()) {
     LOGF(ERROR, "Failed to connect to service '%s': %s",
          fidl::DiscoverableProtocolName<fdh::DriverHost>, client_end.status_string());

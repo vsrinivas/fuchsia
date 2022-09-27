@@ -19,11 +19,11 @@ source_set("test_effects_v2") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.audio.effects:fuchsia.audio.effects_cpp_wire",
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 
   # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,

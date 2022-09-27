@@ -15,9 +15,9 @@ executable("goldfish_test_bin") {
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp_wire",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl",
+    "//sdk/lib/sys/component/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
   ]

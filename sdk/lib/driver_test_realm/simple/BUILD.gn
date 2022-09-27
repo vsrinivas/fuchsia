@@ -31,8 +31,8 @@ executable("bin") {
   sources = [ "simple.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_cpp_wire",
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/syslog/cpp",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 
   # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,

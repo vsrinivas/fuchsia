@@ -7,7 +7,7 @@
 #include <fidl/fuchsia.process/cpp/wire.h>
 #include <lib/fdio/spawn-actions.h>
 #include <lib/fdio/spawn.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/status.h>
 #include <zircon/processargs.h>
 
@@ -29,7 +29,7 @@ struct ResolvedProcess {
 // ResolveName makes a call to the fuchsia.process.Resolver service and may return a vmo and
 // associated loader service, if the name resolves within the current realm.
 zx::status<ResolvedProcess> ResolveName(std::string_view name) {
-  auto client = service::Connect<fprocess::Resolver>();
+  auto client = component::Connect<fprocess::Resolver>();
   if (client.is_error()) {
     return client.take_error();
   }

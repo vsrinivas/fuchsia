@@ -27,11 +27,11 @@ source_set("driver_runner") {
 
   deps = [
     "//sdk/lib/driver2:cpp",
+    "//sdk/lib/sys/component/cpp",
     "//src/devices/bin/driver_manager:binding",
     "//src/devices/bin/driver_manager/device_group:lib",
     "//src/devices/lib/log",
     "//src/lib/fxl",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zircon-internal",
   ]
 

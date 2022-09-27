@@ -8,7 +8,7 @@
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/wire/channel.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 
 #include <filesystem>
@@ -27,7 +27,7 @@ class TestDeviceBase {
   TestDeviceBase() = default;
 
   void InitializeFromFileName(const char* device_name) {
-    auto client = service::Connect<fuchsia_device::Controller>(device_name);
+    auto client = component::Connect<fuchsia_device::Controller>(device_name);
     ASSERT_TRUE(client.is_ok());
     device_controller_ = client->borrow();
     EXPECT_EQ(MAGMA_STATUS_OK, magma_device_import(client->TakeChannel().release(), &device_));
@@ -65,7 +65,7 @@ class TestDeviceBase {
     // Remove everything after the final slash.
     *strrchr(path, '/') = 0;
 
-    auto parent = service::Connect<fuchsia_device::Controller>(path);
+    auto parent = component::Connect<fuchsia_device::Controller>(path);
 
     EXPECT_EQ(ZX_OK, parent.status_value());
     return std::move(*parent);

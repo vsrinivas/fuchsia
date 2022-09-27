@@ -6,7 +6,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/fdio_connect.h>
 #include <lib/trace-provider/provider.h>
@@ -48,7 +48,7 @@ std::vector<BucketMatch> GetBucketMatchesFromConfig() {
 }
 
 void SignalMemoryPressure(fuchsia_memorypressure::Level level) {
-  auto client_end = service::Connect<fuchsia_memory::Debugger>();
+  auto client_end = component::Connect<fuchsia_memory::Debugger>();
   if (!client_end.is_ok()) {
     FX_LOGS(ERROR) << "Could not connect to the memory monitor";
     return;

@@ -41,6 +41,7 @@ source_set("paver-core") {
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_cpp_wire",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl",
+    "//sdk/lib/sys/component/cpp",
     "//src/lib/storage/fs_management",
     "//src/lib/storage/ramdevice_client/cpp:ramdevice-client-static",
     "//src/security/zxcrypt:zxcrypt-client",
@@ -48,7 +49,6 @@ source_set("paver-core") {
     "//src/storage/gpt",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/third_party/ulib/cksum",
     "//zircon/third_party/ulib/safemath",
   ]
@@ -83,10 +83,10 @@ source_set("gpt") {
   deps = [ "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire" ]
   public_deps = [
     ":paver-core",
+    "//sdk/lib/sys/component/cpp",
     "//src/storage/gpt",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zx",
   ]
 
@@ -102,9 +102,9 @@ source_set("skip-block") {
   public_deps = [
     ":paver-core",
     "//sdk/fidl/fuchsia.hardware.skipblock:fuchsia.hardware.skipblock_cpp_wire",
+    "//sdk/lib/sys/component/cpp",
     "//src/storage/gpt",
     "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
@@ -138,10 +138,10 @@ source_set("astro") {
     ":paver-core",
     ":sysconfig",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_cpp_wire",
+    "//sdk/lib/sys/component/cpp",
     "//src/devices/lib/amlogic",
     "//src/lib/uuid",
     "//src/storage/gpt",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
   public_deps = [
     ":skip-block",

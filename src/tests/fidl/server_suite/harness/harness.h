@@ -6,7 +6,7 @@
 #define SRC_TESTS_FIDL_SERVER_SUITE_HARNESS_HARNESS_H_
 
 #include <fidl/fidl.serversuite/cpp/fidl.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 
 #include <gtest/gtest.h>
 

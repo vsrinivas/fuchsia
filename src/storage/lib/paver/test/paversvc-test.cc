@@ -20,7 +20,7 @@
 #include <lib/fidl/cpp/wire/vector_view.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/paver/provider.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/sysconfig/sync-client.h>
 #include <lib/zx/vmo.h>
 #include <zircon/boot/image.h>
@@ -2024,7 +2024,7 @@ class PaverServiceGptDeviceTest : public PaverServiceTest {
   }
 
   fidl::ClientEnd<fuchsia_io::Directory> GetSvcRoot() {
-    return service::MaybeClone(fake_svc_.svc_chan());
+    return component::MaybeClone(fake_svc_.svc_chan());
   }
 
   struct PartitionDescription {
@@ -2173,7 +2173,7 @@ TEST_F(PaverServiceLuisTest, WriteOpaqueVolume) {
                                     block_service_channel.channel().reset_and_get_address()));
   std::unique_ptr<paver::BlockPartitionClient> block_client =
       std::make_unique<paver::BlockPartitionClient>(
-          service::MaybeClone(block_service_channel, service::AssumeProtocolComposesNode));
+          component::MaybeClone(block_service_channel, component::AssumeProtocolComposesNode));
 
   // Read the partition directly from block and verify.
   zx::vmo block_read_vmo;

@@ -46,7 +46,6 @@ fuchsia_driver("lifecycle_driver") {
     "//sdk/lib/driver_compat:symbols",
     "//sdk/lib/sys/component/cpp",
     "//src/devices/lib/driver:driver_runtime",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 

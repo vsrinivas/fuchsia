@@ -9,7 +9,7 @@
 #include <fidl/fuchsia.fxfs/cpp/wire_types.h>
 #include <lib/fidl/cpp/wire/vector_view.h>
 #include <lib/fit/defer.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/status.h>
 
@@ -134,7 +134,7 @@ zx::status<fs_management::MountedVolume*> UnwrapOrInitDataVolume(
     crypto::Bytes data_key, metadata_key;
     data_key.Copy(kLegacyCryptDataKey, sizeof(kLegacyCryptDataKey));
     metadata_key.Copy(kLegacyCryptMetadataKey, sizeof(kLegacyCryptMetadataKey));
-    auto cm_client = service::Connect<fuchsia_fxfs::CryptManagement>();
+    auto cm_client = component::Connect<fuchsia_fxfs::CryptManagement>();
     if (cm_client.is_error()) {
       FX_PLOGS(ERROR, cm_client.error_value()) << "Failed to connect to CryptManagement service.";
       return cm_client.take_error();
@@ -143,7 +143,7 @@ zx::status<fs_management::MountedVolume*> UnwrapOrInitDataVolume(
         status.is_error())
       return status.take_error();
 
-    auto crypt = service::Connect<fuchsia_fxfs::Crypt>();
+    auto crypt = component::Connect<fuchsia_fxfs::Crypt>();
     if (crypt.is_error()) {
       FX_PLOGS(ERROR, crypt.error_value()) << "Failed to connect to Crypt service.";
       return crypt.take_error();
@@ -250,7 +250,7 @@ zx::status<fs_management::MountedVolume*> UnwrapOrInitDataVolume(
     return zx::error(status);
   if (status = metadata_key.Copy(metadata_unwrapped._0, key_bag::AES256_KEY_SIZE); status != ZX_OK)
     return zx::error(status);
-  auto cm_client = service::Connect<fuchsia_fxfs::CryptManagement>();
+  auto cm_client = component::Connect<fuchsia_fxfs::CryptManagement>();
   if (cm_client.is_error()) {
     FX_PLOGS(ERROR, cm_client.error_value()) << "Failed to connect to CryptManagement service.";
     return cm_client.take_error();
@@ -260,7 +260,7 @@ zx::status<fs_management::MountedVolume*> UnwrapOrInitDataVolume(
     return status.take_error();
 
   // OK, crypt is seeded with the stored keys, so we can finally open the data volume.
-  auto crypt = service::Connect<fuchsia_fxfs::Crypt>();
+  auto crypt = component::Connect<fuchsia_fxfs::Crypt>();
   if (crypt.is_error()) {
     FX_PLOGS(ERROR, crypt.error_value()) << "Failed to connect to Crypt service.";
     return crypt.take_error();
@@ -280,7 +280,7 @@ FormatFxfsAndInitDataVolume(fidl::ClientEnd<fuchsia_hardware_block::Block> block
     return device_path.take_error();
   }
   constexpr char kStartupServicePath[] = "/fxfs/svc/fuchsia.fs.startup.Startup";
-  auto startup_client_end = service::Connect<fuchsia_fs_startup::Startup>(kStartupServicePath);
+  auto startup_client_end = component::Connect<fuchsia_fs_startup::Startup>(kStartupServicePath);
   if (startup_client_end.is_error()) {
     FX_PLOGS(ERROR, startup_client_end.error_value())
         << "Failed to connect to startup service at " << kStartupServicePath;

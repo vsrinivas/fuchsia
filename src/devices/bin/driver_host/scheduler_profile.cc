@@ -6,7 +6,7 @@
 
 #include <fidl/fuchsia.scheduler/cpp/wire.h>
 #include <lib/fdio/directory.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/thread.h>
@@ -21,7 +21,7 @@ fidl::ClientEnd<fuchsia_scheduler::ProfileProvider> scheduler_profile_provider;
 }  // namespace
 
 zx_status_t connect_scheduler_profile_provider() {
-  zx::status client_end = service::Connect<fuchsia_scheduler::ProfileProvider>();
+  zx::status client_end = component::Connect<fuchsia_scheduler::ProfileProvider>();
   if (client_end.is_ok()) {
     scheduler_profile_provider = std::move(client_end.value());
   }

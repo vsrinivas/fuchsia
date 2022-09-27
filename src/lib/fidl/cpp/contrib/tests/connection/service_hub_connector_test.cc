@@ -6,7 +6,7 @@
 
 #include <fidl/test.protocol.connector/cpp/fidl.h>
 #include <lib/fidl/cpp/wire/channel.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 
 #include <functional>
 #include <optional>
@@ -49,7 +49,7 @@ class ProtocolConnector : public fidl::contrib::ServiceHubConnector<ProtocolFact
 
  private:
   void ConnectToServiceHub(ServiceHubConnectResolver resolver) override {
-    auto connection = service::ConnectAt<ProtocolFactory>(directory_);
+    auto connection = component::ConnectAt<ProtocolFactory>(directory_);
     if (connection.is_error()) {
       resolver.resolve(std::nullopt);
     } else {
@@ -205,7 +205,7 @@ class ServiceHubConnectorTest : public gtest::TestLoopFixture {
     ASSERT_EQ(ZX_OK, outgoing_directory_->Serve(std::move(endpoints->server)).status_value());
     root_dir_ = std::move(endpoints->client);
 
-    auto svc_dir = service::ConnectAt<fuchsia_io::Directory>(root_dir_, "svc");
+    auto svc_dir = component::ConnectAt<fuchsia_io::Directory>(root_dir_, "svc");
     ASSERT_EQ(ZX_OK, svc_dir.status_value());
     svc_dir_ = std::move(svc_dir.value());
 

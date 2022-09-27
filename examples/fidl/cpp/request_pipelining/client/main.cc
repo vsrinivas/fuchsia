@@ -10,7 +10,7 @@
 
 #include <fidl/fuchsia.examples/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <memory>
@@ -22,7 +22,7 @@ int main(int argc, const char** argv) {
   int num_responses = 0;
 
   // Connect to the EchoLauncher protocol
-  zx::status launcher_client_end = service::Connect<fuchsia_examples::EchoLauncher>();
+  zx::status launcher_client_end = component::Connect<fuchsia_examples::EchoLauncher>();
   ZX_ASSERT(launcher_client_end.is_ok());
   fidl::Client launcher(std::move(*launcher_client_end), dispatcher);
 

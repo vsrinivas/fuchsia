@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.driver.test/cpp/wire.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 
 int main() {
   syslog::SetTags({"simple_driver_test_realm"});
 
-  auto client_end = service::Connect<fuchsia_driver_test::Realm>();
+  auto client_end = component::Connect<fuchsia_driver_test::Realm>();
   if (!client_end.is_ok()) {
     FX_SLOG(ERROR, "Failed to connect to Realm FIDL", KV("error", client_end.error_value()));
     return 1;

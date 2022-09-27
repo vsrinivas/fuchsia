@@ -22,8 +22,8 @@
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/service/cpp/reader.h>
 #include <lib/inspect/testing/cpp/inspect.h>
-#include <lib/service/llcpp/service.h>
 #include <lib/sync/completion.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/vmo.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -162,7 +162,7 @@ TEST_P(BlobfsIntegrationTest, CorruptBlobNotify) {
       binding.NewBinding(loop.dispatcher()).TakeChannel());
 
   // Pass the corrupt blob handler server to blobfs.
-  auto blobfs = service::ConnectAt<fuchsia_blobfs::Blobfs>(fs().ServiceDirectory());
+  auto blobfs = component::ConnectAt<fuchsia_blobfs::Blobfs>(fs().ServiceDirectory());
   ASSERT_EQ(blobfs.status_value(), ZX_OK);
 
   ASSERT_EQ(fidl::WireCall(*blobfs)->SetCorruptBlobHandler(std::move(client_end)).status(), ZX_OK);

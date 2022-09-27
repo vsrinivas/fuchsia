@@ -30,8 +30,8 @@ source_set("effects_loader") {
   ]
 
   deps = [
+    "//sdk/lib/sys/component/cpp",
     "//src/media/audio/lib/timeline",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/trace",
   ]
 }

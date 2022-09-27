@@ -36,10 +36,10 @@ executable("cpp-test") {
     ":cpp",
     "//sdk/fidl/fuchsia.net.tun:fuchsia.net.tun_cpp_wire",
     "//sdk/lib/fit-promise",
+    "//sdk/lib/sys/component/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/lib/testing/predicates",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 
   # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,

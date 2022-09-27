@@ -17,7 +17,7 @@
 #include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/fidl/cpp/wire/string_view.h>
 #include <lib/fit/defer.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/status.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -57,7 +57,7 @@ zx::status<> CreateVolume(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_
                           std::string_view name,
                           fidl::ServerEnd<fuchsia_io::Directory> outgoing_dir,
                           zx::channel crypt_client) {
-  auto client = service::ConnectAt<fuchsia_fxfs::Volumes>(exposed_dir);
+  auto client = component::ConnectAt<fuchsia_fxfs::Volumes>(exposed_dir);
   if (client.is_error())
     return client.take_error();
 
@@ -81,7 +81,7 @@ zx::status<> OpenVolume(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_di
     return status.take_error();
   }
 
-  auto client = service::ConnectAt<fuchsia_fxfs::Volume>(exposed_dir, path.c_str());
+  auto client = component::ConnectAt<fuchsia_fxfs::Volume>(exposed_dir, path.c_str());
   if (client.is_error())
     return client.take_error();
   fuchsia_fxfs::wire::MountOptions options{
@@ -103,7 +103,7 @@ __EXPORT zx::status<> CheckVolume(fidl::UnownedClientEnd<fuchsia_io::Directory> 
     return status.take_error();
   }
 
-  auto client = service::ConnectAt<fuchsia_fxfs::Volume>(exposed_dir, path.c_str());
+  auto client = component::ConnectAt<fuchsia_fxfs::Volume>(exposed_dir, path.c_str());
   if (client.is_error())
     return client.take_error();
   fuchsia_fxfs::wire::CheckOptions options{

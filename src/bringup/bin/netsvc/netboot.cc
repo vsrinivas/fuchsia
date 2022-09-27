@@ -10,7 +10,7 @@
 #include <fidl/fuchsia.boot/cpp/wire.h>
 #include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
 #include <lib/netboot/netboot.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/vmo.h>
 #include <stdio.h>
 #include <string.h>
@@ -254,7 +254,7 @@ static zx_status_t do_dmctl_mexec() {
     return status;
   }
 
-  zx::status client_end = service::Connect<statecontrol::Admin>();
+  zx::status client_end = component::Connect<statecontrol::Admin>();
   if (client_end.is_error()) {
     return client_end.status_value();
   }
@@ -272,7 +272,7 @@ static zx_status_t do_dmctl_mexec() {
 }
 
 static zx_status_t reboot() {
-  zx::status client_end = service::Connect<statecontrol::Admin>();
+  zx::status client_end = component::Connect<statecontrol::Admin>();
   if (client_end.is_error()) {
     return client_end.status_value();
   }

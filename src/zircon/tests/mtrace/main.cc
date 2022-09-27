@@ -6,7 +6,7 @@
 #include <fidl/fuchsia.boot/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zircon-internal/device/cpu-trace/intel-pm.h>
 #include <lib/zircon-internal/mtrace.h>
 #include <lib/zx/channel.h>
@@ -20,7 +20,7 @@ namespace {
 
 zx::status<zx::resource> GetRootResource() {
   zx::status<fidl::ClientEnd<fuchsia_boot::RootResource>> client_end =
-      service::Connect<fuchsia_boot::RootResource>();
+      component::Connect<fuchsia_boot::RootResource>();
   if (client_end.is_error()) {
     printf("mtrace: Could not connect to RootResource service: %s\n", client_end.status_string());
     return zx::error(client_end.error_value());

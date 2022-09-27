@@ -6,7 +6,7 @@
 #include <fidl/fuchsia.driver.test/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 
 #include <gtest/gtest.h>
 #include <sdk/lib/device-watcher/cpp/device-watcher.h>
@@ -22,7 +22,7 @@ TEST(DdkFirmwaretest, DriverWasLoaded) {
 
 int main(int argc, char **argv) {
   // Setup DriverTestRealm.
-  auto client_end = service::Connect<fuchsia_driver_test::Realm>();
+  auto client_end = component::Connect<fuchsia_driver_test::Realm>();
   if (!client_end.is_ok()) {
     return 1;
   }

@@ -10,7 +10,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/cpp/caller.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <sys/statfs.h>
 
 #include <gmock/gmock.h>
@@ -245,7 +245,7 @@ TEST_F(BlockDeviceManagerIntegration, StartBlobfsComponent) {
 
   // Call query on the blob directory. We expect that the request will be queued, but not responed
   // to until blobfs is mounted by fshost later.
-  auto node_client_end = service::ConnectAt<fuchsia_io::Node>(exposed_dir().client_end(), "blob");
+  auto node_client_end = component::ConnectAt<fuchsia_io::Node>(exposed_dir().client_end(), "blob");
   ASSERT_EQ(node_client_end.status_value(), ZX_OK);
   fidl::WireSharedClient<fuchsia_io::Node> node(std::move(*node_client_end), loop.dispatcher());
   sync_completion_t query_completion;

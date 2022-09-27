@@ -4,7 +4,7 @@
 
 #include <fidl/fuchsia.kernel/cpp/wire.h>
 #include <lib/fdio/directory.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zxdump/task.h>
 
 #include <array>
@@ -34,7 +34,7 @@ fitx::result<Error, T> GetFromService() {
   constexpr std::string_view kCallName{kGetName.data(), kGetName.size()};
 
   fidl::ClientEnd<Service> client;
-  if (auto result = service::Connect<Service>(); result.is_error()) {
+  if (auto result = component::Connect<Service>(); result.is_error()) {
     return fitx::error{Error{kSvcName, result.status_value()}};
   } else {
     client = std::move(result).value();

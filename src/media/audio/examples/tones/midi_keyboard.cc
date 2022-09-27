@@ -7,7 +7,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <lib/fit/defer.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <unistd.h>
 
@@ -38,7 +38,7 @@ std::unique_ptr<MidiKeyboard> MidiKeyboard::Create(Tones* owner) {
     char devname[128];
 
     snprintf(devname, sizeof(devname), "%s/%s", kDevMidiPath, de->d_name);
-    auto result = service::Connect<fuchsia_hardware_midi::Device>(devname);
+    auto result = component::Connect<fuchsia_hardware_midi::Device>(devname);
     if (!result.is_ok()) {
       continue;
     }

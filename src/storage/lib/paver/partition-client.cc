@@ -7,7 +7,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fzl/vmo-mapper.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <zircon/errors.h>
 #include <zircon/limits.h>
 #include <zircon/status.h>
@@ -215,7 +215,7 @@ zx::status<> BlockPartitionClient::Flush() {
 }
 
 fidl::ClientEnd<fuchsia_hardware_block::Block> BlockPartitionClient::GetChannel() {
-  return service::MaybeClone(partition_.client_end(), service::AssumeProtocolComposesNode);
+  return component::MaybeClone(partition_.client_end(), component::AssumeProtocolComposesNode);
 }
 
 fbl::unique_fd BlockPartitionClient::block_fd() {

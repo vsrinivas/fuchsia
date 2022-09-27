@@ -23,7 +23,7 @@ executable("bin") {
 
     # This library is used to consume capabilities, e.g. protocols,
     # from the component's incoming directory.
-    "//zircon/system/ulib/service:service-llcpp",
+    "//sdk/lib/sys/component/cpp",
   ]
 }
 

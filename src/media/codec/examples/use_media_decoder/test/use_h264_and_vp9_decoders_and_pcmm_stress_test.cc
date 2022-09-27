@@ -10,7 +10,7 @@
 #include <lib/fidl/cpp/wire/channel.h>
 #include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/media/codec_impl/fourcc.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
@@ -153,7 +153,7 @@ int main(int argc, char* argv[]) {
 const std::string& GetBoardName() {
   static std::string s_board_name;
   if (s_board_name.empty()) {
-    auto client_end = service::Connect<fuchsia_sysinfo::SysInfo>();
+    auto client_end = component::Connect<fuchsia_sysinfo::SysInfo>();
     ZX_ASSERT(client_end.is_ok());
 
     fidl::WireSyncClient sysinfo{std::move(client_end.value())};
@@ -192,7 +192,7 @@ bool is_board_with_amlogic_secure() {
 }
 
 zx::status<fidl::WireSyncClient<fuchsia_sysmem::Allocator>> connect_to_sysmem_service() {
-  auto client_end = service::Connect<fuchsia_sysmem::Allocator>();
+  auto client_end = component::Connect<fuchsia_sysmem::Allocator>();
   ZX_ASSERT(client_end.is_ok());
   if (!client_end.is_ok()) {
     return zx::error(client_end.status_value());

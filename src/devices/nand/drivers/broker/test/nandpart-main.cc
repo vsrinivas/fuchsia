@@ -4,7 +4,7 @@
 
 #include <fidl/fuchsia.driver.test/cpp/wire.h>
 #include <lib/fdio/namespace.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <zircon/hw/gpt.h>
 
 #include <sdk/lib/device-watcher/cpp/device-watcher.h>
@@ -49,7 +49,7 @@ ParentDevice* g_parent_device_;
 
 int main(int argc, char** argv) {
   // Connect to DriverTestRealm.
-  auto client_end = service::Connect<fuchsia_driver_test::Realm>();
+  auto client_end = component::Connect<fuchsia_driver_test::Realm>();
   if (!client_end.is_ok()) {
     fprintf(stderr, "Failed to connect to Realm FIDL: %d", client_end.error_value());
     return client_end.status_value();

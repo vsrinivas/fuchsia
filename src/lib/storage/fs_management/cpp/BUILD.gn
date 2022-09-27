@@ -51,6 +51,7 @@ if (is_fuchsia) {
       "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_c",
       "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
       "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_cpp_wire",
+      "//sdk/lib/sys/component/cpp",
       "//src/lib/digest",
       "//src/lib/storage/block_client/cpp",
       "//src/lib/storage/vfs/cpp",
@@ -62,7 +63,6 @@ if (is_fuchsia) {
       "//zircon/system/ulib/fdio-caller",
       "//zircon/system/ulib/fzl",
       "//zircon/system/ulib/pretty",
-      "//zircon/system/ulib/service:service-llcpp",
       "//zircon/system/ulib/zx",
       "//zircon/system/ulib/zxc",
     ]
@@ -136,6 +136,7 @@ test("fs-management-test") {
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_cpp_wire",
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/fxl/test:test_settings",
     "//src/lib/storage/block_client/cpp",
@@ -147,7 +148,6 @@ test("fs-management-test") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zx",
   ]
   data_deps = [

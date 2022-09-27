@@ -8,7 +8,7 @@
 #include <fidl/fuchsia.audio.effects/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 
 #include <string>
 #include <unordered_map>

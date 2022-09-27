@@ -14,7 +14,7 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/inspect/cpp/reader.h>
 #include <lib/inspect/testing/cpp/inspect.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -263,7 +263,7 @@ TEST_F(DriverHostTest, Start_OutgoingServices) {
 
   // Note, we skip the leading '/' in the default path to form a relative path.
   auto path = fidl::DiscoverableProtocolDefaultPath<ftest::Outgoing> + 1;
-  auto client_end = service::ConnectAt<ftest::Outgoing>(outgoing_dir, path);
+  auto client_end = component::ConnectAt<ftest::Outgoing>(outgoing_dir, path);
   ASSERT_TRUE(client_end.is_ok());
 
   class EventHandler : public fidl::WireAsyncEventHandler<ftest::Outgoing> {

@@ -5,7 +5,7 @@
 #include "args.h"
 
 #include <fidl/fuchsia.boot/cpp/wire.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <stdlib.h>
 
 #include <cstring>
@@ -43,7 +43,7 @@ int ParseArgs(int argc, char** argv, fidl::UnownedClientEnd<fuchsia_io::Director
   *out = DeviceNameProviderArgs();
 
   // First parse from kernel args, then use use cmdline args as overrides.
-  zx::status client_end = service::ConnectAt<fuchsia_boot::Arguments>(svc_root);
+  zx::status client_end = component::ConnectAt<fuchsia_boot::Arguments>(svc_root);
   if (client_end.is_error()) {
     *error = "netsvc: unable to connect to fuchsia.boot.Arguments";
     return -1;

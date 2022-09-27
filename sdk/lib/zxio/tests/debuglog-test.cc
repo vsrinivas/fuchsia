@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.boot/cpp/wire.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zxio/zxio.h>
 
 #include <array>
@@ -17,7 +17,7 @@
 namespace {
 
 zx::status<zx::debuglog> GetDebugLogHandle() {
-  zx::status log_service = service::Connect<fuchsia_boot::WriteOnlyLog>();
+  zx::status log_service = component::Connect<fuchsia_boot::WriteOnlyLog>();
   if (log_service.is_error()) {
     return log_service.take_error();
   }

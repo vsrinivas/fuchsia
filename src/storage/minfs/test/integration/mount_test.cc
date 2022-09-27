@@ -11,7 +11,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/fd.h>
 #include <lib/fit/defer.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <sys/stat.h>
 #include <sys/statfs.h>
 #include <sys/statvfs.h>
@@ -83,7 +83,7 @@ class MountTestTemplate : public testing::Test {
       return;
     }
     // Unmount the filesystem, thereby terminating the minfs instance.
-    auto admin_client = service::ConnectAt<fuchsia_fs::Admin>(root_client_end_.borrow());
+    auto admin_client = component::ConnectAt<fuchsia_fs::Admin>(root_client_end_.borrow());
     ASSERT_EQ(admin_client.status_value(), ZX_OK);
     EXPECT_EQ(fidl::WireCall(*admin_client)->Shutdown().status(), ZX_OK);
     unmounted_ = true;

@@ -30,9 +30,9 @@ source_set("cobalt") {
   public_deps = [
     ":basemgr_metrics_registry",
     "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_cpp",
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fidl/cpp/contrib/connection:service_hub_connector",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 
   deps = [

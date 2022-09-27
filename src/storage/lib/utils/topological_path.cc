@@ -5,7 +5,7 @@
 #include "src/storage/lib/utils/topological_path.h"
 
 #include <fidl/fuchsia.device/cpp/wire.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 
 namespace storage {
 
@@ -20,7 +20,7 @@ zx::status<std::string> GetTopologicalPath(
 }
 
 zx::status<std::string> GetTopologicalPath(const std::string& path) {
-  auto client_end_or = service::Connect<fuchsia_device::Controller>(path.c_str());
+  auto client_end_or = component::Connect<fuchsia_device::Controller>(path.c_str());
   if (client_end_or.is_error())
     return client_end_or.take_error();
   return GetTopologicalPath(*client_end_or);

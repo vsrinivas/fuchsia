@@ -18,13 +18,13 @@ executable("inspect_service_llcpp_unittests_bin") {
     "//sdk/lib/inspect/component/cpp:inspect_component_cpp",
     "//sdk/lib/inspect/contrib/cpp:archive_reader",
     "//sdk/lib/inspect/testing/cpp",
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/inspect",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 

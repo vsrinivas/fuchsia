@@ -23,11 +23,11 @@ source_set("common") {
     "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/driver_test_realm",
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp",
     "//src/lib/storage/ramdevice_client/cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

@@ -8,7 +8,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
@@ -111,7 +111,7 @@ TEEC_Result CheckGlobalPlatformCompliance(
       return TEEC_ERROR_NOT_SUPPORTED;
     }
   } else {
-    auto result = service::Connect<fuchsia_tee::DeviceInfo>();
+    auto result = component::Connect<fuchsia_tee::DeviceInfo>();
     if (!result.is_ok()) {
       return TEEC_ERROR_NOT_SUPPORTED;
     }
@@ -690,7 +690,7 @@ zx_status_t ConnectToDeviceConnector(
   ZX_DEBUG_ASSERT(device_connector);
 
   auto device_connector_result =
-      service::Connect<fuchsia_hardware_tee::DeviceConnector>(tee_device);
+      component::Connect<fuchsia_hardware_tee::DeviceConnector>(tee_device);
   if (!device_connector_result.is_ok()) {
     return device_connector_result.status_value();
   }
@@ -732,7 +732,7 @@ TEEC_Result ConnectApplicationViaService(const fuchsia_tee::wire::Uuid& app_uuid
 
   std::string service_path = GetApplicationServicePath(app_uuid);
 
-  auto application = service::Connect<fuchsia_tee::Application>(service_path.c_str());
+  auto application = component::Connect<fuchsia_tee::Application>(service_path.c_str());
   if (!application.is_ok()) {
     return TEEC_ERROR_COMMUNICATION;
   }

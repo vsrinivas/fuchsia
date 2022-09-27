@@ -11,7 +11,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/vfs.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
@@ -56,11 +56,11 @@ zx_status_t FsckFat(const char* device_path, const FsckOptions& options, LaunchC
 
 zx::status<> FsckComponentFs(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_dir,
                              const std::string& device_path, const FsckOptions& options) {
-  auto device = service::Connect<fuchsia_hardware_block::Block>(device_path.c_str());
+  auto device = component::Connect<fuchsia_hardware_block::Block>(device_path.c_str());
   if (device.is_error())
     return device.take_error();
 
-  auto startup_client_end = service::ConnectAt<fuchsia_fs_startup::Startup>(exposed_dir);
+  auto startup_client_end = component::ConnectAt<fuchsia_fs_startup::Startup>(exposed_dir);
   if (startup_client_end.is_error())
     return startup_client_end.take_error();
   fidl::WireSyncClient startup_client{std::move(*startup_client_end)};

@@ -12,9 +12,9 @@ executable("bin") {
     "//examples/fidl/fuchsia.examples:fuchsia.examples_cpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl",
+    "//sdk/lib/sys/component/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 

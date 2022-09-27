@@ -62,7 +62,7 @@ namespace fidl::contrib {
 //
 //    private:
 //     void ConnectToServiceHub(ServiceHubConnectResolver resolver) override {
-//       auto connection = service::ConnectAt<ProtocolFactory>(directory_);
+//       auto connection = component::ConnectAt<ProtocolFactory>(directory_);
 //       if (connection.is_error()) {
 //         resolver.resolve(std::nullopt);
 //       } else {

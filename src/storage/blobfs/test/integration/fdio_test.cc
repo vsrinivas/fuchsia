@@ -13,7 +13,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/service/cpp/reader.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/status.h>
 
 #include "lib/fidl/cpp/wire/internal/transport_channel.h"
@@ -70,7 +70,7 @@ void FdioTest::TearDown() {
   ASSERT_EQ(fdio_fd_transfer(root_fd_.release(), root_client.reset_and_get_address()), ZX_OK);
   fidl::UnownedClientEnd<fuchsia_io::Directory> dir(
       fdio_cpp::UnownedFdioCaller(export_root_fd_.get()).channel());
-  auto admin_client = service::ConnectAt<fuchsia_fs::Admin>(dir);
+  auto admin_client = component::ConnectAt<fuchsia_fs::Admin>(dir);
   ASSERT_EQ(admin_client.status_value(), ZX_OK);
   ASSERT_EQ(fidl::WireCall(*admin_client)->Shutdown().status(), ZX_OK);
 }

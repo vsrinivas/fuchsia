@@ -15,7 +15,7 @@ test("svchost") {
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_cpp_wire",
     "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_c",
     "//sdk/lib/fdio",
-    "//zircon/system/ulib/service:service-llcpp",
+    "//sdk/lib/sys/component/cpp",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

@@ -5,7 +5,7 @@
 #include "src/bringup/bin/netsvc/debuglog.h"
 
 #include <lib/fit/defer.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/clock.h>
 #include <stdio.h>
 #include <string.h>
@@ -204,7 +204,7 @@ std::optional<LogListener> gListener;
 }
 
 zx_status_t debuglog_init(async_dispatcher_t* dispatcher) {
-  zx::status log_client_end = service::Connect<fuchsia_logger::Log>();
+  zx::status log_client_end = component::Connect<fuchsia_logger::Log>();
   if (log_client_end.is_error()) {
     return log_client_end.status_value();
   }

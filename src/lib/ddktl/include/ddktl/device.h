@@ -13,8 +13,8 @@
 #include <lib/fidl/cpp/wire/traits.h>
 #include <lib/fidl/cpp/wire/wire_messaging.h>
 #include <lib/fidl_driver/cpp/transport.h>
-#include <lib/service/llcpp/service.h>
 #include <lib/stdcompat/span.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 #include <lib/zx/vmo.h>

@@ -12,9 +12,9 @@ executable("bin") {
     "//sdk/fidl/fuchsia.hardware.radar:fuchsia.hardware.radar_cpp_wire",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
+    "//sdk/lib/sys/component/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zxtest",
   ]
 

@@ -6,7 +6,7 @@
 #include <fidl/fuchsia.feedback.testing/cpp/wire.h>
 #include <fidl/fuchsia.fs/cpp/wire.h>
 #include <lib/fdio/vfs.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/vmo.h>
 #include <unistd.h>
 
@@ -81,7 +81,7 @@ TEST_F(FsRecoveryTest, EmptyPartitionRecoveryTest) {
   EXPECT_EQ(fs_type, expected_type);
 
   // No crash reports should have been filed.
-  auto client_end = service::Connect<fuchsia_feedback_testing::FakeCrashReporterQuerier>();
+  auto client_end = component::Connect<fuchsia_feedback_testing::FakeCrashReporterQuerier>();
   ASSERT_EQ(client_end.status_value(), ZX_OK);
   fidl::WireSyncClient client{std::move(*client_end)};
   auto res = client->WatchFile();
@@ -162,7 +162,7 @@ TEST_F(FsRecoveryTest, CorruptDataRecoveryTest) {
   // If fshost was configured to use (e.g.) Fxfs and the magic was Fxfs' magic, then fshost will
   // treat this as a corruption and file a crash report.  If the magic was something else, fshost
   // treats this as a first boot and just silently reformats.
-  auto client_end = service::Connect<fuchsia_feedback_testing::FakeCrashReporterQuerier>();
+  auto client_end = component::Connect<fuchsia_feedback_testing::FakeCrashReporterQuerier>();
   ASSERT_EQ(client_end.status_value(), ZX_OK);
   fidl::WireSyncClient client{std::move(*client_end)};
   auto res = client->WatchFile();

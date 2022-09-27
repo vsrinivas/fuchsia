@@ -25,9 +25,9 @@ test("test") {
     "//sdk/fidl/fuchsia.io",
     "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/driver_test_realm/realm_builder/cpp",
+    "//sdk/lib/sys/component/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 

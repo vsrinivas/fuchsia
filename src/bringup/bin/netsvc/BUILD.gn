@@ -44,11 +44,11 @@ executable("netsvc") {
     "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_c",
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp",
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/tftp",
     "//zircon/system/ulib/zx",
@@ -65,7 +65,7 @@ source_set("args") {
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_cpp_wire",
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
-    "//zircon/system/ulib/service:service-llcpp",
+    "//sdk/lib/sys/component/cpp",
   ]
 }
 
@@ -90,6 +90,7 @@ source_set("netsvc_common") {
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_cpp_wire",
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp",
     "//src/bringup/lib/mexec",
     "//src/lib/zbitl",
     "//src/storage/gpt",
@@ -98,7 +99,6 @@ source_set("netsvc_common") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/sysconfig-client:sysconfig-sync-client",
   ]
   public_deps = [
@@ -246,10 +246,10 @@ source_set("netifc-discover") {
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp",
     "//src/lib/fsl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_cpp_wire",

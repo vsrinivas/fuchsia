@@ -7,7 +7,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/guest.h>
@@ -41,7 +41,7 @@ namespace {
 
 template <typename T>
 zx::status<zx::resource> GetResource() {
-  auto client_end = service::Connect<T>();
+  auto client_end = component::Connect<T>();
   if (client_end.is_error()) {
     return client_end.take_error();
   }

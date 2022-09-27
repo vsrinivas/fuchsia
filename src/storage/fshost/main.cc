@@ -15,7 +15,7 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl/cpp/wire/client.h>
 #include <lib/fit/defer.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <zircon/boot/image.h>
@@ -65,7 +65,7 @@ zx_status_t DecompressZstd(zx::vmo& input, uint64_t input_offset, size_t input_s
 
 // Get ramdisk from the boot items service.
 zx_status_t get_ramdisk(zx::vmo* ramdisk_vmo) {
-  auto client_end = service::Connect<fuchsia_boot::Items>();
+  auto client_end = component::Connect<fuchsia_boot::Items>();
   if (client_end.is_error()) {
     return client_end.error_value();
   }

@@ -4,7 +4,7 @@
 
 #include <fidl/fuchsia.fshost/cpp/wire.h>
 #include <getopt.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -82,7 +82,7 @@ int main(int argc, char** argv) {
   std::string mount_name = path.filename();
   xprintf("Unmount path: /mnt/%s\n", mount_name.c_str());
 
-  auto client_or = service::Connect<fuchsia_fshost::Admin>(fshost_path.c_str());
+  auto client_or = component::Connect<fuchsia_fshost::Admin>(fshost_path.c_str());
   if (client_or.is_error()) {
     fprintf(stderr, "Error connecting to fshost (@ %s): %s\n", fshost_path.c_str(),
             client_or.status_string());

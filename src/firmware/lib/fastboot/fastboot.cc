@@ -11,7 +11,6 @@
 #include <lib/fastboot/fastboot.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl-async/cpp/bind.h>
-#include <lib/service/llcpp/service.h>
 #include <lib/sys/component/cpp/service_client.h>
 #include <zircon/status.h>
 
@@ -183,7 +182,7 @@ zx::status<std::string> Fastboot::GetVarHwRevision(const std::vector<std::string
     return zx::error(svc_root.status_value());
   }
 
-  auto connect_result = service::ConnectAt<fuchsia_buildinfo::Provider>(*svc_root.value());
+  auto connect_result = component::ConnectAt<fuchsia_buildinfo::Provider>(*svc_root.value());
   if (connect_result.is_error()) {
     return zx::error(connect_result.status_value());
   }
@@ -246,7 +245,7 @@ zx::status<fidl::WireSyncClient<fuchsia_paver::Paver>> Fastboot::ConnectToPaver(
     return zx::error(svc_root.status_value());
   }
 
-  auto paver_svc = service::ConnectAt<fuchsia_paver::Paver>(*svc_root.value());
+  auto paver_svc = component::ConnectAt<fuchsia_paver::Paver>(*svc_root.value());
   if (!paver_svc.is_ok()) {
     FX_LOGST(ERROR, kFastbootLogTag) << "Unable to open /svc/fuchsia.paver.Paver";
     return zx::error(paver_svc.error_value());
@@ -454,7 +453,7 @@ Fastboot::ConnectToPowerStateControl() {
   }
 
   auto connect_result =
-      service::ConnectAt<fuchsia_hardware_power_statecontrol::Admin>(*svc_root.value());
+      component::ConnectAt<fuchsia_hardware_power_statecontrol::Admin>(*svc_root.value());
   if (connect_result.is_error()) {
     return zx::error(connect_result.status_value());
   }

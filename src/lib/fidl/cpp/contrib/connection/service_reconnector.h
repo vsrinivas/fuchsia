@@ -47,7 +47,7 @@ namespace fidl::contrib {
 //
 //   auto reconnector = ServiceReconnector<SimpleProtocol>::Create(dispatcher_, "SimpleProtocol",
 //   [](ServiceReconnector<SimpleProtocol>::ConnectResolver resolver) {
-//     auto connection = service::ConnectAt<SimpleProtocol>(svc());
+//     auto connection = component::ConnectAt<SimpleProtocol>(svc());
 //     if (connection.is_error()) {
 //       resolver.resolve(std::nullopt);
 //     } else {

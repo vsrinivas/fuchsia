@@ -4,17 +4,17 @@
 #include <fidl/fuchsia.device.manager/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 
 #include <gtest/gtest.h>
 
 TEST(DeviceWatcherTest, WatchUSBDevice) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  auto svc = service::OpenServiceRoot();
+  auto svc = component::OpenServiceRoot();
   ASSERT_TRUE(svc.is_ok());
 
-  auto client_end = service::ConnectAt<fuchsia_device_manager::DeviceWatcher>(
+  auto client_end = component::ConnectAt<fuchsia_device_manager::DeviceWatcher>(
       *svc, "fuchsia.hardware.usb.DeviceWatcher");
   ASSERT_TRUE(client_end.is_ok());
 

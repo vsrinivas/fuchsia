@@ -16,7 +16,6 @@ test("service_hub_connector_tests_bin") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/vfs/cpp",
     "//src/lib/testing/loop_fixture",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 
@@ -30,7 +29,6 @@ test("service_reconnector_tests_bin") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/vfs/cpp",
     "//src/lib/testing/loop_fixture",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 

@@ -6,7 +6,7 @@
 #include <fidl/fuchsia.boot/cpp/wire.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fzl/vmo-mapper.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 
 #include <memory>
 

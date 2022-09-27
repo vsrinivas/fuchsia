@@ -7,8 +7,8 @@
 #include <alarm.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/wire/server.h>
-#include <lib/service/llcpp/service.h>
 #include <lib/svc/dir.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <radio.h>
 #include <zircon/compiler.h>
 #include <zircon/status.h>
@@ -497,7 +497,7 @@ zx_status_t OtStackApp::ConnectToOtRadioDev() {
 
 // Get the spinel setup client from a file path. Set `client_ptr_` on success.
 zx_status_t OtStackApp::SetDeviceSetupClientInDevmgr(const std::string& path) {
-  auto client_end = service::Connect<fidl_spinel::DeviceSetup>(path.c_str());
+  auto client_end = component::Connect<fidl_spinel::DeviceSetup>(path.c_str());
   if (client_end.is_error()) {
     FX_LOGS(ERROR) << "failed to connect to device: " << client_end.status_string();
     return client_end.status_value();
@@ -509,13 +509,13 @@ zx_status_t OtStackApp::SetDeviceSetupClientInDevmgr(const std::string& path) {
 
 // Get the spinel setup client from a file path. Set `client_ptr_` on success.
 zx_status_t OtStackApp::SetDeviceSetupClientInIsolatedDevmgr(const std::string& path) {
-  auto isolated_devfs = service::Connect<fuchsia_openthread_devmgr::IsolatedDevmgr>();
+  auto isolated_devfs = component::Connect<fuchsia_openthread_devmgr::IsolatedDevmgr>();
   if (isolated_devfs.is_error()) {
     FX_LOGS(ERROR) << "failed to connect to isolated devmgr: " << isolated_devfs.status_string();
     return isolated_devfs.status_value();
   }
   // IsolatedDevmgr composes fuchsia.io.Directory, but FIDL bindings don't know.
-  auto client_end = service::ConnectAt<fidl_spinel::DeviceSetup>(
+  auto client_end = component::ConnectAt<fidl_spinel::DeviceSetup>(
       fidl::UnownedClientEnd<fuchsia_io::Directory>(isolated_devfs->channel().borrow()),
       path.c_str());
   if (client_end.is_error()) {

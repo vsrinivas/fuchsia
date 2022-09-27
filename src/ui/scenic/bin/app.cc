@@ -6,11 +6,11 @@
 
 #include <fuchsia/stash/cpp/fidl.h>
 #include <fuchsia/vulkan/loader/cpp/fidl.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <optional>
 
-#include "lib/service/llcpp/service.h"
 #include "rapidjson/document.h"
 #include "src/lib/files/file.h"
 #include "src/ui/lib/escher/vk/pipeline_builder.h"
@@ -229,7 +229,7 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
           ShutdownManager::New(async_get_default_dispatcher(), std::move(quit_callback))),
       metrics_logger_(
           async_get_default_dispatcher(),
-          fidl::ClientEnd<fuchsia_io::Directory>(service::OpenServiceRoot()->TakeChannel())),
+          fidl::ClientEnd<fuchsia_io::Directory>(component::OpenServiceRoot()->TakeChannel())),
       inspect_node_(std::move(inspect_node)),
       frame_scheduler_(std::make_unique<scheduling::WindowedFramePredictor>(
                            config_values_.min_predicted_frame_duration,

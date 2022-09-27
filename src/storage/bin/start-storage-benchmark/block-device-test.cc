@@ -7,7 +7,7 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <lib/fdio/fd.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
@@ -52,7 +52,7 @@ TEST(BlockDeviceTest, FvmVolumeCreateWorks) {
   ASSERT_OK(fvm_colume.status_value());
 
   auto volume_client =
-      service::Connect<fuchsia_hardware_block_volume::Volume>(fvm_colume->path().c_str());
+      component::Connect<fuchsia_hardware_block_volume::Volume>(fvm_colume->path().c_str());
   ASSERT_OK(fvm_colume.status_value());
   auto info = fidl::WireCall(*volume_client)->GetVolumeInfo();
   ASSERT_OK(info.status());

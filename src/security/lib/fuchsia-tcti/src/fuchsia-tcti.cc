@@ -7,7 +7,7 @@
 #include <fidl/fuchsia.tpm/cpp/wire.h>
 #include <fuchsia/tpm/cpp/fidl.h>
 #include <lib/fdio/directory.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <vector>
@@ -36,7 +36,7 @@ struct FuchsiaTctiContext {
 };
 
 opaque_ctx_t* fuchsia_tpm_init(void) {
-  auto command = service::Connect<fuchsia_tpm::Command>();
+  auto command = component::Connect<fuchsia_tpm::Command>();
   if (command.is_error()) {
     FX_LOGS(ERROR) << "Failed to connect to fuchsia.tpm.Transmit protocol.";
     return nullptr;

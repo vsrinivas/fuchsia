@@ -7,7 +7,7 @@
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <string.h>
 #include <zircon/errors.h>
 #include <zircon/hw/gpt.h>
@@ -393,7 +393,7 @@ class FixedOffsetBlockPartitionClientTest : public zxtest::Test {
   // Creates a BlockPartitionClient which will read/write the entire device.
   std::unique_ptr<paver::BlockPartitionClient> RawClient() {
     return std::make_unique<paver::BlockPartitionClient>(
-        service::MaybeClone(service_channel_, service::AssumeProtocolComposesNode));
+        component::MaybeClone(service_channel_, component::AssumeProtocolComposesNode));
   }
 
   // Creates a FixedOffsetBlockPartitionClient which will read/write with a partition
@@ -401,7 +401,7 @@ class FixedOffsetBlockPartitionClientTest : public zxtest::Test {
   std::unique_ptr<paver::FixedOffsetBlockPartitionClient> FixedOffsetClient(size_t partition_offset,
                                                                             size_t buffer_offset) {
     return std::make_unique<paver::FixedOffsetBlockPartitionClient>(
-        service::MaybeClone(service_channel_, service::AssumeProtocolComposesNode),
+        component::MaybeClone(service_channel_, component::AssumeProtocolComposesNode),
         partition_offset, buffer_offset);
   }
 

@@ -10,8 +10,8 @@ test("restricted-mode") {
   sources = [ "restricted-mode-test.cc" ]
   deps = [
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp",
     "//zircon/system/ulib/pretty",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",

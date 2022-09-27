@@ -14,7 +14,7 @@
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fidl/cpp/wire/vector_view.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/handle.h>
@@ -137,7 +137,7 @@ void CoreDisplayTest::SetUp() {
   } while (!event_handler.has_display());
 
   // get sysmem
-  zx::status sysmem_allocator = service::Connect<sysmem::Allocator>();
+  zx::status sysmem_allocator = component::Connect<sysmem::Allocator>();
   ASSERT_TRUE(sysmem_allocator.is_ok(), "%s", sysmem_allocator.status_string());
   sysmem_allocator_ = fidl::WireSyncClient(std::move(sysmem_allocator.value()));
 }

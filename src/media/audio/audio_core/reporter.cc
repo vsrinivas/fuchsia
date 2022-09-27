@@ -3,6 +3,7 @@
 
 #include "src/media/audio/audio_core/reporter.h"
 
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <queue>

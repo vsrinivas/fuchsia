@@ -10,7 +10,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fidl/cpp/wire/channel.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <sys/statfs.h>
 #include <unistd.h>

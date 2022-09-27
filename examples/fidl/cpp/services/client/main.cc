@@ -6,7 +6,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <iostream>
@@ -16,7 +16,7 @@ using fuchsia_examples::EchoService;
 
 zx::status<> llcpp_example(fidl::UnownedClientEnd<fuchsia_io::Directory> svc) {
   zx::status<EchoService::ServiceClient> open_result =
-      service::OpenServiceAt<EchoService>(std::move(svc));
+      component::OpenServiceAt<EchoService>(std::move(svc));
   if (open_result.is_error()) {
     std::cerr << "failed to open default instance of EchoService: " << open_result.status_string()
               << std::endl;
@@ -56,10 +56,10 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
-  // |service::OpenServiceRoot| returns a channel connected to the /svc directory.
+  // |component::OpenServiceRoot| returns a channel connected to the /svc directory.
   // The remote end of the channel implements the |fuchsia.io/Directory| protocol
   // and contains the capabilities provided to this component.
-  auto svc = service::OpenServiceRoot();
+  auto svc = component::OpenServiceRoot();
   ZX_ASSERT(svc.is_ok());
 
   // Convert the typed handle to LLCPP types.

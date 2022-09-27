@@ -4,7 +4,7 @@
 
 #include "src/modular/bin/basemgr/cobalt/metrics_logger.h"
 
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/modular/bin/basemgr/cobalt/basemgr_metrics_registry.cb.h"
@@ -22,7 +22,7 @@ fit::deferred_action<fit::closure> InitializeMetricsImpl() {
 
   std::unique_ptr<modular::MetricsImpl> metrics_logger = std::make_unique<modular::MetricsImpl>(
       async_get_default_dispatcher(),
-      fidl::ClientEnd<fuchsia_io::Directory>(service::OpenServiceRoot()->TakeChannel()));
+      fidl::ClientEnd<fuchsia_io::Directory>(component::OpenServiceRoot()->TakeChannel()));
 
   g_metrics_logger = metrics_logger.get();
   return fit::defer<fit::closure>(

@@ -9,7 +9,7 @@
 #include <lib/driver2/node_add_args.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/wire/connect_service.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <sched.h>
 #include <unistd.h>
 #include <zircon/threads.h>
@@ -495,7 +495,7 @@ zx::status<std::vector<fuchsia_driver_development::wire::DriverInfo>> DriverLoad
     fidl::AnyArena& allocator, fidl::VectorView<fidl::StringView> filter) {
   std::vector<fuchsia_driver_development::wire::DriverInfo> info;
 
-  auto driver_index_client = service::Connect<fuchsia_driver_development::DriverIndex>();
+  auto driver_index_client = component::Connect<fuchsia_driver_development::DriverIndex>();
   if (driver_index_client.is_error()) {
     LOGF(WARNING, "Failed to connect to fuchsia_driver_development::DriverIndex\n");
     return driver_index_client.take_error();
@@ -542,7 +542,7 @@ zx::status<std::vector<fuchsia_driver_development::wire::DriverInfo>> DriverLoad
 std::vector<const Driver*> DriverLoader::GetAllDriverIndexDrivers() {
   std::vector<const Driver*> drivers;
 
-  auto driver_index_client = service::Connect<fuchsia_driver_development::DriverIndex>();
+  auto driver_index_client = component::Connect<fuchsia_driver_development::DriverIndex>();
   if (driver_index_client.is_error()) {
     LOGF(WARNING, "Failed to connect to fuchsia_driver_development::DriverIndex\n");
     return drivers;

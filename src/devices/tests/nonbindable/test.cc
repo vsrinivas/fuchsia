@@ -5,7 +5,7 @@
 #include <fidl/fuchsia.driver.test/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/directory.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 
 #include <gtest/gtest.h>
 #include <sdk/lib/device-watcher/cpp/device-watcher.h>
@@ -13,7 +13,7 @@
 TEST(NonbindableTest, DriversExist) {
   {
     // Connect to DriverTestRealm.
-    auto client_end = service::Connect<fuchsia_driver_test::Realm>();
+    auto client_end = component::Connect<fuchsia_driver_test::Realm>();
     ASSERT_EQ(client_end.status_value(), ZX_OK);
     fidl::WireSyncClient client{std::move(*client_end)};
 

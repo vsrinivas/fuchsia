@@ -169,8 +169,8 @@ FIDL services in a component's namespace. Because its signature is C, it becomes
 quite verbose to use, especially in the presence of typed channels. We have
 created ergonomic wrappers: [`service::Connect<Protocol>`][service-connect],
 [`service::ConnectAt<Protocol>`][service-connect-at], and
-[`service::OpenServiceRoot`][open-service-root]. They are located in the
-[zircon/system/ulib/service][ulib-service] library.
+[`component::OpenServiceRoot`][open-service-root]. They are located in the
+[sdk/lib/sys/component/cpp][lib-component] library.
 
 #### Connecting to an individual protocol
 
@@ -221,7 +221,7 @@ created ergonomic wrappers: [`service::Connect<Protocol>`][service-connect],
   // The channel creation and service connection is done in one function.
   // Opens "/svc" and returns the client endpoint, as a
   // |zx::status<fidl::ClientEnd<::fuchsia_io::Directory>>|.
-  auto client_end = service::OpenServiceRoot<Foo>();
+  auto client_end = component::OpenServiceRoot<Foo>();
   if (!client_end.is_ok())
     return client_end.status_value();
   // Note: can omit template argument
@@ -336,12 +336,12 @@ https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/lib/fidl/cpp/wire/includ
 [fdio-service-connect]:
 https://cs.opensource.google/search?q=fdio_service_connect&ss=fuchsia%2Ffuchsia&start=11
 [service-connect]:
-https://cs.opensource.google/fuchsia/fuchsia/+/main:zircon/system/ulib/service/include/lib/service/llcpp/service.h;l=75?q=service::Connect&sq=&ss=fuchsia%2Ffuchsia
+https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/lib/sys/component/cpp/service_client.h;l=104
 [service-connect-at]:
-https://cs.opensource.google/fuchsia/fuchsia/+/main:zircon/system/ulib/service/include/lib/service/llcpp/service.h;l=92?q=service::Connect&ss=fuchsia%2Ffuchsia
+https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/lib/sys/component/cpp/service_client.h;l=120
 [open-service-root]:
-https://cs.opensource.google/fuchsia/fuchsia/+/main:zircon/system/ulib/service/include/lib/service/llcpp/service.h;l=23?q=service::Connect&ss=fuchsia%2Ffuchsia
-[ulib-service]: https://cs.opensource.google/fuchsia/fuchsia/+/main:zircon/system/ulib/service/
+https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/lib/sys/component/cpp/service_client.h;l=24
+[lib-component]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/lib/sys/component/cpp/
 [rfc-0023]: /docs/contribute/governance/rfcs/0023_compositional_model_protocols.md#is_a_relationship_considered_harmful
 [target-allowlist]:
 https://cs.opensource.google/fuchsia/fuchsia/+/main:build/cpp/BUILD.gn?q=%22could%20be%20migrated%20to%20use%20typed%20channels%22&ss=fuchsia%2Ffuchsia:build%2Fcpp%2F

@@ -9,7 +9,7 @@
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <getopt.h>
 #include <lib/fdio/cpp/caller.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -50,7 +50,7 @@ void PrintBlockMetrics(const char* dev, const fuchsia_hardware_block::wire::Bloc
 
 // Retrieves metrics for the block device at dev. Clears metrics if clear is true.
 zx::status<fuchsia_hardware_block::wire::BlockStats> GetBlockStats(const char* dev, bool clear) {
-  auto client_end = service::Connect<fuchsia_hardware_block::Block>(dev);
+  auto client_end = component::Connect<fuchsia_hardware_block::Block>(dev);
   if (!client_end.is_ok()) {
     return client_end.take_error();
   }
@@ -103,7 +103,7 @@ void RunBlockMetrics(const char* path, const StorageMetricOptions options) {
   auto result = fidl::WireCall(caller.directory())->QueryFilesystem();
   if (result.ok() && result.value().s == ZX_OK) {
     std::string fshost_path(fshost::kHubAdminServicePath);
-    auto fshost_or = service::Connect<fuchsia_fshost::Admin>(fshost_path.c_str());
+    auto fshost_or = component::Connect<fuchsia_fshost::Admin>(fshost_path.c_str());
     if (fshost_or.is_error()) {
       fprintf(stderr, "Error connecting to fshost (@ %s): %s\n", fshost_path.c_str(),
               fshost_or.status_string());

@@ -5,7 +5,7 @@
 #include "src/bringup/bin/pwrbtn-monitor/monitor.h"
 
 #include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <zircon/status.h>
 
 namespace pwrbtn {
@@ -46,7 +46,7 @@ zx_status_t PowerButtonMonitor::SendButtonEvent(
 }
 
 zx_status_t PowerButtonMonitor::SendPoweroff() {
-  auto connect_result = service::Connect<statecontrol_fidl::Admin>();
+  auto connect_result = component::Connect<statecontrol_fidl::Admin>();
   if (connect_result.is_error()) {
     printf("pwrbtn-monitor: Failed to connect to statecontrol service: %s\n",
            zx_status_get_string(connect_result.status_value()));

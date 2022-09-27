@@ -54,10 +54,10 @@ test("nonbindable-test") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/driver_test_realm",
+    "//sdk/lib/sys/component/cpp",
     "//src/devices/internal/drivers/fragment",
     "//src/devices/misc/drivers/test-parent",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 

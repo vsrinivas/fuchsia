@@ -28,7 +28,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.process:fuchsia.process_cpp_wire",
     "//sdk/lib/fdio",
     "//sdk/lib/fdio:fdio-spawn-actions",
-    "//zircon/system/ulib/service:service-llcpp",
+    "//sdk/lib/sys/component/cpp",
   ]
 }
 

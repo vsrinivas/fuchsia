@@ -6,14 +6,14 @@
 
 #include <fidl/fuchsia.component/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 
 namespace fs_management {
 
 zx::status<fidl::ClientEnd<fuchsia_io::Directory>> ConnectFsComponent(
     std::string_view component_url, std::string_view component_child_name,
     std::optional<std::string_view> component_collection_name) {
-  auto realm_client_end = service::Connect<fuchsia_component::Realm>();
+  auto realm_client_end = component::Connect<fuchsia_component::Realm>();
   if (realm_client_end.is_error())
     return realm_client_end.take_error();
   fidl::WireSyncClient realm{std::move(*realm_client_end)};
@@ -74,7 +74,7 @@ zx::status<fidl::ClientEnd<fuchsia_io::Directory>> ConnectFsComponent(
 
 zx::status<> DestroyFsComponent(std::string_view component_child_name,
                                 std::string_view component_collection_name) {
-  auto realm_client_end = service::Connect<fuchsia_component::Realm>();
+  auto realm_client_end = component::Connect<fuchsia_component::Realm>();
   if (realm_client_end.is_error())
     return realm_client_end.take_error();
   fidl::WireSyncClient realm{std::move(*realm_client_end)};

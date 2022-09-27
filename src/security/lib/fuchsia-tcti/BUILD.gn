@@ -14,8 +14,8 @@ static_library("fuchsia-tcti") {
   deps = [
     "//sdk/fidl/fuchsia.tpm:fuchsia.tpm_cpp_wire",
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/syslog/cpp:cpp-macros",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
   public_deps = [ "//sdk/fidl/fuchsia.tpm" ]
 }

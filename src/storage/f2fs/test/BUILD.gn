@@ -79,6 +79,7 @@ test("f2fs_component_runner_test") {
     "//sdk/fidl/fuchsia.fs:fuchsia.fs_cpp_wire",
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/block_client/cpp:fake_device",
@@ -88,7 +89,6 @@ test("f2fs_component_runner_test") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/id_allocator",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zx",
   ]
 }

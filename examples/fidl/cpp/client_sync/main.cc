@@ -10,7 +10,7 @@
 
 // [START includes]
 #include <fidl/fuchsia.examples/cpp/fidl.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 // [END includes]
 
@@ -20,7 +20,7 @@ int main(int argc, const char** argv) {
   // Connect to the |fuchsia.examples/Echo| protocol inside the component's
   // namespace. This can fail so it's wrapped in a |zx::status| and it must be
   // checked for errors.
-  zx::status client_end = service::Connect<fuchsia_examples::Echo>();
+  zx::status client_end = component::Connect<fuchsia_examples::Echo>();
   if (!client_end.is_ok()) {
     FX_LOGS(ERROR) << "Synchronous error when connecting to the |Echo| protocol: "
                    << client_end.status_string();

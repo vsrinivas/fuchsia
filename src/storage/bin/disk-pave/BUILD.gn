@@ -29,6 +29,7 @@ executable("install-disk-image") {
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_cpp_wire",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver_cpp_wire",
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp",
     "//src/storage/lib/paver",
     "//zircon/system/ulib/async",
     "//zircon/system/ulib/async-default",
@@ -37,7 +38,6 @@ executable("install-disk-image") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zx",
   ]
 }

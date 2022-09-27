@@ -18,8 +18,8 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fit/defer.h>
-#include <lib/service/llcpp/service.h>
 #include <lib/svc/outgoing.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/channel.h>
 #include <stdio.h>
@@ -250,7 +250,7 @@ void ProcessPowerEvent(
 
 // Get the root job from the root job service.
 zx::status<zx::job> GetRootJob() {
-  auto connect_result = service::Connect<fuchsia_kernel::RootJob>();
+  auto connect_result = component::Connect<fuchsia_kernel::RootJob>();
 
   if (connect_result.is_error()) {
     return zx::error(connect_result.status_value());
@@ -274,7 +274,7 @@ zx_status_t GetOomEvent(zx::job& root_job, zx::event* event_handle_out) {
 }
 
 bool StartOomWatcher(pwrbtn::OomWatcher* watcher, async_dispatcher_t* dispatcher) {
-  auto pwr_client_req = service::Connect<statecontrol_fidl::Admin>();
+  auto pwr_client_req = component::Connect<statecontrol_fidl::Admin>();
   if (!pwr_client_req.is_ok()) {
     return false;
   }

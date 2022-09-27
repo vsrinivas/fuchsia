@@ -56,12 +56,12 @@ source_set("network_service") {
     "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
+    "//sdk/lib/sys/component/cpp",
     "//src/lib/fostr",
     "//src/lib/fxl",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 
   public_deps = [

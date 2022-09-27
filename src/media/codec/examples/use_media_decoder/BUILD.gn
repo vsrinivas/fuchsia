@@ -189,7 +189,7 @@ test("use_h264_and_vp9_decoders_and_pcmm_stress_test") {
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_cpp_wire",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp_wire",
     "//sdk/lib/fidl/cpp/wire",
-    "//zircon/system/ulib/service:service-llcpp",
+    "//sdk/lib/sys/component/cpp",
   ]
 }
 

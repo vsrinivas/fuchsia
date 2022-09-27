@@ -8,7 +8,7 @@
 #include <fidl/fuchsia.fshost/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <stdalign.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -163,7 +163,7 @@ int main(int argc, const char** argv) {
   }
 
   std::string fshost_path(fshost::kHubAdminServicePath);
-  auto fshost_or = service::Connect<fuchsia_fshost::Admin>(fshost_path.c_str());
+  auto fshost_or = component::Connect<fuchsia_fshost::Admin>(fshost_path.c_str());
   if (fshost_or.is_error()) {
     fprintf(stderr, "Error connecting to fshost (@ %s): %s\n", fshost_path.c_str(),
             fshost_or.status_string());

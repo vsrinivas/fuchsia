@@ -9,7 +9,7 @@
 #include <fuchsia/scheduler/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/wire/client.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zx/profile.h>
@@ -50,7 +50,7 @@ TEST(SvchostTest, FuchsiaBootFactoryItemsPresent) {
 }
 
 TEST(SvchostTest, FuchsiaBootItemsPresent) {
-  auto client_end = service::Connect<fuchsia_boot::Items>();
+  auto client_end = component::Connect<fuchsia_boot::Items>();
   ASSERT_TRUE(client_end.is_ok(), "failed to connect to fuchsia_boot::Items");
 
   auto result = fidl::WireCall(*client_end)->Get(0, 0);

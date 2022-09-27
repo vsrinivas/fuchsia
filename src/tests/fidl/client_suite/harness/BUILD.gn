@@ -25,6 +25,5 @@ executable("bin") {
     "//src/tests/fidl/client_suite/fidl:fidl.clientsuite_cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 }

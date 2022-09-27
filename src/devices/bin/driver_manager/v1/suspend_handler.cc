@@ -5,7 +5,7 @@
 #include "suspend_handler.h"
 
 #include <lib/fdio/directory.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <zircon/syscalls/system.h>
 
 #include <inspector/inspector.h>

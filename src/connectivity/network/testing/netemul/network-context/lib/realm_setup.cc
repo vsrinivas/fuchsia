@@ -6,7 +6,7 @@
 
 #include <fcntl.h>
 #include <fidl/fuchsia.driver.test/cpp/wire.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 
 #include <sdk/lib/device-watcher/cpp/device-watcher.h>
 
@@ -15,7 +15,7 @@ namespace netemul {
 constexpr char kTapctlRelativePath[] = "sys/test/tapctl";
 
 zx::status<fbl::unique_fd> StartDriverTestRealm() {
-  zx::status client_end = service::Connect<fuchsia_driver_test::Realm>();
+  zx::status client_end = component::Connect<fuchsia_driver_test::Realm>();
   if (client_end.is_error()) {
     return zx::error(client_end.status_value());
   }

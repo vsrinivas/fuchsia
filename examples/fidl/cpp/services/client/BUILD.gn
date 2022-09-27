@@ -10,10 +10,10 @@ executable("bin") {
 
   deps = [
     "//examples/fidl/fuchsia.examples:fuchsia.examples_cpp_wire",
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/sys/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 

@@ -6,7 +6,7 @@
 
 #include <fidl/fuchsia.boot/cpp/wire.h>
 #include <lib/fdio/directory.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 
 #include <algorithm>
 #include <iterator>
@@ -31,7 +31,7 @@ fidl::WireSyncClient<fuchsia_boot::Arguments> OpenBootArgumentClient(
     return {};
   }
 
-  auto local = service::ConnectAt<fuchsia_boot::Arguments>(svc_root);
+  auto local = component::ConnectAt<fuchsia_boot::Arguments>(svc_root);
   if (!local.is_ok()) {
     ERROR("Failed to connect to boot::Arguments service.\n");
     return {};

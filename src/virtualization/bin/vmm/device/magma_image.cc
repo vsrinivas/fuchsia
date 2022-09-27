@@ -8,7 +8,7 @@
 #include <fidl/fuchsia.ui.composition/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/syslog/global.h>
 #include <lib/zx/channel.h>
@@ -199,7 +199,7 @@ vk::Result VulkanImageCreator::InitVulkan(uint32_t physical_device_index) {
 
 zx_status_t VulkanImageCreator::InitSysmem() {
   {
-    auto client_end = service::Connect<fuchsia_sysmem::Allocator>();
+    auto client_end = component::Connect<fuchsia_sysmem::Allocator>();
     if (!client_end.is_ok()) {
       LOG_VERBOSE("Failed to connect to sysmem allocator: %d", client_end.status_value());
       return client_end.status_value();
@@ -277,7 +277,7 @@ zx_status_t VulkanImageCreator::InitSysmem() {
 }
 
 zx_status_t VulkanImageCreator::InitScenic() {
-  auto client_end = service::Connect<fuchsia_ui_composition::Allocator>();
+  auto client_end = component::Connect<fuchsia_ui_composition::Allocator>();
   if (!client_end.is_ok()) {
     LOG_VERBOSE("Failed to connect to scenic allocator: %d", client_end.status_value());
     return client_end.status_value();

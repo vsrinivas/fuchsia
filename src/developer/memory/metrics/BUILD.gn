@@ -24,10 +24,10 @@ source_set("metrics") {
   ]
 
   deps = [
+    "//sdk/lib/sys/component/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//third_party/rapidjson",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/task-utils",
     "//zircon/system/ulib/trace",
   ]

@@ -13,7 +13,7 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/fdio/vfs.h>
 #include <lib/inspect/service/cpp/reader.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <sys/statfs.h>
 
 namespace fshost::testing {
@@ -31,7 +31,7 @@ static const fuchsia_component_decl::wire::ChildRef kFshostChildRef{
     .name = kTestFshostName, .collection = kTestFshostCollection};
 
 void FshostIntegrationTest::SetUp() {
-  auto realm_client_end = service::Connect<fuchsia_component::Realm>();
+  auto realm_client_end = component::Connect<fuchsia_component::Realm>();
   ASSERT_EQ(realm_client_end.status_value(), ZX_OK);
   realm_ = fidl::WireSyncClient(std::move(*realm_client_end));
 
@@ -53,7 +53,7 @@ void FshostIntegrationTest::SetUp() {
   exposed_dir_ = fidl::WireSyncClient(std::move(exposed_endpoints->client));
 
   auto watcher_client_end =
-      service::ConnectAt<fuchsia_fshost::BlockWatcher>(exposed_dir_.client_end());
+      component::ConnectAt<fuchsia_fshost::BlockWatcher>(exposed_dir_.client_end());
   ASSERT_EQ(watcher_client_end.status_value(), ZX_OK);
   block_watcher_ = fidl::WireSyncClient(std::move(*watcher_client_end));
 }

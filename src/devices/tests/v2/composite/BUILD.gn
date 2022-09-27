@@ -32,9 +32,10 @@ fuchsia_driver("root_driver") {
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_cpp_wire",
     "//sdk/lib/driver2:cpp",
     "//sdk/lib/driver_compat",
+    "//sdk/lib/sys/component/cpp",
     "//src/devices/bind/fuchsia.test:fuchsia.test_cpp",
     "//src/devices/lib/driver:driver_runtime",
-    "//zircon/system/ulib/service:service-llcpp",
+    "//src/lib/storage/vfs/cpp",
   ]
 
   # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,

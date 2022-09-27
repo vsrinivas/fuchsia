@@ -45,8 +45,8 @@ source_set("ddktl") {
 
   if (is_fuchsia) {
     public_deps += [
-      # <ddktl/device.h> has #include <lib/service/llcpp/service.h>.
-      "//zircon/system/ulib/service:service-llcpp",
+      # <ddktl/device.h> has #include <lib/sys/component/cpp/service_client.h>.
+      "//sdk/lib/sys/component/cpp",
 
       # <ddktl/device.h> has #include <lib/fidl_driver/cpp/transport.h>
       "//sdk/lib/fidl_driver:fidl_driver_transport",

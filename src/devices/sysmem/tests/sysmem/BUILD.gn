@@ -14,11 +14,11 @@ test("sysmem") {
     "//sdk/fidl/fuchsia.sysmem2:fuchsia.sysmem2_cpp_wire",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl",
+    "//sdk/lib/sys/component/cpp",
     "//src/lib/ddk",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

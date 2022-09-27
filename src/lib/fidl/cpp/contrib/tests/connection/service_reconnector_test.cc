@@ -7,8 +7,8 @@
 #include <fidl/test.protocol.connector/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/wire/channel.h>
-#include <lib/service/llcpp/service.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
+#include <lib/sys/component/cpp/service_client.h>
 
 #include <functional>
 #include <optional>
@@ -102,7 +102,7 @@ class ServiceReconnectorTest : public gtest::TestLoopFixture {
     return ServiceReconnector<SimpleProtocol>::Create(
         dispatcher(), "SimpleProtocol",
         [this](ServiceReconnector<SimpleProtocol>::ConnectResolver resolver) {
-          auto connection = service::ConnectAt<SimpleProtocol>(svc());
+          auto connection = component::ConnectAt<SimpleProtocol>(svc());
           if (connection.is_error()) {
             resolver.resolve(std::nullopt);
           } else {
@@ -139,7 +139,7 @@ class ServiceReconnectorTest : public gtest::TestLoopFixture {
     ASSERT_EQ(ZX_OK, outgoing_directory_->Serve(std::move(endpoints->server)).status_value());
     root_dir_ = std::move(endpoints->client);
 
-    auto svc_dir = service::ConnectAt<fuchsia_io::Directory>(root_dir_, "svc");
+    auto svc_dir = component::ConnectAt<fuchsia_io::Directory>(root_dir_, "svc");
     ASSERT_EQ(ZX_OK, svc_dir.status_value());
     svc_dir_ = std::move(svc_dir.value());
 

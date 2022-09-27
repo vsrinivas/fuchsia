@@ -151,7 +151,6 @@ executable("cpp_test") {
     "//third_party/rapidjson",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/syslog",
   ]
 

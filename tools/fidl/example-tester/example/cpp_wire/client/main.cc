@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/test.exampletester/cpp/wire.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <unistd.h>
 
@@ -21,7 +21,7 @@ int main(int argc, const char** argv) {
   } else {
     // Connect to the protocol inside the component's namespace. This can fail so it's wrapped in a
     // |zx::status| and it must be checked for errors.
-    zx::status client_end = service::Connect<test_exampletester::Simple>();
+    zx::status client_end = component::Connect<test_exampletester::Simple>();
     if (!client_end.is_ok()) {
       FX_LOGS(ERROR) << "Synchronous error when connecting to the |Simple| protocol: "
                      << client_end.status_string();

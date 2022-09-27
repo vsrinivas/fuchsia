@@ -11,9 +11,9 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fidl/cpp/wire/client.h>
-#include <lib/service/llcpp/service.h>
 #include <lib/sys/component/cpp/constants.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/handle.h>
 #include <unistd.h>
@@ -163,7 +163,7 @@ TEST_F(OutgoingDirectoryTest, AddProtocolWireServer) {
 
   // Setup fuchsia.examples.Echo client.
   auto client_end =
-      service::ConnectAt<fuchsia_examples::Echo>(TakeSvcClientEnd(TakeRootClientEnd()));
+      component::ConnectAt<fuchsia_examples::Echo>(TakeSvcClientEnd(TakeRootClientEnd()));
   ASSERT_EQ(client_end.status_value(), ZX_OK);
   fidl::WireClient<fuchsia_examples::Echo> client(std::move(*client_end), dispatcher());
 
@@ -189,7 +189,7 @@ TEST_F(OutgoingDirectoryTest, AddProtocolNaturalServer) {
 
   // Setup fuchsia.examples.Echo client.
   auto client_end =
-      service::ConnectAt<fuchsia_examples::Echo>(TakeSvcClientEnd(TakeRootClientEnd()));
+      component::ConnectAt<fuchsia_examples::Echo>(TakeSvcClientEnd(TakeRootClientEnd()));
   ASSERT_EQ(client_end.status_value(), ZX_OK);
   fidl::Client<fuchsia_examples::Echo> client(std::move(*client_end), dispatcher());
 
@@ -228,8 +228,8 @@ TEST_F(OutgoingDirectoryTest, AddServiceServesAllMembers) {
                 .is_ok());
 
   // Setup test client.
-  auto open_result =
-      service::OpenServiceAt<fuchsia_examples::EchoService>(TakeSvcClientEnd(TakeRootClientEnd()));
+  auto open_result = component::OpenServiceAt<fuchsia_examples::EchoService>(
+      TakeSvcClientEnd(TakeRootClientEnd()));
   ZX_ASSERT(open_result.is_ok());
 
   fuchsia_examples::EchoService::ServiceClient service = std::move(open_result.value());
@@ -282,7 +282,7 @@ TEST_F(OutgoingDirectoryTest, AddProtocolCanServeMultipleProtocols) {
   // Setup fuchsia.examples.Echo client
   for (auto [reversed, path] : kIsReversedAndPaths) {
     auto client_end =
-        service::ConnectAt<fuchsia_examples::Echo>(TakeSvcClientEnd(TakeRootClientEnd()), path);
+        component::ConnectAt<fuchsia_examples::Echo>(TakeSvcClientEnd(TakeRootClientEnd()), path);
     ASSERT_EQ(client_end.status_value(), ZX_OK);
     fidl::WireClient<fuchsia_examples::Echo> client(std::move(*client_end), dispatcher());
 
@@ -329,7 +329,7 @@ TEST_F(OutgoingDirectoryTest, RemoveProtocolClosesAllConnections) {
   fidl::ClientEnd<fuchsia_io::Directory> svc_directory = TakeSvcClientEnd(TakeRootClientEnd());
   std::vector<fidl::Client<fuchsia_examples::Echo>> clients = {};
   for (size_t i = 0; i < kNumClients; ++i) {
-    auto client_end = service::ConnectAt<fuchsia_examples::Echo>(svc_directory.borrow());
+    auto client_end = component::ConnectAt<fuchsia_examples::Echo>(svc_directory.borrow());
 
     ASSERT_EQ(client_end.status_value(), ZX_OK);
 
@@ -368,7 +368,7 @@ TEST_F(OutgoingDirectoryTest, AddProtocolAtServesProtocol) {
                 .status_value(),
             ZX_OK);
 
-  auto client_end = service::ConnectAt<fuchsia_examples::Echo>(
+  auto client_end = component::ConnectAt<fuchsia_examples::Echo>(
       TakeSvcClientEnd(TakeRootClientEnd(), /*path=*/kDirectory));
   ASSERT_EQ(client_end.status_value(), ZX_OK);
   fidl::WireClient<fuchsia_examples::Echo> client(std::move(*client_end), dispatcher());
@@ -469,7 +469,7 @@ TEST_F(OutgoingDirectoryTest, ServeCanYieldMultipleConnections) {
     root_client_ends.pop_back();
 
     auto client_end =
-        service::ConnectAt<fuchsia_examples::Echo>(TakeSvcClientEnd(/*root=*/std::move(root)));
+        component::ConnectAt<fuchsia_examples::Echo>(TakeSvcClientEnd(/*root=*/std::move(root)));
     ASSERT_EQ(client_end.status_value(), ZX_OK);
     fidl::WireClient<fuchsia_examples::Echo> client(std::move(*client_end), dispatcher());
 

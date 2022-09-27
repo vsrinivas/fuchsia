@@ -5,7 +5,7 @@
 // These tests should run without any network interface (except loopback).
 
 #include <fidl/fuchsia.device/cpp/wire.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <sys/utsname.h>
 
 #include <gtest/gtest.h>
@@ -27,7 +27,7 @@ TEST(NameProviderTest, UnameDefault) {
 }
 
 TEST(NameProviderTest, GetDeviceName) {
-  zx::status client_end = service::Connect<fuchsia_device::NameProvider>();
+  zx::status client_end = component::Connect<fuchsia_device::NameProvider>();
   ASSERT_OK(client_end.status_value());
 
   fidl::WireResult response = fidl::WireCall(client_end.value())->GetDeviceName();

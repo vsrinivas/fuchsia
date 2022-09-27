@@ -4,14 +4,14 @@
 
 #include "harness.h"
 
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 
 #include <future>
 
 namespace client_suite {
 
 void ClientTest::SetUp() {
-  auto runner_service = service::Connect<fidl_clientsuite::Runner>();
+  auto runner_service = component::Connect<fidl_clientsuite::Runner>();
   ASSERT_OK(runner_service.status_value());
   runner_ = fidl::Client<fidl_clientsuite::Runner>(std::move(*runner_service), dispatcher());
 

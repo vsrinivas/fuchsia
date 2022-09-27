@@ -22,11 +22,11 @@ zx_library("audio-utils") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_cpp_wire",
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp",
     "//src/media/audio/drivers/lib/audio-proto-utils",
     "//zircon/system/ulib/affine",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zx",
   ]
 

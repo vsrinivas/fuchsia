@@ -8,7 +8,7 @@ source_set("topological_path") {
     "topological_path.h",
   ]
   deps = [
-    "//zircon/system/ulib/service:service-llcpp",
+    "//sdk/lib/sys/component/cpp",
     "//zircon/system/ulib/zxc",
   ]
   public_deps = [ "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire" ]

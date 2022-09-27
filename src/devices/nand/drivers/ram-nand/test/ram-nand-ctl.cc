@@ -6,7 +6,7 @@
 #include <fidl/fuchsia.driver.test/cpp/wire.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/fdio/cpp/caller.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -100,7 +100,7 @@ TEST(RamNandCtlTest, CreateFailure) {
 
 int main(int argc, char** argv) {
   // Connect to DriverTestRealm.
-  auto client_end = service::Connect<fuchsia_driver_test::Realm>();
+  auto client_end = component::Connect<fuchsia_driver_test::Realm>();
   if (!client_end.is_ok()) {
     fprintf(stderr, "Failed to connect to Realm FIDL: %d", client_end.error_value());
     return 1;

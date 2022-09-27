@@ -5,7 +5,7 @@
 #include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/dispatcher.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/event.h>
 
 #ifndef SRC_BRINGUP_BIN_PWRBTN_MONITOR_OOM_WATCHER_H_

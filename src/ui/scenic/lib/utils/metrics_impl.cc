@@ -5,8 +5,7 @@
 #include "src/ui/scenic/lib/utils/metrics_impl.h"
 
 #include <lib/fidl/cpp/wire/channel.h>
-
-#include "zircon/system/ulib/service/include/lib/service/llcpp/service.h"
+#include <lib/sys/component/cpp/service_client.h>
 
 namespace metrics {
 
@@ -54,7 +53,7 @@ void MetricsImpl::LogLatchToActualPresentation(
 }
 
 void MetricsImpl::ConnectToServiceHub(ServiceHubConnectResolver resolver) {
-  auto connection = service::ConnectAt<MetricEventLoggerFactory>(directory_);
+  auto connection = component::ConnectAt<MetricEventLoggerFactory>(directory_);
   if (connection.is_ok()) {
     resolver.resolve(std::move(connection.value()));
   }

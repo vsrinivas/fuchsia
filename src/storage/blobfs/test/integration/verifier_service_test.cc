@@ -5,7 +5,7 @@
 #include <fidl/fuchsia.update.verify/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/wire/connect_service.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -24,7 +24,7 @@ namespace fuv = fuchsia_update_verify;
 class VerifierServiceTest : public BlobfsTest {
  protected:
   fidl::WireSyncClient<fuv::BlobfsVerifier> ConnectToHealthCheckService() {
-    auto client_end = service::ConnectAt<fuv::BlobfsVerifier>(fs().ServiceDirectory());
+    auto client_end = component::ConnectAt<fuv::BlobfsVerifier>(fs().ServiceDirectory());
     EXPECT_EQ(client_end.status_value(), ZX_OK);
     return fidl::WireSyncClient<fuv::BlobfsVerifier>(std::move(*client_end));
   }

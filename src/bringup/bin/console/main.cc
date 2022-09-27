@@ -5,8 +5,8 @@
 #include <fidl/fuchsia.kernel/cpp/wire.h>
 #include <fidl/fuchsia.logger/cpp/wire.h>
 #include <lib/fs-pty/service.h>
-#include <lib/service/llcpp/service.h>
 #include <lib/svc/outgoing.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
@@ -19,7 +19,7 @@
 namespace {
 
 zx::resource GetDebugResource() {
-  auto client_end = service::Connect<fuchsia_kernel::DebugResource>();
+  auto client_end = component::Connect<fuchsia_kernel::DebugResource>();
   if (client_end.is_error()) {
     printf("console: Could not connect to DebugResource service: %s\n", client_end.status_string());
     return {};
@@ -37,7 +37,7 @@ zx::resource GetDebugResource() {
 
 zx_status_t ConnectListener(fidl::ClientEnd<fuchsia_logger::LogListenerSafe> listener,
                             std::vector<std::string> allowed_log_tags) {
-  auto client_end = service::Connect<fuchsia_logger::Log>();
+  auto client_end = component::Connect<fuchsia_logger::Log>();
   if (client_end.is_error()) {
     printf("console: fdio_service_connect() = %s\n", client_end.status_string());
     return client_end.status_value();
@@ -72,7 +72,7 @@ int main(int argc, const char** argv) {
     return status;
   }
 
-  zx::status boot_args = service::Connect<fuchsia_boot::Arguments>();
+  zx::status boot_args = component::Connect<fuchsia_boot::Arguments>();
   if (boot_args.is_error()) {
     return boot_args.status_value();
   }

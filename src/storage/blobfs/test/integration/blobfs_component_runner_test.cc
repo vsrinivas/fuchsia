@@ -7,7 +7,7 @@
 #include <fidl/fuchsia.process.lifecycle/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/resource.h>
 
 #include <gtest/gtest.h>
@@ -104,7 +104,7 @@ TEST_F(BlobfsComponentRunnerTest, ServeAndConfigureStartsBlobfs) {
   ASSERT_NO_FATAL_FAILURE(StartServe(std::move(admin_endpoints->client)));
 
   auto svc_dir = GetSvcDir();
-  auto client_end = service::ConnectAt<fuchsia_fs_startup::Startup>(svc_dir.borrow());
+  auto client_end = component::ConnectAt<fuchsia_fs_startup::Startup>(svc_dir.borrow());
   ASSERT_EQ(client_end.status_value(), ZX_OK);
 
   MountOptions options;
@@ -127,7 +127,7 @@ TEST_F(BlobfsComponentRunnerTest, ServeAndConfigureStartsBlobfsWithoutDriverMana
   ASSERT_NO_FATAL_FAILURE(StartServe(fidl::ClientEnd<fuchsia_device_manager::Administrator>()));
 
   auto svc_dir = GetSvcDir();
-  auto client_end = service::ConnectAt<fuchsia_fs_startup::Startup>(svc_dir.borrow());
+  auto client_end = component::ConnectAt<fuchsia_fs_startup::Startup>(svc_dir.borrow());
   ASSERT_EQ(client_end.status_value(), ZX_OK);
 
   MountOptions options;
@@ -177,7 +177,7 @@ TEST_F(BlobfsComponentRunnerTest, RequestsBeforeStartupAreQueuedAndServicedAfter
   ASSERT_FALSE(query_complete);
 
   auto svc_dir = GetSvcDir();
-  auto client_end = service::ConnectAt<fuchsia_fs_startup::Startup>(svc_dir.borrow());
+  auto client_end = component::ConnectAt<fuchsia_fs_startup::Startup>(svc_dir.borrow());
   ASSERT_EQ(client_end.status_value(), ZX_OK);
 
   MountOptions options;

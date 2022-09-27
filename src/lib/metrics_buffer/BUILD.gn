@@ -15,11 +15,11 @@ source_set("metrics_buffer") {
   public_deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_hlcpp_conversion",
     "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_cpp",
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fidl/cpp/contrib/connection:service_hub_connector",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/syslog",
 
     # Only for <ddk/debug.h>'s severity levels.

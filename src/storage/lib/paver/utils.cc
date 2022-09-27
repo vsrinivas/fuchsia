@@ -15,7 +15,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 
 #include <string_view>
 
@@ -59,7 +59,7 @@ BlockWatcherPauser::~BlockWatcherPauser() {
 
 zx::status<BlockWatcherPauser> BlockWatcherPauser::Create(
     fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root) {
-  auto local = service::ConnectAt<fuchsia_fshost::BlockWatcher>(svc_root);
+  auto local = component::ConnectAt<fuchsia_fshost::BlockWatcher>(svc_root);
   if (!local.is_ok()) {
     return local.take_error();
   }

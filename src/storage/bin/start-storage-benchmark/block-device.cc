@@ -9,7 +9,7 @@
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/spawn.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/process.h>
 #include <zircon/device/block.h>
@@ -140,7 +140,7 @@ zx::status<zx::channel> GetCryptService() {
   if (svc_directory == ZX_HANDLE_INVALID)
     return zx::error(ZX_ERR_INTERNAL);
 
-  if (auto crypt_service_or = service::ConnectAt<fuchsia_fxfs::Crypt>(
+  if (auto crypt_service_or = component::ConnectAt<fuchsia_fxfs::Crypt>(
           fidl::UnownedClientEnd<fuchsia_io::Directory>(svc_directory));
       crypt_service_or.is_error()) {
     fprintf(stderr, "Unable to connect to crypt service: %s\n", crypt_service_or.status_string());
@@ -166,7 +166,7 @@ FvmVolume::~FvmVolume() {
   if (path_.empty()) {
     return;
   }
-  auto volume_client = service::Connect<Volume>(path_.c_str());
+  auto volume_client = component::Connect<Volume>(path_.c_str());
   if (volume_client.is_error()) {
     fprintf(stderr, "Failed to connect to volume: %s %s\n", path_.c_str(),
             volume_client.status_string());
@@ -244,7 +244,7 @@ zx::status<fidl::ClientEnd<VolumeManager>> ConnectToFvm(const std::string &fvm_b
   }
 
   std::string fvm_path = *fvm_block_topological_path + "/fvm";
-  return service::Connect<VolumeManager>(fvm_path.c_str());
+  return component::Connect<VolumeManager>(fvm_path.c_str());
 }
 
 zx::status<> FormatBlockDevice(const std::string &block_device_path,

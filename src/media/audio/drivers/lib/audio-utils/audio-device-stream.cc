@@ -7,7 +7,7 @@
 #include <inttypes.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/handle.h>
@@ -52,9 +52,9 @@ zx_status_t AudioDeviceStream::Open() {
   if (stream_ch_.is_valid())
     return ZX_ERR_BAD_STATE;
 
-  auto client_end = service::Connect<audio_fidl::StreamConfigConnector>(name());
+  auto client_end = component::Connect<audio_fidl::StreamConfigConnector>(name());
   if (client_end.is_error()) {
-    printf("service::Connect failed with error %s\n", client_end.status_string());
+    printf("component::Connect failed with error %s\n", client_end.status_string());
     return client_end.status_value();
   }
   fidl::WireSyncClient client{std::move(client_end.value())};

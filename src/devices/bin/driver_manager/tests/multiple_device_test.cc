@@ -5,7 +5,7 @@
 #include "multiple_device_test.h"
 
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <zircon/errors.h>
 
 #include <string>
@@ -415,7 +415,7 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_svchost_fidl) {
   coordinator().InitOutgoingServices(outgoing);
   ASSERT_OK(outgoing.Serve(std::move(service_endpoints->server)).status_value());
 
-  auto client_end = service::ConnectAt<fuchsia_device_manager::SystemStateTransition>(
+  auto client_end = component::ConnectAt<fuchsia_device_manager::SystemStateTransition>(
       service_endpoints->client,
       fidl::DiscoverableProtocolDefaultPath<fuchsia_device_manager::SystemStateTransition>);
   ASSERT_OK(client_end.status_value());

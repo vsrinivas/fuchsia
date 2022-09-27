@@ -5,17 +5,17 @@
 #include <fidl/fuchsia.sys/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/wire/client.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 
 #include <gtest/gtest.h>
 
 // Attempt to instantiate a CFv1 component with a non-canonical path entry in
 // the sandbox section. This should fail with kInternalError.
 TEST(NamespaceTest, PathTraversalEscapeFails) {
-  auto svc = service::OpenServiceRoot();
+  auto svc = component::OpenServiceRoot();
   ASSERT_TRUE(svc.is_ok());
 
-  auto launcher_end = service::ConnectAt<fuchsia_sys::Launcher>(*svc);
+  auto launcher_end = component::ConnectAt<fuchsia_sys::Launcher>(*svc);
   ASSERT_EQ(ZX_OK, launcher_end.status_value());
 
   constexpr std::string_view child_url =

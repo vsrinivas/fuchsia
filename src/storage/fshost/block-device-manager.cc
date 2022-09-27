@@ -12,6 +12,7 @@
 #include <inttypes.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fidl/cpp/wire/channel.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <sys/stat.h>
 #include <zircon/device/block.h>
@@ -24,7 +25,6 @@
 
 #include "fidl/fuchsia.hardware.block.volume/cpp/markers.h"
 #include "lib/fdio/directory.h"
-#include "lib/service/llcpp/service.h"
 #include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/lib/storage/fs_management/cpp/fvm.h"
 #include "src/lib/uuid/uuid.h"
@@ -417,7 +417,8 @@ class FxfsMatcher : public BlockDeviceManager::Matcher {
       // Once we have copied the data, tear down the zxcrypt device so that we can use it for
       // Fxfs.
       FX_LOGS(INFO) << "Shutting down zxcrypt...";
-      auto controller = service::Connect<fuchsia_device::Controller>(zxcrypt_parent_path_.c_str());
+      auto controller =
+          component::Connect<fuchsia_device::Controller>(zxcrypt_parent_path_.c_str());
       if (controller.is_error()) {
         FX_LOGS(ERROR) << "Failed to connect to zcxrypt: " << controller.status_string();
         return ZX_ERR_BAD_STATE;

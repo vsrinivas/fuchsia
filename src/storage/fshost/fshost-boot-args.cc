@@ -5,7 +5,7 @@
 #include "src/storage/fshost/fshost-boot-args.h"
 
 #include <lib/fdio/directory.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 
@@ -15,7 +15,7 @@ namespace fshost {
 std::shared_ptr<FshostBootArgs> FshostBootArgs::Create() {
   return std::make_shared<FshostBootArgs>(
       fidl::WireSyncClient([]() -> fidl::ClientEnd<fuchsia_boot::Arguments> {
-        zx::status local = service::Connect<fuchsia_boot::Arguments>();
+        zx::status local = component::Connect<fuchsia_boot::Arguments>();
         if (local.is_error()) {
           // This service might be missing if we're running in a test environment. Log
           // the error and continue.

@@ -7,7 +7,7 @@
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmar.h>
@@ -22,7 +22,7 @@
 
 namespace {
 fidl::WireSyncClient<fuchsia_sysmem::Allocator> CreateSysmemAllocator() {
-  zx::status client_end = service::Connect<fuchsia_sysmem::Allocator>();
+  zx::status client_end = component::Connect<fuchsia_sysmem::Allocator>();
   EXPECT_EQ(client_end.status_value(), ZX_OK);
   if (!client_end.is_ok()) {
     return {};

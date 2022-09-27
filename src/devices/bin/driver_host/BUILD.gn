@@ -68,6 +68,7 @@ source_set("common") {
 
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below
     "//sdk/lib/fidl",
+    "//sdk/lib/sys/component/cpp",
     "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//src/lib/storage/vfs/cpp",
@@ -76,7 +77,6 @@ source_set("common") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/inspect",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/sync:sync-cpp",
     "//zircon/system/ulib/trace",
@@ -217,6 +217,7 @@ test("driver_host_test") {
     "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_cpp_wire",
     "//sdk/fidl/fuchsia.driver.development",
     "//sdk/lib/inspect/testing/cpp:zxtest",
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/sys/cpp",
     "//src/devices/testing/devmgr-integration-test-shim",
     "//src/devices/testing/driver-integration-test-shim",
@@ -224,7 +225,6 @@ test("driver_host_test") {
     "//src/lib/storage/vfs/cpp:test_support",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zxtest",
   ]
 

@@ -9,7 +9,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 
 #include <gtest/gtest.h>
 
@@ -31,7 +31,7 @@ class MinfsComponentTest : public testing::Test {
     ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
     ramdisk_ = std::move(*ramdisk_or);
 
-    auto realm_client_end = service::Connect<fuchsia_component::Realm>();
+    auto realm_client_end = component::Connect<fuchsia_component::Realm>();
     ASSERT_EQ(realm_client_end.status_value(), ZX_OK);
     realm_ = fidl::WireSyncClient(std::move(*realm_client_end));
 
@@ -58,7 +58,7 @@ class MinfsComponentTest : public testing::Test {
     exposed_dir_ = std::move(exposed_endpoints->client);
 
     auto startup_client_end =
-        service::ConnectAt<fuchsia_fs_startup::Startup>(exposed_dir_.borrow());
+        component::ConnectAt<fuchsia_fs_startup::Startup>(exposed_dir_.borrow());
     ASSERT_EQ(startup_client_end.status_value(), ZX_OK);
     startup_client_ = fidl::WireSyncClient(std::move(*startup_client_end));
   }
@@ -80,7 +80,7 @@ class MinfsComponentTest : public testing::Test {
 
   fidl::ClientEnd<fuchsia_hardware_block::Block> block_client() const {
     auto block_client_end =
-        service::Connect<fuchsia_hardware_block::Block>(ramdisk_.path().c_str());
+        component::Connect<fuchsia_hardware_block::Block>(ramdisk_.path().c_str());
     EXPECT_EQ(block_client_end.status_value(), ZX_OK);
     auto res = fidl::WireCall(*block_client_end)->GetInfo();
     EXPECT_EQ(res.status(), ZX_OK);
@@ -112,7 +112,7 @@ TEST_F(MinfsComponentTest, FormatCheckStart) {
   ASSERT_EQ(startup_res.status(), ZX_OK);
   ASSERT_FALSE(startup_res->is_error());
 
-  auto admin_client_end = service::ConnectAt<fuchsia_fs::Admin>(exposed_dir());
+  auto admin_client_end = component::ConnectAt<fuchsia_fs::Admin>(exposed_dir());
   ASSERT_EQ(admin_client_end.status_value(), ZX_OK);
   fidl::WireSyncClient admin_client{std::move(*admin_client_end)};
 
@@ -140,7 +140,7 @@ TEST_F(MinfsComponentTest, RequestsBeforeStartupAreQueuedAndServicedAfter) {
   ASSERT_EQ(startup_res.status(), ZX_OK);
   ASSERT_FALSE(startup_res->is_error());
 
-  auto admin_client_end = service::ConnectAt<fuchsia_fs::Admin>(exposed_dir());
+  auto admin_client_end = component::ConnectAt<fuchsia_fs::Admin>(exposed_dir());
   ASSERT_EQ(admin_client_end.status_value(), ZX_OK);
   fidl::WireSyncClient admin_client{std::move(*admin_client_end)};
 

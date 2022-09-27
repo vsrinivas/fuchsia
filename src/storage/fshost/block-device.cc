@@ -20,7 +20,7 @@
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/time.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
@@ -186,7 +186,7 @@ Copier TryReadingFilesystem(fidl::ClientEnd<fuchsia_io::Directory> export_root) 
 
   fidl::ClientEnd<fuchsia_io::Directory> root_dir_client(std::move(root_dir_handle));
   auto unmount = fit::defer([&export_root] {
-    auto admin_client = service::ConnectAt<fuchsia_fs::Admin>(export_root);
+    auto admin_client = component::ConnectAt<fuchsia_fs::Admin>(export_root);
     if (admin_client.is_ok()) {
       [[maybe_unused]] auto result = fidl::WireCall(*admin_client)->Shutdown();
     }
@@ -908,7 +908,7 @@ zx_status_t BlockDevice::CheckCustomFilesystem(fs_management::DiskFormat format)
   if (format == fs_management::kDiskFormatFxfs) {
     // Fxfs runs as a component.
     constexpr char startup_service_path[] = "/fxfs/svc/fuchsia.fs.startup.Startup";
-    auto startup_client_end = service::Connect<fuchsia_fs_startup::Startup>(startup_service_path);
+    auto startup_client_end = component::Connect<fuchsia_fs_startup::Startup>(startup_service_path);
     if (startup_client_end.is_error()) {
       FX_PLOGS(ERROR, startup_client_end.error_value())
           << "Failed to connect to startup service at " << startup_service_path;

@@ -10,7 +10,7 @@
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fzl/vmo-mapper.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <zircon/errors.h>
 
 #include "src/storage/lib/paver/pave-logging.h"
@@ -117,7 +117,7 @@ zx::status<std::unique_ptr<FlashmapPartitionClient>> FlashmapPartitionClient::Cr
     const fbl::unique_fd& devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
     zx::duration timeout) {
   // Connect to the flashmap manager service.
-  auto client_end = service::ConnectAt<fuchsia_nand_flashmap::Manager>(svc_root);
+  auto client_end = component::ConnectAt<fuchsia_nand_flashmap::Manager>(svc_root);
   if (client_end.is_error()) {
     ERROR("Failed to connect to flashmap manager: %s\n", client_end.status_string());
     return client_end.take_error();
@@ -162,7 +162,7 @@ zx::status<std::unique_ptr<FlashmapPartitionClient>> FlashmapPartitionClient::Cr
   fidl::ClientEnd<fuchsia_acpi_chromeos::Device> cros_acpi(std::move(cros_result.value()));
 
   // Connect to the firmware parameter service.
-  auto fwparam_client = service::Connect<fuchsia_vboot::FirmwareParam>();
+  auto fwparam_client = component::Connect<fuchsia_vboot::FirmwareParam>();
   if (fwparam_client.is_error()) {
     return fwparam_client.take_error();
   }

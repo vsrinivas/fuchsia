@@ -11,7 +11,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <stdbool.h>
@@ -247,7 +247,7 @@ fitx::result<UseBlockDeviceError<Protocol>> UseBlockDevice(
   static_assert(std::is_same_v<Protocol, fuchsia_paver::DataSink> ||
                 std::is_same_v<Protocol, fuchsia_paver::DynamicDataSink>);
 
-  auto block_device = service::Connect<fuchsia_hardware_block::Block>(block_device_path);
+  auto block_device = component::Connect<fuchsia_hardware_block::Block>(block_device_path);
   if (block_device.is_ok()) {
     // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
     (void)paver_client->UseBlockDevice(
@@ -267,13 +267,13 @@ fitx::result<UseBlockDeviceError<Protocol>> UseBlockDevice(
 }
 
 zx_status_t RealMain(Flags flags) {
-  auto paver_svc = service::Connect<fuchsia_paver::Paver>();
+  auto paver_svc = component::Connect<fuchsia_paver::Paver>();
   if (!paver_svc.is_ok()) {
     ERROR("Unable to open /svc/fuchsia.paver.Paver.\n");
     return paver_svc.error_value();
   }
   auto paver_client = fidl::WireSyncClient(std::move(*paver_svc));
-  auto fshost_svc = service::Connect<fuchsia_fshost::Admin>();
+  auto fshost_svc = component::Connect<fuchsia_fshost::Admin>();
   if (!fshost_svc.is_ok()) {
     ERROR("Unable to open /svc/fuchsia.fshost.Admin.\n");
     return fshost_svc.error_value();

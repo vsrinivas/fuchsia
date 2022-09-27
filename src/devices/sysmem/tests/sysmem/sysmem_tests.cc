@@ -18,7 +18,7 @@
 #include <lib/fidl/cpp/wire/channel.h>
 #include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/fit/defer.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/event.h>
@@ -114,7 +114,7 @@ void WaitForSysmemAvailability() {
 zx::status<fidl::WireSyncClient<fuchsia_sysmem::Allocator>> connect_to_sysmem_driver() {
   WaitForSysmemAvailability();
 
-  auto client_end = service::Connect<fuchsia_sysmem::DriverConnector>(kSysmemDevicePath);
+  auto client_end = component::Connect<fuchsia_sysmem::DriverConnector>(kSysmemDevicePath);
   EXPECT_OK(client_end);
   if (!client_end.is_ok()) {
     return zx::error(client_end.status_value());
@@ -140,7 +140,7 @@ zx::status<fidl::WireSyncClient<fuchsia_sysmem::Allocator>> connect_to_sysmem_dr
 }
 
 zx::status<fidl::WireSyncClient<fuchsia_sysmem::Allocator>> connect_to_sysmem_service() {
-  auto client_end = service::Connect<fuchsia_sysmem::Allocator>();
+  auto client_end = component::Connect<fuchsia_sysmem::Allocator>();
   EXPECT_OK(client_end);
   if (!client_end.is_ok()) {
     return zx::error(client_end.status_value());
@@ -362,7 +362,7 @@ void set_picky_constraints(fidl::WireSyncClient<fuchsia_sysmem::BufferCollection
 const std::string& GetBoardName() {
   static std::string s_board_name;
   if (s_board_name.empty()) {
-    auto client_end = service::Connect<fuchsia_sysinfo::SysInfo>();
+    auto client_end = component::Connect<fuchsia_sysinfo::SysInfo>();
     ZX_ASSERT(client_end.is_ok());
 
     fidl::WireSyncClient sysinfo{std::move(client_end.value())};

@@ -13,7 +13,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
 #include <lib/inspect/service/cpp/service.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -301,7 +301,7 @@ void FsManager::Shutdown(fit::function<void(zx_status_t)> callback) {
 
     for (auto& [point, fs] : filesystems_to_shutdown) {
       FX_LOGS(INFO) << "Shutting down " << MountPointPath(point);
-      auto admin_client = service::ConnectAt<fuchsia_fs::Admin>(fs);
+      auto admin_client = component::ConnectAt<fuchsia_fs::Admin>(fs);
       if (!admin_client.is_ok()) {
         FX_LOGS(WARNING) << "Failed to get admin handle for shutting down " << MountPointPath(point)
                          << ": " << admin_client.status_string();
@@ -419,7 +419,7 @@ void FileReport(std::string program_name, fbl::String report_reason) {
   // reporter is destroyed.
   std::thread t(
       [program_name = std::move(program_name), report_reason = std::move(report_reason)]() {
-        auto client_end = service::Connect<fuchsia_feedback::CrashReporter>();
+        auto client_end = component::Connect<fuchsia_feedback::CrashReporter>();
         if (client_end.is_error()) {
           FX_LOGS(WARNING) << "Unable to connect to crash reporting service: "
                            << client_end.status_string();

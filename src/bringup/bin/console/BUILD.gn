@@ -42,10 +42,10 @@ source_set("common") {
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp",
     "//src/lib/fxl",
     "//zircon/system/ulib/cmdline",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 
@@ -54,10 +54,10 @@ executable("console") {
   deps = [
     ":common",
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp",
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/fs-pty",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/svc",
   ]
 }

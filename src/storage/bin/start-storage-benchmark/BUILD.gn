@@ -32,6 +32,7 @@ source_set("start-storage-benchmark-lib") {
   ]
   deps = [
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/storage/fs_management/cpp:mkfs_with_default",
@@ -41,7 +42,6 @@ source_set("start-storage-benchmark-lib") {
     "//src/storage/fxfs:fuchsia.fxfs_cpp_wire",
     "//src/storage/lib/utils:topological_path",
     "//zircon/system/public",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
   data_deps = [
     "//src/security/policy/zxcrypt:null",
@@ -59,9 +59,9 @@ executable("start-storage-benchmark-bin") {
   deps = [
     ":start-storage-benchmark-lib",
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
+    "//sdk/lib/sys/component/cpp",
     "//src/lib/fxl/test:test_settings",
     "//src/storage/bin/odu:libodu",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zxc",
   ]
 }
@@ -91,6 +91,7 @@ test("start-storage-benchmark-unittests") {
   deps = [
     ":start-storage-benchmark-lib",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_cpp_wire",
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
@@ -99,7 +100,6 @@ test("start-storage-benchmark-unittests") {
     "//src/storage/testing:storage_driver_test_support",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 

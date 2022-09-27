@@ -14,6 +14,7 @@ source_set("src") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/fidl/fuchsia.vulkan.loader:fuchsia.vulkan.loader_cpp_wire",
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp",
     "//src/lib/elflib",
     "//src/lib/files",
     "//src/lib/fxl",
@@ -22,7 +23,6 @@ source_set("src") {
     "//src/lib/json_parser",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
   public_deps += [ "//src/lib/vulkan" ]
 }

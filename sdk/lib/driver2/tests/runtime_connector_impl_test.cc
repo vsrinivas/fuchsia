@@ -4,8 +4,8 @@
 
 #include <lib/driver2/runtime.h>
 #include <lib/driver2/runtime_connector_impl.h>
-#include <lib/service/llcpp/service.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
+#include <lib/sys/component/cpp/service_client.h>
 
 #include <set>
 
@@ -57,7 +57,7 @@ class RuntimeConnectorTest : public gtest::RealLoopFixture {
       return zx::error(ZX_ERR_IO);
     }
     fidl::ClientEnd<fuchsia_io::Directory> fidl_client_end(std::move(client_end));
-    auto svc = service::ConnectAt<fdf::RuntimeConnector>(std::move(fidl_client_end));
+    auto svc = component::ConnectAt<fdf::RuntimeConnector>(std::move(fidl_client_end));
     if (!svc.is_ok()) {
       return svc.take_error();
     }

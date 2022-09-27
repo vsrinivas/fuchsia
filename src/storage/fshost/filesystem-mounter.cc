@@ -15,7 +15,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/wire/vector_view.h>
 #include <lib/inspect/service/cpp/service.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/process.h>
 #include <sys/stat.h>

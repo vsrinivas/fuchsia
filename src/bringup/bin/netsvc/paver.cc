@@ -11,7 +11,7 @@
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fit/defer.h>
 #include <lib/netboot/netboot.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/clock.h>
 #include <stdio.h>
 #include <zircon/errors.h>
@@ -30,7 +30,7 @@ namespace netsvc {
 Paver* Paver::Get() {
   static Paver* instance_ = nullptr;
   if (instance_ == nullptr) {
-    zx::status client_end = service::Connect<fuchsia_io::Directory>("/svc");
+    zx::status client_end = component::Connect<fuchsia_io::Directory>("/svc");
     if (client_end.is_error()) {
       return nullptr;
     }
@@ -356,7 +356,7 @@ zx_status_t Paver::OpenDataSink(fuchsia_mem::wire::Buffer buffer,
 
   fdio_cpp::UnownedFdioCaller caller(devfs_root_.get());
 
-  zx::status client_end = service::ConnectAt<fuchsia_hardware_block::Block>(
+  zx::status client_end = component::ConnectAt<fuchsia_hardware_block::Block>(
       caller.directory(), &partition_info.block_device_path[5]);
   if (client_end.is_error()) {
     fprintf(stderr, "netsvc: Unable to open %s.\n", partition_info.block_device_path);
@@ -655,13 +655,13 @@ tftp_status Paver::OpenWrite(std::string_view filename, size_t size, zx::duratio
   }
   auto buffer_cleanup = fit::defer([this]() { buffer_mapper_.Reset(); });
 
-  auto paver = service::ConnectAt<fuchsia_paver::Paver>(svc_root_);
+  auto paver = component::ConnectAt<fuchsia_paver::Paver>(svc_root_);
   if (paver.is_error()) {
     fprintf(stderr, "netsvc: Unable to open /svc/%s.\n",
             fidl::DiscoverableProtocolName<fuchsia_paver::Paver>);
     return TFTP_ERR_IO;
   }
-  auto fshost = service::ConnectAt<fuchsia_fshost::Admin>(svc_root_);
+  auto fshost = component::ConnectAt<fuchsia_fshost::Admin>(svc_root_);
   if (fshost.is_error()) {
     fprintf(stderr, "netsvc: Unable to open /svc/%s.\n",
             fidl::DiscoverableProtocolName<fuchsia_fshost::Admin>);

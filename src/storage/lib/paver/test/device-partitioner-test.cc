@@ -14,8 +14,8 @@
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
-#include <lib/service/llcpp/service.h>
 #include <lib/stdcompat/span.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <zircon/boot/image.h>
 #include <zircon/errors.h>
 #include <zircon/hw/gpt.h>

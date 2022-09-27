@@ -8,7 +8,7 @@
 #include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/fit/defer.h>
 #include <lib/fzl/vmo-mapper.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 
 #include <set>
 
@@ -151,8 +151,8 @@ void ValidateIcd(fidl::WireSyncClient<fuchsia_vulkan_loader::Loader>& loader,
 }
 
 TEST(IcdConformance, SharedLibraries) {
-  auto svc = service::OpenServiceRoot();
-  auto client_end = service::ConnectAt<fuchsia_vulkan_loader::Loader>(*svc);
+  auto svc = component::OpenServiceRoot();
+  auto client_end = component::ConnectAt<fuchsia_vulkan_loader::Loader>(*svc);
 
   fidl::WireSyncClient client{std::move(*client_end)};
 

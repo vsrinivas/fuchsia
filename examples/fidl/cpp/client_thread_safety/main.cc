@@ -6,7 +6,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/wire/client.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <zircon/assert.h>
 
 #include <future>
@@ -152,9 +152,9 @@ void ShareUntilTeardown(async_dispatcher_t* dispatcher, fidl::ClientEnd<Echo> cl
 }
 
 fidl::ClientEnd<Echo> ConnectToEcho() {
-  zx::status svc = service::OpenServiceRoot();
+  zx::status svc = component::OpenServiceRoot();
   ZX_ASSERT_MSG(svc.is_ok(), "Failed to open service root: %s", svc.status_string());
-  zx::status client_end = service::ConnectAt<Echo>(*svc);
+  zx::status client_end = component::ConnectAt<Echo>(*svc);
   ZX_ASSERT_MSG(client_end.is_ok(), "Failed to connect to Echo protocol: %s",
                 client_end.status_string());
   return std::move(client_end.value());

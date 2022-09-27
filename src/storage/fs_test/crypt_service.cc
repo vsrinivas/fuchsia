@@ -8,7 +8,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/wire/channel.h>
 #include <lib/fidl/cpp/wire/connect_service.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 
 #include "sdk/lib/syslog/cpp/macros.h"
 
@@ -18,7 +18,7 @@ zx::status<> SetUpCryptWithRandomKeys(
     fidl::UnownedClientEnd<fuchsia_io::Directory> service_directory) {
   fidl::WireSyncClient<fuchsia_fxfs::CryptManagement> client;
   if (auto management_service_or =
-          service::ConnectAt<fuchsia_fxfs::CryptManagement>(service_directory);
+          component::ConnectAt<fuchsia_fxfs::CryptManagement>(service_directory);
       management_service_or.is_error()) {
     FX_LOGS(ERROR) << "Unable to connect to crypt management service: "
                    << management_service_or.status_string();
@@ -77,7 +77,7 @@ zx::status<zx::channel> GetCryptService() {
     initialized = true;
   }
 
-  if (auto crypt_service_or = service::Connect<fuchsia_fxfs::Crypt>();
+  if (auto crypt_service_or = component::Connect<fuchsia_fxfs::Crypt>();
       crypt_service_or.is_error()) {
     FX_LOGS(ERROR) << "Unable to connect to the crypt service: "
                    << crypt_service_or.status_string();

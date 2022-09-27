@@ -28,10 +28,10 @@ source_set("lib") {
   deps = [
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_cpp_wire",
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
     "//src/lib/storage/vfs/cpp",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zircon-internal",
   ]
 
@@ -57,13 +57,14 @@ executable("bin") {
     "//sdk/fidl/fuchsia.hardware.virtioconsole:fuchsia.hardware.virtioconsole_cpp_wire",
     "//sdk/fidl/fuchsia.virtualconsole:fuchsia.virtualconsole_cpp_wire",
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
+    "//src/lib/storage/vfs/cpp",
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zx",
   ]
 }

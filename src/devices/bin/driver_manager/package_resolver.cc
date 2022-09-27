@@ -7,7 +7,7 @@
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fidl/fuchsia.pkg/cpp/wire.h>
 #include <lib/fdio/directory.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 
 #include <fbl/string_printf.h>
 
@@ -58,7 +58,7 @@ zx::status<std::unique_ptr<Driver>> PackageResolver::FetchDriver(const std::stri
 }
 
 zx_status_t PackageResolver::ConnectToResolverService() {
-  auto client_end = service::Connect<fuchsia_pkg::PackageResolver>();
+  auto client_end = component::Connect<fuchsia_pkg::PackageResolver>();
   if (client_end.is_error()) {
     return client_end.error_value();
   }
