@@ -8,6 +8,7 @@
 #include <lib/zx/bti.h>
 #include <lib/zx/iommu.h>
 #include <lib/zx/port.h>
+#include <zircon/errors.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/iommu.h>
 #include <zircon/syscalls/object.h>
@@ -2230,10 +2231,11 @@ TEST(Pager, SupplyAfterFail) {
 
 // Tests that the error code passed in when failing is correctly propagated.
 TEST(Pager, FailErrorCode) {
-  constexpr uint32_t kNumValidErrors = 3;
-  zx_status_t valid_errors[kNumValidErrors] = {ZX_ERR_IO, ZX_ERR_IO_DATA_INTEGRITY,
-                                               ZX_ERR_BAD_STATE};
-  for (uint32_t i = 0; i < kNumValidErrors; i++) {
+  constexpr zx_status_t valid_errors[] = {
+      ZX_ERR_IO,       ZX_ERR_IO_DATA_INTEGRITY, ZX_ERR_BAD_STATE,
+      ZX_ERR_NO_SPACE, ZX_ERR_BUFFER_TOO_SMALL,
+  };
+  for (const zx_status_t valid_error : valid_errors) {
     UserPager pager;
     ASSERT_TRUE(pager.Init());
 
@@ -2278,15 +2280,15 @@ TEST(Pager, FailErrorCode) {
     ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, kNumPages, ZX_TIME_INFINITE));
 
     // Fail with a specific valid error code.
-    ASSERT_TRUE(pager.FailPages(vmo, 0, kNumPages, valid_errors[i]));
+    ASSERT_TRUE(pager.FailPages(vmo, 0, kNumPages, valid_error));
 
     ASSERT_TRUE(t_commit.WaitForFailure());
     // Verify that op_range(ZX_VMO_OP_COMMIT) returned the provided error code.
-    ASSERT_EQ(status_commit, valid_errors[i]);
+    ASSERT_EQ(status_commit, valid_error);
 
     ASSERT_TRUE(t_read.WaitForFailure());
     // Verify that vmo_read() returned the provided error code.
-    ASSERT_EQ(status_read, valid_errors[i]);
+    ASSERT_EQ(status_read, valid_error);
 
     uint64_t offset, length;
     ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));

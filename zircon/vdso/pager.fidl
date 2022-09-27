@@ -352,8 +352,8 @@ protocol pager {
     /// **ZX_PAGER_OP_FAIL** - The userspace pager failed to fulfill page requests for *pager_vmo* in the
     /// range [*offset*, *offset* + *length*) with command **ZX_PAGER_VMO_READ** or **ZX_PAGER_VMO_DIRTY**.
     /// *data* contains the error encountered (a `zx_status_t` error code sign-extended to a `uint64_t`
-    /// value) - permitted values are **ZX_ERR_IO**, **ZX_ERR_IO_DATA_INTEGRITY**, **ZX_ERR_BAD_STATE** and
-    /// **ZX_ERR_NO_SPACE**.
+    /// value) - permitted values are **ZX_ERR_IO**, **ZX_ERR_IO_DATA_INTEGRITY**, **ZX_ERR_BAD_STATE**,
+    /// **ZX_ERR_NO_SPACE**, and **ZX_ERR_BUFFER_TOO_SMALL**.
     ///
     /// This will signal threads that might be waiting on page requests in that range, unblocking them. If
     /// the blocked thread was requesting pages through a [`zx_vmo_read()`] / [`zx_vmo_write()`] or a

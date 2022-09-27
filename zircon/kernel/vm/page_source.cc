@@ -205,6 +205,7 @@ bool PageSource::IsValidExternalFailureCode(zx_status_t error_status) {
     case ZX_ERR_IO_DATA_INTEGRITY:
     case ZX_ERR_BAD_STATE:
     case ZX_ERR_NO_SPACE:
+    case ZX_ERR_BUFFER_TOO_SMALL:
       return true;
     default:
       return false;
