@@ -35,6 +35,15 @@ impl<'a> VariableName {
             _ => None,
         }
     }
+
+    pub fn full_name(&self, namespace: &str) -> String {
+        let name_parts: Vec<_> = self.name.split("::").collect();
+        if name_parts.len() == 1 {
+            namespace.to_owned() + &self.name
+        } else {
+            self.name.clone()
+        }
+    }
 }
 
 #[cfg(test)]

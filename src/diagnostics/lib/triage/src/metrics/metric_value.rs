@@ -42,6 +42,8 @@ pub enum Problem {
     InternalBug(String),
     /// One or more expected errors - don't bother humans with the result.
     Ignore(Vec<Problem>),
+    /// An error which can occur in evaluation of an expression.
+    EvaluationError(String),
 }
 
 impl PartialEq for MetricValue {
@@ -184,6 +186,7 @@ impl std::fmt::Debug for Problem {
             Problem::ValueError(s) => write!(f, "ValueError: {}", s),
             Problem::InternalBug(s) => write!(f, "InternalBug: {}", s),
             Problem::UnhandledType(s) => write!(f, "UnhandledType: {}", s),
+            Problem::EvaluationError(s) => write!(f, "EvaluationError: {}", s),
         }
     }
 }

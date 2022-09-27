@@ -13,7 +13,13 @@ use {
     metric_value::{MetricValue, Problem},
     regex::Regex,
     serde::{Deserialize, Deserializer, Serialize},
-    std::{cell::RefCell, clone::Clone, cmp::min, collections::HashMap, convert::TryFrom},
+    std::{
+        cell::RefCell,
+        clone::Clone,
+        cmp::min,
+        collections::{HashMap, HashSet},
+        convert::TryFrom,
+    },
     variable::VariableName,
 };
 
@@ -80,6 +86,7 @@ pub struct MetricState<'a> {
     pub metrics: &'a Metrics,
     pub fetcher: Fetcher<'a>,
     now: Option<i64>,
+    stack: RefCell<HashSet<String>>,
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Serialize)]
@@ -282,6 +289,10 @@ fn unhandled_type(message: impl AsRef<str>) -> MetricValue {
     MetricValue::Problem(Problem::UnhandledType(message.as_ref().to_string()))
 }
 
+fn evaluation_error(message: impl AsRef<str>) -> MetricValue {
+    MetricValue::Problem(Problem::EvaluationError(message.as_ref().to_string()))
+}
+
 /// If Problem is a Multiple and all its entries are Ignore, combines them. Otherwise just
 /// returns the Problem.
 fn bubble_up_ignore(problem: Problem) -> Problem {
@@ -338,7 +349,7 @@ fn first_usable_value(values: impl Iterator<Item = MetricValue>) -> MetricValue 
 impl<'a> MetricState<'a> {
     /// Create an initialized MetricState.
     pub fn new(metrics: &'a Metrics, fetcher: Fetcher<'a>, now: Option<i64>) -> MetricState<'a> {
-        MetricState { metrics, fetcher, now }
+        MetricState { metrics, fetcher, now, stack: RefCell::new(HashSet::new()) }
     }
 
     /// Forcefully evaluate all [Metric]s to populate the cached values.
@@ -424,31 +435,22 @@ impl<'a> MetricState<'a> {
                         ))
                     }
                     Some(value_source) => {
-                        let resolved_value: MetricValue;
-                        {
-                            let cached_value_cell = value_source.cached_value.borrow();
-                            match &*cached_value_cell {
-                                None => {
-                                    resolved_value = match &value_source.metric {
-                                        Metric::Selector(selectors) => first_usable_value(
-                                            selectors
-                                                .iter()
-                                                .map(|selector| fetcher.fetch(selector)),
-                                        ),
-                                        Metric::Eval(expression) => self.evaluate(
-                                            real_namespace,
-                                            &expression.parsed_expression,
-                                        ),
-                                        #[cfg(test)]
-                                        Metric::Hardcoded(value) => value.clone(),
-                                    };
-                                }
-                                Some(cached_value) => return cached_value.clone(),
-                            }
+                        if let Some(cached_value) = value_source.cached_value.borrow().as_ref() {
+                            return cached_value.clone();
                         }
+                        let resolved_value = match &value_source.metric {
+                            Metric::Selector(selectors) => first_usable_value(
+                                selectors.iter().map(|selector| fetcher.fetch(selector)),
+                            ),
+                            Metric::Eval(expression) => {
+                                self.evaluate(real_namespace, &expression.parsed_expression)
+                            }
+                            #[cfg(test)]
+                            Metric::Hardcoded(value) => value.clone(),
+                        };
                         let mut cached_value_cell = value_source.cached_value.borrow_mut();
                         *cached_value_cell = Some(resolved_value.clone());
-                        return resolved_value.clone();
+                        resolved_value
                     }
                 },
             }
@@ -460,14 +462,26 @@ impl<'a> MetricState<'a> {
     /// Calculate the value of a Metric specified by name and namespace.
     fn evaluate_variable(&self, namespace: &str, name: &VariableName) -> MetricValue {
         // TODO(cphoenix): When historical metrics are added, change semantics to refresh()
-        // TODO(cphoenix): cache values
-        // TODO(cphoenix): Detect infinite cycles/depth.
         // TODO(cphoenix): Improve the data structure on Metric names. Probably fill in
         //  namespace during parse.
-        match &self.fetcher {
+        if self.stack.borrow().contains(&name.full_name(namespace)) {
+            // Clear the stack for future reuse
+            let _ = self.stack.replace(HashSet::new());
+            return evaluation_error(&format!(
+                "Cycle encountered while evaluating variable {} in the expression",
+                name.name
+            ));
+        }
+        // Insert the full name including namespace.
+        self.stack.borrow_mut().insert(name.full_name(namespace));
+
+        let value = match &self.fetcher {
             Fetcher::FileData(fetcher) => self.metric_value_for_file(fetcher, namespace, name),
             Fetcher::TrialData(fetcher) => self.metric_value_for_trial(fetcher, namespace, name),
-        }
+        };
+
+        self.stack.borrow_mut().remove(&name.full_name(namespace));
+        value
     }
 
     /// Fetch or compute the value of a Metric expression from an action.
@@ -1724,5 +1738,110 @@ pub(crate) mod test {
         );
     }
 
+    #[fuchsia::test]
+    fn test_not_valid_cycle_same_variable() {
+        let metrics: Metrics = [
+            (
+                "root".to_string(),
+                [
+                    ("is42".to_string(), ValueSource::try_from_expression("42").unwrap()),
+                    (
+                        "shouldBe42".to_string(),
+                        ValueSource::try_from_expression("is42 + 0").unwrap(),
+                    ),
+                ]
+                .iter()
+                .cloned()
+                .collect(),
+            ),
+            (
+                "n2".to_string(),
+                [(
+                    "is42".to_string(),
+                    ValueSource::try_from_expression("root::shouldBe42").unwrap(),
+                )]
+                .iter()
+                .cloned()
+                .collect(),
+            ),
+        ]
+        .iter()
+        .cloned()
+        .collect();
+        let state = MetricState::new(&metrics, Fetcher::FileData(EMPTY_FILE_FETCHER.clone()), None);
+
+        // Evaluation with the same variable name but different namespace should be successful.
+        assert_eq!(state.evaluate_value("n2", "is42"), MetricValue::Int(42));
+    }
+
+    #[fuchsia::test]
+    fn test_cycle_detected_correctly() {
+        // Cycle is between n2::a -> n2::c -> root::b -> n2::a
+        let metrics: Metrics = [
+            (
+                "root".to_string(),
+                [
+                    ("is42".to_string(), ValueSource::try_from_expression("42").unwrap()),
+                    (
+                        "shouldBe62".to_string(),
+                        ValueSource::try_from_expression("is42 + 1 + n2::is19").unwrap(),
+                    ),
+                    ("b".to_string(), ValueSource::try_from_expression("is42 + n2::a").unwrap()),
+                ]
+                .iter()
+                .cloned()
+                .collect(),
+            ),
+            (
+                "n2".to_string(),
+                [
+                    ("is19".to_string(), ValueSource::try_from_expression("19").unwrap()),
+                    (
+                        "shouldBe44".to_string(),
+                        ValueSource::try_from_expression("root::is42 + 2").unwrap(),
+                    ),
+                    ("a".to_string(), ValueSource::try_from_expression("is19 + c").unwrap()),
+                    (
+                        "c".to_string(),
+                        ValueSource::try_from_expression("root::b + root::is42").unwrap(),
+                    ),
+                ]
+                .iter()
+                .cloned()
+                .collect(),
+            ),
+        ]
+        .iter()
+        .cloned()
+        .collect();
+        let state = MetricState::new(&metrics, Fetcher::FileData(EMPTY_FILE_FETCHER.clone()), None);
+
+        // Evaluation when a cycle is not encountered should be successful.
+        assert_eq!(state.evaluate_value("root", "shouldBe62 + 1"), MetricValue::Int(63));
+
+        // Check evaluation with a cycle leads to an 'EvaluationError'.
+        assert_problem!(
+            state.evaluate_value("root", "n2::a"),
+            "EvaluationError: Cycle encountered while evaluating variable n2::a in the expression"
+        );
+
+        // Check if the stack was reset properly after problem
+        assert_eq!(state.evaluate_value("root", "n2::shouldBe44"), MetricValue::Int(44));
+
+        // Check evaluation with a cycle leads to an 'EvaluationError'.
+        assert_problem!(
+            state.evaluate_value("root", "b"),
+            "EvaluationError: Cycle encountered while evaluating variable n2::a in the expression"
+        );
+
+        // Check evaluation with a cycle leads to an 'EvaluationError'.
+        assert_problem!(
+            state.evaluate_value("root", "n2::c"),
+            "EvaluationError: Cycle encountered while evaluating variable n2::a in the expression"
+        );
+
+        // Check if the stack was reset properly after problem
+        assert_eq!(state.evaluate_value("root", "shouldBe62"), MetricValue::Int(62));
+    }
     // Correct operation of annotations is tested via annotation_tests.triage.
 }
