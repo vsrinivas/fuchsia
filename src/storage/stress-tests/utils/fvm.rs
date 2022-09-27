@@ -4,7 +4,6 @@
 
 use {
     fidl_fuchsia_device::ControllerMarker,
-    fidl_fuchsia_hardware_block_volume::ALLOCATE_PARTITION_FLAG_INACTIVE,
     fidl_fuchsia_hardware_block_volume::{VolumeManagerMarker, VolumeManagerProxy},
     fuchsia_component::client::connect_to_protocol_at_path,
     fuchsia_zircon::{AsHandleRef, Rights, Status, Vmo},
@@ -87,7 +86,7 @@ impl FvmInstance {
             type_guid,
             &instance_guid,
             initial_volume_size,
-            ALLOCATE_PARTITION_FLAG_INACTIVE,
+            0,
         )
         .await
         .unwrap();
