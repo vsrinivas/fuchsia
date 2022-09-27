@@ -107,7 +107,7 @@ $ ffx component explore -l namespace /core/compute-benchmarks
 
 ```
 $ spinel-vk-bench -h
-$ spinel-vk-bench -Q -f /cache/UAB_Blazers_logo.svg -Q -t 20 -r -c 100,100:2
+$ spinel-vk-bench -f /cache/UAB_Blazers_logo.svg -Q -t 20 -r -c 100,100:2
 $ <Ctrl-C to exit>
 ```
 
