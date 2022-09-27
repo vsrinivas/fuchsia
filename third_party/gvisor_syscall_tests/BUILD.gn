@@ -250,7 +250,7 @@ test("netstack3-socket-tests") {
 
 fuchsia_unittest_package("netstack2-with-fast-udp-syscall-tests") {
   package_name = "netstack2-with-fast-udp-syscall-tests"
-  manifest = "meta/netstack2-with-fast-udp-syscalls-tests.cml"
+  manifest = "meta/netstack2-with-fast-udp-syscall-tests.cml"
   deps = [
     ":netstack2-with-fast-udp-socket-tests",
 
