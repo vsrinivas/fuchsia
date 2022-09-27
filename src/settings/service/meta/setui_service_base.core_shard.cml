@@ -35,18 +35,18 @@
             subdir: "setui_service",
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-light",
             to: "#setui_service",
-            subdir: "class/light",
+            subdir: "light",
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-input-report",
             to: "#setui_service",
-            subdir: "class/input-report",
+            subdir: "input-report",
         },
         {
             protocol: "fuchsia.media.sessions2.Discovery",
