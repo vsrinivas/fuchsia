@@ -155,9 +155,10 @@ def read_reproxy_metrics_proto(reproxy_logdir: str) -> stats_pb2.Stats:
 def bq_table_insert(table: str, data: str) -> int:
     # The 'bq' CLI tool comes with gcloud SDK.
     # Unfortunately, piping the data through stdin doesn't work
-    # because bq expects an interactive session.
+    # because bq expects an interactive session, so we use a temp file.
     with tempfile.NamedTemporaryFile() as f:
         f.write(data.encode())
+        f.flush()
         return subprocess.call(['bq', 'insert', table, f.name])
 
 
@@ -178,7 +179,7 @@ def bq_upload_remote_action_logs(
             any_err = True
 
     if any_err:
-        print("There was at least one error uploading logs.")
+        msg("There was at least one error uploading logs.")
 
 
 def bq_upload_metrics(
@@ -188,7 +189,7 @@ def bq_upload_metrics(
     data = "\n".join(json.dumps(row) for row in metrics)
     exit_code = bq_table_insert(bq_table, data)
     if exit_code != 0:
-        print("There was at least one error uploading metrics.")
+        msg("There was at least one error uploading metrics.")
 
 
 def main_upload_metrics(
@@ -269,7 +270,7 @@ def main_upload_logs(
     ]
 
     if print_sample:
-        print("Sample remote action record:")
+        msg("Sample remote action record:")
         print(log_records[0])
         return
 
