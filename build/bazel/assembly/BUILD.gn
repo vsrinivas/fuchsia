@@ -2,11 +2,43 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bazel/assembly/bazel_assembled_system.gni")
 import("//build/bazel/assembly/bazel_assembly_input_bundle.gni")
+import("//build/images/args.gni")
+import("//build/images/custom_signing.gni")
+import("//build/images/fvm.gni")
+import("//build/product.gni")
 
 bazel_assembly_input_bundle("bazel_platform_aibs") {
   testonly = true
   source_dir = get_label_info("//bundles/assembly", "target_out_dir")
   dest_dir = "fuchsia_platform_aibs"
   deps = [ "//bundles/assembly" ]
+}
+
+zbi_only = use_bringup_assembly
+
+if (use_bringup_assembly) {
+  bazel_assembled_system("bringup") {
+    testonly = true
+    gn_image_name = "bringup"
+    bazel_assembly_target = "//build/bazel/assembly:bringup"
+  }
+} else {
+  gn_image_name = "fuchsia"
+
+  bazel_assembled_system("core") {
+    testonly = true
+    bazel_assembly_target = "//build/bazel/assembly:core"
+  }
+
+  bazel_assembled_system("minimal") {
+    testonly = true
+    bazel_assembly_target = "//build/bazel/assembly:minimal"
+  }
+
+  bazel_assembled_system("workstation_eng") {
+    testonly = true
+    bazel_assembly_target = "//build/bazel/assembly:workstation_eng"
+  }
 }

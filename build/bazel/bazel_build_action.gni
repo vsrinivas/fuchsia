@@ -64,6 +64,12 @@ assert(current_toolchain == default_toolchain)
 #     to using `bazel_outputs` directly.
 #     Type: a list of output file paths, relative to target_gen_dir.
 #
+#   extra_bazel_args: (optional)
+#     A list extra command line arguments to pass to Bazel.
+#     Type: list of string
+#
+#   deps:
+#   no_output_dir_leaks:
 #   testonly:
 #   visibility:
 #     Usual GN meaning.
@@ -120,8 +126,14 @@ template("bazel_build_action") {
            ] + invoker.bazel_outputs + [ "--bazel-targets" ] +
            invoker.bazel_targets + [ "--ninja-outputs" ] +
            rebase_path(_outputs, root_build_dir)
+    if (defined(invoker.extra_bazel_args)) {
+      args += [ "--" ] + invoker.extra_bazel_args
+    }
 
     deps = invoker.bazel_inputs + [ "//build/bazel:generate_main_workspace" ]
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
 
     forward_variables_from(invoker,
                            [

@@ -1,0 +1,146 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bazel/bazel_build_action.gni")
+
+# Parameters
+#
+#  bazel_assembly_target (required)
+#    The bazel assembly target to build.
+#    Type: label (from BUILD.bazel)
+#
+#  bazel_image_name (optional)
+#    The image name of Bazel assembly target.
+#    Type: string
+#    Default: target_name
+#
+#  gn_image_name (required)
+#    Image name for this target as defined in GN. Bazel will inherit the same
+#    image name because it's reusing the images config from GN assembly.
+#    Type: string
+#
+#  zbi_only (required)
+#    Whether this assembly target outputs ZBI only.
+#    Type: bool
+#
+#  sign_zbi (required)
+#    Whether signed system ZBI is produced by assembly.
+#    Type: bool
+#
+#  use_vbmeta (required)
+#    Whether a vbmeta image is being generated.
+#    Type: bool
+#
+#  fvm_emmc_partition_size (required)
+#    The size in bytes of the FVM partition on the target eMMC devices.
+#    Type: int|bool
+#
+#  fvm_ftl_nand_block_count (required)
+#    Specified if generating a NAND FVM image suitable for directly flashing via
+#    fastboot.
+#    Type: int|bool
+#
+#  deps
+#  testonly
+#  visibility
+#
+template("bazel_assembled_system") {
+  assert(defined(invoker.bazel_assembly_target),
+         "bazel_assembly_target is required")
+  assert(defined(invoker.gn_image_name), "gn_image_name is required")
+  assert(defined(invoker.zbi_only), "zbi_only is required")
+  assert(defined(invoker.sign_zbi), "sign_zbi is required")
+  assert(defined(invoker.use_vbmeta), "use_vbmeta is required")
+  assert(defined(invoker.fvm_emmc_partition_size),
+         "fvm_emmc_partition_size is required")
+  assert(defined(invoker.fvm_ftl_nand_block_count),
+         "fvm_ftl_nand_block_count is required")
+
+  bazel_build_action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    # Core SDK is necessary to run assembly rules from the Bazel SDK.
+    deps = [ "//sdk:core" ]
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
+
+    no_output_dir_leaks = false
+
+    # TODO(jayzhuang): Investigate Bazel assembly hermeticity issues and remove
+    # this arg.
+    extra_bazel_args = [ "--spawn_strategy=local" ]
+
+    bazel_targets = [ invoker.bazel_assembly_target ]
+    bazel_inputs = [
+      "//build/bazel:build_args_bazel_inputs",
+      "//build/bazel/assembly:bazel_platform_aibs",
+      "//build/images/${invoker.gn_image_name}:${invoker.gn_image_name}.bazel_images_config_inputs",
+      "//build/images/${invoker.gn_image_name}:${invoker.gn_image_name}.bazel_legacy_aib",
+    ]
+
+    _assembly_outputs = [
+      "bootfs_files.list",
+      "devmgr_config.txt",
+      "${invoker.gn_image_name}.zbi",
+      "zbi.json",
+      "packages.json",
+      "data/bootfs_packages",
+      "command_log.json",
+      "images.json",
+    ]
+
+    if (invoker.sign_zbi) {
+      _assembly_outputs += [ "${invoker.gn_image_name}.zbi.signed" ]
+    }
+
+    if (invoker.use_vbmeta) {
+      _assembly_outputs += [ "${invoker.gn_image_name}.vbmeta" ]
+    }
+
+    if (!invoker.zbi_only) {
+      _assembly_outputs += [
+        "base/meta.far",
+        "base/package_manifest.json",
+        "base/base.merkle",
+        "data.blk",
+        "blob.blk",
+        "fvm.blk",
+        "fvm.sparse.blk",
+        "fvm.blob.sparse.blk",
+        "blob.manifest",
+        "blobs.json",
+        "system_image/data/static_packages",
+        "system_image/data/cache_packages.json",
+        "system_image/meta/package",
+        "system_image/meta/fuchsia.abi/abi-revision",
+      ]
+
+      if (invoker.fvm_emmc_partition_size != false ||
+          invoker.fvm_ftl_nand_block_count != false) {
+        _assembly_outputs += [ "fvm.fastboot.blk" ]
+      }
+      if (invoker.fvm_ftl_nand_block_count != false) {
+        _assembly_outputs += [ "fvm.fastboot.tmp.blk" ]
+      }
+    }
+
+    _bazel_image_name = target_name
+    if (defined(invoker.bazel_assembly_image_name)) {
+      _bazel_image_name = invoker.bazel_assembly_image_name
+    }
+    _bazel_assembly_out_dir = "build/bazel/assembly/${_bazel_image_name}_out"
+
+    bazel_outputs = []
+    ninja_outputs = []
+    foreach(_out, _assembly_outputs) {
+      bazel_outputs += [ "${_bazel_assembly_out_dir}/${_out}" ]
+      ninja_outputs += [ "${_bazel_image_name}/${_out}" ]
+    }
+  }
+}

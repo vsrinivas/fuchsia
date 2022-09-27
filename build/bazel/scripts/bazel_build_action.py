@@ -56,6 +56,7 @@ def main():
         default=[],
         nargs='*',
         help='Ninja output paths relative to current directory.')
+    parser.add_argument('extra_bazel_args', nargs=argparse.REMAINDER)
 
     args = parser.parse_args()
 
@@ -73,6 +74,11 @@ def main():
             'The --bazel-outputs and --ninja-outputs lists must have the same size!'
         )
 
+    if args.extra_bazel_args and args.extra_bazel_args[0] != '--':
+        return parser.error(
+            'Extra bazel args should be seperate with script args using --')
+    args.extra_bazel_args = args.extra_bazel_args[1:]
+
     if not os.path.exists(args.workspace_dir):
         return parser.error(
             'Workspace directory does not exist: %s' % args.workspace_dir)
@@ -81,8 +87,8 @@ def main():
         return parser.error(
             'Bazel launcher does not exist: %s' % args.bazel_launcher)
 
-    cmd = [
-        args.bazel_launcher, 'build', '--verbose_failures'
+    cmd = [args.bazel_launcher, 'build'] + [
+        shlex.quote(arg) for arg in args.extra_bazel_args
     ] + args.bazel_targets
     ret = subprocess.run(cmd)
     if ret.returncode != 0:
