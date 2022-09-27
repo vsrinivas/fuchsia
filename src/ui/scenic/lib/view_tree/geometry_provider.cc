@@ -190,6 +190,9 @@ fuog_ViewDescriptor GeometryProvider::ExtractViewDescriptor(
       << "top left and top right coordinates cannot be the same";
   auto angle_context = atan2(extent_in_context_dy, extent_in_context_dx) * (180. / M_PI);
 
+  // Change the range of |angle_context| from [-pi,pi] to [0,2*pi).
+  angle_context = std::fmod(angle_context + 360, 360);
+
   fuog_RotatableExtent extent_in_context = {
       .origin = {extent_in_context_top_left[0], extent_in_context_top_left[1]},
       // Root mean squared distance between two coordinates.
@@ -224,6 +227,9 @@ fuog_ViewDescriptor GeometryProvider::ExtractViewDescriptor(
 
   // TODO(fxb/92869) : Handle floating point precision errors in calculating the angle.
   auto angle_parent = atan2(extent_in_parent_dy, extent_in_parent_dx) * (180. / M_PI);
+
+  // Change the range of |angle_parent| from [-pi,pi] to [0,2*pi).
+  angle_parent = std::fmod(angle_parent + 360, 360);
 
   fuog_RotatableExtent extent_in_parent = {
       .origin = {extent_in_parent_top_left[0], extent_in_parent_top_left[1]},
