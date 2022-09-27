@@ -7,8 +7,8 @@ import("//build/components.gni")
 group("tests") {
   testonly = true
   deps = [
-    ":audio-libprocessing-death-unittests",
-    ":audio-libprocessing-unittests",
+    ":audio_lib_processing_death_unittests",
+    ":audio_lib_processing_unittests",
   ]
 }
 
@@ -109,7 +109,7 @@ compiled_action("build_coefficient_table_data_prebuilt_cc") {
 executable("unittest-bin") {
   visibility = [ ":*" ]
   testonly = true
-  output_name = "audio-libprocessing-unittests"
+  output_name = "audio_lib_processing_unittests"
 
   sources = [
     "channel_strip_unittest.cc",
@@ -135,13 +135,13 @@ executable("unittest-bin") {
   ]
 }
 
-fuchsia_unittest_package("audio-libprocessing-unittests") {
+fuchsia_unittest_package("audio_lib_processing_unittests") {
   deps = [ ":unittest-bin" ]
 }
 
 executable("death-unittest-bin") {
   testonly = true
-  output_name = "audio-libprocessing-death-unittests"
+  output_name = "audio_lib_processing_death_unittests"
 
   sources = [ "sampler_death_unittest.cc" ]
 
@@ -155,7 +155,7 @@ executable("death-unittest-bin") {
   ]
 }
 
-fuchsia_unittest_package("audio-libprocessing-death-unittests") {
+fuchsia_unittest_package("audio_lib_processing_death_unittests") {
   deps = [ ":death-unittest-bin" ]
   manifest = "meta/audio_libprocessing_death_unittests.cml"
   test_specs = {

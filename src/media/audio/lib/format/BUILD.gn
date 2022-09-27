@@ -43,7 +43,7 @@ source_set("constants") {
 executable("unittest-bin") {
   visibility = [ ":*" ]
   testonly = true
-  output_name = "audio-libformat-unittests"
+  output_name = "audio_lib_format_unittests"
 
   sources = [
     "audio_buffer_unittest.cc",
@@ -59,7 +59,7 @@ executable("unittest-bin") {
   ]
 }
 
-fuchsia_unittest_package("audio-libformat-unittests") {
+fuchsia_unittest_package("audio_lib_format_unittests") {
   deps = [ ":unittest-bin" ]
 
   test_specs = {
@@ -69,5 +69,5 @@ fuchsia_unittest_package("audio-libformat-unittests") {
 
 group("tests") {
   testonly = true
-  deps = [ ":audio-libformat-unittests" ]
+  deps = [ ":audio_lib_format_unittests" ]
 }

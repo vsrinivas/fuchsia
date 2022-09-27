@@ -55,7 +55,7 @@ source_set("clock") {
 executable("unittest_bin") {
   visibility = [ ":*" ]
   testonly = true
-  output_name = "audio-libclock-unittests"
+  output_name = "audio_lib_clock_unittests"
 
   sources = [
     "clock_snapshot_unittest.cc",
@@ -82,11 +82,11 @@ executable("unittest_bin") {
   ]
 }
 
-fuchsia_unittest_package("audio-libclock-unittests") {
+fuchsia_unittest_package("audio_lib_clock_unittests") {
   deps = [ ":unittest_bin" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":audio-libclock-unittests" ]
+  deps = [ ":audio_lib_clock_unittests" ]
 }

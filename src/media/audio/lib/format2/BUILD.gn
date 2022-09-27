@@ -6,7 +6,7 @@ import("//build/components.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":audio-libformat2-unittests" ]
+  deps = [ ":audio_lib_format2_unittests" ]
 }
 
 source_set("fixed") {
@@ -57,7 +57,7 @@ source_set("format2") {
 executable("unittest-bin") {
   visibility = [ ":*" ]
   testonly = true
-  output_name = "audio-libformat2-unittests"
+  output_name = "audio_lib_format2_unittests"
 
   sources = [
     "channel_mapper_unittest.cc",
@@ -73,6 +73,6 @@ executable("unittest-bin") {
   ]
 }
 
-fuchsia_unittest_package("audio-libformat2-unittests") {
+fuchsia_unittest_package("audio_lib_format2_unittests") {
   deps = [ ":unittest-bin" ]
 }

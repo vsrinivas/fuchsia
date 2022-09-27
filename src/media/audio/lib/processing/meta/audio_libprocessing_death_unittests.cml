@@ -8,6 +8,6 @@
         "//src/sys/test_runners/gtest/default.shard.cml",
     ],
     program: {
-        binary: "bin/audio-libprocessing-death-unittests",
+        binary: "bin/audio_lib_processing_death_unittests",
     },
 }

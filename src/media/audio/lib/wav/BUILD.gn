@@ -26,7 +26,7 @@ source_set("wav") {
 test("unittest_bin") {
   visibility = [ ":*" ]
   testonly = true
-  output_name = "audio-libwav-unittests"
+  output_name = "audio_lib_wav_unittests"
 
   sources = [ "wav_unittest.cc" ]
 
@@ -36,12 +36,12 @@ test("unittest_bin") {
   ]
 }
 
-fuchsia_unittest_package("audio-libwav-unittests") {
+fuchsia_unittest_package("audio_lib_wav_unittests") {
   deps = [ ":unittest_bin" ]
-  manifest = "meta/audio-libwav-unittests.cml"
+  manifest = "meta/audio_lib_wav_unittests.cml"
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":audio-libwav-unittests" ]
+  deps = [ ":audio_lib_wav_unittests" ]
 }
