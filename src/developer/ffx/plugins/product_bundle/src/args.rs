@@ -19,6 +19,7 @@ pub enum SubCommand {
     List(ListCommand),
     Get(GetCommand),
     Create(CreateCommand),
+    Remove(RemoveCommand),
 }
 
 /// Display a list of product bundle names.
@@ -122,4 +123,21 @@ pub struct CreateCommand {
     /// path to output directory.
     #[argh(option, short = 'o', default = "PathBuf::from(\".\")")]
     pub out: PathBuf,
+}
+
+/// Remove a product bundle from the product bundle cache.
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "remove")]
+pub struct RemoveCommand {
+    /// remove all product bundles instead of just one.
+    #[argh(switch, short = 'a')]
+    pub all: bool,
+
+    /// remove product bundle(s) without interactive confirmation.
+    #[argh(switch, short = 'f')]
+    pub force: bool,
+
+    /// the name of the product bundle to remove.
+    #[argh(positional)]
+    pub product_bundle_name: Option<String>,
 }

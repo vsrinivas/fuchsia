@@ -8,28 +8,32 @@
 
 use crate::{DeviceConfig, EmulatorConfiguration, GuestConfig, PortMapping, VirtualCpu};
 use anyhow::{anyhow, bail, Context, Result};
+use pbms::{
+    fms_entries_from, get_images_dir, load_product_bundle, select_product_bundle, ListingMode,
+};
 use sdk_metadata::{ProductBundle, ProductBundleV1, VirtualDeviceV1};
 use std::path::Path;
 
 pub async fn convert_bundle_to_configs(
-    product_bundle: ProductBundle,
+    product_bundle_name: Option<String>,
     device_name: Option<String>,
     verbose: bool,
 ) -> Result<EmulatorConfiguration> {
+    let product_url = select_product_bundle(&product_bundle_name, ListingMode::ReadyBundlesOnly)
+        .await
+        .context("Selecting product bundle")?;
+    let product_bundle =
+        load_product_bundle(&Some(product_url.to_string()), ListingMode::ReadyBundlesOnly).await?;
     match &product_bundle {
         ProductBundle::V1(product_bundle) => {
             // Get the virtual devices.
-            let product_url = pbms::select_product_bundle(&Some(product_bundle.name.clone()))
-                .await
-                .context("Selecting product bundle")?;
-            let fms_entries =
-                pbms::fms_entries_from(&product_url).await.context("get fms entries")?;
+            let fms_entries = fms_entries_from(&product_url).await.context("get fms entries")?;
             let virtual_devices =
                 fms::find_virtual_devices(&fms_entries, &product_bundle.device_refs)
                     .context("problem with virtual device")?;
 
             // Find the data root, which is used to find the images and template file.
-            let data_root = pbms::get_images_dir(&product_url).await.context("images dir")?;
+            let data_root = get_images_dir(&product_url).await.context("images dir")?;
 
             // Determine the correct device name from the user, or default to the first one listed
             // in the product bundle.

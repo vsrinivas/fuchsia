@@ -46,9 +46,18 @@ mod pbms;
 mod repo_info;
 pub mod structured_ui;
 
+#[derive(PartialEq, Debug, Clone)]
+pub enum ListingMode {
+    AllBundles,
+    ReadyBundlesOnly,
+}
+
 /// Load a product bundle by name, uri, or local path.
 /// This is capable of loading both v1 and v2 ProductBundles.
-pub async fn load_product_bundle(product_bundle: &Option<String>) -> Result<ProductBundle> {
+pub async fn load_product_bundle(
+    product_bundle: &Option<String>,
+    mode: ListingMode,
+) -> Result<ProductBundle> {
     tracing::debug!("Loading a product bundle: {:?}", product_bundle);
 
     //  If `product_bundle` is a local path, load it directly.
@@ -58,7 +67,7 @@ pub async fn load_product_bundle(product_bundle: &Option<String>) -> Result<Prod
 
     // Otherwise, use the `fms` crate to fetch and parse the product bundle by name or uri.
     let product_url =
-        select_product_bundle(product_bundle).await.context("Selecting product bundle")?;
+        select_product_bundle(product_bundle, mode).await.context("Selecting product bundle")?;
     let name = product_url.fragment().expect("Product name is required.");
 
     let fms_entries = fms_entries_from(&product_url).await.context("get fms entries")?;
@@ -191,7 +200,7 @@ where
         urls.clone().map(|url| format!("`{}`", url)).collect::<Vec<String>>().join("\n");
     println!(
         "Multiple product bundles found{extra_message}. To choose a specific product, pass \
-        in a full URL from the following:\n{formatted}",
+    in a full URL from the following:\n{formatted}",
         extra_message = extra_message,
         formatted = formatted
     );
@@ -235,7 +244,10 @@ where
 ///
 /// Tip: Call `update_metadata()` to get up to date choices (or not, if the
 ///      intent is to select from what's already there).
-pub async fn select_product_bundle(looking_for: &Option<String>) -> Result<url::Url> {
+pub async fn select_product_bundle(
+    looking_for: &Option<String>,
+    mode: ListingMode,
+) -> Result<url::Url> {
     tracing::debug!("select_product_bundle");
     let mut urls = product_bundle_urls().await.context("getting product bundle URLs")?;
     // Sort the URLs lexigraphically, then reverse them so the most recent
@@ -244,21 +256,31 @@ pub async fn select_product_bundle(looking_for: &Option<String>) -> Result<url::
     let sdk_version = sdk.get_version();
     urls.sort();
     urls.reverse();
+    let mut iter = urls.into_iter();
+    if mode == ListingMode::ReadyBundlesOnly {
+        // Unfortunately this can't be a filter() because is_pb_ready is async.
+        let mut ready = Vec::new();
+        for i in iter {
+            if is_pb_ready(&i).await? {
+                ready.push(i);
+            }
+        }
+        iter = ready.into_iter();
+    }
     if let Some(looking_for) = &looking_for {
-        let matches = urls.into_iter().filter(|url| {
+        let matches = iter.filter(|url| {
             return url.as_str() == looking_for
                 || url.fragment().expect("product_urls must have fragment") == looking_for;
         });
         match matches.at_most_one() {
             Ok(Some(m)) => Ok(m),
             Ok(None) => bail!(
-                "{}",
                 "A product bundle with that name was not found, please check the spelling and try again."
             ),
             Err(matches) => default_pbm_of_many(matches, sdk_version, Some(looking_for.to_string())),
         }
     } else {
-        match urls.into_iter().at_most_one() {
+        match iter.at_most_one() {
             Ok(Some(url)) => Ok(url),
             Ok(None) => bail!("There are no product bundles available."),
             Err(urls) => default_pbm_of_many(urls, sdk_version, None),

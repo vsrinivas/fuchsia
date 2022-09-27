@@ -23,7 +23,7 @@ use {
     errors::{ffx_bail, ffx_error},
     fidl_fuchsia_developer_ffx::FastbootProxy,
     fms::Entries,
-    pbms::load_product_bundle,
+    pbms::{load_product_bundle, ListingMode},
     sdk_metadata::{Metadata, ProductBundle, ProductBundleV2},
     serde::{Deserialize, Serialize},
     serde_json::{from_value, to_value, Value},
@@ -430,7 +430,8 @@ pub async fn from_sdk<W: Write>(
 ) -> Result<()> {
     match cmd.product_bundle.as_ref() {
         Some(b) => {
-            let product_bundle = load_product_bundle(&Some(b.to_string())).await?;
+            let product_bundle =
+                load_product_bundle(&Some(b.to_string()), ListingMode::AllBundles).await?;
             FlashManifest {
                 resolver: Resolver::new(PathBuf::from(b))?,
                 version: FlashManifestVersion::from_product_bundle(&product_bundle)?,
