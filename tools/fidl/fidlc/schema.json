@@ -713,7 +713,8 @@
                 "uint16",
                 "uint32",
                 "uint64",
-                "usize"
+                "usize",
+                "uintptr"
             ],
             "type": "string"
         },

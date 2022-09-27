@@ -36,6 +36,8 @@ std::string PrimitiveSubtypeToString(fidl::types::PrimitiveSubtype subtype) {
       return "Uint64";
     case PrimitiveSubtype::kZxUsize:
       return "ZxUsize";
+    case PrimitiveSubtype::kZxUintptr:
+      return "ZxUintptr";
     case PrimitiveSubtype::kFloat32:
       return "Float32";
     case PrimitiveSubtype::kFloat64:

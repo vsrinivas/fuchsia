@@ -88,6 +88,7 @@ enum struct PrimitiveSubtype {
   kUint32,
   kUint64,
   kZxUsize,
+  kZxUintptr,
   kFloat32,
   kFloat64,
 };

@@ -9,6 +9,49 @@
   "bits_declarations": [],
   "const_declarations": [
     {
+      "name": "test.experimentalzxctypes/UINTPTR_CONST",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
+        "line": 7,
+        "column": 7,
+        "length": 13
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uintptr",
+        "type_shape_v1": {
+          "inline_size": 8,
+          "alignment": 8,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_envelope": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 8,
+          "alignment": 8,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_envelope": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "value": {
+        "kind": "literal",
+        "value": "11",
+        "expression": "11",
+        "literal": {
+          "kind": "numeric",
+          "value": "11",
+          "expression": "11"
+        }
+      }
+    },
+    {
       "name": "test.experimentalzxctypes/USIZE_CONST",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
@@ -64,7 +107,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
-        "line": 10,
+        "line": 12,
         "column": 6,
         "length": 28
       },
@@ -97,7 +140,7 @@
           "name": "us",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
-            "line": 11,
+            "line": 13,
             "column": 5,
             "length": 2
           },
@@ -109,11 +152,52 @@
             "offset": 0,
             "padding": 0
           }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uintptr",
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "up",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
+            "line": 14,
+            "column": 5,
+            "length": 2
+          },
+          "field_shape_v1": {
+            "offset": 8,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 8,
+            "padding": 0
+          }
         }
       ],
       "resource": false,
       "type_shape_v1": {
-        "inline_size": 8,
+        "inline_size": 16,
         "alignment": 8,
         "depth": 0,
         "max_handles": 0,
@@ -123,7 +207,7 @@
         "has_flexible_envelope": false
       },
       "type_shape_v2": {
-        "inline_size": 8,
+        "inline_size": 16,
         "alignment": 8,
         "depth": 0,
         "max_handles": 0,
@@ -139,10 +223,24 @@
   "union_declarations": [],
   "type_alias_declarations": [
     {
+      "name": "test.experimentalzxctypes/AliasOfUintptr",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
+        "line": 10,
+        "column": 7,
+        "length": 14
+      },
+      "partial_type_ctor": {
+        "name": "uintptr",
+        "args": [],
+        "nullable": false
+      }
+    },
+    {
       "name": "test.experimentalzxctypes/AliasOfUsize",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
-        "line": 8,
+        "line": 9,
         "column": 7,
         "length": 12
       },
@@ -156,12 +254,16 @@
   "new_type_declarations": [],
   "declaration_order": [
     "test.experimentalzxctypes/USIZE_CONST",
+    "test.experimentalzxctypes/UINTPTR_CONST",
     "test.experimentalzxctypes/StructOfExperimentalZxCTypes",
-    "test.experimentalzxctypes/AliasOfUsize"
+    "test.experimentalzxctypes/AliasOfUsize",
+    "test.experimentalzxctypes/AliasOfUintptr"
   ],
   "declarations": {
+    "test.experimentalzxctypes/UINTPTR_CONST": "const",
     "test.experimentalzxctypes/USIZE_CONST": "const",
     "test.experimentalzxctypes/StructOfExperimentalZxCTypes": "struct",
+    "test.experimentalzxctypes/AliasOfUintptr": "type_alias",
     "test.experimentalzxctypes/AliasOfUsize": "type_alias"
   }
 }

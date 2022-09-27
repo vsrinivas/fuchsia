@@ -318,6 +318,9 @@ void AttributeArgSchema::ResolveArg(CompileStep* step, Attribute* attribute, Att
     case ConstantValue::Kind::kZxUsize:
       target_type = step->typespace()->GetPrimitiveType(types::PrimitiveSubtype::kZxUsize);
       break;
+    case ConstantValue::Kind::kZxUintptr:
+      target_type = step->typespace()->GetPrimitiveType(types::PrimitiveSubtype::kZxUintptr);
+      break;
     case ConstantValue::Kind::kFloat32:
       target_type = step->typespace()->GetPrimitiveType(types::PrimitiveSubtype::kFloat32);
       break;
@@ -413,6 +416,7 @@ static bool IsSimple(const Type* type, Reporter* reporter) {
     case Type::Kind::kPrimitive:
       switch (static_cast<const PrimitiveType*>(type)->subtype) {
         case types::PrimitiveSubtype::kZxUsize:
+        case types::PrimitiveSubtype::kZxUintptr:
           return false;
         default:
           break;

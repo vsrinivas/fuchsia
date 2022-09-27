@@ -14,6 +14,19 @@
   "dependency_identifiers": [],
   "consts": [
     {
+      "identifier": "test.experimentalzxctypes/UINTPTR_CONST",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
+        "data": "UINTPTR_CONST",
+        "start_offset": 236,
+        "end_offset": 249
+      },
+      "value": {
+        "type": "literal"
+      }
+    },
+    {
       "identifier": "test.experimentalzxctypes/USIZE_CONST",
       "location": {
         "is_virtual": false,
@@ -38,8 +51,8 @@
         "is_virtual": false,
         "file": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
         "data": "StructOfExperimentalZxCTypes",
-        "start_offset": 265,
-        "end_offset": 293
+        "start_offset": 331,
+        "end_offset": 359
       },
       "members": [
         {
@@ -48,8 +61,21 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
             "data": "us",
-            "start_offset": 309,
-            "end_offset": 311
+            "start_offset": 375,
+            "end_offset": 377
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "up",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
+            "data": "up",
+            "start_offset": 389,
+            "end_offset": 391
           },
           "type": {
             "kind": "primitive"

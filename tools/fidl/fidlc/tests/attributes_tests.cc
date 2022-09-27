@@ -1259,6 +1259,7 @@ library fidl.test;
         uint32=3,
         uint64=4,
         usize=5,
+        uintptr=6,
         float32=1.2,
         float64=-3.4)
 type MyStruct = struct {};
@@ -1276,6 +1277,8 @@ type MyStruct = struct {};
       .AddArg("uint32", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint32))
       .AddArg("uint64", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint64))
       .AddArg("usize", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kZxUsize))
+      .AddArg("uintptr",
+              fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kZxUintptr))
       .AddArg("float32", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kFloat32))
       .AddArg("float64", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kFloat64));
   ASSERT_COMPILED(library);
@@ -1408,6 +1411,18 @@ type MyStruct = struct {};
   EXPECT_EQ(static_cast<fidl::flat::NumericConstantValue<uint64_t>*>(resolved_usize.get())->value,
             5);
 
+  // Check `uintptr` arg.
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("uintptr"));
+  const auto& uintptr_val = example_struct->attributes->Get("attr")->GetArg("uintptr")->value;
+  EXPECT_STREQ(uintptr_val->span.data(), "6");
+  ASSERT_EQ(uintptr_val->kind, fidl::flat::Constant::Kind::kLiteral);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_uintptr;
+  EXPECT_TRUE(
+      uintptr_val->Value().Convert(fidl::flat::ConstantValue::Kind::kZxUintptr, &resolved_uintptr));
+  EXPECT_EQ(static_cast<fidl::flat::NumericConstantValue<uint64_t>*>(resolved_uintptr.get())->value,
+            6);
+
   // Check `float32` arg.
   EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("float32"));
   const auto& float32_val = example_struct->attributes->Get("attr")->GetArg("float32")->value;
@@ -1498,6 +1513,7 @@ type uint64 = bits : fidl.uint64 {
     MEMBER = 4;
 };
 const usize fidl.usize = 5;
+const uintptr fidl.uintptr = 6;
 const float32 fidl.float32 = 1.2;
 const float64 fidl.float64 = -3.4;
 
@@ -1513,6 +1529,7 @@ const float64 fidl.float64 = -3.4;
         uint32=uint32,
         uint64=uint64.MEMBER,
         usize=usize,
+        uintptr=uintptr,
         float32=float32,
         float64=float64)
 type MyStruct = struct {};
@@ -1530,10 +1547,12 @@ type MyStruct = struct {};
       .AddArg("uint32", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint32))
       .AddArg("uint64", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint64))
       .AddArg("usize", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kZxUsize))
+      .AddArg("uintptr",
+              fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kZxUintptr))
       .AddArg("float32", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kFloat32))
       .AddArg("float64", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kFloat64));
 
-  // For the use of usize.
+  // For the use of usize and uintptr.
   library.EnableFlag(fidl::ExperimentalFlags::Flag::kZxCTypes);
 
   ASSERT_COMPILED(library);
@@ -1665,6 +1684,18 @@ type MyStruct = struct {};
       usize_val->Value().Convert(fidl::flat::ConstantValue::Kind::kZxUsize, &resolved_usize));
   EXPECT_EQ(static_cast<fidl::flat::NumericConstantValue<uint64_t>*>(resolved_usize.get())->value,
             5);
+
+  // Check `uintptr` arg.
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("uintptr"));
+  const auto& uintptr_val = example_struct->attributes->Get("attr")->GetArg("uintptr")->value;
+  EXPECT_STREQ(uintptr_val->span.data(), "uintptr");
+  ASSERT_EQ(uintptr_val->kind, fidl::flat::Constant::Kind::kIdentifier);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_uintptr;
+  EXPECT_TRUE(
+      uintptr_val->Value().Convert(fidl::flat::ConstantValue::Kind::kZxUintptr, &resolved_uintptr));
+  EXPECT_EQ(static_cast<fidl::flat::NumericConstantValue<uint64_t>*>(resolved_uintptr.get())->value,
+            6);
 
   // Check `float32` arg.
   EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("float32"));

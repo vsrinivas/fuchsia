@@ -7,5 +7,5 @@ __LOCAL extern const struct FidlCodedStruct test_experimentalzxctypes_StructOfEx
 
 
 
-const struct FidlCodedStruct test_experimentalzxctypes_StructOfExperimentalZxCTypesTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v2=8u, .name="test.experimentalzxctypes/StructOfExperimentalZxCTypes"};
+const struct FidlCodedStruct test_experimentalzxctypes_StructOfExperimentalZxCTypesTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v2=16u, .name="test.experimentalzxctypes/StructOfExperimentalZxCTypes"};
 

@@ -73,6 +73,7 @@ bool Builtin::IsInternal() const {
     case Identity::kUint32:
     case Identity::kUint64:
     case Identity::kZxUsize:
+    case Identity::kZxUintptr:
     case Identity::kFloat32:
     case Identity::kFloat64:
     case Identity::kString:
@@ -217,6 +218,7 @@ std::unique_ptr<Library> Library::CreateRootLibrary() {
   insert("uint32", Builtin::Identity::kUint32);
   insert("uint64", Builtin::Identity::kUint64);
   insert("usize", Builtin::Identity::kZxUsize);
+  insert("uintptr", Builtin::Identity::kZxUintptr);
   insert("float32", Builtin::Identity::kFloat32);
   insert("float64", Builtin::Identity::kFloat64);
   insert("string", Builtin::Identity::kString);

@@ -90,7 +90,8 @@ bool NumericConstantValue<ValueType>::Convert(Kind kind,
       return true;
     }
     case Kind::kUint64:
-    case Kind::kZxUsize: {
+    case Kind::kZxUsize:
+    case Kind::kZxUintptr: {
       uint64_t casted_value;
       if (!checked_value.template Cast<uint64_t>().AssignIfValid(&casted_value)) {
         return false;
