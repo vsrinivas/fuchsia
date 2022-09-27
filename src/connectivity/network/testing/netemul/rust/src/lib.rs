@@ -899,16 +899,14 @@ impl<'a> TestEndpoint<'a> {
             truncate_dropping_front(n.into(), fnet_interfaces::INTERFACE_NAME_LENGTH.into())
                 .to_string()
         });
+        // TODO(https://fxbug.dev/34719) remove support for Ethernet once the
+        // netdevice migration is complete.
         match self.get_device().await.context("get_device failed")? {
             fnetemul_network::DeviceConnection::Ethernet(eth) => {
                 let id = {
                     // NB: Use different stack APIs based on name because
                     // fuchsia.net.stack doesn't allow the name to be set, and
                     // netstack3 doesn't support fuchsia.netstack.
-                    //
-                    // Migration to netdevice (https://fxbug.dev/34719) and new
-                    // APIs on NS3 (https://fxbug.dev/88796) should eventually
-                    // allow us to get rid of this.
                     if let Some(name) = name {
                         let netstack = realm
                             .connect_to_protocol::<fnetstack::NetstackMarker>()

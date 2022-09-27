@@ -119,10 +119,6 @@ async fn watcher_existing<N: Netstack>(name: &str) {
     for (idx, (has_default_ipv4_route, has_default_ipv6_route)) in
         [true, false].into_iter().cartesian_product([true, false]).enumerate()
     {
-        // TODO(https://fxbug.dev/88796): Use TestRealm::join_network_with
-        // https://fuchsia-docs.firebaseapp.com/rust/netemul/struct.TestRealm.html#method.join_network_with
-        // when `fuchsia.net.interfaces.admin` is supported.
-
         let if_name = format!("test-ep-{}", idx);
 
         let ep = sandbox

@@ -4,8 +4,6 @@
 
 #![cfg(test)]
 
-use std::collections::HashMap;
-
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_ext::{IntoExt as _, NetTypesIpAddressExt};
 use fidl_fuchsia_net_interfaces_admin as finterfaces_admin;
@@ -151,47 +149,6 @@ async fn test_no_duplicate_interface_names() {
         .expect("add_ethernet_device FIDL error")
         .map_err(zx::Status::from_raw);
     assert_eq!(result, Err(zx::Status::ALREADY_EXISTS));
-}
-
-// TODO(https://fxbug.dev/88796): Remove this test when fuchsia.net.interfaces
-// is supported in N3 and test_add_remove_interface can be parameterized on
-// Netstack.
-#[variants_test]
-async fn add_ethernet_interface<N: Netstack>(name: &str) {
-    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
-    let interfaces_state = realm
-        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .expect("connect to protocol");
-    let device =
-        sandbox.create_endpoint::<netemul::Ethernet, _>(name).await.expect("create endpoint");
-
-    let iface = device.into_interface_in_realm(&realm).await.expect("add device");
-    let id = iface.id();
-
-    let interfaces = fidl_fuchsia_net_interfaces_ext::existing(
-        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)
-            .expect("create event stream"),
-        HashMap::new(),
-    )
-    .await
-    .expect("fetch existing interfaces");
-    let fidl_fuchsia_net_interfaces_ext::Properties {
-        id: _,
-        name: _,
-        device_class,
-        online,
-        addresses: _,
-        has_default_ipv4_route: _,
-        has_default_ipv6_route: _,
-    } = interfaces.get(&id).expect("find added ethernet interface");
-    assert_eq!(
-        *device_class,
-        fidl_fuchsia_net_interfaces::DeviceClass::Device(
-            fidl_fuchsia_hardware_network::DeviceClass::Virtual
-        )
-    );
-    assert!(!online);
 }
 
 #[variants_test]
