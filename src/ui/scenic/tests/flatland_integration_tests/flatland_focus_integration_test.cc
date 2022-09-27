@@ -52,6 +52,7 @@ namespace {
 // Should not be used when actually expecting an update to occur.
 const zx::duration kWaitTime = zx::msec(100);
 const uint32_t kDefaultLogicalPixelSize = 1;
+const fuchsia::ui::composition::TransformId kRootTransform{.value = 1};
 
 }  // namespace
 
@@ -155,7 +156,6 @@ class FlatlandFocusIntegrationTest : public zxtest::Test,
     fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
     ViewportProperties properties;
     properties.set_logical_size({kDefaultLogicalPixelSize, kDefaultLogicalPixelSize});
-    const TransformId kRootTransform{.value = 1};
     const ContentId kRootContent{.value = 1};
     root_session_->CreateTransform(kRootTransform);
     root_session_->CreateViewport(kRootContent, std::move(token), std::move(properties),
@@ -585,6 +585,49 @@ TEST_F(FlatlandFocusIntegrationTest,
   // The child_focused_ptr should not die.
   RunLoopUntilIdle();
   EXPECT_TRUE(channel_alive);
+}
+
+TEST_F(FlatlandFocusIntegrationTest, ViewBoundChannels_ShouldSurviveViewDisconnect) {
+  // Set up the child view and attach to root.
+  auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
+  fuchsia::ui::composition::FlatlandPtr child_session;
+  child_session = realm_->Connect<fuchsia::ui::composition::Flatland>();
+
+  fuchsia::ui::views::ViewRefFocusedPtr focused;
+  bool focused_alive = true;
+  focused.set_error_handler([&focused_alive](auto) { focused_alive = false; });
+
+  fuchsia::ui::views::FocuserPtr focuser;
+  bool focuser_alive = true;
+  focuser.set_error_handler([&focuser_alive](auto) { focuser_alive = false; });
+
+  ViewBoundProtocols protocols;
+  protocols.set_view_ref_focused(focused.NewRequest());
+  protocols.set_view_focuser(focuser.NewRequest());
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+  child_session->CreateView2(std::move(child_token), scenic::NewViewIdentityOnCreation(),
+                             std::move(protocols), parent_viewport_watcher.NewRequest());
+  BlockingPresent(child_session);
+
+  AttachToRoot(std::move(parent_token));
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(focused_alive);
+  EXPECT_TRUE(focuser_alive);
+
+  // Disconnect from root and observe channels survive.
+  root_session_->SetRootTransform(TransformId{0});
+  BlockingPresent(root_session_);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(focused_alive);
+  EXPECT_TRUE(focuser_alive);
+
+  // Reconnect and observe that channels survive.
+  root_session_->SetRootTransform(kRootTransform);
+  BlockingPresent(root_session_);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(focused_alive);
+  EXPECT_TRUE(focuser_alive);
 }
 
 #undef EXPECT_VIEW_REF_MATCH

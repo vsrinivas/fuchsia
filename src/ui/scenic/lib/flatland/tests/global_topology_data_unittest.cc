@@ -60,8 +60,7 @@ namespace flatland::test {
 view_tree::SubtreeSnapshot GenerateSnapshot(
     const UberStruct::InstanceMap& uber_structs, const GlobalTopologyData::LinkTopologyMap& links,
     TransformHandle::InstanceId link_instance_id, TransformHandle root,
-    const std::unordered_map<TransformHandle, TransformHandle>
-        child_parent_viewport_watcher_mapping) {
+    const std::unordered_map<TransformHandle, TransformHandle> link_child_to_parent_transform_map) {
   auto gtd =
       GlobalTopologyData::ComputeGlobalTopologyData(uber_structs, links, kLinkInstanceId, {1, 0});
   CHECK_GLOBAL_TOPOLOGY_DATA(gtd, 0u);
@@ -73,16 +72,15 @@ view_tree::SubtreeSnapshot GenerateSnapshot(
   gtd.hit_regions =
       ComputeGlobalHitRegions(gtd.topology_vector, gtd.parent_indices, matrix_vector, uber_structs);
   return GlobalTopologyData::GenerateViewTreeSnapshot(gtd, global_clip_regions, matrix_vector,
-                                                      child_parent_viewport_watcher_mapping);
+                                                      link_child_to_parent_transform_map);
 }
 
 view_tree::SubtreeHitTester GenerateHitTester(
     const UberStruct::InstanceMap& uber_structs, const GlobalTopologyData::LinkTopologyMap& links,
     TransformHandle::InstanceId link_instance_id, TransformHandle root,
-    const std::unordered_map<TransformHandle, TransformHandle>
-        child_parent_viewport_watcher_mapping) {
+    const std::unordered_map<TransformHandle, TransformHandle> link_child_to_parent_transform_map) {
   auto snapshot = GenerateSnapshot(uber_structs, links, link_instance_id, root,
-                                   child_parent_viewport_watcher_mapping);
+                                   link_child_to_parent_transform_map);
   return std::move(snapshot.hit_tester);
 }
 
@@ -1202,7 +1200,7 @@ TEST(GlobalTopologyDataTest, PartialScreenViews_HaveCorrectTransforms) {
   MakeLink(links, 5);  // 0:5 - 5:0
 
   const auto snapshot = GenerateSnapshot(uber_structs, links, kLinkInstanceId, /*root*/ {1, 0},
-                                         /*child_parent_viewport_watcher_mapping*/ {});
+                                         /*link_child_to_parent_transform_map*/ {});
 
   int checksum = 0;
 
@@ -1312,8 +1310,8 @@ TEST(GlobalTopologyDataTest, ViewTreeSnapshot) {
   // handle.
   const auto& parent_transform_handle = vectors[0][1].handle;
   const auto& child_transform_handle = vectors[1][0].handle;
-  const std::unordered_map<TransformHandle, TransformHandle> child_parent_viewport_watcher_mapping =
-      {{child_transform_handle, parent_transform_handle}};
+  const std::unordered_map<TransformHandle, TransformHandle> link_child_to_parent_transform_map = {
+      {child_transform_handle, parent_transform_handle}};
   {
     auto uber_struct = std::make_unique<UberStruct>();
     uber_struct->local_topology = vectors[0];
@@ -1336,7 +1334,7 @@ TEST(GlobalTopologyDataTest, ViewTreeSnapshot) {
   // Since the global topology is only 2 instances, we should only see two views: the root and the
   // child, one a child of the other.
   const auto [root, view_tree, unconnected_views, _, tree_boundaries] = GenerateSnapshot(
-      uber_structs, links, kLinkInstanceId, /*root*/ {1, 0}, child_parent_viewport_watcher_mapping);
+      uber_structs, links, kLinkInstanceId, /*root*/ {1, 0}, link_child_to_parent_transform_map);
   EXPECT_EQ(root, view_ref1_koid);
   EXPECT_EQ(view_tree.size(), 2u);
 
@@ -1359,6 +1357,57 @@ TEST(GlobalTopologyDataTest, ViewTreeSnapshot) {
   }
 
   EXPECT_TRUE(unconnected_views.empty());
+  EXPECT_TRUE(tree_boundaries.empty());
+}
+
+TEST(GlobalTopologyDataTest, ViewTreeSnapshot_UnconnectedLocalTopology) {
+  UberStruct::InstanceMap uber_structs;
+
+  auto [control_ref1, view_ref1] = scenic::ViewRefPair::New();
+  auto [control_ref2, view_ref2] = scenic::ViewRefPair::New();
+  const zx_koid_t view_ref1_koid = utils::ExtractKoid(view_ref1);
+  const zx_koid_t view_ref2_koid = utils::ExtractKoid(view_ref2);
+
+  // Topology has the root local topology + a second unconnected local topology.
+  const TransformGraph::TopologyVector vectors[] = {
+      {{{1, 0}, 2}, {{1, 1}, 0}, {{1, 2}, 0}},  // 1:0 - 1:1
+                                                //   \
+                                                //    1:2
+                                                //
+      {{{2, 0}, 1}, {{2, 1}, 0}}};              // 2:0 - 2:1
+
+  {
+    auto uber_struct = std::make_unique<UberStruct>();
+    uber_struct->local_topology = vectors[0];
+    uber_struct->view_ref = std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_ref1));
+    uber_struct->debug_name = "test_instance_1";
+    uber_structs[vectors[0][0].handle.GetInstanceId()] = std::move(uber_struct);
+  }
+  {
+    auto uber_struct = std::make_unique<UberStruct>();
+    uber_struct->local_topology = vectors[1];
+    uber_struct->view_ref = std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_ref2));
+    uber_struct->debug_name = "test_instance_2";
+    uber_structs[vectors[1][0].handle.GetInstanceId()] = std::move(uber_struct);
+  }
+
+  // The generated snapshot should now have the root topology expressed in the ViewTree, while the
+  // unconnected topology should be represented as an unconnected view.
+  const auto [root, view_tree, unconnected_views, _, tree_boundaries] =
+      GenerateSnapshot(uber_structs, /*links=*/{}, kLinkInstanceId, /*root=*/{1, 0},
+                       /*link_child_to_parent_transform_map=*/{});
+  EXPECT_EQ(root, view_ref1_koid);
+  EXPECT_EQ(view_tree.size(), 1u);
+
+  {
+    ASSERT_TRUE(view_tree.count(view_ref1_koid) == 1);
+    const auto& node1 = view_tree.at(view_ref1_koid);
+    EXPECT_EQ(node1.parent, ZX_KOID_INVALID);
+    EXPECT_TRUE(node1.children.empty());
+    EXPECT_EQ(node1.debug_name, "test_instance_1");
+  }
+
+  EXPECT_THAT(unconnected_views, testing::ElementsAre(view_ref2_koid));
   EXPECT_TRUE(tree_boundaries.empty());
 }
 
@@ -1435,7 +1484,7 @@ TEST(GlobalTopologyDataTest, ViewTreeSnapshot_AnonymousView) {
   MakeLink(links, 5);  // 0:5 - 5:0
 
   const auto snapshot = GenerateSnapshot(uber_structs, links, kLinkInstanceId, /*root*/ {1, 0},
-                                         /*child_parent_viewport_watcher_mapping*/ {});
+                                         /*link_child_to_parent_transform_map*/ {});
 
   // View 3 is anonymous, so it and its children should not appear in the ViewTree; instead marked
   // as unconnected.

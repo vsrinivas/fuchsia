@@ -384,6 +384,14 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
   std::unordered_map<TransformHandle, std::string> debug_names;
   std::unordered_map<TransformHandle, TransformClipRegion> clip_regions;
 
+  // For the root of each local topology (i.e. the View), save the ViewRef, whether they're
+  // currently attached to the scene or not.
+  for (const auto& [_, uber_struct] : uber_structs) {
+    if (!uber_struct->local_topology.empty()) {
+      view_refs.emplace(uber_struct->local_topology[0].handle, uber_struct->view_ref);
+    }
+  }
+
   // If we don't have the root in the map, the topology will be empty.
   const auto root_uber_struct_kv = uber_structs.find(root.GetInstanceId());
   if (root_uber_struct_kv != uber_structs.cend()) {
@@ -499,13 +507,6 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
     child_counts.push_back(current_entry.child_count);
     parent_indices.push_back(parent_counts.empty() ? 0 : parent_counts.back().parent_index);
     live_transforms.insert(current_entry.handle);
-
-    // For the root of each local topology (i.e. the View), save the ViewRef.
-    // Non-View roots might have a nullptr ViewRef.
-    if (current_entry == vector[0]) {
-      view_refs.emplace(current_entry.handle,
-                        uber_structs.at(current_entry.handle.GetInstanceId())->view_ref);
-    }
 
     // For the root of each local topology (i.e. the View), save the debug name if it is not empty.
     if (current_entry == vector[0] &&
