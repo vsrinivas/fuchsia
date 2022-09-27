@@ -20,12 +20,21 @@
         },
         {
             "event_codes": [
+                2
+            ],
+            "metric_id": 121,
+            "metric_type": "Integer",
+            "selector": "core/system-update-committer:root/verification/ota_verification_duration:failure_netstack",
+            "upload_once": true
+        },
+        {
+            "event_codes": [
                 1,
                 1
             ],
             "metric_id": 122,
             "metric_type": "Occurrence",
-            "selector": "core/system-update-committer:root/verification/ota_verification_failure:verify",
+            "selector": "core/system-update-committer:root/verification/ota_verification_failure:blobfs_verify",
             "upload_once": true
         },
         {
@@ -35,7 +44,7 @@
             ],
             "metric_id": 122,
             "metric_type": "Occurrence",
-            "selector": "core/system-update-committer:root/verification/ota_verification_failure:fidl",
+            "selector": "core/system-update-committer:root/verification/ota_verification_failure:blobfs_fidl",
             "upload_once": true
         },
         {
@@ -45,7 +54,37 @@
             ],
             "metric_id": 122,
             "metric_type": "Occurrence",
-            "selector": "core/system-update-committer:root/verification/ota_verification_failure:timeout",
+            "selector": "core/system-update-committer:root/verification/ota_verification_failure:blobfs_timeout",
+            "upload_once": true
+        },
+        {
+            "event_codes": [
+                2,
+                1
+            ],
+            "metric_id": 122,
+            "metric_type": "Occurrence",
+            "selector": "core/system-update-committer:root/verification/ota_verification_failure:netstack_verify",
+            "upload_once": true
+        },
+        {
+            "event_codes": [
+                2,
+                2
+            ],
+            "metric_id": 122,
+            "metric_type": "Occurrence",
+            "selector": "core/system-update-committer:root/verification/ota_verification_failure:netstack_fidl",
+            "upload_once": true
+        },
+        {
+            "event_codes": [
+                2,
+                3
+            ],
+            "metric_id": 122,
+            "metric_type": "Occurrence",
+            "selector": "core/system-update-committer:root/verification/ota_verification_failure:netstack_timeout",
             "upload_once": true
         }
     ],

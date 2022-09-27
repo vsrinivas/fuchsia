@@ -34,9 +34,9 @@ pub(super) fn write_to_inspect(
                 duration_node.record_uint(name, duration_u64)
             });
             node.record_child("ota_verification_failure", |reason_node| match reason {
-                VerifyFailureReason::Fidl(_) => reason_node.record_uint("fidl", 1),
-                VerifyFailureReason::Verify(_) => reason_node.record_uint("verify", 1),
-                VerifyFailureReason::Timeout => reason_node.record_uint("timeout", 1),
+                VerifyFailureReason::Fidl(_) => reason_node.record_uint("blobfs_fidl", 1),
+                VerifyFailureReason::Verify(_) => reason_node.record_uint("blobfs_verify", 1),
+                VerifyFailureReason::Timeout => reason_node.record_uint("blobfs_timeout", 1),
             });
         }
     };
@@ -87,7 +87,7 @@ mod tests {
                     "failure_blobfs" : 2u64,
                 },
                 "ota_verification_failure": {
-                    "fidl": 1u64,
+                    "blobfs_fidl": 1u64,
                 }
             }
         }
@@ -110,7 +110,7 @@ mod tests {
                     "failure_blobfs" : 2u64,
                 },
                 "ota_verification_failure": {
-                    "timeout": 1u64,
+                    "blobfs_timeout": 1u64,
                 }
             }
         }
@@ -136,7 +136,7 @@ mod tests {
                     "failure_blobfs" : 2u64,
                 },
                 "ota_verification_failure": {
-                    "verify": 1u64,
+                    "blobfs_verify": 1u64,
                 }
             }
         }

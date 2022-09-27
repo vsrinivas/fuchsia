@@ -498,7 +498,7 @@ async fn verification_failure_causes_reboot() {
                     "failure_blobfs": AnyProperty,
                 },
                 "ota_verification_failure": {
-                    "verify": 1u64,
+                    "blobfs_verify": 1u64,
                 }
             },
             "fuchsia.inspect.Health": {
@@ -552,7 +552,7 @@ async fn verification_failure_does_not_cause_reboot() {
                     "failure_blobfs": AnyProperty,
                 },
                 "ota_verification_failure": {
-                    "verify": 1u64,
+                    "blobfs_verify": 1u64,
                 }
             },
             "fuchsia.inspect.Health": {
