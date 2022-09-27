@@ -39,7 +39,6 @@
 
 namespace vmm {
 
-using ::fuchsia::component::RealmSyncPtr;
 using ::fuchsia::virtualization::BalloonController;
 using ::fuchsia::virtualization::GuestConfig;
 using ::fuchsia::virtualization::GuestError;
@@ -90,6 +89,9 @@ Vmm::~Vmm() {
   // guest has ownership of VCPU threads that may attempt to access various other objects via the
   // guest, and its destructor joins those threads avoiding any use after free problems.
   guest_.reset();
+  if (outgoing_) {
+    outgoing_->RemovePublicService<Guest>();
+  }
 }
 
 fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContext* context,
@@ -98,10 +100,9 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
     return fitx::error(GuestError::BAD_CONFIG);
   }
 
-  DevMem dev_mem;
-  RealmSyncPtr realm;
-  context->svc()->Connect(realm.NewRequest());
+  outgoing_ = context->outgoing();
 
+  DevMem dev_mem;
   guest_ = std::make_unique<::Guest>();
   zx_status_t status = guest_->Init(cfg.guest_memory());
   if (status != ZX_OK) {
@@ -179,7 +180,7 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
       FX_PLOGS(ERROR, status) << "Failed to connect balloon device";
       return fitx::error(GuestError::DEVICE_INITIALIZATION_FAILURE);
     }
-    status = balloon_->Start(guest_->object(), realm, dispatcher);
+    status = balloon_->Start(guest_->object(), context, dispatcher);
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start balloon device";
       return fitx::error(GuestError::DEVICE_START_FAILURE);
@@ -195,8 +196,8 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
       FX_PLOGS(ERROR, status) << "Failed to connect block device";
       return fitx::error(GuestError::DEVICE_INITIALIZATION_FAILURE);
     }
-    status = block->Start(guest_->object(), block_device.id, std::move(block_device.client), realm,
-                          dispatcher, block_devices_.size());
+    status = block->Start(guest_->object(), block_device.id, std::move(block_device.client),
+                          context, dispatcher, block_devices_.size());
 
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start block device";
@@ -216,7 +217,7 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
 
     zx::socket host_console_socket;
     FX_CHECK(zx::socket::create(0, &host_console_socket, &client_console_socket_) == ZX_OK);
-    status = console_->Start(guest_->object(), std::move(host_console_socket), realm, dispatcher);
+    status = console_->Start(guest_->object(), std::move(host_console_socket), context, dispatcher);
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start console device";
       return fitx::error(GuestError::DEVICE_START_FAILURE);
@@ -234,7 +235,7 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
       FX_PLOGS(ERROR, status) << "Failed to connect keyboard device";
       return fitx::error(GuestError::DEVICE_INITIALIZATION_FAILURE);
     }
-    status = input_keyboard_->Start(guest_->object(), realm, dispatcher, "virtio_input_keyboard");
+    status = input_keyboard_->Start(guest_->object(), context, dispatcher, "virtio_input_keyboard");
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start keyboard device";
       return fitx::error(GuestError::DEVICE_START_FAILURE);
@@ -248,7 +249,7 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
       FX_PLOGS(ERROR, status) << "Failed to connect mouse device";
       return fitx::error(GuestError::DEVICE_INITIALIZATION_FAILURE);
     }
-    status = input_pointer_->Start(guest_->object(), realm, dispatcher, "virtio_input_pointer");
+    status = input_pointer_->Start(guest_->object(), context, dispatcher, "virtio_input_pointer");
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start mouse device";
       return fitx::error(GuestError::DEVICE_START_FAILURE);
@@ -263,7 +264,7 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
       return fitx::error(GuestError::DEVICE_INITIALIZATION_FAILURE);
     }
     status = gpu_->Start(guest_->object(), std::move(keyboard_listener),
-                         std::move(pointer_listener), realm, dispatcher);
+                         std::move(pointer_listener), context, dispatcher);
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start GPU device";
       return fitx::error(GuestError::DEVICE_START_FAILURE);
@@ -278,7 +279,7 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
       FX_PLOGS(ERROR, status) << "Failed to connect RNG device";
       return fitx::error(GuestError::DEVICE_INITIALIZATION_FAILURE);
     }
-    status = rng_->Start(guest_->object(), realm, dispatcher);
+    status = rng_->Start(guest_->object(), context, dispatcher);
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start RNG device";
       return fitx::error(GuestError::DEVICE_START_FAILURE);
@@ -292,7 +293,7 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
       FX_PLOGS(ERROR, status) << "Failed to connect vsock device";
       return fitx::error(GuestError::DEVICE_INITIALIZATION_FAILURE);
     }
-    status = vsock_->Start(guest_->object(), std::move(*cfg.mutable_vsock_listeners()), realm,
+    status = vsock_->Start(guest_->object(), std::move(*cfg.mutable_vsock_listeners()), context,
                            dispatcher);
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start vsock device";
@@ -336,7 +337,7 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
     }
     status = wl_->Start(
         guest_->object(), std::move(wl_vmar), std::move(cfg.mutable_wayland_device()->server),
-        std::move(sysmem_allocator), std::move(scenic_allocator), realm, dispatcher);
+        std::move(sysmem_allocator), std::move(scenic_allocator), context, dispatcher);
     if (status != ZX_OK) {
       FX_LOGS(INFO) << "Could not start wayland device";
       return fitx::error(GuestError::DEVICE_START_FAILURE);
@@ -374,7 +375,7 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
       }
     }
     status = magma_->Start(guest_->object(), std::move(magma_vmar),
-                           std::move(wayland_importer_handle), realm, dispatcher);
+                           std::move(wayland_importer_handle), context, dispatcher);
     if (status == ZX_ERR_NOT_FOUND) {
       FX_LOGS(INFO) << "Magma device not supported by host";
     } else if (status != ZX_OK) {
@@ -391,7 +392,7 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
       FX_PLOGS(ERROR, status) << "Failed to connect sound device";
       return fitx::error(GuestError::DEVICE_INITIALIZATION_FAILURE);
     }
-    status = sound_->Start(guest_->object(), realm, dispatcher,
+    status = sound_->Start(guest_->object(), context, dispatcher,
                            cfg.has_virtio_sound_input() && cfg.virtio_sound_input());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start sound device";
@@ -409,7 +410,7 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
       FX_PLOGS(ERROR, status) << "Failed to connect Ethernet device";
       return fitx::error(GuestError::DEVICE_INITIALIZATION_FAILURE);
     }
-    status = net->Start(guest_->object(), net_device.mac_address, net_device.enable_bridge, realm,
+    status = net->Start(guest_->object(), net_device.mac_address, net_device.enable_bridge, context,
                         dispatcher, net_devices_.size());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Could not open Ethernet device";
@@ -470,7 +471,7 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
     return fitx::error(GuestError::KERNEL_LOAD_FAILURE);
   }
 
-  auto result = AddPublicServices(context);
+  auto result = AddPublicServices();
   if (result.is_error()) {
     return result;
   }
@@ -496,8 +497,8 @@ zx_gpaddr_t Vmm::AllocDeviceAddr(size_t device_size) {
   return ret;
 }
 
-fitx::result<GuestError> Vmm::AddPublicServices(sys::ComponentContext* context) {
-  zx_status_t status = context->outgoing()->AddPublicService(guest_bindings_.GetHandler(this));
+fitx::result<GuestError> Vmm::AddPublicServices() {
+  zx_status_t status = outgoing_->AddPublicService(guest_bindings_.GetHandler(this));
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to add guest controller public service";
     return fitx::error(GuestError::DUPLICATE_PUBLIC_SERVICES);

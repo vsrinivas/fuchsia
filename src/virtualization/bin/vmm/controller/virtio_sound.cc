@@ -6,23 +6,26 @@
 
 #include <lib/sys/cpp/service_directory.h>
 
-#include "src/virtualization/bin/vmm/controller/realm_utils.h"
+namespace {
+
 // No features currently defined.
 static constexpr uint32_t kDeviceFeatures = 0;
+
+constexpr auto kComponentName = "virtio_sound";
+constexpr auto kComponentCollectionName = "virtio_sound_devices";
+constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_sound#meta/virtio_sound.cm";
+
+}  // namespace
 
 VirtioSound::VirtioSound(const PhysMem& phys_mem)
     : VirtioComponentDevice("Virtio Sound", phys_mem, kDeviceFeatures,
                             fit::bind_member(this, &VirtioSound::ConfigureQueue),
                             fit::bind_member(this, &VirtioSound::Ready)) {}
 
-zx_status_t VirtioSound::Start(const zx::guest& guest, fuchsia::component::RealmSyncPtr& realm,
+zx_status_t VirtioSound::Start(const zx::guest& guest, ::sys::ComponentContext* context,
                                async_dispatcher_t* dispatcher, bool enable_input) {
-  constexpr auto kComponentName = "virtio_sound";
-  constexpr auto kComponentCollectionName = "virtio_sound_devices";
-  constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_sound#meta/virtio_sound.cm";
-
   zx_status_t status = CreateDynamicComponent(
-      realm, kComponentCollectionName, kComponentName, kComponentUrl,
+      context, kComponentCollectionName, kComponentName, kComponentUrl,
       [sound = sound_.NewRequest()](std::shared_ptr<sys::ServiceDirectory> services) mutable {
         return services->Connect(std::move(sound));
       });

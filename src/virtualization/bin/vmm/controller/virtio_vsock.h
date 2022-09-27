@@ -5,7 +5,6 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_VSOCK_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_VSOCK_H_
 
-#include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -28,7 +27,7 @@ class VirtioVsock
   // Only supports starting as a CFv2 component.
   zx_status_t Start(const zx::guest& guest,
                     std::vector<fuchsia::virtualization::Listener> listeners,
-                    fuchsia::component::RealmSyncPtr& realm, async_dispatcher_t* dispatcher);
+                    ::sys::ComponentContext* context, async_dispatcher_t* dispatcher);
 
   void GetHostVsockEndpoint(
       fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint> endpoint);

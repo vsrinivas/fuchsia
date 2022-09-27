@@ -6,7 +6,6 @@
 #define SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_BALLOON_H_
 
 #include <fidl/fuchsia.virtualization.hardware/cpp/fidl.h>
-#include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -27,7 +26,7 @@ class VirtioBalloon
  public:
   explicit VirtioBalloon(const PhysMem& phys_mem);
 
-  zx_status_t Start(const zx::guest& guest, fuchsia::component::RealmSyncPtr& realm,
+  zx_status_t Start(const zx::guest& guest, ::sys::ComponentContext* context,
                     async_dispatcher_t* dispatcher);
 
   void ConnectToBalloonController(

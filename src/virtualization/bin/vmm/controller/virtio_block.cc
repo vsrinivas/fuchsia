@@ -9,10 +9,12 @@
 #include <zircon/errors.h>
 
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/virtualization/bin/vmm/controller/realm_utils.h"
 #include "src/virtualization/bin/vmm/device/block.h"
 
 namespace {
+
+constexpr auto kVirtioBlockCollectionName = "virtio_block_devices";
+constexpr auto component_url = "fuchsia-pkg://fuchsia.com/virtio_block#meta/virtio_block.cm";
 
 uint32_t read_only(fuchsia::virtualization::BlockMode mode) {
   return mode == fuchsia::virtualization::BlockMode::READ_ONLY ? VIRTIO_BLK_F_RO : 0;
@@ -40,14 +42,11 @@ VirtioBlock::VirtioBlock(const PhysMem& phys_mem, fuchsia::virtualization::Block
       format_(format) {}
 
 zx_status_t VirtioBlock::Start(const zx::guest& guest, const std::string& id, zx::channel client,
-                               fuchsia::component::RealmSyncPtr& realm,
-                               async_dispatcher_t* dispatcher, size_t component_name_suffix) {
-  const auto kComponentName = fxl::StringPrintf("virtio_block_%zu", component_name_suffix);
-  constexpr auto kVirtioBlockCollectionName = "virtio_block_devices";
-  auto component_url = "fuchsia-pkg://fuchsia.com/virtio_block#meta/virtio_block.cm";
-
+                               ::sys::ComponentContext* context, async_dispatcher_t* dispatcher,
+                               size_t component_name_suffix) {
+  std::string component_name = fxl::StringPrintf("virtio_block_%zu", component_name_suffix);
   zx_status_t status = CreateDynamicComponent(
-      realm, kVirtioBlockCollectionName, kComponentName.c_str(), component_url,
+      context, kVirtioBlockCollectionName, component_name.c_str(), component_url,
       [block = block_.NewRequest()](std::shared_ptr<sys::ServiceDirectory> services) mutable {
         return services->Connect(std::move(block));
       });

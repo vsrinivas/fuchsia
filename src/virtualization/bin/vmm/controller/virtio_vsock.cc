@@ -6,8 +6,6 @@
 
 #include <lib/sys/cpp/service_directory.h>
 
-#include "src/virtualization/bin/vmm/controller/realm_utils.h"
-
 namespace controller {
 
 using ::fuchsia::virtualization::Listener;
@@ -39,10 +37,9 @@ VirtioVsock::VirtioVsock(const PhysMem& phys_mem)
 }
 
 zx_status_t VirtioVsock::Start(const zx::guest& guest, std::vector<Listener> listeners,
-                               fuchsia::component::RealmSyncPtr& realm,
-                               async_dispatcher_t* dispatcher) {
+                               ::sys::ComponentContext* context, async_dispatcher_t* dispatcher) {
   zx_status_t status = CreateDynamicComponent(
-      realm, kComponentCollectionName, kComponentName, kComponentUrl,
+      context, kComponentCollectionName, kComponentName, kComponentUrl,
       [this, vsock = vsock_.NewRequest()](std::shared_ptr<sys::ServiceDirectory> services) mutable {
         services_ = std::move(services);
         return services_->Connect(std::move(vsock));

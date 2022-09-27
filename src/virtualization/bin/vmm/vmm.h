@@ -71,8 +71,7 @@ class Vmm : public fuchsia::virtualization::Guest {
   zx_gpaddr_t AllocDeviceAddr(size_t device_size);
 
   // Serve any supported public services. This will always serve |fuchsia::virtualization::Guest|.
-  fitx::result<::fuchsia::virtualization::GuestError> AddPublicServices(
-      sys::ComponentContext* context);
+  fitx::result<::fuchsia::virtualization::GuestError> AddPublicServices();
 
   // Must be destroyed first (see comment in destructor).
   std::unique_ptr<::Guest> guest_;
@@ -116,6 +115,7 @@ class Vmm : public fuchsia::virtualization::Guest {
   zx::socket client_serial_socket_;
   zx::socket client_console_socket_;
 
+  std::shared_ptr<sys::OutgoingDirectory> outgoing_;
   fidl::BindingSet<fuchsia::virtualization::Guest> guest_bindings_;
 };
 

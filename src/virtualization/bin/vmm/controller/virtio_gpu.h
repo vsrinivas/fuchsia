@@ -6,7 +6,6 @@
 #define SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_GPU_H_
 
 #include <fidl/fuchsia.virtualization.hardware/cpp/fidl.h>
-#include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
@@ -30,7 +29,7 @@ class VirtioGpu
       const zx::guest& guest,
       fidl::InterfaceHandle<fuchsia::virtualization::hardware::KeyboardListener> keyboard_listener,
       fidl::InterfaceHandle<fuchsia::virtualization::hardware::PointerListener> pointer_listener,
-      fuchsia::component::RealmSyncPtr& realm, async_dispatcher_t* dispatcher);
+      ::sys::ComponentContext* context, async_dispatcher_t* dispatcher);
 
  private:
   enum class State {

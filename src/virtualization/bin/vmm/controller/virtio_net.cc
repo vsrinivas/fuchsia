@@ -7,7 +7,13 @@
 #include <lib/sys/cpp/service_directory.h>
 
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/virtualization/bin/vmm/controller/realm_utils.h"
+
+namespace {
+
+constexpr auto kComponentCollectionName = "virtio_net_devices";
+constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_net#meta/virtio_net.cm";
+
+}  // namespace
 
 VirtioNet::VirtioNet(const PhysMem& phys_mem)
     : VirtioComponentDevice("Virtio Net", phys_mem, VIRTIO_NET_F_MAC,
@@ -16,14 +22,11 @@ VirtioNet::VirtioNet(const PhysMem& phys_mem)
 
 zx_status_t VirtioNet::Start(const zx::guest& guest,
                              const fuchsia::hardware::ethernet::MacAddress& mac_address,
-                             bool enable_bridge, fuchsia::component::RealmSyncPtr& realm,
+                             bool enable_bridge, ::sys::ComponentContext* context,
                              async_dispatcher_t* dispatcher, size_t component_name_suffix) {
-  const auto kComponentName = fxl::StringPrintf("virtio_net_%zu", component_name_suffix);
-  constexpr auto kComponentCollectionName = "virtio_net_devices";
-  constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_net#meta/virtio_net.cm";
-
+  std::string component_name = fxl::StringPrintf("virtio_net_%zu", component_name_suffix);
   zx_status_t status = CreateDynamicComponent(
-      realm, kComponentCollectionName, kComponentName.c_str(), kComponentUrl,
+      context, kComponentCollectionName, component_name.c_str(), kComponentUrl,
       [net = net_.NewRequest()](std::shared_ptr<sys::ServiceDirectory> services) mutable {
         return services->Connect(std::move(net));
       });

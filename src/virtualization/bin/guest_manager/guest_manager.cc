@@ -160,9 +160,6 @@ void GuestManager::HandleCreateResult(
   if (result.is_err()) {
     HandleGuestStopped(fitx::error(result.err()));
     callback(fpromise::error(GuestManagerError::START_FAILURE));
-
-    // TODO(fxbug.dev/104989): Destroy dynamic children so that we don't need to restart the VMM.
-    lifecycle_.Unbind();
   } else {
     state_ = GuestStatus::RUNNING;
     lifecycle_->Run(
@@ -179,9 +176,6 @@ void GuestManager::HandleRunResult(GuestLifecycle_Run_Result result) {
   } else {
     HandleGuestStopped(fitx::error(result.err()));
   }
-
-  // TODO(fxbug.dev/104989): Destroy dynamic children so that we don't need to restart the VMM.
-  lifecycle_.Unbind();
 }
 
 void GuestManager::HandleGuestStopped(fitx::result<GuestError> err) {

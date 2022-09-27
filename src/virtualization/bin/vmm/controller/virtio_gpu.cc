@@ -4,7 +4,13 @@
 
 #include "src/virtualization/bin/vmm/controller/virtio_gpu.h"
 
-#include "src/virtualization/bin/vmm/controller/realm_utils.h"
+namespace {
+
+constexpr auto kComponentName = "virtio_gpu";
+constexpr auto kComponentCollectionName = "virtio_gpu_devices";
+constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_gpu#meta/virtio_gpu.cm";
+
+}  // namespace
 
 VirtioGpu::VirtioGpu(const PhysMem& phys_mem)
     : VirtioComponentDevice("Virtio GPU", phys_mem, 0 /* device_features */,
@@ -17,11 +23,7 @@ zx_status_t VirtioGpu::Start(
     const zx::guest& guest,
     fidl::InterfaceHandle<fuchsia::virtualization::hardware::KeyboardListener> keyboard_listener,
     fidl::InterfaceHandle<fuchsia::virtualization::hardware::PointerListener> pointer_listener,
-    fuchsia::component::RealmSyncPtr& realm, async_dispatcher_t* dispatcher) {
-  constexpr auto kComponentName = "virtio_gpu";
-  constexpr auto kComponentCollectionName = "virtio_gpu_devices";
-  constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_gpu#meta/virtio_gpu.cm";
-
+    ::sys::ComponentContext* context, async_dispatcher_t* dispatcher) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_virtualization_hardware::VirtioGpu>();
   auto [client_end, server_end] = std::move(endpoints.value());
   fidl::InterfaceRequest<fuchsia::virtualization::hardware::VirtioGpu> gpu_request(
@@ -29,7 +31,7 @@ zx_status_t VirtioGpu::Start(
   gpu_.Bind(std::move(client_end), dispatcher, this);
 
   zx_status_t status =
-      CreateDynamicComponent(realm, kComponentCollectionName, kComponentName, kComponentUrl,
+      CreateDynamicComponent(context, kComponentCollectionName, kComponentName, kComponentUrl,
                              [gpu_request = std::move(gpu_request)](
                                  std::shared_ptr<sys::ServiceDirectory> services) mutable {
                                return services->Connect(std::move(gpu_request));

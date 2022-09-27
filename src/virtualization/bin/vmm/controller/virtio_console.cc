@@ -6,7 +6,13 @@
 
 #include <lib/sys/cpp/service_directory.h>
 
-#include "src/virtualization/bin/vmm/controller/realm_utils.h"
+namespace {
+
+constexpr auto kComponentName = "virtio_console";
+constexpr auto kComponentCollectionName = "virtio_console_devices";
+constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_console#meta/virtio_console.cm";
+
+}  // namespace
 
 VirtioConsole::VirtioConsole(const PhysMem& phys_mem)
     : VirtioComponentDevice("Virtio Console", phys_mem, 0 /* device_features */,
@@ -16,14 +22,9 @@ VirtioConsole::VirtioConsole(const PhysMem& phys_mem)
 }
 
 zx_status_t VirtioConsole::Start(const zx::guest& guest, zx::socket socket,
-                                 fuchsia::component::RealmSyncPtr& realm,
-                                 async_dispatcher_t* dispatcher) {
-  constexpr auto kComponentName = "virtio_console";
-  constexpr auto kComponentCollectionName = "virtio_console_devices";
-  constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_console#meta/virtio_console.cm";
-
+                                 ::sys::ComponentContext* context, async_dispatcher_t* dispatcher) {
   zx_status_t status = CreateDynamicComponent(
-      realm, kComponentCollectionName, kComponentName, kComponentUrl,
+      context, kComponentCollectionName, kComponentName, kComponentUrl,
       [console = console_.NewRequest()](std::shared_ptr<sys::ServiceDirectory> services) mutable {
         return services->Connect(std::move(console));
       });

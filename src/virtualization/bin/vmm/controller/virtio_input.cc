@@ -7,24 +7,25 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/virtualization/bin/vmm/controller/realm_utils.h"
 #include "src/virtualization/bin/vmm/device/input.h"
 
-static constexpr char kDeviceName[] = "machina-input";
+namespace {
+
+constexpr char kDeviceName[] = "machina-input";
 static_assert(sizeof(kDeviceName) - 1 < sizeof(virtio_input_config_t::u),
               "Device name is too long");
 
-static constexpr char kDeviceSerial[] = "serial-number";
+constexpr char kDeviceSerial[] = "serial-number";
 static_assert(sizeof(kDeviceSerial) - 1 < sizeof(virtio_input_config_t::u),
               "Device serial is too long");
 
 // Make sure to report only these event codes from keyboard.
 // Reporting other keycodes may cause guest OS to recognize keyboard as
 // touchpad, stylus or joystick.
-static constexpr uint32_t kATKeyboardFirstCode = 0;
-static constexpr uint32_t kATKeyboardLastCode = 255;
-static constexpr uint32_t kMediaKeyboardFirstCode = 0x160;
-static constexpr uint32_t kMediaKeyboardLastCode = 0x2bf;
+constexpr uint32_t kATKeyboardFirstCode = 0;
+constexpr uint32_t kATKeyboardLastCode = 255;
+constexpr uint32_t kMediaKeyboardFirstCode = 0x160;
+constexpr uint32_t kMediaKeyboardLastCode = 0x2bf;
 static_assert(kATKeyboardFirstCode % 8 == 0, "First scan code must be byte aligned.");
 static_assert((kATKeyboardLastCode + 1 - kATKeyboardFirstCode) % 8 == 0,
               "Scan code range must be byte aligned.");
@@ -36,9 +37,14 @@ static_assert((kATKeyboardLastCode + 7) / 8 < sizeof(virtio_input_config_t().u.b
 static_assert((kMediaKeyboardLastCode + 7) / 8 < sizeof(virtio_input_config_t().u.bitmap),
               "Last scan code cannot exceed allowed range.");
 
-static void set_config_bit(uint8_t* bitmap, uint32_t event_code) {
+constexpr auto kComponentCollectionName = "virtio_input_devices";
+constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_input#meta/virtio_input.cm";
+
+void set_config_bit(uint8_t* bitmap, uint32_t event_code) {
   bitmap[event_code / 8] |= 1u << (event_code % 8);
 }
+
+}  // namespace
 
 uint8_t VirtioInput::Keyboard(uint8_t subsel, uint8_t* bitmap) {
   if (subsel != VIRTIO_INPUT_EV_KEY) {
@@ -68,13 +74,10 @@ VirtioInput::VirtioInput(const PhysMem& phys_mem, VirtioInputType type)
                             fit::bind_member(this, &VirtioInput::Ready)),
       type_(type) {}
 
-zx_status_t VirtioInput::Start(const zx::guest& guest, fuchsia::component::RealmSyncPtr& realm,
+zx_status_t VirtioInput::Start(const zx::guest& guest, ::sys::ComponentContext* context,
                                async_dispatcher_t* dispatcher, std::string component_name) {
-  constexpr auto kComponentCollectionName = "virtio_input_devices";
-  constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_input#meta/virtio_input.cm";
-
   zx_status_t status = CreateDynamicComponent(
-      realm, kComponentCollectionName, component_name.c_str(), kComponentUrl,
+      context, kComponentCollectionName, component_name.c_str(), kComponentUrl,
       [&, input = input_.NewRequest()](std::shared_ptr<sys::ServiceDirectory> services) mutable {
         services_ = services;
         return services->Connect(std::move(input));

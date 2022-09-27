@@ -8,7 +8,13 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/virtualization/bin/vmm/controller/realm_utils.h"
+namespace {
+
+constexpr auto kComponentName = "virtio_magma";
+constexpr auto kComponentCollectionName = "virtio_magma_devices";
+constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_magma#meta/virtio_magma.cm";
+
+}  // namespace
 
 VirtioMagma::VirtioMagma(const PhysMem& phys_mem)
     : VirtioComponentDevice("Virtio Magma", phys_mem, 0,
@@ -19,13 +25,9 @@ zx_status_t VirtioMagma::Start(
     const zx::guest& guest, zx::vmar vmar,
     fidl::InterfaceHandle<fuchsia::virtualization::hardware::VirtioWaylandImporter>
         wayland_importer,
-    fuchsia::component::RealmSyncPtr& realm, async_dispatcher_t* dispatcher) {
-  constexpr auto kComponentName = "virtio_magma";
-  constexpr auto kComponentCollectionName = "virtio_magma_devices";
-  constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_magma#meta/virtio_magma.cm";
-
+    ::sys::ComponentContext* context, async_dispatcher_t* dispatcher) {
   zx_status_t status = CreateDynamicComponent(
-      realm, kComponentCollectionName, kComponentName, kComponentUrl,
+      context, kComponentCollectionName, kComponentName, kComponentUrl,
       [magma = magma_.NewRequest()](std::shared_ptr<sys::ServiceDirectory> services) mutable {
         return services->Connect(std::move(magma));
       });

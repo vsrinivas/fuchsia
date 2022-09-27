@@ -8,7 +8,13 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/virtualization/bin/vmm/controller/realm_utils.h"
+namespace {
+
+constexpr auto kComponentName = "virtio_wl";
+constexpr auto kComponentCollectionName = "virtio_wl_devices";
+constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_wl#meta/virtio_wl.cm";
+
+}  // namespace
 
 VirtioWl::VirtioWl(const PhysMem& phys_mem)
     : VirtioComponentDevice("Virtio WL", phys_mem, VIRTIO_WL_F_TRANS_FLAGS,
@@ -20,13 +26,9 @@ zx_status_t VirtioWl::Start(
     fidl::InterfaceHandle<fuchsia::wayland::Server> wayland_server,
     fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem_allocator,
     fidl::InterfaceHandle<fuchsia::ui::composition::Allocator> scenic_allocator,
-    fuchsia::component::RealmSyncPtr& realm, async_dispatcher_t* dispatcher) {
-  constexpr auto kComponentName = "virtio_wl";
-  constexpr auto kComponentCollectionName = "virtio_wl_devices";
-  constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_wl#meta/virtio_wl.cm";
-
+    ::sys::ComponentContext* context, async_dispatcher_t* dispatcher) {
   zx_status_t status = CreateDynamicComponent(
-      realm, kComponentCollectionName, kComponentName, kComponentUrl,
+      context, kComponentCollectionName, kComponentName, kComponentUrl,
       [wayland = wayland_.NewRequest()](std::shared_ptr<sys::ServiceDirectory> services) mutable {
         return services->Connect(std::move(wayland));
       });

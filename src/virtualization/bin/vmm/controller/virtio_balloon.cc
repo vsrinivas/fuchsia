@@ -7,7 +7,13 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/virtualization/bin/vmm/controller/realm_utils.h"
+namespace {
+
+constexpr auto kComponentName = "virtio_balloon";
+constexpr auto kComponentCollectionName = "virtio_balloon_devices";
+constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_balloon#meta/virtio_balloon.cm";
+
+}  // namespace
 
 VirtioBalloon::VirtioBalloon(const PhysMem& phys_mem)
     : VirtioComponentDevice("Virtio Balloon", phys_mem,
@@ -15,12 +21,8 @@ VirtioBalloon::VirtioBalloon(const PhysMem& phys_mem)
                             fit::bind_member(this, &VirtioBalloon::ConfigureQueue),
                             fit::bind_member(this, &VirtioBalloon::Ready)) {}
 
-zx_status_t VirtioBalloon::Start(const zx::guest& guest, fuchsia::component::RealmSyncPtr& realm,
+zx_status_t VirtioBalloon::Start(const zx::guest& guest, ::sys::ComponentContext* context,
                                  async_dispatcher_t* dispatcher) {
-  constexpr auto kComponentName = "virtio_balloon";
-  constexpr auto kComponentCollectionName = "virtio_balloon_devices";
-  constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_balloon#meta/virtio_balloon.cm";
-
   auto endpoints = fidl::CreateEndpoints<fuchsia_virtualization_hardware::VirtioBalloon>();
   auto [client_end, server_end] = std::move(endpoints.value());
   fidl::InterfaceRequest<fuchsia::virtualization::hardware::VirtioBalloon> balloon_request(
@@ -28,7 +30,7 @@ zx_status_t VirtioBalloon::Start(const zx::guest& guest, fuchsia::component::Rea
   balloon_.Bind(std::move(client_end), dispatcher, this);
 
   zx_status_t status =
-      CreateDynamicComponent(realm, kComponentCollectionName, kComponentName, kComponentUrl,
+      CreateDynamicComponent(context, kComponentCollectionName, kComponentName, kComponentUrl,
                              [balloon_request = std::move(balloon_request)](
                                  std::shared_ptr<sys::ServiceDirectory> services) mutable {
                                return services->Connect(std::move(balloon_request));

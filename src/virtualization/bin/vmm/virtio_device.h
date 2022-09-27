@@ -7,15 +7,18 @@
 
 #include <fidl/fuchsia.virtualization.hardware/cpp/fidl.h>
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/trace-engine/types.h>
 #include <lib/trace/event.h>
 
 #include <atomic>
 
 #include "src/lib/fsl/handles/object_info.h"
+#include "src/virtualization/bin/vmm/controller/realm_utils.h"
 #include "src/virtualization/bin/vmm/device/config.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue.h"
 #include "src/virtualization/bin/vmm/virtio_pci.h"
+
 // Set of features that are supported transparently for all devices.
 static constexpr uint32_t kVirtioFeatures = 0;
 
@@ -60,6 +63,13 @@ class VirtioComponentDevice {
                         VirtioDeviceConfig::ReadyDeviceFn ready_device)
       : VirtioComponentDevice(name, phys_mem, device_features, std::move(config_queue),
                               noop_config_device, std::move(ready_device)) {}
+
+  ~VirtioComponentDevice() {
+    if (realm_.is_bound()) {
+      ::fuchsia::component::Realm_DestroyChild_Result result;
+      realm_->DestroyChild({.name = component_name_, .collection = collection_name_}, &result);
+    }
+  }
 
   zx_status_t PrepStart(const zx::guest& guest, async_dispatcher_t* dispatcher,
                         fuchsia::virtualization::hardware::StartInfo* start_info) {
@@ -116,6 +126,24 @@ class VirtioComponentDevice {
     return ZX_OK;
   }
 
+  zx_status_t CreateDynamicComponent(
+      ::sys::ComponentContext* context, const char* collection_name, const char* component_name,
+      const char* component_url,
+      fit::function<zx_status_t(std::shared_ptr<sys::ServiceDirectory> services)> callback) {
+    component_name_ = component_name;
+    collection_name_ = collection_name;
+
+    zx_status_t status = context->svc()->Connect(realm_.NewRequest());
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Virtio device controller failed to connect to realm";
+      return status;
+    }
+
+    // TODO(fxbug.dev/104989): Move this function entirely into the VirtioComponentDevice.
+    return ::CreateDynamicComponent(realm_, collection_name, component_name, component_url,
+                                    std::move(callback));
+  }
+
   const PhysMem& phys_mem_;
   ConfigType config_ __TA_GUARDED(device_config_.mutex) = {};
   VirtioDeviceConfig device_config_;
@@ -148,6 +176,10 @@ class VirtioComponentDevice {
   zx::event event_;
   zx_koid_t event_koid_;
   async::WaitMethod<VirtioComponentDevice, &VirtioComponentDevice::OnInterrupt> wait_{this};
+
+  std::string component_name_;
+  std::string collection_name_;
+  ::fuchsia::component::RealmSyncPtr realm_;
 };
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_VIRTIO_DEVICE_H_
