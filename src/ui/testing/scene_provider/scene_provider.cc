@@ -33,6 +33,8 @@ void SceneProvider::AttachClientView(
     scene_manager->SetRootView(std::move(*request.mutable_view_provider()), &set_root_view_result);
     if (set_root_view_result.is_response()) {
       client_view_ref = std::move(set_root_view_result.response().view_ref);
+    } else {
+      FX_LOGS(ERROR) << "Got a PresentRootViewError when trying to attach the client view";
     }
   } else {
     fuchsia::ui::policy::PresenterPtr root_presenter;
