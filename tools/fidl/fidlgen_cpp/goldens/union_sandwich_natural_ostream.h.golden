@@ -11,44 +11,57 @@ template <>
 struct fidl::ostream::Formatter<::test_unionsandwich::UnionSize8Alignment4> {
   static std::ostream& Format(std::ostream& os, const ::test_unionsandwich::UnionSize8Alignment4& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unionsandwich::UnionSize8Alignment4& value);
 template <>
 struct fidl::ostream::Formatter<::test_unionsandwich::SandwichUnionSize8Alignment4> {
   static std::ostream& Format(std::ostream& os, const ::test_unionsandwich::SandwichUnionSize8Alignment4& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unionsandwich::SandwichUnionSize8Alignment4& value);
 template <>
 struct fidl::ostream::Formatter<::test_unionsandwich::UnionSize12Alignment4> {
   static std::ostream& Format(std::ostream& os, const ::test_unionsandwich::UnionSize12Alignment4& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unionsandwich::UnionSize12Alignment4& value);
 template <>
 struct fidl::ostream::Formatter<::test_unionsandwich::SandwichUnionSize12Alignment4> {
   static std::ostream& Format(std::ostream& os, const ::test_unionsandwich::SandwichUnionSize12Alignment4& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unionsandwich::SandwichUnionSize12Alignment4& value);
 template <>
 struct fidl::ostream::Formatter<::test_unionsandwich::StructSize16Alignment8> {
   static std::ostream& Format(std::ostream& os, const ::test_unionsandwich::StructSize16Alignment8& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unionsandwich::StructSize16Alignment8& value);
 template <>
 struct fidl::ostream::Formatter<::test_unionsandwich::UnionSize24Alignment8> {
   static std::ostream& Format(std::ostream& os, const ::test_unionsandwich::UnionSize24Alignment8& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unionsandwich::UnionSize24Alignment8& value);
 template <>
 struct fidl::ostream::Formatter<::test_unionsandwich::SandwichUnionSize24Alignment8> {
   static std::ostream& Format(std::ostream& os, const ::test_unionsandwich::SandwichUnionSize24Alignment8& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unionsandwich::SandwichUnionSize24Alignment8& value);
 template <>
 struct fidl::ostream::Formatter<::test_unionsandwich::UnionSize36Alignment4> {
   static std::ostream& Format(std::ostream& os, const ::test_unionsandwich::UnionSize36Alignment4& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unionsandwich::UnionSize36Alignment4& value);
 template <>
 struct fidl::ostream::Formatter<::test_unionsandwich::SandwichUnionSize36Alignment4> {
   static std::ostream& Format(std::ostream& os, const ::test_unionsandwich::SandwichUnionSize36Alignment4& value);
 };
+
+namespace test_unionsandwich {
+
+std::ostream& operator<<(std::ostream& os, const ::test_unionsandwich::UnionSize8Alignment4& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unionsandwich::SandwichUnionSize8Alignment4& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unionsandwich::UnionSize12Alignment4& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unionsandwich::SandwichUnionSize12Alignment4& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unionsandwich::StructSize16Alignment8& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unionsandwich::UnionSize24Alignment8& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unionsandwich::SandwichUnionSize24Alignment8& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unionsandwich::UnionSize36Alignment4& value);
+
 std::ostream& operator<<(std::ostream& os, const ::test_unionsandwich::SandwichUnionSize36Alignment4& value);
+
+}  // namespace test_unionsandwich

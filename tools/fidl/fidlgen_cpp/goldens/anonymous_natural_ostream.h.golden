@@ -11,72 +11,91 @@ template <>
 struct fidl::ostream::Formatter<::test_anonymous::Op> {
   static std::ostream& Format(std::ostream& os, const ::test_anonymous::Op& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_anonymous::Op& value);
 template <>
 struct fidl::ostream::Formatter<::test_anonymous::OverrideTest> {
   static std::ostream& Format(std::ostream& os, const ::test_anonymous::OverrideTest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_anonymous::OverrideTest& value);
 template <>
 struct fidl::ostream::Formatter<::test_anonymous::Flags> {
   static std::ostream& Format(std::ostream& os, const ::test_anonymous::Flags& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_anonymous::Flags& value);
 template <>
 struct fidl::ostream::Formatter<::test_anonymous::FunctionApplication> {
   static std::ostream& Format(std::ostream& os, const ::test_anonymous::FunctionApplication& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_anonymous::FunctionApplication& value);
 template <>
 struct fidl::ostream::Formatter<::test_anonymous::Expression> {
   static std::ostream& Format(std::ostream& os, const ::test_anonymous::Expression& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_anonymous::Expression& value);
 template <>
 struct fidl::ostream::Formatter<::test_anonymous::UnionMember> {
   static std::ostream& Format(std::ostream& os, const ::test_anonymous::UnionMember& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_anonymous::UnionMember& value);
 template <>
 struct fidl::ostream::Formatter<::test_anonymous::TableData> {
   static std::ostream& Format(std::ostream& os, const ::test_anonymous::TableData& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_anonymous::TableData& value);
 template <>
 struct fidl::ostream::Formatter<::test_anonymous::TableMember> {
   static std::ostream& Format(std::ostream& os, const ::test_anonymous::TableMember& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_anonymous::TableMember& value);
 template <>
 struct fidl::ostream::Formatter<::test_anonymous::SomeProtocolSomeMethodRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_anonymous::SomeProtocolSomeMethodRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_anonymous::SomeProtocolSomeMethodRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_anonymous::BitsMember> {
   static std::ostream& Format(std::ostream& os, const ::test_anonymous::BitsMember& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_anonymous::BitsMember& value);
 template <>
 struct fidl::ostream::Formatter<::test_anonymous::SomeProtocolSomeMethodResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_anonymous::SomeProtocolSomeMethodResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_anonymous::SomeProtocolSomeMethodResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_anonymous::SomeProtocolSomeMethodError> {
   static std::ostream& Format(std::ostream& os, const ::test_anonymous::SomeProtocolSomeMethodError& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_anonymous::SomeProtocolSomeMethodError& value);
 template <>
 struct fidl::ostream::Formatter<::test_anonymous::SomeProtocolSomeMethodResult> {
   static std::ostream& Format(std::ostream& os, const ::test_anonymous::SomeProtocolSomeMethodResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_anonymous::SomeProtocolSomeMethodResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_anonymous::SomeProtocolSomeMethodTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_anonymous::SomeProtocolSomeMethodTopResponse& value);
 };
+
+namespace test_anonymous {
+
+std::ostream& operator<<(std::ostream& os, const ::test_anonymous::Op& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_anonymous::OverrideTest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_anonymous::Flags& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_anonymous::FunctionApplication& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_anonymous::Expression& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_anonymous::UnionMember& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_anonymous::TableData& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_anonymous::TableMember& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_anonymous::SomeProtocolSomeMethodRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_anonymous::BitsMember& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_anonymous::SomeProtocolSomeMethodResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_anonymous::SomeProtocolSomeMethodError& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_anonymous::SomeProtocolSomeMethodResult& value);
+
 std::ostream& operator<<(std::ostream& os, const ::test_anonymous::SomeProtocolSomeMethodTopResponse& value);
+
+}  // namespace test_anonymous
+
 template <>
 struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_anonymous::SomeProtocol>> {
   static std::ostream& Format(std::ostream& os, const ::fidl::ClientEnd<::test_anonymous::SomeProtocol>& value) {
@@ -85,9 +104,6 @@ struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_anonymous::SomeProtocol
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_anonymous::SomeProtocol>& value) {
-  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_anonymous::SomeProtocol>>::Format(os, value);
-}
 
 template <>
 struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_anonymous::SomeProtocol>> {
@@ -97,6 +113,15 @@ struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_anonymous::SomeProtocol
               << ">(" << value.channel().get() << ")";
   }
 };
+
+namespace fidl {
+
+inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_anonymous::SomeProtocol>& value) {
+  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_anonymous::SomeProtocol>>::Format(os, value);
+}
+
 inline std::ostream& operator<<(std::ostream& os, const ::fidl::ServerEnd<::test_anonymous::SomeProtocol>& value) {
   return fidl::ostream::Formatter<::fidl::ServerEnd<::test_anonymous::SomeProtocol>>::Format(os, value);
 }
+
+}  // namespace fidl

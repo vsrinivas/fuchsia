@@ -11,4 +11,9 @@ template <>
 struct fidl::ostream::Formatter<::test_byteandbytes::ByteAndBytes> {
   static std::ostream& Format(std::ostream& os, const ::test_byteandbytes::ByteAndBytes& value);
 };
+
+namespace test_byteandbytes {
+
 std::ostream& operator<<(std::ostream& os, const ::test_byteandbytes::ByteAndBytes& value);
+
+}  // namespace test_byteandbytes

@@ -11,157 +11,193 @@ template <>
 struct fidl::ostream::Formatter<::test_union::Pizza> {
   static std::ostream& Format(std::ostream& os, const ::test_union::Pizza& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_union::Pizza& value);
 template <>
 struct fidl::ostream::Formatter<::test_union::Pasta> {
   static std::ostream& Format(std::ostream& os, const ::test_union::Pasta& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_union::Pasta& value);
 template <>
 struct fidl::ostream::Formatter<::test_union::PizzaOrPasta> {
   static std::ostream& Format(std::ostream& os, const ::test_union::PizzaOrPasta& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_union::PizzaOrPasta& value);
 template <>
 struct fidl::ostream::Formatter<::test_union::ExplicitPizzaOrPasta> {
   static std::ostream& Format(std::ostream& os, const ::test_union::ExplicitPizzaOrPasta& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_union::ExplicitPizzaOrPasta& value);
 template <>
 struct fidl::ostream::Formatter<::test_union::FlexiblePizzaOrPasta> {
   static std::ostream& Format(std::ostream& os, const ::test_union::FlexiblePizzaOrPasta& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_union::FlexiblePizzaOrPasta& value);
 template <>
 struct fidl::ostream::Formatter<::test_union::StrictPizzaOrPasta> {
   static std::ostream& Format(std::ostream& os, const ::test_union::StrictPizzaOrPasta& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_union::StrictPizzaOrPasta& value);
 template <>
 struct fidl::ostream::Formatter<::test_union::Union> {
   static std::ostream& Format(std::ostream& os, const ::test_union::Union& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_union::Union& value);
 template <>
 struct fidl::ostream::Formatter<::test_union::FlexibleUnion> {
   static std::ostream& Format(std::ostream& os, const ::test_union::FlexibleUnion& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_union::FlexibleUnion& value);
 template <>
 struct fidl::ostream::Formatter<::test_union::StrictUnion> {
   static std::ostream& Format(std::ostream& os, const ::test_union::StrictUnion& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_union::StrictUnion& value);
 template <>
 struct fidl::ostream::Formatter<::test_union::FieldCollision> {
   static std::ostream& Format(std::ostream& os, const ::test_union::FieldCollision& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_union::FieldCollision& value);
 template <>
 struct fidl::ostream::Formatter<::test_union::ExplicitUnion> {
   static std::ostream& Format(std::ostream& os, const ::test_union::ExplicitUnion& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_union::ExplicitUnion& value);
 template <>
 struct fidl::ostream::Formatter<::test_union::ReverseOrdinalUnion> {
   static std::ostream& Format(std::ostream& os, const ::test_union::ReverseOrdinalUnion& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_union::ReverseOrdinalUnion& value);
 template <>
 struct fidl::ostream::Formatter<::test_union::NullableUnionStruct> {
   static std::ostream& Format(std::ostream& os, const ::test_union::NullableUnionStruct& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_union::NullableUnionStruct& value);
 template <>
 struct fidl::ostream::Formatter<::test_union::FlexibleFoo> {
   static std::ostream& Format(std::ostream& os, const ::test_union::FlexibleFoo& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_union::FlexibleFoo& value);
 template <>
 struct fidl::ostream::Formatter<::test_union::StrictFoo> {
   static std::ostream& Format(std::ostream& os, const ::test_union::StrictFoo& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_union::StrictFoo& value);
 template <>
 struct fidl::ostream::Formatter<::test_union::ExplicitFoo> {
   static std::ostream& Format(std::ostream& os, const ::test_union::ExplicitFoo& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_union::ExplicitFoo& value);
 template <>
 struct fidl::ostream::Formatter<::test_union::ExplicitStrictFoo> {
   static std::ostream& Format(std::ostream& os, const ::test_union::ExplicitStrictFoo& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_union::ExplicitStrictFoo& value);
 template <>
 struct fidl::ostream::Formatter<::test_union::OlderSimpleUnion> {
   static std::ostream& Format(std::ostream& os, const ::test_union::OlderSimpleUnion& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_union::OlderSimpleUnion& value);
 template <>
 struct fidl::ostream::Formatter<::test_union::NewerSimpleUnion> {
   static std::ostream& Format(std::ostream& os, const ::test_union::NewerSimpleUnion& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_union::NewerSimpleUnion& value);
 template <>
 struct fidl::ostream::Formatter<::test_union::StrictSimpleXUnion> {
   static std::ostream& Format(std::ostream& os, const ::test_union::StrictSimpleXUnion& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_union::StrictSimpleXUnion& value);
 template <>
 struct fidl::ostream::Formatter<::test_union::Empty> {
   static std::ostream& Format(std::ostream& os, const ::test_union::Empty& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_union::Empty& value);
 template <>
 struct fidl::ostream::Formatter<::test_union::XUnionContainingEmptyStruct> {
   static std::ostream& Format(std::ostream& os, const ::test_union::XUnionContainingEmptyStruct& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_union::XUnionContainingEmptyStruct& value);
 template <>
 struct fidl::ostream::Formatter<::test_union::StrictBoundedXUnion> {
   static std::ostream& Format(std::ostream& os, const ::test_union::StrictBoundedXUnion& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_union::StrictBoundedXUnion& value);
 template <>
 struct fidl::ostream::Formatter<::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_union::StructWithNullableXUnion> {
   static std::ostream& Format(std::ostream& os, const ::test_union::StructWithNullableXUnion& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_union::StructWithNullableXUnion& value);
 template <>
 struct fidl::ostream::Formatter<::test_union::ExplicitXUnion> {
   static std::ostream& Format(std::ostream& os, const ::test_union::ExplicitXUnion& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_union::ExplicitXUnion& value);
 template <>
 struct fidl::ostream::Formatter<::test_union::UnionSandwich> {
   static std::ostream& Format(std::ostream& os, const ::test_union::UnionSandwich& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_union::UnionSandwich& value);
 template <>
 struct fidl::ostream::Formatter<::test_union::UnionWithAttributes> {
   static std::ostream& Format(std::ostream& os, const ::test_union::UnionWithAttributes& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_union::UnionWithAttributes& value);
 template <>
 struct fidl::ostream::Formatter<::test_union::EmptyFlexibleUnion> {
   static std::ostream& Format(std::ostream& os, const ::test_union::EmptyFlexibleUnion& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_union::EmptyFlexibleUnion& value);
 template <>
 struct fidl::ostream::Formatter<::test_union::OnlyReservedFlexibleUnion> {
   static std::ostream& Format(std::ostream& os, const ::test_union::OnlyReservedFlexibleUnion& value);
 };
+
+namespace test_union {
+
+std::ostream& operator<<(std::ostream& os, const ::test_union::Pizza& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_union::Pasta& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_union::PizzaOrPasta& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_union::ExplicitPizzaOrPasta& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_union::FlexiblePizzaOrPasta& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_union::StrictPizzaOrPasta& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_union::Union& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_union::FlexibleUnion& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_union::StrictUnion& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_union::FieldCollision& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_union::ExplicitUnion& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_union::ReverseOrdinalUnion& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_union::NullableUnionStruct& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_union::FlexibleFoo& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_union::StrictFoo& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_union::ExplicitFoo& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_union::ExplicitStrictFoo& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_union::OlderSimpleUnion& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_union::NewerSimpleUnion& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_union::StrictSimpleXUnion& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_union::Empty& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_union::XUnionContainingEmptyStruct& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_union::StrictBoundedXUnion& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_union::StructWithNullableXUnion& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_union::ExplicitXUnion& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_union::UnionSandwich& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_union::UnionWithAttributes& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_union::EmptyFlexibleUnion& value);
+
 std::ostream& operator<<(std::ostream& os, const ::test_union::OnlyReservedFlexibleUnion& value);
+
+}  // namespace test_union
+
 template <>
 struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_union::TestProtocol>> {
   static std::ostream& Format(std::ostream& os, const ::fidl::ClientEnd<::test_union::TestProtocol>& value) {
@@ -170,9 +206,6 @@ struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_union::TestProtocol>> {
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_union::TestProtocol>& value) {
-  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_union::TestProtocol>>::Format(os, value);
-}
 
 template <>
 struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_union::TestProtocol>> {
@@ -182,6 +215,15 @@ struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_union::TestProtocol>> {
               << ">(" << value.channel().get() << ")";
   }
 };
+
+namespace fidl {
+
+inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_union::TestProtocol>& value) {
+  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_union::TestProtocol>>::Format(os, value);
+}
+
 inline std::ostream& operator<<(std::ostream& os, const ::fidl::ServerEnd<::test_union::TestProtocol>& value) {
   return fidl::ostream::Formatter<::fidl::ServerEnd<::test_union::TestProtocol>>::Format(os, value);
 }
+
+}  // namespace fidl

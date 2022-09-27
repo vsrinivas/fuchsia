@@ -12,37 +12,49 @@ template <>
 struct fidl::ostream::Formatter<::test_placementofattributes::ExampleBits> {
   static std::ostream& Format(std::ostream& os, const ::test_placementofattributes::ExampleBits& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_placementofattributes::ExampleBits& value);
 template <>
 struct fidl::ostream::Formatter<::test_placementofattributes::ExampleEnum> {
   static std::ostream& Format(std::ostream& os, const ::test_placementofattributes::ExampleEnum& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_placementofattributes::ExampleEnum& value);
 template <>
 struct fidl::ostream::Formatter<::test_placementofattributes::ExampleProtocolMethodRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_placementofattributes::ExampleProtocolMethodRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_placementofattributes::ExampleProtocolMethodRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_placementofattributes::ExampleStruct> {
   static std::ostream& Format(std::ostream& os, const ::test_placementofattributes::ExampleStruct& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_placementofattributes::ExampleStruct& value);
 template <>
 struct fidl::ostream::Formatter<::test_placementofattributes::ExampleTable> {
   static std::ostream& Format(std::ostream& os, const ::test_placementofattributes::ExampleTable& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_placementofattributes::ExampleTable& value);
 template <>
 struct fidl::ostream::Formatter<::test_placementofattributes::ExampleUnion> {
   static std::ostream& Format(std::ostream& os, const ::test_placementofattributes::ExampleUnion& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_placementofattributes::ExampleUnion& value);
 template <>
 struct fidl::ostream::Formatter<::test_placementofattributes::ExampleXUnion> {
   static std::ostream& Format(std::ostream& os, const ::test_placementofattributes::ExampleXUnion& value);
 };
+
+namespace test_placementofattributes {
+
+std::ostream& operator<<(std::ostream& os, const ::test_placementofattributes::ExampleBits& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_placementofattributes::ExampleEnum& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_placementofattributes::ExampleProtocolMethodRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_placementofattributes::ExampleStruct& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_placementofattributes::ExampleTable& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_placementofattributes::ExampleUnion& value);
+
 std::ostream& operator<<(std::ostream& os, const ::test_placementofattributes::ExampleXUnion& value);
+
+}  // namespace test_placementofattributes
+
 template <>
 struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_placementofattributes::ExampleProtocol>> {
   static std::ostream& Format(std::ostream& os, const ::fidl::ClientEnd<::test_placementofattributes::ExampleProtocol>& value) {
@@ -51,9 +63,6 @@ struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_placementofattributes::
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_placementofattributes::ExampleProtocol>& value) {
-  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_placementofattributes::ExampleProtocol>>::Format(os, value);
-}
 
 template <>
 struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_placementofattributes::ExampleProtocol>> {
@@ -63,6 +72,15 @@ struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_placementofattributes::
               << ">(" << value.channel().get() << ")";
   }
 };
+
+namespace fidl {
+
+inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_placementofattributes::ExampleProtocol>& value) {
+  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_placementofattributes::ExampleProtocol>>::Format(os, value);
+}
+
 inline std::ostream& operator<<(std::ostream& os, const ::fidl::ServerEnd<::test_placementofattributes::ExampleProtocol>& value) {
   return fidl::ostream::Formatter<::fidl::ServerEnd<::test_placementofattributes::ExampleProtocol>>::Format(os, value);
 }
+
+}  // namespace fidl

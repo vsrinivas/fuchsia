@@ -11,1067 +11,1285 @@ template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrTopResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrTopResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResult> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrTopResponse& value);
 };
+
+namespace test_unknowninteractions {
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResult& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrTopResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResult& value);
+
 std::ostream& operator<<(std::ostream& os, const ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrTopResponse& value);
+
+}  // namespace test_unknowninteractions
+
 template <>
 struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol>> {
   static std::ostream& Format(std::ostream& os, const ::fidl::ClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol>& value) {
@@ -1080,9 +1298,6 @@ struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_unknowninteractions::Un
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol>& value) {
-  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol>>::Format(os, value);
-}
 
 template <>
 struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_unknowninteractions::UnknownInteractionsProtocol>> {
@@ -1092,9 +1307,6 @@ struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_unknowninteractions::Un
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fidl::ServerEnd<::test_unknowninteractions::UnknownInteractionsProtocol>& value) {
-  return fidl::ostream::Formatter<::fidl::ServerEnd<::test_unknowninteractions::UnknownInteractionsProtocol>>::Format(os, value);
-}
 template <>
 struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol>> {
   static std::ostream& Format(std::ostream& os, const ::fidl::ClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol>& value) {
@@ -1103,9 +1315,6 @@ struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_unknowninteractions::Un
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol>& value) {
-  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol>>::Format(os, value);
-}
 
 template <>
 struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol>> {
@@ -1115,9 +1324,6 @@ struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_unknowninteractions::Un
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fidl::ServerEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol>& value) {
-  return fidl::ostream::Formatter<::fidl::ServerEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol>>::Format(os, value);
-}
 template <>
 struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol>> {
   static std::ostream& Format(std::ostream& os, const ::fidl::ClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol>& value) {
@@ -1126,9 +1332,6 @@ struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_unknowninteractions::Un
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol>& value) {
-  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol>>::Format(os, value);
-}
 
 template <>
 struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol>> {
@@ -1138,9 +1341,6 @@ struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_unknowninteractions::Un
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fidl::ServerEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol>& value) {
-  return fidl::ostream::Formatter<::fidl::ServerEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol>>::Format(os, value);
-}
 template <>
 struct fidl::ostream::Formatter<::fdf::ClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol>> {
   static std::ostream& Format(std::ostream& os, const ::fdf::ClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol>& value) {
@@ -1149,9 +1349,6 @@ struct fidl::ostream::Formatter<::fdf::ClientEnd<::test_unknowninteractions::Unk
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fdf::ClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol>& value) {
-  return fidl::ostream::Formatter<::fdf::ClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol>>::Format(os, value);
-}
 
 template <>
 struct fidl::ostream::Formatter<::fdf::ServerEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol>> {
@@ -1161,9 +1358,6 @@ struct fidl::ostream::Formatter<::fdf::ServerEnd<::test_unknowninteractions::Unk
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fdf::ServerEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol>& value) {
-  return fidl::ostream::Formatter<::fdf::ServerEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol>>::Format(os, value);
-}
 template <>
 struct fidl::ostream::Formatter<::fdf::ClientEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>> {
   static std::ostream& Format(std::ostream& os, const ::fdf::ClientEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>& value) {
@@ -1172,9 +1366,6 @@ struct fidl::ostream::Formatter<::fdf::ClientEnd<::test_unknowninteractions::Unk
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fdf::ClientEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>& value) {
-  return fidl::ostream::Formatter<::fdf::ClientEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>>::Format(os, value);
-}
 
 template <>
 struct fidl::ostream::Formatter<::fdf::ServerEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>> {
@@ -1184,9 +1375,6 @@ struct fidl::ostream::Formatter<::fdf::ServerEnd<::test_unknowninteractions::Unk
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fdf::ServerEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>& value) {
-  return fidl::ostream::Formatter<::fdf::ServerEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>>::Format(os, value);
-}
 template <>
 struct fidl::ostream::Formatter<::fdf::ClientEnd<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>> {
   static std::ostream& Format(std::ostream& os, const ::fdf::ClientEnd<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>& value) {
@@ -1195,9 +1383,6 @@ struct fidl::ostream::Formatter<::fdf::ClientEnd<::test_unknowninteractions::Unk
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fdf::ClientEnd<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>& value) {
-  return fidl::ostream::Formatter<::fdf::ClientEnd<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>>::Format(os, value);
-}
 
 template <>
 struct fidl::ostream::Formatter<::fdf::ServerEnd<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>> {
@@ -1207,6 +1392,57 @@ struct fidl::ostream::Formatter<::fdf::ServerEnd<::test_unknowninteractions::Unk
               << ">(" << value.channel().get() << ")";
   }
 };
+
+namespace fidl {
+
+inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol>& value) {
+  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol>>::Format(os, value);
+}
+
+inline std::ostream& operator<<(std::ostream& os, const ::fidl::ServerEnd<::test_unknowninteractions::UnknownInteractionsProtocol>& value) {
+  return fidl::ostream::Formatter<::fidl::ServerEnd<::test_unknowninteractions::UnknownInteractionsProtocol>>::Format(os, value);
+}
+
+inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol>& value) {
+  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol>>::Format(os, value);
+}
+
+inline std::ostream& operator<<(std::ostream& os, const ::fidl::ServerEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol>& value) {
+  return fidl::ostream::Formatter<::fidl::ServerEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol>>::Format(os, value);
+}
+
+inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol>& value) {
+  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol>>::Format(os, value);
+}
+
+inline std::ostream& operator<<(std::ostream& os, const ::fidl::ServerEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol>& value) {
+  return fidl::ostream::Formatter<::fidl::ServerEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol>>::Format(os, value);
+}
+}  // namespace fidl
+namespace fdf {
+
+inline std::ostream& operator<<(std::ostream& os, const ::fdf::ClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol>& value) {
+  return fidl::ostream::Formatter<::fdf::ClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol>>::Format(os, value);
+}
+
+inline std::ostream& operator<<(std::ostream& os, const ::fdf::ServerEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol>& value) {
+  return fidl::ostream::Formatter<::fdf::ServerEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol>>::Format(os, value);
+}
+
+inline std::ostream& operator<<(std::ostream& os, const ::fdf::ClientEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>& value) {
+  return fidl::ostream::Formatter<::fdf::ClientEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>>::Format(os, value);
+}
+
+inline std::ostream& operator<<(std::ostream& os, const ::fdf::ServerEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>& value) {
+  return fidl::ostream::Formatter<::fdf::ServerEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>>::Format(os, value);
+}
+
+inline std::ostream& operator<<(std::ostream& os, const ::fdf::ClientEnd<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>& value) {
+  return fidl::ostream::Formatter<::fdf::ClientEnd<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>>::Format(os, value);
+}
+
 inline std::ostream& operator<<(std::ostream& os, const ::fdf::ServerEnd<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>& value) {
   return fidl::ostream::Formatter<::fdf::ServerEnd<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>>::Format(os, value);
 }
+
+}  // namespace fdf

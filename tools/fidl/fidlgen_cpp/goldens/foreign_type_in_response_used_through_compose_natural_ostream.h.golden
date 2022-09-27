@@ -9,6 +9,10 @@
 
 #include <iostream>
 
+namespace test_foreigntypeinresponseusedthroughcompose {
+
+}  // namespace test_foreigntypeinresponseusedthroughcompose
+
 template <>
 struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_foreigntypeinresponseusedthroughcompose::Top>> {
   static std::ostream& Format(std::ostream& os, const ::fidl::ClientEnd<::test_foreigntypeinresponseusedthroughcompose::Top>& value) {
@@ -17,9 +21,6 @@ struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_foreigntypeinresponseus
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_foreigntypeinresponseusedthroughcompose::Top>& value) {
-  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_foreigntypeinresponseusedthroughcompose::Top>>::Format(os, value);
-}
 
 template <>
 struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_foreigntypeinresponseusedthroughcompose::Top>> {
@@ -29,6 +30,15 @@ struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_foreigntypeinresponseus
               << ">(" << value.channel().get() << ")";
   }
 };
+
+namespace fidl {
+
+inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_foreigntypeinresponseusedthroughcompose::Top>& value) {
+  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_foreigntypeinresponseusedthroughcompose::Top>>::Format(os, value);
+}
+
 inline std::ostream& operator<<(std::ostream& os, const ::fidl::ServerEnd<::test_foreigntypeinresponseusedthroughcompose::Top>& value) {
   return fidl::ostream::Formatter<::fidl::ServerEnd<::test_foreigntypeinresponseusedthroughcompose::Top>>::Format(os, value);
 }
+
+}  // namespace fidl

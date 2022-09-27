@@ -11,4 +11,9 @@ template <>
 struct fidl::ostream::Formatter<::test_vectors::ExampleUseOfVectors> {
   static std::ostream& Format(std::ostream& os, const ::test_vectors::ExampleUseOfVectors& value);
 };
+
+namespace test_vectors {
+
 std::ostream& operator<<(std::ostream& os, const ::test_vectors::ExampleUseOfVectors& value);
+
+}  // namespace test_vectors

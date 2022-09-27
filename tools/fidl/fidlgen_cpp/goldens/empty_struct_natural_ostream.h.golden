@@ -11,27 +11,37 @@ template <>
 struct fidl::ostream::Formatter<::test_emptystruct::Empty> {
   static std::ostream& Format(std::ostream& os, const ::test_emptystruct::Empty& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_emptystruct::Empty& value);
 template <>
 struct fidl::ostream::Formatter<::test_emptystruct::EmptyProtocolSendRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_emptystruct::EmptyProtocolSendRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_emptystruct::EmptyProtocolSendRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_emptystruct::EmptyProtocolReceiveRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_emptystruct::EmptyProtocolReceiveRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_emptystruct::EmptyProtocolReceiveRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_emptystruct::EmptyProtocolSendAndReceiveRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_emptystruct::EmptyProtocolSendAndReceiveRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_emptystruct::EmptyProtocolSendAndReceiveRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_emptystruct::EmptyProtocolSendAndReceiveResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_emptystruct::EmptyProtocolSendAndReceiveResponse& value);
 };
+
+namespace test_emptystruct {
+
+std::ostream& operator<<(std::ostream& os, const ::test_emptystruct::Empty& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_emptystruct::EmptyProtocolSendRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_emptystruct::EmptyProtocolReceiveRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_emptystruct::EmptyProtocolSendAndReceiveRequest& value);
+
 std::ostream& operator<<(std::ostream& os, const ::test_emptystruct::EmptyProtocolSendAndReceiveResponse& value);
+
+}  // namespace test_emptystruct
+
 template <>
 struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_emptystruct::EmptyProtocol>> {
   static std::ostream& Format(std::ostream& os, const ::fidl::ClientEnd<::test_emptystruct::EmptyProtocol>& value) {
@@ -40,9 +50,6 @@ struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_emptystruct::EmptyProto
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_emptystruct::EmptyProtocol>& value) {
-  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_emptystruct::EmptyProtocol>>::Format(os, value);
-}
 
 template <>
 struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_emptystruct::EmptyProtocol>> {
@@ -52,6 +59,15 @@ struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_emptystruct::EmptyProto
               << ">(" << value.channel().get() << ")";
   }
 };
+
+namespace fidl {
+
+inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_emptystruct::EmptyProtocol>& value) {
+  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_emptystruct::EmptyProtocol>>::Format(os, value);
+}
+
 inline std::ostream& operator<<(std::ostream& os, const ::fidl::ServerEnd<::test_emptystruct::EmptyProtocol>& value) {
   return fidl::ostream::Formatter<::fidl::ServerEnd<::test_emptystruct::EmptyProtocol>>::Format(os, value);
 }
+
+}  // namespace fidl

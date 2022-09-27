@@ -11,9 +11,15 @@ template <>
 struct fidl::ostream::Formatter<::test_consts::EnumType> {
   static std::ostream& Format(std::ostream& os, const ::test_consts::EnumType& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_consts::EnumType& value);
 template <>
 struct fidl::ostream::Formatter<::test_consts::BitsType> {
   static std::ostream& Format(std::ostream& os, const ::test_consts::BitsType& value);
 };
+
+namespace test_consts {
+
+std::ostream& operator<<(std::ostream& os, const ::test_consts::EnumType& value);
+
 std::ostream& operator<<(std::ostream& os, const ::test_consts::BitsType& value);
+
+}  // namespace test_consts

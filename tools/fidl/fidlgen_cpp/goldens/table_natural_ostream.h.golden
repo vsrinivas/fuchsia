@@ -11,39 +11,51 @@ template <>
 struct fidl::ostream::Formatter<::test_table::EmptyTable> {
   static std::ostream& Format(std::ostream& os, const ::test_table::EmptyTable& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_table::EmptyTable& value);
 template <>
 struct fidl::ostream::Formatter<::test_table::SimpleTable> {
   static std::ostream& Format(std::ostream& os, const ::test_table::SimpleTable& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_table::SimpleTable& value);
 template <>
 struct fidl::ostream::Formatter<::test_table::OlderSimpleTable> {
   static std::ostream& Format(std::ostream& os, const ::test_table::OlderSimpleTable& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_table::OlderSimpleTable& value);
 template <>
 struct fidl::ostream::Formatter<::test_table::NewerSimpleTable> {
   static std::ostream& Format(std::ostream& os, const ::test_table::NewerSimpleTable& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_table::NewerSimpleTable& value);
 template <>
 struct fidl::ostream::Formatter<::test_table::ReverseOrdinalTable> {
   static std::ostream& Format(std::ostream& os, const ::test_table::ReverseOrdinalTable& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_table::ReverseOrdinalTable& value);
 template <>
 struct fidl::ostream::Formatter<::test_table::TableWithAttributes> {
   static std::ostream& Format(std::ostream& os, const ::test_table::TableWithAttributes& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_table::TableWithAttributes& value);
 template <>
 struct fidl::ostream::Formatter<::test_table::ExtensionTable> {
   static std::ostream& Format(std::ostream& os, const ::test_table::ExtensionTable& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_table::ExtensionTable& value);
 template <>
 struct fidl::ostream::Formatter<::test_table::SixtyFourOrdinalTable> {
   static std::ostream& Format(std::ostream& os, const ::test_table::SixtyFourOrdinalTable& value);
 };
+
+namespace test_table {
+
+std::ostream& operator<<(std::ostream& os, const ::test_table::EmptyTable& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_table::SimpleTable& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_table::OlderSimpleTable& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_table::NewerSimpleTable& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_table::ReverseOrdinalTable& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_table::TableWithAttributes& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_table::ExtensionTable& value);
+
 std::ostream& operator<<(std::ostream& os, const ::test_table::SixtyFourOrdinalTable& value);
+
+}  // namespace test_table

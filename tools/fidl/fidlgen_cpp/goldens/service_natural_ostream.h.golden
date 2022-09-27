@@ -7,6 +7,10 @@
 
 #include <iostream>
 
+namespace test_service {
+
+}  // namespace test_service
+
 template <>
 struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_service::FirstProtocol>> {
   static std::ostream& Format(std::ostream& os, const ::fidl::ClientEnd<::test_service::FirstProtocol>& value) {
@@ -15,9 +19,6 @@ struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_service::FirstProtocol>
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_service::FirstProtocol>& value) {
-  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_service::FirstProtocol>>::Format(os, value);
-}
 
 template <>
 struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_service::FirstProtocol>> {
@@ -27,9 +28,6 @@ struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_service::FirstProtocol>
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fidl::ServerEnd<::test_service::FirstProtocol>& value) {
-  return fidl::ostream::Formatter<::fidl::ServerEnd<::test_service::FirstProtocol>>::Format(os, value);
-}
 template <>
 struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_service::SecondProtocol>> {
   static std::ostream& Format(std::ostream& os, const ::fidl::ClientEnd<::test_service::SecondProtocol>& value) {
@@ -38,9 +36,6 @@ struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_service::SecondProtocol
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_service::SecondProtocol>& value) {
-  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_service::SecondProtocol>>::Format(os, value);
-}
 
 template <>
 struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_service::SecondProtocol>> {
@@ -50,6 +45,23 @@ struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_service::SecondProtocol
               << ">(" << value.channel().get() << ")";
   }
 };
+
+namespace fidl {
+
+inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_service::FirstProtocol>& value) {
+  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_service::FirstProtocol>>::Format(os, value);
+}
+
+inline std::ostream& operator<<(std::ostream& os, const ::fidl::ServerEnd<::test_service::FirstProtocol>& value) {
+  return fidl::ostream::Formatter<::fidl::ServerEnd<::test_service::FirstProtocol>>::Format(os, value);
+}
+
+inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_service::SecondProtocol>& value) {
+  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_service::SecondProtocol>>::Format(os, value);
+}
+
 inline std::ostream& operator<<(std::ostream& os, const ::fidl::ServerEnd<::test_service::SecondProtocol>& value) {
   return fidl::ostream::Formatter<::fidl::ServerEnd<::test_service::SecondProtocol>>::Format(os, value);
 }
+
+}  // namespace fidl

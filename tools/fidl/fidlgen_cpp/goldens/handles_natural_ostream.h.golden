@@ -12,12 +12,19 @@ template <>
 struct fidl::ostream::Formatter<::test_handles::Handles> {
   static std::ostream& Format(std::ostream& os, const ::test_handles::Handles& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_handles::Handles& value);
 template <>
 struct fidl::ostream::Formatter<::test_handles::FdfHandles> {
   static std::ostream& Format(std::ostream& os, const ::test_handles::FdfHandles& value);
 };
+
+namespace test_handles {
+
+std::ostream& operator<<(std::ostream& os, const ::test_handles::Handles& value);
+
 std::ostream& operator<<(std::ostream& os, const ::test_handles::FdfHandles& value);
+
+}  // namespace test_handles
+
 template <>
 struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_handles::SomeProtocol>> {
   static std::ostream& Format(std::ostream& os, const ::fidl::ClientEnd<::test_handles::SomeProtocol>& value) {
@@ -26,9 +33,6 @@ struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_handles::SomeProtocol>>
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_handles::SomeProtocol>& value) {
-  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_handles::SomeProtocol>>::Format(os, value);
-}
 
 template <>
 struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_handles::SomeProtocol>> {
@@ -38,9 +42,6 @@ struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_handles::SomeProtocol>>
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fidl::ServerEnd<::test_handles::SomeProtocol>& value) {
-  return fidl::ostream::Formatter<::fidl::ServerEnd<::test_handles::SomeProtocol>>::Format(os, value);
-}
 template <>
 struct fidl::ostream::Formatter<::fdf::ClientEnd<::test_handles::DriverProtocol>> {
   static std::ostream& Format(std::ostream& os, const ::fdf::ClientEnd<::test_handles::DriverProtocol>& value) {
@@ -49,9 +50,6 @@ struct fidl::ostream::Formatter<::fdf::ClientEnd<::test_handles::DriverProtocol>
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fdf::ClientEnd<::test_handles::DriverProtocol>& value) {
-  return fidl::ostream::Formatter<::fdf::ClientEnd<::test_handles::DriverProtocol>>::Format(os, value);
-}
 
 template <>
 struct fidl::ostream::Formatter<::fdf::ServerEnd<::test_handles::DriverProtocol>> {
@@ -61,6 +59,25 @@ struct fidl::ostream::Formatter<::fdf::ServerEnd<::test_handles::DriverProtocol>
               << ">(" << value.channel().get() << ")";
   }
 };
+
+namespace fidl {
+
+inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_handles::SomeProtocol>& value) {
+  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_handles::SomeProtocol>>::Format(os, value);
+}
+
+inline std::ostream& operator<<(std::ostream& os, const ::fidl::ServerEnd<::test_handles::SomeProtocol>& value) {
+  return fidl::ostream::Formatter<::fidl::ServerEnd<::test_handles::SomeProtocol>>::Format(os, value);
+}
+}  // namespace fidl
+namespace fdf {
+
+inline std::ostream& operator<<(std::ostream& os, const ::fdf::ClientEnd<::test_handles::DriverProtocol>& value) {
+  return fidl::ostream::Formatter<::fdf::ClientEnd<::test_handles::DriverProtocol>>::Format(os, value);
+}
+
 inline std::ostream& operator<<(std::ostream& os, const ::fdf::ServerEnd<::test_handles::DriverProtocol>& value) {
   return fidl::ostream::Formatter<::fdf::ServerEnd<::test_handles::DriverProtocol>>::Format(os, value);
 }
+
+}  // namespace fdf

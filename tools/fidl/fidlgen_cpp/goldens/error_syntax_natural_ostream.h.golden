@@ -12,22 +12,31 @@ template <>
 struct fidl::ostream::Formatter<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult> {
   static std::ostream& Format(std::ostream& os, const ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse& value);
 };
+
+namespace test_errorsyntax {
+
+std::ostream& operator<<(std::ostream& os, const ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult& value);
+
 std::ostream& operator<<(std::ostream& os, const ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse& value);
+
+}  // namespace test_errorsyntax
+
 template <>
 struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_errorsyntax::ExampleUseOfErrorSyntax>> {
   static std::ostream& Format(std::ostream& os, const ::fidl::ClientEnd<::test_errorsyntax::ExampleUseOfErrorSyntax>& value) {
@@ -36,9 +45,6 @@ struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_errorsyntax::ExampleUse
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_errorsyntax::ExampleUseOfErrorSyntax>& value) {
-  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_errorsyntax::ExampleUseOfErrorSyntax>>::Format(os, value);
-}
 
 template <>
 struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_errorsyntax::ExampleUseOfErrorSyntax>> {
@@ -48,6 +54,15 @@ struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_errorsyntax::ExampleUse
               << ">(" << value.channel().get() << ")";
   }
 };
+
+namespace fidl {
+
+inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_errorsyntax::ExampleUseOfErrorSyntax>& value) {
+  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_errorsyntax::ExampleUseOfErrorSyntax>>::Format(os, value);
+}
+
 inline std::ostream& operator<<(std::ostream& os, const ::fidl::ServerEnd<::test_errorsyntax::ExampleUseOfErrorSyntax>& value) {
   return fidl::ostream::Formatter<::fidl::ServerEnd<::test_errorsyntax::ExampleUseOfErrorSyntax>>::Format(os, value);
 }
+
+}  // namespace fidl

@@ -11,12 +11,19 @@ template <>
 struct fidl::ostream::Formatter<::test_inheritancewithrecursivedecl::ParentFirstRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_inheritancewithrecursivedecl::ParentFirstRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_inheritancewithrecursivedecl::ParentFirstRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_inheritancewithrecursivedecl::ChildSecondRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_inheritancewithrecursivedecl::ChildSecondRequest& value);
 };
+
+namespace test_inheritancewithrecursivedecl {
+
+std::ostream& operator<<(std::ostream& os, const ::test_inheritancewithrecursivedecl::ParentFirstRequest& value);
+
 std::ostream& operator<<(std::ostream& os, const ::test_inheritancewithrecursivedecl::ChildSecondRequest& value);
+
+}  // namespace test_inheritancewithrecursivedecl
+
 template <>
 struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_inheritancewithrecursivedecl::Parent>> {
   static std::ostream& Format(std::ostream& os, const ::fidl::ClientEnd<::test_inheritancewithrecursivedecl::Parent>& value) {
@@ -25,9 +32,6 @@ struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_inheritancewithrecursiv
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_inheritancewithrecursivedecl::Parent>& value) {
-  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_inheritancewithrecursivedecl::Parent>>::Format(os, value);
-}
 
 template <>
 struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>> {
@@ -37,9 +41,6 @@ struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_inheritancewithrecursiv
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>& value) {
-  return fidl::ostream::Formatter<::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>>::Format(os, value);
-}
 template <>
 struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_inheritancewithrecursivedecl::Child>> {
   static std::ostream& Format(std::ostream& os, const ::fidl::ClientEnd<::test_inheritancewithrecursivedecl::Child>& value) {
@@ -48,9 +49,6 @@ struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_inheritancewithrecursiv
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_inheritancewithrecursivedecl::Child>& value) {
-  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_inheritancewithrecursivedecl::Child>>::Format(os, value);
-}
 
 template <>
 struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Child>> {
@@ -60,6 +58,23 @@ struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_inheritancewithrecursiv
               << ">(" << value.channel().get() << ")";
   }
 };
+
+namespace fidl {
+
+inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_inheritancewithrecursivedecl::Parent>& value) {
+  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_inheritancewithrecursivedecl::Parent>>::Format(os, value);
+}
+
+inline std::ostream& operator<<(std::ostream& os, const ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>& value) {
+  return fidl::ostream::Formatter<::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>>::Format(os, value);
+}
+
+inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_inheritancewithrecursivedecl::Child>& value) {
+  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_inheritancewithrecursivedecl::Child>>::Format(os, value);
+}
+
 inline std::ostream& operator<<(std::ostream& os, const ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Child>& value) {
   return fidl::ostream::Formatter<::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Child>>::Format(os, value);
 }
+
+}  // namespace fidl

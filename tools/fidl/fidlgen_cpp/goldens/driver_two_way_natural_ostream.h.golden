@@ -11,12 +11,19 @@ template <>
 struct fidl::ostream::Formatter<::test_drivertwoway::TwoWayAddRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_drivertwoway::TwoWayAddRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_drivertwoway::TwoWayAddRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_drivertwoway::TwoWayAddResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_drivertwoway::TwoWayAddResponse& value);
 };
+
+namespace test_drivertwoway {
+
+std::ostream& operator<<(std::ostream& os, const ::test_drivertwoway::TwoWayAddRequest& value);
+
 std::ostream& operator<<(std::ostream& os, const ::test_drivertwoway::TwoWayAddResponse& value);
+
+}  // namespace test_drivertwoway
+
 template <>
 struct fidl::ostream::Formatter<::fdf::ClientEnd<::test_drivertwoway::TwoWay>> {
   static std::ostream& Format(std::ostream& os, const ::fdf::ClientEnd<::test_drivertwoway::TwoWay>& value) {
@@ -25,9 +32,6 @@ struct fidl::ostream::Formatter<::fdf::ClientEnd<::test_drivertwoway::TwoWay>> {
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fdf::ClientEnd<::test_drivertwoway::TwoWay>& value) {
-  return fidl::ostream::Formatter<::fdf::ClientEnd<::test_drivertwoway::TwoWay>>::Format(os, value);
-}
 
 template <>
 struct fidl::ostream::Formatter<::fdf::ServerEnd<::test_drivertwoway::TwoWay>> {
@@ -37,6 +41,15 @@ struct fidl::ostream::Formatter<::fdf::ServerEnd<::test_drivertwoway::TwoWay>> {
               << ">(" << value.channel().get() << ")";
   }
 };
+
+namespace fdf {
+
+inline std::ostream& operator<<(std::ostream& os, const ::fdf::ClientEnd<::test_drivertwoway::TwoWay>& value) {
+  return fidl::ostream::Formatter<::fdf::ClientEnd<::test_drivertwoway::TwoWay>>::Format(os, value);
+}
+
 inline std::ostream& operator<<(std::ostream& os, const ::fdf::ServerEnd<::test_drivertwoway::TwoWay>& value) {
   return fidl::ostream::Formatter<::fdf::ServerEnd<::test_drivertwoway::TwoWay>>::Format(os, value);
 }
+
+}  // namespace fdf

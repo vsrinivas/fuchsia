@@ -11,22 +11,31 @@ template <>
 struct fidl::ostream::Formatter<::test_driverhandle::ClientEndWrapper> {
   static std::ostream& Format(std::ostream& os, const ::test_driverhandle::ClientEndWrapper& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_driverhandle::ClientEndWrapper& value);
 template <>
 struct fidl::ostream::Formatter<::test_driverhandle::ServerEndWrapper> {
   static std::ostream& Format(std::ostream& os, const ::test_driverhandle::ServerEndWrapper& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_driverhandle::ServerEndWrapper& value);
 template <>
 struct fidl::ostream::Formatter<::test_driverhandle::T> {
   static std::ostream& Format(std::ostream& os, const ::test_driverhandle::T& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_driverhandle::T& value);
 template <>
 struct fidl::ostream::Formatter<::test_driverhandle::HandlesInProtocolSendHandlesRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_driverhandle::HandlesInProtocolSendHandlesRequest& value);
 };
+
+namespace test_driverhandle {
+
+std::ostream& operator<<(std::ostream& os, const ::test_driverhandle::ClientEndWrapper& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_driverhandle::ServerEndWrapper& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_driverhandle::T& value);
+
 std::ostream& operator<<(std::ostream& os, const ::test_driverhandle::HandlesInProtocolSendHandlesRequest& value);
+
+}  // namespace test_driverhandle
+
 template <>
 struct fidl::ostream::Formatter<::fdf::ClientEnd<::test_driverhandle::DriverProtocol>> {
   static std::ostream& Format(std::ostream& os, const ::fdf::ClientEnd<::test_driverhandle::DriverProtocol>& value) {
@@ -35,9 +44,6 @@ struct fidl::ostream::Formatter<::fdf::ClientEnd<::test_driverhandle::DriverProt
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fdf::ClientEnd<::test_driverhandle::DriverProtocol>& value) {
-  return fidl::ostream::Formatter<::fdf::ClientEnd<::test_driverhandle::DriverProtocol>>::Format(os, value);
-}
 
 template <>
 struct fidl::ostream::Formatter<::fdf::ServerEnd<::test_driverhandle::DriverProtocol>> {
@@ -47,9 +53,6 @@ struct fidl::ostream::Formatter<::fdf::ServerEnd<::test_driverhandle::DriverProt
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fdf::ServerEnd<::test_driverhandle::DriverProtocol>& value) {
-  return fidl::ostream::Formatter<::fdf::ServerEnd<::test_driverhandle::DriverProtocol>>::Format(os, value);
-}
 template <>
 struct fidl::ostream::Formatter<::fdf::ClientEnd<::test_driverhandle::HandlesInProtocol>> {
   static std::ostream& Format(std::ostream& os, const ::fdf::ClientEnd<::test_driverhandle::HandlesInProtocol>& value) {
@@ -58,9 +61,6 @@ struct fidl::ostream::Formatter<::fdf::ClientEnd<::test_driverhandle::HandlesInP
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fdf::ClientEnd<::test_driverhandle::HandlesInProtocol>& value) {
-  return fidl::ostream::Formatter<::fdf::ClientEnd<::test_driverhandle::HandlesInProtocol>>::Format(os, value);
-}
 
 template <>
 struct fidl::ostream::Formatter<::fdf::ServerEnd<::test_driverhandle::HandlesInProtocol>> {
@@ -70,6 +70,23 @@ struct fidl::ostream::Formatter<::fdf::ServerEnd<::test_driverhandle::HandlesInP
               << ">(" << value.channel().get() << ")";
   }
 };
+
+namespace fdf {
+
+inline std::ostream& operator<<(std::ostream& os, const ::fdf::ClientEnd<::test_driverhandle::DriverProtocol>& value) {
+  return fidl::ostream::Formatter<::fdf::ClientEnd<::test_driverhandle::DriverProtocol>>::Format(os, value);
+}
+
+inline std::ostream& operator<<(std::ostream& os, const ::fdf::ServerEnd<::test_driverhandle::DriverProtocol>& value) {
+  return fidl::ostream::Formatter<::fdf::ServerEnd<::test_driverhandle::DriverProtocol>>::Format(os, value);
+}
+
+inline std::ostream& operator<<(std::ostream& os, const ::fdf::ClientEnd<::test_driverhandle::HandlesInProtocol>& value) {
+  return fidl::ostream::Formatter<::fdf::ClientEnd<::test_driverhandle::HandlesInProtocol>>::Format(os, value);
+}
+
 inline std::ostream& operator<<(std::ostream& os, const ::fdf::ServerEnd<::test_driverhandle::HandlesInProtocol>& value) {
   return fidl::ostream::Formatter<::fdf::ServerEnd<::test_driverhandle::HandlesInProtocol>>::Format(os, value);
 }
+
+}  // namespace fdf

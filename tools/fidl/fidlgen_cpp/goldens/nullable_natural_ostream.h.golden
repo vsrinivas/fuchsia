@@ -11,57 +11,73 @@ template <>
 struct fidl::ostream::Formatter<::test_nullable::StructWithNullableString> {
   static std::ostream& Format(std::ostream& os, const ::test_nullable::StructWithNullableString& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_nullable::StructWithNullableString& value);
 template <>
 struct fidl::ostream::Formatter<::test_nullable::StructWithNullableVector> {
   static std::ostream& Format(std::ostream& os, const ::test_nullable::StructWithNullableVector& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_nullable::StructWithNullableVector& value);
 template <>
 struct fidl::ostream::Formatter<::test_nullable::StructWithNullableHandle> {
   static std::ostream& Format(std::ostream& os, const ::test_nullable::StructWithNullableHandle& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_nullable::StructWithNullableHandle& value);
 template <>
 struct fidl::ostream::Formatter<::test_nullable::SimpleProtocolAddRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_nullable::SimpleProtocolAddRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_nullable::SimpleProtocolAddRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_nullable::SimpleProtocolAddResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_nullable::SimpleProtocolAddResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_nullable::SimpleProtocolAddResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_nullable::StructWithNullableProtocol> {
   static std::ostream& Format(std::ostream& os, const ::test_nullable::StructWithNullableProtocol& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_nullable::StructWithNullableProtocol& value);
 template <>
 struct fidl::ostream::Formatter<::test_nullable::StructWithNullableRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_nullable::StructWithNullableRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_nullable::StructWithNullableRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_nullable::Int32Wrapper> {
   static std::ostream& Format(std::ostream& os, const ::test_nullable::Int32Wrapper& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_nullable::Int32Wrapper& value);
 template <>
 struct fidl::ostream::Formatter<::test_nullable::StructWithNullableStruct> {
   static std::ostream& Format(std::ostream& os, const ::test_nullable::StructWithNullableStruct& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_nullable::StructWithNullableStruct& value);
 template <>
 struct fidl::ostream::Formatter<::test_nullable::SimpleUnion> {
   static std::ostream& Format(std::ostream& os, const ::test_nullable::SimpleUnion& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_nullable::SimpleUnion& value);
 template <>
 struct fidl::ostream::Formatter<::test_nullable::StructWithNullableUnion> {
   static std::ostream& Format(std::ostream& os, const ::test_nullable::StructWithNullableUnion& value);
 };
+
+namespace test_nullable {
+
+std::ostream& operator<<(std::ostream& os, const ::test_nullable::StructWithNullableString& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_nullable::StructWithNullableVector& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_nullable::StructWithNullableHandle& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_nullable::SimpleProtocolAddRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_nullable::SimpleProtocolAddResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_nullable::StructWithNullableProtocol& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_nullable::StructWithNullableRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_nullable::Int32Wrapper& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_nullable::StructWithNullableStruct& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_nullable::SimpleUnion& value);
+
 std::ostream& operator<<(std::ostream& os, const ::test_nullable::StructWithNullableUnion& value);
+
+}  // namespace test_nullable
+
 template <>
 struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_nullable::SimpleProtocol>> {
   static std::ostream& Format(std::ostream& os, const ::fidl::ClientEnd<::test_nullable::SimpleProtocol>& value) {
@@ -70,9 +86,6 @@ struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_nullable::SimpleProtoco
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_nullable::SimpleProtocol>& value) {
-  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_nullable::SimpleProtocol>>::Format(os, value);
-}
 
 template <>
 struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_nullable::SimpleProtocol>> {
@@ -82,6 +95,15 @@ struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_nullable::SimpleProtoco
               << ">(" << value.channel().get() << ")";
   }
 };
+
+namespace fidl {
+
+inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_nullable::SimpleProtocol>& value) {
+  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_nullable::SimpleProtocol>>::Format(os, value);
+}
+
 inline std::ostream& operator<<(std::ostream& os, const ::fidl::ServerEnd<::test_nullable::SimpleProtocol>& value) {
   return fidl::ostream::Formatter<::fidl::ServerEnd<::test_nullable::SimpleProtocol>>::Format(os, value);
 }
+
+}  // namespace fidl

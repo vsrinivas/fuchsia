@@ -11,27 +11,37 @@ template <>
 struct fidl::ostream::Formatter<::test_versions::Bits> {
   static std::ostream& Format(std::ostream& os, const ::test_versions::Bits& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_versions::Bits& value);
 template <>
 struct fidl::ostream::Formatter<::test_versions::Enum> {
   static std::ostream& Format(std::ostream& os, const ::test_versions::Enum& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_versions::Enum& value);
 template <>
 struct fidl::ostream::Formatter<::test_versions::Struct> {
   static std::ostream& Format(std::ostream& os, const ::test_versions::Struct& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_versions::Struct& value);
 template <>
 struct fidl::ostream::Formatter<::test_versions::Table> {
   static std::ostream& Format(std::ostream& os, const ::test_versions::Table& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_versions::Table& value);
 template <>
 struct fidl::ostream::Formatter<::test_versions::Union> {
   static std::ostream& Format(std::ostream& os, const ::test_versions::Union& value);
 };
+
+namespace test_versions {
+
+std::ostream& operator<<(std::ostream& os, const ::test_versions::Bits& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_versions::Enum& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_versions::Struct& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_versions::Table& value);
+
 std::ostream& operator<<(std::ostream& os, const ::test_versions::Union& value);
+
+}  // namespace test_versions
+
 template <>
 struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_versions::OtherProtocol>> {
   static std::ostream& Format(std::ostream& os, const ::fidl::ClientEnd<::test_versions::OtherProtocol>& value) {
@@ -40,9 +50,6 @@ struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_versions::OtherProtocol
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_versions::OtherProtocol>& value) {
-  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_versions::OtherProtocol>>::Format(os, value);
-}
 
 template <>
 struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_versions::OtherProtocol>> {
@@ -52,9 +59,6 @@ struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_versions::OtherProtocol
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fidl::ServerEnd<::test_versions::OtherProtocol>& value) {
-  return fidl::ostream::Formatter<::fidl::ServerEnd<::test_versions::OtherProtocol>>::Format(os, value);
-}
 template <>
 struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_versions::Protocol>> {
   static std::ostream& Format(std::ostream& os, const ::fidl::ClientEnd<::test_versions::Protocol>& value) {
@@ -63,9 +67,6 @@ struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_versions::Protocol>> {
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_versions::Protocol>& value) {
-  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_versions::Protocol>>::Format(os, value);
-}
 
 template <>
 struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_versions::Protocol>> {
@@ -75,6 +76,23 @@ struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_versions::Protocol>> {
               << ">(" << value.channel().get() << ")";
   }
 };
+
+namespace fidl {
+
+inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_versions::OtherProtocol>& value) {
+  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_versions::OtherProtocol>>::Format(os, value);
+}
+
+inline std::ostream& operator<<(std::ostream& os, const ::fidl::ServerEnd<::test_versions::OtherProtocol>& value) {
+  return fidl::ostream::Formatter<::fidl::ServerEnd<::test_versions::OtherProtocol>>::Format(os, value);
+}
+
+inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_versions::Protocol>& value) {
+  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_versions::Protocol>>::Format(os, value);
+}
+
 inline std::ostream& operator<<(std::ostream& os, const ::fidl::ServerEnd<::test_versions::Protocol>& value) {
   return fidl::ostream::Formatter<::fidl::ServerEnd<::test_versions::Protocol>>::Format(os, value);
 }
+
+}  // namespace fidl

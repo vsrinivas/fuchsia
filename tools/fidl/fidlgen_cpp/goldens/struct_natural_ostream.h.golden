@@ -11,9 +11,15 @@ template <>
 struct fidl::ostream::Formatter<::test_struct::Simple> {
   static std::ostream& Format(std::ostream& os, const ::test_struct::Simple& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_struct::Simple& value);
 template <>
 struct fidl::ostream::Formatter<::test_struct::BasicStruct> {
   static std::ostream& Format(std::ostream& os, const ::test_struct::BasicStruct& value);
 };
+
+namespace test_struct {
+
+std::ostream& operator<<(std::ostream& os, const ::test_struct::Simple& value);
+
 std::ostream& operator<<(std::ostream& os, const ::test_struct::BasicStruct& value);
+
+}  // namespace test_struct

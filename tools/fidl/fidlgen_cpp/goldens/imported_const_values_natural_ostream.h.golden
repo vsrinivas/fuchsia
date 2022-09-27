@@ -12,4 +12,9 @@ template <>
 struct fidl::ostream::Formatter<::test_importedconstvalues::MyStruct> {
   static std::ostream& Format(std::ostream& os, const ::test_importedconstvalues::MyStruct& value);
 };
+
+namespace test_importedconstvalues {
+
 std::ostream& operator<<(std::ostream& os, const ::test_importedconstvalues::MyStruct& value);
+
+}  // namespace test_importedconstvalues

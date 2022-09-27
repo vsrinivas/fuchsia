@@ -11,19 +11,27 @@ template <>
 struct fidl::ostream::Formatter<::test_bits::MyBits> {
   static std::ostream& Format(std::ostream& os, const ::test_bits::MyBits& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_bits::MyBits& value);
 template <>
 struct fidl::ostream::Formatter<::test_bits::StrictBits> {
   static std::ostream& Format(std::ostream& os, const ::test_bits::StrictBits& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_bits::StrictBits& value);
 template <>
 struct fidl::ostream::Formatter<::test_bits::FlexibleBits> {
   static std::ostream& Format(std::ostream& os, const ::test_bits::FlexibleBits& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_bits::FlexibleBits& value);
 template <>
 struct fidl::ostream::Formatter<::test_bits::EmptyBits> {
   static std::ostream& Format(std::ostream& os, const ::test_bits::EmptyBits& value);
 };
+
+namespace test_bits {
+
+std::ostream& operator<<(std::ostream& os, const ::test_bits::MyBits& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_bits::StrictBits& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_bits::FlexibleBits& value);
+
 std::ostream& operator<<(std::ostream& os, const ::test_bits::EmptyBits& value);
+
+}  // namespace test_bits

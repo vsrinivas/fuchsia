@@ -11,29 +11,39 @@ template <>
 struct fidl::ostream::Formatter<::test_arrays::StructSmallArray> {
   static std::ostream& Format(std::ostream& os, const ::test_arrays::StructSmallArray& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_arrays::StructSmallArray& value);
 template <>
 struct fidl::ostream::Formatter<::test_arrays::StructLargeArray> {
   static std::ostream& Format(std::ostream& os, const ::test_arrays::StructLargeArray& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_arrays::StructLargeArray& value);
 template <>
 struct fidl::ostream::Formatter<::test_arrays::TableSmallArray> {
   static std::ostream& Format(std::ostream& os, const ::test_arrays::TableSmallArray& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_arrays::TableSmallArray& value);
 template <>
 struct fidl::ostream::Formatter<::test_arrays::TableLargeArray> {
   static std::ostream& Format(std::ostream& os, const ::test_arrays::TableLargeArray& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_arrays::TableLargeArray& value);
 template <>
 struct fidl::ostream::Formatter<::test_arrays::UnionSmallArray> {
   static std::ostream& Format(std::ostream& os, const ::test_arrays::UnionSmallArray& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_arrays::UnionSmallArray& value);
 template <>
 struct fidl::ostream::Formatter<::test_arrays::UnionLargeArray> {
   static std::ostream& Format(std::ostream& os, const ::test_arrays::UnionLargeArray& value);
 };
+
+namespace test_arrays {
+
+std::ostream& operator<<(std::ostream& os, const ::test_arrays::StructSmallArray& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_arrays::StructLargeArray& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_arrays::TableSmallArray& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_arrays::TableLargeArray& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_arrays::UnionSmallArray& value);
+
 std::ostream& operator<<(std::ostream& os, const ::test_arrays::UnionLargeArray& value);
+
+}  // namespace test_arrays

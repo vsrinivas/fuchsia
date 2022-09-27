@@ -11,4 +11,9 @@ template <>
 struct fidl::ostream::Formatter<::test_bitsconstants::BitsType> {
   static std::ostream& Format(std::ostream& os, const ::test_bitsconstants::BitsType& value);
 };
+
+namespace test_bitsconstants {
+
 std::ostream& operator<<(std::ostream& os, const ::test_bitsconstants::BitsType& value);
+
+}  // namespace test_bitsconstants

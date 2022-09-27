@@ -23,17 +23,24 @@
     #include <{{ . | Filename "NaturalOStreamHeader" }}>
   {{ end }}
 
-  {{- EnsureNamespace "" }}
-
+  {{ EnsureNamespace "" }}
   {{- range .Decls }}
     {{- if and (ne .Kind Kinds.Const) (ne .Kind Kinds.Protocol) (ne .Kind Kinds.Service) }}
       template<>
       struct fidl::ostream::Formatter<{{ . }}> {
         static std::ostream& Format(std::ostream& os, const {{ . }}& value);
       };
+    {{- end }}
+  {{- end }}
+
+  {{ range .Decls }}
+    {{ EnsureNamespace . }}
+    {{- if and (ne .Kind Kinds.Const) (ne .Kind Kinds.Protocol) (ne .Kind Kinds.Service) }}
       std::ostream& operator<<(std::ostream& os, const {{ . }}& value);
     {{- end }}
   {{- end }}
+
+  {{ EnsureNamespace "" }}
   {{- range .Protocols }}
     {{- if .Transport }}
       template<>
@@ -42,9 +49,6 @@
           return os << "ClientEnd<" << "{{ .NoLeading }}" << ">(" << value.channel().get() << ")";
         }
       };
-      inline std::ostream& operator<<(std::ostream& os, const {{ .ClientEnd }}& value) {
-          return fidl::ostream::Formatter<{{ .ClientEnd }}>::Format(os, value);
-      }
 
       template<>
       struct fidl::ostream::Formatter<{{ .ServerEnd }}> {
@@ -52,6 +56,17 @@
           return os << "ServerEnd<" << "{{ .NoLeading }}" << ">(" << value.channel().get() << ")";
         }
       };
+    {{- end }}
+  {{- end }}
+
+  {{ range .Protocols }}
+    {{- if .Transport }}
+      {{ EnsureNamespace .Transport.Namespace }}
+
+      inline std::ostream& operator<<(std::ostream& os, const {{ .ClientEnd }}& value) {
+          return fidl::ostream::Formatter<{{ .ClientEnd }}>::Format(os, value);
+      }
+
       inline std::ostream& operator<<(std::ostream& os, const {{ .ServerEnd }}& value) {
           return fidl::ostream::Formatter<{{ .ServerEnd }}>::Format(os, value);
       }

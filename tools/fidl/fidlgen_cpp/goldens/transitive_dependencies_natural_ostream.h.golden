@@ -12,4 +12,9 @@ template <>
 struct fidl::ostream::Formatter<::test_transitivedependencies::Baz> {
   static std::ostream& Format(std::ostream& os, const ::test_transitivedependencies::Baz& value);
 };
+
+namespace test_transitivedependencies {
+
 std::ostream& operator<<(std::ostream& os, const ::test_transitivedependencies::Baz& value);
+
+}  // namespace test_transitivedependencies

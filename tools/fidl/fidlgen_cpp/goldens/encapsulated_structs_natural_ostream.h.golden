@@ -11,29 +11,39 @@ template <>
 struct fidl::ostream::Formatter<::test_encapsulatedstructs::Int8Int32> {
   static std::ostream& Format(std::ostream& os, const ::test_encapsulatedstructs::Int8Int32& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_encapsulatedstructs::Int8Int32& value);
 template <>
 struct fidl::ostream::Formatter<::test_encapsulatedstructs::Int16Int8> {
   static std::ostream& Format(std::ostream& os, const ::test_encapsulatedstructs::Int16Int8& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_encapsulatedstructs::Int16Int8& value);
 template <>
 struct fidl::ostream::Formatter<::test_encapsulatedstructs::ArrayInt16Int8> {
   static std::ostream& Format(std::ostream& os, const ::test_encapsulatedstructs::ArrayInt16Int8& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_encapsulatedstructs::ArrayInt16Int8& value);
 template <>
 struct fidl::ostream::Formatter<::test_encapsulatedstructs::StructPaddingTestStruct> {
   static std::ostream& Format(std::ostream& os, const ::test_encapsulatedstructs::StructPaddingTestStruct& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_encapsulatedstructs::StructPaddingTestStruct& value);
 template <>
 struct fidl::ostream::Formatter<::test_encapsulatedstructs::NonInlineStructTestStruct> {
   static std::ostream& Format(std::ostream& os, const ::test_encapsulatedstructs::NonInlineStructTestStruct& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_encapsulatedstructs::NonInlineStructTestStruct& value);
 template <>
 struct fidl::ostream::Formatter<::test_encapsulatedstructs::TopLevelStruct> {
   static std::ostream& Format(std::ostream& os, const ::test_encapsulatedstructs::TopLevelStruct& value);
 };
+
+namespace test_encapsulatedstructs {
+
+std::ostream& operator<<(std::ostream& os, const ::test_encapsulatedstructs::Int8Int32& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_encapsulatedstructs::Int16Int8& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_encapsulatedstructs::ArrayInt16Int8& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_encapsulatedstructs::StructPaddingTestStruct& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_encapsulatedstructs::NonInlineStructTestStruct& value);
+
 std::ostream& operator<<(std::ostream& os, const ::test_encapsulatedstructs::TopLevelStruct& value);
+
+}  // namespace test_encapsulatedstructs

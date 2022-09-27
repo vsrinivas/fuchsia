@@ -11,42 +11,55 @@ template <>
 struct fidl::ostream::Formatter<::test_doccomments::MyStrictBits> {
   static std::ostream& Format(std::ostream& os, const ::test_doccomments::MyStrictBits& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_doccomments::MyStrictBits& value);
 template <>
 struct fidl::ostream::Formatter<::test_doccomments::MyFlexibleBits> {
   static std::ostream& Format(std::ostream& os, const ::test_doccomments::MyFlexibleBits& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_doccomments::MyFlexibleBits& value);
 template <>
 struct fidl::ostream::Formatter<::test_doccomments::MyStrictEnum> {
   static std::ostream& Format(std::ostream& os, const ::test_doccomments::MyStrictEnum& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_doccomments::MyStrictEnum& value);
 template <>
 struct fidl::ostream::Formatter<::test_doccomments::MyFlexibleEnum> {
   static std::ostream& Format(std::ostream& os, const ::test_doccomments::MyFlexibleEnum& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_doccomments::MyFlexibleEnum& value);
 template <>
 struct fidl::ostream::Formatter<::test_doccomments::Struct> {
   static std::ostream& Format(std::ostream& os, const ::test_doccomments::Struct& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_doccomments::Struct& value);
 template <>
 struct fidl::ostream::Formatter<::test_doccomments::StrictUnion> {
   static std::ostream& Format(std::ostream& os, const ::test_doccomments::StrictUnion& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_doccomments::StrictUnion& value);
 template <>
 struct fidl::ostream::Formatter<::test_doccomments::FlexibleUnion> {
   static std::ostream& Format(std::ostream& os, const ::test_doccomments::FlexibleUnion& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_doccomments::FlexibleUnion& value);
 template <>
 struct fidl::ostream::Formatter<::test_doccomments::Table> {
   static std::ostream& Format(std::ostream& os, const ::test_doccomments::Table& value);
 };
+
+namespace test_doccomments {
+
+std::ostream& operator<<(std::ostream& os, const ::test_doccomments::MyStrictBits& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_doccomments::MyFlexibleBits& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_doccomments::MyStrictEnum& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_doccomments::MyFlexibleEnum& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_doccomments::Struct& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_doccomments::StrictUnion& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_doccomments::FlexibleUnion& value);
+
 std::ostream& operator<<(std::ostream& os, const ::test_doccomments::Table& value);
+
+}  // namespace test_doccomments
+
 template <>
 struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_doccomments::Interface>> {
   static std::ostream& Format(std::ostream& os, const ::fidl::ClientEnd<::test_doccomments::Interface>& value) {
@@ -55,9 +68,6 @@ struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_doccomments::Interface>
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_doccomments::Interface>& value) {
-  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_doccomments::Interface>>::Format(os, value);
-}
 
 template <>
 struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_doccomments::Interface>> {
@@ -67,6 +77,15 @@ struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_doccomments::Interface>
               << ">(" << value.channel().get() << ")";
   }
 };
+
+namespace fidl {
+
+inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_doccomments::Interface>& value) {
+  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_doccomments::Interface>>::Format(os, value);
+}
+
 inline std::ostream& operator<<(std::ostream& os, const ::fidl::ServerEnd<::test_doccomments::Interface>& value) {
   return fidl::ostream::Formatter<::fidl::ServerEnd<::test_doccomments::Interface>>::Format(os, value);
 }
+
+}  // namespace fidl

@@ -12,4 +12,9 @@ template <>
 struct fidl::ostream::Formatter<::test_structdefaultvalueenumlibraryreference::Foo> {
   static std::ostream& Format(std::ostream& os, const ::test_structdefaultvalueenumlibraryreference::Foo& value);
 };
+
+namespace test_structdefaultvalueenumlibraryreference {
+
 std::ostream& operator<<(std::ostream& os, const ::test_structdefaultvalueenumlibraryreference::Foo& value);
+
+}  // namespace test_structdefaultvalueenumlibraryreference

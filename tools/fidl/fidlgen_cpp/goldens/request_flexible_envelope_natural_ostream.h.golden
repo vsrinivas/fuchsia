@@ -11,32 +11,43 @@ template <>
 struct fidl::ostream::Formatter<::test_requestflexibleenvelope::FlexibleFoo> {
   static std::ostream& Format(std::ostream& os, const ::test_requestflexibleenvelope::FlexibleFoo& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_requestflexibleenvelope::FlexibleFoo& value);
 template <>
 struct fidl::ostream::Formatter<::test_requestflexibleenvelope::StrictFoo> {
   static std::ostream& Format(std::ostream& os, const ::test_requestflexibleenvelope::StrictFoo& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_requestflexibleenvelope::StrictFoo& value);
 template <>
 struct fidl::ostream::Formatter<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse& value);
 };
+
+namespace test_requestflexibleenvelope {
+
+std::ostream& operator<<(std::ostream& os, const ::test_requestflexibleenvelope::FlexibleFoo& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_requestflexibleenvelope::StrictFoo& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest& value);
+
 std::ostream& operator<<(std::ostream& os, const ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse& value);
+
+}  // namespace test_requestflexibleenvelope
+
 template <>
 struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_requestflexibleenvelope::Protocol>> {
   static std::ostream& Format(std::ostream& os, const ::fidl::ClientEnd<::test_requestflexibleenvelope::Protocol>& value) {
@@ -45,9 +56,6 @@ struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_requestflexibleenvelope
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_requestflexibleenvelope::Protocol>& value) {
-  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_requestflexibleenvelope::Protocol>>::Format(os, value);
-}
 
 template <>
 struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_requestflexibleenvelope::Protocol>> {
@@ -57,6 +65,15 @@ struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_requestflexibleenvelope
               << ">(" << value.channel().get() << ")";
   }
 };
+
+namespace fidl {
+
+inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_requestflexibleenvelope::Protocol>& value) {
+  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_requestflexibleenvelope::Protocol>>::Format(os, value);
+}
+
 inline std::ostream& operator<<(std::ostream& os, const ::fidl::ServerEnd<::test_requestflexibleenvelope::Protocol>& value) {
   return fidl::ostream::Formatter<::fidl::ServerEnd<::test_requestflexibleenvelope::Protocol>>::Format(os, value);
 }
+
+}  // namespace fidl

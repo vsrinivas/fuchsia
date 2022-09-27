@@ -11,19 +11,27 @@ template <>
 struct fidl::ostream::Formatter<::test_enum::MyStrictEnum> {
   static std::ostream& Format(std::ostream& os, const ::test_enum::MyStrictEnum& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_enum::MyStrictEnum& value);
 template <>
 struct fidl::ostream::Formatter<::test_enum::MyFlexibleEnum> {
   static std::ostream& Format(std::ostream& os, const ::test_enum::MyFlexibleEnum& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_enum::MyFlexibleEnum& value);
 template <>
 struct fidl::ostream::Formatter<::test_enum::MyFlexibleEnumWithCustomUnknown> {
   static std::ostream& Format(std::ostream& os, const ::test_enum::MyFlexibleEnumWithCustomUnknown& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_enum::MyFlexibleEnumWithCustomUnknown& value);
 template <>
 struct fidl::ostream::Formatter<::test_enum::MyEmptyFlexibleEnum> {
   static std::ostream& Format(std::ostream& os, const ::test_enum::MyEmptyFlexibleEnum& value);
 };
+
+namespace test_enum {
+
+std::ostream& operator<<(std::ostream& os, const ::test_enum::MyStrictEnum& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_enum::MyFlexibleEnum& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_enum::MyFlexibleEnumWithCustomUnknown& value);
+
 std::ostream& operator<<(std::ostream& os, const ::test_enum::MyEmptyFlexibleEnum& value);
+
+}  // namespace test_enum

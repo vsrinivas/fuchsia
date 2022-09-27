@@ -11,22 +11,31 @@ template <>
 struct fidl::ostream::Formatter<::test_error::ExampleFooRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_error::ExampleFooRequest& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_error::ExampleFooRequest& value);
 template <>
 struct fidl::ostream::Formatter<::test_error::ExampleFooResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_error::ExampleFooResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_error::ExampleFooResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_error::ExampleFooResult> {
   static std::ostream& Format(std::ostream& os, const ::test_error::ExampleFooResult& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_error::ExampleFooResult& value);
 template <>
 struct fidl::ostream::Formatter<::test_error::ExampleFooTopResponse> {
   static std::ostream& Format(std::ostream& os, const ::test_error::ExampleFooTopResponse& value);
 };
+
+namespace test_error {
+
+std::ostream& operator<<(std::ostream& os, const ::test_error::ExampleFooRequest& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_error::ExampleFooResponse& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_error::ExampleFooResult& value);
+
 std::ostream& operator<<(std::ostream& os, const ::test_error::ExampleFooTopResponse& value);
+
+}  // namespace test_error
+
 template <>
 struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_error::Example>> {
   static std::ostream& Format(std::ostream& os, const ::fidl::ClientEnd<::test_error::Example>& value) {
@@ -35,9 +44,6 @@ struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_error::Example>> {
               << ">(" << value.channel().get() << ")";
   }
 };
-inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_error::Example>& value) {
-  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_error::Example>>::Format(os, value);
-}
 
 template <>
 struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_error::Example>> {
@@ -47,6 +53,15 @@ struct fidl::ostream::Formatter<::fidl::ServerEnd<::test_error::Example>> {
               << ">(" << value.channel().get() << ")";
   }
 };
+
+namespace fidl {
+
+inline std::ostream& operator<<(std::ostream& os, const ::fidl::ClientEnd<::test_error::Example>& value) {
+  return fidl::ostream::Formatter<::fidl::ClientEnd<::test_error::Example>>::Format(os, value);
+}
+
 inline std::ostream& operator<<(std::ostream& os, const ::fidl::ServerEnd<::test_error::Example>& value) {
   return fidl::ostream::Formatter<::fidl::ServerEnd<::test_error::Example>>::Format(os, value);
 }
+
+}  // namespace fidl

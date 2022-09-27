@@ -14,6 +14,8 @@
 
   #include <{{ .Library | Filename "NaturalOStreamHeader" }}>
 
+  {{ EnsureNamespace "" }}
+
   {{- range .Enums }}
     std::ostream& fidl::ostream::Formatter<{{ . }}>::Format(std::ostream& os, const {{ . }}& value) {
       os << "{{ .NoLeading }}";
@@ -34,10 +36,8 @@
       }
       return os;
     }
-    std::ostream& operator<<(std::ostream& os, const {{ . }}& value) {
-      return fidl::ostream::Formatter<{{ . }}>::Format(os, value);
-    }
   {{- end }}
+
   {{- range .Bits }}
     std::ostream& fidl::ostream::Formatter<{{ . }}>::Format(std::ostream& os, const {{ . }}& value) {
       os << "{{ .NoLeading }}";
@@ -64,10 +64,8 @@
       os << ")";
       return os;
     }
-    std::ostream& operator<<(std::ostream& os, const {{ . }}& value) {
-      return fidl::ostream::Formatter<{{ . }}>::Format(os, value);
-    }
   {{- end }}
+
   {{- range .Structs }}
     std::ostream& fidl::ostream::Formatter<{{ . }}>::Format(std::ostream& os, const {{ . }}& value) {
       os << "{{ .NoLeading }}";
@@ -79,10 +77,8 @@
       os << "}";
       return os;
     }
-    std::ostream& operator<<(std::ostream& os, const {{ . }}& value) {
-      return fidl::ostream::Formatter<{{ . }}>::Format(os, value);
-    }
-    {{- end }}
+  {{- end }}
+
   {{- range .Tables }}
     std::ostream& fidl::ostream::Formatter<{{ . }}>::Format(std::ostream& os, const {{ . }}& value) {
       os << "{{ .NoLeading }}";
@@ -96,10 +92,8 @@
       os << "}";
       return os;
     }
-    std::ostream& operator<<(std::ostream& os, const {{ . }}& value) {
-      return fidl::ostream::Formatter<{{ . }}>::Format(os, value);
-    }
   {{- end }}
+
   {{- range .Unions }}
     std::ostream& fidl::ostream::Formatter<{{ . }}>::Format(std::ostream& os, const {{ . }}& value) {
       os << "{{ .NoLeading }}::";
@@ -114,9 +108,15 @@
       }
       return os;
     }
-    std::ostream& operator<<(std::ostream& os, const {{ . }}& value) {
-      return fidl::ostream::Formatter<{{ . }}>::Format(os, value);
-    }
+  {{- end }}
+
+  {{ range .Decls }}
+    {{- if and (ne .Kind Kinds.Const) (ne .Kind Kinds.Protocol) (ne .Kind Kinds.Service) }}
+      {{- EnsureNamespace . }}
+      std::ostream& operator<<(std::ostream& os, const {{ . }}& value) {
+        return fidl::ostream::Formatter<{{ . }}>::Format(os, value);
+      }
+    {{- end }}
   {{- end }}
 
   {{ EndOfFile }}

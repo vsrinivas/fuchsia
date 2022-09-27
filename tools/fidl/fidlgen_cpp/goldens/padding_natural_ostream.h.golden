@@ -11,79 +11,99 @@ template <>
 struct fidl::ostream::Formatter<::test_padding::Padding1ByteEnd> {
   static std::ostream& Format(std::ostream& os, const ::test_padding::Padding1ByteEnd& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_padding::Padding1ByteEnd& value);
 template <>
 struct fidl::ostream::Formatter<::test_padding::Padding2ByteEnd> {
   static std::ostream& Format(std::ostream& os, const ::test_padding::Padding2ByteEnd& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_padding::Padding2ByteEnd& value);
 template <>
 struct fidl::ostream::Formatter<::test_padding::Padding3ByteEnd> {
   static std::ostream& Format(std::ostream& os, const ::test_padding::Padding3ByteEnd& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_padding::Padding3ByteEnd& value);
 template <>
 struct fidl::ostream::Formatter<::test_padding::Padding4ByteEnd> {
   static std::ostream& Format(std::ostream& os, const ::test_padding::Padding4ByteEnd& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_padding::Padding4ByteEnd& value);
 template <>
 struct fidl::ostream::Formatter<::test_padding::Padding5ByteEnd> {
   static std::ostream& Format(std::ostream& os, const ::test_padding::Padding5ByteEnd& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_padding::Padding5ByteEnd& value);
 template <>
 struct fidl::ostream::Formatter<::test_padding::Padding6ByteEnd> {
   static std::ostream& Format(std::ostream& os, const ::test_padding::Padding6ByteEnd& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_padding::Padding6ByteEnd& value);
 template <>
 struct fidl::ostream::Formatter<::test_padding::Padding7ByteEnd> {
   static std::ostream& Format(std::ostream& os, const ::test_padding::Padding7ByteEnd& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_padding::Padding7ByteEnd& value);
 template <>
 struct fidl::ostream::Formatter<::test_padding::Padding1ByteMiddle> {
   static std::ostream& Format(std::ostream& os, const ::test_padding::Padding1ByteMiddle& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_padding::Padding1ByteMiddle& value);
 template <>
 struct fidl::ostream::Formatter<::test_padding::Padding2ByteMiddle> {
   static std::ostream& Format(std::ostream& os, const ::test_padding::Padding2ByteMiddle& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_padding::Padding2ByteMiddle& value);
 template <>
 struct fidl::ostream::Formatter<::test_padding::Padding3ByteMiddle> {
   static std::ostream& Format(std::ostream& os, const ::test_padding::Padding3ByteMiddle& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_padding::Padding3ByteMiddle& value);
 template <>
 struct fidl::ostream::Formatter<::test_padding::Padding4ByteMiddle> {
   static std::ostream& Format(std::ostream& os, const ::test_padding::Padding4ByteMiddle& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_padding::Padding4ByteMiddle& value);
 template <>
 struct fidl::ostream::Formatter<::test_padding::Padding5ByteMiddle> {
   static std::ostream& Format(std::ostream& os, const ::test_padding::Padding5ByteMiddle& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_padding::Padding5ByteMiddle& value);
 template <>
 struct fidl::ostream::Formatter<::test_padding::Padding6ByteMiddle> {
   static std::ostream& Format(std::ostream& os, const ::test_padding::Padding6ByteMiddle& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_padding::Padding6ByteMiddle& value);
 template <>
 struct fidl::ostream::Formatter<::test_padding::Padding7ByteMiddle> {
   static std::ostream& Format(std::ostream& os, const ::test_padding::Padding7ByteMiddle& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_padding::Padding7ByteMiddle& value);
 template <>
 struct fidl::ostream::Formatter<::test_padding::Padding4ByteAlignmentLength12> {
   static std::ostream& Format(std::ostream& os, const ::test_padding::Padding4ByteAlignmentLength12& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_padding::Padding4ByteAlignmentLength12& value);
 template <>
 struct fidl::ostream::Formatter<::test_padding::Padding2ByteAlignmentLength6> {
   static std::ostream& Format(std::ostream& os, const ::test_padding::Padding2ByteAlignmentLength6& value);
 };
+
+namespace test_padding {
+
+std::ostream& operator<<(std::ostream& os, const ::test_padding::Padding1ByteEnd& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_padding::Padding2ByteEnd& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_padding::Padding3ByteEnd& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_padding::Padding4ByteEnd& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_padding::Padding5ByteEnd& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_padding::Padding6ByteEnd& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_padding::Padding7ByteEnd& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_padding::Padding1ByteMiddle& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_padding::Padding2ByteMiddle& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_padding::Padding3ByteMiddle& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_padding::Padding4ByteMiddle& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_padding::Padding5ByteMiddle& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_padding::Padding6ByteMiddle& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_padding::Padding7ByteMiddle& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_padding::Padding4ByteAlignmentLength12& value);
+
 std::ostream& operator<<(std::ostream& os, const ::test_padding::Padding2ByteAlignmentLength6& value);
+
+}  // namespace test_padding

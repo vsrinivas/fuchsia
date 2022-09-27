@@ -12,9 +12,15 @@ template <>
 struct fidl::ostream::Formatter<::test_typealiases::ObjType> {
   static std::ostream& Format(std::ostream& os, const ::test_typealiases::ObjType& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_typealiases::ObjType& value);
 template <>
 struct fidl::ostream::Formatter<::test_typealiases::ExampleOfUseOfAliases> {
   static std::ostream& Format(std::ostream& os, const ::test_typealiases::ExampleOfUseOfAliases& value);
 };
+
+namespace test_typealiases {
+
+std::ostream& operator<<(std::ostream& os, const ::test_typealiases::ObjType& value);
+
 std::ostream& operator<<(std::ostream& os, const ::test_typealiases::ExampleOfUseOfAliases& value);
+
+}  // namespace test_typealiases

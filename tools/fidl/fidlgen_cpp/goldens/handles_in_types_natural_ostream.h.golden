@@ -11,19 +11,27 @@ template <>
 struct fidl::ostream::Formatter<::test_handlesintypes::ObjType> {
   static std::ostream& Format(std::ostream& os, const ::test_handlesintypes::ObjType& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_handlesintypes::ObjType& value);
 template <>
 struct fidl::ostream::Formatter<::test_handlesintypes::TableWithHandle> {
   static std::ostream& Format(std::ostream& os, const ::test_handlesintypes::TableWithHandle& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_handlesintypes::TableWithHandle& value);
 template <>
 struct fidl::ostream::Formatter<::test_handlesintypes::UnionWithHandle> {
   static std::ostream& Format(std::ostream& os, const ::test_handlesintypes::UnionWithHandle& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_handlesintypes::UnionWithHandle& value);
 template <>
 struct fidl::ostream::Formatter<::test_handlesintypes::HandlesInTypes> {
   static std::ostream& Format(std::ostream& os, const ::test_handlesintypes::HandlesInTypes& value);
 };
+
+namespace test_handlesintypes {
+
+std::ostream& operator<<(std::ostream& os, const ::test_handlesintypes::ObjType& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_handlesintypes::TableWithHandle& value);
+
+std::ostream& operator<<(std::ostream& os, const ::test_handlesintypes::UnionWithHandle& value);
+
 std::ostream& operator<<(std::ostream& os, const ::test_handlesintypes::HandlesInTypes& value);
+
+}  // namespace test_handlesintypes
