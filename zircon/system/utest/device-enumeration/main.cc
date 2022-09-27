@@ -681,8 +681,8 @@ TEST_F(DeviceEnumerationTest, VisaliaTest) {
 
 TEST_F(DeviceEnumerationTest, AtlasTest) {
   static const char* kDevicePaths[] = {
-      "pci-01:00.0/iwlwifi-wlanphyimpl",
-      "pci-01:00.0/iwlwifi-wlanphyimpl/wlanphy",
+      "pci-01:00.0-fidl/iwlwifi-wlanphyimpl",
+      "pci-01:00.0-fidl/iwlwifi-wlanphyimpl/wlanphy",
       "pci-00:19.2-fidl/i2c-bus-9d64/i2c/i2c-3-26",  // Codec headphones.
       "acpi-MAXL-composite/MAX98373",                // Codec left speaker.
       "acpi-MAXR-composite/MAX98373",                // Codec right speaker.
