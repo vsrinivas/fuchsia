@@ -32,7 +32,7 @@ mkdir -p "${PATH_TO_GVISOR}/${PATH_TO_TEST_SRCS}"
 # Move test source files.
 while read -r filename; do
     cp "${PATH_TO_TMP}/${PATH_TO_TEST_SRCS}/${filename}" "${PATH_TO_GVISOR}/${PATH_TO_TEST_SRCS}/${filename}";
-done < "${TEST_SRC_FILENAMES}"
+done < "${PATH_TO_SYSCALLS_DIR}/${TEST_SRC_FILENAMES}"
 
 # Create the test util file directory, if it doesn't yet exist.
 mkdir -p "${PATH_TO_GVISOR}/${PATH_TO_TEST_UTILS}"
@@ -40,7 +40,7 @@ mkdir -p "${PATH_TO_GVISOR}/${PATH_TO_TEST_UTILS}"
 # Move test util files.
 while read -r filename; do
     cp "${PATH_TO_TMP}/${PATH_TO_TEST_UTILS}/${filename}" "${PATH_TO_GVISOR}/${PATH_TO_TEST_UTILS}/${filename}";
-done < "${TEST_UTILS_FILENAMES}"
+done < "${PATH_TO_SYSCALLS_DIR}/${TEST_UTILS_FILENAMES}"
 
 # Move License file.
 cp "${PATH_TO_TMP}/${LICENSE_FILENAME}" "${PATH_TO_SYSCALLS_DIR}/${LICENSE_FILENAME}"
