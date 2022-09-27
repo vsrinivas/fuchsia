@@ -8,13 +8,13 @@ pub mod virtualization;
 
 use std::collections::HashMap;
 
-use fidl_fuchsia_net as net;
-use fidl_fuchsia_net_dhcp as dhcp;
+use fidl_fuchsia_net as fnet;
+use fidl_fuchsia_net_dhcp as fnet_dhcp;
 use fidl_fuchsia_net_ext::IntoExt as _;
-use fidl_fuchsia_net_interfaces as net_interfaces;
-use fidl_fuchsia_net_interfaces_admin as net_interfaces_admin;
-use fidl_fuchsia_netemul_network as netemul_network;
-use fidl_fuchsia_netstack as netstack;
+use fidl_fuchsia_net_interfaces as fnet_interfaces;
+use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
+use fidl_fuchsia_netemul_network as fnetemul_network;
+use fidl_fuchsia_netstack as fnetstack;
 use fuchsia_async::{DurationExt as _, TimeoutExt as _};
 use fuchsia_zircon as zx;
 
@@ -65,7 +65,7 @@ async fn test_oir<E: netemul::Endpoint, M: Manager>(name: &str) {
 
     // Make sure the Netstack got the new device added.
     let interface_state = realm
-        .connect_to_protocol::<net_interfaces::StateMarker>()
+        .connect_to_protocol::<fnet_interfaces::StateMarker>()
         .expect("connect to fuchsia.net.interfaces/State service");
     let wait_for_netmgr =
         wait_for_component_stopped(&realm, M::MANAGEMENT_AGENT.get_component_name(), None).fuse();
@@ -111,11 +111,11 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name
         wait_for_component_stopped(&realm, M::MANAGEMENT_AGENT.get_component_name(), None);
 
     let netstack = realm
-        .connect_to_protocol::<netstack::NetstackMarker>()
+        .connect_to_protocol::<fnetstack::NetstackMarker>()
         .expect("connect to netstack service");
 
     let interface_state = realm
-        .connect_to_protocol::<net_interfaces::StateMarker>()
+        .connect_to_protocol::<fnet_interfaces::StateMarker>()
         .expect("connect to fuchsia.net.interfaces/State service");
     let interfaces_stream =
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
@@ -158,11 +158,11 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name
     // Non PCI and USB devices get their interface names from their MAC addresses.
     // Using the same MAC address for different devices will result in the same
     // interface name.
-    let mac = || Some(Box::new(net::MacAddress { octets: [2, 3, 4, 5, 6, 7] }));
+    let mac = || Some(Box::new(fnet::MacAddress { octets: [2, 3, 4, 5, 6, 7] }));
     let ethx7 = sandbox
         .create_endpoint_with(
             "ep1",
-            netemul_network::EndpointConfig { mtu: 1500, mac: mac(), backing: E::NETEMUL_BACKING },
+            fnetemul_network::EndpointConfig { mtu: 1500, mac: mac(), backing: E::NETEMUL_BACKING },
         )
         .await
         .expect("create ethx7");
@@ -186,7 +186,7 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name
     let netstack_id_etht0 = netstack
         .add_ethernet_device(
             name,
-            &mut netstack::InterfaceConfig {
+            &mut fnetstack::InterfaceConfig {
                 name: name.to_string(),
                 filepath: "/fake/filepath/for_test".to_string(),
                 metric: 0,
@@ -211,7 +211,7 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name
     let etht1 = sandbox
         .create_endpoint_with(
             "ep2",
-            netemul_network::EndpointConfig { mtu: 1500, mac: mac(), backing: E::NETEMUL_BACKING },
+            fnetemul_network::EndpointConfig { mtu: 1500, mac: mac(), backing: E::NETEMUL_BACKING },
         )
         .await
         .expect("create etht1");
@@ -254,7 +254,7 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
     const RETRY_COUNT: u64 = 120;
 
     /// Check if the DHCP server is started.
-    async fn check_dhcp_status(dhcp_server: &dhcp::Server_Proxy, started: bool) {
+    async fn check_dhcp_status(dhcp_server: &fnet_dhcp::Server_Proxy, started: bool) {
         for _ in 0..RETRY_COUNT {
             let () = fuchsia_async::Timer::new(POLL_WAIT.after_now()).await;
 
@@ -279,11 +279,11 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
         // These constants are all hard coded in NetCfg for the WLAN AP interface and
         // the DHCP server.
         const DHCP_LEASE_TIME: u32 = 24 * 60 * 60; // 1 day in seconds.
-        const NETWORK_ADDR: net::Ipv4Address = fidl_ip_v4!("192.168.255.248");
+        const NETWORK_ADDR: fnet::Ipv4Address = fidl_ip_v4!("192.168.255.248");
         const NETWORK_PREFIX_LEN: u8 = 29;
-        const INTERFACE_ADDR: net::Ipv4Address = fidl_ip_v4!("192.168.255.249");
-        const DHCP_POOL_START_ADDR: net::Ipv4Address = fidl_ip_v4!("192.168.255.250");
-        const DHCP_POOL_END_ADDR: net::Ipv4Address = fidl_ip_v4!("192.168.255.254");
+        const INTERFACE_ADDR: fnet::Ipv4Address = fidl_ip_v4!("192.168.255.249");
+        const DHCP_POOL_START_ADDR: fnet::Ipv4Address = fidl_ip_v4!("192.168.255.250");
+        const DHCP_POOL_END_ADDR: fnet::Ipv4Address = fidl_ip_v4!("192.168.255.254");
         const NETWORK_ADDR_SUBNET: net_types_ip::Subnet<net_types_ip::Ipv4Addr> = unsafe {
             net_types_ip::Subnet::new_unchecked(
                 net_types_ip::Ipv4Addr::new(NETWORK_ADDR.addr),
@@ -313,13 +313,13 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
         // Make sure the WLAN AP interface is added to the Netstack and is brought up with
         // the right IP address.
         let interface_state = realm
-            .connect_to_protocol::<net_interfaces::StateMarker>()
+            .connect_to_protocol::<fnet_interfaces::StateMarker>()
             .expect("connect to fuchsia.net.interfaces/State service");
         let (watcher, watcher_server) =
-            ::fidl::endpoints::create_proxy::<net_interfaces::WatcherMarker>()
+            ::fidl::endpoints::create_proxy::<fnet_interfaces::WatcherMarker>()
                 .expect("create proxy");
         let () = interface_state
-            .get_watcher(net_interfaces::WatcherOptions::EMPTY, watcher_server)
+            .get_watcher(fnet_interfaces::WatcherOptions::EMPTY, watcher_server)
             .expect("failed to initialize interface watcher");
         let mut if_map = HashMap::new();
         let (wlan_ap_id, wlan_ap_name) = fidl_fuchsia_net_interfaces_ext::wait_interface(
@@ -336,7 +336,7 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
                         (*online
                             && addresses.iter().any(
                                 |&fidl_fuchsia_net_interfaces_ext::Address {
-                                     addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
+                                     addr: fnet::Subnet { addr, prefix_len: _ },
                                      valid_until: _,
                                  }| {
                                     addr == INTERFACE_ADDR.into_ext()
@@ -356,29 +356,32 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
 
         // Check the DHCP server's configured parameters.
         let dhcp_server = realm
-            .connect_to_protocol::<dhcp::Server_Marker>()
+            .connect_to_protocol::<fnet_dhcp::Server_Marker>()
             .expect("connect to DHCP server service");
         let checks = [
-            (dhcp::ParameterName::IpAddrs, dhcp::Parameter::IpAddrs(vec![INTERFACE_ADDR])),
             (
-                dhcp::ParameterName::LeaseLength,
-                dhcp::Parameter::Lease(dhcp::LeaseLength {
+                fnet_dhcp::ParameterName::IpAddrs,
+                fnet_dhcp::Parameter::IpAddrs(vec![INTERFACE_ADDR]),
+            ),
+            (
+                fnet_dhcp::ParameterName::LeaseLength,
+                fnet_dhcp::Parameter::Lease(fnet_dhcp::LeaseLength {
                     default: Some(DHCP_LEASE_TIME),
                     max: Some(DHCP_LEASE_TIME),
-                    ..dhcp::LeaseLength::EMPTY
+                    ..fnet_dhcp::LeaseLength::EMPTY
                 }),
             ),
             (
-                dhcp::ParameterName::BoundDeviceNames,
-                dhcp::Parameter::BoundDeviceNames(vec![wlan_ap_name]),
+                fnet_dhcp::ParameterName::BoundDeviceNames,
+                fnet_dhcp::Parameter::BoundDeviceNames(vec![wlan_ap_name]),
             ),
             (
-                dhcp::ParameterName::AddressPool,
-                dhcp::Parameter::AddressPool(dhcp::AddressPool {
+                fnet_dhcp::ParameterName::AddressPool,
+                fnet_dhcp::Parameter::AddressPool(fnet_dhcp::AddressPool {
                     prefix_length: Some(NETWORK_PREFIX_LEN),
                     range_start: Some(DHCP_POOL_START_ADDR),
                     range_stop: Some(DHCP_POOL_END_ADDR),
-                    ..dhcp::AddressPool::EMPTY
+                    ..fnet_dhcp::AddressPool::EMPTY
                 }),
             ),
         ];
@@ -438,14 +441,14 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
                             && *online
                             && addresses.iter().any(
                                 |&fidl_fuchsia_net_interfaces_ext::Address {
-                                     addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
+                                     addr: fnet::Subnet { addr, prefix_len: _ },
                                      valid_until: _,
                                  }| match addr {
-                                    net::IpAddress::Ipv4(net::Ipv4Address { addr }) => {
+                                    fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr }) => {
                                         NETWORK_ADDR_SUBNET
                                             .contains(&net_types_ip::Ipv4Addr::new(addr))
                                     }
-                                    net::IpAddress::Ipv6(net::Ipv6Address { addr: _ }) => false,
+                                    fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: _ }) => false,
                                 },
                             ))
                         .then_some(*id)
@@ -612,7 +615,7 @@ async fn test_forwarding<E: netemul::Endpoint, M: Manager>(name: &str) {
 
     // Make sure the Netstack got the new device added.
     let interface_state = realm
-        .connect_to_protocol::<net_interfaces::StateMarker>()
+        .connect_to_protocol::<fnet_interfaces::StateMarker>()
         .expect("connect to fuchsia.net.interfaces/State service");
     let wait_for_netmgr =
         wait_for_component_stopped(&realm, M::MANAGEMENT_AGENT.get_component_name(), None).fuse();
@@ -629,15 +632,15 @@ async fn test_forwarding<E: netemul::Endpoint, M: Manager>(name: &str) {
     let control = realm
         .interface_control(id)
         .expect("connect to fuchsia.net.interfaces.admin/Control for new interface");
-    let net_interfaces_admin::Configuration { ipv4: ipv4_config, ipv6: ipv6_config, .. } = control
+    let fnet_interfaces_admin::Configuration { ipv4: ipv4_config, ipv6: ipv6_config, .. } = control
         .get_configuration()
         .await
         .expect("get_configuration FIDL error")
         .expect("to get configuration");
 
-    let net_interfaces_admin::Ipv4Configuration { forwarding: v4, .. } =
+    let fnet_interfaces_admin::Ipv4Configuration { forwarding: v4, .. } =
         ipv4_config.expect("to have a v4 config");
-    let net_interfaces_admin::Ipv6Configuration { forwarding: v6, .. } =
+    let fnet_interfaces_admin::Ipv6Configuration { forwarding: v6, .. } =
         ipv6_config.expect("to have a v6 config");
 
     // The configuration installs forwarding on v4 on Virtual interfaces and v6 on Ethernet. We
