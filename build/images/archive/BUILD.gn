@@ -94,6 +94,10 @@ foreach(target, archive_targets + fastboot_targets + paver_targets) {
       deps += target.deps
     }
     testonly = true
+
+    # TODO(fxb/110475): Remove this once the assembly inputs stop leaking
+    # output_dir.
+    no_output_dir_leaks = false
     outputs = target.outputs
     depfile = "${outputs[0]}.d"
     script = "//build/images/pack-images.py"
