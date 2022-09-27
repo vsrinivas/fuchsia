@@ -15,5 +15,5 @@ resource("corpus") {
     "many_sectors_per_fat.img",
     "utf16_unpaired_surrogates.img",
   ]
-  outputs = [ "data/corpus/{{source_file_part}}" ]
+  outputs = [ "data/src/storage/fuchsia-fatfs/corpus/{{source_file_part}}" ]
 }
