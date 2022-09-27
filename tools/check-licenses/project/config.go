@@ -17,6 +17,8 @@ func init() {
 type ProjectConfig struct {
 	FuchsiaDir string `json:"fuchsiaDir"`
 
+	OutputLicenseFile bool `json:"outputLicenseFile"`
+
 	// Paths to temporary directories holding README.fuchsia files.
 	// These files will eventually migrate to their correct locations in
 	// the Fuchsia repository.
@@ -68,4 +70,5 @@ func (c *ProjectConfig) Merge(other *ProjectConfig) {
 	}
 	c.Readmes = append(c.Readmes, other.Readmes...)
 	c.Barriers = append(c.Barriers, other.Barriers...)
+	c.OutputLicenseFile = c.OutputLicenseFile || other.OutputLicenseFile
 }

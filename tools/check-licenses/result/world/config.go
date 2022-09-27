@@ -10,6 +10,10 @@ type WorldConfig struct {
 	BuildDir   string `json:"buildDir"`
 	GnPath     string `json:"gnPath"`
 
+	BuildInfoVersion string `json:"buildInfoVersion"`
+	BuildInfoProduct string `json:"buildInfoProduct"`
+	BuildInfoBoard   string `json:"buildInfoBoard"`
+
 	Filters []string `json:"filters"`
 
 	DiffNotice string `json:"diffnotice"`
@@ -40,4 +44,13 @@ func (c *WorldConfig) Merge(other *WorldConfig) {
 		c.DiffNotice = other.DiffNotice
 	}
 	c.Filters = append(c.Filters, other.Filters...)
+	if c.BuildInfoVersion == "" {
+		c.BuildInfoVersion = other.BuildInfoVersion
+	}
+	if c.BuildInfoProduct == "" {
+		c.BuildInfoProduct = other.BuildInfoProduct
+	}
+	if c.BuildInfoBoard == "" {
+		c.BuildInfoBoard = other.BuildInfoBoard
+	}
 }

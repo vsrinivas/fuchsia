@@ -118,7 +118,7 @@ func savePackageInfo(pkgName string, c interface{}, m MetricsInterface) (string,
 	}
 	if Config.OutDir != "" {
 		if _, err := os.Stat(Config.OutDir); os.IsNotExist(err) {
-			err := os.Mkdir(Config.OutDir, 0755)
+			err := os.MkdirAll(Config.OutDir, 0755)
 			if err != nil {
 				return "", fmt.Errorf("Failed to make directory %v: %v", Config.OutDir, err)
 			}
@@ -163,29 +163,35 @@ func saveMetrics(pkg string, m MetricsInterface) error {
 
 func writeFile(path string, data []byte) error {
 	path = filepath.Join(Config.OutDir, path)
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		return err
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("Failed to make directory %v: %v", dir, err)
 	}
-	return os.WriteFile(path, data, 0666)
+	if err := os.WriteFile(path, data, 0666); err != nil {
+		return fmt.Errorf("Failed to write file %v: %v", path, err)
+	}
+	return nil
 }
 
 func compressGZ(path string) error {
 	d, err := os.ReadFile(path)
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to read file %v: %v", path, err)
 	}
 
 	buf := bytes.Buffer{}
 	zw := gzip.NewWriter(&buf)
 	if _, err := zw.Write(d); err != nil {
-		return err
+		return fmt.Errorf("Failed to write zipped file %v", err)
 	}
 	if err := zw.Close(); err != nil {
-		return err
+		return fmt.Errorf("Failed to close zipped file %v", err)
 	}
 	path, err = filepath.Rel(Config.OutDir, path)
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to get relative directory [%v] of [%v]: %v",
+			Config.OutDir, path, err)
+
 	}
 	return writeFile(path+".gz", buf.Bytes())
 }

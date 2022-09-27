@@ -13,6 +13,9 @@ type ResultConfig struct {
 	ExitOnError       bool        `json:"exitOnError"`
 	GnGenOutputFile   string      `json:"gnGenOutputFile"`
 	OutputLicenseFile bool        `json:"outputLicenseFile"`
+	BuildInfoVersion  string      `json:"buildInfoVersion"`
+	BuildInfoProduct  string      `json:"buildInfoProduct"`
+	BuildInfoBoard    string      `json:"buildInfoBoard"`
 
 	DiffNotice string `json:"diffnotice"`
 }
@@ -55,4 +58,13 @@ func (c *ResultConfig) Merge(other *ResultConfig) {
 		c.GnGenOutputFile = other.GnGenOutputFile
 	}
 	c.OutputLicenseFile = c.OutputLicenseFile || other.OutputLicenseFile
+	if c.BuildInfoVersion == "" {
+		c.BuildInfoVersion = other.BuildInfoVersion
+	}
+	if c.BuildInfoProduct == "" {
+		c.BuildInfoProduct = other.BuildInfoProduct
+	}
+	if c.BuildInfoBoard == "" {
+		c.BuildInfoBoard = other.BuildInfoBoard
+	}
 }

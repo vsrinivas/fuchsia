@@ -1,6 +1,7 @@
 {
     "project": {
         "fuchsiaDir": "{FUCHSIA_DIR}",
+        "outputLicenseFile": {OUTPUT_LICENSE_FILE},
         "readmes": [
             {
                 "paths": [

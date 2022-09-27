@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/compiled_action.gni")
+import("//build/config/build_api_module.gni")
+import("//build/info/info.gni")
 
 # Invokes the check-licenses tool.
 #
@@ -17,13 +19,19 @@ import("//build/compiled_action.gni")
 #
 #   testonly, visibility
 template("license_data") {
-  # TODO(fxbug.dev/98528): Remove this "configs" flag from all targets
-  # that use this template.
-  not_needed(invoker, [ "configs" ])
-
   filter = ""
   if (defined(invoker.filter)) {
     filter = invoker.filter
+  }
+
+  if (build_info_version == "") {
+    build_info_version = "version"
+  }
+  if (build_info_product == "") {
+    build_info_product = "product"
+  }
+  if (build_info_board == "") {
+    build_info_board = "board"
   }
 
   out_dir = "$target_out_dir/check-licenses"
@@ -32,13 +40,18 @@ template("license_data") {
   }
   temp_out_dir = "$out_dir/temp"
 
+  build_api_target = "licenses_${target_name}"
   check_licenses_target = "${target_name}_check-licenses"
   copy_txt_notices_target = "${target_name}_txt_copy"
   copy_html_notices_target = "${target_name}_html_copy"
 
+  compliance_output = "compliance.csv"
   txt_notices_output = "license_texts_grouped_by_license_pattern_deduped.txt.gz"
   html_notices_output =
       "license_texts_grouped_by_license_pattern_deduped.html.gz"
+
+  path_prefix =
+      "${build_info_version}/${build_info_product}.${build_info_board}"
 
   compiled_action(check_licenses_target) {
     forward_variables_from(invoker,
@@ -61,8 +74,9 @@ template("license_data") {
     out_dir = temp_out_dir
 
     outputs = [
-      "$temp_out_dir/out/$txt_notices_output",
-      "$temp_out_dir/out/$html_notices_output",
+      "$temp_out_dir/$path_prefix/out/$txt_notices_output",
+      "$temp_out_dir/$path_prefix/out/$html_notices_output",
+      "$temp_out_dir/$path_prefix/out/$compliance_output",
     ]
 
     args = [
@@ -79,11 +93,24 @@ template("license_data") {
       rebase_path(root_out_dir, root_build_dir),
     ]
 
+    args += [
+      "--build_info_version",
+      build_info_version,
+      "--build_info_product",
+      build_info_product,
+      "--build_info_board",
+      build_info_board,
+    ]
+
     if (filter != "") {
       args += [
         "--filter",
         filter,
       ]
+    }
+
+    metadata = {
+      licenses = outputs
     }
   }
 
@@ -95,7 +122,7 @@ template("license_data") {
                              "visibility",
                            ])
 
-    sources = [ "$temp_out_dir/out/$txt_notices_output" ]
+    sources = [ "$temp_out_dir/$path_prefix/out/$txt_notices_output" ]
     outputs = [ "$out_dir/NOTICE.txt.gz" ]
     deps = [ ":$check_licenses_target" ]
   }
@@ -107,8 +134,13 @@ template("license_data") {
                              "visibility",
                            ])
 
-    sources = [ "$temp_out_dir/out/$html_notices_output" ]
+    sources = [ "$temp_out_dir/$path_prefix/out/$html_notices_output" ]
     outputs = [ "$out_dir/NOTICE.html.gz" ]
+    deps = [ ":$check_licenses_target" ]
+  }
+
+  build_api_module(build_api_target) {
+    data_keys = [ "licenses" ]
     deps = [ ":$check_licenses_target" ]
   }
 
@@ -121,6 +153,7 @@ template("license_data") {
                            ])
 
     deps = [
+      ":$build_api_target",
       ":$check_licenses_target",
       ":$copy_html_notices_target",
       ":$copy_txt_notices_target",

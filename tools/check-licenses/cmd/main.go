@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -35,6 +36,10 @@ var (
 	buildDir   = flag.String("build_dir", os.Getenv("FUCHSIA_BUILD_DIR"), "Location of GN build directory.")
 	outDir     = flag.String("out_dir", "/tmp/check-licenses", "Directory to write outputs to.")
 
+	buildInfoVersion = flag.String("build_info_version", "version", "Version of fuchsia being built. Used for uploading results.")
+	buildInfoProduct = flag.String("build_info_product", "product", "Version of fuchsia being built. Used for uploading results.")
+	buildInfoBoard   = flag.String("build_info_board", "board", "Version of fuchsia being built. Used for uploading results.")
+
 	gnPath = flag.String("gn_path", "{FUCHSIA_DIR}/prebuilt/third_party/gn/linux-x64/gn", "Path to GN executable. Required when target is specified.")
 
 	outputLicenseFile = flag.Bool("output_license_file", true, "Flag for enabling template expansions.")
@@ -44,6 +49,25 @@ func mainImpl() error {
 	var err error
 
 	flag.Parse()
+
+	// buildInfo
+	ConfigVars["{BUILD_INFO_VERSION}"] = *buildInfoVersion
+
+	if *buildInfoProduct == "product" {
+		b, err := os.ReadFile(filepath.Join(*buildDir, "product.txt"))
+		if err == nil {
+			*buildInfoProduct = string(b)
+		}
+	}
+	ConfigVars["{BUILD_INFO_PRODUCT}"] = *buildInfoProduct
+
+	if *buildInfoBoard == "board" {
+		b, err := os.ReadFile(filepath.Join(*buildDir, "board.txt"))
+		if err == nil {
+			*buildInfoBoard = string(b)
+		}
+	}
+	ConfigVars["{BUILD_INFO_BOARD}"] = *buildInfoBoard
 
 	// fuchsiaDir
 	if *fuchsiaDir == "" {
@@ -81,6 +105,13 @@ func mainImpl() error {
 		if err != nil {
 			return fmt.Errorf("Failed to get absolute directory for *outDir %v: %v", *outDir, err)
 		}
+
+		if *outputLicenseFile {
+			productBoard := fmt.Sprintf("%v.%v", *buildInfoProduct, *buildInfoBoard)
+			*outDir = filepath.Join(*outDir, *buildInfoVersion, productBoard)
+		} else {
+			*outDir = filepath.Join(*outDir, *buildInfoVersion, "everything")
+		}
 	}
 	if _, err := os.Stat(*outDir); os.IsNotExist(err) {
 		err := os.MkdirAll(*outDir, 0755)
@@ -101,6 +132,7 @@ func mainImpl() error {
 	}
 
 	ConfigVars["{GN_PATH}"] = *gnPath
+	ConfigVars["{OUTPUT_LICENSE_FILE}"] = strconv.FormatBool(*outputLicenseFile)
 
 	// logLevel
 	w, err := getLogWriters(*logLevel, *outDir)

@@ -46,6 +46,13 @@ type CheckLicensesConfig struct {
 
 	Target string `json:"target"`
 
+	// The SDK version for the current workspace.
+	BuildInfoVersion string `json:"buildInfoVersion"`
+	// The product currently set in the fx args for the local workspace.
+	BuildInfoProduct string `json:"buildInfoProduct"`
+	// The board currently set in the fx args for the local workspace.
+	BuildInfoBoard string `json:"buildInfoBoard"`
+
 	Filters []string
 
 	OutputLicenseFile bool `json:"outputLicenseFile"`
@@ -150,6 +157,16 @@ func (c *CheckLicensesConfig) Merge(other *CheckLicensesConfig) error {
 
 	c.Filters = append(c.Filters, other.Filters...)
 	c.OutputLicenseFile = c.OutputLicenseFile || other.OutputLicenseFile
+
+	if c.BuildInfoVersion == "" {
+		c.BuildInfoVersion = other.BuildInfoVersion
+	}
+	if c.BuildInfoProduct == "" {
+		c.BuildInfoProduct = other.BuildInfoProduct
+	}
+	if c.BuildInfoBoard == "" {
+		c.BuildInfoBoard = other.BuildInfoBoard
+	}
 
 	return nil
 }

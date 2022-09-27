@@ -27,6 +27,16 @@ func Initialize(c *ResultConfig) error {
 		plusFile("_config.json", b)
 	}
 
+	if c.BuildInfoVersion != "" {
+		plusFile("buildInfoVersion", []byte(c.BuildInfoVersion))
+	}
+	if c.BuildInfoProduct != "" {
+		plusFile("buildInfoProduct", []byte(c.BuildInfoProduct))
+	}
+	if c.BuildInfoBoard != "" {
+		plusFile("buildInfoBoard", []byte(c.BuildInfoBoard))
+	}
+
 	Config = c
 	return initializeTemplates()
 }

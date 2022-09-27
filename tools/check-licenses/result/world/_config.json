@@ -4,6 +4,9 @@
         "diffNotice": "{DIFF_TARGET}",
         "fuchsiaDir": "{FUCHSIA_DIR}",
         "buildDir": "{BUILD_DIR}",
-        "gnPath": "{GN_PATH}"
+        "gnPath": "{GN_PATH}",
+        "buildInfoVersion": "{BUILD_INFO_VERSION}",
+        "buildInfoProduct": "{BUILD_INFO_PRODUCT}",
+        "buildInfoBoard": "{BUILD_INFO_BOARD}"
     }
 }
