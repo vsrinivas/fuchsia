@@ -44,6 +44,7 @@ if (is_host) {
 
   go_library("fint_lib") {
     sources = [
+      "affected.go",
       "build.go",
       "build_test.go",
       "common.go",
@@ -84,6 +85,7 @@ if (is_host) {
   go_library("main") {
     source_dir = "cmd/fint"
     sources = [
+      "cmd_affected.go",
       "cmd_build.go",
       "cmd_set.go",
       "cmd_set_test.go",

@@ -12,7 +12,6 @@ import (
 	"io"
 	"io/fs"
 	"math"
-	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -250,35 +249,12 @@ func buildImpl(
 		return artifacts, err
 	}
 
-	// saveLogs writes the given set of logs to files in the artifact directory,
-	// and adds each path to the output artifacts.
-	saveLogs := func(logs map[string]string) error {
-		if contextSpec.ArtifactDir == "" {
-			return nil
-		}
-		for name, contents := range logs {
-			dest := filepath.Join(
-				contextSpec.ArtifactDir,
-				url.QueryEscape(strings.ReplaceAll(name, " ", "_")))
-			f, err := osmisc.CreateFile(dest)
-			if err != nil {
-				return err
-			}
-			defer f.Close()
-			if _, err := f.WriteString(contents); err != nil {
-				return fmt.Errorf("failed to write log file %q: %w", name, err)
-			}
-			artifacts.LogFiles[name] = f.Name()
-		}
-		return nil
-	}
-
 	if !contextSpec.SkipNinjaNoopCheck {
 		noop, logs, err := checkNinjaNoop(ctx, r, targets, hostplatform.IsMac(platform))
 		if err != nil {
 			return artifacts, err
 		}
-		if err := saveLogs(logs); err != nil {
+		if err := saveLogs(contextSpec.ArtifactDir, artifacts, logs); err != nil {
 			return artifacts, err
 		}
 		if !noop {
@@ -317,22 +293,11 @@ func buildImpl(
 	// it's not the end of the world to do this analysis unnecessarily, since it
 	// only takes ~10 seconds and we do use the results most of the time,
 	// including on all the slowest infra builders.
-	if contextSpec.ArtifactDir != "" && len(contextSpec.ChangedFiles) > 0 && len(modules.TestSpecs()) > 0 {
-		var tests []build.Test
-		for _, t := range modules.TestSpecs() {
-			tests = append(tests, t.Test)
-		}
-		result, err := affectedTestsNoWork(ctx, r, contextSpec, tests, targets)
-		if err != nil {
-			return artifacts, err
-		}
-		if err := saveLogs(result.logs); err != nil {
-			return artifacts, err
-		}
-		artifacts.AffectedTests = result.affectedTests
-		artifacts.BuildNotAffected = result.noWork
+	newArtifacts, err := affectedImpl(ctx, runner, staticSpec, contextSpec, modules, platform, targets)
+	if err != nil {
+		return artifacts, err
 	}
-
+	proto.Merge(artifacts, newArtifacts)
 	return artifacts, nil
 }
 

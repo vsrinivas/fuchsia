@@ -33,6 +33,7 @@ func main() {
 	subcommands.Register(subcommands.FlagsCommand(), "")
 	subcommands.Register(&SetCommand{}, "")
 	subcommands.Register(&BuildCommand{}, "")
+	subcommands.Register(&AffectedCommand{}, "")
 
 	flag.Parse()
 

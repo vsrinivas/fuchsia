@@ -6,8 +6,14 @@ package fint
 
 import (
 	"context"
+	"fmt"
 	"io"
+	"net/url"
 	"path/filepath"
+	"strings"
+
+	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
+	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 )
 
 type subprocessRunner interface {
@@ -38,4 +44,30 @@ func makeAbsolute(rootDir string, paths []string) []string {
 		res = append(res, filepath.Join(rootDir, path))
 	}
 	return res
+}
+
+// saveLogs writes the given set of logs to files in the artifact directory,
+// and adds each path to the output artifacts.
+func saveLogs(artifactDir string, artifacts *fintpb.BuildArtifacts, logs map[string]string) error {
+	if artifactDir == "" {
+		return nil
+	}
+	if artifacts.LogFiles == nil {
+		artifacts.LogFiles = make(map[string]string)
+	}
+	for name, contents := range logs {
+		dest := filepath.Join(
+			artifactDir,
+			url.QueryEscape(strings.ReplaceAll(name, " ", "_")))
+		f, err := osmisc.CreateFile(dest)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		if _, err := f.WriteString(contents); err != nil {
+			return fmt.Errorf("failed to write log file %q: %w", name, err)
+		}
+		artifacts.LogFiles[name] = f.Name()
+	}
+	return nil
 }

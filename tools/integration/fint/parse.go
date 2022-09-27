@@ -37,3 +37,16 @@ func ReadContext(path string) (*fintpb.Context, error) {
 	}
 	return &message, nil
 }
+
+// ReadBuildArtifacts deserializes a BuildArtifacts textproto file.
+func ReadBuildArtifacts(path string) (*fintpb.BuildArtifacts, error) {
+	bytes, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var message fintpb.BuildArtifacts
+	if err := prototext.Unmarshal(bytes, &message); err != nil {
+		return nil, err
+	}
+	return &message, nil
+}
