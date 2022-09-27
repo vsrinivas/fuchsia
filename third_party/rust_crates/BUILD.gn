@@ -40,6 +40,10 @@ group("arrayvec") {
   public_deps = [ ":arrayvec-v0_7_1" ]
 }
 
+group("ash") {
+  public_deps = [ ":ash-v0_37_0+1_3_209" ]
+}
+
 group("assert_matches") {
   public_deps = [ ":assert_matches-v1_5_0" ]
 }
@@ -1407,6 +1411,27 @@ rust_library("arrayvec-v0_7_1") {
     "-Cextra-filename=-2b25e26ec4c0a472",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_library("ash-v0_37_0+1_3_209") {
+  crate_name = "ash"
+  crate_root = "//third_party/rust_crates/vendor/ash/src/lib.rs"
+  output_name = "ash-b07aaa2f97684336"
+  configs -= [ "//build/config/rust:2018_idioms" ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=b07aaa2f97684336",
+    "-Cextra-filename=-b07aaa2f97684336",
+    "--cfg=feature=\"linked\"",
   ]
 
   visibility = [ ":*" ]

@@ -32,6 +32,7 @@ anyhow = "1.0.57"
 arbitrary = { version = "1.0.3", features = ["derive"] }
 argh = "0.1.9"
 arrayvec = "0.7.1"
+ash = { version = "0.37.0+1.3.209", features = ["linked"], default-features = false }
 assert_matches = "1.5.0"
 async-channel = "1.6.1"
 async-lock = "2.3"
@@ -395,6 +396,9 @@ configs = [ "//build/config/rust:allow_simd" ]
 [gn.package.anyhow."1.0.57"]
 # TODO(https://github.com/rust-lang/rust/pull/72981): uncomment when backtrace is stabilized.
 #rustflags = ["--cfg=backtrace"]
+
+[gn.package.ash."0.37.0+1.3.209"]
+rustflags = []
 
 [gn.package.async-trait."0.1.56"]
 rustflags = []
