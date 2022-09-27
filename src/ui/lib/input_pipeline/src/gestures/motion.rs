@@ -4,9 +4,9 @@
 
 use {
     super::gesture_arena::{
-        self, EndGestureEvent, ExamineEventResult, MismatchData, MismatchDetailsUint, MouseEvent,
-        ProcessBufferedEventsResult, ProcessNewEventResult, RecognizedGesture, TouchpadEvent,
-        VerifyEventResult,
+        self, DetailedReasonUint, EndGestureEvent, ExamineEventResult, MouseEvent,
+        ProcessBufferedEventsResult, ProcessNewEventResult, Reason, RecognizedGesture,
+        TouchpadEvent, VerifyEventResult,
     },
     crate::mouse_binding,
     crate::utils::{euclidean_distance, Position},
@@ -58,7 +58,7 @@ impl gesture_arena::Contender for InitialContender {
     fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult {
         let num_contacts = event.contacts.len();
         if num_contacts != 1 {
-            return ExamineEventResult::Mismatch(MismatchData::DetailedUint(MismatchDetailsUint {
+            return ExamineEventResult::Mismatch(Reason::DetailedUint(DetailedReasonUint {
                 criterion: "num_contacts",
                 min: Some(1),
                 max: Some(1),
@@ -68,7 +68,7 @@ impl gesture_arena::Contender for InitialContender {
 
         let num_pressed_buttons = event.pressed_buttons.len();
         if num_pressed_buttons > 0 {
-            return ExamineEventResult::Mismatch(MismatchData::DetailedUint(MismatchDetailsUint {
+            return ExamineEventResult::Mismatch(Reason::DetailedUint(DetailedReasonUint {
                 criterion: "num_pressed_buttons",
                 min: None,
                 max: Some(0),
@@ -92,7 +92,7 @@ impl gesture_arena::Contender for FingerContactContender {
     fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult {
         let num_contacts = event.contacts.len();
         if num_contacts != 1 {
-            return ExamineEventResult::Mismatch(MismatchData::DetailedUint(MismatchDetailsUint {
+            return ExamineEventResult::Mismatch(Reason::DetailedUint(DetailedReasonUint {
                 criterion: "num_contacts",
                 min: Some(1),
                 max: Some(1),
@@ -102,7 +102,7 @@ impl gesture_arena::Contender for FingerContactContender {
 
         let num_pressed_buttons = event.pressed_buttons.len();
         if num_pressed_buttons > 0 {
-            return ExamineEventResult::Mismatch(MismatchData::DetailedUint(MismatchDetailsUint {
+            return ExamineEventResult::Mismatch(Reason::DetailedUint(DetailedReasonUint {
                 criterion: "num_pressed_buttons",
                 min: None,
                 max: Some(0),
@@ -129,7 +129,7 @@ impl gesture_arena::MatchedContender for MatchedContender {
     fn verify_event(self: Box<Self>, event: &TouchpadEvent) -> VerifyEventResult {
         let num_contacts = event.contacts.len();
         if num_contacts != 1 {
-            return VerifyEventResult::Mismatch(MismatchData::DetailedUint(MismatchDetailsUint {
+            return VerifyEventResult::Mismatch(Reason::DetailedUint(DetailedReasonUint {
                 criterion: "num_contacts",
                 min: Some(1),
                 max: Some(1),
@@ -139,7 +139,7 @@ impl gesture_arena::MatchedContender for MatchedContender {
 
         let num_pressed_buttons = event.pressed_buttons.len();
         if num_pressed_buttons > 0 {
-            return VerifyEventResult::Mismatch(MismatchData::DetailedUint(MismatchDetailsUint {
+            return VerifyEventResult::Mismatch(Reason::DetailedUint(DetailedReasonUint {
                 criterion: "num_pressed_buttons",
                 min: None,
                 max: Some(0),

@@ -4,9 +4,9 @@
 
 use {
     super::gesture_arena::{
-        self, EndGestureEvent, ExamineEventResult, MismatchData, MismatchDetailsUint, MouseEvent,
-        ProcessBufferedEventsResult, ProcessNewEventResult, RecognizedGesture, TouchpadEvent,
-        VerifyEventResult,
+        self, DetailedReasonUint, EndGestureEvent, ExamineEventResult, MouseEvent,
+        ProcessBufferedEventsResult, ProcessNewEventResult, Reason, RecognizedGesture,
+        TouchpadEvent, VerifyEventResult,
     },
     crate::mouse_binding,
     crate::utils::{euclidean_distance, Position},
@@ -228,7 +228,7 @@ impl gesture_arena::Contender for InitialContender {
     fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult {
         let num_contacts = event.contacts.len();
         if num_contacts != 2 {
-            return ExamineEventResult::Mismatch(MismatchData::DetailedUint(MismatchDetailsUint {
+            return ExamineEventResult::Mismatch(Reason::DetailedUint(DetailedReasonUint {
                 criterion: "num_contacts",
                 min: Some(2),
                 max: Some(2),
@@ -238,7 +238,7 @@ impl gesture_arena::Contender for InitialContender {
 
         let num_pressed_buttons = event.pressed_buttons.len();
         if num_pressed_buttons > 0 {
-            return ExamineEventResult::Mismatch(MismatchData::DetailedUint(MismatchDetailsUint {
+            return ExamineEventResult::Mismatch(Reason::DetailedUint(DetailedReasonUint {
                 criterion: "num_pressed_buttons",
                 min: None,
                 max: Some(0),
@@ -250,9 +250,7 @@ impl gesture_arena::Contender for InitialContender {
             Ok(positions) => positions,
             Err(_) => {
                 fx_log_err!("failed to parse positions");
-                return ExamineEventResult::Mismatch(MismatchData::Basic(
-                    "failed to parse positions",
-                ));
+                return ExamineEventResult::Mismatch(Reason::Basic("failed to parse positions"));
             }
         };
 
@@ -277,7 +275,7 @@ impl gesture_arena::Contender for FingerContactContender {
     fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult {
         let num_contacts = event.contacts.len();
         if num_contacts != 2 {
-            return ExamineEventResult::Mismatch(MismatchData::DetailedUint(MismatchDetailsUint {
+            return ExamineEventResult::Mismatch(Reason::DetailedUint(DetailedReasonUint {
                 criterion: "num_contacts",
                 min: Some(2),
                 max: Some(2),
@@ -287,7 +285,7 @@ impl gesture_arena::Contender for FingerContactContender {
 
         let num_pressed_buttons = event.pressed_buttons.len();
         if num_pressed_buttons > 0 {
-            return ExamineEventResult::Mismatch(MismatchData::DetailedUint(MismatchDetailsUint {
+            return ExamineEventResult::Mismatch(Reason::DetailedUint(DetailedReasonUint {
                 criterion: "num_pressed_buttons",
                 min: None,
                 max: Some(0),
@@ -299,9 +297,7 @@ impl gesture_arena::Contender for FingerContactContender {
             Ok(positions) => positions,
             Err(_) => {
                 fx_log_err!("failed to parse positions");
-                return ExamineEventResult::Mismatch(MismatchData::Basic(
-                    "failed to parse positions",
-                ));
+                return ExamineEventResult::Mismatch(Reason::Basic("failed to parse positions"));
             }
         };
 
@@ -310,7 +306,7 @@ impl gesture_arena::Contender for FingerContactContender {
             // event, this is likely a bug in firmware or driver.
             Err(_) => {
                 fx_log_err!("new event contact id not match old event");
-                return ExamineEventResult::Mismatch(MismatchData::Basic(
+                return ExamineEventResult::Mismatch(Reason::Basic(
                     "contact ids changed since last event",
                 ));
             }
@@ -339,7 +335,7 @@ impl gesture_arena::Contender for FingerContactContender {
         if movements.iter().any(|movement| {
             euclidean_distance(movement.to, movement.from) > self.max_movement_in_mm
         }) {
-            return ExamineEventResult::Mismatch(MismatchData::Basic(
+            return ExamineEventResult::Mismatch(Reason::Basic(
                 "too much motion without clear direction",
             ));
         }
@@ -365,7 +361,7 @@ impl gesture_arena::MatchedContender for MatchedContender {
     fn verify_event(self: Box<Self>, event: &TouchpadEvent) -> VerifyEventResult {
         let num_contacts = event.contacts.len();
         if num_contacts != 2 {
-            return VerifyEventResult::Mismatch(MismatchData::DetailedUint(MismatchDetailsUint {
+            return VerifyEventResult::Mismatch(Reason::DetailedUint(DetailedReasonUint {
                 criterion: "num_contacts",
                 min: Some(2),
                 max: Some(2),
@@ -375,7 +371,7 @@ impl gesture_arena::MatchedContender for MatchedContender {
 
         let num_pressed_buttons = event.pressed_buttons.len();
         if num_pressed_buttons > 0 {
-            return VerifyEventResult::Mismatch(MismatchData::DetailedUint(MismatchDetailsUint {
+            return VerifyEventResult::Mismatch(Reason::DetailedUint(DetailedReasonUint {
                 criterion: "num_pressed_buttons",
                 min: None,
                 max: Some(0),
@@ -387,9 +383,7 @@ impl gesture_arena::MatchedContender for MatchedContender {
             Ok(positions) => positions,
             Err(_) => {
                 fx_log_err!("failed to parse positions");
-                return VerifyEventResult::Mismatch(MismatchData::Basic(
-                    "failed to parse positions",
-                ));
+                return VerifyEventResult::Mismatch(Reason::Basic("failed to parse positions"));
             }
         };
         let movements = match self.initial_positions.get_movements(&current_positions) {
@@ -397,7 +391,7 @@ impl gesture_arena::MatchedContender for MatchedContender {
             // event, this is likely a bug in firmware or driver.
             Err(_) => {
                 fx_log_err!("new event contact id not match old event");
-                return VerifyEventResult::Mismatch(MismatchData::Basic(
+                return VerifyEventResult::Mismatch(Reason::Basic(
                     "contact ids changed since last event",
                 ));
             }
@@ -411,7 +405,7 @@ impl gesture_arena::MatchedContender for MatchedContender {
             return VerifyEventResult::MatchedContender(self);
         }
 
-        VerifyEventResult::Mismatch(MismatchData::Basic("contacts moved in different directions"))
+        VerifyEventResult::Mismatch(Reason::Basic("contacts moved in different directions"))
     }
 
     fn process_buffered_events(

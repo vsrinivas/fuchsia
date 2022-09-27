@@ -85,7 +85,7 @@ pub(super) struct MouseEvent {
 }
 
 #[derive(Debug)]
-pub(super) struct MismatchDetailsUint {
+pub(super) struct DetailedReasonUint {
     pub(super) criterion: &'static str,
     pub(super) min: Option<u64>,
     pub(super) max: Option<u64>,
@@ -93,7 +93,7 @@ pub(super) struct MismatchDetailsUint {
 }
 
 #[derive(Debug)]
-pub(super) struct MismatchDetailsFloat {
+pub(super) struct DetailedReasonFloat {
     pub(super) criterion: &'static str,
     pub(super) min: Option<f32>,
     pub(super) max: Option<f32>,
@@ -101,7 +101,7 @@ pub(super) struct MismatchDetailsFloat {
 }
 
 #[derive(Debug)]
-pub(super) struct MismatchDetailsInt {
+pub(super) struct DetailedReasonInt {
     pub(super) criterion: &'static str,
     pub(super) min: Option<i64>,
     pub(super) max: Option<i64>,
@@ -109,18 +109,18 @@ pub(super) struct MismatchDetailsInt {
 }
 
 #[derive(Debug)]
-pub(super) enum MismatchData {
+pub(super) enum Reason {
     Basic(&'static str),
-    DetailedUint(MismatchDetailsUint),
-    DetailedFloat(MismatchDetailsFloat),
-    DetailedInt(MismatchDetailsInt),
+    DetailedUint(DetailedReasonUint),
+    DetailedFloat(DetailedReasonFloat),
+    DetailedInt(DetailedReasonInt),
 }
 
 #[derive(Debug)]
 pub(super) enum ExamineEventResult {
     Contender(Box<dyn Contender>),
     MatchedContender(Box<dyn MatchedContender>),
-    Mismatch(MismatchData),
+    Mismatch(Reason),
 }
 
 pub(super) trait Contender: std::fmt::Debug + AsAny {
@@ -162,7 +162,7 @@ impl<T: Any> AsAny for T {
 #[derive(Debug)]
 pub(super) enum VerifyEventResult {
     MatchedContender(Box<dyn MatchedContender>),
-    Mismatch(MismatchData),
+    Mismatch(Reason),
 }
 
 #[derive(Debug, PartialEq)]
@@ -562,7 +562,7 @@ impl GestureArena {
                         ExamineEventResult::MatchedContender(matched_contender) => {
                             matched_contenders.push(matched_contender);
                         }
-                        ExamineEventResult::Mismatch(mismatch_data) => log_mismatch(
+                        ExamineEventResult::Mismatch(mismatch_data) => log_mismatch_reason(
                             self.inspect_log.borrow_mut().create_entry(),
                             type_name,
                             mismatch_data,
@@ -620,7 +620,7 @@ impl GestureArena {
                         ExamineEventResult::MatchedContender(matched_contender) => {
                             matched_contenders.push(matched_contender);
                         }
-                        ExamineEventResult::Mismatch(mismatch_data) => log_mismatch(
+                        ExamineEventResult::Mismatch(mismatch_data) => log_mismatch_reason(
                             self.inspect_log.borrow_mut().create_entry(),
                             type_name,
                             mismatch_data,
@@ -684,7 +684,7 @@ impl GestureArena {
                     VerifyEventResult::MatchedContender(m) => {
                         matched_contenders.push(m);
                     }
-                    VerifyEventResult::Mismatch(mismatch_data) => log_mismatch(
+                    VerifyEventResult::Mismatch(mismatch_data) => log_mismatch_reason(
                         self.inspect_log.borrow_mut().create_entry(),
                         type_name,
                         mismatch_data,
@@ -705,7 +705,7 @@ impl GestureArena {
                         ExamineEventResult::MatchedContender(matched_contender) => {
                             matched_contenders.push(matched_contender);
                         }
-                        ExamineEventResult::Mismatch(mismatch_data) => log_mismatch(
+                        ExamineEventResult::Mismatch(mismatch_data) => log_mismatch_reason(
                             self.inspect_log.borrow_mut().create_entry(),
                             type_name,
                             mismatch_data,
@@ -1021,55 +1021,36 @@ fn log_keyboard_event_timestamp(log_entry_node: &InspectNode, driver_timestamp: 
     });
 }
 
-fn log_basic_mismatch(mismatch_event_node: &InspectNode, text: &'static str) {
-    mismatch_event_node.record_string(&*inspect_keys::SUMMARY_PROP, text);
+fn log_basic_reason(reason_node: &InspectNode, text: &'static str) {
+    reason_node.record_string(&*inspect_keys::SUMMARY_PROP, text);
 }
 
-fn log_detailed_mismatch_uint(
-    mismatch_event_node: &InspectNode,
-    mismatch_details: MismatchDetailsUint,
-) {
+fn log_detailed_reason_uint(reason_node: &InspectNode, reason_details: DetailedReasonUint) {
     use inspect_keys::*;
-    mismatch_event_node.record_string(&*CRITERION_PROP, mismatch_details.criterion);
-    mismatch_event_node.record_uint(
-        &*ACTUAL_VALUE_PROP,
-        u64::try_from(mismatch_details.actual).unwrap_or(u64::MAX),
-    );
-    mismatch_details.min.map(|min| mismatch_event_node.record_uint(&*MIN_VALUE_PROP, min));
-    mismatch_details.max.map(|max| mismatch_event_node.record_uint(&*MAX_VALUE_PROP, max));
+    reason_node.record_string(&*CRITERION_PROP, reason_details.criterion);
+    reason_node
+        .record_uint(&*ACTUAL_VALUE_PROP, u64::try_from(reason_details.actual).unwrap_or(u64::MAX));
+    reason_details.min.map(|min| reason_node.record_uint(&*MIN_VALUE_PROP, min));
+    reason_details.max.map(|max| reason_node.record_uint(&*MAX_VALUE_PROP, max));
 }
 
-fn log_detailed_mismatch_float(
-    mismatch_event_node: &InspectNode,
-    mismatch_details: MismatchDetailsFloat,
-) {
+fn log_detailed_reason_float(reason_node: &InspectNode, reason_details: DetailedReasonFloat) {
     use inspect_keys::*;
-    mismatch_event_node.record_string(&*CRITERION_PROP, mismatch_details.criterion);
-    mismatch_event_node.record_double(&*ACTUAL_VALUE_PROP, f64::from(mismatch_details.actual));
-    mismatch_details
-        .min
-        .map(|min| mismatch_event_node.record_double(&*MIN_VALUE_PROP, f64::from(min)));
-    mismatch_details
-        .max
-        .map(|max| mismatch_event_node.record_double(&*MAX_VALUE_PROP, f64::from(max)));
+    reason_node.record_string(&*CRITERION_PROP, reason_details.criterion);
+    reason_node.record_double(&*ACTUAL_VALUE_PROP, f64::from(reason_details.actual));
+    reason_details.min.map(|min| reason_node.record_double(&*MIN_VALUE_PROP, f64::from(min)));
+    reason_details.max.map(|max| reason_node.record_double(&*MAX_VALUE_PROP, f64::from(max)));
 }
 
-fn log_detailed_mismatch_int(
-    mismatch_event_node: &InspectNode,
-    mismatch_details: MismatchDetailsInt,
-) {
+fn log_detailed_reason_int(reason_node: &InspectNode, reason_details: DetailedReasonInt) {
     use inspect_keys::*;
-    mismatch_event_node.record_string(&*CRITERION_PROP, mismatch_details.criterion);
-    mismatch_event_node.record_int(&*ACTUAL_VALUE_PROP, mismatch_details.actual);
-    mismatch_details.min.map(|min| mismatch_event_node.record_int(&*MIN_VALUE_PROP, min));
-    mismatch_details.max.map(|max| mismatch_event_node.record_int(&*MAX_VALUE_PROP, max));
+    reason_node.record_string(&*CRITERION_PROP, reason_details.criterion);
+    reason_node.record_int(&*ACTUAL_VALUE_PROP, reason_details.actual);
+    reason_details.min.map(|min| reason_node.record_int(&*MIN_VALUE_PROP, min));
+    reason_details.max.map(|max| reason_node.record_int(&*MAX_VALUE_PROP, max));
 }
 
-fn log_mismatch(
-    log_entry_node: &InspectNode,
-    contender_name: &'static str,
-    mismatch_data: MismatchData,
-) {
+fn log_reason(reason_node: &InspectNode, contender_name: &'static str, reason: Reason) {
     use inspect_keys::*;
     // E.g. "input_pipeline_lib_test::gestures::gesture_arena::tests::utils::StubContender"
     // -> "utils::StubContender".
@@ -1077,22 +1058,27 @@ fn log_mismatch(
         Some((i, _matched_substr)) => &contender_name[i + 2..],
         None => contender_name,
     };
-    fx_log_debug!("touchpad: {} mismatched: {:?}", contender_name, mismatch_data);
+    reason_node.record_string(&*CONTENDER_PROP, contender_name);
+    match reason {
+        Reason::Basic(text) => log_basic_reason(reason_node, text),
+        Reason::DetailedUint(mismatch_details) => {
+            log_detailed_reason_uint(reason_node, mismatch_details)
+        }
+        Reason::DetailedFloat(mismatch_details) => {
+            log_detailed_reason_float(reason_node, mismatch_details)
+        }
+        Reason::DetailedInt(mismatch_details) => {
+            log_detailed_reason_int(reason_node, mismatch_details)
+        }
+    }
+}
+
+fn log_mismatch_reason(log_entry_node: &InspectNode, contender_name: &'static str, reason: Reason) {
+    use inspect_keys::*;
+    fx_log_debug!("touchpad: {} mismatched: {:?}", contender_name, reason);
     log_entry_node.atomic_update(|log_entry_node| {
         log_entry_node.record_child(&*MISMATCH_EVENT_NODE, |mismatch_event_node| {
-            mismatch_event_node.record_string(&*CONTENDER_PROP, contender_name);
-            match mismatch_data {
-                MismatchData::Basic(text) => log_basic_mismatch(mismatch_event_node, text),
-                MismatchData::DetailedUint(mismatch_details) => {
-                    log_detailed_mismatch_uint(mismatch_event_node, mismatch_details)
-                }
-                MismatchData::DetailedFloat(mismatch_details) => {
-                    log_detailed_mismatch_float(mismatch_event_node, mismatch_details)
-                }
-                MismatchData::DetailedInt(mismatch_details) => {
-                    log_detailed_mismatch_int(mismatch_event_node, mismatch_details)
-                }
-            }
+            log_reason(mismatch_event_node, contender_name, reason);
         })
     })
 }
@@ -1569,7 +1555,7 @@ mod tests {
         use {
             super::{
                 super::{
-                    ExamineEventResult, GestureArena, InputHandler, MismatchData, MutableState,
+                    ExamineEventResult, GestureArena, InputHandler, MutableState, Reason,
                     TouchpadEvent,
                 },
                 utils::{
@@ -1661,8 +1647,7 @@ mod tests {
             let contender = Box::new(StubContender::new());
             let contender_factory = ContenderFactoryOnceOrPanic::new(vec![contender.clone()]);
             let arena = make_gesture_arena_with_state(contender_factory, state);
-            contender
-                .set_next_result(ExamineEventResult::Mismatch(MismatchData::Basic("some reason")));
+            contender.set_next_result(ExamineEventResult::Mismatch(Reason::Basic("some reason")));
             arena.handle_input_event(make_unhandled_touchpad_event()).await;
             pretty_assertions::assert_eq!(contender.calls_received(), 1);
         }
@@ -1672,8 +1657,7 @@ mod tests {
             let contender = Box::new(StubContender::new_start_from_idle());
             let contender_factory = ContenderFactoryOnceOrPanic::new(vec![contender.clone()]);
             let arena = make_gesture_arena_with_state(contender_factory, MutableState::Idle);
-            contender
-                .set_next_result(ExamineEventResult::Mismatch(MismatchData::Basic("some reason")));
+            contender.set_next_result(ExamineEventResult::Mismatch(Reason::Basic("some reason")));
             arena.handle_input_event(make_unhandled_touchpad_event()).await;
             pretty_assertions::assert_eq!(contender.calls_received(), 1);
         }
@@ -1683,8 +1667,7 @@ mod tests {
             let contender = Box::new(StubContender::new_start_from_idle());
             let contender_factory = ContenderFactoryOnceOrPanic::new(vec![contender.clone()]);
             let arena = make_gesture_arena_with_state(contender_factory, MutableState::Chain);
-            contender
-                .set_next_result(ExamineEventResult::Mismatch(MismatchData::Basic("some reason")));
+            contender.set_next_result(ExamineEventResult::Mismatch(Reason::Basic("some reason")));
             arena.handle_input_event(make_unhandled_touchpad_event()).await;
             pretty_assertions::assert_eq!(contender.calls_received(), 0);
         }
@@ -1704,7 +1687,7 @@ mod tests {
                 StubMatchedContender::new().into(),
             ));
             second_contender
-                .set_next_result(ExamineEventResult::Mismatch(MismatchData::Basic("some reason")));
+                .set_next_result(ExamineEventResult::Mismatch(Reason::Basic("some reason")));
             arena.handle_input_event(make_unhandled_touchpad_event()).await;
             pretty_assertions::assert_eq!(first_contender.calls_received(), 1);
             pretty_assertions::assert_eq!(second_contender.calls_received(), 1);
@@ -1839,8 +1822,7 @@ mod tests {
             let contender = Box::new(StubContender::new());
             let contender_factory = ContenderFactoryOnceOrPanic::new(vec![contender.clone()]);
             let arena = make_gesture_arena_with_state(contender_factory, state);
-            contender
-                .set_next_result(ExamineEventResult::Mismatch(MismatchData::Basic("some reason")));
+            contender.set_next_result(ExamineEventResult::Mismatch(Reason::Basic("some reason")));
 
             let touchpad_event = input_device::InputEvent {
                 event_time: zx::Time::from_nanos(123456),
@@ -1875,8 +1857,7 @@ mod tests {
             let contender = Box::new(StubContender::new());
             let contender_factory = ContenderFactoryOnceOrPanic::new(vec![contender.clone()]);
             let arena = make_gesture_arena_with_state(contender_factory, state);
-            contender
-                .set_next_result(ExamineEventResult::Mismatch(MismatchData::Basic("some reason")));
+            contender.set_next_result(ExamineEventResult::Mismatch(Reason::Basic("some reason")));
             pretty_assertions::assert_eq!(
                 arena.clone().handle_input_event(make_unhandled_touchpad_event()).await,
                 vec![]
@@ -1906,8 +1887,7 @@ mod tests {
             let contender = Box::new(StubContender::new());
             let contender_factory = ContenderFactoryOnceOrPanic::new(vec![contender.clone()]);
             let arena = make_gesture_arena_with_state(contender_factory, state);
-            contender
-                .set_next_result(ExamineEventResult::Mismatch(MismatchData::Basic("some reason")));
+            contender.set_next_result(ExamineEventResult::Mismatch(Reason::Basic("some reason")));
             arena.clone().handle_input_event(make_unhandled_touchpad_event()).await;
             assert_matches!(*arena.mutable_state.borrow(), MutableState::Idle);
         }
@@ -1944,7 +1924,7 @@ mod tests {
             super::{
                 super::{
                     Contender, ContenderFactory, ExamineEventResult, GestureArena, InputHandler,
-                    MismatchData, MouseEvent, MutableState, ProcessBufferedEventsResult,
+                    MouseEvent, MutableState, ProcessBufferedEventsResult, Reason,
                     RecognizedGesture, TouchpadEvent, VerifyEventResult, PRIMARY_BUTTON,
                 },
                 utils::{
@@ -2021,7 +2001,7 @@ mod tests {
             );
             contender.set_next_result(ExamineEventResult::Contender(contender.clone().into()));
             matched_contender.set_next_verify_event_result(VerifyEventResult::Mismatch(
-                MismatchData::Basic("some reason"),
+                Reason::Basic("some reason"),
             ));
             arena.handle_input_event(make_unhandled_touchpad_event()).await;
             assert_eq!(contender.calls_received(), 1);
@@ -2038,10 +2018,9 @@ mod tests {
                 vec![],
                 None,
             );
-            contender
-                .set_next_result(ExamineEventResult::Mismatch(MismatchData::Basic("some reason")));
+            contender.set_next_result(ExamineEventResult::Mismatch(Reason::Basic("some reason")));
             matched_contender.set_next_verify_event_result(VerifyEventResult::Mismatch(
-                MismatchData::Basic("some reason"),
+                Reason::Basic("some reason"),
             ));
             arena.handle_input_event(make_unhandled_mouse_event()).await;
             assert_eq!(contender.calls_received(), 0);
@@ -2058,10 +2037,9 @@ mod tests {
                 vec![],
                 None,
             );
-            contender
-                .set_next_result(ExamineEventResult::Mismatch(MismatchData::Basic("some reason")));
+            contender.set_next_result(ExamineEventResult::Mismatch(Reason::Basic("some reason")));
             matched_contender.set_next_verify_event_result(VerifyEventResult::Mismatch(
-                MismatchData::Basic("some reason"),
+                Reason::Basic("some reason"),
             ));
             arena.handle_input_event(make_unhandled_keyboard_event()).await;
             assert_eq!(contender.calls_received(), 0);
@@ -2091,7 +2069,7 @@ mod tests {
             // that call makes this test fail at the final assertion, which is easier
             // to understand.
             matched_contender.set_next_verify_event_result(VerifyEventResult::Mismatch(
-                MismatchData::Basic("some reason"),
+                Reason::Basic("some reason"),
             ));
 
             // Send the touchpad event, and validate that the arena did not call
@@ -2118,7 +2096,7 @@ mod tests {
             // Process another touchpad event. This should cause `arena` to invoke
             // `examine_event()` on `replacement_contender`.
             replacement_contender
-                .set_next_result(ExamineEventResult::Mismatch(MismatchData::Basic("some reason")));
+                .set_next_result(ExamineEventResult::Mismatch(Reason::Basic("some reason")));
             arena.handle_input_event(make_unhandled_touchpad_event()).await;
 
             // Verify that `replacement_contender` was called.
@@ -2151,7 +2129,7 @@ mod tests {
             // Process another touchpad event. This should cause `arena` to invoke
             // `examine_event()` on `replacement_contender`.
             replacement_contender.set_next_verify_event_result(VerifyEventResult::Mismatch(
-                MismatchData::Basic("some reason"),
+                Reason::Basic("some reason"),
             ));
             arena.handle_input_event(make_unhandled_touchpad_event()).await;
 
@@ -2186,7 +2164,7 @@ mod tests {
 
             // Set a return value for the expected call on `replacement_contender`.
             replacement_matched_contender.set_next_verify_event_result(
-                VerifyEventResult::Mismatch(MismatchData::Basic("some reason")),
+                VerifyEventResult::Mismatch(Reason::Basic("some reason")),
             );
 
             // Process another touchpad event, and verify that `replacement_contender`
@@ -2199,8 +2177,7 @@ mod tests {
         async fn generates_no_events_on_mismatch_entering_idle() {
             let contender = StubContender::new();
             let arena = make_matching_arena(vec![contender.clone()], vec![], vec![], None);
-            contender
-                .set_next_result(ExamineEventResult::Mismatch(MismatchData::Basic("some reason")));
+            contender.set_next_result(ExamineEventResult::Mismatch(Reason::Basic("some reason")));
             assert_eq!(
                 arena.clone().handle_input_event(make_unhandled_touchpad_event()).await,
                 vec![]
@@ -2212,8 +2189,7 @@ mod tests {
         async fn generates_no_events_on_mismatch_entering_chain() {
             let contender = StubContender::new();
             let arena = make_matching_arena(vec![contender.clone()], vec![], vec![], None);
-            contender
-                .set_next_result(ExamineEventResult::Mismatch(MismatchData::Basic("some reason")));
+            contender.set_next_result(ExamineEventResult::Mismatch(Reason::Basic("some reason")));
 
             let touchpad_event = input_device::InputEvent {
                 event_time: zx::Time::from_nanos(123456),
@@ -2392,8 +2368,7 @@ mod tests {
                 .await;
 
             // Send the event that concludes the contest.
-            contender
-                .set_next_result(ExamineEventResult::Mismatch(MismatchData::Basic("some reason")));
+            contender.set_next_result(ExamineEventResult::Mismatch(Reason::Basic("some reason")));
             matched_contender.set_next_verify_event_result(VerifyEventResult::MatchedContender(
                 matched_contender.clone().into(),
             ));
@@ -2436,8 +2411,7 @@ mod tests {
         async fn transitions_to_idle_when_sole_contender_does_not_match() {
             let contender = StubContender::new();
             let arena = make_matching_arena(vec![contender.clone()], vec![], vec![], None);
-            contender
-                .set_next_result(ExamineEventResult::Mismatch(MismatchData::Basic("some reason")));
+            contender.set_next_result(ExamineEventResult::Mismatch(Reason::Basic("some reason")));
             arena.clone().handle_input_event(make_unhandled_touchpad_event()).await;
             assert_matches!(*arena.mutable_state.borrow(), MutableState::Idle);
         }
@@ -2447,7 +2421,7 @@ mod tests {
             let matched_contender = StubMatchedContender::new();
             let arena = make_matching_arena(vec![], vec![matched_contender.clone()], vec![], None);
             matched_contender.set_next_verify_event_result(VerifyEventResult::Mismatch(
-                MismatchData::Basic("some reason"),
+                Reason::Basic("some reason"),
             ));
             arena.clone().handle_input_event(make_unhandled_touchpad_event()).await;
             assert_matches!(*arena.mutable_state.borrow(), MutableState::Idle);
@@ -2524,7 +2498,7 @@ mod tests {
             super::{
                 super::{
                     Contender, EndGestureEvent, ExamineEventResult, GestureArena, InputHandler,
-                    MismatchData, MouseEvent, MutableState, ProcessNewEventResult, TouchpadEvent,
+                    MouseEvent, MutableState, ProcessNewEventResult, Reason, TouchpadEvent,
                 },
                 utils::{
                     make_touchpad_descriptor, make_unhandled_keyboard_event,
@@ -2714,8 +2688,7 @@ mod tests {
             ));
 
             // Set a return value for the `examine_event()` call.
-            contender
-                .set_next_result(ExamineEventResult::Mismatch(MismatchData::Basic("some reason")));
+            contender.set_next_result(ExamineEventResult::Mismatch(Reason::Basic("some reason")));
 
             // Verify no events were generated.
             pretty_assertions::assert_eq!(
@@ -2751,8 +2724,7 @@ mod tests {
             ));
 
             // Set a return value for the `examine_event()` call.
-            contender
-                .set_next_result(ExamineEventResult::Mismatch(MismatchData::Basic("some reason")));
+            contender.set_next_result(ExamineEventResult::Mismatch(Reason::Basic("some reason")));
 
             let touchpad_event = input_device::InputEvent {
                 event_time: zx::Time::from_nanos(123456),
@@ -2962,8 +2934,7 @@ mod tests {
             ));
 
             // Set up `contender` to reply to the `examine_event()` call.
-            contender
-                .set_next_result(ExamineEventResult::Mismatch(MismatchData::Basic("some reason")));
+            contender.set_next_result(ExamineEventResult::Mismatch(Reason::Basic("some reason")));
 
             // Send an event into the arena.
             arena.handle_input_event(make_unhandled_touchpad_event()).await;
@@ -2976,7 +2947,7 @@ mod tests {
     mod touchpad_event_payload {
         use {
             super::{
-                super::{ExamineEventResult, GestureArena, InputHandler, MismatchData},
+                super::{ExamineEventResult, GestureArena, InputHandler, Reason},
                 utils::{ContenderFactoryOnceOrPanic, StubContender},
             },
             crate::{input_device, touch_binding, Position},
@@ -3062,8 +3033,7 @@ mod tests {
                 &fuchsia_inspect::Inspector::new(),
                 1,
             ));
-            contender
-                .set_next_result(ExamineEventResult::Mismatch(MismatchData::Basic("some reason")));
+            contender.set_next_result(ExamineEventResult::Mismatch(Reason::Basic("some reason")));
             arena
                 .handle_input_event(make_unhandled_touchpad_event(
                     contact_position_units,
@@ -3132,8 +3102,7 @@ mod tests {
                 &fuchsia_inspect::Inspector::new(),
                 1,
             ));
-            contender
-                .set_next_result(ExamineEventResult::Mismatch(MismatchData::Basic("some reason")));
+            contender.set_next_result(ExamineEventResult::Mismatch(Reason::Basic("some reason")));
             arena
                 .handle_input_event(make_unhandled_touchpad_event(
                     contact_position_units,
@@ -3148,9 +3117,9 @@ mod tests {
         use {
             super::{
                 super::{
-                    ContenderFactory, ExamineEventResult, GestureArena, InputHandler, MismatchData,
-                    MismatchDetailsFloat, MismatchDetailsInt, MismatchDetailsUint,
-                    ProcessBufferedEventsResult, RecognizedGesture,
+                    ContenderFactory, DetailedReasonFloat, DetailedReasonInt, DetailedReasonUint,
+                    ExamineEventResult, GestureArena, InputHandler, ProcessBufferedEventsResult,
+                    Reason, RecognizedGesture,
                 },
                 utils::{
                     make_unhandled_touchpad_event, ContenderFactoryOnceOrPanic, StubContender,
@@ -3183,9 +3152,9 @@ mod tests {
             let detailed_int_mismatch_contender = Box::new(StubContender::new());
             let gesture_matching_contender = Box::new(StubContender::new());
             basic_mismatch_contender
-                .set_next_result(ExamineEventResult::Mismatch(MismatchData::Basic("some reason")));
+                .set_next_result(ExamineEventResult::Mismatch(Reason::Basic("some reason")));
             detailed_uint_mismatch_contender.set_next_result(ExamineEventResult::Mismatch(
-                MismatchData::DetailedUint(MismatchDetailsUint {
+                Reason::DetailedUint(DetailedReasonUint {
                     criterion: "num_goats_teleported",
                     min: Some(10),
                     max: Some(30),
@@ -3193,7 +3162,7 @@ mod tests {
                 }),
             ));
             detailed_float_mismatch_contender.set_next_result(ExamineEventResult::Mismatch(
-                MismatchData::DetailedFloat(MismatchDetailsFloat {
+                Reason::DetailedFloat(DetailedReasonFloat {
                     criterion: "teleportation_distance_kilometers",
                     min: Some(10.125),
                     max: Some(30.5),
@@ -3201,7 +3170,7 @@ mod tests {
                 }),
             ));
             detailed_int_mismatch_contender.set_next_result(ExamineEventResult::Mismatch(
-                MismatchData::DetailedInt(MismatchDetailsInt {
+                Reason::DetailedInt(DetailedReasonInt {
                     criterion: "budget_surplus_trillions",
                     min: Some(-10),
                     max: Some(1),

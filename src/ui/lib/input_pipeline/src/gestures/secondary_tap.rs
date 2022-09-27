@@ -4,9 +4,9 @@
 
 use {
     super::gesture_arena::{
-        self, ExamineEventResult, MismatchData, MismatchDetailsFloat, MismatchDetailsInt,
-        MismatchDetailsUint, ProcessBufferedEventsResult, RecognizedGesture, TouchpadEvent,
-        VerifyEventResult, SECONDARY_BUTTON,
+        self, DetailedReasonFloat, DetailedReasonInt, DetailedReasonUint, ExamineEventResult,
+        ProcessBufferedEventsResult, Reason, RecognizedGesture, TouchpadEvent, VerifyEventResult,
+        SECONDARY_BUTTON,
     },
     crate::mouse_binding::{MouseEvent, MouseLocation, MousePhase, RelativeLocation},
     crate::utils::{euclidean_distance, Position},
@@ -55,7 +55,7 @@ impl gesture_arena::Contender for InitialContender {
     fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult {
         let num_pressed_buttons = event.pressed_buttons.len();
         if num_pressed_buttons != 0 {
-            return ExamineEventResult::Mismatch(MismatchData::DetailedUint(MismatchDetailsUint {
+            return ExamineEventResult::Mismatch(Reason::DetailedUint(DetailedReasonUint {
                 criterion: "num_pressed_buttons",
                 min: Some(0),
                 max: Some(0),
@@ -71,14 +71,12 @@ impl gesture_arena::Contender for InitialContender {
             2 => ExamineEventResult::Contender(
                 self.into_two_finger_contacts_contender(event.clone()),
             ),
-            0 | _ => {
-                ExamineEventResult::Mismatch(MismatchData::DetailedUint(MismatchDetailsUint {
-                    criterion: "num_contacts",
-                    min: Some(1),
-                    max: Some(2),
-                    actual: num_contacts,
-                }))
-            }
+            0 | _ => ExamineEventResult::Mismatch(Reason::DetailedUint(DetailedReasonUint {
+                criterion: "num_contacts",
+                min: Some(1),
+                max: Some(2),
+                actual: num_contacts,
+            })),
         }
     }
 
@@ -119,7 +117,7 @@ impl gesture_arena::Contender for OneFingerContactContender {
     fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult {
         let elapsed_time = event.timestamp - self.one_finger_contact_event.timestamp;
         if elapsed_time >= self.max_time_elapsed {
-            return ExamineEventResult::Mismatch(MismatchData::DetailedInt(MismatchDetailsInt {
+            return ExamineEventResult::Mismatch(Reason::DetailedInt(DetailedReasonInt {
                 criterion: "elapsed_time_micros",
                 min: None,
                 max: Some(self.max_time_elapsed.into_micros()),
@@ -129,7 +127,7 @@ impl gesture_arena::Contender for OneFingerContactContender {
 
         let num_pressed_buttons = event.pressed_buttons.len();
         if num_pressed_buttons != 0 {
-            return ExamineEventResult::Mismatch(MismatchData::DetailedUint(MismatchDetailsUint {
+            return ExamineEventResult::Mismatch(Reason::DetailedUint(DetailedReasonUint {
                 criterion: "num_pressed_buttons",
                 min: Some(0),
                 max: Some(0),
@@ -145,8 +143,8 @@ impl gesture_arena::Contender for OneFingerContactContender {
                     position_from_event(&self.one_finger_contact_event, 0),
                 );
                 if displacement_mm >= self.max_finger_displacement_in_mm {
-                    return ExamineEventResult::Mismatch(MismatchData::DetailedFloat(
-                        MismatchDetailsFloat {
+                    return ExamineEventResult::Mismatch(Reason::DetailedFloat(
+                        DetailedReasonFloat {
                             criterion: "displacement_mm",
                             min: None,
                             max: Some(self.max_finger_displacement_in_mm),
@@ -162,8 +160,8 @@ impl gesture_arena::Contender for OneFingerContactContender {
                     position_from_event(&self.one_finger_contact_event, 0),
                 );
                 if displacement_mm >= self.max_finger_displacement_in_mm {
-                    return ExamineEventResult::Mismatch(MismatchData::DetailedFloat(
-                        MismatchDetailsFloat {
+                    return ExamineEventResult::Mismatch(Reason::DetailedFloat(
+                        DetailedReasonFloat {
                             criterion: "displacement_mm",
                             min: None,
                             max: Some(self.max_finger_displacement_in_mm),
@@ -175,14 +173,12 @@ impl gesture_arena::Contender for OneFingerContactContender {
                     self.into_two_finger_contacts_contender(event.clone()),
                 )
             }
-            0 | _ => {
-                ExamineEventResult::Mismatch(MismatchData::DetailedUint(MismatchDetailsUint {
-                    criterion: "num_contacts",
-                    min: Some(1),
-                    max: Some(2),
-                    actual: num_contacts,
-                }))
-            }
+            0 | _ => ExamineEventResult::Mismatch(Reason::DetailedUint(DetailedReasonUint {
+                criterion: "num_contacts",
+                min: Some(1),
+                max: Some(2),
+                actual: num_contacts,
+            })),
         }
     }
 }
@@ -227,7 +223,7 @@ impl gesture_arena::Contender for TwoFingerContactsContender {
     fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult {
         let elapsed_time = event.timestamp - self.two_finger_contacts_event.timestamp;
         if elapsed_time >= self.max_time_elapsed {
-            return ExamineEventResult::Mismatch(MismatchData::DetailedInt(MismatchDetailsInt {
+            return ExamineEventResult::Mismatch(Reason::DetailedInt(DetailedReasonInt {
                 criterion: "elapsed_time_micros",
                 min: None,
                 max: Some(self.max_time_elapsed.into_micros()),
@@ -237,7 +233,7 @@ impl gesture_arena::Contender for TwoFingerContactsContender {
 
         let num_pressed_buttons = event.pressed_buttons.len();
         if num_pressed_buttons != 0 {
-            return ExamineEventResult::Mismatch(MismatchData::DetailedUint(MismatchDetailsUint {
+            return ExamineEventResult::Mismatch(Reason::DetailedUint(DetailedReasonUint {
                 criterion: "num_pressed_buttons",
                 min: Some(0),
                 max: Some(0),
@@ -260,8 +256,8 @@ impl gesture_arena::Contender for TwoFingerContactsContender {
                         let displacement_mm =
                             euclidean_distance(position_from_event(event, 0), contact.position);
                         if displacement_mm >= self.max_finger_displacement_in_mm {
-                            return ExamineEventResult::Mismatch(MismatchData::DetailedFloat(
-                                MismatchDetailsFloat {
+                            return ExamineEventResult::Mismatch(Reason::DetailedFloat(
+                                DetailedReasonFloat {
                                     criterion: "displacement_mm",
                                     min: None,
                                     max: Some(self.max_finger_displacement_in_mm),
@@ -271,7 +267,7 @@ impl gesture_arena::Contender for TwoFingerContactsContender {
                         }
                     }
                     None => {
-                        return ExamineEventResult::Mismatch(MismatchData::Basic(
+                        return ExamineEventResult::Mismatch(Reason::Basic(
                             "remaining contact id differs from initial two finger contacts",
                         ));
                     }
@@ -286,8 +282,8 @@ impl gesture_arena::Contender for TwoFingerContactsContender {
                     position_from_event(&self.two_finger_contacts_event, 0),
                 );
                 if displacement_mm >= self.max_finger_displacement_in_mm {
-                    return ExamineEventResult::Mismatch(MismatchData::DetailedFloat(
-                        MismatchDetailsFloat {
+                    return ExamineEventResult::Mismatch(Reason::DetailedFloat(
+                        DetailedReasonFloat {
                             criterion: "displacement_mm",
                             min: None,
                             max: Some(self.max_finger_displacement_in_mm),
@@ -302,8 +298,8 @@ impl gesture_arena::Contender for TwoFingerContactsContender {
                     position_from_event(&self.two_finger_contacts_event, 1),
                 );
                 if displacement_mm >= self.max_finger_displacement_in_mm {
-                    return ExamineEventResult::Mismatch(MismatchData::DetailedFloat(
-                        MismatchDetailsFloat {
+                    return ExamineEventResult::Mismatch(Reason::DetailedFloat(
+                        DetailedReasonFloat {
                             criterion: "displacement_mm",
                             min: None,
                             max: Some(self.max_finger_displacement_in_mm),
@@ -314,7 +310,7 @@ impl gesture_arena::Contender for TwoFingerContactsContender {
 
                 ExamineEventResult::Contender(self)
             }
-            3.. => ExamineEventResult::Mismatch(MismatchData::DetailedUint(MismatchDetailsUint {
+            3.. => ExamineEventResult::Mismatch(Reason::DetailedUint(DetailedReasonUint {
                 criterion: "num_contacts",
                 min: Some(0),
                 max: Some(2),
@@ -357,7 +353,7 @@ impl gesture_arena::Contender for OneFingerRaisedContender {
     fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult {
         let elapsed_time = event.timestamp - self.two_finger_contacts_event.timestamp;
         if elapsed_time >= self.max_time_elapsed {
-            return ExamineEventResult::Mismatch(MismatchData::DetailedInt(MismatchDetailsInt {
+            return ExamineEventResult::Mismatch(Reason::DetailedInt(DetailedReasonInt {
                 criterion: "elapsed_time_micros",
                 min: None,
                 max: Some(self.max_time_elapsed.into_micros()),
@@ -367,7 +363,7 @@ impl gesture_arena::Contender for OneFingerRaisedContender {
 
         let num_pressed_buttons = event.pressed_buttons.len();
         if num_pressed_buttons != 0 {
-            return ExamineEventResult::Mismatch(MismatchData::DetailedUint(MismatchDetailsUint {
+            return ExamineEventResult::Mismatch(Reason::DetailedUint(DetailedReasonUint {
                 criterion: "num_pressed_buttons",
                 min: Some(0),
                 max: Some(0),
@@ -390,8 +386,8 @@ impl gesture_arena::Contender for OneFingerRaisedContender {
                         let displacement_mm =
                             euclidean_distance(position_from_event(event, 0), contact.position);
                         if displacement_mm >= self.max_finger_displacement_in_mm {
-                            return ExamineEventResult::Mismatch(MismatchData::DetailedFloat(
-                                MismatchDetailsFloat {
+                            return ExamineEventResult::Mismatch(Reason::DetailedFloat(
+                                DetailedReasonFloat {
                                     criterion: "displacement_mm",
                                     min: None,
                                     max: Some(self.max_finger_displacement_in_mm),
@@ -401,7 +397,7 @@ impl gesture_arena::Contender for OneFingerRaisedContender {
                         }
                     }
                     None => {
-                        return ExamineEventResult::Mismatch(MismatchData::Basic(
+                        return ExamineEventResult::Mismatch(Reason::Basic(
                             "remaining contact id differs from initial two finger contacts",
                         ));
                     }
@@ -409,7 +405,7 @@ impl gesture_arena::Contender for OneFingerRaisedContender {
 
                 ExamineEventResult::Contender(self)
             }
-            2.. => ExamineEventResult::Mismatch(MismatchData::DetailedUint(MismatchDetailsUint {
+            2.. => ExamineEventResult::Mismatch(Reason::DetailedUint(DetailedReasonUint {
                 criterion: "num_contacts",
                 min: Some(0),
                 max: Some(1),
@@ -438,7 +434,7 @@ impl gesture_arena::MatchedContender for MatchedContender {
     fn verify_event(self: Box<Self>, event: &TouchpadEvent) -> VerifyEventResult {
         let elapsed_time = event.timestamp - self.two_finger_contacts_event.timestamp;
         if elapsed_time >= self.max_time_elapsed {
-            return VerifyEventResult::Mismatch(MismatchData::DetailedInt(MismatchDetailsInt {
+            return VerifyEventResult::Mismatch(Reason::DetailedInt(DetailedReasonInt {
                 criterion: "elapsed_time_micros",
                 min: None,
                 max: Some(self.max_time_elapsed.into_micros()),
@@ -448,7 +444,7 @@ impl gesture_arena::MatchedContender for MatchedContender {
 
         let num_contacts = event.contacts.len();
         if num_contacts != 0 {
-            return VerifyEventResult::Mismatch(MismatchData::DetailedUint(MismatchDetailsUint {
+            return VerifyEventResult::Mismatch(Reason::DetailedUint(DetailedReasonUint {
                 criterion: "num_contacts",
                 min: Some(0),
                 max: Some(0),
@@ -458,7 +454,7 @@ impl gesture_arena::MatchedContender for MatchedContender {
 
         let num_pressed_buttons = event.pressed_buttons.len();
         if num_pressed_buttons != 0 {
-            return VerifyEventResult::Mismatch(MismatchData::DetailedUint(MismatchDetailsUint {
+            return VerifyEventResult::Mismatch(Reason::DetailedUint(DetailedReasonUint {
                 criterion: "num_pressed_buttons",
                 min: Some(0),
                 max: Some(0),
