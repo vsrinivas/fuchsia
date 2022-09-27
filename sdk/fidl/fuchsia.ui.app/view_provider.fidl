@@ -37,6 +37,7 @@ protocol ViewProvider {
     ///
     /// Modules can use these mechanisms to establish a distributed,
     /// inter-process scene graph.
+    @transitional
     CreateView(resource struct {
         token zx.handle:EVENTPAIR;
         incoming_services server_end:<fuchsia.sys.ServiceProvider, optional>;
