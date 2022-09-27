@@ -43,6 +43,7 @@ class AppStateImpl with Disposable implements AppState {
 
   static const kFeedbackUrl =
       'https://fuchsia.dev/fuchsia-src/contribute/report-issue';
+  static const kChromeElementManager = 'fuchsia.element.Manager-chrome';
   static const kLicenseUrl =
       'fuchsia-pkg://fuchsia.com/license_settings#meta/license_settings.cm';
   static const kScreenSaverUrl =
@@ -408,6 +409,11 @@ class AppStateImpl with Disposable implements AppState {
       (String title, String url, String? alternateServiceName) async {
     try {
       _clearError(url, 'ProposeElementError');
+
+      // For web urls use Chrome's element manager service.
+      if (url.startsWith('http')) {
+        alternateServiceName ??= kChromeElementManager;
+      }
       await launchService.launch(title, url,
           alternateServiceName: alternateServiceName);
       // Hide app launcher unless we had an error presenting the view.
