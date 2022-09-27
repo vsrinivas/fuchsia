@@ -48,6 +48,11 @@
             to: "#trace_manager",
             subdir: "sys",
         },
+        {
+            storage: [ "tmp" ],
+            from: "self",
+            to: "#trace_manager",
+        },
     ],
     expose: [
         {

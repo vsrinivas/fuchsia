@@ -6,22 +6,63 @@ import("//build/components.gni")
 import("//build/config.gni")
 import("//src/sys/core/build/core_shard.gni")
 
-executable("bin") {
-  output_name = "perfetto-bridge"
-
+source_set("perfetto_bridge_lib") {
   sources = [
-    "main.cc",
-    "perfetto_bridge.cc",
+    "consumer_adapter.cc",
+    "consumer_adapter.h",
+    "producer_connector_impl.cc",
+    "producer_connector_impl.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.tracing.perfetto:fuchsia.tracing.perfetto_cpp",
+    "//third_party/perfetto:libperfetto_client_experimental",
+    "//third_party/perfetto/include/perfetto/ext/ipc",
+    "//third_party/perfetto/src/base",
+    "//third_party/perfetto/src/tracing/ipc/service",
+    "//zircon/system/ulib/trace",
+    "//zircon/system/ulib/trace-provider",
   ]
 
   deps = [
-    "//examples/fidl/fuchsia.examples",
-    "//sdk/fidl/fuchsia.tracing.perfetto",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl",
+    "//third_party/perfetto/protos/perfetto/config:lite",
+    "//third_party/perfetto/protos/perfetto/trace:non_minimal_cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+executable("bin") {
+  output_name = "perfetto-bridge"
+
+  sources = [ "main.cc" ]
+
+  # Perfetto (3P library) performs some pointer arithmetic that breaks UBSan
+  # (nullptr + offset). The arithmetic is legal because the addresses are used
+  # within a custom arena allocator, so UBSan's error is not correct.
+  # See https://github.com/google/perfetto/issues/271 , which recommends
+  # suppressing UBsan as the fix.
+  exclude_toolchain_tags = [ "ubsan" ]
+
+  deps = [
+    ":perfetto_bridge_lib",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/fit",
+    "//sdk/lib/sys/component/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/trace",
+    "//zircon/system/ulib/trace-provider",
   ]
 }
 
@@ -29,8 +70,4 @@ fuchsia_package_with_single_component("perfetto-bridge") {
   manifest = "meta/perfetto_bridge.cml"
 
   deps = [ ":bin" ]
-}
-
-core_shard("perfetto_bridge_core_shard") {
-  shard_file = "meta/perfetto_bridge.core_shard.cml"
 }

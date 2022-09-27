@@ -36,7 +36,6 @@ core_realm_shards += [
   "//src/developer/process_explorer:process_explorer_core_shard",
   "//src/media/audio/audio_core:core_shard",
   "//src/media/sounds/soundplayer:core_shard",
-  "//src/performance/perfetto-bridge:perfetto_bridge_core_shard",
   "//src/performance/trace_manager:trace_manager_core_shard",
   "//src/proc/bin/starnix_manager:starnix_manager_core_shard",
   "//src/settings/service:setui_service_core_shard",
