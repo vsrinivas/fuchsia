@@ -474,6 +474,11 @@ class TiledBufferManager : public SurfaceBufferManager {
     }
     // ~to_drop
 
+    {
+      std::lock_guard<std::mutex> guard(surface_lock_);
+      allocated_free_surfaces_.clear();
+    }
+
     ZX_DEBUG_ASSERT(!output_buffer_pool_.has_buffers_in_use());
   }
 
@@ -603,7 +608,7 @@ class TiledBufferManager : public SurfaceBufferManager {
       output_buffer_pool_.FreeBuffer(buffer->base());
     };
 
-    ZX_DEBUG_ASSERT(surface_to_buffer_.count(vmo_surface_id) == 0);
+    ZX_ASSERT(surface_to_buffer_.count(vmo_surface_id) == 0);
     surface_to_buffer_.emplace(vmo_surface_id, buffer);
 
     release_buffer.cancel();

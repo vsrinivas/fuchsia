@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <set>
+
 #include <gtest/gtest.h>
 #include <va/va.h>
 #include <va/va_magma.h>
@@ -11,10 +13,16 @@ static VAStatus vaCreateContextReturn = VA_STATUS_SUCCESS;
 static VAStatus vaCreateSurfacesReturn = VA_STATUS_SUCCESS;
 static int vaGetDisplayMagmaReturn;
 
+static const std::set<VASurfaceID> vaFreeSurfacesDefault = {
+    0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15,
+    16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31};
+static std::set<VASurfaceID> vaFreeSurfaces = vaFreeSurfacesDefault;
+
 void vaDefaultStubSetReturn() {
   vaCreateConfigReturn = VA_STATUS_SUCCESS;
   vaCreateContextReturn = VA_STATUS_SUCCESS;
   vaCreateSurfacesReturn = VA_STATUS_SUCCESS;
+  vaFreeSurfaces = vaFreeSurfacesDefault;
 }
 
 struct FakeBuffer {
@@ -84,12 +92,33 @@ VAStatus vaQueryConfigAttributes(VADisplay dpy, VAConfigID config_id, VAProfile 
 VAStatus vaCreateSurfaces(VADisplay dpy, unsigned int format, unsigned int width,
                           unsigned int height, VASurfaceID *surfaces, unsigned int num_surfaces,
                           VASurfaceAttrib *attrib_list, unsigned int num_attribs) {
-  for (size_t i = 0; i < num_surfaces; i++) {
-    surfaces[i] = static_cast<unsigned int>(i + 1);
+  // User set return values take precedent
+  if (vaCreateSurfacesReturn != VA_STATUS_SUCCESS) {
+    return vaCreateSurfacesReturn;
   }
-  return vaCreateSurfacesReturn;
+
+  if (vaFreeSurfaces.size() < num_surfaces) {
+    return VA_STATUS_ERROR_MAX_NUM_EXCEEDED;
+  }
+
+  for (size_t i = 0; i < num_surfaces; i++) {
+    surfaces[i] = *vaFreeSurfaces.begin();
+    vaFreeSurfaces.erase(vaFreeSurfaces.begin());
+  }
+
+  return VA_STATUS_SUCCESS;
 }
 VAStatus vaDestroySurfaces(VADisplay dpy, VASurfaceID *surfaces, int num_surfaces) {
+  for (int surface_idx = 0; surface_idx < num_surfaces; surface_idx += 1) {
+    if (vaFreeSurfaces.count(surfaces[surface_idx]) != 0) {
+      return VA_STATUS_ERROR_INVALID_SURFACE;
+    }
+  }
+
+  for (int surface_idx = 0; surface_idx < num_surfaces; surface_idx += 1) {
+    vaFreeSurfaces.insert(surfaces[surface_idx]);
+  }
+
   return VA_STATUS_SUCCESS;
 }
 VAStatus vaCreateContext(VADisplay dpy, VAConfigID config_id, int picture_width, int picture_height,
