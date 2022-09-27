@@ -1,0 +1,590 @@
+[
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.gpu.magma/BufferOp.DEPOPULATE_TABLES",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.gpu.magma/BufferOp.POPULATE_TABLES",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.gpu.magma/BufferOp",
+        "strictness": "flexible",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.gpu.magma/BufferRange.buffer_id",
+        "ordinal": "1",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.gpu.magma/BufferRange.offset",
+        "ordinal": "2",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.gpu.magma/BufferRange.size",
+        "ordinal": "3",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.gpu.magma/BufferRange"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/CombinedDevice.Connect2",
+        "ordinal": "4204975873092647188",
+        "type": "(uint64 client_id,server_end:fuchsia.gpu.magma/Primary primary_channel,server_end:fuchsia.gpu.magma/Notification notification_channel)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/CombinedDevice.DumpState",
+        "ordinal": "6062090604094925077",
+        "type": "(uint32 dump_type)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/CombinedDevice.GetIcdList",
+        "ordinal": "8535420133684838999",
+        "type": "() -> (vector<fuchsia.gpu.magma/IcdInfo>:8 icd_list)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/CombinedDevice.Query",
+        "ordinal": "7096912565484157159",
+        "type": "(fuchsia.gpu.magma/QueryId query_id) -> (fuchsia.gpu.magma/Device_Query_Result result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.gpu.magma/CombinedDevice"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.gpu.magma/CommandBuffer.resource_index",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.gpu.magma/CommandBuffer.start_offset",
+        "ordinal": "2",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.gpu.magma/CommandBuffer"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.gpu.magma/CommandBufferFlags.VENDOR_FLAG_0",
+        "value": "65536"
+    },
+    {
+        "kind": "bits",
+        "name": "fuchsia.gpu.magma/CommandBufferFlags",
+        "strictness": "flexible",
+        "type": "uint64"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/DependencyInjection.SetMemoryPressureProvider",
+        "ordinal": "6841177385653178188",
+        "type": "(fuchsia.memorypressure/Provider provider)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.gpu.magma/DependencyInjection"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/Device.Connect2",
+        "ordinal": "4204975873092647188",
+        "type": "(uint64 client_id,server_end:fuchsia.gpu.magma/Primary primary_channel,server_end:fuchsia.gpu.magma/Notification notification_channel)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/Device.Query",
+        "ordinal": "7096912565484157159",
+        "type": "(fuchsia.gpu.magma/QueryId query_id) -> (fuchsia.gpu.magma/Device_Query_Result result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.gpu.magma/Device"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.gpu.magma/Device_Query_Response.buffer_result",
+        "ordinal": "2",
+        "type": "zx/handle:VMO"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.gpu.magma/Device_Query_Response.simple_result",
+        "ordinal": "1",
+        "type": "uint64"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.gpu.magma/Device_Query_Response",
+        "resourceness": "resource",
+        "strictness": "strict"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.gpu.magma/Device_Query_Result.err",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.gpu.magma/Device_Query_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.gpu.magma/Device_Query_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.gpu.magma/Device_Query_Result",
+        "resourceness": "resource",
+        "strictness": "strict"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/DiagnosticDevice.DumpState",
+        "ordinal": "6062090604094925077",
+        "type": "(uint32 dump_type)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.gpu.magma/DiagnosticDevice"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.gpu.magma/IcdFlags.SUPPORTS_MEDIA_CODEC_FACTORY",
+        "value": "4"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.gpu.magma/IcdFlags.SUPPORTS_OPENCL",
+        "value": "2"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.gpu.magma/IcdFlags.SUPPORTS_VULKAN",
+        "value": "1"
+    },
+    {
+        "kind": "bits",
+        "name": "fuchsia.gpu.magma/IcdFlags",
+        "strictness": "flexible",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.gpu.magma/IcdInfo.component_url",
+        "ordinal": "1",
+        "type": "string:4096"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.gpu.magma/IcdInfo.flags",
+        "ordinal": "2",
+        "type": "fuchsia.gpu.magma/IcdFlags"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.gpu.magma/IcdInfo"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/IcdLoaderDevice.GetIcdList",
+        "ordinal": "8535420133684838999",
+        "type": "() -> (vector<fuchsia.gpu.magma/IcdInfo>:8 icd_list)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.gpu.magma/IcdLoaderDevice"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.gpu.magma/MAX_ICD_COUNT",
+        "type": "uint64",
+        "value": "8"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.gpu.magma/MAX_IMMEDIATE_COMMANDS_DATA_SIZE",
+        "type": "uint32",
+        "value": "2048"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.gpu.magma/MapFlags.EXECUTE",
+        "value": "4"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.gpu.magma/MapFlags.GROWABLE",
+        "value": "8"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.gpu.magma/MapFlags.READ",
+        "value": "1"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.gpu.magma/MapFlags.VENDOR_FLAG_0",
+        "value": "65536"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.gpu.magma/MapFlags.WRITE",
+        "value": "2"
+    },
+    {
+        "kind": "bits",
+        "name": "fuchsia.gpu.magma/MapFlags",
+        "strictness": "flexible",
+        "type": "uint64"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.gpu.magma/Notification"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.gpu.magma/ObjectType.BUFFER",
+        "value": "11"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.gpu.magma/ObjectType.EVENT",
+        "value": "10"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.gpu.magma/ObjectType",
+        "strictness": "flexible",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/PerformanceCounterAccess.GetPerformanceCountToken",
+        "ordinal": "5206447526620696466",
+        "type": "() -> (zx/handle:EVENT access_token)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.gpu.magma/PerformanceCounterAccess"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/PerformanceCounterEvents.OnPerformanceCounterReadCompleted",
+        "ordinal": "4545056878418019543",
+        "type": " -> (fuchsia.gpu.magma/PerformanceCounterEventsOnPerformanceCounterReadCompletedRequest payload)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.gpu.magma/PerformanceCounterEvents"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.gpu.magma/PerformanceCounterEventsOnPerformanceCounterReadCompletedRequest.buffer_id",
+        "ordinal": "2",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.gpu.magma/PerformanceCounterEventsOnPerformanceCounterReadCompletedRequest.buffer_offset",
+        "ordinal": "3",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.gpu.magma/PerformanceCounterEventsOnPerformanceCounterReadCompletedRequest.flags",
+        "ordinal": "5",
+        "type": "fuchsia.gpu.magma/ResultFlags"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.gpu.magma/PerformanceCounterEventsOnPerformanceCounterReadCompletedRequest.timestamp",
+        "ordinal": "4",
+        "type": "int64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.gpu.magma/PerformanceCounterEventsOnPerformanceCounterReadCompletedRequest.trigger_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.gpu.magma/PerformanceCounterEventsOnPerformanceCounterReadCompletedRequest"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/Primary.AddPerformanceCounterBufferOffsetsToPool",
+        "ordinal": "2267713419422546027",
+        "type": "(uint64 pool_id,vector<fuchsia.gpu.magma/BufferRange>:64 offsets)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/Primary.BufferRangeOp2",
+        "ordinal": "4716897048856974230",
+        "type": "(fuchsia.gpu.magma/BufferOp op,fuchsia.gpu.magma/BufferRange range)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/Primary.ClearPerformanceCounters",
+        "ordinal": "2551343624109388826",
+        "type": "(vector<uint64>:64 counters)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/Primary.CreateContext",
+        "ordinal": "6528690901102583204",
+        "type": "(uint32 context_id)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/Primary.CreatePerformanceCounterBufferPool",
+        "ordinal": "5245838496345343544",
+        "type": "(uint64 pool_id,server_end:fuchsia.gpu.magma/PerformanceCounterEvents event_channel)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/Primary.DestroyContext",
+        "ordinal": "2789459791676059376",
+        "type": "(uint32 context_id)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/Primary.DumpPerformanceCounters",
+        "ordinal": "2669272507661584391",
+        "type": "(uint64 pool_id,uint32 trigger_id)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/Primary.EnableFlowControl",
+        "ordinal": "627661225997677102",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/Primary.EnablePerformanceCounterAccess",
+        "ordinal": "5887165325733562417",
+        "type": "(zx/handle:EVENT access_token)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/Primary.EnablePerformanceCounters",
+        "ordinal": "5964133100861631143",
+        "type": "(vector<uint64>:64 counters)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/Primary.ExecuteCommand",
+        "ordinal": "1092010090420875483",
+        "type": "(uint32 context_id,vector<fuchsia.gpu.magma/BufferRange> resources,vector<fuchsia.gpu.magma/CommandBuffer> command_buffers,vector<uint64> wait_semaphores,vector<uint64> signal_semaphores,fuchsia.gpu.magma/CommandBufferFlags flags)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/Primary.ExecuteImmediateCommands",
+        "ordinal": "4430994260716992031",
+        "type": "(uint32 context_id,vector<uint8>:2048 command_data,vector<uint64> semaphores)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/Primary.Flush",
+        "ordinal": "6110458180465614905",
+        "type": "() -> ()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/Primary.ImportObject2",
+        "ordinal": "8597077828117162816",
+        "type": "(zx/handle object,fuchsia.gpu.magma/ObjectType object_type,uint64 object_id)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/Primary.IsPerformanceCounterAccessAllowed",
+        "ordinal": "1815996337041987330",
+        "type": "() -> (bool enabled)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/Primary.MapBuffer",
+        "ordinal": "6249489754445614643",
+        "type": "(fuchsia.gpu.magma/PrimaryMapBufferRequest payload)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/Primary.OnNotifyMemoryImported",
+        "ordinal": "5787771459372034982",
+        "type": " -> (uint64 bytes)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/Primary.OnNotifyMessagesConsumed",
+        "ordinal": "6813331268689964099",
+        "type": " -> (uint64 count)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/Primary.ReleaseObject",
+        "ordinal": "5360925713117866127",
+        "type": "(uint64 object_id,fuchsia.gpu.magma/ObjectType object_type)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/Primary.ReleasePerformanceCounterBufferPool",
+        "ordinal": "1744947266691577050",
+        "type": "(uint64 pool_id)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/Primary.RemovePerformanceCounterBufferFromPool",
+        "ordinal": "860512294293349774",
+        "type": "(uint64 pool_id,uint64 buffer_id)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/Primary.UnmapBuffer",
+        "ordinal": "3481714533469051228",
+        "type": "(fuchsia.gpu.magma/PrimaryUnmapBufferRequest payload)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.gpu.magma/Primary"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.gpu.magma/PrimaryMapBufferRequest.flags",
+        "ordinal": "3",
+        "type": "fuchsia.gpu.magma/MapFlags"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.gpu.magma/PrimaryMapBufferRequest.hw_va",
+        "ordinal": "1",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.gpu.magma/PrimaryMapBufferRequest.range",
+        "ordinal": "2",
+        "type": "fuchsia.gpu.magma/BufferRange"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.gpu.magma/PrimaryMapBufferRequest"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.gpu.magma/PrimaryUnmapBufferRequest.buffer_id",
+        "ordinal": "2",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.gpu.magma/PrimaryUnmapBufferRequest.hw_va",
+        "ordinal": "1",
+        "type": "uint64"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.gpu.magma/PrimaryUnmapBufferRequest"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.gpu.magma/QueryId.DEVICE_ID",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.gpu.magma/QueryId.IS_TOTAL_TIME_SUPPORTED",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.gpu.magma/QueryId.MAGMA_QUERY_TOTAL_TIME",
+        "value": "500"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.gpu.magma/QueryId.MAXIMUM_INFLIGHT_PARAMS",
+        "value": "5"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.gpu.magma/QueryId.VENDOR_ID",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.gpu.magma/QueryId.VENDOR_QUERY_0",
+        "value": "10000"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.gpu.magma/QueryId",
+        "strictness": "flexible",
+        "type": "uint64"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.gpu.magma/ResultFlags.DISCONTINUITY",
+        "value": "1"
+    },
+    {
+        "kind": "bits",
+        "name": "fuchsia.gpu.magma/ResultFlags",
+        "strictness": "flexible",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/TestDevice.Connect2",
+        "ordinal": "4204975873092647188",
+        "type": "(uint64 client_id,server_end:fuchsia.gpu.magma/Primary primary_channel,server_end:fuchsia.gpu.magma/Notification notification_channel)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/TestDevice.DumpState",
+        "ordinal": "6062090604094925077",
+        "type": "(uint32 dump_type)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/TestDevice.GetIcdList",
+        "ordinal": "8535420133684838999",
+        "type": "() -> (vector<fuchsia.gpu.magma/IcdInfo>:8 icd_list)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/TestDevice.GetUnitTestStatus",
+        "ordinal": "4520727561973680369",
+        "type": "() -> (int32 status)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.gpu.magma/TestDevice.Query",
+        "ordinal": "7096912565484157159",
+        "type": "(fuchsia.gpu.magma/QueryId query_id) -> (fuchsia.gpu.magma/Device_Query_Result result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.gpu.magma/TestDevice"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.gpu.magma"
+    }
+]

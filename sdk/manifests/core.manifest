@@ -51,6 +51,7 @@ sdk://fidl/fuchsia.factory.wlan
 sdk://fidl/fuchsia.feedback
 sdk://fidl/fuchsia.fonts
 sdk://fidl/fuchsia.gpu.agis
+sdk://fidl/fuchsia.gpu.magma
 sdk://fidl/fuchsia.hardware.adc
 sdk://fidl/fuchsia.hardware.audio
 sdk://fidl/fuchsia.hardware.audio.signalprocessing

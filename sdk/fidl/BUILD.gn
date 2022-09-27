@@ -46,6 +46,7 @@ sdk_fidl_targets = [
   "//sdk/fidl/fuchsia.feedback:fuchsia.feedback",
   "//sdk/fidl/fuchsia.fonts:fuchsia.fonts",
   "//sdk/fidl/fuchsia.gpu.agis:fuchsia.gpu.agis",
+  "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma",
   "//sdk/fidl/fuchsia.hardware.adc:fuchsia.hardware.adc",
   "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish",
   "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light",

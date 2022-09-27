@@ -11,6 +11,7 @@
 ///
 /// Some names have a numeric suffix (eg, BufferRangeOp2); the number is a detail of how the
 /// protocols have evolved, and can be ignored.
+@available(added=9)
 library fuchsia.gpu.magma;
 
 using fuchsia.url;
