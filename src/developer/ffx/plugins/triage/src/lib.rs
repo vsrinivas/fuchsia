@@ -19,7 +19,10 @@ mod config;
 mod snapshot;
 pub use snapshot::create_snapshot;
 
-#[ffx_plugin("triage.enabled", DataProviderProxy = "core/appmgr:out:fuchsia.feedback.DataProvider")]
+#[ffx_plugin(
+    "triage.enabled",
+    DataProviderProxy = "core/feedback:expose:fuchsia.feedback.DataProvider"
+)]
 pub async fn triage(
     data_provider_proxy: Option<DataProviderProxy>,
     #[ffx(machine = TriageOutput)] writer: Writer,

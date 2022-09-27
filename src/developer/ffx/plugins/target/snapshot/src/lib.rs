@@ -146,7 +146,7 @@ pub async fn dump_annotations<W: Write>(
     Ok(())
 }
 
-#[ffx_plugin(DataProviderProxy = "core/appmgr:out:fuchsia.feedback.DataProvider")]
+#[ffx_plugin(DataProviderProxy = "core/feedback:expose:fuchsia.feedback.DataProvider")]
 pub async fn snapshot(data_provider_proxy: DataProviderProxy, cmd: SnapshotCommand) -> Result<()> {
     snapshot_impl(data_provider_proxy, cmd, &mut std::io::stdout()).await
 }

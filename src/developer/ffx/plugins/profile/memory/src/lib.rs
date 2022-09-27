@@ -25,7 +25,7 @@ use {
     std::time::Duration,
 };
 
-#[ffx_plugin("ffx_memory", MonitorProxy = "core/appmgr:out:fuchsia.memory.Monitor")]
+#[ffx_plugin("ffx_memory", MonitorProxy = "core/memory_monitor:expose:fuchsia.memory.Monitor")]
 /// Prints a memory digest to stdout.
 pub async fn plugin_entrypoint(
     monitor_proxy: MonitorProxy,

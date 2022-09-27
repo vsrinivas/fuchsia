@@ -10,7 +10,9 @@ use {
     fidl_fuchsia_hardware_power_statecontrol::AdminProxy,
 };
 
-#[ffx_plugin(AdminProxy = "core/appmgr:out:fuchsia.hardware.power.statecontrol.Admin")]
+#[ffx_plugin(
+    AdminProxy = "bootstrap/power_manager:expose:fuchsia.hardware.power.statecontrol.Admin"
+)]
 pub async fn off(admin_proxy: AdminProxy, _cmd: OffCommand) -> Result<()> {
     let res = admin_proxy.poweroff().await;
     match res {

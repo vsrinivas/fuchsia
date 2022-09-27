@@ -20,7 +20,7 @@ use {
 // rather than redefining it here.
 const HANDLE_TYPE_FILE_DESCRIPTOR: i32 = 0x30;
 
-#[ffx_plugin(LauncherProxy = "core/appmgr:out:fuchsia.sys.Launcher")]
+#[ffx_plugin(LauncherProxy = "core/appmgr:expose:fuchsia.sys.Launcher")]
 pub async fn run_component(launcher_proxy: LauncherProxy, run: RunComponentCommand) -> Result<()> {
     if !run.url.ends_with("cmx") {
         return Err(anyhow!(

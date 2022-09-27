@@ -118,7 +118,7 @@ impl<'a> LineWaiter<'a> for Stdin {
 // OPTIMIZATION: Only grab a tracing controller proxy only when necessary.
 #[ffx_plugin(
     TracingProxy = "daemon::protocol",
-    ControllerProxy = "core/appmgr:out:fuchsia.tracing.controller.Controller"
+    ControllerProxy = "core/trace_manager:expose:fuchsia.tracing.controller.Controller"
 )]
 pub async fn trace(
     proxy: TracingProxy,

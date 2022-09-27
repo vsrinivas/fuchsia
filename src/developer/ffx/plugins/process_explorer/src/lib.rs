@@ -27,7 +27,10 @@ use {
 };
 
 // TODO(fxbug.dev/107973): The plugin must remain experimental until the FIDL API is strongly typed.
-#[ffx_plugin("ffx_process_explorer", QueryProxy = "core/appmgr:out:fuchsia.process.explorer.Query")]
+#[ffx_plugin(
+    "ffx_process_explorer",
+    QueryProxy = "core/process_explorer:expose:fuchsia.process.explorer.Query"
+)]
 /// Prints processes data.
 pub async fn print_processes_data(
     query_proxy: QueryProxy,

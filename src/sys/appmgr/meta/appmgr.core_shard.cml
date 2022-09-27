@@ -90,6 +90,7 @@
                 "fuchsia.appmgr.Startup",
                 "fuchsia.sys.internal.ComponentEventProvider",
                 "fuchsia.sys.internal.LogConnector",
+                "fuchsia.sys.Launcher",
             ],
             from: "#appmgr",
         },

@@ -33,7 +33,7 @@ impl FidlProtocol for ListenerProtocol {
                 let (_target, connector) = ctx
                     .open_target_proxy_with_info::<agis::ConnectorMarker>(
                         target_query.string_matcher,
-                        "core/agis:out:fuchsia.gpu.agis.Connector",
+                        "core/agis:expose:fuchsia.gpu.agis.Connector",
                     )
                     .await?;
 

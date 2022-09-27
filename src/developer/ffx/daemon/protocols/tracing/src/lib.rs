@@ -301,7 +301,7 @@ async fn get_controller_proxy(
     let (target, proxy) = cx
         .open_target_proxy_with_info::<trace::ControllerMarker>(
             target_query.cloned(),
-            "core/appmgr:out:fuchsia.tracing.controller.Controller",
+            "core/trace_manager:expose:fuchsia.tracing.controller.Controller",
         )
         .await?;
     Ok((target, proxy))

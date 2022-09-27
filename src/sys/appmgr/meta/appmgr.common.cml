@@ -54,6 +54,7 @@
             rights: [ "rw*" ],
             path: "/svc",
         },
+        { protocol: "fuchsia.sys.Launcher" },
     ],
     use: [
         {
@@ -141,6 +142,7 @@
                 "fuchsia.appmgr.Startup",
                 "fuchsia.sys.internal.ComponentEventProvider",
                 "fuchsia.sys.internal.LogConnector",
+                "fuchsia.sys.Launcher",
             ],
             from: "self",
         },

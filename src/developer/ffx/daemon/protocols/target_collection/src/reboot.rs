@@ -24,7 +24,8 @@ use {
     tasks::TaskManager,
 };
 
-const ADMIN_SELECTOR: &'static str = "core/appmgr:out:fuchsia.hardware.power.statecontrol.Admin";
+const ADMIN_SELECTOR: &'static str =
+    "bootstrap/power_manager:expose:fuchsia.hardware.power.statecontrol.Admin";
 
 pub(crate) struct RebootController {
     target: Rc<Target>,

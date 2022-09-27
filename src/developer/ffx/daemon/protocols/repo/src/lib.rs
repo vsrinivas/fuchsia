@@ -44,8 +44,8 @@ use {
 mod metrics;
 mod tunnel;
 
-const REPOSITORY_MANAGER_SELECTOR: &str = "core/appmgr:out:fuchsia.pkg.RepositoryManager";
-const REWRITE_PROTOCOL_SELECTOR: &str = "core/appmgr:out:fuchsia.pkg.rewrite.Engine";
+const REPOSITORY_MANAGER_SELECTOR: &str = "core/pkg-resolver:expose:fuchsia.pkg.RepositoryManager";
+const REWRITE_PROTOCOL_SELECTOR: &str = "core/pkg-resolver:expose:fuchsia.pkg.rewrite.Engine";
 
 const TARGET_CONNECT_TIMEOUT: Duration = Duration::from_secs(60);
 const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(5);

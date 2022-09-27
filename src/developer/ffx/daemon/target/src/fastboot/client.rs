@@ -28,7 +28,8 @@ use {
     std::time::Duration,
 };
 
-const ADMIN_SELECTOR: &str = "core/appmgr:out:fuchsia.hardware.power.statecontrol.Admin";
+const ADMIN_SELECTOR: &str =
+    "bootstrap/power_manager:expose:fuchsia.hardware.power.statecontrol.Admin";
 
 #[async_trait(?Send)]
 pub trait InterfaceFactory<T: AsyncRead + AsyncWrite + Unpin> {
