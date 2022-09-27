@@ -62,13 +62,6 @@ class CobaltLogger : public CobaltLoggerBase {
     // Not Implemented
     callback(fpromise::error(fuchsia::metrics::Error::INVALID_ARGUMENTS));
   }
-
-  void LogCustomEvent(uint32_t metric_id,
-                      ::std::vector<::fuchsia::metrics::CustomEventValue> event_values,
-                      LogCustomEventCallback callback) override {
-    // Not Implemented
-    callback(fpromise::error(fuchsia::metrics::Error::INVALID_ARGUMENTS));
-  }
 };
 
 // Will not execute the callback for the first n events.

@@ -473,34 +473,6 @@ TEST_F(CobaltAppTest, LogMetricEvents) {
   EXPECT_THAT(event.occurrence_event().event_code(), ::testing::ElementsAre(2));
 }
 
-TEST_F(CobaltAppTest, LogCustomEvent) {
-  FX_LOGS(INFO) << "A logging statement";
-  fuchsia::metrics::MetricEventLoggerPtr logger = GetMetricEventLogger();
-  logger::testing::FakeLogger* fake_logger = fake_service_->last_logger_created();
-  ASSERT_NE(fake_logger, nullptr);
-  EXPECT_EQ(fake_logger->call_count(), 0);
-
-  fpromise::result<void, fuchsia::metrics::Error> result;
-  std::vector<fuchsia::metrics::CustomEventValue> parts(3);
-  parts.at(0).dimension_name = "query";
-  parts.at(0).value.set_string_value("SELECT 1;");
-  parts.at(1).dimension_name = "wait_time_ms";
-  parts.at(1).value.set_int_value(1234);
-  parts.at(2).dimension_name = "response_code";
-  parts.at(2).value.set_index_value(2);
-  logger->LogCustomEvent(testapp_registry::kQueryResponseMetricId, std::move(parts),
-                         [&](auto result_) { result = std::move(result_); });
-  RunLoopUntilIdle();
-  ASSERT_TRUE(result.is_ok());
-  EXPECT_EQ(fake_logger->call_count(), 1);
-  auto event = fake_logger->last_event_logged();
-  EXPECT_EQ(event.metric_id(), testapp_registry::kQueryResponseMetricId);
-  EXPECT_EQ(event.custom_event().values().size(), 3);
-  EXPECT_EQ(event.custom_event().values().at("query").string_value(), "SELECT 1;");
-  EXPECT_EQ(event.custom_event().values().at("wait_time_ms").int_value(), 1234);
-  EXPECT_EQ(event.custom_event().values().at("response_code").index_value(), 2);
-}
-
 TEST_F(CobaltAppTest, ShutDown) {
   EXPECT_EQ(fake_service_->is_shut_down(), false);
 

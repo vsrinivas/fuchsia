@@ -71,14 +71,4 @@ zx_status_t StubMetricEventLogger_Sync::LogMetricEvents(
   return ZX_OK;
 }
 
-zx_status_t StubMetricEventLogger_Sync::LogCustomEvent(
-    uint32_t metric_id, ::std::vector<::fuchsia::metrics::CustomEventValue> event_values,
-    ::fuchsia::metrics::MetricEventLogger_LogCustomEvent_Result* out_result) {
-  call_count_++;
-  last_log_metric_method_invoked_ = LogMetricMethod::kLogCustomEvent;
-  last_metric_id_ = metric_id;
-  *out_result = fpromise::ok();
-  return ZX_OK;
-}
-
 }  // namespace cobalt

@@ -176,6 +176,7 @@ protocol MetricEventLogger {
     /// `event_values` The values for the custom Event. There must be one value
     /// for each dimension of the metric and the types of the values must
     /// be consistent with the dimensions declared in the metric definition.
+    @available(deprecated=9, removed=10)
     LogCustomEvent(struct {
         metric_id uint32;
         event_values vector<CustomEventValue>:MAX;
@@ -212,6 +213,7 @@ type MetricEventPayload = flexible union {
 };
 
 /// A value for a custom event. This is used by the method LogCustomEvent().
+@available(deprecated=9, removed=10)
 type CustomEventValue = struct {
     /// The name of the metric's dimension this value is for.
     dimension_name string:MAX;
@@ -221,6 +223,7 @@ type CustomEventValue = struct {
 };
 
 /// A custom event value that may be a string, int, double, or index.
+@available(deprecated=9, removed=10)
 type Value = strict union {
     1: string_value string:MAX;
     2: int_value int64;

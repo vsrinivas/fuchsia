@@ -29,9 +29,6 @@ class StubMetricEventLogger_Sync : public fuchsia::metrics::MetricEventLogger_Sy
   zx_status_t LogMetricEvents(
       ::std::vector<::fuchsia::metrics::MetricEvent> events,
       ::fuchsia::metrics::MetricEventLogger_LogMetricEvents_Result* out_result) override;
-  zx_status_t LogCustomEvent(
-      uint32_t metric_id, ::std::vector<::fuchsia::metrics::CustomEventValue> event_values,
-      ::fuchsia::metrics::MetricEventLogger_LogCustomEvent_Result* out_result) override;
 
   uint32_t last_metric_id() { return last_metric_id_; }
 

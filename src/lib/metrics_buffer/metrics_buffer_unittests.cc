@@ -224,12 +224,6 @@ class ServerAndClient {
       completer.ReplySuccess();
     }
 
-    void LogCustomEvent(LogCustomEventRequestView request,
-                        LogCustomEventCompleter::Sync& completer) override {
-      ZX_ASSERT_MSG(false, "message not expected");
-      completer.ReplySuccess();
-    }
-
     void LogMetricEvents(LogMetricEventsRequestView request,
                          LogMetricEventsCompleter::Sync& completer) override {
       parent_->IncLoggerMessageCount();

@@ -141,9 +141,6 @@ async fn cobalt_impl(handles: LocalComponentHandles) -> Result<(), Error> {
                                 MetricEventLoggerRequest::LogMetricEvents { responder, .. } => {
                                     let _ = responder.send(&mut Ok(()));
                                 }
-                                MetricEventLoggerRequest::LogCustomEvent { responder, .. } => {
-                                    let _ = responder.send(&mut Ok(()));
-                                }
                             }
                         }
                     })

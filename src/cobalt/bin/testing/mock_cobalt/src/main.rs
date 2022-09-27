@@ -100,77 +100,67 @@ async fn handle_metric_event_logger(
     log: EventsLogHandle,
 ) -> Result<(), fidl::Error> {
     use fidl_fuchsia_metrics::MetricEventLoggerRequest::*;
-    let fut = stream.try_for_each_concurrent(None, |event| {
-        async {
-            let mut log = log.lock().await;
-            let log_state = match event {
-                LogOccurrence { responder, metric_id, count, event_codes } => {
-                    let state = &mut log.log_occurrence;
-                    state.log.push(
-                        MetricEvent::builder(metric_id)
-                            .with_event_codes(event_codes)
-                            .as_occurrence(count),
-                    );
-                    responder.send(&mut Ok(()))?;
-                    state
-                }
-                LogInteger { responder, metric_id, value, event_codes } => {
-                    let state = &mut log.log_integer;
-                    state.log.push(
-                        MetricEvent::builder(metric_id)
-                            .with_event_codes(event_codes)
-                            .as_integer(value),
-                    );
-                    responder.send(&mut Ok(()))?;
-                    state
-                }
-                LogIntegerHistogram { responder, metric_id, histogram, event_codes } => {
-                    let state = &mut log.log_integer_histogram;
-                    state.log.push(
-                        MetricEvent::builder(metric_id)
-                            .with_event_codes(event_codes)
-                            .as_integer_histogram(histogram),
-                    );
-                    responder.send(&mut Ok(()))?;
-                    state
-                }
-                LogString { responder, metric_id, string_value, event_codes } => {
-                    let state = &mut log.log_string;
-                    state.log.push(
-                        MetricEvent::builder(metric_id)
-                            .with_event_codes(event_codes)
-                            .as_string(string_value),
-                    );
-                    responder.send(&mut Ok(()))?;
-                    state
-                }
-                LogMetricEvents { responder, mut events } => {
-                    let state = &mut log.log_metric_events;
-                    state.log.append(&mut events);
-                    responder.send(&mut Ok(()))?;
-                    state
-                }
-                // We can't easily support CustomEvents because custom events can't
-                // be packaged into MetricEvent objects.
-                LogCustomEvent { responder, .. } => {
-                    let _ = responder.send(&mut Err(fidl_fuchsia_metrics::Error::InternalError));
-                    unimplemented!("Custom Events are not supported by mock_cobalt");
-                }
-            };
-
-            while let Some(hanging_get_state) = log_state.hanging.pop() {
-                let mut last_observed = hanging_get_state.last_observed.lock().await;
-                let mut events: Vec<MetricEvent> = (&mut log_state.log)
-                    .iter()
-                    .skip(*last_observed)
-                    .take(MAX_QUERY_LENGTH)
-                    .map(Clone::clone)
-                    .collect();
-                *last_observed = log_state.log.len();
-                hanging_get_state.responder.send(&mut events.iter_mut(), false)?;
+    let fut = stream.try_for_each_concurrent(None, |event| async {
+        let mut log = log.lock().await;
+        let log_state = match event {
+            LogOccurrence { responder, metric_id, count, event_codes } => {
+                let state = &mut log.log_occurrence;
+                state.log.push(
+                    MetricEvent::builder(metric_id)
+                        .with_event_codes(event_codes)
+                        .as_occurrence(count),
+                );
+                responder.send(&mut Ok(()))?;
+                state
             }
-            Ok(())
+            LogInteger { responder, metric_id, value, event_codes } => {
+                let state = &mut log.log_integer;
+                state.log.push(
+                    MetricEvent::builder(metric_id).with_event_codes(event_codes).as_integer(value),
+                );
+                responder.send(&mut Ok(()))?;
+                state
+            }
+            LogIntegerHistogram { responder, metric_id, histogram, event_codes } => {
+                let state = &mut log.log_integer_histogram;
+                state.log.push(
+                    MetricEvent::builder(metric_id)
+                        .with_event_codes(event_codes)
+                        .as_integer_histogram(histogram),
+                );
+                responder.send(&mut Ok(()))?;
+                state
+            }
+            LogString { responder, metric_id, string_value, event_codes } => {
+                let state = &mut log.log_string;
+                state.log.push(
+                    MetricEvent::builder(metric_id)
+                        .with_event_codes(event_codes)
+                        .as_string(string_value),
+                );
+                responder.send(&mut Ok(()))?;
+                state
+            }
+            LogMetricEvents { responder, mut events } => {
+                let state = &mut log.log_metric_events;
+                state.log.append(&mut events);
+                responder.send(&mut Ok(()))?;
+                state
+            }
+        };
+
+        while let Some(hanging_get_state) = log_state.hanging.pop() {
+            let mut last_observed = hanging_get_state.last_observed.lock().await;
+            let mut events: Vec<MetricEvent> = (&mut log_state.log)
+                .iter()
+                .skip(*last_observed)
+                .take(MAX_QUERY_LENGTH)
+                .map(Clone::clone)
+                .collect();
+            *last_observed = log_state.log.len();
+            hanging_get_state.responder.send(&mut events.iter_mut(), false)?;
         }
+        Ok(())
     });
 
     match fut.await {

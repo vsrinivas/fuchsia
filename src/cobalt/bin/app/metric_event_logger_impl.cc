@@ -80,30 +80,6 @@ void MetricEventLoggerImpl::LogMetricEvents(
   }
 }
 
-void MetricEventLoggerImpl::LogCustomEvent(
-    uint32_t metric_id, std::vector<fuchsia::metrics::CustomEventValue> event_values,
-    fuchsia::metrics::MetricEventLogger::LogCustomEventCallback callback) {
-  TRACE_DURATION("cobalt_fidl", "MetricEventLoggerImpl::LogCustomEvent");
-  logger::EventValuesPtr inner_event_values(
-      new google::protobuf::Map<std::string, CustomDimensionValue>());
-  for (auto it = event_values.begin(); event_values.end() != it; it++) {
-    CustomDimensionValue value;
-    if (it->value.is_string_value()) {
-      value.set_string_value(it->value.string_value());
-    } else if (it->value.is_int_value()) {
-      value.set_int_value(it->value.int_value());
-    } else if (it->value.is_double_value()) {
-      value.set_double_value(it->value.double_value());
-    } else if (it->value.is_index_value()) {
-      value.set_index_value(it->value.index_value());
-    }
-
-    auto pair = google::protobuf::MapPair(it->dimension_name, value);
-    inner_event_values->insert(pair);
-  }
-  callback(ToMetricsResult(logger_->LogCustomEvent(metric_id, std::move(inner_event_values))));
-}
-
 using fuchsia::metrics::MetricEventPayload;
 fpromise::result<void, fuchsia::metrics::Error> MetricEventLoggerImpl::LogMetricEvent(
     fuchsia::metrics::MetricEvent event) {

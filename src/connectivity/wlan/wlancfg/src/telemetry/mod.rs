@@ -6373,9 +6373,6 @@ mod tests {
                     assert!(responder.send(result).is_ok());
                     events
                 }
-                Self::LogCustomEvent { .. } => {
-                    panic!("Testing for Cobalt LogCustomEvent not supported");
-                }
             }
         }
     }
