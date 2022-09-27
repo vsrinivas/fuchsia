@@ -457,13 +457,13 @@ impl gesture_arena::Winner for Winner {
         match u8::try_from(event.contacts.len()).unwrap_or(u8::MAX) {
             0 => ProcessNewEventResult::EndGesture(
                 EndGestureEvent::NoEvent,
-                "wanted 2 contacts, got 0",
+                Reason::Basic("wanted 2 contacts, got 0"),
             ),
             2 => {
                 if event.pressed_buttons.len() > 0 {
                     return ProcessNewEventResult::EndGesture(
                         EndGestureEvent::UnconsumedEvent(event),
-                        "wanted 0 pressed buttons",
+                        Reason::Basic("wanted 0 pressed buttons"),
                     );
                 }
 
@@ -473,7 +473,7 @@ impl gesture_arena::Winner for Winner {
                         fx_log_err!("failed to parse positions");
                         return ProcessNewEventResult::EndGesture(
                             EndGestureEvent::UnconsumedEvent(event),
-                            "failed to parse positions",
+                            Reason::Basic("failed to parse positions"),
                         );
                     }
                 };
@@ -485,7 +485,7 @@ impl gesture_arena::Winner for Winner {
                         fx_log_err!("new event contact id not match old event");
                         return ProcessNewEventResult::EndGesture(
                             EndGestureEvent::UnconsumedEvent(event),
-                            "contact ids changed since last event",
+                            Reason::Basic("contact ids changed since last event"),
                         );
                     }
                     Ok(m) => m,
@@ -494,7 +494,7 @@ impl gesture_arena::Winner for Winner {
                 if movements.iter().any(|m| m.has_delta_on_reverse_direction(self.direction)) {
                     return ProcessNewEventResult::EndGesture(
                         EndGestureEvent::UnconsumedEvent(event),
-                        "inconsistent direction",
+                        Reason::Basic("inconsistent direction"),
                     );
                 }
 
@@ -513,11 +513,11 @@ impl gesture_arena::Winner for Winner {
             }
             1 => ProcessNewEventResult::EndGesture(
                 EndGestureEvent::UnconsumedEvent(event),
-                "wanted 2 contacts, got 1",
+                Reason::Basic("wanted 2 contacts, got 1"),
             ),
             3.. => ProcessNewEventResult::EndGesture(
                 EndGestureEvent::UnconsumedEvent(event),
-                "wanted 2 contacts, got >= 3",
+                Reason::Basic("wanted 2 contacts, got >= 3"),
             ),
         }
     }

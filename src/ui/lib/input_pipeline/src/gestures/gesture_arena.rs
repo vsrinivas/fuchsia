@@ -242,7 +242,7 @@ pub(super) enum EndGestureEvent {
 #[derive(Debug)]
 pub(super) enum ProcessNewEventResult {
     ContinueGesture(Option<MouseEvent>, Box<dyn Winner>),
-    EndGesture(EndGestureEvent, &'static str),
+    EndGesture(EndGestureEvent, Reason),
 }
 
 pub(super) trait Winner: std::fmt::Debug {
@@ -796,7 +796,7 @@ impl GestureArena {
                 reason,
             ) => {
                 // TODO(https://fxbug.dev/105588): Gate log message on dynamic opt-in.
-                fx_log_info!("touchpad: {} ended: {}", type_name, reason);
+                fx_log_info!("touchpad: {} ended: {:?}", type_name, reason);
                 if has_finger_contact {
                     (MutableState::Chain, vec![generated_event])
                 } else {
@@ -808,7 +808,7 @@ impl GestureArena {
                 reason,
             ) => {
                 // TODO(https://fxbug.dev/105588): Gate log message on dynamic opt-in.
-                fx_log_info!("touchpad: {} ended: {}", type_name, reason);
+                fx_log_info!("touchpad: {} ended: {:?}", type_name, reason);
                 if unconsumed_event.contacts.len() > 0 {
                     self.handle_event_while_chain(unconsumed_event)
                 } else {
@@ -817,7 +817,7 @@ impl GestureArena {
             }
             ProcessNewEventResult::EndGesture(EndGestureEvent::NoEvent, reason) => {
                 // TODO(https://fxbug.dev/105588): Gate log message on dynamic opt-in.
-                fx_log_info!("touchpad: {} ended: {}", type_name, reason);
+                fx_log_info!("touchpad: {} ended: {:?}", type_name, reason);
                 if has_finger_contact {
                     (MutableState::Chain, vec![])
                 } else {
@@ -2552,7 +2552,7 @@ mod tests {
             let arena = make_forwarding_arena(winner.clone(), None);
             winner.set_next_result(ProcessNewEventResult::EndGesture(
                 EndGestureEvent::NoEvent,
-                "some reason",
+                Reason::Basic("some reason"),
             ));
             arena.handle_input_event(make_unhandled_touchpad_event()).await;
             assert_eq!(winner.calls_received(), 1);
@@ -2564,7 +2564,7 @@ mod tests {
             let arena = make_forwarding_arena(winner.clone(), None);
             winner.set_next_result(ProcessNewEventResult::EndGesture(
                 EndGestureEvent::NoEvent,
-                "some reason",
+                Reason::Basic("some reason"),
             ));
             arena.handle_input_event(make_unhandled_mouse_event()).await;
             assert_eq!(winner.calls_received(), 0);
@@ -2576,7 +2576,7 @@ mod tests {
             let arena = make_forwarding_arena(winner.clone(), None);
             winner.set_next_result(ProcessNewEventResult::EndGesture(
                 EndGestureEvent::NoEvent,
-                "some reason",
+                Reason::Basic("some reason"),
             ));
             arena.handle_input_event(make_unhandled_keyboard_event()).await;
             assert_eq!(winner.calls_received(), 0);
@@ -2663,7 +2663,7 @@ mod tests {
             let arena = make_forwarding_arena(winner.clone(), None);
             winner.set_next_result(ProcessNewEventResult::EndGesture(
                 EndGestureEvent::NoEvent,
-                "some reason",
+                Reason::Basic("some reason"),
             ));
             pretty_assertions::assert_eq!(
                 arena.handle_input_event(make_unhandled_touchpad_event()).await.as_slice(),
@@ -2684,7 +2684,7 @@ mod tests {
                     pressed_buttons: vec![],
                     timestamp: zx::Time::ZERO,
                 }),
-                "some reason",
+                Reason::Basic("some reason"),
             ));
 
             // Set a return value for the `examine_event()` call.
@@ -2720,7 +2720,7 @@ mod tests {
                     pressed_buttons: vec![],
                     timestamp: zx::Time::from_nanos(123456),
                 }),
-                "some reason",
+                Reason::Basic("some reason"),
             ));
 
             // Set a return value for the `examine_event()` call.
@@ -2780,7 +2780,7 @@ mod tests {
             };
             winner.set_next_result(ProcessNewEventResult::EndGesture(
                 EndGestureEvent::GeneratedEvent(mouse_event),
-                "some reason",
+                Reason::Basic("some reason"),
             ));
 
             // Verify events were generated.
@@ -2850,7 +2850,7 @@ mod tests {
             };
             winner.set_next_result(ProcessNewEventResult::EndGesture(
                 EndGestureEvent::GeneratedEvent(mouse_event),
-                "some reason",
+                Reason::Basic("some reason"),
             ));
             arena.clone().handle_input_event(make_unhandled_touchpad_event()).await;
             assert_matches!(*arena.mutable_state.borrow(), MutableState::Idle { .. });
@@ -2879,7 +2879,7 @@ mod tests {
             };
             winner.set_next_result(ProcessNewEventResult::EndGesture(
                 EndGestureEvent::GeneratedEvent(mouse_event),
-                "some reason",
+                Reason::Basic("some reason"),
             ));
             let touchpad_event = input_device::InputEvent {
                 event_time: zx::Time::from_nanos(123456),
@@ -2908,7 +2908,7 @@ mod tests {
             let arena = make_forwarding_arena(winner.clone(), None);
             winner.set_next_result(ProcessNewEventResult::EndGesture(
                 EndGestureEvent::NoEvent,
-                "reason",
+                Reason::Basic("reason"),
             ));
             arena.clone().handle_input_event(make_unhandled_touchpad_event()).await;
             assert_matches!(*arena.mutable_state.borrow(), MutableState::Idle);
@@ -2930,7 +2930,7 @@ mod tests {
                     contacts: vec![],
                     pressed_buttons: vec![],
                 }),
-                "reason",
+                Reason::Basic("reason"),
             ));
 
             // Set up `contender` to reply to the `examine_event()` call.

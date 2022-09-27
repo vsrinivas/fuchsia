@@ -177,13 +177,13 @@ impl gesture_arena::Winner for Winner {
         match u8::try_from(event.contacts.len()).unwrap_or(u8::MAX) {
             0 => ProcessNewEventResult::EndGesture(
                 EndGestureEvent::NoEvent,
-                "wanted 1 contact, got 0",
+                Reason::Basic("wanted 1 contact, got 0"),
             ),
             1 => {
                 if event.pressed_buttons.len() > 0 {
                     ProcessNewEventResult::EndGesture(
                         EndGestureEvent::UnconsumedEvent(event),
-                        "wanted 0 pressed buttons",
+                        Reason::Basic("wanted 0 pressed buttons"),
                     )
                 } else {
                     let last_position = event.contacts[0].position.clone();
@@ -195,7 +195,7 @@ impl gesture_arena::Winner for Winner {
             }
             2.. => ProcessNewEventResult::EndGesture(
                 EndGestureEvent::UnconsumedEvent(event),
-                "wanted 1 contact, got >= 2",
+                Reason::Basic("wanted 1 contact, got >= 2"),
             ),
         }
     }
