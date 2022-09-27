@@ -15,6 +15,7 @@
 
 #include <fuchsia/hardware/wlan/fullmac/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fit/function.h>
 #include <zircon/types.h>
 
 #include <mutex>
@@ -45,6 +46,11 @@ class WlanInterface : public WlanInterfaceDeviceType,
   static zx_status_t Create(zx_device_t* parent, const char* name, uint32_t iface_index,
                             wlan_mac_role_t role, DeviceContext* context,
                             zx::channel&& mlme_channel, WlanInterface** out_interface);
+
+  // Initiate an async remove call. The provided callback will be called once DdkRelease is called
+  // as part of the removal. Note that when `on_remove` is called the WlanInterface object is
+  // already destroyed and should not be referenced.
+  void Remove(fit::callback<void()>&& on_remove);
 
   // Device operations.
   void DdkRelease();
@@ -108,6 +114,8 @@ class WlanInterface : public WlanInterfaceDeviceType,
 
   wlan_mac_role_t role_;
   zx::channel mlme_channel_;
+
+  fit::callback<void()> on_remove_ __TA_GUARDED(mutex_);
 
   KeyRing key_ring_;
   ClientConnection client_connection_ __TA_GUARDED(mutex_);

@@ -80,7 +80,27 @@ zx_status_t WlanInterface::Create(zx_device_t* parent, const char* name, uint32_
   return ZX_OK;
 }
 
-void WlanInterface::DdkRelease() { delete this; }
+void WlanInterface::Remove(fit::callback<void()>&& on_remove) {
+  {
+    std::lock_guard lock(mutex_);
+    on_remove_ = std::move(on_remove);
+  }
+  DdkAsyncRemove();
+}
+
+void WlanInterface::DdkRelease() {
+  fit::callback<void()> on_remove;
+  {
+    std::lock_guard lock(mutex_);
+    if (on_remove_) {
+      on_remove = std::move(on_remove_);
+    }
+  }
+  delete this;
+  if (on_remove) {
+    on_remove();
+  }
+}
 
 zx_status_t WlanInterface::WlanFullmacImplStart(const wlan_fullmac_impl_ifc_protocol_t* ifc,
                                                 zx::channel* out_mlme_channel) {

@@ -260,12 +260,13 @@ void Device::DestroyIface(DestroyIfaceRequestView request, fdf::Arena &arena,
         completer.buffer(arena).ReplyError(ZX_ERR_NOT_FOUND);
         return;
       }
-      // Remove the network device port so no additional frames are queued up for transmission. Do
-      // this before the TX queue is flushed as part of deleting the interface. That way no stray
-      // TX frames can sneak into the TX queue between flushing the queue and removing the port.
-      client_interface_->DdkAsyncRemove();
+      // Remove the interface and asynchronously reply to the request once the removal is complete.
+      client_interface_->Remove(
+          [completer = completer.ToAsync(), arena = std::move(arena)]() mutable {
+            completer.buffer(arena).ReplySuccess();
+          });
       client_interface_ = nullptr;
-      break;
+      return;
     }
     case kApInterfaceId: {
       if (ap_interface_ == nullptr) {
@@ -273,9 +274,12 @@ void Device::DestroyIface(DestroyIfaceRequestView request, fdf::Arena &arena,
         completer.buffer(arena).ReplyError(ZX_ERR_NOT_FOUND);
         return;
       }
-      ap_interface_->DdkAsyncRemove();
+      // Remove the interface and asynchronously reply to the request once the removal is complete.
+      ap_interface_->Remove([completer = completer.ToAsync(), arena = std::move(arena)]() mutable {
+        completer.buffer(arena).ReplySuccess();
+      });
       ap_interface_ = nullptr;
-      break;
+      return;
     }
     default: {
       NXPF_ERR("AP interface %u unavailable, skipping destroy.", request->iface_id());
@@ -283,7 +287,11 @@ void Device::DestroyIface(DestroyIfaceRequestView request, fdf::Arena &arena,
       return;
     }
   }
-  completer.buffer(arena).ReplySuccess();
+  // At this point we MUST have either replied or used ToAsync with the intent of replying
+  // asynchronously.
+  if (completer.is_reply_needed()) {
+    NXPF_ERR("Completed DestroyIface without completing request");
+  }
 }
 
 void Device::SetCountry(SetCountryRequestView request, fdf::Arena &arena,
