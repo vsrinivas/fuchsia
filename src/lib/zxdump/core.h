@@ -46,6 +46,12 @@ inline constexpr std::string_view kThreadPropertyNoteName{"ZirconThreadProperty"
 // of the note are exactly as returned by read_state.
 inline constexpr std::string_view kThreadStateNoteName{"ZirconThreadState"};
 
+// The n_type field is always zero.  The contents is a time_t value, i.e.
+// 64-bit count of seconds since 1970-1-1T0:00 UTC.  (A note holding 0 claims
+// to be a dump made in 1970; to elide the dump date, the note should be
+// omitted entirely.)
+inline constexpr std::string_view kDateNoteName{"ZirconDumpDate"};
+
 // The contents are JSON, schema based on zx::system methods.
 inline constexpr std::string_view kSystemNoteName{"ZirconSystem.json"};
 

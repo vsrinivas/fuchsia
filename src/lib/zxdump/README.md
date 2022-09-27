@@ -302,6 +302,24 @@ interfaces, e.g. `"version_string"` maps to a JSON string value that
 `zx_system_get_version_string()` returned, and `"num_cpus"` maps to a JSON
 integer value that `zx_system_get_num_cpus()` returned.
 
+## Dump timestamps
+
+The dump-writer may choose to include a timestamp indicating when a dump was
+taken.  In job archives, each archive member file records a date; `ar tv` on an
+archive file will display each member's date.  Timestamps the dump-writer chose
+to elide appear as zero (i.e. 1970-1-1T0:00 UTC).  The dump-writer usually
+samples the UTC clock just before collecting each job's job-wide information
+and makes that the date of each member file in the "stub archive".  It samples
+the clock again just before collecting each process, and makes that the date of
+the process dump member file.  Hence, by convention the "dump date" indicates
+the earliest time any data was collected, though some of the data collected may
+reflect state changed by processes doing more work after collection began.
+
+The dump-writer may also choose to include the timestamp in an `ET_CORE` file.
+This is represented by the ELF note with name `ZirconDumpDate` and `n_type` of
+zero.  It contains a 64-bit POSIX `time_t` "seconds since Epoch" value.  This
+note does not appear at all if the dump-writer chose to elide the timestamp.
+
 ## Reader API
 
 The `zxdump` C++ library provides an API for reading dumps as well as one for

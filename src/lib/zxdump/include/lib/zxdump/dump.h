@@ -130,6 +130,9 @@ class ProcessDumpBase : protected DumpBase {
   // it stays that way.
   void clear();
 
+  // If this is called before DumpHeaders, the dump will include a date note.
+  void set_date(time_t date);
+
   // This can be called at most once and must be called first if at all.  If
   // this is not called, then threads may be allowed to run while the dump
   // takes place, yielding an inconsistent memory image; and CollectProcess

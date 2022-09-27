@@ -7,6 +7,7 @@
 #include <lib/stdcompat/string_view.h>
 
 #include <cstdlib>
+#include <ctime>
 
 #include "dump-tests.h"
 #include "job-archive.h"
@@ -26,6 +27,7 @@ constexpr const char* kJobsSwitch = "--jobs";
 constexpr const char* kJobArchiveSwitch = "--job-archive";
 constexpr const char* kZstdSwitch = "--zstd";
 constexpr const char* kSystemSwitch = "--system";
+constexpr const char* kNoDateSwitch = "--no-date";
 
 constexpr std::string_view kArchiveSuffix = ".a";
 
@@ -362,6 +364,97 @@ TEST(ZxdumpTests, GcoreProcessDumpSystemInfo) {
   auto read_result = holder.Insert(std::move(fd));
   ASSERT_TRUE(read_result.is_ok()) << read_result.error_value();
   ASSERT_NO_FATAL_FAILURE(process.CheckDump(holder));
+}
+
+TEST(ZxdumpTests, GcoreProcessDumpNoDate) {
+  zxdump::testing::TestProcessForPropertiesAndInfo process;
+  ASSERT_NO_FATAL_FAILURE(process.StartChild());
+
+  zxdump::testing::TestToolProcess child;
+  ASSERT_NO_FATAL_FAILURE(child.Init());
+  const auto& [dump_file, prefix, pid_string] =
+      GetOutputFile(child, "process-dump-no-date", process.koid());
+  std::vector<std::string> args({
+      kNoDateSwitch,
+      // Don't include threads.
+      kNoThreadsSwitch,
+      // Don't dump memory since we don't need it and it is large.
+      kExcludeMemorySwitch,
+      kOutputSwitch,
+      prefix,
+      pid_string,
+  });
+  ASSERT_NO_FATAL_FAILURE(child.Start("gcore", args));
+  ASSERT_NO_FATAL_FAILURE(child.CollectStdout());
+  ASSERT_NO_FATAL_FAILURE(child.CollectStderr());
+  int status;
+  ASSERT_NO_FATAL_FAILURE(child.Finish(status));
+  EXPECT_EQ(status, EXIT_SUCCESS);
+  EXPECT_EQ(child.collected_stdout(), "");
+  EXPECT_EQ(child.collected_stderr(), "");
+
+  fbl::unique_fd fd = dump_file.OpenOutput();
+  ASSERT_TRUE(fd) << dump_file.name() << ": " << strerror(errno);
+
+  zxdump::TaskHolder holder;
+  auto read_result = holder.Insert(std::move(fd));
+  ASSERT_TRUE(read_result.is_ok()) << read_result.error_value();
+
+  auto find_result = holder.root_job().find(process.koid());
+  ASSERT_TRUE(find_result.is_ok()) << find_result.error_value();
+
+  ASSERT_EQ(find_result->get().type(), ZX_OBJ_TYPE_PROCESS);
+  zxdump::Process& read_process = static_cast<zxdump::Process&>(find_result->get());
+
+  EXPECT_EQ(read_process.date(), zxdump::testing::kNoDate);
+}
+
+TEST(ZxdumpTests, GcoreProcessDumpDate) {
+  zxdump::testing::TestProcessForPropertiesAndInfo process;
+  ASSERT_NO_FATAL_FAILURE(process.StartChild());
+
+  // gcore includes a date note by default, but offers no way to fudge a
+  // synthetic date.  So it will use the current time when it starts the dump,
+  // which will be in the future (possibly rounded to the same current second).
+  const time_t before_dump = time(nullptr);
+  ASSERT_GT(before_dump, zxdump::testing::kNoDate);
+
+  zxdump::testing::TestToolProcess child;
+  ASSERT_NO_FATAL_FAILURE(child.Init());
+  const auto& [dump_file, prefix, pid_string] =
+      GetOutputFile(child, "process-dump-date", process.koid());
+  std::vector<std::string> args({
+      // Don't include threads.
+      kNoThreadsSwitch,
+      // Don't dump memory since we don't need it and it is large.
+      kExcludeMemorySwitch,
+      kOutputSwitch,
+      prefix,
+      pid_string,
+  });
+  ASSERT_NO_FATAL_FAILURE(child.Start("gcore", args));
+  ASSERT_NO_FATAL_FAILURE(child.CollectStdout());
+  ASSERT_NO_FATAL_FAILURE(child.CollectStderr());
+  int status;
+  ASSERT_NO_FATAL_FAILURE(child.Finish(status));
+  EXPECT_EQ(status, EXIT_SUCCESS);
+  EXPECT_EQ(child.collected_stdout(), "");
+  EXPECT_EQ(child.collected_stderr(), "");
+
+  fbl::unique_fd fd = dump_file.OpenOutput();
+  ASSERT_TRUE(fd) << dump_file.name() << ": " << strerror(errno);
+
+  zxdump::TaskHolder holder;
+  auto read_result = holder.Insert(std::move(fd));
+  ASSERT_TRUE(read_result.is_ok()) << read_result.error_value();
+
+  auto find_result = holder.root_job().find(process.koid());
+  ASSERT_TRUE(find_result.is_ok()) << find_result.error_value();
+
+  ASSERT_EQ(find_result->get().type(), ZX_OBJ_TYPE_PROCESS);
+  zxdump::Process& read_process = static_cast<zxdump::Process&>(find_result->get());
+
+  EXPECT_GE(read_process.date(), before_dump);
 }
 
 }  // namespace

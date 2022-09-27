@@ -302,5 +302,54 @@ TEST(ZxdumpTests, ProcessDumpSystemInfo) {
 
 // TODO(mcgrathr): test job archives with system info, nested repeats
 
+TEST(ZxdumpTests, ProcessDumpNoDate) {
+  TestFile file;
+  zxdump::FdWriter writer(file.RewoundFd());
+
+  TestProcessForPropertiesAndInfo process;
+  ASSERT_NO_FATAL_FAILURE(process.StartChild());
+  ASSERT_NO_FATAL_FAILURE(process.Dump(writer));
+
+  zxdump::TaskHolder holder;
+  auto read_result = holder.Insert(file.RewoundFd());
+  ASSERT_TRUE(read_result.is_ok()) << read_result.error_value();
+
+  auto find_result = holder.root_job().find(process.koid());
+  ASSERT_TRUE(find_result.is_ok()) << find_result.error_value();
+
+  ASSERT_EQ(find_result->get().type(), ZX_OBJ_TYPE_PROCESS);
+  zxdump::Process& read_process = static_cast<zxdump::Process&>(find_result->get());
+
+  // By default no date was recorded.
+  EXPECT_EQ(read_process.date(), kNoDate);
+}
+
+TEST(ZxdumpTests, ProcessDumpDate) {
+  TestFile file;
+  zxdump::FdWriter writer(file.RewoundFd());
+
+  TestProcessForPropertiesAndInfo process;
+  ASSERT_NO_FATAL_FAILURE(process.StartChild());
+
+  constexpr auto precollect = [](zxdump::ProcessDump<zx::unowned_process>& dump) {
+    dump.set_date(kTestDate);
+  };
+  ASSERT_NO_FATAL_FAILURE(process.Dump(writer, precollect));
+
+  zxdump::TaskHolder holder;
+  auto read_result = holder.Insert(file.RewoundFd());
+  ASSERT_TRUE(read_result.is_ok()) << read_result.error_value();
+
+  auto find_result = holder.root_job().find(process.koid());
+  ASSERT_TRUE(find_result.is_ok()) << find_result.error_value();
+
+  ASSERT_EQ(find_result->get().type(), ZX_OBJ_TYPE_PROCESS);
+  zxdump::Process& read_process = static_cast<zxdump::Process&>(find_result->get());
+
+  EXPECT_EQ(read_process.date(), kTestDate);
+}
+
+// TODO(mcgrathr): test job archives w/&w/o dates
+
 }  // namespace
 }  // namespace zxdump::testing

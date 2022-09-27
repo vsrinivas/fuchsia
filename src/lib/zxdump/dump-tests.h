@@ -24,6 +24,9 @@
 
 namespace zxdump::testing {
 
+constexpr time_t kNoDate = 0;           // Value for no date recorded.
+constexpr time_t kTestDate = 74697240;  // Long, long ago.
+
 // A simple test program starts up and waits.
 class TestProcess {
  public:

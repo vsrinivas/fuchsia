@@ -698,6 +698,8 @@ class ProcessDumpBase::Collector {
     return fitx::ok(offset);
   }
 
+  void set_date(time_t date) { std::get<DateNote>(notes_).Set(date); }
+
  private:
   struct ProcessInfoClass {
     using Handle = zx::process;
@@ -754,6 +756,24 @@ class ProcessDumpBase::Collector {
 
   using SystemNote = JsonNote<SystemClass>;
 
+  struct DateClass {
+    static constexpr auto MakeHeader = kMakeNote<kDateNoteName>;
+    static constexpr auto Pad = PadForElfNote;
+  };
+
+  class DateNote : public NoteBase<DateClass, 0> {
+   public:
+    fitx::result<Error> Collect(const zx::process& process) { return fitx::ok(); }
+
+    void Set(time_t date) {
+      date_ = date;
+      Emplace({reinterpret_cast<const std::byte*>(&date_), sizeof(date_)});
+    }
+
+   private:
+    time_t date_ = 0;
+  };
+
   using ThreadNotes = std::tuple<
       // This lists all the notes that can be extracted from a thread.
       // Ordering of the notes after the first two is not specified and can
@@ -778,6 +798,7 @@ class ProcessDumpBase::Collector {
       // notes after the first two is not specified and can change.
       ProcessInfo<ZX_INFO_HANDLE_BASIC, zx_info_handle_basic_t>,
       ProcessProperty<ZX_PROP_NAME, char[ZX_MAX_NAME_LEN]>,
+      DateNote,    // Self-elides when not set.
       SystemNote,  // Optionally included in any given process.
       ProcessInfo<ZX_INFO_PROCESS, zx_info_process_t>,
       ProcessInfo<ZX_INFO_PROCESS_THREADS, zx_koid_t>,
@@ -1305,6 +1326,8 @@ fitx::result<Error, size_t> ProcessDumpBase::DumpHeadersImpl(DumpCallback dump, 
 fitx::result<Error, size_t> ProcessDumpBase::DumpMemoryImpl(DumpCallback callback, size_t limit) {
   return collector_->DumpMemory(std::move(callback), limit);
 }
+
+void ProcessDumpBase::set_date(time_t date) { collector_->set_date(date); }
 
 // The Collector borrows the process handle.  A single Collector cannot be
 // used for a different process later.  It can be clear()'d to reset all

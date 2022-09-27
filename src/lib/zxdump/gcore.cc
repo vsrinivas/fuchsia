@@ -43,7 +43,7 @@ struct Flags {
     return filename;
   }
 
-  time_t Date() const { return archive_member_date_ ? time(nullptr) : 0; }
+  time_t Date() const { return record_date_ ? time(nullptr) : 0; }
 
   std::string_view output_prefix_ = kOutputPrefix;
   size_t limit_ = zxdump::DefaultLimit();
@@ -54,7 +54,7 @@ struct Flags {
   bool collect_job_children_ = true;
   bool collect_job_processes_ = true;
   bool flatten_jobs_ = false;
-  bool archive_member_date_ = true;
+  bool record_date_ = true;
   bool zstd_ = false;
 };
 
@@ -175,6 +175,8 @@ class DumperBase {
 
   zx_koid_t koid() const { return koid_; }
 
+  time_t ClockIn(const Flags& flags) { return 0; }
+
  protected:
   constexpr explicit DumperBase(zx_koid_t koid) : koid_(koid) {}
 
@@ -189,6 +191,14 @@ class ProcessDumper : public DumperBase {
 
   auto OutputFile(const Flags& flags, bool outer = true) const {
     return flags.OutputFile(koid(), outer);
+  }
+
+  time_t ClockIn(const Flags& flags) {
+    time_t dump_date = flags.Date();
+    if (dump_date != 0) {
+      dumper_.set_date(dump_date);
+    }
+    return dump_date;
   }
 
   // Phase 1: Collect underpants!
@@ -390,6 +400,7 @@ class JobDumper::CollectedJob {
   // Later ok() indicates if any process or child collection failed.
   bool DeepCollect(const Flags& flags) {
     // Collect the job itself.
+    dumper_.ClockIn(flags);
     if (auto collected_size = dumper_.Collect(flags, false)) {
       content_size_ += *collected_size;
 
@@ -456,7 +467,7 @@ class JobDumper::CollectedJob {
 
   void CollectProcess(zx::process process, zx_koid_t pid, const Flags& flags) {
     ProcessDumper dump{std::move(process), pid};
-    time_t dump_date = flags.Date();
+    time_t dump_date = dump.ClockIn(flags);
     if (auto collected_size = dump.Collect(flags, false)) {
       CollectedProcess core_file{std::move(dump), *collected_size, dump_date};
       content_size_ += core_file.size_bytes();
@@ -492,7 +503,7 @@ bool JobDumper::Dump(Writer& writer, const Flags& flags) {
   for (auto& [process, pid] : processes_) {
     // Collect the process and thus discover the ET_CORE file size.
     ProcessDumper process_dump{std::move(process), pid};
-    time_t process_dump_date = flags.Date();
+    time_t process_dump_date = process_dump.ClockIn(flags);
     if (auto collected_size = process_dump.Collect(flags, false)) {
       // Dump the member header, now complete with size.
       if (!DumpMemberHeader(writer, process_dump.OutputFile(flags, false),  //
@@ -548,6 +559,7 @@ bool WriteDump(Dumper dumper, const Flags& flags) {
     return false;
   }
   Writer writer{std::move(fd), std::move(outfile), flags.zstd_};
+  dumper.ClockIn(flags);
   return writer.Ok(dumper.Collect(flags, true) && dumper.Dump(writer, flags));
 }
 
@@ -624,8 +636,8 @@ int main(int argc, char** argv) {
     --flat-job-archive, -f             write flattened job archives
     --no-children, -c                  don't recurse to child jobs
     --no-processes, -p                 don't dump processes found in jobs
-    --no-date, -D                      don't put dates into job archives
-    --date, -U                         do put dates into job archives (default)
+    --no-date, -D                      don't record dates in dumps
+    --date, -U                         record dates in dumps (default)
     --system, -s                       include system-wide information
     --system-recursive, -S             ... repeated in each child dump
     --root-job, -a                     dump the root job
@@ -680,11 +692,11 @@ essential services.  PID arguments are not allowed with --root-job unless
         break;
 
       case 'D':
-        flags.archive_member_date_ = false;
+        flags.record_date_ = false;
         continue;
 
       case 'U':
-        flags.archive_member_date_ = true;
+        flags.record_date_ = true;
         continue;
 
       case 'o':

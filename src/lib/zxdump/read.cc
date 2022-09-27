@@ -885,6 +885,15 @@ fitx::result<Error> TaskHolder::JobTree::ReadElf(DumpFile& file, FileRange where
         continue;
       }
 
+      // Check for a dump date note.
+      if (name == kDateNoteName) {
+        if (desc.size() < sizeof(process.date_)) {
+          return CorruptedDump();
+        }
+        memcpy(&process.date_, desc.data(), sizeof(process.date_));
+        continue;
+      }
+
       // Check for a process info note.
       if (name == kProcessInfoNoteName) {
         if (nhdr.type == ZX_INFO_HANDLE_BASIC) {
@@ -1166,6 +1175,9 @@ fitx::result<Error> TaskHolder::JobTree::ReadArchive(DumpFile& file, FileRange a
         if (basic_info.type != ZX_OBJ_TYPE_JOB) {
           return CorruptedDump();
         }
+      }
+      if (job.date_ == 0) {
+        job.date_ = member.date;
       }
       return AddNote(job.info_, topic, bytes);
     }
