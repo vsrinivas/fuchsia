@@ -50,6 +50,9 @@ class EcmCtx {
     sync_completion_signal(&completion);
   }
 
+  list_node_t* tx_txn_bufs() TA_REQ(tx_mutex) { return &tx_txn_bufs_; }
+  list_node_t* tx_pending_infos() TA_REQ(tx_mutex) { return &tx_pending_infos_; }
+
   zx_device_t* zxdev = nullptr;
   zx_device_t* usb_device = nullptr;
   usb_protocol_t usbproto;
@@ -80,8 +83,6 @@ class EcmCtx {
   // when both locks are held.
   fbl::Mutex tx_mutex TA_ACQ_BEFORE(ethernet_mutex);
   ecm_endpoint_t tx_endpoint{};
-  list_node_t tx_txn_bufs{};       // list of usb_request_t
-  list_node_t tx_pending_infos{};  // list of txn_info_t
   bool unbound = false;            // set to true when device is going away. Guarded by tx_mutex
   uint64_t tx_endpoint_delay = 0;  // wait time between 2 transmit requests
 
@@ -100,6 +101,9 @@ class EcmCtx {
 
   // Returns true if its able to successfully parse the interface descriptor passed.
   bool ParseCdcEthernetDescriptor(usb_cs_ethernet_interface_descriptor_t* desc);
+
+  list_node_t tx_txn_bufs_{};       // list of usb_request_t
+  list_node_t tx_pending_infos_{};  // list of txn_info_t
 };
 
 }  // namespace usb_cdc_ecm

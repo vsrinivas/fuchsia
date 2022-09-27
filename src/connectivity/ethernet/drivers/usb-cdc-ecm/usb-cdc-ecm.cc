@@ -45,7 +45,7 @@ void UsbCdcEcm::DdkUnbind(ddk::UnbindTxn unbindtxn) {
   fbl::AutoLock tx_lock(&ecm_ctx_.tx_mutex);
   ecm_ctx_.unbound = true;
   txn_info_t* pending_txn;
-  while ((pending_txn = list_remove_head_type(&ecm_ctx_.tx_pending_infos, txn_info_t, node)) !=
+  while ((pending_txn = list_remove_head_type(ecm_ctx_.tx_pending_infos(), txn_info_t, node)) !=
          nullptr) {
     CompleteTxn(pending_txn, ZX_ERR_PEER_CLOSED);
   }
@@ -56,9 +56,13 @@ void UsbCdcEcm::EcmFree() {
   if (ecm_ctx_.int_thread.has_value()) {
     thrd_join(ecm_ctx_.int_thread.value(), nullptr);
   }
+  list_node_t bufs;
+  {
+    fbl::AutoLock _(&ecm_ctx_.tx_mutex);
+    list_move(ecm_ctx_.tx_txn_bufs(), &bufs);
+  }
   usb_request_t* req;
-  while ((req = usb_req_list_remove_head(&ecm_ctx_.tx_txn_bufs, ecm_ctx_.parent_req_size)) !=
-         nullptr) {
+  while ((req = usb_req_list_remove_head(&bufs, ecm_ctx_.parent_req_size)) != nullptr) {
     usb_request_release(req);
   }
   if (ecm_ctx_.int_txn_buf) {
@@ -151,7 +155,7 @@ void UsbCdcEcm::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
       status = SendLocked(netbuf);
       if (status == ZX_ERR_SHOULD_WAIT) {
         // No buffers available, queue it up
-        list_add_tail(&ecm_ctx_.tx_pending_infos, &txn->node);
+        list_add_tail(ecm_ctx_.tx_pending_infos(), &txn->node);
       }
     }
   }
@@ -325,8 +329,11 @@ void UsbCdcEcm::DdkInit(ddk::InitTxn txn) {
     zxlogf(ERROR, "Failed to complete DdkInit");
   });
 
-  list_initialize(&ecm_ctx_.tx_txn_bufs);
-  list_initialize(&ecm_ctx_.tx_pending_infos);
+  {
+    fbl::AutoLock _(&ecm_ctx_.tx_mutex);
+    list_initialize(ecm_ctx_.tx_txn_bufs());
+    list_initialize(ecm_ctx_.tx_pending_infos());
+  }
 
   zx_status_t result =
       usb_control_out(&ecm_ctx_.usbproto, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
@@ -402,11 +409,12 @@ void UsbCdcEcm::DdkInit(ddk::InitTxn txn) {
     // As per the CDC-ECM spec, we need to send a zero-length packet to signify the end of
     // transmission when the endpoint max packet size is a factor of the total transmission size
     tx_buf->header.send_zlp = true;
-
-    zx_status_t add_result =
-        usb_req_list_add_head(&ecm_ctx_.tx_txn_bufs, tx_buf, ecm_ctx_.parent_req_size);
-    ZX_DEBUG_ASSERT(add_result == ZX_OK);
-
+    {
+      fbl::AutoLock _(&ecm_ctx_.tx_mutex);
+      zx_status_t add_result =
+          usb_req_list_add_head(ecm_ctx_.tx_txn_bufs(), tx_buf, ecm_ctx_.parent_req_size);
+      ZX_DEBUG_ASSERT(add_result == ZX_OK);
+    }
     tx_buf_remain -= tx_buf_sz;
   }
 
@@ -504,7 +512,7 @@ zx_status_t UsbCdcEcm::EcmBind(void* ctx, zx_device_t* device) {
 
 zx_status_t UsbCdcEcm::SendLocked(ethernet_netbuf_t* netbuf) {
   // Make sure that we can get all of the tx buffers we need to use
-  usb_request_t* req = usb_req_list_remove_head(&ecm_ctx_.tx_txn_bufs, ecm_ctx_.parent_req_size);
+  usb_request_t* req = usb_req_list_remove_head(ecm_ctx_.tx_txn_bufs(), ecm_ctx_.parent_req_size);
   if (req == nullptr) {
     return ZX_ERR_SHOULD_WAIT;
   }
@@ -515,7 +523,7 @@ zx_status_t UsbCdcEcm::SendLocked(ethernet_netbuf_t* netbuf) {
   size_t length = netbuf->data_size;
   if ((status = QueueRequest(byte_data, length, req)) != ZX_OK) {
     zx_status_t add_status =
-        usb_req_list_add_tail(&ecm_ctx_.tx_txn_bufs, req, ecm_ctx_.parent_req_size);
+        usb_req_list_add_tail(ecm_ctx_.tx_txn_bufs(), req, ecm_ctx_.parent_req_size);
     ZX_DEBUG_ASSERT(add_status == ZX_OK);
     return status;
   }
@@ -597,7 +605,7 @@ void UsbCdcEcm::UsbWriteComplete(usb_request_t* request) __TA_NO_THREAD_SAFETY_A
     if (!request->reset) {
       // Return transmission buffer to pool
       zx_status_t status =
-          usb_req_list_add_tail(&ecm_ctx_.tx_txn_bufs, request, ecm_ctx_.parent_req_size);
+          usb_req_list_add_tail(ecm_ctx_.tx_txn_bufs(), request, ecm_ctx_.parent_req_size);
       ZX_DEBUG_ASSERT(status == ZX_OK);
       if (request->response.status == ZX_ERR_IO_REFUSED) {
         zxlogf(DEBUG, "Resetting transmit endpoint");
@@ -634,10 +642,10 @@ void UsbCdcEcm::UsbWriteComplete(usb_request_t* request) __TA_NO_THREAD_SAFETY_A
       }
     }
     request->reset = false;
-    if (!list_is_empty(&ecm_ctx_.tx_pending_infos)) {
-      txn = list_peek_head_type(&ecm_ctx_.tx_pending_infos, txn_info_t, node);
+    if (!list_is_empty(ecm_ctx_.tx_pending_infos())) {
+      txn = list_peek_head_type(ecm_ctx_.tx_pending_infos(), txn_info_t, node);
       if ((send_status = SendLocked(&txn->netbuf)) != ZX_ERR_SHOULD_WAIT) {
-        list_remove_head(&ecm_ctx_.tx_pending_infos);
+        list_remove_head(ecm_ctx_.tx_pending_infos());
         additional_tx_queued = true;
       }
     }
