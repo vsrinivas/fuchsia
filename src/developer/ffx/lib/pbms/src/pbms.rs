@@ -11,8 +11,11 @@ use {
             get_gcs_client_without_auth,
         },
         repo_info::RepoInfo,
+        structured_ui,
     },
-    ::gcs::client::{DirectoryProgress, FileProgress, ProgressResponse, ProgressResult, Throttle},
+    ::gcs::client::{
+        DirectoryProgress, FileProgress, ProgressResponse, ProgressResult, ProgressState, Throttle,
+    },
     anyhow::{anyhow, bail, Context, Result},
     camino::Utf8Path,
     chrono::{DateTime, NaiveDateTime, Utc},
@@ -45,7 +48,7 @@ pub(crate) async fn fetch_product_metadata<F>(
     progress: &mut F,
 ) -> Result<()>
 where
-    F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
+    F: FnMut(ProgressState<'_>, ProgressState<'_>) -> ProgressResult,
 {
     tracing::info!("Getting product metadata for {:?}", repo);
     async_fs::create_dir_all(&output_dir).await.context("create directory")?;
@@ -189,20 +192,22 @@ pub(crate) fn url_sans_fragment(product_url: &url::Url) -> Result<url::Url> {
 }
 
 /// Helper for `get_product_data()`, see docs there.
-pub(crate) async fn get_product_data_from_gcs<F>(
+pub(crate) async fn get_product_data_from_gcs<I>(
     product_url: &url::Url,
     local_repo_dir: &std::path::Path,
-    progress: &mut F,
+    ui: &mut I,
 ) -> Result<()>
 where
-    F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
+    I: structured_ui::Interface + Sync,
 {
     tracing::debug!("get_product_data_from_gcs {:?} to {:?}", product_url, local_repo_dir);
     assert_eq!(product_url.scheme(), GS_SCHEME);
     let product_name = product_url.fragment().expect("URL with trailing product_name fragment.");
     let url = url_sans_fragment(product_url)?;
 
-    fetch_product_metadata(&url, local_repo_dir, progress).await.context("fetching metadata")?;
+    fetch_product_metadata(&url, local_repo_dir, &mut |_d, _f| Ok(ProgressResponse::Continue))
+        .await
+        .context("fetching metadata")?;
 
     let file_path = local_repo_dir.join("product_bundles.json");
     if !file_path.is_file() {
@@ -212,18 +217,18 @@ where
     entries.add_from_path(&file_path).context("adding entries from gcs")?;
     let product_bundle = find_product_bundle(&entries, &Some(product_name.to_string()))
         .context("finding product bundle")?;
-    fetch_data_for_product_bundle_v1(&product_bundle, &url, local_repo_dir, progress).await
+    fetch_data_for_product_bundle_v1(&product_bundle, &url, local_repo_dir, ui).await
 }
 
 /// Helper for `get_product_data()`, see docs there.
-pub async fn fetch_data_for_product_bundle_v1<F>(
+pub async fn fetch_data_for_product_bundle_v1<I>(
     product_bundle: &sdk_metadata::ProductBundleV1,
     product_url: &url::Url,
     local_repo_dir: &std::path::Path,
-    progress: &mut F,
+    ui: &mut I,
 ) -> Result<()>
 where
-    F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
+    I: structured_ui::Interface + Sync,
 {
     // Handy debugging switch to disable images download.
     if true {
@@ -244,9 +249,17 @@ where
             if !exists_in_gcs(&base_url.as_str()).await? {
                 tracing::warn!("The base_uri does not exist: {}", base_url);
             }
-            fetch_by_format(&image.format, &base_url, &local_dir, progress)
-                .await
-                .with_context(|| format!("fetching images for {}.", product_bundle.name))?;
+            fetch_by_format(&image.format, &base_url, &local_dir, &mut |d, f| {
+                let mut progress = structured_ui::Progress::builder();
+                progress.title(&product_bundle.name);
+                progress.entry("Image data", /*at=*/ 1, /*of=*/ 2, "steps");
+                progress.entry(&d.url, d.at, d.of, "files");
+                progress.entry(&f.url, f.at, f.of, "bytes");
+                ui.present(&structured_ui::Presentation::Progress(progress))?;
+                Ok(ProgressResponse::Continue)
+            })
+            .await
+            .with_context(|| format!("fetching images for {}.", product_bundle.name))?;
         }
         tracing::debug!("Total fetch images runtime {} seconds.", start.elapsed().as_secs_f32());
     }
@@ -266,7 +279,15 @@ where
             product_url,
             &local_dir,
             &product_bundle.packages,
-            progress,
+            &mut |d, f| {
+                let mut progress = structured_ui::Progress::builder();
+                progress.title(&product_bundle.name);
+                progress.entry("Package data", /*at=*/ 2, /*at=*/ 2, "steps");
+                progress.entry(&d.url, d.at, d.of, "files");
+                progress.entry(&f.url, f.at, f.of, "bytes");
+                ui.present(&structured_ui::Presentation::Progress(progress))?;
+                Ok(ProgressResponse::Continue)
+            },
         )
         .await
         .with_context(|| {

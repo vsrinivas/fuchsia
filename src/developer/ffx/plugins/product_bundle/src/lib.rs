@@ -7,7 +7,6 @@
 //! - acquire related data files, such as disk partition images (data)
 
 use {
-    ::gcs::client::{DirectoryProgress, FileProgress, ProgressResponse, ProgressResult},
     anyhow::{bail, Context, Result},
     ffx_core::ffx_plugin,
     ffx_product_bundle_args::{
@@ -16,10 +15,12 @@ use {
     fidl_fuchsia_developer_ffx::RepositoryRegistryProxy,
     fidl_fuchsia_developer_ffx_ext::{RepositoryError, RepositorySpec},
     fuchsia_url::RepositoryUrl,
-    pbms::{get_product_data, is_pb_ready, product_bundle_urls, update_metadata_all},
+    pbms::{
+        get_product_data, is_pb_ready, product_bundle_urls, structured_ui, update_metadata_all,
+    },
     std::{
         convert::TryInto,
-        io::{stdout, Write},
+        io::{stderr, stdin, stdout},
     },
 };
 
@@ -32,71 +33,67 @@ pub async fn product_bundle(
     cmd: ProductBundleCommand,
     repos: RepositoryRegistryProxy,
 ) -> Result<()> {
-    product_bundle_plugin_impl(cmd, &mut stdout(), repos).await
+    let mut input = stdin();
+    let mut output = stdout();
+    let mut err_out = stderr();
+    let mut ui = structured_ui::TextUi::new(&mut input, &mut output, &mut err_out);
+    product_bundle_plugin_impl(cmd, &mut ui, repos).await
 }
 
 /// Dispatch to a sub-command.
-pub async fn product_bundle_plugin_impl<W>(
+pub async fn product_bundle_plugin_impl<I>(
     command: ProductBundleCommand,
-    writer: &mut W,
+    ui: &mut I,
     repos: RepositoryRegistryProxy,
 ) -> Result<()>
 where
-    W: Write + Sync,
+    I: structured_ui::Interface + Sync,
 {
     match &command.sub {
-        SubCommand::List(cmd) => pb_list(writer, &cmd).await?,
-        SubCommand::Get(cmd) => pb_get(writer, &cmd, repos).await?,
+        SubCommand::List(cmd) => pb_list(ui, &cmd).await?,
+        SubCommand::Get(cmd) => pb_get(ui, &cmd, repos).await?,
         SubCommand::Create(cmd) => pb_create(&cmd).await?,
     }
     Ok(())
 }
 
 /// `ffx product-bundle list` sub-command.
-async fn pb_list<W: Write + Sync>(writer: &mut W, cmd: &ListCommand) -> Result<()> {
+async fn pb_list<I>(ui: &mut I, cmd: &ListCommand) -> Result<()>
+where
+    I: structured_ui::Interface + Sync,
+{
     tracing::debug!("pb_list");
     if !cmd.cached {
         let storage_dir = pbms::get_storage_dir().await?;
-        update_metadata_all(&storage_dir, &mut |_d, _f| Ok(ProgressResponse::Continue)).await?;
+        update_metadata_all(&storage_dir, ui).await?;
     }
     let mut entries = product_bundle_urls().await.context("list pbms")?;
     entries.sort();
-    writeln!(writer, "")?;
+    let mut table = structured_ui::TableRows::builder();
     for entry in entries {
-        let ready = if is_pb_ready(&entry).await? { "*" } else { "" };
-        writeln!(writer, "{}{}", entry, ready)?;
+        let ready = if is_pb_ready(&entry).await? { "*" } else { " " };
+        table.row(vec![format!("{}", ready), format!("{}", entry)]);
     }
-    writeln!(
-        writer,
+    table.note(
         "\
         \n*No need to fetch with `ffx product-bundle get ...`. \
         The '*' is not part of the name.\
-        \n"
-    )?;
+        \n",
+    );
+    ui.present(&structured_ui::Presentation::Table(table.clone()))?;
     Ok(())
 }
 
 /// `ffx product-bundle get` sub-command.
-async fn pb_get<W: Write + Sync>(
-    writer: &mut W,
-    cmd: &GetCommand,
-    repos: RepositoryRegistryProxy,
-) -> Result<()> {
+async fn pb_get<I>(ui: &mut I, cmd: &GetCommand, repos: RepositoryRegistryProxy) -> Result<()>
+where
+    I: structured_ui::Interface + Sync,
+{
     let start = std::time::Instant::now();
     tracing::debug!("pb_get {:?}", cmd.product_bundle_name);
-    let product_url = determine_pbm_url(cmd, &mut |_d, _f| {
-        write!(writer, ".")?;
-        writer.flush()?;
-        Ok(ProgressResponse::Continue)
-    })
-    .await?;
+    let product_url = determine_pbm_url(cmd, ui).await?;
     let output_dir = pbms::get_product_dir(&product_url).await?;
-    get_product_data(&product_url, &output_dir, &mut |_d, _f| {
-        write!(writer, ".")?;
-        writer.flush()?;
-        Ok(ProgressResponse::Continue)
-    })
-    .await?;
+    get_product_data(&product_url, &output_dir, ui).await?;
 
     let repo_name = if let Some(repo_name) = &cmd.repository {
         repo_name.clone()
@@ -152,13 +149,13 @@ async fn pb_get<W: Write + Sync>(
 }
 
 /// Convert cli args to a full URL pointing to product bundle metadata
-async fn determine_pbm_url<F>(cmd: &GetCommand, progress: &mut F) -> Result<url::Url>
+async fn determine_pbm_url<I>(cmd: &GetCommand, ui: &mut I) -> Result<url::Url>
 where
-    F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
+    I: structured_ui::Interface + Sync,
 {
     if !cmd.cached {
         let base_dir = pbms::get_storage_dir().await?;
-        update_metadata_all(&base_dir, progress).await?;
+        update_metadata_all(&base_dir, ui).await?;
     }
     pbms::select_product_bundle(&cmd.product_bundle_name).await
 }

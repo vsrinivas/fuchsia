@@ -28,7 +28,7 @@ use {
         },
         repo_info::RepoInfo,
     },
-    ::gcs::client::{DirectoryProgress, FileProgress, ProgressResult},
+    ::gcs::client::ProgressResponse,
     anyhow::{anyhow, bail, Context, Result},
     errors::ffx_bail,
     ffx_config::sdk,
@@ -44,6 +44,7 @@ pub use crate::pbms::{fetch_data_for_product_bundle_v1, get_product_dir, get_sto
 mod gcs;
 mod pbms;
 mod repo_info;
+pub mod structured_ui;
 
 /// Load a product bundle by name, uri, or local path.
 /// This is capable of loading both v1 and v2 ProductBundles.
@@ -68,9 +69,9 @@ pub async fn load_product_bundle(product_bundle: &Option<String>) -> Result<Prod
 }
 
 /// For each non-local URL in ffx CONFIG_METADATA, fetch updated info.
-pub async fn update_metadata_all<F>(output_dir: &Path, progress: &mut F) -> Result<()>
+pub async fn update_metadata_all<I>(output_dir: &Path, _ui: &mut I) -> Result<()>
 where
-    F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
+    I: structured_ui::Interface + Sync,
 {
     tracing::debug!("update_metadata_all");
     let repos = pbm_repo_list().await.context("getting repo list")?;
@@ -80,24 +81,28 @@ where
             // There's no need to fetch local files or unrecognized schemes.
             continue;
         }
-        fetch_product_metadata(&repo_url, &output_dir.join(pb_dir_name(&repo_url)), progress)
-            .await
-            .context("fetching product metadata")?;
+        fetch_product_metadata(
+            &repo_url,
+            &output_dir.join(pb_dir_name(&repo_url)),
+            &mut |_d, _f| Ok(ProgressResponse::Continue),
+        )
+        .await
+        .context("fetching product metadata")?;
     }
     Ok(())
 }
 
 /// Update metadata from given url.
-pub async fn update_metadata_from<F>(
+pub async fn update_metadata_from<I>(
     product_url: &url::Url,
     output_dir: &Path,
-    progress: &mut F,
+    _ui: &mut I,
 ) -> Result<()>
 where
-    F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
+    I: structured_ui::Interface + Sync,
 {
     tracing::debug!("update_metadata_from");
-    fetch_product_metadata(&product_url, output_dir, progress)
+    fetch_product_metadata(&product_url, output_dir, &mut |_d, _f| Ok(ProgressResponse::Continue))
         .await
         .context("fetching product metadata")
 }
@@ -276,13 +281,13 @@ pub async fn is_pb_ready(product_url: &url::Url) -> Result<bool> {
 /// is used.
 ///
 /// `writer` is used to output user messages.
-pub async fn get_product_data<F>(
+pub async fn get_product_data<I>(
     product_url: &url::Url,
     output_dir: &std::path::Path,
-    progress: &mut F,
+    ui: &mut I,
 ) -> Result<()>
 where
-    F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
+    I: structured_ui::Interface + Sync,
 {
     tracing::debug!("get_product_data {:?} to {:?}", product_url, output_dir);
     if product_url.scheme() == "file" {
@@ -293,9 +298,7 @@ where
         tracing::info!("Only GCS downloads are supported at this time.");
         return Ok(());
     }
-    get_product_data_from_gcs(product_url, output_dir, progress)
-        .await
-        .context("reading pbms entries")?;
+    get_product_data_from_gcs(product_url, output_dir, ui).await.context("reading pbms entries")?;
     Ok(())
 }
 
@@ -342,7 +345,6 @@ pub async fn get_metadata_glob(product_url: &url::Url) -> Result<PathBuf> {
 mod tests {
     use super::*;
     use crate::pbms::CONFIG_METADATA;
-    use ::gcs::client::ProgressResponse;
     use ffx_config::ConfigLevel;
     use serde_json;
     use std::{fs::File, io::Write};
@@ -394,9 +396,11 @@ mod tests {
             .await
             .expect("set pbms metadata");
         let output_dir = temp_dir.path().join("output_dir");
-        update_metadata_all(&output_dir, &mut |_d, _f| Ok(ProgressResponse::Continue))
-            .await
-            .expect("get pbms");
+        let mut input = Box::new(std::io::stdin());
+        let mut output = Vec::new();
+        let mut err_out = Vec::new();
+        let mut ui = structured_ui::TextUi::new(&mut input, &mut output, &mut err_out);
+        update_metadata_all(&output_dir, &mut ui).await.expect("get pbms");
         let urls = product_bundle_urls().await.expect("get pbms");
         assert!(!urls.is_empty());
     }

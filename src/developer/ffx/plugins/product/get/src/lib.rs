@@ -7,7 +7,6 @@
 //! - acquire related data files, such as disk partition images (data)
 
 use {
-    ::gcs::client::ProgressResponse,
     anyhow::{Context, Result},
     errors::ffx_bail,
     ffx_core::ffx_plugin,
@@ -15,11 +14,11 @@ use {
     fidl_fuchsia_developer_ffx::RepositoryRegistryProxy,
     fidl_fuchsia_developer_ffx_ext::{RepositoryError, RepositorySpec},
     fuchsia_url::RepositoryUrl,
-    pbms::{fetch_data_for_product_bundle_v1, update_metadata_from},
+    pbms::{fetch_data_for_product_bundle_v1, structured_ui, update_metadata_from},
     sdk_metadata,
     std::{
         convert::TryInto,
-        io::{stdout, Write},
+        io::{stderr, stdin, stdout},
         path::Path,
     },
 };
@@ -27,13 +26,17 @@ use {
 /// `ffx product get` sub-command.
 #[ffx_plugin("product.experimental", RepositoryRegistryProxy = "daemon::protocol")]
 pub async fn pb_get(cmd: GetCommand, repos: RepositoryRegistryProxy) -> Result<()> {
-    pb_get_impl(&cmd, repos, &mut stdout()).await
+    let mut input = stdin();
+    let mut output = stdout();
+    let mut err_out = stderr();
+    let mut ui = structured_ui::TextUi::new(&mut input, &mut output, &mut err_out);
+    pb_get_impl(&cmd, repos, &mut ui).await
 }
 
-async fn pb_get_impl<W: Write + Sync>(
+async fn pb_get_impl<I: structured_ui::Interface + Sync>(
     cmd: &GetCommand,
     repos: RepositoryRegistryProxy,
-    writer: &mut W,
+    ui: &mut I,
 ) -> Result<()> {
     let start = std::time::Instant::now();
     tracing::info!("---------------------- Begin ----------------------------");
@@ -49,37 +52,24 @@ async fn pb_get_impl<W: Write + Sync>(
     make_way_for_output(&local_dir, cmd.force).await.context("make_way_for_output")?;
     let pbm_path = local_dir.join("product_bundle.json");
     tracing::debug!("first read_product_bundle_metadata {:?}", pbm_path);
-    let product_bundle_metadata =
-        match read_product_bundle_metadata(&pbm_path).await.context("reading product metadata") {
-            Ok(name) => name,
-            _ => {
-                // Try updating the metadata and then reading again.
-                tracing::debug!("update_metadata_from {:?} {:?}", product_url, local_dir);
-                update_metadata_from(&product_url, local_dir, &mut |_d, _f| {
-                    write!(writer, ".")?;
-                    writer.flush()?;
-                    Ok(ProgressResponse::Continue)
-                })
+    let product_bundle_metadata = match read_product_bundle_metadata(&pbm_path)
+        .await
+        .context("reading product metadata")
+    {
+        Ok(name) => name,
+        _ => {
+            // Try updating the metadata and then reading again.
+            tracing::debug!("update_metadata_from {:?} {:?}", product_url, local_dir);
+            update_metadata_from(&product_url, local_dir, ui).await.context("updating metadata")?;
+            read_product_bundle_metadata(&pbm_path)
                 .await
-                .context("updating metadata")?;
-                read_product_bundle_metadata(&pbm_path)
-                    .await
-                    .with_context(|| format!("loading product metadata from {:?}", pbm_path))?
-            }
-        };
+                .with_context(|| format!("loading product metadata from {:?}", pbm_path))?
+        }
+    };
     tracing::debug!("fetch_data_for_product_bundle_v1, product_url {:?}", product_url);
-    fetch_data_for_product_bundle_v1(
-        &product_bundle_metadata,
-        &product_url,
-        local_dir,
-        &mut |_d, _f| {
-            write!(writer, ".")?;
-            writer.flush()?;
-            Ok(ProgressResponse::Continue)
-        },
-    )
-    .await
-    .context("getting product data")?;
+    fetch_data_for_product_bundle_v1(&product_bundle_metadata, &product_url, local_dir, ui)
+        .await
+        .context("getting product data")?;
 
     let product_name = product_bundle_metadata.name;
 
@@ -128,7 +118,6 @@ async fn pb_get_impl<W: Write + Sync>(
             .with_context(|| format!("registering repository {}", repo_name))?;
 
         tracing::debug!("Created repository named '{}'", repo_name);
-        writeln!(writer, "\nCreated repository named '{}'", repo_name)?;
     } else {
         tracing::debug!(
             "The repository was not registered with the daemon because path {:?} does not exist.",

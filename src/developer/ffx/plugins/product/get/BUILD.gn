@@ -20,7 +20,6 @@ ffx_plugin("ffx_product_get") {
     "//src/developer/ffx/lib/fms:lib",
     "//src/developer/ffx/lib/pbms:lib",
     "//src/lib/fuchsia-url",
-    "//src/lib/gcs:lib",
     "//third_party/rust_crates:tracing",
     "//third_party/rust_crates:url",
   ]
