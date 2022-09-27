@@ -4,7 +4,9 @@
 # found in the LICENSE file.
 
 import os
+import shutil
 import subprocess
+import tempfile
 import unittest
 from unittest import mock
 
@@ -25,7 +27,6 @@ class MainUploadMetricsTest(unittest.TestCase):
             upload_reproxy_logs.main_upload_metrics(
                 uuid="feed-face-feed-face",
                 reproxy_logdir="/tmp/reproxy.log.dir",
-                bqupload="/usr/local/bin/bqupload",
                 bq_metrics_table="project.dataset.rbe_metrics",
                 dry_run=True,
                 verbose=False)
@@ -41,7 +42,6 @@ class MainUploadMetricsTest(unittest.TestCase):
                 upload_reproxy_logs.main_upload_metrics(
                     uuid="feed-face-feed-face",
                     reproxy_logdir="/tmp/reproxy.log.dir",
-                    bqupload="/usr/local/bin/bqupload",
                     bq_metrics_table="project.dataset.rbe_metrics",
                     dry_run=False,
                     verbose=False)
@@ -57,7 +57,6 @@ class MainUploadMetricsTest(unittest.TestCase):
                 upload_reproxy_logs.main_upload_metrics(
                     uuid="feed-face-feed-face",
                     reproxy_logdir="/tmp/reproxy.log.dir",
-                    bqupload="/usr/local/bin/bqupload",
                     bq_metrics_table="project.dataset.rbe_metrics",
                     dry_run=False,
                     verbose=False)
@@ -78,7 +77,6 @@ class MainUploadLogsTest(unittest.TestCase):
                 uuid="feed-f00d-feed-f00d",
                 reproxy_logdir="/tmp/reproxy.log.dir",
                 reclient_bindir="/usr/local/reclient/bin",
-                bqupload="/usr/local/bin/bqupload",
                 bq_logs_table="project.dataset.reproxy_logs",
                 upload_batch_size=100,
                 dry_run=True,
@@ -98,7 +96,6 @@ class MainUploadLogsTest(unittest.TestCase):
                     uuid="feed-f00d-feed-f00d",
                     reproxy_logdir="/tmp/reproxy.log.dir",
                     reclient_bindir="/usr/local/reclient/bin",
-                    bqupload="/usr/local/bin/bqupload",
                     bq_logs_table="project.dataset.reproxy_logs",
                     upload_batch_size=100,
                     dry_run=False,
@@ -119,7 +116,6 @@ class MainUploadLogsTest(unittest.TestCase):
                     uuid="feed-f00d-feed-f00d",
                     reproxy_logdir="/tmp/reproxy.log.dir",
                     reclient_bindir="/usr/local/reclient/bin",
-                    bqupload="/usr/local/bin/bqupload",
                     bq_logs_table="project.dataset.reproxy_logs",
                     upload_batch_size=100,
                     dry_run=False,
@@ -165,7 +161,6 @@ class ReadReproxyMetricsProto(unittest.TestCase):
 class BQUploadRemoteActionLogsTest(unittest.TestCase):
 
     def test_batch_upload(self):
-        bqupload = "/path/to/bqupload"
         bq_table = "proj.dataset.tablename"
         with mock.patch.object(subprocess, "call",
                                side_effect=[0, 0]) as mock_process_call:
@@ -173,18 +168,18 @@ class BQUploadRemoteActionLogsTest(unittest.TestCase):
                 records=[{
                     "records": []
                 }] * 8,
-                bqupload=bqupload,
                 bq_table=bq_table,
                 batch_size=4,
             )
-        mock_process_call.assert_called_with(
-            [bqupload, bq_table, "\n".join(["{'records': []}"] * 4)])
+        # Cannot use assert_called_with due to use of temporary file.
+        # Mock is called twice due to batch size being half the size
+        # of the number of records.
+        mock_process_call.assert_called()
 
 
 class BQUploadMetricsTest(unittest.TestCase):
 
     def test_upload(self):
-        bqupload = "/path/to/bqupload"
         bq_table = "proj.dataset.tablename"
         with mock.patch.object(subprocess, "call",
                                return_value=0) as mock_process_call:
@@ -192,11 +187,112 @@ class BQUploadMetricsTest(unittest.TestCase):
                 metrics=[{
                     "metrics": []
                 }],
-                bqupload=bqupload,
                 bq_table=bq_table,
             )
-        mock_process_call.assert_called_with(
-            [bqupload, bq_table, "{'metrics': []}"])
+        # Cannot use assert_called_with due to use of temporary file.
+        mock_process_call.assert_called_once()
+
+
+class MainSingleLogdirTest(unittest.TestCase):
+
+    def setUp(self):
+        self._reproxy_logdir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self._reproxy_logdir)
+
+    @property
+    def _stamp_file(self):
+        return os.path.join(self._reproxy_logdir, "upload_stamp")
+
+    @property
+    def _build_id_file(self):
+        return os.path.join(self._reproxy_logdir, "build_id")
+
+    def test_already_uploaded(self):
+        with open(self._stamp_file, "w") as stamp:
+            stamp.write("\n")
+        with mock.patch.object(upload_reproxy_logs,
+                               "main_upload_metrics") as mock_upload_metrics:
+            with mock.patch.object(upload_reproxy_logs,
+                                   "main_upload_logs") as mock_upload_logs:
+                upload_reproxy_logs.main_single_logdir(
+                    reproxy_logdir=self._reproxy_logdir,
+                    reclient_bindir="/re-client/tools",
+                    metrics_table="project:metrics.metrics_table",
+                    logs_table="project:metrics.logs_table",
+                    uuid_flag="feed-face",
+                    upload_batch_size=10,
+                    print_sample=False,
+                    dry_run=False,
+                    verbose=False,
+                )
+        mock_upload_metrics.assert_not_called()
+        mock_upload_logs.assert_not_called()
+
+    def test_no_stamp_have_uuid_flag(self):
+        with mock.patch.object(upload_reproxy_logs,
+                               "main_upload_metrics") as mock_upload_metrics:
+            with mock.patch.object(upload_reproxy_logs,
+                                   "main_upload_logs") as mock_upload_logs:
+                upload_reproxy_logs.main_single_logdir(
+                    reproxy_logdir=self._reproxy_logdir,
+                    reclient_bindir="/re-client/tools",
+                    metrics_table="project:metrics.metrics_table",
+                    logs_table="project:metrics.logs_table",
+                    uuid_flag="feed-face",
+                    upload_batch_size=10,
+                    print_sample=False,
+                    dry_run=False,
+                    verbose=False,
+                )
+        mock_upload_metrics.assert_called_once()
+        mock_upload_logs.assert_called_once()
+        self.assertTrue(os.path.isfile(self._stamp_file))
+
+    def test_no_stamp_have_uuid_file(self):
+        with open(self._build_id_file, "w") as build_id_file:
+            build_id_file.write("feed-face\n")
+        with mock.patch.object(upload_reproxy_logs,
+                               "main_upload_metrics") as mock_upload_metrics:
+            with mock.patch.object(upload_reproxy_logs,
+                                   "main_upload_logs") as mock_upload_logs:
+                upload_reproxy_logs.main_single_logdir(
+                    reproxy_logdir=self._reproxy_logdir,
+                    reclient_bindir="/re-client/tools",
+                    metrics_table="project:metrics.metrics_table",
+                    logs_table="project:metrics.logs_table",
+                    uuid_flag="",
+                    upload_batch_size=10,
+                    print_sample=False,
+                    dry_run=False,
+                    verbose=False,
+                )
+        mock_upload_metrics.assert_called_once()
+        mock_upload_logs.assert_called_once()
+        self.assertTrue(os.path.isfile(self._stamp_file))
+
+    def test_no_stamp_auto_uuid(self):
+        with mock.patch.object(upload_reproxy_logs,
+                               "main_upload_metrics") as mock_upload_metrics:
+            with mock.patch.object(upload_reproxy_logs,
+                                   "main_upload_logs") as mock_upload_logs:
+                upload_reproxy_logs.main_single_logdir(
+                    reproxy_logdir=self._reproxy_logdir,
+                    reclient_bindir="/re-client/tools",
+                    metrics_table="project:metrics.metrics_table",
+                    logs_table="project:metrics.logs_table",
+                    uuid_flag="",
+                    upload_batch_size=10,
+                    print_sample=False,
+                    dry_run=False,
+                    verbose=False,
+                )
+        mock_upload_metrics.assert_called_once()
+        mock_upload_logs.assert_called_once()
+        self.assertTrue(os.path.isfile(self._stamp_file))
+        # build_id is automatically generated
+        self.assertTrue(os.path.isfile(self._build_id_file))
 
 
 if __name__ == '__main__':

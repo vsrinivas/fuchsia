@@ -2,12 +2,13 @@
 # Copyright 2022 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-"""Upload reproxy logs to a table.
+"""Upload reproxy logs and metrics to BQ tables.
 
 This is used to publish fine-grain anonymized remote build performance data.
 """
 
 import argparse
+import glob
 import json
 import os
 import subprocess
@@ -22,6 +23,17 @@ import rbe_metrics_pb2
 from typing import Any, Callable, Dict, Sequence, Tuple
 
 _SCRIPT_BASENAME = os.path.basename(__file__)
+# This script lives at _PROJECT_ROOT/build/rbe/{__file__}.
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+
+# There is never a need to checkout non-host platforms of the reclient tools.
+# This should be unique.  Path may be relative or absolute.
+_DEFAULT_RECLIENT_BINDIR = glob.glob(
+    os.path.join(_PROJECT_ROOT,
+                 "prebuilt/proprietary/third_party/reclient/*"))[0]
+
+_DEFAULT_REPROXY_LOGS_TABLE = "fuchsia-engprod-metrics-prod:metrics.rbe_client_command_logs_developer"
+_DEFAULT_RBE_METRICS_TABLE = "fuchsia-engprod-metrics-prod:metrics.rbe_client_metrics_developer"
 
 
 def msg(text: str):
@@ -56,7 +68,7 @@ def main_arg_parser() -> argparse.ArgumentParser:
         "--reclient-bindir",
         type=dir_arg,
         help="Location of reclient binaries",
-        required=True,
+        default=_DEFAULT_RECLIENT_BINDIR,
     )
     parser.add_argument(
         "--uuid",
@@ -72,16 +84,16 @@ def main_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--bq-logs-table",
         type=table_arg,
+        default=_DEFAULT_REPROXY_LOGS_TABLE,
         help=
-        "BigQuery remote action logs table name in the form 'project.dataset.table'",
-        required=True,
+        "BigQuery remote action logs table name in the form 'project:dataset.table'",
     )
     parser.add_argument(
         "--bq-metrics-table",
         type=table_arg,
+        default=_DEFAULT_RBE_METRICS_TABLE,
         help=
-        "BigQuery remote action metrics table name in the form 'project.dataset.table'",
-        required=True,
+        "BigQuery remote action metrics table name in the form 'project:dataset.table'",
     )
     parser.add_argument(
         "--dry-run",
@@ -276,6 +288,7 @@ def main_upload_logs(
 
 def main_single_logdir(
     reproxy_logdir: str,
+    reclient_bindir: str,
     metrics_table: str,
     logs_table: str,
     uuid_flag: str,
@@ -342,6 +355,7 @@ def main(argv: Sequence[str]) -> int:
     for logdir in args.reproxy_logdirs:
         main_single_logdir(
             reproxy_logdir=logdir,
+            reclient_bindir=args.reclient_bindir,
             metrics_table=args.bq_metrics_table,
             logs_table=args.bq_logs_table,
             uuid_flag=args.uuid,

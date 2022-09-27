@@ -3,6 +3,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# Uploads reproxy logs and metrics to Fuchsia's BQ tables.
+
+# usage:
+# $0 [options] reproxy-log-dirs...
+
+# Most defaults are already set in the .py script.
+# Example: to manually upload a batch of existing log dirs:
+# $0 /tmp/reproxy_*
+
 script="$0"
 script_dir="$(dirname "$script")"
 script_dir_abs="$(readlink -f "$script_dir")"
