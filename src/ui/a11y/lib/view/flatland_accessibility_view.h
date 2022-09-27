@@ -62,7 +62,7 @@ class FlatlandAccessibilityView : public AccessibilityViewInterface,
 
   // Manages a11y view's flatland connection, and ensures that `Present` calls
   // are enqueued safely.
-  FlatlandConnection flatland_;
+  FlatlandConnection flatland_a11y_;
 
   // Scenic focuser used to request focus chain updates in the a11y view's subtree.
   fuchsia::ui::views::FocuserPtr focuser_;
