@@ -79,7 +79,6 @@ bool CobaltTestApp::RunTests() {
   TRY_TEST(TestLogFrameRate(&logger_));
   TRY_TEST(TestLogMemoryUsage(&logger_));
   TRY_TEST(TestLogIntHistogram(&logger_));
-  TRY_TEST(TestLogCustomEvent(&logger_));
   TRY_TEST(TestLogCobaltEvent(&logger_));
   child->MakeTeardownAsync(loop_->dispatcher());
 

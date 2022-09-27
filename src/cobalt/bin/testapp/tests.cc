@@ -195,17 +195,6 @@ bool TestLogIntHistogram(CobaltTestAppLogger* logger) {
   return SendAndCheckSuccess("TestLogIntHistogram", logger);
 }
 
-bool TestLogCustomEvent(CobaltTestAppLogger* logger) {
-  FX_LOGS(INFO) << "========================";
-  FX_LOGS(INFO) << "TestLogCustomEvent";
-  bool success = logger->LogCustomMetricsTestProto(cobalt_registry::kQueryResponseMetricId,
-                                                   "test " + std::to_string(std::time(0)), 100, 1);
-
-  FX_LOGS(INFO) << "TestLogCustomEvent : " << (success ? "PASS" : "FAIL");
-
-  return SendAndCheckSuccess("TestLogCustomEvent", logger);
-}
-
 bool TestLogCobaltEvent(CobaltTestAppLogger* logger) {
   FX_LOGS(INFO) << "========================";
   FX_LOGS(INFO) << "TestLogCobaltEvent";

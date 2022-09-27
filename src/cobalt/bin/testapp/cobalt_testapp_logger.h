@@ -79,11 +79,6 @@ class CobaltTestAppLogger {
   bool LogString(uint32_t metric_id, std::vector<uint32_t> indices,
                  const std::string& string_value);
 
-  // Synchronously invokes LogCustomEvent() for an event of type
-  // cobalt.CobaltMetricsTestProto, using the given parameter values.
-  bool LogCustomMetricsTestProto(uint32_t metric_id, const std::string& query_val,
-                                 const int64_t wait_time_val, const uint32_t response_code_val);
-
   // If |use_network_| is false this method returns true immediately.
   //
   // Otherwise, triggers the Cobalt FIDL service to send observations for

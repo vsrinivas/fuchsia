@@ -34,8 +34,6 @@ bool TestLogMemoryUsage(CobaltTestAppLogger* logger);
 
 bool TestLogIntHistogram(CobaltTestAppLogger* logger);
 
-bool TestLogCustomEvent(CobaltTestAppLogger* logger);
-
 bool TestLogCobaltEvent(CobaltTestAppLogger* logger);
 
 // Tests of local aggregation.

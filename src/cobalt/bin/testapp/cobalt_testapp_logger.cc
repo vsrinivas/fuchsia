@@ -200,29 +200,6 @@ bool CobaltTestAppLogger::LogString(uint32_t metric_id, std::vector<uint32_t> in
   return true;
 }
 
-bool CobaltTestAppLogger::LogCustomMetricsTestProto(uint32_t metric_id,
-                                                    const std::string& query_val,
-                                                    const int64_t wait_time_val,
-                                                    const uint32_t response_code_val) {
-  fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-  std::vector<fuchsia::cobalt::CustomEventValue> parts(3);
-  parts.at(0).dimension_name = "query";
-  parts.at(0).value.set_string_value(query_val);
-  parts.at(1).dimension_name = "wait_time_ms";
-  parts.at(1).value.set_int_value(wait_time_val);
-  parts.at(2).dimension_name = "response_code";
-  parts.at(2).value.set_index_value(response_code_val);
-  logger_->LogCustomEvent(metric_id, std::move(parts), &status);
-  FX_VLOGS(1) << "LogCustomEvent(query=" << query_val << ", wait_time_ms=" << wait_time_val
-              << ", response_code=" << response_code_val << ") => " << StatusToString(status);
-  if (status != fuchsia::cobalt::Status::OK) {
-    FX_LOGS(ERROR) << "LogCustomEvent() => " << StatusToString(status);
-    return false;
-  }
-
-  return true;
-}
-
 bool CobaltTestAppLogger::CheckForSuccessfulSend() {
   if (!use_network_) {
     FX_LOGS(INFO) << "Not using the network because --no_network_for_testing "
