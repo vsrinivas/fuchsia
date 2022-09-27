@@ -46,6 +46,9 @@ class Scanner {
   zx_status_t StopScan() __TA_EXCLUDES(mutex_);
 
  private:
+  zx_status_t PrepareScanRequest(const wlan_fullmac_scan_req_t* req) __TA_REQUIRES(mutex_);
+  void PopulateScanChannel(wlan_user_scan_chan& user_scan_chan, uint8_t channel, uint8_t scan_type,
+                           uint32_t channel_time);
   void OnScanReport(pmlan_event event) __TA_EXCLUDES(mutex_);
   void FetchAndProcessScanResults(wlan_scan_result_t result) __TA_REQUIRES(mutex_);
   void ProcessScanResults(wlan_scan_result_t result) __TA_REQUIRES(mutex_);
@@ -53,7 +56,8 @@ class Scanner {
   void EndScan(uint64_t txn_id, wlan_scan_result_t result) __TA_REQUIRES(mutex_);
 
   DeviceContext* context_ = nullptr;
-  IoctlRequest<mlan_ds_scan> scan_request_ __TA_GUARDED(mutex_);
+  using ScanRequestType = IoctlRequest<mlan_ds_scan, sizeof(wlan_user_scan_cfg)>;
+  ScanRequestType scan_request_ __TA_GUARDED(mutex_);
   IoctlRequest<mlan_ds_scan> scan_results_ __TA_GUARDED(mutex_);
   WaitableState<bool> scan_in_progress_{false};
   WaitableState<bool> ioctl_in_progress_{false};

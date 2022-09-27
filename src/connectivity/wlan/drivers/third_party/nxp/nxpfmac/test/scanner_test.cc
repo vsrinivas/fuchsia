@@ -23,6 +23,7 @@
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/test/mlan_mocks.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/test/mock_bus.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/test/mock_fullmac_ifc.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/utils.h"
 
 namespace {
 
@@ -64,6 +65,10 @@ TEST_F(ScannerTest, Scan) {
   constexpr uint32_t kBssIndex = 0;
   constexpr uint64_t kTxnId = 0x234776898adf83;
 
+  constexpr uint8_t kChannels[] = {1,   2,   3,   4,   5,   6,   7,   8,   9,   10,  11,  36,
+                                   40,  44,  48,  52,  56,  60,  64,  100, 104, 108, 112, 116,
+                                   120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165};
+
   // Our scan result
   BSSDescriptor_t scan_table[] = {{
       .mac_address = {0x01, 0x02, 0x03, 0x04, 0x5, 0x06},
@@ -79,14 +84,48 @@ TEST_F(ScannerTest, Scan) {
     auto request = reinterpret_cast<wlan::nxpfmac::IoctlRequest<mlan_ds_scan>*>(req);
     if (req->action == MLAN_ACT_SET) {
       on_ioctl_set_called = true;
+
+      EXPECT_EQ(MLAN_IOCTL_SCAN, req->req_id);
+      EXPECT_EQ(MLAN_OID_SCAN_USER_CONFIG, request->UserReq().sub_command);
+
+      auto user_scan =
+          reinterpret_cast<wlan_user_scan_cfg*>(request->UserReq().param.user_scan.scan_cfg_buf);
+
+      for (size_t i = 0; i < std::size(user_scan->chan_list); ++i) {
+        if (i < std::size(kChannels)) {
+          EXPECT_EQ(kChannels[i], user_scan->chan_list[i].chan_number);
+          if (wlan::nxpfmac::is_dfs_channel(kChannels[i])) {
+            EXPECT_EQ(MLAN_SCAN_TYPE_PASSIVE_TO_ACTIVE, user_scan->chan_list[i].scan_type);
+          } else {
+            EXPECT_EQ(MLAN_SCAN_TYPE_ACTIVE, user_scan->chan_list[i].scan_type);
+          }
+          EXPECT_EQ(wlan::nxpfmac::band_from_channel(kChannels[i]),
+                    user_scan->chan_list[i].radio_type);
+        } else {
+          // Remaining channels should be zero.
+          EXPECT_EQ(0, user_scan->chan_list[i].chan_number);
+        }
+      }
+
       ioctl_adapter_->OnIoctlComplete(req, wlan::nxpfmac::IoctlStatus::Success);
       return MLAN_STATUS_PENDING;
     }
-    if (req->action == MLAN_ACT_GET) {
+    if (req->req_id == MLAN_IOCTL_SCAN && req->action == MLAN_ACT_GET) {
+      // Get scan results
       request->UserReq().param.scan_resp.num_in_scan_table = std::size(scan_table);
       request->UserReq().param.scan_resp.pscan_table = reinterpret_cast<uint8_t*>(&scan_table);
 
       on_ioctl_get_called = true;
+      return MLAN_STATUS_SUCCESS;
+    }
+    if (req->req_id == MLAN_IOCTL_BSS && req->action == MLAN_ACT_GET) {
+      // Get the list of supported channels to scan. Provide a bunch of channels.
+      auto request = reinterpret_cast<wlan::nxpfmac::IoctlRequest<mlan_ds_bss>*>(req);
+      EXPECT_EQ(MLAN_OID_BSS_CHANNEL_LIST, request->UserReq().sub_command);
+      for (size_t i = 0; i < std::size(kChannels); ++i) {
+        request->UserReq().param.chanlist.cf[i].channel = kChannels[i];
+      }
+      request->UserReq().param.chanlist.num_of_chan = std::size(kChannels);
       return MLAN_STATUS_SUCCESS;
     }
     if (req->action == MLAN_ACT_CANCEL) {
@@ -162,6 +201,10 @@ TEST_F(ScannerTest, StopScan) {
       ioctl_adapter_->OnIoctlComplete(req, wlan::nxpfmac::IoctlStatus::Failure);
       return MLAN_STATUS_SUCCESS;
     }
+    if (req->req_id == MLAN_IOCTL_BSS && req->action == MLAN_ACT_GET) {
+      // Retrieve the list of channels to use, should return success.
+      return MLAN_STATUS_SUCCESS;
+    }
     // Don't call the callback here, let the scan languish so we can stop it.
     return MLAN_STATUS_PENDING;
   };
@@ -223,7 +266,7 @@ TEST_F(ScannerTest, StopScanWithNoScanInProgress) {
   ASSERT_EQ(ZX_ERR_NOT_FOUND, scanner.StopScan());
 }
 
-TEST_F(ScannerTest, ScanSpecificSsid) {
+TEST_F(ScannerTest, ScanSpecificSsids) {
   // Test scanning of a specific SSID
 
   constexpr uint32_t kBssIndex = 0;
@@ -231,24 +274,27 @@ TEST_F(ScannerTest, ScanSpecificSsid) {
 
   wlan_fullmac_scan_req_t scan_request{.txn_id = kTxnId, .scan_type = WLAN_SCAN_TYPE_ACTIVE};
 
-  constexpr cssid_t kSsid{.len = 4, .data{"foo"}};
+  constexpr cssid_t kSsids[] = {{.len = 4, .data{"foo"}}, {.len = 8, .data{"another"}}};
 
-  scan_request.ssids_list = &kSsid;
-  scan_request.ssids_count = 1u;
+  scan_request.ssids_list = kSsids;
+  scan_request.ssids_count = std::size(kSsids);
 
   auto on_ioctl = [&](t_void*, pmlan_ioctl_req req) -> mlan_status {
     if (req->action == MLAN_ACT_GET) {
-      // Don't do anything with the request to get scan results.
+      // Don't do anything with the request to get scan results or channel list.
       return MLAN_STATUS_SUCCESS;
     }
     EXPECT_EQ(MLAN_ACT_SET, req->action);
     EXPECT_EQ(MLAN_IOCTL_SCAN, req->req_id);
     auto scan = reinterpret_cast<mlan_ds_scan*>(req->pbuf);
-    EXPECT_EQ(MLAN_OID_SCAN_SPECIFIC_SSID, scan->sub_command);
-    auto& scan_req = scan->param.scan_req;
+    EXPECT_EQ(MLAN_OID_SCAN_USER_CONFIG, scan->sub_command);
+    auto scan_cfg = reinterpret_cast<wlan_user_scan_cfg*>(scan->param.user_scan.scan_cfg_buf);
 
-    // Check that the requested SSID is part of the request.
-    EXPECT_BYTES_EQ(kSsid.data, scan_req.scan_ssid.ssid, kSsid.len);
+    // Check that the requested SSIDs are part of the request.
+    EXPECT_BYTES_EQ(kSsids[0].data, scan_cfg->ssid_list[0].ssid, kSsids[0].len);
+    EXPECT_BYTES_EQ(kSsids[1].data, scan_cfg->ssid_list[1].ssid, kSsids[1].len);
+    // The next SSID should be empty.
+    EXPECT_EQ('\0', scan_cfg->ssid_list[2].ssid[0]);
     ioctl_adapter_->OnIoctlComplete(req, wlan::nxpfmac::IoctlStatus::Success);
     return MLAN_STATUS_PENDING;
   };
@@ -278,10 +324,12 @@ TEST_F(ScannerTest, ScanTooManySsids) {
 
   constexpr uint32_t kBssIndex = 0;
   constexpr uint64_t kTxnId = 42;
+  constexpr size_t kTooManySsids = 11;
 
   wlan_fullmac_scan_req_t scan_request{.txn_id = kTxnId, .scan_type = WLAN_SCAN_TYPE_ACTIVE};
 
-  constexpr cssid_t kSsids[] = {{.len = 4, .data{"foo"}}, {.len = 3, .data{"ap"}}};
+  // Just use an empty list, the important thing is the number of SSIDs.
+  constexpr cssid_t kSsids[kTooManySsids] = {};
 
   scan_request.ssids_list = kSsids;
   scan_request.ssids_count = std::size(kSsids);
@@ -313,10 +361,14 @@ TEST_F(ScannerTest, ScanTimeout) {
       ioctl_adapter_->OnIoctlComplete(req, wlan::nxpfmac::IoctlStatus::Failure);
       return MLAN_STATUS_SUCCESS;
     }
-    if (req->action == MLAN_ACT_GET) {
+    if (req->req_id == MLAN_IOCTL_SCAN && req->action == MLAN_ACT_GET) {
       // The scanner will attempt to get any partial scan results available. This operation should
       // immediately return success.
       get_scan_results_called = true;
+      return MLAN_STATUS_SUCCESS;
+    }
+    if (req->req_id == MLAN_IOCTL_BSS && req->action == MLAN_ACT_GET) {
+      // Get the list of channels to scan.
       return MLAN_STATUS_SUCCESS;
     }
     // Leave the scan as pending, allowing it to time out.
@@ -337,9 +389,9 @@ TEST_F(ScannerTest, ScanTimeout) {
   ASSERT_OK(scanner.Scan(&scan_request, kShortTimeout));
 
   ASSERT_OK(sync_completion_wait(&completion, ZX_TIME_INFINITE));
-  // There should only have been three ioctl calls. One to start the scan, one to cancel it, and one
-  // to fetch scan results.
-  ASSERT_EQ(3u, on_ioctl_calls.load());
+  // There should only have been four ioctl calls. One to get the channel list, one to start the
+  // scan, one to cancel it, and one to fetch scan results.
+  ASSERT_EQ(4u, on_ioctl_calls.load());
   ASSERT_TRUE(get_scan_results_called.load());
 }
 

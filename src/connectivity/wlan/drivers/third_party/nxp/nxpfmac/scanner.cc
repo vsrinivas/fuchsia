@@ -17,11 +17,14 @@
 #include <lib/zx/clock.h>
 #include <netinet/if_ether.h>
 
+#include <unordered_set>
+
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/device_context.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/event_handler.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/ioctl_adapter.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/utils.h"
 
 namespace {
 
@@ -54,36 +57,9 @@ zx_status_t Scanner::Scan(const wlan_fullmac_scan_req_t* req, zx_duration_t time
     return ZX_ERR_ALREADY_EXISTS;
   }
 
-  if (req->ssids_count > 1u) {
-    NXPF_ERR("Requested %zu SSIDs in scan but only 1 supported", req->ssids_count);
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  // Prepare the request
-  scan_request_ = IoctlRequest<mlan_ds_scan>(MLAN_IOCTL_SCAN, MLAN_ACT_SET, bss_index_,
-                                             {.sub_command = MLAN_OID_SCAN_NORMAL});
-  auto& scan_req = scan_request_.UserReq().param.scan_req;
-
-  switch (req->scan_type) {
-    case WLAN_SCAN_TYPE_ACTIVE:
-      scan_req.scan_type = MLAN_SCAN_TYPE_ACTIVE;
-      scan_req.scan_time.active_scan_time = req->min_channel_time;
-      break;
-    case WLAN_SCAN_TYPE_PASSIVE:
-      scan_req.scan_type = MLAN_SCAN_TYPE_PASSIVE;
-      scan_req.scan_time.passive_scan_time = req->min_channel_time;
-      break;
-    default:
-      NXPF_ERR("Invalid scan type %u requested", req->scan_type);
-      return ZX_ERR_INVALID_ARGS;
-  }
-
-  if (req->ssids_count == 1) {
-    // Perform a scan for a specific SSID.
-    scan_request_.UserReq().sub_command = MLAN_OID_SCAN_SPECIFIC_SSID;
-    const uint8_t len = std::min<uint8_t>(req->ssids_list[0].len, sizeof(scan_req.scan_ssid.ssid));
-    memcpy(scan_req.scan_ssid.ssid, req->ssids_list[0].data, len);
-    scan_req.scan_ssid.ssid_len = len;
+  const zx_status_t status = PrepareScanRequest(req);
+  if (status != ZX_OK) {
+    return status;
   }
 
   // Callback for when the scan completes.
@@ -132,7 +108,6 @@ zx_status_t Scanner::Scan(const wlan_fullmac_scan_req_t* req, zx_duration_t time
     // We don't expect anything but pending here, the scan cannot complete immediately so even an
     // IoctlStatus::Success is an error.
     NXPF_ERR("Scan ioctl failed: %d", io_status);
-    EndScan(req->txn_id, WLAN_SCAN_RESULT_INTERNAL_ERROR);
     ioctl_in_progress_ = false;
     return ZX_ERR_INTERNAL;
   }
@@ -157,6 +132,95 @@ zx_status_t Scanner::StopScan() {
     return status;
   }
   return ZX_OK;
+}
+
+zx_status_t Scanner::PrepareScanRequest(const wlan_fullmac_scan_req_t* req) {
+  if (req->ssids_count > MRVDRV_MAX_SSID_LIST_LENGTH) {
+    NXPF_ERR("Requested %zu SSIDs in scan but only %d supported", req->ssids_count,
+             MRVDRV_MAX_SSID_LIST_LENGTH);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (req->channels_count > WLAN_USER_SCAN_CHAN_MAX) {
+    NXPF_ERR("Requested %zu channels in scan but only %d supported", req->channels_count,
+             WLAN_USER_SCAN_CHAN_MAX);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  uint8_t scan_type = 0;
+  switch (req->scan_type) {
+    case WLAN_SCAN_TYPE_ACTIVE:
+      scan_type = MLAN_SCAN_TYPE_ACTIVE;
+      break;
+    case WLAN_SCAN_TYPE_PASSIVE:
+      scan_type = MLAN_SCAN_TYPE_PASSIVE;
+      break;
+    default:
+      NXPF_ERR("Invalid scan type %u requested", req->scan_type);
+      return ZX_ERR_INVALID_ARGS;
+  }
+
+  scan_request_ = ScanRequestType(MLAN_IOCTL_SCAN, MLAN_ACT_SET, bss_index_,
+                                  {.sub_command = MLAN_OID_SCAN_USER_CONFIG});
+  auto scan_cfg =
+      reinterpret_cast<wlan_user_scan_cfg*>(scan_request_.UserReq().param.user_scan.scan_cfg_buf);
+  scan_cfg->ext_scan_type = EXT_SCAN_ENHANCE;
+
+  // Copy SSIDs if this is a targeted scan.
+  for (size_t i = 0; i < req->ssids_count; ++i) {
+    const uint8_t len =
+        std::min<uint8_t>(req->ssids_list[i].len, sizeof(scan_cfg->ssid_list[i].ssid));
+    memcpy(scan_cfg->ssid_list[i].ssid, req->ssids_list[i].data, len);
+    // Leave ssid_list[i].max_len set to zero here, based on other drivers it doesn't seem necessary
+    // to set it.
+  }
+
+  // Retrieve a list of supported channels. This just calls into mlan and doesn't reach firmware so
+  // it's a quick, synchronous call.
+  IoctlRequest<mlan_ds_bss> get_channels(MLAN_IOCTL_BSS, MLAN_ACT_GET, bss_index_,
+                                         {.sub_command = MLAN_OID_BSS_CHANNEL_LIST});
+  const IoctlStatus io_status = context_->ioctl_adapter_->IssueIoctlSync(&get_channels);
+  if (io_status != IoctlStatus::Success) {
+    // This should only ever fail if the request is malformed.
+    NXPF_ERR("Couldn't get channels: %d", io_status);
+    return ZX_ERR_INTERNAL;
+  }
+  auto& chanlist = get_channels.UserReq().param.chanlist;
+
+  if (req->channels_count > 0) {
+    // Create a set of all supported channels so we can filter out any requested channels that are
+    // not supported.
+    std::unordered_set<uint32_t> supported_channels;
+    for (size_t i = 0; i < chanlist.num_of_chan; ++i) {
+      supported_channels.insert(chanlist.cf[i].channel);
+    }
+
+    // Channels to scan provided in request, copy them.
+    for (size_t i = 0; i < req->channels_count; ++i) {
+      if (supported_channels.find(req->channels_list[i]) != supported_channels.end()) {
+        PopulateScanChannel(scan_cfg->chan_list[i], req->channels_list[i], scan_type,
+                            req->min_channel_time);
+      }
+    }
+  } else {
+    for (size_t i = 0; i < chanlist.num_of_chan && i < WLAN_USER_SCAN_CHAN_MAX; ++i) {
+      PopulateScanChannel(scan_cfg->chan_list[i], static_cast<uint8_t>(chanlist.cf[i].channel),
+                          scan_type, req->min_channel_time);
+    }
+  }
+  return ZX_OK;
+}
+
+void Scanner::PopulateScanChannel(wlan_user_scan_chan& user_scan_chan, uint8_t channel,
+                                  uint8_t scan_type, uint32_t channel_time) {
+  user_scan_chan.chan_number = channel;
+  if (is_dfs_channel(channel) && scan_type == MLAN_SCAN_TYPE_ACTIVE) {
+    user_scan_chan.scan_type = MLAN_SCAN_TYPE_PASSIVE_TO_ACTIVE;
+  } else {
+    user_scan_chan.scan_type = scan_type;
+  }
+  user_scan_chan.radio_type = band_from_channel(channel);
+  user_scan_chan.scan_time = channel_time;
 }
 
 void Scanner::OnScanReport(pmlan_event event) {

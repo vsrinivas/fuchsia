@@ -253,7 +253,9 @@ void WlanInterface::WlanFullmacImplStartScan(const wlan_fullmac_scan_req_t* req)
   zx_status_t status = scanner_.Scan(req, kScanTimeout);
   if (status != ZX_OK) {
     NXPF_ERR("Scan failed: %s", zx_status_get_string(status));
-    // Error will have been reported through fullmac_ifc in scanner.
+    const wlan_fullmac_scan_end_t end{.txn_id = req->txn_id,
+                                      .code = WLAN_SCAN_RESULT_INTERNAL_ERROR};
+    fullmac_ifc_.OnScanEnd(&end);
   }
 }
 
