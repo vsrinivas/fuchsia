@@ -11,9 +11,11 @@ use {
         system_controller::MockSystemControllerService, temperature_driver::MockTemperatureDriver,
     },
     fidl::endpoints::DiscoverableProtocolMarker,
+    fidl::AsHandleRef as _,
     fidl_fuchsia_testing as ftesting, fidl_fuchsia_thermal as fthermal,
     fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
     std::collections::HashMap,
+    std::sync::atomic::{AtomicU64, Ordering},
     std::sync::Arc,
     tracing::*,
 };
@@ -24,6 +26,9 @@ const FAKE_CLOCK_URL: &str = "#meta/fake_clock.cm";
 
 /// Increase the time scale so Power Manager's interval-based operation runs faster for testing.
 const FAKE_TIME_SCALE: u32 = 100;
+
+/// Unique number that is incremented for each TestEnv to avoid name clashes.
+static UNIQUE_REALM_NUMBER: AtomicU64 = AtomicU64::new(0);
 
 pub struct TestEnvBuilder {
     power_manager_node_config_path: Option<String>,
@@ -228,8 +233,17 @@ impl TestEnvBuilder {
             .await
             .unwrap();
 
+        // Generate a unique realm name based on the current process ID and unique realm number for
+        // the current process.
+        let realm_name = format!(
+            "{}-{}",
+            fuchsia_runtime::process_self().get_koid().unwrap().raw_koid(),
+            UNIQUE_REALM_NUMBER.fetch_add(1, Ordering::Relaxed)
+        );
+
         // Finally, build it
-        let realm_instance = realm_builder.build().await.expect("Failed to build RealmInstance");
+        let realm_instance =
+            realm_builder.build_with_name(realm_name).await.expect("Failed to build RealmInstance");
 
         // Increase the time scale so Power Manager's interval-based operation runs faster for
         // testing
