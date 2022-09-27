@@ -795,7 +795,7 @@ void Dispatcher::QueueRegisteredCallback(driver_runtime::CallbackRequest* reques
                                          zx_status_t callback_reason) {
   ZX_ASSERT(request);
 
-  auto idle_check = fit::defer([this]() {
+  auto decrement_and_idle_check = fit::defer([this]() {
     fbl::AutoLock lock(&callback_lock_);
     ZX_ASSERT(num_active_threads_ > 0);
     num_active_threads_--;
@@ -807,10 +807,18 @@ void Dispatcher::QueueRegisteredCallback(driver_runtime::CallbackRequest* reques
   std::unique_ptr<driver_runtime::CallbackRequest> callback_request;
   {
     fbl::AutoLock lock(&callback_lock_);
-    num_active_threads_++;
+    // It's possible that we are being called from a |Channel::Write| on the peer of a channel
+    // that is registered on this dispatcher. This means that there is no guarantee that the
+    // dispatcher will not enter |CompleteShutdown| between when we return from this check
+    // and when we decrement |num_active_threads_| in |decrement_and_idle_check|.
+    // Instead do not increment |num_active_threads_| until after this check.
     if (!IsRunningLocked()) {
+      decrement_and_idle_check.cancel();
+      // We still want to do |IdleCheckLocked|, in case this is a completed |Wait| being processed.
+      IdleCheckLocked();
       return;
     }
+    num_active_threads_++;
 
     // Finding the callback request may fail if the request was cancelled in the meanwhile.
     // This is possible if the channel was about to queue the registered callback (in response

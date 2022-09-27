@@ -1148,6 +1148,51 @@ TEST_F(DispatcherTest, ShutdownCallbackIsNotReentrant) {
   ASSERT_OK(completion.Wait(zx::time::infinite()));
 }
 
+TEST_F(DispatcherTest, ChannelPeerWriteDuringShutdown) {
+  constexpr uint32_t kNumChannelPairs = 1000;
+
+  libsync::Completion shutdown;
+  auto shutdown_handler = [&](fdf_dispatcher_t* shutdown_dispatcher) { shutdown.Signal(); };
+
+  auto fake_driver = CreateFakeDriver();
+  driver_context::PushDriver(fake_driver);
+  auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
+
+  auto dispatcher = fdf::Dispatcher::Create(0, "", shutdown_handler);
+  ASSERT_FALSE(dispatcher.is_error());
+
+  // Create a bunch of channels, and register one end with the dispatcher to wait for
+  // available channel reads.
+  fdf::Channel local[kNumChannelPairs];
+  fdf::Channel remote[kNumChannelPairs];
+  for (uint32_t i = 0; i < kNumChannelPairs; i++) {
+    auto channels_status = fdf::ChannelPair::Create(0);
+    ASSERT_OK(channels_status.status_value());
+    local[i] = std::move(channels_status->end0);
+    remote[i] = std::move(channels_status->end1);
+
+    auto channel_read = std::make_unique<fdf::ChannelRead>(
+        local[i].get(), 0 /* options */,
+        [=](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
+          ASSERT_EQ(ZX_ERR_CANCELED, status);
+          delete channel_read;
+        });
+    ASSERT_OK(channel_read->Begin(dispatcher->get()));
+    channel_read.release();  // Will be deleted on callback.
+  }
+
+  dispatcher->ShutdownAsync();
+
+  for (uint32_t i = 0; i < kNumChannelPairs; i++) {
+    // This will write the packet to the peer channel and attempt to call |QueueRegisteredCallback|
+    // on the dispatcher.
+    fdf::Arena arena;
+    ASSERT_EQ(ZX_OK,
+              remote[i].Write(0, arena, nullptr, 0, cpp20::span<zx_handle_t>()).status_value());
+  }
+  ASSERT_OK(shutdown.Wait());
+}
+
 //
 // async_dispatcher_t
 //
