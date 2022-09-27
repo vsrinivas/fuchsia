@@ -49,7 +49,8 @@ Device::Device(zx_device_t *parent) : DeviceType(parent) {
 }
 
 void Device::DdkInit(ddk::InitTxn txn) {
-  const zx_status_t status = [this]() -> zx_status_t {
+  bool fw_init_pending = false;
+  const zx_status_t status = [&]() -> zx_status_t {
     auto dispatcher = fdf::Dispatcher::Create(0, "nxpfmac-sdio-wlanphy", [&](fdf_dispatcher_t *) {
       sync_completion_signal(&fidl_dispatcher_completion_);
     });
@@ -101,7 +102,7 @@ void Device::DdkInit(ddk::InitTxn txn) {
       return status;
     }
 
-    status = InitFirmware();
+    status = InitFirmware(&fw_init_pending);
     if (status != ZX_OK) {
       NXPF_ERR("Failed to initialize firmware: %s", zx_status_get_string(status));
       return status;
@@ -110,7 +111,14 @@ void Device::DdkInit(ddk::InitTxn txn) {
     return ZX_OK;
   }();
 
-  txn.Reply(status);
+  if (status != ZX_OK || !fw_init_pending) {
+    // Initialization either failed or firmware initialization completed immediately, complete the
+    // initializaiton.
+    txn.Reply(status);
+    return;
+  }
+  init_txn_ = std::move(txn);
+  // Otherwise wait until firmware downloading has completed.
 }
 
 void Device::DdkRelease() {
@@ -386,6 +394,12 @@ void Device::OnFirmwareInitComplete(zx_status_t status) {
   } else {
     NXPF_ERR("Firmware initialization failed: %s", zx_status_get_string(status));
   }
+  if (!init_txn_.has_value()) {
+    NXPF_ERR("No initialization transaction in progress");
+    return;
+  }
+  init_txn_->Reply(status);
+  init_txn_.reset();
 }
 
 void Device::OnFirmwareShutdownComplete(zx_status_t status) {
@@ -403,6 +417,14 @@ void Device::PerformShutdown() {
   if (status != ZX_OK) {
     NXPF_ERR("Failed to wait for fdf dispatcher to shutdown: %s", zx_status_get_string(status));
     // Keep going and shut everything else down.
+  }
+
+  if (init_txn_.has_value()) {
+    // We must reply to the initialization request or it will trigger an assert. If we get to this
+    // point without completing initialization we should consider it a failure.
+    NXPF_WARN("Shutting down before init completed.");
+    init_txn_->Reply(ZX_ERR_INTERNAL);
+    init_txn_.reset();
   }
 
   if (mlan_adapter_) {
@@ -426,7 +448,7 @@ void Device::PerformShutdown() {
   }
 }
 
-zx_status_t Device::InitFirmware() {
+zx_status_t Device::InitFirmware(bool *out_is_pending) {
   std::vector<uint8_t> firmware_data;
   zx_status_t status = LoadFirmwareData(kFirmwarePath, &firmware_data);
   if (status != ZX_OK) {
@@ -481,6 +503,7 @@ zx_status_t Device::InitFirmware() {
     NXPF_ERR("mlan_init_fw failed: %d", ml_status);
     return ZX_ERR_INTERNAL;
   }
+  *out_is_pending = ml_status == MLAN_STATUS_PENDING;
 
   status = bus_->OnFirmwareInitialized();
   if (status != ZX_OK) {

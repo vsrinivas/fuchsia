@@ -96,11 +96,12 @@ class Device : public DeviceType,
 
  private:
   void PerformShutdown();
-  zx_status_t InitFirmware();
+  zx_status_t InitFirmware(bool* out_is_pending);
   zx_status_t LoadFirmwareData(const char* path, std::vector<uint8_t>* data_out);
 
   mlan_device mlan_device_ = {};
   void* mlan_adapter_ = nullptr;
+  std::optional<ddk::InitTxn> init_txn_;
 
   BusInterface* bus_ = nullptr;
 
