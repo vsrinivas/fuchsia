@@ -113,6 +113,7 @@ class WlanInterface : public WlanInterfaceDeviceType,
   void ConfirmDisassoc(zx_status_t status) __TA_REQUIRES(mutex_);
 
   wlan_mac_role_t role_;
+  uint32_t iface_index_;
   zx::channel mlme_channel_;
 
   fit::callback<void()> on_remove_ __TA_GUARDED(mutex_);

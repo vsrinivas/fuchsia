@@ -25,6 +25,7 @@
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/event_handler.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/ioctl_adapter.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/key_ring.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/utils.h"
 
 namespace wlan::nxpfmac {
 
@@ -34,6 +35,7 @@ WlanInterface::WlanInterface(zx_device_t* parent, uint32_t iface_index, wlan_mac
       wlan::drivers::components::NetworkPort(context->data_plane_->NetDevIfcProto(), *this,
                                              static_cast<uint8_t>(iface_index)),
       role_(role),
+      iface_index_(iface_index),
       mlme_channel_(std::move(mlme_channel)),
       key_ring_(context->ioctl_adapter_, iface_index),
       client_connection_(this, context, &key_ring_, iface_index),
@@ -195,9 +197,20 @@ void WlanInterface::WlanFullmacImplQuery(wlan_fullmac_query_info_t* info) {
   static_assert(std::size(kRates2g) <= fuchsia_wlan_internal_MAX_SUPPORTED_BASIC_RATES);
   static_assert(std::size(kRates5g) <= fuchsia_wlan_internal_MAX_SUPPORTED_BASIC_RATES);
 
-  constexpr uint8_t kChannels2g[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
-  constexpr uint8_t kChannels5g[] = {36,  40,  44,  48,  52,  56,  60,  64,  100, 104, 108, 112,
-                                     116, 120, 124, 128, 132, 136, 140, 149, 153, 157, 161, 165};
+  // Retrieve the list of supported channels. This does not call into firmware, it's just mlan
+  // computing all the channels and it shouldn't fail as long as the request is properly formatted.
+  IoctlRequest<mlan_ds_bss> get_channels(MLAN_IOCTL_BSS, MLAN_ACT_GET, iface_index_,
+                                         {.sub_command = MLAN_OID_BSS_CHANNEL_LIST});
+  auto& chanlist = get_channels.UserReq().param.chanlist;
+  IoctlStatus io_status = context_->ioctl_adapter_->IssueIoctlSync(&get_channels);
+  if (io_status != IoctlStatus::Success) {
+    NXPF_ERR("Failed to retrieve supported channels: %d", io_status);
+    // Clear this to make sure we don't populate any channels.
+    chanlist.num_of_chan = 0;
+  }
+
+  // Clear info first.
+  *info = {};
 
   std::lock_guard lock(mutex_);
   info->role = role_;
@@ -210,18 +223,28 @@ void WlanInterface::WlanFullmacImplQuery(wlan_fullmac_query_info_t* info) {
   band_cap->band = WLAN_BAND_TWO_GHZ;
   band_cap->basic_rate_count = std::size(kRates2g);
   std::copy(std::begin(kRates2g), std::end(kRates2g), std::begin(band_cap->basic_rate_list));
-  band_cap->operating_channel_count = std::size(kChannels2g);
-  std::copy(std::begin(kChannels2g), std::end(kChannels2g),
-            std::begin(band_cap->operating_channel_list));
+
+  for (uint32_t i = 0, chan = 0;
+       i < chanlist.num_of_chan && i < std::size(band_cap->operating_channel_list); ++i) {
+    if (band_from_channel(chanlist.cf[i].channel) == BAND_2GHZ) {
+      band_cap->operating_channel_list[chan++] = static_cast<uint8_t>(chanlist.cf[i].channel);
+      ++band_cap->operating_channel_count;
+    }
+  }
 
   // 5 GHz
   band_cap = &info->band_cap_list[1];
   band_cap->band = WLAN_BAND_FIVE_GHZ;
   band_cap->basic_rate_count = std::size(kRates5g);
   std::copy(std::begin(kRates5g), std::end(kRates5g), std::begin(band_cap->basic_rate_list));
-  band_cap->operating_channel_count = std::size(kChannels5g);
-  std::copy(std::begin(kChannels5g), std::end(kChannels5g),
-            std::begin(band_cap->operating_channel_list));
+
+  for (uint32_t i = 0, chan = 0;
+       i < chanlist.num_of_chan && i < std::size(band_cap->operating_channel_list); ++i) {
+    if (band_from_channel(chanlist.cf[i].channel) == BAND_5GHZ) {
+      band_cap->operating_channel_list[chan++] = static_cast<uint8_t>(chanlist.cf[i].channel);
+      ++band_cap->operating_channel_count;
+    }
+  }
 }
 
 void WlanInterface::WlanFullmacImplQueryMacSublayerSupport(mac_sublayer_support_t* resp) {

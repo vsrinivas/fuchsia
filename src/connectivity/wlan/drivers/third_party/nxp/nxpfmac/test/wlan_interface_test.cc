@@ -141,10 +141,30 @@ TEST_F(WlanInterfaceTest, WlanFullmacImplStart) {
 TEST_F(WlanInterfaceTest, WlanFullmacImplQuery) {
   // Test that WlanFullmacImplQuery returns some reasonable values
 
+  constexpr uint8_t kChannels[] = {1,   2,   3,   4,   5,   6,   7,   8,   9,   10,  11,  12,  13,
+                                   36,  40,  44,  48,  52,  56,  60,  64,  100, 104, 108, 112, 116,
+                                   120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165, 255};
+  constexpr size_t kNum2gChannels = 13;
+  constexpr size_t kNum5gChannels = 26;
+
   constexpr wlan_mac_role_t kRole = WLAN_MAC_ROLE_AP;
   WlanInterface* ifc = nullptr;
   ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacDeviceName, 0, kRole, &context_,
                                   zx::channel(), &ifc));
+
+  mlan_mocks_.SetOnMlanIoctl([&](t_void*, pmlan_ioctl_req req) -> mlan_status {
+    if (req->req_id == MLAN_IOCTL_BSS && req->action == MLAN_ACT_GET) {
+      // Get the supported channel list.
+      auto bss = reinterpret_cast<mlan_ds_bss*>(req->pbuf);
+      EXPECT_EQ(MLAN_OID_BSS_CHANNEL_LIST, bss->sub_command);
+      chan_freq* chan = bss->param.chanlist.cf;
+      for (auto channel : kChannels) {
+        (chan++)->channel = channel;
+      }
+      bss->param.chanlist.num_of_chan = std::size(kChannels);
+    }
+    return MLAN_STATUS_SUCCESS;
+  });
 
   wlan_fullmac_query_info_t info{};
   ifc->WlanFullmacImplQuery(&info);
@@ -159,11 +179,14 @@ TEST_F(WlanInterfaceTest, WlanFullmacImplQuery) {
 
   // Should support a non-zero number of rates and channels for 2.4 GHz
   EXPECT_NE(0, info.band_cap_list[0].basic_rate_count);
-  EXPECT_NE(0, info.band_cap_list[0].operating_channel_count);
+  EXPECT_EQ(kNum2gChannels, info.band_cap_list[0].operating_channel_count);
+  EXPECT_BYTES_EQ(kChannels, info.band_cap_list[0].operating_channel_list, kNum2gChannels);
 
   // Should support a non-zero number of rates and channels for 5 GHz
-  EXPECT_NE(0, info.band_cap_list[0].basic_rate_count);
-  EXPECT_NE(0, info.band_cap_list[0].operating_channel_count);
+  EXPECT_NE(0, info.band_cap_list[1].basic_rate_count);
+  EXPECT_EQ(kNum5gChannels, info.band_cap_list[1].operating_channel_count);
+  EXPECT_BYTES_EQ(kChannels + kNum2gChannels, info.band_cap_list[1].operating_channel_list,
+                  kNum5gChannels);
 }
 
 TEST_F(WlanInterfaceTest, WlanFullmacImplQueryMacSublayerSupport) {
