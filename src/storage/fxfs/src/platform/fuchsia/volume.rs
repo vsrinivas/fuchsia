@@ -385,7 +385,7 @@ mod tests {
         fuchsia_zircon::Status,
         std::sync::Arc,
         storage_device::{fake_device::FakeDevice, DeviceHolder},
-        vfs::file::File,
+        vfs::file::FileIo,
     };
 
     #[fasync::run(10, test)]

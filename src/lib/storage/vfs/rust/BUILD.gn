@@ -68,7 +68,6 @@ rustc_library("vfs") {
     "src/file/common.rs",
     "src/file/connection.rs",
     "src/file/connection/io1.rs",
-    "src/file/connection/util.rs",
     "src/file/test_utils.rs",
     "src/file/vmo.rs",
     "src/file/vmo/asynchronous.rs",

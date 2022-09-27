@@ -21,7 +21,7 @@ pub mod connection;
 
 /// Trait used for all files.
 #[async_trait]
-pub trait File: Sync + Send + DirectoryEntry {
+pub trait File: Send + Sync {
     /// Called when the file is going to be accessed, typically by a new connection.
     /// Flags is the same as the flags passed to `fidl_fuchsia_io.Node/Open`.
     /// The following flags are handled by the connection and do not need to be handled inside
@@ -30,25 +30,6 @@ pub trait File: Sync + Send + DirectoryEntry {
     /// * OPEN_FLAG_DESCRIBE - The OnOpen event is sent before any other requests are received from
     /// the file's client.
     async fn open(&self, flags: fio::OpenFlags) -> Result<(), Status>;
-
-    /// Read at most |buffer.len()| bytes starting at |offset| into |buffer|. The function may read
-    /// less than |count| bytes and still return success, in which case read_at returns the number
-    /// of bytes read into |buffer|.
-    async fn read_at(&self, offset: u64, buffer: &mut [u8]) -> Result<u64, Status>;
-
-    /// Write |content| starting at |offset|, returning the number of bytes that were successfully
-    /// written.
-    /// If there are pending attributes to update (see set_attrs), they should also be flushed at
-    /// this time.  Otherwise, no attributes should be updated, other than size as needed.
-    async fn write_at(&self, offset: u64, content: &[u8]) -> Result<u64, Status>;
-
-    /// Appends |content| returning, if successful, the number of bytes written, and the file offset
-    /// after writing.  Implementations should make the writes atomic, so in the event that multiple
-    /// requests to append are in-flight, it should appear that the two writes are applied in
-    /// sequence.
-    /// If there are pending attributes to update (see set_attrs), they should also be flushed at
-    /// this time.  Otherwise, no attributes should be updated, other than size as needed.
-    async fn append(&self, content: &[u8]) -> Result<(u64, u64), Status>;
 
     /// Truncate the file to |length|.
     /// If there are pending attributes to update (see set_attrs), they should also be flushed at
@@ -89,7 +70,35 @@ pub trait File: Sync + Send + DirectoryEntry {
     }
 
     /// Describes the underlying object.  Defaults to a simple file.
-    fn describe(&self, _connection_flags: fio::OpenFlags) -> Result<fio::FileInfo, Status> {
-        Ok(fio::FileInfo::EMPTY)
+    fn describe(
+        &self,
+        _connection_flags: fio::OpenFlags,
+        stream: Option<zx::Stream>,
+    ) -> Result<fio::FileInfo, Status> {
+        Ok(fio::FileInfo { stream, ..fio::FileInfo::EMPTY })
     }
+}
+
+// Trait for handling reads and writes to a file. Files that support Streams should handle reads and
+// writes via a Pager instead of implementing this trait.
+#[async_trait]
+pub trait FileIo: Send + Sync {
+    /// Read at most |buffer.len()| bytes starting at |offset| into |buffer|. The function may read
+    /// less than |count| bytes and still return success, in which case read_at returns the number
+    /// of bytes read into |buffer|.
+    async fn read_at(&self, offset: u64, buffer: &mut [u8]) -> Result<u64, Status>;
+
+    /// Write |content| starting at |offset|, returning the number of bytes that were successfully
+    /// written.
+    /// If there are pending attributes to update (see set_attrs), they should also be flushed at
+    /// this time.  Otherwise, no attributes should be updated, other than size as needed.
+    async fn write_at(&self, offset: u64, content: &[u8]) -> Result<u64, Status>;
+
+    /// Appends |content| returning, if successful, the number of bytes written, and the file offset
+    /// after writing.  Implementations should make the writes atomic, so in the event that multiple
+    /// requests to append are in-flight, it should appear that the two writes are applied in
+    /// sequence.
+    /// If there are pending attributes to update (see set_attrs), they should also be flushed at
+    /// this time.  Otherwise, no attributes should be updated, other than size as needed.
+    async fn append(&self, content: &[u8]) -> Result<(u64, u64), Status>;
 }

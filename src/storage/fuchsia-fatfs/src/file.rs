@@ -27,7 +27,7 @@ use {
     vfs::{
         directory::entry::{DirectoryEntry, EntryInfo},
         execution_scope::ExecutionScope,
-        file::{connection, File as VfsFile},
+        file::{connection, File as VfsFile, FileIo as VfsFileIo},
         path::Path,
     },
 };
@@ -217,36 +217,6 @@ impl VfsFile for FatFile {
         Ok(())
     }
 
-    async fn read_at(&self, offset: u64, buffer: &mut [u8]) -> Result<u64, Status> {
-        let fs_lock = self.filesystem.lock().unwrap();
-        let file = self.borrow_file_mut(&fs_lock).ok_or(Status::BAD_HANDLE)?;
-
-        let real_offset =
-            file.seek(std::io::SeekFrom::Start(offset)).map_err(fatfs_error_to_status)?;
-        // Technically, we don't need to do this because the read should return zero bytes later,
-        // but it's better to be explicit.
-        if real_offset != offset {
-            return Ok(0);
-        }
-        let mut total_read = 0;
-        while total_read < buffer.len() {
-            let read = file.read(&mut buffer[total_read..]).map_err(fatfs_error_to_status)?;
-            if read == 0 {
-                break;
-            }
-            total_read += read;
-        }
-        Ok(total_read as u64)
-    }
-
-    async fn write_at(&self, offset: u64, content: &[u8]) -> Result<u64, Status> {
-        self.write_or_append(Some(offset), content).await.map(|r| r.0)
-    }
-
-    async fn append(&self, content: &[u8]) -> Result<(u64, u64), Status> {
-        self.write_or_append(None, content).await
-    }
-
     async fn truncate(&self, length: u64) -> Result<(), Status> {
         let fs_lock = self.filesystem.lock().unwrap();
         let file = self.borrow_file_mut(&fs_lock).ok_or(Status::BAD_HANDLE)?;
@@ -337,6 +307,39 @@ impl VfsFile for FatFile {
     }
 }
 
+#[async_trait]
+impl VfsFileIo for FatFile {
+    async fn read_at(&self, offset: u64, buffer: &mut [u8]) -> Result<u64, Status> {
+        let fs_lock = self.filesystem.lock().unwrap();
+        let file = self.borrow_file_mut(&fs_lock).ok_or(Status::BAD_HANDLE)?;
+
+        let real_offset =
+            file.seek(std::io::SeekFrom::Start(offset)).map_err(fatfs_error_to_status)?;
+        // Technically, we don't need to do this because the read should return zero bytes later,
+        // but it's better to be explicit.
+        if real_offset != offset {
+            return Ok(0);
+        }
+        let mut total_read = 0;
+        while total_read < buffer.len() {
+            let read = file.read(&mut buffer[total_read..]).map_err(fatfs_error_to_status)?;
+            if read == 0 {
+                break;
+            }
+            total_read += read;
+        }
+        Ok(total_read as u64)
+    }
+
+    async fn write_at(&self, offset: u64, content: &[u8]) -> Result<u64, Status> {
+        self.write_or_append(Some(offset), content).await.map(|r| r.0)
+    }
+
+    async fn append(&self, content: &[u8]) -> Result<(u64, u64), Status> {
+        self.write_or_append(None, content).await
+    }
+}
+
 impl DirectoryEntry for FatFile {
     fn open(
         self: Arc<Self>,
@@ -360,7 +363,7 @@ impl DirectoryEntry for FatFile {
                 return;
             }
         }
-        connection::io1::FileConnection::<FatFile>::create_connection(
+        connection::io1::create_connection(
             // Note readable/writable do not override what's set in flags, they merely tell the
             // FileConnection that it's valid to open the file readable/writable.
             scope.clone(),

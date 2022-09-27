@@ -20,7 +20,7 @@ use {
             entry_container::Directory,
             traversal_position::TraversalPosition,
         },
-        file::File,
+        file::{File, FileIo},
     },
 };
 

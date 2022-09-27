@@ -54,7 +54,7 @@ impl<S: crate::NonMetaStorage> vfs::directory::entry::DirectoryEntry for MetaAsF
             return;
         }
 
-        let () = vfs::file::connection::io1::FileConnection::<Self>::create_connection(
+        let () = vfs::file::connection::io1::create_connection(
             scope.clone(),
             self,
             flags,
@@ -76,22 +76,6 @@ impl<S: crate::NonMetaStorage> vfs::directory::entry::DirectoryEntry for MetaAsF
 impl<S: crate::NonMetaStorage> vfs::file::File for MetaAsFile<S> {
     async fn open(&self, _flags: fio::OpenFlags) -> Result<(), zx::Status> {
         Ok(())
-    }
-
-    async fn read_at(&self, offset: u64, buffer: &mut [u8]) -> Result<u64, zx::Status> {
-        let contents = self.root_dir.hash.to_string();
-        let offset = std::cmp::min(u64_to_usize_safe(offset), contents.len());
-        let count = std::cmp::min(buffer.len(), contents.len() - offset);
-        let () = buffer[..count].copy_from_slice(&contents.as_bytes()[offset..offset + count]);
-        Ok(usize_to_u64_safe(count))
-    }
-
-    async fn write_at(&self, _offset: u64, _content: &[u8]) -> Result<u64, zx::Status> {
-        Err(zx::Status::NOT_SUPPORTED)
-    }
-
-    async fn append(&self, _content: &[u8]) -> Result<(u64, u64), zx::Status> {
-        Err(zx::Status::NOT_SUPPORTED)
     }
 
     async fn truncate(&self, _length: u64) -> Result<(), zx::Status> {
@@ -140,6 +124,25 @@ impl<S: crate::NonMetaStorage> vfs::file::File for MetaAsFile<S> {
     }
 }
 
+#[async_trait]
+impl<S: crate::NonMetaStorage> vfs::file::FileIo for MetaAsFile<S> {
+    async fn read_at(&self, offset: u64, buffer: &mut [u8]) -> Result<u64, zx::Status> {
+        let contents = self.root_dir.hash.to_string();
+        let offset = std::cmp::min(u64_to_usize_safe(offset), contents.len());
+        let count = std::cmp::min(buffer.len(), contents.len() - offset);
+        let () = buffer[..count].copy_from_slice(&contents.as_bytes()[offset..offset + count]);
+        Ok(usize_to_u64_safe(count))
+    }
+
+    async fn write_at(&self, _offset: u64, _content: &[u8]) -> Result<u64, zx::Status> {
+        Err(zx::Status::NOT_SUPPORTED)
+    }
+
+    async fn append(&self, _content: &[u8]) -> Result<(u64, u64), zx::Status> {
+        Err(zx::Status::NOT_SUPPORTED)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {
@@ -148,7 +151,10 @@ mod tests {
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
         futures::stream::StreamExt as _,
         std::convert::TryInto as _,
-        vfs::{directory::entry::DirectoryEntry, file::File},
+        vfs::{
+            directory::entry::DirectoryEntry,
+            file::{File, FileIo},
+        },
     };
 
     struct TestEnv {
@@ -265,7 +271,7 @@ mod tests {
         let (_env, meta_as_file) = TestEnv::new().await;
         let mut buffer = vec![0u8];
         assert_eq!(
-            File::read_at(
+            FileIo::read_at(
                 &meta_as_file,
                 (meta_as_file.root_dir.hash.to_string().as_bytes().len() + 1).try_into().unwrap(),
                 buffer.as_mut()
@@ -281,7 +287,7 @@ mod tests {
         let (_env, meta_as_file) = TestEnv::new().await;
         let mut buffer = vec![0u8; 2];
         assert_eq!(
-            File::read_at(
+            FileIo::read_at(
                 &meta_as_file,
                 (meta_as_file.root_dir.hash.to_string().as_bytes().len() - 1).try_into().unwrap(),
                 buffer.as_mut()
@@ -301,7 +307,7 @@ mod tests {
         let content_len = meta_as_file.root_dir.hash.to_string().as_bytes().len();
         let mut buffer = vec![0u8; content_len];
 
-        assert_eq!(File::read_at(&meta_as_file, 0, buffer.as_mut()).await, Ok(64));
+        assert_eq!(FileIo::read_at(&meta_as_file, 0, buffer.as_mut()).await, Ok(64));
         assert_eq!(buffer.as_slice(), meta_as_file.root_dir.hash.to_string().as_bytes());
     }
 
@@ -309,14 +315,14 @@ mod tests {
     async fn file_write_at() {
         let (_env, meta_as_file) = TestEnv::new().await;
 
-        assert_eq!(File::write_at(&meta_as_file, 0, &[]).await, Err(zx::Status::NOT_SUPPORTED));
+        assert_eq!(FileIo::write_at(&meta_as_file, 0, &[]).await, Err(zx::Status::NOT_SUPPORTED));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn file_append() {
         let (_env, meta_as_file) = TestEnv::new().await;
 
-        assert_eq!(File::append(&meta_as_file, &[]).await, Err(zx::Status::NOT_SUPPORTED));
+        assert_eq!(FileIo::append(&meta_as_file, &[]).await, Err(zx::Status::NOT_SUPPORTED));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

@@ -32,7 +32,7 @@ use {
         common::{rights_to_posix_mode_bits, send_on_open_with_error},
         directory::entry::{DirectoryEntry, EntryInfo},
         execution_scope::ExecutionScope,
-        file::{connection::io1::FileConnection, File},
+        file::{connection::io1::create_connection_async, File, FileIo},
         path::Path,
     },
 };
@@ -145,7 +145,7 @@ impl FxFile {
         server_end: ServerEnd<fio::NodeMarker>,
         shutdown: oneshot::Receiver<()>,
     ) {
-        FileConnection::<FxFile>::create_connection_async(
+        create_connection_async(
             // Note readable/writable/executable do not override what's set in flags, they merely
             // tell the FileConnection which set of rights the file can be opened as.
             scope.clone(),
@@ -385,28 +385,6 @@ impl File for FxFile {
         Ok(())
     }
 
-    async fn read_at(&self, offset: u64, buffer: &mut [u8]) -> Result<u64, Status> {
-        let bytes_read = self.handle.read_cached(offset, buffer).await.map_err(map_to_status)?;
-        Ok(bytes_read as u64)
-    }
-
-    async fn write_at(&self, offset: u64, content: &[u8]) -> Result<u64, Status> {
-        let _ = self
-            .handle
-            .write_or_append_cached(Some(offset), content)
-            .await
-            .map_err(map_to_status)?;
-        self.has_written.store(true, Ordering::Relaxed);
-        Ok(content.len() as u64)
-    }
-
-    async fn append(&self, content: &[u8]) -> Result<(u64, u64), Status> {
-        let size =
-            self.handle.write_or_append_cached(None, content).await.map_err(map_to_status)?;
-        self.has_written.store(true, Ordering::Relaxed);
-        Ok((content.len() as u64, size))
-    }
-
     async fn truncate(&self, length: u64) -> Result<(), Status> {
         self.handle.truncate(length).await.map_err(map_to_status)?;
         self.has_written.store(true, Ordering::Relaxed);
@@ -512,6 +490,31 @@ impl File for FxFile {
             store.object_count(),
             self.handle.owner().id(),
         ))
+    }
+}
+
+#[async_trait]
+impl FileIo for FxFile {
+    async fn read_at(&self, offset: u64, buffer: &mut [u8]) -> Result<u64, Status> {
+        let bytes_read = self.handle.read_cached(offset, buffer).await.map_err(map_to_status)?;
+        Ok(bytes_read as u64)
+    }
+
+    async fn write_at(&self, offset: u64, content: &[u8]) -> Result<u64, Status> {
+        let _ = self
+            .handle
+            .write_or_append_cached(Some(offset), content)
+            .await
+            .map_err(map_to_status)?;
+        self.has_written.store(true, Ordering::Relaxed);
+        Ok(content.len() as u64)
+    }
+
+    async fn append(&self, content: &[u8]) -> Result<(u64, u64), Status> {
+        let size =
+            self.handle.write_or_append_cached(None, content).await.map_err(map_to_status)?;
+        self.has_written.store(true, Ordering::Relaxed);
+        Ok((content.len() as u64, size))
     }
 }
 
