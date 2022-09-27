@@ -89,6 +89,7 @@ async fn full_transfer(run: usize) -> Result<(), Error> {
     .await
 }
 
+/* TODO(110501): Re-enable this after CSO lands
 #[fuchsia::test]
 async fn forwarded_twice_to_separate_nodes(run: usize) -> Result<(), Error> {
     let mut node_id_gen = NodeIdGenerator::new("forwarded_twice_to_separate_nodes", run);
@@ -121,7 +122,7 @@ async fn forwarded_twice_to_separate_nodes(run: usize) -> Result<(), Error> {
         Some("HELLO INTEGRATION TEST WORLD"),
     )
     .await
-}
+} */
 
 #[fuchsia::test]
 async fn forwarded_twice_full_transfer(run: usize) -> Result<(), Error> {
