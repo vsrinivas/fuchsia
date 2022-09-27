@@ -16,6 +16,10 @@ __BEGIN_CDECLS
 // to initiate asynchronous read operations. The dispatcher is in
 // charge of dispatching the read callbacks.
 //
+// # Thread safety
+//
+// Operations on dispatcher objects are thread-safe.
+//
 // # Example
 //
 //   void shutdown_handler(fdf_dispatcher_t* dispatcher,

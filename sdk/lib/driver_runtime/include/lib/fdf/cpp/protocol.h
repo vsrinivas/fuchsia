@@ -18,8 +18,9 @@ namespace fdf {
 // the structure in memory (and unmodified) until the connect handler runs.
 // Thereafter, the protocol may be registered again or destroyed.
 //
-// This class must only be accessed on the dispatch thread since it lacks internal
-// synchronization of its state.
+// # Thread safety
+//
+// This class is thread-unsafe.
 class Protocol : public fdf_token_t {
  public:
   // Handles the connection request to |protocol|. If |status| is ZX_OK, transfers

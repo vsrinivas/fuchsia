@@ -20,8 +20,9 @@ namespace fdf {
 // the structure in memory (and unmodified) until the read's handler runs,
 // or the dispatcher shuts down.  Thereafter, the read may be begun again or destroyed.
 //
-// This class must only be accessed on the dispatch thread since it lacks internal
-// synchronization of its state.
+// # Thread safety
+//
+// This class is thread-unsafe.
 //
 // Concrete implementations: |fdf::ChannelRead|.
 class ChannelReadBase {

@@ -17,7 +17,7 @@ __BEGIN_CDECLS
 //
 // # Thread safety
 //
-// Most operations on |fdf_channel_t| are thread-safe, except for |fdf_channel_cancel_wait|.
+// Most operations on channel objects are thread-safe, except for |fdf_channel_cancel_wait|.
 //
 // # Example
 //

@@ -14,6 +14,8 @@ __BEGIN_CDECLS
 // The arena owns all the allocated memory. Allocated memory can be freed
 // by calling |fdf_arena_free|, or will be freed when the arena is destroyed.
 //
+// # Thread safety
+//
 // Operations on arena objects are thread-safe.
 //
 // # Example

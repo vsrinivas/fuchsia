@@ -15,7 +15,9 @@ namespace fdf {
 // C++ wrapper for an arena, with RAII semantics. Automatically frees
 // all allocated memory when it goes out of scope.
 //
-// This class is thread-safe.
+// # Thread safety
+//
+// This class is thread-unsafe.
 //
 // # Example
 //

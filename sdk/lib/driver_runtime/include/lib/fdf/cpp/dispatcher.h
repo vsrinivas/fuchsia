@@ -24,6 +24,10 @@ namespace fdf {
 // C++ wrapper for a dispatcher, with RAII semantics. Automatically shuts down
 // the dispatcher when it goes out of scope.
 //
+// # Thread safety
+//
+// This class is thread-unsafe.
+//
 // # Example
 //
 //   void Driver::OnDispatcherShutdown(fdf_dispatcher_t* dispatcher) {

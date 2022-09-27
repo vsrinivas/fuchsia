@@ -19,7 +19,7 @@ namespace fdf {
 //
 // # Thread safety
 //
-// This class is thread-compatible.
+// This class is thread-unsafe.
 //
 // # Example
 //
