@@ -1150,18 +1150,11 @@ template("assembled_system") {
                "route_sources_config",
              ])
 
-  _bazel_legacy_aib_output_dir =
-      rebase_path("${files.outdir}/${labels.bazel_legacy_aib}", root_build_dir)
   bazel_assembly_input_bundle(labels.bazel_legacy_aib) {
     forward_variables_from(invoker, [ "testonly" ])
-
-    # TODO(jayzhuang): This is symlinking more than what we need. This is
-    # necessary because we need to create a `root` file in this dir, while we
-    # only need contents from the `legacy` subdir.
-    #
-    # Change once https://fxrev.dev/728647 has landed.
-    source_dir = "${files.outdir}"
-    dest_dir = "${_bazel_legacy_aib_output_dir}"
+    source_dir = "${files.legacy_assembly_input_bundle_dir}"
+    dest_dir = rebase_path("${files.outdir}/${labels.bazel_legacy_aib}",
+                           root_build_dir)
     deps = [ ":${labels.legacy_assembly_input_bundle}" ]
   }
 
