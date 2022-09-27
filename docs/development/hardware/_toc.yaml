@@ -20,8 +20,6 @@ toc:
   section:
   - title: "Install Fuchsia from a USB flash drive"
     path: /docs/development/hardware/usb_setup.md
-  - title: "Use the Fuchsia installer (Legacy)"
-    path: /docs/development/hardware/installer.md
 - title: "Set up experimental hardware"
   section:
   - title: "Install Fuchsia on Acer Switch Alpha 12"

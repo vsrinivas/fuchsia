@@ -37,7 +37,7 @@ To prepare a USB flash drive to be a bootable disk, do the following:
 1. Create a bootable USB drive:
 
    ```posix-terminal
-   fx mkinstaller -v --new-installer {{ "<var>" }}PATH_TO_USB_DRIVE{{ "</var>"}}
+   fx mkinstaller -v {{ "<var>" }}PATH_TO_USB_DRIVE{{ "</var>"}}
    ```
 
    Replace `PATH_TO_USB_DRIVE` with the path to the USB drive from the step above.
@@ -45,14 +45,14 @@ To prepare a USB flash drive to be a bootable disk, do the following:
    The example command below selects the `/dev/sda` path:
 
    ``` none {:.devsite-disable-click-to-copy}
-   $ fx mkinstaller -v --new-installer /dev/sda
+   $ fx mkinstaller -v /dev/sda
    ```
 
    When finished, the command prints output similar to the following in the end:
 
 
    ``` none {:.devsite-disable-click-to-copy}
-   $ fx mkinstaller -v --new-installer /dev/sda
+   $ fx mkinstaller -v /dev/sda
    mkinstaller: WARNING: Changing ownership of /dev/sda to alice
    [sudo] password for alice:
    ...

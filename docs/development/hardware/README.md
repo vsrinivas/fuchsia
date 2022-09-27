@@ -35,7 +35,6 @@ Fuchsia's support for CPUs:
 - [Install Fuchsia on a Khadas VIM3 board][install-fuchsia-on-vim3]
 - Create a bootable Fuchsia image:
   - [Install Fuchsia from a USB flash drive][prepare-usb]
-  - [Use the Fuchsia installer (Legacy)][use-the-installer-legacy]
 - Set up experimental hardware:
   - [Install Fuchsia on Acer Switch Alpha 12][install-fuchsia-on-acer12]
   - [Install Fuchsia on Toulouse][install-fuchsia-on-toulouse]
@@ -47,6 +46,5 @@ Fuchsia's support for CPUs:
 [install-fuchsia-on-nuc-legacy]: /docs/development/hardware/intel_nuc_with_zedboot.md
 [install-fuchsia-on-vim3]: /docs/development/hardware/khadas-vim3.md
 [prepare-usb]: /docs/development/hardware/usb_setup.md
-[use-the-installer-legacy]: /docs/development/hardware/installer.md
 [install-fuchsia-on-acer12]: /docs/development/hardware/acer12.md
 [install-fuchsia-on-toulouse]: /docs/development/hardware/toulouse.md
