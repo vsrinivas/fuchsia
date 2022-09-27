@@ -6,6 +6,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "zircon/rights.h"
+
 namespace screenshot {
 
 GfxScreenshot::GfxScreenshot(TakeGfxScreenshot take_gfx_screenshot,
@@ -41,9 +43,9 @@ void GfxScreenshot::Take(fuchsia::ui::composition::ScreenshotTakeRequest format,
     fuchsia::ui::composition::ScreenshotTakeResponse response;
 
     zx::vmo response_vmo;
-    zx_status_t status = data.data.vmo.duplicate(ZX_RIGHT_READ | ZX_RIGHT_MAP, &response_vmo);
-    FX_DCHECK(status == ZX_OK);
-
+    zx_status_t status = data.data.vmo.duplicate(
+        ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER | ZX_RIGHT_GET_PROPERTY, &response_vmo);
+    FX_CHECK(status == ZX_OK);
     response.set_vmo(std::move(response_vmo));
     response.set_size({data.info.width, data.info.height});
 

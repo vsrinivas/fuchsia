@@ -177,7 +177,7 @@ void FlatlandScreenshot::HandleFrameRender() {
 
   zx::vmo response_vmo;
   zx_status_t status = buffer_collection_info_.buffers[0].vmo.duplicate(
-      ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER, &response_vmo);
+      ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER | ZX_RIGHT_GET_PROPERTY, &response_vmo);
   FX_DCHECK(status == ZX_OK);
 
   response.set_vmo(std::move(response_vmo));

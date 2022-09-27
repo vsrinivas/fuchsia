@@ -39,8 +39,14 @@ void TestView::DrawCoordinateGrid() {
   const uint32_t view_width = width();
   const uint32_t view_height = height();
 
-  const uint32_t pane_width = view_width / 2;
-  const uint32_t pane_height = view_height / 2;
+  // Add some padding for display pixel ratio tests because (scale * display dimensions) is not
+  // an integer which causes scenic to return the floor values as view's width and height . This
+  // will not impact other tests as Scenic will clip content drawn outside the view's clip boundary.
+  const uint32_t pane_width =
+      static_cast<uint32_t>(std::ceil(static_cast<float>(view_width) / 2.f)) + 1;
+
+  const uint32_t pane_height =
+      static_cast<uint32_t>(std::ceil(static_cast<float>(view_height) / 2.f)) + 1;
 
   for (uint8_t i = 0; i < 2; i++) {
     for (uint8_t j = 0; j < 2; j++) {

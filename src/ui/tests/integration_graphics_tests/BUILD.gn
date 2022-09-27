@@ -5,5 +5,8 @@
 group("integration_graphics_tests") {
   testonly = true
 
-  deps = [ "presentation:tests" ]
+  deps = [
+    "display-pixel-ratio:tests",
+    "presentation:tests",
+  ]
 }
