@@ -76,6 +76,8 @@ if (is_fuchsia) {
       ":package",
     ]
 
+    generate_image_metadata = false
+
     # Needed for scrutiny to find things for the component model.
     include_component_id_index = true
   }

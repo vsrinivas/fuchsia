@@ -574,6 +574,9 @@ build_api_module("images") {
 
     # This has the images referred to by $qemu_kernel_label entries.
     "//build/zircon/zbi_tests",
+
+    # Images who are pulled as part of host interaction tests.
+    ":host",
   ]
 }
 
