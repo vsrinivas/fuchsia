@@ -5,6 +5,7 @@
 #include "src/media/sounds/soundplayer/opus_decoder.h"
 
 #include <endian.h>
+#include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <memory>
@@ -79,11 +80,8 @@ bool OpusDecoder::CheckHeaderPacket(const uint8_t* data, size_t size) {
   return true;
 }
 
-OpusDecoder::OpusDecoder() {}
-
-OpusDecoder::~OpusDecoder() {}
-
-bool OpusDecoder::ProcessPacket(const uint8_t* data, size_t size, bool first, bool last) {
+bool OpusDecoder::ProcessPacket(const uint8_t* data, size_t size, bool first, bool last,
+                                DiscardableSound& sound) {
   if (first) {
     second_packet_processed_ = false;
     total_frame_count_ = 0;
@@ -111,7 +109,7 @@ bool OpusDecoder::ProcessPacket(const uint8_t* data, size_t size, bool first, bo
   HandleOutputBuffer(std::move(output_buffer), static_cast<uint32_t>(decoded_frame_count_or_error));
 
   if (last) {
-    return HandleEndOfStream();
+    return HandleEndOfStream(sound);
   }
 
   return true;
@@ -165,18 +163,20 @@ void OpusDecoder::HandleOutputBuffer(std::unique_ptr<int16_t[]> buffer, uint32_t
   total_frame_count_ += frame_count;
 }
 
-bool OpusDecoder::HandleEndOfStream() {
+bool OpusDecoder::HandleEndOfStream(DiscardableSound& sound) {
   size_t frame_size = sizeof(int16_t) * channels_;
   size_t vmo_size = (total_frame_count_ - preskip_) * frame_size;
 
-  zx_status_t status = zx::vmo::create(vmo_size, 0, &vmo_);
+  zx_status_t status = sound.SetSize(vmo_size);
   if (status != ZX_OK) {
-    FX_PLOGS(WARNING, status) << "zx::vmo::create failed";
     return false;
   }
 
   uint16_t preskip_remaining = preskip_;
   uint64_t offset = 0;
+  auto& vmo = sound.LockForWrite();
+  auto unlocker = fit::defer([&sound]() { sound.Unlock(); });
+
   for (auto& output_buffer : output_buffers_) {
     if (preskip_remaining >= output_buffer.frame_count_) {
       preskip_remaining -= output_buffer.frame_count_;
@@ -184,7 +184,7 @@ bool OpusDecoder::HandleEndOfStream() {
     }
 
     size_t size = (output_buffer.frame_count_ - preskip_remaining) * frame_size;
-    status = vmo_.write(output_buffer.samples_.get() + preskip_remaining * channels_, offset, size);
+    status = vmo.write(output_buffer.samples_.get() + preskip_remaining * channels_, offset, size);
     if (status != ZX_OK) {
       FX_PLOGS(WARNING, status) << "zx::vmo::write failed";
       return false;
@@ -194,20 +194,13 @@ bool OpusDecoder::HandleEndOfStream() {
     preskip_remaining = 0;
   }
 
-  output_buffers_.clear();
-  return true;
-}
-
-Sound OpusDecoder::TakeSound() {
-  if (!vmo_) {
-    return Sound();
-  }
-
-  return Sound(
-      std::move(vmo_), (total_frame_count_ - preskip_) * sizeof(int16_t) * channels_,
+  sound.SetStreamType(
       fuchsia::media::AudioStreamType{.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16,
                                       .channels = channels_,
                                       .frames_per_second = kOutputFramesPerSecond});
+
+  output_buffers_.clear();
+  return true;
 }
 
 }  // namespace soundplayer

@@ -50,7 +50,8 @@ class SoundPlayerImpl : public fuchsia::media::sounds::Player {
 
     // Plays the sound, returning ZX_OK and calling the callback when playback is complete.
     // If a failure occurs, an error status is returned, and the callback is not called.
-    zx_status_t PlaySound(uint32_t id, const Sound& sound, PlaySoundCallback completion_callback);
+    zx_status_t PlaySound(uint32_t id, std::shared_ptr<Sound> sound,
+                          PlaySoundCallback completion_callback);
 
     // Stops playing the sound, if one is playing, and calls the completion callback.
     void StopPlayingSound();
@@ -58,17 +59,19 @@ class SoundPlayerImpl : public fuchsia::media::sounds::Player {
    private:
     fuchsia::media::AudioRendererPtr audio_renderer_;
     PlaySoundCallback play_sound_callback_;
+    std::shared_ptr<Sound> locked_sound_;
   };
 
   void DeleteThis();
 
   void WhenAudioServiceIsWarm(fit::closure callback);
 
-  fpromise::result<Sound, zx_status_t> SoundFromFile(fidl::InterfaceHandle<fuchsia::io::File> file);
+  fpromise::result<std::shared_ptr<Sound>, zx_status_t> SoundFromFile(
+      fidl::InterfaceHandle<fuchsia::io::File> file);
 
   fidl::Binding<fuchsia::media::sounds::Player> binding_;
   fuchsia::media::AudioPtr audio_service_;
-  std::unordered_map<uint32_t, std::unique_ptr<Sound>> sounds_by_id_;
+  std::unordered_map<uint32_t, std::shared_ptr<Sound>> sounds_by_id_;
   std::unordered_map<Renderer*, std::unique_ptr<Renderer>> renderers_;
   std::unordered_map<uint32_t, Renderer*> renderers_by_sound_id_;
 

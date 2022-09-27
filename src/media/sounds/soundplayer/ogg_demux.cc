@@ -20,14 +20,16 @@ OggDemux::OggDemux() {}
 
 OggDemux::~OggDemux() { ogg_sync_clear(&sync_state_); }
 
-fpromise::result<Sound, zx_status_t> OggDemux::Process(int fd) {
+zx_status_t OggDemux::Process(DiscardableSound& sound) {
+  lseek(sound.fd(), 0, SEEK_SET);
+
   int ogg_result = ogg_sync_init(&sync_state_);
   if (ogg_result != 0) {
     FX_LOGS(WARNING) << "ogg_sync_init failed, result " << ogg_result;
-    return fpromise::error(ZX_ERR_INTERNAL);
+    return ZX_ERR_INTERNAL;
   }
 
-  while (ReadPage(fd)) {
+  while (ReadPage(sound.fd())) {
     int serial_number = ogg_page_serialno(&page_);
     Stream* stream = GetOrCreateStream(serial_number);
     if (!stream) {
@@ -38,7 +40,7 @@ fpromise::result<Sound, zx_status_t> OggDemux::Process(int fd) {
     ogg_result = ogg_stream_pagein(&stream->state(), &page_);
     if (ogg_result != 0) {
       FX_LOGS(WARNING) << "ogg_stream_pagein failed, result " << ogg_result;
-      return fpromise::error(ZX_ERR_IO_INVALID);
+      return ZX_ERR_IO_INVALID;
     }
 
     while (true) {
@@ -49,23 +51,22 @@ fpromise::result<Sound, zx_status_t> OggDemux::Process(int fd) {
         break;
       } else if (ogg_result == -1) {
         FX_LOGS(WARNING) << "ogg_stream_packetout failed, result " << ogg_result;
-        return fpromise::error(ZX_ERR_IO_INVALID);
+        return ZX_ERR_IO_INVALID;
       }
 
-      if (!OnPacket(packet, serial_number)) {
-        return fpromise::error(ZX_ERR_IO_INVALID);
+      if (!OnPacket(packet, serial_number, sound)) {
+        return ZX_ERR_IO_INVALID;
       }
     }
   }
 
   if (!end_of_file_ || !stream_ || !stream_->decoder()) {
-    return fpromise::error(ZX_ERR_IO_INVALID);
+    return ZX_ERR_IO_INVALID;
   }
 
-  auto sound = stream_->decoder()->TakeSound();
   stream_ = nullptr;
 
-  return fpromise::ok(std::move(sound));
+  return ZX_OK;
 }
 
 bool OggDemux::ReadPage(int fd) {
@@ -143,7 +144,7 @@ bool OggDemux::RejectStream(Stream* stream) {
   return !had_decoder;
 }
 
-bool OggDemux::OnPacket(const ogg_packet& packet, int serial_number) {
+bool OggDemux::OnPacket(const ogg_packet& packet, int serial_number, DiscardableSound& sound) {
   auto stream = GetStream(serial_number);
 
   if (!stream) {
@@ -160,7 +161,8 @@ bool OggDemux::OnPacket(const ogg_packet& packet, int serial_number) {
   }
 
   FX_DCHECK(stream->decoder());
-  if (!stream->decoder()->ProcessPacket(packet.packet, packet.bytes, packet.b_o_s, packet.e_o_s)) {
+  if (!stream->decoder()->ProcessPacket(packet.packet, packet.bytes, packet.b_o_s, packet.e_o_s,
+                                        sound)) {
     return RejectStream(stream);
   }
 

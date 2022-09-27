@@ -57,9 +57,9 @@ void SoundPlayerImpl::AddSoundFromFile(uint32_t id,
 
   callback(fuchsia::media::sounds::Player_AddSoundFromFile_Result::WithResponse(
       fuchsia::media::sounds::Player_AddSoundFromFile_Response(
-          std::make_tuple(result.value().duration().get()))));
+          std::make_tuple(result.value()->duration().get()))));
 
-  sounds_by_id_.emplace(id, std::make_unique<Sound>(result.take_value()));
+  sounds_by_id_.emplace(id, result.take_value());
 }
 
 void SoundPlayerImpl::AddSoundBuffer(uint32_t id, fuchsia::mem::Buffer buffer,
@@ -71,8 +71,8 @@ void SoundPlayerImpl::AddSoundBuffer(uint32_t id, fuchsia::mem::Buffer buffer,
     return;
   }
 
-  sounds_by_id_.emplace(
-      id, std::make_unique<Sound>(std::move(buffer.vmo), buffer.size, std::move(stream_type)));
+  sounds_by_id_.emplace(id, std::make_shared<UndiscardableSound>(std::move(buffer.vmo), buffer.size,
+                                                                 std::move(stream_type)));
 }
 
 void SoundPlayerImpl::RemoveSound(uint32_t id) { sounds_by_id_.erase(id); }
@@ -91,7 +91,7 @@ void SoundPlayerImpl::PlaySound(uint32_t id, fuchsia::media::AudioRenderUsage us
   auto renderer = std::make_unique<Renderer>(std::move(audio_renderer), usage);
   auto renderer_raw_ptr = renderer.get();
   if (renderer->PlaySound(
-          id, *iter->second,
+          id, iter->second,
           [this, id, renderer_raw_ptr,
            callback = std::move(callback)](fuchsia::media::sounds::Player_PlaySound_Result result) {
             auto iter = renderers_by_sound_id_.find(id);
@@ -157,7 +157,7 @@ void SoundPlayerImpl::WhenAudioServiceIsWarm(fit::closure callback) {
   });
 }
 
-fpromise::result<Sound, zx_status_t> SoundPlayerImpl::SoundFromFile(
+fpromise::result<std::shared_ptr<Sound>, zx_status_t> SoundPlayerImpl::SoundFromFile(
     fidl::InterfaceHandle<fuchsia::io::File> file) {
   FX_DCHECK(file);
 
@@ -167,16 +167,40 @@ fpromise::result<Sound, zx_status_t> SoundPlayerImpl::SoundFromFile(
     return fpromise::error(status);
   }
 
-  OggDemux demux;
-  auto result = demux.Process(fd.get());
-  if (result.is_ok()) {
-    return result;
+  auto sound = std::make_shared<DiscardableSound>(std::move(fd));
+
+  {
+    OggDemux demux;
+    if (demux.Process(*sound) == ZX_OK) {
+      // The raw pointer to |sound| is safe here, because the sound owns the callback.
+      sound->SetRestoreCallback([sound = sound.get()]() {
+        OggDemux demux;
+        zx_status_t status = demux.Process(*sound);
+        if (status != ZX_OK) {
+          FX_PLOGS(WARNING, status) << "Failed to restore discarded ogg/opus sound";
+        }
+      });
+
+      return fpromise::ok(std::move(sound));
+    }
   }
 
-  lseek(fd.get(), 0, SEEK_SET);
-
   WavReader wav_reader;
-  return wav_reader.Process(fd.get());
+  status = wav_reader.Process(*sound);
+  if (status == ZX_OK) {
+    // The raw pointer to |sound| is safe here, because the sound owns the callback.
+    sound->SetRestoreCallback([sound = sound.get()]() {
+      WavReader wav_reader;
+      zx_status_t status = wav_reader.Process(*sound);
+      if (status != ZX_OK) {
+        FX_PLOGS(WARNING, status) << "Failed to restore discarded WAV sound";
+      }
+    });
+
+    return fpromise::ok(std::move(sound));
+  }
+
+  return fpromise::error(status);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -190,22 +214,25 @@ SoundPlayerImpl::Renderer::Renderer(fuchsia::media::AudioRendererPtr audio_rende
 
 SoundPlayerImpl::Renderer::~Renderer() {}
 
-zx_status_t SoundPlayerImpl::Renderer::PlaySound(uint32_t id, const Sound& sound,
+zx_status_t SoundPlayerImpl::Renderer::PlaySound(uint32_t id, std::shared_ptr<Sound> sound,
                                                  PlaySoundCallback completion_callback) {
-  audio_renderer_->SetPcmStreamType(fidl::Clone(sound.stream_type()));
+  audio_renderer_->SetPcmStreamType(fidl::Clone(sound->stream_type()));
 
   zx::vmo vmo;
-  auto status = sound.vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
+  auto status = sound->LockForRead().duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
   if (status != ZX_OK) {
     FX_PLOGS(WARNING, status) << "Failed to duplicate VMO handle";
+    sound->Unlock();
     return status;
   }
+
+  locked_sound_ = sound;
 
   play_sound_callback_ = std::move(completion_callback);
 
   audio_renderer_->AddPayloadBuffer(0, std::move(vmo));
 
-  uint64_t frames_remaining = sound.frame_count();
+  uint64_t frames_remaining = sound->frame_count();
   uint64_t offset = 0;
 
   while (frames_remaining != 0) {
@@ -216,7 +243,7 @@ zx_status_t SoundPlayerImpl::Renderer::PlaySound(uint32_t id, const Sound& sound
         .pts = fuchsia::media::NO_TIMESTAMP,
         .payload_buffer_id = 0,
         .payload_offset = offset,
-        .payload_size = frames_to_send * sound.frame_size(),
+        .payload_size = frames_to_send * sound->frame_size(),
         .flags = 0,
         .buffer_config = 0,
         .stream_segment_id = 0,
@@ -224,6 +251,8 @@ zx_status_t SoundPlayerImpl::Renderer::PlaySound(uint32_t id, const Sound& sound
 
     if (frames_to_send == frames_remaining) {
       audio_renderer_->SendPacket(std::move(packet), [this]() {
+        locked_sound_->Unlock();
+        locked_sound_ = nullptr;
         // This renderer may be deleted during the callback, so we move the callback to prevent
         // it from being deleted out from under us.
         auto callback = std::move(play_sound_callback_);
@@ -235,7 +264,7 @@ zx_status_t SoundPlayerImpl::Renderer::PlaySound(uint32_t id, const Sound& sound
     }
 
     frames_remaining -= frames_to_send;
-    offset += frames_to_send * sound.frame_size();
+    offset += frames_to_send * sound->frame_size();
   }
 
   audio_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP, 0);
@@ -250,6 +279,9 @@ zx_status_t SoundPlayerImpl::Renderer::PlaySound(uint32_t id, const Sound& sound
 void SoundPlayerImpl::Renderer::StopPlayingSound() {
   audio_renderer_ = nullptr;
   if (play_sound_callback_) {
+    locked_sound_->Unlock();
+    locked_sound_ = nullptr;
+
     // This renderer may be deleted during the callback, so we move the callback to prevent
     // it from being deleted out from under us.
     auto callback = std::move(play_sound_callback_);

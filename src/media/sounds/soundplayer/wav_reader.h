@@ -5,8 +5,6 @@
 #ifndef SRC_MEDIA_SOUNDS_SOUNDPLAYER_WAV_READER_H_
 #define SRC_MEDIA_SOUNDS_SOUNDPLAYER_WAV_READER_H_
 
-#include <lib/fpromise/result.h>
-
 #include <vector>
 
 #include "src/media/sounds/soundplayer/sound.h"
@@ -19,12 +17,13 @@ class WavReader {
 
   ~WavReader();
 
-  // Processes the file. |fd| must be positioned at the beginning of the file. This method does
-  // not close |fd| regardless of the result, but will leave |fd| at an arbitrary position.
-  fpromise::result<Sound, zx_status_t> Process(int fd);
+  // Process the file referenced by |sound.fd()|, initializes |sound| as needed, and fills the
+  // VMO with the audio contained in the file.
+  zx_status_t Process(DiscardableSound& sound);
 
-  // Processes the buffer.
-  fpromise::result<Sound, zx_status_t> Process(const uint8_t* data, size_t size);
+  // Processes the provided buffer, initializes |sound| as needed, and fills the
+  // VMO with the audio contained in the buffer.
+  zx_status_t Process(DiscardableSound& sound, const uint8_t* data, size_t size);
 
  private:
   struct FourCc {
@@ -35,11 +34,6 @@ class WavReader {
 
     bool operator==(FourCc other) const { return value_ == other.value_; }
     bool operator!=(FourCc other) const { return value_ != other.value_; }
-  };
-
-  struct Data {
-    zx::vmo vmo_;
-    uint64_t size_;
   };
 
   static const FourCc kRiff;
@@ -59,12 +53,11 @@ class WavReader {
 
   bool Skip(size_t count);
 
-  WavReader& operator>>(Sound& value);
+  WavReader& operator>>(DiscardableSound& value);
   WavReader& operator>>(FourCc& value);
   WavReader& operator>>(uint16_t& value);
   WavReader& operator>>(uint32_t& value);
   WavReader& operator>>(fuchsia::media::AudioStreamType& value);
-  WavReader& operator>>(Data& value);
 
   zx_status_t WriteDataNoConversion(const zx::vmo& vmo, const void* data, uint32_t* size_in_out);
   zx_status_t WriteData24To32(const zx::vmo& vmo, const void* data, uint32_t* size_in_out);

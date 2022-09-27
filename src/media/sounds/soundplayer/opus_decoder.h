@@ -22,17 +22,14 @@ class OpusDecoder {
   // Checks an initial stream packet to see if the stream is in Opus format.
   static bool CheckHeaderPacket(const uint8_t* data, size_t size);
 
-  OpusDecoder();
+  OpusDecoder() = default;
 
-  ~OpusDecoder();
+  ~OpusDecoder() = default;
 
   // Processes a packet. |first| indicates whether the packet is the first in the stream. |last|
   // indicates whether the packet is the last in the stream. Returns false on failure.
-  bool ProcessPacket(const uint8_t* data, size_t size, bool first, bool last);
-
-  // Takes the results. If a successful decode was not completed, all fields in the |Sound|
-  // structure will be zero/null.
-  Sound TakeSound();
+  bool ProcessPacket(const uint8_t* data, size_t size, bool first, bool last,
+                     DiscardableSound& sound);
 
  private:
   struct DecoderDeleter {
@@ -57,7 +54,7 @@ class OpusDecoder {
   void HandleOutputBuffer(std::unique_ptr<int16_t[]> buffer, uint32_t frame_count);
 
   // Performs end-of-stream tasks. Returns false on failure.
-  bool HandleEndOfStream();
+  bool HandleEndOfStream(DiscardableSound& sound);
 
   uint32_t channels_;
   uint16_t preskip_;
@@ -66,7 +63,6 @@ class OpusDecoder {
   bool second_packet_processed_;
   uint32_t total_frame_count_;
   std::vector<OutputBuffer> output_buffers_;
-  zx::vmo vmo_;
 };
 
 }  // namespace soundplayer

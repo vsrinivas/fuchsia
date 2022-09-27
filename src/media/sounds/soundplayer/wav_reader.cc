@@ -31,18 +31,20 @@ WavReader::WavReader() {}
 
 WavReader::~WavReader() {}
 
-fpromise::result<Sound, zx_status_t> WavReader::Process(int fd) {
+zx_status_t WavReader::Process(DiscardableSound& sound) {
+  lseek(sound.fd(), 0, SEEK_SET);
+
   std::vector<uint8_t> buffer;
-  if (!files::ReadFileDescriptorToVector(fd, &buffer)) {
+  if (!files::ReadFileDescriptorToVector(sound.fd(), &buffer)) {
     COMPLAIN() << "ReadFileDescriptorToVector failed";
     Fail();
-    return fpromise::error(status_);
+    return status_;
   }
 
-  return Process(buffer.data(), buffer.size());
+  return Process(sound, buffer.data(), buffer.size());
 }
 
-fpromise::result<Sound, zx_status_t> WavReader::Process(const uint8_t* data, size_t size) {
+zx_status_t WavReader::Process(DiscardableSound& sound, const uint8_t* data, size_t size) {
   buffer_ = data;
   size_ = size;
 
@@ -50,21 +52,20 @@ fpromise::result<Sound, zx_status_t> WavReader::Process(const uint8_t* data, siz
   bytes_consumed_ = 0;
   data_writer_ = fit::bind_member(this, &WavReader::WriteDataNoConversion);
 
-  Sound sound;
   *this >> sound;
 
   if (!healthy()) {
     COMPLAIN() << "Parse failed";
-    return fpromise::error(status_);
+    return status_;
   }
 
   if (bytes_remaining() != 0) {
     COMPLAIN() << "Parse did not reach end-of-file";
     Fail();
-    return fpromise::error(status_);
+    return ZX_ERR_INVALID_ARGS;
   }
 
-  return fpromise::ok(std::move(sound));
+  return ZX_OK;
 }
 
 WavReader& WavReader::Fail(zx_status_t status) {
@@ -117,7 +118,7 @@ bool WavReader::Skip(size_t count) {
   return healthy();
 }
 
-WavReader& WavReader::operator>>(Sound& value) {
+WavReader& WavReader::operator>>(DiscardableSound& value) {
   FourCc riff;
   uint32_t file_size;
   FourCc wave;
@@ -133,7 +134,7 @@ WavReader& WavReader::operator>>(Sound& value) {
   }
 
   fuchsia::media::AudioStreamType stream_type;
-  Data data;
+  bool data_read = false;
 
   while (healthy() && bytes_remaining() != 0) {
     if (bytes_remaining() < 4) {
@@ -148,7 +149,33 @@ WavReader& WavReader::operator>>(Sound& value) {
     if (four_cc == kFmt) {
       *this >> stream_type;
     } else if (four_cc == kData) {
-      *this >> data;
+      uint32_t chunk_size;
+      *this >> chunk_size;
+      if (!healthy()) {
+        return *this;
+      }
+      if (chunk_size == 0 || chunk_size > bytes_remaining()) {
+        COMPLAIN() << "bad data chunk size " << chunk_size;
+        return Fail();
+      }
+
+      uint32_t adjusted_size = chunk_size;
+      data_writer_(zx::vmo(), nullptr, &adjusted_size);
+
+      zx_status_t status = value.SetSize(adjusted_size);
+      if (status != ZX_OK) {
+        return Fail(status);
+      }
+
+      uint32_t size = chunk_size;
+      status = data_writer_(value.LockForWrite(), data(), &size);
+      value.Unlock();
+      if (status != ZX_OK) {
+        return Fail(status);
+      }
+
+      Skip(chunk_size);
+      data_read = true;
     } else {
       // Ignore unrecognized chunk.
       uint32_t chunk_size;
@@ -163,13 +190,16 @@ WavReader& WavReader::operator>>(Sound& value) {
     return Fail();
   }
 
-  if (!data.vmo_) {
+  if (!data_read) {
     // No data chunk.
     COMPLAIN() << "data chunk not found";
     return Fail();
   }
 
-  value = Sound(std::move(data.vmo_), data.size_, std::move(stream_type));
+  zx_status_t status = value.SetStreamType(std::move(stream_type));
+  if (status != ZX_OK) {
+    return Fail(status);
+  }
 
   return *this;
 }
@@ -260,41 +290,16 @@ WavReader& WavReader::operator>>(fuchsia::media::AudioStreamType& value) {
   return *this;
 }
 
-WavReader& WavReader::operator>>(Data& value) {
-  uint32_t chunk_size;
-  *this >> chunk_size;
-  if (!healthy()) {
-    return *this;
-  }
-  if (chunk_size == 0 || chunk_size > bytes_remaining()) {
-    COMPLAIN() << "bad data chunk size " << chunk_size;
-    return Fail();
-  }
-
-  zx_status_t status = zx::vmo::create(chunk_size, 0, &value.vmo_);
-  if (status != ZX_OK) {
-    FX_PLOGS(WARNING, status) << "zx::vmo::create failed";
-    return Fail(status);
-  }
-
-  uint32_t size = chunk_size;
-  status = data_writer_(value.vmo_, data(), &size);
-  if (status != ZX_OK) {
-    return Fail(status);
-  }
-
-  Skip(chunk_size);
-
-  value.size_ = size;
-
-  return *this;
-}
-
 zx_status_t WavReader::WriteDataNoConversion(const zx::vmo& vmo, const void* data,
                                              uint32_t* size_in_out) {
-  FX_DCHECK(vmo);
-  FX_DCHECK(data);
   FX_DCHECK(size_in_out);
+
+  if (!vmo) {
+    // The caller wants the size adjusted, which is a no-op.
+    return ZX_OK;
+  }
+
+  FX_DCHECK(data);
 
   zx_status_t status = vmo.write(data, 0, *size_in_out);
   if (status != ZX_OK) {
@@ -306,8 +311,6 @@ zx_status_t WavReader::WriteDataNoConversion(const zx::vmo& vmo, const void* dat
 
 zx_status_t WavReader::WriteData24To32(const zx::vmo& vmo, const void* data,
                                        uint32_t* size_in_out) {
-  FX_DCHECK(vmo);
-  FX_DCHECK(data);
   FX_DCHECK(size_in_out);
 
   auto size = *size_in_out;
@@ -318,6 +321,14 @@ zx_status_t WavReader::WriteData24To32(const zx::vmo& vmo, const void* data,
   }
 
   uint32_t sample_count = size / 3;
+
+  if (!vmo) {
+    // The caller wants the size adjusted.
+    *size_in_out = sample_count * sizeof(int32_t);
+    return ZX_OK;
+  }
+
+  FX_DCHECK(data);
 
   auto buffer = std::make_unique<uint8_t[]>(sample_count * sizeof(uint32_t));
   auto from = reinterpret_cast<const uint8_t*>(data);

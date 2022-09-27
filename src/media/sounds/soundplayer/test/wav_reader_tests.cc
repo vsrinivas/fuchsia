@@ -11,6 +11,15 @@
 namespace soundplayer {
 namespace test {
 
+class TestDiscardableSound : public DiscardableSound {
+ public:
+  const zx::vmo& LockForRead() {
+    auto& result = DiscardableSound::LockForRead();
+    Restore();
+    return result;
+  }
+};
+
 bool VmoMatches(const zx::vmo& vmo, const uint8_t* data, size_t size) {
   auto buffer = std::vector<uint8_t>(size);
   zx_status_t status = vmo.read(buffer.data(), 0, size);
@@ -41,15 +50,16 @@ TEST(WavReaderTests, Successful) {
   };
 
   WavReader under_test;
-  auto result = under_test.Process(test_data.data(), test_data.size());
-  EXPECT_TRUE(result.is_ok());
-  auto& sound = result.value();
+  DiscardableSound sound;
+  zx_status_t status = under_test.Process(sound, test_data.data(), test_data.size());
+  EXPECT_EQ(ZX_OK, status);
   EXPECT_EQ(4u, sound.size());
   EXPECT_EQ(fuchsia::media::AudioSampleFormat::SIGNED_16, sound.stream_type().sample_format);
   EXPECT_EQ(2u, sound.stream_type().channels);
   EXPECT_EQ(44100u, sound.stream_type().frames_per_second);
-  EXPECT_TRUE(
-      VmoMatches(sound.vmo(), test_data.data() + (test_data.size() - sound.size()), sound.size()));
+  auto& vmo = sound.LockForRead();
+  EXPECT_TRUE(VmoMatches(vmo, test_data.data() + (test_data.size() - sound.size()), sound.size()));
+  sound.Unlock();
 }
 
 TEST(WavReaderTests, OneExtraByte) {
@@ -72,15 +82,17 @@ TEST(WavReaderTests, OneExtraByte) {
   };
 
   WavReader under_test;
-  auto result = under_test.Process(test_data.data(), test_data.size());
-  EXPECT_TRUE(result.is_ok());
-  auto& sound = result.value();
+  DiscardableSound sound;
+  zx_status_t status = under_test.Process(sound, test_data.data(), test_data.size());
+  EXPECT_EQ(ZX_OK, status);
   EXPECT_EQ(4u, sound.size());
   EXPECT_EQ(fuchsia::media::AudioSampleFormat::SIGNED_16, sound.stream_type().sample_format);
   EXPECT_EQ(2u, sound.stream_type().channels);
   EXPECT_EQ(44100u, sound.stream_type().frames_per_second);
-  EXPECT_TRUE(VmoMatches(sound.vmo(), test_data.data() + (test_data.size() - sound.size() - 1),
-                         sound.size()));
+  auto& vmo = sound.LockForRead();
+  EXPECT_TRUE(
+      VmoMatches(vmo, test_data.data() + (test_data.size() - sound.size() - 1), sound.size()));
+  sound.Unlock();
 }
 
 TEST(WavReaderTests, TwoExtraBytes) {
@@ -103,15 +115,17 @@ TEST(WavReaderTests, TwoExtraBytes) {
   };
 
   WavReader under_test;
-  auto result = under_test.Process(test_data.data(), test_data.size());
-  EXPECT_TRUE(result.is_ok());
-  auto& sound = result.value();
+  DiscardableSound sound;
+  zx_status_t status = under_test.Process(sound, test_data.data(), test_data.size());
+  EXPECT_EQ(ZX_OK, status);
   EXPECT_EQ(4u, sound.size());
   EXPECT_EQ(fuchsia::media::AudioSampleFormat::SIGNED_16, sound.stream_type().sample_format);
   EXPECT_EQ(2u, sound.stream_type().channels);
   EXPECT_EQ(44100u, sound.stream_type().frames_per_second);
-  EXPECT_TRUE(VmoMatches(sound.vmo(), test_data.data() + (test_data.size() - sound.size() - 2),
-                         sound.size()));
+  auto& vmo = sound.LockForRead();
+  EXPECT_TRUE(
+      VmoMatches(vmo, test_data.data() + (test_data.size() - sound.size() - 2), sound.size()));
+  sound.Unlock();
 }
 
 TEST(WavReaderTests, ThreeExtraBytes) {
@@ -134,15 +148,17 @@ TEST(WavReaderTests, ThreeExtraBytes) {
   };
 
   WavReader under_test;
-  auto result = under_test.Process(test_data.data(), test_data.size());
-  EXPECT_TRUE(result.is_ok());
-  auto& sound = result.value();
+  DiscardableSound sound;
+  zx_status_t status = under_test.Process(sound, test_data.data(), test_data.size());
+  EXPECT_EQ(ZX_OK, status);
   EXPECT_EQ(4u, sound.size());
   EXPECT_EQ(fuchsia::media::AudioSampleFormat::SIGNED_16, sound.stream_type().sample_format);
   EXPECT_EQ(2u, sound.stream_type().channels);
   EXPECT_EQ(44100u, sound.stream_type().frames_per_second);
-  EXPECT_TRUE(VmoMatches(sound.vmo(), test_data.data() + (test_data.size() - sound.size() - 3),
-                         sound.size()));
+  auto& vmo = sound.LockForRead();
+  EXPECT_TRUE(
+      VmoMatches(vmo, test_data.data() + (test_data.size() - sound.size() - 3), sound.size()));
+  sound.Unlock();
 }
 
 TEST(WavReaderTests, LongFmtChunk) {
@@ -165,15 +181,16 @@ TEST(WavReaderTests, LongFmtChunk) {
   };
 
   WavReader under_test;
-  auto result = under_test.Process(test_data.data(), test_data.size());
-  EXPECT_TRUE(result.is_ok());
-  auto& sound = result.value();
+  DiscardableSound sound;
+  zx_status_t status = under_test.Process(sound, test_data.data(), test_data.size());
+  EXPECT_EQ(ZX_OK, status);
   EXPECT_EQ(4u, sound.size());
   EXPECT_EQ(fuchsia::media::AudioSampleFormat::SIGNED_16, sound.stream_type().sample_format);
   EXPECT_EQ(2u, sound.stream_type().channels);
   EXPECT_EQ(44100u, sound.stream_type().frames_per_second);
-  EXPECT_TRUE(
-      VmoMatches(sound.vmo(), test_data.data() + (test_data.size() - sound.size()), sound.size()));
+  auto& vmo = sound.LockForRead();
+  EXPECT_TRUE(VmoMatches(vmo, test_data.data() + (test_data.size() - sound.size()), sound.size()));
+  sound.Unlock();
 }
 
 TEST(WavReaderTests, NoRiffHeader) {
@@ -195,8 +212,9 @@ TEST(WavReaderTests, NoRiffHeader) {
   };
 
   WavReader under_test;
-  auto result = under_test.Process(test_data.data(), test_data.size());
-  EXPECT_TRUE(result.is_error());
+  DiscardableSound sound;
+  zx_status_t status = under_test.Process(sound, test_data.data(), test_data.size());
+  EXPECT_NE(ZX_OK, status);
 }
 
 TEST(WavReaderTests, NoWave) {
@@ -218,8 +236,9 @@ TEST(WavReaderTests, NoWave) {
   };
 
   WavReader under_test;
-  auto result = under_test.Process(test_data.data(), test_data.size());
-  EXPECT_TRUE(result.is_error());
+  DiscardableSound sound;
+  zx_status_t status = under_test.Process(sound, test_data.data(), test_data.size());
+  EXPECT_NE(ZX_OK, status);
 }
 
 TEST(WavReaderTests, NoFmt) {
@@ -241,8 +260,9 @@ TEST(WavReaderTests, NoFmt) {
   };
 
   WavReader under_test;
-  auto result = under_test.Process(test_data.data(), test_data.size());
-  EXPECT_TRUE(result.is_error());
+  DiscardableSound sound;
+  zx_status_t status = under_test.Process(sound, test_data.data(), test_data.size());
+  EXPECT_NE(ZX_OK, status);
 }
 
 TEST(WavReaderTests, ShortFmt) {
@@ -263,8 +283,9 @@ TEST(WavReaderTests, ShortFmt) {
   };
 
   WavReader under_test;
-  auto result = under_test.Process(test_data.data(), test_data.size());
-  EXPECT_TRUE(result.is_error());
+  DiscardableSound sound;
+  zx_status_t status = under_test.Process(sound, test_data.data(), test_data.size());
+  EXPECT_NE(ZX_OK, status);
 }
 
 TEST(WavReaderTests, BadEncoding) {
@@ -286,8 +307,9 @@ TEST(WavReaderTests, BadEncoding) {
   };
 
   WavReader under_test;
-  auto result = under_test.Process(test_data.data(), test_data.size());
-  EXPECT_TRUE(result.is_error());
+  DiscardableSound sound;
+  zx_status_t status = under_test.Process(sound, test_data.data(), test_data.size());
+  EXPECT_NE(ZX_OK, status);
 }
 
 TEST(WavReaderTests, ZeroChannels) {
@@ -309,8 +331,9 @@ TEST(WavReaderTests, ZeroChannels) {
   };
 
   WavReader under_test;
-  auto result = under_test.Process(test_data.data(), test_data.size());
-  EXPECT_TRUE(result.is_error());
+  DiscardableSound sound;
+  zx_status_t status = under_test.Process(sound, test_data.data(), test_data.size());
+  EXPECT_NE(ZX_OK, status);
 }
 
 TEST(WavReaderTests, ThreeChannels) {
@@ -332,8 +355,9 @@ TEST(WavReaderTests, ThreeChannels) {
   };
 
   WavReader under_test;
-  auto result = under_test.Process(test_data.data(), test_data.size());
-  EXPECT_TRUE(result.is_error());
+  DiscardableSound sound;
+  zx_status_t status = under_test.Process(sound, test_data.data(), test_data.size());
+  EXPECT_NE(ZX_OK, status);
 }
 
 TEST(WavReaderTests, NoData) {
@@ -355,8 +379,9 @@ TEST(WavReaderTests, NoData) {
   };
 
   WavReader under_test;
-  auto result = under_test.Process(test_data.data(), test_data.size());
-  EXPECT_TRUE(result.is_error());
+  DiscardableSound sound;
+  zx_status_t status = under_test.Process(sound, test_data.data(), test_data.size());
+  EXPECT_NE(ZX_OK, status);
 }
 
 TEST(WavReaderTests, Truncated) {
@@ -379,8 +404,9 @@ TEST(WavReaderTests, Truncated) {
 
   for (size_t i = 1; i < 44; ++i) {
     WavReader under_test;
-    auto result = under_test.Process(test_data.data(), test_data.size() - i);
-    EXPECT_TRUE(result.is_error());
+    DiscardableSound sound;
+    zx_status_t status = under_test.Process(sound, test_data.data(), test_data.size() - i);
+    EXPECT_NE(ZX_OK, status);
   }
 }
 
@@ -409,14 +435,16 @@ TEST(WavReaderTests, Packed24) {
   };
 
   WavReader under_test;
-  auto result = under_test.Process(test_data.data(), test_data.size());
-  EXPECT_TRUE(result.is_ok());
-  auto& sound = result.value();
+  DiscardableSound sound;
+  zx_status_t status = under_test.Process(sound, test_data.data(), test_data.size());
+  EXPECT_EQ(ZX_OK, status);
   EXPECT_EQ(16u, sound.size());
   EXPECT_EQ(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, sound.stream_type().sample_format);
   EXPECT_EQ(2u, sound.stream_type().channels);
   EXPECT_EQ(44100u, sound.stream_type().frames_per_second);
-  EXPECT_TRUE(VmoMatches(sound.vmo(), expected.data(), expected.size()));
+  auto& vmo = sound.LockForRead();
+  EXPECT_TRUE(VmoMatches(vmo, expected.data(), expected.size()));
+  sound.Unlock();
 }
 
 TEST(WavReaderTests, Float) {
@@ -439,15 +467,48 @@ TEST(WavReaderTests, Float) {
   };
 
   WavReader under_test;
-  auto result = under_test.Process(test_data.data(), test_data.size());
-  EXPECT_TRUE(result.is_ok());
-  auto& sound = result.value();
+  DiscardableSound sound;
+  zx_status_t status = under_test.Process(sound, test_data.data(), test_data.size());
+  EXPECT_EQ(ZX_OK, status);
   EXPECT_EQ(8u, sound.size());
   EXPECT_EQ(fuchsia::media::AudioSampleFormat::FLOAT, sound.stream_type().sample_format);
   EXPECT_EQ(2u, sound.stream_type().channels);
   EXPECT_EQ(44100u, sound.stream_type().frames_per_second);
-  EXPECT_TRUE(
-      VmoMatches(sound.vmo(), test_data.data() + (test_data.size() - sound.size()), sound.size()));
+  auto& vmo = sound.LockForRead();
+  EXPECT_TRUE(VmoMatches(vmo, test_data.data() + (test_data.size() - sound.size()), sound.size()));
+  sound.Unlock();
+}
+
+TEST(WavReaderTests, Restore) {
+  std::vector<uint8_t> test_data{
+      0x52, 0x49, 0x46, 0x46,  // 'RIFF'
+      0x00, 0x00, 0x00, 0x00,  // RIFF chunk size (ignored)
+      0x57, 0x41, 0x56, 0x45,  // 'WAVE'
+      0x66, 0x6d, 0x74, 0x20,  // 'fmt '
+      0x10, 0x00, 0x00, 0x00,  // fmt chunk size (16 bytes)
+      0x01, 0x00,              // encoding (1 = pcm)
+      0x02, 0x00,              // channel count (2)
+      0x44, 0xac, 0x00, 0x00,  // frames/second (44100)
+      0x10, 0xb1, 0x02, 0x00,  // byte rate (44100 * 4)
+      0x04, 0x00,              // block alignment (4)
+      0x10, 0x00,              // bits/sample (16)
+      0x64, 0x61, 0x74, 0x61,  // 'data'
+      0x04, 0x00, 0x00, 0x00,  // data chunk size (4)
+      0x01, 0x02, 0x03, 0x04,  // frames
+  };
+
+  WavReader under_test;
+  // |TestDiscardableSound| always restores on |LockForRead|.
+  TestDiscardableSound sound;
+  zx_status_t status = under_test.Process(sound, test_data.data(), test_data.size());
+  EXPECT_EQ(ZX_OK, status);
+  EXPECT_EQ(4u, sound.size());
+  EXPECT_EQ(fuchsia::media::AudioSampleFormat::SIGNED_16, sound.stream_type().sample_format);
+  EXPECT_EQ(2u, sound.stream_type().channels);
+  EXPECT_EQ(44100u, sound.stream_type().frames_per_second);
+  auto& vmo = sound.LockForRead();
+  EXPECT_TRUE(VmoMatches(vmo, test_data.data() + (test_data.size() - sound.size()), sound.size()));
+  sound.Unlock();
 }
 
 }  // namespace test

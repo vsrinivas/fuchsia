@@ -5,8 +5,6 @@
 #ifndef SRC_MEDIA_SOUNDS_SOUNDPLAYER_OGG_DEMUX_H_
 #define SRC_MEDIA_SOUNDS_SOUNDPLAYER_OGG_DEMUX_H_
 
-#include <lib/fpromise/result.h>
-
 #include <memory>
 
 #include "src/media/sounds/soundplayer/opus_decoder.h"
@@ -20,10 +18,9 @@ class OggDemux {
 
   ~OggDemux();
 
-  // Processes the file. |fd| must be positioned at the beginning of the file. This method does
-  // not close |fd| regardless of the result, but will leave |fd| at an arbitrary position. The
-  // first valid stream in the file is decoded.
-  fpromise::result<Sound, zx_status_t> Process(int fd);
+  // Process the file referenced by |sound.fd()|, initializes |sound| as needed, and fills the
+  // VMO with the audio contained in the file.
+  zx_status_t Process(DiscardableSound& sound);
 
  private:
   class Stream {
@@ -65,7 +62,7 @@ class OggDemux {
 
   // Handles a complete packet for the stream identified by |serial_number|. Returns false if the
   // packet was rejected and file processing should stop.
-  bool OnPacket(const ogg_packet& packet, int serial_number);
+  bool OnPacket(const ogg_packet& packet, int serial_number, DiscardableSound& sound);
 
   ogg_sync_state sync_state_;
   ogg_page page_;

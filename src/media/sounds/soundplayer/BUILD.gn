@@ -43,6 +43,7 @@ source_set("source") {
     "//sdk/lib/fit",
     "//third_party/ogg",
     "//third_party/opus",
+    "//zircon/system/ulib/fbl",
   ]
 
   deps = [
@@ -52,7 +53,6 @@ source_set("source") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/files",
-    "//zircon/system/ulib/fbl",
   ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
