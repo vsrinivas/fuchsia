@@ -167,17 +167,19 @@ template("legacy_assembly_input_bundle") {
     output_conversion = "json"
   }
 
-  generated_file(labels.shell_commands_manifest_list) {
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "testonly",
-                           ])
-    deps = _shell_command_packages
-    outputs = [ "${files.shell_command_manifests_list}" ]
-    data_keys = [ "shell_commands_distribution_manifests" ]
-    walk_keys = [ "shell_commands_barrier" ]
-    output_conversion = "json"
+  if (_shell_command_packages != []) {
+    generated_file(labels.shell_commands_manifest_list) {
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "testonly",
+                             ])
+      deps = _shell_command_packages
+      outputs = [ "${files.shell_command_manifests_list}" ]
+      data_keys = [ "shell_commands_distribution_manifests" ]
+      walk_keys = [ "shell_commands_barrier" ]
+      output_conversion = "json"
+    }
   }
 
   create_package_archive =
@@ -225,10 +227,6 @@ template("legacy_assembly_input_bundle") {
       rebase_path(files.base_driver_package_list, root_build_dir),
       "--base-driver-components-files-list",
       rebase_path(files.driver_package_component_files, root_build_dir),
-
-      # TODO: This flag should be turned on when we're ready to generate the shell commands package through assembly
-      # "--shell-commands-packages-list",
-      # rebase_path(files.shell_command_manifests_list, root_build_dir),
     ]
 
     # If packaging or archiving the AIB, write out the fini manifest needed to
@@ -246,12 +244,24 @@ template("legacy_assembly_input_bundle") {
       files.driver_package_component_files,
       files.image_assembly_config,
     ]
+
+    if (_shell_command_packages != []) {
+      args += [
+        "--shell-commands-packages-list",
+        rebase_path(files.shell_command_manifests_list, root_build_dir),
+      ]
+      inputs += [ files.shell_command_manifests_list ]
+    }
+
     deps = [
       ":${labels.base_driver_package_list}",
       ":${labels.driver_package_component_files}",
-      ":${labels.shell_commands_manifest_list}",
       labels.assemble_system_image_assembly_config,
     ]
+
+    if (_shell_command_packages != []) {
+      deps += [ ":${labels.shell_commands_manifest_list}" ]
+    }
 
     if (include_config_data) {
       args += [

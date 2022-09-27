@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/dist/resource.gni")
-import("//build/images/shell_commands.gni")
 
 # This template can be used in the seldom case where it is necessary
 # to install inside a Fuchsia package a binary under a different name
@@ -120,8 +119,10 @@ template("renamed_binary") {
       outputs = [ _shell_file ]
       contents = [ "#!resolve fuchsia-pkg://fuchsia.com/${_shell_package_name}#${invoker.dest}" ]
       metadata = {
-        # Used by shell_commands() template. This ensures that only the renamed binary
-        # gets a shell wrapper, and not the source one.
+        # Used by the assembly tool to generate a shell_commands package from binaries that are
+        # marked as shell commands. Handles the edge case where only a subset of the binaries in
+        # a package are to be included in the shell_commands package under a specific name
+        # (often the original package name).
         shell_binary_entries = [
           {
             source = rebase_path(_shell_file, root_build_dir)

@@ -13,7 +13,6 @@ import("//build/component/component_id_index.gni")
 import("//build/config.gni")
 import("//build/drivers/driver_manifest.gni")
 import("//build/images/fvm.gni")
-import("//build/images/shell_commands.gni")
 import("//build/info/info.gni")
 import("//build/packages/package_metadata.gni")
 import("//build/zircon/tools.gni")
@@ -462,25 +461,13 @@ template("assembled_system") {
     fshost_config = invoker.fshost_config
   }
 
+  # Defaults to true if the invoker doesn't pass "include_shell_commands"
   include_shell_commands = true
   if (defined(invoker.include_shell_commands)) {
     include_shell_commands = invoker.include_shell_commands
   }
 
-  # TODO(fxbug.dev/81290): Construct the shell commands package in the Image
-  # Assembler.
-  if (include_shell_commands) {
-    shell_commands(labels.shell_commands) {
-      forward_variables_from(invoker,
-                             [
-                               "testonly",
-                               "visibility",
-                             ])
-      package_name = "shell-commands"
-      deps = _base_packages + _cache_packages + _universe_packages
-    }
-    _meta_packages += [ ":${labels.shell_commands}" ]
-  } else {
+  if (!include_shell_commands) {
     not_needed([ "_universe_packages" ])
   }
 
@@ -681,8 +668,10 @@ template("assembled_system") {
                              invoker.create_legacy_aib_archive
 
     base_driver_packages = _base_driver_packages
-    shell_command_packages =
-        _base_packages + _universe_packages + _cache_packages
+    if (include_shell_commands) {
+      shell_command_packages =
+          _base_packages + _universe_packages + _cache_packages
+    }
   }
 
   # Run product assembly.

@@ -4,7 +4,6 @@
 
 import("//build/components.gni")
 import("//build/config.gni")
-import("//build/images/shell_commands.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
@@ -145,21 +144,11 @@ fuchsia_component("remote-control-component") {
   ]
 }
 
-# Used to ensure that remote_control_runner is available as a shell command,
-# from the 'remote-control' package, but not its other binaries.
-# fuchsia_shell_package() cannot be used here because it would also add
-# 'remote_control_bin' as a shell command.
-shell_command("remote-control-runner_shell_command") {
-  package_name = "remote-control"
-  deps = [ "//src/developer/remote-control/runner" ]
-}
-
 fuchsia_package("pkg") {
   package_name = "remote-control"
   deps = [
     ":maps",
     ":remote-control-component",
-    ":remote-control-runner_shell_command",
   ]
   shell_commands = [ "//src/developer/remote-control/runner" ]
 }

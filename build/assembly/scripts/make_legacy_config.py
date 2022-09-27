@@ -108,6 +108,7 @@ def main():
             args.base_driver_components_files_list)
 
     shell_commands = dict()
+    shell_deps = set()
     if args.shell_commands_packages_list:
         shell_commands = defaultdict(set)
         for package in json.load(args.shell_commands_packages_list):
@@ -115,6 +116,7 @@ def main():
                 "package_name"]
             with open(manifest_path, "r") as fname:
                 package_aib = json.load(fname)
+                shell_deps.add(manifest_path)
                 shell_commands[package_name].update(
                     {
                         blob["path"]
@@ -131,6 +133,7 @@ def main():
              for (package, components) in shell_commands.items()
          })
 
+    deps.update(shell_deps)
     # Write out a fini manifest of the files that have been copied, to create a
     # package or archive that contains all of the files in the bundle.
     if args.export_manifest:
