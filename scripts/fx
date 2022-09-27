@@ -390,7 +390,7 @@ elif which inotifywait >/dev/null; then
     # Watch everything except out/ and files/directories beginning with "."
     # such as lock files, swap files, .git, etc'.
     inotifywait -qrme modify \
-      --exclude "/(\.|lock|compile_commands.json)" \
+      --exclude "/(\.|lock|compile_commands.json|lcov.info)" \
       "${fuchsia_dir}" \
       @"${fuchsia_dir}"/out \
       @"${fuchsia_dir}"/zircon/public

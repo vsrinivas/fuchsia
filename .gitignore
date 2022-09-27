@@ -145,3 +145,6 @@ tables_generator_tests_*.txt
 # Remote build logs
 compiler_info_cache*
 reproxy-gomaip.cache*
+
+# Local test coverage file.
+lcov.info
