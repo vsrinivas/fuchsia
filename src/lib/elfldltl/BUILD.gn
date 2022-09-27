@@ -85,6 +85,7 @@ source_set("unittests") {
     "note-tests.cc",
     "phdr-tests.cc",
     "relocation-tests.cc",
+    "soname-tests.cc",
     "symbol-tests.cc",
     "symbol-tests.h",
     "tests.h",
