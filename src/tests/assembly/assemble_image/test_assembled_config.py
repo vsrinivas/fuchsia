@@ -29,10 +29,10 @@ def main():
         required=True,
         help="Path to input bundles directory.")
     parser.add_argument(
-        "--legacy-bundle-dir",
+        "--legacy-bundle",
         type=pathlib.Path,
         required=True,
-        help="Path to the legacy input bundle directory.")
+        help="Path to the legacy input bundle manifest.")
     parser.add_argument(
         "--outdir",
         type=pathlib.Path,
@@ -65,7 +65,7 @@ def main():
         ffx_bin=args.ffx_bin,
         product=args.product_assembly_config,
         input_bundles=args.input_bundles_dir,
-        legacy_bundle=args.legacy_bundle_dir,
+        legacy_bundle=args.legacy_bundle,
         outdir=args.outdir,
         **kwargs)
     if output.returncode != 0:

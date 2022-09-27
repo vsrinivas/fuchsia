@@ -51,7 +51,7 @@ def run_product_assembly(
         product,
         "--input-bundles-dir",
         input_bundles,
-        "--legacy-bundle-dir",
+        "--legacy-bundle",
         legacy_bundle,
         "--outdir",
         outdir,

@@ -22,7 +22,7 @@ pub fn assemble(args: ProductArgs) -> Result<()> {
         outdir,
         gendir: _,
         input_bundles_dir,
-        legacy_bundle_dir,
+        legacy_bundle,
         additional_packages_path,
     } = args;
 
@@ -68,8 +68,7 @@ pub fn assemble(args: ProductArgs) -> Result<()> {
         })?;
     }
 
-    let legacy_bundle_path = make_bundle_path(&legacy_bundle_dir, "legacy");
-
+    let legacy_bundle_path = legacy_bundle.join("assembly_config.json");
     builder
         .add_bundle(&legacy_bundle_path)
         .context(format!("Adding legacy bundle: {}", legacy_bundle_path.display()))?;

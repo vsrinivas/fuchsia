@@ -273,9 +273,9 @@ pub struct ProductArgs {
     #[argh(option)]
     pub input_bundles_dir: PathBuf,
 
-    /// the directory in which to find the legacy assembly input bundle
+    /// the path to the legacy assembly input bundle directory
     #[argh(option)]
-    pub legacy_bundle_dir: PathBuf,
+    pub legacy_bundle: PathBuf,
 
     /// a file containing a ProductPackageConfig with additional packages
     /// to include which are not in the assembly input bundle

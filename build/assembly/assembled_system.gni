@@ -348,8 +348,9 @@ template("assembled_system") {
     outdir = "$target_out_dir/$image_name"
     gendir = "$outdir/gen"
 
+    legacy_assembly_input_bundle_dir = "${outdir}/legacy"
     legacy_assembly_input_bundle_manifest =
-        "${outdir}/legacy/assembly_config.json"
+        "${legacy_assembly_input_bundle_dir}/assembly_config.json"
 
     # This file is created implicitly by ffx assembly product, so this is the
     # path that it's expected to be found at, not the path that it's to be
@@ -689,8 +690,8 @@ template("assembled_system") {
       rebase_path(files.product_assembly_config, root_build_dir),
       "--input-bundles-dir",
       rebase_path(files.platform_common_aibs_dir, root_build_dir),
-      "--legacy-bundle-dir",
-      rebase_path(files.outdir, root_build_dir),
+      "--legacy-bundle",
+      rebase_path(files.legacy_assembly_input_bundle_dir, root_build_dir),
       "--outdir",
       rebase_path(files.outdir, root_build_dir),
     ]
