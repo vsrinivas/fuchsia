@@ -1,0 +1,77 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//build/testing/zbi_test.gni")
+import("//zircon/kernel/phys/zbi_executable.gni")
+
+group("polling-input-test") {
+  testonly = true
+  deps = []
+  if (host_os == "linux") {
+    deps += [ ":uart-input-host-test($host_toolchain)" ]
+  }
+}
+
+phys_toolchain = "//zircon/kernel/phys:kernel.phys_${target_cpu}"
+is_phys_toolchain = phys_toolchain == toolchain_variant.base
+if (is_phys_toolchain) {
+  phys_toolchain = current_toolchain
+}
+
+if (is_host || is_phys_toolchain) {
+  phys_target_out_dir =
+      get_label_info(":anything($phys_toolchain)", "target_out_dir")
+  uart_input_zbi = "$phys_target_out_dir/uart-input-zbi-test.zbi"
+}
+
+if (is_phys_toolchain) {
+  zbi_executable("uart-input-test") {
+    testonly = true
+    sources = [ "uart-input-test.cc" ]
+    deps = [
+      "//zircon/kernel/phys:main",
+      "//zircon/kernel/phys:stdio",
+      "//zircon/kernel/phys:uart",
+      "//zircon/kernel/phys/test:zbi-test-main",
+      "//zircon/system/ulib/uart",
+    ]
+  }
+
+  zbi_test("uart-input-zbi-test") {
+    deps = [ ":uart-input-test" ]
+
+    device_types = [
+      "AEMU",
+      "QEMU",
+    ]
+  }
+
+  zbi_outputs = get_target_outputs(":uart-input-zbi-test.zbi")
+  assert(zbi_outputs + [ uart_input_zbi ] - [ uart_input_zbi ] != zbi_outputs)
+}
+
+if (is_host && is_linux) {
+  host_test_data("uart-host-test-zbi") {
+    sources = [ uart_input_zbi ]
+    deps = [ ":uart-input-zbi-test($phys_toolchain)" ]
+  }
+
+  # Go does not support '-' in package names, which is present in our current path
+  package_name = "go.fuchsia.dev/fuchsia/src/zircon/system/ulib/uart/test/polling_input_test"
+
+  go_library("lib") {
+    testonly = true
+    name = package_name
+    sources = [ "uart_input_host_test.go" ]
+    deps = [ "//tools/emulator/emulatortest" ]
+  }
+
+  go_test("uart-input-host-test") {
+    gopackages = [ package_name ]
+    deps = [ ":lib" ]
+    non_go_deps = [ ":uart-host-test-zbi" ]
+  }
+}

@@ -73,7 +73,6 @@ group("tests") {
     "trace-reader:tests",
     "trace-vthread:tests",
     "uart:tests",
-    "uart/test",
     "zircon-internal:tests",
     "zxtest:tests",
     "//zircon/third_party/ulib/lz4:tests",
