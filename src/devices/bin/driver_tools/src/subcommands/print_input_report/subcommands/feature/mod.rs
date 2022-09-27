@@ -26,8 +26,7 @@ pub async fn feature(
         .map_err(|e| zx::Status::from_raw(e))
         .context("Failed to get feature report")?;
     let mut writer = writer.lock().await;
-    writeln!(&mut writer, "Feature from file: {:?}", &cmd.device_path,)
-        .context("Failed to write to writer")?;
+    writeln!(&mut writer, "Feature from file: {:?}", &cmd.device_path,)?;
     super::write_feature_report(writer.deref_mut(), &feature_report)
         .context("Failed to write feature report")?;
     Ok(())

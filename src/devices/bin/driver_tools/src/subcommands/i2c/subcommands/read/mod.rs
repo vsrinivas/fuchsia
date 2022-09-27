@@ -21,10 +21,10 @@ pub async fn read(
     let byte = super::read_byte_from_i2c_device(&device, &cmd.address)
         .await
         .context("Failed to read byte from I2C device")?;
-    write!(writer, "Read from").context("Failed to write to writer")?;
+    write!(writer, "Read from")?;
     for byte in cmd.address.iter() {
-        write!(writer, " {:#04x}", byte).context("Failed to write to writer")?;
+        write!(writer, " {:#04x}", byte)?;
     }
-    writeln!(writer, ": {:#04x}", byte).context("Failed to write to writer")?;
+    writeln!(writer, ": {:#04x}", byte)?;
     Ok(())
 }

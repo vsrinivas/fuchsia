@@ -71,19 +71,16 @@ pub async fn list(
     if cmd.verbose {
         for driver in driver_info {
             if let Some(name) = driver.name {
-                writeln!(writer, "{0: <10}: {1}", "Name", name)
-                    .context("Failed to write to writer")?;
+                writeln!(writer, "{0: <10}: {1}", "Name", name)?;
             }
             if let Some(url) = driver.url {
-                writeln!(writer, "{0: <10}: {1}", "URL", url)
-                    .context("Failed to write to writer")?;
+                writeln!(writer, "{0: <10}: {1}", "URL", url)?;
             }
             if let Some(libname) = driver.libname {
-                writeln!(writer, "{0: <10}: {1}", "Driver", libname)
-                    .context("Failed to write to writer")?;
+                writeln!(writer, "{0: <10}: {1}", "Driver", libname)?;
             }
             if let Some(device_categories) = driver.device_categories {
-                write!(writer, "Device Categories: [").context("Failed to write to writer")?;
+                write!(writer, "Device Categories: [")?;
 
                 for (i, category_table) in device_categories.iter().enumerate() {
                     if let Some(category) = &category_table.category {
@@ -94,69 +91,60 @@ pub async fn list(
                                 write!(writer, "{}", category,)?;
                             }
                         } else {
-                            write!(writer, "{}", category,).context("Failed to write to writer")?;
+                            write!(writer, "{}", category,)?;
                         }
                     }
 
                     if i != device_categories.len() - 1 {
-                        write!(writer, ", ").context("Failed to write to writer")?;
+                        write!(writer, ", ")?;
                     }
                 }
-                writeln!(writer, "]").context("Failed to write to writer")?;
+                writeln!(writer, "]")?;
             }
             if let Some(package_hash) = driver.package_hash {
                 let mut merkle_root = String::with_capacity(package_hash.merkle_root.len() * 2);
                 for byte in package_hash.merkle_root.iter() {
-                    write!(merkle_root, "{:02x}", byte).context("Failed to write to string")?;
+                    write!(merkle_root, "{:02x}", byte)?;
                 }
-                writeln!(writer, "{0: <10}: {1}", "Merkle Root", &merkle_root)
-                    .context("Failed to write to writer")?;
+                writeln!(writer, "{0: <10}: {1}", "Merkle Root", &merkle_root)?;
             }
             match driver.bind_rules {
                 Some(fdd::BindRulesBytecode::BytecodeV1(bytecode)) => {
-                    writeln!(writer, "{0: <10}: {1}", "Bytecode Version", 1)
-                        .context("Failed to write to writer")?;
+                    writeln!(writer, "{0: <10}: {1}", "Bytecode Version", 1)?;
                     writeln!(
                         writer,
                         "{0: <10}({1} bytes): {2:?}",
                         "Bytecode:",
                         bytecode.len(),
                         bytecode
-                    )
-                    .context("Failed to write to writer")?;
+                    )?;
                 }
                 Some(fdd::BindRulesBytecode::BytecodeV2(bytecode)) => {
-                    writeln!(writer, "{0: <10}: {1}", "Bytecode Version", 2)
-                        .context("Failed to write to writer")?;
-                    writeln!(writer, "{0: <10}({1} bytes): ", "Bytecode:", bytecode.len())
-                        .context("Failed to write to writer")?;
+                    writeln!(writer, "{0: <10}: {1}", "Bytecode Version", 2)?;
+                    writeln!(writer, "{0: <10}({1} bytes): ", "Bytecode:", bytecode.len())?;
                     match dump_bind_rules(bytecode.clone()) {
-                        Ok(bytecode_dump) => writeln!(writer, "{}", bytecode_dump)
-                            .context("Failed to write to writer")?,
+                        Ok(bytecode_dump) => writeln!(writer, "{}", bytecode_dump)?,
                         Err(err) => {
                             writeln!(
                                 writer,
                                 "  Issue parsing bytecode \"{}\": {:?}",
                                 err, bytecode
-                            )
-                            .context("Failed to write to writer")?;
+                            )?;
                         }
                     }
                 }
-                _ => writeln!(writer, "{0: <10}: {1}", "Bytecode Version", "Unknown")
-                    .context("Failed to write to writer")?,
+                _ => writeln!(writer, "{0: <10}: {1}", "Bytecode Version", "Unknown")?,
             }
-            writeln!(writer).context("Failed to write to writer")?;
+            writeln!(writer)?;
         }
     } else {
         for driver in driver_info {
             if let Some(name) = driver.name {
                 let libname_or_url = driver.libname.or(driver.url).unwrap_or("".to_string());
-                writeln!(writer, "{:<20}: {}", name, libname_or_url)
-                    .context("Failed to write to writer")?;
+                writeln!(writer, "{:<20}: {}", name, libname_or_url)?;
             } else {
                 let url_or_libname = driver.url.or(driver.libname).unwrap_or("".to_string());
-                writeln!(writer, "{}", url_or_libname).context("Failed to write to writer")?;
+                writeln!(writer, "{}", url_or_libname)?;
             }
         }
     }

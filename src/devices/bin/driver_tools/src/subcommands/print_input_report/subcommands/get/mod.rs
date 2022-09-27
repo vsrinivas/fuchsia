@@ -19,8 +19,7 @@ pub async fn get(
 ) -> Result<()> {
     let input_device_proxy = super::connect_to_input_device(&dev, &cmd.device_path)
         .context("Failed to get input device proxy")?;
-    writeln!(&mut writer.lock().await, "Reading a report from {:?}:", &cmd.device_path)
-        .context("Failed to write to writer")?;
+    writeln!(&mut writer.lock().await, "Reading a report from {:?}:", &cmd.device_path)?;
     let input_report = input_device_proxy
         .get_input_report(cmd.device_type.get_fidl())
         .await
@@ -28,8 +27,7 @@ pub async fn get(
         .map_err(|e| zx::Status::from_raw(e))
         .context("Failed to get input report")?;
     let mut writer = writer.lock().await;
-    writeln!(&mut writer, "Report from file: {:?}", &cmd.device_path)
-        .context("Failed to write to writer")?;
+    writeln!(&mut writer, "Report from file: {:?}", &cmd.device_path)?;
     super::write_input_report(writer.deref_mut(), &input_report)
         .context("Failed to write input report")?;
     Ok(())

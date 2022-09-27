@@ -41,8 +41,7 @@ pub async fn ping(
                 Ok(_) => "OK".to_owned(),
                 Err(err) => format!("ERROR: {:?}", err),
             }
-        )
-        .context("Failed to write to writer")?;
+        )?;
     }
     Ok(())
 }

@@ -23,8 +23,7 @@ async fn get_and_write_descriptor(
         .await
         .context("Failed to send request to get descriptor")?;
     let mut writer = writer.lock().await;
-    writeln!(&mut writer, "Descriptor from file: {:?}", input_device_path.as_ref(),)
-        .context("Failed to write to writer")?;
+    writeln!(&mut writer, "Descriptor from file: {:?}", input_device_path.as_ref(),)?;
     super::write_descriptor(writer.deref_mut(), &descriptor)
         .context("Failed to write input descriptor")?;
     Ok(())

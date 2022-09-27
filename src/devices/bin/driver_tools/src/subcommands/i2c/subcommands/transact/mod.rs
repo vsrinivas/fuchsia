@@ -80,22 +80,22 @@ pub async fn transact(
         .map_err(|status| zx::Status::from_raw(status))
         .context("Failed to transfer transactions to I2C device")?;
     if write_data.len() > 0 {
-        write!(writer, "Writes:").context("Failed to write to writer")?;
+        write!(writer, "Writes:")?;
         for write in write_data.iter() {
             for byte in write.iter() {
-                write!(writer, " {:#04x}", byte).context("Failed to write to writer")?;
+                write!(writer, " {:#04x}", byte)?;
             }
         }
-        writeln!(writer, "").context("Failed to write to writer")?;
+        writeln!(writer, "")?;
     }
     if read_data.len() > 0 {
-        write!(writer, "Reads:").context("Failed to write to writer")?;
+        write!(writer, "Reads:")?;
         for line in read_data.iter() {
             for byte in line.iter() {
-                write!(writer, " {:#04x}", byte).context("Failed to write to writer")?;
+                write!(writer, " {:#04x}", byte)?;
             }
         }
-        writeln!(writer, "").context("Failed to write to writer")?;
+        writeln!(writer, "")?;
     }
     Ok(())
 }

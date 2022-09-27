@@ -25,8 +25,7 @@ async fn read_input_device(
     input_device_proxy
         .get_input_reports_reader(server)
         .context("Failed to get input reports reader")?;
-    writeln!(&mut writer.lock().await, "Reading reports from {:?}", &input_device_path)
-        .context("Failed to write output")?;
+    writeln!(&mut writer.lock().await, "Reading reports from {:?}", &input_device_path)?;
     let mut reads = 0;
     while reads < num_reads {
         let input_reports = input_reports_reader_proxy
@@ -37,8 +36,7 @@ async fn read_input_device(
             .context("Failed to read input reports")?;
         let mut writer = writer.lock().await;
         for input_report in input_reports.iter() {
-            writeln!(&mut writer, "Report from file {:?}", &input_device_path)
-                .context("Failed to write to writer")?;
+            writeln!(&mut writer, "Report from file {:?}", &input_device_path)?;
             super::write_input_report(writer.deref_mut(), input_report)
                 .context("Failed to write input report")?;
             reads += 1;

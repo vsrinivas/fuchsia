@@ -28,10 +28,10 @@ pub async fn write(
         .context("Failed to send request to transfer write transaction to I2C device")?
         .map_err(|status| zx::Status::from_raw(status))
         .context("Failed to transfer write transaction to I2C device")?;
-    write!(writer, "Write:").context("Failed to write to writer")?;
+    write!(writer, "Write:")?;
     for byte in cmd.data.iter() {
-        write!(writer, " {:#04x}", byte).context("Failed to write to writer")?;
+        write!(writer, " {:#04x}", byte)?;
     }
-    writeln!(writer, "").context("Failed to write to writer")?;
+    writeln!(writer, "")?;
     Ok(())
 }
