@@ -40,8 +40,7 @@ if (is_fuchsia) {
 # specify the "foosan" varaint for the toolchain variant to be available.
 # `fx set`ensures this by adding a `select_variant` scope for libfdio.so itself
 # with its "-fuzz-with" parameter.
-if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
-    toolchain_variant.configs) {
+if (is_fuzzer) {
   group("fdio") {
     suffix = string_replace(toolchain_variant.suffix, "-fuzzer", "")
     public_deps = [ ":fdio(${toolchain_variant.base}${suffix})" ]

@@ -1,0 +1,180 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components/fuchsia_package.gni")
+import("//build/components/fuchsia_test.gni")
+import("//build/fuzzing/v2/fuchsia_fuzzer_component.gni")
+
+# Defines a package of fuzzers
+#
+# This template is used to bundle several fuzzers or fuzzer tests and their associated data into a
+# single Fuchsia package. See //examples/fuzzers/BUILD.gn for examples.
+#
+# Parameters: Same as `fuchsia_test_package`, but with `test_components` replaced one or more of the
+# following:
+#   cpp_fuzzer_components (optional)
+#   rust_fuzzer_components (optional)
+#     [list] A list of `fuchsia_*_component` targets for fuzzers in the indicated language. Each
+#       list is asscoiated with the corresponding list of sanitizers, e.g. each label in
+#       `cpp_fuzzers` is built as a fuzzer when the toolchain variant selected for that label
+#       matches an element of `_cpp_sanitizers`.
+#
+# Additionally, as part of the migration from the CFv1 fuzzer GN templates, the following
+# parameters are supported:
+#   cpp_fuzzers (optional)
+#     [list] A list of `fuchsia_libfuzzer` targets. `cpp_fuzzer_components` will be generated
+#       automatically with default manifests.
+#
+#   fuzzers (optional)
+#     [list] Alternate name for `cpp_fuzzers`.
+#
+#   rust_fuzzers (optional)
+#     [list] A list of `rustc_fuzzer` labels or scopes with a 'label' field.
+#       `rust_fuzzer_components` will be generated automatically with default manifests.
+#
+template("fuchsia_fuzzer_package") {
+  if (current_toolchain == default_toolchain) {
+    no_forward = [
+      "package_name",
+      "fuzzers",
+      "cpp_fuzzers",
+      "cpp_fuzzer_components",
+      "rust_fuzzers",
+      "rust_fuzzer_components",
+      "test_components",
+      "visibility",
+    ]
+
+    package_name = target_name
+    if (defined(invoker.package_name)) {
+      package_name = invoker.package_name
+    }
+
+    # Step 1: Generate components for fuzzer binaries.
+    # TODO(fxbug.dev/105707): Make the fuzzers more build system agnostic by adding explicitly
+    # manifests and deprecating this logic.
+    cpp_fuzzers = []
+    if (defined(invoker.fuzzers)) {
+      cpp_fuzzers += invoker.fuzzers
+    }
+    if (defined(invoker.cpp_fuzzers)) {
+      cpp_fuzzers += invoker.cpp_fuzzers
+    }
+    cpp_fuzzer_components = []
+    foreach(fuzzer, cpp_fuzzers) {
+      fuzzer_name = get_label_info(fuzzer, "name")
+      component_target = "${fuzzer_name}_component"
+      fuchsia_fuzzer_component(component_target) {
+        component_name = fuzzer_name
+        deps = [ fuzzer ]
+      }
+      cpp_fuzzer_components += [ ":$component_target" ]
+    }
+    if (defined(invoker.cpp_fuzzer_components)) {
+      cpp_fuzzer_components += invoker.cpp_fuzzer_components
+    }
+
+    rust_fuzzers = []
+    if (defined(invoker.rust_fuzzers)) {
+      rust_fuzzers += invoker.rust_fuzzers
+    }
+    rust_fuzzer_components = []
+    foreach(fuzzer, rust_fuzzers) {
+      fuzzer_name = get_label_info(fuzzer, "name")
+      component_target = "${fuzzer_name}_component"
+      fuchsia_fuzzer_component(component_target) {
+        component_name = fuzzer_name
+        deps = [ fuzzer ]
+      }
+      rust_fuzzer_components += [ ":$component_target" ]
+    }
+    if (defined(invoker.rust_fuzzer_components)) {
+      rust_fuzzer_components += invoker.rust_fuzzer_components
+    }
+
+    # Step 2: Determine which components to fuzz vs test based on which variants are active. This is
+    # eager, and may include components that don't end up being selected by a fuzzer variant. This
+    # is unlikely to happen with normal development workflows, but if it does, it will only
+    # advertise one or more fuzzer tests as fuzzers, which will produce a descriptive error message
+    # if run.
+    #
+    # TODO(fxbug.dev/105708): Make this less eager, e.g. by extending test_spec to include metadata
+    # from the binary itself, or by making the fuzzer vs test a runtime determination.
+    can_fuzz_cpp = false
+    can_fuzz_rust = false
+    foreach(selector, select_variant_canonical) {
+      selector_host = defined(selector.host) && selector.host
+
+      # TODO(fxbug.dev/48118): Add LSan.
+      if (!selector_host && selector.variant == "asan-fuzzer") {
+        can_fuzz_cpp = true
+        can_fuzz_rust = true
+      }
+      if (!selector_host && selector.variant == "ubsan-fuzzer") {
+        can_fuzz_rust = true
+      }
+    }
+    component_sets = [
+      {
+        components = cpp_fuzzer_components
+        is_fuzzed = can_fuzz_cpp
+      },
+      {
+        components = rust_fuzzer_components
+        is_fuzzed = can_fuzz_rust
+      },
+    ]
+
+    # Step 3: Assemble a package and add both fuzzers and fuzzer tests to it.
+    package_target = "${package_name}_package"
+    fuchsia_package(package_target) {
+      testonly = true
+      visibility = [ ":*" ]
+      package_name = package_name
+      deps = []
+      forward_variables_from(invoker, "*", no_forward)
+      forward_variables_from(invoker, [ "visibility" ])
+      deps += cpp_fuzzer_components
+      deps += rust_fuzzer_components
+    }
+
+    # Step 4: Register fuzzers and fuzzer tests. The former are distinguished from the latter by a
+    # fuzzer-specific `build_rule`.
+    group_deps = [ ":$package_target" ]
+    foreach(component_set, component_sets) {
+      foreach(component, component_set.components) {
+        component_name = get_label_info(component, "name")
+        test_target = "${component_name}_test"
+        fuchsia_test(test_target) {
+          package = ":$package_target"
+          package_name = package_name
+          component = component
+          if (component_set.is_fuzzed) {
+            build_rule = "fuchsia_fuzzer_package"
+          }
+
+          # Fuzzer tests may produce errors so long as they do not crash.
+          log_settings = {
+            max_severity = "ERROR"
+          }
+        }
+        group_deps += [ ":$test_target" ]
+      }
+    }
+
+    # Step 5: Add the package and test registrations to a group with the `target_name`.
+    group(target_name) {
+      testonly = true
+      forward_variables_from(invoker, [ "visibility" ])
+      deps = group_deps
+    }
+  } else {
+    group(target_name) {
+      testonly = true
+      forward_variables_from(invoker, [ "visibility" ])
+      deps = [ ":$target_name($default_toolchain)" ]
+    }
+    not_needed(invoker, "*")
+  }
+}

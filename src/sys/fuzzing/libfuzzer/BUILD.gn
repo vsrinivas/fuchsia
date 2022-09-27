@@ -4,11 +4,13 @@
 
 import("//build/components.gni")
 import("//build/test.gni")
+import("//tools/cmc/build/expect_includes.gni")
 
 group("libfuzzer") {
   testonly = true
   deps = [
     ":engine-bin",
+    ":libfuzzer_includes",
     "//src/sys/fuzzing",
   ]
 }
@@ -64,6 +66,10 @@ test("unittests-bin") {
     "//src/sys/fuzzing/common/testing",
     "//third_party/googletest:gtest",
   ]
+}
+
+expect_includes("libfuzzer_includes") {
+  includes = [ "default.shard.cml" ]
 }
 
 fuchsia_component("test-realm") {
