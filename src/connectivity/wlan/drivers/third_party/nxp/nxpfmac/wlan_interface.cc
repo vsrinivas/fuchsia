@@ -22,6 +22,7 @@
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/data_plane.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/device.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/device_context.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/event_handler.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/ioctl_adapter.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/key_ring.h"
 
@@ -35,7 +36,7 @@ WlanInterface::WlanInterface(zx_device_t* parent, uint32_t iface_index, wlan_mac
       role_(role),
       mlme_channel_(std::move(mlme_channel)),
       key_ring_(context->ioctl_adapter_, iface_index),
-      client_connection_(context->ioctl_adapter_, &key_ring_, iface_index),
+      client_connection_(this, context, &key_ring_, iface_index),
       scanner_(&fullmac_ifc_, context, iface_index),
       context_(context) {}
 
@@ -99,6 +100,7 @@ zx_status_t WlanInterface::WlanFullmacImplStart(const wlan_fullmac_impl_ifc_prot
 }
 
 void WlanInterface::OnEapolResponse(wlan::drivers::components::Frame&& frame) {
+  std::lock_guard lock(mutex_);
   if (!fullmac_ifc_.is_valid()) {
     NXPF_WARN("Received EAPOL response when interface is shut down");
     return;
@@ -122,6 +124,7 @@ void WlanInterface::OnEapolResponse(wlan::drivers::components::Frame&& frame) {
     memcpy(eapol_ind.dst_addr, eth->h_dest, sizeof(eapol_ind.dst_addr));
     memcpy(eapol_ind.src_addr, eth->h_source, sizeof(eapol_ind.src_addr));
 
+    std::lock_guard lock(mutex_);
     fullmac_ifc_.EapolInd(&eapol_ind);
   });
   if (status != ZX_OK) {
@@ -138,8 +141,10 @@ void WlanInterface::OnEapolTransmitted(zx_status_t status, const uint8_t* dst_ad
   // This work cannot be run on this thread since it's triggered from the mlan main process. There
   // are locks in fullmac that could block this call if fullmac is calling into this driver and
   // causes something to wait for the mlan main process to run.
-  status = async::PostTask(context_->device_->GetDispatcher(),
-                           [this, response] { fullmac_ifc_.EapolConf(&response); });
+  status = async::PostTask(context_->device_->GetDispatcher(), [this, response] {
+    std::lock_guard lock(mutex_);
+    fullmac_ifc_.EapolConf(&response);
+  });
   if (status != ZX_OK) {
     NXPF_ERR("Failed to schedule EAPOL transmit confirmation: %s", zx_status_get_string(status));
   }
@@ -221,6 +226,7 @@ void WlanInterface::WlanFullmacImplQuerySpectrumManagementSupport(
 }
 
 void WlanInterface::WlanFullmacImplStartScan(const wlan_fullmac_scan_req_t* req) {
+  std::lock_guard lock(mutex_);
   // TODO(fxbug.dev/108408): Consider calculating a more accurate scan timeout based on the max
   // scan time per channel in the scan request.
   constexpr zx_duration_t kScanTimeout = ZX_MSEC(12000);
@@ -232,12 +238,15 @@ void WlanInterface::WlanFullmacImplStartScan(const wlan_fullmac_scan_req_t* req)
 }
 
 void WlanInterface::WlanFullmacImplConnectReq(const wlan_fullmac_connect_req_t* req) {
+  std::lock_guard lock(mutex_);
+
   auto on_connect = [this](ClientConnection::StatusCode status_code, const uint8_t* ies,
                            size_t ies_size) __TA_EXCLUDES(mutex_) {
     const wlan_fullmac_connect_confirm_t result = {
         .result_code = static_cast<uint16_t>(status_code),
         .association_ies_list = ies,
         .association_ies_count = ies_size};
+    std::lock_guard lock(mutex_);
     fullmac_ifc_.ConnectConf(&result);
   };
 
@@ -259,6 +268,23 @@ void WlanInterface::WlanFullmacImplAuthResp(const wlan_fullmac_auth_resp_t* resp
 
 void WlanInterface::WlanFullmacImplDeauthReq(const wlan_fullmac_deauth_req_t* req) {
   NXPF_ERR("%s", __func__);
+  std::lock_guard lock(mutex_);
+
+  auto on_disconnect = [this](IoctlStatus status) __TA_EXCLUDES(mutex_) {
+    if (status != IoctlStatus::Success) {
+      NXPF_ERR("Deauth failed: %d", status);
+    }
+    std::lock_guard lock(mutex_);
+    // This doesn't have any way of indicating what went wrong.
+    ConfirmDeauth();
+  };
+
+  zx_status_t status = client_connection_.Disconnect(req->peer_sta_address, req->reason_code,
+                                                     std::move(on_disconnect));
+  if (status != ZX_OK) {
+    // The request didn't work, send the notification right away.
+    ConfirmDeauth();
+  }
 }
 
 void WlanInterface::WlanFullmacImplAssocResp(const wlan_fullmac_assoc_resp_t* resp) {
@@ -267,6 +293,37 @@ void WlanInterface::WlanFullmacImplAssocResp(const wlan_fullmac_assoc_resp_t* re
 
 void WlanInterface::WlanFullmacImplDisassocReq(const wlan_fullmac_disassoc_req_t* req) {
   NXPF_ERR("%s", __func__);
+  std::lock_guard lock(mutex_);
+
+  auto on_disconnect = [this](IoctlStatus io_status) __TA_EXCLUDES(mutex_) {
+    zx_status_t status = ZX_OK;
+    switch (io_status) {
+      case IoctlStatus::Success:
+        status = ZX_OK;
+        break;
+      case IoctlStatus::Canceled:
+        NXPF_ERR("Deauth canceled");
+        status = ZX_ERR_CANCELED;
+        break;
+      case IoctlStatus::Timeout:
+        NXPF_ERR("Deauth timed out");
+        status = ZX_ERR_TIMED_OUT;
+        break;
+      default:
+        NXPF_ERR("Deauth failed: %d", status);
+        status = ZX_ERR_INTERNAL;
+        break;
+    }
+    std::lock_guard lock(mutex_);
+    ConfirmDisassoc(status);
+  };
+
+  zx_status_t status = client_connection_.Disconnect(req->peer_sta_address, req->reason_code,
+                                                     std::move(on_disconnect));
+  if (status != ZX_OK) {
+    // The request didn't work, send the notification right away.
+    ConfirmDisassoc(status);
+  }
 }
 
 void WlanInterface::WlanFullmacImplResetReq(const wlan_fullmac_reset_req_t* req) {
@@ -309,6 +366,7 @@ void WlanInterface::WlanFullmacImplEapolReq(const wlan_fullmac_eapol_req_t* req)
     wlan_fullmac_eapol_confirm_t response{
         .result_code = WLAN_EAPOL_RESULT_TRANSMISSION_FAILURE,
     };
+    std::lock_guard lock(mutex_);
     fullmac_ifc_.EapolConf(&response);
     return;
   }
@@ -372,6 +430,13 @@ void WlanInterface::WlanFullmacImplWmmStatusReq() {
 
 void WlanInterface::WlanFullmacImplOnLinkStateChanged(bool online) { SetPortOnline(online); }
 
+void WlanInterface::OnDisconnectEvent(uint16_t reason_code) {
+  std::lock_guard lock(mutex_);
+  wlan_fullmac_deauth_indication_t ind{.reason_code = reason_code};
+  memcpy(ind.peer_sta_address, mac_address_, sizeof(mac_address_));
+  fullmac_ifc_.DeauthInd(&ind);
+}
+
 uint32_t WlanInterface::PortGetMtu() { return 1500u; }
 
 void WlanInterface::MacGetAddress(uint8_t out_mac[MAC_SIZE]) {
@@ -432,6 +497,19 @@ zx_status_t WlanInterface::RetrieveMacAddress() {
   }
   memcpy(mac_address_, request.UserReq().param.mac_addr, ETH_ALEN);
   return ZX_OK;
+}
+
+void WlanInterface::ConfirmDeauth() {
+  NXPF_ERR("%s", __func__);
+  wlan_fullmac_deauth_confirm_t resp{};
+  memcpy(resp.peer_sta_address, mac_address_, sizeof(mac_address_));
+  fullmac_ifc_.DeauthConf(&resp);
+}
+
+void WlanInterface::ConfirmDisassoc(zx_status_t status) {
+  NXPF_ERR("%s", __func__);
+  const wlan_fullmac_disassoc_confirm_t resp{.status = status};
+  fullmac_ifc_.DisassocConf(&resp);
 }
 
 }  // namespace wlan::nxpfmac

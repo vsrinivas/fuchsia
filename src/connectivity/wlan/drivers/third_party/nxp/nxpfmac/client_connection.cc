@@ -18,6 +18,8 @@
 #include <netinet/if_ether.h>
 
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/debug.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/device_context.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/event_handler.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/ies.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/ioctl_adapter.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/key_ring.h"
@@ -25,13 +27,20 @@
 namespace wlan::nxpfmac {
 
 constexpr zx_duration_t kConnectionTimeout = ZX_MSEC(6000);
+constexpr zx_duration_t kDisconnectTimeout = ZX_MSEC(1000);
 
-ClientConnection::ClientConnection(IoctlAdapter* ioctl_adapter, KeyRing* key_ring,
-                                   uint32_t bss_index)
-    : ioctl_adapter_(ioctl_adapter),
+ClientConnection::ClientConnection(ClientConnectionIfc* ifc, DeviceContext* context,
+                                   KeyRing* key_ring, uint32_t bss_index)
+    : ifc_(ifc),
+      context_(context),
       key_ring_(key_ring),
       bss_index_(bss_index),
-      connect_request_(new IoctlRequest<mlan_ds_bss>()) {}
+      connect_request_(new IoctlRequest<mlan_ds_bss>()) {
+  disconnect_event_ = context_->event_handler_->RegisterForInterfaceEvent(
+      MLAN_EVENT_ID_FW_DISCONNECTED, bss_index, [this](pmlan_event event) {
+        OnDisconnect(*reinterpret_cast<const uint16_t*>(event->event_buf));
+      });
+}
 
 ClientConnection::~ClientConnection() {
   // Cancel any ongoing connection attempt.
@@ -41,12 +50,14 @@ ClientConnection::~ClientConnection() {
     // Don't attempt to wait for the correct state here, it might never happen.
     return;
   }
-  // Wait until any connection attempt has completed. A connection attempt will cause asynchronous
-  // callbacks that could crash if the connection object goes away. By waiting for an attempt to
-  // finish we avoid this. The CancelConnect call above should immediately try to stop any ongoing
-  // connection attempt.
+  // Wait until any connect or disconnect attempt has completed. A connect or disconnect attempt
+  // will cause asynchronous callbacks that could crash if the connection object goes away. By
+  // waiting for an attempt to finish we avoid this. The CancelConnect call above should immediately
+  // try to stop any ongoing connection attempt. Disconnect attempts should complete fast enough
+  // that this shouldn't be an issue.
   std::unique_lock lock(mutex_);
   connect_in_progress_.Wait(lock, false);
+  disconnect_in_progress_.Wait(lock, false);
 }
 
 zx_status_t ClientConnection::Connect(const wlan_fullmac_connect_req_t* req,
@@ -54,6 +65,9 @@ zx_status_t ClientConnection::Connect(const wlan_fullmac_connect_req_t* req,
   std::lock_guard lock(mutex_);
   if (connect_in_progress_) {
     return ZX_ERR_ALREADY_EXISTS;
+  }
+  if (connected_) {
+    return ZX_ERR_ALREADY_BOUND;
   }
 
   zx_status_t status = key_ring_->RemoveAllKeys();
@@ -108,7 +122,8 @@ zx_status_t ClientConnection::Connect(const wlan_fullmac_connect_req_t* req,
 
   // The linux driver seems to potentially set both the pairwise and group cipher suite here. But
   // there is no differentiation in the ioctl to say which is which. So it seems that one would
-  // overwrite the other. Until we know more only set one of them and expect they're both the same.
+  // overwrite the other. Until we know more only set one of them and expect they're both the
+  // same.
   status = SetEncryptMode(pairwise_cipher_suite);
   if (status != ZX_OK) {
     NXPF_ERR("Failed to set pairwise cipher suite: %s", zx_status_get_string(status));
@@ -185,7 +200,7 @@ zx_status_t ClientConnection::Connect(const wlan_fullmac_connect_req_t* req,
   // before IssueIoctl even returns.
   connect_in_progress_ = true;
 
-  IoctlStatus io_status = ioctl_adapter_->IssueIoctl(
+  IoctlStatus io_status = context_->ioctl_adapter_->IssueIoctl(
       connect_request_.get(), std::move(on_connect_complete), kConnectionTimeout);
   if (io_status != IoctlStatus::Pending) {
     // Even IoctlStatus::Success should  be considered a failure here. Connecting has to be a
@@ -206,19 +221,85 @@ zx_status_t ClientConnection::CancelConnect() {
     return ZX_ERR_NOT_FOUND;
   }
 
-  ioctl_adapter_->CancelIoctl(connect_request_.get());
+  context_->ioctl_adapter_->CancelIoctl(connect_request_.get());
 
   return ZX_OK;
 }
 
-zx_status_t ClientConnection::Disconnect() {
+zx_status_t ClientConnection::Disconnect(
+    const uint8_t* addr, uint16_t reason_code,
+    std::function<void(IoctlStatus)>&& on_disconnect_complete) {
   std::lock_guard lock(mutex_);
   if (!connected_) {
     return ZX_ERR_NOT_CONNECTED;
   }
+  if (disconnect_in_progress_) {
+    return ZX_ERR_ALREADY_EXISTS;
+  }
 
-  // Maybe one day..
-  return ZX_ERR_NOT_SUPPORTED;
+  auto request = std::make_unique<IoctlRequest<mlan_ds_bss>>(
+      MLAN_IOCTL_BSS, MLAN_ACT_SET, bss_index_,
+      mlan_ds_bss{.sub_command = MLAN_OID_BSS_STOP,
+                  .param = {.deauth_param{.reason_code = reason_code}}});
+  memcpy(request->UserReq().param.deauth_param.mac_addr, addr, ETH_ALEN);
+
+  auto on_ioctl = [this, on_disconnect = std::move(on_disconnect_complete)](pmlan_ioctl_req req,
+                                                                            IoctlStatus status) {
+    if (status == IoctlStatus::Success) {
+      std::lock_guard lock(mutex_);
+      connected_ = false;
+    }
+    on_disconnect(status);
+    delete reinterpret_cast<const IoctlRequest<mlan_ds_bss>*>(req);
+    std::lock_guard lock(mutex_);
+    disconnect_in_progress_ = false;
+  };
+
+  // This flag must be set before IssueIoctl is called, the ioctl callback could be called before
+  // IssueIoctl even returns.
+  disconnect_in_progress_ = true;
+  const IoctlStatus io_status =
+      context_->ioctl_adapter_->IssueIoctl(request.get(), std::move(on_ioctl), kDisconnectTimeout);
+  if (io_status != IoctlStatus::Pending) {
+    NXPF_ERR("Failed to disconnect: %d", io_status);
+    disconnect_in_progress_ = false;
+    return ZX_ERR_INTERNAL;
+  }
+
+  // At this point the request is pending and the allocated memory will be handled by the callback.
+  (void)request.release();
+
+  return ZX_OK;
+}
+
+void ClientConnection::OnDisconnect(uint16_t reason_code) {
+  NXPF_INFO("Client disconnect, reason: %u", reason_code);
+  std::lock_guard lock(mutex_);
+  if (disconnect_in_progress_ && reason_code == 0) {
+    // If there is a disconnect in progress and the reason code is zero this indicates that this
+    // disconnect event is the result of the disconnect call by the driver. Don't handle this case
+    // here, it will be handled when the disconnect ioctl completes. The ioctl seems to complete
+    // after this event so it should be the safe choice.
+    NXPF_INFO("Driver initiated disconnect");
+    return;
+  }
+  if (connect_in_progress_) {
+    // Attempt to cancel any ongoing connection attempt, if the cancel succeeds the connect callback
+    // will be called with an indication that the connection failed.
+    if (!context_->ioctl_adapter_->CancelIoctl(connect_request_.get())) {
+      // If we can't cancel the ioctl and connect_in_progress_ is still set it means that the ioctl
+      // must have been completed but the ioctl callback has yet to run. It seems like mlan should
+      // not allow this case to happen, log an error message so it can be caught if it does happen.
+      NXPF_ERR("Could not cancel connection attempt during disconnect event");
+    }
+    return;
+  }
+  if (!connected_) {
+    NXPF_ERR("Received disconnect event when not connected, reason: %u", reason_code);
+    return;
+  }
+  connected_ = false;
+  ifc_->OnDisconnectEvent(reason_code);
 }
 
 zx_status_t ClientConnection::GetRsnCipherSuites(const uint8_t* ies, size_t ies_count,
@@ -265,7 +346,7 @@ zx_status_t ClientConnection::ConfigureIes(const uint8_t* ies, size_t ies_count)
                          .param{.gen_ie{.type = MLAN_IE_TYPE_GEN_IE, .len = ie.raw_size()}}});
     memcpy(request.UserReq().param.gen_ie.ie_data, ie.raw_data(), ie.raw_size());
 
-    IoctlStatus io_status = ioctl_adapter_->IssueIoctlSync(&request);
+    IoctlStatus io_status = context_->ioctl_adapter_->IssueIoctlSync(&request);
     if (io_status != IoctlStatus::Success) {
       NXPF_ERR("Failed to set IE %u: %d", ie.type(), io_status);
       continue;
@@ -299,7 +380,7 @@ zx_status_t ClientConnection::SetAuthMode(wlan_auth_type_t auth_type) {
       MLAN_IOCTL_SEC_CFG, MLAN_ACT_SET, bss_index_,
       mlan_ds_sec_cfg{.sub_command = MLAN_OID_SEC_CFG_AUTH_MODE, .param{.auth_mode = auth_mode}});
 
-  IoctlStatus io_status = ioctl_adapter_->IssueIoctlSync(&request);
+  IoctlStatus io_status = context_->ioctl_adapter_->IssueIoctlSync(&request);
   if (io_status != IoctlStatus::Success) {
     NXPF_ERR("Failed to set auth mode: %d", io_status);
     return ZX_ERR_INTERNAL;
@@ -346,7 +427,7 @@ zx_status_t ClientConnection::SetEncryptMode(uint8_t cipher_suite) {
       mlan_ds_sec_cfg{.sub_command = MLAN_OID_SEC_CFG_ENCRYPT_MODE,
                       .param{.encrypt_mode = encrypt_mode}});
 
-  IoctlStatus io_status = ioctl_adapter_->IssueIoctlSync(&request);
+  IoctlStatus io_status = context_->ioctl_adapter_->IssueIoctlSync(&request);
   if (io_status != IoctlStatus::Success) {
     NXPF_ERR("Failed to set encrypt mode: %d", io_status);
     return ZX_ERR_INTERNAL;
@@ -360,7 +441,7 @@ zx_status_t ClientConnection::SetWpaEnabled(bool enabled) {
       MLAN_IOCTL_SEC_CFG, MLAN_ACT_SET, bss_index_,
       mlan_ds_sec_cfg{.sub_command = MLAN_OID_SEC_CFG_WPA_ENABLED, .param{.wpa_enabled = enabled}});
 
-  IoctlStatus io_status = ioctl_adapter_->IssueIoctlSync(&request);
+  IoctlStatus io_status = context_->ioctl_adapter_->IssueIoctlSync(&request);
   if (io_status != IoctlStatus::Success) {
     NXPF_ERR("Failed to %s WPA: %d", enabled ? "enable" : "disable", io_status);
     return ZX_ERR_INTERNAL;

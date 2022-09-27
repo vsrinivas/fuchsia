@@ -29,8 +29,15 @@
 
 namespace wlan::nxpfmac {
 
-class IoctlAdapter;
+struct DeviceContext;
 class KeyRing;
+
+class ClientConnectionIfc {
+ public:
+  virtual ~ClientConnectionIfc() = default;
+
+  virtual void OnDisconnectEvent(uint16_t reason_code) = 0;
+};
 
 class ClientConnection {
  public:
@@ -38,21 +45,27 @@ class ClientConnection {
   using OnConnectCallback =
       std::function<void(StatusCode, const uint8_t* /*ies*/, size_t /*ies_size*/)>;
 
-  ClientConnection(IoctlAdapter* ioctl_adapter, KeyRing* key_ring, uint32_t bss_index);
+  ClientConnection(ClientConnectionIfc* ifc, DeviceContext* context, KeyRing* key_ring,
+                   uint32_t bss_index);
   ~ClientConnection();
   // Attempt to connect to given bssid on the given channel. Returns ZX_ERR_ALREADY_EXISTS if a
   // connection attempt is already in progress. Returns ZX_OK if the request is successfully
   // initiated, on_connect will be called asynchronously with the result of the connection attempt.
-  zx_status_t Connect(const wlan_fullmac_connect_req_t* req, OnConnectCallback&& on_connect);
+  zx_status_t Connect(const wlan_fullmac_connect_req_t* req, OnConnectCallback&& on_connect)
+      __TA_EXCLUDES(mutex_);
   // Cancel a connection attempt. This will call the on_connect callback passed to Connect if a
   // connection attempt was found. Returns ZX_ERR_NOT_FOUND if no connection attempt is in progress.
-  zx_status_t CancelConnect();
+  zx_status_t CancelConnect() __TA_EXCLUDES(mutex_);
 
-  // Returns ZX_ERR_NOT_CONNECTED if not connected. Otherwise attempt to disconnect from an
-  // established connection.
-  zx_status_t Disconnect();
+  // Returns ZX_ERR_NOT_CONNECTED if not connected or ZX_ERR_ALREADY_EXISTS if a disconnect attempt
+  // is already in progress. Otherwise attempt to disconnect from an established connection.
+  zx_status_t Disconnect(const uint8_t* addr, uint16_t reason_code,
+                         std::function<void(IoctlStatus)>&& on_disconnect_complete)
+      __TA_EXCLUDES(mutex_);
 
  private:
+  void OnDisconnect(uint16_t reason_code) __TA_EXCLUDES(mutex_);
+
   zx_status_t GetRsnCipherSuites(const uint8_t* ies, size_t ies_count,
                                  uint8_t* out_pairwise_cipher_suite,
                                  uint8_t* out_group_cipher_suite);
@@ -66,11 +79,13 @@ class ClientConnection {
   void CompleteConnection(StatusCode status_code, const uint8_t* ies = nullptr, size_t ies_size = 0)
       __TA_REQUIRES(mutex_);
 
-  IoctlAdapter* ioctl_adapter_ = nullptr;
+  ClientConnectionIfc* ifc_ = nullptr;
+  DeviceContext* context_ = nullptr;
   KeyRing* key_ring_ = nullptr;
   const uint32_t bss_index_;
   bool connected_ __TA_GUARDED(mutex_) = false;
   WaitableState<bool> connect_in_progress_{false};
+  WaitableState<bool> disconnect_in_progress_{false};
   OnConnectCallback on_connect_;
   // Something inside mlan_ds_bss makes this a variable size struct so we need to have a pointer.
   // Otherwise it has to be at the end of this class and that makes this class variable size which

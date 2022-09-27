@@ -36,6 +36,7 @@ using WlanInterfaceDeviceType = ::ddk::Device<WlanInterface>;
 
 class WlanInterface : public WlanInterfaceDeviceType,
                       public ::ddk::WlanFullmacImplProtocol<WlanInterface, ::ddk::base_protocol>,
+                      public ClientConnectionIfc,
                       public wlan::drivers::components::NetworkPort,
                       public wlan::drivers::components::NetworkPort::Callbacks {
  public:
@@ -88,6 +89,9 @@ class WlanInterface : public WlanInterfaceDeviceType,
   void WlanFullmacImplWmmStatusReq();
   void WlanFullmacImplOnLinkStateChanged(bool online);
 
+  // ClientConnectionIfc implementation.
+  void OnDisconnectEvent(uint16_t reason_code) override;
+
   // NetworkPort::Callbacks implementation
   uint32_t PortGetMtu() override;
   void MacGetAddress(uint8_t out_mac[6]) override;
@@ -99,16 +103,18 @@ class WlanInterface : public WlanInterfaceDeviceType,
                          DeviceContext* context, zx::channel&& mlme_channel);
 
   zx_status_t RetrieveMacAddress();
+  void ConfirmDeauth() __TA_REQUIRES(mutex_);
+  void ConfirmDisassoc(zx_status_t status) __TA_REQUIRES(mutex_);
 
   wlan_mac_role_t role_;
   zx::channel mlme_channel_;
 
   KeyRing key_ring_;
-  ClientConnection client_connection_;
-  Scanner scanner_;
+  ClientConnection client_connection_ __TA_GUARDED(mutex_);
+  Scanner scanner_ __TA_GUARDED(mutex_);
   DeviceContext* context_ = nullptr;
 
-  ::ddk::WlanFullmacImplIfcProtocolClient fullmac_ifc_;
+  ::ddk::WlanFullmacImplIfcProtocolClient fullmac_ifc_ __TA_GUARDED(mutex_);
 
   uint8_t mac_address_[ETH_ALEN] = {};
 
