@@ -36,6 +36,7 @@ mod test {
         ffx_writer::Format,
         fidl_fuchsia_developer_remotecontrol::{ArchiveIteratorError, BridgeStreamParameters},
         fidl_fuchsia_diagnostics::{ClientSelectorConfiguration, DataType, StreamMode},
+        selectors,
         std::sync::Arc,
     };
 
@@ -49,7 +50,7 @@ mod test {
         };
         let expected_responses = Arc::new(vec![]);
         let writer = Writer::new_test(Some(Format::Json));
-        let cmd = ListCommand { manifest: None, with_url: false, accessor_path: None };
+        let cmd = ListCommand { manifest: None, with_url: false, accessor: None };
         run_command(
             setup_fake_rcs(),
             setup_fake_diagnostics_bridge(vec![FakeBridgeData::new(
@@ -76,7 +77,7 @@ mod test {
         };
         let expected_responses = Arc::new(vec![FakeArchiveIteratorResponse::new_with_fidl_error()]);
         let writer = Writer::new_test(Some(Format::Json));
-        let cmd = ListCommand { manifest: None, with_url: false, accessor_path: None };
+        let cmd = ListCommand { manifest: None, with_url: false, accessor: None };
 
         assert!(run_command(
             setup_fake_rcs(),
@@ -106,7 +107,7 @@ mod test {
                 ArchiveIteratorError::GenericError,
             )]);
         let writer = Writer::new_test(Some(Format::Json));
-        let cmd = ListCommand { manifest: None, with_url: false, accessor_path: None };
+        let cmd = ListCommand { manifest: None, with_url: false, accessor: None };
 
         assert!(run_command(
             setup_fake_rcs(),
@@ -135,7 +136,7 @@ mod test {
         let value = serde_json::to_string(&lifecycles).unwrap();
         let expected_responses = Arc::new(vec![FakeArchiveIteratorResponse::new_with_value(value)]);
         let writer = Writer::new_test(Some(Format::Json));
-        let cmd = ListCommand { manifest: None, with_url: false, accessor_path: None };
+        let cmd = ListCommand { manifest: None, with_url: false, accessor: None };
         run_command(
             setup_fake_rcs(),
             setup_fake_diagnostics_bridge(vec![FakeBridgeData::new(
@@ -169,7 +170,7 @@ mod test {
         let value = serde_json::to_string(&lifecycles).unwrap();
         let expected_responses = Arc::new(vec![FakeArchiveIteratorResponse::new_with_value(value)]);
         let writer = Writer::new_test(Some(Format::Json));
-        let cmd = ListCommand { manifest: None, with_url: true, accessor_path: None };
+        let cmd = ListCommand { manifest: None, with_url: true, accessor: None };
         run_command(
             setup_fake_rcs(),
             setup_fake_diagnostics_bridge(vec![FakeBridgeData::new(
@@ -199,12 +200,15 @@ mod test {
 
     #[fuchsia::test]
     async fn test_list_with_data_with_manifest_and_archive() {
-        let accessor_path = String::from("some/archivist/path");
+        let accessor = selectors::parse_selector::<selectors::FastError>(
+            "./test/component:expose:fuchsia.diagnostics.ArchiveAccessor",
+        )
+        .unwrap();
         let params = BridgeStreamParameters {
             stream_mode: Some(StreamMode::Snapshot),
             data_type: Some(DataType::Inspect),
             client_selector_configuration: Some(ClientSelectorConfiguration::SelectAll(true)),
-            accessor_path: Some(accessor_path.clone()),
+            accessor: Some(accessor.clone()),
             ..BridgeStreamParameters::EMPTY
         };
         let lifecycles = make_inspects_for_lifecycle();
@@ -214,7 +218,9 @@ mod test {
         let cmd = ListCommand {
             manifest: Some(String::from("moniker1")),
             with_url: true,
-            accessor_path: Some(accessor_path),
+            accessor: Some(
+                "./test/component:expose:fuchsia.diagnostics.ArchiveAccessor".to_owned(),
+            ),
         };
         run_command(
             setup_fake_rcs(),

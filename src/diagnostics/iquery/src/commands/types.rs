@@ -19,7 +19,7 @@ pub trait Command {
 pub trait DiagnosticsProvider: Send + Sync {
     async fn snapshot<D: DiagnosticsData>(
         &self,
-        accessor_path: &Option<String>,
+        accessor: &Option<String>,
         selectors: &[String],
     ) -> Result<Vec<Data<D>>, Error>;
 

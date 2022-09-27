@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {anyhow, serde_json, std::str::FromStr, thiserror::Error};
+use {anyhow, fidl, serde_json, std::str::FromStr, thiserror::Error};
 
 #[cfg(target_os = "fuchsia")]
 use diagnostics_reader as reader;
@@ -25,6 +25,9 @@ pub enum Error {
     #[error("Failed parsing glob {0}: {1}")]
     ParsePath(String, anyhow::Error),
 
+    #[error("Failed parsing selector {0}: {1}")]
+    ParseSelector(String, anyhow::Error),
+
     #[error("Failed to list archive accessors on {0} {1}")]
     ListAccessors(String, anyhow::Error),
 
@@ -33,6 +36,12 @@ pub enum Error {
 
     #[error("Failed to find inspect data in location {0}: {1}")]
     ReadLocation(String, anyhow::Error),
+
+    #[error("Error while connecting to {0}: {1}")]
+    ConnectingTo(String, fidl::Error),
+
+    #[error("Error while communicating with {0}: {1}")]
+    CommunicatingWith(String, #[source] anyhow::Error),
 
     #[error("Failed to connect to archivst: {0}")]
     ConnectToArchivist(#[source] anyhow::Error),
@@ -45,6 +54,9 @@ pub enum Error {
 
     #[error("No running component was found whose URL contains the given string: {0}")]
     ManifestNotFound(String),
+
+    #[error("Invalid selector: {0}")]
+    InvalidSelector(String),
 }
 
 impl Error {
