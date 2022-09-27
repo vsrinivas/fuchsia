@@ -93,18 +93,27 @@ lazy_static::lazy_static! {
 //         }
 //       },
 //       "4": {
+//         "mismatch_event": {
+//           "actual": -42,
+//           "contender": "utils::StubContender",
+//           "criterion": "budget_surplus_trillions",
+//           "max_allowed": 1,
+//           "min_allowed": -10
+//         }
+//       },
+//       "5": {
 //         "key_event": {
 //           "driver_monotonic_nanos": 11000000,
 //           "entry_latency_micros": 1000
 //         }
 //       },
-//       "5": {
+//       "6": {
 //         "key_event": {
 //           "driver_monotonic_nanos": 13000000,
 //           "entry_latency_micros": 1000
 //         }
 //       },
-//       "6": {
+//       "7": {
 //         "touchpad_event": {
 //           "driver_monotonic_nanos": 18000000,
 //           "entry_latency_micros": 1000,
@@ -119,7 +128,7 @@ lazy_static::lazy_static! {
 //           }
 //         }
 //       },
-//       "7": {
+//       "8": {
 //         "gesture_start": {
 //           "latency_event_count": 1,
 //           "latency_micros": 18987,
@@ -138,46 +147,43 @@ lazy_static::lazy_static! {
 //   metadata:
 //     filename = fuchsia.inspect.Tree
 //     component_url = fuchsia-pkg://fuchsia.com/scene_manager#meta/scene_manager.cm
-//     timestamp = 1929093181684
+//     timestamp = 919859033552
 //   payload:
 //     root:
 //       fuchsia.inspect.Stats:
-//         allocated_blocks = 3914
-//         current_size = 65536
-//         deallocated_blocks = 0
+//         allocated_blocks = 16273
+//         current_size = 274432
+//         deallocated_blocks = 80
 //         failed_allocations = 0
 //         maximum_size = 307200
 //         total_dynamic_children = 1
 //       input_pipeline:
 //         gestures_event_log:
-//           0:
+//           16:
 //             key_event:
-//               driver_monotonic_nanos = 1885655604500
-//               entry_latency_micros = 38411
-//           1:
-//             key_event:
-//               driver_monotonic_nanos = 1885772742472
-//               entry_latency_micros = 1663
+//               driver_monotonic_nanos = 23970620123
+//               entry_latency_micros = 3666
 //           /* ... many entries omitted ... */
-//           54:
+//           26:
 //             touchpad_event:
-//               driver_monotonic_nanos = 1904216026796
-//               entry_latency_micros = 13617
+//               driver_monotonic_nanos = 40008033143
+//               entry_latency_micros = 12285
 //               pressed_buttons = []
 //               contacts:
 //                 0:
 //                   height_raw = 3230.000000
-//                   pos_x_mm = 76.378998
-//                   pos_y_mm = 31.892000
+//                   pos_x_mm = 44.615002
+//                   pos_y_mm = 23.142000
 //                   width_raw = 2953.000000
-//           55:
+//           /* mismatches reported on u64 properties */
+//           27:
 //             mismatch_event:
 //               actual = 0
 //               contender = one_finger_drag::InitialContender
 //               criterion = num_pressed_buttons
 //               max_allowed = 1
 //               min_allowed = 1
-//           56:
+//           28:
 //             mismatch_event:
 //               actual = 1
 //               contender = scroll::InitialContender
@@ -185,45 +191,83 @@ lazy_static::lazy_static! {
 //               max_allowed = 2
 //               min_allowed = 2
 //           /* ... many entries omitted ... */
-//           81:
+//           44:
 //             touchpad_event:
-//               driver_monotonic_nanos = 1904420677320
-//               entry_latency_micros = 4654
+//               driver_monotonic_nanos = 40133996636
+//               entry_latency_micros = 4575
+//               pressed_buttons = []
+//               contacts:
+//                 0:
+//                   height_raw = 3230.000000
+//                   pos_x_mm = 45.154999
+//                   pos_y_mm = 23.047001
+//                   width_raw = 3691.000000
+//           /* mismatches reported on f32 properties */
+//           45:
+//             mismatch_event:
+//               actual = 0.548290
+//               contender = click::UnpressedContender
+//               criterion = displacement_mm
+//               max_allowed = 0.500000
+//           46:
+//             mismatch_event:
+//               actual = 0.548290
+//               contender = primary_tap::FingerContactContender
+//               criterion = displacement_mm
+//               max_allowed = 0.500000
+//           47:
+//             mismatch_event:
+//               actual = 0.548290
+//               contender = secondary_tap::OneFingerContactContender
+//               criterion = displacement_mm
+//               max_allowed = 0.500000
+//           /* start of a gesture */
+//           48:
+//             gesture_start:
+//               latency_event_count = 16
+//               latency_micros = 132104
+//               name = motion
+//           /* ... many entries omitted ... */
+//           917:
+//             touchpad_event:
+//               driver_monotonic_nanos = 370738160531
+//               entry_latency_micros = 2688
+//               pressed_buttons = []
+//               contacts:
+//           918:
+//             touchpad_event:
+//               driver_monotonic_nanos = 909431900359
+//               entry_latency_micros = 17505
+//               pressed_buttons = []
+//               contacts:
+//                 0:
+//                   height_raw = 3230.000000
+//                   pos_x_mm = 34.651001
+//                   pos_y_mm = 29.070000
+//                   width_raw = 2953.000000
+//           /* ... many entries omitted ... */
+//           1072:
+//             touchpad_event:
+//               driver_monotonic_nanos = 910636970026
+//               entry_latency_micros = 4597
 //               pressed_buttons = []
 //               contacts:
 //                 0:
 //                   height_raw = 3876.000000
-//                   pos_x_mm = 76.855003
-//                   pos_y_mm = 32.145000
+//                   pos_x_mm = 34.651001
+//                   pos_y_mm = 29.197001
 //                   width_raw = 3691.000000
-//           82:
+//           /* mismatches reported on i64 properties */
+//           1073:
 //             mismatch_event:
-//               actual = 0.539064
-//               contender = click::UnpressedContender
-//               criterion = displacement_mm
-//               max_allowed = 0.500000
-//           83:
-//             mismatch_event:
-//               actual = 0.539064
+//               actual = 1205069
 //               contender = primary_tap::FingerContactContender
-//               criterion = displacement_mm
-//               max_allowed = 0.500000
-//           84:
+//               criterion = elapsed_time_micros
+//               max_allowed = 1200000
+//           1074:
 //             mismatch_event:
-//               actual = 0.539064
+//               actual = 1205069
 //               contender = secondary_tap::OneFingerContactContender
-//               criterion = displacement_mm
-//               max_allowed = 0.500000
-//           85:
-//             gesture_start:
-//               latency_event_count = 25
-//               latency_micros = 210898
-//               name = motion
-//           /* ... many entries omitted ... */
-//           323:
-//             touchpad_event:
-//               driver_monotonic_nanos = 1906294927022
-//               entry_latency_micros = 3550
-//               pressed_buttons = []
-//               contacts:
+//               criterion = elapsed_time_micros
+//               max_allowed = 1200000
 // ```

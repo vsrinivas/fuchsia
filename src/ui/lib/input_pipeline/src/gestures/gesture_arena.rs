@@ -101,10 +101,19 @@ pub(super) struct MismatchDetailsFloat {
 }
 
 #[derive(Debug)]
+pub(super) struct MismatchDetailsInt {
+    pub(super) criterion: &'static str,
+    pub(super) min: Option<i64>,
+    pub(super) max: Option<i64>,
+    pub(super) actual: i64,
+}
+
+#[derive(Debug)]
 pub(super) enum MismatchData {
     Basic(&'static str),
     DetailedUint(MismatchDetailsUint),
     DetailedFloat(MismatchDetailsFloat),
+    DetailedInt(MismatchDetailsInt),
 }
 
 #[derive(Debug)]
@@ -1045,6 +1054,17 @@ fn log_detailed_mismatch_float(
         .map(|max| mismatch_event_node.record_double(&*MAX_VALUE_PROP, f64::from(max)));
 }
 
+fn log_detailed_mismatch_int(
+    mismatch_event_node: &InspectNode,
+    mismatch_details: MismatchDetailsInt,
+) {
+    use inspect_keys::*;
+    mismatch_event_node.record_string(&*CRITERION_PROP, mismatch_details.criterion);
+    mismatch_event_node.record_int(&*ACTUAL_VALUE_PROP, mismatch_details.actual);
+    mismatch_details.min.map(|min| mismatch_event_node.record_int(&*MIN_VALUE_PROP, min));
+    mismatch_details.max.map(|max| mismatch_event_node.record_int(&*MAX_VALUE_PROP, max));
+}
+
 fn log_mismatch(
     log_entry_node: &InspectNode,
     contender_name: &'static str,
@@ -1068,6 +1088,9 @@ fn log_mismatch(
                 }
                 MismatchData::DetailedFloat(mismatch_details) => {
                     log_detailed_mismatch_float(mismatch_event_node, mismatch_details)
+                }
+                MismatchData::DetailedInt(mismatch_details) => {
+                    log_detailed_mismatch_int(mismatch_event_node, mismatch_details)
                 }
             }
         })
@@ -3126,8 +3149,8 @@ mod tests {
             super::{
                 super::{
                     ContenderFactory, ExamineEventResult, GestureArena, InputHandler, MismatchData,
-                    MismatchDetailsFloat, MismatchDetailsUint, ProcessBufferedEventsResult,
-                    RecognizedGesture,
+                    MismatchDetailsFloat, MismatchDetailsInt, MismatchDetailsUint,
+                    ProcessBufferedEventsResult, RecognizedGesture,
                 },
                 utils::{
                     make_unhandled_touchpad_event, ContenderFactoryOnceOrPanic, StubContender,
@@ -3157,6 +3180,7 @@ mod tests {
             let basic_mismatch_contender = Box::new(StubContender::new());
             let detailed_uint_mismatch_contender = Box::new(StubContender::new());
             let detailed_float_mismatch_contender = Box::new(StubContender::new());
+            let detailed_int_mismatch_contender = Box::new(StubContender::new());
             let gesture_matching_contender = Box::new(StubContender::new());
             basic_mismatch_contender
                 .set_next_result(ExamineEventResult::Mismatch(MismatchData::Basic("some reason")));
@@ -3176,12 +3200,21 @@ mod tests {
                     actual: 42.0,
                 }),
             ));
+            detailed_int_mismatch_contender.set_next_result(ExamineEventResult::Mismatch(
+                MismatchData::DetailedInt(MismatchDetailsInt {
+                    criterion: "budget_surplus_trillions",
+                    min: Some(-10),
+                    max: Some(1),
+                    actual: -42,
+                }),
+            ));
 
             let inspector = fuchsia_inspect::Inspector::new();
             let contender_factory = Box::new(ContenderFactoryOnceOrPanic::new(vec![
                 basic_mismatch_contender,
                 detailed_uint_mismatch_contender,
                 detailed_float_mismatch_contender,
+                detailed_int_mismatch_contender,
                 gesture_matching_contender.clone(),
             ]));
             let arena = Rc::new(GestureArena::new_for_test(contender_factory, &inspector, 100));
@@ -3378,18 +3411,27 @@ mod tests {
                         }
                     },
                     "4": {
+                        mismatch_event: {
+                            contender: "utils::StubContender",
+                            criterion: "budget_surplus_trillions",
+                            min_allowed: -10i64,
+                            max_allowed: 1i64,
+                            actual: -42i64,
+                        }
+                    },
+                    "5": {
                         key_event: {
                             driver_monotonic_nanos: 11_000_000i64,
                             entry_latency_micros: 1_000i64,  // 12_000_000 - 11_000_000 = 1_000_00 nsec
                         }
                     },
-                    "5": {
+                    "6": {
                         key_event: {
                             driver_monotonic_nanos: 13_000_000i64,
                             entry_latency_micros: 1_000i64,  // 14_000_000 - 13_000_000 = 1_000_00 nsec
                         }
                     },
-                    "6": {
+                    "7": {
                         touchpad_event: {
                             driver_monotonic_nanos: 18_000_000i64,
                             entry_latency_micros: 1_000i64,  // 19_000_000 - 18_000_000 = 1_000_00 nsec
@@ -3404,7 +3446,7 @@ mod tests {
                             }
                         }
                     },
-                    "7": {
+                    "8": {
                         gesture_start: {
                           latency_event_count: 1u64,
                           latency_micros: 18_987i64,  // 19_000_000 - 12_300 = 18_987_700

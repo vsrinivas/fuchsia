@@ -4,9 +4,9 @@
 
 use {
     super::gesture_arena::{
-        self, ExamineEventResult, MismatchData, MismatchDetailsFloat, MismatchDetailsUint,
-        ProcessBufferedEventsResult, RecognizedGesture, TouchpadEvent, VerifyEventResult,
-        PRIMARY_BUTTON,
+        self, ExamineEventResult, MismatchData, MismatchDetailsFloat, MismatchDetailsInt,
+        MismatchDetailsUint, ProcessBufferedEventsResult, RecognizedGesture, TouchpadEvent,
+        VerifyEventResult, PRIMARY_BUTTON,
     },
     crate::mouse_binding::{MouseEvent, MouseLocation, MousePhase, RelativeLocation},
     crate::utils::{euclidean_distance, Position},
@@ -98,8 +98,14 @@ impl FingerContactContender {
 
 impl gesture_arena::Contender for FingerContactContender {
     fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult {
-        if !is_valid_event_time(event, &self.finger_down_event, self.max_time_elapsed) {
-            return ExamineEventResult::Mismatch(MismatchData::Basic("too much time elapsed"));
+        let elapsed_time = event.timestamp - self.finger_down_event.timestamp;
+        if elapsed_time >= self.max_time_elapsed {
+            return ExamineEventResult::Mismatch(MismatchData::DetailedInt(MismatchDetailsInt {
+                criterion: "elapsed_time_micros",
+                min: None,
+                max: Some(self.max_time_elapsed.into_micros()),
+                actual: elapsed_time.into_micros(),
+            }));
         }
 
         let num_pressed_buttons = event.pressed_buttons.len();
@@ -159,8 +165,14 @@ struct MatchedContender {
 
 impl gesture_arena::MatchedContender for MatchedContender {
     fn verify_event(self: Box<Self>, event: &TouchpadEvent) -> VerifyEventResult {
-        if !is_valid_event_time(event, &self.finger_down_event, self.max_time_elapsed) {
-            return VerifyEventResult::Mismatch(MismatchData::Basic("too much time elapsed"));
+        let elapsed_time = event.timestamp - self.finger_down_event.timestamp;
+        if elapsed_time >= self.max_time_elapsed {
+            return VerifyEventResult::Mismatch(MismatchData::DetailedInt(MismatchDetailsInt {
+                criterion: "elapsed_time_micros",
+                min: None,
+                max: Some(self.max_time_elapsed.into_micros()),
+                actual: elapsed_time.into_micros(),
+            }));
         }
 
         let num_contacts = event.contacts.len();
@@ -233,16 +245,6 @@ impl gesture_arena::MatchedContender for MatchedContender {
 /// assumed to have a single associated TouchContact.
 fn position_from_event(event: &TouchpadEvent) -> Position {
     event.contacts[0].position
-}
-
-/// Returns true iff the timestamp for new_event has not exceeded
-/// the threshold since the old_event timestamp.
-fn is_valid_event_time(
-    new_event: &TouchpadEvent,
-    old_event: &TouchpadEvent,
-    threshold: zx::Duration,
-) -> bool {
-    new_event.timestamp - old_event.timestamp < threshold
 }
 
 #[cfg(test)]
