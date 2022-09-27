@@ -69,12 +69,12 @@ fuchsia_shell_package("hwstress_cli") {
   deps = [ ":bin" ]
 }
 
-# CFv1 package.
-# We generate an in-package CMX file for the top-level "hwstress"
+# CFv2 package.
+# We generate an in-package CML file for the top-level "hwstress"
 # binary, and also for each style of test we run.
 #
 # This is to help automated tests seperate logs for the different
-# styles of test, where currently the CFv1 component name is the
+# styles of test, where currently the CFv2 component name is the
 # only mechanism we have to do this.
 _hwstress_binaries = [
   "hwstress",
@@ -83,15 +83,6 @@ _hwstress_binaries = [
   "flash",
   "led",
 ]
-_hwstress_components = []
-foreach(hwstress_name, _hwstress_binaries) {
-  fuchsia_component("${hwstress_name}_component") {
-    component_name = "${hwstress_name}"
-    manifest = "meta/hwstress.cmx"
-    deps = [ ":bin" ]
-  }
-  _hwstress_components += [ ":${hwstress_name}_component" ]
-}
 
 _hwstress_v2_components = []
 foreach(hwstress_name, _hwstress_binaries) {
@@ -103,11 +94,6 @@ foreach(hwstress_name, _hwstress_binaries) {
   _hwstress_v2_components += [ ":${hwstress_name}_v2_component" ]
 }
 
-fuchsia_package("hwstress_pkg") {
-  package_name = "hwstress"
-  deps = _hwstress_components
-}
-
 fuchsia_package("hwstress_v2_pkg") {
   package_name = "hwstress_v2"
   deps = _hwstress_v2_components
@@ -117,8 +103,8 @@ core_shard("hwstress_v2_shard") {
   shard_file = "meta/hwstress.core_shard.cml"
 }
 
-# Tests using CFv1.
-executable("hwstress_test") {
+# Tests requiring support from the CFv2 (or requiring support from libraries that depend on CFv2).
+executable("hwstress_v2_test") {
   testonly = true
 
   sources = [
@@ -126,6 +112,7 @@ executable("hwstress_test") {
     "cpu_stress_test.cc",
     "cpu_stressor_test.cc",
     "cpu_workloads_test.cc",
+    "flash_stress_test.cc",
     "hwstress_test.cc",
     "light_stress_test.cc",
     "memory_patterns_test.cc",
@@ -144,24 +131,6 @@ executable("hwstress_test") {
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/predicates",
-    "//third_party/googletest:gmock",
-    "//zircon/system/ulib/zx",
-    "//zircon/system/ulib/zxc",
-  ]
-}
-
-# Tests requiring support from the CFv2 (or requiring support from libraries that depend on CFv2).
-executable("hwstress_v2_test") {
-  testonly = true
-
-  sources = [ "flash_stress_test.cc" ]
-
-  deps = [
-    ":lib",
-    "//sdk/lib/fdio",
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/predicates",
     "//src/storage/testing:storage_driver_test_support",  # requires CFv2.
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/zx",
@@ -171,11 +140,6 @@ executable("hwstress_v2_test") {
   # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
   # Consider switching to the C++ bindings. See linked bug for details.
   configs += [ "//build/c:fidl-deprecated-c-bindings" ]
-}
-
-fuchsia_test_component("hwstress_v1_test_pkg") {
-  manifest = "meta/hwstress_test.cml"
-  deps = [ ":hwstress_test" ]
 }
 
 fuchsia_test_component("hwstress_v2_test_pkg") {
@@ -188,10 +152,7 @@ fuchsia_test_component("hwstress_v2_test_pkg") {
 
 fuchsia_test_package("hwstress_test_pkg") {
   package_name = "hwstress-tests"
-  test_components = [
-    ":hwstress_v1_test_pkg",
-    ":hwstress_v2_test_pkg",
-  ]
+  test_components = [ ":hwstress_v2_test_pkg" ]
   test_specs = {
     log_settings = {
       max_severity = "ERROR"
@@ -208,7 +169,6 @@ group("hwstress") {
   testonly = true
   public_deps = [
     ":hwstress_cli",
-    ":hwstress_pkg",
     ":hwstress_v2_pkg",
     ":hwstress_v2_shard",
   ]

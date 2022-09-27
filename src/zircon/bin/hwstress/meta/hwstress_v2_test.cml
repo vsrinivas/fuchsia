@@ -7,12 +7,19 @@
         "//src/sys/test_runners/gtest/default.shard.cml",
         "//src/sys/test_runners/tmp_storage.shard.cml",
         "inspect/client.shard.cml",
+        "sys/testing/system-test.shard.cml",
         "syslog/client.shard.cml",
     ],
     program: {
         binary: "bin/hwstress_v2_test",
     },
     use: [
-        { protocol: "fuchsia.process.Launcher" },
+        {
+            protocol: [
+                "fuchsia.kernel.Stats",
+                "fuchsia.process.Launcher",
+                "fuchsia.scheduler.ProfileProvider",
+            ],
+        },
     ],
 }
