@@ -4,29 +4,28 @@
 
 use anyhow::{format_err, Error};
 use fidl::prelude::*;
-use fidl_fuchsia_bluetooth_gatt::{
-    self as gatt, AttributePermissions, Characteristic, Descriptor,
-    LocalServiceDelegateControlHandle, LocalServiceDelegateMarker,
-    LocalServiceDelegateOnReadValueResponder, LocalServiceDelegateOnWriteValueResponder,
-    LocalServiceDelegateRequestStream, LocalServiceMarker, LocalServiceProxy, SecurityRequirements,
-    Server_Marker, Server_Proxy, ServiceInfo,
+use fidl_fuchsia_bluetooth_gatt2::{
+    self as gatt, AttributePermissions, Characteristic, CharacteristicPropertyBits, Descriptor,
+    Handle, LocalServiceControlHandle, LocalServiceMarker, LocalServiceReadValueResponder,
+    LocalServiceRequest, LocalServiceRequestStream, LocalServiceWriteValueResponder,
+    SecurityRequirements, Server_Marker, Server_Proxy, ServiceHandle, ServiceInfo, ServiceKind,
+    ValueChangedParameters,
 };
 use fuchsia_async as fasync;
+use fuchsia_bluetooth::types::{PeerId, Uuid};
 use fuchsia_component as app;
-use fuchsia_zircon as zx;
 use futures::stream::TryStreamExt;
 use parking_lot::RwLock;
 use serde_json::value::Value;
-use std::collections::HashMap;
-use tracing::{error, info};
+use std::{collections::HashMap, str::FromStr};
+use tracing::{error, info, warn};
 
 use crate::bluetooth::constants::{
-    GATT_MAX_ATTRIBUTE_VALUE_LENGTH, PERMISSION_READ_ENCRYPTED, PERMISSION_READ_ENCRYPTED_MITM,
-    PERMISSION_WRITE_ENCRYPTED, PERMISSION_WRITE_ENCRYPTED_MITM, PERMISSION_WRITE_SIGNED,
-    PERMISSION_WRITE_SIGNED_MITM, PROPERTY_INDICATE, PROPERTY_NOTIFY,
+    CHARACTERISTIC_EXTENDED_PROPERTIES_UUID, GATT_MAX_ATTRIBUTE_VALUE_LENGTH,
+    PERMISSION_READ_ENCRYPTED, PERMISSION_READ_ENCRYPTED_MITM, PERMISSION_WRITE_ENCRYPTED,
+    PERMISSION_WRITE_ENCRYPTED_MITM, PERMISSION_WRITE_SIGNED, PERMISSION_WRITE_SIGNED_MITM,
+    PROPERTY_INDICATE, PROPERTY_NOTIFY, PROPERTY_READ, PROPERTY_WRITE,
 };
-
-use crate::common_utils::error::Sl4fError;
 
 #[derive(Debug)]
 struct Counter {
@@ -60,8 +59,8 @@ struct InnerGattServerFacade {
     /// The current Gatt Server Proxy
     server_proxy: Option<Server_Proxy>,
 
-    /// service_proxies: List of LocalServiceProxy objects in use
-    service_proxies: Vec<LocalServiceProxy>,
+    /// List of active LocalService server tasks.
+    service_tasks: Vec<fasync::Task<()>>,
 }
 
 /// Perform Gatt Server operations.
@@ -80,12 +79,12 @@ impl GattServerFacade {
                 attribute_value_mapping: HashMap::new(),
                 generic_id_counter: Counter::new(),
                 server_proxy: None,
-                service_proxies: Vec::new(),
+                service_tasks: vec![],
             }),
         }
     }
 
-    pub fn create_server_proxy(&self) -> Result<Server_Proxy, Error> {
+    fn create_server_proxy(&self) -> Result<Server_Proxy, Error> {
         let tag = "GattServerFacade::create_server_proxy:";
         match self.inner.read().server_proxy.clone() {
             Some(service) => {
@@ -116,7 +115,7 @@ impl GattServerFacade {
 
     /// Function to take the input attribute value and parse it to
     /// a byte array. Types can be Strings, u8, or generic Array.
-    pub fn parse_attribute_value_to_byte_array(&self, value_to_parse: &Value) -> Vec<u8> {
+    fn parse_attribute_value_to_byte_array(&self, value_to_parse: &Value) -> Vec<u8> {
         match value_to_parse {
             Value::String(obj) => String::from(obj.as_str()).into_bytes(),
             Value::Number(obj) => match obj.as_u64() {
@@ -130,13 +129,12 @@ impl GattServerFacade {
         }
     }
 
-    pub fn on_characteristic_configuration(
-        peer_id: String,
+    fn on_characteristic_configuration(
+        peer_id: PeerId,
+        handle: Handle,
         notify: bool,
         indicate: bool,
-        characteristic_id: u64,
-        control_handle: LocalServiceDelegateControlHandle,
-        service_proxy: &LocalServiceProxy,
+        control_handle: &LocalServiceControlHandle,
     ) {
         let tag = "GattServerFacade::on_characteristic_configuration:";
         info!(
@@ -146,49 +144,61 @@ impl GattServerFacade {
             id = %peer_id,
             "OnCharacteristicConfiguration"
         );
-        control_handle.shutdown();
-        let value: [u8; 2] = if indicate {
-            [0x02, 0x00]
+
+        if indicate {
+            let value = ValueChangedParameters {
+                handle: Some(handle),
+                value: Some(vec![0x02, 0x00]),
+                peer_ids: Some(vec![peer_id.into()]),
+                ..ValueChangedParameters::EMPTY
+            };
+            // Ignore the confirmation.
+            let (confirmation, _) = fidl::EventPair::create().unwrap();
+            let _ = control_handle.send_on_indicate_value(value, confirmation);
         } else if notify {
-            [0x01, 0x00]
-        } else {
-            [0x00, 0x00]
-        };
-        let confirm = true;
-        let _result = service_proxy.notify_value(characteristic_id, &peer_id, &value, confirm);
+            let value = ValueChangedParameters {
+                handle: Some(handle),
+                value: Some(vec![0x01, 0x00]),
+                peer_ids: Some(vec![peer_id.into()]),
+                ..ValueChangedParameters::EMPTY
+            };
+            let _ = control_handle.send_on_notify_value(value);
+        }
     }
 
-    pub fn on_read_value(
-        id: u64,
+    fn on_read_value(
+        peer_id: PeerId,
+        handle: Handle,
         offset: i32,
-        responder: LocalServiceDelegateOnReadValueResponder,
+        responder: LocalServiceReadValueResponder,
         value_in_mapping: Option<&(Vec<u8>, bool)>,
     ) {
         let tag = "GattServerFacade::on_read_value:";
         info!(
             tag = &[tag, &line!().to_string()].join("").as_str(),
-            at_id = ?id,
+            at_id = ?handle.value,
             offset = ?offset,
+            id = %peer_id,
             "OnReadValue request",
         );
         match value_in_mapping {
             Some(v) => {
                 let (value, _enforce_initial_attribute_length) = v;
                 if value.len() < offset as usize {
-                    let _result = responder.send(None, gatt::ErrorCode::InvalidOffset);
+                    let _result = responder.send(&mut Err(gatt::Error::InvalidOffset));
                 } else {
                     let value_to_write = value.clone().split_off(offset as usize);
-                    let _result = responder.send(Some(&value_to_write), gatt::ErrorCode::NoError);
+                    let _result = responder.send(&mut Ok(value_to_write));
                 }
             }
             None => {
                 // ID doesn't exist in the database
-                let _result = responder.send(None, gatt::ErrorCode::NotPermitted);
+                let _result = responder.send(&mut Err(gatt::Error::ReadNotPermitted));
             }
         };
     }
 
-    pub fn write_and_extend(value: &mut Vec<u8>, value_to_write: Vec<u8>, offset: usize) {
+    fn write_and_extend(value: &mut Vec<u8>, value_to_write: Vec<u8>, offset: usize) {
         let split_idx = (value.len() - offset).min(value_to_write.len());
         let (overlapping, extending) = value_to_write.split_at(split_idx);
         let end_of_overlap = offset + overlapping.len();
@@ -196,19 +206,21 @@ impl GattServerFacade {
         value.extend_from_slice(extending);
     }
 
-    pub fn on_write_value(
-        id: u64,
-        offset: u16,
+    fn on_write_value(
+        peer_id: PeerId,
+        handle: Handle,
+        offset: u32,
         value_to_write: Vec<u8>,
-        responder: LocalServiceDelegateOnWriteValueResponder,
+        responder: LocalServiceWriteValueResponder,
         value_in_mapping: Option<&mut (Vec<u8>, bool)>,
     ) {
         let tag = "GattServerFacade::on_write_value:";
         info!(
             tag = &[tag, &line!().to_string()].join("").as_str(),
-            at_id = id,
+            at_id = handle.value,
             offset = offset,
             value = ?value_to_write,
+            id = %peer_id,
             "OnWriteValue request",
         );
 
@@ -220,90 +232,68 @@ impl GattServerFacade {
                     false => GATT_MAX_ATTRIBUTE_VALUE_LENGTH,
                 };
                 if max_attribute_size < (value_to_write.len() + offset as usize) {
-                    let _result = responder.send(gatt::ErrorCode::InvalidValueLength);
+                    let _result =
+                        responder.send(&mut Err(gatt::Error::InvalidAttributeValueLength));
                 } else if value.len() < offset as usize {
-                    let _result = responder.send(gatt::ErrorCode::InvalidOffset);
+                    let _result = responder.send(&mut Err(gatt::Error::InvalidOffset));
                 } else {
                     GattServerFacade::write_and_extend(value, value_to_write, offset as usize);
-                    let _result = responder.send(gatt::ErrorCode::NoError);
+                    let _result = responder.send(&mut Ok(()));
                 }
             }
             None => {
                 // ID doesn't exist in the database
-                let _result = responder.send(gatt::ErrorCode::NotPermitted);
+                let _result = responder.send(&mut Err(gatt::Error::WriteNotPermitted));
             }
         }
     }
 
-    pub fn on_write_without_response(
-        id: u64,
-        offset: u16,
-        value_to_write: Vec<u8>,
-        value_in_mapping: Option<&mut (Vec<u8>, bool)>,
-    ) {
-        let tag = "GattServerFacade::on_write_without_response:";
-        info!(
-            tag = &[tag, &line!().to_string()].join("").as_str(),
-            at_id = id,
-            offset = offset,
-            value = ?value_to_write,
-            "OnWriteWithoutResponse request",
-        );
-        if let Some(v) = value_in_mapping {
-            let (value, _enforce_initial_attribute_length) = v;
-            GattServerFacade::write_and_extend(value, value_to_write, offset as usize);
-        }
-    }
-
-    pub async fn monitor_delegate_request_stream(
-        stream: LocalServiceDelegateRequestStream,
+    async fn monitor_service_request_stream(
+        stream: LocalServiceRequestStream,
+        control_handle: LocalServiceControlHandle,
         mut attribute_value_mapping: HashMap<u64, (Vec<u8>, bool)>,
-        service_proxy: LocalServiceProxy,
     ) -> Result<(), Error> {
-        use fidl_fuchsia_bluetooth_gatt::LocalServiceDelegateRequest::*;
         stream
             .map_ok(move |request| match request {
-                OnCharacteristicConfiguration {
+                LocalServiceRequest::CharacteristicConfiguration {
                     peer_id,
+                    handle,
                     notify,
                     indicate,
-                    characteristic_id,
-                    control_handle,
+                    responder,
                 } => {
                     GattServerFacade::on_characteristic_configuration(
-                        peer_id,
+                        peer_id.into(),
+                        handle,
                         notify,
                         indicate,
-                        characteristic_id,
-                        control_handle,
-                        &service_proxy,
+                        &control_handle,
                     );
+                    let _ = responder.send();
                 }
-                OnReadValue { id, offset, responder } => {
+                LocalServiceRequest::ReadValue { peer_id, handle, offset, responder } => {
                     GattServerFacade::on_read_value(
-                        id,
+                        peer_id.into(),
+                        handle,
                         offset,
                         responder,
-                        attribute_value_mapping.get(&id),
+                        attribute_value_mapping.get(&handle.value),
                     );
                 }
-                OnWriteValue { id, offset, value, responder } => {
+                LocalServiceRequest::WriteValue { payload, responder } => {
                     GattServerFacade::on_write_value(
-                        id,
-                        offset,
-                        value,
+                        payload.peer_id.unwrap().into(),
+                        payload.handle.unwrap(),
+                        payload.offset.unwrap(),
+                        payload.value.unwrap(),
                         responder,
-                        attribute_value_mapping.get_mut(&id),
+                        attribute_value_mapping.get_mut(&payload.handle.unwrap().value),
                     );
                 }
-                OnWriteWithoutResponse { id, offset, value, .. } => {
-                    GattServerFacade::on_write_without_response(
-                        id,
-                        offset,
-                        value,
-                        attribute_value_mapping.get_mut(&id),
-                    );
+                LocalServiceRequest::PeerUpdate { payload: _, responder } => {
+                    responder.drop_without_shutdown();
                 }
+                LocalServiceRequest::ValueChangedCredit { .. } => {}
             })
             .try_collect::<()>()
             .await
@@ -314,7 +304,7 @@ impl GattServerFacade {
     ///
     /// Fuchsia GATT Server uses a u32 as a property value and an AttributePermissions
     /// object to represent Characteristic and Descriptor permissions. In order to
-    /// simplify the incomming json object the incoming permission value will be
+    /// simplify the incoming json object the incoming permission value will be
     /// treated as a u32 and converted into the proper AttributePermission object.
     ///
     /// The incoming permissions number is represented by adding the numbers representing
@@ -331,7 +321,7 @@ impl GattServerFacade {
     ///
     /// Example input that allows read and write: 0x01 | 0x10 = 0x11
     /// This function will convert this to the proper AttributePermission permissions.
-    pub fn permissions_and_properties_from_raw_num(
+    fn permissions_and_properties_from_raw_num(
         &self,
         permissions: u32,
         properties: u32,
@@ -387,62 +377,93 @@ impl GattServerFacade {
         // Update Security Requirements only required if notify or indicate
         // properties set.
         let update_sec_requirement = if properties & (PROPERTY_NOTIFY | PROPERTY_INDICATE) != 0 {
-            Some(Box::new(SecurityRequirements {
-                encryption_required: update_encryption_required,
-                authentication_required: update_authentication_required,
-                authorization_required: update_authorization_required,
-            }))
+            Some(SecurityRequirements {
+                encryption_required: Some(update_encryption_required),
+                authentication_required: Some(update_authentication_required),
+                authorization_required: Some(update_authorization_required),
+                ..SecurityRequirements::EMPTY
+            })
         } else {
             None
         };
 
-        let read_sec_requirement = SecurityRequirements {
-            encryption_required: read_encryption_required,
-            authentication_required: read_authentication_required,
-            authorization_required: read_authorization_required,
+        let read_sec_requirement = if properties & PROPERTY_READ != 0 {
+            Some(SecurityRequirements {
+                encryption_required: Some(read_encryption_required),
+                authentication_required: Some(read_authentication_required),
+                authorization_required: Some(read_authorization_required),
+                ..SecurityRequirements::EMPTY
+            })
+        } else {
+            None
         };
 
-        let write_sec_requirement = SecurityRequirements {
-            encryption_required: write_encryption_required,
-            authentication_required: write_authentication_required,
-            authorization_required: write_authorization_required,
+        let write_sec_requirement = if properties & PROPERTY_WRITE != 0 {
+            Some(SecurityRequirements {
+                encryption_required: Some(write_encryption_required),
+                authentication_required: Some(write_authentication_required),
+                authorization_required: Some(write_authorization_required),
+                ..SecurityRequirements::EMPTY
+            })
+        } else {
+            None
         };
 
         AttributePermissions {
-            read: Some(Box::new(read_sec_requirement)),
-            write: Some(Box::new(write_sec_requirement)),
+            read: read_sec_requirement,
+            write: write_sec_requirement,
             update: update_sec_requirement,
+            ..AttributePermissions::EMPTY
         }
     }
 
-    pub fn generate_descriptors(
+    /// Converts `descriptor_list_json` to FIDL descriptors and filters out descriptors banned by
+    /// the Server FIDL API. The Characteristic Extended Properties descriptor is one such banned
+    /// descriptor, and its value will be returned.
+    ///
+    /// Returns a tuple of (filtered FIDL descriptors, extended property bits)
+    fn process_descriptors(
         &self,
         descriptor_list_json: &Value,
-    ) -> Result<Vec<Descriptor>, Error> {
+    ) -> Result<(Vec<Descriptor>, CharacteristicPropertyBits), Error> {
         let mut descriptors: Vec<Descriptor> = Vec::new();
         // Fuchsia will automatically setup these descriptors and manage them.
         // Skip setting them up if found in the input descriptor list.
         let banned_descriptor_uuids = [
-            "00002900-0000-1000-8000-00805f9b34fb".to_string(), // CCC Descriptor
-            "00002902-0000-1000-8000-00805f9b34fb".to_string(), // Client Configuration Descriptor
-            "00002903-0000-1000-8000-00805f9b34fb".to_string(), // Server Configuration Descriptor
+            Uuid::from_str("00002900-0000-1000-8000-00805f9b34fb").unwrap(), // CCC Descriptor
+            Uuid::from_str("00002902-0000-1000-8000-00805f9b34fb").unwrap(), // Client Configuration Descriptor
+            Uuid::from_str("00002903-0000-1000-8000-00805f9b34fb").unwrap(), // Server Configuration Descriptor
         ];
 
         if descriptor_list_json.is_null() {
-            return Ok(descriptors);
+            return Ok((descriptors, CharacteristicPropertyBits::empty()));
         }
 
-        let descriptor_list = match descriptor_list_json.as_array() {
-            Some(d) => d,
-            None => return Err(format_err!("Attribute 'descriptors' is not a parseable list.")),
-        };
+        let descriptor_list = descriptor_list_json
+            .as_array()
+            .ok_or(format_err!("Attribute 'descriptors' is not a parseable list."))?;
+
+        let mut ext_property_bits = CharacteristicPropertyBits::empty();
 
         for descriptor in descriptor_list.into_iter() {
-            let descriptor_uuid = match descriptor["uuid"].as_str() {
-                Some(uuid) => uuid.to_string(),
+            let descriptor_uuid: Uuid = match descriptor["uuid"].as_str() {
+                Some(uuid_str) => Uuid::from_str(uuid_str)
+                    .map_err(|_| format_err!("Descriptor uuid is invalid"))?,
                 None => return Err(format_err!("Descriptor uuid was unable to cast to str.")),
             };
             let descriptor_value = self.parse_attribute_value_to_byte_array(&descriptor["value"]);
+
+            // Intercept the Extended Properties descriptor.
+            if descriptor_uuid == Uuid::new16(CHARACTERISTIC_EXTENDED_PROPERTIES_UUID) {
+                if descriptor_value.is_empty() {
+                    warn!("Extended properties descriptor has empty value. Ignoring.");
+                    continue;
+                }
+                // The second byte in CharacteristicPropertyBits is for extended property bits.
+                let ext_bits_raw: u16 = (descriptor_value[0] as u16) << u8::BITS;
+                ext_property_bits = CharacteristicPropertyBits::from_bits_truncate(ext_bits_raw);
+                continue;
+            }
 
             let raw_enforce_enforce_initial_attribute_length =
                 descriptor["enforce_initial_attribute_length"].as_bool().unwrap_or(false);
@@ -469,18 +490,19 @@ impl GattServerFacade {
                 descriptor_id,
                 (descriptor_value, raw_enforce_enforce_initial_attribute_length),
             );
-            let descriptor_obj = Descriptor {
-                id: descriptor_id,
-                type_: descriptor_uuid.clone(),
-                permissions: Some(Box::new(desc_permission_attributes)),
+            let fidl_descriptor = Descriptor {
+                handle: Some(Handle { value: descriptor_id }),
+                type_: Some(descriptor_uuid.into()),
+                permissions: Some(desc_permission_attributes),
+                ..Descriptor::EMPTY
             };
 
-            descriptors.push(descriptor_obj);
+            descriptors.push(fidl_descriptor);
         }
-        Ok(descriptors)
+        Ok((descriptors, ext_property_bits))
     }
 
-    pub fn generate_characteristics(
+    fn generate_characteristics(
         &self,
         characteristic_list_json: &Value,
     ) -> Result<Vec<Characteristic>, Error> {
@@ -498,7 +520,8 @@ impl GattServerFacade {
 
         for characteristic in characteristic_list.into_iter() {
             let characteristic_uuid = match characteristic["uuid"].as_str() {
-                Some(uuid) => uuid.to_string(),
+                Some(uuid_str) => Uuid::from_str(uuid_str)
+                    .map_err(|_| format_err!("Invalid characteristic uuid: {}", uuid_str))?,
                 None => return Err(format_err!("Characteristic uuid was unable to cast to str.")),
             };
 
@@ -525,107 +548,101 @@ impl GattServerFacade {
                 characteristic["enforce_initial_attribute_length"].as_bool().unwrap_or(false);
 
             let descriptor_list = &characteristic["descriptors"];
-            let descriptors = self.generate_descriptors(descriptor_list)?;
+            let (fidl_descriptors, ext_properties_bits) =
+                self.process_descriptors(descriptor_list)?;
 
             let characteristic_permissions = self.permissions_and_properties_from_raw_num(
                 raw_characteristic_permissions,
                 characteristic_properties,
             );
 
+            // Properties map directly to CharacteristicPropertyBits except for
+            // property_extended_props (0x80), so we truncate. The extended properties descriptor is
+            // intercepted and added to the property bits (the Bluetooth stack will add the
+            // descriptor later).
+            let characteristic_properties =
+                CharacteristicPropertyBits::from_bits_truncate(characteristic_properties as u16)
+                    | ext_properties_bits;
+
             let characteristic_id = self.inner.write().generic_id_counter.next();
             self.inner.write().attribute_value_mapping.insert(
                 characteristic_id,
                 (characteristic_value, raw_enforce_enforce_initial_attribute_length),
             );
-            let characteristic_obj = Characteristic {
-                id: characteristic_id,
-                type_: characteristic_uuid,
-                properties: characteristic_properties,
-                permissions: Some(Box::new(characteristic_permissions)),
-                descriptors: Some(descriptors),
+            let fidl_characteristic = Characteristic {
+                handle: Some(Handle { value: characteristic_id }),
+                type_: Some(characteristic_uuid.into()),
+                properties: Some(characteristic_properties),
+                permissions: Some(characteristic_permissions),
+                descriptors: Some(fidl_descriptors),
+                ..Characteristic::EMPTY
             };
 
-            characteristics.push(characteristic_obj);
+            characteristics.push(fidl_characteristic);
         }
         Ok(characteristics)
     }
 
-    pub fn generate_service(&self, service_json: &Value) -> Result<ServiceInfo, Error> {
+    fn generate_service(&self, service_json: &Value) -> Result<ServiceInfo, Error> {
         // Determine if the service is primary or not.
         let service_id = self.inner.write().generic_id_counter.next();
-        let service_type = &service_json["type"];
-        let is_service_primary = match service_type.as_i64() {
-            Some(val) => match val {
-                0 => true,
-                1 => false,
-                _ => return Err(format_err!("Invalid Service type. Expected 0 or 1.")),
-            },
-            None => return Err(format_err!("Service type was unable to cast to i64.")),
-        };
+        let service_kind =
+            match service_json["type"].as_i64().ok_or(format_err!("Invalid service type"))? {
+                0 => ServiceKind::Primary,
+                1 => ServiceKind::Secondary,
+                _ => return Err(format_err!("Invalid Service type")),
+            };
 
         // Get the service UUID.
-        let service_uuid = match service_json["uuid"].as_str() {
-            Some(s) => s,
-            None => return Err(format_err!("Service uuid was unable to cast to str.")),
-        };
+        let service_uuid_str = service_json["uuid"]
+            .as_str()
+            .ok_or(format_err!("Service uuid was unable to cast  to str"))?;
+        let service_uuid =
+            Uuid::from_str(service_uuid_str).map_err(|_| format_err!("Invalid service uuid"))?;
 
         //Get the Characteristics from the service.
         let characteristics = self.generate_characteristics(&service_json["characteristics"])?;
 
-        // Includes: TBD
-        let includes = None;
-
         Ok(ServiceInfo {
-            id: service_id,
-            primary: is_service_primary,
-            type_: service_uuid.to_string(),
+            handle: Some(ServiceHandle { value: service_id }),
+            kind: Some(service_kind),
+            type_: Some(service_uuid.into()),
             characteristics: Some(characteristics),
-            includes: includes,
+            ..ServiceInfo::EMPTY
         })
     }
 
-    pub async fn publish_service(
+    async fn publish_service(
         &self,
-        mut service_info: ServiceInfo,
+        service_info: ServiceInfo,
         service_uuid: String,
     ) -> Result<(), Error> {
         let tag = "GattServerFacade::publish_service:";
-        let (service_local, service_remote) = zx::Channel::create()?;
-        let service_local = fasync::Channel::from_channel(service_local)?;
-        let service_proxy = LocalServiceProxy::new(service_local);
+        let (service_client, service_server) =
+            fidl::endpoints::create_endpoints::<LocalServiceMarker>()?;
+        let (service_request_stream, service_control_handle) =
+            service_server.into_stream_and_control_handle()?;
 
-        let (delegate_client, delegate_request_stream) =
-            fidl::endpoints::create_request_stream::<LocalServiceDelegateMarker>()?;
-
-        let service_server = fidl::endpoints::ServerEnd::<LocalServiceMarker>::new(service_remote);
-
-        self.inner.write().service_proxies.push(service_proxy.clone());
-
-        match &self.inner.read().server_proxy {
-            Some(server) => {
-                let status = server
-                    .publish_service(&mut service_info, delegate_client, service_server)
-                    .await?;
-                match status.error {
-                    None => info!(
-                        tag = &[tag, &line!().to_string()].join("").as_str(),
-                        uuid = ?service_uuid,
-                        "Successfully published GATT service",
-                    ),
-                    Some(e) => {
-                        return Err(format_err!(
-                            "Failed to create GATT Service: {}",
-                            Sl4fError::from(*e)
-                        ))
-                    }
-                }
-            }
-            None => return Err(format_err!("No Server Proxy created.")),
+        let server_proxy = self
+            .inner
+            .read()
+            .server_proxy
+            .as_ref()
+            .ok_or(format_err!("No Server Proxy created."))?
+            .clone();
+        match server_proxy.publish_service(service_info, service_client).await? {
+            Ok(()) => info!(
+                tag = &[tag, &line!().to_string()].join("").as_str(),
+                uuid = ?service_uuid,
+                "Successfully published GATT service",
+            ),
+            Err(e) => return Err(format_err!("PublishService error: {:?}", e)),
         }
-        let monitor_delegate_fut = GattServerFacade::monitor_delegate_request_stream(
-            delegate_request_stream,
+
+        let monitor_delegate_fut = GattServerFacade::monitor_service_request_stream(
+            service_request_stream,
+            service_control_handle,
             self.inner.read().attribute_value_mapping.clone(),
-            service_proxy,
         );
         let fut = async {
             let result = monitor_delegate_fut.await;
@@ -637,7 +654,7 @@ impl GattServerFacade {
                 );
             }
         };
-        fasync::Task::spawn(fut).detach();
+        self.inner.write().service_tasks.push(fasync::Task::spawn(fut));
         Ok(())
     }
 
@@ -651,6 +668,8 @@ impl GattServerFacade {
     /// ACTS test framework at:
     /// <aosp_root>/tools/test/connectivity/acts/framework/acts/test_utils/bt/gatt_test_database.py
     ///
+    /// A "database" key wraps the database at:
+    /// <aosp root>/tools/test/connectivity/acts/framework/acts/controllers/fuchsia_lib/bt/gatts_lib.py
     ///
     /// Example python dictionary that's turned into JSON (sub dic values can be found
     /// in <aosp_root>/tools/test/connectivity/acts/framework/acts/test_utils/bt/bt_constants.py:
@@ -712,16 +731,11 @@ impl GattServerFacade {
         info!(tag = &[tag, &line!().to_string()].join("").as_str(), "Publishing service");
         let server_proxy = self.create_server_proxy()?;
         self.inner.write().server_proxy = Some(server_proxy);
-        let database = args.get("database");
-        let services = match database {
-            Some(d) => match d.get("services") {
-                Some(s) => s,
-                None => return Err(format_err!("No services found.")),
-            },
-            None => {
-                return Err(format_err!("Could not find the 'services' key in the json database."))
-            }
-        };
+        let services = args
+            .get("database")
+            .ok_or(format_err!("Could not find the 'database' key in the json database."))?
+            .get("services")
+            .ok_or(format_err!("Could not find the 'services' key in the json database."))?;
 
         let service_list = match services.as_array() {
             Some(s) => s,
@@ -738,16 +752,16 @@ impl GattServerFacade {
     }
 
     pub async fn close_server(&self) {
-        self.inner.write().server_proxy = None
+        self.inner.write().server_proxy = None;
+        let _ = self.inner.write().service_tasks.drain(..).collect::<Vec<fasync::Task<()>>>();
     }
 
     // GattServerFacade for cleaning up objects in use.
     pub fn cleanup(&self) {
         let tag = "GattServerFacade::cleanup:";
         info!(tag = &[tag, &line!().to_string()].join("").as_str(), "Cleanup GATT server objects");
-        let mut inner = self.inner.write();
-        inner.server_proxy = None;
-        inner.service_proxies.clear();
+        self.inner.write().server_proxy = None;
+        let _ = self.inner.write().service_tasks.drain(..).collect::<Vec<fasync::Task<()>>>();
     }
 
     // GattServerFacade for printing useful information pertaining to the facade for

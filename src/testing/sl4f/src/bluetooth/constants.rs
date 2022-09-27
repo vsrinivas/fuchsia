@@ -11,8 +11,13 @@ pub const PERMISSION_WRITE_SIGNED: u32 = 0x80;
 pub const PERMISSION_WRITE_SIGNED_MITM: u32 = 0x100;
 
 /// GATT Attribute Property Values
+pub const PROPERTY_READ: u32 = 0x2;
+pub const PROPERTY_WRITE: u32 = 0x8;
 pub const PROPERTY_NOTIFY: u32 = 0x10;
 pub const PROPERTY_INDICATE: u32 = 0x20;
 
 /// GATT Max Attribute Length (Vol 3, Part F, 3.2.9)
 pub const GATT_MAX_ATTRIBUTE_VALUE_LENGTH: usize = 512;
+
+/// GATT UUIDs
+pub const CHARACTERISTIC_EXTENDED_PROPERTIES_UUID: u16 = 0x2900;

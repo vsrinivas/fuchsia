@@ -43,7 +43,7 @@
                 "fuchsia.bluetooth.avdtp.PeerManager",
                 "fuchsia.bluetooth.avrcp.PeerManager",
                 "fuchsia.bluetooth.bredr.Profile",
-                "fuchsia.bluetooth.gatt.Server",
+                "fuchsia.bluetooth.gatt2.Server",
                 "fuchsia.bluetooth.hfp.Hfp",
                 "fuchsia.bluetooth.hfp.test.HfpTest",
                 "fuchsia.bluetooth.le.Central",
