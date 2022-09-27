@@ -34,6 +34,4 @@ async fn test_privacymarker() {
         let settings = proxy.watch().await.expect("watch completed");
         assert_eq!(settings.user_data_sharing_consent, changed_value.user_data_sharing_consent);
     }
-
-    let _ = instance.destroy();
 }

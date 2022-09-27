@@ -84,6 +84,4 @@ async fn test_max_volume_sound_on_press() {
 
     // Check that the sound played the correct number of times.
     assert_eq!(volume_change_earcons_test.play_counts().lock().await.get(&0).copied(), Some(3));
-
-    let _ = instance.destroy().await;
 }

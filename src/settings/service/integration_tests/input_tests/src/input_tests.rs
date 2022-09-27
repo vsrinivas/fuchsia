@@ -88,6 +88,4 @@ async fn test_inputmarker() {
     let _ = proxy.watch().await.expect("watch completed");
     // Assert the camera_sw_muted value changes to default false.
     assert!(!camera_sw_muted.load(Ordering::Relaxed));
-
-    let _ = instance.destroy().await;
 }

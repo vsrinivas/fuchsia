@@ -106,8 +106,6 @@ async fn test_light_restore() {
     // Light controller will return values restored from the hardware service.
     let settings = light_proxy.watch_light_groups().await.expect("watch completed");
     assert_lights_eq!(settings, expected_light_info);
-
-    let _ = realm.destroy().await;
 }
 
 // Tests that when a `LightHardwareConfiguration` is specified, that light groups configured with
@@ -136,8 +134,6 @@ async fn test_light_disabled_by_mic_mute_off() {
     let settings: LightGroup =
         light_proxy.watch_light_group(LIGHT_NAME_1).await.expect("watch completed");
     assert_fidl_light_group_eq!(&expected_light_group, &settings);
-
-    let _ = realm.destroy().await;
 }
 
 #[fuchsia::test]
@@ -168,8 +164,6 @@ async fn test_light_set_and_watch() {
     let light_groups: Vec<LightGroup> =
         light_proxy.watch_light_groups().await.expect("watch completed");
     assert_lights_eq!(light_groups, expected_light_info);
-
-    let _ = realm.destroy().await;
 }
 
 #[fuchsia::test]
@@ -197,8 +191,6 @@ async fn test_light_set_wrong_size() {
         .await
         .expect("set completed")
         .expect_err("expected error");
-
-    let _ = realm.destroy().await;
 }
 
 // Tests that when there are multiple lights, one light can be set at a time.
@@ -249,8 +241,6 @@ async fn test_light_set_single_light() {
 
     let settings = light_proxy.watch_light_group(LIGHT_NAME_1).await.expect("watch completed");
     assert_eq!(settings, expected_light_group);
-
-    let _ = realm.destroy().await;
 }
 
 #[fuchsia::test]
@@ -322,8 +312,6 @@ async fn test_individual_light_group() {
 
     let settings = light_proxy.watch_light_group(LIGHT_NAME_3).await.expect("watch completed");
     assert_fidl_light_group_eq!(&settings, &light_group_3_updated);
-
-    let _ = realm.destroy().await;
 }
 
 #[fuchsia::test]
@@ -339,8 +327,6 @@ async fn test_watch_unknown_light_group_name() {
 
     // Unknown name should be rejected.
     let _ = light_proxy.watch_light_group("unknown_name").await.expect_err("watch should fail");
-
-    let _ = realm.destroy().await;
 }
 
 #[fuchsia::test]
@@ -363,8 +349,6 @@ async fn test_set_unknown_light_group_name() {
         .await
         .expect("set returns");
     assert_eq!(result, Err(LightError::InvalidName));
-
-    let _ = realm.destroy().await;
 }
 
 #[fuchsia::test]
@@ -395,8 +379,6 @@ async fn test_set_wrong_state_length() {
         .await
         .expect("set returns");
     assert_eq!(result, Err(LightError::InvalidValue));
-
-    let _ = realm.destroy().await;
 }
 
 #[fuchsia::test]
@@ -417,8 +399,6 @@ async fn test_set_wrong_value_type() {
         .await
         .expect("set returns");
     assert_eq!(result, Err(LightError::InvalidValue));
-
-    let _ = realm.destroy().await;
 }
 
 #[test_case(ColorRgb { red: 0.1, green: 0.1, blue: 1.0 + std::f32::EPSILON})]
@@ -450,6 +430,4 @@ async fn test_set_invalid_rgb_values(invalid_rgb: ColorRgb) {
         .await
         .expect("set returns");
     assert_eq!(result, Err(LightError::InvalidValue));
-
-    let _ = realm.destroy().await;
 }

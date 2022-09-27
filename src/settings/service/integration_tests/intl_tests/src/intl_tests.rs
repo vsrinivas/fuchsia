@@ -104,8 +104,6 @@ async fn test_intl_e2e_set_twice() {
         let settings = proxy.watch().await.expect("watch completed");
         assert_eq!(settings.time_zone_id.unwrap().id, updated_timezone);
     }
-
-    let _ = instance.destroy().await;
 }
 
 #[fuchsia::test]
@@ -153,8 +151,6 @@ async fn test_intl_e2e_idempotent_set() {
         let settings = proxy.watch().await.expect("watch completed");
         assert_eq!(settings.time_zone_id.unwrap().id, updated_timezone);
     }
-
-    let _ = instance.destroy().await;
 }
 
 #[fuchsia::test]
@@ -183,8 +179,6 @@ async fn test_intl_invalid_timezone() {
         settings.time_zone_id,
         Some(fidl_fuchsia_intl::TimeZoneId { id: INITIAL_TIME_ZONE.to_string() })
     );
-
-    let _ = instance.destroy().await;
 }
 
 #[fuchsia::test]
@@ -213,6 +207,4 @@ async fn test_intl_invalid_locale() {
         settings.locales,
         Some(vec![fidl_fuchsia_intl::LocaleId { id: INITIAL_LOCALE.to_string() }])
     );
-
-    let _ = instance.destroy().await;
 }

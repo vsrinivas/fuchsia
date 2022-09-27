@@ -147,8 +147,6 @@ async fn test_audio() {
     // Verify that a separate client receives the changed settings on a Watch call.
     let settings = watch_client.watch().await.expect("watch completed");
     verify_audio_stream(&settings, CHANGED_MEDIA_STREAM_SETTINGS);
-
-    let _ = instance.destroy().await;
 }
 
 // Verifies that the correct value is returned after two successive watch calls.
@@ -215,8 +213,6 @@ async fn test_consecutive_volume_changes() {
     // Verify that a separate client receives the changed settings on a Watch call.
     let settings = watch_client.watch().await.expect("watch completed");
     verify_audio_stream(&settings, CHANGED_MEDIA_STREAM_SETTINGS_2);
-
-    let _ = instance.destroy().await;
 }
 
 // Verifies that clients aren't notified for duplicate audio changes.
@@ -247,8 +243,6 @@ async fn test_deduped_volume_changes() {
         let settings = fut.await.expect("watch completed");
         verify_audio_stream(&settings, CHANGED_MEDIA_STREAM_SETTINGS_2);
     }
-
-    let _ = instance.destroy().await;
 }
 
 // Verifies that changing one stream's volume does not affect the volume of other streams.
@@ -313,8 +307,6 @@ async fn test_volume_not_overwritten() {
     // Changing the background volume should not affect media volume.
     verify_audio_stream(&settings, CHANGED_MEDIA_STREAM_SETTINGS);
     verify_audio_stream(&settings, CHANGED_BACKGROUND_STREAM_SETTINGS);
-
-    let _ = instance.destroy().await;
 }
 
 // Tests that the volume level gets rounded to two decimal places.
@@ -373,8 +365,6 @@ async fn test_volume_rounding() {
     )
     .await
     .expect("changed audio requests received");
-
-    let _ = instance.destroy().await;
 }
 
 // Verifies that invalid inputs return an error for Set calls.
@@ -418,25 +408,19 @@ async fn test_volume_rounding() {
 async fn invalid_missing_input_tests(setting: AudioStreamSettings) {
     let audio_test = AudioTest::create();
 
-    // We don't care about verifying calls to audio core for this test, but request an event from
-    // the audio core mock to make sure it starts properly.
-    let (audio_request_sender, mut audio_request_receiver) =
-        futures::channel::mpsc::channel::<AudioCoreRequest>(0);
-    let instance = audio_test
-        .create_realm(audio_request_sender, vec![AudioRenderUsage::Media])
-        .await
-        .expect("setting up test realm");
+    // We don't care about verifying calls to audio core for this test, don't request any events
+    // from the audio core mock.
+    let (audio_request_sender, _) = futures::channel::mpsc::channel::<AudioCoreRequest>(0);
+    let instance =
+        audio_test.create_realm(audio_request_sender, vec![]).await.expect("setting up test realm");
 
     let audio_proxy = AudioTest::connect_to_audio_marker(&instance);
-    let _ = audio_request_receiver.next().await.expect("received audio core request");
 
     let result = audio_proxy
         .set(AudioSettings { streams: Some(vec![setting]), ..AudioSettings::EMPTY })
         .await
         .expect("set completed");
     assert_eq!(result, Err(Error::Failed));
-
-    let _ = instance.destroy().await;
 }
 
 // Verifies that the input to Set calls can be missing certain parts and still be valid.
@@ -464,23 +448,17 @@ async fn invalid_missing_input_tests(setting: AudioStreamSettings) {
 async fn valid_missing_input_tests(setting: AudioStreamSettings) {
     let audio_test = AudioTest::create();
 
-    // We don't care about verifying calls to audio core for this test, but request an event from
-    // the audio core mock to make sure it starts properly.
-    let (audio_request_sender, mut audio_request_receiver) =
-        futures::channel::mpsc::channel::<AudioCoreRequest>(0);
-    let instance = audio_test
-        .create_realm(audio_request_sender, vec![AudioRenderUsage::Media])
-        .await
-        .expect("setting up test realm");
+    // We don't care about verifying calls to audio core for this test, don't request any events
+    // from the audio core mock.
+    let (audio_request_sender, _) = futures::channel::mpsc::channel::<AudioCoreRequest>(0);
+    let instance =
+        audio_test.create_realm(audio_request_sender, vec![]).await.expect("setting up test realm");
 
     let audio_proxy = AudioTest::connect_to_audio_marker(&instance);
-    let _ = audio_request_receiver.next().await.expect("received audio core request");
 
     let result = audio_proxy
         .set(AudioSettings { streams: Some(vec![setting]), ..AudioSettings::EMPTY })
         .await
         .expect("set completed");
     assert_eq!(result, Ok(()));
-
-    let _ = instance.destroy().await;
 }
