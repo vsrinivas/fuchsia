@@ -593,6 +593,12 @@ func ffxCommandRequiresOutputDir(args []string) bool {
 		args[1] != "list" && args[1] != "stop"
 }
 
+// Only necessary for listing fuzzers.
+func ffxCommandRequiresTestsJson(args []string) bool {
+	return len(args) >= 2 && args[0] == "fuzz" &&
+		args[1] == "list"
+}
+
 // FfxRun runs the specified command to completion via ffx and returns its
 // output. `outputDir` is optional.
 func (c *SSHConnector) FfxRun(outputDir string, args ...string) (string, error) {
@@ -652,6 +658,15 @@ func (c *SSHConnector) FfxCommand(outputDir string, args ...string) (*exec.Cmd, 
 			}
 			args[j] = hostPath
 		}
+	}
+
+	// Set explicit path to fuzzer metadata file
+	if ffxCommandRequiresTestsJson(args) {
+		paths, err := c.build.Path("tests.json")
+		if err != nil {
+			return nil, fmt.Errorf("tests.json not found in build: %s", err)
+		}
+		args = append(args, "-j", paths[0])
 	}
 
 	addr := net.JoinHostPort(c.Host, strconv.Itoa(c.Port))

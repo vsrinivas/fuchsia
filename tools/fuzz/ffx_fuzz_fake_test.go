@@ -28,8 +28,9 @@ func getFfxFuzzOutput(t *testing.T, args []string) (string, string) {
 	// between processes...)
 	seed := rand.Int()
 
-	// Separate out the "-o" flag, if any
+	// Separate out the "-o" and "-j" flags, if any
 	var outputDir string
+	var testsJson string
 	var otherArgs []string
 	i := 0
 	for i < len(args) {
@@ -39,6 +40,12 @@ func getFfxFuzzOutput(t *testing.T, args []string) (string, string) {
 			}
 			outputDir = args[i+1]
 			i += 2
+		} else if args[i] == "-j" {
+			if i == len(args)-1 {
+				t.Fatalf("-j flag missing value")
+			}
+			testsJson = args[i+1]
+			i += 2
 		} else {
 			otherArgs = append(otherArgs, args[i])
 			i++
@@ -46,7 +53,11 @@ func getFfxFuzzOutput(t *testing.T, args []string) (string, string) {
 	}
 
 	var fuzzerUrl string
-	if command != "list" {
+	if command == "list" {
+		if testsJson != "/path/to/tests.json" {
+			t.Fatalf("tests.json not passed correctly: %q", args)
+		}
+	} else {
 		if outputDir == "" {
 			t.Fatalf("output flag not detected: %q", args)
 		}
