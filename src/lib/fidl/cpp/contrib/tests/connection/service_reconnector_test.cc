@@ -205,18 +205,6 @@ TEST_F(ServiceReconnectorTest, SupportCallsFromDispatcherThread) {
   RunLoopUntilIdle();
 }
 
-TEST_F(ServiceReconnectorTest, DoesNotSupportCallsFromMultipleThreads) {
-#if ZX_DEBUG_ASSERT_IMPLEMENTED
-  auto test = [&] {
-    auto thread_1 = std::thread([=]() { DoAction(); });
-    RunLoopUntilIdle();
-    thread_1.join();
-  };
-
-  ASSERT_DEATH(test(), "thread");
-#endif
-}
-
 TEST_F(ServiceReconnectorTest, BacksOff) {
   int connect_count = 0;
   auto protocol = ServiceReconnector<SimpleProtocol>::Create(

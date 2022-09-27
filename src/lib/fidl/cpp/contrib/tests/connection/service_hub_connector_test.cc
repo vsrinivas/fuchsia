@@ -359,18 +359,6 @@ TEST_F(ServiceHubConnectorTest, SupportCallsFromDispatcherThread) {
   RunLoopUntilIdle();
 }
 
-TEST_F(ServiceHubConnectorTest, DoesNotSupportCallsFromMultipleThreads) {
-#if ZX_DEBUG_ASSERT_IMPLEMENTED
-  auto test = [&] {
-    auto thread_1 = std::thread([=]() { protocol_connector().DoAction(); });
-    RunLoopUntilIdle();
-    thread_1.join();
-  };
-
-  ASSERT_DEATH(test(), "thread");
-#endif
-}
-
 TEST_F(ServiceHubConnectorTest, LimitsInFlightCallbacks) {
   // Store the DoResolvers in a vector to hold the do callback as 'in flight'.
   std::vector<ProtocolConnector::DoResolver> held_resolvers;

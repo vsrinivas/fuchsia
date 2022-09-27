@@ -167,7 +167,11 @@ class ServiceReconnector : public std::enable_shared_from_this<ServiceReconnecto
       }
       callbacks_to_run_.emplace(std::move(callback));
     }
-    RunCallbacks();
+    async::PostTask(dispatcher_, [weak_this = get_this()]() {
+      if (auto shared_this = weak_this.lock()) {
+        shared_this->RunCallbacks();
+      }
+    });
   }
 
   // Shutdown makes sure that no new |DoCallback|s will be queued, so the class can cleanly shut
@@ -276,6 +280,7 @@ class ServiceReconnector : public std::enable_shared_from_this<ServiceReconnecto
   }
 
   void RunCallbacks() FXL_LOCKS_EXCLUDED(mutex_) {
+    FX_DCHECK(dispatcher_ == async_get_default_dispatcher());
     while (true) {
       DoCallback callback;
 
