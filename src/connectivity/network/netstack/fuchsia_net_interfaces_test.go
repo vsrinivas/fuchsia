@@ -429,69 +429,111 @@ func TestInterfacesWatcherDuplicateAddress(t *testing.T) {
 // TestInterfacesWatcherDeepCopyAddresses ensures that changes to address
 // properties do not get retroactively applied to events enqueued in the past.
 func TestInterfacesWatcherDeepCopyAddresses(t *testing.T) {
-	eventChan := make(chan interfaceEvent)
-	watcherChan := make(chan interfaces.WatcherWithCtxInterfaceRequest)
-
-	go interfaceWatcherEventLoop(eventChan, watcherChan, &fidlInterfaceWatcherStats{})
-	ns, _ := newNetstack(t, netstackTestOptions{interfaceEventChan: eventChan})
-	si := &interfaceStateImpl{watcherChan: watcherChan}
-
-	ifs := addNoopEndpoint(t, ns, "")
-
-	// Add an address.
-	protocolAddr := tcpip.ProtocolAddress{
-		Protocol: header.IPv4ProtocolNumber,
-		AddressWithPrefix: tcpip.AddressWithPrefix{
-			Address:   tcpip.Address(net.IPv4(1, 2, 3, 4).To4()),
-			PrefixLen: 16,
+	for _, tc := range []struct {
+		name     string
+		existing bool
+	}{
+		{
+			name:     "added",
+			existing: false,
 		},
-	}
-	if ok, reason := ifs.addAddress(protocolAddr, stack.AddressProperties{}); !ok {
-		t.Fatalf("ifs.addAddress(%s, {}): %s", protocolAddr.AddressWithPrefix, reason)
-	}
+		{
+			name:     "existing",
+			existing: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			eventChan := make(chan interfaceEvent)
+			watcherChan := make(chan interfaces.WatcherWithCtxInterfaceRequest)
 
-	// Initialize a watcher so that there is a queued Existing event with the
-	// address.
-	watcher := initWatcher(t, si)
-	defer func() {
-		if err := watcher.Close(); err != nil {
-			t.Fatalf("failed to close watcher: %s", err)
-		}
-	}()
+			go interfaceWatcherEventLoop(eventChan, watcherChan, &fidlInterfaceWatcherStats{})
+			si := &interfaceStateImpl{watcherChan: watcherChan}
 
-	validUntil1 := time.Hour.Nanoseconds()
-	validUntil2 := 2 * validUntil1
-	ifs.mu.Lock()
-	ifs.ns.onAddressValidUntilChangeLocked(ifs.nicid, protocolAddr.AddressWithPrefix, time.Monotonic(validUntil1))
-	ifs.ns.onAddressValidUntilChangeLocked(ifs.nicid, protocolAddr.AddressWithPrefix, time.Monotonic(validUntil2))
-	ifs.mu.Unlock()
+			var watcher watcherHelper
+			defer func() {
+				if err := watcher.Close(); err != nil {
+					t.Fatalf("failed to close watcher: %s", err)
+				}
+			}()
+			if !tc.existing {
+				watcher = initWatcher(t, si)
+				watcher.expectIdleEvent(t)
+			}
 
-	// Read all the queued events.
-	var wantAddr interfaces.Address
-	wantAddr.SetAddr(fidlconv.ToNetSubnet(protocolAddr.AddressWithPrefix))
-	wantAddr.SetValidUntil(int64(zx.TimensecInfinite))
-	wantProperties := initialProperties(ifs, ns.name(ifs.nicid))
-	wantProperties.SetAddresses([]interfaces.Address{wantAddr})
-	event, err := watcher.Watch(context.Background())
-	if err := assertWatchResult(event, err, interfaces.EventWithExisting(wantProperties)); err != nil {
-		t.Fatal(err)
-	}
+			const Id = 1
+			var initialProperties interfaces.Properties
+			initialProperties.SetId(Id)
+			initialProperties.SetName("testif01")
+			initialProperties.SetDeviceClass(interfaces.DeviceClassWithLoopback(interfaces.Empty{}))
+			initialProperties.SetOnline(true)
+			initialProperties.SetHasDefaultIpv4Route(true)
+			initialProperties.SetHasDefaultIpv6Route(true)
+			subnet := fidlnet.Subnet{
+				Addr:      fidlnet.IpAddressWithIpv4(fidlnet.Ipv4Address{Addr: [4]uint8{1, 2, 3, 4}}),
+				PrefixLen: 16,
+			}
+			var addr interfaces.Address
+			addr.SetAddr(subnet)
+			addr.SetValidUntil(int64(zx.TimensecInfinite))
+			initialProperties.SetAddresses([]interfaces.Address{
+				addr,
+			})
+			eventChan <- interfaceAdded(initialProperties)
 
-	watcher.expectIdleEvent(t)
+			// Initialize a watcher so that there is a queued Existing event with the
+			// address.
+			if tc.existing {
+				watcher = initWatcher(t, si)
+			}
 
-	var wantChange interfaces.Properties
-	wantChange.SetId(uint64(ifs.nicid))
-	wantAddr.SetValidUntil(validUntil1)
-	wantChange.SetAddresses([]interfaces.Address{wantAddr})
-	event, err = watcher.Watch(context.Background())
-	if err := assertWatchResult(event, err, interfaces.EventWithChanged(wantChange)); err != nil {
-		t.Fatal(err)
-	}
+			validUntil := []int64{
+				time.Hour.Nanoseconds(),
+				(time.Hour * 2).Nanoseconds(),
+			}
+			eventChan <- validUntilChanged{
+				nicid:      tcpip.NICID(Id),
+				subnet:     subnet,
+				validUntil: time.Monotonic(validUntil[0]),
+			}
+			eventChan <- validUntilChanged{
+				nicid:      tcpip.NICID(Id),
+				subnet:     subnet,
+				validUntil: time.Monotonic(validUntil[1]),
+			}
 
-	wantAddr.SetValidUntil(validUntil2)
-	wantChange.SetAddresses([]interfaces.Address{wantAddr})
-	event, err = watcher.Watch(context.Background())
-	if err := assertWatchResult(event, err, interfaces.EventWithChanged(wantChange)); err != nil {
-		t.Fatal(err)
+			// Read all the queued events.
+			wantProperties := initialProperties
+			wantProperties.SetAddresses([]interfaces.Address{addr})
+			event, err := watcher.Watch(context.Background())
+			wantEvent := func() interfaces.Event {
+				if tc.existing {
+					return interfaces.EventWithExisting(wantProperties)
+				}
+				return interfaces.EventWithAdded(wantProperties)
+			}()
+			if err := assertWatchResult(event, err, wantEvent); err != nil {
+				t.Fatal(err)
+			}
+
+			if tc.existing {
+				watcher.expectIdleEvent(t)
+			}
+
+			var wantChange interfaces.Properties
+			wantChange.SetId(Id)
+			addr.SetValidUntil(validUntil[0])
+			wantChange.SetAddresses([]interfaces.Address{addr})
+			event, err = watcher.Watch(context.Background())
+			if err := assertWatchResult(event, err, interfaces.EventWithChanged(wantChange)); err != nil {
+				t.Fatal(err)
+			}
+
+			addr.SetValidUntil(validUntil[1])
+			wantChange.SetAddresses([]interfaces.Address{addr})
+			event, err = watcher.Watch(context.Background())
+			if err := assertWatchResult(event, err, interfaces.EventWithChanged(wantChange)); err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 }

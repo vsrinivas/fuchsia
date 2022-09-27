@@ -257,6 +257,9 @@ func interfaceWatcherEventLoop(
 					panic(fmt.Sprintf("interface %#v already exists but duplicate added event received: %#v", properties, event))
 				}
 				propertiesMap[nicid] = added
+				// Must make a deep copy of the addresses so that updates to the slice
+				// don't accidentally change the event added to the queue.
+				added.SetAddresses(append([]interfaces.Address(nil), added.GetAddresses()...))
 				for w := range watchers {
 					w.onEvent(interfaces.EventWithAdded(added))
 				}
