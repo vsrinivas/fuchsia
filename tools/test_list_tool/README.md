@@ -61,9 +61,9 @@ following section , the test type is **unknown**.
    rules just yet. This leaves us an opportunity to separately
    handle other types of tests without miscategorizing them up
    front.
-1. If the test does not run in `hermetic` or `hermetic-tier-2`
-realms it is a **system** test.
-   - Justification: These realms enforce hermetic execution of
+1. If the test does not run in the `hermetic` realm it is a **system**
+test.
+   - Justification: This realm enforces hermetic execution of
    tests, and all other tests can change and depend on global system
    state.
 1. If the test used the `fuzzer_package` build rule, it is a **fuzzer** test.

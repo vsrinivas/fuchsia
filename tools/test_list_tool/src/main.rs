@@ -27,6 +27,8 @@ use {
 const META_FAR_PREFIX: &'static str = "meta/";
 const TEST_REALM_FACET_NAME: &'static str = "fuchsia.test.type";
 const HERMETIC_TEST_REALM: &'static str = "hermetic";
+// TODO(fxbug.dev/110507): This realm is deprecated. We will remove
+// this reference when it is no longer useful for burndown tracking.
 const HERMETIC_TIER_2_TEST_REALM: &'static str = "hermetic-tier-2";
 
 mod error;

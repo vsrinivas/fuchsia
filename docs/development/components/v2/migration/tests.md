@@ -382,6 +382,7 @@ To migrate this test to the Test Runner Framework, do the following:
         {
             include: [
                 // Required for wrapped CMX components
+                // TODO(fxbug.dev/110507): Remove this reference.
                 "sys/testing/hermetic-tier-2-test.shard.cml",
             ],
             ...
