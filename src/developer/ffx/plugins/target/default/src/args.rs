@@ -76,7 +76,15 @@ pub struct TargetDefaultUnsetCommand {
     note = "Returns the default configured target from the 'User Configuration'.
 Returns an empty string if no default is configured."
 )]
-pub struct TargetDefaultGetCommand {}
+pub struct TargetDefaultGetCommand {
+    #[argh(option, short = 'l')]
+    /// config level, such as 'user', 'build', or 'global' - defaults to searching all levels
+    pub level: Option<ConfigLevel>,
+
+    #[argh(option, short = 'b')]
+    /// optional directory to associate the provided build config
+    pub build_dir: Option<PathBuf>,
+}
 
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(

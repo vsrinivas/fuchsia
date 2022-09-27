@@ -4,7 +4,7 @@
 
 use anyhow::Result;
 use ffx_core::ffx_plugin;
-use ffx_target_default_args::{SubCommand, TargetDefaultCommand};
+use ffx_target_default_args::{SubCommand, TargetDefaultCommand, TargetDefaultGetCommand};
 
 pub(crate) const TARGET_DEFAULT_KEY: &str = "target.default";
 
@@ -18,6 +18,15 @@ pub async fn exec_target_default_impl<W: std::io::Write>(
     writer: &mut W,
 ) -> Result<()> {
     match &cmd.subcommand {
+        SubCommand::Get(TargetDefaultGetCommand { level: Some(level), build_dir }) => {
+            let res: String = ffx_config::query(TARGET_DEFAULT_KEY)
+                .level(Some(*level))
+                .build(build_dir.as_deref().map(|dir| dir.into()))
+                .get()
+                .await
+                .unwrap_or("".to_owned());
+            writeln!(writer, "{}", res)?;
+        }
         SubCommand::Get(_) => {
             let res: String = ffx_config::get(TARGET_DEFAULT_KEY).await.unwrap_or("".to_owned());
             writeln!(writer, "{}", res)?;
