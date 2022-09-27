@@ -23,7 +23,7 @@
     // Capabilities used by this component.
     use: [
         {
-            directory: "dev",
+            directory: "dev-topological",
             rights: [ "rw*" ],
             path: "/dev",
         },

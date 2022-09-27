@@ -43,11 +43,11 @@
             dependency: "weak",
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-camera",
             to: "#camera_device_watcher",
-            subdir: "class/camera",
+            subdir: "camera",
         },
     ],
 }
