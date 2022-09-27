@@ -24,10 +24,7 @@ source_set("cobalt_logger") {
   ]
 
   # This library is deprecated, please do not add new elements to this list
-  visibility = [
-    "//src/lib/cobalt/*",
-    "//src/media/audio/audio_core:audio_core_lib",
-  ]
+  visibility = [ "//src/lib/cobalt/*" ]
 }
 
 source_set("unittests") {
