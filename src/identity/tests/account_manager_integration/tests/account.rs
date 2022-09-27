@@ -81,7 +81,11 @@ async fn stop_component(realm_ref: &RealmInstance, child_name: &str) {
         .root
         .connect_to_protocol_at_exposed_dir::<fsys2::LifecycleControllerMarker>()
         .expect("Failed to connect to LifecycleController");
-    lifecycle.stop(&format!("./{}", child_name), true).await.unwrap().unwrap();
+    lifecycle
+        .stop(&format!("./{}", child_name), true)
+        .await
+        .expect(&format!("Failed to stop child: {}", child_name))
+        .expect(&format!("Failed to unwrap stop child result: {}", child_name));
 }
 
 /// Utility function to start a component using LifecycleController.
@@ -90,7 +94,11 @@ async fn start_component(realm_ref: &RealmInstance, child_name: &str) {
         .root
         .connect_to_protocol_at_exposed_dir::<fsys2::LifecycleControllerMarker>()
         .expect("Failed to connect to LifecycleController");
-    lifecycle.start(&format!("./{}", child_name)).await.unwrap().unwrap();
+    lifecycle
+        .start(&format!("./{}", child_name))
+        .await
+        .expect(&format!("Failed to start child: {}", child_name))
+        .expect(&format!("Failed to unwrap start child result: {}", child_name));
 }
 
 /// A proxy to an account manager running in a nested environment.
@@ -531,6 +539,39 @@ async fn test_account_metadata_persistence() -> Result<(), Error> {
     account_manager.restart().await?;
 
     assert_eq!(account_manager.get_account_metadata(account_1).await?, Ok(account_metadata));
+
+    Ok(())
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_account_metadata_failures() -> Result<(), Error> {
+    let account_manager = create_account_manager().await?;
+
+    // Fail if there is no metadata
+    assert_eq!(
+        account_manager
+        .provision_new_account(AccountManagerProvisionNewAccountRequest {
+            lifetime: Some(Lifetime::Persistent),
+            auth_mechanism_id: None,
+            metadata: None,
+            ..AccountManagerProvisionNewAccountRequest::EMPTY
+        })
+        .await?,
+        Err(ApiError::InvalidRequest)
+    );
+
+    // Fail if metadata is invalid
+    assert_eq!(
+        account_manager
+        .provision_new_account(AccountManagerProvisionNewAccountRequest {
+            lifetime: Some(Lifetime::Persistent),
+            auth_mechanism_id: None,
+            metadata: Some(AccountMetadata::EMPTY),
+            ..AccountManagerProvisionNewAccountRequest::EMPTY
+        })
+        .await?,
+        Err(ApiError::InvalidRequest)
+    );
 
     Ok(())
 }
