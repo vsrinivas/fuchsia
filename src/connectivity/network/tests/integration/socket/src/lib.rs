@@ -8,9 +8,15 @@ use std::{collections::HashMap, os::unix::io::AsRawFd as _};
 
 use anyhow::Context as _;
 use assert_matches::assert_matches;
+use fidl_fuchsia_hardware_network as fhardware_network;
 use fidl_fuchsia_net as fnet;
+use fidl_fuchsia_net_ext as fnet_ext;
+use fidl_fuchsia_net_interfaces as fnet_interfaces;
+use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
 use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
+use fidl_fuchsia_net_stack as fnet_stack;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
+use fidl_fuchsia_net_tun as fnet_tun;
 use fidl_fuchsia_posix as fposix;
 use fidl_fuchsia_posix_socket as fposix_socket;
 use fuchsia_async::{
@@ -43,12 +49,10 @@ async fn run_udp_socket_test(
     client: &netemul::TestRealm<'_>,
     client_addr: fnet::IpAddress,
 ) {
-    let fidl_fuchsia_net_ext::IpAddress(client_addr) =
-        fidl_fuchsia_net_ext::IpAddress::from(client_addr);
+    let fnet_ext::IpAddress(client_addr) = fnet_ext::IpAddress::from(client_addr);
     let client_addr = std::net::SocketAddr::new(client_addr, 1234);
 
-    let fidl_fuchsia_net_ext::IpAddress(server_addr) =
-        fidl_fuchsia_net_ext::IpAddress::from(server_addr);
+    let fnet_ext::IpAddress(server_addr) = fnet_ext::IpAddress::from(server_addr);
     let server_addr = std::net::SocketAddr::new(server_addr, 8080);
 
     let client_sock = fasync::net::UdpSocket::bind_in_realm(client, client_addr)
@@ -156,7 +160,7 @@ enum UdpCacheInvalidationReason {
 
 enum ToAddrExpectation {
     Unspecified,
-    Specified(Option<fidl_fuchsia_net::SocketAddress>),
+    Specified(Option<fnet::SocketAddress>),
 }
 
 struct UdpSendMsgPreflightSuccessExpectation {
@@ -170,7 +174,7 @@ enum UdpSendMsgPreflightExpectation {
 }
 
 struct UdpSendMsgPreflight {
-    to_addr: Option<fidl_fuchsia_net::SocketAddress>,
+    to_addr: Option<fnet::SocketAddress>,
     expected_result: UdpSendMsgPreflightExpectation,
 }
 
@@ -281,20 +285,20 @@ async fn test_udp_send_msg_preflight_fidl(
     let proxy = datagram_socket.into_proxy().expect("failed to create proxy");
 
     const PORT: u16 = 80;
-    const INSTALLED_ADDR: fidl_fuchsia_net::Ipv4SocketAddress =
-        fidl_fuchsia_net::Ipv4SocketAddress { address: fidl_ip_v4!("10.0.0.0"), port: PORT };
-    const REACHABLE_ADDR1: fidl_fuchsia_net::SocketAddress =
-        fidl_fuchsia_net::SocketAddress::Ipv4(fidl_fuchsia_net::Ipv4SocketAddress {
+    const INSTALLED_ADDR: fnet::Ipv4SocketAddress =
+        fnet::Ipv4SocketAddress { address: fidl_ip_v4!("10.0.0.0"), port: PORT };
+    const REACHABLE_ADDR1: fnet::SocketAddress =
+        fnet::SocketAddress::Ipv4(fnet::Ipv4SocketAddress {
             address: fidl_ip_v4!("10.0.0.1"),
             port: PORT,
         });
-    const REACHABLE_ADDR2: fidl_fuchsia_net::SocketAddress =
-        fidl_fuchsia_net::SocketAddress::Ipv4(fidl_fuchsia_net::Ipv4SocketAddress {
+    const REACHABLE_ADDR2: fnet::SocketAddress =
+        fnet::SocketAddress::Ipv4(fnet::Ipv4SocketAddress {
             address: fidl_ip_v4!("10.0.0.2"),
             port: PORT,
         });
-    const UNREACHABLE_ADDR: fidl_fuchsia_net::SocketAddress =
-        fidl_fuchsia_net::SocketAddress::Ipv4(fidl_fuchsia_net::Ipv4SocketAddress {
+    const UNREACHABLE_ADDR: fnet::SocketAddress =
+        fnet::SocketAddress::Ipv4(fnet::Ipv4SocketAddress {
             address: fidl_ip_v4!("11.0.0.0"),
             port: PORT,
         });
@@ -305,8 +309,8 @@ async fn test_udp_send_msg_preflight_fidl(
         .expect("failed to join network");
 
     iface
-        .add_address_and_subnet_route(fidl_fuchsia_net::Subnet {
-            addr: fidl_fuchsia_net::IpAddress::Ipv4(INSTALLED_ADDR.address),
+        .add_address_and_subnet_route(fnet::Subnet {
+            addr: fnet::IpAddress::Ipv4(INSTALLED_ADDR.address),
             prefix_len: 8,
         })
         .await
@@ -634,10 +638,10 @@ async fn run_tcp_socket_test(
     client: &netemul::TestRealm<'_>,
     client_addr: fnet::IpAddress,
 ) {
-    let fidl_fuchsia_net_ext::IpAddress(client_addr) = client_addr.into();
+    let fnet_ext::IpAddress(client_addr) = client_addr.into();
     let client_addr = std::net::SocketAddr::new(client_addr, 1234);
 
-    let fidl_fuchsia_net_ext::IpAddress(server_addr) = server_addr.into();
+    let fnet_ext::IpAddress(server_addr) = server_addr.into();
     let server_addr = std::net::SocketAddr::new(server_addr, 8080);
 
     // We pick a payload that is small enough to be guaranteed to fit in a TCP segment so both the
@@ -722,9 +726,9 @@ async fn tcp_socket_accept_cross_ns<
         .expect("failed to join network in realm");
     server_interface.add_address_and_subnet_route(SERVER_SUBNET).await.expect("configure address");
 
-    let fidl_fuchsia_net_ext::IpAddress(client_ip) = CLIENT_SUBNET.addr.into();
+    let fnet_ext::IpAddress(client_ip) = CLIENT_SUBNET.addr.into();
 
-    let fidl_fuchsia_net_ext::IpAddress(server_ip) = SERVER_SUBNET.addr.into();
+    let fnet_ext::IpAddress(server_ip) = SERVER_SUBNET.addr.into();
     let server_addr = std::net::SocketAddr::new(server_ip, 8080);
 
     let listener = fasync::net::TcpListener::listen_in_realm(&server, server_addr)
@@ -813,43 +817,32 @@ async fn test_tcp_socket<E: netemul::Endpoint>(name: &str) {
 // Helper function to add ip device to stack.
 async fn install_ip_device(
     realm: &netemul::TestRealm<'_>,
-    port: fidl_fuchsia_hardware_network::PortProxy,
+    port: fhardware_network::PortProxy,
     addrs: impl IntoIterator<Item = fnet::Subnet>,
-) -> (
-    u64,
-    fidl_fuchsia_net_interfaces_ext::admin::Control,
-    fidl_fuchsia_net_interfaces_admin::DeviceControlProxy,
-) {
-    let installer =
-        realm.connect_to_protocol::<fidl_fuchsia_net_interfaces_admin::InstallerMarker>().unwrap();
-    let stack = realm.connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>().unwrap();
+) -> (u64, fnet_interfaces_ext::admin::Control, fnet_interfaces_admin::DeviceControlProxy) {
+    let installer = realm.connect_to_protocol::<fnet_interfaces_admin::InstallerMarker>().unwrap();
+    let stack = realm.connect_to_protocol::<fnet_stack::StackMarker>().unwrap();
 
     let mut port_id = port.get_info().await.expect("get port info").id.expect("missing port id");
     let device = {
         let (device, server_end) =
-            fidl::endpoints::create_endpoints::<fidl_fuchsia_hardware_network::DeviceMarker>()
+            fidl::endpoints::create_endpoints::<fhardware_network::DeviceMarker>()
                 .expect("create endpoints");
         let () = port.get_device(server_end).expect("get device");
         device
     };
     let device_control = {
-        let (control, server_end) = fidl::endpoints::create_proxy::<
-            fidl_fuchsia_net_interfaces_admin::DeviceControlMarker,
-        >()
-        .expect("create proxy");
+        let (control, server_end) =
+            fidl::endpoints::create_proxy::<fnet_interfaces_admin::DeviceControlMarker>()
+                .expect("create proxy");
         let () = installer.install_device(device, server_end).expect("install device");
         control
     };
     let control = {
         let (control, server_end) =
-            fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
-                .expect("create endpoints");
+            fnet_interfaces_ext::admin::Control::create_endpoints().expect("create endpoints");
         let () = device_control
-            .create_interface(
-                &mut port_id,
-                server_end,
-                fidl_fuchsia_net_interfaces_admin::Options::EMPTY,
-            )
+            .create_interface(&mut port_id, server_end, fnet_interfaces_admin::Options::EMPTY)
             .expect("create interface");
         control
     };
@@ -860,7 +853,7 @@ async fn install_ip_device(
     let () = futures::stream::iter(addrs.into_iter())
         .for_each_concurrent(None, |subnet| {
             let (address_state_provider, server_end) = fidl::endpoints::create_proxy::<
-                fidl_fuchsia_net_interfaces_admin::AddressStateProviderMarker,
+                fnet_interfaces_admin::AddressStateProviderMarker,
             >()
             .expect("create proxy");
 
@@ -870,25 +863,22 @@ async fn install_ip_device(
             let () = control
                 .add_address(
                     &mut subnet.clone(),
-                    fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
+                    fnet_interfaces_admin::AddressParameters::EMPTY,
                     server_end,
                 )
                 .expect("add address");
 
             // Wait for the address to be assigned.
-            let wait_assignment_fut =
-                fidl_fuchsia_net_interfaces_ext::admin::wait_assignment_state(
-                    fidl_fuchsia_net_interfaces_ext::admin::assignment_state_stream(
-                        address_state_provider,
-                    ),
-                    fidl_fuchsia_net_interfaces_admin::AddressAssignmentState::Assigned,
-                )
-                .map(|r| r.expect("wait assignment state"));
+            let wait_assignment_fut = fnet_interfaces_ext::admin::wait_assignment_state(
+                fnet_interfaces_ext::admin::assignment_state_stream(address_state_provider),
+                fnet_interfaces_admin::AddressAssignmentState::Assigned,
+            )
+            .map(|r| r.expect("wait assignment state"));
 
             // NB: add_address above does NOT create a subnet route.
             let add_forwarding_entry_fut = stack
-                .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
-                    subnet: fidl_fuchsia_net_ext::apply_subnet_mask(subnet.clone()),
+                .add_forwarding_entry(&mut fnet_stack::ForwardingEntry {
+                    subnet: fnet_ext::apply_subnet_mask(subnet.clone()),
                     device_id: id,
                     next_hop: None,
                     metric: 0,
@@ -907,27 +897,27 @@ async fn install_ip_device(
 const TUN_DEFAULT_PORT_ID: u8 = 0;
 
 /// Creates default base config for an IP tun device.
-fn base_ip_device_port_config() -> fidl_fuchsia_net_tun::BasePortConfig {
-    fidl_fuchsia_net_tun::BasePortConfig {
+fn base_ip_device_port_config() -> fnet_tun::BasePortConfig {
+    fnet_tun::BasePortConfig {
         id: Some(TUN_DEFAULT_PORT_ID),
         mtu: Some(1500),
         rx_types: Some(vec![
-            fidl_fuchsia_hardware_network::FrameType::Ipv4,
-            fidl_fuchsia_hardware_network::FrameType::Ipv6,
+            fhardware_network::FrameType::Ipv4,
+            fhardware_network::FrameType::Ipv6,
         ]),
         tx_types: Some(vec![
-            fidl_fuchsia_hardware_network::FrameTypeSupport {
-                type_: fidl_fuchsia_hardware_network::FrameType::Ipv4,
-                features: fidl_fuchsia_hardware_network::FRAME_FEATURES_RAW,
-                supported_flags: fidl_fuchsia_hardware_network::TxFlags::empty(),
+            fhardware_network::FrameTypeSupport {
+                type_: fhardware_network::FrameType::Ipv4,
+                features: fhardware_network::FRAME_FEATURES_RAW,
+                supported_flags: fhardware_network::TxFlags::empty(),
             },
-            fidl_fuchsia_hardware_network::FrameTypeSupport {
-                type_: fidl_fuchsia_hardware_network::FrameType::Ipv6,
-                features: fidl_fuchsia_hardware_network::FRAME_FEATURES_RAW,
-                supported_flags: fidl_fuchsia_hardware_network::TxFlags::empty(),
+            fhardware_network::FrameTypeSupport {
+                type_: fhardware_network::FrameType::Ipv6,
+                features: fhardware_network::FRAME_FEATURES_RAW,
+                supported_flags: fhardware_network::TxFlags::empty(),
             },
         ]),
-        ..fidl_fuchsia_net_tun::BasePortConfig::EMPTY
+        ..fnet_tun::BasePortConfig::EMPTY
     }
 }
 
@@ -941,23 +931,21 @@ async fn test_ip_endpoints_socket() {
         .create_netstack_realm::<Netstack2, _>("test_ip_endpoints_socket_server")
         .expect("failed to create server realm");
 
-    let tun =
-        fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_net_tun::ControlMarker>()
-            .expect("failed to connect to tun protocol");
+    let tun = fuchsia_component::client::connect_to_protocol::<fnet_tun::ControlMarker>()
+        .expect("failed to connect to tun protocol");
 
-    let (tun_pair, req) = fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::DevicePairMarker>()
+    let (tun_pair, req) = fidl::endpoints::create_proxy::<fnet_tun::DevicePairMarker>()
         .expect("failed to create endpoints");
-    let () = tun
-        .create_pair(fidl_fuchsia_net_tun::DevicePairConfig::EMPTY, req)
-        .expect("failed to create tun pair");
+    let () =
+        tun.create_pair(fnet_tun::DevicePairConfig::EMPTY, req).expect("failed to create tun pair");
 
     let () = tun_pair
-        .add_port(fidl_fuchsia_net_tun::DevicePairPortConfig {
+        .add_port(fnet_tun::DevicePairPortConfig {
             base: Some(base_ip_device_port_config()),
             // No MAC, this is a pure IP device.
             mac_left: None,
             mac_right: None,
-            ..fidl_fuchsia_net_tun::DevicePairPortConfig::EMPTY
+            ..fnet_tun::DevicePairPortConfig::EMPTY
         })
         .await
         .expect("add_port failed")
@@ -965,10 +953,10 @@ async fn test_ip_endpoints_socket() {
         .expect("add_port returned error");
 
     let (client_port, client_req) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_hardware_network::PortMarker>()
+        fidl::endpoints::create_proxy::<fhardware_network::PortMarker>()
             .expect("failed to create proxy");
     let (server_port, server_req) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_hardware_network::PortMarker>()
+        fidl::endpoints::create_proxy::<fhardware_network::PortMarker>()
             .expect("failed to create proxy");
     let () = tun_pair.get_left_port(TUN_DEFAULT_PORT_ID, client_req).expect("get_left failed");
     let () = tun_pair.get_right_port(TUN_DEFAULT_PORT_ID, server_req).expect("get_right failed");
@@ -1004,43 +992,40 @@ async fn test_ip_endpoint_packets() {
         .create_netstack_realm::<Netstack2, _>("test_ip_endpoint_packets")
         .expect("failed to create client realm");
 
-    let tun =
-        fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_net_tun::ControlMarker>()
-            .expect("failed to connect to tun protocol");
+    let tun = fuchsia_component::client::connect_to_protocol::<fnet_tun::ControlMarker>()
+        .expect("failed to connect to tun protocol");
 
-    let (tun_dev, req) = fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::DeviceMarker>()
+    let (tun_dev, req) = fidl::endpoints::create_proxy::<fnet_tun::DeviceMarker>()
         .expect("failed to create endpoints");
     let () = tun
         .create_device(
-            fidl_fuchsia_net_tun::DeviceConfig {
+            fnet_tun::DeviceConfig {
                 base: None,
                 blocking: Some(true),
-                ..fidl_fuchsia_net_tun::DeviceConfig::EMPTY
+                ..fnet_tun::DeviceConfig::EMPTY
             },
             req,
         )
         .expect("failed to create tun pair");
 
     let (_tun_port, port) = {
-        let (tun_port, server_end) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::PortMarker>()
-                .expect("failed to create endpoints");
+        let (tun_port, server_end) = fidl::endpoints::create_proxy::<fnet_tun::PortMarker>()
+            .expect("failed to create endpoints");
         let () = tun_dev
             .add_port(
-                fidl_fuchsia_net_tun::DevicePortConfig {
+                fnet_tun::DevicePortConfig {
                     base: Some(base_ip_device_port_config()),
                     online: Some(true),
                     // No MAC, this is a pure IP device.
                     mac: None,
-                    ..fidl_fuchsia_net_tun::DevicePortConfig::EMPTY
+                    ..fnet_tun::DevicePortConfig::EMPTY
                 },
                 server_end,
             )
             .expect("add_port failed");
 
-        let (port, server_end) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_hardware_network::PortMarker>()
-                .expect("failed to create endpoints");
+        let (port, server_end) = fidl::endpoints::create_proxy::<fhardware_network::PortMarker>()
+            .expect("failed to create endpoints");
         let () = tun_port.get_port(server_end).expect("get_port failed");
         (tun_port, port)
     };
@@ -1089,7 +1074,7 @@ async fn test_ip_endpoint_packets() {
         let frame_type = frame.frame_type.context("missing frame type in frame")?;
         let frame_data = frame.data.context("missing data in frame")?;
         match frame_type {
-            fidl_fuchsia_hardware_network::FrameType::Ipv6 => {
+            fhardware_network::FrameType::Ipv6 => {
                 // Ignore all NDP and MLD IPv6 frames.
                 let mut bv = &frame_data[..];
                 let ipv6 = Ipv6Packet::parse(&mut bv, ())
@@ -1117,7 +1102,7 @@ async fn test_ip_endpoint_packets() {
                     }
                 }
             }
-            fidl_fuchsia_hardware_network::FrameType::Ipv4 => {
+            fhardware_network::FrameType::Ipv4 => {
                 // Ignore all IGMP frames.
                 let mut bv = &frame_data[..];
                 let ipv4 = Ipv4Packet::parse(&mut bv, ())
@@ -1129,15 +1114,15 @@ async fn test_ip_endpoint_packets() {
                     return Ok(None);
                 }
             }
-            fidl_fuchsia_hardware_network::FrameType::Ethernet => {}
+            fhardware_network::FrameType::Ethernet => {}
         }
         Ok(Some((frame_type, frame_data)))
     });
     futures::pin_mut!(read_frame);
 
     async fn write_frame_and_read_with_timeout<S>(
-        tun_dev: &fidl_fuchsia_net_tun::DeviceProxy,
-        frame: fidl_fuchsia_net_tun::Frame,
+        tun_dev: &fnet_tun::DeviceProxy,
+        frame: fnet_tun::Frame,
         read_frame: &mut S,
     ) -> Result<Option<S::Ok>>
     where
@@ -1181,12 +1166,12 @@ async fn test_ip_endpoint_packets() {
 
     // Send v4 ping request.
     let () = tun_dev
-        .write_frame(fidl_fuchsia_net_tun::Frame {
+        .write_frame(fnet_tun::Frame {
             port: Some(TUN_DEFAULT_PORT_ID),
-            frame_type: Some(fidl_fuchsia_hardware_network::FrameType::Ipv4),
+            frame_type: Some(fhardware_network::FrameType::Ipv4),
             data: Some(packet.clone()),
             meta: None,
-            ..fidl_fuchsia_net_tun::Frame::EMPTY
+            ..fnet_tun::Frame::EMPTY
         })
         .await
         .expect("write_frame failed")
@@ -1199,7 +1184,7 @@ async fn test_ip_endpoint_packets() {
         .await
         .expect("failed to read ping response")
         .expect("frame stream ended unexpectedly");
-    assert_eq!(frame_type, fidl_fuchsia_hardware_network::FrameType::Ipv4);
+    assert_eq!(frame_type, fhardware_network::FrameType::Ipv4);
     let mut bv = &data[..];
     let ipv4_packet = Ipv4Packet::parse(&mut bv, ()).expect("failed to parse IPv4 packet");
     assert_eq!(ipv4_packet.src_ip(), dst_ip);
@@ -1222,12 +1207,12 @@ async fn test_ip_endpoint_packets() {
     assert_matches!(
         write_frame_and_read_with_timeout(
             &tun_dev,
-            fidl_fuchsia_net_tun::Frame {
+            fnet_tun::Frame {
                 port: Some(TUN_DEFAULT_PORT_ID),
-                frame_type: Some(fidl_fuchsia_hardware_network::FrameType::Ipv6),
+                frame_type: Some(fhardware_network::FrameType::Ipv6),
                 data: Some(packet),
                 meta: None,
-                ..fidl_fuchsia_net_tun::Frame::EMPTY
+                ..fnet_tun::Frame::EMPTY
             },
             &mut read_frame,
         )
@@ -1258,12 +1243,12 @@ async fn test_ip_endpoint_packets() {
 
     // Send v6 ping request.
     let () = tun_dev
-        .write_frame(fidl_fuchsia_net_tun::Frame {
+        .write_frame(fnet_tun::Frame {
             port: Some(TUN_DEFAULT_PORT_ID),
-            frame_type: Some(fidl_fuchsia_hardware_network::FrameType::Ipv6),
+            frame_type: Some(fhardware_network::FrameType::Ipv6),
             data: Some(packet.clone()),
             meta: None,
-            ..fidl_fuchsia_net_tun::Frame::EMPTY
+            ..fnet_tun::Frame::EMPTY
         })
         .await
         .expect("write_frame failed")
@@ -1276,7 +1261,7 @@ async fn test_ip_endpoint_packets() {
         .await
         .expect("failed to read ping response")
         .expect("frame stream ended unexpectedly");
-    assert_eq!(frame_type, fidl_fuchsia_hardware_network::FrameType::Ipv6);
+    assert_eq!(frame_type, fhardware_network::FrameType::Ipv6);
     let mut bv = &data[..];
     let ipv6_packet = Ipv6Packet::parse(&mut bv, ()).expect("failed to parse IPv6 packet");
     assert_eq!(ipv6_packet.src_ip(), dst_ip);
@@ -1299,12 +1284,12 @@ async fn test_ip_endpoint_packets() {
     assert_matches!(
         write_frame_and_read_with_timeout(
             &tun_dev,
-            fidl_fuchsia_net_tun::Frame {
+            fnet_tun::Frame {
                 port: Some(TUN_DEFAULT_PORT_ID),
-                frame_type: Some(fidl_fuchsia_hardware_network::FrameType::Ipv4),
+                frame_type: Some(fhardware_network::FrameType::Ipv4),
                 data: Some(packet),
                 meta: None,
-                ..fidl_fuchsia_net_tun::Frame::EMPTY
+                ..fnet_tun::Frame::EMPTY
             },
             &mut read_frame,
         )
@@ -1753,11 +1738,10 @@ async fn get_bound_device_errors_after_device_deleted<N: Netstack, E: netemul::E
 
     let id = bound_interface.id();
 
-    let interface_state = host
-        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .expect("connect to protocol");
+    let interface_state =
+        host.connect_to_protocol::<fnet_interfaces::StateMarker>().expect("connect to protocol");
 
-    let stream = fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
+    let stream = fnet_interfaces_ext::event_stream_from_state(&interface_state)
         .expect("error getting interface state event stream");
     futures::pin_mut!(stream);
     let mut state = HashMap::new();
