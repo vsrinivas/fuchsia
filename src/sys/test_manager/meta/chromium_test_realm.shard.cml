@@ -29,20 +29,27 @@
         // These system capabilities are offered for use by the chromium tests.
         {
             protocol: [
+                "fuchsia.accessibility.semantics.SemanticsManager",
+                "fuchsia.buildinfo.Provider",
+                "fuchsia.device.NameProvider",
                 "fuchsia.fonts.Provider",
                 "fuchsia.hwinfo.Product",
+                "fuchsia.input.virtualkeyboard.ControllerCreator",
                 "fuchsia.intl.PropertyProvider",
-
-                // TODO: add any other required capabilities
                 "fuchsia.kernel.VmexResource",
                 "fuchsia.media.Audio",
                 "fuchsia.media.AudioDeviceEnumerator",
                 "fuchsia.media.ProfileProvider",
+                "fuchsia.media.SessionAudioConsumerFactory",
                 "fuchsia.mediacodec.CodecFactory",
                 "fuchsia.memorypressure.Provider",
+                "fuchsia.net.http.Loader",
+                "fuchsia.net.interfaces.State",
+                "fuchsia.net.name.Lookup",
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.settings.Display",
+                "fuchsia.stash.SecureStore",
 
                 // Tests of the media system change their behavior based on
                 // board.
@@ -52,22 +59,10 @@
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.policy.Presenter",
                 "fuchsia.ui.scenic.Scenic",
                 "fuchsia.vulkan.loader.Loader",
-            ],
-            from: "parent",
-            to: "#chromium-tests",
-        },
-
-        // Some Chromium tests require access to network services.
-        {
-            protocol: [
-                "fuchsia.device.NameProvider",
-                "fuchsia.net.http.Loader",
-                "fuchsia.net.interfaces.State",
-                "fuchsia.net.name.Lookup",
-                "fuchsia.posix.socket.Provider",
-                "fuchsia.stash.SecureStore",
             ],
             from: "parent",
             to: "#chromium-tests",

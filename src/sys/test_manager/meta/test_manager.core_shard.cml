@@ -107,6 +107,17 @@
             to: "#test_manager",
             source_availability: "unknown",
         },
+        {
+            protocol: [
+                "fuchsia.accessibility.semantics.SemanticsManager",
+                "fuchsia.input.virtualkeyboard.ControllerCreator",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.policy.Presenter",
+            ],
+            from: "#ui",
+            to: "#test_manager",
+            source_availability: "unknown",
+        },
 
         // Test realms may offer subdirectories of config-data to test
         // components. See:
@@ -238,6 +249,11 @@
             // Once we're able, this part of the manifest should be maintained by chromium.
             directory: "build-info",
             from: "parent",
+            to: "#test_manager",
+        },
+        {
+            protocol: "fuchsia.buildinfo.Provider",
+            from: "#build-info",
             to: "#test_manager",
         },
         {
