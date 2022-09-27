@@ -15,6 +15,7 @@ test("nxpfmac_test") {
   sources = [
     "client_connection_test.cc",
     "data_plane_test.cc",
+    "device_test.cc",
     "event_handler_test.cc",
     "ies_test.cc",
     "ioctl_adapter_test.cc",
@@ -28,6 +29,7 @@ test("nxpfmac_test") {
     ":mlan_mocks",
     "//sdk/banjo/fuchsia.hardware.wlan.fullmac:fuchsia.hardware.wlan.fullmac_banjo_cpp",
     "//src/connectivity/wlan/drivers/third_party/nxp/nxpfmac:core",
+    "//src/devices/testing/driver-runtime-main:zxtest",
     "//src/devices/testing/mock-ddk",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/mock-function",

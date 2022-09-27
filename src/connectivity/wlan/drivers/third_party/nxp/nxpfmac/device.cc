@@ -13,6 +13,7 @@
 
 #include "device.h"
 
+#include <lib/fidl/cpp/wire/arena.h>
 #include <lib/zx/timer.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
@@ -305,8 +306,24 @@ void Device::SetCountry(SetCountryRequestView request, fdf::Arena &arena,
 }
 
 void Device::GetCountry(fdf::Arena &arena, GetCountryCompleter::Sync &completer) {
-  NXPF_ERR("Not supported");
-  completer.buffer(arena).ReplyError(ZX_ERR_NOT_SUPPORTED);
+  // Bss index shouldn't matter here, set it to zero.
+  IoctlRequest<mlan_ds_misc_cfg> ioctl_request(
+      MLAN_IOCTL_MISC_CFG, MLAN_ACT_GET, 0,
+      mlan_ds_misc_cfg{.sub_command = MLAN_OID_MISC_COUNTRY_CODE});
+
+  IoctlStatus io_status = ioctl_adapter_->IssueIoctlSync(&ioctl_request);
+  if (io_status != IoctlStatus::Success) {
+    NXPF_ERR("Failed to get country: %d", io_status);
+    completer.buffer(arena).ReplyError(ZX_ERR_INTERNAL);
+    return;
+  }
+
+  fidl::Array<uint8_t, fuchsia_wlan_wlanphyimpl::wire::kWlanphyAlpha2Len> alpha2;
+  memcpy(alpha2.begin(), ioctl_request.UserReq().param.country_code.country_code,
+         decltype(alpha2)::size());
+
+  completer.buffer(arena).ReplySuccess(
+      ::fuchsia_wlan_wlanphyimpl::wire::WlanphyCountry::WithAlpha2(alpha2));
 }
 
 void Device::ClearCountry(fdf::Arena &arena, ClearCountryCompleter::Sync &completer) {

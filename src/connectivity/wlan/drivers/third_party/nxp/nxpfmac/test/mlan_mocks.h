@@ -53,9 +53,23 @@ class MlanMockAdapter {
   void SetOnMlanSendPacket(std::function<mlan_status(t_void*, pmlan_buffer)>&& callback);
   void SetOnMlanRxProcess(std::function<mlan_status(t_void*, t_u8*)>&& callback);
 
+  void SetOnMlanShutdownFw(std::function<mlan_status(t_void* padapter)>&& callback);
+  void SetOnMlanUnregister(std::function<mlan_status(t_void* padapter)>&& callback);
+  void SetOnMlanSetInitParam(
+      std::function<mlan_status(t_void* padapter, pmlan_init_param pparam)>&& callback);
+  void SetOnMlanDnldFw(
+      std::function<mlan_status(t_void* padapter, pmlan_fw_image pmfw)>&& callback);
+  void SetOnMlanInitFw(std::function<mlan_status(t_void* padapter)>&& callback);
+
  private:
   std::unique_ptr<MlanMockAdapterImpl> impl_;
 };
+
+// Call this to set the mlan adapter that the next call to mlan_register should return. This is only
+// needed for tests that can't create and provide their own adapter. In practice this is almost
+// certainly going to be tests for the Device class which is the place where mlan_register is
+// called.
+void set_mlan_register_mock_adapter(MlanMockAdapter* adapter);
 
 }  // namespace wlan::nxpfmac
 
