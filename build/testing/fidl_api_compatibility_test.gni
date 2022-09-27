@@ -16,7 +16,7 @@ template("fidl_api_compatibility_test") {
   }
 
   # Let command-line build args override values from target declarations.
-  if (update_goldens) {
+  if (bless_goldens) {
     policy = "update_golden"
   }
 

@@ -23,7 +23,7 @@ fx run-in-build-dir cp \\
     {candidate} \\
     {golden}
 ```
-Or you can rebuild with `update_goldens=true` in your GN args and {label} in your build graph.
+Or you can rebuild with `bless_goldens=true` in your GN args and {label} in your build graph.
 
 """)
 

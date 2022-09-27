@@ -8,7 +8,7 @@ import("//build/testing/config.gni")
 # Fails if one of the provided `golden`'s contents is not equal to the
 # associated `candidate`'s.
 #
-# If the `update_goldens` build arg is true, the goldens will be updated with
+# If the `bless_goldens` build arg is true, the goldens will be updated with
 # the candidate files rather than failing the action.
 #
 # Parameters:
@@ -242,7 +242,7 @@ template("golden_files") {
       rebase_path("//", root_build_dir),
     ]
 
-    if (update_goldens) {
+    if (bless_goldens) {
       args += [ "--bless" ]
     }
 

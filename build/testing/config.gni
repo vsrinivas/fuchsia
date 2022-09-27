@@ -5,5 +5,5 @@
 declare_args() {
   # Set to true for the golden_file template to implicitly write updated goldens
   # instead of failing the action or test.
-  update_goldens = false
+  bless_goldens = false
 }

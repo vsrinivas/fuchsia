@@ -13,5 +13,5 @@ set -o pipefail
 # cd to fuchsia checkout root.
 cd "$( dirname "${BASH_SOURCE[0]}" )/../../../.."
 
-scripts/fx set core.x64 --with '//tools/integration/fint:tests' --args 'update_goldens=true'
+scripts/fx set core.x64 --with '//tools/integration/fint:tests' --args 'bless_goldens=true'
 scripts/fx ninja -C out/default 'tools/integration/fint:tests'

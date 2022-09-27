@@ -231,7 +231,7 @@ The list of environment names to include in "basic_envs".
 
 From //build/testing/environments.gni:9
 
-### update_goldens
+### bless_goldens
 Set to true for the golden_file template to implicitly write updated goldens
 instead of failing the action or test.
 
