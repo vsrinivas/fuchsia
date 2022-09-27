@@ -560,7 +560,10 @@ impl Environment {
                         None => self.files.build.get_or_insert_with(Default::default),
                     };
                     if !build_dirs.contains_key(&b_dir) {
-                        let config = b_dir.with_extension("json");
+                        let mut b_name =
+                            b_dir.file_name().context("build dir had no filename")?.to_owned();
+                        b_name.push(".json");
+                        let config = b_dir.with_file_name(&b_name);
                         if !config.is_file() {
                             info!("Build configuration file for '{b_dir}' does not exist yet, will create it by default at '{config}' if a value is set", b_dir=b_dir.display(), config=config.display());
                         }
