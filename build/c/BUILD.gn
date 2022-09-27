@@ -284,7 +284,6 @@ config("fidl-deprecated-c-bindings") {
     "//zircon/system/ulib/storage-metrics",
     "//zircon/system/ulib/storage-metrics/test:storage-metrics",
     "//zircon/system/ulib/sysconfig-client/test:sysconfig-sync-client-test",
-    "//zircon/system/ulib/sysmem-connector",
     "//zircon/system/ulib/sysmem-version",
     "//zircon/system/ulib/sysmem-version/test:sysmem-version-test",
     "//zircon/system/ulib/task-utils",

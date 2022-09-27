@@ -4,7 +4,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/sysmem/c/fidl.h>
+#include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
@@ -50,25 +50,19 @@ class SysmemConnector : public sysmem_connector {
  public:
   SysmemConnector(const char* sysmem_directory_path, bool terminate_on_sysmem_connection_failure);
   zx_status_t Start();
-  void QueueRequest(zx::channel allocator_request);
-  void QueueServiceDirectory(zx::channel service_directory);
+
+  using QueueItem = std::variant<fidl::ServerEnd<fuchsia_sysmem::Allocator>,
+                                 fidl::ClientEnd<fuchsia_io::Directory>>;
+
+  void Queue(QueueItem&& queue_item);
   void Stop();
 
  private:
-  struct QueueItem {
-    // Exactly one is set.
-    zx::channel allocator_request;
-    zx::channel service_directory;
-  };
-
   void Post(fit::closure to_run);
 
-  static zx_status_t DeviceAddedShim(int dirfd, int event, const char* fn, void* cookie);
-  zx_status_t DeviceAdded(int dirfd, int event, const char* fn);
+  zx_status_t DeviceAdded(int dirfd, int event, const char* filename);
 
   zx_status_t ConnectToSysmemDriver();
-
-  void QueueInternal(QueueItem&& queue_item);
 
   void ProcessQueue();
 
@@ -90,7 +84,7 @@ class SysmemConnector : public sysmem_connector {
   //
 
   fbl::unique_fd sysmem_dir_fd_;
-  zx::channel driver_connector_client_;
+  fidl::ClientEnd<fuchsia_sysmem::DriverConnector> driver_connector_client_;
   async::WaitMethod<SysmemConnector, &SysmemConnector::OnSysmemPeerClosed> wait_sysmem_peer_closed_;
 
   //
@@ -115,7 +109,7 @@ zx_status_t SysmemConnector::Start() {
   // because the current thread is the only thread that triggers anything to happen on the thread
   // being created here, and that is only done after process_queue_thrd_ is filled out by the
   // current thread.
-  zx_status_t status =
+  const zx_status_t status =
       process_queue_loop_.StartThread("SysmemConnector-ProcessQueue", &process_queue_thrd_);
   if (status != ZX_OK) {
     printf("sysmem-connector: process_queue_loop_.StartThread() failed - status: %d\n", status);
@@ -126,21 +120,11 @@ zx_status_t SysmemConnector::Start() {
   return ZX_OK;
 }
 
-void SysmemConnector::QueueRequest(zx::channel allocator_request) {
-  QueueItem queue_item{.allocator_request = std::move(allocator_request)};
-  QueueInternal(std::move(queue_item));
-}
-
-void SysmemConnector::QueueServiceDirectory(zx::channel service_directory) {
-  QueueItem queue_item{.service_directory = std::move(service_directory)};
-  QueueInternal(std::move(queue_item));
-}
-
-void SysmemConnector::QueueInternal(QueueItem&& queue_item) {
+void SysmemConnector::Queue(QueueItem&& queue_item) {
   ZX_DEBUG_ASSERT(thrd_current() != process_queue_thrd_);
   bool trigger_needed;
   {  // scope lock
-    fbl::AutoLock lock(&lock_);
+    const fbl::AutoLock lock(&lock_);
     trigger_needed = connection_requests_.empty();
     connection_requests_.emplace(std::move(queue_item));
   }  // ~lock
@@ -157,15 +141,9 @@ void SysmemConnector::Stop() {
 }
 
 void SysmemConnector::Post(fit::closure to_run) {
-  zx_status_t post_status = async::PostTask(process_queue_loop_.dispatcher(), std::move(to_run));
+  const zx_status_t status = async::PostTask(process_queue_loop_.dispatcher(), std::move(to_run));
   // We don't expect this post to ever fail.
-  ZX_ASSERT(post_status == ZX_OK);
-}
-
-zx_status_t SysmemConnector::DeviceAddedShim(int dirfd, int event, const char* fn, void* cookie) {
-  ZX_DEBUG_ASSERT(cookie);
-  SysmemConnector* connector = static_cast<SysmemConnector*>(cookie);
-  return connector->DeviceAdded(dirfd, event, fn);
+  ZX_ASSERT_MSG(status == ZX_OK, "%s", zx_status_get_string(status));
 }
 
 zx_status_t SysmemConnector::DeviceAdded(int dirfd, int event, const char* filename) {
@@ -180,7 +158,7 @@ zx_status_t SysmemConnector::DeviceAdded(int dirfd, int event, const char* filen
   }
   ZX_DEBUG_ASSERT(event == WATCH_EVENT_ADD_FILE);
 
-  zx::status endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
+  zx::status endpoints = fidl::CreateEndpoints<fuchsia_sysmem::DriverConnector>();
   if (endpoints.is_error()) {
     printf("SysmemConnector::DeviceAdded() zx::channel::create() failed - status: %s\n",
            endpoints.status_string());
@@ -191,7 +169,7 @@ zx_status_t SysmemConnector::DeviceAdded(int dirfd, int event, const char* filen
   }
   auto& [client, server] = endpoints.value();
 
-  fdio_cpp::UnownedFdioCaller caller(dirfd);
+  const fdio_cpp::UnownedFdioCaller caller(dirfd);
   zx_status_t status;
   status =
       fdio_service_connect_at(caller.borrow_channel(), filename, server.TakeChannel().release());
@@ -221,7 +199,7 @@ zx_status_t SysmemConnector::DeviceAdded(int dirfd, int event, const char* filen
   printf("sysmem-connector: %s connected to sysmem driver %s\n", process_name, filename);
   fflush(stdout);
 
-  driver_connector_client_ = client.TakeChannel();
+  driver_connector_client_ = std::move(client);
   ZX_DEBUG_ASSERT(driver_connector_client_);
   return ZX_ERR_STOP;
 }
@@ -232,7 +210,7 @@ zx_status_t SysmemConnector::ConnectToSysmemDriver() {
 
   ZX_DEBUG_ASSERT(!sysmem_dir_fd_);
   {
-    int fd = open(sysmem_directory_path_, O_DIRECTORY | O_RDONLY);
+    const int fd = open(sysmem_directory_path_, O_DIRECTORY | O_RDONLY);
     if (fd < 0) {
       printf("sysmem-connector: Failed to open %s: %d\n", sysmem_directory_path_, errno);
       if (terminate_on_sysmem_connection_failure_) {
@@ -256,8 +234,14 @@ zx_status_t SysmemConnector::ConnectToSysmemDriver() {
   // instance, then sysmem_connector_release() will block forever.  This can
   // be fixed once it's feasible to use DeviceWatcher (or similar) here
   // instead (currently DeviceWatcher is in garnet not zircon).
-  zx_status_t watch_status =
-      fdio_watch_directory(sysmem_dir_fd_.get(), DeviceAddedShim, ZX_TIME_INFINITE, this);
+  const zx_status_t watch_status = fdio_watch_directory(
+      sysmem_dir_fd_.get(),
+      [](int dirfd, int event, const char* fn, void* cookie) {
+        ZX_DEBUG_ASSERT(cookie);
+        SysmemConnector* connector = static_cast<SysmemConnector*>(cookie);
+        return connector->DeviceAdded(dirfd, event, fn);
+      },
+      ZX_TIME_INFINITE, this);
   if (watch_status != ZX_ERR_STOP) {
     printf("sysmem-connector: Failed to find sysmem device - status: %d\n", watch_status);
     if (terminate_on_sysmem_connection_failure_) {
@@ -269,19 +253,32 @@ zx_status_t SysmemConnector::ConnectToSysmemDriver() {
   return ZX_OK;
 }
 
+namespace {
+
+// Helpers from the reference documentation for std::visit<>, to allow
+// visit-by-overload of the std::variant<> returned by GetLastReference():
+template <class... Ts>
+struct overloaded : Ts... {
+  using Ts::operator()...;
+};
+// explicit deduction guide (not needed as of C++20)
+template <class... Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
+
+}  // namespace
+
 void SysmemConnector::ProcessQueue() {
   ZX_DEBUG_ASSERT(thrd_current() == process_queue_thrd_);
   while (true) {
     QueueItem queue_item;
     {  // scope lock
-      fbl::AutoLock lock(&lock_);
+      const fbl::AutoLock lock(&lock_);
       if (connection_requests_.empty()) {
         return;
       }
       queue_item = std::move(connection_requests_.front());
       connection_requests_.pop();
     }  // ~lock
-    ZX_DEBUG_ASSERT(!!queue_item.allocator_request ^ !!queue_item.service_directory);
 
     // Poll for PEER_CLOSED just before we need the channel to be usable, to
     // avoid routing a request to a stale no-longer-usable sysmem device
@@ -296,8 +293,9 @@ void SysmemConnector::ProcessQueue() {
     // async wait.
     if (driver_connector_client_) {
       zx_signals_t observed;
-      zx_status_t wait_status = zx_object_wait_one(
-          driver_connector_client_.get(), ZX_CHANNEL_PEER_CLOSED, ZX_TIME_INFINITE_PAST, &observed);
+      const zx_status_t wait_status =
+          zx_object_wait_one(driver_connector_client_.channel().get(), ZX_CHANNEL_PEER_CLOSED,
+                             ZX_TIME_INFINITE_PAST, &observed);
       if (wait_status == ZX_OK) {
         ZX_DEBUG_ASSERT(observed & ZX_CHANNEL_PEER_CLOSED);
         // This way, we'll call ConnectToSysmemDriver() below.
@@ -309,7 +307,7 @@ void SysmemConnector::ProcessQueue() {
     }
 
     if (!driver_connector_client_) {
-      zx_status_t connect_status = ConnectToSysmemDriver();
+      const zx_status_t connect_status = ConnectToSysmemDriver();
       if (connect_status != ZX_OK) {
         // ~allocator_request - we'll try again to connect to a sysmem
         // instance next time a request comes in, but any given request
@@ -321,46 +319,50 @@ void SysmemConnector::ProcessQueue() {
     }
     ZX_DEBUG_ASSERT(driver_connector_client_);
 
-    if (queue_item.allocator_request) {
-      zx_status_t send_connect_status = fuchsia_sysmem_DriverConnectorConnect(
-          driver_connector_client_.get(), queue_item.allocator_request.release());
-      if (send_connect_status != ZX_OK) {
-        // The most likely failing send_connect_status is
-        // ZX_ERR_PEER_CLOSED, which can happen if the channel closed since
-        // we checked above.  Since we don't really expect even
-        // ZX_ERR_PEER_CLOSED unless sysmem is having problems, complain
-        // about the error regardless of which error.
-        printf(
-            "SysmemConnector::ProcessQueue() DriverConnectorConnect() returned unexpected status: "
-            "%d\n",
-            send_connect_status);
+    std::visit(
+        overloaded{
+            [this](fidl::ServerEnd<fuchsia_sysmem::Allocator> allocator_request) {
+              const fidl::WireResult result =
+                  fidl::WireCall(driver_connector_client_)->Connect(std::move(allocator_request));
+              if (!result.ok()) {
+                // The most likely failing status is ZX_ERR_PEER_CLOSED, which
+                // can happen if the channel closed since we checked above.
+                // Since we don't really expect even ZX_ERR_PEER_CLOSED unless
+                // sysmem is having problems, complain about the error
+                // regardless of which error.
+                printf(
+                    "SysmemConnector::ProcessQueue() DriverConnectorConnect() returned unexpected "
+                    "status: %s\n",
+                    result.status_string());
 
-        // Regardless of the specific error, we want to try
-        // ConnectToSysmemDriver() again for the _next_ request.
-        driver_connector_client_.reset();
+                // Regardless of the specific error, we want to try
+                // ConnectToSysmemDriver() again for the _next_ request.
+                driver_connector_client_.reset();
 
-        // We don't retry this request (the window for getting
-        // ZX_ERR_PEER_CLOSED is short due to check above, and exists in any
-        // case due to possibility of close from other end at any time), but
-        // the next request will try ConnectToSysmemDriver() again.
-        //
-        // continue with next request
-      }
-    } else {
-      printf("queue_item.service_directory\n");
-      ZX_DEBUG_ASSERT(queue_item.service_directory);
-      zx_status_t send_set_aux_service_directory_status =
-          fuchsia_sysmem_DriverConnectorSetAuxServiceDirectory(
-              driver_connector_client_.get(), queue_item.service_directory.release());
-      if (send_set_aux_service_directory_status != ZX_OK) {
-        printf(
-            "SysmemConnector::ProcessQueue() DriverConnectorSetAuxServiceDirectory() returned "
-            "unexpected status: %d\n",
-            send_set_aux_service_directory_status);
-        driver_connector_client_.reset();
-        // continue with next request
-      }
-    }
+                // We don't retry this request (the window for getting
+                // ZX_ERR_PEER_CLOSED is short due to check above, and exists in
+                // any case due to possibility of close from other end at any
+                // time), but the next request will try ConnectToSysmemDriver()
+                // again.
+                //
+                // continue with next request
+              }
+            },
+            [this](fidl::ClientEnd<fuchsia_io::Directory> service_directory) {
+              printf("queue_item.service_directory\n");
+              const fidl::WireResult result =
+                  fidl::WireCall(driver_connector_client_)
+                      ->SetAuxServiceDirectory(std::move(service_directory));
+              if (!result.ok()) {
+                printf(
+                    "SysmemConnector::ProcessQueue() DriverConnectorSetAuxServiceDirectory() "
+                    "returned unexpected status: %s\n",
+                    result.status_string());
+                driver_connector_client_.reset();
+                // continue with next request
+              }
+            }},
+        std::move(queue_item));
   }
 }
 
@@ -383,7 +385,7 @@ zx_status_t sysmem_connector_init(const char* sysmem_directory_path,
                                   sysmem_connector_t** out_connector) {
   SysmemConnector* connector =
       new SysmemConnector(sysmem_directory_path, terminate_on_sysmem_connection_failure);
-  zx_status_t status = connector->Start();
+  const zx_status_t status = connector->Start();
   if (status != ZX_OK) {
     printf("sysmem_connector_init() connector->Start() failed - status: %d\n", status);
     return status;
@@ -398,7 +400,7 @@ void sysmem_connector_queue_connection_request(sysmem_connector_t* connector_par
   ZX_DEBUG_ASSERT(connector_param);
   ZX_DEBUG_ASSERT(allocator_request);
   SysmemConnector* connector = static_cast<SysmemConnector*>(connector_param);
-  connector->QueueRequest(std::move(allocator_request));
+  connector->Queue(fidl::ServerEnd<fuchsia_sysmem::Allocator>{std::move(allocator_request)});
 }
 
 void sysmem_connector_queue_service_directory(sysmem_connector_t* connector_param,
@@ -408,7 +410,7 @@ void sysmem_connector_queue_service_directory(sysmem_connector_t* connector_para
   ZX_DEBUG_ASSERT(connector_param);
   ZX_DEBUG_ASSERT(service_directory);
   SysmemConnector* connector = static_cast<SysmemConnector*>(connector_param);
-  connector->QueueServiceDirectory(std::move(service_directory));
+  connector->Queue(fidl::ClientEnd<fuchsia_io::Directory>{std::move(service_directory)});
 }
 
 void sysmem_connector_release(sysmem_connector_t* connector_param) {
