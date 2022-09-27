@@ -54,8 +54,7 @@ constexpr char kCrashServerUrl[] = "https://clients2.google.com/cr/report";
 constexpr char kGarbageCollectedSnapshotsPath[] = "/tmp/garbage_collected_snapshots.txt";
 
 // Snapshots can occupy up to 10 MB of memory.
-constexpr StorageSize kSnapshotAnnotationsMaxSize = StorageSize::Megabytes(5);
-constexpr StorageSize kSnapshotArchivesMaxSize = StorageSize::Megabytes(5);
+constexpr StorageSize kSnapshotArchivesMaxSize = StorageSize::Megabytes(10);
 
 // If a crash report arrives within |kSnapshotSharedRequestWindow| of a call to
 // SnapshotManager::GetSnapshotUuid that schedules a call to

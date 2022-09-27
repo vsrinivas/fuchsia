@@ -13,7 +13,6 @@ namespace forensics::crash_reports {
 
 ScopedTestReportStore::ScopedTestReportStore(feedback::AnnotationManager* annotation_manager,
                                              std::shared_ptr<InfoContext> info_context,
-                                             StorageSize max_annotations_size,
                                              StorageSize max_archives_size)
     : tmp_path_(files::JoinPath(temp_dir_.path(), kReportStoreTmpPath)),
       cache_path_(files::JoinPath(temp_dir_.path(), kReportStoreCachePath)) {
@@ -24,7 +23,7 @@ ScopedTestReportStore::ScopedTestReportStore(feedback::AnnotationManager* annota
       &tags_, std::move(info_context), annotation_manager,
       crash_reports::ReportStore::Root{tmp_path_, crash_reports::kReportStoreMaxTmpSize},
       crash_reports::ReportStore::Root{cache_path_, crash_reports::kReportStoreMaxCacheSize},
-      kGarbageCollectedSnapshotsPath, max_annotations_size, max_archives_size);
+      kGarbageCollectedSnapshotsPath, max_archives_size);
 }
 
 ReportStore& ScopedTestReportStore::GetReportStore() { return *report_store_; }

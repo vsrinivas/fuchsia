@@ -140,13 +140,12 @@ ReportStore::ReportStore(LogTags* tags, std::shared_ptr<InfoContext> info,
                          const ReportStore::Root& temp_root,
                          const ReportStore::Root& persistent_root,
                          const std::string& garbage_collected_snapshots_path,
-                         StorageSize max_annotations_size, StorageSize max_archives_size)
+                         StorageSize max_archives_size)
     : tmp_metadata_(temp_root.dir, temp_root.max_size),
       cache_metadata_(persistent_root.dir, persistent_root.max_size),
       tags_(tags),
       info_(std::move(info)),
-      snapshot_store_(annotation_manager, garbage_collected_snapshots_path, max_annotations_size,
-                      max_archives_size) {
+      snapshot_store_(annotation_manager, garbage_collected_snapshots_path, max_archives_size) {
   info_.LogMaxReportStoreSize(temp_root.max_size + persistent_root.max_size);
 
   // Clean up any empty directories in the report store. This may happen if the component stops

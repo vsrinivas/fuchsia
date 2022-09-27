@@ -41,13 +41,6 @@ void StubCrashServer::MakeRequest(const Report& report, const Snapshot& snapshot
 
   if (std::holds_alternative<ManagedSnapshot>(snapshot)) {
     const auto& s = std::get<ManagedSnapshot>(snapshot);
-    for (const auto& [key, value] : s.Annotations()) {
-      latest_annotations_.Set(key, value);
-    }
-
-    for (const auto& [key, value] : s.PresenceAnnotations()) {
-      latest_annotations_.Set(key, value);
-    }
 
     if (auto archive = s.LockArchive(); archive) {
       latest_attachment_keys_.push_back(archive->key);

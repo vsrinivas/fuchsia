@@ -228,7 +228,7 @@ void SnapshotCollector::CompleteWithSnapshot(const SnapshotUuid& uuid,
 
   // The snapshot request is completed and unblock all promises that need |annotations| and
   // |archive|.
-  const auto shared_annotations = std::make_shared<feedback::Annotations>(annotations);
+  const auto shared_annotations = std::make_shared<feedback::Annotations>(std::move(annotations));
   for (auto id : request->promise_ids) {
     report_results_[id] = ReportResults{
         .uuid = uuid,
@@ -242,7 +242,7 @@ void SnapshotCollector::CompleteWithSnapshot(const SnapshotUuid& uuid,
 
   // Now that all crash reports associated with this snapshot have extracted the necessary
   // annotations we can move the snapshot to |snapshot_store_|.
-  snapshot_store_->AddSnapshotData(uuid, std::move(annotations), std::move(archive));
+  snapshot_store_->AddSnapshot(uuid, std::move(archive));
 }
 
 void SnapshotCollector::EnforceSizeLimits() {

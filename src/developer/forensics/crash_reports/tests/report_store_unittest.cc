@@ -53,7 +53,6 @@ class ReportStoreTest : public UnitTestFixture {
  protected:
   void MakeNewStore(const StorageSize max_tmp_size,
                     const StorageSize max_cache_size = StorageSize::Bytes(0),
-                    const StorageSize max_annotations_size = StorageSize::Megabytes(1),
                     const StorageSize max_archives_size = StorageSize::Megabytes(1)) {
     info_context_ =
         std::make_shared<InfoContext>(&InspectRoot(), &clock_, dispatcher(), services());
@@ -61,8 +60,7 @@ class ReportStoreTest : public UnitTestFixture {
         &tags_, info_context_, &annotation_manager_,
         /*temp_root=*/ReportStore::Root{tmp_dir_.path(), max_tmp_size},
         /*persistent_root=*/ReportStore::Root{cache_dir_.path(), max_cache_size},
-        files::JoinPath(tmp_dir_.path(), "garbage_collected_snapshots.txt"), max_annotations_size,
-        max_archives_size);
+        files::JoinPath(tmp_dir_.path(), "garbage_collected_snapshots.txt"), max_archives_size);
   }
 
   std::optional<ReportId> Add(const std::string& program_shortname,
@@ -578,7 +576,7 @@ TEST_F(ReportStoreTest, UsesTmpUntilPersistentReady) {
       /*temp_root=*/ReportStore::Root{tmp_dir_.path(), StorageSize::Bytes(expected_report_size)},
       /*persistent_root=*/ReportStore::Root{cache_root, StorageSize::Bytes(expected_report_size)},
       files::JoinPath(tmp_dir_.path(), "garbage_collected_snapshots.txt"),
-      StorageSize::Bytes(expected_report_size), StorageSize::Bytes(expected_report_size));
+      StorageSize::Bytes(expected_report_size));
 
   std::map<std::string, std::string> annotations;
   std::map<std::string, std::string> attachments;

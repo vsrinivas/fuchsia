@@ -24,10 +24,6 @@ constexpr char kHourlySnapshotSignature[] = "fuchsia-hourly-snapshot";
 
 constexpr char kCrashServerUrl[] = "https://clients2.google.com/cr/report";
 
-// Snapshots can occupy up to 10 MB of memory.
-constexpr StorageSize kSnapshotAnnotationsMaxSize = StorageSize::Megabytes(5);
-constexpr StorageSize kSnapshotArchivesMaxSize = StorageSize::Megabytes(5);
-
 constexpr const char* kGarbageCollectedSnapshotsPath = "/tmp/garbage_collected_snapshots.txt";
 
 // Up to 512KiB of the non-snapshot portion of reports, like annotations and the minidump, are

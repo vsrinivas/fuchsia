@@ -48,7 +48,6 @@ class MainServiceTest : public UnitTestFixture {
                           },
                           CrashReports::Options{
                               .config = {},
-                              .snapshot_store_max_annotations_size = StorageSize::Bytes(0),
                               .snapshot_store_max_archives_size = StorageSize::Bytes(0),
                               .snapshot_collector_window_duration = zx::sec(0),
                           },

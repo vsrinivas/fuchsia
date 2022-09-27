@@ -21,11 +21,9 @@ std::shared_ptr<T> MakeShared(T&& t) {
 
 SnapshotStore::SnapshotStore(feedback::AnnotationManager* annotation_manager,
                              std::string garbage_collected_snapshots_path,
-                             StorageSize max_annotations_size, StorageSize max_archives_size)
+                             StorageSize max_archives_size)
     : annotation_manager_(annotation_manager),
       garbage_collected_snapshots_path_(std::move(garbage_collected_snapshots_path)),
-      max_annotations_size_(max_annotations_size),
-      current_annotations_size_(0u),
       max_archives_size_(max_archives_size),
       current_archives_size_(0u),
       garbage_collected_snapshot_(kGarbageCollectedSnapshotUuid,
@@ -91,7 +89,7 @@ Snapshot SnapshotStore::GetSnapshot(const SnapshotUuid& uuid) {
     return BuildMissing(not_persisted_snapshot_);
   }
 
-  return ManagedSnapshot(data->annotations, data->presence_annotations, data->archive);
+  return ManagedSnapshot(data->archive);
 }
 
 MissingSnapshot SnapshotStore::GetMissingSnapshot(const SnapshotUuid& uuid) {
@@ -128,7 +126,7 @@ bool SnapshotStore::Release(const SnapshotUuid& uuid) {
     return false;
   }
 
-  DropAnnotations(data);
+  // TODO(fxbug.dev/102479): drop from persistence instead if that's where the snapshot is located.
   DropArchive(data);
 
   RecordAsGarbageCollected(uuid);
@@ -139,32 +137,15 @@ bool SnapshotStore::Release(const SnapshotUuid& uuid) {
 void SnapshotStore::StartSnapshot(const SnapshotUuid& uuid) {
   data_.emplace(uuid, SnapshotData{
                           .num_clients_with_uuid = 0,
-                          .annotations_size = StorageSize::Bytes(0u),
                           .archive_size = StorageSize::Bytes(0u),
-                          .annotations = nullptr,
                           .archive = nullptr,
-                          .presence_annotations = nullptr,
                       });
 }
 
-void SnapshotStore::AddSnapshotData(const SnapshotUuid& uuid, feedback::Annotations annotations,
-                                    fuchsia::feedback::Attachment archive) {
+void SnapshotStore::AddSnapshot(const SnapshotUuid& uuid, fuchsia::feedback::Attachment archive) {
   auto* data = FindSnapshotData(uuid);
 
   FX_CHECK(data);
-
-  data->presence_annotations = std::make_shared<feedback::Annotations>();
-
-  // Take ownership of |annotations| and then record the size of the annotations and archive.
-  data->annotations = MakeShared(std::move(annotations));
-
-  for (const auto& [k, v] : *data->annotations) {
-    data->annotations_size += StorageSize::Bytes(k.size());
-    if (v.HasValue()) {
-      data->annotations_size += StorageSize::Bytes(v.Value().size());
-    }
-  }
-  current_annotations_size_ += data->annotations_size;
 
   if (!archive.key.empty() && archive.value.vmo.is_valid()) {
     data->archive = MakeShared(ManagedSnapshot::Archive(archive));
@@ -179,23 +160,9 @@ void SnapshotStore::EnforceSizeLimits(const SnapshotUuid& uuid) {
   auto* data = FindSnapshotData(uuid);
   FX_CHECK(data);
 
-  // Drop |data|'s annotations and attachments if necessary. Attachments are dropped because
-  // they don't make sense without the accompanying annotations.
-  if (current_annotations_size_ > max_annotations_size_) {
-    DropAnnotations(data);
-    DropArchive(data);
-    RecordAsGarbageCollected(uuid);
-  }
-
-  // Drop |data|'s archive if necessary.
+  // Drop |data| if necessary.
   if (current_archives_size_ > max_archives_size_) {
     DropArchive(data);
-    RecordAsGarbageCollected(uuid);
-  }
-
-  // Delete the SnapshotRequest and SnapshotData if the annotations and archive have been
-  // dropped, either in this iteration of the loop or a prior one.
-  if (!data->annotations && !data->archive) {
     RecordAsGarbageCollected(uuid);
     data_.erase(uuid);
   }
@@ -207,16 +174,7 @@ bool SnapshotStore::SnapshotExists(const SnapshotUuid& uuid) {
 }
 
 bool SnapshotStore::SizeLimitsExceeded() const {
-  return current_annotations_size_ > max_annotations_size_ ||
-         current_archives_size_ > max_archives_size_;
-}
-
-void SnapshotStore::DropAnnotations(SnapshotData* data) {
-  data->annotations = nullptr;
-  data->presence_annotations = nullptr;
-
-  current_annotations_size_ -= data->annotations_size;
-  data->annotations_size = StorageSize::Bytes(0u);
+  return current_archives_size_ > max_archives_size_;
 }
 
 void SnapshotStore::DropArchive(SnapshotData* data) {
@@ -224,20 +182,6 @@ void SnapshotStore::DropArchive(SnapshotData* data) {
 
   current_archives_size_ -= data->archive_size;
   data->archive_size = StorageSize::Bytes(0u);
-
-  // If annotations still exist, add an annotation indicating the archive was garbage collected.
-  if (data->annotations) {
-    for (const auto& [k, v] : garbage_collected_snapshot_.annotations) {
-      data->presence_annotations->insert({k, v});
-      data->annotations_size += StorageSize::Bytes(k.size());
-      current_annotations_size_ += StorageSize::Bytes(k.size());
-
-      if (v.HasValue()) {
-        data->annotations_size += StorageSize::Bytes(v.Value().size());
-        current_annotations_size_ += StorageSize::Bytes(v.Value().size());
-      }
-    }
-  }
 }
 
 void SnapshotStore::RecordAsGarbageCollected(const SnapshotUuid& uuid) {

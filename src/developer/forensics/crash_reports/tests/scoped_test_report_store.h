@@ -17,7 +17,6 @@ class ScopedTestReportStore {
  public:
   ScopedTestReportStore(feedback::AnnotationManager* annotation_manager,
                         std::shared_ptr<InfoContext> info_context,
-                        StorageSize max_annotations_size = StorageSize::Megabytes(1),
                         StorageSize max_archives_size = StorageSize::Megabytes(1));
   ReportStore& GetReportStore();
   const std::string& GetTmpPath() const;

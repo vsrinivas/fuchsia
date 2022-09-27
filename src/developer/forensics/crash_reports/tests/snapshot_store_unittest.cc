@@ -26,19 +26,8 @@ namespace forensics::crash_reports {
 namespace {
 
 using testing::HasSubstr;
-using testing::IsEmpty;
-using testing::IsSupersetOf;
 using testing::Pair;
 using testing::UnorderedElementsAreArray;
-
-feedback::Annotations BuildFeedbackAnnotations(
-    const std::map<std::string, std::string>& annotations) {
-  feedback::Annotations ret_annotations;
-  for (const auto& [key, value] : annotations) {
-    ret_annotations.insert({key, value});
-  }
-  return ret_annotations;
-}
 
 ManagedSnapshot AsManaged(Snapshot snapshot) {
   FX_CHECK(std::holds_alternative<ManagedSnapshot>(snapshot));
@@ -65,30 +54,19 @@ auto Vector(const std::map<K, V>& annotations) {
 const std::string kDefaultArchiveKey = "snapshot.key";
 const SnapshotUuid kTestUuid = "test uuid";
 
-const std::map<std::string, std::string> kDefaultAnnotations = {
-    {"annotation.key.one", "annotation.value.one"},
-    {"annotation.key.two", "annotation.value.two"},
-};
-
-const feedback::Annotations kDefaultFeedbackAnnotations =
-    BuildFeedbackAnnotations(kDefaultAnnotations);
-
 class SnapshotStoreTest : public UnitTestFixture {
  public:
   SnapshotStoreTest()
       : garbage_collected_snapshots_path_(
             files::JoinPath(tmp_dir_.path(), "garbage_collected_snapshots.txt")) {
-    snapshot_store_ =
-        std::make_unique<SnapshotStore>(&annotation_manager_, garbage_collected_snapshots_path_,
-                                        StorageSize::Megabytes(1u), StorageSize::Megabytes(1u));
+    snapshot_store_ = std::make_unique<SnapshotStore>(
+        &annotation_manager_, garbage_collected_snapshots_path_, StorageSize::Megabytes(1u));
   }
 
  protected:
-  void SetUpSnapshotStore(StorageSize max_annotations_size = StorageSize::Megabytes(1),
-                          StorageSize max_archives_size = StorageSize::Megabytes(1)) {
-    snapshot_store_ =
-        std::make_unique<SnapshotStore>(&annotation_manager_, garbage_collected_snapshots_path_,
-                                        max_annotations_size, max_archives_size);
+  void SetUpSnapshotStore(StorageSize max_archives_size = StorageSize::Megabytes(1)) {
+    snapshot_store_ = std::make_unique<SnapshotStore>(
+        &annotation_manager_, garbage_collected_snapshots_path_, max_archives_size);
   }
 
   fuchsia::feedback::Attachment GetDefaultAttachment() {
@@ -101,7 +79,7 @@ class SnapshotStoreTest : public UnitTestFixture {
   void AddDefaultSnapshot(const SnapshotUuid& uuid = kTestUuid) {
     snapshot_store_->StartSnapshot(uuid);
     snapshot_store_->IncrementClientCount(uuid);
-    snapshot_store_->AddSnapshotData(uuid, kDefaultFeedbackAnnotations, GetDefaultAttachment());
+    snapshot_store_->AddSnapshot(uuid, GetDefaultAttachment());
   }
 
   std::set<std::string> ReadGarbageCollectedSnapshots() {
@@ -121,8 +99,6 @@ class SnapshotStoreTest : public UnitTestFixture {
   std::unique_ptr<SnapshotStore> snapshot_store_;
 };
 
-using SnapshotStoreDeathTest = SnapshotStoreTest;
-
 TEST_F(SnapshotStoreTest, Check_AddEmpty) {
   snapshot_store_->StartSnapshot(kTestUuid);
 
@@ -130,33 +106,31 @@ TEST_F(SnapshotStoreTest, Check_AddEmpty) {
   snapshot_store_->IncrementClientCount(kTestUuid);
 }
 
-TEST_F(SnapshotStoreDeathTest, Check_GetSnapshotNeverAdded) {
+TEST_F(SnapshotStoreTest, Check_GetSnapshotNeverAdded) {
   snapshot_store_->StartSnapshot(kTestUuid);
 
   // Ask for snapshot before adding it.
-  ASSERT_DEATH(snapshot_store_->GetSnapshot(kTestUuid), HasSubstr("Annotations can't be null"));
+  auto snapshot = AsManaged(snapshot_store_->GetSnapshot(kTestUuid));
+  ASSERT_FALSE(snapshot.LockArchive());
 }
 
 TEST_F(SnapshotStoreTest, Check_GetSnapshot) {
   snapshot_store_->StartSnapshot(kTestUuid);
-  snapshot_store_->AddSnapshotData(kTestUuid, kDefaultFeedbackAnnotations, GetDefaultAttachment());
+  snapshot_store_->AddSnapshot(kTestUuid, GetDefaultAttachment());
 
   auto snapshot = AsManaged(snapshot_store_->GetSnapshot(kTestUuid));
   ASSERT_TRUE(snapshot.LockArchive());
-
-  EXPECT_THAT(snapshot.Annotations(), IsSupersetOf(Vector(kDefaultAnnotations)));
-  EXPECT_THAT(snapshot.PresenceAnnotations(), IsEmpty());
   EXPECT_EQ(snapshot.LockArchive()->key, kDefaultArchiveKey);
 }
 
-TEST_F(SnapshotStoreTest, Check_AnnotationsMaxSizeIsEnforced) {
-  // Initialize the manager to only hold the default annotations and the debug annotations.
-  SetUpSnapshotStore(StorageSize::Bytes(128), StorageSize::Megabytes(1));
+TEST_F(SnapshotStoreTest, Check_ArchivesMaxSizeIsEnforced) {
+  // Initialize the manager to only hold a single default snapshot archive.
+  SetUpSnapshotStore(StorageSize::Bytes(kDefaultArchiveKey.size()));
+
   AddDefaultSnapshot();
 
   EXPECT_FALSE(snapshot_store_->SizeLimitsExceeded());
   snapshot_store_->EnforceSizeLimits(kTestUuid);
-
   EXPECT_TRUE(snapshot_store_->SnapshotExists(kTestUuid));
   ASSERT_TRUE(AsManaged(snapshot_store_->GetSnapshot(kTestUuid)).LockArchive());
 
@@ -164,55 +138,14 @@ TEST_F(SnapshotStoreTest, Check_AnnotationsMaxSizeIsEnforced) {
   AddDefaultSnapshot(kTestUuid2);
 
   EXPECT_TRUE(snapshot_store_->SizeLimitsExceeded());
-
   snapshot_store_->EnforceSizeLimits(kTestUuid);
-  EXPECT_FALSE(snapshot_store_->SnapshotExists(kTestUuid));
-
   snapshot_store_->EnforceSizeLimits(kTestUuid2);
+  EXPECT_FALSE(snapshot_store_->SnapshotExists(kTestUuid));
   EXPECT_TRUE(snapshot_store_->SnapshotExists(kTestUuid2));
 
   ASSERT_TRUE(AsManaged(snapshot_store_->GetSnapshot(kTestUuid2)).LockArchive());
 
   EXPECT_THAT(AsMissing(snapshot_store_->GetSnapshot(kTestUuid)).PresenceAnnotations(),
-              UnorderedElementsAreArray({
-                  Pair("debug.snapshot.error", "garbage collected"),
-                  Pair("debug.snapshot.present", "false"),
-              }));
-
-  EXPECT_THAT(ReadGarbageCollectedSnapshots(), UnorderedElementsAreArray({
-                                                   kTestUuid,
-                                               }));
-}
-
-TEST_F(SnapshotStoreTest, Check_ArchivesMaxSizeIsEnforced) {
-  // Initialize the manager to only hold a single default snapshot archive.
-  SetUpSnapshotStore(StorageSize::Megabytes(1), StorageSize::Bytes(kDefaultArchiveKey.size()));
-
-  AddDefaultSnapshot();
-
-  EXPECT_FALSE(snapshot_store_->SizeLimitsExceeded());
-  snapshot_store_->EnforceSizeLimits(kTestUuid);
-  EXPECT_TRUE(snapshot_store_->SnapshotExists(kTestUuid));
-  ASSERT_TRUE(AsManaged(snapshot_store_->GetSnapshot(kTestUuid)).LockArchive());
-
-  const SnapshotUuid kTestUuid2 = kTestUuid + "2";
-  AddDefaultSnapshot(kTestUuid2);
-
-  EXPECT_TRUE(snapshot_store_->SizeLimitsExceeded());
-  snapshot_store_->EnforceSizeLimits(kTestUuid);
-  snapshot_store_->EnforceSizeLimits(kTestUuid2);
-  EXPECT_TRUE(snapshot_store_->SnapshotExists(kTestUuid));
-  EXPECT_TRUE(snapshot_store_->SnapshotExists(kTestUuid2));
-
-  ASSERT_TRUE(AsManaged(snapshot_store_->GetSnapshot(kTestUuid2)).LockArchive());
-
-  EXPECT_FALSE(AsManaged(snapshot_store_->GetSnapshot(kTestUuid)).LockArchive());
-  EXPECT_THAT(AsManaged(snapshot_store_->GetSnapshot(kTestUuid)).Annotations(),
-              UnorderedElementsAreArray({
-                  Pair("annotation.key.one", "annotation.value.one"),
-                  Pair("annotation.key.two", "annotation.value.two"),
-              }));
-  EXPECT_THAT(AsManaged(snapshot_store_->GetSnapshot(kTestUuid)).PresenceAnnotations(),
               UnorderedElementsAreArray({
                   Pair("debug.snapshot.error", "garbage collected"),
                   Pair("debug.snapshot.present", "false"),
@@ -313,7 +246,7 @@ TEST_F(SnapshotStoreTest, Check_ReadPreviouslyGarbageCollected) {
                                                    kTestUuid,
                                                }));
 
-  SetUpSnapshotStore(StorageSize::Megabytes(1u), StorageSize::Megabytes(1u));
+  SetUpSnapshotStore(StorageSize::Megabytes(1u));
   {
     auto snapshot = AsMissing(snapshot_store_->GetSnapshot(kTestUuid));
     EXPECT_THAT(snapshot.PresenceAnnotations(),

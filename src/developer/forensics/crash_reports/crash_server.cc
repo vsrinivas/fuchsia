@@ -237,22 +237,14 @@ std::map<std::string, std::string> CrashServer::PrepareAnnotations(const Report&
                                                                    const Snapshot& snapshot) {
   // Start with annotations from |report| and only add "presence" annotations.
   //
-  // * If |snapshot| is a MissingSnapshot, they contain potentially new information about why the
-  //   underlying data was dropped by the SnapshotManager.
-  //
-  // * If |snapshot| is a ManagedSnapshot, they're either empty or contain potentially new
-  //   information about why the underlying archive (the annotations are still present) was dropped
-  //   by the SnapshotManager.
+  // If |snapshot| is a MissingSnapshot, they contain potentially new information about why the
+  // underlying data was dropped by the SnapshotManager.
   auto annotations = report.Annotations();
 
   if (std::holds_alternative<MissingSnapshot>(snapshot)) {
     const auto& s = std::get<MissingSnapshot>(snapshot);
     annotations.Set(s.PresenceAnnotations());
-    return annotations.Raw();
   }
-
-  const auto& s = std::get<ManagedSnapshot>(snapshot);
-  annotations.Set(s.PresenceAnnotations());
 
   return annotations.Raw();
 }

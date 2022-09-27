@@ -20,14 +20,9 @@ namespace crash_reports {
 using SnapshotUuid = std::string;
 
 // Allows for the data from a single FIDL fuchsia.feedback.Snapshot to be shared amongst many
-// clients and managed by the SnapshotManager. The SnapshotManager may drop the underlying data at
-// any point, however if a reference is held (gotten from Annotations or LockArchive) the data
-// will not be deleted until the last reference is deleted.
-//
-// Attachments may be missing, but annotations are always guaranteed to be present.
-//
-// The SnapshotManager may add annotations as |presence_annotations_| that convey information about
-// how its management has affected the archive.
+// clients and managed by the SnapshotStore. The SnapshotStore may drop the underlying data at
+// any point, however if a reference is held (gotten from LockArchive) the data will not be deleted
+// until the last reference is deleted.
 class ManagedSnapshot {
  public:
   struct Archive {
@@ -36,35 +31,21 @@ class ManagedSnapshot {
     SizedData value;
   };
 
-  ManagedSnapshot(std::shared_ptr<const feedback::Annotations> annotations,
-                  std::shared_ptr<const feedback::Annotations> presence_annotations,
-                  std::weak_ptr<const Archive> archive = std::weak_ptr<const Archive>())
-      : annotations_(std::move(annotations)),
-        presence_annotations_(std::move(presence_annotations)),
-        archive_(std::move(archive)) {
-    FX_CHECK(annotations_ != nullptr) << "Annotations can't be null";
-    FX_CHECK(presence_annotations_ != nullptr) << "Presence annotations can't be null";
-  }
-
-  const feedback::Annotations& Annotations() const { return *annotations_; }
-
-  const feedback::Annotations& PresenceAnnotations() const { return *presence_annotations_; }
+  explicit ManagedSnapshot(std::weak_ptr<const Archive> archive) : archive_(std::move(archive)) {}
 
   std::shared_ptr<const Archive> LockArchive() const { return archive_.lock(); }
 
  private:
-  std::shared_ptr<const feedback::Annotations> annotations_;
-  std::shared_ptr<const feedback::Annotations> presence_annotations_;
   std::weak_ptr<const Archive> archive_;
 };
 
 // Replacement for a ManagedSnapshot when the Snapshot manager drops a snapshot.
 //
-// |annotations_| stores information the SnapshotManager can collect immiediately when it's
+// |annotations_| stores information the SnapshotStore can collect immiediately when it's
 // requested to get a snapshot, which may be dynamic and change with time. These data are things
 // like channel and uptime.
 //
-// |presence_annotations_| store information from the SnapshotManager on the circumstances that
+// |presence_annotations_| store information from the SnapshotStore on the circumstances that
 // caused the underlying data to be missing.
 class MissingSnapshot {
  public:
