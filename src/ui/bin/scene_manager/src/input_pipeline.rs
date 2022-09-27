@@ -75,6 +75,7 @@ pub async fn handle_input(
     node: &inspect::Node,
     display_ownership_event: zx::Event,
     focus_chain_publisher: FocusChainProviderPublisher,
+    _supported_input_devices: Vec<String>,
 ) -> Result<InputPipeline, Error> {
     let factory_reset_handler = FactoryResetHandler::new();
     let media_buttons_handler = MediaButtonsHandler::new();

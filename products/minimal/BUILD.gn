@@ -11,6 +11,12 @@ assert(
 product_assembly_configuration("minimal") {
   platform = {
     build_type = "user"
+    input = {
+      supported_input_devices = [
+        "button",
+        "touchscreen",
+      ]
+    }
   }
   product = {
   }

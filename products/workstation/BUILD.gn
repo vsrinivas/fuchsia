@@ -13,6 +13,13 @@ workstation_platform_config = {
   identity = {
     password_pinweaver = "required"
   }
+  input = {
+    supported_input_devices = [
+      "keyboard",
+      "mouse",
+      "touchscreen",
+    ]
+  }
 }
 
 workstation_product_config = {

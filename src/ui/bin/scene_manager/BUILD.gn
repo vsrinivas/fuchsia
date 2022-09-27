@@ -83,7 +83,7 @@ fuchsia_component("scene_manager_component") {
 # default config values are available.
 group("scene_manager_component_for_test") {
   deps = [
-    ":default_config",
+    ":config_for_test",
     ":scene_manager_component",
   ]
 }
@@ -100,9 +100,19 @@ fuchsia_structured_config_rust_lib("input_config_lib") {
   cm_label = ":manifest"
 }
 
-fuchsia_structured_config_values("default_config") {
+fuchsia_structured_config_values("config_for_test") {
+  visibility = [
+    ":config_for_test",
+    ":scene_manager_component_for_test",
+  ]
   cm_label = ":manifest"
   values = {
     idle_threshold_minutes = 15
+    supported_input_devices = [
+      "button",
+      "keyboard",
+      "mouse",
+      "touchscreen",
+    ]
   }
 }

@@ -246,6 +246,8 @@ async fn inner_main() -> Result<(), Error> {
     let inspect_node = Rc::new(inspector.root().create_child("input_pipeline"));
 
     // Start input pipeline.
+    let Config { idle_threshold_minutes, supported_input_devices } =
+        Config::take_from_startup_handle();
     if let Ok(input_pipeline) = input_pipeline::handle_input(
         use_flatland,
         scene_manager.clone(),
@@ -258,6 +260,7 @@ async fn inner_main() -> Result<(), Error> {
         &inspect_node.clone(),
         display_ownership,
         focus_chain_publisher,
+        supported_input_devices,
     )
     .await
     {
@@ -265,7 +268,6 @@ async fn inner_main() -> Result<(), Error> {
     }
 
     // Create Activity Manager.
-    let Config { idle_threshold_minutes } = Config::take_from_startup_handle();
     let activity_manager =
         ActivityManager::new(zx::Duration::from_minutes(idle_threshold_minutes as i64));
 

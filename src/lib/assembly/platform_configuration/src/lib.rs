@@ -126,13 +126,26 @@ pub fn define_repackaging(
 
     // Configure the input interaction activity service.
     const DEFAULT_IDLE_THRESHOLD_MINUTES: u64 = 15;
-    patches.package("scene_manager").component("meta/scene_manager.cm").field(
-        "idle_threshold_minutes",
-        config.platform.input.idle_threshold_minutes.unwrap_or(DEFAULT_IDLE_THRESHOLD_MINUTES),
-    );
     patches.package("input-pipeline").component("meta/input-pipeline.cm").field(
         "idle_threshold_minutes",
         config.platform.input.idle_threshold_minutes.unwrap_or(DEFAULT_IDLE_THRESHOLD_MINUTES),
+    );
+    let scene_manager_config = patches.package("scene_manager").component("meta/scene_manager.cm");
+    scene_manager_config.field(
+        "idle_threshold_minutes",
+        config.platform.input.idle_threshold_minutes.unwrap_or(DEFAULT_IDLE_THRESHOLD_MINUTES),
+    );
+
+    // Configure the supported input devices. Default to an empty list.
+    scene_manager_config.field(
+        "supported_input_devices",
+        config
+            .platform
+            .input
+            .supported_input_devices
+            .iter()
+            .filter_map(|d| serde_json::to_value(d).ok())
+            .collect::<serde_json::Value>(),
     );
 
     Ok(patches.inner)

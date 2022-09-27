@@ -12,6 +12,12 @@ product_assembly_configuration("core") {
   testonly = true
   platform = {
     build_type = "eng"
+    input = {
+      supported_input_devices = [
+        "button",
+        "touchscreen",
+      ]
+    }
   }
   product = {
   }

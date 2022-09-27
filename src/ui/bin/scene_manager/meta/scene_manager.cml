@@ -136,5 +136,13 @@
     ],
     config: {
         idle_threshold_minutes: { type: "uint64" },
+        supported_input_devices: {
+            type: "vector",
+            element: {
+                type: "string",
+                max_size: 12,
+            },
+            max_count: 6,
+        },
     },
 }

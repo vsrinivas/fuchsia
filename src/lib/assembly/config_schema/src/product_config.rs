@@ -139,6 +139,21 @@ pub struct PlatformInputConfig {
     /// input activity for the system to become idle.
     #[serde(default)]
     pub idle_threshold_minutes: Option<u64>,
+
+    /// The relevant input device bindings from which to install appropriate
+    /// input handlers. Default to an empty set.
+    #[serde(default)]
+    pub supported_input_devices: Vec<InputDeviceType>,
+}
+
+/// Options for input devices that may be supported.
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "lowercase", deny_unknown_fields)]
+pub enum InputDeviceType {
+    Button,
+    Keyboard,
+    Mouse,
+    Touchscreen,
 }
 
 /// Options for features that may either be forced on, forced off, or allowed
