@@ -1,0 +1,30 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+load("@legacy_ninja_build_outputs//:build_args.bzl", "use_vbmeta")
+load("@rules_fuchsia_experimental//fuchsia:defs.bzl", "fuchsia_image_configuration")
+
+package(default_visibility = ["//build/bazel/assembly:__pkg__"])
+
+fuchsia_image_configuration(
+    name = "fuchsia",
+    # NOTE: files here are not used in template substitution, instead they are
+    # only used to propagate inputs.
+    files = {
+        "@legacy_ninja_build_outputs//:fuchsia.bazel_images_config_inputs/key.pem": "NOT_USED_IN_TEMPLATE",
+        "@legacy_ninja_build_outputs//:fuchsia.bazel_images_config_inputs/key_metadata.bin": "NOT_USED_IN_TEMPLATE",
+    } if use_vbmeta else {},
+    template = "@legacy_ninja_build_outputs//:fuchsia.bazel_images_config_inputs/images_config.json",
+)
+
+fuchsia_image_configuration(
+    name = "bringup",
+    # NOTE: files here are not used in template substitution, instead they are
+    # only used to propagate inputs.
+    files = {
+        "@legacy_ninja_build_outputs//:bringup.bazel_images_config_inputs/key.pem": "NOT_USED_IN_TEMPLATE",
+        "@legacy_ninja_build_outputs//:bringup.bazel_images_config_inputs/key_metadata.bin": "NOT_USED_IN_TEMPLATE",
+    } if use_vbmeta else {},
+    template = "@legacy_ninja_build_outputs//:bringup.bazel_images_config_inputs/images_config.json",
+)

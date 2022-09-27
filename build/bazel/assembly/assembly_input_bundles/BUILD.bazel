@@ -1,0 +1,25 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+load("@rules_fuchsia_experimental//fuchsia/private:assembly_bundle.bzl", "assembly_bundle")
+
+package(default_visibility = ["//build/bazel/assembly:__pkg__"])
+
+assembly_bundle(
+    name = "platform",
+    files = "@legacy_ninja_build_outputs//:bazel_platform_aibs",
+    root = "@legacy_ninja_build_outputs//:fuchsia_platform_aibs/root",
+)
+
+assembly_bundle(
+    name = "legacy_fuchsia",
+    files = "@legacy_ninja_build_outputs//:fuchsia.bazel_legacy_aib",
+    root = "@legacy_ninja_build_outputs//:obj/build/images/fuchsia/fuchsia/fuchsia.bazel_legacy_aib/root",
+)
+
+assembly_bundle(
+    name = "legacy_bringup",
+    files = "@legacy_ninja_build_outputs//:bringup.bazel_legacy_aib",
+    root = "@legacy_ninja_build_outputs//:obj/build/images/bringup/bringup/bringup.bazel_legacy_aib/root",
+)

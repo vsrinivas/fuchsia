@@ -1,0 +1,109 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bazel/bazel_inputs.gni")
+
+# Modify and group generated images configuration and referenced key files (if
+# any) so they are ready to be consumed by Bazel.
+#
+# Parameters
+#
+#  use_vbmeta (required)
+#    Whether a vbmeta image is being generated.
+#    Type: bool
+#
+#  images_config (required)
+#    The generated images_config to use.
+#    Type: path
+#
+#  images_config_target (required)
+#    The target generating images_config above.
+#    Type: label
+#
+#  avb_key (required if use_vbmeta is true)
+#    The key used to sign VBMETA and images for AVB.
+#    Type: path
+#
+#  avb_atx_metadata (required if use_vbmeta is true)
+#    AVB metadata which is ued to validate public key.
+#    Type: path
+#
+#  testonly
+#  visibility
+#
+template("bazel_assembly_images_config_inputs") {
+  assert(defined(invoker.use_vbmeta), "use_vbmeta is required")
+  assert(defined(invoker.images_config), "images_config is required")
+  assert(defined(invoker.images_config_target),
+         "images_config_target is required")
+
+  _images_config_out_dir = "${target_gen_dir}/${target_name}"
+  _images_config_target = "${target_name}.images_config"
+
+  if (invoker.use_vbmeta) {
+    assert(defined(invoker.avb_key),
+           "avb_key is required when use_vbmeta is true")
+    assert(defined(invoker.avb_atx_metadata),
+           "avb_atx_metadata is required when use_vbmeta is true")
+
+    _copy_key_target = "${target_name}.copy_key"
+    copy(_copy_key_target) {
+      sources = [ invoker.avb_key ]
+      outputs = [ "${_images_config_out_dir}/key.pem" ]
+    }
+
+    _copy_key_metadata_target = "${target_name}.copy_key_metadata"
+    copy(_copy_key_metadata_target) {
+      sources = [ invoker.avb_atx_metadata ]
+      outputs = [ "${_images_config_out_dir}/key_metadata.bin" ]
+    }
+
+    action(_images_config_target) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      script = "//build/bazel/assembly/rebase_images_config_key_paths.py"
+      inputs = [ invoker.images_config ]
+      _output = "${_images_config_out_dir}/images_config.json"
+      outputs = [ _output ]
+      args = [
+        "--images-config",
+        rebase_path(invoker.images_config, root_build_dir),
+        "--key-dir",
+        get_path_info(_images_config_out_dir, "file"),
+        "--output",
+        rebase_path(_output, root_build_dir),
+      ]
+      deps = [
+        ":${_copy_key_metadata_target}",
+        ":${_copy_key_target}",
+        ":${invoker.images_config_target}",
+      ]
+    }
+  } else {
+    copy(_images_config_target) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      sources = [ invoker.images_config ]
+      outputs = [ "${_images_config_out_dir}/images_config.json" ]
+      deps = [ ":${invoker.images_config_target}" ]
+    }
+  }
+
+  bazel_input_resource_directory(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    source_dir = _images_config_out_dir
+    dest_dir = target_name
+    deps = [ ":${_images_config_target}" ]
+  }
+}

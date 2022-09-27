@@ -1394,10 +1394,16 @@ group("package_archive") {
 # time.
 #
 # Targets that need to depend on the Bazel workspace should instead depend
-# directly on //build/bazel:generate_main_workspace.
+# directly on //build/bazel:generate_main_workspace and other targets
+# instead (e.g. see the definition of `bazel_build_action()`).
 #
 if (current_toolchain == default_toolchain) {
   group("bazel_workspace") {
-    deps = [ "//build/bazel:generate_main_workspace" ]
+    deps = [
+      "//build/bazel:generate_main_workspace",
+
+      # For the @fuchsia_sdk Bazel repository content.
+      "//sdk:core",
+    ]
   }
 }

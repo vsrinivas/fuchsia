@@ -1,0 +1,33 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+load("@rules_fuchsia_experimental//fuchsia:defs.bzl", "fuchsia_product_configuration")
+
+package(default_visibility = ["//build/bazel/assembly:__pkg__"])
+
+fuchsia_product_configuration(name = "bringup")
+
+fuchsia_product_configuration(
+    name = "minimal",
+    build_type = "eng",
+
+    # TODO(jayzhuang): Add the following fields when they are supported.
+    # base_feature_set = "minimal"
+)
+
+fuchsia_product_configuration(
+    name = "core",
+    build_type = "eng",
+)
+
+fuchsia_product_configuration(
+    name = "workstation_eng",
+    build_type = "eng",
+    session_url = "fuchsia-pkg://fuchsia.com/workstation_session#meta/workstation_routing.cm",
+
+    # TODO(jayzhuang): Add the following fields when they are supported.
+    # password_pinweaver = "allowed"
+)
+
+# TODO(https://fxbug.dev/103248): Define targets for workstation_user and workstation_userdebug.

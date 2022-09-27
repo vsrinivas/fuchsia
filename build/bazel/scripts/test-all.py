@@ -29,6 +29,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import json
 
 _SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -45,6 +46,16 @@ def get_fx_build_dir(fuchsia_dir):
         build_dir = 'out/default'
 
     return os.path.join(fuchsia_dir, build_dir)
+
+
+def get_product_name(fuchsia_build_dir):
+    with open(os.path.join(fuchsia_build_dir, 'args.json')) as f:
+        args = json.load(f)
+        if 'build_info_product' not in args:
+            raise ValueError(
+                "build_info_product not found in args.json, can't determine product name"
+            )
+        return args['build_info_product']
 
 
 class CommandLauncher(object):
@@ -343,6 +354,14 @@ def main():
     if not os.path.exists(api_version_path):
         print('ERROR: Missing @fuchsia_sdk file: ' + api_version_path)
         return 1
+
+    product_name = get_product_name(build_dir)
+    log(f'bazel platform assembly check for {product_name}.')
+    run_fx_command(
+        [
+            'bazel', 'build', '--spawn_strategy=local',
+            f'//build/bazel/assembly:{product_name}'
+        ])
 
     log('Done!')
     return 0

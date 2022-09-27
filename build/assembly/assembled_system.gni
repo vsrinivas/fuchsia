@@ -7,6 +7,8 @@ import("//build/assembly/generated_image_assembly_config.gni")
 import("//build/assembly/generated_images_config.gni")
 import("//build/assembly/hermetic_inputs_for_image_assembly.gni")
 import("//build/assembly/legacy_assembly_input_bundle.gni")
+import("//build/bazel/assembly/bazel_assembly_images_config_inputs.gni")
+import("//build/bazel/assembly/bazel_assembly_input_bundle.gni")
 import("//build/component/component_id_index.gni")
 import("//build/config.gni")
 import("//build/drivers/driver_manifest.gni")
@@ -329,6 +331,9 @@ template("assembled_system") {
     foreach(name, _platform_aib_names) {
       platform_common_aibs += [ "//bundles/assembly:${name}" ]
     }
+
+    bazel_images_config_inputs = "${image_name}.bazel_images_config_inputs"
+    bazel_legacy_aib = "${image_name}.bazel_legacy_aib"
   }
 
   # Intermediate files produced for Image Assembly.
@@ -642,6 +647,16 @@ template("assembled_system") {
     if (defined(invoker.assembly_include_account_in_fvm)) {
       empty_account_partition = invoker.assembly_include_account_in_fvm
     }
+  }
+
+  bazel_assembly_images_config_inputs(labels.bazel_images_config_inputs) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    images_config = files.images_config
+    images_config_target = labels.images_config
   }
 
   check_production_tag = false
@@ -1134,6 +1149,21 @@ template("assembled_system") {
                "static_pkgs_goldens",
                "route_sources_config",
              ])
+
+  _bazel_legacy_aib_output_dir =
+      rebase_path("${files.outdir}/${labels.bazel_legacy_aib}", root_build_dir)
+  bazel_assembly_input_bundle(labels.bazel_legacy_aib) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    # TODO(jayzhuang): This is symlinking more than what we need. This is
+    # necessary because we need to create a `root` file in this dir, while we
+    # only need contents from the `legacy` subdir.
+    #
+    # Change once https://fxrev.dev/728647 has landed.
+    source_dir = "${files.outdir}"
+    dest_dir = "${_bazel_legacy_aib_output_dir}"
+    deps = [ ":${labels.legacy_assembly_input_bundle}" ]
+  }
 
   group(target_name) {
     forward_variables_from(invoker,

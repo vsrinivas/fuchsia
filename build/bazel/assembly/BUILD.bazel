@@ -1,0 +1,39 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+load(
+    "@rules_fuchsia_experimental//fuchsia:defs.bzl",
+    "fuchsia_product_image",
+)
+
+fuchsia_product_image(
+    name = "bringup",
+    image = "//build/bazel/assembly/images_configurations:bringup",
+    legacy_aib = "//build/bazel/assembly/assembly_input_bundles:legacy_bringup",
+    platform_aibs = "//build/bazel/assembly/assembly_input_bundles:platform",
+    product_config = "//build/bazel/assembly/product_configurations:bringup",
+)
+
+fuchsia_product_image(
+    name = "minimal",
+    image = "//build/bazel/assembly/images_configurations:fuchsia",
+    legacy_aib = "//build/bazel/assembly/assembly_input_bundles:legacy_fuchsia",
+    platform_aibs = "//build/bazel/assembly/assembly_input_bundles:platform",
+    product_config = "//build/bazel/assembly/product_configurations:minimal",
+)
+
+fuchsia_product_image(
+    name = "core",
+    image = "//build/bazel/assembly/images_configurations:fuchsia",
+    legacy_aib = "//build/bazel/assembly/assembly_input_bundles:legacy_fuchsia",
+    platform_aibs = "//build/bazel/assembly/assembly_input_bundles:platform",
+    product_config = "//build/bazel/assembly/product_configurations:core",
+)
+
+fuchsia_product_image(
+    name = "workstation_eng",
+    image = "//build/bazel/assembly/images_configurations:fuchsia",
+    legacy_aib = "//build/bazel/assembly/assembly_input_bundles:legacy_fuchsia",
+    platform_aibs = "//build/bazel/assembly/assembly_input_bundles:platform",
+    product_config = "//build/bazel/assembly/product_configurations:workstation_eng",
+)
