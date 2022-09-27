@@ -82,10 +82,14 @@ mod tests {
 
     #[test]
     fn test_ff1() {
-        // These values have been compared against other ff1 implementations.
+        // These values have been compared against the implementation in the Rust binary-ff1 crate.
+        // The rust binary-ff1 crate will produce the same results if the bits in each byte are
+        // reversed on the input and likewise on the output.
         let ff1 = Ff1::new(&UnwrappedKey::new([0; 32]));
         assert_eq!(ff1.encrypt(1), 0x27c9468);
         assert_eq!(ff1.encrypt(999), 0x87a92dd5);
+        assert_eq!(ff1.encrypt(11471928), 0x70c679b1);
+        assert_eq!(ff1.encrypt(318689559), 0xdec5199a);
 
         let ff1 = Ff1::new(&UnwrappedKey::new([
             1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
@@ -93,6 +97,18 @@ mod tests {
         ]));
         assert_eq!(ff1.encrypt(1), 0x92fac14e);
         assert_eq!(ff1.encrypt(999), 0x6d2cd513);
+        assert_eq!(ff1.encrypt(11471928), 0xdb672d05);
+        assert_eq!(ff1.encrypt(318689559), 0x66d58b7e);
+
+        let ff1 = Ff1::new(&UnwrappedKey::new([
+            0xf8, 0x24, 0x6b, 0x2c, 0x38, 0x39, 0xfa, 0x6d, 0x98, 0xe8, 0x56, 0x17, 0x0c, 0xdd,
+            0xf4, 0xf1, 0x1b, 0xa5, 0xa6, 0xcb, 0x07, 0x06, 0x58, 0x4c, 0x2a, 0x63, 0x9d, 0x32,
+            0x22, 0x80, 0xe6, 0xf1,
+        ]));
+        assert_eq!(ff1.encrypt(1), 0xfc049c96);
+        assert_eq!(ff1.encrypt(999), 0xbe10a02a);
+        assert_eq!(ff1.encrypt(11471928), 0xe1290afd);
+        assert_eq!(ff1.encrypt(318689559), 0xf4fcf414);
 
         for _ in 0..100 {
             let v = rand::random();

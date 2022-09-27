@@ -114,9 +114,10 @@ pub struct WrappedKey {
     /// unwrapping.
     pub wrapping_key_id: u64,
     /// AES 256 requires a 512 bit key, which is made of two 256 bit keys, one for the data and one
-    /// for the tweak.  Both those keys are derived from the single 256 bit key we have here.
-    /// Since the key is wrapped with AES-GCM-SIV, there are an additional 16 bytes paid per key (so
-    /// the actual key material is 32 bytes once unwrapped).
+    /// for the tweak.  It is safe to use the same 256 bit key for both (see
+    /// https://csrc.nist.gov/CSRC/media/Projects/Block-Cipher-Techniques/documents/BCM/Comments/XTS/follow-up_XTS_comments-Ball.pdf)
+    /// which is what we do here.  Since the key is wrapped with AES-GCM-SIV, there are an
+    /// additional 16 bytes paid per key (so the actual key material is 32 bytes once unwrapped).
     pub key: WrappedKeyBytes,
 }
 
@@ -203,6 +204,9 @@ impl XtsCipherSet {
     }
 }
 
+/// A thin wrapper around a ChaCha20 stream cipher.  This will use a zero nonce. **NOTE**: Great
+/// care must be taken not to encrypt different plaintext with the same key and offset (even across
+/// multiple boots), so consider if this suits your purpose before using it.
 pub struct StreamCipher(ChaCha20);
 
 impl StreamCipher {
