@@ -335,23 +335,6 @@
                     },
                 },
                 {
-                    using_node: "/core/system-metrics-logger",
-                    capability: "fuchsia.device.Controller",
-                    error: {
-                        error: {
-                            analyzer_model_error: {
-                                routing_error: {
-                                    use_from_parent_not_found: {
-                                        moniker: "/core/system-metrics-logger",
-                                        capability_id: "fuchsia.device.Controller",
-                                    },
-                                },
-                            },
-                        },
-                        message: "`/core/system-metrics-logger` tried to use `fuchsia.device.Controller` from its parent, but the parent does not offer that capability. Note, use clauses in CML default to using from parent.",
-                    },
-                },
-                {
                     capability: "fuchsia.pkg.PackageCache",
                     error: {
                         error: {

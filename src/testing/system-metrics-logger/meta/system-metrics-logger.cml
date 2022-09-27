@@ -13,7 +13,6 @@
     use: [
         {
             protocol: [
-                "fuchsia.device.Controller",
                 "fuchsia.kernel.Stats",
                 "fuchsia.tracing.provider.Registry",
             ],
