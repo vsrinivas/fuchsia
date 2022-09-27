@@ -100,7 +100,7 @@ To prepare a bootable USB drive, do the following:
 1. Create a bootable USB drive:
 
    ```posix-terminal
-   fx mkinstaller -v --new-installer {{ "<var>" }}PATH_TO_USB_DRIVE{{ "</var>" }}
+   fx mkinstaller -v {{ "<var>" }}PATH_TO_USB_DRIVE{{ "</var>" }}
    ```
 
    Replace `PATH_TO_USB_DRIVE` with the path to the USB drive from the step
@@ -109,14 +109,14 @@ To prepare a bootable USB drive, do the following:
    The example command below selects the `/dev/sda` path:
 
    ```none {:.devsite-disable-click-to-copy}
-   $ fx mkinstaller -v --new-installer /dev/sda
+   $ fx mkinstaller -v /dev/sda
    ```
 
    When finished, the command prints output similar to the following
    in the end:
 
    ```none {:.devsite-disable-click-to-copy}
-   $ fx mkinstaller -v --new-installer /dev/sda
+   $ fx mkinstaller -v /dev/sda
    mkinstaller: WARNING: Changing ownership of /dev/sda to alice
    [sudo] password for alice:
    ...
@@ -161,9 +161,7 @@ do the following:
 ## 5. Install Fuchsia on the NUC {#install-fuchsia}
 
 Use the [bootable USB drive](#prepare-usb) to boot your NUC into
-the Fuchsia installer. It then flashes the
-[Workstation prebuilt image](#build-fuchsia) from your workstation
-to the NUC to install Fuchsia for the first time.
+the Fuchsia installer. It then installs the Workstation image (which was built in the [Build Fuchsia](#build-fuchsia) section) to the NUC.
 
 To install Fuchsia on your NUC, do the following:
 
@@ -177,10 +175,15 @@ To install Fuchsia on your NUC, do the following:
 
 1. Press **Enter** on other prompts to continue.
 
-   When the installation is finished, the screen displays
-   `Success! Please restart your computer`.
+1. Once the installation completes, unplug the USB drive from the NUC device.
 
-1. Unplug the USB drive from the NUC device.
+1. (Optional) If you plan on using this NUC device for Fuchsia development,
+   complete the steps in the
+   [Flash a new Fuchsia image to the NUC](#flash-fuchsia) section in Appendices.
+
+   These steps will
+   upload [Fuchsia-specific SSH keys][fuchsia-ssh-keys] to the NUC device, which
+   then enables other useful [`ffx` workflows][ffx-workflows].
 
 1. Reboot the NUC device.
 
@@ -191,13 +194,6 @@ To install Fuchsia on your NUC, do the following:
 Later, if you need to install a new version of Fuchsia (for instance, after
 re-building a new Workstation image using `fx build`), see the
 [Flash a new Fuchsia image to the NUC](#flash-fuchsia) section in Appendices.
-
-Important: If you plan on using this NUC device for Fuchsia development,
-you must complete the steps in  the
-[Flash a new Fuchsia image to the NUC](#flash-fuchsia) section at least once
-after installing Fuchsia from a bootable USB drive. Running `fx flash` will
-upload [Fuchsia-specific SSH keys][fuchsia-ssh-keys] to the NUC device, which
-then enables other useful [`ffx` workflows][ffx-workflows].
 
 ## Appendices
 
@@ -260,6 +256,12 @@ To flash a Fuchsia image to your NUC, do the following:
 
    ```posix-terminal
    fx flash
+   ```
+
+   You may need to specify the name of the NUC device explicitly, for example:
+
+   ```posix-terminal
+   fx flash -s fuchsia-54b2-0389-644b
    ```
 
    When finished, the NUC reboots and starts running the new Fuchsia image.
