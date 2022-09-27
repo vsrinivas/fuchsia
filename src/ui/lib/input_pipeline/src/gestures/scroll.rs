@@ -457,13 +457,24 @@ impl gesture_arena::Winner for Winner {
         match u8::try_from(event.contacts.len()).unwrap_or(u8::MAX) {
             0 => ProcessNewEventResult::EndGesture(
                 EndGestureEvent::NoEvent,
-                Reason::Basic("wanted 2 contacts, got 0"),
+                Reason::DetailedUint(DetailedReasonUint {
+                    criterion: "num_contacts",
+                    min: Some(2),
+                    max: Some(2),
+                    actual: 0,
+                }),
             ),
             2 => {
-                if event.pressed_buttons.len() > 0 {
+                let num_pressed_buttons = event.pressed_buttons.len();
+                if num_pressed_buttons > 0 {
                     return ProcessNewEventResult::EndGesture(
                         EndGestureEvent::UnconsumedEvent(event),
-                        Reason::Basic("wanted 0 pressed buttons"),
+                        Reason::DetailedUint(DetailedReasonUint {
+                            criterion: "num_pressed_buttons",
+                            min: None,
+                            max: Some(0),
+                            actual: num_pressed_buttons,
+                        }),
                     );
                 }
 
@@ -513,11 +524,21 @@ impl gesture_arena::Winner for Winner {
             }
             1 => ProcessNewEventResult::EndGesture(
                 EndGestureEvent::UnconsumedEvent(event),
-                Reason::Basic("wanted 2 contacts, got 1"),
+                Reason::DetailedUint(DetailedReasonUint {
+                    criterion: "num_contacts",
+                    min: Some(2),
+                    max: Some(2),
+                    actual: 1,
+                }),
             ),
-            3.. => ProcessNewEventResult::EndGesture(
+            num_contacts @ 3.. => ProcessNewEventResult::EndGesture(
                 EndGestureEvent::UnconsumedEvent(event),
-                Reason::Basic("wanted 2 contacts, got >= 3"),
+                Reason::DetailedUint(DetailedReasonUint {
+                    criterion: "num_contacts",
+                    min: Some(2),
+                    max: Some(2),
+                    actual: usize::from(num_contacts),
+                }),
             ),
         }
     }
