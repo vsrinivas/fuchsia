@@ -134,7 +134,7 @@ impl MockDriverManager {
             {
                 info!("MockDriverManager: received SetTerminationSystemState request: {:?}", state);
                 *current_state.write() = Some(state);
-                responder.send(&mut Ok(())).expect("Failed to send FIDL response");
+                let _ = responder.send(&mut Ok(()));
             }
         })
         .detach();
