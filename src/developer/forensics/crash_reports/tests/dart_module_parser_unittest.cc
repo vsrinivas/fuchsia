@@ -21,9 +21,9 @@ std::string BuildStackTrace(std::optional<std::string> build_id,
                             std::optional<std::string> isolate_dso_base,
                             std::vector<std::string> stack_trace_addrs) {
   std::string stack_trace =
-      R"(Warning: This VM has been configured to produce stack traces that violate the Dart standard.
-*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+      R"(*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
 pid: 3436, tid: 547903581360, name io.flutter.ui
+os: fuchsia arch: x86 comp: no sim: no
 )";
 
   if (build_id.has_value()) {
@@ -144,9 +144,7 @@ TEST(DartModulesParserTest, MissingStackTrace) {
 }
 
 TEST(DartModulesParserTest, DoesNotMatchUnsymbolicatedStackTrace) {
-  const auto [is_unsymbolicated, modules] = ParseDartModulesFromStackTrace(
-      R"(Warning: This VM has been configured to produce stack traces that violate the Dart standard.
-NOT UNSYMBOLICATED)");
+  const auto [is_unsymbolicated, modules] = ParseDartModulesFromStackTrace(R"(NOT UNSYMBOLICATED)");
   EXPECT_FALSE(is_unsymbolicated);
   EXPECT_FALSE(modules);
 }

@@ -28,11 +28,11 @@ namespace {
 constexpr std::string_view kDartModulesName = "<_>";
 
 // Unsymbolicated stack traces have 16 groups of "***" on the second line.
-static const re2::RE2* const kUnsymbolicatedDartStackTraceRegex =
-    new re2::RE2(R"((?:\*{3}\s{0,1}){16})");
+constexpr std::string_view kUnsymbolicatedDartStackTraceHeader =
+    "*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***";
 
 bool MatchesUnsymbolicatedDartStackTrace(const std::vector<std::string>& lines) {
-  return lines.size() >= 2 && re2::RE2::FullMatch(lines[1], *kUnsymbolicatedDartStackTraceRegex);
+  return std::find(lines.begin(), lines.end(), kUnsymbolicatedDartStackTraceHeader) != lines.end();
 }
 
 // Regexes and functions for extracting information from unsymbolicated Dart stack traces.
