@@ -32,6 +32,28 @@ pub enum Key {
 /// closed prior to locking the `StorageManager`.
 /// Note: The ?Send is necessary to allow implementations to make FIDL calls as
 /// the FIDL bindings don't require threadsafe inputs.
+///
+///       unlock
+///  ┌───────────────┐
+///  │               ▼
+///  │             ┌─────────────────────────────────────────┐
+///  │    ┌──────▶ │                AVAILABLE                │
+///  │    │        └─────────────────────────────────────────┘
+///  │    │          │                │           ▲
+///  │    │ unlock   │ lock           │           │ provision
+///  │    │          ▼                │           │
+///  │    │        ┌───────────────┐  │           │
+///  │    └─────── │    LOCKED     │  │           │
+///  │             └───────────────┘  │           │
+///  │               │                │ destroy   │
+///  │               │ destroy        │           │
+///  │               ▼                │           │
+///  │             ┌───────────────┐  │           │
+///  └──────────── │ UNINITIALIZED │ ◀┘           │
+///                └───────────────┘              │
+///                  │                            │
+///                  └────────────────────────────┘
+///
 #[async_trait(?Send)]
 pub trait StorageManager: Sized {
     /// Provisions a new storage instance.  The same `Key` must be supplied
