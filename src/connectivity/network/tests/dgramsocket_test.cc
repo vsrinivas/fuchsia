@@ -3235,6 +3235,128 @@ INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgIpv6PktInfoTests,
                            return std::string(enableCmsgReceiveTimeToString(info.param));
                          });
 
+class NetDatagramSocketsMultipleIpv6CmsgsTest
+    : public NetDatagramSocketsCmsgRecvTestBase,
+      public testing::TestWithParam<EnableCmsgReceiveTime> {
+ protected:
+  void SetUp() override {
+    ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(SocketDomain::IPv6(), GetParam()));
+  }
+
+  void EnableReceivingCmsg() const override {
+    // Enable receiving IPV6_HOPLIMIT control message.
+    constexpr int kOne = 1;
+    ASSERT_EQ(setsockopt(bound().get(), SOL_IPV6, IPV6_RECVHOPLIMIT, &kOne, sizeof(kOne)), 0)
+        << strerror(errno);
+
+    // Enable receiving IPV6_PKTINFO control message.
+    ASSERT_EQ(setsockopt(bound().get(), SOL_IPV6, IPV6_RECVPKTINFO, &kOne, sizeof(kOne)), 0)
+        << strerror(errno);
+  }
+
+  void TearDown() override {
+    if (!IsSkipped()) {
+      EXPECT_NO_FATAL_FAILURE(TearDownDatagramSockets());
+    }
+  }
+};
+
+TEST_P(NetDatagramSocketsMultipleIpv6CmsgsTest, SendCmsg) {
+  char send_buf[] = "hello";
+  size_t buf_len = sizeof(send_buf);
+
+  iovec iov = {
+      .iov_base = send_buf,
+      .iov_len = buf_len,
+  };
+
+  constexpr int kHopLimit = 42;
+  const unsigned int lo_ifindex = if_nametoindex("lo");
+  EXPECT_NE(lo_ifindex, 0u) << strerror(errno);
+  const in6_pktinfo pktinfo = {
+      .ipi6_addr = IN6ADDR_LOOPBACK_INIT,
+      .ipi6_ifindex = lo_ifindex,
+  };
+
+  // This buffer needs to be zero-initialized for CMSG_NXTHDR.
+  // See CMSG_NXTHDR in https://man7.org/linux/man-pages/man3/cmsg.3.html
+  char control[CMSG_SPACE(sizeof(kHopLimit)) + CMSG_SPACE(sizeof(pktinfo))] = {};
+  msghdr msg = {
+      .msg_iov = &iov,
+      .msg_iovlen = 1,
+      .msg_control = control,
+      .msg_controllen = sizeof(control),
+  };
+
+  cmsghdr* cmsg = CMSG_FIRSTHDR(&msg);
+  *cmsg = {
+      .cmsg_len = CMSG_LEN(sizeof(kHopLimit)),
+      .cmsg_level = SOL_IPV6,
+      .cmsg_type = IPV6_HOPLIMIT,
+  };
+  memcpy(CMSG_DATA(cmsg), &kHopLimit, sizeof(kHopLimit));
+
+  cmsg = CMSG_NXTHDR(&msg, cmsg);
+  *cmsg = {
+      .cmsg_len = CMSG_LEN(sizeof(pktinfo)),
+      .cmsg_level = SOL_IPV6,
+      .cmsg_type = IPV6_PKTINFO,
+  };
+  memcpy(CMSG_DATA(cmsg), &pktinfo, sizeof(pktinfo));
+
+  ASSERT_EQ(sendmsg(connected().get(), &msg, 0), ssize_t(buf_len)) << strerror(errno);
+
+  // This buffer needs to be zero-initialized for CMSG_NXTHDR.
+  char recv_control[CMSG_SPACE(sizeof(kHopLimit)) + CMSG_SPACE(sizeof(pktinfo))] = {};
+  ASSERT_NO_FATAL_FAILURE(ReceiveAndCheckMessage(
+      send_buf, buf_len, recv_control, sizeof(recv_control), [kHopLimit, pktinfo](msghdr& msghdr) {
+        EXPECT_EQ(msghdr.msg_controllen,
+                  CMSG_SPACE(sizeof(kHopLimit) + CMSG_SPACE(sizeof(pktinfo))));
+        int hoplimit_count = 0;
+        int pktinfo_count = 0;
+        for (cmsghdr* cmsg = CMSG_FIRSTHDR(&msghdr); cmsg != nullptr;
+             cmsg = CMSG_NXTHDR(&msghdr, cmsg)) {
+          const cmsghdr& cmsg_ref = *cmsg;
+          EXPECT_EQ(cmsg_ref.cmsg_level, SOL_IPV6);
+          switch (cmsg_ref.cmsg_type) {
+            case IPV6_HOPLIMIT: {
+              EXPECT_EQ(cmsg_ref.cmsg_len, CMSG_LEN(sizeof(kHopLimit)));
+              int recv_hoplimit;
+              memcpy(&recv_hoplimit, CMSG_DATA(cmsg), sizeof(recv_hoplimit));
+              EXPECT_EQ(recv_hoplimit, kHopLimit);
+              hoplimit_count++;
+              break;
+            }
+            case IPV6_PKTINFO: {
+              EXPECT_EQ(cmsg_ref.cmsg_len, CMSG_LEN(sizeof(pktinfo)));
+              in6_pktinfo recv_pktinfo;
+              memcpy(&recv_pktinfo, CMSG_DATA(cmsg), sizeof(recv_pktinfo));
+              EXPECT_EQ(recv_pktinfo.ipi6_ifindex, pktinfo.ipi6_ifindex);
+              char buf[INET6_ADDRSTRLEN];
+              ASSERT_TRUE(IN6_IS_ADDR_LOOPBACK(&recv_pktinfo.ipi6_addr))
+                  << "unexpected addr: "
+                  << inet_ntop(AF_INET6, &recv_pktinfo.ipi6_addr, buf, sizeof(buf));
+              pktinfo_count++;
+              break;
+            }
+            default:
+              FAIL() << "unexpected cmsg type: " << cmsg_ref.cmsg_type;
+              break;
+          }
+        }
+        EXPECT_EQ(hoplimit_count, 1);
+        EXPECT_EQ(pktinfo_count, 1);
+      }));
+}
+
+INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsMultipleIpv6CmsgsTests,
+                         NetDatagramSocketsMultipleIpv6CmsgsTest,
+                         testing::Values(EnableCmsgReceiveTime::AfterSocketSetup,
+                                         EnableCmsgReceiveTime::BetweenSendAndRecv),
+                         [](const auto info) {
+                           return std::string(enableCmsgReceiveTimeToString(info.param));
+                         });
+
 template <typename Instance, typename Arg>
 void ValidateLinearizedSendSemantics(const Arg& arg) {
   // NOTE: our goal here is to exercise the potential race condition in which a setting

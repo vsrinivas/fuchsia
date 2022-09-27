@@ -231,7 +231,7 @@ int16_t ParseIpLevelControlMessage(fsocket::wire::IpSendControlData& fidl_ip, in
   switch (type) {
     case IP_TTL: {
       int ttl;
-      if (len != sizeof(ttl)) {
+      if (len != CMSG_LEN(sizeof(ttl))) {
         return EINVAL;
       }
       memcpy(&ttl, data, sizeof(ttl));
@@ -260,7 +260,7 @@ int16_t ParseIpv6LevelControlMessage(fsocket::wire::Ipv6SendControlData& fidl_ip
   switch (type) {
     case IPV6_HOPLIMIT: {
       int hoplimit;
-      if (data_len != sizeof(hoplimit)) {
+      if (data_len != CMSG_LEN(sizeof(hoplimit))) {
         return EINVAL;
       }
       memcpy(&hoplimit, data, sizeof(hoplimit));
@@ -277,7 +277,7 @@ int16_t ParseIpv6LevelControlMessage(fsocket::wire::Ipv6SendControlData& fidl_ip
     }
     case IPV6_PKTINFO: {
       in6_pktinfo pktinfo;
-      if (data_len != sizeof(pktinfo)) {
+      if (data_len != CMSG_LEN(sizeof(pktinfo))) {
         return EINVAL;
       }
       memcpy(&pktinfo, data, sizeof(pktinfo));
@@ -350,35 +350,25 @@ int16_t ParseControlMessage(fpacketsocket::wire::SendControlData& fidl_packet,
 }
 
 template <typename T>
-fitx::result<int16_t, T> ParseControlMessages(const void* buf, socklen_t len,
-                                              fidl::AnyArena& allocator) {
-  if (buf == nullptr && len != 0) {
+fitx::result<int16_t, T> ParseControlMessages(const struct msghdr& msg, fidl::AnyArena& allocator) {
+  if (msg.msg_control == nullptr && msg.msg_controllen != 0) {
     return fitx::error(static_cast<int16_t>(EFAULT));
   }
 
   T fidl_cmsg(allocator);
-  cpp20::span posix_cmsg(static_cast<const unsigned char*>(buf), len);
-  // Stop parsing once there is not enough bytes left to form a full cmsghdr.
-  // https://github.com/torvalds/linux/blob/42eb8fdac2f/net/core/sock.c#L2644
-  // https://github.com/torvalds/linux/blob/42eb8fdac2f/include/linux/socket.h#L115-L126
-  while (posix_cmsg.size() >= sizeof(cmsghdr)) {
-    // Do not access the control buffer directly, as it may be misaligned.
-    cmsghdr cmsg;
-    memcpy(&cmsg, posix_cmsg.data(), sizeof(cmsg));
+  socklen_t total_cmsg_len = 0;
+  for (cmsghdr* cmsg = CMSG_FIRSTHDR(&msg); cmsg != nullptr; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
+    const cmsghdr& cmsg_ref = *cmsg;
+    total_cmsg_len += cmsg_ref.cmsg_len;
 
     // Validate the header length.
     // https://github.com/torvalds/linux/blob/42eb8fdac2f/include/linux/socket.h#L119-L122
-    if (cmsg.cmsg_len < sizeof(cmsg) || cmsg.cmsg_len > posix_cmsg.size()) {
+    if (msg.msg_controllen < total_cmsg_len || cmsg_ref.cmsg_len < sizeof(cmsghdr)) {
       return fitx::error(static_cast<int16_t>(EINVAL));
     }
-    const void* data = CMSG_DATA(posix_cmsg.data());
-    const socklen_t data_len = cmsg.cmsg_len - CMSG_ALIGN(sizeof(cmsghdr));
-    ZX_ASSERT_MSG(reinterpret_cast<const unsigned char*>(data) + data_len < posix_cmsg.end(),
-                  "incoherent data buffer bounds, %p + %x > %p", data, data_len, posix_cmsg.end());
-    posix_cmsg = posix_cmsg.subspan(cmsg.cmsg_len);
 
-    int16_t err =
-        ParseControlMessage(fidl_cmsg, allocator, cmsg.cmsg_level, cmsg.cmsg_type, data, data_len);
+    int16_t err = ParseControlMessage(fidl_cmsg, allocator, cmsg_ref.cmsg_level, cmsg_ref.cmsg_type,
+                                      CMSG_DATA(cmsg), cmsg_ref.cmsg_len);
     if (err != 0) {
       return fitx::error(err);
     }
@@ -840,10 +830,16 @@ struct socket_with_event : virtual public base_socket<T> {
 
   zx_status_t sendmsg(const struct msghdr* msg, int flags, size_t* out_actual,
                       int16_t* out_code) override {
+    // TODO(https://fxbug.dev/110570) Add tests with msg as nullptr.
+    if (msg == nullptr) {
+      *out_code = EFAULT;
+      return ZX_OK;
+    }
+    const msghdr& msghdr_ref = *msg;
     typename T::FidlSockAddr addr;
     // Attempt to load socket address if either name or namelen is set.
     // If only one is set, it'll result in INVALID_ARGS.
-    if (msg->msg_namelen != 0 || msg->msg_name != nullptr) {
+    if (msghdr_ref.msg_namelen != 0 || msghdr_ref.msg_name != nullptr) {
       zx_status_t status =
           addr.LoadSockAddr(static_cast<struct sockaddr*>(msg->msg_name), msg->msg_namelen);
       if (status != ZX_OK) {
@@ -851,7 +847,7 @@ struct socket_with_event : virtual public base_socket<T> {
       }
     }
 
-    std::optional opt_total = total_iov_len(*msg);
+    std::optional opt_total = total_iov_len(msghdr_ref);
     if (!opt_total.has_value()) {
       *out_code = EFAULT;
       return ZX_OK;
@@ -859,8 +855,8 @@ struct socket_with_event : virtual public base_socket<T> {
     size_t total = opt_total.value();
 
     fidl::Arena allocator;
-    fitx::result cmsg_result = ParseControlMessages<typename T::FidlSendControlData>(
-        msg->msg_control, msg->msg_controllen, allocator);
+    fitx::result cmsg_result =
+        ParseControlMessages<typename T::FidlSendControlData>(msghdr_ref, allocator);
     if (cmsg_result.is_error()) {
       *out_code = cmsg_result.error_value();
       return ZX_OK;
@@ -1159,7 +1155,13 @@ struct datagram_socket : public socket_with_zx_socket<DatagramSocket> {
 
   zx_status_t sendmsg(const struct msghdr* msg, int flags, size_t* out_actual,
                       int16_t* out_code) override {
-    std::optional opt_total = total_iov_len(*msg);
+    // TODO(https://fxbug.dev/110570) Add tests with msg as nullptr.
+    if (msg == nullptr) {
+      *out_code = EFAULT;
+      return ZX_OK;
+    }
+    const msghdr& msghdr_ref = *msg;
+    std::optional opt_total = total_iov_len(msghdr_ref);
     if (!opt_total.has_value()) {
       *out_code = EFAULT;
       return ZX_OK;
@@ -1179,8 +1181,8 @@ struct datagram_socket : public socket_with_zx_socket<DatagramSocket> {
 
     // TODO(https://fxbug.dev/103740): Avoid allocating into this arena.
     fidl::Arena alloc;
-    fitx::result cmsg_result = ParseControlMessages<fsocket::wire::DatagramSocketSendControlData>(
-        msg->msg_control, msg->msg_controllen, alloc);
+    fitx::result cmsg_result =
+        ParseControlMessages<fsocket::wire::DatagramSocketSendControlData>(msghdr_ref, alloc);
     if (cmsg_result.is_error()) {
       *out_code = cmsg_result.error_value();
       return ZX_OK;
@@ -1487,9 +1489,15 @@ struct stream_socket : public socket_with_zx_socket<StreamSocket> {
 
     // Fuchsia does not support control messages on stream sockets. But we still parse the buffer
     // to check that it is valid.
+    // TODO(https://fxbug.dev/110570) Add tests with msg as nullptr.
+    if (msg == nullptr) {
+      *out_code = EFAULT;
+      return ZX_OK;
+    }
+    const msghdr& msghdr_ref = *msg;
     fidl::Arena allocator;
-    fitx::result cmsg_result = ParseControlMessages<fsocket::wire::SocketSendControlData>(
-        msg->msg_control, msg->msg_controllen, allocator);
+    fitx::result cmsg_result =
+        ParseControlMessages<fsocket::wire::SocketSendControlData>(msghdr_ref, allocator);
     if (cmsg_result.is_error()) {
       *out_code = cmsg_result.error_value();
       return ZX_OK;
