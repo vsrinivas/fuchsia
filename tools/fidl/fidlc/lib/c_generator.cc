@@ -89,6 +89,8 @@ bool MethodAlwaysAllowed(const flat::Protocol::Method& method) {
   return false;
 }
 
+bool TypeAllowed(const flat::Type* type);
+
 bool DeclAllowed(const flat::Decl* decl) {
   if (HasSimpleLayout(decl) || DeclAlwaysAllowed(decl->name)) {
     return true;
@@ -96,10 +98,11 @@ bool DeclAllowed(const flat::Decl* decl) {
 
   switch (decl->kind) {
     case flat::Decl::Kind::kBits:
-    case flat::Decl::Kind::kConst:
     case flat::Decl::Kind::kEnum:
-      // bits, const, enum are always allowed.
+      // bits and enum are always allowed.
       return true;
+    case flat::Decl::Kind::kConst:
+      return TypeAllowed(static_cast<const flat::Const*>(decl)->type_ctor->type);
     default:
       return false;
   }
@@ -108,13 +111,23 @@ bool DeclAllowed(const flat::Decl* decl) {
 bool TypeAllowed(const flat::Type* type) {
   ZX_ASSERT(type != nullptr);
   // treat box types like we do nullable structs
-  if (type->kind == flat::Type::Kind::kBox)
+  if (type->kind == flat::Type::Kind::kBox) {
     type = static_cast<const flat::BoxType*>(type)->boxed_type;
-  if (type->kind == flat::Type::Kind::kIdentifier) {
-    auto identifier_type = static_cast<const flat::IdentifierType*>(type);
-    if (!DeclAllowed(identifier_type->type_decl)) {
-      return false;
-    }
+  }
+
+  switch (type->kind) {
+    case flat::Type::Kind::kIdentifier:
+      return DeclAllowed(static_cast<const flat::IdentifierType*>(type)->type_decl);
+    case flat::Type::Kind::kPrimitive:
+      switch (static_cast<const flat::PrimitiveType*>(type)->subtype) {
+        case types::PrimitiveSubtype::kZxUsize:
+          return false;
+        default:
+          break;
+      }
+      break;
+    default:
+      break;
   }
   return true;
 }
@@ -608,6 +621,7 @@ void BitsValue(const flat::Constant* constant, std::string* out_value) {
     case flat::ConstantValue::Kind::kInt16:
     case flat::ConstantValue::Kind::kInt32:
     case flat::ConstantValue::Kind::kInt64:
+    case flat::ConstantValue::Kind::kZxUsize:
     case flat::ConstantValue::Kind::kBool:
     case flat::ConstantValue::Kind::kFloat32:
     case flat::ConstantValue::Kind::kFloat64:
@@ -669,6 +683,7 @@ void EnumValue(const flat::Constant* constant, std::string* out_value) {
     case flat::ConstantValue::Kind::kFloat64:
     case flat::ConstantValue::Kind::kDocComment:
     case flat::ConstantValue::Kind::kString:
+    case flat::ConstantValue::Kind::kZxUsize:
       ZX_PANIC("bad primitive type for an enum");
   }
 
@@ -860,6 +875,8 @@ void CGenerator::GeneratePrimitiveDefine(std::string_view name, types::Primitive
             << "(" << value << ")\n";
       break;
     }
+    case types::PrimitiveSubtype::kZxUsize:
+      ZX_PANIC("C code generation does not support experimental zx C types");
   }  // switch
 }
 
@@ -941,7 +958,9 @@ std::map<const flat::Decl*, CGenerator::NamedConst> CGenerator::NameConsts(
     const std::vector<const flat::Const*>& const_infos) {
   std::map<const flat::Decl*, NamedConst> named_consts;
   for (const auto& const_info : const_infos) {
-    named_consts.emplace(const_info, NamedConst{NameCodedName(const_info->name), *const_info});
+    if (DeclAllowed(const_info)) {
+      named_consts.emplace(const_info, NamedConst{NameCodedName(const_info->name), *const_info});
+    }
   }
   return named_consts;
 }

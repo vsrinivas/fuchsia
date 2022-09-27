@@ -35,6 +35,7 @@ struct ConstantValue : public HasClone<ConstantValue> {
     kUint16,
     kUint32,
     kUint64,
+    kZxUsize,
     kFloat32,
     kFloat64,
     kBool,

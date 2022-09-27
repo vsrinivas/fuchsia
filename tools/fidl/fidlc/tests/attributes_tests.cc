@@ -583,43 +583,44 @@ TEST(AttributesTests, BadIncorrectPlacementLayout) {
 @for_deprecated_c_bindings // 1
 library fidl.test;
 
-@for_deprecated_c_bindings // 2
-const MyConst int32 = 0;
+// No error; placement on simple constants is allowed
+@for_deprecated_c_bindings
+const MyConst uint32 = 0;
 
-@for_deprecated_c_bindings // 3
+@for_deprecated_c_bindings // 2
 type MyEnum = enum {
-    @for_deprecated_c_bindings // 4
+    @for_deprecated_c_bindings // 3
     MyMember = 5;
 };
 
 @for_deprecated_c_bindings // no error, this placement is allowed
 type MyStruct = struct {
-    @for_deprecated_c_bindings // 5
+    @for_deprecated_c_bindings // 4
     MyMember int32;
 };
 
-@for_deprecated_c_bindings // 6
+@for_deprecated_c_bindings // 5
 type MyUnion = union {
-    @for_deprecated_c_bindings // 7
+    @for_deprecated_c_bindings // 6
     1: MyMember int32;
 };
 
-@for_deprecated_c_bindings // 8
+@for_deprecated_c_bindings // 7
 type MyTable = table {
-    @for_deprecated_c_bindings // 9
+    @for_deprecated_c_bindings // 8
     1: MyMember int32;
 };
 
 @for_deprecated_c_bindings // no error, this placement is allowed
 protocol MyProtocol {
-    @for_deprecated_c_bindings // 10
+    @for_deprecated_c_bindings // 9
     MyMethod();
 };
 
 )FIDL");
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 10);
+  ASSERT_EQ(errors.size(), 9);
   for (const auto& error : errors) {
     ASSERT_ERR(error, fidl::ErrInvalidAttributePlacement);
     ASSERT_SUBSTR(error->msg.c_str(), "for_deprecated_c_bindings");
@@ -1257,6 +1258,7 @@ library fidl.test;
         uint16=2,
         uint32=3,
         uint64=4,
+        usize=5,
         float32=1.2,
         float64=-3.4)
 type MyStruct = struct {};
@@ -1273,6 +1275,7 @@ type MyStruct = struct {};
       .AddArg("uint16", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint16))
       .AddArg("uint32", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint32))
       .AddArg("uint64", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint64))
+      .AddArg("usize", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kZxUsize))
       .AddArg("float32", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kFloat32))
       .AddArg("float64", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kFloat64));
   ASSERT_COMPILED(library);
@@ -1393,6 +1396,18 @@ type MyStruct = struct {};
   EXPECT_EQ(static_cast<fidl::flat::NumericConstantValue<uint64_t>*>(resolved_uint64.get())->value,
             4);
 
+  // Check `usize` arg.
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("usize"));
+  const auto& usize_val = example_struct->attributes->Get("attr")->GetArg("usize")->value;
+  EXPECT_STREQ(usize_val->span.data(), "5");
+  ASSERT_EQ(usize_val->kind, fidl::flat::Constant::Kind::kLiteral);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_usize;
+  EXPECT_TRUE(
+      usize_val->Value().Convert(fidl::flat::ConstantValue::Kind::kZxUsize, &resolved_usize));
+  EXPECT_EQ(static_cast<fidl::flat::NumericConstantValue<uint64_t>*>(resolved_usize.get())->value,
+            5);
+
   // Check `float32` arg.
   EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("float32"));
   const auto& float32_val = example_struct->attributes->Get("attr")->GetArg("float32")->value;
@@ -1482,6 +1497,7 @@ const uint32 fidl.uint32 = 3;
 type uint64 = bits : fidl.uint64 {
     MEMBER = 4;
 };
+const usize fidl.usize = 5;
 const float32 fidl.float32 = 1.2;
 const float64 fidl.float64 = -3.4;
 
@@ -1496,6 +1512,7 @@ const float64 fidl.float64 = -3.4;
         uint16=uint16,
         uint32=uint32,
         uint64=uint64.MEMBER,
+        usize=usize,
         float32=float32,
         float64=float64)
 type MyStruct = struct {};
@@ -1512,8 +1529,13 @@ type MyStruct = struct {};
       .AddArg("uint16", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint16))
       .AddArg("uint32", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint32))
       .AddArg("uint64", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint64))
+      .AddArg("usize", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kZxUsize))
       .AddArg("float32", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kFloat32))
       .AddArg("float64", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kFloat64));
+
+  // For the use of usize.
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kZxCTypes);
+
   ASSERT_COMPILED(library);
 
   auto example_struct = library.LookupStruct("MyStruct");
@@ -1631,6 +1653,18 @@ type MyStruct = struct {};
       uint64_val->Value().Convert(fidl::flat::ConstantValue::Kind::kUint64, &resolved_uint64));
   EXPECT_EQ(static_cast<fidl::flat::NumericConstantValue<uint64_t>*>(resolved_uint64.get())->value,
             4);
+
+  // Check `usize` arg.
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("usize"));
+  const auto& usize_val = example_struct->attributes->Get("attr")->GetArg("usize")->value;
+  EXPECT_STREQ(usize_val->span.data(), "usize");
+  ASSERT_EQ(usize_val->kind, fidl::flat::Constant::Kind::kIdentifier);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_usize;
+  EXPECT_TRUE(
+      usize_val->Value().Convert(fidl::flat::ConstantValue::Kind::kZxUsize, &resolved_usize));
+  EXPECT_EQ(static_cast<fidl::flat::NumericConstantValue<uint64_t>*>(resolved_usize.get())->value,
+            5);
 
   // Check `float32` arg.
   EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("float32"));

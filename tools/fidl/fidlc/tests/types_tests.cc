@@ -36,9 +36,14 @@ const u8 uint8 = 0;
 const u16 uint16 = 0;
 const u32 uint32 = 0;
 const u64 uint64 = 0;
+const us usize = 0;
 const f32 float32 = 0;
 const f64 float64 = 0;
 )FIDL");
+
+  // For the use of usize.
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kZxCTypes);
+
   ASSERT_COMPILED(library);
 
   EXPECT_EQ(ConstPrimitiveSubtype(library, "b"), types::PrimitiveSubtype::kBool);
@@ -50,6 +55,7 @@ const f64 float64 = 0;
   EXPECT_EQ(ConstPrimitiveSubtype(library, "u16"), types::PrimitiveSubtype::kUint16);
   EXPECT_EQ(ConstPrimitiveSubtype(library, "u32"), types::PrimitiveSubtype::kUint32);
   EXPECT_EQ(ConstPrimitiveSubtype(library, "u64"), types::PrimitiveSubtype::kUint64);
+  EXPECT_EQ(ConstPrimitiveSubtype(library, "us"), types::PrimitiveSubtype::kZxUsize);
   EXPECT_EQ(ConstPrimitiveSubtype(library, "f32"), types::PrimitiveSubtype::kFloat32);
   EXPECT_EQ(ConstPrimitiveSubtype(library, "f64"), types::PrimitiveSubtype::kFloat64);
 }
@@ -67,9 +73,14 @@ const uint8 fidl.uint8 = 0;
 const uint16 fidl.uint16 = 0;
 const uint32 fidl.uint32 = 0;
 const uint64 fidl.uint64 = 0;
+const usize fidl.usize = 0;
 const float32 fidl.float32 = 0;
 const float64 fidl.float64 = 0;
 )FIDL");
+
+  // For the use of usize.
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kZxCTypes);
+
   ASSERT_COMPILED(library);
 
   EXPECT_EQ(ConstPrimitiveSubtype(library, "bool"), types::PrimitiveSubtype::kBool);
@@ -81,6 +92,7 @@ const float64 fidl.float64 = 0;
   EXPECT_EQ(ConstPrimitiveSubtype(library, "uint16"), types::PrimitiveSubtype::kUint16);
   EXPECT_EQ(ConstPrimitiveSubtype(library, "uint32"), types::PrimitiveSubtype::kUint32);
   EXPECT_EQ(ConstPrimitiveSubtype(library, "uint64"), types::PrimitiveSubtype::kUint64);
+  EXPECT_EQ(ConstPrimitiveSubtype(library, "usize"), types::PrimitiveSubtype::kZxUsize);
   EXPECT_EQ(ConstPrimitiveSubtype(library, "float32"), types::PrimitiveSubtype::kFloat32);
   EXPECT_EQ(ConstPrimitiveSubtype(library, "float64"), types::PrimitiveSubtype::kFloat64);
 }

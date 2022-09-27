@@ -35,6 +35,7 @@ std::map<const std::string_view, const ExperimentalFlags::Flag> ExperimentalFlag
     {"allow_new_types", Flag::kAllowNewTypes},
     {"allow_overflowing", Flag::kAllowOverflowing},
     {"output_index_json", Flag::kOutputIndexJson},
+    {"zx_c_types", Flag::kZxCTypes},
 };
 
 }  // namespace fidl

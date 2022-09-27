@@ -486,6 +486,7 @@ uint32_t PrimitiveType::SubtypeSize(types::PrimitiveSubtype subtype) {
     case types::PrimitiveSubtype::kFloat64:
     case types::PrimitiveSubtype::kInt64:
     case types::PrimitiveSubtype::kUint64:
+    case types::PrimitiveSubtype::kZxUsize:
       return 8u;
   }
 }
@@ -504,6 +505,11 @@ bool PrimitiveType::ApplyConstraints(TypeResolver* resolver, const TypeConstrain
   if (num_constraints > 1) {
     return resolver->Fail(ErrTooManyConstraints, constraints.span.value(), layout.resolved().name(),
                           0, num_constraints);
+  }
+  if (subtype == types::PrimitiveSubtype::kZxUsize &&
+      !resolver->experimental_flags().IsFlagEnabled(ExperimentalFlags::Flag::kZxCTypes)) {
+    return resolver->Fail(ErrExperimentalZxCTypesDisallowed, layout.span(),
+                          layout.resolved().name());
   }
   *out_type = std::make_unique<PrimitiveType>(name, subtype);
   return true;

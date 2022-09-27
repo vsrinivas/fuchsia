@@ -89,7 +89,8 @@ bool NumericConstantValue<ValueType>::Convert(Kind kind,
       *out_value = std::make_unique<NumericConstantValue<uint32_t>>(casted_value);
       return true;
     }
-    case Kind::kUint64: {
+    case Kind::kUint64:
+    case Kind::kZxUsize: {
       uint64_t casted_value;
       if (!checked_value.template Cast<uint64_t>().AssignIfValid(&casted_value)) {
         return false;

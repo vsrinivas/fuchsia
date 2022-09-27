@@ -22,6 +22,10 @@ class ExperimentalFlags {
     kUnknownInteractions = 0b10000,
     kNoOptionalStructs = 0b100000,
     kOutputIndexJson = 0b1000000,
+
+    // TODO(fxbug.dev/110021): A temporary measure describe in
+    // fxbug.dev/110294.
+    kZxCTypes = 0b10000000,
   };
 
   ExperimentalFlags() = default;

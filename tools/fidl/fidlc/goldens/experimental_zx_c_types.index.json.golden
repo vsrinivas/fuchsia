@@ -1,0 +1,62 @@
+{
+  "name": "test.experimentalzxctypes",
+  "lib_declarations": [
+    {
+      "is_virtual": false,
+      "file": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
+      "data": "test.experimentalzxctypes",
+      "start_offset": 172,
+      "end_offset": 197
+    }
+  ],
+  "using_declarations": [],
+  "dependencies": [],
+  "dependency_identifiers": [],
+  "consts": [
+    {
+      "identifier": "test.experimentalzxctypes/USIZE_CONST",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
+        "data": "USIZE_CONST",
+        "start_offset": 206,
+        "end_offset": 217
+      },
+      "value": {
+        "type": "literal"
+      }
+    }
+  ],
+  "enums": [],
+  "unions": [],
+  "tables": [],
+  "structs": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.experimentalzxctypes/StructOfExperimentalZxCTypes",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
+        "data": "StructOfExperimentalZxCTypes",
+        "start_offset": 265,
+        "end_offset": 293
+      },
+      "members": [
+        {
+          "name": "us",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
+            "data": "us",
+            "start_offset": 309,
+            "end_offset": 311
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    }
+  ],
+  "protocols": []
+}

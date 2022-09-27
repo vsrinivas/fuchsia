@@ -347,8 +347,8 @@ constexpr UndocumentedErrorDef<136, flat::Name> ErrTableCannotBeSimple(
 constexpr UndocumentedErrorDef<137, flat::Name> ErrUnionCannotBeSimple(
     "table '{}' is not a simple type, so it cannot be used in "
     "@for_deprecated_c_bindings");
-constexpr UndocumentedErrorDef<138, std::string_view> ErrMemberMustBeSimple(
-    "member '{}' is not a simple type, so it cannot be used in "
+constexpr UndocumentedErrorDef<138, std::string_view> ErrElementMustBeSimple(
+    "element '{}' does not have a simple type, so it cannot be used in "
     "@for_deprecated_c_bindings");
 constexpr UndocumentedErrorDef<139, uint32_t, uint32_t> ErrTooManyBytes(
     "too large: only {} bytes allowed, but {} bytes found");
@@ -439,6 +439,8 @@ constexpr ErrorDef<178, std::vector<std::string_view>, std::vector<std::string_v
     ErrUnusedImport("Library {} imports {} but does not use it. Either use {}, or remove import.");
 constexpr UndocumentedErrorDef<179, flat::Name> ErrNewTypeCannotHaveConstraint(
     "{} is a new-type, which cannot carry constraints");
+constexpr ErrorDef<180, flat::Name> ErrExperimentalZxCTypesDisallowed(
+    "{} is an experimental type that must be enabled by with `--experimental zx_c_types`");
 
 }  // namespace fidl
 // LINT.ThenChange(//docs/reference/fidl/language/errcat.md)

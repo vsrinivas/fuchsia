@@ -23,6 +23,7 @@ standalone_libraries = [
   "error.test.fidl",
   "escaping.test.fidl",
   "experimental_maybe_from_type_alias.test.fidl",
+  "experimental_zx_c_types.test.fidl",
   "handles.test.fidl",
   "handles_in_types.test.fidl",
   "inheritance.test.fidl",
@@ -70,6 +71,10 @@ foreach(filename, standalone_libraries) {
 
     if (filename == "overflowing.test.fidl") {
       experimental_flags += [ "allow_overflowing" ]
+    }
+
+    if (filename == "experimental_zx_c_types.test.fidl") {
+      experimental_flags += [ "zx_c_types" ]
     }
 
     # To ensure quality of generated Dart bindings.

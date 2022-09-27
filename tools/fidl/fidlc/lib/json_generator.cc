@@ -43,7 +43,8 @@ void JSONGenerator::Generate(const flat::ConstantValue& value) {
       EmitNumeric(static_cast<uint32_t>(numeric_constant), kAsString);
       break;
     }
-    case flat::ConstantValue::Kind::kUint64: {
+    case flat::ConstantValue::Kind::kUint64:
+    case flat::ConstantValue::Kind::kZxUsize: {
       auto& numeric_constant = reinterpret_cast<const flat::NumericConstantValue<uint64_t>&>(value);
       EmitNumeric(static_cast<uint64_t>(numeric_constant), kAsString);
       break;

@@ -315,6 +315,9 @@ void AttributeArgSchema::ResolveArg(CompileStep* step, Attribute* attribute, Att
     case ConstantValue::Kind::kUint64:
       target_type = step->typespace()->GetPrimitiveType(types::PrimitiveSubtype::kUint64);
       break;
+    case ConstantValue::Kind::kZxUsize:
+      target_type = step->typespace()->GetPrimitiveType(types::PrimitiveSubtype::kZxUsize);
+      break;
     case ConstantValue::Kind::kFloat32:
       target_type = step->typespace()->GetPrimitiveType(types::PrimitiveSubtype::kFloat32);
       break;
@@ -408,6 +411,12 @@ static bool IsSimple(const Type* type, Reporter* reporter) {
     case Type::Kind::kHandle:
     case Type::Kind::kTransportSide:
     case Type::Kind::kPrimitive:
+      switch (static_cast<const PrimitiveType*>(type)->subtype) {
+        case types::PrimitiveSubtype::kZxUsize:
+          return false;
+        default:
+          break;
+      }
       return depth == 0u;
     case Type::Kind::kIdentifier: {
       auto identifier_type = static_cast<const IdentifierType*>(type);
@@ -461,6 +470,17 @@ static bool SimpleLayoutConstraint(Reporter* reporter, const Attribute* attr,
   ZX_ASSERT(element);
   bool ok = true;
   switch (element->kind) {
+    case Element::Kind::kConst: {
+      auto constant = static_cast<const Const*>(element);
+      const Type* const_type = constant->type_ctor->type;
+      ZX_ASSERT(const_type);
+      if (!IsSimple(const_type, reporter)) {
+        SourceSpan span = constant->name.span().value();
+        reporter->Fail(ErrElementMustBeSimple, span, span.data());
+        ok = false;
+      }
+      break;
+    }
     case Element::Kind::kProtocol: {
       auto protocol = static_cast<const Protocol*>(element);
       for (const auto& method_with_info : protocol->all_methods) {
@@ -527,7 +547,7 @@ static bool SimpleLayoutConstraint(Reporter* reporter, const Attribute* attr,
       auto struct_decl = static_cast<const Struct*>(element);
       for (const auto& member : struct_decl->members) {
         if (!IsSimple(member.type_ctor->type, reporter)) {
-          reporter->Fail(ErrMemberMustBeSimple, member.name, member.name.data());
+          reporter->Fail(ErrElementMustBeSimple, member.name, member.name.data());
           ok = false;
         }
       }
@@ -758,6 +778,7 @@ AttributeSchemaMap AttributeSchema::OfficialAttributes() {
       .RestrictTo({
           Element::Kind::kProtocol,
           Element::Kind::kStruct,
+          Element::Kind::kConst,
       })
       .Constrain(SimpleLayoutConstraint);
   map["generated_name"]

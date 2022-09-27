@@ -65,6 +65,8 @@ std::string NamePrimitiveCType(types::PrimitiveSubtype subtype) {
       return "uint32_t";
     case types::PrimitiveSubtype::kUint64:
       return "uint64_t";
+    case types::PrimitiveSubtype::kZxUsize:
+      return "size_t";
     case types::PrimitiveSubtype::kBool:
       return "bool";
     case types::PrimitiveSubtype::kFloat32:
@@ -91,6 +93,7 @@ std::string NamePrimitiveIntegerCConstantMacro(types::PrimitiveSubtype subtype) 
     case types::PrimitiveSubtype::kUint32:
       return "UINT32_C";
     case types::PrimitiveSubtype::kUint64:
+    case types::PrimitiveSubtype::kZxUsize:
       return "UINT64_C";
     case types::PrimitiveSubtype::kBool:
       ZX_PANIC("tried to generate an integer constant for a bool");

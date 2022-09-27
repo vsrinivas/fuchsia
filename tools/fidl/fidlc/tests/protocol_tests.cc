@@ -673,7 +673,7 @@ protocol YearningForSimplicity {
     Simple();
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMemberMustBeSimple);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrElementMustBeSimple);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "arg");
   EXPECT_SUBSTR(library.errors()[0]->msg.c_str(), "for_deprecated_c_bindings");
 }
@@ -841,7 +841,7 @@ protocol MyProtocol {
   });
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMemberMustBeSimple);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrElementMustBeSimple);
   EXPECT_SUBSTR(library.errors()[0]->msg.c_str(), "for_deprecated_c_bindings");
 }
 

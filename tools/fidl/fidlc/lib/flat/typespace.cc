@@ -31,6 +31,8 @@ static std::optional<types::PrimitiveSubtype> BuiltinToPrimitiveSubtype(Builtin:
       return types::PrimitiveSubtype::kUint32;
     case Builtin::Identity::kUint64:
       return types::PrimitiveSubtype::kUint64;
+    case Builtin::Identity::kZxUsize:
+      return types::PrimitiveSubtype::kZxUsize;
     case Builtin::Identity::kFloat32:
       return types::PrimitiveSubtype::kFloat32;
     case Builtin::Identity::kFloat64:
@@ -175,6 +177,7 @@ const Type* Typespace::Creator::Create() {
     case Builtin::Identity::kUint16:
     case Builtin::Identity::kUint32:
     case Builtin::Identity::kUint64:
+    case Builtin::Identity::kZxUsize:
     case Builtin::Identity::kFloat32:
     case Builtin::Identity::kFloat64:
       return CreatePrimitiveType(BuiltinToPrimitiveSubtype(builtin->id).value());

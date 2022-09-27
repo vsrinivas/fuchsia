@@ -295,6 +295,8 @@ ConstantValue::Kind CompileStep::ConstantValuePrimitiveKind(
       return ConstantValue::Kind::kUint32;
     case types::PrimitiveSubtype::kUint64:
       return ConstantValue::Kind::kUint64;
+    case types::PrimitiveSubtype::kZxUsize:
+      return ConstantValue::Kind::kZxUsize;
     case types::PrimitiveSubtype::kFloat32:
       return ConstantValue::Kind::kFloat32;
     case types::PrimitiveSubtype::kFloat64:
@@ -494,6 +496,7 @@ bool CompileStep::ResolveLiteralConstant(LiteralConstant* literal_constant,
         case types::PrimitiveSubtype::kUint32:
           return ResolveLiteralConstantKindNumericLiteral<uint32_t>(literal_constant, type);
         case types::PrimitiveSubtype::kUint64:
+        case types::PrimitiveSubtype::kZxUsize:
           return ResolveLiteralConstantKindNumericLiteral<uint64_t>(literal_constant, type);
         case types::PrimitiveSubtype::kFloat32:
           return ResolveLiteralConstantKindNumericLiteral<float>(literal_constant, type);
@@ -761,6 +764,7 @@ void CompileStep::CompileBits(Bits* bits_declaration) {
     case types::PrimitiveSubtype::kInt16:
     case types::PrimitiveSubtype::kInt32:
     case types::PrimitiveSubtype::kInt64:
+    case types::PrimitiveSubtype::kZxUsize:
     case types::PrimitiveSubtype::kFloat32:
     case types::PrimitiveSubtype::kFloat64:
       Fail(ErrBitsTypeMustBeUnsignedIntegralPrimitive, bits_declaration->name.span().value(),
@@ -863,6 +867,7 @@ void CompileStep::CompileEnum(Enum* enum_declaration) {
     case types::PrimitiveSubtype::kBool:
     case types::PrimitiveSubtype::kFloat32:
     case types::PrimitiveSubtype::kFloat64:
+    case types::PrimitiveSubtype::kZxUsize:
       Fail(ErrEnumTypeMustBeIntegralPrimitive, enum_declaration->name.span().value(),
            enum_declaration->subtype_ctor->type);
       break;
