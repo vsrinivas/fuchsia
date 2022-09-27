@@ -32,6 +32,8 @@ zx_library("elfldltl") {
     "lib/elfldltl/link.h",
     "lib/elfldltl/load.h",
     "lib/elfldltl/machine.h",
+    "lib/elfldltl/mapped-fd-file.h",
+    "lib/elfldltl/mapped-vmo-file.h",
     "lib/elfldltl/memory.h",
     "lib/elfldltl/note.h",
     "lib/elfldltl/phdr.h",
@@ -52,12 +54,36 @@ zx_library("elfldltl") {
   }
 
   public_deps = [ "//sdk/lib/stdcompat" ]
+  if (!is_kernel) {
+    public_deps += [
+      # <lib/elfldltl/mapped-fd-file.h> has #include <lib/fitx/result.h>.
+      "//zircon/system/ulib/zxc:headers",
+    ]
 
+    if (is_fuchsia) {
+      public_deps += [
+        # <lib/elfldltl/vmo.h> has #include <lib/zx/vmo.h>.
+        "//zircon/system/ulib/zx:headers",
+      ]
+    }
+  }
+
+  deps = []
   if (is_kernel) {
     deps = [
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/libc",
     ]
+  } else {
+    sources += [ "mapped-fd-file.cc" ]
+    deps += [
+      "//zircon/system/ulib/fbl",
+      "//zircon/system/ulib/zxc",
+    ]
+    if (is_fuchsia) {
+      sources += [ "mapped-vmo-file.cc" ]
+      deps += [ "//zircon/system/ulib/zx" ]
+    }
   }
 
   if (current_os == "linux") {
@@ -66,7 +92,10 @@ zx_library("elfldltl") {
 }
 
 test("elfldltl-unittests") {
-  deps = [ ":unittests" ]
+  deps = [
+    ":hosted-unittests",
+    ":unittests",
+  ]
 }
 
 # These pure unit tests can be included in a standalone ZBI test binary too.
@@ -98,6 +127,21 @@ source_set("unittests") {
   if (is_elf) {
     sources += [ "self-tests.cc" ]
   }
+  if (is_fuchsia) {
+    sources += [ "mapped-vmo-file-tests.cc" ]
+  }
+}
+
+# These cannot be included in standalone-core-tests since they rely on having a
+# real external filesystem.
+source_set("hosted-unittests") {
+  visibility = [ ":*" ]
+  sources = [ "mapped-fd-file-tests.cc" ]
+  deps = [
+    ".",
+    "//sdk/lib/stdcompat",
+    "//zircon/system/ulib/zxtest",
+  ]
 }
 
 if (current_os == "linux") {
@@ -213,6 +257,7 @@ zbi_test("zbi-static-pie-test") {
 
 fuchsia_unittest_package("elfldltl-tests") {
   deps = [ ":elfldltl-unittests" ]
+  manifest = "meta/elfldltl-tests.cml"
 }
 
 cpp_fuzzer("dynamic-fuzzer") {

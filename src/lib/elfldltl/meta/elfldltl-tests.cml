@@ -1,0 +1,21 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//sdk/lib/sys/testing/elf_test_runner.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "test/elfldltl-unittests",
+    },
+    use: [
+        {
+            protocol: [ "fuchsia.process.Launcher" ],
+        },
+        {
+            storage: "tmp",
+            path: "/tmp",
+        },
+    ],
+}
