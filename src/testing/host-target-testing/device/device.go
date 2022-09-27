@@ -264,6 +264,31 @@ func (c *Client) RebootToRecovery(ctx context.Context) error {
 	})
 }
 
+// Suspend asks the device to suspend. It waits until the device disconnects
+// before returning.
+func (c *Client) Suspend(ctx context.Context) error {
+	logger.Infof(ctx, "Suspending")
+
+	return c.ExpectDisconnect(ctx, func() error {
+		// Run the suspend in the background, which gives us a chance to
+		// observe us successfully executing the suspend command.
+		cmd := []string{"dm", "suspend", "&", "exit", "0"}
+		if err := c.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
+			// If the device suspends before ssh was able to tell
+			// us the command ran, it will tell us the session
+			// exited without passing along an exit code. So,
+			// ignore that specific error.
+			if _, ok := err.(*ssh.ExitMissingError); ok {
+				logger.Infof(ctx, "ssh disconnected before returning a status")
+			} else {
+				return fmt.Errorf("failed to suspend: %w", err)
+			}
+		}
+
+		return nil
+	})
+}
+
 func (c *Client) ExpectDisconnect(ctx context.Context, f func() error) error {
 	ch := c.DisconnectionListener()
 

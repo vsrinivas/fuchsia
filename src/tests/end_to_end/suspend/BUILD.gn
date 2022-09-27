@@ -1,0 +1,64 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//build/host.gni")
+import("//build/images/vbmeta.gni")
+import("//build/suspend/config.gni")
+import("//build/testing/environments.gni")
+import("//build/testing/host_test.gni")
+import("//build/testing/host_test_data.gni")
+
+if (is_host) {
+  host_test_data("test_tools") {
+    sources = [ "$host_tools_dir/ffx" ]
+    outputs = [ "$root_out_dir/test_data/suspend-test/{{source_file_part}}" ]
+    public_deps = [ "//src/developer/ffx:host($host_toolchain)" ]
+  }
+
+  go_library("lib") {
+    testonly = true
+    sources = [
+      "config.go",
+      "suspend_test.go",
+    ]
+    non_go_deps = [ ":test_tools" ]
+    deps = [
+      "//src/testing/host-target-testing",
+      "//tools/botanist:constants",
+      "//tools/lib/color",
+      "//tools/lib/logger",
+      "//tools/lib/serial",
+    ]
+  }
+
+  # Add this to go_test()'s environments to disable a test in infra
+  disabled_env = {
+    tags = [ "system-tests-disabled" ]  # Tells infra not to run this by default
+    dimensions = host_env.dimensions
+  }
+
+  go_test("e2e_suspend_test") {
+    gopackages = [ "go.fuchsia.dev/fuchsia/src/tests/end_to_end/suspend" ]
+    environments = [ disabled_env ]
+    deps = [ ":lib" ]
+  }
+}
+
+if (is_linux) {
+  host_test("atlas-suspend") {
+    binary_path = "$root_out_dir/e2e_suspend_test"
+    deps = [ "//src/tests/end_to_end/suspend:e2e_suspend_test" ]
+    environments = [ atlas_env ]
+  }
+}
+
+group("test") {
+  testonly = true
+  deps = []
+  if (host_os == "linux" && enable_suspend) {
+    deps += [ ":atlas-suspend($host_toolchain)" ]
+  }
+}
