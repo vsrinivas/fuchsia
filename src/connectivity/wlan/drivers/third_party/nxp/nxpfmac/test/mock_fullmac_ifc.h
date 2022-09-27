@@ -37,8 +37,12 @@ class MockFullmacIfc : public ::ddk::WlanFullmacImplIfcProtocol<MockFullmacIfc> 
   void WlanFullmacImplIfcAssocInd(const wlan_fullmac_assoc_ind_t* resp) {}
   void WlanFullmacImplIfcDisassocConf(const wlan_fullmac_disassoc_confirm_t* resp) {}
   void WlanFullmacImplIfcDisassocInd(const wlan_fullmac_disassoc_indication_t* ind) {}
-  void WlanFullmacImplIfcStartConf(const wlan_fullmac_start_confirm_t* resp) {}
-  void WlanFullmacImplIfcStopConf(const wlan_fullmac_stop_confirm_t* resp) {}
+  void WlanFullmacImplIfcStartConf(const wlan_fullmac_start_confirm_t* resp) {
+    on_start_conf.Call(resp);
+  }
+  void WlanFullmacImplIfcStopConf(const wlan_fullmac_stop_confirm_t* resp) {
+    on_stop_conf.Call(resp);
+  }
   void WlanFullmacImplIfcEapolConf(const wlan_fullmac_eapol_confirm_t* resp) {}
   void WlanFullmacImplIfcOnChannelSwitch(const wlan_fullmac_channel_switch_info_t* ind) {}
   void WlanFullmacImplIfcSignalReport(const wlan_fullmac_signal_report_indication_t* ind) {}
@@ -53,6 +57,8 @@ class MockFullmacIfc : public ::ddk::WlanFullmacImplIfcProtocol<MockFullmacIfc> 
   mock_function::MockFunction<void, const wlan_fullmac_scan_result_t*> on_scan_result;
   mock_function::MockFunction<void, const wlan_fullmac_scan_end_t*> on_scan_end;
   mock_function::MockFunction<void, const wlan_fullmac_connect_confirm_t*> on_connect_conf;
+  mock_function::MockFunction<void, const wlan_fullmac_start_confirm_t*> on_start_conf;
+  mock_function::MockFunction<void, const wlan_fullmac_stop_confirm_t*> on_stop_conf;
 
  private:
   wlan_fullmac_impl_ifc_protocol_t proto_;

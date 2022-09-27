@@ -21,6 +21,7 @@ test("nxpfmac_test") {
     "ioctl_adapter_test.cc",
     "key_ring_test.cc",
     "scanner_test.cc",
+    "softap_test.cc",
     "test_data_plane.cc",
     "waitable_state_test.cc",
     "wlan_interface_test.cc",

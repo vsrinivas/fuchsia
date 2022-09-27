@@ -107,6 +107,15 @@ void Device::DdkInit(ddk::InitTxn txn) {
       NXPF_ERR("Failed to initialize firmware: %s", zx_status_get_string(status));
       return status;
     }
+    IoctlRequest<mlan_ds_bss> request(MLAN_IOCTL_BSS, MLAN_ACT_GET, 0,
+                                      {.sub_command = MLAN_OID_BSS_MAC_ADDR});
+
+    IoctlStatus io_status = context_->ioctl_adapter_->IssueIoctlSync(&request);
+    if (io_status != IoctlStatus::Success) {
+      NXPF_ERR("Failed to perform get MAC ioctl: %d", io_status);
+      return ZX_ERR_INTERNAL;
+    }
+    memcpy(mac_address_, request.UserReq().param.mac_addr, ETH_ALEN);
 
     return ZX_OK;
   }();
@@ -208,7 +217,7 @@ void Device::CreateIface(CreateIfaceRequestView request, fdf::Arena &arena,
 
       WlanInterface *interface = nullptr;
       zx_status_t status = WlanInterface::Create(parent(), kClientInterfaceName, kClientInterfaceId,
-                                                 WLAN_MAC_ROLE_CLIENT, context_,
+                                                 WLAN_MAC_ROLE_CLIENT, context_, mac_address_,
                                                  std::move(request->mlme_channel()), &interface);
       if (status != ZX_OK) {
         NXPF_ERR("Could not create client interface: %s", zx_status_get_string(status));
@@ -227,11 +236,18 @@ void Device::CreateIface(CreateIfaceRequestView request, fdf::Arena &arena,
         completer.buffer(arena).ReplyError(ZX_ERR_ALREADY_EXISTS);
         return;
       }
+      if (!request->has_init_sta_addr()) {
+        NXPF_ERR("SoftAP requires mac address to be set");
+        completer.buffer(arena).ReplyError(ZX_ERR_INVALID_ARGS);
+        return;
+      }
+      uint8_t mac_address[ETH_ALEN];
+      memcpy(mac_address, request->init_sta_addr().data(), ETH_ALEN);
 
       WlanInterface *interface = nullptr;
-      zx_status_t status =
-          WlanInterface::Create(parent(), kApInterfaceName, kApInterfaceId, WLAN_MAC_ROLE_AP,
-                                context_, std::move(request->mlme_channel()), &interface);
+      zx_status_t status = WlanInterface::Create(parent(), kApInterfaceName, kApInterfaceId,
+                                                 WLAN_MAC_ROLE_AP, context_, mac_address,
+                                                 std::move(request->mlme_channel()), &interface);
       if (status != ZX_OK) {
         NXPF_ERR("Could not create AP interface: %s", zx_status_get_string(status));
         completer.buffer(arena).ReplyError(status);

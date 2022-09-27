@@ -107,6 +107,7 @@ class Device : public DeviceType,
 
   std::mutex lock_;
 
+  uint8_t mac_address_[ETH_ALEN] = {};
   WlanInterface* client_interface_;
   WlanInterface* ap_interface_;
 

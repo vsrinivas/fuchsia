@@ -28,6 +28,7 @@
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/key_ring.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/scanner.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/softap.h"
 
 namespace wlan::nxpfmac {
 
@@ -45,7 +46,8 @@ class WlanInterface : public WlanInterfaceDeviceType,
   // the devhost.
   static zx_status_t Create(zx_device_t* parent, const char* name, uint32_t iface_index,
                             wlan_mac_role_t role, DeviceContext* context,
-                            zx::channel&& mlme_channel, WlanInterface** out_interface);
+                            const uint8_t mac_address[ETH_ALEN], zx::channel&& mlme_channel,
+                            WlanInterface** out_interface);
 
   // Initiate an async remove call. The provided callback will be called once DdkRelease is called
   // as part of the removal. Note that when `on_remove` is called the WlanInterface object is
@@ -106,9 +108,10 @@ class WlanInterface : public WlanInterfaceDeviceType,
 
  private:
   explicit WlanInterface(zx_device_t* parent, uint32_t iface_index, wlan_mac_role_t role,
-                         DeviceContext* context, zx::channel&& mlme_channel);
+                         DeviceContext* context, const uint8_t mac_address[ETH_ALEN],
+                         zx::channel&& mlme_channel);
 
-  zx_status_t RetrieveMacAddress();
+  zx_status_t SetMacAddressInFw();
   void ConfirmDeauth() __TA_REQUIRES(mutex_);
   void ConfirmDisassoc(zx_status_t status) __TA_REQUIRES(mutex_);
 
@@ -121,6 +124,8 @@ class WlanInterface : public WlanInterfaceDeviceType,
   KeyRing key_ring_;
   ClientConnection client_connection_ __TA_GUARDED(mutex_);
   Scanner scanner_ __TA_GUARDED(mutex_);
+
+  SoftAp soft_ap_ __TA_GUARDED(mutex_);
   DeviceContext* context_ = nullptr;
 
   ::ddk::WlanFullmacImplIfcProtocolClient fullmac_ifc_ __TA_GUARDED(mutex_);

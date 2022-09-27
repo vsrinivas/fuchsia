@@ -51,6 +51,7 @@ source_set("core") {
     "key_ring.cc",
     "moal_shim.cc",
     "scanner.cc",
+    "softap.cc",
     "wlan_interface.cc",
   ]
   public = [ "device.h" ]

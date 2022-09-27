@@ -19,6 +19,10 @@
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
+#include <wlan/common/element.h>
+#include <wlan/common/ieee80211.h>
+#include <wlan/common/ieee80211_codes.h>
+
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/data_plane.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/device.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/device_context.h"
@@ -30,7 +34,8 @@
 namespace wlan::nxpfmac {
 
 WlanInterface::WlanInterface(zx_device_t* parent, uint32_t iface_index, wlan_mac_role_t role,
-                             DeviceContext* context, zx::channel&& mlme_channel)
+                             DeviceContext* context, const uint8_t mac_address[ETH_ALEN],
+                             zx::channel&& mlme_channel)
     : WlanInterfaceDeviceType(parent),
       wlan::drivers::components::NetworkPort(context->data_plane_->NetDevIfcProto(), *this,
                                              static_cast<uint8_t>(iface_index)),
@@ -40,20 +45,22 @@ WlanInterface::WlanInterface(zx_device_t* parent, uint32_t iface_index, wlan_mac
       key_ring_(context->ioctl_adapter_, iface_index),
       client_connection_(this, context, &key_ring_, iface_index),
       scanner_(&fullmac_ifc_, context, iface_index),
-      context_(context) {}
+      soft_ap_(context, iface_index),
+      context_(context) {
+  memcpy(mac_address_, mac_address, ETH_ALEN);
+}
 
 zx_status_t WlanInterface::Create(zx_device_t* parent, const char* name, uint32_t iface_index,
                                   wlan_mac_role_t role, DeviceContext* context,
-                                  zx::channel&& mlme_channel, WlanInterface** out_interface) {
+                                  const uint8_t mac_address[ETH_ALEN], zx::channel&& mlme_channel,
+                                  WlanInterface** out_interface) {
   std::unique_ptr<WlanInterface> interface(
-      new WlanInterface(parent, iface_index, role, context, std::move(mlme_channel)));
+      new WlanInterface(parent, iface_index, role, context, mac_address, std::move(mlme_channel)));
 
-  // Retrieve the MAC address before adding the DDK device. Otherwise the device can bind and
-  // receive calls before the MAC address is ready.
-  zx_status_t status = interface->RetrieveMacAddress();
+  // Set the given mac address in FW.
+  zx_status_t status = interface->SetMacAddressInFw();
   if (status != ZX_OK) {
-    NXPF_ERR("Failed to get interface %u MAC address: %s", iface_index,
-             zx_status_get_string(status));
+    NXPF_ERR("Unable to set Mac address in FW: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -213,8 +220,20 @@ void WlanInterface::WlanFullmacImplQuery(wlan_fullmac_query_info_t* info) {
   *info = {};
 
   std::lock_guard lock(mutex_);
+
+  // Retrieve FW Info (contains HT and VHT capabilities).
+  IoctlRequest<mlan_ds_get_info> info_req;
+  info_req = IoctlRequest<mlan_ds_get_info>(MLAN_IOCTL_GET_INFO, MLAN_ACT_GET, 0,
+                                            {.sub_command = MLAN_OID_GET_FW_INFO});
+  auto& fw_info = info_req.UserReq().param.fw_info;
+  io_status = context_->ioctl_adapter_->IssueIoctlSync(&info_req);
+  if (io_status != IoctlStatus::Success) {
+    NXPF_ERR("FW Info get req failed: %d", io_status);
+  }
+
   info->role = role_;
   info->band_cap_count = 2;
+  memcpy(info->sta_addr, mac_address_, sizeof(mac_address_));
 
   memcpy(info->sta_addr, mac_address_, sizeof(mac_address_));
 
@@ -231,6 +250,12 @@ void WlanInterface::WlanFullmacImplQuery(wlan_fullmac_query_info_t* info) {
       ++band_cap->operating_channel_count;
     }
   }
+  band_cap->ht_supported = true;
+  band_cap->vht_supported = true;
+  wlan::HtCapabilities* ht_caps = wlan::HtCapabilities::View(&band_cap->ht_caps);
+  wlan::VhtCapabilities* vht_caps = wlan::VhtCapabilities::View(&band_cap->vht_caps);
+  ht_caps->ht_cap_info.set_as_uint16(fw_info.hw_dot_11n_dev_cap & 0xFFFF);
+  vht_caps->vht_cap_info.set_as_uint32(fw_info.hw_dot_11ac_dev_cap);
 
   // 5 GHz
   band_cap = &info->band_cap_list[1];
@@ -245,6 +270,12 @@ void WlanInterface::WlanFullmacImplQuery(wlan_fullmac_query_info_t* info) {
       ++band_cap->operating_channel_count;
     }
   }
+  band_cap->ht_supported = true;
+  band_cap->vht_supported = true;
+  ht_caps = wlan::HtCapabilities::View(&band_cap->ht_caps);
+  vht_caps = wlan::VhtCapabilities::View(&band_cap->vht_caps);
+  ht_caps->ht_cap_info.set_as_uint16(fw_info.hw_dot_11n_dev_cap & 0xFFFF);
+  vht_caps->vht_cap_info.set_as_uint32(fw_info.hw_dot_11ac_dev_cap);
 }
 
 void WlanInterface::WlanFullmacImplQueryMacSublayerSupport(mac_sublayer_support_t* resp) {
@@ -376,11 +407,39 @@ void WlanInterface::WlanFullmacImplResetReq(const wlan_fullmac_reset_req_t* req)
 }
 
 void WlanInterface::WlanFullmacImplStartReq(const wlan_fullmac_start_req_t* req) {
-  NXPF_ERR("%s", __func__);
+  const wlan_start_result_t result = [&]() -> wlan_start_result_t {
+    std::lock_guard lock(mutex_);
+    if (role_ != WLAN_MAC_ROLE_AP) {
+      NXPF_ERR("Start is supported only in AP mode, current mode: %d", role_);
+      return WLAN_START_RESULT_NOT_SUPPORTED;
+    }
+    if (req->bss_type != BSS_TYPE_INFRASTRUCTURE) {
+      NXPF_ERR("Attempt to start AP in unsupported mode (%d)", req->bss_type);
+      return WLAN_START_RESULT_NOT_SUPPORTED;
+    }
+    return soft_ap_.Start(req);
+  }();
+
+  std::lock_guard lock(mutex_);
+  wlan_fullmac_start_confirm_t start_conf = {.result_code = result};
+  fullmac_ifc_.StartConf(&start_conf);
 }
 
 void WlanInterface::WlanFullmacImplStopReq(const wlan_fullmac_stop_req_t* req) {
-  NXPF_ERR("%s", __func__);
+  const wlan_stop_result_t result = [&]() -> wlan_stop_result_t {
+    std::lock_guard lock(mutex_);
+
+    if (role_ != WLAN_MAC_ROLE_AP) {
+      NXPF_ERR("Stop is supported only in AP mode, current mode: %d", role_);
+      return WLAN_STOP_RESULT_INTERNAL_ERROR;
+    }
+
+    return soft_ap_.Stop(req);
+  }();
+
+  std::lock_guard lock(mutex_);
+  wlan_fullmac_stop_confirm_t stop_conf = {.result_code = result};
+  fullmac_ifc_.StopConf(&stop_conf);
 }
 
 void WlanInterface::WlanFullmacImplSetKeysReq(const wlan_fullmac_set_keys_req_t* req,
@@ -530,17 +589,17 @@ void WlanInterface::MacSetMode(mode_t mode, cpp20::span<const uint8_t> multicast
   }
 }
 
-zx_status_t WlanInterface::RetrieveMacAddress() {
-  IoctlRequest<mlan_ds_bss> request(MLAN_IOCTL_BSS, MLAN_ACT_GET, PortId(),
+zx_status_t WlanInterface::SetMacAddressInFw() {
+  IoctlRequest<mlan_ds_bss> request(MLAN_IOCTL_BSS, MLAN_ACT_SET, iface_index_,
                                     {.sub_command = MLAN_OID_BSS_MAC_ADDR});
+  request.IoctlReq().bss_index = iface_index_;
+  memcpy(request.UserReq().param.mac_addr, mac_address_, ETH_ALEN);
 
-  NXPF_INFO("Retrieving MAC address");
   IoctlStatus io_status = context_->ioctl_adapter_->IssueIoctlSync(&request);
   if (io_status != IoctlStatus::Success) {
-    NXPF_ERR("Failed to perform get MAC ioctl: %d", io_status);
+    NXPF_ERR("Failed to perform set MAC ioctl: %d", io_status);
     return ZX_ERR_INTERNAL;
   }
-  memcpy(mac_address_, request.UserReq().param.mac_addr, ETH_ALEN);
   return ZX_OK;
 }
 

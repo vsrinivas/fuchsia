@@ -13,6 +13,8 @@
 
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/wlan_interface.h"
 
+#include <stdlib.h>
+
 #include <zxtest/zxtest.h>
 
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/data_plane.h"
@@ -28,7 +30,10 @@ using wlan::nxpfmac::WlanInterface;
 
 namespace {
 
-constexpr char kFullmacDeviceName[] = "test-fullmac-ifc";
+constexpr char kFullmacClientDeviceName[] = "test-client-fullmac-ifc";
+constexpr char kFullmacSoftApDeviceName[] = "test-softap-fullmac-ifc";
+constexpr uint8_t kClientMacAddress[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05};
+constexpr uint8_t kSoftApMacAddress[] = {0x05, 0x04, 0x03, 0x02, 0x01, 0x00};
 
 struct WlanInterfaceTest : public zxtest::Test, public wlan::nxpfmac::DataPlaneIfc {
   void SetUp() override {
@@ -111,31 +116,54 @@ TEST_F(WlanInterfaceTest, Construct) {
   // mock device parent. It will call release on the interface and destroy it that way.
 
   WlanInterface* ifc = nullptr;
-  ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacDeviceName, 0, WLAN_MAC_ROLE_CLIENT,
-                                  &context_, zx::channel(), &ifc));
+  ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacClientDeviceName, 0, WLAN_MAC_ROLE_CLIENT,
+                                  &context_, kClientMacAddress, zx::channel(), &ifc));
 }
 
-TEST_F(WlanInterfaceTest, WlanFullmacImplStart) {
+TEST_F(WlanInterfaceTest, WlanFullmacImplStartClient) {
   // Test that WlanFullmacImplStart works and correctly passes the MLME channel back.
 
-  zx::channel in_mlme_channel;
+  zx::channel in_client_mlme_channel;
   zx::channel unused;
-  ASSERT_OK(zx::channel::create(0, &in_mlme_channel, &unused));
+  ASSERT_OK(zx::channel::create(0, &in_client_mlme_channel, &unused));
 
-  const zx_handle_t mlme_channel_handle = in_mlme_channel.get();
+  const zx_handle_t client_mlme_channel_handle = in_client_mlme_channel.get();
 
   WlanInterface* ifc = nullptr;
-  ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacDeviceName, 0, WLAN_MAC_ROLE_CLIENT,
-                                  &context_, std::move(in_mlme_channel), &ifc));
+  ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacClientDeviceName, 0, WLAN_MAC_ROLE_CLIENT,
+                                  &context_, kClientMacAddress, std::move(in_client_mlme_channel),
+                                  &ifc));
 
   const wlan_fullmac_impl_ifc_protocol_t fullmac_ifc{.ops = nullptr, .ctx = this};
-  zx::channel out_mlme_channel;
-  ifc->WlanFullmacImplStart(&fullmac_ifc, &out_mlme_channel);
+  zx::channel out_client_mlme_channel;
+  ifc->WlanFullmacImplStart(&fullmac_ifc, &out_client_mlme_channel);
 
   // Verify that the channel we get back from starting is the same we passed in during construction.
   // The one passed in during construction will be the one passed through wlanphy and we have to
   // pass it back here.
-  ASSERT_EQ(mlme_channel_handle, out_mlme_channel.get());
+  ASSERT_EQ(client_mlme_channel_handle, out_client_mlme_channel.get());
+}
+
+TEST_F(WlanInterfaceTest, WlanFullmacImplStartSoftAp) {
+  zx::channel in_softap_mlme_channel;
+  zx::channel unused;
+  ASSERT_OK(zx::channel::create(0, &in_softap_mlme_channel, &unused));
+
+  const zx_handle_t softap_mlme_channel_handle = in_softap_mlme_channel.get();
+
+  WlanInterface* softap_ifc = nullptr;
+  ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacSoftApDeviceName, 0, WLAN_MAC_ROLE_AP,
+                                  &context_, kSoftApMacAddress, std::move(in_softap_mlme_channel),
+                                  &softap_ifc));
+
+  const wlan_fullmac_impl_ifc_protocol_t fullmac_ifc{.ops = nullptr, .ctx = this};
+  zx::channel out_softap_mlme_channel;
+  softap_ifc->WlanFullmacImplStart(&fullmac_ifc, &out_softap_mlme_channel);
+
+  // Verify that the channel we get back from starting is the same we passed in during construction.
+  // The one passed in during construction will be the one passed through wlanphy and we have to
+  // pass it back here.
+  ASSERT_EQ(softap_mlme_channel_handle, out_softap_mlme_channel.get());
 }
 
 TEST_F(WlanInterfaceTest, WlanFullmacImplQuery) {
@@ -149,8 +177,8 @@ TEST_F(WlanInterfaceTest, WlanFullmacImplQuery) {
 
   constexpr wlan_mac_role_t kRole = WLAN_MAC_ROLE_AP;
   WlanInterface* ifc = nullptr;
-  ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacDeviceName, 0, kRole, &context_,
-                                  zx::channel(), &ifc));
+  ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacClientDeviceName, 0, kRole, &context_,
+                                  kSoftApMacAddress, zx::channel(), &ifc));
 
   mlan_mocks_.SetOnMlanIoctl([&](t_void*, pmlan_ioctl_req req) -> mlan_status {
     if (req->req_id == MLAN_IOCTL_BSS && req->action == MLAN_ACT_GET) {
@@ -193,8 +221,8 @@ TEST_F(WlanInterfaceTest, WlanFullmacImplQueryMacSublayerSupport) {
   // Test that the most important values are configured in the mac sublayer support.
 
   WlanInterface* ifc = nullptr;
-  ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacDeviceName, 0, WLAN_MAC_ROLE_CLIENT,
-                                  &context_, zx::channel(), &ifc));
+  ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacClientDeviceName, 0, WLAN_MAC_ROLE_CLIENT,
+                                  &context_, kClientMacAddress, zx::channel(), &ifc));
 
   mac_sublayer_support_t sublayer_support;
   ifc->WlanFullmacImplQueryMacSublayerSupport(&sublayer_support);
@@ -235,8 +263,8 @@ TEST_F(WlanInterfaceTest, WlanFullmacImplStartScan) {
   ASSERT_OK(zx::channel::create(0, &in_mlme_channel, &unused));
 
   WlanInterface* ifc = nullptr;
-  ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacDeviceName, 0, WLAN_MAC_ROLE_CLIENT,
-                                  &context_, std::move(in_mlme_channel), &ifc));
+  ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacClientDeviceName, 0, WLAN_MAC_ROLE_CLIENT,
+                                  &context_, kClientMacAddress, std::move(in_mlme_channel), &ifc));
 
   zx::channel out_mlme_channel;
   ifc->WlanFullmacImplStart(mock_fullmac_ifc.proto(), &out_mlme_channel);
@@ -286,8 +314,8 @@ TEST_F(WlanInterfaceTest, WlanFullmacImplConnectReq) {
   ASSERT_OK(zx::channel::create(0, &in_mlme_channel, &unused));
 
   WlanInterface* ifc = nullptr;
-  ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacDeviceName, 0, WLAN_MAC_ROLE_CLIENT,
-                                  &context_, std::move(in_mlme_channel), &ifc));
+  ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacClientDeviceName, 0, WLAN_MAC_ROLE_CLIENT,
+                                  &context_, kClientMacAddress, std::move(in_mlme_channel), &ifc));
 
   zx::channel out_mlme_channel;
   ifc->WlanFullmacImplStart(mock_fullmac_ifc.proto(), &out_mlme_channel);
@@ -324,28 +352,29 @@ TEST_F(WlanInterfaceTest, MacSetMode) {
   mlan_mocks_.SetOnMlanIoctl([&](t_void*, pmlan_ioctl_req req) -> mlan_status {
     if (req->action == MLAN_ACT_SET && req->req_id == MLAN_IOCTL_BSS) {
       auto bss = reinterpret_cast<const mlan_ds_bss*>(req->pbuf);
-      EXPECT_EQ(MLAN_OID_BSS_MULTICAST_LIST, bss->sub_command);
-      switch (mac_mode.load()) {
-        case MODE_MULTICAST_FILTER:
-          EXPECT_EQ(MLAN_MULTICAST_MODE, bss->param.multicast_list.mode);
-          EXPECT_EQ(sizeof(kMacMulticastFilters) / ETH_ALEN,
-                    bss->param.multicast_list.num_multicast_addr);
-          EXPECT_BYTES_EQ(kMacMulticastFilters, bss->param.multicast_list.mac_list,
-                          sizeof(kMacMulticastFilters));
-          break;
-        case MODE_MULTICAST_PROMISCUOUS:
-          EXPECT_EQ(MLAN_ALL_MULTI_MODE, bss->param.multicast_list.mode);
-          EXPECT_EQ(0, bss->param.multicast_list.num_multicast_addr);
-          break;
-        case MODE_PROMISCUOUS:
-          EXPECT_EQ(MLAN_PROMISC_MODE, bss->param.multicast_list.mode);
-          EXPECT_EQ(0, bss->param.multicast_list.num_multicast_addr);
-          break;
-        default:
-          ADD_FAILURE("Unexpected mac mode: %u", mac_mode.load());
-          break;
+      if (bss->sub_command == MLAN_OID_BSS_MULTICAST_LIST) {
+        switch (mac_mode.load()) {
+          case MODE_MULTICAST_FILTER:
+            EXPECT_EQ(MLAN_MULTICAST_MODE, bss->param.multicast_list.mode);
+            EXPECT_EQ(sizeof(kMacMulticastFilters) / ETH_ALEN,
+                      bss->param.multicast_list.num_multicast_addr);
+            EXPECT_BYTES_EQ(kMacMulticastFilters, bss->param.multicast_list.mac_list,
+                            sizeof(kMacMulticastFilters));
+            break;
+          case MODE_MULTICAST_PROMISCUOUS:
+            EXPECT_EQ(MLAN_ALL_MULTI_MODE, bss->param.multicast_list.mode);
+            EXPECT_EQ(0, bss->param.multicast_list.num_multicast_addr);
+            break;
+          case MODE_PROMISCUOUS:
+            EXPECT_EQ(MLAN_PROMISC_MODE, bss->param.multicast_list.mode);
+            EXPECT_EQ(0, bss->param.multicast_list.num_multicast_addr);
+            break;
+          default:
+            ADD_FAILURE("Unexpected mac mode: %u", mac_mode.load());
+            break;
+        }
+        return MLAN_STATUS_SUCCESS;
       }
-      return MLAN_STATUS_SUCCESS;
     }
     // Return success for everything else.
     return MLAN_STATUS_SUCCESS;
@@ -356,8 +385,8 @@ TEST_F(WlanInterfaceTest, MacSetMode) {
   ASSERT_OK(zx::channel::create(0, &in_mlme_channel, &unused));
 
   WlanInterface* ifc = nullptr;
-  ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacDeviceName, 0, WLAN_MAC_ROLE_CLIENT,
-                                  &context_, std::move(in_mlme_channel), &ifc));
+  ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacClientDeviceName, 0, WLAN_MAC_ROLE_CLIENT,
+                                  &context_, kClientMacAddress, std::move(in_mlme_channel), &ifc));
 
   constexpr mode_t kMacModes[] = {MODE_MULTICAST_FILTER, MODE_MULTICAST_PROMISCUOUS,
                                   MODE_PROMISCUOUS};
@@ -365,6 +394,79 @@ TEST_F(WlanInterfaceTest, MacSetMode) {
     mac_mode = mode;
     ifc->MacSetMode(mode, kMacMulticastFilters);
   }
+}
+
+TEST_F(WlanInterfaceTest, WlanFullmacImplStartReq) {
+  // Test that a SoftAP Start request results in the right set of ioctls and parameters.
+
+  wlan::nxpfmac::MockFullmacIfc mock_fullmac_ifc;
+  constexpr uint8_t kSoftApSsid[] = {"Test_SoftAP"};
+  constexpr uint8_t kTestChannel = 6;
+
+  mlan_mocks_.SetOnMlanIoctl([&](t_void*, pmlan_ioctl_req req) -> mlan_status {
+    if (req->req_id == MLAN_IOCTL_BSS) {
+      auto bss = reinterpret_cast<const mlan_ds_bss*>(req->pbuf);
+      if (bss->sub_command == MLAN_OID_UAP_BSS_CONFIG) {
+        if (req->action == MLAN_ACT_SET) {
+          // BSS config set. Ensure SSID, channel and Band are correctly set.
+          EXPECT_EQ(bss->param.bss_config.ssid.ssid_len, sizeof(kSoftApSsid));
+          EXPECT_BYTES_EQ(bss->param.bss_config.ssid.ssid, kSoftApSsid,
+                          bss->param.bss_config.ssid.ssid_len);
+          EXPECT_EQ(bss->param.bss_config.channel, kTestChannel);
+          EXPECT_EQ(bss->param.bss_config.bandcfg.chanBand, BAND_2GHZ);
+          EXPECT_EQ(bss->param.bss_config.bandcfg.chanWidth, CHAN_BW_20MHZ);
+        }
+        ioctl_adapter_->OnIoctlComplete(req, wlan::nxpfmac::IoctlStatus::Success);
+        return MLAN_STATUS_PENDING;
+      } else if (bss->sub_command == MLAN_OID_BSS_START ||
+                 bss->sub_command == MLAN_OID_UAP_BSS_RESET) {
+        ioctl_adapter_->OnIoctlComplete(req, wlan::nxpfmac::IoctlStatus::Success);
+        return MLAN_STATUS_PENDING;
+      }
+    }
+    // Return success for everything else.
+    return MLAN_STATUS_SUCCESS;
+  });
+
+  zx::channel in_mlme_channel;
+  zx::channel unused;
+  ASSERT_OK(zx::channel::create(0, &in_mlme_channel, &unused));
+
+  WlanInterface* ifc = nullptr;
+  ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacSoftApDeviceName, 0, WLAN_MAC_ROLE_AP,
+                                  &context_, kSoftApMacAddress, std::move(in_mlme_channel), &ifc));
+
+  zx::channel out_mlme_channel;
+  ifc->WlanFullmacImplStart(mock_fullmac_ifc.proto(), &out_mlme_channel);
+
+  sync_completion_t on_start_conf_called;
+  mock_fullmac_ifc.on_start_conf.ExpectCallWithMatcher([&](const wlan_fullmac_start_confirm* resp) {
+    EXPECT_EQ(resp->result_code, WLAN_START_RESULT_SUCCESS);
+    sync_completion_signal(&on_start_conf_called);
+  });
+
+  // Start the SoftAP
+  wlan_fullmac_start_req start_req = {
+      .bss_type = BSS_TYPE_INFRASTRUCTURE,
+      .channel = kTestChannel,
+  };
+  memcpy(start_req.ssid.data, kSoftApSsid, sizeof(kSoftApSsid));
+  start_req.ssid.len = sizeof(kSoftApSsid);
+
+  ifc->WlanFullmacImplStartReq(&start_req);
+  ASSERT_OK(sync_completion_wait(&on_start_conf_called, ZX_TIME_INFINITE));
+
+  // And now ensure SoftAP Stop works ok.
+  sync_completion_t on_stop_conf_called;
+  mock_fullmac_ifc.on_stop_conf.ExpectCallWithMatcher([&](const wlan_fullmac_stop_confirm* resp) {
+    EXPECT_EQ(resp->result_code, WLAN_STOP_RESULT_SUCCESS);
+    sync_completion_signal(&on_stop_conf_called);
+  });
+  wlan_fullmac_stop_req stop_req = {};
+  memcpy(stop_req.ssid.data, kSoftApSsid, sizeof(kSoftApSsid));
+  stop_req.ssid.len = sizeof(kSoftApSsid);
+  ifc->WlanFullmacImplStopReq(&stop_req);
+  ASSERT_OK(sync_completion_wait(&on_stop_conf_called, ZX_TIME_INFINITE));
 }
 
 }  // namespace

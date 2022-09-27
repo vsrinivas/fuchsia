@@ -20,9 +20,12 @@
 extern "C" {
 #endif
 
+#pragma push_macro("MACSTR")
+#undef MACSTR
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan/mlan_decl.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan/mlan_ioctl.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan/mlan_ieee.h"
+#pragma pop_macro("MACSTR")
 
 #ifdef __cplusplus
 }  // extern "C"
