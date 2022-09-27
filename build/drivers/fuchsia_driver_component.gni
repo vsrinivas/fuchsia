@@ -66,15 +66,11 @@ import("//tools/cmc/build/cmc.gni")
 #   info (mandatory for //src and //zircon)
 #     Name of the file containing the driver information file.
 #     Type: file
-#   device_category
-#      The device categories this driver is for. (The values must be from fhcp.json)
-#      This is a requirement for Certification of the driver.
-#      Type: array of string
-#      Default: ['Misc']
-#   device_sub_category (optional)
-#      The device sub-categories this driver is for (defined in fhcp.json)
-#      Type: array of string
-#      Default: ['None']
+#   device_categories (optional)
+#      The device categories this driver is for. (The values must be from FHCP.json)
+#      TODO(fxbug.dev/110360): Verify that the values are from FHCP.json
+#      This is a requirement for certification of the driver.
+#      Type: array of scopes
 #   deps
 #   testonly
 #   visibility
@@ -143,15 +139,15 @@ template("fuchsia_driver_component") {
           args += [ "--sysmem" ]
         }
 
-        # TODO(fxbug.dev/109701: Convert the device_category and device_category
-        # data structure to be nested
-        if (defined(invoker.device_category)) {
-          args += [ "--device_category" ]
-          args += invoker.device_category
-        }
-        if (defined(invoker.device_sub_category)) {
-          args += [ "--device_sub_category" ]
-          args += invoker.device_sub_category
+        if (defined(invoker.device_categories)) {
+          # TODO(fxbug.dev/110360): Verify that the values are from FHCP.json
+          path = "${target_gen_dir}/device_categories.json"
+          write_file(path, invoker.device_categories, "json")
+          args += [
+            "--device_categories_file",
+            rebase_path(path, root_build_dir),
+          ]
+          inputs += [ path ]
         }
 
         # TODO(fxbug.dev/99310): set allow_sync_calls for v1 drivers

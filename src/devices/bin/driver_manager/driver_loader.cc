@@ -61,22 +61,20 @@ fuchsia_driver_development::wire::DriverInfo CopyDriverInfo(
     allocated.package_type(driver.package_type());
   }
 
-  if (driver.has_device_category()) {
-    auto categories =
-        fidl::VectorView<fidl::StringView>(allocator, driver.device_category().count());
+  if (driver.has_device_categories()) {
+    auto categories = fidl::VectorView<fuchsia_driver_index::wire::DeviceCategory>(
+        allocator, driver.device_categories().count());
     for (size_t i = 0; i < categories.count(); i++) {
-      categories[i] = fidl::StringView(allocator, driver.device_category()[i].get());
+      auto category_builder = fuchsia_driver_index::wire::DeviceCategory::Builder(allocator);
+      if (driver.device_categories()[i].has_category()) {
+        category_builder.category(allocator, driver.device_categories()[i].category().get());
+      }
+      if (driver.device_categories()[i].has_subcategory()) {
+        category_builder.subcategory(allocator, driver.device_categories()[i].subcategory().get());
+      }
+      categories[i] = category_builder.Build();
     }
-    allocated.device_category(categories);
-  }
-
-  if (driver.has_device_sub_category()) {
-    auto subcategories =
-        fidl::VectorView<fidl::StringView>(allocator, driver.device_sub_category().count());
-    for (size_t i = 0; i < subcategories.count(); i++) {
-      subcategories[i] = fidl::StringView(allocator, driver.device_sub_category()[i].get());
-    }
-    allocated.device_sub_category(subcategories);
+    allocated.device_categories(categories);
   }
 
   return allocated.Build();
@@ -447,20 +445,6 @@ const std::vector<MatchedDriver> DriverLoader::MatchPropertiesDriverIndex(
     if (!fidl_driver_info->is_fallback() && config.only_return_base_and_fallback_drivers &&
         IsFuchsiaBootScheme(driver_url)) {
       continue;
-    }
-
-    if (fidl_driver_info->has_device_category()) {
-      for (size_t i = 0; i < fidl_driver_info->device_category().count(); i++) {
-        std::string category(fidl_driver_info->device_category()[i].get());
-        matched_driver_info.device_category.push_back(category);
-      }
-    }
-
-    if (fidl_driver_info->has_device_sub_category()) {
-      for (size_t i = 0; i < fidl_driver_info->device_sub_category().count(); i++) {
-        std::string sub_category(fidl_driver_info->device_sub_category()[i].get());
-        matched_driver_info.device_sub_category.push_back(sub_category);
-      }
     }
 
     MatchedDriver matched_driver;

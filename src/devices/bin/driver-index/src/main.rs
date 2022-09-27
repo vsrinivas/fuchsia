@@ -710,7 +710,7 @@ mod tests {
             interpreter::decode_bind_rules::DecodedRules,
             parser::bind_library::ValueType,
         },
-        fidl_fuchsia_pkg as fpkg,
+        fidl_fuchsia_data as fdata, fidl_fuchsia_pkg as fpkg,
         std::collections::HashMap,
     };
 
@@ -718,8 +718,7 @@ mod tests {
         url: String,
         driver_url: String,
         colocate: bool,
-        device_category: Vec<String>,
-        device_sub_category: Vec<String>,
+        device_categories: Vec<fdi::DeviceCategory>,
         package_type: DriverPackageType,
         fallback: bool,
     ) -> fdi::MatchedDriverInfo {
@@ -727,11 +726,18 @@ mod tests {
             url: Some(url),
             driver_url: Some(driver_url),
             colocate: Some(colocate),
-            device_category: Some(device_category),
-            device_sub_category: Some(device_sub_category),
+            device_categories: Some(device_categories),
             package_type: fdi::DriverPackageType::from_primitive(package_type as u8),
             is_fallback: Some(fallback),
             ..fdi::MatchedDriverInfo::EMPTY
+        }
+    }
+
+    fn create_default_device_category() -> fdi::DeviceCategory {
+        fdi::DeviceCategory {
+            category: Some(resolved_driver::DEFAULT_DEVICE_CATEGORY.to_string()),
+            subcategory: None,
+            ..fdi::DeviceCategory::EMPTY
         }
     }
 
@@ -898,8 +904,7 @@ mod tests {
                 expected_url,
                 expected_driver_url,
                 true,
-                vec![resolved_driver::DEFAULT_DEVICE_CATEGORY.to_string()],
-                vec![resolved_driver::DEFAULT_DEVICE_SUB_CATEGORY.to_string()],
+                vec![create_default_device_category()],
                 DriverPackageType::Base,
                 false,
             ));
@@ -926,8 +931,7 @@ mod tests {
                 expected_url,
                 expected_driver_url,
                 false,
-                vec![resolved_driver::DEFAULT_DEVICE_CATEGORY.to_string()],
-                vec![resolved_driver::DEFAULT_DEVICE_SUB_CATEGORY.to_string()],
+                vec![create_default_device_category()],
                 DriverPackageType::Base,
                 false,
             ));
@@ -983,8 +987,7 @@ mod tests {
             bind_rules: always_match.clone(),
             bind_bytecode: vec![],
             colocate: false,
-            device_category: vec![],
-            device_sub_category: vec![],
+            device_categories: vec![],
             fallback: false,
             package_type: DriverPackageType::Base,
             package_hash: None,
@@ -1010,8 +1013,7 @@ mod tests {
             let expected_result = vec![fdi::MatchedDriver::Driver(fdi::MatchedDriverInfo {
                 url: Some("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string()),
                 colocate: Some(false),
-                device_category: Some(vec![]),
-                device_sub_category: Some(vec![]),
+                device_categories: Some(vec![]),
                 package_type: Some(fdi::DriverPackageType::Base),
                 is_fallback: Some(false),
                 ..fdi::MatchedDriverInfo::EMPTY
@@ -1058,8 +1060,7 @@ mod tests {
             bind_rules: always_match.clone(),
             bind_bytecode: vec![],
             colocate: false,
-            device_category: vec![],
-            device_sub_category: vec![],
+            device_categories: vec![],
             fallback: false,
             package_type: DriverPackageType::Base,
             package_hash: None,
@@ -1087,8 +1088,7 @@ mod tests {
                 colocate: Some(false),
                 package_type: Some(fdi::DriverPackageType::Base),
                 is_fallback: Some(false),
-                device_category: Some(vec![]),
-                device_sub_category: Some(vec![]),
+                device_categories: Some(vec![]),
                 ..fdi::MatchedDriverInfo::EMPTY
             })];
 
@@ -1130,8 +1130,7 @@ mod tests {
                 bind_rules: always_match.clone(),
                 bind_bytecode: vec![],
                 colocate: false,
-                device_category: vec![],
-                device_sub_category: vec![],
+                device_categories: vec![],
                 fallback: false,
                 package_type: DriverPackageType::Base,
                 package_hash: None,
@@ -1145,8 +1144,7 @@ mod tests {
                 bind_rules: always_match.clone(),
                 bind_bytecode: vec![],
                 colocate: false,
-                device_category: vec![],
-                device_sub_category: vec![],
+                device_categories: vec![],
                 fallback: false,
                 package_type: DriverPackageType::Base,
                 package_hash: None,
@@ -1185,7 +1183,6 @@ mod tests {
                     expected_driver_url_1,
                     false,
                     vec![],
-                    vec![],
                     DriverPackageType::Base,
                     false,
                 )),
@@ -1193,7 +1190,6 @@ mod tests {
                     expected_url_2,
                     expected_driver_url_2,
                     false,
-                    vec![],
                     vec![],
                     DriverPackageType::Base,
                     false,
@@ -1234,8 +1230,7 @@ mod tests {
                 bind_rules: always_match.clone(),
                 bind_bytecode: vec![],
                 colocate: false,
-                device_category: vec![],
-                device_sub_category: vec![],
+                device_categories: vec![],
                 fallback: false,
                 package_type: DriverPackageType::Boot,
                 package_hash: None,
@@ -1246,8 +1241,7 @@ mod tests {
                 bind_rules: always_match.clone(),
                 bind_bytecode: vec![],
                 colocate: false,
-                device_category: vec![],
-                device_sub_category: vec![],
+                device_categories: vec![],
                 fallback: false,
                 package_type: DriverPackageType::Boot,
                 package_hash: None,
@@ -1312,8 +1306,7 @@ mod tests {
                 bind_rules: always_match.clone(),
                 bind_bytecode: vec![],
                 colocate: false,
-                device_category: vec![],
-                device_sub_category: vec![],
+                device_categories: vec![],
                 fallback: true,
                 package_type: DriverPackageType::Boot,
                 package_hash: None,
@@ -1324,8 +1317,7 @@ mod tests {
                 bind_rules: always_match.clone(),
                 bind_bytecode: vec![],
                 colocate: false,
-                device_category: vec![],
-                device_sub_category: vec![],
+                device_categories: vec![],
                 fallback: false,
                 package_type: DriverPackageType::Boot,
                 package_hash: None,
@@ -1356,7 +1348,6 @@ mod tests {
                     NON_FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH
                 ),
                 false,
-                vec![],
                 vec![],
                 DriverPackageType::Boot,
                 false,
@@ -1407,8 +1398,7 @@ mod tests {
             bind_rules: always_match.clone(),
             bind_bytecode: vec![],
             colocate: false,
-            device_category: vec![],
-            device_sub_category: vec![],
+            device_categories: vec![],
             fallback: true,
             package_type: DriverPackageType::Boot,
             package_hash: None,
@@ -1421,8 +1411,7 @@ mod tests {
                 bind_rules: always_match.clone(),
                 bind_bytecode: vec![],
                 colocate: false,
-                device_category: vec![],
-                device_sub_category: vec![],
+                device_categories: vec![],
                 fallback: true,
                 package_type: DriverPackageType::Base,
                 package_hash: None,
@@ -1433,8 +1422,7 @@ mod tests {
                 bind_rules: always_match.clone(),
                 bind_bytecode: vec![],
                 colocate: false,
-                device_category: vec![],
-                device_sub_category: vec![],
+                device_categories: vec![],
                 fallback: false,
                 package_type: DriverPackageType::Base,
                 package_hash: None,
@@ -1465,7 +1453,6 @@ mod tests {
                     NON_FALLBACK_BASE_DRIVER_V1_DRIVER_PATH
                 ),
                 false,
-                vec![],
                 vec![],
                 DriverPackageType::Base,
                 false,
@@ -1514,8 +1501,7 @@ mod tests {
                 bind_rules: always_match.clone(),
                 bind_bytecode: vec![],
                 colocate: false,
-                device_category: vec![],
-                device_sub_category: vec![],
+                device_categories: vec![],
                 fallback: true,
                 package_type: DriverPackageType::Boot,
                 package_hash: None,
@@ -1526,8 +1512,7 @@ mod tests {
                 bind_rules: always_match.clone(),
                 bind_bytecode: vec![],
                 colocate: false,
-                device_category: vec![],
-                device_sub_category: vec![],
+                device_categories: vec![],
                 fallback: false,
                 package_type: DriverPackageType::Boot,
                 package_hash: None,
@@ -1557,7 +1542,6 @@ mod tests {
                     format!("fuchsia-boot:///#{}", NON_FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH),
                     false,
                     vec![],
-                    vec![],
                     DriverPackageType::Boot,
                     false,
                 )),
@@ -1565,7 +1549,6 @@ mod tests {
                     FALLBACK_BOOT_DRIVER_COMPONENT_URL.to_owned(),
                     format!("fuchsia-boot:///#{}", FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH),
                     false,
-                    vec![],
                     vec![],
                     DriverPackageType::Boot,
                     true,
@@ -1616,8 +1599,7 @@ mod tests {
             bind_rules: always_match.clone(),
             bind_bytecode: vec![],
             colocate: false,
-            device_category: vec![],
-            device_sub_category: vec![],
+            device_categories: vec![],
             fallback: true,
             package_type: DriverPackageType::Boot,
             package_hash: None,
@@ -1630,8 +1612,7 @@ mod tests {
                 bind_rules: always_match.clone(),
                 bind_bytecode: vec![],
                 colocate: false,
-                device_category: vec![],
-                device_sub_category: vec![],
+                device_categories: vec![],
                 fallback: true,
                 package_type: DriverPackageType::Base,
                 package_hash: None,
@@ -1642,8 +1623,7 @@ mod tests {
                 bind_rules: always_match.clone(),
                 bind_bytecode: vec![],
                 colocate: false,
-                device_category: vec![],
-                device_sub_category: vec![],
+                device_categories: vec![],
                 fallback: false,
                 package_type: DriverPackageType::Base,
                 package_hash: None,
@@ -1676,7 +1656,6 @@ mod tests {
                     ),
                     false,
                     vec![],
-                    vec![],
                     DriverPackageType::Base,
                     false,
                 )),
@@ -1684,7 +1663,6 @@ mod tests {
                     FALLBACK_BOOT_DRIVER_COMPONENT_URL.to_owned(),
                     format!("fuchsia-boot:///#{}", FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH),
                     false,
-                    vec![],
                     vec![],
                     DriverPackageType::Boot,
                     true,
@@ -1696,7 +1674,6 @@ mod tests {
                         FALLBACK_BASE_DRIVER_V1_DRIVER_PATH
                     ),
                     false,
-                    vec![],
                     vec![],
                     DriverPackageType::Base,
                     true,
@@ -1878,8 +1855,7 @@ mod tests {
             bind_rules: always_match.clone(),
             bind_bytecode: vec![],
             colocate: false,
-            device_category: vec![],
-            device_sub_category: vec![],
+            device_categories: vec![],
             fallback: true,
             package_type: DriverPackageType::Boot,
             package_hash: None,
@@ -1915,8 +1891,7 @@ mod tests {
             bind_rules: always_match.clone(),
             bind_bytecode: vec![],
             colocate: false,
-            device_category: vec![],
-            device_sub_category: vec![],
+            device_categories: vec![],
             fallback: true,
             package_type: DriverPackageType::Boot,
             package_hash: None,
@@ -1940,7 +1915,6 @@ mod tests {
                 format!("fuchsia-boot:///#{}", FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH),
                 false,
                 vec![],
-                vec![],
                 DriverPackageType::Boot,
                 true,
             ));
@@ -1958,8 +1932,7 @@ mod tests {
             bind_rules: always_match.clone(),
             bind_bytecode: vec![],
             colocate: false,
-            device_category: vec![],
-            device_sub_category: vec![],
+            device_categories: vec![],
             fallback: true,
             package_type: DriverPackageType::Boot,
             package_hash: None,
@@ -1995,8 +1968,7 @@ mod tests {
             bind_rules: always_match.clone(),
             bind_bytecode: vec![],
             colocate: false,
-            device_category: vec![],
-            device_sub_category: vec![],
+            device_categories: vec![],
             fallback: true,
             package_type: DriverPackageType::Boot,
             package_hash: None,
@@ -2019,7 +1991,6 @@ mod tests {
                 FALLBACK_BOOT_DRIVER_COMPONENT_URL.to_owned(),
                 format!("fuchsia-boot:///#{}", FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH),
                 false,
-                vec![],
                 vec![],
                 DriverPackageType::Boot,
                 true,
@@ -2061,8 +2032,7 @@ mod tests {
                 expected_url,
                 expected_driver_url,
                 true,
-                vec![resolved_driver::DEFAULT_DEVICE_CATEGORY.to_string()],
-                vec![resolved_driver::DEFAULT_DEVICE_SUB_CATEGORY.to_string()],
+                vec![create_default_device_category()],
                 DriverPackageType::Boot,
                 false,
             ));
@@ -2084,8 +2054,7 @@ mod tests {
                 expected_url,
                 expected_driver_url,
                 false,
-                vec![resolved_driver::DEFAULT_DEVICE_CATEGORY.to_string()],
-                vec![resolved_driver::DEFAULT_DEVICE_SUB_CATEGORY.to_string()],
+                vec![create_default_device_category()],
                 DriverPackageType::Boot,
                 false,
             ));
@@ -2166,8 +2135,7 @@ mod tests {
             bind_rules: rules,
             bind_bytecode: vec![],
             colocate: false,
-            device_category: vec![],
-            device_sub_category: vec![],
+            device_categories: vec![],
             fallback: false,
             package_type: DriverPackageType::Base,
             package_hash: None,
@@ -2194,8 +2162,7 @@ mod tests {
             let expected_driver_info = fdi::MatchedDriverInfo {
                 url: Some("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string()),
                 colocate: Some(false),
-                device_category: Some(vec![]),
-                device_sub_category: Some(vec![]),
+                device_categories: Some(vec![]),
                 package_type: Some(fdi::DriverPackageType::Base),
                 is_fallback: Some(false),
                 ..fdi::MatchedDriverInfo::EMPTY
@@ -2232,8 +2199,7 @@ mod tests {
             let expected_driver_info = fdi::MatchedDriverInfo {
                 url: Some("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string()),
                 colocate: Some(false),
-                device_category: Some(vec![]),
-                device_sub_category: Some(vec![]),
+                device_categories: Some(vec![]),
                 package_type: Some(fdi::DriverPackageType::Base),
                 is_fallback: Some(false),
                 ..fdi::MatchedDriverInfo::EMPTY
@@ -2388,8 +2354,7 @@ mod tests {
             bind_rules: always_match,
             bind_bytecode: vec![],
             colocate: false,
-            device_category: vec![],
-            device_sub_category: vec![],
+            device_categories: vec![],
             fallback: false,
             package_type: DriverPackageType::Base,
             package_hash: None,
@@ -2465,8 +2430,7 @@ mod tests {
                             "fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string()
                         ),
                         colocate: Some(false),
-                        device_category: Some(vec![]),
-                        device_sub_category: Some(vec![]),
+                        device_categories: Some(vec![]),
                         package_type: Some(fdi::DriverPackageType::Base),
                         is_fallback: Some(false),
                         ..fdi::MatchedDriverInfo::EMPTY
@@ -2507,8 +2471,7 @@ mod tests {
                 vec![fdi::MatchedDriver::Driver(fdi::MatchedDriverInfo {
                     url: Some("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string()),
                     colocate: Some(false),
-                    device_category: Some(vec![]),
-                    device_sub_category: Some(vec![]),
+                    device_categories: Some(vec![]),
                     package_type: Some(fdi::DriverPackageType::Base),
                     is_fallback: Some(false),
                     ..fdi::MatchedDriverInfo::EMPTY
@@ -2582,8 +2545,7 @@ mod tests {
             bind_rules: rules,
             bind_bytecode: vec![],
             colocate: false,
-            device_category: vec![],
-            device_sub_category: vec![],
+            device_categories: vec![],
             fallback: false,
             package_type: DriverPackageType::Base,
             package_hash: None,
@@ -2877,8 +2839,7 @@ mod tests {
                     bind_rules: rules,
                     bind_bytecode: vec![],
                     colocate: false,
-                    device_category: vec![],
-                    device_sub_category: vec![],
+                    device_categories: vec![],
                     fallback: false,
                     package_type: DriverPackageType::Base,
                     package_hash: None,
@@ -2933,8 +2894,7 @@ mod tests {
             bind_rules: always_match,
             bind_bytecode: vec![],
             colocate: false,
-            device_category: vec![],
-            device_sub_category: vec![],
+            device_categories: vec![],
             fallback: false,
             package_type: DriverPackageType::Base,
             package_hash: None,
@@ -3041,8 +3001,7 @@ mod tests {
             bind_rules: always_match,
             bind_bytecode: vec![],
             colocate: false,
-            device_category: vec![],
-            device_sub_category: vec![],
+            device_categories: vec![],
             fallback: false,
             package_type: DriverPackageType::Base,
             package_hash: None,
@@ -3162,8 +3121,7 @@ mod tests {
                 expected_url,
                 expected_driver_url,
                 true,
-                vec![resolved_driver::DEFAULT_DEVICE_CATEGORY.to_string()],
-                vec![resolved_driver::DEFAULT_DEVICE_SUB_CATEGORY.to_string()],
+                vec![create_default_device_category()],
                 DriverPackageType::Universe,
                 false,
             ));
@@ -3286,8 +3244,7 @@ mod tests {
             bind_rules: always_match.clone(),
             bind_bytecode: vec![],
             colocate: false,
-            device_category: vec![],
-            device_sub_category: vec![],
+            device_categories: vec![],
             fallback: false,
             package_type: DriverPackageType::Base,
             package_hash: None,
@@ -3352,8 +3309,7 @@ mod tests {
             bind_rules: always_match.clone(),
             bind_bytecode: vec![],
             colocate: false,
-            device_category: vec![],
-            device_sub_category: vec![],
+            device_categories: vec![],
             fallback: false,
             package_type: DriverPackageType::Boot,
             package_hash: None,
@@ -3386,5 +3342,49 @@ mod tests {
             },
             () = test_task => {},
         }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_device_categories_from_component_data() {
+        assert_eq!(
+            resolved_driver::get_device_categories_from_component_data(&vec![
+                fdata::Dictionary {
+                    entries: Some(vec![fdata::DictionaryEntry {
+                        key: "category".to_string(),
+                        value: Some(Box::new(fdata::DictionaryValue::Str("usb".to_string())))
+                    }]),
+                    ..fdata::Dictionary::EMPTY
+                },
+                fdata::Dictionary {
+                    entries: Some(vec![
+                        fdata::DictionaryEntry {
+                            key: "category".to_string(),
+                            value: Some(Box::new(fdata::DictionaryValue::Str(
+                                "connectivity".to_string()
+                            ))),
+                        },
+                        fdata::DictionaryEntry {
+                            key: "subcategory".to_string(),
+                            value: Some(Box::new(fdata::DictionaryValue::Str(
+                                "ethernet".to_string()
+                            ))),
+                        }
+                    ]),
+                    ..fdata::Dictionary::EMPTY
+                }
+            ]),
+            vec![
+                fdi::DeviceCategory {
+                    category: Some("usb".to_string()),
+                    subcategory: None,
+                    ..fdi::DeviceCategory::EMPTY
+                },
+                fdi::DeviceCategory {
+                    category: Some("connectivity".to_string()),
+                    subcategory: Some("ethernet".to_string()),
+                    ..fdi::DeviceCategory::EMPTY
+                }
+            ]
+        );
     }
 }

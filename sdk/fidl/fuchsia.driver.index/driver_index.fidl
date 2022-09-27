@@ -20,6 +20,11 @@ type DriverPackageType = flexible enum : uint8 {
     UNIVERSE = 3;
 };
 
+type DeviceCategory = table {
+    1: category string:MAX;
+    2: subcategory string:MAX;
+};
+
 /// Information for a driver matched by the driver index. This is used by
 /// normal and composite drivers.
 type MatchedDriverInfo = table {
@@ -39,9 +44,8 @@ type MatchedDriverInfo = table {
     /// If this is true then the driver is a fallback driver.
     5: is_fallback bool;
 
-    /// Device category and sub-category
-    6: device_category vector<string:MAX>:MAX;
-    7: device_sub_category vector<string:MAX>:MAX;
+    /// Device categories
+    6: device_categories vector<DeviceCategory>:MAX;
 };
 
 /// Information for a composite driver matched by the driver index.

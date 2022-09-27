@@ -15,8 +15,8 @@ use {
     fidl_fuchsia_driver_index as fdi, fidl_fuchsia_io as fio, fidl_fuchsia_pkg as fpkg,
     futures::TryFutureExt,
 };
-pub const DEFAULT_DEVICE_CATEGORY: &str = "Misc";
-pub const DEFAULT_DEVICE_SUB_CATEGORY: &str = "None";
+
+pub const DEFAULT_DEVICE_CATEGORY: &str = "misc";
 
 // Cached drivers don't exist yet so we allow dead code.
 #[derive(Copy, Clone, Debug)]
@@ -35,8 +35,7 @@ pub struct ResolvedDriver {
     pub bind_rules: DecodedRules,
     pub bind_bytecode: Vec<u8>,
     pub colocate: bool,
-    pub device_category: Vec<String>,
-    pub device_sub_category: Vec<String>,
+    pub device_categories: Vec<fdi::DeviceCategory>,
     pub fallback: bool,
     pub package_type: DriverPackageType,
     pub package_hash: Option<fpkg::BlobId>,
@@ -167,8 +166,7 @@ impl ResolvedDriver {
             url: Some(self.component_url.as_str().to_string()),
             driver_url: self.get_driver_url(),
             colocate: Some(self.colocate),
-            device_category: Some(self.device_category.clone()),
-            device_sub_category: Some(self.device_sub_category.clone()),
+            device_categories: Some(self.device_categories.clone()),
             package_type: fdi::DriverPackageType::from_primitive(self.package_type as u8),
             is_fallback: Some(self.fallback),
             ..fdi::MatchedDriverInfo::EMPTY
@@ -190,8 +188,7 @@ impl ResolvedDriver {
             bind_rules: bind_rules,
             package_type: fdi::DriverPackageType::from_primitive(self.package_type as u8),
             package_hash: self.package_hash,
-            device_category: Some(self.device_category.clone()),
-            device_sub_category: Some(self.device_sub_category.clone()),
+            device_categories: Some(self.device_categories.clone()),
             ..fdd::DriverInfo::EMPTY
         }
     }
@@ -288,16 +285,14 @@ pub async fn load_driver(
         None => false,
     };
 
-    let device_category = get_rules_string_vec(&component, "device_category").unwrap();
-    let device_sub_category = get_rules_string_vec(&component, "device_sub_category").unwrap();
+    let device_categories = get_rules_device_categories_vec(&component).unwrap();
     Ok(Some(ResolvedDriver {
         component_url: component_url,
         v1_driver_path: v1_driver_path,
         bind_rules: bind_rules,
         bind_bytecode: bind,
         colocate: colocate,
-        device_category: device_category,
-        device_sub_category: device_sub_category,
+        device_categories: device_categories,
         fallback: fallback,
         package_type: package_type,
         package_hash: package_hash,
@@ -320,20 +315,20 @@ fn get_rules_string_value(component: &cm_rust::ComponentDecl, key: &str) -> Opti
     return None;
 }
 
-fn get_rules_string_vec(
+fn get_rules_device_categories_vec(
     component: &cm_rust::ComponentDecl,
-    key: &str,
-) -> Option<Vec<std::string::String>> {
-    let default_val = match key {
-        "device_category" => Some(vec![DEFAULT_DEVICE_CATEGORY.to_string()]),
-        "device_sub_category" => Some(vec![DEFAULT_DEVICE_SUB_CATEGORY.to_string()]),
-        _ => Some(vec![]),
-    };
+) -> Option<Vec<fdi::DeviceCategory>> {
+    let default_val = Some(vec![fdi::DeviceCategory {
+        category: Some(DEFAULT_DEVICE_CATEGORY.to_string()),
+        subcategory: None,
+        ..fdi::DeviceCategory::EMPTY
+    }]);
+
     for entry in component.program.as_ref()?.info.entries.as_ref()? {
-        if entry.key == key {
+        if entry.key == "device_categories" {
             match entry.value.as_ref()?.as_ref() {
-                fidl_fuchsia_data::DictionaryValue::StrVec(s) => {
-                    return Some(s.to_vec());
+                fidl_fuchsia_data::DictionaryValue::ObjVec(dictionaries) => {
+                    return Some(get_device_categories_from_component_data(dictionaries));
                 }
                 _ => {
                     return default_val;
@@ -343,6 +338,44 @@ fn get_rules_string_vec(
     }
 
     default_val
+}
+
+pub fn get_device_categories_from_component_data(
+    dictionaries: &Vec<fidl_fuchsia_data::Dictionary>,
+) -> Vec<fdi::DeviceCategory> {
+    let mut categories = Vec::new();
+    for dictionary in dictionaries {
+        if let Some(entries) = &dictionary.entries {
+            let category = get_dictionary_string_value(entries, "category");
+            let subcategory = get_dictionary_string_value(entries, "subcategory");
+            categories.push(fdi::DeviceCategory {
+                category,
+                subcategory,
+                ..fdi::DeviceCategory::EMPTY
+            });
+        }
+    }
+    categories
+}
+
+fn get_dictionary_string_value(
+    entries: &Vec<fidl_fuchsia_data::DictionaryEntry>,
+    key: &str,
+) -> Option<String> {
+    for entry in entries {
+        if entry.key == key {
+            match entry.value.as_ref()?.as_ref() {
+                fidl_fuchsia_data::DictionaryValue::Str(s) => {
+                    return Some(s.clone());
+                }
+                _ => {
+                    return None;
+                }
+            }
+        }
+    }
+
+    None
 }
 
 fn map_resolve_err_to_zx_status(

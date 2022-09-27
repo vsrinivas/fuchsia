@@ -45,12 +45,8 @@ type DriverInfo = table {
     /// Hash of the package the driver belongs to.
     6: package_hash fuchsia.pkg.BlobId;
 
-    // TODO(fxbug.dev/109701: Convert the device_category and device_category
-    //data structure to be nested
-
-    /// Device category and sub-category
-    7: device_category vector<string:MAX>:MAX;
-    8: device_sub_category vector<string:MAX>:MAX;
+    /// Device categories
+    7: device_categories vector<fuchsia.driver.index.DeviceCategory>:MAX;
 };
 
 type DeviceFlags = strict bits : uint32 {

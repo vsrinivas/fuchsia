@@ -66,8 +66,6 @@ struct MatchedCompositeDevice {
 struct MatchedDriverInfo {
   std::variant<const Driver*, Dfv2Driver> driver;
   bool colocate = false;
-  std::vector<std::string> device_category;
-  std::vector<std::string> device_sub_category;
 
   bool is_v1() const { return std::holds_alternative<const Driver*>(driver); }
 

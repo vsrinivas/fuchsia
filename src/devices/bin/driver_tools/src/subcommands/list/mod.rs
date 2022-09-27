@@ -65,7 +65,7 @@ pub async fn list(
             })
             .collect()
     } else {
-        driver_info.await?
+        driver_info.await.context("Failed to get driver info")?
     };
 
     if cmd.verbose {
@@ -82,13 +82,27 @@ pub async fn list(
                 writeln!(writer, "{0: <10}: {1}", "Driver", libname)
                     .context("Failed to write to writer")?;
             }
-            if let Some(device_category) = driver.device_category {
-                writeln!(writer, "{0: <10}: {1:?}", "Device Category:", device_category)
-                    .context("Failed to write to writer")?;
-            }
-            if let Some(device_sub_category) = driver.device_sub_category {
-                writeln!(writer, "{0: <10}: {1:?}", "Device Sub Category:", device_sub_category)
-                    .context("Failed to write to writer")?;
+            if let Some(device_categories) = driver.device_categories {
+                write!(writer, "Device Categories: [").context("Failed to write to writer")?;
+
+                for (i, category_table) in device_categories.iter().enumerate() {
+                    if let Some(category) = &category_table.category {
+                        if let Some(subcategory) = &category_table.subcategory {
+                            if !subcategory.is_empty() {
+                                write!(writer, "{}::{}", category, subcategory)?;
+                            } else {
+                                write!(writer, "{}", category,)?;
+                            }
+                        } else {
+                            write!(writer, "{}", category,).context("Failed to write to writer")?;
+                        }
+                    }
+
+                    if i != device_categories.len() - 1 {
+                        write!(writer, ", ").context("Failed to write to writer")?;
+                    }
+                }
+                writeln!(writer, "]").context("Failed to write to writer")?;
             }
             if let Some(package_hash) = driver.package_hash {
                 let mut merkle_root = String::with_capacity(package_hash.merkle_root.len() * 2);
@@ -242,8 +256,18 @@ mod tests {
                                 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
                             ],
                         }),
-                        device_category: Some(vec![]),
-                        device_sub_category: Some(vec![]),
+                        device_categories: Some(vec![
+                            fdi::DeviceCategory {
+                                category: Some("connectivity".to_string()),
+                                subcategory: Some("ethernet".to_string()),
+                                ..fdi::DeviceCategory::EMPTY
+                            },
+                            fdi::DeviceCategory {
+                                category: Some("usb".to_string()),
+                                subcategory: None,
+                                ..fdi::DeviceCategory::EMPTY
+                            },
+                        ]),
                         ..fdd::DriverInfo::EMPTY
                     }],
                     iterator,
@@ -262,8 +286,7 @@ mod tests {
             r#"Name      : foo
 URL       : fuchsia-pkg://fuchsia.com/foo-package#meta/foo.cm
 Driver    : foo.so
-Device Category:: []
-Device Sub Category:: []
+Device Categories: [connectivity::ethernet, usb]
 Merkle Root: 0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20
 Bytecode Version: Unknown
 

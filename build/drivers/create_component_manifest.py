@@ -34,16 +34,8 @@ def main():
         help='If this exists then the driver should be colocated with its parent'
     )
     parser.add_argument(
-        '--device_category',
-        nargs="*",
-        help=
-        'A comma separated list of device categories to enlist and run the tests for certification'
-    )
-    parser.add_argument(
-        '--device_sub_category',
-        nargs="*",
-        help=
-        'A comma separated list of device sub-categories to enlist and run the test for certification'
+      '--device_categories_file',
+      help='A path to a JSON file of device categories to enlist and run the tests for certification'
     )
     parser.add_argument(
         '--fallback',
@@ -121,10 +113,9 @@ def main():
     else:
         manifest["program"]["binary"] = program
 
-    if args.device_category:
-        manifest["program"]["device_category"] = args.device_category
-    if args.device_sub_category:
-        manifest["program"]["device_sub_category"] = args.device_sub_category
+    if args.device_categories_file:
+        with open(args.device_categories_file) as f:
+            manifest["program"]["device_categories"] = json.load(f)
 
     if args.colocate:
         manifest["program"]["colocate"] = "true"
