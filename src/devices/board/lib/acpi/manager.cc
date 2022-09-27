@@ -217,16 +217,8 @@ acpi::status<bool> Manager::DiscoverDevice(ACPI_HANDLE handle) {
     return result.take_error();
   }
   UniquePtr<ACPI_DEVICE_INFO> info = std::move(result.value());
-  std::string_view raw_name(reinterpret_cast<char*>(&info->Name), sizeof(info->Name));
-  std::string name("acpi-");
-  name += raw_name;
-
-  // TODO(fxbug.dev/107288): Remove this hack once the compat shim is fixed.
-  if (device_is_dfv2(acpi_root_) && (raw_name == "PXSX" || raw_name.find_first_of("TLC") == 0)) {
-    zxlogf(WARNING, "Skipping ACPI device '%s' in DFv2. See https://fxbug.dev/107288.",
-           name.data());
-    return acpi::ok(true);
-  }
+  std::string name =
+      "acpi-" + std::string(reinterpret_cast<char*>(&info->Name), sizeof(info->Name));
 
   // TODO(fxbug.dev/80491): newer versions of ACPICA return this from GetObjectInfo().
   auto state_result = acpi_->EvaluateObject(handle, "_STA", std::nullopt);
