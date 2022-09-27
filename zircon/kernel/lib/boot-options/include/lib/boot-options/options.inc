@@ -737,6 +737,13 @@ that well behaved programs will not hit the limit, but low enough to terminate m
 before they impact the system.
 )""")
 
+DEFINE_OPTION("kernel.experimental.serial_migration", bool, experimental_serial_migration, {false}, R"""(
+**TODO(fxbug.dev/89182)**
+
+Temporary flag to assist on serial driver migration from kernel's implementation to
+ulib/uart implementation.
+)""")
+
 // Machine-specific options are included here for all the kernel places.
 // In the generator program, they're included separately.
 
