@@ -101,7 +101,7 @@ fn create_dir_reporter() -> (run_test_suite_lib::output::DirectoryReporter, temp
     let tmp_dir = tempfile::tempdir().unwrap();
     let dir_reporter = run_test_suite_lib::output::DirectoryReporter::new(
         tmp_dir.path().to_path_buf(),
-        run_test_suite_lib::output::SchemaVersion::UnstablePrototype,
+        run_test_suite_lib::output::SchemaVersion::V1,
     )
     .unwrap();
     (dir_reporter, tmp_dir)

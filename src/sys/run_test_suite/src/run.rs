@@ -775,8 +775,6 @@ pub async fn run_tests_and_get_outcome<F: Future<Output = ()>>(
 pub struct DirectoryReporterOptions {
     /// Root path of the directory.
     pub root_path: PathBuf,
-    /// Schema to output the directory format in.
-    pub schema: output::SchemaVersion,
 }
 
 /// Create a reporter for use with |run_tests_and_get_outcome|.
@@ -787,7 +785,9 @@ pub fn create_reporter<W: 'static + Write + Send + Sync>(
 ) -> Result<output::RunReporter, anyhow::Error> {
     let stdout_reporter = output::ShellReporter::new(writer);
     let dir_reporter = dir
-        .map(|dir| output::DirectoryWithStdoutReporter::new(dir.root_path, dir.schema))
+        .map(|dir| {
+            output::DirectoryWithStdoutReporter::new(dir.root_path, output::SchemaVersion::V1)
+        })
         .transpose()?;
     let reporter = match (dir_reporter, filter_ansi) {
         (Some(dir_reporter), false) => output::RunReporter::new(output::MultiplexedReporter::new(

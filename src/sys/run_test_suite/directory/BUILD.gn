@@ -13,15 +13,12 @@ rustc_library("directory") {
   sources = [
     "src/lib.rs",
     "src/macros.rs",
-    "src/prototype.rs",
     "src/testing.rs",
     "src/v1.rs",
   ]
   inputs = [
     "//sdk/schema/ffx_test/run_summary-8d1dd964.json",
     "//sdk/schema/common-00000000.json",
-    "schema/run_summary.schema.json",
-    "schema/suite_summary.schema.json",
   ]
 
   deps = [

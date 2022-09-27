@@ -138,7 +138,7 @@ pub fn assert_suite_result(
     expected_suite: &ExpectedSuite,
 ) {
     let context = EntityContext::Suite(expected_suite);
-    let &SuiteResult { common, cases, tags, summary_file_hint: _ } = &actual_suite;
+    let &SuiteResult { common, cases, tags } = &actual_suite;
     assert_eq!(common.deref().outcome, expected_suite.outcome, "Outcome for {}", context);
     assert_eq!(common.deref().name, expected_suite.name, "Name for {}", context);
     assert_match_option!(
@@ -607,7 +607,7 @@ mod test {
         let actual = TestRunResult {
             common: Cow::Owned(CommonResult {
                 name: RUN_NAME.to_string(),
-                artifact_dir: output_dir.new_artifact_dir("artifacts").expect("new artifact dir"),
+                artifact_dir: output_dir.new_artifact_dir().expect("new artifact dir"),
                 outcome: Outcome::Passed.into(),
                 start_time: Some(64),
                 duration_milliseconds: Some(128),
@@ -628,7 +628,7 @@ mod test {
         let actual = TestRunResult {
             common: Cow::Owned(CommonResult {
                 name: RUN_NAME.to_string(),
-                artifact_dir: output_dir.new_artifact_dir("artifacts").expect("new artifact dir"),
+                artifact_dir: output_dir.new_artifact_dir().expect("new artifact dir"),
                 outcome: Outcome::Passed.into(),
                 start_time: Some(64),
                 duration_milliseconds: Some(128),
@@ -649,7 +649,7 @@ mod test {
         let actual = TestRunResult {
             common: Cow::Owned(CommonResult {
                 name: RUN_NAME.to_string(),
-                artifact_dir: output_dir.new_artifact_dir("artifacts").expect("new artifact dir"),
+                artifact_dir: output_dir.new_artifact_dir().expect("new artifact dir"),
                 outcome: Outcome::Passed.into(),
                 start_time: None,
                 duration_milliseconds: None,
@@ -667,7 +667,7 @@ mod test {
     #[fixture::fixture(test_with_directory)]
     #[test]
     fn assert_run_result_single_artifact_unspecified_name(output_dir: OutputDirectoryBuilder) {
-        let mut artifact_dir = output_dir.new_artifact_dir("artifacts").expect("new artifact dir");
+        let mut artifact_dir = output_dir.new_artifact_dir().expect("new artifact dir");
         let mut artifact =
             artifact_dir.new_artifact(ArtifactType::Syslog, "b.txt").expect("create artifact");
         write!(artifact, "hello").expect("write to artifact");
@@ -698,7 +698,7 @@ mod test {
     #[fixture::fixture(test_with_directory)]
     #[test]
     fn assert_run_result_single_artifact_specified_name(output_dir: OutputDirectoryBuilder) {
-        let mut artifact_dir = output_dir.new_artifact_dir("artifacts").expect("new artifact dir");
+        let mut artifact_dir = output_dir.new_artifact_dir().expect("new artifact dir");
         let mut artifact =
             artifact_dir.new_artifact(ArtifactType::Syslog, "b.txt").expect("create artifact");
         write!(artifact, "hello").expect("write to artifact");
@@ -733,7 +733,7 @@ mod test {
         let actual = TestRunResult {
             common: Cow::Owned(CommonResult {
                 name: RUN_NAME.to_string(),
-                artifact_dir: output_dir.new_artifact_dir("artifacts").expect("new artifact dir"),
+                artifact_dir: output_dir.new_artifact_dir().expect("new artifact dir"),
                 outcome: Outcome::Failed.into(),
                 start_time: None,
                 duration_milliseconds: None,
@@ -752,7 +752,7 @@ mod test {
         let actual = TestRunResult {
             common: Cow::Owned(CommonResult {
                 name: RUN_NAME.to_string(),
-                artifact_dir: output_dir.new_artifact_dir("artifacts").expect("new artifact dir"),
+                artifact_dir: output_dir.new_artifact_dir().expect("new artifact dir"),
                 outcome: Outcome::Failed.into(),
                 start_time: Some(64),
                 duration_milliseconds: None,
@@ -774,7 +774,7 @@ mod test {
         let actual = TestRunResult {
             common: Cow::Owned(CommonResult {
                 name: RUN_NAME.to_string(),
-                artifact_dir: output_dir.new_artifact_dir("artifacts").expect("new artifact dir"),
+                artifact_dir: output_dir.new_artifact_dir().expect("new artifact dir"),
                 outcome: Outcome::Failed.into(),
                 start_time: None,
                 duration_milliseconds: None,
@@ -793,7 +793,7 @@ mod test {
     #[test]
     #[should_panic]
     fn assert_run_artifact_mismatch(output_dir: OutputDirectoryBuilder) {
-        let mut artifact_dir = output_dir.new_artifact_dir("artifacts").expect("new artifact dir");
+        let mut artifact_dir = output_dir.new_artifact_dir().expect("new artifact dir");
         let mut artifact =
             artifact_dir.new_artifact(ArtifactType::Syslog, "missing").expect("create artifact");
         write!(artifact, "hello").expect("write to artifact");
@@ -828,7 +828,7 @@ mod test {
         TestRunResult {
             common: Cow::Owned(CommonResult {
                 name: RUN_NAME.to_string(),
-                artifact_dir: output_dir.new_artifact_dir("artifacts").expect("new artifact dir"),
+                artifact_dir: output_dir.new_artifact_dir().expect("new artifact dir"),
                 outcome: Outcome::Passed.into(),
                 start_time: Some(64),
                 duration_milliseconds: Some(128),
@@ -845,14 +845,11 @@ mod test {
             SuiteResult {
                 common: Cow::Owned(CommonResult {
                     name: "suite".to_string(),
-                    artifact_dir: output_dir
-                        .new_artifact_dir("artifacts-suite")
-                        .expect("new artifact dir"),
+                    artifact_dir: output_dir.new_artifact_dir().expect("new artifact dir"),
                     outcome: Outcome::Passed.into(),
                     start_time: Some(64),
                     duration_milliseconds: Some(128),
                 }),
-                summary_file_hint: Cow::Owned("summary.json".into()),
                 cases: vec![],
                 tags: Cow::Owned(vec![]),
             },
@@ -880,14 +877,11 @@ mod test {
             SuiteResult {
                 common: Cow::Owned(CommonResult {
                     name: "suite".to_string(),
-                    artifact_dir: output_dir
-                        .new_artifact_dir("artifacts-suite")
-                        .expect("new artifact dir"),
+                    artifact_dir: output_dir.new_artifact_dir().expect("new artifact dir"),
                     outcome: Outcome::Passed.into(),
                     start_time: Some(64),
                     duration_milliseconds: Some(128),
                 }),
-                summary_file_hint: Cow::Owned("summary.json".into()),
                 cases: vec![],
                 tags: Cow::Owned(vec![]),
             },
@@ -915,14 +909,11 @@ mod test {
             SuiteResult {
                 common: Cow::Owned(CommonResult {
                     name: "suite".to_string(),
-                    artifact_dir: output_dir
-                        .new_artifact_dir("artifacts-suite")
-                        .expect("new artifact dir"),
+                    artifact_dir: output_dir.new_artifact_dir().expect("new artifact dir"),
                     outcome: Outcome::Passed.into(),
                     start_time: None,
                     duration_milliseconds: None,
                 }),
-                summary_file_hint: Cow::Owned("summary.json".into()),
                 cases: vec![],
                 tags: Cow::Owned(vec![]),
             },
@@ -945,8 +936,7 @@ mod test {
     #[fixture::fixture(test_with_directory)]
     #[test]
     fn assert_run_result_suite_with_artifact(output_dir: OutputDirectoryBuilder) {
-        let mut artifact_dir =
-            output_dir.new_artifact_dir("artifacts-suite").expect("new artifact dir");
+        let mut artifact_dir = output_dir.new_artifact_dir().expect("new artifact dir");
         let mut artifact =
             artifact_dir.new_artifact(ArtifactType::Syslog, "b.txt").expect("create artifact");
         write!(artifact, "hello").expect("write to artifact");
@@ -962,7 +952,6 @@ mod test {
                     start_time: None,
                     duration_milliseconds: None,
                 }),
-                summary_file_hint: Cow::Owned("summary.json".into()),
                 cases: vec![],
                 tags: Cow::Owned(vec![]),
             },
@@ -990,20 +979,15 @@ mod test {
             SuiteResult {
                 common: Cow::Owned(CommonResult {
                     name: "suite".to_string(),
-                    artifact_dir: output_dir
-                        .new_artifact_dir("artifacts-suite")
-                        .expect("new artifact dir"),
+                    artifact_dir: output_dir.new_artifact_dir().expect("new artifact dir"),
                     outcome: Outcome::Passed.into(),
                     start_time: None,
                     duration_milliseconds: None,
                 }),
-                summary_file_hint: Cow::Owned("summary.json".into()),
                 cases: vec![TestCaseResult {
                     common: Cow::Owned(CommonResult {
                         name: "case".to_string(),
-                        artifact_dir: output_dir
-                            .new_artifact_dir("artifacts-case")
-                            .expect("new artifact dir"),
+                        artifact_dir: output_dir.new_artifact_dir().expect("new artifact dir"),
                         outcome: Outcome::Passed.into(),
                         start_time: None,
                         duration_milliseconds: None,
@@ -1037,14 +1021,11 @@ mod test {
             SuiteResult {
                 common: Cow::Owned(CommonResult {
                     name: "suite".to_string(),
-                    artifact_dir: output_dir
-                        .new_artifact_dir("artifacts-suite")
-                        .expect("new artifact dir"),
+                    artifact_dir: output_dir.new_artifact_dir().expect("new artifact dir"),
                     outcome: Outcome::Passed.into(),
                     start_time: None,
                     duration_milliseconds: None,
                 }),
-                summary_file_hint: Cow::Owned("summary.json".into()),
                 cases: vec![],
                 tags: Cow::Owned(vec![
                     TestTag { key: "os".to_string(), value: "fuchsia".to_string() },
@@ -1076,14 +1057,11 @@ mod test {
             SuiteResult {
                 common: Cow::Owned(CommonResult {
                     name: "suite".to_string(),
-                    artifact_dir: output_dir
-                        .new_artifact_dir("artifacts-suite")
-                        .expect("new artifact dir"),
+                    artifact_dir: output_dir.new_artifact_dir().expect("new artifact dir"),
                     outcome: Outcome::Failed.into(),
                     start_time: None,
                     duration_milliseconds: None,
                 }),
-                summary_file_hint: Cow::Owned("summary.json".into()),
                 cases: vec![],
                 tags: Cow::Owned(vec![]),
             },
@@ -1108,14 +1086,11 @@ mod test {
             SuiteResult {
                 common: Cow::Owned(CommonResult {
                     name: "suite".to_string(),
-                    artifact_dir: output_dir
-                        .new_artifact_dir("artifacts-suite")
-                        .expect("new artifact dir"),
+                    artifact_dir: output_dir.new_artifact_dir().expect("new artifact dir"),
                     outcome: Outcome::Passed.into(),
                     start_time: None,
                     duration_milliseconds: Some(128),
                 }),
-                summary_file_hint: Cow::Owned("summary.json".into()),
                 cases: vec![],
                 tags: Cow::Owned(vec![]),
             },
@@ -1140,14 +1115,11 @@ mod test {
             SuiteResult {
                 common: Cow::Owned(CommonResult {
                     name: "suite".to_string(),
-                    artifact_dir: output_dir
-                        .new_artifact_dir("artifacts-suite")
-                        .expect("new artifact dir"),
+                    artifact_dir: output_dir.new_artifact_dir().expect("new artifact dir"),
                     outcome: Outcome::Passed.into(),
                     start_time: None,
                     duration_milliseconds: Some(128),
                 }),
-                summary_file_hint: Cow::Owned("summary.json".into()),
                 cases: vec![],
                 tags: Cow::Owned(vec![]),
             },
@@ -1172,14 +1144,11 @@ mod test {
             SuiteResult {
                 common: Cow::Owned(CommonResult {
                     name: "suite".to_string(),
-                    artifact_dir: output_dir
-                        .new_artifact_dir("artifacts-suite")
-                        .expect("new artifact dir"),
+                    artifact_dir: output_dir.new_artifact_dir().expect("new artifact dir"),
                     outcome: Outcome::Passed.into(),
                     start_time: None,
                     duration_milliseconds: Some(128),
                 }),
-                summary_file_hint: Cow::Owned("summary.json".into()),
                 cases: vec![],
                 tags: Cow::Owned(vec![]),
             },
@@ -1208,20 +1177,15 @@ mod test {
             SuiteResult {
                 common: Cow::Owned(CommonResult {
                     name: "suite".to_string(),
-                    artifact_dir: output_dir
-                        .new_artifact_dir("artifacts-suite")
-                        .expect("new artifact dir"),
+                    artifact_dir: output_dir.new_artifact_dir().expect("new artifact dir"),
                     outcome: Outcome::Failed.into(),
                     start_time: None,
                     duration_milliseconds: None,
                 }),
-                summary_file_hint: Cow::Owned("summary.json".into()),
                 cases: vec![TestCaseResult {
                     common: Cow::Owned(CommonResult {
                         name: "case".to_string(),
-                        artifact_dir: output_dir
-                            .new_artifact_dir("artifacts-case")
-                            .expect("new artifact dir"),
+                        artifact_dir: output_dir.new_artifact_dir().expect("new artifact dir"),
                         outcome: Outcome::Passed.into(),
                         start_time: None,
                         duration_milliseconds: None,
@@ -1247,7 +1211,7 @@ mod test {
         let actual = TestRunResult {
             common: Cow::Owned(CommonResult {
                 name: RUN_NAME.to_string(),
-                artifact_dir: output_dir.new_artifact_dir("artifacts").expect("new artifact dir"),
+                artifact_dir: output_dir.new_artifact_dir().expect("new artifact dir"),
                 outcome: Outcome::Passed.into(),
                 start_time: None,
                 duration_milliseconds: None,
@@ -1262,7 +1226,7 @@ mod test {
     #[fixture::fixture(test_with_directory)]
     #[test]
     fn assert_artifacts_exact_content(output_dir: OutputDirectoryBuilder) {
-        let mut artifact_dir = output_dir.new_artifact_dir("artifacts").expect("new artifact dir");
+        let mut artifact_dir = output_dir.new_artifact_dir().expect("new artifact dir");
         let mut artifact =
             artifact_dir.new_artifact(ArtifactType::Stderr, "b.txt").expect("new artifact");
         write!(artifact, "hello").expect("write to artifact");
@@ -1291,7 +1255,7 @@ mod test {
     #[fixture::fixture(test_with_directory)]
     #[test]
     fn assert_artifacts_exact_content_exact_name(output_dir: OutputDirectoryBuilder) {
-        let mut artifact_dir = output_dir.new_artifact_dir("artifacts").expect("new artifact dir");
+        let mut artifact_dir = output_dir.new_artifact_dir().expect("new artifact dir");
         let mut artifact =
             artifact_dir.new_artifact(ArtifactType::Stderr, "b.txt").expect("new artifact");
         write!(artifact, "hello").expect("write to artifact");
@@ -1320,7 +1284,7 @@ mod test {
     #[fixture::fixture(test_with_directory)]
     #[test]
     fn assert_artifacts_matching_content(output_dir: OutputDirectoryBuilder) {
-        let mut artifact_dir = output_dir.new_artifact_dir("artifacts").expect("new artifact dir");
+        let mut artifact_dir = output_dir.new_artifact_dir().expect("new artifact dir");
         let mut artifact =
             artifact_dir.new_artifact(ArtifactType::Stderr, "b.txt").expect("new artifact");
         write!(artifact, "hello").expect("write to artifact");
@@ -1349,7 +1313,7 @@ mod test {
     #[fixture::fixture(test_with_directory)]
     #[test]
     fn assert_artifacts_moniker_specified(output_dir: OutputDirectoryBuilder) {
-        let mut artifact_dir = output_dir.new_artifact_dir("artifacts").expect("new artifact dir");
+        let mut artifact_dir = output_dir.new_artifact_dir().expect("new artifact dir");
         let mut artifact = artifact_dir
             .new_artifact(
                 ArtifactMetadata {
@@ -1388,7 +1352,7 @@ mod test {
     #[fixture::fixture(test_with_directory)]
     #[test]
     fn assert_artifacts_directory_artifact(output_dir: OutputDirectoryBuilder) {
-        let mut artifact_dir = output_dir.new_artifact_dir("artifacts").expect("new artifact dir");
+        let mut artifact_dir = output_dir.new_artifact_dir().expect("new artifact dir");
         let dir_artifact =
             artifact_dir.new_directory_artifact(ArtifactType::Custom, "b").expect("new artifact");
         std::fs::write(dir_artifact.join("c.txt"), "hello c").unwrap();
@@ -1421,7 +1385,7 @@ mod test {
     #[test]
     #[should_panic(expected = "Artifacts for TEST RUN")]
     fn assert_artifacts_missing(output_dir: OutputDirectoryBuilder) {
-        let artifact_dir = output_dir.new_artifact_dir("artifacts").expect("new artifact dir");
+        let artifact_dir = output_dir.new_artifact_dir().expect("new artifact dir");
         let actual = TestRunResult {
             common: Cow::Owned(CommonResult {
                 name: RUN_NAME.to_string(),
@@ -1448,7 +1412,7 @@ mod test {
     #[test]
     #[should_panic(expected = "Artifacts for TEST RUN")]
     fn assert_artifacts_extra_artifact(output_dir: OutputDirectoryBuilder) {
-        let mut artifact_dir = output_dir.new_artifact_dir("artifacts").expect("new artifact dir");
+        let mut artifact_dir = output_dir.new_artifact_dir().expect("new artifact dir");
         let mut file_b =
             artifact_dir.new_artifact(ArtifactType::Stderr, "b.txt").expect("create artifact");
         write!(file_b, "hello").unwrap();
@@ -1483,7 +1447,7 @@ mod test {
     #[test]
     #[should_panic]
     fn assert_artifacts_content_not_equal(output_dir: OutputDirectoryBuilder) {
-        let mut artifact_dir = output_dir.new_artifact_dir("artifacts").expect("new artifact dir");
+        let mut artifact_dir = output_dir.new_artifact_dir().expect("new artifact dir");
         let mut file_b =
             artifact_dir.new_artifact(ArtifactType::Stderr, "b.txt").expect("create artifact");
         write!(file_b, "wrong content").unwrap();
@@ -1514,7 +1478,7 @@ mod test {
     #[test]
     #[should_panic]
     fn assert_artifacts_content_does_not_match(output_dir: OutputDirectoryBuilder) {
-        let mut artifact_dir = output_dir.new_artifact_dir("artifacts").expect("new artifact dir");
+        let mut artifact_dir = output_dir.new_artifact_dir().expect("new artifact dir");
         let mut file_b =
             artifact_dir.new_artifact(ArtifactType::Stderr, "b.txt").expect("create artifact");
         write!(file_b, "wrong content").unwrap();
@@ -1545,7 +1509,7 @@ mod test {
     #[test]
     #[should_panic]
     fn assert_artifacts_directory_mismatch(output_dir: OutputDirectoryBuilder) {
-        let mut artifact_dir = output_dir.new_artifact_dir("artifacts").expect("new artifact dir");
+        let mut artifact_dir = output_dir.new_artifact_dir().expect("new artifact dir");
         let dir_artifact =
             artifact_dir.new_directory_artifact(ArtifactType::Custom, "b").expect("new artifact");
         std::fs::write(dir_artifact.join("c.txt"), "unexpected file").unwrap();
@@ -1574,7 +1538,7 @@ mod test {
     #[fixture::fixture(test_with_directory)]
     #[test]
     fn assert_artifacts_not_checked_if_unspecified(output_dir: OutputDirectoryBuilder) {
-        let mut artifact_dir = output_dir.new_artifact_dir("artifacts").expect("new artifact dir");
+        let mut artifact_dir = output_dir.new_artifact_dir().expect("new artifact dir");
         let mut file_c =
             artifact_dir.new_artifact(ArtifactType::Stderr, "c.txt").expect("create artifact");
         write!(file_c, "unexpected file").unwrap();

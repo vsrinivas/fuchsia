@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 mod macros;
-mod prototype;
 pub mod testing;
 mod v1;
 
@@ -27,7 +26,6 @@ enumerable_enum! {
     /// Schema version.
     #[derive(PartialEq, Eq, Debug, Clone, Copy, Hash)]
     SchemaVersion {
-        UnstablePrototype,
         V1,
     }
 }
@@ -98,25 +96,12 @@ pub struct TestRunResult<'a> {
 /// A serializable suite run result.
 /// Contains overall results and artifacts scoped to a suite run, and
 /// results and artifacts scoped to any test run within it.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SuiteResult<'a> {
     pub common: Cow<'a, CommonResult>,
-    /// A hint as to where the summary file should go.
-    // TODO(fxbug.dev/81195): This is only used for the prototype output and
-    // this should be removed at the same time as the prototype.
-    pub summary_file_hint: Cow<'a, String>,
     pub cases: Vec<TestCaseResult<'a>>,
     pub tags: Cow<'a, Vec<TestTag>>,
 }
-
-// Manual impl to ignore summary_file_hint.
-impl<'a> PartialEq for SuiteResult<'a> {
-    fn eq(&self, other: &Self) -> bool {
-        self.common == other.common && self.cases == other.cases && self.tags == other.tags
-    }
-}
-
-impl<'a> Eq for SuiteResult<'a> {}
 
 /// A serializable test case result.
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -126,11 +111,7 @@ pub struct TestCaseResult<'a> {
 
 impl TestRunResult<'static> {
     pub fn from_dir(root: &Path) -> Result<Self, Error> {
-        match v1::parse_from_directory(root) {
-            Ok(res) => return Ok(res),
-            Err(_) => (),
-        }
-        prototype::parse_from_directory(root)
+        v1::parse_from_directory(root)
     }
 }
 
@@ -169,7 +150,7 @@ impl From<ArtifactType> for ArtifactMetadata {
 /// format, such as the locations of summaries and artifacts, while allowing the caller to
 /// accumulate results separately. A typical usecase might look like this:
 /// ```rust
-/// let output_directory = OutputDirectoryBuilder::new("/path", SchemaVersion::UnstablePrototype)?;
+/// let output_directory = OutputDirectoryBuilder::new("/path", SchemaVersion::V1)?;
 /// let mut run_result = TestRunResult {
 ///     common: Cow::Owned(CommonResult{
 ///         name: "run".to_string(),
@@ -205,24 +186,8 @@ impl OutputDirectoryBuilder {
     ///
     /// The new |ArtifactSubDirectory| should be referenced from either the test run, suite, or
     /// case when a summary is saved in this OutputDirectoryBuilder with |save_summary|.
-    ///
-    /// |path_hint| exists to preserve some naming behavior in the experimental output, but this
-    /// behavior will not be preserved in stable versions. After the experimental version is
-    /// removed this should be removed.
-    pub fn new_artifact_dir(
-        &self,
-        path_hint: impl AsRef<Path>,
-    ) -> Result<ArtifactSubDirectory, Error> {
+    pub fn new_artifact_dir(&self) -> Result<ArtifactSubDirectory, Error> {
         match self.version {
-            SchemaVersion::UnstablePrototype => {
-                // todo - check that relative path is only one segment long.
-                let subdir_root = self.root.join(path_hint);
-                Ok(ArtifactSubDirectory {
-                    version: self.version,
-                    root: subdir_root,
-                    artifacts: HashMap::new(),
-                })
-            }
             SchemaVersion::V1 => {
                 let subdir_root =
                     self.root.join(format!("{:?}", self.creation_instant.elapsed().as_nanos()));
@@ -238,9 +203,6 @@ impl OutputDirectoryBuilder {
     /// Save a summary of the test results in the directory.
     pub fn save_summary<'a, 'b>(&'a self, result: &'a TestRunResult<'b>) -> Result<(), Error> {
         match self.version {
-            SchemaVersion::UnstablePrototype => {
-                prototype::save_summary(self.root.as_path(), result)
-            }
             SchemaVersion::V1 => v1::save_summary(self.root.as_path(), result),
         }
     }
@@ -260,7 +222,7 @@ impl ArtifactSubDirectory {
     ) -> Result<File, Error> {
         ensure_directory_exists(self.root.as_path())?;
         match self.version {
-            SchemaVersion::UnstablePrototype | SchemaVersion::V1 => {
+            SchemaVersion::V1 => {
                 // todo validate path
                 self.artifacts.insert(name.as_ref().to_path_buf(), metadata.into());
                 File::create(self.root.join(name))
@@ -275,7 +237,7 @@ impl ArtifactSubDirectory {
         name: impl AsRef<Path>,
     ) -> Result<PathBuf, Error> {
         match self.version {
-            SchemaVersion::UnstablePrototype | SchemaVersion::V1 => {
+            SchemaVersion::V1 => {
                 // todo validate path
                 let subdir = self.root.join(name.as_ref());
                 ensure_directory_exists(subdir.as_path())?;
@@ -288,12 +250,10 @@ impl ArtifactSubDirectory {
     /// Get the absolute path of the artifact at |name|, if present.
     pub fn path_to_artifact(&self, name: impl AsRef<Path>) -> Option<PathBuf> {
         match self.version {
-            SchemaVersion::UnstablePrototype | SchemaVersion::V1 => {
-                match self.artifacts.contains_key(name.as_ref()) {
-                    true => Some(self.root.join(name.as_ref())),
-                    false => None,
-                }
-            }
+            SchemaVersion::V1 => match self.artifacts.contains_key(name.as_ref()) {
+                true => Some(self.root.join(name.as_ref())),
+                false => None,
+            },
         }
     }
 
@@ -319,7 +279,6 @@ mod test {
 
     fn validate_against_schema(version: SchemaVersion, root: &Path) {
         match version {
-            SchemaVersion::UnstablePrototype => prototype::validate_against_schema(root),
             SchemaVersion::V1 => v1::validate_against_schema(root),
         }
     }
@@ -348,7 +307,7 @@ mod test {
         round_trip_test_all_versions(|dir_builder| TestRunResult {
             common: Cow::Owned(CommonResult {
                 name: RUN_NAME.to_string(),
-                artifact_dir: dir_builder.new_artifact_dir("subdir").expect("new dir"),
+                artifact_dir: dir_builder.new_artifact_dir().expect("new dir"),
                 outcome: Outcome::Passed.into(),
                 start_time: None,
                 duration_milliseconds: None,
@@ -362,21 +321,18 @@ mod test {
     fn artifact_types() {
         for artifact_type in ArtifactType::all_variants() {
             round_trip_test_all_versions(|dir_builder| {
-                let mut run_artifact_dir =
-                    dir_builder.new_artifact_dir("run-artifacts").expect("new dir");
+                let mut run_artifact_dir = dir_builder.new_artifact_dir().expect("new dir");
                 let mut run_artifact =
                     run_artifact_dir.new_artifact(artifact_type, "a.txt").expect("create artifact");
                 write!(run_artifact, "run contents").unwrap();
 
-                let mut suite_artifact_dir =
-                    dir_builder.new_artifact_dir("suite-artifacts").expect("new dir");
+                let mut suite_artifact_dir = dir_builder.new_artifact_dir().expect("new dir");
                 let mut suite_artifact = suite_artifact_dir
                     .new_artifact(artifact_type, "a.txt")
                     .expect("create artifact");
                 write!(suite_artifact, "suite contents").unwrap();
 
-                let mut case_artifact_dir =
-                    dir_builder.new_artifact_dir("case-artifacts").expect("new dir");
+                let mut case_artifact_dir = dir_builder.new_artifact_dir().expect("new dir");
                 let mut case_artifact = case_artifact_dir
                     .new_artifact(artifact_type, "a.txt")
                     .expect("create artifact");
@@ -398,7 +354,6 @@ mod test {
                             start_time: None,
                             duration_milliseconds: None,
                         }),
-                        summary_file_hint: Cow::Owned("suite.json".to_string()),
                         tags: Cow::Owned(vec![]),
                         cases: vec![TestCaseResult {
                             common: Cow::Owned(CommonResult {
@@ -419,8 +374,7 @@ mod test {
     fn artifact_types_moniker_specified() {
         for artifact_type in ArtifactType::all_variants() {
             round_trip_test_all_versions(|dir_builder| {
-                let mut run_artifact_dir =
-                    dir_builder.new_artifact_dir("run-artifacts").expect("new dir");
+                let mut run_artifact_dir = dir_builder.new_artifact_dir().expect("new dir");
                 let mut run_artifact = run_artifact_dir
                     .new_artifact(
                         ArtifactMetadata {
@@ -432,8 +386,7 @@ mod test {
                     .expect("create artifact");
                 write!(run_artifact, "run contents").unwrap();
 
-                let mut suite_artifact_dir =
-                    dir_builder.new_artifact_dir("suite-artifacts").expect("new dir");
+                let mut suite_artifact_dir = dir_builder.new_artifact_dir().expect("new dir");
                 let mut suite_artifact = suite_artifact_dir
                     .new_artifact(
                         ArtifactMetadata {
@@ -445,8 +398,7 @@ mod test {
                     .expect("create artifact");
                 write!(suite_artifact, "suite contents").unwrap();
 
-                let mut case_artifact_dir =
-                    dir_builder.new_artifact_dir("case-artifacts").expect("new dir");
+                let mut case_artifact_dir = dir_builder.new_artifact_dir().expect("new dir");
                 let mut case_artifact = case_artifact_dir
                     .new_artifact(
                         ArtifactMetadata {
@@ -474,7 +426,6 @@ mod test {
                             start_time: None,
                             duration_milliseconds: None,
                         }),
-                        summary_file_hint: Cow::Owned("suite.json".to_string()),
                         tags: Cow::Owned(vec![]),
                         cases: vec![TestCaseResult {
                             common: Cow::Owned(CommonResult {
@@ -497,7 +448,7 @@ mod test {
             round_trip_test_all_versions(|dir_builder| TestRunResult {
                 common: Cow::Owned(CommonResult {
                     name: RUN_NAME.to_string(),
-                    artifact_dir: dir_builder.new_artifact_dir("run-artifacts").expect("new dir"),
+                    artifact_dir: dir_builder.new_artifact_dir().expect("new dir"),
                     outcome: outcome_type.into(),
                     start_time: None,
                     duration_milliseconds: None,
@@ -505,21 +456,16 @@ mod test {
                 suites: vec![SuiteResult {
                     common: Cow::Owned(CommonResult {
                         name: "suite".to_string(),
-                        artifact_dir: dir_builder
-                            .new_artifact_dir("suite-artifacts")
-                            .expect("new dir"),
+                        artifact_dir: dir_builder.new_artifact_dir().expect("new dir"),
                         outcome: outcome_type.into(),
                         start_time: None,
                         duration_milliseconds: None,
                     }),
-                    summary_file_hint: Cow::Owned("suite.json".to_string()),
                     tags: Cow::Owned(vec![]),
                     cases: vec![TestCaseResult {
                         common: Cow::Owned(CommonResult {
                             name: "case".to_string(),
-                            artifact_dir: dir_builder
-                                .new_artifact_dir("case-artifacts")
-                                .expect("new dir"),
+                            artifact_dir: dir_builder.new_artifact_dir().expect("new dir"),
                             outcome: outcome_type.into(),
                             start_time: None,
                             duration_milliseconds: None,
@@ -535,7 +481,7 @@ mod test {
         round_trip_test_all_versions(|dir_builder| TestRunResult {
             common: Cow::Owned(CommonResult {
                 name: RUN_NAME.to_string(),
-                artifact_dir: dir_builder.new_artifact_dir("run-artifacts").expect("new dir"),
+                artifact_dir: dir_builder.new_artifact_dir().expect("new dir"),
                 outcome: Outcome::Passed.into(),
                 start_time: Some(1),
                 duration_milliseconds: Some(2),
@@ -543,19 +489,16 @@ mod test {
             suites: vec![SuiteResult {
                 common: Cow::Owned(CommonResult {
                     name: "suite".to_string(),
-                    artifact_dir: dir_builder.new_artifact_dir("suite-artifacts").expect("new dir"),
+                    artifact_dir: dir_builder.new_artifact_dir().expect("new dir"),
                     outcome: Outcome::Passed.into(),
                     start_time: Some(3),
                     duration_milliseconds: Some(4),
                 }),
-                summary_file_hint: Cow::Owned("suite.json".to_string()),
                 tags: Cow::Owned(vec![]),
                 cases: vec![TestCaseResult {
                     common: Cow::Owned(CommonResult {
                         name: "case".to_string(),
-                        artifact_dir: dir_builder
-                            .new_artifact_dir("case-artifacts")
-                            .expect("new dir"),
+                        artifact_dir: dir_builder.new_artifact_dir().expect("new dir"),
                         outcome: Outcome::Passed.into(),
                         start_time: Some(5),
                         duration_milliseconds: Some(6),
@@ -570,7 +513,7 @@ mod test {
         round_trip_test_all_versions(|dir_builder| TestRunResult {
             common: Cow::Owned(CommonResult {
                 name: RUN_NAME.to_string(),
-                artifact_dir: dir_builder.new_artifact_dir("run-artifacts").expect("new dir"),
+                artifact_dir: dir_builder.new_artifact_dir().expect("new dir"),
                 outcome: Outcome::Passed.into(),
                 start_time: Some(1),
                 duration_milliseconds: Some(2),
@@ -578,12 +521,11 @@ mod test {
             suites: vec![SuiteResult {
                 common: Cow::Owned(CommonResult {
                     name: "suite".to_string(),
-                    artifact_dir: dir_builder.new_artifact_dir("suite-artifacts").expect("new dir"),
+                    artifact_dir: dir_builder.new_artifact_dir().expect("new dir"),
                     outcome: Outcome::Passed.into(),
                     start_time: Some(3),
                     duration_milliseconds: Some(4),
                 }),
-                summary_file_hint: Cow::Owned("suite.json".to_string()),
                 tags: Cow::Owned(vec![
                     TestTag { key: "hermetic".to_string(), value: "false".to_string() },
                     TestTag { key: "realm".to_string(), value: "system".to_string() },
