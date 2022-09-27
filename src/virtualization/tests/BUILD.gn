@@ -68,6 +68,7 @@ group("tests") {
     ":virtualization_gpu_tests_pkg",
     ":virtualization_input_tests_pkg",
     ":virtualization_net_tests_pkg",
+    ":virtualization_test_utils_pkg",
     ":virtualization_vsock_tests_pkg",
     "hypervisor",
     "lib:tests",
@@ -395,9 +396,16 @@ fuchsia_component("virtio_vsock_test_util_cmp") {
   manifest = "virtio_vsock_test_util/meta/virtio_vsock_test_util.cml"
 }
 
+fuchsia_component("memory_test_util_cmp") {
+  component_name = "memory_test_util"
+  deps = [ "memory_test_util" ]
+  manifest = "memory_test_util/meta/memory_test_util.cml"
+}
+
 fuchsia_shell_package("virtualization_test_utils_pkg") {
   package_name = "virtualization-test-utils"
   deps = [
+    ":memory_test_util_cmp",
     ":virtio_block_test_util_cmp",
     ":virtio_gpu_test_util_cmp",
     ":virtio_net_test_util_cmp",

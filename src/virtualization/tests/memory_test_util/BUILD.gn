@@ -1,0 +1,16 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("memory_test_util") {
+  name = "memory_test_util"
+  edition = "2021"
+  configs += [ "//src/virtualization/tests:guest_test_util" ]
+  disable_rbe = true
+
+  deps = [ "//third_party/rust_crates:argh" ]
+
+  sources = [ "src/main.rs" ]
+}

@@ -34,6 +34,7 @@ guest_prebuilt("kernel") {
 
 romfs_image("tests") {
   deps = [
+    "//src/virtualization/tests/memory_test_util(${linux_exe_toolchain})",
     "//src/virtualization/tests/virtio_block_test_util(${linux_exe_toolchain})",
     "//src/virtualization/tests/virtio_gpu_test_util(${linux_exe_toolchain})",
     "//src/virtualization/tests/virtio_input_test_util(${linux_exe_toolchain})",
@@ -49,6 +50,7 @@ romfs_image("tests") {
     "${linux_exe_path}/virtio_net_test_util",
     "${linux_exe_path}/virtio_rng_test_util",
     "${linux_exe_path}/virtio_vsock_test_util",
+    "${linux_exe_path}/memory_test_util",
   ]
 
   output = "$target_out_dir/debian/${tests_image}"
