@@ -14,6 +14,19 @@
   "dependency_identifiers": [],
   "consts": [
     {
+      "identifier": "test.experimentalzxctypes/UCHAR_CONST",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
+        "data": "UCHAR_CONST",
+        "start_offset": 270,
+        "end_offset": 281
+      },
+      "value": {
+        "type": "literal"
+      }
+    },
+    {
       "identifier": "test.experimentalzxctypes/UINTPTR_CONST",
       "location": {
         "is_virtual": false,
@@ -51,8 +64,8 @@
         "is_virtual": false,
         "file": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
         "data": "StructOfExperimentalZxCTypes",
-        "start_offset": 331,
-        "end_offset": 359
+        "start_offset": 389,
+        "end_offset": 417
       },
       "members": [
         {
@@ -61,8 +74,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
             "data": "us",
-            "start_offset": 375,
-            "end_offset": 377
+            "start_offset": 433,
+            "end_offset": 435
           },
           "type": {
             "kind": "primitive"
@@ -74,8 +87,21 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
             "data": "up",
-            "start_offset": 389,
-            "end_offset": 391
+            "start_offset": 447,
+            "end_offset": 449
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "uc",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
+            "data": "uc",
+            "start_offset": 463,
+            "end_offset": 465
           },
           "type": {
             "kind": "primitive"

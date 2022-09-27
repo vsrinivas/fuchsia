@@ -1260,6 +1260,7 @@ library fidl.test;
         uint64=4,
         usize=5,
         uintptr=6,
+        uchar=7,
         float32=1.2,
         float64=-3.4)
 type MyStruct = struct {};
@@ -1279,6 +1280,7 @@ type MyStruct = struct {};
       .AddArg("usize", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kZxUsize))
       .AddArg("uintptr",
               fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kZxUintptr))
+      .AddArg("uchar", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kZxUchar))
       .AddArg("float32", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kFloat32))
       .AddArg("float64", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kFloat64));
   ASSERT_COMPILED(library);
@@ -1423,6 +1425,18 @@ type MyStruct = struct {};
   EXPECT_EQ(static_cast<fidl::flat::NumericConstantValue<uint64_t>*>(resolved_uintptr.get())->value,
             6);
 
+  // Check `uchar` arg.
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("uchar"));
+  const auto& uchar_val = example_struct->attributes->Get("attr")->GetArg("uchar")->value;
+  EXPECT_STREQ(uchar_val->span.data(), "7");
+  ASSERT_EQ(uchar_val->kind, fidl::flat::Constant::Kind::kLiteral);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_uchar;
+  EXPECT_TRUE(
+      uchar_val->Value().Convert(fidl::flat::ConstantValue::Kind::kZxUchar, &resolved_uchar));
+  EXPECT_EQ(static_cast<fidl::flat::NumericConstantValue<uint8_t>*>(resolved_uchar.get())->value,
+            7);
+
   // Check `float32` arg.
   EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("float32"));
   const auto& float32_val = example_struct->attributes->Get("attr")->GetArg("float32")->value;
@@ -1514,6 +1528,7 @@ type uint64 = bits : fidl.uint64 {
 };
 const usize fidl.usize = 5;
 const uintptr fidl.uintptr = 6;
+const uchar fidl.uchar = 7;
 const float32 fidl.float32 = 1.2;
 const float64 fidl.float64 = -3.4;
 
@@ -1530,6 +1545,7 @@ const float64 fidl.float64 = -3.4;
         uint64=uint64.MEMBER,
         usize=usize,
         uintptr=uintptr,
+        uchar=uchar,
         float32=float32,
         float64=float64)
 type MyStruct = struct {};
@@ -1549,10 +1565,11 @@ type MyStruct = struct {};
       .AddArg("usize", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kZxUsize))
       .AddArg("uintptr",
               fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kZxUintptr))
+      .AddArg("uchar", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kZxUchar))
       .AddArg("float32", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kFloat32))
       .AddArg("float64", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kFloat64));
 
-  // For the use of usize and uintptr.
+  // For the use of usize, uintptr, and uchar.
   library.EnableFlag(fidl::ExperimentalFlags::Flag::kZxCTypes);
 
   ASSERT_COMPILED(library);
@@ -1696,6 +1713,18 @@ type MyStruct = struct {};
       uintptr_val->Value().Convert(fidl::flat::ConstantValue::Kind::kZxUintptr, &resolved_uintptr));
   EXPECT_EQ(static_cast<fidl::flat::NumericConstantValue<uint64_t>*>(resolved_uintptr.get())->value,
             6);
+
+  // Check `uchar` arg.
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("uchar"));
+  const auto& uchar_val = example_struct->attributes->Get("attr")->GetArg("uchar")->value;
+  EXPECT_STREQ(uchar_val->span.data(), "uchar");
+  ASSERT_EQ(uchar_val->kind, fidl::flat::Constant::Kind::kIdentifier);
+
+  std::unique_ptr<fidl::flat::ConstantValue> resolved_uchar;
+  EXPECT_TRUE(
+      uchar_val->Value().Convert(fidl::flat::ConstantValue::Kind::kZxUchar, &resolved_uchar));
+  EXPECT_EQ(static_cast<fidl::flat::NumericConstantValue<uint8_t>*>(resolved_uchar.get())->value,
+            7);
 
   // Check `float32` arg.
   EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("float32"));

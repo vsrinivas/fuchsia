@@ -59,6 +59,8 @@ std::string NamePrimitiveCType(types::PrimitiveSubtype subtype) {
       return "int64_t";
     case types::PrimitiveSubtype::kUint8:
       return "uint8_t";
+    case types::PrimitiveSubtype::kZxUchar:
+      return "unsigned char";
     case types::PrimitiveSubtype::kUint16:
       return "uint16_t";
     case types::PrimitiveSubtype::kUint32:
@@ -89,6 +91,7 @@ std::string NamePrimitiveIntegerCConstantMacro(types::PrimitiveSubtype subtype) 
     case types::PrimitiveSubtype::kInt64:
       return "INT64_C";
     case types::PrimitiveSubtype::kUint8:
+    case types::PrimitiveSubtype::kZxUchar:
       return "UINT8_C";
     case types::PrimitiveSubtype::kUint16:
       return "UINT16_C";

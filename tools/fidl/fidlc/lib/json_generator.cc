@@ -28,7 +28,8 @@ void JSONGenerator::Generate(NameSpan value) {
 
 void JSONGenerator::Generate(const flat::ConstantValue& value) {
   switch (value.kind) {
-    case flat::ConstantValue::Kind::kUint8: {
+    case flat::ConstantValue::Kind::kUint8:
+    case flat::ConstantValue::Kind::kZxUchar: {
       auto& numeric_constant = reinterpret_cast<const flat::NumericConstantValue<uint8_t>&>(value);
       EmitNumeric(static_cast<uint64_t>(numeric_constant), kAsString);
       break;

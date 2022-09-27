@@ -472,6 +472,7 @@ uint32_t PrimitiveType::SubtypeSize(types::PrimitiveSubtype subtype) {
     case types::PrimitiveSubtype::kBool:
     case types::PrimitiveSubtype::kInt8:
     case types::PrimitiveSubtype::kUint8:
+    case types::PrimitiveSubtype::kZxUchar:
       return 1u;
 
     case types::PrimitiveSubtype::kInt16:
@@ -508,7 +509,8 @@ bool PrimitiveType::ApplyConstraints(TypeResolver* resolver, const TypeConstrain
                           0, num_constraints);
   }
   if ((subtype == types::PrimitiveSubtype::kZxUsize ||
-       subtype == types::PrimitiveSubtype::kZxUintptr) &&
+       subtype == types::PrimitiveSubtype::kZxUintptr ||
+       subtype == types::PrimitiveSubtype::kZxUchar) &&
       !resolver->experimental_flags().IsFlagEnabled(ExperimentalFlags::Flag::kZxCTypes)) {
     return resolver->Fail(ErrExperimentalZxCTypesDisallowed, layout.span(),
                           layout.resolved().name());

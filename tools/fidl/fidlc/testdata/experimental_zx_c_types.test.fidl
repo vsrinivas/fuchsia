@@ -5,11 +5,14 @@ library test.experimentalzxctypes;
 
 const USIZE_CONST usize = 10;
 const UINTPTR_CONST uintptr = 11;
+const UCHAR_CONST uchar = 12;
 
 alias AliasOfUsize = usize;
 alias AliasOfUintptr = uintptr;
+alias AliasOfUchar = uchar;
 
 type StructOfExperimentalZxCTypes = struct {
     us usize;
     up uintptr;
+    uc uchar;
 };

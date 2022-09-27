@@ -123,6 +123,7 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
       case types::PrimitiveSubtype::kBool:
       case types::PrimitiveSubtype::kInt8:
       case types::PrimitiveSubtype::kUint8:
+      case types::PrimitiveSubtype::kZxUchar:
         return DataSize(1);
       case types::PrimitiveSubtype::kInt16:
       case types::PrimitiveSubtype::kUint16:

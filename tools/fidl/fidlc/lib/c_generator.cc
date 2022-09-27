@@ -122,6 +122,7 @@ bool TypeAllowed(const flat::Type* type) {
       switch (static_cast<const flat::PrimitiveType*>(type)->subtype) {
         case types::PrimitiveSubtype::kZxUsize:
         case types::PrimitiveSubtype::kZxUintptr:
+        case types::PrimitiveSubtype::kZxUchar:
           return false;
         default:
           break;
@@ -624,6 +625,7 @@ void BitsValue(const flat::Constant* constant, std::string* out_value) {
     case flat::ConstantValue::Kind::kInt64:
     case flat::ConstantValue::Kind::kZxUsize:
     case flat::ConstantValue::Kind::kZxUintptr:
+    case flat::ConstantValue::Kind::kZxUchar:
     case flat::ConstantValue::Kind::kBool:
     case flat::ConstantValue::Kind::kFloat32:
     case flat::ConstantValue::Kind::kFloat64:
@@ -687,6 +689,7 @@ void EnumValue(const flat::Constant* constant, std::string* out_value) {
     case flat::ConstantValue::Kind::kString:
     case flat::ConstantValue::Kind::kZxUsize:
     case flat::ConstantValue::Kind::kZxUintptr:
+    case flat::ConstantValue::Kind::kZxUchar:
       ZX_PANIC("bad primitive type for an enum");
   }
 
@@ -880,6 +883,7 @@ void CGenerator::GeneratePrimitiveDefine(std::string_view name, types::Primitive
     }
     case types::PrimitiveSubtype::kZxUsize:
     case types::PrimitiveSubtype::kZxUintptr:
+    case types::PrimitiveSubtype::kZxUchar:
       ZX_PANIC("C code generation does not support experimental zx C types");
   }  // switch
 }

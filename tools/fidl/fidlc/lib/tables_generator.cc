@@ -28,6 +28,8 @@ std::string PrimitiveSubtypeToString(fidl::types::PrimitiveSubtype subtype) {
       return "Int64";
     case PrimitiveSubtype::kUint8:
       return "Uint8";
+    case PrimitiveSubtype::kZxUchar:
+      return "ZxUchar";
     case PrimitiveSubtype::kUint16:
       return "Uint16";
     case PrimitiveSubtype::kUint32:
