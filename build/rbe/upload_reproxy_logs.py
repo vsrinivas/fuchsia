@@ -166,30 +166,27 @@ def bq_upload_remote_action_logs(
     records: Sequence[Dict[str, Any]],
     bq_table: str,
     batch_size: int,
-):
+) -> int:
     batches = (
         records[i:i + batch_size] for i in range(0, len(records), batch_size))
-    any_err = False
+    exit_code = 0
     for batch in batches:
         # bq accepts rows as newline-delimited JSON.
         data = "\n".join(json.dumps(row) for row in batch)
-        exit_code = bq_table_insert(bq_table, data)
-        if exit_code != 0:
+        _exit_code = bq_table_insert(bq_table, data)
+        if _exit_code != 0:
             # There will be something printed to stderr already.
-            any_err = True
+            exit_code = _exit_code
 
-    if any_err:
-        msg("There was at least one error uploading logs.")
+    return exit_code
 
 
 def bq_upload_metrics(
     metrics: Sequence[Dict[str, Any]],
     bq_table: str,
-):
+) -> int:
     data = "\n".join(json.dumps(row) for row in metrics)
-    exit_code = bq_table_insert(bq_table, data)
-    if exit_code != 0:
-        msg("There was at least one error uploading metrics.")
+    return bq_table_insert(bq_table, data)
 
 
 def main_upload_metrics(
@@ -198,7 +195,7 @@ def main_upload_metrics(
     bq_metrics_table: str,
     dry_run: bool = False,
     verbose: bool = False,
-):
+) -> int:
     if verbose:
         msg(f"Ingesting reproxy metrics from {reproxy_logdir}")
     stats = read_reproxy_metrics_proto(reproxy_logdir=reproxy_logdir)
@@ -206,7 +203,7 @@ def main_upload_metrics(
     if len(stats.stats) == 0:
         if verbose:
             msg("No remote action stats found.  Skipping upload.")
-        return
+        return 0
 
     metrics_pb = rbe_metrics_pb2.RbeMetrics(
         build_id=uuid,
@@ -218,16 +215,21 @@ def main_upload_metrics(
         msg(f"Converting metrics format to JSON for BQ.")
     metrics_json = pb_message_util.proto_message_to_bq_dict(metrics_pb)
 
-    if not dry_run:
-        if verbose:
-            msg("Uploading aggregate metrics BQ")
-        bq_upload_metrics(
-            metrics=[metrics_json],
-            bq_table=bq_metrics_table,
-        )
+    if dry_run:
+        return 0
 
-        if verbose:
-            msg("Done uploading RBE metrics.")
+    if verbose:
+        msg("Uploading aggregate metrics BQ")
+    exit_code = bq_upload_metrics(
+        metrics=[metrics_json],
+        bq_table=bq_metrics_table,
+    )
+    if exit_code != 0:
+        msg("There was at least one error uploading metrics.")
+    elif verbose:
+        msg("Done uploading RBE metrics.")
+
+    return exit_code
 
 
 def main_upload_logs(
@@ -239,7 +241,7 @@ def main_upload_logs(
     dry_run: bool = False,
     verbose: bool = False,
     print_sample: bool = False,
-):
+) -> int:
     if verbose:
         msg(f"Ingesting reproxy action logs from {reproxy_logdir}")
     log_dump = convert_reproxy_actions_log(
@@ -250,7 +252,7 @@ def main_upload_logs(
     if len(log_dump.records) == 0:
         if verbose:
             msg("No remote action records found.  Skipping upload.")
-        return
+        return 0
 
     if verbose:
         msg(f"Anonymizing remote action records.")
@@ -272,19 +274,25 @@ def main_upload_logs(
     if print_sample:
         msg("Sample remote action record:")
         print(log_records[0])
-        return
+        return 0
 
-    if not dry_run:
-        if verbose:
-            msg("Uploading converted logs to BQ")
-        bq_upload_remote_action_logs(
-            records=log_records,
-            bq_table=bq_logs_table,
-            batch_size=upload_batch_size,
-        )
+    if dry_run:
+        return 0
 
-        if verbose:
-            msg("Done uploading RBE logs.")
+    if verbose:
+        msg("Uploading converted logs to BQ")
+
+    exit_code = bq_upload_remote_action_logs(
+        records=log_records,
+        bq_table=bq_logs_table,
+        batch_size=upload_batch_size,
+    )
+    if exit_code != 0:
+        msg("There was at least one error uploading action logs.")
+    elif verbose:
+        msg("Done uploading RBE logs.")
+
+    return exit_code
 
 
 def main_single_logdir(
@@ -321,16 +329,18 @@ def main_single_logdir(
             f.write(build_id + "\n")
 
     # Upload aggregate metrics.
-    main_upload_metrics(
+    exit_code = main_upload_metrics(
         uuid=build_id,
         reproxy_logdir=reproxy_logdir,
         bq_metrics_table=metrics_table,
         dry_run=dry_run,
         verbose=verbose,
     )
+    if exit_code != 0:
+        return exit_code
 
     # Upload remote action logs.
-    main_upload_logs(
+    exit_code = main_upload_logs(
         uuid=build_id,
         reproxy_logdir=reproxy_logdir,
         reclient_bindir=reclient_bindir,  # for logdump utility
@@ -340,6 +350,8 @@ def main_single_logdir(
         verbose=verbose,
         print_sample=print_sample,
     )
+    if exit_code != 0:
+        return exit_code
 
     # Leave a stamp-file to indicate we've already uploaded this reproxy_logdir.
     if not dry_run:
@@ -348,13 +360,16 @@ def main_single_logdir(
                 "Already uploaded {reproxy_logdir}.  Remove {upload_stamp_file} and re-run to force re-upload."
             )
 
+    return 0
+
 
 def main(argv: Sequence[str]) -> int:
     parser = main_arg_parser()
     args = parser.parse_args(argv)
 
+    exit_code = 0
     for logdir in args.reproxy_logdirs:
-        main_single_logdir(
+        _exit_code = main_single_logdir(
             reproxy_logdir=logdir,
             reclient_bindir=args.reclient_bindir,
             metrics_table=args.bq_metrics_table,
@@ -365,8 +380,10 @@ def main(argv: Sequence[str]) -> int:
             dry_run=args.dry_run,
             verbose=args.verbose,
         )
+        if _exit_code != 0:
+            exit_code = _exit_code
 
-    return 0
+    return exit_code
 
 
 if __name__ == '__main__':

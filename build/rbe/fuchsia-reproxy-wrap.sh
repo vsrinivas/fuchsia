@@ -206,6 +206,7 @@ shutdown() {
       --bq-logs-table="$cloud_project:$dataset".rbe_client_command_logs_developer \
       --bq-metrics-table="$cloud_project:$dataset".rbe_client_metrics_developer \
       "$reproxy_tmpdir"
+      # The upload exit status does not propagate from inside a trap call.
   }
 }
 
