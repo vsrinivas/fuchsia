@@ -64,7 +64,7 @@ template("fuzzer_test_component") {
 
     group(meta_target_name) {
       testonly = true
-      deps = invoker.deps + [ "//build/fuzzing/v1:includes_cml" ]
+      deps = invoker.deps + [ "//build/fuzzing:includes_cml" ]
       metadata = {
         test_component_manifest_cml = [
           {

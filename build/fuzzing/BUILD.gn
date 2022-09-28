@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//tools/cmc/build/expect_includes.gni")
+
 config("fuzzing_verbose_logging") {
   defines = [ "FUZZING_VERBOSE_LOGGING" ]
+}
+
+# All fuzzer components should depend on this.
+expect_includes("includes_cmx") {
+  includes = [ "fuzzer.shard.cmx" ]
+}
+
+# All fuzzer test components should depend on this.
+expect_includes("includes_cml") {
+  includes = [ "fuzzer.shard.cml" ]
 }
