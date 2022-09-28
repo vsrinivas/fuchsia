@@ -32,6 +32,9 @@ constexpr uint16_t kI8042CommandPort            = 0x4;
 // I8042 status flags.
 constexpr uint8_t kI8042StatusOutputFull        = 1 << 0;
 
+// I8042 commands.
+constexpr uint8_t kI8042PulseResetLow           = 0xfe;
+
 // I8042 test constants.
 constexpr uint8_t kI8042CommandTest             = 0xaa;
 constexpr uint8_t kI8042DataTestResponse        = 0x55;
@@ -43,6 +46,9 @@ constexpr uint16_t kI8237DmaPage0               = 0x7;
 // CMOS ports.
 static constexpr uint64_t kCmosBase             = 0x70;
 static constexpr uint64_t kCmosSize             = 0x2;
+
+// CMOS constants.
+constexpr uint64_t kCmosNmiDisabled             = 0x80;
 
 // I8042 ports.
 static constexpr uint64_t kI8042Base            = 0x60;
@@ -197,7 +203,9 @@ zx_status_t CmosHandler::Write(uint64_t addr, const IoValue& value) {
         return ZX_ERR_IO;
       }
       std::lock_guard<std::mutex> lock(mutex_);
-      index_ = value.u8;
+      // The kCmosNmiDisabled bit may be set which essentially means that there is a CMOS update
+      // in progress. This bit must be ignored when determining the CMOS index.
+      index_ = value.u8 & ~kCmosNmiDisabled;
       return ZX_OK;
     }
     default:
@@ -271,18 +279,24 @@ zx_status_t I8042Handler::Read(uint64_t port, IoValue* value) {
 zx_status_t I8042Handler::Write(uint64_t port, const IoValue& value) {
   switch (port) {
     case kI8042DataPort:
+      return ZX_OK;
     case kI8042CommandPort: {
       if (value.access_size != 1) {
         return ZX_ERR_IO;
       }
       std::lock_guard<std::mutex> lock(mutex_);
       command_ = value.u8;
-      break;
+      if (command_ == kI8042PulseResetLow) {
+        // Writing 0xfe to the command port triggers a restart, regardless of what state the
+        // CPU is in. Since we don't support restarting guests, writing this value is equivalent
+        // to an unconditional and immediate shutdown.
+        return ZX_ERR_CANCELED;
+      }
+      return ZX_OK;
     }
     default:
       return ZX_ERR_NOT_SUPPORTED;
   }
-  return ZX_OK;
 }
 
 zx_status_t I8237Handler::Init(Guest* guest) {

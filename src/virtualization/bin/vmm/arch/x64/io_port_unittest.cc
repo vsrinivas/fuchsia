@@ -12,13 +12,16 @@
 #include "src/virtualization/bin/vmm/guest.h"
 
 namespace {
+
 TEST(CmosHandler, WriteReadBootByte) {
   Guest guest;
   CmosHandler cmos_handler;
   cmos_handler.Init(&guest);
 
-  // Set the BootByte address as the current index
-  zx_status_t status = cmos_handler.Write(kCmosIndexPort, IoValue::FromU8(kCmosRebootReason));
+  // Set the BootByte address as the current index, and set bit 0x80 which is the NMI disable bit.
+  // The NMI disable bit should be ignored when determining the CMOS index.
+  zx_status_t status =
+      cmos_handler.Write(kCmosIndexPort, IoValue::FromU8(0x80 | kCmosRebootReason));
   ASSERT_EQ(status, ZX_OK);
 
   // Sentinel as we are expecting 0 back on a good read
@@ -38,6 +41,19 @@ TEST(CmosHandler, WriteReadBootByte) {
   ASSERT_EQ(status, ZX_OK);
   ASSERT_EQ(result.u8, 1);
   ASSERT_EQ(result.access_size, 1);
+}
+
+TEST(I8042Handler, SettingByteShutsdownVcpu) {
+  Guest guest;
+  I8042Handler handler;
+  handler.Init(&guest);
+
+  // Writing to the data port just returns ZX_OK.
+  ASSERT_EQ(handler.Write(0x0, IoValue::FromU8(0xfe)), ZX_OK);
+
+  // Writing to the command port shuts down the VCPU by returning ZX_ERR_CANCELED (which will then
+  // terminate the guest and VM object).
+  ASSERT_EQ(handler.Write(0x4, IoValue::FromU8(0xfe)), ZX_ERR_CANCELED);
 }
 
 }  // namespace
