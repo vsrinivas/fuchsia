@@ -641,9 +641,9 @@ void UsbXhci::DdkRelease() {
 }
 
 // USB HCI protocol implementation.
-void UsbXhci::UsbHciRequestQueue(usb_request_t* usb_request_,
-                                 const usb_request_complete_callback_t* complete_cb_) {
-  Request request(usb_request_, *complete_cb_, sizeof(usb_request_t));
+void UsbXhci::UsbHciRequestQueue(usb_request_t* usb_request,
+                                 const usb_request_complete_callback_t* complete_cb) {
+  Request request(usb_request, *complete_cb, sizeof(usb_request_t));
 
   if (!running_) {
     request.Complete(ZX_ERR_IO_NOT_PRESENT, 0);
