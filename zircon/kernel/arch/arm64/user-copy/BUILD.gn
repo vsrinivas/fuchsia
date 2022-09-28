@@ -5,6 +5,7 @@
 # https://opensource.org/licenses/MIT
 
 import("//build/components.gni")
+import("//build/components/fuchsia_shell_package.gni")
 import("//build/components/fuchsia_test_package.gni")
 import("//build/components/fuchsia_unittest_component.gni")
 import("//build/test.gni")
@@ -34,20 +35,43 @@ if (is_fuchsia) {
     test_target_name = "${target_name}-test"
     main_target_name = target_name
 
+    extra_deps = []
+    if (defined(invoker.deps)) {
+      extra_deps = invoker.deps
+    }
+
     test(test_target_name) {
       visibility = [ ":*" ]
       sources = [ "user-copy-tests.cc" ] + invoker.sources
       defines = [ "ARM64_USERCOPY_FN=${main_target_name}" ]
       deps = [
-        ":user-copy-asm",
-        "//sdk/lib/stdcompat",
-        "//src/lib/fxl/test:gtest_main",
-        "//third_party/googletest:gtest",
-        "//zircon/kernel/lib/arch",
+               ":user-copy-asm",
+               "//sdk/lib/stdcompat",
+               "//src/lib/fxl/test:gtest_main",
+               "//third_party/googletest:gtest",
+               "//zircon/kernel/lib/arch",
+             ] + extra_deps
+    }
 
-        # unsanitized memcpy symbol.
-        "//zircon/kernel/lib/libc/string/arch/arm64",
-      ]
+    benchmark_name = "$target_name-bench"
+    executable(benchmark_name) {
+      output_name = main_target_name
+      visibility = [ ":*" ]
+      sources = [ "user-copy-bench.cc" ] + invoker.sources
+      defines = [ "ARM64_USERCOPY_FN=${main_target_name}" ]
+      deps = [
+               ":user-copy-asm",
+               "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_cpp_wire",
+               "//sdk/lib/stdcompat",
+               "//zircon/kernel/lib/arch",
+               "//zircon/system/ulib/fbl",
+               "//zircon/system/ulib/service:service-llcpp",
+               "//zircon/system/ulib/zx",
+             ] + extra_deps
+    }
+
+    fuchsia_shell_package("${main_target_name}.shell") {
+      deps = [ ":$benchmark_name" ]
     }
 
     fuchsia_unittest_component(main_target_name) {
@@ -57,6 +81,10 @@ if (is_fuchsia) {
 
   arm64_user_copy_test("_arm64_user_copy") {
     sources = [ "user-copy.S" ]
+    deps = [
+      # unsanitized memcpy symbol.
+      "//zircon/kernel/lib/libc/string/arch/arm64",
+    ]
   }
 
   arm64_user_copy_test("_arm64_user_copy_from_user") {
@@ -73,6 +101,15 @@ if (is_fuchsia) {
       ":_arm64_user_copy",
       ":_arm64_user_copy_to_user",
       ":_arm64_user_copy_from_user",
+    ]
+  }
+
+  # Elf binaries that will produce data that describes the usercopy behaviors.
+  group("benchmarks") {
+    deps = [
+      ":_arm64_user_copy.shell",
+      ":_arm64_user_copy_from_user.shell",
+      ":_arm64_user_copy_to_user.shell",
     ]
   }
 }
