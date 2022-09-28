@@ -684,6 +684,10 @@ impl<'a> ValidationContext<'a> {
         if program.runner.is_none() {
             self.errors.push(Error::missing_field("Program", "runner"));
         }
+
+        if program.info.is_none() {
+            self.errors.push(Error::missing_field("Program", "info"));
+        }
     }
 
     /// Validates that paths-based capabilities (service, directory, protocol)
@@ -3050,6 +3054,20 @@ mod tests {
                 Error::missing_field("UseStorage", "target_path"),
                 Error::missing_field("UseEventStream", "name"),
                 Error::missing_field("UseEventStream", "subscriptions"),
+            ])),
+        },
+        test_validate_missing_program_info => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.program = Some(fdecl::Program {
+                    runner: Some("runner".to_string()),
+                    info: None,
+                    ..fdecl::Program::EMPTY
+                });
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::missing_field("Program", "info")
             ])),
         },
         test_validate_uses_invalid_identifiers_service => {
