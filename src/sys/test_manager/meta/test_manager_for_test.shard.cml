@@ -1,0 +1,43 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// use this shard to nest test manager in your test topology.
+{
+    children: [
+        {
+            name: "test_manager",
+            url: "#meta/test_manager_for_tests.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.component.resolution.Resolver",
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys2.EventSource",
+            ],
+            from: "parent",
+            to: "#test_manager",
+        },
+        {
+            event_stream: [
+                "capability_requested_v2",
+                "destroyed_v2",
+                "directory_ready_v2",
+                "running_v2",
+                "started_v2",
+                "stopped_v2",
+            ],
+            from: "parent",
+            to: "#test_manager",
+            scope: "#test_manager",
+        },
+        {
+            storage: "tmp",
+            from: "parent",
+            to: "#test_manager",
+        },
+    ],
+}

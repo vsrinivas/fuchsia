@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 {
     include: [
+        "//src/sys/test_manager/meta/test_manager_for_test.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
         "//src/sys/test_runners/tmp_storage.shard.cml",
         "sys/testing/system-test.shard.cml",
@@ -11,12 +12,6 @@
     program: {
         binary: "bin/run_test_suite_integration_tests",
     },
-    children: [
-        {
-            name: "test_manager",
-            url: "#meta/test_manager_for_tests.cm",
-        },
-    ],
     use: [
         {
             protocol: "fuchsia.test.manager.RunBuilder",
@@ -33,34 +28,9 @@
     ],
     offer: [
         {
-            protocol: [
-                "fuchsia.component.resolution.Resolver",
-                "fuchsia.logger.LogSink",
-                "fuchsia.process.Launcher",
-                "fuchsia.sys.Loader",
-                "fuchsia.sys2.EventSource",
-            ],
+            protocol: [ "fuchsia.sys.Loader" ],
             from: "parent",
             to: "#test_manager",
-        },
-        {
-            storage: "tmp",
-            from: "parent",
-            to: "#test_manager",
-            rights: [ "rw*" ],
-        },
-        {
-            event_stream: [
-                "capability_requested_v2",
-                "destroyed_v2",
-                "directory_ready_v2",
-                "running_v2",
-                "started_v2",
-                "stopped_v2",
-            ],
-            from: "parent",
-            to: "#test_manager",
-            scope: "#test_manager",
         },
     ],
 }
