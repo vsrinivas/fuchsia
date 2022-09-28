@@ -10,7 +10,7 @@
 #include <lib/trivial-allocator/zircon.h>
 #endif
 
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 namespace {
 
@@ -40,9 +40,7 @@ void PageAllocatorTest(Args&&... args) {
 
   // Reset should unmap the page.
   allocation.reset();
-#ifdef __Fuchsia__
-  ASSERT_DEATH([vptr]() { [[maybe_unused]] int i = *vptr; });
-#endif
+  ASSERT_DEATH({ [[maybe_unused]] int i = *vptr; }, "");
 
   allocation = allocator(size, 1);
   EXPECT_TRUE(allocation);
@@ -72,18 +70,16 @@ void PageAllocatorTest(Args&&... args) {
   std::move(allocation).Seal();
   EXPECT_EQ(23, *vptr);
 
-#ifdef __Fuchsia__
-  ASSERT_DEATH([vptr]() { *vptr = 17; });
-#endif
+  ASSERT_DEATH({ *vptr = 17; }, "");
 }
 
-TEST(TrivialAllocatorTests, PageAllocatorMmap) {
+TEST(TrivialAllocatorDeathTest, PageAllocatorMmap) {
   ASSERT_NO_FATAL_FAILURE(PageAllocatorTest<trivial_allocator::PosixMmap>());
 }
 
 #ifdef __Fuchsia__
 
-TEST(TrivialAllocatorTests, PageAllocatorVmar) {
+TEST(TrivialAllocatorDeathTest, PageAllocatorVmar) {
   ASSERT_NO_FATAL_FAILURE(PageAllocatorTest<trivial_allocator::ZirconVmar>(*zx::vmar::root_self()));
 }
 

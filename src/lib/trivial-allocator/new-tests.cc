@@ -6,7 +6,7 @@
 #include <lib/trivial-allocator/new.h>
 #include <lib/trivial-allocator/single-heap-allocator.h>
 
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 namespace {
 
@@ -24,7 +24,7 @@ TEST(TrivialAllocatorTests, New) {
   {
     fbl::AllocChecker ac;
     int* iptr = new (allocator, ac) int(17);
-    ASSERT_NOT_NULL(iptr);
+    ASSERT_TRUE(iptr);
     ASSERT_TRUE(ac.check());
     EXPECT_EQ(17, *iptr);
   }
@@ -32,14 +32,14 @@ TEST(TrivialAllocatorTests, New) {
   {
     fbl::AllocChecker ac;
     char* cptr = new (allocator, ac) char[11];
-    ASSERT_NOT_NULL(cptr);
+    ASSERT_TRUE(cptr);
     ASSERT_TRUE(ac.check());
   }
 
   {
     fbl::AllocChecker ac;
     Aligned* aptr = new (allocator, ac) Aligned{23};
-    ASSERT_NOT_NULL(aptr);
+    ASSERT_TRUE(aptr);
     ASSERT_TRUE(ac.check());
     EXPECT_EQ(23, aptr->data);
   }
@@ -47,7 +47,7 @@ TEST(TrivialAllocatorTests, New) {
   {
     fbl::AllocChecker ac;
     Aligned* aptr = new (allocator, ac) Aligned[2]{{1}, {2}};
-    ASSERT_NOT_NULL(aptr);
+    ASSERT_TRUE(aptr);
     ASSERT_TRUE(ac.check());
     EXPECT_EQ(1, aptr[0].data);
     EXPECT_EQ(2, aptr[1].data);
@@ -57,7 +57,7 @@ TEST(TrivialAllocatorTests, New) {
   {
     fbl::AllocChecker ac;
     char* cptr = new (allocator, ac) char;
-    EXPECT_NULL(cptr);
+    EXPECT_FALSE(cptr);
     EXPECT_FALSE(ac.check());
   }
 }

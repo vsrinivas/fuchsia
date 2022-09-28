@@ -5,7 +5,7 @@
 #include <lib/trivial-allocator/basic-leaky-allocator.h>
 #include <lib/trivial-allocator/single-heap-allocator.h>
 
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 namespace {
 
@@ -15,27 +15,27 @@ TEST(TrivialAllocatorTests, BasicLeakyAllocator) {
   trivial_allocator::BasicLeakyAllocator allocator(backing_allocator);
 
   void* ptr = allocator.allocate(16);
-  ASSERT_NOT_NULL(ptr);
+  ASSERT_TRUE(ptr);
 
   // We should be able to return the one chunk and recover the space each time.
   for (int i = 0; i < 100; ++i) {
     allocator.deallocate(ptr);
     ptr = allocator.allocate(16);
-    ASSERT_NOT_NULL(ptr, "attempt %d", i);
+    ASSERT_TRUE(ptr) << "attempt " << i;
   }
   allocator.deallocate(ptr);
 
   ptr = allocator.allocate(32, 16);
-  EXPECT_NOT_NULL(ptr);
-  EXPECT_EQ(0, reinterpret_cast<uintptr_t>(ptr) % 16);
+  EXPECT_TRUE(ptr);
+  EXPECT_EQ(0u, reinterpret_cast<uintptr_t>(ptr) % 16);
   allocator.deallocate(ptr);
 
   for (int i = 0; i < 128 / 32; ++i) {
     ptr = allocator.allocate(32);
-    EXPECT_NOT_NULL(ptr, "attempt %d", i);
+    EXPECT_TRUE(ptr) << "attempt " << i;
   }
   ptr = allocator.allocate(32);
-  EXPECT_NULL(ptr);
+  EXPECT_FALSE(ptr);
 
   // No-op.
   allocator.deallocate(nullptr);
@@ -49,7 +49,7 @@ TEST(TrivialAllocatorTests, BasicLeakyAllocator) {
   // Allocating with no alignment requirement should be happy with the first
   // possible chunk.
   ptr = misaligned_allocator.allocate(1, 1);
-  EXPECT_NOT_NULL(ptr);
+  EXPECT_TRUE(ptr);
   EXPECT_EQ(ptr, misaligned_backing_data.data());
 
   auto expect_aligned_to = [&backing_data](void* ptr, size_t alignment) {
@@ -60,7 +60,7 @@ TEST(TrivialAllocatorTests, BasicLeakyAllocator) {
 
   // Allocating with a large required alignment should still work.
   ptr = misaligned_allocator.allocate(32, 32);
-  EXPECT_NOT_NULL(ptr);
+  EXPECT_TRUE(ptr);
   expect_aligned_to(ptr, 32);
 
   const std::array align_test_chunks = {
@@ -88,26 +88,26 @@ TEST(TrivialAllocatorTests, BasicLeakyAllocator) {
 
   // First allocation consumes first chunk.
   ptr = align_test_allocator.allocate(16, 16);
-  EXPECT_NOT_NULL(ptr);
+  EXPECT_TRUE(ptr);
   expect_aligned_to(ptr, 16);
 
   // Second allocation consumes second chunk.
   ptr = align_test_allocator.allocate(16, 16);
-  EXPECT_NOT_NULL(ptr);
+  EXPECT_TRUE(ptr);
   expect_aligned_to(ptr, 16);
 
   // Third allocation skips remainder of third chunk and uses fourth.
   ptr = align_test_allocator.allocate(16, 16);
-  EXPECT_NOT_NULL(ptr);
+  EXPECT_TRUE(ptr);
   expect_aligned_to(ptr, 16);
 
   // Fourth allocation consumes remainder of third chunk.
   ptr = align_test_allocator.allocate(15, 1);
-  EXPECT_NOT_NULL(ptr);
+  EXPECT_TRUE(ptr);
 
   // Should now be fresh out of chunks.
   ptr = align_test_allocator.allocate(1, 1);
-  EXPECT_NULL(ptr);
+  EXPECT_FALSE(ptr);
 }
 
 }  // namespace
