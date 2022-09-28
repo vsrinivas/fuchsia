@@ -24,7 +24,7 @@ use fuchsia_fs::directory::open_in_namespace;
 use fuchsia_runtime::{self as fruntime, HandleInfo, HandleType};
 use futures::StreamExt;
 use std::sync::Arc;
-use storage_manager::minfs::disk::DevDiskManager;
+use storage_manager::minfs::{disk::DevDiskManager, StorageManager as MinfsStorageManager};
 use tracing::{error, info};
 
 use crate::{
@@ -70,11 +70,13 @@ async fn main() -> Result<(), Error> {
     drop(cleanup_res);
 
     let cred_manager_provider = EnvCredManagerProvider {};
+    let storage_manager = MinfsStorageManager {};
     let account_manager = Arc::new(AccountManager::new(
         config,
         disk_manager,
         account_metadata_store,
         cred_manager_provider,
+        storage_manager,
     ));
 
     let storage_unlock_mechanism = Arc::new(StorageUnlockMechanism::new());
