@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::capability::{CapabilityProvider, CapabilitySource},
+    crate::capability::{CapabilityProvider, CapabilitySource, PERMITTED_FLAGS},
     crate::framework::RealmCapabilityHost,
     crate::model::{
         component::{ComponentInstance, StartReason, WeakComponentInstance},
@@ -335,8 +335,9 @@ impl CapabilityProvider for LifecycleControllerCapabilityProvider {
         relative_path: PathBuf,
         server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
-        if flags != fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE {
-            warn!(?flags, "LifecycleController capability got open request with bad");
+        let forbidden = flags - PERMITTED_FLAGS;
+        if !forbidden.is_empty() {
+            warn!(?forbidden, "LifecycleController capability");
             return Ok(());
         }
 

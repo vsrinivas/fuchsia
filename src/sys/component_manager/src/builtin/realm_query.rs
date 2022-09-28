@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource},
+        capability::{CapabilityProvider, CapabilitySource, PERMITTED_FLAGS},
         model::{
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
@@ -199,8 +199,9 @@ impl CapabilityProvider for RealmQueryCapabilityProvider {
         relative_path: PathBuf,
         server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
-        if flags != fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE {
-            warn!(?flags, "RealmQuery capability got open request with bad");
+        let forbidden = flags - PERMITTED_FLAGS;
+        if !forbidden.is_empty() {
+            warn!(?forbidden, "RealmQuery capability");
             return Ok(());
         }
 

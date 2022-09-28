@@ -22,7 +22,7 @@ async fn component_manager_namespace() {
         assert_matches!(
             validate_open_with_node_reference_and_describe(node_path).await,
             Err(OpenError::OnOpenEventStreamClosed),
-            "Opening capability: {} with DECRIBE|NODE_REFERENCE did not produce closed stream.",
+            "Opening capability: {} with DESCRIBE|NODE_REFERENCE did not produce closed stream.",
             node_path
         );
     });
@@ -55,7 +55,7 @@ async fn component_manager_namespace() {
         assert_matches!(
             hanging_err,
             Err(OpenError::OpenError(zx_status::Status::TIMED_OUT)),
-            "Opening capability: {} with DECRIBE|NODE_REFERENCE did not timeout.",
+            "Opening capability: {} with DESCRIBE|NODE_REFERENCE did not timeout.",
             node_path
         );
     });

@@ -12,7 +12,7 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource},
+        capability::{CapabilityProvider, CapabilitySource, PERMITTED_FLAGS},
         model::{
             component::{ComponentInstance, WeakComponentInstance},
             error::ModelError,
@@ -78,20 +78,22 @@ impl CapabilityProvider for StorageAdminProtocolProvider {
         relative_path: PathBuf,
         server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
-        let server_end = channel::take_channel(server_end);
-        if (flags & (fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE))
-            != (fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE)
-        {
-            warn!("open request for the storage admin protocol rejected: access denied");
+        let forbidden = flags - PERMITTED_FLAGS;
+        if !forbidden.is_empty() {
+            warn!(?forbidden, "StorageAdmin protocol");
             return Ok(());
         }
+
         if relative_path.components().count() != 0 {
             warn!(
                 path=%relative_path.display(),
-                "StorageAdmin capability got open request with non-empty",
+                "StorageAdmin protocol got open request with non-empty",
             );
             return Ok(());
         }
+
+        let server_end = channel::take_channel(server_end);
+
         let storage_decl = self.storage_decl.clone();
         let component = self.component.clone();
         let storage_admin = self.storage_admin.clone();

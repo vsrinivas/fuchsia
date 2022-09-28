@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource},
+        capability::{CapabilityProvider, CapabilitySource, PERMITTED_FLAGS},
         model::{
             component::{ComponentInstance, InstanceState},
             error::ModelError,
@@ -177,8 +177,9 @@ impl CapabilityProvider for RouteValidatorCapabilityProvider {
         relative_path: PathBuf,
         server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
-        if flags != fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE {
-            warn!(?flags, "RouteValidator capability got open request with bad flags");
+        let forbidden = flags - PERMITTED_FLAGS;
+        if !forbidden.is_empty() {
+            warn!(?forbidden, "RouteValidator capability");
             return Ok(());
         }
 

@@ -14,7 +14,7 @@ use {
 pub type CapabilitySource = CapabilitySourceInterface<ComponentInstance>;
 /// The server-side of a capability implements this trait.
 /// Multiple `CapabilityProvider` objects can compose with one another for a single
-/// capability request. For example, a `CapabitilityProvider` can be interposed
+/// capability request. For example, a `CapabilityProvider` can be interposed
 /// between the primary `CapabilityProvider and the client for the purpose of
 /// logging and testing. A `CapabilityProvider` is typically provided by a
 /// corresponding `Hook` in response to the `CapabilityRouted` event.
@@ -36,3 +36,9 @@ pub trait CapabilityProvider: Send + Sync {
         server_end: &mut zx::Channel,
     ) -> Result<(), ModelError>;
 }
+
+/// The only flags that are accepted by `CapabilityProvider` implementations.
+pub const PERMITTED_FLAGS: fio::OpenFlags = fio::OpenFlags::empty()
+    .union(fio::OpenFlags::RIGHT_READABLE)
+    .union(fio::OpenFlags::RIGHT_WRITABLE)
+    .union(fio::OpenFlags::POSIX_WRITABLE);
