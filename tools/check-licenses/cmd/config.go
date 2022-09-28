@@ -6,9 +6,7 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"log"
 	"os"
 	"regexp"
 	"strings"
@@ -22,6 +20,11 @@ import (
 )
 
 var (
+	// Map of string to string.
+	//
+	// Config files may contain unexpanded variables like {FUCHSIA_DIR}.
+	// This map is used to replace those variables with values set on the command-line.
+	// Map keys are variable names. Map values are what they will be replaced with.
 	ConfigVars map[string]string
 )
 
@@ -30,13 +33,25 @@ func init() {
 }
 
 type CheckLicensesConfig struct {
+	// LogLevel controls how much output is printed to stdout.
+	// See log.go for more information.
 	LogLevel int `json:"logLevel"`
-
+	// FuchsiaDir is the path to the root of your fuchsia workspace.
+	// Typically ~/fuchsia, but can be set by environment variables
+	// or command-line arguments.
 	FuchsiaDir string `json:"fuchsiaDir"`
-	OutDir     string `json:"outDir"`
+	// OutDir is the path to the output directory for your GN workspace.
+	// Typically ~/fuchsia/out/default, but can be set by environment variables
+	// or command-line arguments.
+	OutDir string `json:"outDir"`
 
+	// Includes defines a list of files or directories that contain
+	// config.json files. This allows check-licenses configuration details
+	// to be spread out across the fuchsia workspace.
 	Includes []Include `json:"includes"`
 
+	// The following variables represent Config files for the
+	// check-licenses subpackage of the same name.
 	File      *file.FileConfig           `json:"file"`
 	License   *license.LicenseConfig     `json:"license"`
 	Project   *project.ProjectConfig     `json:"project"`
@@ -44,8 +59,9 @@ type CheckLicensesConfig struct {
 	Result    *result.ResultConfig       `json:"result"`
 	World     *world.WorldConfig         `json:"world"`
 
+	// On the command-line, a user can provide a GN target (e.g. //sdk)
+	// to generate a NOTICE file for.
 	Target string `json:"target"`
-
 	// The SDK version for the current workspace.
 	BuildInfoVersion string `json:"buildInfoVersion"`
 	// The product currently set in the fx args for the local workspace.
@@ -53,11 +69,14 @@ type CheckLicensesConfig struct {
 	// The board currently set in the fx args for the local workspace.
 	BuildInfoBoard string `json:"buildInfoBoard"`
 
-	Filters []string
-
+	// Flag stating whether or not check-licenses should generate
+	// a NOTICE file.
 	OutputLicenseFile bool `json:"outputLicenseFile"`
+
+	Filters []string
 }
 
+// Create a new CheckLicensesConfig object by reading in a config.json file.
 func NewCheckLicensesConfig(path string) (*CheckLicensesConfig, error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
@@ -71,6 +90,7 @@ func NewCheckLicensesConfig(path string) (*CheckLicensesConfig, error) {
 	return c, nil
 }
 
+// Create a new CheckLicensesConfig object by consuming a json config string.
 func NewCheckLicensesConfigJson(configJson string) (*CheckLicensesConfig, error) {
 	for k, v := range ConfigVars {
 		configJson = strings.ReplaceAll(configJson, k, v)
@@ -94,37 +114,9 @@ func NewCheckLicensesConfigJson(configJson string) (*CheckLicensesConfig, error)
 	}
 
 	d := json.NewDecoder(strings.NewReader(configJson))
-	// TODO: Uncomment once "Filter" fields are removed from all config files.
-	//d.DisallowUnknownFields()
+	d.DisallowUnknownFields()
 	if err := d.Decode(c); err != nil {
 		return nil, err
-	}
-
-	// Loop over the Includes field and merge in all config files
-	// from that list, recursively.
-	if len(c.Includes) > 0 {
-		for _, include := range c.Includes {
-			for _, path := range include.Path {
-				c2, err := NewCheckLicensesConfig(path)
-				// If we get an error loading the config file,
-				// it may be because a given submodule isn't
-				// available on your machine (e.g. //vendor/google).
-				//
-				// Only error out if this config section is marked
-				// as "required".
-				if err != nil {
-					if errors.Is(err, os.ErrNotExist) && !include.Required {
-						if c.LogLevel > 0 {
-							log.Printf("Failed to create config file for %s: %v.\n", path, err)
-						}
-						continue
-					} else {
-						return nil, err
-					}
-				}
-				c.Merge(c2)
-			}
-		}
 	}
 
 	if err := c.ProcessIncludes(); err != nil {
@@ -134,6 +126,7 @@ func NewCheckLicensesConfigJson(configJson string) (*CheckLicensesConfig, error)
 	return c, nil
 }
 
+// Merge two CheckLicenseConfig objects together.
 func (c *CheckLicensesConfig) Merge(other *CheckLicensesConfig) error {
 	c.File.Merge(other.File)
 	c.License.Merge(other.License)
@@ -155,9 +148,7 @@ func (c *CheckLicensesConfig) Merge(other *CheckLicensesConfig) error {
 		c.LogLevel = other.LogLevel
 	}
 
-	c.Filters = append(c.Filters, other.Filters...)
 	c.OutputLicenseFile = c.OutputLicenseFile || other.OutputLicenseFile
-
 	if c.BuildInfoVersion == "" {
 		c.BuildInfoVersion = other.BuildInfoVersion
 	}
@@ -167,6 +158,8 @@ func (c *CheckLicensesConfig) Merge(other *CheckLicensesConfig) error {
 	if c.BuildInfoBoard == "" {
 		c.BuildInfoBoard = other.BuildInfoBoard
 	}
+
+	c.Filters = append(c.Filters, other.Filters...)
 
 	return nil
 }

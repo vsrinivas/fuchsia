@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	logLevel  = flag.Int("log_level", 0, "Log level. Set to 0 for no logs, 1 to log to a file, 2 to log to stdout.")
+	logLevel  = flag.Int("log_level", 2, "Log level. Set to 0 for no logs, 1 to log to a file, 2 to log to stdout.")
 	pproffile = flag.String("pprof", "", "generate file that can be parsed by go tool pprof")
 	tracefile = flag.String("trace", "", "generate file that can be parsed by go tool trace")
 )
