@@ -350,6 +350,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_VS680_CLOCK        0x0E
 #define PDEV_DID_VS680_THERMAL      0x0F
 #define PDEV_DID_VS680_POWER        0x10
+#define PDEV_DID_AS370_SDHCI1       0x11
 
 // Maxim
 #define PDEV_VID_MAXIM              0x15

@@ -30,4 +30,5 @@ extend uint fuchsia.BIND_PLATFORM_DEV_DID {
   VS680_CLOCK = 0x0E,
   VS680_THERMAL = 0x0F,
   VS680_POWER = 0x10,
+  AS370_SDHCI1 = 0x11,
 };

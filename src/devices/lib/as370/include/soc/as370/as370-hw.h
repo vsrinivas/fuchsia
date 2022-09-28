@@ -35,9 +35,13 @@ constexpr uint32_t kCpuSize = fbl::round_up<uint32_t, uint32_t>(0x2'0000, PAGE_S
 constexpr uint32_t kSdio0Base = 0xf7ab'0000;
 constexpr uint32_t kSdio0Size = fbl::round_up<uint32_t, uint32_t>(0x1000, PAGE_SIZE);
 
+constexpr uint32_t kEmmc0Base = 0xf7aa'0000;
+constexpr uint32_t kEmmc0Size = kSdio0Size;
+
 constexpr uint32_t kDhubIrq = 32 + 11;
 
 constexpr uint32_t kSdio0Irq = (22 + 32);
+constexpr uint32_t kEmmc0Irq = (21 + 32);
 
 }  // namespace as370
 

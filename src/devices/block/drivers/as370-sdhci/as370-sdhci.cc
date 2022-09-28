@@ -201,7 +201,7 @@ uint64_t As370Sdhci::SdhciGetQuirks(uint64_t* out_dma_boundary_alignment) {
   // Tuning currently doesn't work on AS370/VS680 so HS200/HS400/SDR104 can't be used. VS680 has
   // eMMC for which the next fallback is HSDDR, however this also doesn't work on the board we have.
   // Enable the following quirk so that HS is used instead of HSDDR.
-  if (did_ == PDEV_DID_VS680_SDHCI0) {
+  if (did_ == PDEV_DID_VS680_SDHCI0 || did_ == PDEV_DID_AS370_SDHCI1) {
     quirks |= SDHCI_QUIRK_NO_DDR;
   }
 
