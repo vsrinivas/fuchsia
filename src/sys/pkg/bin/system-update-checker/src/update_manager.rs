@@ -772,7 +772,7 @@ pub(crate) mod tests {
         }
     }
 
-    const UPDATE_URL: &str = "fuchsia-pkg://fuchsia.com/update";
+    const UPDATE_URL: &str = "fuchsia-pkg://fuchsia.test/update";
     #[derive(Clone)]
     pub struct FakeTargetChannelUpdater {
         update_url: String,

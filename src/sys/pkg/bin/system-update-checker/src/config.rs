@@ -107,13 +107,13 @@ mod tests {
     fn test_load() {
         verify_load(
             json!({
-                "update_package_url": "fuchsia-pkg://fuchsia.com/abc",
+                "update_package_url": "fuchsia-pkg://fuchsia.test/abc",
                 "poll_frequency_minutes": 123,
             }),
             Config {
                 poll_frequency: Some(Duration::from_minutes(123)),
                 update_package_url: Some(
-                    AbsolutePackageUrl::parse("fuchsia-pkg://fuchsia.com/abc").unwrap(),
+                    AbsolutePackageUrl::parse("fuchsia-pkg://fuchsia.test/abc").unwrap(),
                 ),
             },
         );
@@ -123,12 +123,12 @@ mod tests {
     fn test_missing_fields_are_defaults() {
         verify_load(
             json!({
-                "update_package_url": "fuchsia-pkg://fuchsia.com/the-update",
+                "update_package_url": "fuchsia-pkg://fuchsia.test/the-update",
             }),
             Config {
                 poll_frequency: None,
                 update_package_url: Some(
-                    AbsolutePackageUrl::parse("fuchsia-pkg://fuchsia.com/the-update").unwrap(),
+                    AbsolutePackageUrl::parse("fuchsia-pkg://fuchsia.test/the-update").unwrap(),
                 ),
             },
         );

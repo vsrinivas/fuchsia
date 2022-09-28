@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{errors::Error, update_manager::TargetChannelUpdater};
+use crate::{errors::Error, update_manager::TargetChannelUpdater, DEFAULT_UPDATE_PACKAGE_URL};
 use anyhow::{anyhow, Context as _};
 use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_update_ext::Initiator;
@@ -18,8 +18,6 @@ use fuchsia_syslog::fx_log_info;
 use fuchsia_url::AbsolutePackageUrl;
 use futures::{future::BoxFuture, prelude::*, stream::BoxStream};
 
-const UPDATE_URL: &str = "fuchsia-pkg://fuchsia.com/update";
-
 // On success, system will reboot before this function returns
 pub async fn apply_system_update<'a>(
     initiator: Initiator,
@@ -29,7 +27,13 @@ pub async fn apply_system_update<'a>(
         connect_to_protocol::<InstallerMarker>().context("connecting to component Installer")?;
     let mut update_installer = RealUpdateInstaller { installer_proxy };
 
-    apply_system_update_impl(&mut update_installer, initiator, target_channel_updater).await
+    apply_system_update_impl(
+        DEFAULT_UPDATE_PACKAGE_URL,
+        &mut update_installer,
+        initiator,
+        target_channel_updater,
+    )
+    .await
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -95,6 +99,7 @@ impl UpdateInstaller for RealUpdateInstaller {
 }
 
 async fn apply_system_update_impl(
+    default_update_url: &str,
     update_installer: &mut impl UpdateInstaller,
     initiator: Initiator,
     target_channel_updater: &dyn TargetChannelUpdater,
@@ -109,7 +114,9 @@ async fn apply_system_update_impl(
         allow_attach_to_existing_attempt: true,
     };
     let update_url = AbsolutePackageUrl::parse(
-        &target_channel_updater.get_target_channel_update_url().unwrap_or(UPDATE_URL.to_owned()),
+        &target_channel_updater
+            .get_target_channel_update_url()
+            .unwrap_or(default_update_url.to_owned()),
     )?;
     let (reboot_controller, reboot_controller_server_end) =
         fidl::endpoints::create_proxy::<RebootControllerMarker>()
@@ -184,6 +191,8 @@ mod test_apply_system_update_impl {
     use fuchsia_async as fasync;
     use proptest::prelude::*;
 
+    const TEST_DEFAULT_UPDATE_URL: &str = "fuchsia-pkg://fuchsia.test/update";
+
     struct DoNothingUpdateInstaller;
     impl UpdateInstaller for DoNothingUpdateInstaller {
         type UpdateAttempt =
@@ -226,6 +235,7 @@ mod test_apply_system_update_impl {
         let mut update_installer = WasCalledUpdateInstaller { was_called: false };
 
         apply_system_update_impl(
+            TEST_DEFAULT_UPDATE_URL,
             &mut update_installer,
             Initiator::User,
             &FakeTargetChannelUpdater::new(),
@@ -267,6 +277,7 @@ mod test_apply_system_update_impl {
         let mut update_installer = ArgumentCapturingUpdateInstaller::default();
 
         apply_system_update_impl(
+            TEST_DEFAULT_UPDATE_URL,
             &mut update_installer,
             Initiator::User,
             &FakeTargetChannelUpdater::new(),
@@ -276,7 +287,7 @@ mod test_apply_system_update_impl {
 
         assert_eq!(
             update_installer.update_url,
-            Some(AbsolutePackageUrl::parse(UPDATE_URL).unwrap())
+            Some(AbsolutePackageUrl::parse(TEST_DEFAULT_UPDATE_URL).unwrap())
         );
         assert_eq!(
             update_installer.options,
@@ -293,8 +304,9 @@ mod test_apply_system_update_impl {
     async fn test_call_install_with_right_arguments_and_target_channel() {
         let mut update_installer = ArgumentCapturingUpdateInstaller::default();
 
-        let target_url = "fuchsia-pkg://my.update.server.example.com/my-update";
+        let target_url = "fuchsia-pkg://fuchsia.test/my-update";
         apply_system_update_impl(
+            TEST_DEFAULT_UPDATE_URL,
             &mut update_installer,
             Initiator::User,
             &FakeTargetChannelUpdater::new_with_update_url(target_url),
@@ -325,6 +337,7 @@ mod test_apply_system_update_impl {
         let mut update_installer =
             ArgumentCapturingUpdateInstaller { state: Some(state), ..Default::default() };
         let mut stream = apply_system_update_impl(
+            TEST_DEFAULT_UPDATE_URL,
             &mut update_installer,
             Initiator::User,
             &FakeTargetChannelUpdater::new(),
@@ -371,6 +384,7 @@ mod test_apply_system_update_impl {
     async fn test_does_not_reboot_on_failure() {
         let mut update_installer = FailingUpdateInstaller::default();
         let (_, error) = apply_system_update_impl(
+            TEST_DEFAULT_UPDATE_URL,
             &mut update_installer,
             Initiator::User,
             &FakeTargetChannelUpdater::new(),
@@ -381,7 +395,6 @@ mod test_apply_system_update_impl {
         .await
         .unwrap()
         .unwrap_err();
-
         assert_matches!(error.downcast::<Error>().unwrap(), Error::SystemUpdaterFailed);
     }
 
@@ -409,6 +422,7 @@ mod test_apply_system_update_impl {
         let mut update_installer = RebootUpdateInstaller;
 
         let mut results: Vec<_> = apply_system_update_impl(
+            TEST_DEFAULT_UPDATE_URL,
             &mut update_installer,
             Initiator::User,
             &FakeTargetChannelUpdater::new(),
@@ -440,9 +454,12 @@ mod test_apply_system_update_impl {
             let mut executor =
                 fasync::TestExecutor::new().expect("create executor in test");
             executor.run_singlethreaded(async move{
-                let result = apply_system_update_impl(&mut update_installer, initiator,
-            &FakeTargetChannelUpdater::new(),
-                    ).await;
+                let result = apply_system_update_impl(
+                    TEST_DEFAULT_UPDATE_URL,
+                    &mut update_installer,
+                    initiator,
+                    &FakeTargetChannelUpdater::new(),
+                ).await;
 
                 prop_assert!(result.is_ok(), "apply_system_update_impl failed: {:?}", result.err());
                 prop_assert_eq!(
@@ -512,6 +529,7 @@ mod test_apply_system_update_impl {
         ]);
 
         let mut stream = apply_system_update_impl(
+            TEST_DEFAULT_UPDATE_URL,
             &mut update_installer,
             Initiator::User,
             &FakeTargetChannelUpdater::new(),
@@ -548,6 +566,7 @@ mod test_apply_system_update_impl {
         ]);
 
         let mut stream = apply_system_update_impl(
+            TEST_DEFAULT_UPDATE_URL,
             &mut update_installer,
             Initiator::User,
             &FakeTargetChannelUpdater::new(),
@@ -574,6 +593,7 @@ mod test_apply_system_update_impl {
         ]);
 
         let mut stream = apply_system_update_impl(
+            TEST_DEFAULT_UPDATE_URL,
             &mut update_installer,
             Initiator::User,
             &FakeTargetChannelUpdater::new(),

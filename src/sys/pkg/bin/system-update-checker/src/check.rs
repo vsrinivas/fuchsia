@@ -6,6 +6,7 @@ use {
     crate::{
         errors::{self, Error},
         update_manager::TargetChannelUpdater,
+        DEFAULT_UPDATE_PACKAGE_URL,
     },
     anyhow::{anyhow, Context as _},
     fidl_fuchsia_paver::{
@@ -20,8 +21,6 @@ use {
     std::{cmp::min, convert::TryInto as _, io},
     update_package::{ImageType, UpdatePackage},
 };
-
-const UPDATE_PACKAGE_URL: &str = "fuchsia-pkg://fuchsia.com/update";
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum SystemUpdateStatus {
@@ -41,6 +40,7 @@ pub async fn check_for_system_update(
         connect_to_protocol::<fidl_space::ManagerMarker>().map_err(Error::ConnectSpaceManager)?;
 
     check_for_system_update_impl(
+        DEFAULT_UPDATE_PACKAGE_URL,
         &mut file_system,
         &package_resolver,
         &paver,
@@ -69,6 +69,7 @@ impl FileSystem for RealFileSystem {
 }
 
 async fn check_for_system_update_impl(
+    default_update_url: &str,
     file_system: &mut impl FileSystem,
     package_resolver: &impl PackageResolverProxyInterface,
     paver: &PaverProxy,
@@ -76,8 +77,13 @@ async fn check_for_system_update_impl(
     last_known_update_package: Option<&Hash>,
     space_manager: &fidl_space::ManagerProxy,
 ) -> Result<SystemUpdateStatus, Error> {
-    let update_pkg =
-        latest_update_package(package_resolver, target_channel_manager, space_manager).await?;
+    let update_pkg = latest_update_package(
+        default_update_url,
+        package_resolver,
+        target_channel_manager,
+        space_manager,
+    )
+    .await?;
     let latest_update_merkle = update_pkg.hash().await.map_err(errors::UpdatePackage::Hash)?;
     let current_system_image = current_system_image_merkle(file_system)?;
     let latest_system_image = latest_system_image_merkle(&update_pkg).await?;
@@ -151,11 +157,13 @@ async fn gc(space_manager: &fidl_space::ManagerProxy) -> Result<(), anyhow::Erro
 }
 
 async fn latest_update_package(
+    default_update_url: &str,
     package_resolver: &impl PackageResolverProxyInterface,
     channel_manager: &dyn TargetChannelUpdater,
     space_manager: &fidl_space::ManagerProxy,
 ) -> Result<UpdatePackage, errors::UpdatePackage> {
-    match latest_update_package_attempt(package_resolver, channel_manager).await {
+    match latest_update_package_attempt(default_update_url, package_resolver, channel_manager).await
+    {
         Ok(update_package) => return Ok(update_package),
         Err(errors::UpdatePackage::Resolve(fidl_fuchsia_pkg_ext::ResolveError::NoSpace)) => {}
         Err(raw) => return Err(raw),
@@ -168,7 +176,8 @@ async fn latest_update_package(
         fx_log_err!("unable to gc packages: {:#}", anyhow!(e));
     }
 
-    match latest_update_package_attempt(package_resolver, channel_manager).await {
+    match latest_update_package_attempt(default_update_url, package_resolver, channel_manager).await
+    {
         Ok(update_package) => Ok(update_package),
         Err(raw) => {
             fx_log_err!(
@@ -180,13 +189,14 @@ async fn latest_update_package(
 }
 
 async fn latest_update_package_attempt(
+    default_update_url: &str,
     package_resolver: &impl PackageResolverProxyInterface,
     channel_manager: &dyn TargetChannelUpdater,
 ) -> Result<UpdatePackage, errors::UpdatePackage> {
     let (dir_proxy, dir_server_end) =
         fidl::endpoints::create_proxy().map_err(errors::UpdatePackage::CreateDirectoryProxy)?;
     let update_package =
-        channel_manager.get_target_channel_update_url().unwrap_or(UPDATE_PACKAGE_URL.to_owned());
+        channel_manager.get_target_channel_update_url().unwrap_or(default_update_url.to_owned());
     let fut = package_resolver.resolve(&update_package, dir_server_end);
     let _: fpkg::ResolutionContext = fut
         .await
@@ -293,6 +303,7 @@ pub mod test_check_for_system_update_impl {
         "0000000000000000000000000000000000000000000000000000000000000000";
     const NEW_SYSTEM_IMAGE_MERKLE: &str =
         "1111111111111111111111111111111111111111111111111111111111111111";
+    const TEST_UPDATE_PACKAGE_URL: &str = "fuchsia-pkg://fuchsia.test/update";
 
     lazy_static! {
         static ref UPDATE_PACKAGE_MERKLE: Hash = [0x22; 32].into();
@@ -343,7 +354,7 @@ pub mod test_check_for_system_update_impl {
         fn new() -> PackageResolverProxyTempDirBuilder {
             Self {
                 temp_dir: tempfile::tempdir().expect("create temp dir"),
-                expected_package_url: UPDATE_PACKAGE_URL.to_owned(),
+                expected_package_url: TEST_UPDATE_PACKAGE_URL.to_owned(),
                 write_packages_json: false,
                 packages: Vec::new(),
                 images: HashMap::new(),
@@ -522,6 +533,7 @@ pub mod test_check_for_system_update_impl {
         let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
+            TEST_UPDATE_PACKAGE_URL,
             &mut file_system,
             &package_resolver,
             &paver,
@@ -549,6 +561,7 @@ pub mod test_check_for_system_update_impl {
         let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
+            TEST_UPDATE_PACKAGE_URL,
             &mut file_system,
             &package_resolver,
             &paver,
@@ -601,6 +614,7 @@ pub mod test_check_for_system_update_impl {
         let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
+            TEST_UPDATE_PACKAGE_URL,
             &mut file_system,
             &package_resolver,
             &paver,
@@ -617,7 +631,6 @@ pub mod test_check_for_system_update_impl {
     async fn test_update_package_garbage_collection_called_no_space() {
         struct PackageResolverProxyNoSpaceOnce {
             temp_dir: tempfile::TempDir,
-            expected_package_url: String,
             call_count: Mutex<u32>,
         }
 
@@ -629,7 +642,6 @@ pub mod test_check_for_system_update_impl {
                     .build();
                 PackageResolverProxyNoSpaceOnce {
                     temp_dir: package_resolver.temp_dir,
-                    expected_package_url: package_resolver.expected_package_url,
                     call_count: Mutex::new(0),
                 }
             }
@@ -649,7 +661,7 @@ pub mod test_check_for_system_update_impl {
                     return future::ok(Err(fidl_fuchsia_pkg::ResolveError::NoSpace));
                 }
 
-                assert_eq!(package_url, self.expected_package_url);
+                assert_eq!(package_url, TEST_UPDATE_PACKAGE_URL);
                 fdio::service_connect(
                     self.temp_dir.path().to_str().expect("path is utf8"),
                     dir.into_channel(),
@@ -684,6 +696,7 @@ pub mod test_check_for_system_update_impl {
         let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
+            TEST_UPDATE_PACKAGE_URL,
             &mut file_system,
             &package_resolver,
             &paver,
@@ -742,6 +755,7 @@ pub mod test_check_for_system_update_impl {
         let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
+            TEST_UPDATE_PACKAGE_URL,
             &mut file_system,
             &package_resolver,
             &paver,
@@ -800,6 +814,7 @@ pub mod test_check_for_system_update_impl {
         let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
+            TEST_UPDATE_PACKAGE_URL,
             &mut file_system,
             &package_resolver,
             &paver,
@@ -852,6 +867,7 @@ pub mod test_check_for_system_update_impl {
         let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
+            TEST_UPDATE_PACKAGE_URL,
             &mut file_system,
             &package_resolver,
             &paver,
@@ -874,6 +890,7 @@ pub mod test_check_for_system_update_impl {
         let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
+            TEST_UPDATE_PACKAGE_URL,
             &mut file_system,
             &package_resolver,
             &paver,
@@ -899,6 +916,7 @@ pub mod test_check_for_system_update_impl {
         let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
+            TEST_UPDATE_PACKAGE_URL,
             &mut file_system,
             &package_resolver,
             &paver,
@@ -925,6 +943,7 @@ pub mod test_check_for_system_update_impl {
         let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
+            TEST_UPDATE_PACKAGE_URL,
             &mut file_system,
             &package_resolver,
             &paver,
@@ -960,6 +979,7 @@ pub mod test_check_for_system_update_impl {
         let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
+            TEST_UPDATE_PACKAGE_URL,
             &mut file_system,
             &package_resolver,
             &paver,
@@ -999,6 +1019,7 @@ pub mod test_check_for_system_update_impl {
         let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
+            TEST_UPDATE_PACKAGE_URL,
             &mut file_system,
             &package_resolver,
             &paver,
@@ -1028,6 +1049,7 @@ pub mod test_check_for_system_update_impl {
         let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
+            TEST_UPDATE_PACKAGE_URL,
             &mut file_system,
             &package_resolver,
             &paver,
@@ -1053,7 +1075,7 @@ pub mod test_check_for_system_update_impl {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_update_available_changing_target_channel() {
-        let update_url: &str = "fuchsia-pkg://this.is.a.test.example.com/my-update-package";
+        let update_url: &str = "fuchsia-pkg://target.channel.test/my-update-package";
         let mut file_system = FakeFileSystem::new_with_valid_system_meta();
         let package_resolver = PackageResolverProxyTempDirBuilder::new()
             .with_packages_json()
@@ -1066,6 +1088,7 @@ pub mod test_check_for_system_update_impl {
         let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
+            TEST_UPDATE_PACKAGE_URL,
             &mut file_system,
             &package_resolver,
             &paver,
@@ -1100,6 +1123,7 @@ pub mod test_check_for_system_update_impl {
 
         let previous_update_package = Hash::from([0x44; 32]);
         let result = check_for_system_update_impl(
+            TEST_UPDATE_PACKAGE_URL,
             &mut file_system,
             &package_resolver,
             &paver,
@@ -1140,6 +1164,7 @@ pub mod test_check_for_system_update_impl {
         let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
+            TEST_UPDATE_PACKAGE_URL,
             &mut file_system,
             &package_resolver,
             &paver,
@@ -1183,6 +1208,7 @@ pub mod test_check_for_system_update_impl {
         let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
+            TEST_UPDATE_PACKAGE_URL,
             &mut file_system,
             &package_resolver,
             &paver,
@@ -1226,6 +1252,7 @@ pub mod test_check_for_system_update_impl {
         let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
+            TEST_UPDATE_PACKAGE_URL,
             &mut file_system,
             &package_resolver,
             &paver,
@@ -1265,6 +1292,7 @@ pub mod test_check_for_system_update_impl {
         let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
+            TEST_UPDATE_PACKAGE_URL,
             &mut file_system,
             &package_resolver,
             &paver,
@@ -1308,6 +1336,7 @@ pub mod test_check_for_system_update_impl {
         let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
+            TEST_UPDATE_PACKAGE_URL,
             &mut file_system,
             &package_resolver,
             &paver,
@@ -1347,6 +1376,7 @@ pub mod test_check_for_system_update_impl {
         let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
+            TEST_UPDATE_PACKAGE_URL,
             &mut file_system,
             &package_resolver,
             &paver,
@@ -1390,6 +1420,7 @@ pub mod test_check_for_system_update_impl {
         let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
+            TEST_UPDATE_PACKAGE_URL,
             &mut file_system,
             &package_resolver,
             &paver,

@@ -35,6 +35,7 @@ use {
 };
 
 const MAX_CONCURRENT_CONNECTIONS: usize = 100;
+const DEFAULT_UPDATE_PACKAGE_URL: &str = "fuchsia-pkg://fuchsia.com/update";
 
 #[fasync::run(1)]
 async fn main() -> Result<(), Error> {
