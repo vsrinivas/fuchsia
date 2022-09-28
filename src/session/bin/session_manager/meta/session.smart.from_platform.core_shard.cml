@@ -28,9 +28,6 @@
                 "google.cast.multizone.Leader",
             ],
         },
-        {
-            protocol: "fuchsia.web.ContextProvider",
-        },
     ],
 
     // Protocols used from a child are routed to the v1 sys realm.
@@ -49,12 +46,6 @@
             ],
             from: "self",
             to: [ "#session-manager" ],
-            dependency: "weak_for_migration",
-        },
-        {
-            protocol: "fuchsia.web.ContextProvider",
-            from: "self",
-            to: "#session-manager",
             dependency: "weak_for_migration",
         },
         {
