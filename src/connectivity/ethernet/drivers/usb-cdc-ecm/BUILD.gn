@@ -26,7 +26,10 @@ fuchsia_driver("usb-cdc-ecm-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  sources = [ "usb-cdc-ecm.cc" ]
+  sources = [
+    "usb-cdc-ecm.cc",
+    "usb-cdc-ecm.h",
+  ]
   deps = [
     ":ethernet_usb_cdc_ecm_bind",
     ":usb-cdc-ecm-lib",
@@ -34,7 +37,6 @@ fuchsia_driver("usb-cdc-ecm-driver") {
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_cpp_wire",
-    "//sdk/lib/fdio",
     "//sdk/lib/fdio",
     "//src/devices/lib/driver",
     "//src/lib/ddk",

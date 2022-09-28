@@ -6,96 +6,70 @@
 #define SRC_CONNECTIVITY_ETHERNET_DRIVERS_USB_CDC_ECM_USB_CDC_ECM_H_
 
 #include <fuchsia/hardware/ethernet/cpp/banjo.h>
-#include <fuchsia/hardware/usb/composite/cpp/banjo.h>
-#include <fuchsia/hardware/usb/cpp/banjo.h>
-#include <inttypes.h>
-#include <lib/ddk/debug.h>
-#include <lib/ddk/device.h>
-#include <lib/ddk/driver.h>
-#include <lib/operation/ethernet.h>
-#include <lib/zircon-internal/align.h>
+#include <fuchsia/hardware/usb/c/banjo.h>
+#include <fuchsia/hardware/usb/request/c/banjo.h>
 #include <lib/zircon-internal/thread_annotations.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <threads.h>
-#include <unistd.h>
-#include <zircon/assert.h>
-#include <zircon/device/ethernet.h>
-#include <zircon/hw/usb/cdc.h>
-#include <zircon/listnode.h>
+#include <zircon/compiler.h>
+#include <zircon/hw/usb.h>
 
 #include <ddktl/device.h>
-#include <fbl/alloc_checker.h>
-#include <fbl/auto_lock.h>
-#include <usb/usb-request.h>
+#include <fbl/mutex.h>
+#include <src/lib/listnode/listnode.h>
+#include <usb/usb.h>
 
-#include "lib/ddk/binding_priv.h"
-#include "usb-cdc-ecm-lib.h"
+#include "src/connectivity/ethernet/drivers/usb-cdc-ecm/usb-cdc-ecm-lib.h"
 
 namespace usb_cdc_ecm {
 
 class UsbCdcEcm;
-using DeviceType =
-    ddk::Device<UsbCdcEcm, ddk::GetProtocolable, ddk::Initializable, ddk::Unbindable>;
 
-class UsbCdcEcm : public DeviceType,
+using UsbCdcEcmType = ::ddk::Device<UsbCdcEcm, ddk::Initializable, ddk::Unbindable>;
+
+class UsbCdcEcm : public UsbCdcEcmType,
                   public ddk::EthernetImplProtocol<UsbCdcEcm, ddk::base_protocol> {
  public:
-  explicit UsbCdcEcm(zx_device_t* bus_device) : Device(bus_device) {}
-  ~UsbCdcEcm() { EcmFree(); }
+  explicit UsbCdcEcm(zx_device_t* parent, const usb::UsbDevice& usb)
+      : UsbCdcEcmType(parent), usb_(usb) {}
+  ~UsbCdcEcm();
 
   void DdkInit(ddk::InitTxn txn);
-  static zx_status_t EcmBind(void* ctx, zx_device_t* device);
-  void DdkUnbind(ddk::UnbindTxn txn) __TA_EXCLUDES(&ecm_ctx_.tx_mutex);
+  zx_status_t Init();
+  static zx_status_t Bind(void* ctx, zx_device_t* dev);
   void DdkRelease();
-  zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
+  void DdkUnbind(ddk::UnbindTxn txn);
 
   // ZX_PROTOCOL_ETHERNET_IMPL ops.
   zx_status_t EthernetImplQuery(uint32_t options, ethernet_info_t* info);
-  void EthernetImplStop() __TA_EXCLUDES(&ecm_ctx_.ethernet_mutex, &ecm_ctx_.tx_mutex);
-  zx_status_t EthernetImplStart(const ethernet_ifc_protocol_t* ifc)
-      __TA_EXCLUDES(&ecm_ctx_.ethernet_mutex);
+  void EthernetImplStop();
+  zx_status_t EthernetImplStart(const ethernet_ifc_protocol_t* ifc);
   void EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
-                           ethernet_impl_queue_tx_callback completion_cb, void* cookie)
-      __TA_EXCLUDES(&ecm_ctx_.tx_mutex);
+                           ethernet_impl_queue_tx_callback completion_cb, void* cookie);
   zx_status_t EthernetImplSetParam(uint32_t param, int32_t value, const uint8_t* data,
                                    size_t data_size);
   void EthernetImplGetBti(zx::bti* bti) { bti->reset(); }
 
+ private:
   // Function invoked by the interrupt thread created by DdkInit.
   // The context of type EcmCtx is passed to it. The thread checks the usb request queue and acts on
   // it. Returns the status of the response of the usb requests queue if its not ZX_OK. An interrupt
   // handler is invoked otherwise.
-  static int EcmIntHandlerThread(void*);
+  int InterruptThread();
 
   // Interrupt handler function invoked by the interrupt handler thread. It receives the usb_request
   // it has to work on. If the response is less than the size of (usb_cdc_notification_t) the
   // interrupt is ignored.
-  static void EcmHandleInterrupt(void*, usb_request_t* request);
+  void HandleInterrupt(usb_request_t* request);
 
- private:
-  EcmCtx ecm_ctx_;
+  void InterruptComplete(usb_request_t* request) { sync_completion_signal(&completion_); }
 
-  // Returns after the interrupt thread is joined and all the pending usb requests are released.
-  void EcmFree();
+  void Free();
 
-  // Returns after copying the end point information from usb_endpoint_descriptor_t to
-  // ecm_endpoint_t that are passed
-  void CopyEndpointInfo(ecm_endpoint_t* ep_info, usb_endpoint_descriptor_t* desc);
-
-  // Returns the status after setting the packet filter based on the mode. If it fails setting the
-  // packet filter, it returns corresponding error status.
-  zx_status_t SetPacketFilter(uint16_t mode, bool on);
-
-  // Helper function that returns after calling the completion call back of txn_info_t with the
-  // status passed
-  void CompleteTxn(txn_info_t* txn, zx_status_t status);
+  zx_status_t SetPacketFilterMode(uint16_t mode, bool on);
 
   // Returns with ZX_OK if its able to set the completion callback and queues the request
   // successfully. It returns with the appropriate error status otherwise.
   zx_status_t QueueRequest(const uint8_t* data, size_t length, usb_request_t* req);
-  zx_status_t SendLocked(ethernet_netbuf_t* netbuf) __TA_REQUIRES(&ecm_ctx_.tx_mutex);
+  zx_status_t SendLocked(ethernet_netbuf_t* netbuf) __TA_REQUIRES(&tx_mutex_);
 
   // Write completion callback. Normally -- this will simply acquire the TX lock, release it,
   // and re-queue the USB request.
@@ -107,19 +81,49 @@ class UsbCdcEcm : public DeviceType,
   // because we do not want other packets to get queued out-of-order while the asynchronous
   // operation is in progress. Note: the assumption made here is that no rx transmissions will be
   // processed in parallel, so we do not maintain an rx mutex.
-  void UsbRecv(usb_request_t* request) __TA_EXCLUDES(&ecm_ctx_.ethernet_mutex);
+  void UsbReceive(usb_request_t* request);
 
-  // Usb completion routines
   void UsbReadComplete(usb_request_t* request);
-  void UsbWriteComplete(usb_request_t* request)
-      __TA_EXCLUDES(&ecm_ctx_.ethernet_mutex, &ecm_ctx_.tx_mutex);
+  void UsbWriteComplete(usb_request_t* request) __TA_NO_THREAD_SAFETY_ANALYSIS;
 
-  // Returns after updating the online status.
-  static void EcmUpdateOnlineStatus(void*, bool is_online) __TA_EXCLUDES(&ecm_ctx_.ethernet_mutex);
+  void UpdateOnlineStatus(bool is_online);
 
-  static bool WantInterface(usb_interface_descriptor_t* intf, void* arg) {
-    return intf->b_interface_class == USB_CLASS_CDC;
-  }
+  usb::UsbDevice usb_;
+
+  // Ethernet lock -- must be acquired after tx_mutex_ when both locks are held.
+  fbl::Mutex ethernet_mutex_;
+  ethernet_ifc_protocol_t ethernet_ifc_ = {};
+
+  // Device attributes
+  MacAddress mac_addr_;
+  uint16_t mtu_;
+
+  // Connection attributes
+  bool online_ = false;
+  uint32_t ds_bps_ = 0;
+  uint32_t us_bps_ = 0;
+
+  // Interrupt handling
+  std::optional<EcmEndpoint> int_endpoint_;
+  usb_request_t* int_txn_buf_;
+  sync_completion_t completion_;
+  thrd_t int_thread_;
+
+  // Send context
+  // TX lock -- Must be acquired before ethernet_mutex when both locks are held.
+  fbl::Mutex tx_mutex_;
+  std::optional<EcmEndpoint> tx_endpoint_;
+  list_node_t tx_txn_bufs_ TA_GUARDED(tx_mutex_);       // list of usb_request_t
+  list_node_t tx_pending_infos_ TA_GUARDED(tx_mutex_);  // list of txn_info_t
+  bool unbound_ = false;        // set to true when device is going away. Guarded by tx_mutex_
+  uint64_t tx_endpoint_delay_;  // wait time between 2 transmit requests
+
+  size_t parent_req_size_;
+
+  // Receive context
+  std::optional<EcmEndpoint> rx_endpoint_;
+  uint64_t rx_endpoint_delay_;  // wait time between 2 recv requests
+  uint16_t rx_packet_filter_;
 };
 
 }  // namespace usb_cdc_ecm
