@@ -583,14 +583,15 @@ func (t *FFXTester) TestMultiple(ctx context.Context, tests []testsharder.Test, 
 	if t.experimentLevel == 3 {
 		extraArgs = append(extraArgs, "--experimental-parallel-execution", "8")
 	}
+	startTime := clock.Now(ctx)
 	runResult, err := t.ffx.Test(ctx, build.TestList{Data: testDefs, SchemaID: build.TestListSchemaIDExperimental}, outDir, extraArgs...)
 	if err != nil {
 		return []*TestResult{}, err
 	}
-	return t.processTestResult(runResult, testsByURL)
+	return t.processTestResult(runResult, testsByURL, clock.Now(ctx).Sub(startTime))
 }
 
-func (t *FFXTester) processTestResult(runResult *ffxutil.TestRunResult, testsByURL map[string]testsharder.Test) ([]*TestResult, error) {
+func (t *FFXTester) processTestResult(runResult *ffxutil.TestRunResult, testsByURL map[string]testsharder.Test, totalDuration time.Duration) ([]*TestResult, error) {
 	var testResults []*TestResult
 	if runResult == nil {
 		return testResults, fmt.Errorf("no test result was found")
@@ -602,6 +603,7 @@ func (t *FFXTester) processTestResult(runResult *ffxutil.TestRunResult, testsByU
 		return testResults, err
 	}
 
+	var totalRecordedDuration time.Duration
 	for _, suiteResult := range suiteResults {
 		test := testsByURL[suiteResult.Name]
 		testResult := BaseTestResultFromTest(test)
@@ -680,7 +682,15 @@ func (t *FFXTester) processTestResult(runResult *ffxutil.TestRunResult, testsByU
 
 		testResult.StartTime = time.UnixMilli(suiteResult.StartTime)
 		testResult.EndTime = time.UnixMilli(suiteResult.StartTime + suiteResult.DurationMilliseconds)
+		totalRecordedDuration += testResult.Duration()
 		testResults = append(testResults, testResult)
+	}
+	// Calculate amortized per-test overhead from running ffx test and add it to the recorded
+	// test duration to more accurately capture the total duration of the test.
+	overhead := totalDuration - totalRecordedDuration
+	overheadPerTest := overhead / time.Duration(len(testResults))
+	for i := range testResults {
+		testResults[i].EndTime = testResults[i].EndTime.Add(overheadPerTest)
 	}
 	return testResults, nil
 }
