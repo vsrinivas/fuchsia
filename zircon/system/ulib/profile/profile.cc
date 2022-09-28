@@ -142,8 +142,21 @@ zx_status_t SetProfileByRoleSimple(void* ctx, zx_handle_t thread, const char* ro
   } else if (const auto media_role = MaybeMediaRole(*role_result); media_role.is_ok()) {
     // TODO(fxbug.dev/40858): If a media profile is not found in the system config, use the
     // forwarded parameters. This can be removed once clients are migrated to use defined roles.
-    FX_LOGF(INFO, "ProfileProvider", "No media profile override, using selector parameters: %s",
-            role_selector.c_str());
+    // Skip media roles with invalid deadline parameters.
+    if (media_role->capacity <= 0 || media_role->deadline <= 0 ||
+        media_role->capacity > media_role->deadline) {
+      FX_LOGF(WARNING, "ProfileProvider",
+              "Skipping media profile with no override and invalid selectors: capacity=%" PRId64
+              " deadline=%" PRId64,
+              media_role->capacity, media_role->deadline);
+      return fuchsia_scheduler_ProfileProviderSetProfileByRole_reply(txn, ZX_OK);
+    }
+
+    FX_LOGF(INFO, "ProfileProvider",
+            "Using selector parameters for media profile with no override: capacity=%" PRId64
+            " deadline=%" PRId64,
+            media_role->capacity, media_role->deadline);
+
     info.flags = ZX_PROFILE_INFO_FLAG_DEADLINE;
     info.deadline_params.capacity = media_role->capacity;
     info.deadline_params.relative_deadline = media_role->deadline;
@@ -157,8 +170,7 @@ zx_status_t SetProfileByRoleSimple(void* ctx, zx_handle_t thread, const char* ro
   zx::profile profile;
   status = zx_profile_create(context->root_job, 0u, &info, profile.reset_and_get_address());
   if (status != ZX_OK) {
-    // Failing to create a profile is likely due to a programming error in
-    // this handler. The most likely cause is invalid profile parameters.
+    // Failing to create a profile is likely due to invalid profile parameters.
     return fuchsia_scheduler_ProfileProviderSetProfileByRole_reply(txn, ZX_ERR_INTERNAL);
   }
 

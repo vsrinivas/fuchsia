@@ -24,7 +24,7 @@ class ProfileProvider : public fuchsia::media::ProfileProvider {
 
   // fuchsia::media::ProfileProvider implementation.
   void RegisterHandlerWithCapacity(zx::thread thread_handle, std::string name, int64_t period,
-                                   float capacity,
+                                   float utilization,
                                    RegisterHandlerWithCapacityCallback callback) override;
   void UnregisterHandler(zx::thread thread_handle, std::string name,
                          UnregisterHandlerCallback callback) override;

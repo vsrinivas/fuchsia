@@ -17,10 +17,17 @@ namespace {
 // provider until the new role API using FIDL parameters is implemented.
 std::string MakeRoleSelector(const std::string& role_name, const zx::duration capacity,
                              const zx::duration deadline) {
+  // If the role name already contains selectors, append to the existing list.
+  const char prefix = role_name.find(':') == std::string::npos ? ':' : ',';
+
   std::stringstream stream;
-  stream << role_name << ":realm=media";
-  stream << ",capacity=" << capacity.get();
-  stream << ",deadline=" << deadline.get();
+  stream << role_name << prefix << "realm=media";
+
+  if (capacity > zx::duration{0} && deadline > zx::duration{0}) {
+    stream << ",capacity=" << capacity.get();
+    stream << ",deadline=" << deadline.get();
+  }
+
   return stream.str();
 }
 
@@ -35,14 +42,15 @@ ProfileProvider::GetFidlRequestHandler() {
 
 void ProfileProvider::RegisterHandlerWithCapacity(zx::thread thread_handle,
                                                   const std::string role_name, int64_t period,
-                                                  float capacity_weight,
+                                                  float utilization,
                                                   RegisterHandlerWithCapacityCallback callback) {
   if (!profile_provider_) {
     profile_provider_ = context_.svc()->Connect<fuchsia::scheduler::ProfileProvider>();
   }
 
   const zx::duration interval = period ? zx::duration(period) : mix_profile_period_;
-  const zx::duration capacity(interval.to_nsecs() * capacity_weight);
+  const float scaled_interval = static_cast<float>(interval.to_nsecs()) * utilization;
+  const zx::duration capacity(static_cast<zx_duration_t>(scaled_interval));
 
   const std::string role_selector = MakeRoleSelector(role_name, capacity, interval);
 
