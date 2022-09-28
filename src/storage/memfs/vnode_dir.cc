@@ -42,10 +42,6 @@ fidl::UnownedClientEnd<fuchsia_io::Directory> VnodeDir::GetRemote() const {
   return remoter_.GetRemote();
 }
 
-void VnodeDir::SetRemote(fidl::ClientEnd<fuchsia_io::Directory> remote) {
-  return remoter_.SetRemote(std::move(remote));
-}
-
 zx_status_t VnodeDir::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out) {
   if (!IsDirectory()) {
     return ZX_ERR_NOT_FOUND;

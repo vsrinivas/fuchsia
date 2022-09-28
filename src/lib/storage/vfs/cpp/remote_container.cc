@@ -16,9 +16,4 @@ fidl::UnownedClientEnd<fuchsia_io::Directory> RemoteContainer::GetRemote() const
   return remote_.borrow();
 }
 
-void RemoteContainer::SetRemote(fidl::ClientEnd<fuchsia_io::Directory> remote) {
-  ZX_DEBUG_ASSERT(!remote_.is_valid());
-  remote_ = std::move(remote);
-}
-
 }  // namespace fs

@@ -381,9 +381,6 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // Returns the name of the device backing the filesystem, if one exists.
   virtual zx::status<std::string> GetDevicePath() const;
 
-  // Attaches a handle to the vnode, if possible. Otherwise, returns an error.
-  virtual zx_status_t AttachRemote(fidl::ClientEnd<fuchsia_io::Directory> h);
-
   // The following methods are required to mount sub-filesystems. The logic (and storage) necessary
   // to implement these functions exists within the "RemoteContainer" class, which may be composed
   // inside Vnodes that wish to act as mount points.
@@ -391,7 +388,6 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // The vnode is acting as a mount point for a remote filesystem or device.
   virtual fidl::ClientEnd<fuchsia_io::Directory> DetachRemote();
   virtual fidl::UnownedClientEnd<fuchsia_io::Directory> GetRemote() const;
-  virtual void SetRemote(fidl::ClientEnd<fuchsia_io::Directory> remote);
 
   // Check existing inotify watches and issue inotify events.
   zx_status_t CheckInotifyFilterAndNotify(fuchsia_io::wire::InotifyWatchMask event)

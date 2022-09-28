@@ -39,16 +39,6 @@ void Vnode::Sync(SyncCallback closure) {
   closure(ZX_OK);
 }
 
-zx_status_t Vnode::AttachRemote(fidl::ClientEnd<fuchsia_io::Directory> h) {
-  if (!IsDirectory()) {
-    return ZX_ERR_NOT_DIR;
-  } else if (IsRemote()) {
-    return ZX_ERR_ALREADY_BOUND;
-  }
-  SetRemote(std::move(h));
-  return ZX_OK;
-}
-
 void Vnode::UpdateModified() {
   std::timespec ts;
   if (std::timespec_get(&ts, TIME_UTC)) {

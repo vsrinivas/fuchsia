@@ -37,7 +37,6 @@ class VnodeDir final : public Vnode {
   bool IsRemote() const final;
   fidl::ClientEnd<fuchsia_io::Directory> DetachRemote() final;
   fidl::UnownedClientEnd<fuchsia_io::Directory> GetRemote() const final;
-  void SetRemote(fidl::ClientEnd<fuchsia_io::Directory> remote) final;
 
  private:
   zx_status_t Readdir(fs::VdirCookie* cookie, void* dirents, size_t len, size_t* out_actual) final;

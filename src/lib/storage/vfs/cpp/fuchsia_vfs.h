@@ -137,14 +137,6 @@ class FuchsiaVfs : public Vfs {
   virtual void CloseAllConnectionsForVnode(const Vnode& node,
                                            CloseAllConnectionsForVnodeCallback callback) = 0;
 
-  // Pins/unpin a handle to a remote filesystem onto a vnode, if possible.
-  zx_status_t InstallRemote(fbl::RefPtr<Vnode> vn, fidl::ClientEnd<fuchsia_io::Directory> h)
-      __TA_EXCLUDES(vfs_lock_);
-  // The caller is responsible for shutting down a remote filesystem; this just removes the remote
-  // connection from this filesystem.
-  zx_status_t UninstallRemote(fbl::RefPtr<Vnode> vn, fidl::ClientEnd<fuchsia_io::Directory>* h)
-      __TA_EXCLUDES(vfs_lock_);
-
   // Forwards an open request to a remote handle. If the remote handle is closed (handing off
   // returns ZX_ERR_PEER_CLOSED), it is automatically unmounted.
   zx_status_t ForwardOpenRemote(fbl::RefPtr<Vnode> vn, fidl::ServerEnd<fuchsia_io::Node> channel,
@@ -177,11 +169,6 @@ class FuchsiaVfs : public Vfs {
 
  private:
   zx_status_t TokenToVnode(zx::event token, fbl::RefPtr<Vnode>* out) __TA_REQUIRES(vfs_lock_);
-  zx_status_t InstallRemoteLocked(fbl::RefPtr<Vnode> vn, fidl::ClientEnd<fuchsia_io::Directory> h)
-      __TA_REQUIRES(vfs_lock_);
-  zx_status_t UninstallRemoteLocked(fbl::RefPtr<Vnode> vn,
-                                    fidl::ClientEnd<fuchsia_io::Directory>* h)
-      __TA_REQUIRES(vfs_lock_);
 
   fbl::HashTable<zx_koid_t, std::unique_ptr<VnodeToken>> vnode_tokens_;
 

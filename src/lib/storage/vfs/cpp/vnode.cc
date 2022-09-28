@@ -297,10 +297,6 @@ zx_status_t Vnode::QueryFilesystem(fuchsia_io::wire::FilesystemInfo* out) {
 
 zx::status<std::string> Vnode::GetDevicePath() const { return zx::error(ZX_ERR_NOT_SUPPORTED); }
 
-zx_status_t Vnode::AttachRemote(fidl::ClientEnd<fuchsia_io::Directory> h) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
 fidl::ClientEnd<fuchsia_io::Directory> Vnode::DetachRemote() {
   return fidl::ClientEnd<fuchsia_io::Directory>();
 }
@@ -308,8 +304,6 @@ fidl::ClientEnd<fuchsia_io::Directory> Vnode::DetachRemote() {
 fidl::UnownedClientEnd<fuchsia_io::Directory> Vnode::GetRemote() const {
   return fidl::UnownedClientEnd<fuchsia_io::Directory>(ZX_HANDLE_INVALID);
 }
-
-void Vnode::SetRemote(fidl::ClientEnd<fuchsia_io::Directory> remote) { ZX_DEBUG_ASSERT(false); }
 
 std::shared_ptr<file_lock::FileLock> Vnode::GetVnodeFileLock() {
   std::lock_guard lock_access(gLockAccess);
