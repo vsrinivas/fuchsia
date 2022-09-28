@@ -27,7 +27,8 @@ class FlatlandAccessibilityView : public AccessibilityViewInterface,
                                   public fuchsia::accessibility::scene::Provider,
                                   public Magnifier2::Delegate {
  public:
-  explicit FlatlandAccessibilityView(fuchsia::ui::composition::FlatlandPtr flatland);
+  explicit FlatlandAccessibilityView(fuchsia::ui::composition::FlatlandPtr flatland1,
+                                     fuchsia::ui::composition::FlatlandPtr flatland2);
   ~FlatlandAccessibilityView() override = default;
 
   // |AccessibilityViewInterface|
@@ -54,15 +55,16 @@ class FlatlandAccessibilityView : public AccessibilityViewInterface,
 
  private:
   // Helper method to poll continuously for layout info updates.
-  void WatchLayoutInfo();
+  void WatchForResizes();
 
-  // Helper methods to handle layout changes.
-  void ResizeProxyViewport();
-  void CreateProxyViewport();
+  // Helper method to handle layout changes.
+  void ResizeViewports(fuchsia::math::SizeU logical_size);
 
-  // Manages a11y view's flatland connection, and ensures that `Present` calls
-  // are enqueued safely.
+  // Manages a11y view's flatland connection.
   FlatlandConnection flatland_a11y_;
+
+  // Manages highlight view's flatland connection.
+  FlatlandConnection flatland_highlight_;
 
   // Scenic focuser used to request focus chain updates in the a11y view's subtree.
   fuchsia::ui::views::FocuserPtr focuser_;
@@ -81,7 +83,7 @@ class FlatlandAccessibilityView : public AccessibilityViewInterface,
 
   // Holds a copy of the view ref of the a11y view.
   // If not present, the a11y view has not yet been connected to the scene.
-  std::optional<fuchsia::ui::views::ViewRef> view_ref_;
+  std::optional<fuchsia::ui::views::ViewRef> a11y_view_ref_;
 
   // Layout info for the a11y view. If std::nullopt, then layout info has not yet
   // been received.

@@ -87,10 +87,11 @@ class FlatlandAccessibilityViewTest : public gtest::RealLoopFixture {
 TEST_F(FlatlandAccessibilityViewTest, TestSceneConnected) {
   auto flatland_display =
       realm_exposed_services()->Connect<fuchsia::ui::composition::FlatlandDisplay>();
-  auto a11y_flatland = realm_exposed_services()->Connect<fuchsia::ui::composition::Flatland>();
   auto proxy_flatland = realm_exposed_services()->Connect<fuchsia::ui::composition::Flatland>();
 
-  a11y::FlatlandAccessibilityView a11y_view(std::move(a11y_flatland));
+  a11y::FlatlandAccessibilityView a11y_view(
+      realm_exposed_services()->Connect<fuchsia::ui::composition::Flatland>(),
+      realm_exposed_services()->Connect<fuchsia::ui::composition::Flatland>());
 
   // Set up the display, and add the a11y viewport as the display content.
   // Note that we don't need an extra view between the display and the a11y
