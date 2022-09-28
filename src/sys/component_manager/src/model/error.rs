@@ -14,7 +14,7 @@ use {
     clonable_error::ClonableError,
     cm_runner::RunnerError,
     fuchsia_inspect, fuchsia_zircon as zx,
-    moniker::{AbsoluteMoniker, ChildMoniker},
+    moniker::{AbsoluteMoniker, ChildMoniker, MonikerError},
     std::{ffi::OsString, path::PathBuf},
     thiserror::Error,
 };
@@ -67,6 +67,11 @@ pub enum ModelError {
     PathInvalid { path: String },
     #[error("filename is not utf-8: {:?}", name)]
     NameIsNotUtf8 { name: OsString },
+    #[error("Moniker error: {}", err)]
+    MonikerError {
+        #[from]
+        err: MonikerError,
+    },
     #[error("expected a component instance moniker")]
     UnexpectedComponentManagerMoniker,
     #[error("ComponentDecl invalid {}: {}", url, err)]

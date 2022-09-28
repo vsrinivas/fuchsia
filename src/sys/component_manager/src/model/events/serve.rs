@@ -609,10 +609,11 @@ mod tests {
     #[test]
     fn test_validate_and_filter_event_at_root() {
         let mut moniker =
-            ExtendedMoniker::ComponentInstance(AbsoluteMoniker::new(vec![ChildMoniker::new(
+            ExtendedMoniker::ComponentInstance(AbsoluteMoniker::new(vec![ChildMoniker::try_new(
                 "root",
                 Some("coll"),
-            )]));
+            )
+            .unwrap()]));
         let route = vec![
             ComponentEventRoute { component: "<root>".to_string(), scope: None },
             ComponentEventRoute {
@@ -648,9 +649,9 @@ mod tests {
     #[test]
     fn test_validate_and_filter_event_moniker_root() {
         let mut event = ExtendedMoniker::ComponentInstance(AbsoluteMoniker::new(vec![
-            ChildMoniker::new("a", None),
-            ChildMoniker::new("b", None),
-            ChildMoniker::new("c", None),
+            ChildMoniker::try_new("a", None).unwrap(),
+            ChildMoniker::try_new("b", None).unwrap(),
+            ChildMoniker::try_new("c", None).unwrap(),
         ]));
         let route = vec![
             ComponentEventRoute { component: "<root>".to_string(), scope: None },
@@ -668,10 +669,10 @@ mod tests {
     #[test]
     fn test_validate_and_filter_event_moniker_children_scoped() {
         let mut event = ExtendedMoniker::ComponentInstance(AbsoluteMoniker::new(vec![
-            ChildMoniker::new("a", None),
-            ChildMoniker::new("b", None),
-            ChildMoniker::new("c", None),
-            ChildMoniker::new("d", None),
+            ChildMoniker::try_new("a", None).unwrap(),
+            ChildMoniker::try_new("b", None).unwrap(),
+            ChildMoniker::try_new("c", None).unwrap(),
+            ChildMoniker::try_new("d", None).unwrap(),
         ]));
         let route = vec![
             ComponentEventRoute { component: "<root>".to_string(), scope: None },
@@ -682,9 +683,10 @@ mod tests {
         assert!(super::validate_and_filter_event(&mut event, &route));
         assert_eq!(
             event,
-            ExtendedMoniker::ComponentInstance(AbsoluteMoniker::new(vec![ChildMoniker::new(
+            ExtendedMoniker::ComponentInstance(AbsoluteMoniker::new(vec![ChildMoniker::try_new(
                 "d", None
-            ),]))
+            )
+            .unwrap(),]))
         );
     }
 
@@ -694,9 +696,10 @@ mod tests {
     #[test]
     fn test_validate_and_filter_event_moniker_above_root_rejected() {
         let mut event =
-            ExtendedMoniker::ComponentInstance(AbsoluteMoniker::new(vec![ChildMoniker::new(
+            ExtendedMoniker::ComponentInstance(AbsoluteMoniker::new(vec![ChildMoniker::try_new(
                 "a", None,
-            )]));
+            )
+            .unwrap()]));
         let route = vec![
             ComponentEventRoute { component: "<root>".to_string(), scope: None },
             ComponentEventRoute { component: "a".to_string(), scope: Some(vec!["b".to_string()]) },
@@ -706,9 +709,10 @@ mod tests {
         assert!(!super::validate_and_filter_event(&mut event, &route));
         assert_eq!(
             event,
-            ExtendedMoniker::ComponentInstance(AbsoluteMoniker::new(vec![ChildMoniker::new(
+            ExtendedMoniker::ComponentInstance(AbsoluteMoniker::new(vec![ChildMoniker::try_new(
                 "a", None
-            ),]))
+            )
+            .unwrap(),]))
         );
     }
 
@@ -718,8 +722,8 @@ mod tests {
     #[test]
     fn test_validate_and_filter_event_moniker_ambiguous() {
         let mut event = ExtendedMoniker::ComponentInstance(AbsoluteMoniker::new(vec![
-            ChildMoniker::new("f", None),
-            ChildMoniker::new("i", None),
+            ChildMoniker::try_new("f", None).unwrap(),
+            ChildMoniker::try_new("i", None).unwrap(),
         ]));
         let route = vec![
             ComponentEventRoute { component: "<root>".to_string(), scope: None },
@@ -736,8 +740,8 @@ mod tests {
     #[test]
     fn test_validate_and_filter_event_moniker_root_rejected() {
         let mut event = ExtendedMoniker::ComponentInstance(AbsoluteMoniker::new(vec![
-            ChildMoniker::new("core", None),
-            ChildMoniker::new("feedback", None),
+            ChildMoniker::try_new("core", None).unwrap(),
+            ChildMoniker::try_new("feedback", None).unwrap(),
         ]));
         let route = vec![
             ComponentEventRoute { component: "<root>".to_string(), scope: None },

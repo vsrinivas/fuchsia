@@ -106,11 +106,14 @@ impl ComponentInstanceForAnalyzer {
         component_id_index: Arc<ComponentIdIndex>,
     ) -> Result<Arc<Self>, BuildAnalyzerModelError> {
         let environment = EnvironmentForAnalyzer::new_for_child(&parent, child)?;
-        let instanced_moniker = parent.instanced_moniker.child(InstancedChildMoniker::new(
-            child.child_moniker.name(),
-            child.child_moniker.collection(),
-            0,
-        ));
+        let instanced_moniker = parent.instanced_moniker.child(
+            InstancedChildMoniker::try_new(
+                child.child_moniker.name(),
+                child.child_moniker.collection(),
+                0,
+            )
+            .expect("child moniker is guaranteed to be valid"),
+        );
         let abs_moniker = instanced_moniker.clone().without_instance_ids();
         let persistent_storage = parent.persistent_storage();
         Ok(Arc::new(Self {

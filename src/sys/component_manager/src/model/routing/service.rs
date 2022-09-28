@@ -850,6 +850,7 @@ mod tests {
     #[async_trait]
     impl AggregateCapabilityProvider<ComponentInstance> for MockAggregateCapabilityProvider {
         async fn route_instance(&self, instance: &str) -> Result<CapabilitySource, RoutingError> {
+            let child_moniker = ChildMoniker::try_new(instance, None)?;
             Ok(CapabilitySource::Component {
                 capability: ComponentCapability::Service(ServiceDecl {
                     name: "my.service.Service".into(),
@@ -860,7 +861,7 @@ mod tests {
                     .get(instance)
                     .ok_or_else(|| RoutingError::OfferFromChildInstanceNotFound {
                         capability_id: "my.service.Service".to_string(),
-                        child_moniker: ChildMoniker::new(instance, None),
+                        child_moniker,
                         moniker: AbsoluteMoniker::root(),
                     })?
                     .clone(),

@@ -417,7 +417,7 @@ pub mod tests {
                 environment: None,
                 on_terminate: None,
             };
-            assert!(resolved_state.add_child_no_discover(&component_root, &child, None,).await);
+            assert!(resolved_state.add_child_no_discover(&component_root, &child, None).is_ok());
         }
         let mut event_stream = setup_destroy_waits_test_event_stream(
             &test,

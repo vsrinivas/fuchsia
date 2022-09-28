@@ -673,99 +673,83 @@ impl ComponentInstance {
         child_decl: &ChildDecl,
         child_args: fcomponent::CreateChildArgs,
     ) -> Result<fdecl::Durability, ModelError> {
-        let res = {
-            match child_decl.startup {
-                fdecl::StartupMode::Lazy => {}
-                fdecl::StartupMode::Eager => {
-                    return Err(ModelError::unsupported("Eager startup"));
-                }
-            }
-            let mut state = self.lock_resolved_state().await?;
-            let collection_decl = state
-                .decl()
-                .find_collection(&collection_name)
-                .ok_or_else(|| ModelError::collection_not_found(collection_name.clone()))?
-                .clone();
-
-            if let Some(handles) = &child_args.numbered_handles {
-                if !handles.is_empty() && collection_decl.durability != fdecl::Durability::SingleRun
-                {
-                    return Err(ModelError::unsupported(
-                        "Numbered handles to child in a collection that is not SingleRun",
-                    ));
-                }
-            }
-
-            if !collection_decl.allow_long_names
-                && child_decl.name.len() > cm_types::MAX_NAME_LENGTH
-            {
-                return Err(ModelError::name_too_long(cm_types::MAX_NAME_LENGTH));
-            }
-
-            let dynamic_offers = child_args.dynamic_offers.map(|dynamic_offers| {
-                if !dynamic_offers.is_empty()
-                    && collection_decl.allowed_offers != cm_types::AllowedOffers::StaticAndDynamic
-                {
-                    return Err(ModelError::dynamic_offers_not_allowed(&collection_name));
-                }
-
-                cm_fidl_validator::validate_dynamic_offers(&dynamic_offers)
-                    .map_err(ModelError::dynamic_offer_invalid)?;
-
-                dynamic_offers
-                    .into_iter()
-                    .map(|mut offer| {
-                        use ::routing::component_instance::ResolvedInstanceInterfaceExt;
-                        use cm_rust::OfferDeclCommon;
-
-                        // Set the `target` field to point to the component
-                        // we're creating. `fidl_into_native()` requires
-                        // `target` to be set.
-                        *offer_target_mut(&mut offer)
-                            .expect("validation should have found unknown enum type") =
-                            Some(fdecl::Ref::Child(fdecl::ChildRef {
-                                name: child_decl.name.clone(),
-                                collection: Some(collection_name.clone()),
-                            }));
-                        // This is safe because of the call to
-                        // `validate_dynamic_offers` above.
-                        let offer = cm_rust::FidlIntoNative::fidl_into_native(offer);
-
-                        // The sources and targets of offers in CFv2 must always exist. For static
-                        // offers, this is ensured by `cm_fidl_validator`. For dynamic offers, we
-                        // check that the source exists here. The target _will_ exist by virtue of
-                        // the fact that we're creating it now.
-                        if !state.offer_source_exists(offer.source()) {
-                            return Err(ModelError::dynamic_offer_source_not_found(offer.clone()));
-                        }
-                        Ok(offer)
-                    })
-                    .collect()
-            });
-            let dynamic_offers = dynamic_offers.transpose()?;
-            (
-                state
-                    .add_child(
-                        self,
-                        child_decl,
-                        Some(&collection_decl),
-                        child_args.numbered_handles,
-                        dynamic_offers,
-                    )
-                    .await,
-                collection_decl.durability,
-            )
-        };
-        match res {
-            (Some(discover_nf), durability) => {
-                discover_nf.await?;
-                Ok(durability)
-            }
-            (None, _) => {
-                let child_moniker = ChildMoniker::new(&child_decl.name, Some(&collection_name));
-                Err(ModelError::instance_already_exists(self.abs_moniker.clone(), child_moniker))
+        match child_decl.startup {
+            fdecl::StartupMode::Lazy => {}
+            fdecl::StartupMode::Eager => {
+                return Err(ModelError::unsupported("Eager startup"));
             }
         }
+        let mut state = self.lock_resolved_state().await?;
+        let collection_decl = state
+            .decl()
+            .find_collection(&collection_name)
+            .ok_or_else(|| ModelError::collection_not_found(collection_name.clone()))?
+            .clone();
+
+        if let Some(handles) = &child_args.numbered_handles {
+            if !handles.is_empty() && collection_decl.durability != fdecl::Durability::SingleRun {
+                return Err(ModelError::unsupported(
+                    "Numbered handles to child in a collection that is not SingleRun",
+                ));
+            }
+        }
+
+        if !collection_decl.allow_long_names && child_decl.name.len() > cm_types::MAX_NAME_LENGTH {
+            return Err(ModelError::name_too_long(cm_types::MAX_NAME_LENGTH));
+        }
+
+        let dynamic_offers = child_args.dynamic_offers.map(|dynamic_offers| {
+            if !dynamic_offers.is_empty()
+                && collection_decl.allowed_offers != cm_types::AllowedOffers::StaticAndDynamic
+            {
+                return Err(ModelError::dynamic_offers_not_allowed(&collection_name));
+            }
+
+            cm_fidl_validator::validate_dynamic_offers(&dynamic_offers)
+                .map_err(ModelError::dynamic_offer_invalid)?;
+
+            dynamic_offers
+                .into_iter()
+                .map(|mut offer| {
+                    use ::routing::component_instance::ResolvedInstanceInterfaceExt;
+                    use cm_rust::OfferDeclCommon;
+
+                    // Set the `target` field to point to the component
+                    // we're creating. `fidl_into_native()` requires
+                    // `target` to be set.
+                    *offer_target_mut(&mut offer)
+                        .expect("validation should have found unknown enum type") =
+                        Some(fdecl::Ref::Child(fdecl::ChildRef {
+                            name: child_decl.name.clone(),
+                            collection: Some(collection_name.clone()),
+                        }));
+                    // This is safe because of the call to
+                    // `validate_dynamic_offers` above.
+                    let offer = cm_rust::FidlIntoNative::fidl_into_native(offer);
+
+                    // The sources and targets of offers in CFv2 must always exist. For static
+                    // offers, this is ensured by `cm_fidl_validator`. For dynamic offers, we
+                    // check that the source exists here. The target _will_ exist by virtue of
+                    // the fact that we're creating it now.
+                    if !state.offer_source_exists(offer.source()) {
+                        return Err(ModelError::dynamic_offer_source_not_found(offer.clone()));
+                    }
+                    Ok(offer)
+                })
+                .collect()
+        });
+        let dynamic_offers = dynamic_offers.transpose()?;
+        let durability_nf = state
+            .add_child(
+                self,
+                child_decl,
+                Some(&collection_decl),
+                child_args.numbered_handles,
+                dynamic_offers,
+            )
+            .await?;
+        durability_nf.await?;
+        Ok(collection_decl.durability)
     }
 
     /// Removes the dynamic child, returning a future that will execute the
@@ -1503,7 +1487,7 @@ impl ResolvedInstanceState {
             address,
             context_to_resolve_children,
         };
-        state.add_static_children(component, &decl).await;
+        state.add_static_children(component, &decl).await?;
         Ok(state)
     }
 
@@ -1676,39 +1660,50 @@ impl ResolvedInstanceState {
         collection: Option<&CollectionDecl>,
         numbered_handles: Option<Vec<fidl_fuchsia_process::HandleInfo>>,
         dynamic_offers: Option<Vec<cm_rust::OfferDecl>>,
-    ) -> Option<BoxFuture<'static, Result<(), ModelError>>> {
-        let child = self
-            .add_child_internal(component, child, collection, numbered_handles, dynamic_offers)
-            .await?;
-
+    ) -> Result<BoxFuture<'static, Result<(), ModelError>>, ModelError> {
+        let child = self.add_child_internal(
+            component,
+            child,
+            collection,
+            numbered_handles,
+            dynamic_offers,
+        )?;
         // We can dispatch a Discovered event for the component now that it's installed in the
         // tree, which means any Discovered hooks will capture it.
         let mut actions = child.lock_actions().await;
-        Some(actions.register_no_wait(&child, DiscoverAction::new()).boxed())
+        Ok(actions.register_no_wait(&child, DiscoverAction::new()).boxed())
     }
 
     /// Adds a new child of this instance for the given `ChildDecl`. Returns
-    /// `true` if the creation succeeded, and `false` if a child with the same
-    /// name already existed. Like `add_child`, but doesn't register a
-    /// `Discover` action, and therefore doesn't return a future to wait for.
+    /// a result indicating if the new child instance has been successfully added.
+    /// Like `add_child`, but doesn't register a `Discover` action, and therefore
+    /// doesn't return a future to wait for.
     #[cfg(test)]
-    pub async fn add_child_no_discover(
+    pub fn add_child_no_discover(
         &mut self,
         component: &Arc<ComponentInstance>,
         child: &ChildDecl,
         collection: Option<&CollectionDecl>,
-    ) -> bool {
-        self.add_child_internal(component, child, collection, None, None).await.is_some()
+    ) -> Result<(), ModelError> {
+        self.add_child_internal(component, child, collection, None, None).map(|_| ())
     }
 
-    async fn add_child_internal(
+    fn add_child_internal(
         &mut self,
         component: &Arc<ComponentInstance>,
         child: &ChildDecl,
         collection: Option<&CollectionDecl>,
         numbered_handles: Option<Vec<fidl_fuchsia_process::HandleInfo>>,
         dynamic_offers: Option<Vec<cm_rust::OfferDecl>>,
-    ) -> Option<Arc<ComponentInstance>> {
+    ) -> Result<Arc<ComponentInstance>, ModelError> {
+        let child_moniker = ChildMoniker::try_new(&child.name, collection.map(|c| &c.name))?;
+        if self.get_child(&child_moniker).is_some() {
+            return Err(ModelError::instance_already_exists(
+                component.abs_moniker().clone(),
+                child_moniker,
+            ));
+        }
+        // TODO(fxb/108376): next_dynamic_instance_id should be per-collection.
         let instance_id = match collection {
             Some(_) => {
                 let id = self.next_dynamic_instance_id;
@@ -1718,14 +1713,10 @@ impl ResolvedInstanceState {
             None => 0,
         };
         let instanced_moniker =
-            InstancedChildMoniker::new(&child.name, collection.map(|c| &c.name), instance_id);
-        let child_moniker = instanced_moniker.without_instance_id();
-        if self.get_child(&child_moniker).is_some() {
-            return None;
-        }
+            InstancedChildMoniker::from_child_moniker(&child_moniker, instance_id);
         let child = ComponentInstance::new(
             self.environment_for_child(component, child, collection.clone()),
-            component.instanced_moniker.child(instanced_moniker.clone()),
+            component.instanced_moniker.child(instanced_moniker),
             child.url.clone(),
             child.startup,
             child.on_terminate.unwrap_or(fdecl::OnTerminate::None),
@@ -1739,17 +1730,18 @@ impl ResolvedInstanceState {
         if let Some(dynamic_offers) = dynamic_offers {
             self.dynamic_offers.extend(dynamic_offers.into_iter());
         }
-        Some(child)
+        Ok(child)
     }
 
     async fn add_static_children(
         &mut self,
         component: &Arc<ComponentInstance>,
         decl: &ComponentDecl,
-    ) {
+    ) -> Result<(), ModelError> {
         for child in decl.children.iter() {
-            self.add_child(component, child, None, None, None).await;
+            self.add_child(component, child, None, None, None).await?;
         }
+        Ok(())
     }
 }
 
@@ -3008,8 +3000,7 @@ pub mod tests {
             )
         }
 
-        // Destroy `coll_1:b`. It should still be listed, but shouldn't be live.
-        // The dynamic offer should be deleted.
+        // Destroy `coll_1:b`. It should not be listed. The dynamic offer should be deleted.
         ActionSet::register(root_component.clone(), DestroyChildAction::new("coll_1:b".into(), 2))
             .await
             .expect("destroy failed");

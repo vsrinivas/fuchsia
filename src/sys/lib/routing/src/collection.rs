@@ -108,15 +108,16 @@ where
         instance: &str,
     ) -> Result<CapabilitySourceInterface<C>, RoutingError> {
         let collection_component = self.collection_component.upgrade()?;
+        let find_child_moniker = ChildMoniker::try_new(instance, Some(&self.collection_name))?;
         let (child_moniker, child_component): (ChildMoniker, Arc<C>) = {
             collection_component
                 .lock_resolved_state()
                 .await?
                 .children_in_collection(&self.collection_name)
                 .into_iter()
-                .find(|child| child.0.name() == instance)
+                .find(|child| child.0.name() == find_child_moniker.name())
                 .ok_or_else(|| RoutingError::OfferFromChildInstanceNotFound {
-                    child_moniker: ChildMoniker::new(instance, Some(&self.collection_name)),
+                    child_moniker: find_child_moniker,
                     moniker: collection_component.abs_moniker().clone(),
                     capability_id: self.capability_name.clone().into(),
                 })?

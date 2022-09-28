@@ -877,7 +877,8 @@ mod tests {
                 .children
                 .iter()
                 .map(|c| Child {
-                    moniker: ChildMoniker::new(&c.name, None),
+                    moniker: ChildMoniker::try_new(&c.name, None)
+                        .expect("children should have valid monikers"),
                     environment_name: c.environment.clone(),
                 })
                 .chain(self.dynamic_children.iter().cloned())
@@ -2187,7 +2188,7 @@ mod tests {
             ..default_component_decl()
         };
 
-        let dynamic_child = ChildMoniker::new("dynamic_child", Some("coll"));
+        let dynamic_child = ChildMoniker::try_new("dynamic_child", Some("coll")).unwrap();
         let mut fake = FakeComponent::from_decl(decl);
         fake.dynamic_children
             .push(Child { moniker: dynamic_child.clone(), environment_name: None });
@@ -2237,8 +2238,8 @@ mod tests {
             ..default_component_decl()
         };
 
-        let dynamic_child1 = ChildMoniker::new("dynamic_child1", Some("coll"));
-        let dynamic_child2 = ChildMoniker::new("dynamic_child2", Some("coll"));
+        let dynamic_child1 = ChildMoniker::try_new("dynamic_child1", Some("coll")).unwrap();
+        let dynamic_child2 = ChildMoniker::try_new("dynamic_child2", Some("coll")).unwrap();
         let mut fake = FakeComponent::from_decl(decl);
         fake.dynamic_children
             .push(Child { moniker: dynamic_child1.clone(), environment_name: None });
@@ -2296,10 +2297,10 @@ mod tests {
             ..default_component_decl()
         };
 
-        let source_child1 = ChildMoniker::new("source_child1", Some(&c1_name));
-        let source_child2 = ChildMoniker::new("source_child2", Some(&c1_name));
-        let target_child1 = ChildMoniker::new("target_child1", Some(&c2_name));
-        let target_child2 = ChildMoniker::new("target_child2", Some(&c2_name));
+        let source_child1 = ChildMoniker::try_new("source_child1", Some(&c1_name)).unwrap();
+        let source_child2 = ChildMoniker::try_new("source_child2", Some(&c1_name)).unwrap();
+        let target_child1 = ChildMoniker::try_new("target_child1", Some(&c2_name)).unwrap();
+        let target_child2 = ChildMoniker::try_new("target_child2", Some(&c2_name)).unwrap();
 
         let mut fake = FakeComponent::from_decl(decl);
         fake.dynamic_children

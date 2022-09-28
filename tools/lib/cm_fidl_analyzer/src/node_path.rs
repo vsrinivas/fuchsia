@@ -72,11 +72,11 @@ mod tests {
         let empty_node_path = NodePath::default();
         assert_eq!(empty_node_path.to_string(), "/");
 
-        let foo_moniker = ChildMoniker::new("foo", None);
+        let foo_moniker = ChildMoniker::try_new("foo", None).unwrap();
         let foo_node_path = empty_node_path.extended(foo_moniker);
         assert_eq!(foo_node_path.to_string(), "/foo");
 
-        let bar_moniker = ChildMoniker::new("bar", None);
+        let bar_moniker = ChildMoniker::try_new("bar", None).unwrap();
         let bar_node_path = foo_node_path.extended(bar_moniker);
         assert_eq!(bar_node_path.to_string(), "/foo/bar");
     }

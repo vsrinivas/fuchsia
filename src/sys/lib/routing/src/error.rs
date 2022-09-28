@@ -7,7 +7,7 @@ use {
     clonable_error::ClonableError,
     cm_rust::CapabilityName,
     fidl_fuchsia_component as fcomponent, fuchsia_zircon_status as zx,
-    moniker::{AbsoluteMoniker, ChildMoniker},
+    moniker::{AbsoluteMoniker, ChildMoniker, MonikerError},
     thiserror::Error,
 };
 
@@ -437,6 +437,9 @@ pub enum RoutingError {
 
     #[error(transparent)]
     ComponentIdIndexError(#[from] ComponentIdIndexError),
+
+    #[error(transparent)]
+    MonikerError(#[from] MonikerError),
 }
 
 impl RoutingError {

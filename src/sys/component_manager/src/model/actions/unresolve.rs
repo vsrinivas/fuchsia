@@ -420,7 +420,7 @@ pub mod tests {
                 environment: None,
                 on_terminate: None,
             };
-            assert!(resolved_state.add_child_no_discover(&component_root, &child, None,).await);
+            assert!(resolved_state.add_child_no_discover(&component_root, &child, None).is_ok());
         }
 
         let component_root = test.look_up(vec![].into()).await;

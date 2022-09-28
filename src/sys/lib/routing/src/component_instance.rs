@@ -126,7 +126,11 @@ pub trait ResolvedInstanceInterfaceExt: ResolvedInstanceInterface {
             OfferSource::Framework | OfferSource::Self_ | OfferSource::Parent => true,
             OfferSource::Void => false,
             OfferSource::Child(cm_rust::ChildRef { name, collection }) => {
-                self.get_child(&ChildMoniker::new(name, collection.as_ref())).is_some()
+                let child_moniker = match ChildMoniker::try_new(name, collection.as_ref()) {
+                    Ok(m) => m,
+                    Err(_) => return false,
+                };
+                self.get_child(&child_moniker).is_some()
             }
             OfferSource::Collection(collection_name) => {
                 self.collections().into_iter().any(|collection| collection.name == *collection_name)

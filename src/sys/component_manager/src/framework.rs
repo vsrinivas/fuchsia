@@ -279,7 +279,8 @@ impl RealmCapabilityHost {
     ) -> Result<(), fcomponent::Error> {
         let component = component.upgrade().map_err(|_| fcomponent::Error::InstanceDied)?;
         child.collection.as_ref().ok_or(fcomponent::Error::InvalidArguments)?;
-        let child_moniker = ChildMoniker::new(&child.name, child.collection.as_ref());
+        let child_moniker = ChildMoniker::try_new(&child.name, child.collection.as_ref())
+            .map_err(|_| fcomponent::Error::InvalidArguments)?;
         component.remove_dynamic_child(&child_moniker).await.map_err(|e| match e {
             ModelError::InstanceNotFoundInRealm { .. } => fcomponent::Error::InstanceNotFound,
             ModelError::Unsupported { .. } => fcomponent::Error::Unsupported,
@@ -322,7 +323,8 @@ impl RealmCapabilityHost {
                 return fcomponent::Error::Internal;
             }
         })?;
-        let child_moniker = ChildMoniker::new(&child.name, child.collection.as_ref());
+        let child_moniker = ChildMoniker::try_new(&child.name, child.collection.as_ref())
+            .map_err(|_| fcomponent::Error::InvalidArguments)?;
         Ok(state.get_child(&child_moniker).map(|r| r.clone()))
     }
 

@@ -303,10 +303,17 @@ impl ModelBuilderForAnalyzer {
     ) {
         let mut children = vec![];
         for child_decl in instance.decl.children.iter() {
+            let child_moniker = match ChildMoniker::try_new(&child_decl.name, None) {
+                Ok(cm) => cm,
+                Err(err) => {
+                    result.errors.push(anyhow!(err));
+                    continue;
+                }
+            };
             match Self::get_absolute_child_url(&child_decl.url, instance) {
                 Ok(url) => {
                     children.push(Child {
-                        child_moniker: ChildMoniker::new(&child_decl.name, None),
+                        child_moniker,
                         url,
                         environment: child_decl.environment.clone(),
                     });
@@ -1224,7 +1231,7 @@ mod tests {
 
         let get_child = root_instance
             .resolve()
-            .map(|locked| locked.get_child(&ChildMoniker::new("child", None)))?;
+            .map(|locked| locked.get_child(&ChildMoniker::try_new("child", None).unwrap()))?;
         assert!(get_child.is_some());
         assert_eq!(get_child.as_ref().unwrap().abs_moniker(), child_instance.abs_moniker());
         assert_eq!(get_child.unwrap().instanced_moniker(), child_instance.instanced_moniker());

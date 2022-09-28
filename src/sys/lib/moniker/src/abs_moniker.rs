@@ -222,8 +222,8 @@ mod tests {
         assert_eq!(root, AbsoluteMoniker::from(vec![]));
 
         let m = AbsoluteMoniker::new(vec![
-            ChildMoniker::new("a", None),
-            ChildMoniker::new("b", Some("coll")),
+            ChildMoniker::try_new("a", None).unwrap(),
+            ChildMoniker::try_new("b", Some("coll")).unwrap(),
         ]);
         assert_eq!(false, m.is_root());
         assert_eq!("/a/coll:b", format!("{}", m));
@@ -239,8 +239,10 @@ mod tests {
         assert_eq!(true, root.is_root());
         assert_eq!(None, root.parent());
 
-        let m =
-            AbsoluteMoniker::new(vec![ChildMoniker::new("a", None), ChildMoniker::new("b", None)]);
+        let m = AbsoluteMoniker::new(vec![
+            ChildMoniker::try_new("a", None).unwrap(),
+            ChildMoniker::try_new("b", None).unwrap(),
+        ]);
         assert_eq!("/a/b", format!("{}", m));
         assert_eq!("/a", format!("{}", m.parent().unwrap()));
         assert_eq!("/", format!("{}", m.parent().unwrap().parent().unwrap()));

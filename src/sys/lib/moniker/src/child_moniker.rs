@@ -9,7 +9,7 @@ use {
     std::fmt,
 };
 
-pub trait ChildMonikerBase: Eq + PartialOrd + Clone + Default + fmt::Display {
+pub trait ChildMonikerBase: Eq + PartialOrd + Clone + fmt::Display {
     fn parse<T: AsRef<str>>(rep: T) -> Result<Self, MonikerError>
     where
         Self: Sized;
@@ -27,10 +27,10 @@ pub trait ChildMonikerBase: Eq + PartialOrd + Clone + Default + fmt::Display {
 /// The child moniker does not distinguish between instances.
 ///
 /// Display notation: "name[:collection]".
-#[derive(Eq, PartialEq, Debug, Clone, Hash, Default)]
+#[derive(Eq, PartialEq, Debug, Clone, Hash)]
 pub struct ChildMoniker {
-    pub name: String,
-    pub collection: Option<String>,
+    pub name: LongName,
+    pub collection: Option<Name>,
     rep: String,
 }
 
@@ -46,11 +46,7 @@ impl ChildMonikerBase for ChildMoniker {
             2 => (Some(parts[0]), parts[1]),
             _ => return Err(MonikerError::invalid_moniker(rep)),
         };
-        LongName::validate(name).map_err(|_| MonikerError::invalid_moniker_part(name))?;
-        if let Some(c) = coll {
-            Name::validate(c).map_err(|_| MonikerError::invalid_moniker_part(c))?;
-        }
-        Ok(ChildMoniker::new(name, coll))
+        ChildMoniker::try_new(name, coll)
     }
 
     fn name(&self) -> &str {
@@ -67,21 +63,20 @@ impl ChildMonikerBase for ChildMoniker {
 }
 
 impl ChildMoniker {
-    // TODO(fxbug.dev/77563): This does not currently validate the String inputs.
-    pub fn new<S>(name: S, collection: Option<S>) -> Self
+    pub fn try_new<S>(name: S, collection: Option<S>) -> Result<Self, MonikerError>
     where
         S: Into<String>,
     {
-        let name = name.into();
-        let collection = collection.map(Into::into);
-        assert!(!name.is_empty());
-        let rep = if let Some(c) = collection.as_ref() {
-            assert!(!c.is_empty());
-            format!("{}:{}", c, name)
-        } else {
-            name.clone()
+        let name = LongName::try_new(name)?;
+        let (collection, rep) = match collection {
+            Some(coll) => {
+                let coll_name = Name::try_new(coll)?;
+                let rep = format!("{}:{}", coll_name, name);
+                (Some(coll_name), rep)
+            }
+            None => (None, name.to_string()),
         };
-        ChildMoniker { name, collection, rep }
+        Ok(Self { name, collection, rep })
     }
 }
 
@@ -118,14 +113,14 @@ mod tests {
 
     #[test]
     fn child_monikers() {
-        let m = ChildMoniker::new("test", None);
+        let m = ChildMoniker::try_new("test", None).unwrap();
         assert_eq!("test", m.name());
         assert_eq!(None, m.collection());
         assert_eq!("test", m.as_str());
         assert_eq!("test", format!("{}", m));
         assert_eq!(m, ChildMoniker::from("test"));
 
-        let m = ChildMoniker::new("test", Some("coll"));
+        let m = ChildMoniker::try_new("test", Some("coll")).unwrap();
         assert_eq!("test", m.name());
         assert_eq!(Some("coll"), m.collection());
         assert_eq!("coll:test", m.as_str());
@@ -159,12 +154,12 @@ mod tests {
 
     #[test]
     fn child_moniker_compare() {
-        let a = ChildMoniker::new("a", None);
-        let aa = ChildMoniker::new("a", Some("a"));
-        let ab = ChildMoniker::new("a", Some("b"));
-        let ba = ChildMoniker::new("b", Some("a"));
-        let bb = ChildMoniker::new("b", Some("b"));
-        let aa_same = ChildMoniker::new("a", Some("a"));
+        let a = ChildMoniker::try_new("a", None).unwrap();
+        let aa = ChildMoniker::try_new("a", Some("a")).unwrap();
+        let ab = ChildMoniker::try_new("a", Some("b")).unwrap();
+        let ba = ChildMoniker::try_new("b", Some("a")).unwrap();
+        let bb = ChildMoniker::try_new("b", Some("b")).unwrap();
+        let aa_same = ChildMoniker::try_new("a", Some("a")).unwrap();
 
         assert_eq!(Ordering::Less, a.cmp(&aa));
         assert_eq!(Ordering::Greater, aa.cmp(&a));

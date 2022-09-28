@@ -1180,7 +1180,7 @@ mod tests {
             AllowlistEntryError,
             AllowlistEntryError::OtherInvalidMoniker(
                 "/foo/bar*".into(),
-                MonikerError::InvalidMonikerPart("bar*".into()))),
+                MonikerError::InvalidMonikerPart { 0: ParseError::InvalidValue })),
 
     }
 }
