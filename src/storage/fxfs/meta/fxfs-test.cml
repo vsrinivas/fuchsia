@@ -1,0 +1,24 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//sdk/lib/inspect/client.shard.cml",
+        "//sdk/lib/syslog/client.shard.cml",
+        "//src/lib/storage/fs_management/client.shard.cml",
+        "//src/storage/testing/driver_test_realm/meta/client.shard.cml",
+        "//src/storage/testing/meta/storage_test.shard.cml",
+        "//src/sys/test_runners/rust/next-vdso.shard.cml",
+    ],
+    program: {
+        binary: "bin/fxfs_lib_test",
+    },
+    use: [
+        {
+            protocol: [
+                // This allows tests to launch BlobFS
+                "fuchsia.process.Launcher",
+            ],
+        },
+    ],
+}

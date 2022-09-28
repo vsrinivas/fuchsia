@@ -43,7 +43,7 @@ const FXFS_INFO_NAME: &'static str = "fxfs";
 pub struct FxVolume {
     cache: NodeCache,
     store: Arc<ObjectStore>,
-    pager: Pager,
+    pager: Pager<FxFile>,
     executor: fasync::EHandle,
 
     // A tuple of the actual task and a channel to signal to terminate the task.
@@ -61,7 +61,7 @@ impl FxVolume {
         Ok(Self {
             cache: NodeCache::new(),
             store,
-            pager: Pager::new(PagerExecutor::global_instance())?,
+            pager: Pager::<FxFile>::new(PagerExecutor::global_instance())?,
             executor: fasync::EHandle::local(),
             flush_task: Mutex::new(None),
             fs_id,
@@ -77,7 +77,7 @@ impl FxVolume {
         &self.cache
     }
 
-    pub fn pager(&self) -> &Pager {
+    pub fn pager(&self) -> &Pager<FxFile> {
         &self.pager
     }
 
@@ -240,7 +240,12 @@ impl HandleOwner for FxVolume {
     type Buffer = VmoDataBuffer;
 
     fn create_data_buffer(&self, object_id: u64, initial_size: u64) -> Self::Buffer {
-        self.pager.create_vmo(object_id, initial_size).unwrap().try_into().unwrap()
+        // TODO(fxbug.dev/102659) Enable trap dirty.
+        self.pager
+            .create_vmo(object_id, initial_size, /*enable_trap_dirty=*/ false)
+            .unwrap()
+            .try_into()
+            .unwrap()
     }
 }
 

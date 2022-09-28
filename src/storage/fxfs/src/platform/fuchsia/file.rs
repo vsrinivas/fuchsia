@@ -13,6 +13,7 @@ use {
             directory::FxDirectory,
             errors::map_to_status,
             node::{FxNode, OpenedNode},
+            pager::PagerBackedVmo,
             volume::{info_to_filesystem_info, FxVolume},
         },
         round::{round_down, round_up},
@@ -24,9 +25,12 @@ use {
     fuchsia_zircon::{self as zx, Status},
     futures::{channel::oneshot, join},
     once_cell::sync::Lazy,
-    std::sync::{
-        atomic::{AtomicBool, AtomicUsize, Ordering},
-        Arc, Mutex,
+    std::{
+        ops::Range,
+        sync::{
+            atomic::{AtomicBool, AtomicUsize, Ordering},
+            Arc, Mutex,
+        },
     },
     vfs::{
         common::{rights_to_posix_mode_bits, send_on_open_with_error},
@@ -177,103 +181,6 @@ impl FxFile {
         }
     }
 
-    pub fn vmo(&self) -> &zx::Vmo {
-        self.handle.data_buffer().vmo()
-    }
-
-    pub async fn page_in(self: &Arc<Self>, mut range: std::ops::Range<u64>) {
-        async_enter!("page_in");
-        const ZERO_VMO_SIZE: u64 = TRANSFER_BUFFER_MAX_SIZE;
-        static ZERO_VMO: Lazy<zx::Vmo> = Lazy::new(|| zx::Vmo::create(ZERO_VMO_SIZE).unwrap());
-
-        let vmo = self.vmo();
-        let aligned_size =
-            round_up(self.handle.uncached_size(), zx::system_get_page_size()).unwrap();
-        let mut offset = std::cmp::max(range.start, aligned_size);
-        while offset < range.end {
-            let end = std::cmp::min(range.end, offset + ZERO_VMO_SIZE);
-            self.handle.owner().pager().supply_pages(vmo, offset..end, &ZERO_VMO, 0);
-            offset = end;
-        }
-        if aligned_size < range.end {
-            range.end = aligned_size;
-        } else {
-            const READ_AHEAD: u64 = 131_072;
-            if aligned_size - range.end < READ_AHEAD {
-                range.end = aligned_size;
-            } else {
-                range.end += READ_AHEAD;
-            }
-        }
-        if range.end <= range.start {
-            return;
-        }
-        range.start = round_down(range.start, self.handle.block_size());
-
-        static TRANSFER_BUFFERS: Lazy<TransferBuffers> = Lazy::new(|| TransferBuffers::new());
-        let (buffer_result, transfer_buffer) =
-            join!(async { self.handle.read_uncached(range.clone()).await }, async {
-                let buffer = TRANSFER_BUFFERS.get().await;
-                // Committing pages in the kernel is time consuming, so we do this in parallel
-                // to the read.  This assumes that the implementation of join! polls the other
-                // future first (which happens to be the case for now).
-                buffer.commit(range.end - range.start);
-                buffer
-            });
-        let buffer = match buffer_result {
-            Ok(buffer) => buffer,
-            Err(e) => {
-                error!(
-                    ?range,
-                    oid = self.handle.uncached_handle().object_id(),
-                    error = e.as_value(),
-                    "Failed to page-in range"
-                );
-                self.handle.owner().pager().report_failure(
-                    self.vmo(),
-                    range.clone(),
-                    zx::Status::IO,
-                );
-                return;
-            }
-        };
-        let mut buf = buffer.as_slice();
-        while !buf.is_empty() {
-            let (source, remainder) =
-                buf.split_at(std::cmp::min(buf.len(), TRANSFER_BUFFER_MAX_SIZE as usize));
-            buf = remainder;
-            let range_chunk = range.start..range.start + source.len() as u64;
-            match transfer_buffer.vmo().write(source, transfer_buffer.offset()) {
-                Ok(_) => self.handle.owner().pager().supply_pages(
-                    self.vmo(),
-                    range_chunk,
-                    transfer_buffer.vmo(),
-                    transfer_buffer.offset(),
-                ),
-                Err(e) => {
-                    // Failures here due to OOM will get reported as IO errors, as those are
-                    // considered transient.
-                    error!(
-                            range = ?range_chunk,
-                            error = e.as_value(),
-                            "Failed to transfer range");
-                    self.handle.owner().pager().report_failure(
-                        self.vmo(),
-                        range_chunk,
-                        zx::Status::IO,
-                    );
-                }
-            }
-            range.start += source.len() as u64;
-        }
-    }
-
-    // Called by the pager to indicate there are no more VMO references.
-    pub fn on_zero_children(&self) {
-        // Drop the open count that we took in `get_buffer`.
-        self.open_count_sub_one();
-    }
-
     pub async fn flush(&self) -> Result<(), Error> {
         self.handle.flush().await
     }
@@ -395,7 +302,7 @@ impl File for FxFile {
     async fn get_backing_memory(&self, flags: fio::VmoFlags) -> Result<zx::Vmo, Status> {
         // We do not support exact/duplicate sharing mode.
         if flags.contains(fio::VmoFlags::SHARED_BUFFER) {
-            error!("get_buffer does not support exact sharing mode!");
+            error!("get_backing_memory does not support exact sharing mode!");
             return Err(Status::NOT_SUPPORTED);
         }
         // We only support the combination of WRITE when a private COW clone is explicitly
@@ -403,13 +310,13 @@ impl File for FxFile {
         // PROT_WRITE.
         if flags.contains(fio::VmoFlags::WRITE) && !flags.contains(fio::VmoFlags::PRIVATE_CLONE) {
             error!(
-                "get_buffer only supports fio::VmoFlags::WRITE with fio::VmoFlags::PRIVATE_CLONE!"
+                "get_backing_memory only supports fio::VmoFlags::WRITE with fio::VmoFlags::PRIVATE_CLONE!"
             );
             return Err(Status::NOT_SUPPORTED);
         }
         // We do not support executable VMO handles.
         if flags.contains(fio::VmoFlags::EXECUTE) {
-            error!("get_buffer does not support execute rights!");
+            error!("get_backing_memory does not support execute rights!");
             return Err(Status::NOT_SUPPORTED);
         }
 
@@ -423,7 +330,7 @@ impl File for FxFile {
         }
 
         let child_vmo = vmo.create_child(child_options, 0, size)?;
-        if self.handle.owner().pager().start_servicing(self).map_err(map_to_status)? {
+        if self.handle.owner().pager().watch_for_zero_children(self).map_err(map_to_status)? {
             // Take an open count so that we keep this object alive if it is unlinked.
             self.open_count_add_one();
         }
@@ -515,6 +422,113 @@ impl FileIo for FxFile {
             self.handle.write_or_append_cached(None, content).await.map_err(map_to_status)?;
         self.has_written.store(true, Ordering::Relaxed);
         Ok((content.len() as u64, size))
+    }
+}
+
+#[async_trait]
+impl PagerBackedVmo for FxFile {
+    fn pager_key(&self) -> u64 {
+        self.object_id()
+    }
+
+    fn vmo(&self) -> &zx::Vmo {
+        self.handle.data_buffer().vmo()
+    }
+
+    async fn page_in(self: &Arc<Self>, mut range: Range<u64>) {
+        async_enter!("page_in");
+        const ZERO_VMO_SIZE: u64 = TRANSFER_BUFFER_MAX_SIZE;
+        static ZERO_VMO: Lazy<zx::Vmo> = Lazy::new(|| zx::Vmo::create(ZERO_VMO_SIZE).unwrap());
+
+        let vmo = self.vmo();
+        let aligned_size =
+            round_up(self.handle.uncached_size(), zx::system_get_page_size()).unwrap();
+        let mut offset = std::cmp::max(range.start, aligned_size);
+        while offset < range.end {
+            let end = std::cmp::min(range.end, offset + ZERO_VMO_SIZE);
+            self.handle.owner().pager().supply_pages(vmo, offset..end, &ZERO_VMO, 0);
+            offset = end;
+        }
+        if aligned_size < range.end {
+            range.end = aligned_size;
+        } else {
+            const READ_AHEAD: u64 = 131_072;
+            if aligned_size - range.end < READ_AHEAD {
+                range.end = aligned_size;
+            } else {
+                range.end += READ_AHEAD;
+            }
+        }
+        if range.end <= range.start {
+            return;
+        }
+        range.start = round_down(range.start, self.handle.block_size());
+
+        static TRANSFER_BUFFERS: Lazy<TransferBuffers> = Lazy::new(|| TransferBuffers::new());
+        let (buffer_result, transfer_buffer) =
+            join!(async { self.handle.read_uncached(range.clone()).await }, async {
+                let buffer = TRANSFER_BUFFERS.get().await;
+                // Committing pages in the kernel is time consuming, so we do this in parallel
+                // to the read.  This assumes that the implementation of join! polls the other
+                // future first (which happens to be the case for now).
+                buffer.commit(range.end - range.start);
+                buffer
+            });
+        let buffer = match buffer_result {
+            Ok(buffer) => buffer,
+            Err(e) => {
+                error!(
+                    ?range,
+                    oid = self.handle.uncached_handle().object_id(),
+                    error = e.as_value(),
+                    "Failed to page-in range"
+                );
+                self.handle.owner().pager().report_failure(
+                    self.vmo(),
+                    range.clone(),
+                    zx::Status::IO,
+                );
+                return;
+            }
+        };
+        let mut buf = buffer.as_slice();
+        while !buf.is_empty() {
+            let (source, remainder) =
+                buf.split_at(std::cmp::min(buf.len(), TRANSFER_BUFFER_MAX_SIZE as usize));
+            buf = remainder;
+            let range_chunk = range.start..range.start + source.len() as u64;
+            match transfer_buffer.vmo().write(source, transfer_buffer.offset()) {
+                Ok(_) => self.handle.owner().pager().supply_pages(
+                    self.vmo(),
+                    range_chunk,
+                    transfer_buffer.vmo(),
+                    transfer_buffer.offset(),
+                ),
+                Err(e) => {
+                    // Failures here due to OOM will get reported as IO errors, as those are
+                    // considered transient.
+                    error!(
+                            range = ?range_chunk,
+                            error = e.as_value(),
+                            "Failed to transfer range");
+                    self.handle.owner().pager().report_failure(
+                        self.vmo(),
+                        range_chunk,
+                        zx::Status::IO,
+                    );
+                }
+            }
+            range.start += source.len() as u64;
+        }
+    }
+
+    async fn mark_dirty(self: &Arc<Self>, _range: Range<u64>) {
+        todo!("fxbug.dev/102659: Implement pager writeback")
+    }
+
+    fn on_zero_children(&self) {
+        // Drop the open count that we took in `get_backing_memory`.
+        self.open_count_sub_one();
     }
 }
 

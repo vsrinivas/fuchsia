@@ -11,6 +11,7 @@
         binary: "bin/fxfs",
         args: [ "component" ],
         lifecycle: { stop_event: "notify" },
+        use_next_vdso: "true",
     },
     capabilities: [
         {
