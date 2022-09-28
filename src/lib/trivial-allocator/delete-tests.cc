@@ -6,7 +6,7 @@
 #include <lib/trivial-allocator/new.h>
 #include <lib/trivial-allocator/single-heap-allocator.h>
 
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -24,7 +24,7 @@ TEST(TrivialAllocatorTests, StubDelete) {
   {
     fbl::AllocChecker ac;
     int* iptr = new (allocator, ac) int(17);
-    ASSERT_TRUE(iptr);
+    ASSERT_NOT_NULL(iptr);
     ASSERT_TRUE(ac.check());
     delete iptr;
   }
@@ -32,7 +32,7 @@ TEST(TrivialAllocatorTests, StubDelete) {
   {
     fbl::AllocChecker ac;
     char* cptr = new (allocator, ac) char[11];
-    ASSERT_TRUE(cptr);
+    ASSERT_NOT_NULL(cptr);
     ASSERT_TRUE(ac.check());
     delete[] cptr;
   }
@@ -40,7 +40,7 @@ TEST(TrivialAllocatorTests, StubDelete) {
   {
     fbl::AllocChecker ac;
     Aligned* aptr = new (allocator, ac) Aligned{23};
-    ASSERT_TRUE(aptr);
+    ASSERT_NOT_NULL(aptr);
     ASSERT_TRUE(ac.check());
     delete aptr;
   }
@@ -48,7 +48,7 @@ TEST(TrivialAllocatorTests, StubDelete) {
   {
     fbl::AllocChecker ac;
     Aligned* aaptr = new (allocator, ac) Aligned[2]{{1}, {2}};
-    ASSERT_TRUE(aaptr);
+    ASSERT_NOT_NULL(aaptr);
     ASSERT_TRUE(ac.check());
     delete[] aaptr;
   }

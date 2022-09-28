@@ -5,7 +5,7 @@
 #include <lib/stdcompat/span.h>
 #include <lib/trivial-allocator/single-heap-allocator.h>
 
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 

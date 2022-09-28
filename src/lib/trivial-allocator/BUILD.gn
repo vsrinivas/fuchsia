@@ -27,12 +27,6 @@ zx_library("trivial-allocator") {
     # <lib/trivial-allocator/new.h> has #include <fbl/alloc_checker.h>.
     "//zircon/system/ulib/fbl",
   ]
-  if (is_fuchsia && !is_kernel) {
-    public_deps += [
-      # <lib/trivial-allocator/zircon.h> has #include <lib/zx/vmar.h>.
-      "//zircon/system/ulib/zx",
-    ]
-  }
 
   sources = []
   deps = []
@@ -105,13 +99,12 @@ test("trivial-allocator-unittests") {
   ]
   deps = [
     ":trivial-allocator",
-    "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
 fuchsia_unittest_package("trivial-allocator-tests") {
   deps = [ ":trivial-allocator-unittests" ]
-  manifest = "meta/trivial-allocator-tests.cml"
 }
 
 # This test is isolated since it no-op's out the `delete` usage done by the
@@ -120,7 +113,7 @@ fuchsia_unittest_package("trivial-allocator-tests") {
 test("stub-delete-unittests") {
   deps = [
     ":trivial-allocator",
-    "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/ulib/zxtest",
   ]
 
   if ((is_fuchsia || current_os == "linux") &&
@@ -140,7 +133,6 @@ group("tests") {
 
   deps = [
     ":stub-delete-tests",
-    ":stub-delete-unittests($host_toolchain)",
     ":trivial-allocator-tests",
     ":trivial-allocator-unittests($host_toolchain)",
   ]
