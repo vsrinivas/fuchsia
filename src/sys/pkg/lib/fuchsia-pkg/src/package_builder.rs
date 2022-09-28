@@ -79,7 +79,7 @@ impl PackageBuilder {
     pub fn from_creation_manifest(manifest: &CreationManifest) -> Result<Self> {
         // Read the package name from `meta/package`, or error out if it's missing.
         let meta_package = if let Some(path) = manifest.far_contents().get("meta/package") {
-            let f = File::open(path)?;
+            let f = File::open(path).with_context(|| format!("opening {}", path))?;
             let meta_package = MetaPackage::deserialize(BufReader::new(f))?;
             meta_package
         } else {
@@ -92,12 +92,14 @@ impl PackageBuilder {
 
         // Read the abi revision from `meta/fuchsia.abi/abi-revision`, or error out if it's missing.
         if let Some(path) = manifest.far_contents().get("meta/fuchsia.abi/abi-revision") {
-            let abi_revision = std::fs::read(&path)?;
+            let abi_revision = std::fs::read(&path).with_context(|| format!("reading {}", path))?;
             builder.abi_revision(AbiRevision::try_from(abi_revision.as_slice())?.into());
         }
 
         for (at_path, file) in manifest.external_contents() {
-            builder.add_file_as_blob(at_path, file)?;
+            builder
+                .add_file_as_blob(at_path, file)
+                .with_context(|| format!("adding file {} as blob {}", at_path, file))?;
         }
 
         for (at_path, file) in manifest.far_contents() {
@@ -106,7 +108,9 @@ impl PackageBuilder {
                 continue;
             }
 
-            builder.add_file_to_far(at_path, file)?;
+            builder
+                .add_file_to_far(at_path, file)
+                .with_context(|| format!("adding file {} to far {}", at_path, file))?;
         }
 
         Ok(builder)
@@ -444,14 +448,16 @@ impl PackageBuilder {
         }
 
         let creation_manifest =
-            CreationManifest::from_external_and_far_contents(blobs, far_contents)?;
+            CreationManifest::from_external_and_far_contents(blobs, far_contents)
+                .with_context(|| format!("creating creation manifest"))?;
 
         let package_manifest = crate::build::build(
             &creation_manifest,
             metafar_path,
             published_name.unwrap_or(name),
             repository,
-        )?;
+        )
+        .with_context(|| format!("building package manifest {}", metafar_path.display()))?;
 
         Ok(if let Some(manifest_path) = manifest_path {
             let package_manifest = if let RelativeTo::File = blob_sources_relative {
@@ -468,10 +474,15 @@ impl PackageBuilder {
                 let package_manifest_file = std::fs::File::create(&manifest_path).context(
                     format!("Failed to create package manifest: {}", manifest_path.display()),
                 )?;
+
                 serde_json::ser::to_writer(
                     BufWriter::new(package_manifest_file),
                     &package_manifest,
-                )?;
+                )
+                .with_context(|| {
+                    format!("writing package manifest to {}", manifest_path.display())
+                })?;
+
                 package_manifest
             };
 
