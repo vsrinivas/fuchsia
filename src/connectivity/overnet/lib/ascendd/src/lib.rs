@@ -127,11 +127,12 @@ async fn bind_listener(
     );
 
     let incoming = loop {
-        match UnixListener::bind(&sockpath) {
+        let safe_socket_path = hoist::short_socket_path(&sockpath)?;
+        match UnixListener::bind(&safe_socket_path) {
             Ok(listener) => {
                 break listener;
             }
-            Err(_) => match UnixStream::connect(&sockpath)
+            Err(_) => match UnixStream::connect(&safe_socket_path)
                 .on_timeout(Duration::from_secs(1), || {
                     Err(std::io::Error::new(TimedOut, format_err!("connecting to ascendd socket")))
                 })

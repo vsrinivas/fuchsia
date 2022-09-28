@@ -4,29 +4,27 @@
 
 #![cfg(not(target_os = "fuchsia"))]
 
-use std::path::PathBuf;
-use {
-    anyhow::{bail, format_err, Context, Error},
-    fidl::endpoints::{create_proxy, create_proxy_and_stream},
-    fidl_fuchsia_overnet::{
-        HostOvernetMarker, HostOvernetProxy, HostOvernetRequest, HostOvernetRequestStream,
-        MeshControllerMarker, MeshControllerProxy, MeshControllerRequest, ServiceConsumerMarker,
-        ServiceConsumerProxy, ServiceConsumerRequest, ServicePublisherMarker,
-        ServicePublisherProxy, ServicePublisherRequest,
-    },
-    fuchsia_async::TimeoutExt,
-    fuchsia_async::{Task, Timer},
-    futures::prelude::*,
-    overnet_core::{log_errors, ListPeersContext, Router, RouterOptions, SecurityContext},
-    std::io::ErrorKind::TimedOut,
-    std::time::SystemTime,
-    std::{
-        sync::atomic::{AtomicU64, Ordering},
-        sync::Arc,
-        time::Duration,
-    },
-    stream_link::run_stream_link,
+use anyhow::{bail, format_err, Context, Error};
+use fidl::endpoints::{create_proxy, create_proxy_and_stream};
+use fidl_fuchsia_overnet::{
+    HostOvernetMarker, HostOvernetProxy, HostOvernetRequest, HostOvernetRequestStream,
+    MeshControllerMarker, MeshControllerProxy, MeshControllerRequest, ServiceConsumerMarker,
+    ServiceConsumerProxy, ServiceConsumerRequest, ServicePublisherMarker, ServicePublisherProxy,
+    ServicePublisherRequest,
 };
+use fuchsia_async::TimeoutExt;
+use fuchsia_async::{Task, Timer};
+use futures::prelude::*;
+use overnet_core::{log_errors, ListPeersContext, Router, RouterOptions, SecurityContext};
+use std::io::ErrorKind::{self, TimedOut};
+use std::path::{Path, PathBuf};
+use std::time::SystemTime;
+use std::{
+    sync::atomic::{AtomicU64, Ordering},
+    sync::Arc,
+    time::Duration,
+};
+use stream_link::run_stream_link;
 
 pub fn default_ascendd_path() -> PathBuf {
     let mut path = std::env::temp_dir();
@@ -140,7 +138,8 @@ impl Hoist {
         tracing::trace!(overnet_connection_label = ?label);
         let now = SystemTime::now();
         let uds = loop {
-            match async_net::unix::UnixStream::connect(&sockpath)
+            let safe_socket_path = short_socket_path(&sockpath)?;
+            match async_net::unix::UnixStream::connect(&safe_socket_path)
                 .on_timeout(Duration::from_millis(100), || {
                     Err(std::io::Error::new(
                         TimedOut,
@@ -150,13 +149,21 @@ impl Hoist {
                 .await
             {
                 Ok(uds) => break uds,
-                Err(e) => {
+                Err(e)
+                    if matches!(e.kind(), ErrorKind::NotFound | ErrorKind::ConnectionRefused) =>
+                {
                     if now.elapsed()?.as_secs() > MAX_SINGLE_CONNECT_TIME {
                         bail!(
                             "took too long connecting to ascendd socket at {}. Last error: {e:#?}",
                             sockpath.display(),
                         );
                     }
+                }
+                Err(e) => {
+                    bail!(
+                        "unexpected error while trying to connect to ascendd socket at {}: {e}",
+                        sockpath.display()
+                    );
                 }
             }
         };
@@ -392,6 +399,81 @@ where
     }
 }
 
+/// If necessary, holds a tempdir open with a symlink to a socket path
+/// that is too long to fit in the system's SUN_LEN.
+#[derive(Debug)]
+pub struct ShortPathLink {
+    /// The shorthand path we're using to connect to the daemon
+    pub short_path: PathBuf,
+    /// The temporary directory handle we're putting the socket file in
+    _temp_location: Option<tempfile::TempDir>,
+}
+
+impl ShortPathLink {
+    // there seems to be no standard binding available for the SUN_LEN constant
+    // in std, libc, or nix, so we'll just conservatively guess 100 for now.
+    pub const MAX_SUN_LEN: usize = 100;
+}
+
+impl AsRef<Path> for ShortPathLink {
+    fn as_ref(&self) -> &Path {
+        self.short_path.as_ref()
+    }
+}
+
+/// If `real_path` is too long to fit in a socket bind/connect struct,
+/// creates a symlink in the tempdir that points to the 'real' socket
+/// path.
+///
+/// Returns a [`ShortPathSocket`] that keeps the reference alive
+/// while it's being connected to.
+pub fn short_socket_path(real_path: &Path) -> std::io::Result<ShortPathLink> {
+    #[cfg(not(target_os = "windows"))]
+    use std::os::unix::fs::symlink;
+    #[cfg(target_os = "windows")]
+    use std::os::windows::fs::symlink_dir as symlink;
+
+    let short_path;
+    let temp_location;
+    if real_path.as_os_str().len() > ShortPathLink::MAX_SUN_LEN {
+        // we make a symlink from the original home of the socket to a (hopefully shorter) tmpdir path,
+        // and then return a path that looks into that symlink to find the socket. This avoids a bunch of
+        // annoying situations around things trying to create the socket when it doesn't already exist.
+        let socket_filename = real_path.file_name().ok_or_else(|| {
+            let error_str = format!(
+                "{real_path} did not have a filename component",
+                real_path = real_path.display()
+            );
+            std::io::Error::new(ErrorKind::InvalidInput, error_str)
+        })?;
+        let socket_dir = real_path.parent().ok_or_else(|| {
+            let error_str = format!(
+                "{real_path} did not have a path component",
+                real_path = real_path.display()
+            );
+            std::io::Error::new(ErrorKind::InvalidInput, error_str)
+        })?;
+
+        let tempdir = tempfile::tempdir()?;
+        let symlink_path = tempdir.path().join("root");
+
+        short_path = symlink_path.join(socket_filename).to_owned();
+        if short_path.as_os_str().len() > ShortPathLink::MAX_SUN_LEN {
+            let error_str = format!(
+                "Even tmpdir path was too long to create a short enough socket path for {real_path} (tried: {short_path})",
+                real_path=real_path.display(),
+                short_path=short_path.display());
+            return Err(std::io::Error::new(ErrorKind::InvalidInput, error_str));
+        }
+        symlink(socket_dir, &symlink_path)?;
+        temp_location = Some(tempdir);
+    } else {
+        short_path = real_path.to_owned();
+        temp_location = None;
+    }
+    Ok(ShortPathLink { short_path, _temp_location: temp_location })
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -418,5 +500,37 @@ mod test {
         assert_eq!("onetwothree", connection_label(Option::<String>::None));
 
         assert_eq!("precedence", connection_label(Some("precedence")));
+    }
+
+    #[fuchsia::test]
+    fn test_shortened_path() {
+        let test_temp = tempfile::tempdir().expect("creating tempdir for tests");
+        let already_short_path = test_temp.path().join("a").join("my.sock");
+        let shortened_short_path =
+            short_socket_path(&already_short_path).expect("creating short path");
+        assert_eq!(
+            already_short_path, shortened_short_path.short_path,
+            "Should not have done anything to already short path"
+        );
+
+        let long_dir = test_temp.path().join("a".to_owned().repeat(ShortPathLink::MAX_SUN_LEN + 1));
+        let long_path = long_dir.join("my.sock");
+        std::fs::create_dir_all(&long_dir).expect("Creating long directory name should work");
+        std::fs::File::create(&long_path).expect("Creating file in long directory should work");
+        let shortened_long_path = short_socket_path(&long_path).expect("creating short path");
+        assert_ne!(
+            long_path, shortened_long_path.short_path,
+            "Should have generated a shorter path for a long path"
+        );
+        assert!(
+            shortened_long_path.short_path.as_os_str().len() < ShortPathLink::MAX_SUN_LEN,
+            "new short path should be shorter than the maximum length"
+        );
+        assert_eq!(
+            &std::fs::canonicalize(&shortened_long_path.short_path)
+                .expect("read link should resolve"),
+            &long_path,
+            "short path link should resolve to original long path"
+        )
     }
 }

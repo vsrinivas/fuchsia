@@ -2,19 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[cfg(not(target_os = "fuchsia"))]
-mod not_fuchsia;
-#[cfg(not(target_os = "fuchsia"))]
-pub use not_fuchsia::{default_ascendd_path, hard_coded_security_context, Hoist, HostOvernet};
-
-#[cfg(target_os = "fuchsia")]
-mod fuchsia;
-#[cfg(target_os = "fuchsia")]
-pub use crate::fuchsia::Hoist;
-
 use anyhow::{Context, Error};
 use fidl_fuchsia_overnet::{MeshControllerProxy, ServiceConsumerProxy, ServicePublisherProxy};
 use once_cell::sync::OnceCell;
+
+mod fuchsia;
+mod not_fuchsia;
+
+#[cfg(target_os = "fuchsia")]
+pub use crate::fuchsia::*;
+#[cfg(not(target_os = "fuchsia"))]
+pub use not_fuchsia::*;
 
 #[cfg(target_os = "fuchsia")]
 pub mod logger {

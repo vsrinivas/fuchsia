@@ -9,6 +9,7 @@ rustc_library("hoist") {
   with_unit_tests = true
   edition = "2021"
   deps = [
+    "//sdk/fidl/fuchsia.overnet:fuchsia.overnet_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
@@ -16,7 +17,11 @@ rustc_library("hoist") {
   ]
   non_rust_deps = [ "//third_party/boringssl" ]
 
-  sources = [ "src/lib.rs" ]
+  sources = [
+    "src/fuchsia.rs",
+    "src/lib.rs",
+    "src/not_fuchsia.rs",
+  ]
 
   inputs = [
     "//third_party/rust_crates/mirrors/quiche/quiche/examples/cert.crt",
@@ -28,24 +33,21 @@ rustc_library("hoist") {
 
   if (is_fuchsia) {
     deps += [
-      "//sdk/fidl/fuchsia.overnet:fuchsia.overnet_rust",
       "//src/lib/diagnostics/log/rust",
       "//src/lib/fuchsia-component",
     ]
     test_deps += [ "//third_party/rust_crates:futures" ]
-    sources += [ "src/fuchsia.rs" ]
   } else {
     deps += [
-      "//sdk/fidl/fuchsia.overnet:fuchsia.overnet_rust",
       "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol_rust",
       "//src/connectivity/overnet/lib/core",
       "//src/connectivity/overnet/lib/stream_link",
       "//third_party/rust_crates:async-net",
       "//third_party/rust_crates:futures",
+      "//third_party/rust_crates:tempfile",
       "//third_party/rust_crates:tracing",
     ]
     test_deps += [ "//third_party/rust_crates:scopeguard" ]
-    sources += [ "src/not_fuchsia.rs" ]
   }
 }
 

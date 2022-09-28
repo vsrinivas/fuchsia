@@ -162,7 +162,9 @@ pub fn is_daemon_running_at_path(socket_path: &Path) -> bool {
         }
     }
 
-    match std::os::unix::net::UnixStream::connect(socket_path) {
+    let sock = hoist::short_socket_path(&socket_path)
+        .and_then(|safe_socket_path| std::os::unix::net::UnixStream::connect(&safe_socket_path));
+    match sock {
         Ok(sock) => match sock.peer_addr() {
             Ok(_) => {
                 tracing::info!("found running daemon at {}", socket_path.display());
