@@ -270,4 +270,3 @@ In a future build this error will no longer occur.
  - [`zx_object_set_property()`]
 
 [`zx_object_set_property()`]: object_set_property.md
-

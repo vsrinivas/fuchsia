@@ -21,7 +21,7 @@ zx_status_t zx_system_set_performance_info(zx_handle_t resource,
 `zx_system_set_performance_info()` sets CPU performance parameters maintained by the kernel. The
 *topic* parameter indicates what specific parameters are affected.
 
-*count* indicates the number of items to set. Topics may impose requriements on this value.
+*count* indicates the number of items to set. Topics may impose requirements on this value.
 
 *info* is a pointer to a buffer of sufficient size to accommodate *count* entries of the type
 specified by *topic*.
