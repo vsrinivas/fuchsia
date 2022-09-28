@@ -11,11 +11,12 @@ use crate::types::{Farads, Hertz, PState, Volts, Watts};
 use crate::utils::connect_to_driver;
 use anyhow::{format_err, Context, Error};
 use async_trait::async_trait;
+use async_utils::event::Event as AsyncEvent;
 use fidl_fuchsia_hardware_cpu_ctrl as fcpuctrl;
 use fuchsia_inspect::{self as inspect, Property};
 use serde_derive::Deserialize;
 use serde_json as json;
-use std::cell::Cell;
+use std::cell::{Ref, RefCell};
 use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
@@ -201,7 +202,7 @@ impl<'a> CpuControlHandlerBuilder<'a> {
         }
     }
 
-    pub async fn build(self) -> Result<Rc<CpuControlHandler>, Error> {
+    pub fn build(self) -> Result<Rc<CpuControlHandler>, Error> {
         let cpu_driver_path = ok_or_default_err!(self.cpu_driver_path)?;
         let cpu_stats_handler = ok_or_default_err!(self.cpu_stats_handler)?;
         let cpu_dev_handler = ok_or_default_err!(self.cpu_dev_handler)?;
@@ -209,108 +210,52 @@ impl<'a> CpuControlHandlerBuilder<'a> {
         let capacitance = ok_or_default_err!(self.capacitance)?;
         let logical_cpu_numbers = ok_or_default_err!(self.logical_cpu_numbers)?;
 
-        let mut cpu_control_params =
-            CpuControlParams { p_states: Vec::new(), capacitance, logical_cpu_numbers };
-
-        // Optionally use the default proxy
-        let proxy = if self.cpu_ctrl_proxy.is_none() {
-            connect_to_driver::<fcpuctrl::DeviceMarker>(&cpu_driver_path)
-                .await
-                .context("Failed connecting to CPU driver")?
-        } else {
-            self.cpu_ctrl_proxy.unwrap()
-        };
-
         // Optionally use the default inspect root node
         let inspect_root = self.inspect_root.unwrap_or(inspect::component::inspector().root());
-        let inspect_data =
+        let inspect =
             InspectData::new(inspect_root, format!("CpuControlHandler ({})", cpu_driver_path));
 
-        // Query the CPU P-states
-        cpu_control_params.p_states =
-            Self::get_p_states(&cpu_driver_path, &proxy, min_cpu_clock_speed)
-                .await
-                .context("Failed getting CPU P-states")?;
-        cpu_control_params.validate()?;
-        inspect_data.set_cpu_control_params(&cpu_control_params);
+        let mutable_inner = MutableInner {
+            current_p_state_index: 0,
+            cpu_control_params: CpuControlParams {
+                p_states: Vec::new(),
+                capacitance,
+                logical_cpu_numbers,
+            },
+            cpu_ctrl_proxy: self.cpu_ctrl_proxy,
+        };
 
         let mut hasher = DefaultHasher::new();
         cpu_driver_path.hash(&mut hasher);
         let trace_counter_id = hasher.finish();
 
-        let node = Rc::new(CpuControlHandler {
+        Ok(Rc::new(CpuControlHandler {
+            init_done: AsyncEvent::new(),
             cpu_driver_path,
-            cpu_control_params,
-            current_p_state_index: Cell::new(0),
             cpu_stats_handler,
             cpu_dev_handler,
-            _cpu_ctrl_proxy: proxy,
-            inspect: inspect_data,
+            inspect,
             trace_counter_id,
-        });
-
-        // Initialize current P-state index
-        node.get_current_p_state_index().await?;
-
-        Ok(node)
+            min_cpu_clock_speed,
+            mutable_inner: RefCell::new(mutable_inner),
+        }))
     }
 
-    /// Query the CPU P-states from the CpuCtrl driver.
-    async fn get_p_states(
-        cpu_driver_path: &String,
-        cpu_ctrl_proxy: &fcpuctrl::DeviceProxy,
-        min_cpu_clock_speed: Hertz,
-    ) -> Result<Vec<PState>, Error> {
-        fuchsia_trace::duration!(
-            "power_manager",
-            "CpuControlHandlerBuilder::get_p_states",
-            "driver" => cpu_driver_path.as_str()
-        );
-
-        // Query P-state metadata from the CpuCtrl interface. Each supported performance state
-        // has accompanying P-state metadata.
-        let mut p_states = Vec::new();
-        let mut skipped_p_states = Vec::new();
-        for i in 0..dev_control_handler::MAX_PERF_STATES {
-            if let Ok(info) = cpu_ctrl_proxy.get_performance_state_info(i).await? {
-                let frequency = Hertz(info.frequency_hz as f64);
-                let voltage = Volts(info.voltage_uv as f64 / 1e6);
-                let p_state = PState { frequency, voltage };
-
-                // Filter out P-states where CPU frequency is unacceptably low
-                if frequency >= min_cpu_clock_speed {
-                    p_states.push(p_state);
-                } else {
-                    skipped_p_states.push(p_state);
-                }
-            } else {
-                break;
-            }
-        }
-
-        fuchsia_trace::instant!(
-            "power_manager",
-            "CpuControlHandlerBuilder::received_cpu_p_states",
-            fuchsia_trace::Scope::Thread,
-            "driver" => cpu_driver_path.as_str(),
-            "valid" => 1,
-            "p_states" => format!("{:?}", p_states).as_str(),
-            "skipped_p_states" => format!("{:?}", skipped_p_states).as_str()
-        );
-
-        Ok(p_states)
+    #[cfg(test)]
+    pub async fn build_and_init(self) -> Rc<CpuControlHandler> {
+        let node = self.build().unwrap();
+        node.init().await.unwrap();
+        node
     }
 }
 
 pub struct CpuControlHandler {
+    /// Signalled after `init()` has completed. Used to ensure node doesn't process messages until
+    /// its `init()` has completed.
+    init_done: AsyncEvent,
+
     /// The path to the driver that this node controls.
     cpu_driver_path: String,
-
-    /// The parameters of the CPU domain which are queried from the CPU driver.
-    cpu_control_params: CpuControlParams,
-
-    /// The current CPU P-state index which is queried from the CPU DeviceControlHandler node.
-    current_p_state_index: Cell<usize>,
 
     /// The node which will provide CPU load information. It is expected that this node responds to
     /// the GetCpuLoads message.
@@ -320,17 +265,26 @@ pub struct CpuControlHandler {
     /// responds to the Get/SetPerformanceState messages.
     cpu_dev_handler: Rc<dyn Node>,
 
-    /// A proxy handle to communicate with the CPU driver CpuCtrl interface.
-    _cpu_ctrl_proxy: fcpuctrl::DeviceProxy,
-
     /// A struct for managing Component Inspection data
     inspect: InspectData,
 
     /// Identifies trace counters between CpuControlHandler instances for different drivers.
     trace_counter_id: u64,
+
+    /// Minimum CPU clock speed to set. Selectable CPU P-states with a frequency below this value
+    /// are filtered out.
+    min_cpu_clock_speed: Hertz,
+
+    /// Mutable inner state.
+    mutable_inner: RefCell<MutableInner>,
 }
 
 impl CpuControlHandler {
+    /// Convenience accessor for borrowing `cpu_control_params`.
+    fn cpu_control_params(&self) -> Ref<'_, CpuControlParams> {
+        Ref::map(self.mutable_inner.borrow(), |inner| &inner.cpu_control_params)
+    }
+
     /// Returns the total CPU load (averaged since the previous call)
     async fn get_load(&self) -> Result<f32, Error> {
         fuchsia_trace::duration!(
@@ -348,7 +302,12 @@ impl CpuControlHandler {
             }?;
 
         // Filter down to only the ones we're concerned with
-        Ok(self.cpu_control_params.logical_cpu_numbers.iter().map(|i| cpu_loads[*i as usize]).sum())
+        Ok(self
+            .cpu_control_params()
+            .logical_cpu_numbers
+            .iter()
+            .map(|i| cpu_loads[*i as usize])
+            .sum())
     }
 
     /// Returns the current CPU P-state index
@@ -382,10 +341,12 @@ impl CpuControlHandler {
             "max_power" => max_power.0
         );
 
-        let current_p_state_index = self.current_p_state_index.get();
+        self.init_done.wait().await;
+
+        let current_p_state_index = self.mutable_inner.borrow().current_p_state_index;
 
         // This is reused several times.
-        let num_cores = self.cpu_control_params.logical_cpu_numbers.len() as f64;
+        let num_cores = self.cpu_control_params().logical_cpu_numbers.len() as f64;
 
         // The operation completion rate over the last sample interval is
         //     num_operations / sample_interval,
@@ -403,7 +364,8 @@ impl CpuControlHandler {
                 self.cpu_driver_path.as_str() => last_load
             );
 
-            let last_frequency = self.cpu_control_params.p_states[current_p_state_index].frequency;
+            let last_frequency =
+                self.cpu_control_params().p_states[current_p_state_index].frequency;
             (last_frequency.mul_scalar(last_load), last_frequency.mul_scalar(num_cores))
         };
 
@@ -423,7 +385,7 @@ impl CpuControlHandler {
         // Iterate through the list of available P-states (guaranteed to be sorted in order of
         // decreasing power consumption) and choose the first that will operate within the
         // `max_power` constraint.
-        for (i, state) in self.cpu_control_params.p_states.iter().enumerate() {
+        for (i, state) in self.cpu_control_params().p_states.iter().enumerate() {
             // We assume that the last operation rate carries over to the next interval unless:
             //  - It exceeds the max operation rate at the new frequency, in which case it is
             //    truncated to the new max.
@@ -441,7 +403,7 @@ impl CpuControlHandler {
 
             p_state_index = i;
             estimated_power = get_cpu_power(
-                self.cpu_control_params.capacitance,
+                self.cpu_control_params().capacitance,
                 state.voltage,
                 estimated_op_rate,
             );
@@ -469,7 +431,7 @@ impl CpuControlHandler {
             .await?;
 
             // Cache the new P-state index for calculations on the next iteration
-            self.current_p_state_index.set(p_state_index);
+            self.mutable_inner.borrow_mut().current_p_state_index = p_state_index;
             self.inspect.p_state_index.set(p_state_index as u64);
         }
 
@@ -484,10 +446,57 @@ impl CpuControlHandler {
     }
 }
 
+struct MutableInner {
+    /// The parameters of the CPU domain which are queried from the CPU driver.
+    cpu_control_params: CpuControlParams,
+
+    /// The current CPU P-state index which is queried from the CPU DeviceControlHandler node.
+    current_p_state_index: usize,
+
+    /// A proxy handle to communicate with the CPU driver CpuCtrl interface.
+    cpu_ctrl_proxy: Option<fcpuctrl::DeviceProxy>,
+}
+
 #[async_trait(?Send)]
 impl Node for CpuControlHandler {
     fn name(&self) -> String {
         format!("CpuControlHandler ({})", self.cpu_driver_path)
+    }
+
+    /// Initializes internal state.
+    ///
+    /// Connects to the cpu-ctrl driver unless a proxy was already provided (in a test).
+    async fn init(&self) -> Result<(), Error> {
+        fuchsia_trace::duration!("power_manager", "CpuControlHandler::init");
+
+        // Connect to the cpu-ctrl driver. Typically this is None, but it may be set by tests.
+        let cpu_ctrl_proxy = match &self.mutable_inner.borrow().cpu_ctrl_proxy {
+            Some(p) => p.clone(),
+            None => connect_to_driver::<fcpuctrl::DeviceMarker>(&self.cpu_driver_path).await?,
+        };
+
+        // Query the CPU P-states
+        let p_states =
+            get_p_states(&self.cpu_driver_path, &cpu_ctrl_proxy, self.min_cpu_clock_speed)
+                .await
+                .context("Failed to get CPU P-states")?;
+
+        let current_p_state = self.get_current_p_state_index().await?;
+
+        {
+            let mut mutable_inner = self.mutable_inner.borrow_mut();
+            let mut cpu_control_params = &mut mutable_inner.cpu_control_params;
+            cpu_control_params.p_states = p_states;
+            cpu_control_params.validate().context("Invalid CPU control params")?;
+            self.inspect.set_cpu_control_params(&cpu_control_params);
+
+            mutable_inner.cpu_ctrl_proxy = Some(cpu_ctrl_proxy);
+            mutable_inner.current_p_state_index = current_p_state;
+        }
+
+        self.init_done.signal();
+
+        Ok(())
     }
 
     async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {
@@ -542,6 +551,52 @@ impl InspectData {
         // Pass ownership of the new `cpu_params_node` to the root node
         self.root_node.record(cpu_params_node);
     }
+}
+
+/// Query the CPU P-states from the CpuCtrl driver.
+async fn get_p_states(
+    cpu_driver_path: &str,
+    cpu_ctrl_proxy: &fcpuctrl::DeviceProxy,
+    min_cpu_clock_speed: Hertz,
+) -> Result<Vec<PState>, Error> {
+    fuchsia_trace::duration!(
+        "power_manager",
+        "cpu_control_handler::get_p_states",
+        "driver" => cpu_driver_path
+    );
+
+    // Query P-state metadata from the CpuCtrl interface. Each supported performance state has
+    // accompanying P-state metadata.
+    let mut p_states = Vec::new();
+    let mut skipped_p_states = Vec::new();
+    for i in 0..dev_control_handler::MAX_PERF_STATES {
+        if let Ok(info) = cpu_ctrl_proxy.get_performance_state_info(i).await? {
+            let frequency = Hertz(info.frequency_hz as f64);
+            let voltage = Volts(info.voltage_uv as f64 / 1e6);
+            let p_state = PState { frequency, voltage };
+
+            // Filter out P-states where CPU frequency is unacceptably low
+            if frequency >= min_cpu_clock_speed {
+                p_states.push(p_state);
+            } else {
+                skipped_p_states.push(p_state);
+            }
+        } else {
+            break;
+        }
+    }
+
+    fuchsia_trace::instant!(
+        "power_manager",
+        "cpu_control_handler::received_cpu_p_states",
+        fuchsia_trace::Scope::Thread,
+        "driver" => cpu_driver_path,
+        "valid" => 1,
+        "p_states" => format!("{:?}", p_states).as_str(),
+        "skipped_p_states" => format!("{:?}", skipped_p_states).as_str()
+    );
+
+    Ok(p_states)
 }
 
 #[cfg(test)]
@@ -613,9 +668,8 @@ pub mod tests {
         let cpu_ctrl_node = CpuControlHandlerBuilder::new()
             .cpu_ctrl_proxy(fake_cpu_ctrl_driver())
             .cpu_dev_handler(devhost_node)
-            .build()
-            .await
-            .unwrap();
+            .build_and_init()
+            .await;
 
         assert_matches!(
             cpu_ctrl_node.handle_message(&Message::ReadTemperature).await,
@@ -630,7 +684,7 @@ pub mod tests {
         assert!(CpuControlParams {
             logical_cpu_numbers: vec![],
             p_states: vec![PState { frequency: Hertz(0.0), voltage: Volts(0.0) }],
-            capacitance: Farads(100e-12)
+            capacitance: Farads(100e-12),
         }
         .validate()
         .is_err());
@@ -759,9 +813,8 @@ pub mod tests {
             .cpu_ctrl_proxy(fake_cpu_ctrl_driver_with_p_states(cpu_params.p_states))
             .capacitance(cpu_params.capacitance)
             .logical_cpu_numbers(cpu_params.logical_cpu_numbers)
-            .build()
-            .await
-            .unwrap();
+            .build_and_init()
+            .await;
 
         // Test case 1: Allow power consumption of the highest P-state; expect to be in P-state 0
         let commanded_power = power_consumption[0].mul_scalar(1.01);
@@ -849,9 +902,8 @@ pub mod tests {
             .cpu_stats_handler(stats_node)
             .cpu_dev_handler(devhost_node.clone())
             .min_cpu_clock_speed(Hertz(1.0e9))
-            .build()
-            .await
-            .unwrap();
+            .build_and_init()
+            .await;
 
         // Test case 1: Allow power consumption of the highest P-state; expect to be in P-state 0
         let commanded_power = power_consumption[0].mul_scalar(1.01);
@@ -898,7 +950,7 @@ pub mod tests {
             .capacitance(capacitance)
             .logical_cpu_numbers(logical_cpu_numbers)
             .inspect_root(inspector.root())
-            .build()
+            .build_and_init()
             .await;
 
         assert_data_tree!(

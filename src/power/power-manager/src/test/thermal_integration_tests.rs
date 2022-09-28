@@ -366,9 +366,8 @@ impl<'a> ThermalPolicyTest<'a> {
             .cpu_ctrl_proxy(cpu_control_handler::tests::fake_cpu_ctrl_driver_with_p_states(
                 cpu_params.p_states.clone(),
             ))
-            .build()
-            .await
-            .unwrap();
+            .build_and_init()
+            .await;
 
         let thermal_config = ThermalConfig {
             temperature_node,

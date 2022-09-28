@@ -143,8 +143,7 @@ impl PowerManager {
             }
             "CpuControlHandler" => {
                 cpu_control_handler::CpuControlHandlerBuilder::new_from_json(json_data, &self.nodes)
-                    .build()
-                    .await?
+                    .build()?
             }
             "CpuDeviceHandler" => {
                 cpu_device_handler::CpuDeviceHandlerBuilder::new_from_json(json_data, &self.nodes)
