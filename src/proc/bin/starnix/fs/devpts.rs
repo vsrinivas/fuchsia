@@ -45,10 +45,9 @@ fn init_devpts(kernel: &Kernel) -> FileSystemHandle {
         // Register tty/ptmx device major
         registry.register_chrdev_major(device, TTY_ALT_MAJOR).unwrap();
     }
-    let root_directory = root_dynamic_directory(DevPtsDirectoryDelegate::new(state));
-    assert!(root_directory.inode_num == ROOT_INODE);
     let fs = FileSystem::new(kernel, DevPtsFs);
-    fs.set_root_node(root_directory);
+    fs.set_root(DevPtsRootDir { state });
+    assert!(fs.root().node.inode_num == ROOT_INODE);
     fs
 }
 
@@ -68,20 +67,20 @@ fn get_device_type_for_pts(id: u32) -> DeviceType {
     DeviceType::new(DEVPTS_FIRST_MAJOR + id / 256, id % 256)
 }
 
-struct DevPtsDirectoryDelegate {
+struct DevPtsRootDir {
     state: Arc<TTYState>,
 }
 
-impl DevPtsDirectoryDelegate {
-    fn new(state: Arc<TTYState>) -> Self {
-        Self { state }
-    }
-}
+impl FsNodeOps for DevPtsRootDir {
+    fs_node_impl_dir_readonly!();
 
-impl DirectoryDelegate for DevPtsDirectoryDelegate {
-    fn list(&self, _fs: &Arc<FileSystem>) -> Result<Vec<DynamicDirectoryEntry>, Errno> {
+    fn create_file_ops(
+        &self,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
         let mut result = vec![];
-        result.push(DynamicDirectoryEntry {
+        result.push(VecDirectoryEntry {
             entry_type: DirectoryEntryType::CHR,
             name: b"ptmx".to_vec(),
             inode: Some(PTMX_INODE),
@@ -89,7 +88,7 @@ impl DirectoryDelegate for DevPtsDirectoryDelegate {
         for (id, terminal) in self.state.terminals.read().iter() {
             if let Some(terminal) = terminal.upgrade() {
                 if !terminal.read().is_main_closed() {
-                    result.push(DynamicDirectoryEntry {
+                    result.push(VecDirectoryEntry {
                         entry_type: DirectoryEntryType::CHR,
                         name: format!("{}", id).as_bytes().to_vec(),
                         inode: Some((*id as ino_t) + FIRST_PTS_INODE),
@@ -97,18 +96,18 @@ impl DirectoryDelegate for DevPtsDirectoryDelegate {
                 }
             }
         }
-        Ok(result)
+        Ok(VecDirectory::new_file(result))
     }
 
     fn lookup(
         &self,
+        node: &FsNode,
         _current_task: &CurrentTask,
-        fs: &Arc<FileSystem>,
         name: &FsStr,
-    ) -> Result<Arc<FsNode>, Errno> {
+    ) -> Result<FsNodeHandle, Errno> {
         let name = std::str::from_utf8(name).map_err(|_| errno!(ENOENT))?;
         if name == "ptmx" {
-            let node = fs.create_node_with_id(
+            let node = node.fs().create_node_with_id(
                 Box::new(SpecialNode),
                 PTMX_INODE,
                 mode!(IFCHR, 0o666),
@@ -125,7 +124,7 @@ impl DirectoryDelegate for DevPtsDirectoryDelegate {
             let terminal = self.state.terminals.read().get(&id).and_then(Weak::upgrade);
             if let Some(terminal) = terminal {
                 if !terminal.read().is_main_closed() {
-                    let node = fs.create_node_with_id(
+                    let node = node.fs().create_node_with_id(
                         Box::new(SpecialNode),
                         (id as ino_t) + FIRST_PTS_INODE,
                         mode!(IFCHR, 0o620),

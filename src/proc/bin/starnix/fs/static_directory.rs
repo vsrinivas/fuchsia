@@ -5,7 +5,7 @@
 use crate::auth::FsCred;
 use crate::fs::{
     emit_dotdot, fileops_impl_directory, DirectoryEntryType, DirentSink, FileObject, FileOps,
-    FileSystem, FsNode, FsNodeHandle, FsNodeOps, FsStr, SeekOrigin,
+    FileSystem, FileSystemHandle, FsNode, FsNodeHandle, FsNodeOps, FsStr, SeekOrigin,
 };
 use crate::task::CurrentTask;
 use crate::types::*;
@@ -23,17 +23,12 @@ pub struct StaticDirectoryBuilder<'a> {
 
 impl<'a> StaticDirectoryBuilder<'a> {
     /// Creates a new builder using the given [`FileSystem`] to acquire inode numbers.
-    pub fn new(fs: &'a Arc<FileSystem>) -> Self {
+    pub fn new(fs: &'a FileSystemHandle) -> Self {
         Self { fs, mode: mode!(IFDIR, 0o777), creds: FsCred::root(), entries: BTreeMap::new() }
     }
 
     /// Adds an entry to the directory. Panics if an entry with the same name was already added.
-    pub fn add_entry(
-        self,
-        name: &'static FsStr,
-        ops: impl FsNodeOps,
-        mode: FileMode,
-    ) -> Self {
+    pub fn add_entry(self, name: &'static FsStr, ops: impl FsNodeOps, mode: FileMode) -> Self {
         self.add_device_entry(name, ops, mode, DeviceType::NONE)
     }
 

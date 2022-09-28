@@ -54,7 +54,7 @@ impl SeLinuxFs {
                 )?,
                 mode!(IFREG, 0o444),
             )
-            .add_node_entry(b"class", dynamic_directory(&fs, SeLinuxClassDirectoryDelegate::new()))
+            .add_entry(b"class", SeLinuxClassDirectory::new(), mode!(IFDIR, 0o777))
             .add_entry(b"context", SeLinuxNode::new(|| Ok(SeContext)), mode!(IFREG, 0o644))
             .build_root();
 
@@ -253,43 +253,49 @@ impl FsNodeOps for AccessFileNode {
     }
 }
 
-struct SeLinuxClassDirectoryDelegate {
+struct SeLinuxClassDirectory {
     entries: RwLock<BTreeMap<FsString, FsNodeHandle>>,
 }
 
-impl SeLinuxClassDirectoryDelegate {
-    fn new() -> Self {
-        Self { entries: RwLock::new(BTreeMap::new()) }
+impl SeLinuxClassDirectory {
+    fn new() -> Arc<Self> {
+        Arc::new(Self { entries: RwLock::new(BTreeMap::new()) })
     }
 }
 
-impl DirectoryDelegate for SeLinuxClassDirectoryDelegate {
-    fn list(&self, _fs: &Arc<FileSystem>) -> Result<Vec<DynamicDirectoryEntry>, Errno> {
-        Ok(self
-            .entries
-            .read()
-            .iter()
-            .map(|(name, node)| DynamicDirectoryEntry {
-                entry_type: DirectoryEntryType::DIR,
-                name: name.clone(),
-                inode: Some(node.inode_num),
-            })
-            .collect())
+impl FsNodeOps for Arc<SeLinuxClassDirectory> {
+    fn create_file_ops(
+        &self,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
+        Ok(VecDirectory::new_file(
+            self.entries
+                .read()
+                .iter()
+                .map(|(name, node)| VecDirectoryEntry {
+                    entry_type: DirectoryEntryType::DIR,
+                    name: name.clone(),
+                    inode: Some(node.inode_num),
+                })
+                .collect(),
+        ))
     }
 
     fn lookup(
         &self,
+        node: &FsNode,
         _current_task: &CurrentTask,
-        fs: &Arc<FileSystem>,
         name: &FsStr,
-    ) -> Result<Arc<FsNode>, Errno> {
+    ) -> Result<FsNodeHandle, Errno> {
         let mut entries = self.entries.write();
         let next_index = entries.len() + 1;
+        let fs = node.fs();
         Ok(entries
             .entry(name.to_vec())
             .or_insert_with(|| {
                 let index = format!("{}\n", next_index).into_bytes();
-                let mut perms = StaticDirectoryBuilder::new(fs).set_mode(mode!(IFDIR, 0o555));
+                let mut perms = StaticDirectoryBuilder::new(&fs).set_mode(mode!(IFDIR, 0o555));
                 for (i, perm) in SELINUX_PERMS.iter().enumerate() {
                     perms = perms.add_entry(
                         perm,
@@ -297,7 +303,7 @@ impl DirectoryDelegate for SeLinuxClassDirectoryDelegate {
                         mode!(IFREG, 0o444),
                     );
                 }
-                StaticDirectoryBuilder::new(fs)
+                StaticDirectoryBuilder::new(&node.fs())
                     .add_entry(b"index", ByteVecFile::new_node(index), mode!(IFREG, 0o444))
                     .add_node_entry(b"perms", perms.build())
                     .set_mode(mode!(IFDIR, 0o555))

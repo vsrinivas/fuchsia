@@ -12,19 +12,8 @@ use crate::mm::{ProcMapsFile, ProcStatFile};
 use crate::task::{CurrentTask, Task, ThreadGroup};
 use crate::types::*;
 
-fn dynamic_directory_with_creds<D: DirectoryDelegate>(
-    task: &Arc<Task>,
-    fs: &Arc<FileSystem>,
-    d: D,
-) -> Arc<FsNode> {
-    let node = dynamic_directory(fs, d);
-    {
-        let creds = task.as_fscred();
-        let mut info = node.info_write();
-        info.uid = creds.uid;
-        info.gid = creds.gid;
-    }
-    node
+fn directory_with_creds(task: &Arc<Task>, fs: &Arc<FileSystem>, d: impl FsNodeOps) -> FsNodeHandle {
+    fs.create_node_with_ops(d, mode!(IFDIR, 0o777), task.as_fscred())
 }
 
 /// Creates an [`FsNode`] that represents the `/proc/<pid>` directory for `task`.
@@ -32,7 +21,7 @@ pub fn pid_directory(fs: &FileSystemHandle, task: &Arc<Task>) -> Arc<FsNode> {
     static_directory_builder_with_common_task_entries(fs, task)
         .add_node_entry(
             b"task",
-            dynamic_directory_with_creds(
+            directory_with_creds(
                 task,
                 fs,
                 TaskListDirectory { thread_group: task.thread_group.clone() },
@@ -54,23 +43,17 @@ fn static_directory_builder_with_common_task_entries<'a>(
 ) -> StaticDirectoryBuilder<'a> {
     StaticDirectoryBuilder::new(fs)
         .add_node_entry(b"exe", ExeSymlink::new_node(fs, task.clone()))
-        .add_node_entry(
-            b"fd",
-            dynamic_directory_with_creds(task, fs, FdDirectory { task: task.clone() }),
-        )
+        .add_node_entry(b"fd", directory_with_creds(task, fs, FdDirectory { task: task.clone() }))
         .add_node_entry(
             b"fdinfo",
-            dynamic_directory_with_creds(task, fs, FdInfoDirectory { task: task.clone() }),
+            directory_with_creds(task, fs, FdInfoDirectory { task: task.clone() }),
         )
         .add_node_entry(b"maps", ProcMapsFile::new_node(fs, task.clone()))
         .add_node_entry(b"stat", ProcStatFile::new_node(fs, task.clone()))
         .add_node_entry(b"cmdline", CmdlineFile::new_node(fs, task.clone()))
         .add_node_entry(b"comm", CommFile::new_node(fs, task.clone()))
         .add_node_entry(b"attr", attr_directory(task, fs))
-        .add_node_entry(
-            b"ns",
-            dynamic_directory_with_creds(task, fs, NsDirectory { task: task.clone() }),
-        )
+        .add_node_entry(b"ns", directory_with_creds(task, fs, NsDirectory { task: task.clone() }))
         .set_creds(task.as_fscred())
 }
 
@@ -96,21 +79,27 @@ struct FdDirectory {
     task: Arc<Task>,
 }
 
-impl DirectoryDelegate for FdDirectory {
-    fn list(&self, _fs: &Arc<FileSystem>) -> Result<Vec<DynamicDirectoryEntry>, Errno> {
-        Ok(fds_to_directory_entries(self.task.files.get_all_fds()))
+impl FsNodeOps for FdDirectory {
+    fs_node_impl_dir_readonly!();
+
+    fn create_file_ops(
+        &self,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
+        Ok(VecDirectory::new_file(fds_to_directory_entries(self.task.files.get_all_fds())))
     }
 
     fn lookup(
         &self,
+        node: &FsNode,
         _current_task: &CurrentTask,
-        fs: &Arc<FileSystem>,
         name: &FsStr,
     ) -> Result<Arc<FsNode>, Errno> {
         let fd = FdNumber::from_fs_str(name).map_err(|_| errno!(ENOENT))?;
         // Make sure that the file descriptor exists before creating the node.
         let _ = self.task.files.get(fd).map_err(|_| errno!(ENOENT))?;
-        Ok(fs.create_node(
+        Ok(node.fs().create_node(
             FdSymlink::new_node(self.task.clone(), fd),
             FdSymlink::file_mode(),
             self.task.as_fscred(),
@@ -136,24 +125,32 @@ struct NsDirectory {
     task: Arc<Task>,
 }
 
-impl DirectoryDelegate for NsDirectory {
-    fn list(&self, _fs: &Arc<FileSystem>) -> Result<Vec<DynamicDirectoryEntry>, Errno> {
+impl FsNodeOps for NsDirectory {
+    fs_node_impl_dir_readonly!();
+
+    fn create_file_ops(
+        &self,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
         // For each namespace, this contains a link to the current identifier of the given namespace
         // for the current task.
-        Ok(NS_ENTRIES
-            .iter()
-            .map(|name| DynamicDirectoryEntry {
-                entry_type: DirectoryEntryType::LNK,
-                name: name.as_bytes().to_vec(),
-                inode: None,
-            })
-            .collect())
+        Ok(VecDirectory::new_file(
+            NS_ENTRIES
+                .iter()
+                .map(|name| VecDirectoryEntry {
+                    entry_type: DirectoryEntryType::LNK,
+                    name: name.as_bytes().to_vec(),
+                    inode: None,
+                })
+                .collect(),
+        ))
     }
 
     fn lookup(
         &self,
+        node: &FsNode,
         _current_task: &CurrentTask,
-        fs: &Arc<FileSystem>,
         name: &FsStr,
     ) -> Result<Arc<FsNode>, Errno> {
         // If name is a given namespace, link to the current identifier of the that namespace for
@@ -175,7 +172,7 @@ impl DirectoryDelegate for NsDirectory {
             if NS_IDENTIFIER_RE.is_match(id) {
                 // TODO(qsr): For now, returns an empty file. In the future, this should create a
                 // reference to to correct namespace, and ensures it keeps it alive.
-                Ok(fs.create_node_with_ops(
+                Ok(node.fs().create_node_with_ops(
                     ByteVecFile::new_node(vec![]),
                     mode!(IFREG, 0o444),
                     self.task.as_fscred(),
@@ -185,7 +182,7 @@ impl DirectoryDelegate for NsDirectory {
             }
         } else {
             // The name is {namespace}, link to the correct one of the current task.
-            Ok(fs.create_node(
+            Ok(node.fs().create_node(
                 Box::new(NsDirectoryEntry { name }),
                 mode!(IFLNK, 0o7777),
                 self.task.as_fscred(),
@@ -220,23 +217,27 @@ struct FdInfoDirectory {
     task: Arc<Task>,
 }
 
-impl DirectoryDelegate for FdInfoDirectory {
-    fn list(&self, _fs: &Arc<FileSystem>) -> Result<Vec<DynamicDirectoryEntry>, Errno> {
-        Ok(fds_to_directory_entries(self.task.files.get_all_fds()))
+impl FsNodeOps for FdInfoDirectory {
+    fn create_file_ops(
+        &self,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
+        Ok(VecDirectory::new_file(fds_to_directory_entries(self.task.files.get_all_fds())))
     }
 
     fn lookup(
         &self,
+        node: &FsNode,
         _current_task: &CurrentTask,
-        fs: &Arc<FileSystem>,
         name: &FsStr,
-    ) -> Result<Arc<FsNode>, Errno> {
+    ) -> Result<FsNodeHandle, Errno> {
         let fd = FdNumber::from_fs_str(name).map_err(|_| errno!(ENOENT))?;
         let file = self.task.files.get(fd).map_err(|_| errno!(ENOENT))?;
         let pos = *file.offset.lock();
         let flags = file.flags();
         let data = format!("pos:\t{}flags:\t0{:o}\n", pos, flags.bits()).into_bytes();
-        Ok(fs.create_node_with_ops(
+        Ok(node.fs().create_node_with_ops(
             ByteVecFile::new_node(data),
             mode!(IFREG, 0o444),
             self.task.as_fscred(),
@@ -244,9 +245,9 @@ impl DirectoryDelegate for FdInfoDirectory {
     }
 }
 
-fn fds_to_directory_entries(fds: Vec<FdNumber>) -> Vec<DynamicDirectoryEntry> {
+fn fds_to_directory_entries(fds: Vec<FdNumber>) -> Vec<VecDirectoryEntry> {
     fds.into_iter()
-        .map(|fd| DynamicDirectoryEntry {
+        .map(|fd| VecDirectoryEntry {
             entry_type: DirectoryEntryType::DIR,
             name: fd.raw().to_string().into_bytes(),
             inode: None,
@@ -259,25 +260,30 @@ struct TaskListDirectory {
     thread_group: Arc<ThreadGroup>,
 }
 
-impl DirectoryDelegate for TaskListDirectory {
-    fn list(&self, _fs: &Arc<FileSystem>) -> Result<Vec<DynamicDirectoryEntry>, Errno> {
-        Ok(self
-            .thread_group
-            .read()
-            .tasks
-            .keys()
-            .map(|tid| DynamicDirectoryEntry {
-                entry_type: DirectoryEntryType::DIR,
-                name: tid.to_string().into_bytes(),
-                inode: None,
-            })
-            .collect())
+impl FsNodeOps for TaskListDirectory {
+    fn create_file_ops(
+        &self,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
+        Ok(VecDirectory::new_file(
+            self.thread_group
+                .read()
+                .tasks
+                .keys()
+                .map(|tid| VecDirectoryEntry {
+                    entry_type: DirectoryEntryType::DIR,
+                    name: tid.to_string().into_bytes(),
+                    inode: None,
+                })
+                .collect(),
+        ))
     }
 
     fn lookup(
         &self,
+        node: &FsNode,
         _current_task: &CurrentTask,
-        fs: &Arc<FileSystem>,
         name: &FsStr,
     ) -> Result<Arc<FsNode>, Errno> {
         let tid = std::str::from_utf8(name)
@@ -290,7 +296,7 @@ impl DirectoryDelegate for TaskListDirectory {
         }
         let task =
             self.thread_group.kernel.pids.read().get_task(tid).ok_or_else(|| errno!(ENOENT))?;
-        Ok(tid_directory(fs, &task))
+        Ok(tid_directory(&node.fs(), &task))
     }
 }
 

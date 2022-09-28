@@ -307,6 +307,59 @@ macro_rules! fs_node_impl_symlink {
     };
 }
 
+macro_rules! fs_node_impl_dir_readonly {
+    () => {
+        fn mkdir(
+            &self,
+            _node: &crate::fs::FsNode,
+            _name: &crate::fs::FsStr,
+            _mode: crate::types::FileMode,
+            _owner: crate::auth::FsCred,
+        ) -> Result<crate::fs::FsNodeHandle, Errno> {
+            error!(EROFS)
+        }
+
+        fn mknod(
+            &self,
+            _node: &crate::fs::FsNode,
+            _name: &crate::fs::FsStr,
+            _mode: crate::types::FileMode,
+            _dev: crate::types::DeviceType,
+            _owner: crate::auth::FsCred,
+        ) -> Result<crate::fs::FsNodeHandle, Errno> {
+            error!(EROFS)
+        }
+
+        fn create_symlink(
+            &self,
+            _node: &crate::fs::FsNode,
+            _name: &crate::fs::FsStr,
+            _target: &crate::fs::FsStr,
+            _owner: crate::auth::FsCred,
+        ) -> Result<FsNodeHandle, Errno> {
+            error!(EROFS)
+        }
+
+        fn link(
+            &self,
+            _node: &crate::fs::FsNode,
+            _name: &crate::fs::FsStr,
+            _child: &crate::fs::FsNodeHandle,
+        ) -> Result<(), Errno> {
+            error!(EROFS)
+        }
+
+        fn unlink(
+            &self,
+            _node: &crate::fs::FsNode,
+            _name: &crate::fs::FsStr,
+            _child: &crate::fs::FsNodeHandle,
+        ) -> Result<(), Errno> {
+            error!(EROFS)
+        }
+    };
+}
+
 /// Implements [`FsNodeOps::set_xattr`] by delegating to another [`FsNodeOps`]
 /// object.
 macro_rules! fs_node_impl_xattr_delegate {
@@ -344,6 +397,7 @@ macro_rules! fs_node_impl_xattr_delegate {
 }
 
 // Public re-export of macros allows them to be used like regular rust items.
+pub(crate) use fs_node_impl_dir_readonly;
 pub(crate) use fs_node_impl_symlink;
 pub(crate) use fs_node_impl_xattr_delegate;
 
