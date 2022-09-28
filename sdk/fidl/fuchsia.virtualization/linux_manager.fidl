@@ -62,8 +62,12 @@ protocol LinuxManager {
     /// operation.
     WipeData() -> (struct {}) error zx.status;
 
-    /// Attempts to gracefully shut down a running guest. The caller must ensure that the guest has
-    /// actually stopped (such as by calling GuestManager::GetGuestInfo or waiting on a Guest proxy
-    /// PEER_CLOSED signal) before attempting to launch another guest.
+    /// Attempts to gracefully shut down a running guest. The caller must ensure that the guest
+    /// has actually stopped (such as by waiting on a Guest client PEER_CLOSED signal and checking
+    /// the epitaph) before attempting to launch another guest.
+    ///
+    /// On a clean shutdown the Guest client will contain a ZX_OK epitaph, and on an unexpected
+    /// shutdown the client will contain a ZX_ERR_INTERNAL epitaph (or no epitaph if there was
+    /// a component crash).
     GracefulShutdown();
 };

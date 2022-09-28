@@ -85,7 +85,9 @@ protocol GuestLifecycle {
     Stop() -> ();
 };
 
-/// The guest client API providing high level access to guest features.
+/// The guest client API providing high level access to guest features. When the guest terminates,
+/// this channel will contain a ZX_OK epitaph on a clean shutdown, a ZX_ERR_INTERNAL epitaph on
+/// an unexpected shutdown, and no epitaph if the component crashed.
 @discoverable
 protocol Guest {
     /// Get a guest console.

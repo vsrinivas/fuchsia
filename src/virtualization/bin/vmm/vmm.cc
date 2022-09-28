@@ -543,4 +543,6 @@ void Vmm::GetBalloonController(fidl::InterfaceRequest<BalloonController> endpoin
   }
 }
 
+void Vmm::NotifyClientsShutdown(zx_status_t status) { guest_bindings_.CloseAll(status); }
+
 }  // namespace vmm

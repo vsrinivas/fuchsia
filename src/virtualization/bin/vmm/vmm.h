@@ -51,6 +51,9 @@ class Vmm : public fuchsia::virtualization::Guest {
   virtual fitx::result<::fuchsia::virtualization::GuestError> StartPrimaryVcpu(
       fit::function<void(fitx::result<::fuchsia::virtualization::GuestError>)> stop_callback);
 
+  // The guest is being shutdown, so notify all clients by disconnecting with an epitaph.
+  virtual void NotifyClientsShutdown(zx_status_t status);
+
   // |fuchsia::virtualization::Guest|
   void GetSerial(GetSerialCallback callback) override;
   void GetConsole(GetConsoleCallback callback) override;
