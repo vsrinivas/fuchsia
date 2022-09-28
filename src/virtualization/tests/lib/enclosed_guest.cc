@@ -705,10 +705,10 @@ void TerminaEnclosedGuest::InstallInRealm(component_testing::Realm& realm,
 
 zx_status_t TerminaEnclosedGuest::WaitForSystemReady(zx::time deadline) {
   // Connect to the LinuxManager to get status updates on VM.
-  linux_manager_ = ConnectToService<fuchsia::virtualization::LinuxManager>();
+  auto linux_manager = ConnectToService<fuchsia::virtualization::LinuxManager>();
   std::optional<std::string> failure;
   bool done = false;
-  linux_manager_.events().OnGuestInfoChanged = [this, &done, &failure](auto label, auto info) {
+  linux_manager.events().OnGuestInfoChanged = [this, &done, &failure](auto label, auto info) {
     if (info.container_status() == fuchsia::virtualization::ContainerStatus::FAILED) {
       failure = std::move(info.failure_reason());
     } else if (info.container_status() == target_status_) {
@@ -773,21 +773,7 @@ std::vector<std::string> TerminaEnclosedGuest::GetTestUtilCommand(
   return final_argv;
 }
 
-zx_status_t TerminaEnclosedGuest::ShutdownAndWait(zx::time deadline) {
-  if (!linux_manager_.is_bound()) {
-    return ZX_OK;
-  }
-
-  linux_manager_->GracefulShutdown();
-
-  zx_signals_t pending = 0;
-  zx_status_t status = guest_.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, deadline, &pending);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  return pending & ZX_CHANNEL_PEER_CLOSED ? ZX_OK : ZX_ERR_BAD_STATE;
-}
+zx_status_t TerminaEnclosedGuest::ShutdownAndWait(zx::time deadline) { return ZX_OK; }
 
 zx_status_t TerminaContainerEnclosedGuest::BuildLaunchInfo(GuestLaunchInfo* launch_info) {
   zx_status_t status = TerminaEnclosedGuest::BuildLaunchInfo(launch_info);

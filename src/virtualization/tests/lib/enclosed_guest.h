@@ -143,7 +143,6 @@ class EnclosedGuest {
 
   async::Loop* GetLoop() { return &loop_; }
 
-  fuchsia::virtualization::GuestPtr guest_;
   fuchsia::virtualization::HostVsockEndpointPtr vsock_;
 
  private:
@@ -153,6 +152,7 @@ class EnclosedGuest {
                                                                 GuestLaunchInfo& guest_launch_info);
 
   async::Loop& loop_;
+  fuchsia::virtualization::GuestPtr guest_;
   FakeNetstack fake_netstack_;
   fuchsia::virtualization::GuestManagerSyncPtr guest_manager_;
   std::optional<SocketLogger> serial_logger_;
@@ -228,7 +228,6 @@ class TerminaEnclosedGuest : public EnclosedGuest {
   const fuchsia::virtualization::ContainerStatus target_status_;
   std::unique_ptr<vsh::BlockingCommandRunner> command_runner_;
   async::Executor executor_;
-  ::fuchsia::virtualization::LinuxManagerPtr linux_manager_;
 };
 
 class TerminaContainerEnclosedGuest : public TerminaEnclosedGuest {
