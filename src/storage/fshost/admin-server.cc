@@ -272,8 +272,21 @@ zx::status<> AdminServer::WriteDataFileInner(WriteDataFileRequestView request) {
       fidl::ClientEnd<fuchsia_hardware_block_volume::Volume> volume_client(std::move(block_device));
       uint64_t target_size = config_.data_max_bytes();
       if (format == fs_management::kDiskFormatF2fs) {
+        auto query_result = fidl::WireCall(volume_client)->GetVolumeInfo();
+        if (query_result.status() != ZX_OK) {
+          return zx::error(query_result.status());
+        }
+        if (query_result.value().status != ZX_OK) {
+          return zx::error(query_result.value().status);
+        }
+        const uint64_t slice_size = query_result.value().manager->slice_size;
+        uint64_t required_size = fbl::round_up(kDefaultF2fsMinBytes, slice_size);
         // f2fs always requires at least a certain size.
-        target_size = std::max(target_size, kDefaultF2fsMinBytes);
+        if (inside_zxcrypt) {
+          // Allocate an additional slice for zxcrypt metadata.
+          required_size += slice_size;
+        }
+        target_size = std::max(target_size, required_size);
       }
       FX_LOGS(INFO) << "Resizing data volume, target = " << target_size << " bytes";
       auto actual_size = ResizeVolume(volume_client, target_size, inside_zxcrypt);

@@ -962,11 +962,24 @@ zx_status_t BlockDevice::FormatCustomFilesystem(fs_management::DiskFormat format
   fidl::UnownedClientEnd<fuchsia_hardware_block_volume::Volume> volume_client(
       device.channel().borrow());
   uint64_t target_bytes = device_config_->data_max_bytes();
-  if (format == fs_management::kDiskFormatF2fs) {
-    // f2fs always requires at least a certain size.
-    target_bytes = std::max(target_bytes, kDefaultF2fsMinBytes);
-  }
   const bool inside_zxcrypt = (topological_path_.find("zxcrypt") != std::string::npos);
+  if (format == fs_management::kDiskFormatF2fs) {
+    auto query_result = fidl::WireCall(volume_client)->GetVolumeInfo();
+    if (query_result.status() != ZX_OK) {
+      return query_result.status();
+    }
+    if (query_result.value().status != ZX_OK) {
+      return query_result.value().status;
+    }
+    const uint64_t slice_size = query_result.value().manager->slice_size;
+    uint64_t required_size = fbl::round_up(kDefaultF2fsMinBytes, slice_size);
+    // f2fs always requires at least a certain size.
+    if (inside_zxcrypt) {
+      // Allocate an additional slice for zxcrypt metadata.
+      required_size += slice_size;
+    }
+    target_bytes = std::max(target_bytes, required_size);
+  }
   FX_LOGS(INFO) << "Resizing data volume, target = " << target_bytes << " bytes";
   auto result = ResizeVolume(volume_client, target_bytes, inside_zxcrypt);
   if (result.is_error()) {
