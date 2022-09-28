@@ -324,7 +324,14 @@ void populate_callbacks(mlan_device *mlan_dev) {
   mlan_dev->callbacks.moal_send_packet_complete = &moal_send_packet_complete;
   mlan_dev->callbacks.moal_recv_complete = &moal_recv_complete;
   mlan_dev->callbacks.moal_recv_packet = &moal_recv_packet;
-  mlan_dev->callbacks.moal_recv_amsdu_packet = &moal_recv_amsdu_packet;
+
+  // TODO(https://fxbug.dev/110577): Implement support for ASMDU packet delivery. By not providing
+  // this callback we let mlan handle ASMDU packets for now. It will deaggregate them into multiple
+  // single packet deliveries.
+  // mlan_dev->callbacks.moal_recv_amsdu_packet = &moal_recv_amsdu_packet;
+  // Reference the function for now so we don't get errors about unused functions.
+  (void)moal_recv_amsdu_packet;
+
   mlan_dev->callbacks.moal_recv_event = &moal_recv_event;
   mlan_dev->callbacks.moal_ioctl_complete = &moal_ioctl_complete;
   mlan_dev->callbacks.moal_alloc_mlan_buffer = &moal_alloc_mlan_buffer;
