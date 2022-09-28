@@ -89,8 +89,8 @@ async fn full_transfer(run: usize) -> Result<(), Error> {
     .await
 }
 
-/* TODO(110501): Re-enable this after CSO lands
 #[fuchsia::test]
+#[ignore = "TODO(https://fxbug.dev/110501): Re-enable after CSO lands"]
 async fn forwarded_twice_to_separate_nodes(run: usize) -> Result<(), Error> {
     let mut node_id_gen = NodeIdGenerator::new("forwarded_twice_to_separate_nodes", run);
     // Five nodes connected in a line: A - B - C - D - E
@@ -122,9 +122,10 @@ async fn forwarded_twice_to_separate_nodes(run: usize) -> Result<(), Error> {
         Some("HELLO INTEGRATION TEST WORLD"),
     )
     .await
-} */
+}
 
 #[fuchsia::test]
+#[ignore = "TODO(https://fxbug.dev/110501): Re-enable after CSO lands"]
 async fn forwarded_twice_full_transfer(run: usize) -> Result<(), Error> {
     let mut node_id_gen = NodeIdGenerator::new("forwarded_twice_full_transfer", run);
     // Four nodes connected in a line: A - B - C - D
