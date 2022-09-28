@@ -29,6 +29,11 @@ import("//build/testing/host_test.gni")
 #     contents of the product assembly config product configuration.
 #     Passed through to the product_assembly_configuration() template
 #
+#   product (optional)
+#     [list, GN scopes] A list of GN scopes containing base driver packages.
+#     Passed through to the product_assembly_configuration() template.
+#     See the documentation for product_assembly_configuration().
+#
 template("test_assembly_config") {
   base_packages_param = []
   if (defined(invoker.base_packages)) {
@@ -91,6 +96,7 @@ template("test_assembly_config") {
                [
                  "product",
                  "platform",
+                 "base_driver_packages",
                ])
   }
 
@@ -99,12 +105,14 @@ template("test_assembly_config") {
       assembly_config = "${target_out_dir}/${target_name}_product_config/product_assembly_config.json"
     }
 
-    product_assembly_configuration("${target_name}_product_config") {
+    product_config_label = "${target_name}_product_config"
+    product_assembly_configuration(product_config_label) {
       testonly = true
       forward_variables_from(invoker,
                              [
                                "product",
                                "platform",
+                               "base_driver_packages",
                              ])
     }
 
@@ -164,6 +172,7 @@ template("test_assembly_config") {
                rebase_path(stamp, root_build_dir),
              ] + additional_args_param
       deps = [
+               ":${product_config_label}",
                ":input_bundle",
                labels.ffx,
                platform_bundles_target,
