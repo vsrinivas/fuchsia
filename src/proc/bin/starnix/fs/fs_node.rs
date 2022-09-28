@@ -336,7 +336,7 @@ macro_rules! fs_node_impl_dir_readonly {
             _name: &crate::fs::FsStr,
             _target: &crate::fs::FsStr,
             _owner: crate::auth::FsCred,
-        ) -> Result<FsNodeHandle, Errno> {
+        ) -> Result<crate::fs::FsNodeHandle, Errno> {
             error!(EROFS)
         }
 
