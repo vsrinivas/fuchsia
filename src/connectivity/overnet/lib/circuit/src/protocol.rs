@@ -149,6 +149,8 @@ impl Quality {
     pub const SELF: Quality = Quality(0);
     /// Quality of connecting two nodes in the same process directly.
     pub const IN_PROCESS: Quality = Quality(1);
+    /// Quality of connecting two nodes over a local IPC mechanism.
+    pub const LOCAL_SOCKET: Quality = Quality(2);
     /// Quality of connecting two nodes via a USB link.
     pub const USB: Quality = Quality(5);
     /// Quality of connecting two nodes over the network.
