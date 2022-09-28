@@ -37,7 +37,6 @@
 #include <arch/x86/mmu.h>
 #include <arch/x86/mmu_mem_types.h>
 #include <arch/x86/mp.h>
-#include <arch/x86/proc_trace.h>
 #include <hwreg/x86msr.h>
 #include <kernel/cpu.h>
 #include <kernel/mp.h>
@@ -203,8 +202,6 @@ void arch_init(void) {
 
   gdt_setup();
   idt_setup_readonly();
-
-  x86_processor_trace_init();
 }
 
 void arch_late_init_percpu(void) {

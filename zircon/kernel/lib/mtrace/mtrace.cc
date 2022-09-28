@@ -21,10 +21,6 @@ zx_status_t mtrace_control(uint32_t kind, uint32_t action, uint32_t options,
     case MTRACE_KIND_PERFMON:
       return mtrace_perfmon_control(action, options, arg, size);
 #endif
-#ifdef __x86_64__
-    case MTRACE_KIND_INSNTRACE:
-      return mtrace_insntrace_control(action, options, arg, size);
-#endif
     default:
       return ZX_ERR_INVALID_ARGS;
   }

@@ -10,7 +10,6 @@ assert(is_kernel)
 
 zx_library("mtrace") {
   sources = [
-    "mtrace-ipt.cc",
     "mtrace-pmu.cc",
     "mtrace.cc",
   ]

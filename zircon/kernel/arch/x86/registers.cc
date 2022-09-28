@@ -33,7 +33,6 @@
 #include <arch/x86/feature.h>
 #include <arch/x86/mmu.h>
 #include <arch/x86/mp.h>
-#include <arch/x86/proc_trace.h>
 #include <kernel/auto_lock.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
@@ -298,11 +297,8 @@ bool x86_extended_register_enable_feature(enum x86_extended_register_feature fea
       return false;
     }
     case X86_EXTENDED_REGISTER_PT: {
-      if (!xsaves_supported || !(xss_component_bitmap & X86_XSAVE_STATE_BIT_PT)) {
-        return false;
-      }
-      x86_set_extended_register_pt_state(true);
-      break;
+      /* Currently unsupported */
+      return false;
     }
     case X86_EXTENDED_REGISTER_PKRU: {
       /* Currently unsupported */
@@ -642,23 +638,6 @@ void* x86_get_extended_register_state_component(void* register_state, uint32_t c
     }
   }
   return component_begin;
-}
-
-// Set the extended register PT mode to trace either cpus (!threads)
-// or threads.
-// WARNING: All PT MSRs should be set to init values before changing the mode.
-// See x86_ipt_set_mode_task.
-
-void x86_set_extended_register_pt_state(bool threads) {
-  if (!xsaves_supported || !(xss_component_bitmap & X86_XSAVE_STATE_BIT_PT))
-    return;
-
-  uint64_t xss = read_msr(IA32_XSS_MSR);
-  if (threads)
-    xss |= X86_XSAVE_STATE_BIT_PT;
-  else
-    xss &= ~(0ULL + X86_XSAVE_STATE_BIT_PT);
-  write_msr(IA32_XSS_MSR, xss);
 }
 
 // Debug Registers --------------------------------------------------------------------------------

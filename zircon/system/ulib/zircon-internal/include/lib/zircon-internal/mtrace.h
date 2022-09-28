@@ -15,25 +15,7 @@ __BEGIN_CDECLS
 // It's an abstraction that doesn't mean much, and will likely be replaced
 // before it's useful; it's here in the interests of hackability in the
 // interim.
-#define MTRACE_KIND_INSNTRACE 0
 #define MTRACE_KIND_PERFMON 1
-
-// Actions for instruction tracing control
-
-// Allocate in-kernel resources needed for the trace.
-#define MTRACE_INSNTRACE_ALLOC_TRACE 0
-
-// Free everything allocated with MTRACE_INSNTRACE_ALLOC_TRACE.
-#define MTRACE_INSNTRACE_FREE_TRACE 1
-
-// Stage all trace buffer data for the specified buffer descriptor.
-#define MTRACE_INSNTRACE_STAGE_TRACE_DATA 2
-
-// Fetch trace buffer data (MSRs) for the specified buffer descriptor.
-#define MTRACE_INSNTRACE_GET_TRACE_DATA 3
-
-#define MTRACE_INSNTRACE_START 4
-#define MTRACE_INSNTRACE_STOP 5
 
 // Actions for CPU Performance Counters/Statistics control
 

@@ -281,10 +281,6 @@ zx_status_t sys_process_create(zx_handle_t job_handle, user_in_ptr<const char> _
   fxt_kernel_object(TAG_PROC_NAME, /*always*/ false, koid, ZX_OBJ_TYPE_PROCESS,
                     fxt::StringRef(buf));
 
-  // Give arch-specific tracing a chance to record process creation.
-  arch_trace_process_create(
-      koid, new_vmar_handle.dispatcher()->vmar()->aspace()->arch_aspace().arch_table_phys());
-
   result = proc_handle->make(ktl::move(new_process_handle), proc_rights);
   if (result == ZX_OK)
     result = vmar_handle->make(ktl::move(new_vmar_handle), vmar_rights);
@@ -345,9 +341,6 @@ zx_status_t sys_process_create_shared(zx_handle_t shared_proc_handle, uint32_t o
   uint32_t koid = (uint32_t)new_process_handle.dispatcher()->get_koid();
   fxt_kernel_object(TAG_PROC_NAME, /*always*/ false, koid, ZX_OBJ_TYPE_PROCESS,
                     fxt::StringRef(buf));
-
-  // Give arch-specific tracing a chance to record process creation.
-  arch_trace_process_create(koid, shared_proc->arch_table_phys());
 
   result = proc_handle->make(ktl::move(new_process_handle), proc_rights);
 

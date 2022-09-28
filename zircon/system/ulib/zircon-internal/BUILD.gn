@@ -14,7 +14,6 @@ zx_library("zircon-internal") {
     "lib/zircon-internal/default_stack_size.h",
     "lib/zircon-internal/device/cpu-trace/intel-pm-events.inc",
     "lib/zircon-internal/device/cpu-trace/intel-pm.h",
-    "lib/zircon-internal/device/cpu-trace/intel-pt.h",
     "lib/zircon-internal/device/cpu-trace/perf-mon.h",
     "lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc",
     "lib/zircon-internal/device/cpu-trace/skylake-pm-events.inc",

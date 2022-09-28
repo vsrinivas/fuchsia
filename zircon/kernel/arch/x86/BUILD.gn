@@ -139,7 +139,6 @@ zx_library("x86") {
     "msr.cc",
     "ops.S",
     "perf_mon.cc",
-    "proc_trace.cc",
     "pv.cc",
     "registers.cc",
     "restricted.cc",
