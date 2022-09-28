@@ -220,10 +220,7 @@ static void iwl_mvm_pass_packet_to_mac80211(struct iwl_mvm* mvm,
   // We need to synchronize with the creation/deletion thread and validate that mvmvif is in
   // a valid state before we try to use it.
   iwl_rcu_read_lock(mvm->dev);
-  struct iwl_mvm_vif* mvmvif = mvm->mvmvif[0];
-  if (mvmvif && mvmvif->ifc.ctx && mvmvif->ifc.ops) {
-    wlan_softmac_ifc_recv(&mvmvif->ifc, &rx_packet);
-  }
+  softmac_ifc_recv(mvm->mvmvif[0], &rx_packet);
   iwl_rcu_read_unlock(mvm->dev);
 }
 
@@ -1036,11 +1033,10 @@ static void iwl_mvm_decode_he_phy_ru_alloc(struct iwl_mvm_rx_phy_data* phy_data,
         he->data2 |= cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA2_PRISEC_80_SEC);
     }
 
-
 #define CHECK_BW(bw)                                                         \
   BUILD_BUG_ON(IEEE80211_RADIOTAP_HE_MU_FLAGS2_BW_FROM_SIG_A_BW_##bw##MHZ != \
-		     RATE_MCS_CHAN_WIDTH_##bw >> RATE_MCS_CHAN_WIDTH_POS); \
-	BUILD_BUG_ON(IEEE80211_RADIOTAP_HE_DATA6_TB_PPDU_BW_ ## bw ## MHZ != \
+               RATE_MCS_CHAN_WIDTH_##bw >> RATE_MCS_CHAN_WIDTH_POS);         \
+  BUILD_BUG_ON(IEEE80211_RADIOTAP_HE_DATA6_TB_PPDU_BW_##bw##MHZ !=           \
                RATE_MCS_CHAN_WIDTH_##bw >> RATE_MCS_CHAN_WIDTH_POS)
         CHECK_BW(20);
         CHECK_BW(40);
@@ -1278,9 +1274,9 @@ static void iwl_mvm_rx_he(struct iwl_mvm *mvm, struct sk_buff *skb,
 	rx_status->he_dcm =
 		!!(rate_n_flags & RATE_HE_DUAL_CARRIER_MODE_MSK);
 
-#define CHECK_TYPE(F)							\
-	BUILD_BUG_ON(IEEE80211_RADIOTAP_HE_DATA1_FORMAT_ ## F !=	\
-		     (RATE_MCS_HE_TYPE_ ## F >> RATE_MCS_HE_TYPE_POS))
+#define CHECK_TYPE(F)                                    \
+  BUILD_BUG_ON(IEEE80211_RADIOTAP_HE_DATA1_FORMAT_##F != \
+               (RATE_MCS_HE_TYPE_##F >> RATE_MCS_HE_TYPE_POS))
 
 	CHECK_TYPE(SU);
 	CHECK_TYPE(EXT_SU);
@@ -1544,11 +1540,11 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
     rx_status->flag |= RX_FLAG_AMPDU_DETAILS;
     rx_status->ampdu_reference = mvm->ampdu_ref;
 #endif  // NEEDS_PORTING
-		/*
-		 * Toggle is switched whenever new aggregation starts. Make
-		 * sure ampdu_reference is never 0 so we can later use it to
-		 * see if the frame was really part of an A-MPDU or not.
-		 */
+        /*
+         * Toggle is switched whenever new aggregation starts. Make
+         * sure ampdu_reference is never 0 so we can later use it to
+         * see if the frame was really part of an A-MPDU or not.
+         */
     if (toggle_bit != mvm->ampdu_toggle) {
       mvm->ampdu_ref++;
       mvm->ampdu_toggle = toggle_bit;
@@ -1571,7 +1567,7 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
     sta = iwl_mvm_find_sta_by_addr(mvm, hdr->addr2);
   }
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
 	if (sta) {
 		struct iwl_mvm_sta *mvmsta = iwl_mvm_sta_from_mac80211(sta);
 		struct ieee80211_vif *tx_blocked_vif =

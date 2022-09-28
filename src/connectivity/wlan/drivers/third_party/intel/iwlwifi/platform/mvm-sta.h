@@ -5,6 +5,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_MVM_STA_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_MVM_STA_H_
 
+#include <fidl/fuchsia.wlan.softmac/cpp/driver/wire.h>
 #include <fuchsia/hardware/wlan/associnfo/cpp/banjo.h>
 #include <fuchsia/hardware/wlan/softmac/cpp/banjo.h>
 #include <netinet/if_ether.h>
@@ -36,7 +37,7 @@ class MvmSta {
   ~MvmSta();
 
   // Set one of the keys for this station, which may be the pairwise, group, etc. key.
-  zx_status_t SetKey(const struct wlan_key_config* key_config);
+  zx_status_t SetKey(const fuchsia_wlan_softmac::wire::WlanKeyConfig* key_config);
 
   // Get a key for this station, which may be used for TX.
   struct ieee80211_key_conf* GetKey(wlan_key_type_t key_type);

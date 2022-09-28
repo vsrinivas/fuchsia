@@ -90,3 +90,13 @@ const VHT_CAP_LEN uint8 = 12;
 // IEEE Std 802.11-2016 9.5.2.159
 @namespaced
 const VHT_OP_LEN uint8 = 5;
+
+// https://standards.ieee.org/faqs/regauth/#17
+@available(added=HEAD)
+@namespaced
+const OUI_LEN uint8 = 3;
+
+// IEEE Std 802.11-2016, Table 12-4
+@available(added=HEAD)
+@namespaced
+const MAX_KEY_LEN uint8 = 32;

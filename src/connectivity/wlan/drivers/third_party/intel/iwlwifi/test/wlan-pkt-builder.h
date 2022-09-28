@@ -7,7 +7,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_TEST_WLAN_PKT_BUILDER_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_TEST_WLAN_PKT_BUILDER_H_
 
-#include <fuchsia/hardware/wlan/softmac/c/banjo.h>
+#include <fidl/fuchsia.wlan.softmac/cpp/driver/wire.h>
 #include <stdint.h>
 
 #include <memory>
@@ -45,13 +45,13 @@ class WlanPktBuilder {
 
     ieee80211_mac_packet* mac_pkt();
     const ieee80211_mac_packet* mac_pkt() const;
-    wlan_tx_packet_t* wlan_pkt();
-    const wlan_tx_packet_t* wlan_pkt() const;
+    ::fuchsia_wlan_softmac::wire::WlanTxPacket wlan_pkt();
+    const ::fuchsia_wlan_softmac::wire::WlanTxPacket wlan_pkt() const;
     size_t len() const;
 
    private:
     std::unique_ptr<ieee80211_mac_packet> mac_pkt_;
-    std::unique_ptr<wlan_tx_packet_t> wlan_pkt_;
+    std::unique_ptr<::fuchsia_wlan_softmac::wire::WlanTxPacket> wlan_pkt_;
     std::shared_ptr<uint8_t[]> buf_;
     size_t len_;
   };
@@ -65,6 +65,7 @@ class WlanPktBuilder {
   WlanPktBuilder& operator=(WlanPktBuilder&&) = delete;       // move assignment
 
   std::shared_ptr<WlanPkt> build(uint16_t fc = 0x0801);
+  std::shared_ptr<WlanPkt> build_oversize(uint16_t fc = 0x0801);
 };
 
 }  // namespace wlan::testing

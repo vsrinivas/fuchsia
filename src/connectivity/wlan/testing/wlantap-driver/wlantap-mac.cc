@@ -4,239 +4,292 @@
 
 #include "wlantap-mac.h"
 
-#include <fuchsia/hardware/wlan/softmac/cpp/banjo.h>
-#include <fuchsia/wlan/common/c/banjo.h>
-#include <fuchsia/wlan/common/cpp/fidl.h>
-#include <fuchsia/wlan/device/cpp/fidl.h>
-#include <fuchsia/wlan/ieee80211/c/banjo.h>
-#include <fuchsia/wlan/internal/cpp/banjo.h>
 #include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/fdf/cpp/dispatcher.h>
 
 #include <mutex>
 
+#include <ddktl/device.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/features.h>
 #include <wlan/common/phy.h>
 
-#include "fidl/fuchsia.wlan.common/cpp/wire_types.h"
 #include "utils.h"
 
 namespace wlan {
 
-namespace wlantap = ::fuchsia::wlan::tap;
-namespace wlan_common = ::fuchsia::wlan::common;
+namespace wlan_common = fuchsia_wlan_common::wire;
+namespace wlan_softmac = fuchsia_wlan_softmac::wire;
 
 namespace {
 
 // TODO(fxbug.dev/93459) Prune unnecessary fields from phy_config
-struct WlantapMacImpl : WlantapMac {
+struct WlantapMacImpl : WlantapMac,
+                        public ddk::Device<WlantapMacImpl, ddk::Initializable, ddk::Unbindable,
+                                           ddk::ServiceConnectable>,
+                        public fdf::WireServer<fuchsia_wlan_softmac::WlanSoftmac> {
   WlantapMacImpl(zx_device_t* phy_device, uint16_t id, wlan_common::WlanMacRole role,
-                 const wlantap::WlantapPhyConfig* phy_config, Listener* listener,
-                 zx::channel sme_channel)
-      : id_(id),
+                 const std::shared_ptr<const wlan_tap::WlantapPhyConfig> phy_config,
+                 Listener* listener, zx::channel sme_channel)
+      : ddk::Device<WlantapMacImpl, ddk::Initializable, ddk::Unbindable, ddk::ServiceConnectable>(
+            phy_device),
+        id_(id),
         role_(role),
         phy_config_(phy_config),
         listener_(listener),
         sme_channel_(std::move(sme_channel)) {}
 
-  static void DdkUnbind(void* ctx) {
-    auto& self = *static_cast<WlantapMacImpl*>(ctx);
-    self.Unbind();
+  zx_status_t InitClientDispatcher() {
+    // Create dispatcher for FIDL client of WlanSoftmacIfc protocol.
+    auto dispatcher =
+        fdf::Dispatcher::Create(0, "wlansoftmacifc_client_wlantap", [&](fdf_dispatcher_t*) {
+          if (unbind_txn_)
+            unbind_txn_->Reply();
+        });
+
+    if (dispatcher.is_error()) {
+      zxlogf(ERROR, "%s(): Dispatcher created failed%s\n", __func__,
+             zx_status_get_string(dispatcher.status_value()));
+      return dispatcher.status_value();
+    }
+
+    client_dispatcher_ = *std::move(dispatcher);
+
+    return ZX_OK;
   }
 
-  static void DdkRelease(void* ctx) { delete static_cast<WlantapMacImpl*>(ctx); }
+  zx_status_t InitServerDispatcher() {
+    // Create dispatcher for FIDL server of WlanSoftmac protocol.
+    auto dispatcher =
+        fdf::Dispatcher::Create(0, "wlansoftmac_server_wlantap",
+                                [&](fdf_dispatcher_t*) { client_dispatcher_.ShutdownAsync(); });
+    if (dispatcher.is_error()) {
+      zxlogf(ERROR, "%s(): Dispatcher created failed%s\n", __func__,
+             zx_status_get_string(dispatcher.status_value()));
+      return dispatcher.status_value();
+    }
+    server_dispatcher_ = *std::move(dispatcher);
+
+    return ZX_OK;
+  }
+
+  void DdkInit(ddk::InitTxn txn) {
+    zx_status_t ret = InitServerDispatcher();
+    ZX_ASSERT_MSG(ret == ZX_OK, "Creating dispatcher error: %s\n", zx_status_get_string(ret));
+
+    ret = InitClientDispatcher();
+    ZX_ASSERT_MSG(ret == ZX_OK, "Creating dispatcher error: %s\n", zx_status_get_string(ret));
+
+    txn.Reply(ZX_OK);
+  }
+
+  void DdkUnbind(ddk::UnbindTxn txn) {
+    unbind_txn_ = std::move(txn);
+    Unbind();
+    server_dispatcher_.ShutdownAsync();
+  }
+
+  void DdkRelease() { delete this; }
+
+  zx_status_t DdkServiceConnect(const char* service_name, fdf::Channel channel) {
+    fdf::ServerEnd<fuchsia_wlan_softmac::WlanSoftmac> server_end(std::move(channel));
+    fdf::BindServer<fdf::WireServer<fuchsia_wlan_softmac::WlanSoftmac>>(
+        server_dispatcher_.get(), std::move(server_end), this);
+    return ZX_OK;
+  }
 
   // WlanSoftmac protocol impl
 
-  static zx_status_t WlanSoftmacQuery(void* ctx, wlan_softmac_info_t* mac_info) {
-    auto& self = *static_cast<WlantapMacImpl*>(ctx);
-    ConvertTapPhyConfig(mac_info, *self.phy_config_);
-    return ZX_OK;
+  // Large enough to back a full WlanSoftmacInfo FIDL struct.
+  static constexpr size_t kWlanSoftmacInfoBufferSize = 5120;
+
+  void Query(fdf::Arena& arena, QueryCompleter::Sync& completer) override {
+    fidl::Arena<kWlanSoftmacInfoBufferSize> table_arena;
+    wlan_softmac::WlanSoftmacInfo softmac_info;
+    ConvertTapPhyConfig(&softmac_info, *phy_config_, table_arena);
+    completer.buffer(arena).ReplySuccess(softmac_info);
   }
 
-  static void WlanSoftmacQueryDiscoverySupport(void* ctx, discovery_support_t* support) {
-    auto& self = *static_cast<WlantapMacImpl*>(ctx);
-    wlan::common::ConvertDiscoverySupportToDdk(self.phy_config_->discovery_support, support);
+  void QueryDiscoverySupport(fdf::Arena& arena,
+                             QueryDiscoverySupportCompleter::Sync& completer) override {
+    completer.buffer(arena).ReplySuccess(phy_config_->discovery_support);
   }
 
-  static void WlanSoftmacQueryMacSublayerSupport(void* ctx, mac_sublayer_support_t* support) {
-    auto& self = *static_cast<WlantapMacImpl*>(ctx);
-    wlan::common::ConvertMacSublayerSupportToDdk(self.phy_config_->mac_sublayer_support, support);
+  void QueryMacSublayerSupport(fdf::Arena& arena,
+                               QueryMacSublayerSupportCompleter::Sync& completer) override {
+    completer.buffer(arena).ReplySuccess(phy_config_->mac_sublayer_support);
   }
 
-  static void WlanSoftmacQuerySecuritySupport(void* ctx, security_support_t* support) {
-    auto& self = *static_cast<WlantapMacImpl*>(ctx);
-    wlan::common::ConvertSecuritySupportToDdk(self.phy_config_->security_support, support);
+  void QuerySecuritySupport(fdf::Arena& arena,
+                            QuerySecuritySupportCompleter::Sync& completer) override {
+    completer.buffer(arena).ReplySuccess(phy_config_->security_support);
   }
 
-  static void WlanSoftmacQuerySpectrumManagementSupport(void* ctx,
-                                                        spectrum_management_support_t* support) {
-    auto& self = *static_cast<WlantapMacImpl*>(ctx);
-    wlan::common::ConvertSpectrumManagementSupportToDdk(
-        self.phy_config_->spectrum_management_support, support);
+  void QuerySpectrumManagementSupport(
+      fdf::Arena& arena, QuerySpectrumManagementSupportCompleter::Sync& completer) override {
+    completer.buffer(arena).ReplySuccess(phy_config_->spectrum_management_support);
   }
 
-  static zx_status_t WlanSoftmacStart(void* ctx, const wlan_softmac_ifc_protocol_t* ifc,
-                                      zx_handle_t* out_sme_channel) {
-    auto& self = *static_cast<WlantapMacImpl*>(ctx);
+  void Start(StartRequestView request, fdf::Arena& arena,
+             StartCompleter::Sync& completer) override {
     {
-      std::lock_guard<std::mutex> guard(self.lock_);
-      if (self.ifc_.is_valid()) {
-        return ZX_ERR_ALREADY_BOUND;
+      std::lock_guard<std::mutex> guard(lock_);
+      if (!sme_channel_.is_valid()) {
+        completer.buffer(arena).ReplyError(ZX_ERR_ALREADY_BOUND);
+        return;
       }
-      if (!self.sme_channel_.is_valid()) {
-        return ZX_ERR_ALREADY_BOUND;
-      }
-      self.ifc_ = ddk::WlanSoftmacIfcProtocolClient(ifc);
+      ifc_client_ = fdf::WireSharedClient<fuchsia_wlan_softmac::WlanSoftmacIfc>(
+          std::move(request->ifc), client_dispatcher_.get());
     }
-    self.listener_->WlantapMacStart(self.id_);
-    *out_sme_channel = self.sme_channel_.release();
-    return ZX_OK;
+    listener_->WlantapMacStart(id_);
+    completer.buffer(arena).ReplySuccess(std::move(sme_channel_));
   }
 
-  static void WlanSoftmacStop(void* ctx) {
-    auto& self = *static_cast<WlantapMacImpl*>(ctx);
-    {
-      std::lock_guard<std::mutex> guard(self.lock_);
-      self.ifc_.clear();
+  void Stop(fdf::Arena& arena, StopCompleter::Sync& completer) override {
+    listener_->WlantapMacStop(id_);
+    completer.buffer(arena).Reply();
+  }
+
+  void QueueTx(QueueTxRequestView request, fdf::Arena& arena,
+               QueueTxCompleter::Sync& completer) override {
+    listener_->WlantapMacQueueTx(id_, request->packet);
+    completer.buffer(arena).ReplySuccess(false);
+  }
+
+  void SetChannel(SetChannelRequestView request, fdf::Arena& arena,
+                  SetChannelCompleter::Sync& completer) override {
+    if (!wlan::common::IsValidChan(request->chan)) {
+      completer.buffer(arena).ReplyError(ZX_ERR_INVALID_ARGS);
+      return;
     }
-    self.listener_->WlantapMacStop(self.id_);
+    listener_->WlantapMacSetChannel(id_, request->chan);
+    completer.buffer(arena).ReplySuccess();
   }
 
-  static zx_status_t WlanSoftmacQueueTx(void* ctx, const wlan_tx_packet_t* packet,
-                                        bool* out_enqueue_pending) {
-    auto& self = *static_cast<WlantapMacImpl*>(ctx);
-    self.listener_->WlantapMacQueueTx(self.id_, packet);
-    *out_enqueue_pending = false;
-    return ZX_OK;
-  }
-
-  static zx_status_t WlanSoftmacSetChannel(void* ctx, const wlan_channel_t* channel) {
-    auto& self = *static_cast<WlantapMacImpl*>(ctx);
-    fuchsia_wlan_common::wire::WlanChannel chan = {
-        .primary = channel->primary,
-        .cbw = static_cast<fuchsia_wlan_common::wire::ChannelBandwidth>(channel->cbw),
-        .secondary80 = channel->secondary80,
-    };
-
-    if (!wlan::common::IsValidChan(chan)) {
-      return ZX_ERR_INVALID_ARGS;
+  void ConfigureBss(ConfigureBssRequestView request, fdf::Arena& arena,
+                    ConfigureBssCompleter::Sync& completer) override {
+    bool expected_remote = role_ == wlan_common::WlanMacRole::kClient;
+    if (request->config.remote != expected_remote) {
+      completer.buffer(arena).ReplyError(ZX_ERR_INVALID_ARGS);
+      return;
     }
-    self.listener_->WlantapMacSetChannel(self.id_, channel);
-    return ZX_OK;
+    listener_->WlantapMacConfigureBss(id_, request->config);
+    completer.buffer(arena).ReplySuccess();
   }
 
-  static zx_status_t WlanSoftmacConfigureBss(void* ctx, const bss_config_t* config) {
-    auto& self = *static_cast<WlantapMacImpl*>(ctx);
-    bool expected_remote = self.role_ == wlan_common::WlanMacRole::CLIENT;
-    if (config->remote != expected_remote) {
-      return ZX_ERR_INVALID_ARGS;
-    }
-    self.listener_->WlantapMacConfigureBss(self.id_, config);
-    return ZX_OK;
-  }
-
-  static zx_status_t WlanSoftmacEnableBeaconing(void* ctx, const wlan_bcn_config_t* bcn_cfg) {
+  void EnableBeaconing(EnableBeaconingRequestView request, fdf::Arena& arena,
+                       EnableBeaconingCompleter::Sync& completer) override {
     // This is the test driver, so we can just pretend beaconing was enabled.
-    (void)bcn_cfg;
-    return ZX_OK;
+    completer.buffer(arena).ReplySuccess();
   }
 
-  static zx_status_t WlanSoftmacConfigureBeacon(void* ctx, const wlan_tx_packet_t* pkt) {
+  void ConfigureBeacon(ConfigureBeaconRequestView request, fdf::Arena& arena,
+                       ConfigureBeaconCompleter::Sync& completer) override {
     // This is the test driver, so we can just pretend the beacon was configured.
-    (void)pkt;
-    return ZX_OK;
+    completer.buffer(arena).ReplySuccess();
   }
 
-  static zx_status_t WlanSoftmacStartPassiveScan(void* ctx,
-                                                 const wlan_softmac_passive_scan_args_t* args,
-                                                 uint64_t* scan_id) {
-    auto& self = *static_cast<WlantapMacImpl*>(ctx);
-    *scan_id = 111;
-    self.listener_->WlantapMacStartScan(self.id_, *scan_id);
-    return ZX_OK;
+  void StartPassiveScan(StartPassiveScanRequestView request, fdf::Arena& arena,
+                        StartPassiveScanCompleter::Sync& completer) override {
+    uint64_t scan_id = 111;
+    listener_->WlantapMacStartScan(id_, scan_id);
+    completer.buffer(arena).ReplySuccess(scan_id);
   }
 
-  static zx_status_t WlanSoftmacStartActiveScan(void* ctx,
-                                                const wlan_softmac_active_scan_args_t* args,
-                                                uint64_t* scan_id) {
-    auto& self = *static_cast<WlantapMacImpl*>(ctx);
-    *scan_id = 222;
-    self.listener_->WlantapMacStartScan(self.id_, *scan_id);
-    return ZX_OK;
+  void StartActiveScan(StartActiveScanRequestView request, fdf::Arena& arena,
+                       StartActiveScanCompleter::Sync& completer) override {
+    uint64_t scan_id = 222;
+    listener_->WlantapMacStartScan(id_, scan_id);
+    completer.buffer(arena).ReplySuccess(scan_id);
   }
 
-  static zx_status_t WlanSoftmacSetKey(void* ctx, const wlan_key_config_t* key_config) {
-    auto& self = *static_cast<WlantapMacImpl*>(ctx);
-    self.listener_->WlantapMacSetKey(self.id_, key_config);
-    return ZX_OK;
+  void SetKey(SetKeyRequestView request, fdf::Arena& arena,
+              SetKeyCompleter::Sync& completer) override {
+    listener_->WlantapMacSetKey(id_, request->key_config);
+    completer.buffer(arena).ReplySuccess();
   }
 
-  static zx_status_t WlanSoftmacConfigureAssoc(void* ctx, const wlan_assoc_ctx* assoc_ctx) {
+  void ConfigureAssoc(ConfigureAssocRequestView request, fdf::Arena& arena,
+                      ConfigureAssocCompleter::Sync& completer) override {
     // This is the test driver, so we can just pretend the association was configured.
-    (void)assoc_ctx;
-    // TODO(fxbug.dev/28907): Evalute the use and implement
-    return ZX_OK;
+    // TODO(fxbug.dev/28907): Evaluate the use and implement
+    completer.buffer(arena).ReplySuccess();
+  }
+  const fidl::Array<uint8_t, 6> NULL_MAC_ADDR{0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+  void ClearAssoc(ClearAssocRequestView request, fdf::Arena& arena,
+                  ClearAssocCompleter::Sync& completer) override {
+    if (memcmp(request->peer_addr.data(), NULL_MAC_ADDR.data(), NULL_MAC_ADDR.size()) != 0) {
+      completer.buffer(arena).ReplyError(ZX_ERR_INVALID_ARGS);
+      return;
+    }
+    // TODO(fxbug.dev/28907): Evaluate the use and implement
+    completer.buffer(arena).ReplySuccess();
   }
 
-  static zx_status_t WlanSoftmacClearAssoc(
-      void* ctx, const uint8_t peer_addr[fuchsia_wlan_ieee80211_MAC_ADDR_LEN]) {
-    if (!peer_addr) {
-      return ZX_ERR_INVALID_ARGS;
-    }
-    // TODO(fxbug.dev/28907): Evalute the use and implement
-    return ZX_OK;
+  void CancelScan(CancelScanRequestView request, fdf::Arena& arena,
+                  CancelScanCompleter::Sync& completer) override {
+    ZX_PANIC("CancelScan is not supported.");
+  }
+
+  void UpdateWmmParams(UpdateWmmParamsRequestView request, fdf::Arena& arena,
+                       UpdateWmmParamsCompleter::Sync& completer) override {
+    ZX_PANIC("UpdateWmmParams is not supported.");
   }
 
   // WlantapMac impl
 
-  virtual void Rx(const std::vector<uint8_t>& data, const wlantap::WlanRxInfo& rx_info) override {
+  virtual void Rx(const fidl::VectorView<uint8_t>& data,
+                  const wlan_tap::WlanRxInfo& rx_info) override {
     std::lock_guard<std::mutex> guard(lock_);
-    if (ifc_.is_valid()) {
-      wlan_rx_info_t converted_info = {.rx_flags = rx_info.rx_flags,
-                                       .valid_fields = rx_info.valid_fields,
-                                       .phy = common::FromFidl(rx_info.phy),
-                                       .data_rate = rx_info.data_rate,
-                                       .channel = {.primary = rx_info.channel.primary,
-                                                   .cbw = static_cast<uint8_t>(rx_info.channel.cbw),
-                                                   .secondary80 = rx_info.channel.secondary80},
-                                       .mcs = rx_info.mcs,
-                                       .rssi_dbm = rx_info.rssi_dbm,
-                                       .snr_dbh = rx_info.snr_dbh};
-      wlan_rx_packet_t rx_packet = {
-          .mac_frame_buffer = data.data(), .mac_frame_size = data.size(), .info = converted_info};
-      ifc_.Recv(&rx_packet);
+
+    wlan_softmac::WlanRxInfo converted_info = {.rx_flags = rx_info.rx_flags,
+                                               .valid_fields = rx_info.valid_fields,
+                                               .phy = rx_info.phy,
+                                               .data_rate = rx_info.data_rate,
+                                               .channel = rx_info.channel,
+                                               .mcs = rx_info.mcs,
+                                               .rssi_dbm = rx_info.rssi_dbm,
+                                               .snr_dbh = rx_info.snr_dbh};
+    wlan_softmac::WlanRxPacket rx_packet = {.mac_frame = data, .info = converted_info};
+    auto arena = fdf::Arena::Create(0, 0);
+    auto result = ifc_client_.sync().buffer(*arena)->Recv(rx_packet);
+    if (!result.ok()) {
+      zxlogf(ERROR, "Failed to send rx frames up. Status: %d\n", result.status());
     }
   }
 
   virtual void Status(uint32_t status) override {
     std::lock_guard<std::mutex> guard(lock_);
-    if (ifc_.is_valid()) {
-      ifc_.Status(status);
+    auto arena = fdf::Arena::Create(0, 0);
+    auto result = ifc_client_.sync().buffer(*arena)->Status(status);
+    if (!result.ok()) {
+      zxlogf(ERROR, "Failed to send status up. Status: %d\n", result.status());
     }
   }
 
   virtual void ReportTxStatus(const wlan_common::WlanTxStatus& ts) override {
     std::lock_guard<std::mutex> guard(lock_);
-    if (ifc_.is_valid()) {
-      wlan_tx_status_t converted_tx_status = ConvertTxStatus(ts);
-      ifc_.ReportTxStatus(&converted_tx_status);
+    auto arena = fdf::Arena::Create(0, 0);
+    auto result = ifc_client_.sync().buffer(*arena)->ReportTxStatus(ts);
+    if (!result.ok()) {
+      zxlogf(ERROR, "Failed to report tx status up. Status: %d\n", result.status());
     }
   }
 
   virtual void ScanComplete(uint64_t scan_id, int32_t status) override {
     std::lock_guard<std::mutex> guard(lock_);
-    if (ifc_.is_valid()) {
-      ifc_.ScanComplete(status, scan_id);
+    auto arena = fdf::Arena::Create(0, 0);
+    auto result = ifc_client_.sync().buffer(*arena)->ScanComplete(status, scan_id);
+    if (!result.ok()) {
+      zxlogf(ERROR, "Failed to send scan complete notification up. Status: %d\n", result.status());
     }
   }
 
   void Unbind() {
-    {
-      std::lock_guard<std::mutex> guard(lock_);
-      ifc_.clear();
-    }
+    { std::lock_guard<std::mutex> guard(lock_); }
     device_unbind_reply(device_);
   }
 
@@ -246,52 +299,36 @@ struct WlantapMacImpl : WlantapMac {
   uint16_t id_;
   wlan_common::WlanMacRole role_;
   std::mutex lock_;
-  ddk::WlanSoftmacIfcProtocolClient ifc_ __TA_GUARDED(lock_);
-  const wlantap::WlantapPhyConfig* phy_config_;
+  // The FIDL client to communicate with Wlan device.
+  fdf::WireSharedClient<fuchsia_wlan_softmac::WlanSoftmacIfc> ifc_client_;
+
+  const std::shared_ptr<const wlan_tap::WlantapPhyConfig> phy_config_;
   Listener* listener_;
   zx::channel sme_channel_;
+
+  // Dispatcher for FIDL client of WlanSoftmacIfc protocol.
+  fdf::Dispatcher client_dispatcher_;
+
+  // Dispatcher for FIDL server of WlanSoftmac protocol.
+  fdf::Dispatcher server_dispatcher_;
+
+  // Store unbind txn for async reply.
+  std::optional<::ddk::UnbindTxn> unbind_txn_;
 };
 
 }  // namespace
 
 zx_status_t CreateWlantapMac(zx_device_t* parent_phy, const wlan_common::WlanMacRole role,
-                             const wlantap::WlantapPhyConfig* phy_config, uint16_t id,
-                             WlantapMac::Listener* listener, zx::channel sme_channel,
+                             const std::shared_ptr<const wlan_tap::WlantapPhyConfig> phy_config,
+                             uint16_t id, WlantapMac::Listener* listener, zx::channel sme_channel,
                              WlantapMac** ret) {
   char name[ZX_MAX_NAME_LEN + 1];
   snprintf(name, sizeof(name), "mac%u", id);
   std::unique_ptr<WlantapMacImpl> wlan_softmac(
       new WlantapMacImpl(parent_phy, id, role, phy_config, listener, std::move(sme_channel)));
-  static zx_protocol_device_t device_ops = {.version = DEVICE_OPS_VERSION,
-                                            .unbind = &WlantapMacImpl::DdkUnbind,
-                                            .release = &WlantapMacImpl::DdkRelease};
-  static wlan_softmac_protocol_ops_t proto_ops = {
-      .query = &WlantapMacImpl::WlanSoftmacQuery,
-      .query_discovery_support = &WlantapMacImpl::WlanSoftmacQueryDiscoverySupport,
-      .query_mac_sublayer_support = &WlantapMacImpl::WlanSoftmacQueryMacSublayerSupport,
-      .query_security_support = &WlantapMacImpl::WlanSoftmacQuerySecuritySupport,
-      .query_spectrum_management_support =
-          &WlantapMacImpl::WlanSoftmacQuerySpectrumManagementSupport,
-      .start = &WlantapMacImpl::WlanSoftmacStart,
-      .stop = &WlantapMacImpl::WlanSoftmacStop,
-      .queue_tx = &WlantapMacImpl::WlanSoftmacQueueTx,
-      .set_channel = &WlantapMacImpl::WlanSoftmacSetChannel,
-      .configure_bss = &WlantapMacImpl::WlanSoftmacConfigureBss,
-      .enable_beaconing = &WlantapMacImpl::WlanSoftmacEnableBeaconing,
-      .configure_beacon = &WlantapMacImpl::WlanSoftmacConfigureBeacon,
-      .set_key = &WlantapMacImpl::WlanSoftmacSetKey,
-      .configure_assoc = &WlantapMacImpl::WlanSoftmacConfigureAssoc,
-      .clear_assoc = &WlantapMacImpl::WlanSoftmacClearAssoc,
-      .start_passive_scan = &WlantapMacImpl::WlanSoftmacStartPassiveScan,
-      .start_active_scan = &WlantapMacImpl::WlanSoftmacStartActiveScan,
-  };
-  device_add_args_t args = {.version = DEVICE_ADD_ARGS_VERSION,
-                            .name = name,
-                            .ctx = wlan_softmac.get(),
-                            .ops = &device_ops,
-                            .proto_id = ZX_PROTOCOL_WLAN_SOFTMAC,
-                            .proto_ops = &proto_ops};
-  zx_status_t status = device_add(parent_phy, &args, &wlan_softmac->device_);
+
+  zx_status_t status =
+      wlan_softmac->DdkAdd(::ddk::DeviceAddArgs(name).set_proto_id(ZX_PROTOCOL_WLAN_SOFTMAC));
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: could not add device: %d", __func__, status);
     return status;

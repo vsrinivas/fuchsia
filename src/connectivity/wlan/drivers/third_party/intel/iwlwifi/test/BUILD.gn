@@ -315,7 +315,7 @@ executable("wlan_softmac_device_test") {
     "//src/devices/testing/driver-runtime-main:zxtest",
     "//zircon/system/public",
     "//zircon/system/ulib/mock-function",
-    "//zircon/system/ulib/mock-function",
+    "//zircon/system/ulib/sync:sync-cpp",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

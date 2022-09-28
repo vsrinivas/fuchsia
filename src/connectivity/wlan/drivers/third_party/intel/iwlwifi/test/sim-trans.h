@@ -60,6 +60,7 @@ class SimTransport : public SimMvm {
   const struct iwl_trans* iwl_trans() const;
   ::wlan::iwlwifi::WlanphyImplDevice* sim_device();
   const ::wlan::iwlwifi::WlanphyImplDevice* sim_device() const;
+  zx_device_t* fake_parent();
 
  private:
   std::unique_ptr<::async::Loop> task_loop_;

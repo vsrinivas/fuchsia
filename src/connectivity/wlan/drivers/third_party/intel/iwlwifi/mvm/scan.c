@@ -177,8 +177,7 @@ static inline __le32 iwl_mvm_scan_rate_n_flags(struct iwl_mvm* mvm, wlan_band_t 
 static void iwl_mvm_scan_condition_iterator(void* data, struct iwl_mvm_vif* mvmvif) {
   int* global_cnt = data;
 
-  if (
-      mvmvif->phy_ctxt && mvmvif->phy_ctxt->id < NUM_PHY_CTX) {
+  if (mvmvif->phy_ctxt && mvmvif->phy_ctxt->id < NUM_PHY_CTX) {
     *global_cnt += 1;
   }
 }
@@ -321,7 +320,7 @@ static const char* iwl_mvm_ebs_status_str(enum iwl_scan_ebs_status status) {
 
 static void notify_mlme_scan_completion(struct iwl_mvm_vif* mvmvif, zx_status_t status) {
   // TODO(fxbug.dev/88934): scan_id is always 0
-  wlan_softmac_ifc_scan_complete(&mvmvif->ifc, status, 0);
+  softmac_ifc_scan_complete(mvmvif, status, 0);
 }
 
 void iwl_mvm_rx_lmac_scan_complete_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
@@ -1416,26 +1415,22 @@ static zx_status_t iwl_mvm_scan_umac(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_
   sec_part->schedule[0].iter_count = 1;
   sec_part->schedule[0].interval = cpu_to_le16(0);
 #else   // NEEDS_PORTING
-	ret = iwl_mvm_fill_scan_sched_params(params, tail_v2->schedule,
-					     &tail_v2->delay);
-	if (ret) {
-		mvm->scan_uid_status[uid] = 0;
-		return ret;
-	}
+  ret = iwl_mvm_fill_scan_sched_params(params, tail_v2->schedule, &tail_v2->delay);
+  if (ret) {
+    mvm->scan_uid_status[uid] = 0;
+    return ret;
+  }
 
-	if (iwl_mvm_is_scan_ext_chan_supported(mvm)) {
-		tail_v2->preq = params->preq;
-		direct_scan = tail_v2->direct_scan;
-	} else {
-		tail_v1 = (struct iwl_scan_req_umac_tail_v1 *)sec_part;
-		iwl_mvm_scan_set_legacy_probe_req(&tail_v1->preq,
-						  &params->preq);
-		direct_scan = tail_v1->direct_scan;
-	}
-	iwl_scan_build_ssids(params, direct_scan, &ssid_bitmap);
-	iwl_mvm_umac_scan_cfg_channels(mvm, params->channels,
-				       params->n_channels, ssid_bitmap,
-				       cmd_data);
+  if (iwl_mvm_is_scan_ext_chan_supported(mvm)) {
+    tail_v2->preq = params->preq;
+    direct_scan = tail_v2->direct_scan;
+  } else {
+    tail_v1 = (struct iwl_scan_req_umac_tail_v1*)sec_part;
+    iwl_mvm_scan_set_legacy_probe_req(&tail_v1->preq, &params->preq);
+    direct_scan = tail_v1->direct_scan;
+  }
+  iwl_scan_build_ssids(params, direct_scan, &ssid_bitmap);
+  iwl_mvm_umac_scan_cfg_channels(mvm, params->channels, params->n_channels, ssid_bitmap, cmd_data);
 #endif  // NEEDS_PORTING
 
   sec_part->delay = cpu_to_le16(params->delay);
@@ -1648,7 +1643,7 @@ zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif,
 
   params.type = IWL_SCAN_TYPE_WILD;
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 	params.n_6ghz_params = req->n_6ghz_params;
 	params.scan_6ghz_params = req->scan_6ghz_params;
 	params.scan_6ghz = req->scan_6ghz;

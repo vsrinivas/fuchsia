@@ -330,7 +330,7 @@ void iwl_mvm_rx_rx_mpdu(struct iwl_mvm* mvm, struct napi_struct* napi,
 
   iwl_mvm_get_signal_strength(mvm, phy_info, &rx_info);
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
   IWL_DEBUG_STATS_LIMIT(mvm, "Rssi %d, TSF %llu\n", rx_status->signal,
                         (unsigned long long)rx_status->mactime);
 
@@ -552,11 +552,11 @@ void iwl_mvm_rx_rx_mpdu(struct iwl_mvm* mvm, struct napi_struct* napi,
   };
   iwl_stats_analyze_rx(&rx_packet);
 
+  // This function may be running concurrently while the device is being created or destroyed.
+  // We need to synchronize with the creation/deletion thread and validate that mvmvif is in
+  // a valid state before we try to use it.
   iwl_rcu_read_lock(mvm->dev);
-  struct iwl_mvm_vif* mvmvif = mvm->mvmvif[0];
-  if (mvmvif && mvmvif->ifc.ops && mvmvif->ifc.ctx) {
-    wlan_softmac_ifc_recv(&mvm->mvmvif[0]->ifc, &rx_packet);
-  }
+  softmac_ifc_recv(mvm->mvmvif[0], &rx_packet);
   iwl_rcu_read_unlock(mvm->dev);
 
 #if 0   // NEEDS_PORTING

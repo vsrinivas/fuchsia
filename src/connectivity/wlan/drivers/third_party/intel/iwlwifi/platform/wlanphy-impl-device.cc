@@ -123,7 +123,9 @@ void WlanphyImplDevice::CreateIface(CreateIfaceRequestView request, fdf::Arena& 
   auto wlan_softmac_device =
       std::make_unique<WlanSoftmacDevice>(parent(), drvdata(), out_iface_id, mvmvif);
 
-  if ((status = wlan_softmac_device->DdkAdd("iwlwifi-wlan-softmac")) != ZX_OK) {
+  if ((status = wlan_softmac_device->DdkAdd(
+           ::ddk::DeviceAddArgs("iwlwifi-wlan-softmac").set_proto_id(ZX_PROTOCOL_WLAN_SOFTMAC))) !=
+      ZX_OK) {
     IWL_ERR(this, "%s() failed mac device add: %s\n", __func__, zx_status_get_string(status));
     phy_create_iface_undo(drvdata(), out_iface_id);
     completer.buffer(arena).ReplyError(status);

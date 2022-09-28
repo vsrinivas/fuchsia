@@ -349,4 +349,6 @@ const struct iwl_trans* SimTransport::iwl_trans() const { return iwl_trans_; }
 
 const ::wlan::iwlwifi::WlanphyImplDevice* SimTransport::sim_device() const { return sim_device_; }
 
+zx_device_t* SimTransport::fake_parent() { return device_.zxdev; }
+
 }  // namespace wlan::testing

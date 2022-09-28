@@ -1,0 +1,189 @@
+table/member fuchsia.wlan.softmac/WlanBcnConfig.beacon_interval uint16
+table/member fuchsia.wlan.softmac/WlanBcnConfig.packet_template fuchsia.wlan.softmac/WlanTxPacket
+table/member fuchsia.wlan.softmac/WlanBcnConfig.tim_ele_offset uint64
+table fuchsia.wlan.softmac/WlanBcnConfig
+table/member fuchsia.wlan.softmac/WlanKeyConfig.cipher_oui array<uint8,3>
+table/member fuchsia.wlan.softmac/WlanKeyConfig.cipher_type uint8
+table/member fuchsia.wlan.softmac/WlanKeyConfig.key array<uint8,32>
+table/member fuchsia.wlan.softmac/WlanKeyConfig.key_idx uint8
+table/member fuchsia.wlan.softmac/WlanKeyConfig.key_len uint8
+table/member fuchsia.wlan.softmac/WlanKeyConfig.key_type fuchsia.hardware.wlan.associnfo/WlanKeyType
+table/member fuchsia.wlan.softmac/WlanKeyConfig.peer_addr array<uint8,6>
+table/member fuchsia.wlan.softmac/WlanKeyConfig.protection fuchsia.wlan.softmac/WlanProtection
+table/member fuchsia.wlan.softmac/WlanKeyConfig.rsc uint64
+table fuchsia.wlan.softmac/WlanKeyConfig
+enum/member fuchsia.wlan.softmac/WlanProtection.NONE 0
+enum/member fuchsia.wlan.softmac/WlanProtection.RX 1
+enum/member fuchsia.wlan.softmac/WlanProtection.RX_TX 3
+enum/member fuchsia.wlan.softmac/WlanProtection.TX 2
+strict enum fuchsia.wlan.softmac/WlanProtection uint8
+struct/member fuchsia.wlan.softmac/WlanRxInfo.channel fuchsia.wlan.common/WlanChannel
+struct/member fuchsia.wlan.softmac/WlanRxInfo.data_rate uint32
+struct/member fuchsia.wlan.softmac/WlanRxInfo.mcs uint8
+struct/member fuchsia.wlan.softmac/WlanRxInfo.phy fuchsia.wlan.common/WlanPhyType
+struct/member fuchsia.wlan.softmac/WlanRxInfo.rssi_dbm int8
+struct/member fuchsia.wlan.softmac/WlanRxInfo.rx_flags uint32
+struct/member fuchsia.wlan.softmac/WlanRxInfo.snr_dbh int16
+struct/member fuchsia.wlan.softmac/WlanRxInfo.valid_fields uint32
+struct fuchsia.wlan.softmac/WlanRxInfo
+enum/member fuchsia.wlan.softmac/WlanRxInfoFlags.FCS_INVALID 1
+enum/member fuchsia.wlan.softmac/WlanRxInfoFlags.FRAME_BODY_PADDING_4 2
+strict enum fuchsia.wlan.softmac/WlanRxInfoFlags uint32
+struct/member fuchsia.wlan.softmac/WlanRxPacket.info fuchsia.wlan.softmac/WlanRxInfo
+struct/member fuchsia.wlan.softmac/WlanRxPacket.mac_frame vector<uint8>
+struct fuchsia.wlan.softmac/WlanRxPacket
+protocol/member fuchsia.wlan.softmac/WlanSoftmac.ClearAssoc(array<uint8,6> peer_addr) -> (fuchsia.wlan.softmac/WlanSoftmac_ClearAssoc_Result result)
+protocol/member fuchsia.wlan.softmac/WlanSoftmac.ConfigureAssoc(fuchsia.hardware.wlan.associnfo/WlanAssocCtx assoc_ctx) -> (fuchsia.wlan.softmac/WlanSoftmac_ConfigureAssoc_Result result)
+protocol/member fuchsia.wlan.softmac/WlanSoftmac.ConfigureBeacon(fuchsia.wlan.softmac/WlanTxPacket packet) -> (fuchsia.wlan.softmac/WlanSoftmac_ConfigureBeacon_Result result)
+protocol/member fuchsia.wlan.softmac/WlanSoftmac.ConfigureBss(fuchsia.wlan.internal/BssConfig config) -> (fuchsia.wlan.softmac/WlanSoftmac_ConfigureBss_Result result)
+protocol/member fuchsia.wlan.softmac/WlanSoftmac.EnableBeaconing(fuchsia.wlan.softmac/WlanBcnConfig bcn_cfg) -> (fuchsia.wlan.softmac/WlanSoftmac_EnableBeaconing_Result result)
+protocol/member fuchsia.wlan.softmac/WlanSoftmac.Query() -> (fuchsia.wlan.softmac/WlanSoftmac_Query_Result result)
+protocol/member fuchsia.wlan.softmac/WlanSoftmac.QueryDiscoverySupport() -> (fuchsia.wlan.softmac/WlanSoftmac_QueryDiscoverySupport_Result result)
+protocol/member fuchsia.wlan.softmac/WlanSoftmac.QueryMacSublayerSupport() -> (fuchsia.wlan.softmac/WlanSoftmac_QueryMacSublayerSupport_Result result)
+protocol/member fuchsia.wlan.softmac/WlanSoftmac.QuerySecuritySupport() -> (fuchsia.wlan.softmac/WlanSoftmac_QuerySecuritySupport_Result result)
+protocol/member fuchsia.wlan.softmac/WlanSoftmac.QuerySpectrumManagementSupport() -> (fuchsia.wlan.softmac/WlanSoftmac_QuerySpectrumManagementSupport_Result result)
+protocol/member fuchsia.wlan.softmac/WlanSoftmac.QueueTx(fuchsia.wlan.softmac/WlanTxPacket packet) -> (fuchsia.wlan.softmac/WlanSoftmac_QueueTx_Result result)
+protocol/member fuchsia.wlan.softmac/WlanSoftmac.SetChannel(fuchsia.wlan.common/WlanChannel chan) -> (fuchsia.wlan.softmac/WlanSoftmac_SetChannel_Result result)
+protocol/member fuchsia.wlan.softmac/WlanSoftmac.SetKey(fuchsia.wlan.softmac/WlanKeyConfig key_config) -> (fuchsia.wlan.softmac/WlanSoftmac_SetKey_Result result)
+protocol/member fuchsia.wlan.softmac/WlanSoftmac.Start(client_end:fuchsia.wlan.softmac/WlanSoftmacIfc ifc) -> (fuchsia.wlan.softmac/WlanSoftmac_Start_Result result)
+protocol/member fuchsia.wlan.softmac/WlanSoftmac.StartActiveScan(fuchsia.wlan.softmac/WlanSoftmacActiveScanArgs args) -> (fuchsia.wlan.softmac/WlanSoftmac_StartActiveScan_Result result)
+protocol/member fuchsia.wlan.softmac/WlanSoftmac.StartPassiveScan(fuchsia.wlan.softmac/WlanSoftmacPassiveScanArgs args) -> (fuchsia.wlan.softmac/WlanSoftmac_StartPassiveScan_Result result)
+protocol/member fuchsia.wlan.softmac/WlanSoftmac.Stop() -> ()
+protocol/member fuchsia.wlan.softmac/WlanSoftmac.UpdateWmmParams(fuchsia.hardware.wlan.associnfo/WlanAc ac,fuchsia.hardware.wlan.associnfo/WlanWmmParams params) -> (fuchsia.wlan.softmac/WlanSoftmac_UpdateWmmParams_Result result)
+protocol fuchsia.wlan.softmac/WlanSoftmac
+table/member fuchsia.wlan.softmac/WlanSoftmacActiveScanArgs.channels vector<uint8>:256
+table/member fuchsia.wlan.softmac/WlanSoftmacActiveScanArgs.ies vector<uint8>:11454
+table/member fuchsia.wlan.softmac/WlanSoftmacActiveScanArgs.mac_header vector<uint8>:28
+table/member fuchsia.wlan.softmac/WlanSoftmacActiveScanArgs.max_channel_time int64
+table/member fuchsia.wlan.softmac/WlanSoftmacActiveScanArgs.max_probes_per_channel uint8
+table/member fuchsia.wlan.softmac/WlanSoftmacActiveScanArgs.min_channel_time int64
+table/member fuchsia.wlan.softmac/WlanSoftmacActiveScanArgs.min_home_time int64
+table/member fuchsia.wlan.softmac/WlanSoftmacActiveScanArgs.min_probes_per_channel uint8
+table/member fuchsia.wlan.softmac/WlanSoftmacActiveScanArgs.ssids vector<fuchsia.wlan.ieee80211/CSsid>:84
+table fuchsia.wlan.softmac/WlanSoftmacActiveScanArgs
+struct/member fuchsia.wlan.softmac/WlanSoftmacBandCapability.band fuchsia.wlan.common/WlanBand
+struct/member fuchsia.wlan.softmac/WlanSoftmacBandCapability.basic_rate_count uint8
+struct/member fuchsia.wlan.softmac/WlanSoftmacBandCapability.basic_rate_list array<uint8,12>
+struct/member fuchsia.wlan.softmac/WlanSoftmacBandCapability.ht_caps fuchsia.wlan.ieee80211/HtCapabilitiesFields
+struct/member fuchsia.wlan.softmac/WlanSoftmacBandCapability.ht_supported bool
+struct/member fuchsia.wlan.softmac/WlanSoftmacBandCapability.operating_channel_count uint16
+struct/member fuchsia.wlan.softmac/WlanSoftmacBandCapability.operating_channel_list array<uint8,256>
+struct/member fuchsia.wlan.softmac/WlanSoftmacBandCapability.vht_caps fuchsia.wlan.ieee80211/VhtCapabilitiesFields
+struct/member fuchsia.wlan.softmac/WlanSoftmacBandCapability.vht_supported bool
+struct fuchsia.wlan.softmac/WlanSoftmacBandCapability
+protocol/member fuchsia.wlan.softmac/WlanSoftmacIfc.CompleteTx(fuchsia.wlan.softmac/WlanTxPacket packet,int32 status) -> ()
+protocol/member fuchsia.wlan.softmac/WlanSoftmacIfc.Recv(fuchsia.wlan.softmac/WlanRxPacket packet) -> ()
+protocol/member fuchsia.wlan.softmac/WlanSoftmacIfc.ReportTxStatus(fuchsia.wlan.common/WlanTxStatus tx_status) -> ()
+protocol/member fuchsia.wlan.softmac/WlanSoftmacIfc.ScanComplete(int32 status,uint64 scan_id) -> ()
+protocol/member fuchsia.wlan.softmac/WlanSoftmacIfc.Status(uint32 status) -> ()
+protocol fuchsia.wlan.softmac/WlanSoftmacIfc
+table/member fuchsia.wlan.softmac/WlanSoftmacInfo.band_caps vector<fuchsia.wlan.softmac/WlanSoftmacBandCapability>:16
+table/member fuchsia.wlan.softmac/WlanSoftmacInfo.driver_features uint32
+table/member fuchsia.wlan.softmac/WlanSoftmacInfo.hardware_capability uint32
+table/member fuchsia.wlan.softmac/WlanSoftmacInfo.mac_role fuchsia.wlan.common/WlanMacRole
+table/member fuchsia.wlan.softmac/WlanSoftmacInfo.sta_addr array<uint8,6>
+table/member fuchsia.wlan.softmac/WlanSoftmacInfo.supported_phys vector<fuchsia.wlan.common/WlanPhyType>:64
+table fuchsia.wlan.softmac/WlanSoftmacInfo
+table/member fuchsia.wlan.softmac/WlanSoftmacPassiveScanArgs.channels vector<uint8>:256
+table/member fuchsia.wlan.softmac/WlanSoftmacPassiveScanArgs.max_channel_time int64
+table/member fuchsia.wlan.softmac/WlanSoftmacPassiveScanArgs.min_channel_time int64
+table/member fuchsia.wlan.softmac/WlanSoftmacPassiveScanArgs.min_home_time int64
+table fuchsia.wlan.softmac/WlanSoftmacPassiveScanArgs
+struct fuchsia.wlan.softmac/WlanSoftmac_ClearAssoc_Response
+union/member fuchsia.wlan.softmac/WlanSoftmac_ClearAssoc_Result.err int32
+union/member fuchsia.wlan.softmac/WlanSoftmac_ClearAssoc_Result.response fuchsia.wlan.softmac/WlanSoftmac_ClearAssoc_Response
+strict union fuchsia.wlan.softmac/WlanSoftmac_ClearAssoc_Result
+struct fuchsia.wlan.softmac/WlanSoftmac_ConfigureAssoc_Response
+union/member fuchsia.wlan.softmac/WlanSoftmac_ConfigureAssoc_Result.err int32
+union/member fuchsia.wlan.softmac/WlanSoftmac_ConfigureAssoc_Result.response fuchsia.wlan.softmac/WlanSoftmac_ConfigureAssoc_Response
+strict union fuchsia.wlan.softmac/WlanSoftmac_ConfigureAssoc_Result
+struct fuchsia.wlan.softmac/WlanSoftmac_ConfigureBeacon_Response
+union/member fuchsia.wlan.softmac/WlanSoftmac_ConfigureBeacon_Result.err int32
+union/member fuchsia.wlan.softmac/WlanSoftmac_ConfigureBeacon_Result.response fuchsia.wlan.softmac/WlanSoftmac_ConfigureBeacon_Response
+strict union fuchsia.wlan.softmac/WlanSoftmac_ConfigureBeacon_Result
+struct fuchsia.wlan.softmac/WlanSoftmac_ConfigureBss_Response
+union/member fuchsia.wlan.softmac/WlanSoftmac_ConfigureBss_Result.err int32
+union/member fuchsia.wlan.softmac/WlanSoftmac_ConfigureBss_Result.response fuchsia.wlan.softmac/WlanSoftmac_ConfigureBss_Response
+strict union fuchsia.wlan.softmac/WlanSoftmac_ConfigureBss_Result
+struct fuchsia.wlan.softmac/WlanSoftmac_EnableBeaconing_Response
+union/member fuchsia.wlan.softmac/WlanSoftmac_EnableBeaconing_Result.err int32
+union/member fuchsia.wlan.softmac/WlanSoftmac_EnableBeaconing_Result.response fuchsia.wlan.softmac/WlanSoftmac_EnableBeaconing_Response
+strict union fuchsia.wlan.softmac/WlanSoftmac_EnableBeaconing_Result
+struct/member fuchsia.wlan.softmac/WlanSoftmac_QueryDiscoverySupport_Response.resp fuchsia.wlan.common/DiscoverySupport
+struct fuchsia.wlan.softmac/WlanSoftmac_QueryDiscoverySupport_Response
+union/member fuchsia.wlan.softmac/WlanSoftmac_QueryDiscoverySupport_Result.err int32
+union/member fuchsia.wlan.softmac/WlanSoftmac_QueryDiscoverySupport_Result.response fuchsia.wlan.softmac/WlanSoftmac_QueryDiscoverySupport_Response
+strict union fuchsia.wlan.softmac/WlanSoftmac_QueryDiscoverySupport_Result
+struct/member fuchsia.wlan.softmac/WlanSoftmac_QueryMacSublayerSupport_Response.resp fuchsia.wlan.common/MacSublayerSupport
+struct fuchsia.wlan.softmac/WlanSoftmac_QueryMacSublayerSupport_Response
+union/member fuchsia.wlan.softmac/WlanSoftmac_QueryMacSublayerSupport_Result.err int32
+union/member fuchsia.wlan.softmac/WlanSoftmac_QueryMacSublayerSupport_Result.response fuchsia.wlan.softmac/WlanSoftmac_QueryMacSublayerSupport_Response
+strict union fuchsia.wlan.softmac/WlanSoftmac_QueryMacSublayerSupport_Result
+struct/member fuchsia.wlan.softmac/WlanSoftmac_QuerySecuritySupport_Response.resp fuchsia.wlan.common/SecuritySupport
+struct fuchsia.wlan.softmac/WlanSoftmac_QuerySecuritySupport_Response
+union/member fuchsia.wlan.softmac/WlanSoftmac_QuerySecuritySupport_Result.err int32
+union/member fuchsia.wlan.softmac/WlanSoftmac_QuerySecuritySupport_Result.response fuchsia.wlan.softmac/WlanSoftmac_QuerySecuritySupport_Response
+strict union fuchsia.wlan.softmac/WlanSoftmac_QuerySecuritySupport_Result
+struct/member fuchsia.wlan.softmac/WlanSoftmac_QuerySpectrumManagementSupport_Response.resp fuchsia.wlan.common/SpectrumManagementSupport
+struct fuchsia.wlan.softmac/WlanSoftmac_QuerySpectrumManagementSupport_Response
+union/member fuchsia.wlan.softmac/WlanSoftmac_QuerySpectrumManagementSupport_Result.err int32
+union/member fuchsia.wlan.softmac/WlanSoftmac_QuerySpectrumManagementSupport_Result.response fuchsia.wlan.softmac/WlanSoftmac_QuerySpectrumManagementSupport_Response
+strict union fuchsia.wlan.softmac/WlanSoftmac_QuerySpectrumManagementSupport_Result
+struct/member fuchsia.wlan.softmac/WlanSoftmac_Query_Response.info fuchsia.wlan.softmac/WlanSoftmacInfo
+struct fuchsia.wlan.softmac/WlanSoftmac_Query_Response
+union/member fuchsia.wlan.softmac/WlanSoftmac_Query_Result.err int32
+union/member fuchsia.wlan.softmac/WlanSoftmac_Query_Result.response fuchsia.wlan.softmac/WlanSoftmac_Query_Response
+strict union fuchsia.wlan.softmac/WlanSoftmac_Query_Result
+struct/member fuchsia.wlan.softmac/WlanSoftmac_QueueTx_Response.enqueue_pending bool
+struct fuchsia.wlan.softmac/WlanSoftmac_QueueTx_Response
+union/member fuchsia.wlan.softmac/WlanSoftmac_QueueTx_Result.err int32
+union/member fuchsia.wlan.softmac/WlanSoftmac_QueueTx_Result.response fuchsia.wlan.softmac/WlanSoftmac_QueueTx_Response
+strict union fuchsia.wlan.softmac/WlanSoftmac_QueueTx_Result
+struct fuchsia.wlan.softmac/WlanSoftmac_SetChannel_Response
+union/member fuchsia.wlan.softmac/WlanSoftmac_SetChannel_Result.err int32
+union/member fuchsia.wlan.softmac/WlanSoftmac_SetChannel_Result.response fuchsia.wlan.softmac/WlanSoftmac_SetChannel_Response
+strict union fuchsia.wlan.softmac/WlanSoftmac_SetChannel_Result
+struct fuchsia.wlan.softmac/WlanSoftmac_SetKey_Response
+union/member fuchsia.wlan.softmac/WlanSoftmac_SetKey_Result.err int32
+union/member fuchsia.wlan.softmac/WlanSoftmac_SetKey_Result.response fuchsia.wlan.softmac/WlanSoftmac_SetKey_Response
+strict union fuchsia.wlan.softmac/WlanSoftmac_SetKey_Result
+struct/member fuchsia.wlan.softmac/WlanSoftmac_StartActiveScan_Response.scan_id uint64
+struct fuchsia.wlan.softmac/WlanSoftmac_StartActiveScan_Response
+union/member fuchsia.wlan.softmac/WlanSoftmac_StartActiveScan_Result.err int32
+union/member fuchsia.wlan.softmac/WlanSoftmac_StartActiveScan_Result.response fuchsia.wlan.softmac/WlanSoftmac_StartActiveScan_Response
+strict union fuchsia.wlan.softmac/WlanSoftmac_StartActiveScan_Result
+struct/member fuchsia.wlan.softmac/WlanSoftmac_StartPassiveScan_Response.scan_id uint64
+struct fuchsia.wlan.softmac/WlanSoftmac_StartPassiveScan_Response
+union/member fuchsia.wlan.softmac/WlanSoftmac_StartPassiveScan_Result.err int32
+union/member fuchsia.wlan.softmac/WlanSoftmac_StartPassiveScan_Result.response fuchsia.wlan.softmac/WlanSoftmac_StartPassiveScan_Response
+strict union fuchsia.wlan.softmac/WlanSoftmac_StartPassiveScan_Result
+struct/member fuchsia.wlan.softmac/WlanSoftmac_Start_Response.sme_channel zx/handle:CHANNEL
+resource struct fuchsia.wlan.softmac/WlanSoftmac_Start_Response
+union/member fuchsia.wlan.softmac/WlanSoftmac_Start_Result.err int32
+union/member fuchsia.wlan.softmac/WlanSoftmac_Start_Result.response fuchsia.wlan.softmac/WlanSoftmac_Start_Response
+resource strict union fuchsia.wlan.softmac/WlanSoftmac_Start_Result
+struct fuchsia.wlan.softmac/WlanSoftmac_UpdateWmmParams_Response
+union/member fuchsia.wlan.softmac/WlanSoftmac_UpdateWmmParams_Result.err int32
+union/member fuchsia.wlan.softmac/WlanSoftmac_UpdateWmmParams_Result.response fuchsia.wlan.softmac/WlanSoftmac_UpdateWmmParams_Response
+strict union fuchsia.wlan.softmac/WlanSoftmac_UpdateWmmParams_Result
+struct/member fuchsia.wlan.softmac/WlanTxInfo.channel_bandwidth fuchsia.wlan.common/ChannelBandwidth
+struct/member fuchsia.wlan.softmac/WlanTxInfo.mcs uint8
+struct/member fuchsia.wlan.softmac/WlanTxInfo.phy fuchsia.wlan.common/WlanPhyType
+struct/member fuchsia.wlan.softmac/WlanTxInfo.tx_flags uint32
+struct/member fuchsia.wlan.softmac/WlanTxInfo.tx_vector_idx uint16
+struct/member fuchsia.wlan.softmac/WlanTxInfo.valid_fields uint32
+struct fuchsia.wlan.softmac/WlanTxInfo
+enum/member fuchsia.wlan.softmac/WlanTxInfoFlags.FAVOR_RELIABILITY 2
+enum/member fuchsia.wlan.softmac/WlanTxInfoFlags.PROTECTED 1
+enum/member fuchsia.wlan.softmac/WlanTxInfoFlags.QOS 4
+strict enum fuchsia.wlan.softmac/WlanTxInfoFlags uint8
+enum/member fuchsia.wlan.softmac/WlanTxInfoValid.CHANNEL_BANDWIDTH 8
+enum/member fuchsia.wlan.softmac/WlanTxInfoValid.DATA_RATE 1
+enum/member fuchsia.wlan.softmac/WlanTxInfoValid.MCS 16
+enum/member fuchsia.wlan.softmac/WlanTxInfoValid.PHY 4
+enum/member fuchsia.wlan.softmac/WlanTxInfoValid.TX_VECTOR_IDX 2
+strict enum fuchsia.wlan.softmac/WlanTxInfoValid uint8
+struct/member fuchsia.wlan.softmac/WlanTxPacket.info fuchsia.wlan.softmac/WlanTxInfo
+struct/member fuchsia.wlan.softmac/WlanTxPacket.mac_frame vector<uint8>
+struct fuchsia.wlan.softmac/WlanTxPacket
+library fuchsia.wlan.softmac

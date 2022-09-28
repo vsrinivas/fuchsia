@@ -14,20 +14,18 @@
 zx_status_t wlan_bind(void* ctx, zx_device_t* device) {
   std::printf("%s\n", __func__);
 
-  wlan_softmac_protocol_t wlan_softmac_proto;
-  if (device_get_protocol(device, ZX_PROTOCOL_WLAN_SOFTMAC,
-                          reinterpret_cast<void*>(&wlan_softmac_proto))) {
-    std::printf("wlan: bind: no wlan-softmac protocol\n");
-    return ZX_ERR_INTERNAL;
+  auto endpoints = fdf::CreateEndpoints<fuchsia_wlan_softmac::WlanSoftmac>();
+  if (endpoints.is_error()) {
+    errorf("Failed to create endpoint: %s", zx_status_get_string(endpoints.status_value()));
+    return endpoints.status_value();
   }
 
-  auto wlandev = std::make_unique<wlan::Device>(device, wlan_softmac_proto);
-  auto status = wlandev->Bind();
+  auto wlandev = std::make_unique<wlan::Device>(device, std::move(endpoints->client));
+  auto status = wlandev->Bind(endpoints->server.TakeHandle());
   if (status != ZX_OK) {
-    std::printf("wlan: could not bind: %d\n", status);
+    errorf("Failed to bind: %d\n", status);
     return status;
   }
-
   // devhost is now responsible for the memory used by wlandev. It will be
   // cleaned up in the Device::EthRelease() method.
   wlandev.release();

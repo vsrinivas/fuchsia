@@ -18,6 +18,27 @@ driver_bind_rules("wlan_bind") {
   deps = [ "//src/devices/bind/fuchsia.wlan" ]
 }
 
+wlan_convert_sources = [
+  "convert.cc",
+  "convert.h",
+]
+
+wlan_convert_deps = [
+  "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",
+  "//sdk/banjo/fuchsia.hardware.wlan.softmac:fuchsia.hardware.wlan.softmac_banjo_c",
+  "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
+  "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_banjo_c",
+  "//sdk/fidl/fuchsia.wlan.softmac:fuchsia.wlan.softmac_cpp_driver",
+  "//src/connectivity/wlan/lib/mlme/cpp:mlme",
+  "//zircon/system/ulib/fbl",
+  "//zircon/system/ulib/zx",
+]
+
+source_set("wlan_convert") {
+  sources = wlan_convert_sources
+  public_deps = wlan_convert_deps
+}
+
 fuchsia_driver("wlan_driver-driver") {
   output_name = "wlan"
   sources = [
@@ -27,20 +48,16 @@ fuchsia_driver("wlan_driver-driver") {
     "probe_sequence.cc",
     "probe_sequence.h",
   ]
-
   deps = [
     ":wlan_bind",
-    "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.wlan.softmac:fuchsia.hardware.wlan.softmac_banjo_c",
-    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
-    "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_banjo_c",
+    ":wlan_convert",
+    "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//src/devices/lib/dev-operation",
     "//src/devices/lib/driver",
+    "//src/devices/lib/driver:driver_runtime",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/zx",
   ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 
@@ -60,7 +77,32 @@ fuchsia_driver_package("wlan") {
   driver_components = [ ":wlan_driver" ]
 }
 
+test("wlan_convert_unittest") {
+  testonly = true
+  output_name = "wlan_convert_unittest"
+  sources = wlan_convert_sources + [ "tests/convert_unittest.cc" ]
+
+  deps = wlan_convert_deps + [
+           "//src/lib/fxl/test:gtest_main",
+           "//third_party/googletest:gtest",
+         ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
+}
+
+fuchsia_unittest_component("wlan_convert_unittest_component") {
+  deps = [ ":wlan_convert_unittest" ]
+}
+
+fuchsia_test_package("wlan_unittests") {
+  test_components = [ ":wlan_convert_unittest_component" ]
+}
+
 group("tests") {
   testonly = true
-  deps = [ ":wlan_bind_test" ]
+  deps = [
+    ":wlan_bind_test",
+    ":wlan_unittests",
+  ]
 }

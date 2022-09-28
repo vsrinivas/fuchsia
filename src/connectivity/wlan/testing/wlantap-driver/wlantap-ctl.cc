@@ -4,8 +4,7 @@
 
 #include <fidl/fuchsia.wlan.device/cpp/wire.h>
 #include <fidl/fuchsia.wlan.tap/cpp/fidl.h>
-#include <fidl/fuchsia.wlan.tap/cpp/hlcpp_conversion.h>
-#include <fuchsia/wlan/tap/cpp/fidl.h>
+#include <fidl/fuchsia.wlan.tap/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>
@@ -18,13 +17,20 @@
 #include <mutex>
 
 #include <ddktl/fidl.h>
+#include <src/lib/fidl/cpp/include/lib/fidl/cpp/wire_natural_conversions.h>
 
 #include "src/connectivity/wlan/testing/wlantap-driver/wlantapctl_bind.h"
 #include "wlantap-phy.h"
 
 namespace {
 
-namespace wlantap = fuchsia_wlan_tap;
+namespace wlan_tap = fuchsia_wlan_tap::wire;
+
+// Max size of WlantapPhyConfig.
+constexpr size_t kWlantapPhyConfigBufferSize =
+    fidl::MaxSizeInChannel<wlan_tap::WlantapPhyConfig, fidl::MessageDirection::kSending>();
+
+static fidl::Arena<kWlantapPhyConfigBufferSize> phy_config_arena;
 
 class WlantapDriver {
  public:
@@ -47,27 +53,26 @@ class WlantapDriver {
   std::unique_ptr<async::Loop> loop_;
 };
 
-struct WlantapCtl : fidl::WireServer<wlantap::WlantapCtl> {
+struct WlantapCtl : fidl::WireServer<fuchsia_wlan_tap::WlantapCtl> {
   WlantapCtl(WlantapDriver* driver) : driver_(driver) {}
 
   static void DdkRelease(void* ctx) { delete static_cast<WlantapCtl*>(ctx); }
 
   void CreatePhy(CreatePhyRequestView request, CreatePhyCompleter::Sync& completer) override {
     zx_status_t status;
+    phy_config_arena.Reset();
 
     async_dispatcher_t* loop;
     if ((status = driver_->GetOrStartLoop(&loop)) != ZX_OK) {
       completer.Reply(status);
       return;
     }
+    auto natural_config = fidl::ToNatural(request->config);
+    auto wire_config = fidl::ToWire(phy_config_arena, std::move(natural_config));
+    auto phy_config = std::make_shared<wlan_tap::WlantapPhyConfig>(wire_config);
 
-    // Convert to HLCPP through natural domain object.
-    auto phy_config_natural = fidl::ToNatural(request->config);
-    auto phy_config = std::make_unique<::fuchsia::wlan::tap::WlantapPhyConfig>(
-        fidl::NaturalToHLCPP(std::move(phy_config_natural)));
-
-    if ((status = wlan::CreatePhy(device_, request->proxy.TakeChannel(), std::move(phy_config),
-                                  loop)) != ZX_OK) {
+    if ((status = wlan::CreatePhy(device_, request->proxy.TakeChannel(), phy_config, loop)) !=
+        ZX_OK) {
       completer.Reply(status);
     } else {
       completer.Reply(ZX_OK);
@@ -78,7 +83,8 @@ struct WlantapCtl : fidl::WireServer<wlantap::WlantapCtl> {
     auto self = static_cast<WlantapCtl*>(ctx);
 
     DdkTransaction transaction(txn);
-    fidl::WireDispatch<wlantap::WlantapCtl>(
+
+    fidl::WireDispatch<fuchsia_wlan_tap::WlantapCtl>(
         self, fidl::IncomingHeaderAndMessage::FromEncodedCMessage(msg), &transaction);
     return transaction.Status();
   }

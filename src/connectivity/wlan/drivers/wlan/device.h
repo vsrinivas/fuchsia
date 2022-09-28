@@ -5,11 +5,15 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_WLAN_DEVICE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_WLAN_DEVICE_H_
 
+#include <fidl/fuchsia.wlan.softmac/cpp/driver/wire.h>
 #include <fuchsia/hardware/ethernet/cpp/banjo.h>
 #include <fuchsia/hardware/wlan/softmac/cpp/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
+#include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/fdf/cpp/channel_read.h>
+#include <lib/fdf/cpp/dispatcher.h>
 #include <lib/zx/channel.h>
 #include <zircon/compiler.h>
 
@@ -19,6 +23,7 @@
 #include <tuple>
 #include <unordered_set>
 
+#include <ddktl/device.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/slab_allocator.h>
@@ -29,16 +34,21 @@
 
 namespace wlan {
 
-class Device : public DeviceInterface {
+class Device : public DeviceInterface,
+               ddk::Device<Device, ddk::Unbindable>,
+               fdf::WireServer<fuchsia_wlan_softmac::WlanSoftmacIfc> {
  public:
-  Device(zx_device_t* device, wlan_softmac_protocol_t wlan_softmac_proto);
+  Device(zx_device_t* device, fdf::ClientEnd<fuchsia_wlan_softmac::WlanSoftmac> client);
   ~Device();
 
-  zx_status_t Bind();
+  zx_status_t Bind(fdf::Channel channel);
 
   // ddk device methods
   void EthUnbind();
   void EthRelease();
+  void DdkInit(ddk::InitTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
+  void DdkRelease();
 
   // ddk ethernet_impl_protocol_ops methods
   zx_status_t EthernetImplQuery(uint32_t options, ethernet_info_t* info);
@@ -75,6 +85,16 @@ class Device : public DeviceInterface {
   const security_support_t& GetSecuritySupport() const final;
   const spectrum_management_support_t& GetSpectrumManagementSupport() const final;
 
+  void Status(StatusRequestView request, fdf::Arena& arena,
+              StatusCompleter::Sync& completer) override;
+  void Recv(RecvRequestView request, fdf::Arena& arena, RecvCompleter::Sync& completer) override;
+  void CompleteTx(CompleteTxRequestView request, fdf::Arena& arena,
+                  CompleteTxCompleter::Sync& completer) override;
+  void ReportTxStatus(ReportTxStatusRequestView request, fdf::Arena& arena,
+                      ReportTxStatusCompleter::Sync& completer) override;
+  void ScanComplete(ScanCompleteRequestView request, fdf::Arena& arena,
+                    ScanCompleteCompleter::Sync& completer) override;
+
  private:
   enum class DevicePacket : uint64_t {
     kShutdown,
@@ -105,8 +125,6 @@ class Device : public DeviceInterface {
   zx_device_t* parent_ = nullptr;
   zx_device_t* ethdev_ = nullptr;
 
-  ddk::WlanSoftmacProtocolClient wlan_softmac_proxy_;
-
   std::mutex ethernet_proxy_lock_;
   ddk::EthernetIfcProtocolClient ethernet_proxy_ __TA_GUARDED(ethernet_proxy_lock_);
   bool mlme_main_loop_dead_ = false;
@@ -114,6 +132,7 @@ class Device : public DeviceInterface {
   // Manages the lifetime of the protocol struct we pass down to the vendor driver. Actual
   // calls to this protocol should only be performed by the vendor driver.
   std::unique_ptr<wlan_softmac_ifc_protocol_ops_t> wlan_softmac_ifc_protocol_ops_;
+  std::unique_ptr<wlan_softmac_ifc_protocol_t> wlan_softmac_ifc_protocol_;
 
   wlan_softmac_info_t wlan_softmac_info_ = {};
   discovery_support_t discovery_support_ = {};
@@ -123,6 +142,21 @@ class Device : public DeviceInterface {
   fbl::RefPtr<DeviceState> state_;
 
   std::unique_ptr<Mlme> mlme_;
+
+  // The FIDL client to communicate with iwlwifi
+  fdf::WireSharedClient<fuchsia_wlan_softmac::WlanSoftmac> client_;
+
+  // Dispatcher for being a FIDL client firing requests to WlanphyImply device.
+  fdf::Dispatcher client_dispatcher_;
+
+  // Dispatcher for being a FIDL client firing requests to WlanphyImply device.
+  fdf::Dispatcher server_dispatcher_;
+
+  // Store unbind txn for async reply.
+  std::optional<::ddk::UnbindTxn> unbind_txn_;
+
+  // Lock for Rec() function to make it thread safe.
+  std::mutex rx_lock_;
 };
 
 }  // namespace wlan

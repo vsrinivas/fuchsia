@@ -207,6 +207,8 @@ strict enum fuchsia.wlan.ieee80211/StatusCode uint16
 const fuchsia.wlan.ieee80211/TIDS_MAX uint32 16
 const fuchsia.wlan.ieee80211/VHT_CAP_LEN uint8 12
 const fuchsia.wlan.ieee80211/VHT_OP_LEN uint8 5
+const fuchsia.wlan.ieee80211/OUI_LEN uint8 3
+const fuchsia.wlan.ieee80211/MAX_KEY_LEN uint8 32
 struct/member fuchsia.wlan.ieee80211/VhtCapabilities.bytes array<uint8,12>
 struct fuchsia.wlan.ieee80211/VhtCapabilities
 struct/member fuchsia.wlan.ieee80211/VhtOperation.bytes array<uint8,5>

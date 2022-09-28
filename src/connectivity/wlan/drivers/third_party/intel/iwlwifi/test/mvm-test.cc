@@ -78,7 +78,6 @@ class MvmTest : public SingleApTest {
     mvmvif_ = reinterpret_cast<struct iwl_mvm_vif*>(calloc(1, sizeof(struct iwl_mvm_vif)));
     mvmvif_->mvm = mvm_;
     mvmvif_->mac_role = WLAN_MAC_ROLE_CLIENT;
-    mvmvif_->ifc.ops = &protocol_ops_;
     mvm_->mvmvif[0] = mvmvif_;
     mvm_->vif_count++;
 
@@ -99,7 +98,7 @@ class MvmTest : public SingleApTest {
     // mvmvif.
     mvmvif_->ifc.ctx = ctx;  // 'ctx' was used as 'wlan_softmac_ifc_protocol_t*', but we override it
                              // with 'TestCtx*'.
-    protocol_ops_.recv = [](void* ctx, const wlan_rx_packet_t* packet) {
+    mvmvif_->ifc.recv = [](void* ctx, const wlan_rx_packet_t* packet) {
       TestCtx* test_ctx = reinterpret_cast<TestCtx*>(ctx);
       test_ctx->rx_info = packet->info;
       test_ctx->frame_len = packet->mac_frame_size;
@@ -425,8 +424,10 @@ TEST_F(MvmTest, scanLmacPassiveCmdFilling) {
 class LmacScanTest : public MvmTest {
  public:
   LmacScanTest() {
+    mvmvif_sta.mvm = iwl_trans_get_mvm(sim_trans_.iwl_trans());
+    mvmvif_sta.mac_role = WLAN_MAC_ROLE_CLIENT;
     // Fake callback registered to capture scan completion responses.
-    ops.scan_complete = [](void* ctx, zx_status_t status, uint64_t scan_id) {
+    mvmvif_sta.ifc.scan_complete = [](void* ctx, zx_status_t status, uint64_t scan_id) {
       // TODO(fxbug.dev/88934): scan_id is always 0
       EXPECT_EQ(scan_id, 0);
       struct ScanResult* sr = (struct ScanResult*)ctx;
@@ -434,9 +435,6 @@ class LmacScanTest : public MvmTest {
       sr->success = (status == ZX_OK ? true : false);
     };
 
-    mvmvif_sta.mvm = iwl_trans_get_mvm(sim_trans_.iwl_trans());
-    mvmvif_sta.mac_role = WLAN_MAC_ROLE_CLIENT;
-    mvmvif_sta.ifc.ops = &ops;
     mvmvif_sta.ifc.ctx = &scan_result;
 
     trans_ = sim_trans_.iwl_trans();
@@ -445,7 +443,6 @@ class LmacScanTest : public MvmTest {
   ~LmacScanTest() {}
 
   struct iwl_trans* trans_;
-  wlan_softmac_ifc_protocol_ops_t ops;
   struct iwl_mvm_vif mvmvif_sta;
   uint8_t channels_to_scan_[4] = {7, 1, 40, 136};
   iwl_mvm_scan_req passive_scan_args_{
@@ -478,7 +475,6 @@ class UmacScanTest : public FakeUcodeTest, public MockTrans {
     mvmvif_ = reinterpret_cast<struct iwl_mvm_vif*>(calloc(1, sizeof(struct iwl_mvm_vif)));
     mvmvif_->mvm = mvm_;
     mvmvif_->mac_role = WLAN_MAC_ROLE_CLIENT;
-    mvmvif_->ifc.ops = &protocol_ops_;
     mvm_->mvmvif[0] = mvmvif_;
     mvm_->vif_count++;
 
@@ -495,17 +491,17 @@ class UmacScanTest : public FakeUcodeTest, public MockTrans {
     mtx_lock(&mvm_->mutex);
 
     // Fake callback registered to capture scan completion responses.
-    ops_.scan_complete = [](void* ctx, zx_status_t status, uint64_t scan_id) {
+
+    mvmvif_sta_.mvm = iwl_trans_get_mvm(sim_trans_.iwl_trans());
+    mvmvif_sta_.mac_role = WLAN_MAC_ROLE_CLIENT;
+    // Fake callback registered to capture scan completion responses.
+    mvmvif_sta_.ifc.scan_complete = [](void* ctx, zx_status_t status, uint64_t scan_id) {
       // TODO(fxbug.dev/88934): scan_id is always 0
       EXPECT_EQ(scan_id, 0);
       struct ScanResult* sr = (struct ScanResult*)ctx;
       sr->sme_notified = true;
       sr->success = (status == ZX_OK ? true : false);
     };
-
-    mvmvif_sta_.mvm = iwl_trans_get_mvm(sim_trans_.iwl_trans());
-    mvmvif_sta_.mac_role = WLAN_MAC_ROLE_CLIENT;
-    mvmvif_sta_.ifc.ops = &ops_;
     mvmvif_sta_.ifc.ctx = &scan_result_;
 
     active_scan_args_.ssids =
@@ -530,7 +526,6 @@ class UmacScanTest : public FakeUcodeTest, public MockTrans {
     return test->mock_send_umac_scan_cmd_.Call(host_cmd->id, host_cmd->len[0], umac_scan_cmd->uid);
   }
 
-  wlan_softmac_ifc_protocol_ops_t ops_;
   struct iwl_mvm_vif mvmvif_sta_;
 
   iwl_mvm_scan_req passive_scan_args_{

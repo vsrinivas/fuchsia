@@ -282,7 +282,7 @@ zx_status_t iwl_mvm_get_current_regdomain(struct iwl_mvm* mvm, bool* changed,
       changed, out_country);
 }
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
 int iwl_mvm_init_fw_regd(struct iwl_mvm* mvm) {
     enum iwl_mcc_source used_src;
     struct ieee80211_regdomain* regd;
@@ -342,7 +342,7 @@ iwl_mvm_op_get_antenna(struct ieee80211_hw *hw, u32 *tx_ant, u32 *rx_ant)
 #endif  // NEEDS_PORTING
 
 zx_status_t iwl_mvm_mac_setup_register(struct iwl_mvm* mvm) {
-#if 0   // NEEDS_PORTING: for cipher
+#if 0  // NEEDS_PORTING: for cipher
 	static const u32 mvm_ciphers[] = {
 		WLAN_CIPHER_SUITE_WEP40,
 		WLAN_CIPHER_SUITE_WEP104,
@@ -601,7 +601,6 @@ zx_status_t iwl_mvm_mac_setup_register(struct iwl_mvm* mvm) {
 
   return ZX_OK;
 }
-
 
 zx_status_t iwl_mvm_mac_tx(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvmsta,
                            struct ieee80211_mac_packet* pkt) {
@@ -1013,7 +1012,7 @@ zx_status_t iwl_mvm_mac_start(struct iwl_mvm* mvm) {
   return ret;
 }
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
 static void iwl_mvm_restart_complete(struct iwl_mvm* mvm) {
 	int ret;
 
@@ -1119,7 +1118,7 @@ void iwl_mvm_mac_stop(struct iwl_mvm* mvm) {
 
   iwl_fw_cancel_dump(&mvm->fwrt);
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
   cancel_delayed_work_sync(&mvm->cs_tx_unblock_dwork);
 	cancel_delayed_work_sync(&mvm->scan_timeout_dwork);
 #endif  // NEEDS_PORTING
@@ -1305,7 +1304,7 @@ zx_status_t iwl_mvm_mac_add_interface(struct iwl_mvm_vif* mvmvif) {
     goto out_release;
   }
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
     ret = iwl_mvm_power_update_mac(mvm);
     if (ret) { goto out_remove_mac; }
 
@@ -1400,7 +1399,6 @@ static void iwl_mvm_prepare_mac_removal(struct iwl_mvm* mvm, struct ieee80211_vi
 zx_status_t iwl_mvm_mac_remove_interface(struct iwl_mvm_vif* mvmvif) {
   struct iwl_mvm* mvm = mvmvif->mvm;
   struct iwl_probe_resp_data* probe_data;
-
 #if 0   // NEEDS_PORTING
     iwl_mvm_prepare_mac_removal(mvm, vif);
 
@@ -1604,7 +1602,7 @@ out:
   mtx_unlock(&mvm->mutex);
 }
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
 static void iwl_mvm_config_iface_filter(struct ieee80211_hw *hw,
 					struct ieee80211_vif *vif,
 					unsigned int filter_flags,
@@ -2560,7 +2558,7 @@ zx_status_t iwl_mvm_mac_hw_scan(struct iwl_mvm_vif* mvmvif, const struct iwl_mvm
   return ret;
 }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 static void iwl_mvm_mac_cancel_hw_scan(struct ieee80211_hw* hw, struct ieee80211_vif* vif) {
     struct iwl_mvm* mvm = IWL_MAC80211_GET_MVM(hw);
 
@@ -2977,7 +2975,7 @@ zx_status_t iwl_mvm_mac_sta_state(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta
      * than 16. We can't avoid connecting at all, so refuse the
      * station state change, this will cause mac80211 to abandon
      * attempts to connect to this AP, and eventually wpa_s will
-		 * blocklist the AP...
+     * blocklist the AP...
      */
     if (mvmvif->mac_role == WLAN_MAC_ROLE_CLIENT && mvmvif->bss_conf.beacon_int < 16) {
       IWL_ERR(mvm, "AP %pM beacon interval is %d, refusing due to firmware bug!\n", mvm_sta->addr,
@@ -3020,8 +3018,8 @@ zx_status_t iwl_mvm_mac_sta_state(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta
     ret = ZX_OK;
 
   } else if (old_state == IWL_STA_AUTH && new_state == IWL_STA_ASSOC) {
-#if 0  // NEEDS_PORTING
-       // TODO(36677): Supports AP role
+#if 0   // NEEDS_PORTING
+        // TODO(36677): Supports AP role
         if (mvmvif->mac_role == WLAN_MAC_ROLE_AP) {
 			      vif->bss_conf.he_support = sta->deflink.he_cap.has_he;
             mvmvif->ap_assoc_sta_count++;
@@ -5088,12 +5086,12 @@ static void iwl_mvm_event_mlme_callback(struct iwl_mvm *mvm,
 					struct ieee80211_vif *vif,
 					const struct ieee80211_event *event)
 {
-#define CHECK_MLME_TRIGGER(_cnt, _fmt...)				\
-	do {								\
-		if ((trig_mlme->_cnt) && --(trig_mlme->_cnt))		\
-			break;						\
-		iwl_fw_dbg_collect_trig(&(mvm)->fwrt, trig, _fmt);	\
-	} while (0)
+#define CHECK_MLME_TRIGGER(_cnt, _fmt...)              \
+  do {                                                 \
+    if ((trig_mlme->_cnt) && --(trig_mlme->_cnt))      \
+      break;                                           \
+    iwl_fw_dbg_collect_trig(&(mvm)->fwrt, trig, _fmt); \
+  } while (0)
 
 	struct iwl_fw_dbg_trigger_tlv *trig;
 	struct iwl_fw_dbg_trigger_mlme *trig_mlme;
@@ -5428,3 +5426,28 @@ const struct ieee80211_ops iwl_mvm_hw_ops = {
 #endif
 #endif  // NEEDS_PORTING
 };
+
+void softmac_ifc_recv(struct iwl_mvm_vif* vif, const wlan_rx_packet_t* rx_packet) {
+  if (!vif) {
+    IWL_ERR(nullptr, "vif not found.");
+    return;
+  }
+  if (!vif->ifc.recv) {
+    IWL_ERR(nullptr, "recv funtion not found in softmac_ifc.");
+    return;
+  }
+  vif->ifc.recv(vif->ifc.ctx, rx_packet);
+}
+
+void softmac_ifc_scan_complete(struct iwl_mvm_vif* vif, const zx_status_t status,
+                               const uint64_t scan_id) {
+  if (!vif) {
+    IWL_ERR(nullptr, "vif not found.");
+    return;
+  }
+  if (!vif->ifc.scan_complete) {
+    IWL_ERR(nullptr, "scan_complete function not found in softmac_ifc.");
+    return;
+  }
+  vif->ifc.scan_complete(vif->ifc.ctx, status, scan_id);
+}

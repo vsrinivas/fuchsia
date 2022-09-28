@@ -107,47 +107,59 @@ zx_status_t MvmSta::Create(struct iwl_mvm_vif* iwl_mvm_vif, const uint8_t bssid[
   return status;
 }
 
-zx_status_t MvmSta::SetKey(const struct wlan_key_config* key_config) {
+zx_status_t MvmSta::SetKey(const fuchsia_wlan_softmac::wire::WlanKeyConfig* key_config) {
   zx_status_t status = ZX_OK;
   struct iwl_mvm* const mvm = iwl_mvm_sta_->mvmvif->mvm;
 
+  if (!(key_config->has_cipher_oui() && key_config->has_key_type() && key_config->has_key() &&
+        key_config->has_cipher_type() && key_config->has_key_idx() && key_config->has_rsc())) {
+    IWL_ERR(mvmvif, "WlanKeyConfig missing fields: %s %s %s %s %s %s.",
+            key_config->has_cipher_oui() ? "" : "cipher_oui",
+            key_config->has_key_type() ? "" : "key_type", key_config->has_key() ? "" : "key",
+            key_config->has_cipher_type() ? "" : "cipher_type",
+            key_config->has_key_idx() ? "" : "key_idx", key_config->has_rsc() ? "" : "rsc");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  uint8_t key_type = static_cast<uint8_t>(key_config->key_type());
   if (mvm->trans->cfg->gen2 || iwl_mvm_has_new_tx_api(mvm)) {
     // The new firmwares (for starting with the 22000 series) have different packet generation
     // requirements than mentioned below.
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  if (!std::equal(key_config->cipher_oui,
-                  key_config->cipher_oui + std::size(key_config->cipher_oui), kIeeeOui,
+  if (!std::equal(key_config->cipher_oui().begin(),
+                  key_config->cipher_oui().begin() + key_config->cipher_oui().size(), kIeeeOui,
                   kIeeeOui + std::size(kIeeeOui))) {
     // IEEE 802.11-2016 9.4.2.25.2
     // The standard ciphers all live in the IEEE space.
+    IWL_ERR(mvmvif, "Cipher OUI must be %02X:%02X:%02X. OUI %02X:%02X:%02X is not supported.",
+            kIeeeOui[0], kIeeeOui[1], kIeeeOui[2], key_config->cipher_oui()[0],
+            key_config->cipher_oui()[1], key_config->cipher_oui()[2]);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  if (key_config->key_type < 0 || key_config->key_type >= ieee80211_key_confs_.size()) {
+  if (key_type >= ieee80211_key_confs_.size()) {
+    IWL_ERR(mvmvif, "Unknown key type: %hhu.", key_type);
     return ZX_ERR_INVALID_ARGS;
   }
 
   // Remove any existing key in this slot.
-  if (ieee80211_key_confs_[key_config->key_type] != nullptr) {
+  if (ieee80211_key_confs_[key_type] != nullptr) {
     if ((status = iwl_mvm_mac_remove_key(iwl_mvm_sta_->mvmvif, iwl_mvm_sta_.get(),
-                                         ieee80211_key_confs_[key_config->key_type].get())) !=
-        ZX_OK) {
+                                         ieee80211_key_confs_[key_type].get())) != ZX_OK) {
       IWL_ERR(mvmvif, "iwl_mvm_mac_remove_key() failed: %s\n", zx_status_get_string(status));
       return status;
     }
-    ieee80211_key_confs_[key_config->key_type].reset();
+    ieee80211_key_confs_[key_type].reset();
   }
 
   unique_free_ptr<struct ieee80211_key_conf> key_conf(reinterpret_cast<struct ieee80211_key_conf*>(
-      malloc(sizeof(ieee80211_key_conf) + key_config->key_len)));
-  memset(key_conf.get(), 0, sizeof(*key_conf) + key_config->key_len);
-  key_conf->cipher = key_config->cipher_type;
-  key_conf->key_type = key_config->key_type;
-  key_conf->keyidx = key_config->key_idx;
-  key_conf->keylen = key_config->key_len;
-  key_conf->rx_seq = key_config->rsc;
+      calloc(1, sizeof(ieee80211_key_conf) + key_config->key().count())));
+  key_conf->cipher = key_config->cipher_type();
+  key_conf->keyidx = key_config->key_idx();
+  key_conf->keylen = key_config->key().count();
+  key_conf->rx_seq = key_config->rsc();
 
   if (key_conf->cipher == CIPHER_SUITE_TYPE_TKIP) {
     // A special trick for TKIP group key: Swap the latest 2 8-byte (MIC-KEY-TX and MIC-KEY-RX).
@@ -165,23 +177,25 @@ zx_status_t MvmSta::SetKey(const struct wlan_key_config* key_config) {
     // A STA shall use bits 192–255 of the temporal key as the Michael key for MSDUs from the
     // Supplicant’s STA to the Authenticator’s STA.
     //
-    memcpy(&key_conf->key[0], &key_config->key[0], 16);   // TK (Temporal Key)
-    memcpy(&key_conf->key[16], &key_config->key[24], 8);  // AP TX ==> FW RX
-    memcpy(&key_conf->key[24], &key_config->key[16], 8);  // AP RX ==> FW TX, which is not used in
-                                                          // TKIP group key.
+    ZX_ASSERT_MSG(key_config->key().count() == 32, "TKIP key length must be 32. Found %zu",
+                  key_config->key().count());
+    memcpy(&key_conf->key[0], &key_config->key().begin()[0], 16);   // TK (Temporal Key)
+    memcpy(&key_conf->key[16], &key_config->key().begin()[24], 8);  // AP TX ==> FW RX
+    memcpy(&key_conf->key[24], &key_config->key().begin()[16], 8);  // AP RX ==> FW TX, which is not
+                                                                    // used in TKIP group key.
   } else {
-    memcpy(key_conf->key, key_config->key, key_conf->keylen);
+    memcpy(key_conf->key, key_config->key().begin(), key_conf->keylen);
   }
 
   if ((status = iwl_mvm_mac_add_key(iwl_mvm_sta_->mvmvif, iwl_mvm_sta_.get(), key_conf.get())) !=
       ZX_OK) {
-    IWL_ERR(mvmvif, "iwl_mvm_mac_add_key(key_type %d, cipher_type %d, key_idx %d) failed: %s\n",
-            key_config->key_type, key_config->cipher_type, key_config->key_idx,
+    IWL_ERR(mvmvif, "iwl_mvm_mac_add_key(key_type %hhu, cipher_type %hhu, key_idx %hhu) failed:%s",
+            key_type, key_config->cipher_type(), key_config->key_idx(),
             zx_status_get_string(status));
     return status;
   }
 
-  ieee80211_key_confs_[key_config->key_type] = std::move(key_conf);
+  ieee80211_key_confs_[key_type] = std::move(key_conf);
   return ZX_OK;
 }
 

@@ -1,0 +1,21 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be found
+# in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.wlan.softmac") {
+  sdk_category = "partner"
+  sources = [
+    "overview.fidl",
+    "softmac.fidl",
+  ]
+  public_deps = [
+    "//sdk/banjo/fuchsia.hardware.wlan.associnfo",
+    "//sdk/fidl/fuchsia.wlan.common",
+    "//sdk/fidl/fuchsia.wlan.ieee80211",
+    "//sdk/fidl/fuchsia.wlan.internal",
+    "//zircon/vdso/zx",
+  ]
+  contains_drivers = true
+}

@@ -73,6 +73,7 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/rcu.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/scoped_utils.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/wlan-softmac-device.h"
 
 // Interface create waiting for delete to complete.
 #define IWLWIFI_IF_DELETE_TIMEOUT (ZX_MSEC(100))
@@ -87,16 +88,16 @@ extern "C" {
 //   bands[]: contains the list of enabled bands.
 //
 size_t compose_band_list(const struct iwl_nvm_data* nvm_data,
-                         wlan_band_t bands[fuchsia_wlan_common_MAX_BANDS]) {
+                         wlan_common_wire::WlanBand bands[fuchsia_wlan_common_MAX_BANDS]) {
   size_t bands_count = 0;
 
   if (nvm_data->sku_cap_band_24ghz_enable) {
-    bands[bands_count++] = WLAN_BAND_TWO_GHZ;
+    bands[bands_count++] = wlan_common_wire::WlanBand::kTwoGhz;
   }
   if (nvm_data->sku_cap_band_52ghz_enable) {
-    bands[bands_count++] = WLAN_BAND_FIVE_GHZ;
+    bands[bands_count++] = wlan_common_wire::WlanBand::kFiveGhz;
   }
-  ZX_ASSERT(bands_count <= fuchsia_wlan_common_MAX_BANDS);
+  ZX_ASSERT(bands_count <= wlan_common_wire::kMaxBands);
 
   return bands_count;
 }
@@ -108,19 +109,21 @@ size_t compose_band_list(const struct iwl_nvm_data* nvm_data,
 // - 'bands_count' is the number of bands in 'bands[]'.
 // - 'band_infos[]' must have at least bands_count for this function to write.
 //
-void fill_band_cap_list(const struct iwl_nvm_data* nvm_data, const wlan_band_t* bands,
-                        size_t band_caps_count, wlan_softmac_band_capability_t* band_cap_list) {
+void fill_band_cap_list(const struct iwl_nvm_data* nvm_data,
+                        const wlan_common_wire::WlanBand* bands, size_t band_caps_count,
+                        wlan_softmac_wire::WlanSoftmacBandCapability* band_cap_list) {
   ZX_ASSERT(band_caps_count <= std::size(nvm_data->bands));
 
   for (size_t band_idx = 0; band_idx < band_caps_count; ++band_idx) {
-    wlan_band_t band_id = bands[band_idx];
+    wlan_common_wire::WlanBand band_id = bands[band_idx];
     const struct ieee80211_supported_band* sband = &nvm_data->bands[band_id];  // source
-    wlan_softmac_band_capability_t* band_cap = &band_cap_list[band_idx];       // destination
+    wlan_softmac_wire::WlanSoftmacBandCapability* band_cap =
+        &band_cap_list[band_idx];  // destination
 
     band_cap->band = band_id;
     band_cap->ht_supported = sband->ht_cap.ht_supported;
     struct ieee80211_ht_cap_packed* ht_caps =
-        reinterpret_cast<struct ieee80211_ht_cap_packed*>(&band_cap->ht_caps.bytes);
+        reinterpret_cast<struct ieee80211_ht_cap_packed*>(band_cap->ht_caps.bytes.data());
     ht_caps->ht_capability_info = sband->ht_cap.cap;
     ht_caps->ampdu_params =
         (sband->ht_cap.ampdu_factor << IEEE80211_AMPDU_RX_LEN_SHIFT) |   // (64K - 1) bytes
@@ -136,7 +139,7 @@ void fill_band_cap_list(const struct iwl_nvm_data* nvm_data, const wlan_band_t* 
 
     // Fill the channel list of this band.
     ZX_ASSERT(sband->n_channels <= std::size(band_cap->operating_channel_list));
-    uint8_t* ch_list = band_cap->operating_channel_list;
+    uint8_t* ch_list = band_cap->operating_channel_list.begin();
     for (size_t ch_idx = 0; ch_idx < sband->n_channels; ++ch_idx) {
       ch_list[ch_idx] = sband->channels[ch_idx].ch_num;
     }
@@ -146,73 +149,105 @@ void fill_band_cap_list(const struct iwl_nvm_data* nvm_data, const wlan_band_t* 
 
 /////////////////////////////////////       MAC       //////////////////////////////////////////////
 
-zx_status_t mac_query(void* ctx, wlan_softmac_info_t* info) {
-  const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
-
-  if (!ctx || !info) {
+zx_status_t mac_query(void* ctx, wlan_softmac_wire::WlanSoftmacInfo* info_out,
+                      fidl::AnyArena& arena) {
+  if (ctx == nullptr || info_out == nullptr) {
+    IWL_ERR(mvmvif, "Empty parameter.");
     return ZX_ERR_INVALID_ARGS;
   }
-  memset(info, 0, sizeof(*info));
+
+  const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
+  auto builder = wlan_softmac_wire::WlanSoftmacInfo::Builder(arena);
+
+  // The minimal set of wlan device capabilities, also stored as static array since it also back a
+  // VectorView in wlan_softmac_wire::WlanSoftmacInfo.
+  constexpr size_t kPhySize = 5;
+
+  if (kPhySize > wlan_common_wire::kMaxSupportedPhyTypes) {
+    IWL_ERR(mvmvif,
+            "The phy type array size here is too large to return, please check. kPhySize: %zu, "
+            "kMaxSupportedPhyTypes: %hhu",
+            kPhySize, wlan_common_wire::kMaxSupportedPhyTypes);
+    return ZX_ERR_OUT_OF_RANGE;
+  }
 
   ZX_ASSERT(mvmvif->mvm);
   ZX_ASSERT(mvmvif->mvm->nvm_data);
+
   struct iwl_nvm_data* nvm_data = mvmvif->mvm->nvm_data;
-
-  memcpy(info->sta_addr, nvm_data->hw_addr, sizeof(info->sta_addr));
-  info->mac_role = mvmvif->mac_role;
-
-  // Fill out a minimal set of wlan device capabilities
-  size_t count = 0;
-  for (auto phy : {WLAN_PHY_TYPE_DSSS, WLAN_PHY_TYPE_HR, WLAN_PHY_TYPE_OFDM, WLAN_PHY_TYPE_ERP,
-                   WLAN_PHY_TYPE_HT}) {
-    ZX_DEBUG_ASSERT(count < fuchsia_wlan_common_MAX_SUPPORTED_PHY_TYPES);
-    info->supported_phys_list[count] = phy;
-    ++count;
+  fidl::Array<uint8_t, wlan_ieee80211_wire::kMacAddrLen> sta_addr;
+  memcpy(sta_addr.begin(), nvm_data->hw_addr, wlan_ieee80211_wire::kMacAddrLen);
+  builder.sta_addr(sta_addr);
+  switch (mvmvif->mac_role) {
+    case WLAN_MAC_ROLE_CLIENT:
+      builder.mac_role(wlan_common_wire::WlanMacRole::kClient);
+      break;
+    case WLAN_MAC_ROLE_AP:
+      builder.mac_role(wlan_common_wire::WlanMacRole::kAp);
+      break;
+    case WLAN_MAC_ROLE_MESH:
+      builder.mac_role(wlan_common_wire::WlanMacRole::kMesh);
+      break;
+    default:
+      IWL_ERR(mvmvif, "Mac role not supported. The MAC role in mvmvif: %u", mvmvif->mac_role);
+      return ZX_ERR_BAD_STATE;
   }
-  info->supported_phys_count = count;
 
-  info->hardware_capability = WLAN_SOFTMAC_HARDWARE_CAPABILITY_BIT_SHORT_PREAMBLE |
-                              WLAN_SOFTMAC_HARDWARE_CAPABILITY_BIT_SPECTRUM_MGMT |
-                              WLAN_SOFTMAC_HARDWARE_CAPABILITY_BIT_SHORT_SLOT_TIME;
+  std::vector<wlan_common_wire::WlanPhyType> phy_vec;
+  phy_vec.push_back(wlan_common_wire::WlanPhyType::kDsss);
+  phy_vec.push_back(wlan_common_wire::WlanPhyType::kHr);
+  phy_vec.push_back(wlan_common_wire::WlanPhyType::kOfdm);
+  phy_vec.push_back(wlan_common_wire::WlanPhyType::kErp);
+  phy_vec.push_back(wlan_common_wire::WlanPhyType::kHt);
+
+  builder.supported_phys(fidl::VectorView<wlan_common_wire::WlanPhyType>(arena, phy_vec));
+
+  builder.hardware_capability(
+      (uint32_t)wlan_common_wire::WlanSoftmacHardwareCapabilityBit::kShortPreamble |
+      (uint32_t)wlan_common_wire::WlanSoftmacHardwareCapabilityBit::kSpectrumMgmt |
+      (uint32_t)wlan_common_wire::WlanSoftmacHardwareCapabilityBit::kShortSlotTime);
 
   // Determine how many bands this adapter supports.
-  wlan_band_t bands[fuchsia_wlan_common_MAX_BANDS];
-  info->band_cap_count = compose_band_list(nvm_data, bands);
+  wlan_common_wire::WlanBand bands[fuchsia_wlan_common_MAX_BANDS];
+  wlan_softmac_wire::WlanSoftmacBandCapability band_caps_buffer[wlan_common_wire::kMaxBands];
+  size_t band_caps_count = compose_band_list(nvm_data, bands);
 
-  fill_band_cap_list(nvm_data, bands, info->band_cap_count, info->band_cap_list);
-
+  fill_band_cap_list(nvm_data, bands, band_caps_count, band_caps_buffer);
+  auto band_caps_vec = std::vector<wlan_softmac_wire::WlanSoftmacBandCapability>(
+      band_caps_buffer, band_caps_buffer + band_caps_count);
+  builder.band_caps(
+      fidl::VectorView<wlan_softmac_wire::WlanSoftmacBandCapability>(arena, band_caps_vec));
+  *info_out = builder.Build();
   return ZX_OK;
 }
 
-void mac_query_discovery_support(discovery_support_t* out_resp) {
-  memset(out_resp, 0, sizeof(*out_resp));
+void mac_query_discovery_support(wlan_common_wire::DiscoverySupport* out_resp) {
   // TODO(fxbug.dev/43517): Better handling of driver features
   out_resp->scan_offload.supported = true;
 }
 
-void mac_query_mac_sublayer_support(mac_sublayer_support_t* out_resp) {
-  memset(out_resp, 0, sizeof(*out_resp));
-  out_resp->data_plane.data_plane_type = DATA_PLANE_TYPE_ETHERNET_DEVICE;
-  out_resp->device.mac_implementation_type = MAC_IMPLEMENTATION_TYPE_SOFTMAC;
+void mac_query_mac_sublayer_support(wlan_common_wire::MacSublayerSupport* out_resp) {
+  *out_resp = {};
+  out_resp->data_plane.data_plane_type = wlan_common_wire::DataPlaneType::kEthernetDevice;
+  out_resp->device.mac_implementation_type = wlan_common_wire::MacImplementationType::kSoftmac;
 }
 
-void mac_query_security_support(security_support_t* out_resp) {
-  memset(out_resp, 0, sizeof(*out_resp));
+void mac_query_security_support(wlan_common_wire::SecuritySupport* out_resp) {
+  *out_resp = {};
   // TODO(43517): Better handling of driver features
   out_resp->mfp.supported = true;
   out_resp->sae.sme_handler_supported = true;
 }
 
-void mac_query_spectrum_management_support(spectrum_management_support_t* out_resp) {
-  memset(out_resp, 0, sizeof(*out_resp));
+void mac_query_spectrum_management_support(wlan_common_wire::SpectrumManagementSupport* out_resp) {
+  *out_resp = {};
   // This driver does not set any spectrum management features at this time.
 }
 
-zx_status_t mac_start(void* ctx, const wlan_softmac_ifc_protocol_t* ifc,
-                      zx_handle_t* out_mlme_channel) {
+zx_status_t mac_start(void* ctx, void* ifc_dev, zx_handle_t* out_mlme_channel) {
   const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
 
-  if (!ctx || !ifc || !out_mlme_channel) {
+  if (!ctx || !ifc_dev || !out_mlme_channel) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -230,8 +265,9 @@ zx_status_t mac_start(void* ctx, const wlan_softmac_ifc_protocol_t* ifc,
   *out_mlme_channel = mvmvif->mlme_channel;
   mvmvif->mlme_channel = ZX_HANDLE_INVALID;
 
-  iwl_rcu_store(mvmvif->ifc.ctx, ifc->ctx);
-  iwl_rcu_store(mvmvif->ifc.ops, ifc->ops);
+  iwl_rcu_store(mvmvif->ifc.ctx, ifc_dev);
+  iwl_rcu_store(mvmvif->ifc.recv, &mac_ifc_recv);
+  iwl_rcu_store(mvmvif->ifc.scan_complete, &mac_ifc_scan_complete);
 
   zx_status_t ret = iwl_mvm_mac_add_interface(mvmvif);
   if (ret != ZX_OK) {
@@ -361,13 +397,15 @@ zx_status_t mac_set_channel(struct iwl_mvm_vif* mvmvif, const wlan_channel_t* ch
 }
 
 // This is called after mac_set_channel(). The MAC (mvmvif) will be configured as a CLIENT role.
-zx_status_t mac_configure_bss(struct iwl_mvm_vif* mvmvif, const bss_config_t* config) {
+zx_status_t mac_configure_bss(struct iwl_mvm_vif* mvmvif,
+                              const fuchsia_wlan_internal::wire::BssConfig* config) {
   zx_status_t ret = ZX_OK;
 
   IWL_INFO(mvmvif, "mac_configure_bss(bssid=" FMT_SSID ", type=%d, remote=%d)\n",
-           FMT_SSID_BYTES(config->bssid, sizeof(config->bssid)), config->bss_type, config->remote);
+           FMT_SSID_BYTES(config->bssid.data(), sizeof(config->bssid)), config->bss_type,
+           config->remote);
 
-  if (config->bss_type != BSS_TYPE_INFRASTRUCTURE) {
+  if (config->bss_type != fuchsia_wlan_internal::BssType::kInfrastructure) {
     IWL_ERR(mvmvif, "invalid bss_type requested: %d\n", config->bss_type);
     return ZX_ERR_INVALID_ARGS;
   }
@@ -375,8 +413,8 @@ zx_status_t mac_configure_bss(struct iwl_mvm_vif* mvmvif, const bss_config_t* co
   {
     // Copy the BSSID info.
     auto lock = std::lock_guard(mvmvif->mvm->mutex);
-    memcpy(mvmvif->bss_conf.bssid, config->bssid, ETH_ALEN);
-    memcpy(mvmvif->bssid, config->bssid, ETH_ALEN);
+    memcpy(mvmvif->bss_conf.bssid, config->bssid.data(), ETH_ALEN);
+    memcpy(mvmvif->bssid, config->bssid.data(), ETH_ALEN);
 
     // Simulates the behavior of iwl_mvm_bss_info_changed_station().
     ret = iwl_mvm_mac_ctxt_changed(mvmvif, false, mvmvif->bssid);
@@ -413,12 +451,13 @@ zx_status_t mac_unconfigure_bss(struct iwl_mvm_vif* mvmvif) {
   return ZX_OK;
 }
 
-zx_status_t mac_enable_beaconing(void* ctx, const wlan_bcn_config_t* bcn_cfg) {
+zx_status_t mac_enable_beaconing(void* ctx, const wlan_softmac_wire::WlanBcnConfig* bcn_cfg) {
   IWL_ERR(ctx, "%s() needs porting ... see fxbug.dev/36742\n", __func__);
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t mac_configure_beacon(void* ctx, const wlan_tx_packet_t* packet_template) {
+zx_status_t mac_configure_beacon(void* ctx,
+                                 const wlan_softmac_wire::WlanTxPacket* packet_template) {
   IWL_ERR(ctx, "%s() needs porting ... see fxbug.dev/36742\n", __func__);
   return ZX_ERR_NOT_SUPPORTED;
 }
@@ -428,7 +467,9 @@ zx_status_t mac_configure_beacon(void* ctx, const wlan_tx_packet_t* packet_templ
 // The current mac context is set by mac_configure_bss() with default values.
 //   TODO(fxbug.dev/36684): supports VHT (802.11ac)
 //
-zx_status_t mac_configure_assoc(struct iwl_mvm_vif* mvmvif, const wlan_assoc_ctx_t* assoc_ctx) {
+zx_status_t mac_configure_assoc(
+    struct iwl_mvm_vif* mvmvif,
+    const fuchsia_hardware_wlan_associnfo::wire::WlanAssocCtx* assoc_ctx) {
   zx_status_t ret = ZX_OK;
   IWL_INFO(ctx, "Associating ...\n");
 
@@ -443,16 +484,37 @@ zx_status_t mac_configure_assoc(struct iwl_mvm_vif* mvmvif, const wlan_assoc_ctx
 
   // Save band info into interface struct for future usage.
   mvmvif->phy_ctxt->band = iwl_mvm_get_channel_band(assoc_ctx->channel.primary);
-
-  mvm_sta->bw = assoc_ctx->channel.cbw;
+  switch (assoc_ctx->channel.cbw) {
+    case fuchsia_wlan_common::ChannelBandwidth::kCbw20:
+      mvm_sta->bw = CHANNEL_BANDWIDTH_CBW20;
+      break;
+    case fuchsia_wlan_common::ChannelBandwidth::kCbw40:
+      mvm_sta->bw = CHANNEL_BANDWIDTH_CBW40;
+      break;
+    case fuchsia_wlan_common::ChannelBandwidth::kCbw40Below:
+      mvm_sta->bw = CHANNEL_BANDWIDTH_CBW40BELOW;
+      break;
+    case fuchsia_wlan_common::ChannelBandwidth::kCbw80:
+      mvm_sta->bw = CHANNEL_BANDWIDTH_CBW80;
+      break;
+    case fuchsia_wlan_common::ChannelBandwidth::kCbw160:
+      mvm_sta->bw = CHANNEL_BANDWIDTH_CBW160;
+      break;
+    case fuchsia_wlan_common::ChannelBandwidth::kCbw80P80:
+      mvm_sta->bw = CHANNEL_BANDWIDTH_CBW80P80;
+      break;
+    default:
+      IWL_ERR(mvmvif, "Unknown channel bandwidth.");
+      return ZX_ERR_INVALID_ARGS;
+  }
   // Record the intersection of AP and station supported rate to mvm_sta.
   ZX_ASSERT(assoc_ctx->rates_cnt <= sizeof(mvm_sta->supp_rates));
-  memcpy(mvm_sta->supp_rates, assoc_ctx->rates, assoc_ctx->rates_cnt);
+  memcpy(mvm_sta->supp_rates, assoc_ctx->rates.data(), assoc_ctx->rates_cnt);
 
-  // Copy HT related fields from wlan_assoc_ctx_t.
+  // Copy HT related fields from fuchsia_hardware_wlan_associnfo::wire::WlanAssocCtx.
   mvm_sta->support_ht = assoc_ctx->has_ht_cap;
   if (assoc_ctx->has_ht_cap) {
-    memcpy(&mvm_sta->ht_cap, &assoc_ctx->ht_cap, sizeof(ht_capabilities_t));
+    memcpy(&mvm_sta->ht_cap, assoc_ctx->ht_cap.bytes.data(), sizeof(ht_capabilities_t));
   }
 
   // Change the station states step by step.
@@ -467,6 +529,7 @@ zx_status_t mac_configure_assoc(struct iwl_mvm_vif* mvmvif, const wlan_assoc_ctx
     IWL_ERR(mvmvif, "cannot set state from AUTH to ASSOC: %s\n", zx_status_get_string(ret));
     return ret;
   }
+
   ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_ASSOC, IWL_STA_AUTHORIZED);
   if (ret != ZX_OK) {
     IWL_ERR(mvmvif, "cannot set state from ASSOC to AUTHORIZED: %s\n", zx_status_get_string(ret));
@@ -523,13 +586,18 @@ zx_status_t mac_clear_assoc(struct iwl_mvm_vif* mvmvif,
   return remove_chanctx(mvmvif);
 }
 
-zx_status_t mac_start_passive_scan(void* ctx,
-                                   const wlan_softmac_passive_scan_args_t* passive_scan_args,
-                                   uint64_t* out_scan_id) {
+zx_status_t mac_start_passive_scan(
+    void* ctx, const wlan_softmac_wire::WlanSoftmacPassiveScanArgs* passive_scan_args,
+    uint64_t* out_scan_id) {
   const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
+  if (!passive_scan_args->has_channels()) {
+    IWL_ERR(mvmvif, "Required parameter missed: channels.");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   struct iwl_mvm_scan_req scan_req = {
-      .channels_list = passive_scan_args->channels_list,
-      .channels_count = passive_scan_args->channels_count,
+      .channels_list = passive_scan_args->channels().data(),
+      .channels_count = passive_scan_args->channels().count(),
       .ssids = NULL,
       .ssids_count = 0,
       .mac_header_buffer = NULL,
@@ -540,32 +608,40 @@ zx_status_t mac_start_passive_scan(void* ctx,
   return iwl_mvm_mac_hw_scan(mvmvif, &scan_req, out_scan_id);
 }
 
-zx_status_t mac_start_active_scan(void* ctx,
-                                  const wlan_softmac_active_scan_args_t* active_scan_args,
-                                  uint64_t* out_scan_id) {
+zx_status_t mac_start_active_scan(
+    void* ctx, const wlan_softmac_wire::WlanSoftmacActiveScanArgs* active_scan_args,
+    uint64_t* out_scan_id) {
   const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
   zx_status_t ret = ZX_OK;
+  if (!(active_scan_args->has_channels() && active_scan_args->has_mac_header() &&
+        active_scan_args->has_ies() && active_scan_args->has_ssids())) {
+    IWL_ERR(mvmvif, "WlanSoftmacActiveScanArgs missing fields: %s %s %s %s",
+            active_scan_args->has_channels() ? "" : "channels",
+            active_scan_args->has_mac_header() ? "" : "mac_header",
+            active_scan_args->has_ies() ? "" : "ies", active_scan_args->has_ssids() ? "" : "ssids");
+    return ZX_ERR_INVALID_ARGS;
+  }
   struct iwl_mvm_scan_req scan_req = {
-      .channels_list = active_scan_args->channels_list,
-      .channels_count = active_scan_args->channels_count,
-      .mac_header_buffer = active_scan_args->mac_header_buffer,
-      .mac_header_size = active_scan_args->mac_header_size,
-      .ies_buffer = active_scan_args->ies_buffer,
-      .ies_size = active_scan_args->ies_size,
+      .channels_list = active_scan_args->channels().data(),
+      .channels_count = active_scan_args->channels().count(),
+      .mac_header_buffer = active_scan_args->mac_header().data(),
+      .mac_header_size = active_scan_args->mac_header().count(),
+      .ies_buffer = active_scan_args->ies().data(),
+      .ies_size = active_scan_args->ies().count(),
   };
 
   // If the ssid list in wlanmac_active_scan_args_t is empty, set scan_req for wildcard active scan.
-  if (active_scan_args->ssids_count == 0) {
+  if (active_scan_args->ssids().count() == 0) {
     scan_req.ssids_count = 1;
     scan_req.ssids = (struct iwl_mvm_ssid*)calloc(1, sizeof(struct iwl_mvm_ssid));
     scan_req.ssids[0].ssid_len = 0;
   } else {
-    scan_req.ssids_count = active_scan_args->ssids_count;
+    scan_req.ssids_count = active_scan_args->ssids().count();
     scan_req.ssids =
         (struct iwl_mvm_ssid*)calloc(scan_req.ssids_count, sizeof(struct iwl_mvm_ssid));
     for (uint32_t i = 0; i < scan_req.ssids_count; ++i) {
-      scan_req.ssids[i].ssid_len = active_scan_args->ssids_list[i].len;
-      memcpy(scan_req.ssids[i].ssid_data, active_scan_args->ssids_list[i].data,
+      scan_req.ssids[i].ssid_len = (active_scan_args->ssids().data())[i].len;
+      memcpy(scan_req.ssids[i].ssid_data, (active_scan_args->ssids().data())[i].data.data(),
              scan_req.ssids[i].ssid_len);
     }
   }
@@ -609,7 +685,7 @@ void mac_release(void* ctx) {
   iwl_rcu_free_sync(mvmvif->mvm->dev, mvmvif);
 }
 
-/////////////////////////////////////       PHY       //////////////////////////////////////////////
+/////////////////////////////////////       PHY //////////////////////////////////////////////
 
 zx_status_t phy_get_supported_mac_roles(
     void* ctx,
@@ -788,7 +864,8 @@ zx_status_t phy_destroy_iface(void* ctx, uint16_t id) {
   }
   if (mvmvif->ap_sta_id != IWL_MVM_INVALID_STA) {
     // Client interface is in connected state. Clean it up before deleting the interface.
-    // Attempting to take down the interface with the client connected causes FW to crash sometimes.
+    // Attempting to take down the interface with the client connected causes FW to crash
+    // sometimes.
     struct iwl_mvm_sta* mvm_sta = mvmvif->mvm->fw_id_to_mac_id[mvmvif->ap_sta_id];
     if (mvm_sta) {
       zx_status_t ret;
@@ -864,4 +941,95 @@ zx_status_t phy_get_country(void* ctx, wlanphy_country_t* out_country) {
   zx_status_t ret = iwl_mvm_get_current_regdomain(mvm, &changed, out_country);
   mtx_unlock(&mvm->mutex);
   return ret;
+}
+
+void mac_ifc_recv(void* ctx, const wlan_rx_packet_t* rx_packet) {
+  wlan_softmac_wire::WlanRxPacket fidl_rx_packet;
+  // Unconst the buffer pointer.
+  fidl_rx_packet.mac_frame = fidl::VectorView<uint8_t>::FromExternal(
+      (uint8_t*)(rx_packet->mac_frame_buffer), rx_packet->mac_frame_size);
+
+  auto& fidl_info = fidl_rx_packet.info;
+  const auto& banjo_info = rx_packet->info;
+
+  // TODO(fxbug.dev/109461): Seek a way to remove the conversion below.
+  fidl_info.rx_flags = banjo_info.rx_flags;
+  fidl_info.valid_fields = banjo_info.valid_fields;
+
+  switch (banjo_info.phy) {
+    case WLAN_PHY_TYPE_DSSS:
+      fidl_info.phy = fuchsia_wlan_common::wire::WlanPhyType::kDsss;
+      break;
+    case WLAN_PHY_TYPE_HR:
+      fidl_info.phy = fuchsia_wlan_common::wire::WlanPhyType::kHr;
+      break;
+    case WLAN_PHY_TYPE_OFDM:
+      fidl_info.phy = fuchsia_wlan_common::wire::WlanPhyType::kOfdm;
+      break;
+    case WLAN_PHY_TYPE_ERP:
+      fidl_info.phy = fuchsia_wlan_common::wire::WlanPhyType::kErp;
+      break;
+    case WLAN_PHY_TYPE_HT:
+      fidl_info.phy = fuchsia_wlan_common::wire::WlanPhyType::kHt;
+      break;
+    case WLAN_PHY_TYPE_DMG:
+      fidl_info.phy = fuchsia_wlan_common::wire::WlanPhyType::kDmg;
+      break;
+    case WLAN_PHY_TYPE_VHT:
+      fidl_info.phy = fuchsia_wlan_common::wire::WlanPhyType::kVht;
+      break;
+    case WLAN_PHY_TYPE_TVHT:
+      fidl_info.phy = fuchsia_wlan_common::wire::WlanPhyType::kTvht;
+      break;
+    case WLAN_PHY_TYPE_S1G:
+      fidl_info.phy = fuchsia_wlan_common::wire::WlanPhyType::kS1G;
+      break;
+    case WLAN_PHY_TYPE_CDMG:
+      fidl_info.phy = fuchsia_wlan_common::wire::WlanPhyType::kCdmg;
+      break;
+    case WLAN_PHY_TYPE_CMMG:
+      fidl_info.phy = fuchsia_wlan_common::wire::WlanPhyType::kCmmg;
+      break;
+    case WLAN_PHY_TYPE_HE:
+      fidl_info.phy = fuchsia_wlan_common::wire::WlanPhyType::kHe;
+      break;
+    default:
+      IWL_ERR(nullptr, "Invalid phy type, dropping the packet.");
+      return;
+  }
+  fidl_info.data_rate = banjo_info.data_rate;
+  fidl_info.channel.primary = banjo_info.channel.primary;
+  switch (banjo_info.channel.cbw) {
+    case CHANNEL_BANDWIDTH_CBW20:
+      fidl_info.channel.cbw = fuchsia_wlan_common::wire::ChannelBandwidth::kCbw20;
+      break;
+    case CHANNEL_BANDWIDTH_CBW40:
+      fidl_info.channel.cbw = fuchsia_wlan_common::wire::ChannelBandwidth::kCbw40;
+      break;
+    case CHANNEL_BANDWIDTH_CBW40BELOW:
+      fidl_info.channel.cbw = fuchsia_wlan_common::wire::ChannelBandwidth::kCbw40Below;
+      break;
+    case CHANNEL_BANDWIDTH_CBW80:
+      fidl_info.channel.cbw = fuchsia_wlan_common::wire::ChannelBandwidth::kCbw80;
+      break;
+    case CHANNEL_BANDWIDTH_CBW160:
+      fidl_info.channel.cbw = fuchsia_wlan_common::wire::ChannelBandwidth::kCbw160;
+      break;
+    case CHANNEL_BANDWIDTH_CBW80P80:
+      fidl_info.channel.cbw = fuchsia_wlan_common::wire::ChannelBandwidth::kCbw80P80;
+      break;
+    default:
+      IWL_ERR(nullptr, "Bandwidth is not supported, dropping the packet.");
+      return;
+  }
+  fidl_info.channel.secondary80 = banjo_info.channel.secondary80;
+  fidl_info.mcs = banjo_info.mcs;
+  fidl_info.rssi_dbm = banjo_info.rssi_dbm;
+  fidl_info.snr_dbh = banjo_info.snr_dbh;
+
+  static_cast<wlan::iwlwifi::WlanSoftmacDevice*>(ctx)->Recv(&fidl_rx_packet);
+}
+
+void mac_ifc_scan_complete(void* ctx, const zx_status_t status, const uint64_t scan_id) {
+  static_cast<wlan::iwlwifi::WlanSoftmacDevice*>(ctx)->ScanComplete(status, scan_id);
 }

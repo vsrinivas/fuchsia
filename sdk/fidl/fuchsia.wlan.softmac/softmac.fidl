@@ -1,7 +1,7 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-library fuchsia.hardware.wlan.softmac;
+library fuchsia.wlan.softmac;
 
 using fuchsia.hardware.wlan.associnfo;
 using fuchsia.wlan.common;
@@ -9,7 +9,6 @@ using fuchsia.wlan.internal;
 using fuchsia.wlan.ieee80211 as ieee80211;
 using zx;
 
-// LINT.IfChange
 type WlanSoftmacBandCapability = struct {
     /// The values of this struct apply to the band indicated in this field.
     band fuchsia.wlan.common.WlanBand;
@@ -46,37 +45,36 @@ type WlanSoftmacBandCapability = struct {
     operating_channel_list array<uint8, ieee80211.MAX_UNIQUE_CHANNEL_NUMBERS>;
 };
 
-type WlanSoftmacInfo = struct {
+type WlanSoftmacInfo = table {
     /// Station address.
-    sta_addr ieee80211.MacAddr;
+    1: sta_addr ieee80211.MacAddr;
 
     /// MAC role
-    mac_role fuchsia.wlan.common.WlanMacRole;
+    2: mac_role fuchsia.wlan.common.WlanMacRole;
 
     /// Bitmask indicating WlanInfoPhyType values supported by the hardware.
-    supported_phys_list
-            array<fuchsia.wlan.common.WlanPhyType, fuchsia.wlan.common.MAX_SUPPORTED_PHY_TYPES>;
-    supported_phys_count uint8;
+    3: supported_phys
+            vector<fuchsia.wlan.common.WlanPhyType>:fuchsia.wlan.common.MAX_SUPPORTED_PHY_TYPES;
 
-    /// Bitmask indicating enabled WlanInfoHardwareCapability values.
-    hardware_capability fuchsia.wlan.common.WlanSoftmacHardwareCapability;
+    /// Bitmask indicating enabled WlanInfoHardwareCapability values. Values defined as fuchsia.wlan.common.WlanSoftmacHardwareCapability
+    4: hardware_capability fuchsia.wlan.common.WlanSoftmacHardwareCapability;
 
     /// Supported bands.
-    band_cap_list array<WlanSoftmacBandCapability, fuchsia.wlan.common.MAX_BANDS>;
-    band_cap_count uint8;
+    5: band_caps vector<WlanSoftmacBandCapability>:fuchsia.wlan.common.MAX_BANDS;
 };
 
-/// These flags are used as a bitfield.
 type WlanRxInfoFlags = strict enum : uint32 {
     /// The FCS for the received frame was invalid.
     FCS_INVALID = 0x1;
     /// Padding was added after the MAC header to align the frame body to 4 bytes.
     FRAME_BODY_PADDING_4 = 0x2;
+    // Bits 2-31 reserved
 };
 
 type WlanRxInfo = struct {
-    /// Boolean receive flags. Enums and value-based info are represented below.
-    rx_flags WlanRxInfoFlags;
+    /// Receive flags. These represent boolean flags as opposed to enums or value-based info which
+    /// are represented below. Values should be taken from the WLAN_RX_INFO_FLAGS_* enum.
+    rx_flags uint32;
 
     /// Bitmask indicating which of the following fields are valid in this struct. Reserved flags
     /// must be zero.
@@ -98,6 +96,7 @@ type WlanRxInfo = struct {
 };
 
 type WlanTxInfoFlags = strict enum : uint8 {
+    /// Indicate this packet should be protected.
     PROTECTED = 0x1;
     /// For rate control: indicate an important data frame, such as EAPOL, which should be sent
     /// _reliably_ rather than fast, and is exempt from rate probing
@@ -118,7 +117,7 @@ type WlanTxInfoValid = strict enum : uint8 {
 type WlanTxInfo = struct {
     /// Transmit flags. These represent boolean options as opposed to enums or other value-based
     /// info which are represented below. Values should be taken from the WLAN_TX_INFO_FLAGS_* enum.
-    tx_flags WlanTxInfoFlags;
+    tx_flags uint32;
 
     /// Bitmask indicating which of the following fields are valid in this struct. Reserved flags
     /// must be zero. Values for fields not indicated by a flag may be chosen at the discretion of
@@ -143,30 +142,27 @@ type WlanProtection = strict enum : uint8 {
     RX_TX = 3;
 };
 
-type WlanKeyConfig = struct {
-    /// The BSSID for which this key is relevant.
-    bssid uint8;
+type WlanKeyConfig = table {
     /// Which path to protect: None, TX, RX, or TX and RX.
-    protection WlanProtection;
+    1: protection WlanProtection;
     /// IEEE Cipher suite selector.
     /// See IEEE Std 802.11-2016, 9.4.2.25.2, Table 9-131
-    cipher_oui array<uint8, 3>;
-    cipher_type uint8;
+    2: cipher_oui array<uint8, 3>;
+    3: cipher_type uint8;
     /// Whether this key is a pairwise, group or peer key.
-    key_type fuchsia.hardware.wlan.associnfo.WlanKeyType;
+    4: key_type fuchsia.hardware.wlan.associnfo.WlanKeyType;
     /// The peer MAC address for pairwise and peer keys.
     /// For group keys this value is always the broadcast address.
-    peer_addr ieee80211.MacAddr;
+    5: peer_addr ieee80211.MacAddr;
     /// Index for rotating keys, e.g. group keys.
     /// This value is always 0 for key types which aren't rotating, e.g. pairwise keys.
-    key_idx uint8;
-    // Length of the supplied key.
-    key_len uint8;
+    6: key_idx uint8;
     // They key's actual bytes.
-    key array<uint8, 32>;
+    /// This field is still Array in banjo/fuchsia.hardware.wlan.softmac.softmac.fidl
+    7: key vector<uint8>:ieee80211.MAX_KEY_LEN;
     /// Receive Sequence Counter for group keys only.
     /// In all other cases the RSC will be 0.
-    rsc uint64;
+    8: rsc uint64;
 };
 
 type WlanRxPacket = struct {
@@ -179,27 +175,28 @@ type WlanTxPacket = struct {
     @buffer
     mac_frame vector<uint8>:MAX;
     /// Additional data needed to transmit the packet.
+    /// TODO(fxbug.dev/105579): This field is ignored by iwlwifi.
     info WlanTxInfo;
 };
 
 /// Includes the information about beacon template.
-type WlanBcnConfig = struct {
+type WlanBcnConfig = table {
     /// Points to the beacon template. Since this is just the template, some packet content can
     /// contain only minimum valid info. They will be changed later by hardware/firmware or software.
     /// Note that the driver must copy the packet content into its own memory and cannot rely on
     /// the pointers in the struct.
-    packet_template WlanTxPacket;
+    1: packet_template WlanTxPacket;
 
     /// TIM offset (in bytes) to the start of |bcn_tmpl|. This points to the first byte of TIM IE,
     /// which is the tag ID.
-    tim_ele_offset uint64;
+    2: tim_ele_offset uint64;
 
     /// in TU
-    beacon_interval uint16;
+    3: beacon_interval uint16;
 };
 
-@transport("Banjo")
-@banjo_layout("ddk-interface")
+@discoverable
+@transport("Driver")
 protocol WlanSoftmacIfc {
     /// Report the status of the softmac device.
     Status(struct {
@@ -209,7 +206,7 @@ protocol WlanSoftmacIfc {
     /// Submit received data to the next driver.
     Recv(struct {
         packet WlanRxPacket;
-    });
+    }) -> ();
 
     /// complete_tx() is called to return ownership of a packet to the wlan driver.
     /// Return status indicates queue state:
@@ -227,7 +224,7 @@ protocol WlanSoftmacIfc {
     /// |tx_status|: contains status info of one transmitted packet to one peer at one specific rate.
     ReportTxStatus(struct {
         tx_status fuchsia.wlan.common.WlanTxStatus;
-    });
+    }) -> ();
 
     /// Reports completion of a scan associated with the unique `scan_id`. The status
     /// `ZX_ERR_OUT_OF_RANGE` implies the scan request included a prohibited channel.
@@ -235,11 +232,11 @@ protocol WlanSoftmacIfc {
     ScanComplete(struct {
         status zx.status;
         scan_id uint64;
-    });
+    }) -> ();
 };
 
 /// Argument struct to be passed as the single argument to WlanSoftmac.StartPassiveScan.
-type WlanSoftmacPassiveScanArgs = struct {
+type WlanSoftmacPassiveScanArgs = table {
     /// List of channels to scan on. An empty list of channels will cause a
     /// scan request to immediately return ZX_ERR_INVALID_ARGS.
     ///
@@ -247,22 +244,22 @@ type WlanSoftmacPassiveScanArgs = struct {
     /// number depends on the current regulatory region, and a SoftMAC driver cannot
     /// always determine the region setting. This is especially the case when
     /// firmware changes the region setting dynamically.
-    channels vector<uint8>:ieee80211.MAX_UNIQUE_CHANNEL_NUMBERS;
+    1: channels vector<uint8>:ieee80211.MAX_UNIQUE_CHANNEL_NUMBERS;
 
     /// Minimum duration to spend on each channel during the scan.
-    min_channel_time zx.duration;
+    2: min_channel_time zx.duration;
 
     /// Maximum duration to spend on each channel during the scan.
-    max_channel_time zx.duration;
+    3: max_channel_time zx.duration;
 
     /// Minimum duration to spend on the home channel(s) between the dwell time on each channel
     /// where a home channel corresponds to channels the device should otherwise be present
     /// on while not scanning.
-    min_home_time zx.duration;
+    4: min_home_time zx.duration;
 };
 
 /// Argument struct to be passed as the single argument to WlanSoftmac.StartActiveScan
-type WlanSoftmacActiveScanArgs = struct {
+type WlanSoftmacActiveScanArgs = table {
     /// List of channels to scan on. An empty list of channels will cause a
     /// scan request to immediately return ZX_ERR_INVALID_ARGS.
     ///
@@ -270,34 +267,34 @@ type WlanSoftmacActiveScanArgs = struct {
     /// number depends on the current regulatory region, and a SoftMAC driver cannot
     /// always determine the region setting. This is especially the case when
     /// firmware changes the region setting dynamically.
-    channels vector<uint8>:ieee80211.MAX_UNIQUE_CHANNEL_NUMBERS;
+    1: channels vector<uint8>:ieee80211.MAX_UNIQUE_CHANNEL_NUMBERS;
 
     /// List of SSIDs to scan for. For a list with a single SSID, the SSID will be placed in
     /// the SSID element in the Probe Request frame. For a list with more than one SSID,
     /// all SSIDs will be placed in an SSID List element in the Probe Request frame with the
     /// first SSID in the list in the required SSID element. An empty list is the same as
     /// specifying a list containing only the wildcard SSID.
-    ssids vector<ieee80211.CSsid>:ieee80211.SSID_LIST_MAX;
+    2: ssids vector<ieee80211.CSsid>:ieee80211.SSID_LIST_MAX;
 
     /// Buffer containing a MAC header (as defined in IEEE Std 802.11-2016, 9.3.3.2) to
     /// include in each Probe Request frame.
     @buffer
-    mac_header vector<uint8>:ieee80211.MAX_MGMT_FRAME_MAC_HEADER_BYTE_LEN;
+    3: mac_header vector<uint8>:ieee80211.MAX_MGMT_FRAME_MAC_HEADER_BYTE_LEN;
 
     /// Buffer containing IE bytes to include in each Probe Request frame.
     @buffer
-    ies vector<uint8>:ieee80211.MAX_VHT_MPDU_BYTE_LEN_2;
+    4: ies vector<uint8>:ieee80211.MAX_VHT_MPDU_BYTE_LEN_2;
 
     /// Minimum duration to spend on each channel during the scan.
-    min_channel_time zx.duration;
+    5: min_channel_time zx.duration;
 
     /// Maximum duration to spend on each channel during the scan.
-    max_channel_time zx.duration;
+    6: max_channel_time zx.duration;
 
     /// Minimum duration to spend on the home channel(s) between the dwell time on each channel
     /// where a home channel corresponds to channels the device should otherwise be present
     /// on while not scanning.
-    min_home_time zx.duration;
+    7: min_home_time zx.duration;
 
     /// Minimum number of Probe Request frames to transmit per channel visit during a scan.
     /// The definition of a channel visit may differ between device drivers, but it is roughly
@@ -305,7 +302,7 @@ type WlanSoftmacActiveScanArgs = struct {
     ///
     /// Sending more than one Probe Request frame on a channel may increase the probability that
     /// it is received in a noisy environment.
-    min_probes_per_channel uint8;
+    8: min_probes_per_channel uint8;
 
     /// Maximum number of Probe Request frames to transmit per channel visit during a scan.
     /// The definition of a channel visit may differ between device drivers, but it is roughly
@@ -314,40 +311,38 @@ type WlanSoftmacActiveScanArgs = struct {
     ///
     /// Limiting the number of Probe Request frames sent on a channel reduces the time spent
     /// transmitting frames, and thus increase the time spent receiving frames, while scanning.
-    max_probes_per_channel uint8;
+    9: max_probes_per_channel uint8;
 };
 
-@transport("Banjo")
-@banjo_layout("ddk-protocol")
+@discoverable
+@transport("Driver")
 protocol WlanSoftmac {
     /// Obtain information about the device and supported features
     /// Safe to call at any time.
     Query() -> (struct {
-        status zx.status;
         info WlanSoftmacInfo;
-    });
+    }) error zx.status;
 
     QueryDiscoverySupport() -> (struct {
         resp fuchsia.wlan.common.DiscoverySupport;
-    });
+    }) error zx.status;
     QueryMacSublayerSupport() -> (struct {
         resp fuchsia.wlan.common.MacSublayerSupport;
-    });
+    }) error zx.status;
     QuerySecuritySupport() -> (struct {
         resp fuchsia.wlan.common.SecuritySupport;
-    });
+    }) error zx.status;
     QuerySpectrumManagementSupport() -> (struct {
         resp fuchsia.wlan.common.SpectrumManagementSupport;
-    });
+    }) error zx.status;
 
     /// Start softmac running with ifc_virt
     /// Callbacks on ifc may be invoked from now until stop() is called
     Start(resource struct {
         ifc client_end:WlanSoftmacIfc;
     }) -> (resource struct {
-        status zx.status;
         sme_channel zx.handle:CHANNEL;
-    });
+    }) error zx.status;
 
     /// Shut down a running softmac
     /// Safe to call if the softmac is already stopped.
@@ -362,76 +357,58 @@ protocol WlanSoftmac {
     QueueTx(struct {
         packet WlanTxPacket;
     }) -> (struct {
-        /// status only indicates that the packet was successfully queued, not successfully
-        /// transmitted. enqueue_pending should only be true if status is ZX_OK.
-        status zx.status;
+        /// The ZX_OK returned from error syntax only indicates that the packet was successfully
+        /// queued, not successfully transmitted. enqueue_pending should only be true if the error
+        /// below returns as ZX_OK.
         enqueue_pending bool;
-    });
+    }) error zx.status;
 
     // Set the radio channel
     SetChannel(struct {
         chan fuchsia.wlan.common.WlanChannel;
-    }) -> (struct {
-        status zx.status;
-    });
+    }) -> (struct {}) error zx.status;
 
     // Configures a BSS which the STA is either joining or managing.
     ConfigureBss(struct {
         config fuchsia.wlan.internal.BssConfig;
-    }) -> (struct {
-        st zx.status;
-    });
+    }) -> (struct {}) error zx.status;
 
     // Enables or disables hardware Beaconing.
     // * |bcn_cfg|: Pass `nullptr` to disable hardware Beacons. Used by hardware beacon offload.
     EnableBeaconing(struct {
         bcn_cfg WlanBcnConfig;
-    }) -> (struct {
-        st zx.status;
-    });
+    }) -> (struct {}) error zx.status;
 
     /// Configures a Beacon frame in hardware to announce the BSS' existence.
     /// * |packet|: Pass `nullptr` to disable hardware Beacons. Used by software generated beacon.
     /// TODO(fxbug.dev/29298): Rename to update_beacon.
     ConfigureBeacon(struct {
         packet WlanTxPacket;
-    }) -> (struct {
-        st zx.status;
-    });
+    }) -> (struct {}) error zx.status;
 
     /// Specify a key for frame protection.
     SetKey(struct {
         key_config WlanKeyConfig;
-    }) -> (struct {
-        st zx.status;
-    });
+    }) -> (struct {}) error zx.status;
 
     /// Notifies MAC and PHY parameters negotiated through a successful association
     ConfigureAssoc(struct {
         assoc_ctx fuchsia.hardware.wlan.associnfo.WlanAssocCtx;
-    }) -> (struct {
-        st zx.status;
-    });
+    }) -> (struct {}) error zx.status;
 
-    /// Notifies MAC and PHY that the peer has been disassociated.
+    /// Notifies MAC and PHY that the peer has been de-associated.
     ClearAssoc(struct {
         peer_addr ieee80211.MacAddr;
-    }) -> (struct {
-        st zx.status;
-    });
+    }) -> (struct {}) error zx.status;
 
     /// Start a passive scan in the device driver. Scan results will be delivered as Beacon
     /// frames via WlanSoftmacIfc.Recv(). When complete, WlanSoftmacIfc.ScanComplete() will
     /// be called with the corresponding unique `scan_id`.
-    ///
-    /// A device driver indicates support for `StartPassiveScan()` using
-    /// `fuchsia.wlan.common/ScanOffloadExtension.supported`.
     StartPassiveScan(struct {
         args WlanSoftmacPassiveScanArgs;
     }) -> (struct {
-        status zx.status;
         scan_id uint64;
-    });
+    }) error zx.status;
 
     /// Start an active scan in the device driver. Scan results will be delivered as Beacon or
     /// Probe Response frames via WlanSoftmacIfc.Recv(). When complete,
@@ -441,15 +418,11 @@ protocol WlanSoftmac {
     /// defined by IEEE Std 802.11-2016, 9.2.4.7. MMPDU limit constants can be found in
     /// fuchsia.wlan.ieee80211. These limits are very large and will likely not be exceeded
     /// by specifying the most common IEs found in Probe Request frames.
-    ///
-    /// A device driver indicates support for `StartActiveScan()` using
-    /// `fuchsia.wlan.common/ProbeResponseOffloadExtension.supported`.
     StartActiveScan(struct {
         args WlanSoftmacActiveScanArgs;
     }) -> (struct {
-        status zx.status;
         scan_id uint64;
-    });
+    }) error zx.status;
 
     /// If supported, cancel the ongoing scan corresponding to `scan_id` in the
     /// device driver, where `scan_id` is an identifier returned by `StartPassiveScan()`
@@ -462,16 +435,11 @@ protocol WlanSoftmac {
     /// `fuchsia.wlan.common/ScanOffloadExtension.scan_cancel_supported`.
     CancelScan(struct {
         scan_id uint64;
-    }) -> (struct {
-        status zx.status;
-    });
+    }) -> (struct {}) error zx.status;
 
     /// Notifies change of WMM parameters for specified AC
     UpdateWmmParams(struct {
         ac fuchsia.hardware.wlan.associnfo.WlanAc;
         params fuchsia.hardware.wlan.associnfo.WlanWmmParams;
-    }) -> (struct {
-        st zx.status;
-    });
+    }) -> (struct {}) error zx.status;
 };
-// LINT.ThenChange(//sdk/fidl/fuchsia.wlan.softmac/softmac.fidl)

@@ -329,6 +329,12 @@ struct iwl_probe_resp_data {
   int noa_len;
 };
 
+struct softmac_ifc {
+  void* ctx;
+  void (*recv)(void* ctx, const wlan_rx_packet_t* rx_packet);
+  void (*scan_complete)(void* ctx, const zx_status_t status, const uint64_t scan_id);
+};
+
 /**
  * struct iwl_mvm_vif - data per Virtual Interface, it is a MAC context
  * @id: between 0 and 3
@@ -477,7 +483,7 @@ struct iwl_mvm_vif {
   struct zx_device* zxdev;
   wlan_mac_role_t mac_role;
   zx_handle_t mlme_channel;  // Channel passed from devmgr. Will be passed to MLME at mac_start().
-  wlan_softmac_ifc_protocol_t ifc;
+  struct softmac_ifc ifc;
 
   // Merged from 'struct ieee80211_vif'
   bool ht_enabled;
@@ -2208,6 +2214,15 @@ zx_status_t iwl_mvm_change_chanctx(struct iwl_mvm* mvm, uint16_t phy_ctxt_id,
 zx_status_t iwl_mvm_assign_vif_chanctx(struct iwl_mvm_vif* mvmvif,
                                        const wlan_channel_t* channeldef);
 zx_status_t iwl_mvm_unassign_vif_chanctx(struct iwl_mvm_vif* mvmvif);
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Wrappers for softmac_ifc funtions, defined in mac80211.c
+//
+void softmac_ifc_recv(struct iwl_mvm_vif* vif, const wlan_rx_packet_t* rx_packet);
+
+void softmac_ifc_scan_complete(struct iwl_mvm_vif* vif, const zx_status_t status,
+                               const uint64_t scan_id);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //

@@ -10,6 +10,7 @@
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <lib/mock-function/mock-function.h>
+#include <lib/sync/cpp/completion.h>
 #include <lib/zx/channel.h>
 #include <stdlib.h>
 #include <zircon/errors.h>
@@ -43,61 +44,143 @@ constexpr uint8_t kInvalidBandIdFillByte = 0xa5;
 constexpr wlan_band_t kInvalidBandId = 0xa5;
 constexpr zx_handle_t kDummyMlmeChannel = 73939133;  // An arbitrary value not ZX_HANDLE_INVALID
 
-using recv_cb_t = mock_function::MockFunction<void, void*, const wlan_rx_packet_t*>;
-
-// The wrapper used by wlan_softmac_ifc_t.recv() to call mock-up.
-void recv_wrapper(void* cookie, const wlan_rx_packet_t* packet) {
-  auto recv = reinterpret_cast<recv_cb_t*>(cookie);
-  recv->Call(cookie, packet);
-}
-
-class WlanSoftmacDeviceTest : public SingleApTest {
+class WlanSoftmacDeviceTest : public SingleApTest,
+                              public fdf::WireServer<fuchsia_wlan_softmac::WlanSoftmacIfc> {
  public:
   WlanSoftmacDeviceTest() {
-    mvmvif_.reset(reinterpret_cast<struct iwl_mvm_vif*>(calloc(1, sizeof(struct iwl_mvm_vif))));
+    mvmvif_ = reinterpret_cast<struct iwl_mvm_vif*>(calloc(1, sizeof(struct iwl_mvm_vif)));
     mvmvif_->mvm = iwl_trans_get_mvm(sim_trans_.iwl_trans());
     mvmvif_->mlme_channel = kDummyMlmeChannel;
     mvmvif_->mac_role = WLAN_MAC_ROLE_CLIENT;
     mvmvif_->bss_conf = {.beacon_int = kListenInterval};
 
-    device_ = std::make_unique<::wlan::iwlwifi::WlanSoftmacDevice>(nullptr, sim_trans_.iwl_trans(),
-                                                                   0, mvmvif_.get());
+    device_ = new ::wlan::iwlwifi::WlanSoftmacDevice(sim_trans_.fake_parent(),
+                                                     sim_trans_.iwl_trans(), 0, mvmvif_);
+
+    device_->DdkAdd("sim-iwlwifi-wlansoftmac", DEVICE_ADD_NON_BINDABLE);
+    device_->DdkAsyncRemove();
+
+    auto endpoints = fdf::CreateEndpoints<fuchsia_wlan_softmac::WlanSoftmac>();
+    ASSERT_FALSE(endpoints.is_error());
+
+    // Create a dispatcher for the client end of Wlansoftmac protocol to wait on the runtime
+    // channel.
+    auto dispatcher = fdf::Dispatcher::Create(
+        0, "wlansoftmac_client_test", [&](fdf_dispatcher_t*) { client_completion_.Signal(); });
+    ASSERT_FALSE(dispatcher.is_error());
+    client_dispatcher_ = *std::move(dispatcher);
+
+    // Create a dispatcher for the server end of WlansoftmacIfc protocol to wait on the runtime
+    // channel.
+    dispatcher = fdf::Dispatcher::Create(0, "wlansoftmacifc_server_test",
+                                         [&](fdf_dispatcher_t*) { server_completion_.Signal(); });
+    ASSERT_FALSE(dispatcher.is_error());
+    server_dispatcher_ = *std::move(dispatcher);
+
+    client_ = fdf::WireSharedClient<fuchsia_wlan_softmac::WlanSoftmac>(std::move(endpoints->client),
+                                                                       client_dispatcher_.get());
+
+    // TODO(fxbug.dev/106669): Increase test fidelity. Call mac_init() here as what DdkInit() in
+    // real case does, instead of manually initialize mvmvif above to meet the minimal requirements
+    // of the test cases. Note: device_->zxdev()->InitOp() will invoke DdkInit().
+
+    // Create the server dispatcher of WlanSoftmac protocol for wlan-softmac-device.
+    device_->InitServerDispatcher();
+
+    // Create the client dispatcher of WlanSoftmacIfc protocol for wlan-softmac-device.
+    device_->InitClientDispatcher();
+
+    device_->DdkServiceConnect(fidl::DiscoverableProtocolName<fuchsia_wlan_softmac::WlanSoftmac>,
+                               endpoints->server.TakeHandle());
+
+    // Create test arena.
+    auto arena = fdf::Arena::Create(0, 0);
+    ASSERT_FALSE(arena.is_error());
+
+    test_arena_ = *std::move(arena);
   }
-  ~WlanSoftmacDeviceTest() override {}
+
+  ~WlanSoftmacDeviceTest() override {
+    if (!release_called_) {
+      mock_ddk::ReleaseFlaggedDevices(device_->zxdev());
+    }
+    client_dispatcher_.ShutdownAsync();
+    server_dispatcher_.ShutdownAsync();
+
+    client_completion_.Wait();
+    server_completion_.Wait();
+  }
+
+  void Status(StatusRequestView request, fdf::Arena& arena,
+              StatusCompleter::Sync& completer) override {
+    // Overriding the virtual function, not being used at this point.
+    completer.buffer(arena).Reply();
+  }
+  void Recv(RecvRequestView request, fdf::Arena& arena, RecvCompleter::Sync& completer) override {
+    recv_called_ = true;
+    completer.buffer(arena).Reply();
+  }
+  void CompleteTx(CompleteTxRequestView request, fdf::Arena& arena,
+                  CompleteTxCompleter::Sync& completer) override {
+    // Overriding the virtual function, not being used at this point.
+    completer.buffer(arena).Reply();
+  }
+  void ReportTxStatus(ReportTxStatusRequestView request, fdf::Arena& arena,
+                      ReportTxStatusCompleter::Sync& completer) override {
+    // Overriding the virtual function, not being used at this point.
+    completer.buffer(arena).Reply();
+  }
+  void ScanComplete(ScanCompleteRequestView request, fdf::Arena& arena,
+                    ScanCompleteCompleter::Sync& completer) override {
+    // Overriding the virtual function, not being used at this point.
+    completer.buffer(arena).Reply();
+  }
 
  protected:
-  wlan::iwlwifi::unique_free_ptr<struct iwl_mvm_vif> mvmvif_;
-  std::unique_ptr<::wlan::iwlwifi::WlanSoftmacDevice> device_;
+  struct iwl_mvm_vif* mvmvif_;
+  ::wlan::iwlwifi::WlanSoftmacDevice* device_;
+
+  fdf::WireSharedClient<fuchsia_wlan_softmac::WlanSoftmac> client_;
+  fdf::Dispatcher client_dispatcher_;
+  fdf::Dispatcher server_dispatcher_;
+  fdf::Arena test_arena_;
+  libsync::Completion client_completion_;
+  libsync::Completion server_completion_;
+  // mock_ddk::ReleaseFlaggedDevices() cannot be called twice, but it's required to be called in
+  // come test cases.
+  bool release_called_ = false;
+  // The marks of WlanSoftmacIfc function calls.
+  bool recv_called_ = false;
 };
 
 //////////////////////////////////// Helper Functions  /////////////////////////////////////////////
 
 TEST_F(WlanSoftmacDeviceTest, ComposeBandList) {
   struct iwl_nvm_data nvm_data;
-  wlan_band_t bands[fuchsia_wlan_common_MAX_BANDS];
+  fuchsia_wlan_common::WlanBand bands[fuchsia_wlan_common::wire::kMaxBands];
 
   // nothing enabled
   memset(&nvm_data, 0, sizeof(nvm_data));
   memset(bands, kInvalidBandIdFillByte, sizeof(bands));
   EXPECT_EQ(0, compose_band_list(&nvm_data, bands));
-  EXPECT_EQ(kInvalidBandId, bands[0]);
-  EXPECT_EQ(kInvalidBandId, bands[1]);
+  EXPECT_EQ(kInvalidBandId, uint8_t{bands[0]});
+  EXPECT_EQ(kInvalidBandId, uint8_t{bands[1]});
 
   // 2.4GHz only
   memset(&nvm_data, 0, sizeof(nvm_data));
   memset(bands, kInvalidBandIdFillByte, sizeof(bands));
   nvm_data.sku_cap_band_24ghz_enable = true;
   EXPECT_EQ(1, compose_band_list(&nvm_data, bands));
-  EXPECT_EQ(WLAN_BAND_TWO_GHZ, bands[0]);
-  EXPECT_EQ(kInvalidBandId, bands[1]);
+  EXPECT_EQ(fuchsia_wlan_common::WlanBand::kTwoGhz, bands[0]);
+  EXPECT_EQ(kInvalidBandId, uint8_t{bands[1]});
 
   // 5GHz only
   memset(&nvm_data, 0, sizeof(nvm_data));
   memset(bands, kInvalidBandIdFillByte, sizeof(bands));
   nvm_data.sku_cap_band_52ghz_enable = true;
   EXPECT_EQ(1, compose_band_list(&nvm_data, bands));
-  EXPECT_EQ(WLAN_BAND_FIVE_GHZ, bands[0]);
-  EXPECT_EQ(kInvalidBandId, bands[1]);
+  EXPECT_EQ(fuchsia_wlan_common::WlanBand::kFiveGhz, bands[0]);
+  EXPECT_EQ(kInvalidBandId, uint8_t{bands[1]});
 
   // both bands enabled
   memset(&nvm_data, 0, sizeof(nvm_data));
@@ -105,25 +188,26 @@ TEST_F(WlanSoftmacDeviceTest, ComposeBandList) {
   nvm_data.sku_cap_band_24ghz_enable = true;
   nvm_data.sku_cap_band_52ghz_enable = true;
   EXPECT_EQ(2, compose_band_list(&nvm_data, bands));
-  EXPECT_EQ(WLAN_BAND_TWO_GHZ, bands[0]);
-  EXPECT_EQ(WLAN_BAND_FIVE_GHZ, bands[1]);
+  EXPECT_EQ(fuchsia_wlan_common::WlanBand::kTwoGhz, bands[0]);
+  EXPECT_EQ(fuchsia_wlan_common::WlanBand::kFiveGhz, bands[1]);
 }
 
 TEST_F(WlanSoftmacDeviceTest, FillBandCapabilityList) {
   // The default 'nvm_data' is loaded from test/sim-default-nvm.cc.
 
   const struct iwl_nvm_data* nvm_data = iwl_trans_get_mvm(sim_trans_.iwl_trans())->nvm_data;
-  wlan_band_t bands[fuchsia_wlan_common_MAX_BANDS];
+  fuchsia_wlan_common::WlanBand bands[fuchsia_wlan_common::wire::kMaxBands];
   size_t band_cap_count = compose_band_list(nvm_data, bands);
-  ASSERT_LE(band_cap_count, fuchsia_wlan_common_MAX_BANDS);
+  ASSERT_LE(band_cap_count, fuchsia_wlan_common::wire::kMaxBands);
 
-  wlan_softmac_band_capability_t band_cap_list[fuchsia_wlan_common_MAX_BANDS] = {};
+  fuchsia_wlan_softmac::wire::WlanSoftmacBandCapability
+      band_cap_list[fuchsia_wlan_common_MAX_BANDS] = {};
   fill_band_cap_list(nvm_data, bands, band_cap_count, band_cap_list);
 
   // 2.4Ghz
-  wlan_softmac_band_capability_t* band_cap = &band_cap_list[0];
-  EXPECT_EQ(WLAN_BAND_TWO_GHZ, band_cap->band);
-  EXPECT_EQ(true, band_cap->ht_supported);
+  fuchsia_wlan_softmac::wire::WlanSoftmacBandCapability* band_cap = &band_cap_list[0];
+  EXPECT_EQ(fuchsia_wlan_common::WlanBand::kTwoGhz, band_cap->band);
+  EXPECT_TRUE(band_cap->ht_supported);
   EXPECT_EQ(12, band_cap->basic_rate_count);
   EXPECT_EQ(2, band_cap->basic_rate_list[0]);     // 1Mbps
   EXPECT_EQ(108, band_cap->basic_rate_list[11]);  // 54Mbps
@@ -132,8 +216,8 @@ TEST_F(WlanSoftmacDeviceTest, FillBandCapabilityList) {
   EXPECT_EQ(13, band_cap->operating_channel_list[12]);
   // 5GHz
   band_cap = &band_cap_list[1];
-  EXPECT_EQ(WLAN_BAND_FIVE_GHZ, band_cap->band);
-  EXPECT_EQ(true, band_cap->ht_supported);
+  EXPECT_EQ(fuchsia_wlan_common::WlanBand::kFiveGhz, band_cap->band);
+  EXPECT_TRUE(band_cap->ht_supported);
   EXPECT_EQ(8, band_cap->basic_rate_count);
   EXPECT_EQ(12, band_cap->basic_rate_list[0]);   // 6Mbps
   EXPECT_EQ(108, band_cap->basic_rate_list[7]);  // 54Mbps
@@ -145,16 +229,17 @@ TEST_F(WlanSoftmacDeviceTest, FillBandCapabilityList) {
 TEST_F(WlanSoftmacDeviceTest, FillBandCapabilityListOnly5GHz) {
   // The default 'nvm_data' is loaded from test/sim-default-nvm.cc.
 
-  wlan_band_t bands[fuchsia_wlan_common_MAX_BANDS] = {
-      WLAN_BAND_FIVE_GHZ,
+  fuchsia_wlan_common::WlanBand bands[fuchsia_wlan_common::wire::kMaxBands] = {
+      fuchsia_wlan_common::WlanBand::kFiveGhz,
   };
-  wlan_softmac_band_capability_t band_cap_list[fuchsia_wlan_common_MAX_BANDS] = {};
+  fuchsia_wlan_softmac::wire::WlanSoftmacBandCapability
+      band_cap_list[fuchsia_wlan_common::wire::kMaxBands] = {};
 
   fill_band_cap_list(iwl_trans_get_mvm(sim_trans_.iwl_trans())->nvm_data, bands, 1, band_cap_list);
   // 5GHz
-  wlan_softmac_band_capability_t* band_cap = &band_cap_list[0];
-  EXPECT_EQ(WLAN_BAND_FIVE_GHZ, band_cap->band);
-  EXPECT_EQ(true, band_cap->ht_supported);
+  fuchsia_wlan_softmac::wire::WlanSoftmacBandCapability* band_cap = &band_cap_list[0];
+  EXPECT_EQ(fuchsia_wlan_common::WlanBand::kFiveGhz, band_cap->band);
+  EXPECT_TRUE(band_cap->ht_supported);
   EXPECT_EQ(8, band_cap->basic_rate_count);
   EXPECT_EQ(12, band_cap->basic_rate_list[0]);   // 6Mbps
   EXPECT_EQ(108, band_cap->basic_rate_list[7]);  // 54Mbps
@@ -163,101 +248,162 @@ TEST_F(WlanSoftmacDeviceTest, FillBandCapabilityListOnly5GHz) {
   EXPECT_EQ(165, band_cap->operating_channel_list[24]);
   // index 1 should be empty.
   band_cap = &band_cap_list[1];
-  EXPECT_EQ(false, band_cap->ht_supported);
+  EXPECT_FALSE(band_cap->ht_supported);
   EXPECT_EQ(0, band_cap->basic_rate_count);
   EXPECT_EQ(0, band_cap->operating_channel_count);
 }
 
 TEST_F(WlanSoftmacDeviceTest, Query) {
-  // Test input null pointers
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, device_->WlanSoftmacQuery(nullptr));
-
-  wlan_softmac_info_t info = {};
-  ASSERT_EQ(ZX_OK, device_->WlanSoftmacQuery(&info));
-  EXPECT_EQ(WLAN_MAC_ROLE_CLIENT, info.mac_role);
+  auto result = client_.sync().buffer(test_arena_)->Query();
+  auto& info = result->value()->info;
+  ASSERT_TRUE(result.ok());
+  ASSERT_FALSE(result->is_error());
+  EXPECT_TRUE(info.has_mac_role());
+  EXPECT_EQ(fuchsia_wlan_common::wire::WlanMacRole::kClient, info.mac_role());
 
   //
   // The below code assumes the test/sim-default-nvm.cc contains 2 bands.
   //
-  //   .band_cap_list[0]: WLAN_INFO_BAND_TWO_GHZ
-  //   .band_cap_list[1]: WLAN_INFO_BAND_FIVE_GHZ
+  //   .band_cap_list[0]: fuchsia_wlan_common::WlanBand::kTwoGhz
+  //   .band_cap_list[1]: fuchsia_wlan_common::WlanBand::kFiveGhz
   //
-  ASSERT_EQ(2, info.band_cap_count);
-  EXPECT_EQ(12, info.band_cap_list[0].basic_rate_count);
-  EXPECT_EQ(2, info.band_cap_list[0].basic_rate_list[0]);     // 1 Mbps
-  EXPECT_EQ(36, info.band_cap_list[0].basic_rate_list[7]);    // 18 Mbps
-  EXPECT_EQ(108, info.band_cap_list[0].basic_rate_list[11]);  // 54 Mbps
-  EXPECT_EQ(8, info.band_cap_list[1].basic_rate_count);
-  EXPECT_EQ(12, info.band_cap_list[1].basic_rate_list[0]);  // 6 Mbps
-  EXPECT_EQ(165, info.band_cap_list[1].operating_channel_list[24]);
+  ASSERT_EQ(2, info.band_caps().count());
+  EXPECT_EQ(12, info.band_caps().data()[0].basic_rate_count);
+  EXPECT_EQ(2, info.band_caps().data()[0].basic_rate_list[0]);     // 1 Mbps
+  EXPECT_EQ(36, info.band_caps().data()[0].basic_rate_list[7]);    // 18 Mbps
+  EXPECT_EQ(108, info.band_caps().data()[0].basic_rate_list[11]);  // 54 Mbps
+  EXPECT_EQ(8, info.band_caps().data()[1].basic_rate_count);
+  EXPECT_EQ(12, info.band_caps().data()[1].basic_rate_list[0]);  // 6 Mbps
+  EXPECT_EQ(165, info.band_caps().data()[1].operating_channel_list[24]);
 }
 
 TEST_F(WlanSoftmacDeviceTest, DiscoveryFeatureQuery) {
-  discovery_support_t support;
-  device_->WlanSoftmacQueryDiscoverySupport(&support);
-  EXPECT_TRUE(support.scan_offload.supported);
-  EXPECT_FALSE(support.probe_response_offload.supported);
+  auto result = client_.sync().buffer(test_arena_)->QueryDiscoverySupport();
+  ASSERT_TRUE(result.ok());
+  ASSERT_FALSE(result->is_error());
+  EXPECT_TRUE(result->value()->resp.scan_offload.supported);
+  EXPECT_FALSE(result->value()->resp.probe_response_offload.supported);
 }
 
 TEST_F(WlanSoftmacDeviceTest, MacSublayerFeatureQuery) {
-  mac_sublayer_support_t support;
-  device_->WlanSoftmacQueryMacSublayerSupport(&support);
-  EXPECT_FALSE(support.rate_selection_offload.supported);
-  EXPECT_EQ(support.device.mac_implementation_type, MAC_IMPLEMENTATION_TYPE_SOFTMAC);
-  EXPECT_FALSE(support.device.is_synthetic);
-  EXPECT_EQ(support.data_plane.data_plane_type, DATA_PLANE_TYPE_ETHERNET_DEVICE);
+  auto result = client_.sync().buffer(test_arena_)->QueryMacSublayerSupport();
+  ASSERT_TRUE(result.ok());
+  ASSERT_FALSE(result->is_error());
+  EXPECT_FALSE(result->value()->resp.rate_selection_offload.supported);
+  EXPECT_EQ(result->value()->resp.device.mac_implementation_type,
+            fuchsia_wlan_common::wire::MacImplementationType::kSoftmac);
+  EXPECT_FALSE(result->value()->resp.device.is_synthetic);
+  EXPECT_EQ(result->value()->resp.data_plane.data_plane_type,
+            fuchsia_wlan_common::wire::DataPlaneType::kEthernetDevice);
 }
 
 TEST_F(WlanSoftmacDeviceTest, SecurityFeatureQuery) {
-  security_support_t support;
-  device_->WlanSoftmacQuerySecuritySupport(&support);
-  EXPECT_TRUE(support.mfp.supported);
-  EXPECT_FALSE(support.sae.driver_handler_supported);
-  EXPECT_TRUE(support.sae.sme_handler_supported);
+  auto result = client_.sync().buffer(test_arena_)->QuerySecuritySupport();
+  ASSERT_TRUE(result.ok());
+  ASSERT_FALSE(result->is_error());
+  EXPECT_TRUE(result->value()->resp.mfp.supported);
+  EXPECT_FALSE(result->value()->resp.sae.driver_handler_supported);
+  EXPECT_TRUE(result->value()->resp.sae.sme_handler_supported);
 }
 
 TEST_F(WlanSoftmacDeviceTest, SpectrumManagementFeatureQuery) {
-  spectrum_management_support_t support;
-  device_->WlanSoftmacQuerySpectrumManagementSupport(&support);
-  EXPECT_FALSE(support.dfs.supported);
+  auto result = client_.sync().buffer(test_arena_)->QuerySpectrumManagementSupport();
+  ASSERT_TRUE(result.ok());
+  ASSERT_FALSE(result->is_error());
+  EXPECT_FALSE(result->value()->resp.dfs.supported);
 }
 
 TEST_F(WlanSoftmacDeviceTest, MacStart) {
-  // Test input null pointers
-  wlan_softmac_ifc_protocol_ops_t proto_ops = {
-      .recv = recv_wrapper,
-  };
-  wlan_softmac_ifc_protocol_t ifc = {.ops = &proto_ops};
-  zx::channel mlme_channel;
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, device_->WlanSoftmacStart(nullptr, &mlme_channel));
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, device_->WlanSoftmacStart(&ifc, nullptr));
+  // Created the end points for WlanSoftmacIfc protocol, and pass the client end to
+  // WlanSoftmacDevice.
+  auto endpoints = fdf::CreateEndpoints<fuchsia_wlan_softmac::WlanSoftmacIfc>();
+  ASSERT_FALSE(endpoints.is_error());
 
-  // Test callback function
-  recv_cb_t mock_recv;  // To mock up the wlan_softmac_ifc_t.recv().
-  mlme_channel = zx::channel(static_cast<zx_handle_t>(0xF000));
-  ASSERT_EQ(ZX_OK, device_->WlanSoftmacStart(&ifc, &mlme_channel));
-  // Expect the above line would copy the 'ifc'. Then set expectation below and fire test.
-  mock_recv.ExpectCall(&mock_recv, nullptr);
-  mvmvif_->ifc.ops->recv(&mock_recv, nullptr);
-  mock_recv.VerifyAndClear();
+  fdf::BindServer<fdf::WireServer<fuchsia_wlan_softmac::WlanSoftmacIfc>>(
+      server_dispatcher_.get(), std::move(endpoints->server), this);
+
+  // This FIDL call should invoke mac_start() and pass the pointer of WlanSoftmacDeviceTest to it,
+  // the pointer will be copied to mvmvif_->ifc.ctx.
+  auto result = client_.sync().buffer(test_arena_)->Start(std::move(endpoints->client));
+  EXPECT_TRUE(result.ok());
+  EXPECT_FALSE(result->is_error());
 }
 
-TEST_F(WlanSoftmacDeviceTest, MacStartSmeChannel) {
+TEST_F(WlanSoftmacDeviceTest, MacStartOnlyOneMlmeChannelAllowed) {
   // The normal case. A channel will be transferred to MLME.
-  constexpr zx_handle_t kChannelOne = static_cast<zx_handle_t>(0xF001);
-  constexpr zx_handle_t kChannelTwo = static_cast<zx_handle_t>(0xF002);
-  mvmvif_->mlme_channel = kChannelOne;
-  wlan_softmac_ifc_protocol_ops_t proto_ops = {
-      .recv = recv_wrapper,
-  };
-  wlan_softmac_ifc_protocol_t ifc = {.ops = &proto_ops};
-  zx::channel mlme_channel(kChannelTwo);
-  ASSERT_EQ(ZX_OK, device_->WlanSoftmacStart(&ifc, &mlme_channel));
-  ASSERT_EQ(mlme_channel.get(), kChannelOne);           // The channel handle is returned.
-  ASSERT_EQ(mvmvif_->mlme_channel, ZX_HANDLE_INVALID);  // Driver no longer holds the ownership.
+  constexpr zx_handle_t kMlmeChannel = static_cast<zx_handle_t>(0xF001);
 
-  // Since the driver no longer owns the handle, the start should fail.
-  ASSERT_EQ(ZX_ERR_ALREADY_BOUND, device_->WlanSoftmacStart(&ifc, &mlme_channel));
+  // Manually set mlme channel here, in reality, this is set when WlanphyImplDevice::CreateIface()
+  // is called.
+  mvmvif_->mlme_channel = kMlmeChannel;
+
+  {
+    // Don't need to bind the server here because we won't need to use WlanSoftmacIfc calls.
+    auto endpoints = fdf::CreateEndpoints<fuchsia_wlan_softmac::WlanSoftmacIfc>();
+
+    ASSERT_FALSE(endpoints.is_error());
+
+    auto result = client_.sync().buffer(test_arena_)->Start(std::move(endpoints->client));
+    EXPECT_TRUE(result.ok());
+    EXPECT_FALSE(result->is_error());
+    // Verify the channel returned.
+    ASSERT_EQ(result->value()->sme_channel, kMlmeChannel);
+    ASSERT_EQ(mvmvif_->mlme_channel, ZX_HANDLE_INVALID);  // Driver no longer holds the ownership.
+  }
+
+  {
+    // Create another pair of endpoints for the next call.
+    auto endpoints = fdf::CreateEndpoints<fuchsia_wlan_softmac::WlanSoftmacIfc>();
+
+    // Since the driver no longer owns the handle, the start should fail.
+    auto result = client_.sync().buffer(test_arena_)->Start(std::move(endpoints->client));
+    EXPECT_TRUE(result.ok());
+    EXPECT_TRUE(result->is_error());
+    EXPECT_EQ(ZX_ERR_ALREADY_BOUND, result->error_value());
+  }
+}
+
+TEST_F(WlanSoftmacDeviceTest, SingleRxPacket) {
+  // Created the end points for WlanSoftmacIfc protocol, and pass the client end to
+  // WlanSoftmacDevice.
+  auto endpoints = fdf::CreateEndpoints<fuchsia_wlan_softmac::WlanSoftmacIfc>();
+  ASSERT_FALSE(endpoints.is_error());
+
+  fdf::BindServer<fdf::WireServer<fuchsia_wlan_softmac::WlanSoftmacIfc>>(
+      server_dispatcher_.get(), std::move(endpoints->server), this);
+
+  // This FIDL call should invoke mac_start() and pass the pointer of WlanSoftmacDeviceTest to it,
+  // the pointer will be copied to mvmvif_->ifc.ctx.
+  auto result = client_.sync().buffer(test_arena_)->Start(std::move(endpoints->client));
+
+  EXPECT_TRUE(result.ok());
+  EXPECT_FALSE(result->is_error());
+
+  // Create an dummy rx packet.
+  // TODO(fxbug.dev/99777): Integrate it into WlanPktBuilder.
+  const uint8_t kMacPkt[] = {
+      0x08, 0x01,                          // frame_ctrl
+      0x00, 0x00,                          // duration
+      0x11, 0x22, 0x33, 0x44, 0x55, 0x66,  // MAC1
+      0x01, 0x02, 0x03, 0x04, 0x05, 0x06,  // MAC2
+      0x01, 0x02, 0x03, 0x04, 0x05, 0x06,  // MAC3
+      0x00, 0x00,                          // seq_ctrl
+      0x45, 0x00, 0x55, 0x66, 0x01, 0x83,  // random IP packet...
+  };
+
+  wlan_rx_packet_t rx_packet = {
+      .mac_frame_buffer = &kMacPkt[0],
+      .mac_frame_size = sizeof(kMacPkt),
+      .info =
+          {
+              .rx_flags = 0,
+              .phy = WLAN_PHY_TYPE_DSSS,
+          },
+  };
+
+  // The above lines should enable WlanSoftmacIfc FIDL calls, and the lines below is verifing that.
+  mvmvif_->ifc.recv(mvmvif_->ifc.ctx, &rx_packet);
+  EXPECT_TRUE(recv_called_);
 }
 
 TEST_F(WlanSoftmacDeviceTest, Release) {
@@ -269,8 +415,8 @@ TEST_F(WlanSoftmacDeviceTest, Release) {
 
   // Call release and the sme channel should be closed so that we will get a peer-close error while
   // trying to write any data to it.
-  mvmvif_.release();
-  device_.release()->DdkRelease();
+  mock_ddk::ReleaseFlaggedDevices(device_->zxdev());
+  release_called_ = true;
   ASSERT_EQ(zx_channel_write(case_end, 0 /* option */, dummy, sizeof(dummy), nullptr, 0),
             ZX_ERR_PEER_CLOSED);
 }
@@ -279,14 +425,27 @@ TEST_F(WlanSoftmacDeviceTest, Release) {
 //
 class MacInterfaceTest : public WlanSoftmacDeviceTest, public MockTrans {
  public:
-  MacInterfaceTest() : ifc_{ .ops = &proto_ops_, } , proto_ops_{ .recv = recv_wrapper, } {
+  MacInterfaceTest() {
     zx_handle_t wlanphy_impl_channel = mvmvif_->mlme_channel;
-    zx::channel mlme_channel;
-    ASSERT_EQ(ZX_OK, device_->WlanSoftmacStart(&ifc_, &mlme_channel));
-    ASSERT_EQ(wlanphy_impl_channel, mlme_channel);
+
+    auto endpoints = fdf::CreateEndpoints<fuchsia_wlan_softmac::WlanSoftmacIfc>();
+    ASSERT_FALSE(endpoints.is_error());
+
+    // Created the end points for WlanSoftmacIfc protocol, and pass the client end to
+    // WlanSoftmacDevice.
+    fdf::BindServer<fdf::WireServer<fuchsia_wlan_softmac::WlanSoftmacIfc>>(
+        server_dispatcher_.get(), std::move(endpoints->server), this);
+
+    // This FIDL call should invoke mac_start() and pass the pointer of WlanSoftmacDeviceTest to it,
+    // the pointer will be copied to mvmvif_->ifc.ctx.
+    auto result = client_.sync().buffer(test_arena_)->Start(std::move(endpoints->client));
+
+    ASSERT_TRUE(result.ok());
+    EXPECT_FALSE(result->is_error());
+    ASSERT_EQ(wlanphy_impl_channel, result->value()->sme_channel);
 
     // Add the interface to MVM instance.
-    mvmvif_->mvm->mvmvif[0] = mvmvif_.get();
+    mvmvif_->mvm->mvmvif[0] = mvmvif_;
   }
 
   ~MacInterfaceTest() {
@@ -298,10 +457,10 @@ class MacInterfaceTest : public WlanSoftmacDeviceTest, public MockTrans {
     // Stop the MAC to free resources we allocated.
     // This must be called after we verify the expected commands and restore the mock command
     // callback so that the stop command doesn't mess up the test case expectation.
-    device_->WlanSoftmacStop();
+    auto result = client_.sync().buffer(test_arena_)->Stop();
+    ASSERT_TRUE(result.ok());
 
-    // The AUX sta is added in iwl_mvm_up(). In the normal process, it is deleted in the
-    // __iwl_mvm_mac_stop(), which is out of this test scope. So, manually call it to remove it.
+    // Deallocate the client station at id 0.
     mtx_lock(&mvmvif_->mvm->mutex);
     iwl_mvm_del_aux_sta(mvmvif_->mvm);
     mtx_unlock(&mvmvif_->mvm->mutex);
@@ -346,30 +505,76 @@ class MacInterfaceTest : public WlanSoftmacDeviceTest, public MockTrans {
   fp_send_cmd original_send_cmd;
 
  protected:
-  bool IsValidChannel(const wlan_channel_t* channel) { return device_->IsValidChannel(channel); }
-
-  zx_status_t SetChannel(const wlan_channel_t* channel) {
-    return device_->WlanSoftmacSetChannel(channel);
+  bool IsValidChannel(const fuchsia_wlan_common::wire::WlanChannel* channel) {
+    return device_->IsValidChannel(channel);
   }
 
-  zx_status_t ConfigureBss(const bss_config_t* config) {
-    return device_->WlanSoftmacConfigureBss(config);
+  zx_status_t SetChannel(const fuchsia_wlan_common::wire::WlanChannel* channel) {
+    auto result = client_.sync().buffer(test_arena_)->SetChannel(*channel);
+    EXPECT_TRUE(result.ok());
+    if (result->is_error()) {
+      return result->error_value();
+    }
+    return ZX_OK;
   }
 
-  zx_status_t ConfigureAssoc(const wlan_assoc_ctx_t* config) {
-    return device_->WlanSoftmacConfigureAssoc(config);
+  zx_status_t ConfigureBss(const fuchsia_wlan_internal::wire::BssConfig* config) {
+    auto result = client_.sync().buffer(test_arena_)->ConfigureBss(*config);
+    EXPECT_TRUE(result.ok());
+    if (result->is_error()) {
+      return result->error_value();
+    }
+    return ZX_OK;
+  }
+
+  zx_status_t ConfigureAssoc(const fuchsia_hardware_wlan_associnfo::wire::WlanAssocCtx* ctx) {
+    auto result = client_.sync().buffer(test_arena_)->ConfigureAssoc(*ctx);
+    EXPECT_TRUE(result.ok());
+    if (result->is_error()) {
+      return result->error_value();
+    }
+    return ZX_OK;
   }
 
   zx_status_t ClearAssoc() {
     // Not used since all info were saved in mvmvif_sta_ already.
-    uint8_t peer_addr[::fuchsia_wlan_ieee80211::wire::kMacAddrLen];
-    return device_->WlanSoftmacClearAssoc(peer_addr);
+    fidl::Array<uint8_t, fuchsia_wlan_ieee80211::wire::kMacAddrLen> fidl_peer_addr;
+    auto result = client_.sync().buffer(test_arena_)->ClearAssoc(fidl_peer_addr);
+    EXPECT_TRUE(result.ok());
+    if (result->is_error()) {
+      return result->error_value();
+    }
+    return ZX_OK;
   }
 
-  zx_status_t SetKey(const wlan_key_config_t* key_config) {
-    IWL_INFO(nullptr, "Calling set_key");
-    return device_->WlanSoftmacSetKey(key_config);
+  zx_status_t StartPassiveScan(fuchsia_wlan_softmac::wire::WlanSoftmacPassiveScanArgs* args) {
+    auto result = client_.sync().buffer(test_arena_)->StartPassiveScan(*args);
+    EXPECT_TRUE(result.ok());
+    if (result->is_error()) {
+      return result->error_value();
+    }
+    return ZX_OK;
   }
+
+  zx_status_t StartActiveScan(fuchsia_wlan_softmac::wire::WlanSoftmacActiveScanArgs* args) {
+    auto result = client_.sync().buffer(test_arena_)->StartActiveScan(*args);
+    EXPECT_TRUE(result.ok());
+    if (result->is_error()) {
+      return result->error_value();
+    }
+    return ZX_OK;
+  }
+
+  zx_status_t SetKey(const fuchsia_wlan_softmac::wire::WlanKeyConfig* key_config) {
+    IWL_INFO(nullptr, "Calling set_key");
+    auto result = client_.sync().buffer(test_arena_)->SetKey(*key_config);
+    EXPECT_TRUE(result.ok());
+    if (result->is_error()) {
+      return result->error_value();
+    }
+    return ZX_OK;
+  }
+
   // The following functions are for mocking up the firmware commands.
   //
   // The mock function will return the special error ZX_ERR_INTERNAL when the expectation
@@ -460,86 +665,116 @@ class MacInterfaceTest : public WlanSoftmacDeviceTest, public MockTrans {
                                WIDE_ID(dev_cmd->hdr.group_id, dev_cmd->hdr.cmd), txq_id);
   }
 
-  wlan_softmac_ifc_protocol_t ifc_;
-  wlan_softmac_ifc_protocol_ops_t proto_ops_;
-  static constexpr bss_config_t kBssConfig = {
-      .bssid = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06},
-      .bss_type = BSS_TYPE_INFRASTRUCTURE,
+  static constexpr uint8_t kIeeeOui[] = {0x00, 0x0F, 0xAC};
+  static constexpr fidl::Array<uint8_t, 32> kFakeKey = {
+      .data_ = {1, 2, 3, 4, 5, 6, 7, 8, 0, 9, 8, 7, 6, 5, 4, 3},
+  };
+  static constexpr size_t kFakeKeyLen = 16;
+
+  static constexpr fidl::Array<uint8_t, 32> kFakeTkipKey = {
+      .data_ = {1, 2, 3, 4, 5, 6, 7, 8, 0, 9, 8, 7, 6, 5, 4, 3,
+                1, 2, 3, 4, 5, 6, 7, 8, 0, 9, 8, 7, 6, 5, 4, 3},
+  };
+  static constexpr size_t kFakeTkipKeyLen = 32;
+
+  // Define it's own kChannel and override the one defined in SingleApTest.
+  static constexpr fuchsia_wlan_common::wire::WlanChannel kChannel = {
+      .primary = 11, .cbw = fuchsia_wlan_common::ChannelBandwidth::kCbw20};
+
+  static constexpr fuchsia_wlan_internal::wire::BssConfig kBssConfig = {
+      .bssid =
+          {
+              .data_ = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06},
+          },
+      .bss_type = fuchsia_wlan_internal::wire::BssType::kInfrastructure,
       .remote = true,
   };
+
   // Assoc context without HT related data.
-  static constexpr wlan_assoc_ctx_t kAssocCtx = {
+  static constexpr fuchsia_hardware_wlan_associnfo::wire::WlanAssocCtx kAssocCtx = {
       .listen_interval = kListenInterval,
   };
 
   // Assoc context with HT related data. (The values below comes from real data in manual test)
-  static constexpr wlan_assoc_ctx_t kHtAssocCtx = {
+  static constexpr fuchsia_hardware_wlan_associnfo::wire::WlanAssocCtx kHtAssocCtx = {
       .listen_interval = kListenInterval,
       .channel =
           {
               .primary = 157,
-              .cbw = CHANNEL_BANDWIDTH_CBW80,
+              .cbw = fuchsia_wlan_common::ChannelBandwidth::kCbw80,
           },
       .rates_cnt = 8,
       .rates =
           {
-              140,
-              18,
-              152,
-              36,
-              176,
-              72,
-              96,
-              108,
+              .data_ =
+                  {
+                      140,
+                      18,
+                      152,
+                      36,
+                      176,
+                      72,
+                      96,
+                      108,
+                  },
           },
       .has_ht_cap = true,
       .ht_cap =
           {
               .bytes =
                   {
-                      0,
-                      0,  // HtCapabilityInfo
-                      0,  // AmpduParams
+                      .data_ =
+                          {
+                              0,
+                              0,  // HtCapabilityInfo
+                              0,  // AmpduParams
 
-                      255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
-                      0,  // Supported mcs set
+                              255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+                              0,  // Supported mcs set
 
-                      0,
-                      0,  // HtExtCapabilities
-                      0,   0,   0,
-                      0,  // TxBeamformingCapabilities
-                      0,  // AselCapability
+                              0,
+                              0,  // HtExtCapabilities
+                              0,   0,   0,
+                              0,  // TxBeamformingCapabilities
+                              0,  // AselCapability
+                          },
                   },
           },
   };
+
+  static constexpr uint16_t kChannelSize = 4;
 };
 
 TEST_F(MacInterfaceTest, TestIsValidChannel) {
   ExpectSendCmd(expected_cmd_id_list({}));
 
-  wlan_channel_t ch10_20m = {
+  fuchsia_wlan_common::wire::WlanChannel ch10_20m = {
       .primary = 10,
-      .cbw = CHANNEL_BANDWIDTH_CBW20,
+      .cbw = fuchsia_wlan_common::ChannelBandwidth::kCbw20,
   };
-  EXPECT_EQ(true, IsValidChannel(&ch10_20m));
 
-  wlan_channel_t ch10_40m = {
+  EXPECT_TRUE(IsValidChannel(&ch10_20m));
+
+  fuchsia_wlan_common::wire::WlanChannel ch10_40m = {
       .primary = 10,
-      .cbw = CHANNEL_BANDWIDTH_CBW40,
+      .cbw = fuchsia_wlan_common::ChannelBandwidth::kCbw40,
   };
-  EXPECT_EQ(false, IsValidChannel(&ch10_40m));
 
-  wlan_channel_t ch13_40m_below = {
+  EXPECT_FALSE(IsValidChannel(&ch10_40m));
+
+  fuchsia_wlan_common::wire::WlanChannel ch13_40m_below = {
       .primary = 13,
-      .cbw = CHANNEL_BANDWIDTH_CBW40BELOW,
+      .cbw = fuchsia_wlan_common::ChannelBandwidth::kCbw40Below,
   };
-  EXPECT_EQ(false, IsValidChannel(&ch13_40m_below));
 
-  wlan_channel_t ch5_80m = {
+  EXPECT_FALSE(IsValidChannel(&ch13_40m_below));
+
+  fuchsia_wlan_common::wire::WlanChannel ch5_80m = {
       .primary = 5,
-      .cbw = CHANNEL_BANDWIDTH_CBW80,
+      .cbw = fuchsia_wlan_common::ChannelBandwidth::kCbw80,
   };
-  EXPECT_EQ(false, IsValidChannel(&ch5_80m));
+
+  EXPECT_FALSE(IsValidChannel(&ch5_80m));
 }
 
 // Test the set_channel().
@@ -553,8 +788,8 @@ TEST_F(MacInterfaceTest, TestSetChannel) {
   }));
 
   mvmvif_->csa_bcn_pending = true;  // Expect to be clear because this is client role.
-  ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
-  EXPECT_EQ(false, mvmvif_->csa_bcn_pending);
+  ASSERT_OK(SetChannel(&kChannel));
+  EXPECT_FALSE(mvmvif_->csa_bcn_pending);
 }
 
 // Test call set_channel() multiple times.
@@ -578,7 +813,7 @@ TEST_F(MacInterfaceTest, TestMultipleSetChannel) {
   }));
 
   for (size_t i = 0; i < 2; i++) {
-    ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
+    ASSERT_OK(SetChannel(&kChannel));
   }
 }
 
@@ -596,27 +831,27 @@ TEST_F(MacInterfaceTest, TestSetChannelWithUnsupportedRole) {
 
 // Tests calling SetChannel()/ConfigureBss() again without ConfigureAssoc()/ClearAssoc()
 TEST_F(MacInterfaceTest, DuplicateSetChannel) {
-  ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
-  ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
+  ASSERT_OK(SetChannel(&kChannel));
+  ASSERT_OK(ConfigureBss(&kBssConfig));
   struct iwl_mvm_sta* mvm_sta = mvmvif_->mvm->fw_id_to_mac_id[mvmvif_->ap_sta_id];
   struct iwl_mvm_phy_ctxt* phy_ctxt = mvmvif_->phy_ctxt;
   ASSERT_NE(nullptr, phy_ctxt);
   ASSERT_EQ(IWL_STA_NONE, mvm_sta->sta_state);
   // Call SetChannel() again. This should return the same phy context but ConfigureBss()
   // should setup a new STA.
-  ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
+  ASSERT_OK(SetChannel(&kChannel));
   struct iwl_mvm_phy_ctxt* new_phy_ctxt = mvmvif_->phy_ctxt;
   ASSERT_NE(nullptr, new_phy_ctxt);
   ASSERT_EQ(phy_ctxt, new_phy_ctxt);
-  ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
+  ASSERT_OK(ConfigureBss(&kBssConfig));
   struct iwl_mvm_sta* new_mvm_sta = mvmvif_->mvm->fw_id_to_mac_id[mvmvif_->ap_sta_id];
   // Now Associate and disassociate - this should release and reset the phy ctxt.
-  ASSERT_EQ(ZX_OK, ConfigureAssoc(&kAssocCtx));
+  ASSERT_OK(ConfigureAssoc(&kAssocCtx));
   ASSERT_EQ(IWL_STA_AUTHORIZED, new_mvm_sta->sta_state);
-  ASSERT_EQ(true, mvmvif_->bss_conf.assoc);
+  ASSERT_TRUE(mvmvif_->bss_conf.assoc);
   ASSERT_EQ(kListenInterval, mvmvif_->bss_conf.listen_interval);
 
-  ASSERT_EQ(ZX_OK, ClearAssoc());
+  ASSERT_OK(ClearAssoc());
   ASSERT_EQ(nullptr, mvmvif_->phy_ctxt);
   ASSERT_EQ(IWL_MVM_INVALID_STA, mvmvif_->ap_sta_id);
 }
@@ -624,7 +859,7 @@ TEST_F(MacInterfaceTest, DuplicateSetChannel) {
 // Test ConfigureBss()
 //
 TEST_F(MacInterfaceTest, TestConfigureBss) {
-  ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
+  ASSERT_OK(SetChannel(&kChannel));
 
   ExpectSendCmd(expected_cmd_id_list({
       MockCommand(WIDE_ID(LONG_GROUP, MAC_CONTEXT_CMD)),
@@ -634,26 +869,29 @@ TEST_F(MacInterfaceTest, TestConfigureBss) {
       MockCommand(WIDE_ID(LONG_GROUP, ADD_STA)),
   }));
 
-  ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
+  ASSERT_OK(ConfigureBss(&kBssConfig));
   // Ensure the BSSID was copied into mvmvif
-  ASSERT_EQ(memcmp(mvmvif_->bss_conf.bssid, kBssConfig.bssid, ETH_ALEN), 0);
-  ASSERT_EQ(memcmp(mvmvif_->bssid, kBssConfig.bssid, ETH_ALEN), 0);
+  ASSERT_EQ(memcmp(mvmvif_->bss_conf.bssid, kBssConfig.bssid.data(), ETH_ALEN), 0);
+  ASSERT_EQ(memcmp(mvmvif_->bssid, kBssConfig.bssid.data(), ETH_ALEN), 0);
 }
 
 // Test duplicate BSS config.
 //
 TEST_F(MacInterfaceTest, DuplicateConfigureBss) {
-  ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
-  ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
+  ASSERT_OK(SetChannel(&kChannel));
+  ASSERT_OK(ConfigureBss(&kBssConfig));
   ASSERT_EQ(ZX_ERR_ALREADY_BOUND, ConfigureBss(&kBssConfig));
 }
 
 // Test unsupported bss_type.
 //
 TEST_F(MacInterfaceTest, UnsupportedBssType) {
-  static constexpr bss_config_t kUnsupportedBssConfig = {
-      .bssid = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06},
-      .bss_type = BSS_TYPE_INDEPENDENT,
+  static constexpr fuchsia_wlan_internal::wire::BssConfig kUnsupportedBssConfig = {
+      .bssid =
+          {
+              .data_ = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06},
+          },
+      .bss_type = fuchsia_wlan_internal::wire::BssType::kIndependent,
       .remote = true,
   };
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, ConfigureBss(&kUnsupportedBssConfig));
@@ -662,7 +900,7 @@ TEST_F(MacInterfaceTest, UnsupportedBssType) {
 // Test failed ADD_STA command.
 //
 TEST_F(MacInterfaceTest, TestFailedAddSta) {
-  ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
+  ASSERT_OK(SetChannel(&kChannel));
 
   ExpectSendCmd(expected_cmd_id_list({
       MockCommand(WIDE_ID(LONG_GROUP, MAC_CONTEXT_CMD), kSimMvmReturnWithStatus,
@@ -675,8 +913,8 @@ TEST_F(MacInterfaceTest, TestFailedAddSta) {
 // Test whether the AUX sta (for active scan) is added.
 //
 TEST_F(MacInterfaceTest, TestAuxSta) {
-  ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
-  ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
+  ASSERT_OK(SetChannel(&kChannel));
+  ASSERT_OK(ConfigureBss(&kBssConfig));
 
   auto aux_sta = &mvmvif_->mvm->aux_sta;
   EXPECT_EQ(IWL_STA_AUX_ACTIVITY, aux_sta->type);
@@ -689,7 +927,7 @@ TEST_F(MacInterfaceTest, TestAuxSta) {
 // Test exception handling in driver.
 //
 TEST_F(MacInterfaceTest, TestExceptionHandling) {
-  ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
+  ASSERT_OK(SetChannel(&kChannel));
 
   // Test the beacon interval checking.
   mvmvif_->bss_conf.beacon_int = 0;
@@ -702,22 +940,22 @@ TEST_F(MacInterfaceTest, TestExceptionHandling) {
   EXPECT_EQ(ZX_ERR_BAD_STATE, ConfigureBss(&kBssConfig));
   mvmvif_->phy_ctxt = backup_phy_ctxt;
 
+  iwl_mvm_sta sta;
   // Test the case we run out of slots for STA.
-  std::list<std::unique_ptr<::wlan::iwlwifi::WlanSoftmacDevice>> devices;
-  size_t available_num = IWL_MVM_STATION_COUNT - 1;  // minus the aux_sta.
-  for (size_t i = 0; i < available_num; i++) {
-    // Pretend the STA is not assigned so that we can add it again.
-    devices.emplace_back(std::make_unique<::wlan::iwlwifi::WlanSoftmacDevice>(
-        nullptr, sim_trans_.iwl_trans(), 0, mvmvif_.get()));
-    std::swap(device_, devices.back());
-    ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
+  // Occupy all the station slots.
+  for (uint16_t i = 0; i < IWL_MVM_STATION_COUNT; i++) {
+    mvmvif_->mvm->fw_id_to_mac_id[i] = &sta;
   }
 
-  // However, the last one should fail because we run out of all slots in fw_id_to_mac_id[].
-  devices.emplace_back(std::make_unique<::wlan::iwlwifi::WlanSoftmacDevice>(
-      nullptr, sim_trans_.iwl_trans(), 0, mvmvif_.get()));
-  std::swap(device_, devices.back());
-  ASSERT_EQ(ZX_ERR_NO_RESOURCES, ConfigureBss(&kBssConfig));
+  // Request fails because we run out of all slots in fw_id_to_mac_id[].
+  EXPECT_EQ(ZX_ERR_NO_RESOURCES, ConfigureBss(&kBssConfig));
+
+  // Clean up all the station slots.
+  for (uint16_t i = 0; i < IWL_MVM_STATION_COUNT; i++) {
+    mvmvif_->mvm->fw_id_to_mac_id[i] = nullptr;
+  }
+
+  EXPECT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
   // iwl_mvm_add_sta(), called by ConfigureBss(), has an assumption that each interface has only one
   // AP sta (for WLAN_MAC_ROLE_CLIENT). However, in this case, we break the assumption so that the
   // ap_sta_id was populated with the last successful STA ID. Thus, we reset the mvmvif_->ap_sta_id
@@ -729,20 +967,20 @@ TEST_F(MacInterfaceTest, TestExceptionHandling) {
 // The test is used to test the typical procedure to connect to an open network.
 //
 TEST_F(MacInterfaceTest, AssociateToOpenNetwork) {
-  ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
-  ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
+  ASSERT_OK(SetChannel(&kChannel));
+  ASSERT_OK(ConfigureBss(&kBssConfig));
   struct iwl_mvm_sta* mvm_sta = mvmvif_->mvm->fw_id_to_mac_id[mvmvif_->ap_sta_id];
   ASSERT_EQ(IWL_STA_NONE, mvm_sta->sta_state);
   struct iwl_mvm* mvm = mvmvif_->mvm;
   ASSERT_GT(list_length(&mvm->time_event_list), 0);
 
-  ASSERT_EQ(ZX_OK, ConfigureAssoc(&kAssocCtx));
+  ASSERT_OK(ConfigureAssoc(&kAssocCtx));
   ASSERT_EQ(IWL_STA_AUTHORIZED, mvm_sta->sta_state);
-  ASSERT_EQ(true, mvmvif_->bss_conf.assoc);
+  ASSERT_TRUE(mvmvif_->bss_conf.assoc);
   ASSERT_EQ(kListenInterval, mvmvif_->bss_conf.listen_interval);
   ASSERT_EQ(mvm_sta->sta_state, iwl_sta_state::IWL_STA_AUTHORIZED);
 
-  ASSERT_EQ(ZX_OK, ClearAssoc());
+  ASSERT_OK(ClearAssoc());
   ASSERT_EQ(nullptr, mvmvif_->phy_ctxt);
   ASSERT_EQ(IWL_MVM_INVALID_STA, mvmvif_->ap_sta_id);
   ASSERT_EQ(list_length(&mvm->time_event_list), 0);
@@ -750,23 +988,22 @@ TEST_F(MacInterfaceTest, AssociateToOpenNetwork) {
 
 // Check if calling iwl_mvm_mac_sta_state() sets the state correctly.
 TEST_F(MacInterfaceTest, CheckStaState) {
-  ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
-  ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
+  ASSERT_OK(SetChannel(&kChannel));
+  ASSERT_OK(ConfigureBss(&kBssConfig));
   struct iwl_mvm_sta* mvm_sta = mvmvif_->mvm->fw_id_to_mac_id[mvmvif_->ap_sta_id];
   ASSERT_EQ(IWL_STA_NONE, mvm_sta->sta_state);
   struct iwl_mvm* mvm = mvmvif_->mvm;
   ASSERT_GT(list_length(&mvm->time_event_list), 0);
 
-  ASSERT_EQ(ZX_OK, ConfigureAssoc(&kAssocCtx));
+  ASSERT_OK(ConfigureAssoc(&kAssocCtx));
   ASSERT_EQ(IWL_STA_AUTHORIZED, mvm_sta->sta_state);
-  ASSERT_EQ(true, mvmvif_->bss_conf.assoc);
+  ASSERT_TRUE(mvmvif_->bss_conf.assoc);
   ASSERT_EQ(kListenInterval, mvmvif_->bss_conf.listen_interval);
   ASSERT_EQ(mvm_sta->sta_state, iwl_sta_state::IWL_STA_AUTHORIZED);
 
-  ASSERT_EQ(ZX_OK,
-            iwl_mvm_mac_sta_state(mvmvif_.get(), mvm_sta, IWL_STA_AUTHORIZED, IWL_STA_ASSOC));
+  ASSERT_EQ(ZX_OK, iwl_mvm_mac_sta_state(mvmvif_, mvm_sta, IWL_STA_AUTHORIZED, IWL_STA_ASSOC));
   ASSERT_EQ(mvm_sta->sta_state, iwl_sta_state::IWL_STA_ASSOC);
-  ASSERT_EQ(ZX_OK, ClearAssoc());
+  ASSERT_OK(ClearAssoc());
 }
 
 // Back to back calls of ClearAssoc().
@@ -777,14 +1014,14 @@ TEST_F(MacInterfaceTest, ClearAssocAfterClearAssoc) {
 
 // ClearAssoc() should cleanup when called without Assoc
 TEST_F(MacInterfaceTest, ClearAssocAfterNoAssoc) {
-  ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
-  ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
+  ASSERT_OK(SetChannel(&kChannel));
+  ASSERT_OK(ConfigureBss(&kBssConfig));
   struct iwl_mvm_sta* mvm_sta = mvmvif_->mvm->fw_id_to_mac_id[mvmvif_->ap_sta_id];
   ASSERT_EQ(IWL_STA_NONE, mvm_sta->sta_state);
   struct iwl_mvm* mvm = mvmvif_->mvm;
   ASSERT_GT(list_length(&mvm->time_event_list), 0);
 
-  ASSERT_EQ(ZX_OK, ClearAssoc());
+  ASSERT_OK(ClearAssoc());
   ASSERT_EQ(nullptr, mvmvif_->phy_ctxt);
   ASSERT_EQ(IWL_MVM_INVALID_STA, mvmvif_->ap_sta_id);
   ASSERT_EQ(list_length(&mvm->time_event_list), 0);
@@ -795,8 +1032,8 @@ TEST_F(MacInterfaceTest, ClearAssocAfterNoAssoc) {
 
 // ClearAssoc() should cleanup when called after a failed Assoc
 TEST_F(MacInterfaceTest, ClearAssocAfterFailedAssoc) {
-  SetChannel(&kChannel);
-  ConfigureBss(&kBssConfig);
+  ASSERT_OK(SetChannel(&kChannel));
+  ASSERT_OK(ConfigureBss(&kBssConfig));
 
   struct iwl_mvm* mvm = mvmvif_->mvm;
   ASSERT_GT(list_length(&mvm->time_event_list), 0);
@@ -807,7 +1044,7 @@ TEST_F(MacInterfaceTest, ClearAssocAfterFailedAssoc) {
   mvmvif_->uploaded = orig;
 
   // ClearAssoc will clean up the failed association.
-  ASSERT_EQ(ZX_OK, ClearAssoc());
+  ASSERT_OK(ClearAssoc());
   ASSERT_EQ(nullptr, mvmvif_->phy_ctxt);
   ASSERT_EQ(IWL_MVM_INVALID_STA, mvmvif_->ap_sta_id);
   ASSERT_EQ(list_length(&mvm->time_event_list), 0);
@@ -819,8 +1056,8 @@ TEST_F(MacInterfaceTest, ClearAssocAfterFailedAssoc) {
 // This test case is to verify ConfigureAssoc() with HT wlan_assoc_ctx_t input can successfully
 // trigger LQ_CMD with correct data.
 TEST_F(MacInterfaceTest, AssocWithHtConfig) {
-  ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
-  ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
+  ASSERT_OK(SetChannel(&kChannel));
+  ASSERT_OK(ConfigureBss(&kBssConfig));
 
   ExpectSendCmd(expected_cmd_id_list({
       MockCommand(WIDE_ID(LONG_GROUP, LQ_CMD)),
@@ -838,7 +1075,7 @@ TEST_F(MacInterfaceTest, AssocWithHtConfig) {
   struct iwl_mvm* mvm = mvmvif_->mvm;
   ASSERT_GT(list_length(&mvm->time_event_list), 0);
 
-  ASSERT_EQ(ZX_OK, ConfigureAssoc(&kHtAssocCtx));
+  ASSERT_OK(ConfigureAssoc(&kHtAssocCtx));
 
   // Verify the values in LQ_CMD API structure.
   EXPECT_EQ(lq_cmd->sta_id, 0);
@@ -867,45 +1104,149 @@ TEST_F(MacInterfaceTest, AssocWithHtConfig) {
   ResetSendCmdFunc();
 
   // Clean up the association states.
-  ASSERT_EQ(ZX_OK, ClearAssoc());
+  ASSERT_OK(ClearAssoc());
+}
+
+TEST_F(MacInterfaceTest, StartPassiveScanTest) {
+  fidl::Arena fidl_arena;
+  // FromExternal() is not able to take const data.
+  uint8_t channels_to_scan[kChannelSize] = {7, 1, 40, 136};
+  {
+    // Passive scan with some random channels should pass.
+    auto builder = fuchsia_wlan_softmac::wire::WlanSoftmacPassiveScanArgs::Builder(fidl_arena);
+    builder.channels(fidl::VectorView<uint8_t>::FromExternal(&channels_to_scan[0], kChannelSize));
+    auto passive_scan_args = builder.Build();
+    ASSERT_OK(StartPassiveScan(&passive_scan_args));
+  }
+
+  {
+    // Passive scan request will fail in mvm-mlme.cc if the channels field is not set.
+    auto builder = fuchsia_wlan_softmac::wire::WlanSoftmacPassiveScanArgs::Builder(fidl_arena);
+    auto passive_scan_args = builder.Build();
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, StartPassiveScan(&passive_scan_args));
+  }
+}
+
+TEST_F(MacInterfaceTest, StartActiveScanTest) {
+  fidl::Arena fidl_arena;
+  // FromExternal() is not able to take const data.
+  uint8_t channels_to_scan[kChannelSize] = {7, 1, 40, 136};
+  {
+    // Active scan with args in which all of "channels", "ssids", "mac_header" and "ies" fields are
+    // set will pass the argument check in mvm-mlme.cc.
+    auto builder = fuchsia_wlan_softmac::wire::WlanSoftmacActiveScanArgs::Builder(fidl_arena);
+
+    builder.channels(fidl::VectorView<uint8_t>::FromExternal(&channels_to_scan[0], kChannelSize));
+    builder.ssids(fidl::VectorView<fuchsia_wlan_ieee80211::wire::CSsid>());
+    builder.mac_header(fidl::VectorView<uint8_t>());
+    builder.ies(fidl::VectorView<uint8_t>());
+
+    auto active_scan_args = builder.Build();
+    ASSERT_OK(StartActiveScan(&active_scan_args));
+  }
+
+  {
+    // Missing "channels" fails the argument check.
+    auto builder = fuchsia_wlan_softmac::wire::WlanSoftmacActiveScanArgs::Builder(fidl_arena);
+
+    builder.ssids(fidl::VectorView<fuchsia_wlan_ieee80211::wire::CSsid>());
+    builder.mac_header(fidl::VectorView<uint8_t>());
+    builder.ies(fidl::VectorView<uint8_t>());
+
+    auto active_scan_args = builder.Build();
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, StartActiveScan(&active_scan_args));
+  }
+
+  {
+    // Missing "ssids" fails the argument check.
+    auto builder = fuchsia_wlan_softmac::wire::WlanSoftmacActiveScanArgs::Builder(fidl_arena);
+
+    builder.channels(fidl::VectorView<uint8_t>::FromExternal(&channels_to_scan[0], kChannelSize));
+    builder.mac_header(fidl::VectorView<uint8_t>());
+    builder.ies(fidl::VectorView<uint8_t>());
+
+    auto active_scan_args = builder.Build();
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, StartActiveScan(&active_scan_args));
+  }
+
+  {
+    // Missing "mac_header" fails the argument check.
+    auto builder = fuchsia_wlan_softmac::wire::WlanSoftmacActiveScanArgs::Builder(fidl_arena);
+
+    builder.channels(fidl::VectorView<uint8_t>::FromExternal(&channels_to_scan[0], kChannelSize));
+    builder.ssids(fidl::VectorView<fuchsia_wlan_ieee80211::wire::CSsid>());
+    builder.ies(fidl::VectorView<uint8_t>());
+
+    auto active_scan_args = builder.Build();
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, StartActiveScan(&active_scan_args));
+  }
+
+  {
+    // Missing "ies" fails the argument check.
+    auto builder = fuchsia_wlan_softmac::wire::WlanSoftmacActiveScanArgs::Builder(fidl_arena);
+
+    builder.channels(fidl::VectorView<uint8_t>::FromExternal(&channels_to_scan[0], kChannelSize));
+    builder.ssids(fidl::VectorView<fuchsia_wlan_ieee80211::wire::CSsid>());
+    builder.mac_header(fidl::VectorView<uint8_t>());
+
+    auto active_scan_args = builder.Build();
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, StartActiveScan(&active_scan_args));
+  }
 }
 
 // Check to ensure keys are set during assoc and deleted after disassoc
 // for now use open network
 TEST_F(MacInterfaceTest, SetKeysTest) {
-  constexpr uint8_t kIeeeOui[] = {0x00, 0x0F, 0xAC};
-  ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
-  ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
+  ASSERT_OK(SetChannel(&kChannel));
+  ASSERT_OK(ConfigureBss(&kBssConfig));
   struct iwl_mvm_sta* mvm_sta = mvmvif_->mvm->fw_id_to_mac_id[mvmvif_->ap_sta_id];
   ASSERT_EQ(IWL_STA_NONE, mvm_sta->sta_state);
   struct iwl_mvm* mvm = mvmvif_->mvm;
   ASSERT_GT(list_length(&mvm->time_event_list), 0);
 
-  ASSERT_EQ(ZX_OK, ConfigureAssoc(&kAssocCtx));
+  ASSERT_OK(ConfigureAssoc(&kAssocCtx));
   ASSERT_EQ(IWL_STA_AUTHORIZED, mvm_sta->sta_state);
-  ASSERT_EQ(true, mvmvif_->bss_conf.assoc);
+  ASSERT_TRUE(mvmvif_->bss_conf.assoc);
   ASSERT_EQ(kListenInterval, mvmvif_->bss_conf.listen_interval);
 
-  char keybuf[sizeof(wlan_key_config_t) + 16] = {};
-  wlan_key_config_t* key_config = new (keybuf) wlan_key_config_t();
+  fidl::Arena fidl_arena;
+  fidl::Array<uint8_t, 3> cipher_oui;
+  auto key =
+      fidl::VectorView<uint8_t>::FromExternal(const_cast<uint8_t*>(kFakeKey.begin()), kFakeKeyLen);
+  memcpy(cipher_oui.begin(), kIeeeOui, 3);
+  {
+    auto builder = fuchsia_wlan_softmac::wire::WlanKeyConfig::Builder(fidl_arena);
 
-  // Set an arbitrary pairwise key.
-  key_config->cipher_type = 4;
-  key_config->key_type = 1;
-  key_config->key_idx = 0;
-  key_config->key_len = 16;
-  memcpy(key_config->cipher_oui, kIeeeOui, 3);
-  ASSERT_EQ(ZX_OK, SetKey(key_config));
-  // Expect bit 0 to be set.
-  ASSERT_EQ(*mvm->fw_key_table, 0x1);
+    // Set an arbitrary pairwise key.
+    builder.cipher_type(4);
+    builder.key_type(fuchsia_hardware_wlan_associnfo::wire::WlanKeyType::kPairwise);
+    builder.key_idx(0);
+    builder.key(key);
+    builder.rsc(0);
+    builder.cipher_oui(cipher_oui);
+    auto key_config = builder.Build();
+    ASSERT_OK(SetKey(&key_config));
+    // Expect bit 0 to be set.
+    ASSERT_EQ(*mvm->fw_key_table, 0x1);
+  }
+  {
+    auto builder = fuchsia_wlan_softmac::wire::WlanKeyConfig::Builder(fidl_arena);
 
-  // Set an arbitrary group key.
-  key_config->key_type = 2;
-  key_config->key_idx = 1;
-  ASSERT_EQ(ZX_OK, SetKey(key_config));
-  // Expect bit 1 to be set as well.
-  ASSERT_EQ(*mvm->fw_key_table, 0x3);
-  ASSERT_EQ(ZX_OK, ClearAssoc());
+    // Set an arbitrary group key.
+    builder.cipher_type(4);
+    builder.key_type(fuchsia_hardware_wlan_associnfo::wire::WlanKeyType::kGroup);
+    builder.key_idx(1);
+    builder.key(key);
+    builder.rsc(0);
+    builder.cipher_oui(cipher_oui);
+
+    auto key_config = builder.Build();
+    ASSERT_OK(SetKey(&key_config));
+    // Expect bit 1 to be set as well.
+    ASSERT_EQ(*mvm->fw_key_table, 0x3);
+  }
+
+  ASSERT_OK(ClearAssoc());
   ASSERT_EQ(nullptr, mvmvif_->phy_ctxt);
   ASSERT_EQ(IWL_MVM_INVALID_STA, mvmvif_->ap_sta_id);
   ASSERT_EQ(list_length(&mvm->time_event_list), 0);
@@ -915,61 +1256,91 @@ TEST_F(MacInterfaceTest, SetKeysTest) {
 
 // Check that we can sucessfully set some key configurations required for supported functionality.
 TEST_F(MacInterfaceTest, SetKeysSupportConfigs) {
-  constexpr uint8_t kIeeeOui[] = {0x00, 0x0F, 0xAC};
-  ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
-  ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
-  ASSERT_EQ(ZX_OK, ConfigureAssoc(&kAssocCtx));
-  ASSERT_EQ(true, mvmvif_->bss_conf.assoc);
+  ASSERT_OK(SetChannel(&kChannel));
+  ASSERT_OK(ConfigureBss(&kBssConfig));
+  ASSERT_OK(ConfigureAssoc(&kAssocCtx));
+  ASSERT_TRUE(mvmvif_->bss_conf.assoc);
 
-  char keybuf[sizeof(wlan_key_config_t) + 16] = {};
-  wlan_key_config_t* key_config = new (keybuf) wlan_key_config_t();
-  key_config->key_len = 16;
-  memcpy(key_config->cipher_oui, kIeeeOui, 3);
+  fidl::Arena fidl_arena;
+  fidl::Array<uint8_t, 3> cipher_oui;
+  auto key =
+      fidl::VectorView<uint8_t>::FromExternal(const_cast<uint8_t*>(kFakeKey.begin()), kFakeKeyLen);
+  memcpy(cipher_oui.begin(), kIeeeOui, 3);
+  {
+    auto builder = fuchsia_wlan_softmac::wire::WlanKeyConfig::Builder(fidl_arena);
 
-  // Default cipher configuration for WPA2/3 PTK.  This is data frame protection, required for
-  // WPA2/3.
-  key_config->cipher_type = CIPHER_SUITE_TYPE_CCMP_128;
-  key_config->key_type = WLAN_KEY_TYPE_PAIRWISE;
-  key_config->key_idx = 0;
-  ASSERT_EQ(ZX_OK, SetKey(key_config));
+    builder.key(key);
+    builder.cipher_oui(cipher_oui);
+    // Default cipher configuration for WPA2/3 PTK.  This is data frame protection, required for
+    // WPA2/3.
+    builder.cipher_type(CIPHER_SUITE_TYPE_CCMP_128);
+    builder.key_type(fuchsia_hardware_wlan_associnfo::wire::WlanKeyType::kPairwise);
+    builder.key_idx(0);
+    builder.rsc(0);
+    auto key_config = builder.Build();
+    ASSERT_OK(SetKey(&key_config));
+  }
 
-  // Default cipher configuration for WPA2/3 IGTK.  This is management frame protection, optional
-  // for WPA2 and required for WPA3.
-  key_config->cipher_type = CIPHER_SUITE_TYPE_BIP_CMAC_128;
-  key_config->key_type = WLAN_KEY_TYPE_IGTK;
-  key_config->key_idx = 1;
-  ASSERT_EQ(ZX_OK, SetKey(key_config));
+  {
+    auto builder = fuchsia_wlan_softmac::wire::WlanKeyConfig::Builder(fidl_arena);
 
-  ASSERT_EQ(ZX_OK, ClearAssoc());
+    // Default cipher configuration for WPA2/3 IGTK.  This is management frame protection, optional
+    // for WPA2 and required for WPA3.
+    builder.key(key);
+    builder.cipher_oui(cipher_oui);
+    builder.cipher_type(CIPHER_SUITE_TYPE_BIP_CMAC_128);
+    builder.key_type(fuchsia_hardware_wlan_associnfo::wire::WlanKeyType::kIgtk);
+    builder.key_idx(1);
+    builder.rsc(0);
+    auto key_config = builder.Build();
+    ASSERT_OK(SetKey(&key_config));
+  }
+
+  ASSERT_OK(ClearAssoc());
 }
 
 // Test setting TKIP. Mainly for group key (backward-compatible for many APs).
 TEST_F(MacInterfaceTest, SetKeysTKIP) {
   constexpr uint8_t kIeeeOui[] = {0x00, 0x0F, 0xAC};
-  ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
-  ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
-  ASSERT_EQ(ZX_OK, ConfigureAssoc(&kAssocCtx));
-  ASSERT_EQ(true, mvmvif_->bss_conf.assoc);
+  ASSERT_OK(SetChannel(&kChannel));
+  ASSERT_OK(ConfigureBss(&kBssConfig));
+  ASSERT_OK(ConfigureAssoc(&kAssocCtx));
+  ASSERT_TRUE(mvmvif_->bss_conf.assoc);
 
-  constexpr size_t key_len = 32;
-  char keybuf[sizeof(wlan_key_config_t) + key_len] = {};
-  wlan_key_config_t* key_config = new (keybuf) wlan_key_config_t();
-  key_config->key_len = key_len;
-  memcpy(key_config->cipher_oui, kIeeeOui, 3);
+  fidl::Arena fidl_arena;
+  fidl::Array<uint8_t, 3> cipher_oui;
+  auto tkip_key = fidl::VectorView<uint8_t>::FromExternal(
+      const_cast<uint8_t*>(kFakeTkipKey.begin()), kFakeTkipKeyLen);
+  memcpy(cipher_oui.begin(), kIeeeOui, 3);
+  {
+    auto builder = fuchsia_wlan_softmac::wire::WlanKeyConfig::Builder(fidl_arena);
 
-  // TKIP Pairwise: althought we support it but not recommended (deprecated protocol).
-  key_config->cipher_type = CIPHER_SUITE_TYPE_TKIP;
-  key_config->key_type = WLAN_KEY_TYPE_PAIRWISE;
-  key_config->key_idx = 0;
-  ASSERT_EQ(ZX_OK, SetKey(key_config));
+    builder.key(tkip_key);
+    builder.cipher_oui(cipher_oui);
+    // TKIP Pairwise: although we support it but not recommended (deprecated protocol).
+    builder.cipher_type(fuchsia_wlan_ieee80211::wire::CipherSuiteType::kTkip);
+    builder.key_type(fuchsia_hardware_wlan_associnfo::wire::WlanKeyType::kPairwise);
+    builder.key_idx(0);
+    builder.rsc(0);
+    auto key_config = builder.Build();
+    ASSERT_OK(SetKey(&key_config));
+  }
 
-  // TKIP Group key: supported for backward compatible. Unfortunately many APs still use this.
-  key_config->cipher_type = CIPHER_SUITE_TYPE_TKIP;
-  key_config->key_type = WLAN_KEY_TYPE_IGTK;
-  key_config->key_idx = 1;
-  ASSERT_EQ(ZX_OK, SetKey(key_config));
+  {
+    // TKIP Group key: supported for backward compatible. Unfortunately many APs still use this.
+    auto builder = fuchsia_wlan_softmac::wire::WlanKeyConfig::Builder(fidl_arena);
 
-  ASSERT_EQ(ZX_OK, ClearAssoc());
+    builder.key(tkip_key);
+    builder.cipher_oui(cipher_oui);
+    builder.cipher_type(fuchsia_wlan_ieee80211::wire::CipherSuiteType::kTkip);
+    builder.key_type(fuchsia_hardware_wlan_associnfo::wire::WlanKeyType::kIgtk);
+    builder.key_idx(1);
+    builder.rsc(0);
+    auto key_config = builder.Build();
+    ASSERT_OK(SetKey(&key_config));
+  }
+
+  ASSERT_OK(ClearAssoc());
 }
 
 TEST_F(MacInterfaceTest, TxPktTooLong) {
@@ -979,16 +1350,18 @@ TEST_F(MacInterfaceTest, TxPktTooLong) {
 
   bindTx(tx_wrapper);
   WlanPktBuilder builder;
-  std::shared_ptr<WlanPktBuilder::WlanPkt> wlan_pkt = builder.build();
-  wlan_pkt->wlan_pkt()->mac_frame_size = WLAN_MSDU_MAX_LEN + 1;
+  std::shared_ptr<WlanPktBuilder::WlanPkt> wlan_pkt = builder.build_oversize();
+  fuchsia_wlan_softmac::wire::WlanTxPacket fidl_packet = wlan_pkt->wlan_pkt();
+
   EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_DATA_FROM_MLME), 0);
   EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_DATA_TO_FW), 0);
-  bool enqueue_pending = false;
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
-            device_->WlanSoftmacQueueTx(wlan_pkt->wlan_pkt(), &enqueue_pending));
-  ASSERT_EQ(enqueue_pending, false);
+
+  auto result = client_.sync().buffer(test_arena_)->QueueTx(fidl_packet);
   EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_DATA_FROM_MLME), 1);
   EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_DATA_TO_FW), 0);
+  ASSERT_TRUE(result.ok());
+  EXPECT_TRUE(result->is_error());
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, result->error_value());
   unbindTx();
 }
 
@@ -1003,10 +1376,12 @@ TEST_F(MacInterfaceTest, TxPktNotSupportedRole) {
   bindTx(tx_wrapper);
   WlanPktBuilder builder;
   std::shared_ptr<WlanPktBuilder::WlanPkt> wlan_pkt = builder.build();
-  bool enqueue_pending = false;
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
-            device_->WlanSoftmacQueueTx(wlan_pkt->wlan_pkt(), &enqueue_pending));
-  ASSERT_EQ(enqueue_pending, false);
+  fuchsia_wlan_softmac::wire::WlanTxPacket fidl_packet = wlan_pkt->wlan_pkt();
+
+  auto result = client_.sync().buffer(test_arena_)->QueueTx(fidl_packet);
+  ASSERT_TRUE(result.ok());
+  EXPECT_TRUE(result->is_error());
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, result->error_value());
   unbindTx();
 }
 
@@ -1020,13 +1395,17 @@ TEST_F(MacInterfaceTest, TxPkt) {
   WlanPktBuilder builder;
   std::shared_ptr<WlanPktBuilder::WlanPkt> wlan_pkt = builder.build();
   mock_tx_.ExpectCall(ZX_OK, wlan_pkt->len(), WIDE_ID(0, TX_CMD), IWL_MVM_DQA_MIN_MGMT_QUEUE);
+  fuchsia_wlan_softmac::wire::WlanTxPacket fidl_packet = wlan_pkt->wlan_pkt();
+
   EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_DATA_FROM_MLME), 0);
   EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_DATA_TO_FW), 0);
-  bool enqueue_pending = false;
-  ASSERT_EQ(ZX_OK, device_->WlanSoftmacQueueTx(wlan_pkt->wlan_pkt(), &enqueue_pending));
-  ASSERT_EQ(enqueue_pending, false);
+
+  auto result = client_.sync().buffer(test_arena_)->QueueTx(fidl_packet);
   EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_DATA_FROM_MLME), 1);
   EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_DATA_TO_FW), 1);
+  ASSERT_TRUE(result.ok());
+  EXPECT_FALSE(result->is_error());
+  ASSERT_FALSE(result->value()->enqueue_pending);
   unbindTx();
 }
 

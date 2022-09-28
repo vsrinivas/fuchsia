@@ -5,10 +5,12 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_WLAN_SOFTMAC_DEVICE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_WLAN_SOFTMAC_DEVICE_H_
 
+#include <fidl/fuchsia.wlan.softmac/cpp/driver/wire.h>
 #include <fuchsia/hardware/wlan/softmac/cpp/banjo.h>
 #include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <fuchsia/wlan/internal/cpp/banjo.h>
 #include <lib/ddk/device.h>
+#include <lib/fdf/cpp/dispatcher.h>
 
 #include <memory>
 
@@ -22,9 +24,9 @@ namespace wlan::iwlwifi {
 class MvmSta;
 class WlanSoftmacDevice;
 
-class WlanSoftmacDevice
-    : public ddk::Device<WlanSoftmacDevice, ddk::Initializable, ddk::Unbindable>,
-      public ::ddk::WlanSoftmacProtocol<WlanSoftmacDevice, ::ddk::base_protocol> {
+class WlanSoftmacDevice : public ddk::Device<WlanSoftmacDevice, ddk::Initializable, ddk::Unbindable,
+                                             ddk::ServiceConnectable>,
+                          public fdf::WireServer<fuchsia_wlan_softmac::WlanSoftmac> {
  public:
   WlanSoftmacDevice(zx_device* parent, iwl_trans* drvdata, uint16_t iface_id,
                     struct iwl_mvm_vif* mvmvif);
@@ -33,34 +35,52 @@ class WlanSoftmacDevice
   void DdkInit(ddk::InitTxn txn);
   void DdkRelease();
   void DdkUnbind(ddk::UnbindTxn txn);
+  zx_status_t DdkServiceConnect(const char* service_name, fdf::Channel channel);
 
-  // WlanSoftmac interface implementation.
-  zx_status_t WlanSoftmacQuery(wlan_softmac_info_t* out_info);
-  void WlanSoftmacQueryDiscoverySupport(discovery_support_t* out_resp);
-  void WlanSoftmacQueryMacSublayerSupport(mac_sublayer_support_t* out_resp);
-  void WlanSoftmacQuerySecuritySupport(security_support_t* out_resp);
-  void WlanSoftmacQuerySpectrumManagementSupport(spectrum_management_support_t* out_resp);
-  zx_status_t WlanSoftmacStart(const wlan_softmac_ifc_protocol_t* ifc,
-                               zx::channel* out_mlme_channel);
-  void WlanSoftmacStop();
-  zx_status_t WlanSoftmacQueueTx(const wlan_tx_packet_t* packet, bool* out_enqueue_pending);
-  zx_status_t WlanSoftmacSetChannel(const wlan_channel_t* channel);
-  zx_status_t WlanSoftmacConfigureBss(const bss_config_t* config);
-  zx_status_t WlanSoftmacEnableBeaconing(const wlan_bcn_config_t* bcn_cfg);
-  zx_status_t WlanSoftmacConfigureBeacon(const wlan_tx_packet_t* pkt);
-  zx_status_t WlanSoftmacSetKey(const wlan_key_config_t* key_config);
-  zx_status_t WlanSoftmacConfigureAssoc(const wlan_assoc_ctx_t* assoc_ctx);
-  zx_status_t WlanSoftmacClearAssoc(
-      const uint8_t peer_addr_list[fuchsia_wlan_ieee80211_MAC_ADDR_LEN]);
-  zx_status_t WlanSoftmacStartPassiveScan(const wlan_softmac_passive_scan_args_t* passive_scan_args,
-                                          uint64_t* out_scan_id);
-  zx_status_t WlanSoftmacStartActiveScan(const wlan_softmac_active_scan_args_t* active_scan_args,
-                                         uint64_t* out_scan_id);
-  zx_status_t WlanSoftmacCancelScan(uint64_t scan_id);
-  zx_status_t WlanSoftmacUpdateWmmParams(wlan_ac_t ac, const wlan_wmm_params_t* params);
+  // WlanSoftmac protocol implementation.
+  void Query(fdf::Arena& arena, QueryCompleter::Sync& completer);
+  void QueryDiscoverySupport(fdf::Arena& arena, QueryDiscoverySupportCompleter::Sync& completer);
+  void QueryMacSublayerSupport(fdf::Arena& arena,
+                               QueryMacSublayerSupportCompleter::Sync& completer);
+  void QuerySecuritySupport(fdf::Arena& arena, QuerySecuritySupportCompleter::Sync& completer);
+  void QuerySpectrumManagementSupport(fdf::Arena& arena,
+                                      QuerySpectrumManagementSupportCompleter::Sync& completer);
+  void Start(StartRequestView request, fdf::Arena& arena, StartCompleter::Sync& completer);
+  void Stop(fdf::Arena& arena, StopCompleter::Sync& completer);
+  void QueueTx(QueueTxRequestView request, fdf::Arena& arena, QueueTxCompleter::Sync& completer);
+  void SetChannel(SetChannelRequestView request, fdf::Arena& arena,
+                  SetChannelCompleter::Sync& completer);
+  void ConfigureBss(ConfigureBssRequestView request, fdf::Arena& arena,
+                    ConfigureBssCompleter::Sync& completer);
+  void EnableBeaconing(EnableBeaconingRequestView request, fdf::Arena& arena,
+                       EnableBeaconingCompleter::Sync& completer);
+  void ConfigureBeacon(ConfigureBeaconRequestView request, fdf::Arena& arena,
+                       ConfigureBeaconCompleter::Sync& completer);
+  void SetKey(SetKeyRequestView request, fdf::Arena& arena, SetKeyCompleter::Sync& completer);
+  void ConfigureAssoc(ConfigureAssocRequestView request, fdf::Arena& arena,
+                      ConfigureAssocCompleter::Sync& completer);
+  void ClearAssoc(ClearAssocRequestView request, fdf::Arena& arena,
+                  ClearAssocCompleter::Sync& completer);
+  void StartPassiveScan(StartPassiveScanRequestView request, fdf::Arena& arena,
+                        StartPassiveScanCompleter::Sync& completer);
+  void StartActiveScan(StartActiveScanRequestView request, fdf::Arena& arena,
+                       StartActiveScanCompleter::Sync& completer);
+  void CancelScan(CancelScanRequestView request, fdf::Arena& arena,
+                  CancelScanCompleter::Sync& completer);
+  void UpdateWmmParams(UpdateWmmParamsRequestView request, fdf::Arena& arena,
+                       UpdateWmmParamsCompleter::Sync& completer);
+
+  // Entry functions to access WlanSoftmacIfc protocol implementation in client_.
+  void Recv(fuchsia_wlan_softmac::wire::WlanRxPacket* rx_packet);
+  void ScanComplete(zx_status_t status, uint64_t scan_id);
 
   // Helper function
-  bool IsValidChannel(const wlan_channel_t* channel);
+  bool IsValidChannel(const fuchsia_wlan_common::wire::WlanChannel* channel);
+
+  // Exposing for tests, initializing server end dispatcher for WlanSoftmacIfc protocol.
+  zx_status_t InitServerDispatcher();
+  // Exposing for tests, initializing server end dispatcher for WlanSoftmac protocol.
+  zx_status_t InitClientDispatcher();
 
  protected:
   struct iwl_mvm_vif* mvmvif_;
@@ -72,6 +92,18 @@ class WlanSoftmacDevice
   // Each peer on this interface will require a MvmSta instance.  For now, as we only support client
   // mode, we have only one peer (the AP), which simplifies things.
   std::unique_ptr<MvmSta> ap_mvm_sta_;
+
+  // Dispatcher for FIDL client of WlanSoftmacIfc protocol.
+  fdf::Dispatcher client_dispatcher_;
+
+  // Dispatcher for FIDL server of WlanSoftmac protocol.
+  fdf::Dispatcher server_dispatcher_;
+
+  // The FIDL client to communicate with Wlan device.
+  fdf::WireSharedClient<fuchsia_wlan_softmac::WlanSoftmacIfc> client_;
+
+  // Store unbind txn for async reply.
+  std::optional<::ddk::UnbindTxn> unbind_txn_;
 };
 
 }  // namespace wlan::iwlwifi

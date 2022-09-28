@@ -84,6 +84,9 @@ class WlanphyDeviceTest : public ::zxtest::Test,
     wlanphy_device_ =
         new Device(fake_wlanphy_impl_device_.get(), std::move(endpoints_phy_impl->client));
     EXPECT_EQ(ZX_OK, wlanphy_device_->DeviceAdd());
+    // Call DdkAsyncRemove() here to make ReleaseFlaggedDevices fully executed. This function will
+    // stop the device from working properly, so we can call it anywhere before
+    // ReleaseFlaggedDevices() is called. We just call it as soon as the device is created here.
     wlanphy_device_->DdkAsyncRemove();
 
     fdf::BindServer<fdf::WireServer<fuchsia_wlan_wlanphyimpl::WlanphyImpl>>(
