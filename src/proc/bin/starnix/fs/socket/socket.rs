@@ -211,7 +211,9 @@ fn create_socket_ops(
     match domain {
         SocketDomain::Unix => Ok(Box::new(UnixSocket::new(socket_type))),
         SocketDomain::Vsock => Ok(Box::new(VsockSocket::new(socket_type))),
-        SocketDomain::Inet => Ok(Box::new(InetSocket::new(domain, socket_type, protocol)?)),
+        SocketDomain::Inet | SocketDomain::Inet6 => {
+            Ok(Box::new(InetSocket::new(domain, socket_type, protocol)?))
+        }
         SocketDomain::Netlink => Ok(Box::new(NetlinkSocket::new(socket_type))),
     }
 }

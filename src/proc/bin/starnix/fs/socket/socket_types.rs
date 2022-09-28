@@ -54,8 +54,11 @@ pub enum SocketDomain {
     /// An AF_VSOCK socket for communication from a controlling operating system
     Vsock,
 
-    /// An AF_INET socket (currently stubbed out)
+    /// An AF_INET socket.
     Inet,
+
+    /// An AF_INET6 socket.
+    Inet6,
 
     /// An IF_NETLINK socket (currently stubbed out).
     Netlink,
@@ -66,9 +69,8 @@ impl SocketDomain {
         match raw {
             AF_UNIX => Some(Self::Unix),
             AF_VSOCK => Some(Self::Vsock),
-            // Conflate AF_INET and AF_INET6 while they are both stubbed
             AF_INET => Some(Self::Inet),
-            AF_INET6 => Some(Self::Inet),
+            AF_INET6 => Some(Self::Inet6),
             AF_NETLINK => Some(Self::Netlink),
             _ => None,
         }
@@ -79,6 +81,7 @@ impl SocketDomain {
             Self::Unix => AF_UNIX,
             Self::Vsock => AF_VSOCK,
             Self::Inet => AF_INET,
+            Self::Inet6 => AF_INET6,
             Self::Netlink => AF_NETLINK,
         }
     }
@@ -138,8 +141,11 @@ pub enum SocketAddress {
     /// An AF_VSOCK socket is just referred to by its listening port on the client
     Vsock(u32),
 
-    /// No address for Inet sockets while stubbed
-    Inet(u32),
+    /// AF_INET socket addresses are passed through as a sockaddr* to zxio.
+    Inet(Vec<u8>),
+
+    /// AF_INET6 socket addresses are passed through as a sockaddr* to zxio.
+    Inet6(Vec<u8>),
 
     /// No address for netlink sockets while stubbed.
     Netlink(u32),
@@ -152,7 +158,12 @@ impl SocketAddress {
         match domain {
             SocketDomain::Unix => SocketAddress::Unix(FsString::new()),
             SocketDomain::Vsock => SocketAddress::Vsock(0xffff),
-            SocketDomain::Inet => SocketAddress::Inet(0),
+            SocketDomain::Inet => {
+                SocketAddress::Inet(uapi::sockaddr_in::default().as_bytes().to_vec())
+            }
+            SocketDomain::Inet6 => {
+                SocketAddress::Inet6(uapi::sockaddr_in6::default().as_bytes().to_vec())
+            }
             SocketDomain::Netlink => SocketAddress::Netlink(0),
         }
     }
@@ -163,6 +174,7 @@ impl SocketAddress {
             SocketAddress::Unix(_) => domain == SocketDomain::Unix,
             SocketAddress::Vsock(_) => domain == SocketDomain::Vsock,
             SocketAddress::Inet(_) => domain == SocketDomain::Inet,
+            SocketAddress::Inet6(_) => domain == SocketDomain::Inet6,
             SocketAddress::Netlink(_) => domain == SocketDomain::Netlink,
         }
     }
@@ -189,10 +201,7 @@ impl SocketAddress {
                 vm_addr.write_to(&mut bytes[..]);
                 bytes
             }
-            SocketAddress::Inet(_) => {
-                not_implemented!("?", "SocketAddress::to_bytes is stubbed for Inet");
-                vec![]
-            }
+            SocketAddress::Inet(addr) | SocketAddress::Inet6(addr) => addr.to_vec(),
             SocketAddress::Netlink(_) => {
                 not_implemented!("?", "SocketAddress::to_bytes is stubbed for Netlink");
                 vec![]

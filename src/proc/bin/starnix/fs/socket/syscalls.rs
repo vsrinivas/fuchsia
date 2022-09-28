@@ -118,8 +118,16 @@ fn parse_socket_address(
                 SocketAddress::Unspecified
             }
         }
-        // TODO replace this with the parsed address when AF_INET is implemented
-        AF_INET | AF_INET6 => SocketAddress::default_for_domain(SocketDomain::Inet),
+        AF_INET => {
+            let sockaddr_len = std::mem::size_of::<sockaddr_in>();
+            let addrlen = std::cmp::min(address_length, sockaddr_len);
+            SocketAddress::Inet(address[..addrlen].to_vec())
+        }
+        AF_INET6 => {
+            let sockaddr_len = std::mem::size_of::<sockaddr_in6>();
+            let addrlen = std::cmp::min(address_length, sockaddr_len);
+            SocketAddress::Inet6(address[..addrlen].to_vec())
+        }
         AF_NETLINK => SocketAddress::default_for_domain(SocketDomain::Netlink),
         _ => SocketAddress::Unspecified,
     };
@@ -199,10 +207,7 @@ pub fn sys_bind(
         SocketAddress::Vsock(port) => {
             current_task.abstract_vsock_namespace.bind(port, socket)?;
         }
-        // TODO use namespace when implemented
-        SocketAddress::Inet(_) => {
-            socket.bind(SocketAddress::default_for_domain(SocketDomain::Inet))?
-        }
+        SocketAddress::Inet(_) | SocketAddress::Inet6(_) => socket.bind(address)?,
         SocketAddress::Netlink(_) => {
             socket.bind(SocketAddress::default_for_domain(SocketDomain::Netlink))?
         }
@@ -293,7 +298,7 @@ pub fn sys_connect(
         }
         // Connect not available for AF_VSOCK
         SocketAddress::Vsock(_) => return error!(ENOSYS),
-        SocketAddress::Inet(_) => return error!(ENOSYS),
+        SocketAddress::Inet(_) | SocketAddress::Inet6(_) => return error!(ENOSYS),
         SocketAddress::Netlink(_) => return error!(ENOSYS),
     };
 

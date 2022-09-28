@@ -218,6 +218,60 @@ impl sockaddr_vm {
     }
 }
 
+#[repr(C)]
+#[derive(Debug, Copy, Clone, AsBytes, FromBytes, PartialEq, Eq)]
+pub struct in_addr {
+    pub addr: u32,
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, AsBytes, FromBytes, PartialEq, Eq)]
+pub struct sockaddr_in {
+    pub sin_family: uapi::__kernel_sa_family_t,
+    pub sin_port: u16,
+    pub sin_addr: in_addr,
+    _sin_zero: [u8; 8],
+}
+
+impl Default for sockaddr_in {
+    fn default() -> Self {
+        sockaddr_in {
+            sin_family: AF_INET,
+            sin_port: 0,
+            sin_addr: in_addr { addr: 0 },
+            _sin_zero: [0u8; 8],
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, AsBytes, FromBytes, PartialEq, Eq)]
+pub struct in6_addr {
+    pub s6_addr: [u8; 16],
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, AsBytes, FromBytes, PartialEq, Eq)]
+pub struct sockaddr_in6 {
+    pub sin6_family: uapi::__kernel_sa_family_t,
+    pub sin6_port: u16,
+    _sin6_flowinfo: u32,
+    pub sin6_addr: in6_addr,
+    _sin6_scope_id: u32,
+}
+
+impl Default for sockaddr_in6 {
+    fn default() -> Self {
+        sockaddr_in6 {
+            sin6_family: AF_INET6,
+            sin6_port: 0,
+            _sin6_flowinfo: 0,
+            sin6_addr: in6_addr { s6_addr: [0u8; 16] },
+            _sin6_scope_id: 0,
+        }
+    }
+}
+
 pub type socklen_t = u32;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, AsBytes, FromBytes)]
