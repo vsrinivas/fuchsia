@@ -224,6 +224,10 @@ group("difference") {
   public_deps = [ ":difference-v2_0_0" ]
 }
 
+group("downcast-rs") {
+  public_deps = [ ":downcast-rs-v1_2_0" ]
+}
+
 group("dyn-clone") {
   public_deps = [ ":dyn-clone-v1_0_5" ]
 }
@@ -3580,6 +3584,28 @@ rust_library("downcast-v0_10_0") {
     "--edition=2015",
     "-Cmetadata=417417cb956aacf6",
     "-Cextra-filename=-417417cb956aacf6",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"std\"",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_library("downcast-rs-v1_2_0") {
+  crate_name = "downcast_rs"
+  crate_root = "//third_party/rust_crates/vendor/downcast-rs/src/lib.rs"
+  output_name = "downcast_rs-f02ee96ede03c448"
+  configs -= [ "//build/config/rust:2018_idioms" ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=f02ee96ede03c448",
+    "-Cextra-filename=-f02ee96ede03c448",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
