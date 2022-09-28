@@ -44,8 +44,8 @@ use netstack3_core::{
         buffer::{Buffer, IntoBuffers, ReceiveBuffer, RingBuffer, SendBuffer, SendPayload},
         segment::Payload,
         socket::{
-            accept_v4, accept_v6, bind, connect_bound, connect_unbound, create_socket,
-            get_bound_v4_info, get_bound_v6_info, get_connection_v4_info, get_connection_v6_info,
+            accept, bind, connect_bound, connect_unbound, create_socket, get_bound_v4_info,
+            get_bound_v6_info, get_connection_v4_info, get_connection_v6_info,
             get_listener_v4_info, get_listener_v6_info, listen, AcceptError, BindError, BoundId,
             BoundInfo, ConnectError, ConnectionId, ListenerId, SocketAddr, TcpNonSyncContext,
             UnboundId,
@@ -712,37 +712,12 @@ where
             SocketId::Listener(listener) => {
                 let mut guard = self.ctx.lock().await;
                 let Ctx { sync_ctx, non_sync_ctx } = guard.deref_mut();
-                let (accepted, addr, PeerZirconSocketAndWatcher { peer, watcher, socket }) =
-                    match I::VERSION {
-                        IpVersion::V4 => {
-                            let (accepted, SocketAddr { ip, port }, peer) =
-                                accept_v4(sync_ctx, non_sync_ctx, listener)
-                                    .map_err(IntoErrno::into_errno)?;
-                            (
-                                accepted,
-                                fnet::Ipv4SocketAddress::new(
-                                    Some(ZonedAddr::Unzoned(ip)),
-                                    port.get(),
-                                )
-                                .into_sock_addr(),
-                                peer,
-                            )
-                        }
-                        IpVersion::V6 => {
-                            let (accepted, SocketAddr { ip, port }, peer) =
-                                accept_v6(sync_ctx, non_sync_ctx, listener)
-                                    .map_err(IntoErrno::into_errno)?;
-                            (
-                                accepted,
-                                fnet::Ipv6SocketAddress::new(
-                                    Some(ZonedAddr::Unzoned(ip)),
-                                    port.get(),
-                                )
-                                .into_sock_addr(),
-                                peer,
-                            )
-                        }
-                    };
+                let (accepted, SocketAddr { ip, port }, peer) =
+                    accept::<I, _>(sync_ctx, non_sync_ctx, listener)
+                        .map_err(IntoErrno::into_errno)?;
+                let addr =
+                    <I::SocketAddress as SockAddr>::new(Some(ZonedAddr::Unzoned(ip)), port.get());
+                let PeerZirconSocketAndWatcher { peer, watcher, socket } = peer;
                 let (client, request_stream) =
                     fidl::endpoints::create_request_stream::<fposix_socket::StreamSocketMarker>()
                         .expect("failed to create new fidl endpoints");
@@ -753,7 +728,7 @@ where
                     peer,
                 );
                 worker.spawn(request_stream);
-                Ok((want_addr.then(|| Box::new(addr)), client))
+                Ok((want_addr.then(|| Box::new(addr.into_sock_addr())), client))
             }
             SocketId::Unbound(_, _) | SocketId::Connection(_) | SocketId::Bound(_, _) => {
                 Err(fposix::Errno::Einval)

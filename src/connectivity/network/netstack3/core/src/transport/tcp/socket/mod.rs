@@ -34,7 +34,10 @@ use nonzero_ext::nonzero;
 use assert_matches::assert_matches;
 use log::warn;
 use net_types::{
-    ip::{Ip, IpAddr, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
+    ip::{
+        GenericOverIp, Ip, IpAddr, IpAddress, IpInvariant as IpInv, IpVersion, Ipv4, Ipv4Addr,
+        Ipv6, Ipv6Addr,
+    },
     SpecifiedAddr,
 };
 use packet::Buf;
@@ -159,6 +162,10 @@ pub struct SocketAddr<A: IpAddress> {
     pub ip: SpecifiedAddr<A>,
     /// The port component of the address.
     pub port: NonZeroU16,
+}
+
+impl<A: IpAddress> GenericOverIp for SocketAddr<A> {
+    type Type<I: Ip> = SocketAddr<I::Addr>;
 }
 
 impl<A: IpAddress> From<SocketAddr<A>> for IpAddr<SocketAddr<Ipv4Addr>, SocketAddr<Ipv6Addr>> {
@@ -778,27 +785,29 @@ pub enum AcceptError {
 }
 
 /// Accepts an established socket from the queue of a listener socket.
-pub fn accept_v4<C>(
+pub fn accept<I: Ip, C>(
     sync_ctx: &mut SyncCtx<C>,
     ctx: &mut C,
     id: ListenerId,
-) -> Result<(ConnectionId, SocketAddr<Ipv4Addr>, C::ReturnedBuffers), AcceptError>
+) -> Result<(ConnectionId, SocketAddr<I::Addr>, C::ReturnedBuffers), AcceptError>
 where
     C: NonSyncContext,
 {
-    TcpSocketHandler::<Ipv4, _>::accept(sync_ctx, ctx, id)
-}
-
-/// Accepts an established socket from the queue of a listener socket.
-pub fn accept_v6<C>(
-    sync_ctx: &mut SyncCtx<C>,
-    ctx: &mut C,
-    id: ListenerId,
-) -> Result<(ConnectionId, SocketAddr<Ipv6Addr>, C::ReturnedBuffers), AcceptError>
-where
-    C: NonSyncContext,
-{
-    TcpSocketHandler::<Ipv6, _>::accept(sync_ctx, ctx, id)
+    I::map_ip::<_, Result<_, _>>(
+        IpInv((sync_ctx, ctx, id)),
+        |IpInv((sync_ctx, ctx, id))| {
+            TcpSocketHandler::<Ipv4, _>::accept(sync_ctx, ctx, id)
+                .map(|(a, b, c)| (IpInv(a), b, IpInv(c)))
+                .map_err(IpInv)
+        },
+        |IpInv((sync_ctx, ctx, id))| {
+            TcpSocketHandler::<Ipv6, _>::accept(sync_ctx, ctx, id)
+                .map(|(a, b, c)| (IpInv(a), b, IpInv(c)))
+                .map_err(IpInv)
+        },
+    )
+    .map(|(IpInv(a), b, IpInv(c))| (a, b, c))
+    .map_err(|IpInv(e)| e)
 }
 
 /// Possible errors when connecting a socket.
