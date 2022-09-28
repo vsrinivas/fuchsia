@@ -5,6 +5,7 @@
 //! This library provides methods for getting information about components in Fuchsia.
 
 pub mod capability;
+pub mod copy;
 pub mod io;
 pub mod list;
 pub mod show;

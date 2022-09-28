@@ -9,6 +9,7 @@ ffx_plugin("ffx_component") {
   edition = "2021"
   plugin_deps = [
     "capability:ffx_component_capability",
+    "copy:ffx_component_copy",
     "create:ffx_component_create",
     "destroy:ffx_component_destroy",
     "doctor:ffx_component_doctor",
