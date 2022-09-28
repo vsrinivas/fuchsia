@@ -29,6 +29,7 @@
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
+#include <zircon/syscalls-next.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
@@ -1053,6 +1054,10 @@ class MultiVmoTestInstance : public TestInstance {
         result = zx::port::create(0, &port);
         ZX_ASSERT(result == ZX_OK);
 
+        if (uniform_rand(2, rng) == 0) {
+          options |= ZX_VMO_TRAP_DIRTY;
+        }
+
         result = pager.create_vmo(options, port, 0, vmo_size, &vmo);
         ZX_ASSERT(result == ZX_OK);
         // Randomly discard reliable mappings even though not resizable to give the pager a chance
@@ -1125,7 +1130,8 @@ class MultiVmoTestInstance : public TestInstance {
         // VMO is finished, so we have nothing to do. Technically since we have a handle to the vmo
         // this case will never happen.
         break;
-      } else if (packet.page_request.command != ZX_PAGER_VMO_READ) {
+      } else if (packet.page_request.command != ZX_PAGER_VMO_READ &&
+                 packet.page_request.command != ZX_PAGER_VMO_DIRTY) {
         PrintfAlways("Unknown page_request command %d\n", packet.page_request.command);
         return;
       }
@@ -1136,10 +1142,12 @@ class MultiVmoTestInstance : public TestInstance {
       // we end up with the only VMO handle.
 
       zx::vmo aux_vmo;
-      if (zx::vmo::create(packet.page_request.length, 0, &aux_vmo) != ZX_OK) {
-        PrintfAlways("Failed to create VMO of length %" PRIu64 " to fulfill page fault\n",
-                     packet.page_request.length);
-        return;
+      if (packet.page_request.command == ZX_PAGER_VMO_READ) {
+        if (zx::vmo::create(packet.page_request.length, 0, &aux_vmo) != ZX_OK) {
+          PrintfAlways("Failed to create VMO of length %" PRIu64 " to fulfill page fault\n",
+                       packet.page_request.length);
+          return;
+        }
       }
 
       do {
@@ -1149,21 +1157,34 @@ class MultiVmoTestInstance : public TestInstance {
         zx_status_t get_size_status = vmo.get_size(&vmo_size);
         ZX_ASSERT(get_size_status == ZX_OK);
         if (packet.page_request.offset >= vmo_size) {
-          // No need to supply since the requested range has been seen to be entirely outside the
+          // Nothing to fulfill since the requested range has been seen to be entirely outside the
           // VMO after the request was created by the kernel.
           result = ZX_OK;
           break;
         }
         ZX_ASSERT(packet.page_request.offset < vmo_size);
-        uint64_t supply_length =
+        uint64_t trimmed_length =
             std::min(packet.page_request.length, vmo_size - packet.page_request.offset);
-        result = pager.supply_pages(vmo, packet.page_request.offset, supply_length, aux_vmo, 0);
-        // If the underlying VMO was resized then its possible the supply destination is now out of
-        // range. This is okay and we can try again if necessary to supply the pages that aren't
+        if (packet.page_request.command == ZX_PAGER_VMO_READ) {
+          ZX_ASSERT(aux_vmo.is_valid());
+          result = pager.supply_pages(vmo, packet.page_request.offset, trimmed_length, aux_vmo, 0);
+        } else {
+          ZX_ASSERT(packet.page_request.command == ZX_PAGER_VMO_DIRTY);
+          result =
+              pager.op_range(ZX_PAGER_OP_DIRTY, vmo, packet.page_request.offset, trimmed_length, 0);
+          // ZX_ERR_NOT_FOUND is an acceptable error status as pages that have yet to be dirtied are
+          // clean and can get evicted.
+          if (result == ZX_ERR_NOT_FOUND) {
+            result = ZX_OK;
+          }
+        }
+        // If the underlying VMO was resized then its possible the destination offset is now out of
+        // range. This is okay and we can try again if necessary to fulfill the pages that aren't
         // beyond the VMO size.  In any other case something has gone horribly wrong.
       } while (result == ZX_ERR_OUT_OF_RANGE);
       if (result != ZX_OK) {
-        PrintfAlways("Failed to supply pages: %d\n", result);
+        PrintfAlways("Failed to %s pages: %d\n",
+                     packet.page_request.command == ZX_PAGER_VMO_READ ? "supply" : "dirty", result);
         return;
       }
     }

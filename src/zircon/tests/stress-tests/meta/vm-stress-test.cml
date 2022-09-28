@@ -14,6 +14,7 @@
             "-t",
             "21600",
         ],
+        use_next_vdso: "true",
     },
     use: [
         { protocol: "fuchsia.boot.RootResource" },
