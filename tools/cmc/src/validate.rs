@@ -1092,20 +1092,10 @@ impl<'a> ValidationContext<'a> {
                         }
                     }
                     if let cml::OfferFromRef::Named(from) = from {
-                        match to {
-                            cml::OfferToRef::All => panic!(r#"may not offer from "all""#),
-                            cml::OfferToRef::Named(to) => {
-                                let source = DependencyNode::Named(from);
-                                let target = DependencyNode::Named(to);
-                                for name in &offer.names() {
-                                    self.add_strong_dep(
-                                        Some(name),
-                                        source,
-                                        target,
-                                        strong_dependencies,
-                                    );
-                                }
-                            }
+                        let source = DependencyNode::Named(from);
+                        let target = DependencyNode::Named(to_target);
+                        for name in &offer.names() {
+                            self.add_strong_dep(Some(name), source, target, strong_dependencies);
                         }
                     }
                 }
@@ -1832,6 +1822,10 @@ mod tests {
         assert!(result.is_ok());
     }
 
+    fn unused_component_err_message(missing: &str) -> String {
+        format!(r#"Protocol "{}" is not used by a component but is required by all"#, missing)
+    }
+
     #[test]
     fn must_use_protocol() {
         let input = r##"{
@@ -1855,17 +1849,13 @@ mod tests {
             &vec!["fuchsia.logger.LogSink".into()],
         );
 
-        match result {
+        assert_matches!(result,
             Err(Error::Validate { schema_name, err, filename }) => {
-                assert_eq!(
-                    err,
-                    r#"Protocol "fuchsia.logger.LogSink" is not used by a component but is required by all"#
-                );
+                assert_eq!(err, unused_component_err_message("fuchsia.logger.LogSink"));
                 assert!(schema_name.is_none());
                 assert!(filename.is_some(), "Expected there to be a filename in error message");
             }
-            _ => panic!("Expected Err(Error::Validate), got {:#?}", result),
-        }
+        );
 
         let input = r##"{
             children: [
@@ -1915,6 +1905,7 @@ mod tests {
                 must_use_protocol: [ "fuchsia.logger.LogSink" ],
             }
         }"##;
+
         let result = write_and_validate_with_features(
             "test.cml",
             input.as_bytes(),
@@ -2057,6 +2048,10 @@ mod tests {
         assert!(result.is_ok());
     }
 
+    fn offer_to_all_and_component_message(protocol: &str, component: &str) -> String {
+        format!(r#"Protocol "{}" is offered to both "all" and "{}""#, protocol, component)
+    }
+
     // Test should fail because fuchsia.logger.LogSink is offered to #something twice
     #[test]
     fn offer_to_all_and_manual() {
@@ -2093,17 +2088,16 @@ mod tests {
             &Vec::new(),
         );
 
-        match result {
+        assert_matches!(result,
             Err(Error::Validate { schema_name, err, filename }) => {
                 assert_eq!(
                     err,
-                    r#"Protocol "fuchsia.logger.LogSink" is offered to both "all" and "something""#
+                    offer_to_all_and_component_message("fuchsia.logger.LogSink", "something"),
                 );
                 assert!(schema_name.is_none());
                 assert!(filename.is_some(), "Expected there to be a filename in error message");
             }
-            _ => panic!("Expected Err(Error::Validate), got {:#?}", result),
-        }
+        );
 
         let input = r##"{
             children: [
@@ -2138,17 +2132,20 @@ mod tests {
             &Vec::new(),
         );
 
-        match result {
+        assert_matches!(result,
             Err(Error::Validate { schema_name, err, filename }) => {
                 assert_eq!(
                     err,
-                    r#"Protocol "fuchsia.logger.LogSink" is offered to both "all" and "something""#
+                    offer_to_all_and_component_message("fuchsia.logger.LogSink", "something"),
                 );
                 assert!(schema_name.is_none());
                 assert!(filename.is_some(), "Expected there to be a filename in error message");
             }
-            _ => panic!("Expected Err(Error::Validate), got {:#?}", result),
-        }
+        );
+    }
+
+    fn offer_to_all_diff_sources_message(protocols: &[&str]) -> String {
+        format!(r#"Protocol(s) {:?} offered to "all" multiple times"#, protocols)
     }
 
     #[test]
@@ -2186,17 +2183,16 @@ mod tests {
             &Vec::new(),
         );
 
-        match result {
+        assert_matches!(result,
             Err(Error::Validate { schema_name, err, filename }) => {
                 assert_eq!(
                     err,
-                    r#"Protocol(s) ["fuchsia.logger.LogSink"] offered to "all" multiple times"#
+                    offer_to_all_diff_sources_message(&["fuchsia.logger.LogSink"]),
                 );
                 assert!(schema_name.is_none());
                 assert!(filename.is_some(), "Expected there to be a filename in error message");
             }
-            _ => panic!("Expected Err(Error::Validate), got {:#?}", result),
-        }
+        );
     }
 
     #[test]
@@ -2244,6 +2240,17 @@ mod tests {
         assert!(result.is_ok());
     }
 
+    fn fail_to_make_required_offer(
+        protocol: &str,
+        child_or_collection: &str,
+        component: &str,
+    ) -> String {
+        format!(
+            r#"Protocol "{}" is not offered to {} "{}" but it is a required offer"#,
+            protocol, child_or_collection, component
+        )
+    }
+
     #[test]
     fn fail_to_offer_to_all_when_required() {
         let input = r##"{
@@ -2273,17 +2280,20 @@ mod tests {
             &[],
         );
 
-        match result {
+        assert_matches!(result,
             Err(Error::Validate { schema_name, err, filename }) => {
                 assert_eq!(
                     err,
-                    r#"Protocol "fuchsia.logger.LogSink" is not offered to child component "something" but it is a required offer"#
+                    fail_to_make_required_offer(
+                        "fuchsia.logger.LogSink",
+                        "child component",
+                        "something",
+                    ),
                 );
                 assert!(schema_name.is_none());
                 assert!(filename.is_some(), "Expected there to be a filename in error message");
             }
-            _ => panic!("Expected Err(Error::Validate), got {:#?}", result),
-        }
+        );
 
         let input = r##"{
             children: [
@@ -2314,17 +2324,16 @@ mod tests {
             &[],
         );
 
-        match result {
+        assert_matches!(result,
             Err(Error::Validate { schema_name, err, filename }) => {
                 assert_eq!(
                     err,
-                    r#"Protocol "fuchsia.logger.LogSink" is not offered to collection "coll" but it is a required offer"#
+                    fail_to_make_required_offer("fuchsia.logger.LogSink", "collection", "coll"),
                 );
                 assert!(schema_name.is_none());
                 assert!(filename.is_some(), "Expected there to be a filename in error message");
             }
-            _ => panic!("Expected Err(Error::Validate), got {:#?}", result),
-        }
+        );
     }
 
     #[test]
