@@ -60,13 +60,14 @@ efi_status xefi_find_pci_mmio(efi_boot_services* bs, uint8_t cls, uint8_t sub, u
 // On success:
 //   * |load_options| will always be valid; if no load options were provided, it
 //     will just be an empty UTF-16 string.
-//   * The caller is responsible for calling FreePool() to free |load_options|.
+//   * The caller is responsible for calling FreePool() to free |load_options|,
+//     even if |load_options_size| is zero.
 //
-// load_options_size: will be filled with the size of the load options provided,
-//                    including the null terminator.
+// load_options_size: will be filled with the size of the load options provided.
 // load_options: will be updated to point to an allocated buffer containing
-//               |load_options_size| bytes plus 2 bytes of random garbage.
-//               TODO(https://fxbug.dev/100791): fix the random garbage.
+//               |load_options_size| bytes, followed by an additional two bytes
+//               of zeros that should not be considered part of the
+//               |load_options| content.
 efi_status xefi_get_load_options(size_t* load_options_size, void** load_options);
 
 // GUIDs

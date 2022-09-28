@@ -150,6 +150,7 @@ void cmdline_append_load_options(void) {
 
   efi_status status;
   size_t options_len;
+  size_t options_len_codepoints;
   void* options;
   uint8_t* args;
   uint8_t* ptr;
@@ -161,43 +162,53 @@ void cmdline_append_load_options(void) {
     return;
   }
 
-  args_len = options_len / sizeof(char16_t) + 1;
-  status = gBS->AllocatePool(EfiLoaderData, args_len, (void**)&args);
-  if (status != EFI_SUCCESS) {
-    printf("allocating arg memory failed: %zu\n", status);
-    goto alloc_fail;
+  if (options_len >= 0) {
+    // To ensure we allocate enough space for arbitrary UTF-8 representations of
+    // strings we receive as UTF-16, we need to allocate a *larger* buffer than
+    // the UTF-16 string, since in the worst case each codepoint could require 3
+    // bytes to express as UTF-8.  For codepoints beyond the BMP which would
+    // require 4 bytes as UTF-8, UTF-16 must express them as surrogate pairs, so
+    // 3x is sufficient.
+    options_len_codepoints = options_len / sizeof(char16_t);
+    args_len = options_len_codepoints * 3;
+    status = gBS->AllocatePool(EfiLoaderData, args_len, (void**)&args);
+    if (status != EFI_SUCCESS) {
+      printf("allocating arg memory failed: %zu\n", status);
+      goto alloc_fail;
+    }
+
+    ptr = args;
+    zx_status_t result;
+    size_t converted_args_len = args_len;
+
+    result = utf16_to_utf8(options, options_len_codepoints, args, &converted_args_len);
+    if (result != ZX_OK) {
+      printf("Could not convert options from UTF16->UTF8: %d\n", result);
+      goto fail;
+    }
+
+    if (converted_args_len > args_len) {
+      printf("Insufficient space to convert options from UTF16->UTF8: have %zu, want %zu\n",
+             args_len, converted_args_len);
+      goto fail;
+    }
+
+    // Skip first argument which is the filename.
+    ptr = args;
+    while (converted_args_len > 0 && *ptr != ' ') {
+      ptr++;
+      converted_args_len--;
+    }
+    while (converted_args_len > 0 && *ptr == ' ') {
+      ptr++;
+      converted_args_len--;
+    }
+
+    cmdline_append((char*)ptr, converted_args_len);
+
+  fail:
+    gBS->FreePool(args);
   }
-
-  ptr = args;
-  zx_status_t result;
-  size_t converted_args_len = args_len;
-
-  result = utf16_to_utf8(options, options_len, args, &converted_args_len);
-  if (result != ZX_OK) {
-    printf("Could not convert options from UTF16->UTF8: %d\n", result);
-    goto fail;
-  }
-
-  if (converted_args_len > args_len) {
-    converted_args_len = args_len;
-  }
-  args[converted_args_len] = '\0';
-
-  // Skip first argument which is the filename.
-  ptr = args;
-  while (*ptr && *ptr != ' ') {
-    ptr++;
-    converted_args_len--;
-  }
-  while (*ptr && *ptr == ' ') {
-    ptr++;
-    converted_args_len--;
-  }
-
-  cmdline_append((char*)ptr, converted_args_len);
-
-fail:
-  gBS->FreePool(args);
 
 alloc_fail:
   gBS->FreePool(options);

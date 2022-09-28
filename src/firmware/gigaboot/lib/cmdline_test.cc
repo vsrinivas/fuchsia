@@ -51,21 +51,14 @@ std::u16string GetLoadOptions(std::u16string_view contents) {
                         static_cast<uint32_t>(contents.length() * sizeof(contents[0])));
 }
 
-// TODO(https://fxbug.dev/100791): 0x5A is our default memory contents in tests
-// to make sure we're initializing allocated memory properly. In this case we
-// are not, and doing so causes other bugs to trigger. Fix the other bugs and
-// correct initialize memory.
+TEST(Cmdline, XefiGetLoadOptions) { EXPECT_EQ(GetLoadOptions(u"foo bar 123"), u"foo bar 123"); }
 
-TEST(Cmdline, XefiGetLoadOptions) {
-  EXPECT_EQ(GetLoadOptions(u"foo bar 123"), u"foo bar 123\x5A5A");
-}
+TEST(Cmdline, XefiGetLoadOptionsNull) { EXPECT_EQ(GetLoadOptions(nullptr, 0), u""); }
 
-TEST(Cmdline, XefiGetLoadOptionsNull) { EXPECT_EQ(GetLoadOptions(nullptr, 0), u"\x5A5A"); }
-
-TEST(Cmdline, XefiGetLoadOptionsEmpty) { EXPECT_EQ(GetLoadOptions(u""), u"\x5A5A"); }
+TEST(Cmdline, XefiGetLoadOptionsEmpty) { EXPECT_EQ(GetLoadOptions(u""), u""); }
 
 TEST(Cmdline, XefiGetLoadOptionsEmbeddedNull) {
-  EXPECT_EQ(GetLoadOptions(u"foo\0bar"s), u"foo\0bar\x5A5A"s);
+  EXPECT_EQ(GetLoadOptions(u"foo\0bar"s), u"foo\0bar"s);
 }
 
 }  // namespace
