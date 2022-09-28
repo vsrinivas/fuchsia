@@ -10,6 +10,7 @@ use {
     },
     cm_rust::{EnvironmentDecl, RegistrationSource, ResolverRegistration},
     fidl_fuchsia_component_internal as component_internal,
+    moniker::ChildMonikerBase,
     routing::{
         component_instance::{
             ComponentInstanceInterface, ExtendedInstanceInterface, WeakExtendedInstanceInterface,
@@ -151,7 +152,7 @@ impl EnvironmentForAnalyzer {
                     .find(|&env| &env.name == child_env_name)
                     .ok_or(BuildAnalyzerModelError::EnvironmentNotFound(
                         child_env_name.clone(),
-                        child.child_moniker.name.clone(),
+                        child.child_moniker.name().to_string(),
                         NodePath::from(parent.abs_moniker().clone()).to_string(),
                     ))?;
                 Self::new_from_decl(parent, env_decl)

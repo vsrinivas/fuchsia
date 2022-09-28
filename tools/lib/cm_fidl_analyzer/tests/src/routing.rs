@@ -31,7 +31,7 @@ use {
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_internal as component_internal,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
     futures::FutureExt,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase},
     routing::{
         component_id_index::ComponentIdIndex,
         component_instance::ComponentInstanceInterface,
@@ -398,7 +398,7 @@ fn add_component_to_route(
     let exposes = locked_state.exposes();
     let mut component_route = ComponentEventRoute {
         component: if let Some(moniker) = component.child_moniker() {
-            moniker.name.clone()
+            moniker.name().to_string()
         } else {
             "/".to_string()
         },

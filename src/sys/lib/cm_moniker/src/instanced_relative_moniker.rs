@@ -56,24 +56,12 @@ impl InstancedRelativeMoniker {
         let up_path = self
             .up_path()
             .iter()
-            .map(|c| {
-                InstancedChildMoniker::new(
-                    c.name().to_string(),
-                    c.collection().map(|coll| coll.to_string()),
-                    0,
-                )
-            })
+            .map(|c| InstancedChildMoniker::new(c.name(), c.collection(), 0))
             .collect();
         let down_path = self
             .down_path()
             .iter()
-            .map(|c| {
-                InstancedChildMoniker::new(
-                    c.name().to_string(),
-                    c.collection().map(|coll| coll.to_string()),
-                    0,
-                )
-            })
+            .map(|c| InstancedChildMoniker::new(c.name(), c.collection(), 0))
             .collect();
         InstancedRelativeMoniker::new(up_path, down_path)
     }
@@ -141,8 +129,8 @@ mod tests {
 
         let ancestor = InstancedRelativeMoniker::new(
             vec![
-                InstancedChildMoniker::new("a".to_string(), None, 1),
-                InstancedChildMoniker::new("b".to_string(), None, 2),
+                InstancedChildMoniker::new("a", None, 1),
+                InstancedChildMoniker::new("b", None, 2),
             ],
             vec![],
         );
@@ -152,28 +140,28 @@ mod tests {
         let descendant = InstancedRelativeMoniker::new(
             vec![],
             vec![
-                InstancedChildMoniker::new("a".to_string(), None, 1),
-                InstancedChildMoniker::new("b".to_string(), None, 2),
+                InstancedChildMoniker::new("a", None, 1),
+                InstancedChildMoniker::new("b", None, 2),
             ],
         );
         assert_eq!(false, descendant.is_self());
         assert_eq!("./a:1/b:2", format!("{}", descendant));
 
         let sibling = InstancedRelativeMoniker::new(
-            vec![InstancedChildMoniker::new("a".to_string(), None, 1)],
-            vec![InstancedChildMoniker::new("b".to_string(), None, 2)],
+            vec![InstancedChildMoniker::new("a", None, 1)],
+            vec![InstancedChildMoniker::new("b", None, 2)],
         );
         assert_eq!(false, sibling.is_self());
         assert_eq!(".\\a:1/b:2", format!("{}", sibling));
 
         let cousin = InstancedRelativeMoniker::new(
             vec![
-                InstancedChildMoniker::new("a".to_string(), None, 1),
-                InstancedChildMoniker::new("a0".to_string(), None, 1),
+                InstancedChildMoniker::new("a", None, 1),
+                InstancedChildMoniker::new("a0", None, 1),
             ],
             vec![
-                InstancedChildMoniker::new("b0".to_string(), None, 2),
-                InstancedChildMoniker::new("b".to_string(), None, 2),
+                InstancedChildMoniker::new("b0", None, 2),
+                InstancedChildMoniker::new("b", None, 2),
             ],
         );
         assert_eq!(false, cousin.is_self());

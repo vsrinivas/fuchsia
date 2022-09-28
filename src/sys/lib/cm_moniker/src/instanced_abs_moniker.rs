@@ -103,8 +103,8 @@ mod tests {
         assert_eq!(root, InstancedAbsoluteMoniker::from(vec![]));
 
         let m = InstancedAbsoluteMoniker::new(vec![
-            InstancedChildMoniker::new("a".to_string(), None, 1),
-            InstancedChildMoniker::new("b".to_string(), Some("coll".to_string()), 2),
+            InstancedChildMoniker::new("a", None, 1),
+            InstancedChildMoniker::new("b", Some("coll"), 2),
         ]);
         assert_eq!(false, m.is_root());
         assert_eq!("/a:1/coll:b:2", format!("{}", m));
@@ -122,8 +122,8 @@ mod tests {
         assert_eq!(None, root.parent());
 
         let m = InstancedAbsoluteMoniker::new(vec![
-            InstancedChildMoniker::new("a".to_string(), None, 1),
-            InstancedChildMoniker::new("b".to_string(), None, 2),
+            InstancedChildMoniker::new("a", None, 1),
+            InstancedChildMoniker::new("b", None, 2),
         ]);
         assert_eq!("/a:1/b:2", format!("{}", m));
         assert_eq!("/a:1", format!("{}", m.parent().unwrap()));
@@ -135,30 +135,30 @@ mod tests {
     #[test]
     fn instanced_absolute_moniker_compare() {
         let a = InstancedAbsoluteMoniker::new(vec![
-            InstancedChildMoniker::new("a".to_string(), None, 1),
-            InstancedChildMoniker::new("b".to_string(), None, 2),
-            InstancedChildMoniker::new("c".to_string(), None, 3),
+            InstancedChildMoniker::new("a", None, 1),
+            InstancedChildMoniker::new("b", None, 2),
+            InstancedChildMoniker::new("c", None, 3),
         ]);
         let a2 = InstancedAbsoluteMoniker::new(vec![
-            InstancedChildMoniker::new("a".to_string(), None, 1),
-            InstancedChildMoniker::new("b".to_string(), None, 3),
-            InstancedChildMoniker::new("c".to_string(), None, 3),
+            InstancedChildMoniker::new("a", None, 1),
+            InstancedChildMoniker::new("b", None, 3),
+            InstancedChildMoniker::new("c", None, 3),
         ]);
         let b = InstancedAbsoluteMoniker::new(vec![
-            InstancedChildMoniker::new("a".to_string(), None, 1),
-            InstancedChildMoniker::new("b".to_string(), None, 2),
-            InstancedChildMoniker::new("b".to_string(), None, 3),
+            InstancedChildMoniker::new("a", None, 1),
+            InstancedChildMoniker::new("b", None, 2),
+            InstancedChildMoniker::new("b", None, 3),
         ]);
         let c = InstancedAbsoluteMoniker::new(vec![
-            InstancedChildMoniker::new("a".to_string(), None, 1),
-            InstancedChildMoniker::new("b".to_string(), None, 2),
-            InstancedChildMoniker::new("c".to_string(), None, 3),
-            InstancedChildMoniker::new("d".to_string(), None, 4),
+            InstancedChildMoniker::new("a", None, 1),
+            InstancedChildMoniker::new("b", None, 2),
+            InstancedChildMoniker::new("c", None, 3),
+            InstancedChildMoniker::new("d", None, 4),
         ]);
         let d = InstancedAbsoluteMoniker::new(vec![
-            InstancedChildMoniker::new("a".to_string(), None, 1),
-            InstancedChildMoniker::new("b".to_string(), None, 2),
-            InstancedChildMoniker::new("c".to_string(), None, 3),
+            InstancedChildMoniker::new("a", None, 1),
+            InstancedChildMoniker::new("b", None, 2),
+            InstancedChildMoniker::new("c", None, 3),
         ]);
 
         assert_eq!(Ordering::Less, a.cmp(&a2));
@@ -180,24 +180,20 @@ mod tests {
     #[test]
     fn instanced_absolute_monikers_contains_in_realm() {
         let root = InstancedAbsoluteMoniker::root();
-        let a = InstancedAbsoluteMoniker::new(vec![InstancedChildMoniker::new(
-            "a".to_string(),
-            None,
-            1,
-        )]);
+        let a = InstancedAbsoluteMoniker::new(vec![InstancedChildMoniker::new("a", None, 1)]);
         let ab = InstancedAbsoluteMoniker::new(vec![
-            InstancedChildMoniker::new("a".to_string(), None, 1),
-            InstancedChildMoniker::new("b".to_string(), None, 2),
+            InstancedChildMoniker::new("a", None, 1),
+            InstancedChildMoniker::new("b", None, 2),
         ]);
         let abc = InstancedAbsoluteMoniker::new(vec![
-            InstancedChildMoniker::new("a".to_string(), None, 1),
-            InstancedChildMoniker::new("b".to_string(), None, 2),
-            InstancedChildMoniker::new("c".to_string(), None, 3),
+            InstancedChildMoniker::new("a", None, 1),
+            InstancedChildMoniker::new("b", None, 2),
+            InstancedChildMoniker::new("c", None, 3),
         ]);
         let abd = InstancedAbsoluteMoniker::new(vec![
-            InstancedChildMoniker::new("a".to_string(), None, 1),
-            InstancedChildMoniker::new("b".to_string(), None, 2),
-            InstancedChildMoniker::new("d".to_string(), None, 3),
+            InstancedChildMoniker::new("a", None, 1),
+            InstancedChildMoniker::new("b", None, 2),
+            InstancedChildMoniker::new("d", None, 3),
         ]);
 
         assert!(root.contains_in_realm(&root));
@@ -237,8 +233,8 @@ mod tests {
 
         assert_eq!(under_test("/")?, InstancedAbsoluteMoniker::root());
 
-        let a = InstancedChildMoniker::new("a".to_string(), None, 0);
-        let bb = InstancedChildMoniker::new("b".to_string(), Some("b".to_string()), 0);
+        let a = InstancedChildMoniker::new("a", None, 0);
+        let bb = InstancedChildMoniker::new("b", Some("b"), 0);
 
         assert_eq!(under_test("/a:0")?, InstancedAbsoluteMoniker::new(vec![a.clone()]));
         assert_eq!(

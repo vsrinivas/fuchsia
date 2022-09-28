@@ -546,7 +546,7 @@ impl RoutingTest {
             .start_instance(&component.abs_moniker, &StartReason::Eager)
             .await
             .expect("start instance failed");
-        let child_moniker = ChildMoniker::new(name.to_string(), Some(collection.to_string()));
+        let child_moniker = ChildMoniker::new(name, Some(collection));
         component.remove_dynamic_child(&child_moniker).await.expect("failed to remove child");
     }
 

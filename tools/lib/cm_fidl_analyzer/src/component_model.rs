@@ -23,7 +23,7 @@ use {
     fuchsia_url::AbsoluteComponentUrl,
     fuchsia_zircon_status as zx_status,
     futures::FutureExt,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase},
     routing::{
         capability_source::{
             CapabilitySourceInterface, ComponentCapability, StorageCapabilitySource,
@@ -157,7 +157,7 @@ impl ModelBuilderForAnalyzer {
 
             let abs_moniker: AbsoluteMoniker = moniker_vec.into();
             let child_moniker: ChildMoniker = child_moniker_str.into();
-            if child_moniker.collection.is_none() {
+            if child_moniker.collection().is_none() {
                 errors.push(
                     BuildAnalyzerModelError::DynamicComponentWithoutCollection(
                         node_path.to_string(),
@@ -306,7 +306,7 @@ impl ModelBuilderForAnalyzer {
             match Self::get_absolute_child_url(&child_decl.url, instance) {
                 Ok(url) => {
                     children.push(Child {
-                        child_moniker: ChildMoniker::new(child_decl.name.clone(), None),
+                        child_moniker: ChildMoniker::new(&child_decl.name, None),
                         url,
                         environment: child_decl.environment.clone(),
                     });
@@ -329,7 +329,7 @@ impl ModelBuilderForAnalyzer {
             match Self::get_absolute_child_url(&child.url.to_string(), instance) {
                 Ok(url) => {
                     let absolute_url = url;
-                    if child.child_moniker.name.is_empty() {
+                    if child.child_moniker.name().is_empty() {
                         result.errors.push(anyhow!(BuildAnalyzerModelError::InvalidChildDecl(
                             absolute_url.to_string(),
                             NodePath::from(instance.abs_moniker().clone()).to_string(),
@@ -1224,7 +1224,7 @@ mod tests {
 
         let get_child = root_instance
             .resolve()
-            .map(|locked| locked.get_child(&ChildMoniker::new("child".to_string(), None)))?;
+            .map(|locked| locked.get_child(&ChildMoniker::new("child", None)))?;
         assert!(get_child.is_some());
         assert_eq!(get_child.as_ref().unwrap().abs_moniker(), child_instance.abs_moniker());
         assert_eq!(get_child.unwrap().instanced_moniker(), child_instance.instanced_moniker());

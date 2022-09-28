@@ -116,10 +116,7 @@ where
                 .into_iter()
                 .find(|child| child.0.name() == instance)
                 .ok_or_else(|| RoutingError::OfferFromChildInstanceNotFound {
-                    child_moniker: ChildMoniker::new(
-                        instance.to_string(),
-                        Some(self.collection_name.clone()),
-                    ),
+                    child_moniker: ChildMoniker::new(instance, Some(&self.collection_name)),
                     moniker: collection_component.abs_moniker().clone(),
                     capability_id: self.capability_name.clone().into(),
                 })?

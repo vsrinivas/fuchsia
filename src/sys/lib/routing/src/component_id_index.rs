@@ -175,8 +175,8 @@ pub mod tests {
         assert_eq!(
             Some(&iid),
             index.look_up_moniker(&AbsoluteMoniker::new(vec![
-                ChildMoniker::new("a".to_string(), None),
-                ChildMoniker::new("name".to_string(), Some("coll".to_string())),
+                ChildMoniker::new("a", None),
+                ChildMoniker::new("name", Some("coll")),
             ]))
         );
     }

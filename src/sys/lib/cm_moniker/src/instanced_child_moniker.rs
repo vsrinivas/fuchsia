@@ -34,37 +34,37 @@ impl ChildMonikerBase for InstancedChildMoniker {
     /// or `coll:foo:42`.
     fn parse<T: AsRef<str>>(rep: T) -> Result<Self, MonikerError> {
         let rep = rep.as_ref();
-        let parts: Vec<_> = rep.split(":").collect();
+        let parts: Vec<&str> = rep.split(":").collect();
         // An instanced moniker is either just a name (static instance), or
         // collection:name:instance_id.
         let (coll, name, instance) = match parts.len() {
             2 => {
-                let instance = parts[1].parse().map_err(|_| MonikerError::invalid_moniker(rep))?;
-                (None, parts[0].to_string(), instance)
+                let instance = parts[1]
+                    .parse::<IncarnationId>()
+                    .map_err(|_| MonikerError::invalid_moniker(rep))?;
+                (None, parts[0], instance)
             }
             3 => {
-                let coll = parts[0].to_string();
-                let name = parts[1].to_string();
                 let instance = parts[2]
                     .parse::<IncarnationId>()
                     .map_err(|_| MonikerError::invalid_moniker(rep))?;
-                (Some(coll), name, instance)
+                (Some(parts[0]), parts[1], instance)
             }
             _ => return Err(MonikerError::invalid_moniker(rep)),
         };
-        LongName::validate(&name).map_err(|_| MonikerError::invalid_moniker_part(&name))?;
-        if let Some(ref c) = coll {
-            Name::validate(&c).map_err(|_| MonikerError::invalid_moniker_part(c))?;
+        LongName::validate(name).map_err(|_| MonikerError::invalid_moniker_part(name))?;
+        if let Some(c) = coll {
+            Name::validate(c).map_err(|_| MonikerError::invalid_moniker_part(c))?;
         }
         Ok(Self::new(name, coll, instance))
     }
 
     fn name(&self) -> &str {
-        &self.name
+        self.name.as_str()
     }
 
     fn collection(&self) -> Option<&str> {
-        self.collection.as_ref().map(|s| &**s)
+        self.collection.as_ref().map(|c| c.as_str())
     }
 
     fn as_str(&self) -> &str {
@@ -74,7 +74,12 @@ impl ChildMonikerBase for InstancedChildMoniker {
 
 impl InstancedChildMoniker {
     // TODO(fxbug.dev/77563): This does not currently validate the String inputs.
-    pub fn new(name: String, collection: Option<String>, instance: IncarnationId) -> Self {
+    pub fn new<S>(name: S, collection: Option<S>, instance: IncarnationId) -> Self
+    where
+        S: Into<String>,
+    {
+        let name = name.into();
+        let collection = collection.map(Into::into);
         assert!(!name.is_empty());
         let rep = if let Some(c) = collection.as_ref() {
             assert!(!c.is_empty());
@@ -90,19 +95,19 @@ impl InstancedChildMoniker {
     /// The returned value will have no `collection`, and will have an `instance_id` of 0.
     ///
     /// TODO(fxbug.dev/77563): This does not currently validate the String inputs.
-    pub fn static_child(name: String) -> Self {
+    pub fn static_child(name: &str) -> Self {
         Self::new(name, None, 0)
     }
 
     /// Converts this child moniker into an instanced moniker.
     pub fn from_child_moniker(m: &ChildMoniker, instance: IncarnationId) -> Self {
-        Self::new(m.name.clone(), m.collection.clone(), instance)
+        Self::new(m.name(), m.collection(), instance)
     }
 
     /// Convert an InstancedChildMoniker to an allocated ChildMoniker
     /// without an InstanceId
     pub fn without_instance_id(&self) -> ChildMoniker {
-        ChildMoniker::new(self.name.clone(), self.collection.clone())
+        ChildMoniker::new(self.name(), self.collection())
     }
 
     pub fn instance(&self) -> IncarnationId {
@@ -148,7 +153,7 @@ mod tests {
 
     #[test]
     fn instanced_child_monikers() {
-        let m = InstancedChildMoniker::new("test".to_string(), None, 42);
+        let m = InstancedChildMoniker::new("test", None, 42);
         assert_eq!("test", m.name());
         assert_eq!(None, m.collection());
         assert_eq!(42, m.instance());
@@ -158,7 +163,7 @@ mod tests {
         assert_eq!("test", m.without_instance_id().as_str());
         assert_eq!(m, InstancedChildMoniker::from_child_moniker(&"test".into(), 42));
 
-        let m = InstancedChildMoniker::new("test".to_string(), Some("coll".to_string()), 42);
+        let m = InstancedChildMoniker::new("test", Some("coll"), 42);
         assert_eq!("test", m.name());
         assert_eq!(Some("coll"), m.collection());
         assert_eq!(42, m.instance());
@@ -169,7 +174,7 @@ mod tests {
         assert_eq!(m, InstancedChildMoniker::from_child_moniker(&"coll:test".into(), 42));
 
         let max_coll_length_part = "f".repeat(MAX_NAME_LENGTH);
-        let max_name_length_part = "f".repeat(MAX_LONG_NAME_LENGTH);
+        let max_name_length_part: LongName = "f".repeat(MAX_LONG_NAME_LENGTH).parse().unwrap();
         let m = InstancedChildMoniker::parse(format!(
             "{}:{}:42",
             max_coll_length_part, max_name_length_part
@@ -228,14 +233,14 @@ mod tests {
 
     #[test]
     fn instanced_child_moniker_compare() {
-        let a = InstancedChildMoniker::new("a".to_string(), None, 1);
-        let a2 = InstancedChildMoniker::new("a".to_string(), None, 2);
-        let aa = InstancedChildMoniker::new("a".to_string(), Some("a".to_string()), 1);
-        let aa2 = InstancedChildMoniker::new("a".to_string(), Some("a".to_string()), 2);
-        let ab = InstancedChildMoniker::new("a".to_string(), Some("b".to_string()), 1);
-        let ba = InstancedChildMoniker::new("b".to_string(), Some("a".to_string()), 1);
-        let bb = InstancedChildMoniker::new("b".to_string(), Some("b".to_string()), 1);
-        let aa_same = InstancedChildMoniker::new("a".to_string(), Some("a".to_string()), 1);
+        let a = InstancedChildMoniker::new("a", None, 1);
+        let a2 = InstancedChildMoniker::new("a", None, 2);
+        let aa = InstancedChildMoniker::new("a", Some("a"), 1);
+        let aa2 = InstancedChildMoniker::new("a", Some("a"), 2);
+        let ab = InstancedChildMoniker::new("a", Some("b"), 1);
+        let ba = InstancedChildMoniker::new("b", Some("a"), 1);
+        let bb = InstancedChildMoniker::new("b", Some("b"), 1);
+        let aa_same = InstancedChildMoniker::new("a", Some("a"), 1);
 
         assert_eq!(Ordering::Less, a.cmp(&a2));
         assert_eq!(Ordering::Greater, a2.cmp(&a));

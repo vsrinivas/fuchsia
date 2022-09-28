@@ -107,8 +107,8 @@ impl ComponentInstanceForAnalyzer {
     ) -> Result<Arc<Self>, BuildAnalyzerModelError> {
         let environment = EnvironmentForAnalyzer::new_for_child(&parent, child)?;
         let instanced_moniker = parent.instanced_moniker.child(InstancedChildMoniker::new(
-            child.child_moniker.name.clone(),
-            child.child_moniker.collection.clone(),
+            child.child_moniker.name(),
+            child.child_moniker.collection(),
             0,
         ));
         let abs_moniker = instanced_moniker.clone().without_instance_ids();

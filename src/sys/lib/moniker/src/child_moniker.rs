@@ -42,23 +42,23 @@ impl ChildMonikerBase for ChildMoniker {
         let rep = rep.as_ref();
         let parts: Vec<&str> = rep.split(":").collect();
         let (coll, name) = match parts.len() {
-            1 => (None, parts[0].to_string()),
-            2 => (Some(parts[0].to_string()), parts[1].to_string()),
+            1 => (None, parts[0]),
+            2 => (Some(parts[0]), parts[1]),
             _ => return Err(MonikerError::invalid_moniker(rep)),
         };
-        LongName::validate(&name).map_err(|_| MonikerError::invalid_moniker_part(&name))?;
-        if let Some(ref c) = coll {
+        LongName::validate(name).map_err(|_| MonikerError::invalid_moniker_part(name))?;
+        if let Some(c) = coll {
             Name::validate(c).map_err(|_| MonikerError::invalid_moniker_part(c))?;
         }
-        Ok(ChildMoniker::new(name.to_string(), coll))
+        Ok(ChildMoniker::new(name, coll))
     }
 
     fn name(&self) -> &str {
-        &self.name
+        self.name.as_str()
     }
 
     fn collection(&self) -> Option<&str> {
-        self.collection.as_ref().map(|s| &**s)
+        self.collection.as_ref().map(|c| c.as_str())
     }
 
     fn as_str(&self) -> &str {
@@ -68,7 +68,12 @@ impl ChildMonikerBase for ChildMoniker {
 
 impl ChildMoniker {
     // TODO(fxbug.dev/77563): This does not currently validate the String inputs.
-    pub fn new(name: String, collection: Option<String>) -> Self {
+    pub fn new<S>(name: S, collection: Option<S>) -> Self
+    where
+        S: Into<String>,
+    {
+        let name = name.into();
+        let collection = collection.map(Into::into);
         assert!(!name.is_empty());
         let rep = if let Some(c) = collection.as_ref() {
             assert!(!c.is_empty());
@@ -113,14 +118,14 @@ mod tests {
 
     #[test]
     fn child_monikers() {
-        let m = ChildMoniker::new("test".to_string(), None);
+        let m = ChildMoniker::new("test", None);
         assert_eq!("test", m.name());
         assert_eq!(None, m.collection());
         assert_eq!("test", m.as_str());
         assert_eq!("test", format!("{}", m));
         assert_eq!(m, ChildMoniker::from("test"));
 
-        let m = ChildMoniker::new("test".to_string(), Some("coll".to_string()));
+        let m = ChildMoniker::new("test", Some("coll"));
         assert_eq!("test", m.name());
         assert_eq!(Some("coll"), m.collection());
         assert_eq!("coll:test", m.as_str());
@@ -154,12 +159,12 @@ mod tests {
 
     #[test]
     fn child_moniker_compare() {
-        let a = ChildMoniker::new("a".to_string(), None);
-        let aa = ChildMoniker::new("a".to_string(), Some("a".to_string()));
-        let ab = ChildMoniker::new("a".to_string(), Some("b".to_string()));
-        let ba = ChildMoniker::new("b".to_string(), Some("a".to_string()));
-        let bb = ChildMoniker::new("b".to_string(), Some("b".to_string()));
-        let aa_same = ChildMoniker::new("a".to_string(), Some("a".to_string()));
+        let a = ChildMoniker::new("a", None);
+        let aa = ChildMoniker::new("a", Some("a"));
+        let ab = ChildMoniker::new("a", Some("b"));
+        let ba = ChildMoniker::new("b", Some("a"));
+        let bb = ChildMoniker::new("b", Some("b"));
+        let aa_same = ChildMoniker::new("a", Some("a"));
 
         assert_eq!(Ordering::Less, a.cmp(&aa));
         assert_eq!(Ordering::Greater, aa.cmp(&a));

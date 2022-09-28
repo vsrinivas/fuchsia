@@ -14,7 +14,7 @@ use fidl_fuchsia_test_manager as ftest_manager;
 use fuchsia_inspect::types::Node;
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc, lock::Mutex, SinkExt, Stream, StreamExt, TryFutureExt, TryStreamExt};
-use moniker::{ChildMoniker, RelativeMoniker, RelativeMonikerBase};
+use moniker::{ChildMoniker, ChildMonikerBase, RelativeMoniker, RelativeMonikerBase};
 use std::{
     collections::{HashMap, HashSet},
     sync::{Arc, Weak},
@@ -147,7 +147,7 @@ async fn route_events(
             }
             if !matched {
                 match moniker.down_path().get(0) {
-                    Some(child_moniker) if child_moniker.collection.is_some() => {
+                    Some(child_moniker) if child_moniker.collection().is_some() => {
                         warn!("Unhandled event moniker {}", moniker)
                     }
                     // suppress warning if the moniker isn't in a collection (and thus isn't a test).

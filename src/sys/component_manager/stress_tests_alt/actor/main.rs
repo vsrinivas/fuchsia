@@ -8,7 +8,7 @@ use {
     crate::stressor::Stressor,
     anyhow::Result,
     futures::{future::BoxFuture, FutureExt},
-    moniker::{RelativeMoniker, RelativeMonikerBase},
+    moniker::{ChildMonikerBase, RelativeMoniker, RelativeMonikerBase},
     rand::prelude::SliceRandom,
     rand::rngs::SmallRng,
     rand::Rng,
@@ -72,7 +72,7 @@ pub fn destroy_child<'a>(
         if let Some(moniker) = instances.choose(&mut rng) {
             let mut moniker = RelativeMoniker::parse(moniker).unwrap();
             let child_moniker = moniker.down_path_mut().pop().unwrap();
-            let child_name = child_moniker.name;
+            let child_name = child_moniker.name().to_string();
             let parent_moniker = moniker.to_string();
 
             let result = stressor

@@ -598,7 +598,7 @@ fn find_service_offer_sources(
             .children()
             .into_iter()
             .filter_map(|child| {
-                if let Some(child_collection) = &child.moniker.collection {
+                if let Some(child_collection) = child.moniker.collection() {
                     if child_collection == collection_name {
                         Some(child.moniker.clone().into())
                     } else {
@@ -877,7 +877,7 @@ mod tests {
                 .children
                 .iter()
                 .map(|c| Child {
-                    moniker: ChildMoniker::new(c.name.clone(), None),
+                    moniker: ChildMoniker::new(&c.name, None),
                     environment_name: c.environment.clone(),
                 })
                 .chain(self.dynamic_children.iter().cloned())
@@ -2187,8 +2187,7 @@ mod tests {
             ..default_component_decl()
         };
 
-        let dynamic_child =
-            ChildMoniker::new("dynamic_child".to_string(), Some("coll".to_string()));
+        let dynamic_child = ChildMoniker::new("dynamic_child", Some("coll"));
         let mut fake = FakeComponent::from_decl(decl);
         fake.dynamic_children
             .push(Child { moniker: dynamic_child.clone(), environment_name: None });
@@ -2238,10 +2237,8 @@ mod tests {
             ..default_component_decl()
         };
 
-        let dynamic_child1 =
-            ChildMoniker::new("dynamic_child1".to_string(), Some("coll".to_string()));
-        let dynamic_child2 =
-            ChildMoniker::new("dynamic_child2".to_string(), Some("coll".to_string()));
+        let dynamic_child1 = ChildMoniker::new("dynamic_child1", Some("coll"));
+        let dynamic_child2 = ChildMoniker::new("dynamic_child2", Some("coll"));
         let mut fake = FakeComponent::from_decl(decl);
         fake.dynamic_children
             .push(Child { moniker: dynamic_child1.clone(), environment_name: None });
@@ -2299,10 +2296,10 @@ mod tests {
             ..default_component_decl()
         };
 
-        let source_child1 = ChildMoniker::new("source_child1".to_string(), Some(c1_name.clone()));
-        let source_child2 = ChildMoniker::new("source_child2".to_string(), Some(c1_name.clone()));
-        let target_child1 = ChildMoniker::new("target_child1".to_string(), Some(c2_name.clone()));
-        let target_child2 = ChildMoniker::new("target_child2".to_string(), Some(c2_name.clone()));
+        let source_child1 = ChildMoniker::new("source_child1", Some(&c1_name));
+        let source_child2 = ChildMoniker::new("source_child2", Some(&c1_name));
+        let target_child1 = ChildMoniker::new("target_child1", Some(&c2_name));
+        let target_child2 = ChildMoniker::new("target_child2", Some(&c2_name));
 
         let mut fake = FakeComponent::from_decl(decl);
         fake.dynamic_children

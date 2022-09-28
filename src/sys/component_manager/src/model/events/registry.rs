@@ -31,7 +31,7 @@ use {
     async_trait::async_trait,
     cm_rust::{CapabilityName, EventMode, UseDecl, UseEventDecl, UseEventStreamDecl},
     futures::lock::Mutex,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, ExtendedMoniker},
     std::{
         collections::HashMap,
         sync::{Arc, Weak},
@@ -566,7 +566,7 @@ impl EventRegistry {
             let exposes = locked_state.exposes();
             let mut component_route = ComponentEventRoute {
                 component: if let Some(moniker) = component.child_moniker() {
-                    moniker.name.clone()
+                    moniker.name().to_string()
                 } else {
                     "<root>".to_string()
                 },

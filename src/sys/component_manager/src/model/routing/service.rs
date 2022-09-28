@@ -860,7 +860,7 @@ mod tests {
                     .get(instance)
                     .ok_or_else(|| RoutingError::OfferFromChildInstanceNotFound {
                         capability_id: "my.service.Service".to_string(),
-                        child_moniker: ChildMoniker::new(instance.to_string(), None),
+                        child_moniker: ChildMoniker::new(instance, None),
                         moniker: AbsoluteMoniker::root(),
                     })?
                     .clone(),

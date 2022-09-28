@@ -762,8 +762,7 @@ impl ComponentInstance {
                 Ok(durability)
             }
             (None, _) => {
-                let child_moniker =
-                    ChildMoniker::new(child_decl.name.clone(), Some(collection_name));
+                let child_moniker = ChildMoniker::new(&child_decl.name, Some(&collection_name));
                 Err(ModelError::instance_already_exists(self.abs_moniker.clone(), child_moniker))
             }
         }
@@ -1612,13 +1611,13 @@ impl ResolvedInstanceState {
             use cm_rust::OfferDeclCommon;
             let source_matches = offer.source()
                 == &cm_rust::OfferSource::Child(cm_rust::ChildRef {
-                    name: moniker.name.clone(),
-                    collection: moniker.collection.clone(),
+                    name: moniker.name().to_string(),
+                    collection: moniker.collection().map(|c| c.to_string()),
                 });
             let target_matches = offer.target()
                 == &cm_rust::OfferTarget::Child(cm_rust::ChildRef {
-                    name: moniker.name.clone(),
-                    collection: moniker.collection.clone(),
+                    name: moniker.name().to_string(),
+                    collection: moniker.collection().map(|c| c.to_string()),
                 });
             !source_matches && !target_matches
         });
@@ -1718,11 +1717,8 @@ impl ResolvedInstanceState {
             }
             None => 0,
         };
-        let instanced_moniker = InstancedChildMoniker::new(
-            child.name.clone(),
-            collection.map(|c| c.name.clone()),
-            instance_id,
-        );
+        let instanced_moniker =
+            InstancedChildMoniker::new(&child.name, collection.map(|c| &c.name), instance_id);
         let child_moniker = instanced_moniker.without_instance_id();
         if self.get_child(&child_moniker).is_some() {
             return None;

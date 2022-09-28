@@ -1158,7 +1158,7 @@ where
             UseSource::Child(name) => {
                 let moniker = target.abs_moniker();
                 let child_component = {
-                    let child_moniker = ChildMoniker::new(name.clone(), None);
+                    let child_moniker = ChildMoniker::new(name, None);
                     target.lock_resolved_state().await?.get_child(&child_moniker).ok_or_else(
                         || {
                             RoutingError::use_from_child_instance_not_found(
@@ -1298,7 +1298,7 @@ where
             },
             RegistrationSource::Child(child) => {
                 let child_component = {
-                    let child_moniker = ChildMoniker::new(child.clone(), None);
+                    let child_moniker = ChildMoniker::new(child, None);
                     target.lock_resolved_state().await?.get_child(&child_moniker).ok_or_else(
                         || RoutingError::EnvironmentFromChildInstanceNotFound {
                             child_moniker,
@@ -1528,7 +1528,7 @@ where
     match offer.source() {
         OfferSource::Child(child) => {
             let child_component = {
-                let child_moniker = ChildMoniker::new(child.name.clone(), child.collection.clone());
+                let child_moniker = ChildMoniker::new(&child.name, child.collection.as_ref());
                 component.lock_resolved_state().await?.get_child(&child_moniker).ok_or_else(
                     || RoutingError::OfferFromChildInstanceNotFound {
                         child_moniker,
@@ -1623,7 +1623,7 @@ where
                 }
                 ExposeSource::Child(child) => {
                     let child_component = {
-                        let child_moniker = ChildMoniker::new(child.clone(), None);
+                        let child_moniker = ChildMoniker::new(child, None);
                         target.lock_resolved_state().await?.get_child(&child_moniker).ok_or_else(
                             || RoutingError::ExposeFromChildInstanceNotFound {
                                 child_moniker,

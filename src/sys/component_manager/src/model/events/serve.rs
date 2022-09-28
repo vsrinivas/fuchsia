@@ -187,7 +187,7 @@ fn validate_component_instance(
                 }
                 _ => {}
             }
-            if event_part.name != component.component {
+            if event_part.name() != component.component {
                 // Reject due to path mismatch
                 return false;
             }
@@ -610,8 +610,8 @@ mod tests {
     fn test_validate_and_filter_event_at_root() {
         let mut moniker =
             ExtendedMoniker::ComponentInstance(AbsoluteMoniker::new(vec![ChildMoniker::new(
-                "root".to_string(),
-                Some("coll".to_string()),
+                "root",
+                Some("coll"),
             )]));
         let route = vec![
             ComponentEventRoute { component: "<root>".to_string(), scope: None },
@@ -648,9 +648,9 @@ mod tests {
     #[test]
     fn test_validate_and_filter_event_moniker_root() {
         let mut event = ExtendedMoniker::ComponentInstance(AbsoluteMoniker::new(vec![
-            ChildMoniker::new("a".to_string(), None),
-            ChildMoniker::new("b".to_string(), None),
-            ChildMoniker::new("c".to_string(), None),
+            ChildMoniker::new("a", None),
+            ChildMoniker::new("b", None),
+            ChildMoniker::new("c", None),
         ]));
         let route = vec![
             ComponentEventRoute { component: "<root>".to_string(), scope: None },
@@ -668,10 +668,10 @@ mod tests {
     #[test]
     fn test_validate_and_filter_event_moniker_children_scoped() {
         let mut event = ExtendedMoniker::ComponentInstance(AbsoluteMoniker::new(vec![
-            ChildMoniker::new("a".to_string(), None),
-            ChildMoniker::new("b".to_string(), None),
-            ChildMoniker::new("c".to_string(), None),
-            ChildMoniker::new("d".to_string(), None),
+            ChildMoniker::new("a", None),
+            ChildMoniker::new("b", None),
+            ChildMoniker::new("c", None),
+            ChildMoniker::new("d", None),
         ]));
         let route = vec![
             ComponentEventRoute { component: "<root>".to_string(), scope: None },
@@ -683,8 +683,7 @@ mod tests {
         assert_eq!(
             event,
             ExtendedMoniker::ComponentInstance(AbsoluteMoniker::new(vec![ChildMoniker::new(
-                "d".to_string(),
-                None
+                "d", None
             ),]))
         );
     }
@@ -696,8 +695,7 @@ mod tests {
     fn test_validate_and_filter_event_moniker_above_root_rejected() {
         let mut event =
             ExtendedMoniker::ComponentInstance(AbsoluteMoniker::new(vec![ChildMoniker::new(
-                "a".to_string(),
-                None,
+                "a", None,
             )]));
         let route = vec![
             ComponentEventRoute { component: "<root>".to_string(), scope: None },
@@ -709,8 +707,7 @@ mod tests {
         assert_eq!(
             event,
             ExtendedMoniker::ComponentInstance(AbsoluteMoniker::new(vec![ChildMoniker::new(
-                "a".to_string(),
-                None
+                "a", None
             ),]))
         );
     }
@@ -721,8 +718,8 @@ mod tests {
     #[test]
     fn test_validate_and_filter_event_moniker_ambiguous() {
         let mut event = ExtendedMoniker::ComponentInstance(AbsoluteMoniker::new(vec![
-            ChildMoniker::new("f".to_string(), None),
-            ChildMoniker::new("i".to_string(), None),
+            ChildMoniker::new("f", None),
+            ChildMoniker::new("i", None),
         ]));
         let route = vec![
             ComponentEventRoute { component: "<root>".to_string(), scope: None },
@@ -739,8 +736,8 @@ mod tests {
     #[test]
     fn test_validate_and_filter_event_moniker_root_rejected() {
         let mut event = ExtendedMoniker::ComponentInstance(AbsoluteMoniker::new(vec![
-            ChildMoniker::new("core".to_string(), None),
-            ChildMoniker::new("feedback".to_string(), None),
+            ChildMoniker::new("core", None),
+            ChildMoniker::new("feedback", None),
         ]));
         let route = vec![
             ComponentEventRoute { component: "<root>".to_string(), scope: None },
