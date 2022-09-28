@@ -12,5 +12,11 @@
             name: "bt-rfcomm",
             url: "#meta/bt-rfcomm.cm",
         },
+
+        // The Fast Pair Provider component is not used in the Bluetooth integration tests.
+        {
+            name: "bt-fastpair-provider",
+            url: "fuchsia-pkg://fuchsia.com/bt-fastpair-provider#meta/bt-fastpair-provider.cm",
+        },
     ],
 }

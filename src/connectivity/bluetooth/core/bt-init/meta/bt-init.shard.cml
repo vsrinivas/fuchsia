@@ -8,6 +8,7 @@
     // CML files that include it to define a usable bt-init component should declare:
     //   1. A `bt-gap` child component, with the URL set to the appropriate package and manifest.
     //   2. A `bt-rfcomm` child component, with the URL set to the appropriate bt-rfcomm package.
+    //   3. A `bt-fastpair-provider` child component, with the URL set to the appropriate package.
     // e.g.:
     //   children: [
     //     {
@@ -17,6 +18,10 @@
     //     {
     //         name: "bt-rfcomm",
     //         url: "fuchsia-pkg://fuchsia.com/bt-rfcomm#meta/bt-rfcomm.cm",
+    //     },
+    //     {
+    //         name: "bt-fastpair-provider",
+    //         url: "fuchsia-pkg://fuchsia.com/bt-fastpair-provider#meta/bt-fastpair-provider.cm",
     //     },
     //   ],
     include: [
@@ -29,7 +34,10 @@
     },
     capabilities: [
         {
-            protocol: [ "fuchsia.bluetooth.bredr.Profile" ],
+            protocol: [
+                "fuchsia.bluetooth.bredr.Profile",
+                "fuchsia.bluetooth.sys.Pairing",
+            ],
         },
     ],
     use: [
@@ -63,6 +71,7 @@
             protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
             to: [
+                "#bt-fastpair-provider",
                 "#bt-gap",
                 "#bt-rfcomm",
             ],
@@ -71,6 +80,21 @@
             protocol: [ "fuchsia.bluetooth.bredr.Profile" ],
             from: "#bt-gap",
             to: [ "#bt-rfcomm" ],
+        },
+        {
+            storage: "data",
+            from: "parent",
+            to: [ "#bt-fastpair-provider" ],
+        },
+        {
+            protocol: [
+                "fuchsia.bluetooth.gatt2.Server",
+                "fuchsia.bluetooth.le.Peripheral",
+                "fuchsia.bluetooth.sys.HostWatcher",
+                "fuchsia.bluetooth.sys.Pairing",
+            ],
+            from: "#bt-gap",
+            to: [ "#bt-fastpair-provider" ],
         },
     ],
     expose: [
@@ -84,12 +108,18 @@
                 "fuchsia.bluetooth.sys.Bootstrap",
                 "fuchsia.bluetooth.sys.Configuration",
                 "fuchsia.bluetooth.sys.HostWatcher",
-                "fuchsia.bluetooth.sys.Pairing",
             ],
             from: "#bt-gap",
         },
         {
-            protocol: [ "fuchsia.bluetooth.bredr.Profile" ],
+            protocol: [ "fuchsia.bluetooth.fastpair.Provider" ],
+            from: "#bt-fastpair-provider",
+        },
+        {
+            protocol: [
+                "fuchsia.bluetooth.bredr.Profile",
+                "fuchsia.bluetooth.sys.Pairing",
+            ],
             from: "self",
         },
     ],

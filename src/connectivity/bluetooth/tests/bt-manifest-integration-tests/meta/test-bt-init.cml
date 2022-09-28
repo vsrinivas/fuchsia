@@ -15,5 +15,9 @@
             name: "bt-rfcomm",
             url: "fuchsia-pkg://fuchsia.com/bt-init-smoke-test#meta/bt-rfcomm.cm",
         },
+        {
+            name: "bt-fastpair-provider",
+            url: "fuchsia-pkg://fuchsia.com/bt-init-smoke-test#meta/bt-fastpair-provider.cm",
+        },
     ],
 }
