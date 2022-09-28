@@ -112,12 +112,27 @@ generated_go("gen/netstack/link/netdevice") {
 go_library("pprof") {
   name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/pprof"
   source_dir = "pprof"
-  sources = [ "export.go" ]
+  sources = [
+    "export.go",
+    "export_test.go",
+    "vmobuffer.go",
+    "vmobuffer_test.go",
+  ]
   deps = [
     "inspect",
     "sync",
     "//src/lib/component",
     "//src/lib/syslog/go",
+    "//third_party/golibs:go.uber.org/multierr",
+  ]
+}
+
+go_test("pprof_test") {
+  gopackages =
+      [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/pprof" ]
+  deps = [
+    ":pprof",
+    "//third_party/golibs:github.com/google/go-cmp",
   ]
 }
 
@@ -216,10 +231,18 @@ fuchsia_unittest_package("netstack-gotests") {
   manifest = "meta/netstack_test.cml"
 }
 
+fuchsia_unittest_package("pprof-gotests") {
+  deps = [
+    ":pprof_test",
+    "//src/sys/test_runners:tmp_storage",
+  ]
+}
+
 group("tests") {
   testonly = true
   deps = [
     ":netstack-gotests",
+    ":pprof-gotests",
     "bench:tests",
     "dhcp:tests",
     "dns:tests",

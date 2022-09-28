@@ -7,7 +7,9 @@
 package pprof
 
 import (
+	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -20,6 +22,8 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
+
+	"go.uber.org/multierr"
 )
 
 const pprofName = "pprof"
@@ -49,9 +53,6 @@ func Setup(path string) (component.Node, func() error, error) {
 						}
 						sort.Strings(filenames)
 						for _, filename := range filenames[:len(filenames)-maxProfiles] {
-							if err := mapDir.mu.m[filename].File.(*sliceFile).Close(); err != nil {
-								return err
-							}
 							delete(mapDir.mu.m, filename)
 							if err := os.Remove(filepath.Join(path, filename)); err != nil {
 								_ = syslog.Warnf("failed to remove %s: %s", filename, err)
@@ -65,21 +66,17 @@ func Setup(path string) (component.Node, func() error, error) {
 
 				filename := (<-t.C).UTC().Format(time.RFC3339) + ".inspect"
 
-				b, err := getProfilesInspectVMOBytes()
-				if err != nil {
+				profilePath := filepath.Join(path, filename)
+
+				if err := writeProfilesInspectVMOBytes(profilePath); err != nil {
 					return err
 				}
+
 				mapDir.mu.Lock()
 				mapDir.mu.m[filename] = &component.FileWrapper{
-					File: &sliceFile{
-						b: b,
-					},
+					File: newStdioFile(profilePath),
 				}
 				mapDir.mu.Unlock()
-
-				if err := os.WriteFile(filepath.Join(path, filename), b, os.ModePerm); err != nil {
-					return err
-				}
 			}
 		}, nil
 }
@@ -108,21 +105,9 @@ func mapDirFromPath(path string) (*mapDirectory, error) {
 
 	m := make(map[string]*component.FileWrapper)
 	for _, filename := range filenames {
-		f, err := os.Open(filepath.Join(path, filename))
-		if err != nil {
-			return nil, err
-		}
-		b, err := io.ReadAll(f)
-		if err != nil {
-			return nil, err
-		}
-		if err := f.Close(); err != nil {
-			return nil, err
-		}
+		path := filepath.Join(path, filename)
 		m[filename] = &component.FileWrapper{
-			File: &sliceFile{
-				b: b,
-			},
+			File: newStdioFile(path),
 		}
 	}
 	var d mapDirectory
@@ -144,44 +129,16 @@ func (md *mapDirectory) Get(nodeName string) (component.Node, bool) {
 	return value, ok
 }
 
-func (md *mapDirectory) ForEach(fn func(string, component.Node)) {
-	fn(nowName, &nowFile)
+func (md *mapDirectory) ForEach(fn func(string, component.Node) error) error {
+	if err := fn(nowName, &nowFile); err != nil {
+		return err
+	}
 	md.mu.Lock()
+	defer md.mu.Unlock()
 	for nodeName, node := range md.mu.m {
-		fn(nodeName, node)
-	}
-	md.mu.Unlock()
-}
-
-var _ component.File = (*sliceFile)(nil)
-
-type sliceFile struct {
-	b   []byte
-	vmo zx.VMO
-}
-
-func (sf *sliceFile) GetReader() (component.Reader, uint64) {
-	r := bytes.NewReader(sf.b)
-	return r, uint64(r.Len())
-}
-
-func (sf *sliceFile) GetVMO() zx.VMO {
-	if !sf.vmo.Handle().IsValid() {
-		vmo, err := zx.NewVMO(uint64(len(sf.b)), 0)
-		if err != nil {
-			return zx.VMO(zx.HandleInvalid)
+		if err := fn(nodeName, node); err != nil {
+			return err
 		}
-		if err := vmo.Write(sf.b, 0); err != nil {
-			return zx.VMO(zx.HandleInvalid)
-		}
-		sf.vmo = vmo
-	}
-	return sf.vmo
-}
-
-func (sf *sliceFile) Close() error {
-	if sf.vmo.Handle().IsValid() {
-		return sf.vmo.Close()
 	}
 	return nil
 }
@@ -190,36 +147,98 @@ var _ component.File = (*pprofFile)(nil)
 
 type pprofFile struct{}
 
-func getProfilesInspectVMOBytes() ([]byte, error) {
-	var b bytes.Buffer
-	w, err := inspect.NewWriter(&b)
+func writeProfilesInspectVMOBytes(path string) error {
+	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, os.ModePerm)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("os.Create(%q) = %w", path, err)
+	}
+	defer file.Close()
+
+	bufferedWriter := bufio.NewWriter(file)
+	{
+		err := writeProfilesInspectVMOBytesWriter(bufferedWriter)
+		return multierr.Append(err, bufferedWriter.Flush())
+	}
+}
+
+func writeProfilesInspectVMOBytesWriter(writer io.Writer) error {
+	w, err := inspect.NewWriter(writer)
+	if err != nil {
+		return err
 	}
 	nodeValueIndex, err := w.WriteNodeValueBlock(0, pprofName)
 	if err != nil {
-		return nil, err
+		return err
 	}
+	var buffer bytes.Buffer
 	for _, p := range pprof.Profiles() {
-		var b bytes.Buffer
-		if err := p.WriteTo(&b, 0); err != nil {
-			return nil, err
+		buffer.Reset()
+		if err := p.WriteTo(&buffer, 0); err != nil {
+			return err
 		}
-		if err := w.WriteBinary(nodeValueIndex, p.Name(), uint32(b.Len()), &b); err != nil {
-			return nil, err
+		if err := w.WriteBinary(nodeValueIndex, p.Name(), uint32(buffer.Len()), &buffer); err != nil {
+			return err
 		}
 	}
-	return b.Bytes(), nil
+	return nil
 }
 
-func (p *pprofFile) GetReader() (component.Reader, uint64) {
-	b, err := getProfilesInspectVMOBytes()
+// Chosen arbitrarily.
+const vmoBufferSizeBytes uint64 = 4096
+
+func (p *pprofFile) GetReader() (component.Reader, uint64, error) {
+	b, err := newVmoBuffer(vmoBufferSizeBytes)
 	if err != nil {
-		panic(err)
+		return nil, 0, err
 	}
-	return bytes.NewReader(b), uint64(len(b))
+	if err := writeProfilesInspectVMOBytesWriter(b); err != nil {
+		return nil, 0, err
+	}
+
+	r, err := b.toVmoReader()
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return r, r.size, nil
 }
 
 func (*pprofFile) GetVMO() zx.VMO {
+	b, err := newVmoBuffer(vmoBufferSizeBytes)
+	if err != nil {
+		return zx.VMO(zx.HandleInvalid)
+	}
+	if err := writeProfilesInspectVMOBytesWriter(b); err != nil {
+		return zx.VMO(zx.HandleInvalid)
+	}
+	return b.vmo
+}
+
+var _ component.File = (*stdioFile)(nil)
+
+// stdioFile provides a component.File implementation based on a stdio File.
+type stdioFile struct {
+	path string
+}
+
+func newStdioFile(path string) *stdioFile {
+	return &stdioFile{path}
+}
+
+func (f *stdioFile) GetReader() (component.Reader, uint64, error) {
+	fileInfo, err := os.Stat(f.path)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	file, err := os.Open(f.path)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return file, uint64(fileInfo.Size()), nil
+}
+
+func (f *stdioFile) GetVMO() zx.VMO {
 	return zx.VMO(zx.HandleInvalid)
 }

@@ -95,27 +95,28 @@ func (i *impl) Get(name string) (component.Node, bool) {
 	return nil, false
 }
 
-func (i *impl) ForEach(fn func(string, component.Node)) {
+func (i *impl) ForEach(fn func(string, component.Node) error) error {
 	if i.published {
-		fn(inspectName, &component.FileWrapper{File: i})
+		return fn(inspectName, &component.FileWrapper{File: i})
 	}
+	return nil
 }
 
 var _ component.File = (*impl)(nil)
 
-func (i *impl) GetReader() (component.Reader, uint64) {
+func (i *impl) GetReader() (component.Reader, uint64, error) {
 	h, err := i.vmo.Handle().Duplicate(zx.RightSameRights)
 	if err != nil {
-		panic(err)
+		return nil, 0, err
 	}
 	vmo := zx.VMO(h)
 	size, err := vmo.Size()
 	if err != nil {
-		panic(err)
+		return nil, 0, err
 	}
-	return &vmoReader{
+	return component.NopCloser(&vmoReader{
 		vmo: vmo,
-	}, size
+	}), size, nil
 }
 
 func (i *impl) GetVMO() zx.VMO {

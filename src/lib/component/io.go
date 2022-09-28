@@ -55,8 +55,12 @@ func logError(err error) {
 }
 
 type Node interface {
-	getIO() io.NodeWithCtx
+	getIO() (io.NodeWithCtx, func() error, error)
 	addConnection(ctx fidl.Context, flags io.OpenFlags, mode uint32, req io.NodeWithCtxInterfaceRequest) error
+}
+
+func noop() error {
+	return nil
 }
 
 type Service struct {
@@ -68,8 +72,8 @@ type Service struct {
 var _ Node = (*Service)(nil)
 var _ io.NodeWithCtx = (*Service)(nil)
 
-func (s *Service) getIO() io.NodeWithCtx {
-	return s
+func (s *Service) getIO() (io.NodeWithCtx, func() error, error) {
+	return s, noop, nil
 }
 
 func (s *Service) addConnection(ctx fidl.Context, flags io.OpenFlags, mode uint32, req io.NodeWithCtxInterfaceRequest) error {
@@ -158,7 +162,7 @@ func (*Service) Query(fidl.Context) ([]uint8, error) {
 
 type Directory interface {
 	Get(string) (Node, bool)
-	ForEach(func(string, Node))
+	ForEach(func(string, Node) error) error
 }
 
 var _ Directory = mapDirectory(nil)
@@ -170,10 +174,13 @@ func (md mapDirectory) Get(name string) (Node, bool) {
 	return node, ok
 }
 
-func (md mapDirectory) ForEach(fn func(string, Node)) {
+func (md mapDirectory) ForEach(fn func(string, Node) error) error {
 	for name, node := range md {
-		fn(name, node)
+		if err := fn(name, node); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 var _ Directory = (*pprofDirectory)(nil)
@@ -191,14 +198,17 @@ func (*pprofDirectory) Get(name string) (Node, bool) {
 	return nil, false
 }
 
-func (*pprofDirectory) ForEach(fn func(string, Node)) {
+func (*pprofDirectory) ForEach(fn func(string, Node) error) error {
 	for _, p := range pprof.Profiles() {
-		fn(p.Name(), &FileWrapper{
+		if err := fn(p.Name(), &FileWrapper{
 			File: &pprofFile{
 				p: p,
 			},
-		})
+		}); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 type DirectoryWrapper struct {
@@ -211,8 +221,8 @@ func (dir *DirectoryWrapper) GetDirectory() io.DirectoryWithCtx {
 	return &directoryState{DirectoryWrapper: dir}
 }
 
-func (dir *DirectoryWrapper) getIO() io.NodeWithCtx {
-	return dir.GetDirectory()
+func (dir *DirectoryWrapper) getIO() (io.NodeWithCtx, func() error, error) {
+	return dir.GetDirectory(), noop, nil
 }
 
 func (dir *DirectoryWrapper) addConnection(ctx fidl.Context, flags io.OpenFlags, mode uint32, req io.NodeWithCtxInterfaceRequest) error {
@@ -301,7 +311,11 @@ func (dirState *directoryState) Open(ctx fidl.Context, flags io.OpenFlags, mode 
 
 	if i := strings.Index(path, slash); i != -1 {
 		if node, ok := dirState.Directory.Get(path[:i]); ok {
-			node := node.getIO()
+			node, cleanup, err := node.getIO()
+			if err != nil {
+				return err
+			}
+			defer cleanup()
 			if dir, ok := node.(io.DirectoryWithCtx); ok {
 				return dir.Open(ctx, flags, mode, path[i+len(slash):], req)
 			}
@@ -336,14 +350,18 @@ func (dirState *directoryState) Enumerate(ctx fidl.Context, options io.Directory
 
 func (dirState *directoryState) ReadDirents(ctx fidl.Context, maxOut uint64) (int32, []uint8, error) {
 	if !dirState.reading {
-		writeFn := func(name string, node Node) {
-			ioNode := node.getIO()
+		writeFn := func(name string, node Node) error {
+			ioNode, cleanup, err := node.getIO()
+			if err != nil {
+				return err
+			}
+			defer cleanup()
 			status, attr, err := ioNode.GetAttr(ctx)
 			if err != nil {
-				panic(err)
+				return err
 			}
 			if status := zx.Status(status); status != zx.ErrOk {
-				panic(status)
+				return fmt.Errorf("io.Node.GetAttr returned non-ok zx.Status %s", status)
 			}
 			dirent := syscall.Dirent{
 				Ino:  attr.Id,
@@ -362,23 +380,28 @@ func (dirState *directoryState) ReadDirents(ctx fidl.Context, maxOut uint64) (in
 				}()),
 			}
 			if err := binary.Write(&dirState.dirents, binary.LittleEndian, dirent); err != nil {
-				panic(err)
+				return err
 			}
 			dirState.dirents.Truncate(dirState.dirents.Len() - int(unsafe.Sizeof(syscall.Dirent{}.Name)))
 			if _, err := dirState.dirents.WriteString(name); err != nil {
-				panic(err)
+				return err
 			}
+			return nil
 		}
-		writeFn(dot, dirState)
-		dirState.Directory.ForEach(writeFn)
+		if err := writeFn(dot, dirState); err != nil {
+			return 0, nil, err
+		}
+		if err := dirState.Directory.ForEach(writeFn); err != nil {
+			return 0, nil, err
+		}
 		dirState.reading = true
 	} else if dirState.dirents.Len() == 0 {
 		status, err := dirState.Rewind(ctx)
 		if err != nil {
-			panic(err)
+			return 0, nil, err
 		}
 		if status := zx.Status(status); status != zx.ErrOk {
-			panic(status)
+			return 0, nil, fmt.Errorf("dirState.Rewind(_) = %s", status)
 		}
 	}
 	return int32(zx.ErrOk), dirState.dirents.Next(int(maxOut)), nil
@@ -430,7 +453,7 @@ func (*directoryState) Query(fidl.Context) ([]uint8, error) {
 }
 
 type File interface {
-	GetReader() (Reader, uint64)
+	GetReader() (Reader, uint64, error)
 	GetVMO() zx.VMO
 }
 
@@ -440,12 +463,12 @@ type pprofFile struct {
 	p *pprof.Profile
 }
 
-func (p *pprofFile) GetReader() (Reader, uint64) {
+func (p *pprofFile) GetReader() (Reader, uint64, error) {
 	var b bytes.Buffer
 	if err := p.p.WriteTo(&b, 0); err != nil {
-		panic(err)
+		return nil, 0, err
 	}
-	return bytes.NewReader(b.Bytes()), uint64(b.Len())
+	return NopCloser(bytes.NewReader(b.Bytes())), uint64(b.Len()), nil
 }
 
 func (*pprofFile) GetVMO() zx.VMO {
@@ -458,12 +481,12 @@ var _ File = (*stackTraceFile)(nil)
 // stacks.
 type stackTraceFile struct{}
 
-func (f *stackTraceFile) GetReader() (Reader, uint64) {
+func (f *stackTraceFile) GetReader() (Reader, uint64, error) {
 	buf := make([]byte, 4096)
 	for {
 		n := runtime.Stack(buf, true)
 		if n < len(buf) {
-			return bytes.NewReader(buf[:n]), uint64(n)
+			return NopCloser(bytes.NewReader(buf[:n])), uint64(n), nil
 		}
 		buf = make([]byte, 2*len(buf))
 	}
@@ -479,34 +502,68 @@ type FileWrapper struct {
 	File File
 }
 
-func (file *FileWrapper) GetFile() io.FileWithCtx {
-	reader, size := file.File.GetReader()
+func (file *FileWrapper) getFileState() (*fileState, error) {
+	reader, size, err := file.File.GetReader()
+	if err != nil {
+		return nil, err
+	}
 	return &fileState{
 		FileWrapper: file,
 		reader:      reader,
 		size:        size,
-	}
+	}, nil
 }
 
-func (file *FileWrapper) getIO() io.NodeWithCtx {
-	return file.GetFile()
+func (file *FileWrapper) GetFile() (io.FileWithCtx, error) {
+	return file.getFileState()
+}
+
+func (file *FileWrapper) getIO() (io.NodeWithCtx, func() error, error) {
+	state, err := file.getFileState()
+	if err != nil {
+		return nil, noop, err
+	}
+	return state, state.reader.Close, nil
 }
 
 func (file *FileWrapper) addConnection(ctx fidl.Context, flags io.OpenFlags, mode uint32, req io.NodeWithCtxInterfaceRequest) error {
-	ioFile := file.GetFile()
+	ioFile, err := file.getFileState()
+	if err != nil {
+		return err
+	}
 	stub := io.FileWithCtxStub{Impl: ioFile}
-	go Serve(context.Background(), &stub, req.Channel, ServeOptions{
-		OnError: logError,
-	})
+	go func() {
+		defer ioFile.reader.Close()
+		Serve(context.Background(), &stub, req.Channel, ServeOptions{
+			OnError: logError,
+		})
+	}()
 	return respond(ctx, flags, req, nil, ioFile)
 }
 
 var _ io.FileWithCtx = (*fileState)(nil)
 
-type Reader interface {
+type ReaderWithoutCloser interface {
 	stdio.Reader
 	stdio.ReaderAt
 	stdio.Seeker
+}
+
+type Reader interface {
+	ReaderWithoutCloser
+	stdio.Closer
+}
+
+type nopCloser struct {
+	ReaderWithoutCloser
+}
+
+func (nopCloser) Close() error { return nil }
+
+// NopCloser implements Closer for Readers that don't need closing. We can't just use io.NopCloser()
+// because it doesn't compose with stdio.ReaderAt.
+func NopCloser(r ReaderWithoutCloser) Reader {
+	return nopCloser{ReaderWithoutCloser: r}
 }
 
 type fileState struct {
@@ -526,7 +583,7 @@ func (fState *fileState) Reopen(ctx fidl.Context, rights *io.RightsRequest, chan
 }
 
 func (fState *fileState) Close(fidl.Context) (unknown.CloseableCloseResult, error) {
-	return unknown.CloseableCloseResultWithResponse(unknown.CloseableCloseResponse{}), nil
+	return unknown.CloseableCloseResultWithResponse(unknown.CloseableCloseResponse{}), fState.reader.Close()
 }
 
 func (fState *fileState) DescribeDeprecated(fidl.Context) (io.NodeInfoDeprecated, error) {

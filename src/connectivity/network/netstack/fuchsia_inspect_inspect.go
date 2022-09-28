@@ -116,8 +116,8 @@ func (dir *inspectDirectory) Get(name string) (component.Node, bool) {
 	return nil, false
 }
 
-func (dir *inspectDirectory) ForEach(fn func(string, component.Node)) {
-	fn(inspect.InspectName, dir.asService())
+func (dir *inspectDirectory) ForEach(fn func(string, component.Node) error) error {
+	return fn(inspect.InspectName, dir.asService())
 }
 
 // statCounter enables *tcpip.StatCounters and other types in this

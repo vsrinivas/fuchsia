@@ -26,7 +26,8 @@ func (*mockDirImpl) Get(string) (component.Node, bool) {
 	return nil, false
 }
 
-func (*mockDirImpl) ForEach(func(string, component.Node)) {
+func (*mockDirImpl) ForEach(func(string, component.Node) error) error {
+	return nil
 }
 
 func TestHandleClosedOnOpenFailure(t *testing.T) {
@@ -56,8 +57,8 @@ type vmoFileImpl struct {
 	vmo zx.VMO
 }
 
-func (i *vmoFileImpl) GetReader() (component.Reader, uint64) {
-	return nil, 0
+func (i *vmoFileImpl) GetReader() (component.Reader, uint64, error) {
+	return nil, 0, nil
 }
 
 func (i *vmoFileImpl) GetVMO() zx.VMO {
@@ -83,9 +84,13 @@ func TestGetBackingMemory(t *testing.T) {
 	file := component.FileWrapper{
 		File: &impl,
 	}
-	result, err := file.GetFile().GetBackingMemory(context.Background(), 0)
+	f, err := file.GetFile()
 	if err != nil {
-		t.Fatalf("file.GetBackingMemory() = %s", err)
+		t.Fatalf("file.GetFile() = %s", err)
+	}
+	result, err := f.GetBackingMemory(context.Background(), 0)
+	if err != nil {
+		t.Fatalf("f.GetBackingMemory() = %s", err)
 	}
 	switch w := result.Which(); w {
 	case io.File2GetBackingMemoryResultErr:
