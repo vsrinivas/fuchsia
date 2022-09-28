@@ -629,7 +629,7 @@ where
         .context("rendering progress")?;
     };
 
-    let repo_storage = FileSystemRepository::new(metadata_dir, blobs_dir)?;
+    let repo_storage = FileSystemRepository::new(metadata_dir, blobs_dir);
     let keys_dir = local_dir.join("keys");
     let repo_keys = RepoKeys::from_dir(keys_dir.as_std_path())?;
 

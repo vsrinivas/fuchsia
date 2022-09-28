@@ -196,7 +196,7 @@ streaming-stats = "0.2.3"
 strsim = "0.10.0"
 structopt = "0.2.14"
 tempfile = "3.2"
-tuf = { version = "0.3.0-beta10", default-features = false, features = ["hyper"] }
+tuf = { version = "0.3.0-beta11", default-features = false, features = ["hyper"] }
 tui = "0.16.0"
 termion = "1.5.3"
 test-case = "1.1.0"
@@ -547,7 +547,7 @@ visibility = [
   ":rustls-v0_19_1",
   ":sct-v0_6_0",
   ":trust-dns-proto-v0_21_2",
-  ":tuf-v0_3_0-beta10",
+  ":tuf-v0_3_0-beta11",
   ":webpki-v0_21_0",
 ]
 deps = [ "//third_party/rust_crates/compat/ring:ring-core" ]

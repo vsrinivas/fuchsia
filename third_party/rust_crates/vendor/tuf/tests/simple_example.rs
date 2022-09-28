@@ -2,8 +2,8 @@ use futures_executor::block_on;
 use futures_util::io::Cursor;
 use tuf::client::{Client, Config};
 use tuf::crypto::{Ed25519PrivateKey, PrivateKey, PublicKey};
-use tuf::interchange::Json;
 use tuf::metadata::{MetadataVersion, TargetPath};
+use tuf::pouf::Pouf1;
 use tuf::repo_builder::RepoBuilder;
 use tuf::repository::EphemeralRepository;
 use tuf::Result;
@@ -46,7 +46,7 @@ async fn run_tests(config: Config, consistent_snapshots: bool) {
 
 async fn init_client(
     root_public_keys: &[PublicKey],
-    remote: EphemeralRepository<Json>,
+    remote: EphemeralRepository<Pouf1>,
     config: Config,
 ) -> Result<()> {
     let local = EphemeralRepository::new();
@@ -65,7 +65,7 @@ async fn init_client(
 }
 
 async fn init_server(
-    remote: &mut EphemeralRepository<Json>,
+    remote: &mut EphemeralRepository<Pouf1>,
     consistent_snapshot: bool,
 ) -> Result<Vec<PublicKey>> {
     // in real life, you wouldn't want these keys on the same machine ever

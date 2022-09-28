@@ -28,8 +28,8 @@ use {
         client::Config,
         crypto::PublicKey,
         error::Error as TufError,
-        interchange::Json,
         metadata::{MetadataVersion, TargetPath},
+        pouf::Pouf1,
         repository::{
             EphemeralRepository, HttpRepositoryBuilder, RepositoryProvider,
             RepositoryStorageProvider,
@@ -212,7 +212,7 @@ async fn get_local_repo(
     data_proxy: Option<fio::DirectoryProxy>,
     persisted_repos_dir: Option<&str>,
     config: &RepositoryConfig,
-) -> Result<Box<dyn RepositoryStorageProvider<Json> + Sync + Send>, anyhow::Error> {
+) -> Result<Box<dyn RepositoryStorageProvider<Pouf1> + Sync + Send>, anyhow::Error> {
     match config.repo_storage_type() {
         RepositoryStorageType::Ephemeral => {
             let local = EphemeralRepository::new();
@@ -268,12 +268,12 @@ fn get_remote_repo(
     config: &RepositoryConfig,
     mirror_config: Option<&MirrorConfig>,
     local_mirror: Option<LocalMirrorProxy>,
-) -> Result<Box<dyn RepositoryProvider<Json> + Send>, anyhow::Error> {
+) -> Result<Box<dyn RepositoryProvider<Pouf1> + Send>, anyhow::Error> {
     if config.use_local_mirror() && mirror_config.is_some() {
         return Err(format_err!("Cannot have a local mirror and remote mirrors!"));
     }
 
-    let remote: Box<dyn RepositoryProvider<Json> + Send> =
+    let remote: Box<dyn RepositoryProvider<Pouf1> + Send> =
         match (local_mirror, config.use_local_mirror(), mirror_config.as_ref()) {
             (Some(local_mirror), true, _) => Box::new(LocalMirrorRepositoryProvider::new(
                 local_mirror,

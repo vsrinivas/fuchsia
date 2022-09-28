@@ -10,8 +10,8 @@ use {
     fuchsia_zircon::Status,
     futures::{future::BoxFuture, prelude::*},
     tuf::{
-        interchange::Json,
         metadata::{MetadataPath, MetadataVersion, TargetPath},
+        pouf::Pouf1,
         repository::RepositoryProvider,
     },
 };
@@ -31,14 +31,14 @@ fn make_opaque_error(e: Error) -> tuf::Error {
     tuf::Error::Opaque(format!("{:#}", e))
 }
 
-impl RepositoryProvider<Json> for LocalMirrorRepositoryProvider {
+impl RepositoryProvider<Pouf1> for LocalMirrorRepositoryProvider {
     fn fetch_metadata<'a>(
         &'a self,
         meta_path: &MetadataPath,
         version: MetadataVersion,
     ) -> BoxFuture<'a, tuf::Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
         let meta_path = meta_path.clone();
-        let path = meta_path.components::<Json>(version).join("/");
+        let path = meta_path.components::<Pouf1>(version).join("/");
         async move {
             let (local, remote) = fidl::endpoints::create_endpoints::<fio::FileMarker>()
                 .context("creating file proxy")

@@ -26,8 +26,8 @@ use {
     },
     tracing::warn,
     tuf::{
-        interchange::Json,
         metadata::{MetadataPath, MetadataVersion, TargetPath},
+        pouf::Pouf1,
         repository::{
             FileSystemRepository as TufFileSystemRepository,
             FileSystemRepositoryBuilder as TufFileSystemRepositoryBuilder,
@@ -42,15 +42,15 @@ use {
 pub struct FileSystemRepository {
     metadata_repo_path: Utf8PathBuf,
     blob_repo_path: Utf8PathBuf,
-    tuf_repo: TufFileSystemRepository<Json>,
+    tuf_repo: TufFileSystemRepository<Pouf1>,
 }
 
 impl FileSystemRepository {
     /// Construct a [FileSystemRepository].
-    pub fn new(metadata_repo_path: Utf8PathBuf, blob_repo_path: Utf8PathBuf) -> Result<Self> {
-        let tuf_repo = TufFileSystemRepositoryBuilder::new(metadata_repo_path.clone()).build()?;
+    pub fn new(metadata_repo_path: Utf8PathBuf, blob_repo_path: Utf8PathBuf) -> Self {
+        let tuf_repo = TufFileSystemRepositoryBuilder::new(metadata_repo_path.clone()).build();
 
-        Ok(Self { metadata_repo_path, blob_repo_path, tuf_repo })
+        Self { metadata_repo_path, blob_repo_path, tuf_repo }
     }
 
     fn fetch<'a>(
@@ -215,7 +215,7 @@ impl RepoProvider for FileSystemRepository {
     }
 }
 
-impl TufRepositoryProvider<Json> for FileSystemRepository {
+impl TufRepositoryProvider<Pouf1> for FileSystemRepository {
     fn fetch_metadata<'a>(
         &'a self,
         meta_path: &MetadataPath,
@@ -232,9 +232,9 @@ impl TufRepositoryProvider<Json> for FileSystemRepository {
     }
 }
 
-impl TufRepositoryStorage<Json> for FileSystemRepository {
+impl TufRepositoryStorage<Pouf1> for FileSystemRepository {
     fn store_metadata<'a>(
-        &'a mut self,
+        &'a self,
         meta_path: &MetadataPath,
         version: MetadataVersion,
         metadata: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
@@ -243,7 +243,7 @@ impl TufRepositoryStorage<Json> for FileSystemRepository {
     }
 
     fn store_target<'a>(
-        &'a mut self,
+        &'a self,
         target_path: &TargetPath,
         target: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
     ) -> BoxFuture<'a, tuf::Result<()>> {
@@ -254,9 +254,9 @@ impl TufRepositoryStorage<Json> for FileSystemRepository {
 impl RepoStorage for FileSystemRepository {
     fn get_tuf_repo_storage(
         &self,
-    ) -> Result<Box<dyn RepositoryStorageProvider<Json> + Send + Sync>> {
+    ) -> Result<Box<dyn RepositoryStorageProvider<Pouf1> + Send + Sync>> {
         let repo =
-            TufFileSystemRepositoryBuilder::<Json>::new(self.metadata_repo_path.clone()).build()?;
+            TufFileSystemRepositoryBuilder::<Pouf1>::new(self.metadata_repo_path.clone()).build();
 
         Ok(Box::new(repo))
     }
@@ -330,7 +330,7 @@ mod tests {
                 _tmp: tmp,
                 metadata_path: metadata_path.clone(),
                 blob_path: blob_path.clone(),
-                repo: FileSystemRepository::new(metadata_path, blob_path).unwrap(),
+                repo: FileSystemRepository::new(metadata_path, blob_path),
             }
         }
     }

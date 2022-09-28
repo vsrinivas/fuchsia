@@ -2,10 +2,10 @@ use assert_matches::assert_matches;
 use chrono::offset::Utc;
 use futures_executor::block_on;
 use tuf::crypto::{Ed25519PrivateKey, HashAlgorithm, PrivateKey};
-use tuf::interchange::Json;
 use tuf::metadata::{
     Delegation, Delegations, MetadataDescription, MetadataPath, TargetPath, TargetsMetadataBuilder,
 };
+use tuf::pouf::Pouf1;
 use tuf::repo_builder::RepoBuilder;
 use tuf::repository::EphemeralRepository;
 use tuf::Database;
@@ -58,7 +58,7 @@ fn simple_delegation() {
             .await
             .unwrap();
 
-        let mut tuf = Database::<Json>::from_trusted_metadata(&metadata).unwrap();
+        let mut tuf = Database::<Pouf1>::from_trusted_metadata(&metadata).unwrap();
 
         //// build the targets ////
         //// build the delegation ////
@@ -70,7 +70,7 @@ fn simple_delegation() {
                 &[HashAlgorithm::Sha256],
             )
             .unwrap()
-            .signed::<Json>(&delegation_key)
+            .signed::<Pouf1>(&delegation_key)
             .unwrap();
         let raw_delegation = delegation.to_raw().unwrap();
 
@@ -136,7 +136,7 @@ fn nested_delegation() {
             .await
             .unwrap();
 
-        let mut tuf = Database::<Json>::from_trusted_metadata(&metadata).unwrap();
+        let mut tuf = Database::<Pouf1>::from_trusted_metadata(&metadata).unwrap();
 
         //// build delegation B ////
 
@@ -154,7 +154,7 @@ fn nested_delegation() {
 
         let delegation = TargetsMetadataBuilder::new()
             .delegations(delegations)
-            .signed::<Json>(&delegation_a_key)
+            .signed::<Pouf1>(&delegation_a_key)
             .unwrap();
         let raw_delegation = delegation.to_raw().unwrap();
 
@@ -177,7 +177,7 @@ fn nested_delegation() {
                 &[HashAlgorithm::Sha256],
             )
             .unwrap()
-            .signed::<Json>(&delegation_b_key)
+            .signed::<Pouf1>(&delegation_b_key)
             .unwrap();
         let raw_delegation = delegation.to_raw().unwrap();
 
@@ -236,7 +236,7 @@ fn rejects_bad_delegation_signatures() {
             .await
             .unwrap();
 
-        let mut tuf = Database::<Json>::from_trusted_metadata(&metadata).unwrap();
+        let mut tuf = Database::<Pouf1>::from_trusted_metadata(&metadata).unwrap();
 
         //// build the delegation ////
         let target_file: &[u8] = b"bar";
@@ -247,7 +247,7 @@ fn rejects_bad_delegation_signatures() {
                 &[HashAlgorithm::Sha256],
             )
             .unwrap()
-            .signed::<Json>(&bad_delegation_key)
+            .signed::<Pouf1>(&bad_delegation_key)
             .unwrap();
         let raw_delegation = delegation.to_raw().unwrap();
 
@@ -317,7 +317,7 @@ fn diamond_delegation() {
 
         let delegation_a = TargetsMetadataBuilder::new()
             .delegations(delegations_a)
-            .signed::<Json>(&delegation_a_key)
+            .signed::<Pouf1>(&delegation_a_key)
             .unwrap();
         let raw_delegation_a = delegation_a.to_raw().unwrap();
 
@@ -338,7 +338,7 @@ fn diamond_delegation() {
 
         let delegation_b = TargetsMetadataBuilder::new()
             .delegations(delegations_b)
-            .signed::<Json>(&delegation_b_key)
+            .signed::<Pouf1>(&delegation_b_key)
             .unwrap();
         let raw_delegation_b = delegation_b.to_raw().unwrap();
 
@@ -360,7 +360,7 @@ fn diamond_delegation() {
                 &[HashAlgorithm::Sha256],
             )
             .unwrap()
-            .signed::<Json>(&delegation_c_key)
+            .signed::<Pouf1>(&delegation_c_key)
             .unwrap();
         let raw_delegation_c = delegation_c.to_raw().unwrap();
 
@@ -427,7 +427,7 @@ fn diamond_delegation() {
             .await
             .unwrap();
 
-        let mut tuf = Database::<Json>::from_trusted_metadata(&metadata).unwrap();
+        let mut tuf = Database::<Pouf1>::from_trusted_metadata(&metadata).unwrap();
 
         //// Verify we can trust delegation-a and delegation-b..
 

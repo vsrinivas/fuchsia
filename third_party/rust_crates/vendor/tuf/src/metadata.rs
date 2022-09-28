@@ -14,8 +14,8 @@ use std::str;
 
 use crate::crypto::{self, HashAlgorithm, HashValue, KeyId, PrivateKey, PublicKey, Signature};
 use crate::error::Error;
-use crate::interchange::cjson::shims;
-use crate::interchange::DataInterchange;
+use crate::pouf::pouf1::shims;
+use crate::pouf::Pouf;
 use crate::Result;
 
 #[rustfmt::skip]
@@ -66,7 +66,6 @@ static PATH_ILLEGAL_STRINGS: &[&str] = &[
     "\"",
     "|",
     "?",
-    "*",
     // control characters, all illegal in FAT
     "\u{000}",
     "\u{001}",
@@ -257,7 +256,7 @@ pub struct RawSignedMetadata<D, M> {
 
 impl<D, M> RawSignedMetadata<D, M>
 where
-    D: DataInterchange,
+    D: Pouf,
     M: Metadata,
 {
     /// Create a new [`RawSignedMetadata`] using the provided `bytes`.
@@ -318,14 +317,14 @@ impl<D> RawSignedMetadataSet<D> {
 #[derive(Default)]
 pub struct RawSignedMetadataSetBuilder<D>
 where
-    D: DataInterchange,
+    D: Pouf,
 {
     metadata: RawSignedMetadataSet<D>,
 }
 
 impl<D> RawSignedMetadataSetBuilder<D>
 where
-    D: DataInterchange,
+    D: Pouf,
 {
     /// Create a new [RawSignedMetadataSetBuilder].
     pub fn new() -> Self {
@@ -373,7 +372,7 @@ where
 #[derive(Debug, Clone)]
 pub struct SignedMetadataBuilder<D, M>
 where
-    D: DataInterchange,
+    D: Pouf,
 {
     signatures: HashMap<KeyId, Signature>,
     metadata: D::RawData,
@@ -383,7 +382,7 @@ where
 
 impl<D, M> SignedMetadataBuilder<D, M>
 where
-    D: DataInterchange,
+    D: Pouf,
     M: Metadata,
 {
     /// Create a new `SignedMetadataBuilder` from a given `Metadata`.
@@ -440,7 +439,7 @@ where
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SignedMetadata<D, M>
 where
-    D: DataInterchange,
+    D: Pouf,
 {
     signatures: Vec<Signature>,
     #[serde(rename = "signed")]
@@ -451,7 +450,7 @@ where
 
 impl<D, M> SignedMetadata<D, M>
 where
-    D: DataInterchange,
+    D: Pouf,
     M: Metadata,
 {
     /// Create a new `SignedMetadata`. The supplied private key is used to sign the canonicalized
@@ -460,14 +459,14 @@ where
     /// ```
     /// # use chrono::prelude::*;
     /// # use tuf::crypto::{Ed25519PrivateKey, PrivateKey, SignatureScheme, HashAlgorithm};
-    /// # use tuf::interchange::Json;
+    /// # use tuf::pouf::Pouf1;
     /// # use tuf::metadata::{SignedMetadata, SnapshotMetadataBuilder};
     /// #
     /// # let key: &[u8] = include_bytes!("../tests/ed25519/ed25519-1.pk8.der");
     /// let key = Ed25519PrivateKey::from_pkcs8(&key).unwrap();
     ///
     /// let snapshot = SnapshotMetadataBuilder::new().build().unwrap();
-    /// SignedMetadata::<Json, _>::new(&snapshot, &key).unwrap();
+    /// SignedMetadata::<Pouf1, _>::new(&snapshot, &key).unwrap();
     /// ```
     pub fn new(metadata: &M, private_key: &dyn PrivateKey) -> Result<Self> {
         let raw = D::serialize(metadata)?;
@@ -489,8 +488,8 @@ where
     /// file, as:
     /// * Parsing metadata removes unknown fields, which would not be included in the returned
     /// bytes,
-    /// * DataInterchange implementations only guarantee the bytes are canonical for the purpose of
-    /// a signature. Metadata obtained from a remote source may have included different whitespace
+    /// * [Pouf] implementations only guarantee the bytes are canonical for the purpose of a
+    /// signature. Metadata obtained from a remote source may have included different whitespace
     /// or ordered fields in a way that is not preserved when parsing that metadata.
     pub fn to_raw(&self) -> Result<RawSignedMetadata<D, M>> {
         let bytes = D::canonicalize(&D::serialize(self)?)?;
@@ -508,7 +507,7 @@ where
     /// ```
     /// # use chrono::prelude::*;
     /// # use tuf::crypto::{Ed25519PrivateKey, PrivateKey, SignatureScheme, HashAlgorithm};
-    /// # use tuf::interchange::Json;
+    /// # use tuf::pouf::Pouf1;
     /// # use tuf::metadata::{SignedMetadata, SnapshotMetadataBuilder};
     /// #
     /// let key_1: &[u8] = include_bytes!("../tests/ed25519/ed25519-1.pk8.der");
@@ -520,7 +519,7 @@ where
     /// let key_2 = Ed25519PrivateKey::from_pkcs8(&key_2).unwrap();
     ///
     /// let snapshot = SnapshotMetadataBuilder::new().build().unwrap();
-    /// let mut snapshot = SignedMetadata::<Json, _>::new(&snapshot, &key_1).unwrap();
+    /// let mut snapshot = SignedMetadata::<Pouf1, _>::new(&snapshot, &key_1).unwrap();
     ///
     /// snapshot.add_signature(&key_2).unwrap();
     /// assert_eq!(snapshot.signatures().len(), 2);
@@ -725,7 +724,7 @@ impl RootMetadataBuilder {
     /// Construct a new `SignedMetadata<D, RootMetadata>`.
     pub fn signed<D>(self, private_key: &dyn PrivateKey) -> Result<SignedMetadata<D, RootMetadata>>
     where
-        D: DataInterchange,
+        D: Pouf,
     {
         SignedMetadata::new(&self.build()?, private_key)
     }
@@ -763,10 +762,10 @@ pub struct RootMetadata {
     expires: DateTime<Utc>,
     consistent_snapshot: bool,
     keys: HashMap<KeyId, PublicKey>,
-    root: RoleDefinition,
-    snapshot: RoleDefinition,
-    targets: RoleDefinition,
-    timestamp: RoleDefinition,
+    root: RoleDefinition<RootMetadata>,
+    snapshot: RoleDefinition<SnapshotMetadata>,
+    targets: RoleDefinition<TargetsMetadata>,
+    timestamp: RoleDefinition<TimestampMetadata>,
 }
 
 impl RootMetadata {
@@ -776,16 +775,15 @@ impl RootMetadata {
         expires: DateTime<Utc>,
         consistent_snapshot: bool,
         keys: HashMap<KeyId, PublicKey>,
-        root: RoleDefinition,
-        snapshot: RoleDefinition,
-        targets: RoleDefinition,
-        timestamp: RoleDefinition,
+        root: RoleDefinition<RootMetadata>,
+        snapshot: RoleDefinition<SnapshotMetadata>,
+        targets: RoleDefinition<TargetsMetadata>,
+        timestamp: RoleDefinition<TimestampMetadata>,
     ) -> Result<Self> {
         if version < 1 {
-            return Err(Error::IllegalArgument(format!(
-                "Metadata version must be greater than zero. Found: {}",
-                version
-            )));
+            return Err(Error::MetadataVersionMustBeGreaterThanZero(
+                MetadataPath::root(),
+            ));
         }
 
         Ok(RootMetadata {
@@ -844,22 +842,22 @@ impl RootMetadata {
     }
 
     /// An immutable reference to the root role's definition.
-    pub fn root(&self) -> &RoleDefinition {
+    pub fn root(&self) -> &RoleDefinition<RootMetadata> {
         &self.root
     }
 
     /// An immutable reference to the snapshot role's definition.
-    pub fn snapshot(&self) -> &RoleDefinition {
+    pub fn snapshot(&self) -> &RoleDefinition<SnapshotMetadata> {
         &self.snapshot
     }
 
     /// An immutable reference to the targets role's definition.
-    pub fn targets(&self) -> &RoleDefinition {
+    pub fn targets(&self) -> &RoleDefinition<TargetsMetadata> {
         &self.targets
     }
 
     /// An immutable reference to the timestamp role's definition.
-    pub fn timestamp(&self) -> &RoleDefinition {
+    pub fn timestamp(&self) -> &RoleDefinition<TimestampMetadata> {
         &self.timestamp
     }
 }
@@ -898,33 +896,34 @@ impl<'de> Deserialize<'de> for RootMetadata {
 
 /// The definition of what allows a role to be trusted.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct RoleDefinition {
+pub struct RoleDefinition<M: Metadata> {
     threshold: u32,
     key_ids: HashSet<KeyId>,
+    _metadata: PhantomData<M>,
 }
 
-impl RoleDefinition {
+impl<M: Metadata> RoleDefinition<M> {
     /// Create a new [RoleDefinition] with a given threshold and set of authorized [KeyId]s.
     pub fn new(threshold: u32, key_ids: HashSet<KeyId>) -> Result<Self> {
         if threshold < 1 {
-            return Err(Error::IllegalArgument(format!("Threshold: {}", threshold)));
-        }
-
-        if key_ids.is_empty() {
-            return Err(Error::IllegalArgument(
-                "Cannot define a role with no associated key IDs".into(),
+            return Err(Error::MetadataThresholdMustBeGreaterThanZero(
+                M::ROLE.into(),
             ));
         }
 
         if (key_ids.len() as u64) < u64::from(threshold) {
-            return Err(Error::IllegalArgument(format!(
-                "Cannot have a threshold greater than the number of associated key IDs. {} vs. {}",
+            return Err(Error::MetadataRoleDoesNotHaveEnoughKeyIds {
+                role: M::ROLE.into(),
+                key_ids: key_ids.len(),
                 threshold,
-                key_ids.len()
-            )));
+            });
         }
 
-        Ok(RoleDefinition { threshold, key_ids })
+        Ok(RoleDefinition {
+            threshold,
+            key_ids,
+            _metadata: PhantomData,
+        })
     }
 
     /// The threshold number of signatures required for the role to be trusted.
@@ -938,20 +937,18 @@ impl RoleDefinition {
     }
 }
 
-impl Serialize for RoleDefinition {
+impl<M: Metadata> Serialize for RoleDefinition<M> {
     fn serialize<S>(&self, ser: S) -> ::std::result::Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        shims::RoleDefinition::from(self)
-            .map_err(|e| SerializeError::custom(format!("{:?}", e)))?
-            .serialize(ser)
+        shims::RoleDefinition::from(self).serialize(ser)
     }
 }
 
-impl<'de> Deserialize<'de> for RoleDefinition {
+impl<'de, M: Metadata> Deserialize<'de> for RoleDefinition<M> {
     fn deserialize<D: Deserializer<'de>>(de: D) -> ::std::result::Result<Self, D::Error> {
-        let intermediate: shims::RoleDefinition = Deserialize::deserialize(de)?;
+        let intermediate = shims::RoleDefinition::deserialize(de)?;
         intermediate
             .try_into()
             .map_err(|e| DeserializeError::custom(format!("{:?}", e)))
@@ -961,7 +958,7 @@ impl<'de> Deserialize<'de> for RoleDefinition {
 /// Wrapper for a path to metadata.
 ///
 /// Note: This should **not** contain the file extension. This is automatically added by the
-/// library depending on what type of data interchange format is being used.
+/// library depending on what type of data pouf format is being used.
 ///
 /// ```
 /// use tuf::metadata::MetadataPath;
@@ -1028,18 +1025,18 @@ impl MetadataPath {
     ///
     /// ```
     /// # use tuf::crypto::HashValue;
-    /// # use tuf::interchange::Json;
+    /// # use tuf::pouf::Pouf1;
     /// # use tuf::metadata::{MetadataPath, MetadataVersion};
     /// #
     /// let path = MetadataPath::new("foo/bar").unwrap();
-    /// assert_eq!(path.components::<Json>(MetadataVersion::None),
+    /// assert_eq!(path.components::<Pouf1>(MetadataVersion::None),
     ///            ["foo".to_string(), "bar.json".to_string()]);
-    /// assert_eq!(path.components::<Json>(MetadataVersion::Number(1)),
+    /// assert_eq!(path.components::<Pouf1>(MetadataVersion::Number(1)),
     ///            ["foo".to_string(), "1.bar.json".to_string()]);
     /// ```
     pub fn components<D>(&self, version: MetadataVersion) -> Vec<String>
     where
-        D: DataInterchange,
+        D: Pouf,
     {
         let mut buf: Vec<String> = self.0.split('/').map(|s| s.to_string()).collect();
         let len = buf.len();
@@ -1076,7 +1073,7 @@ impl<'de> Deserialize<'de> for MetadataPath {
 pub struct TimestampMetadataBuilder {
     version: u32,
     expires: DateTime<Utc>,
-    snapshot: MetadataDescription,
+    snapshot: MetadataDescription<SnapshotMetadata>,
 }
 
 impl TimestampMetadataBuilder {
@@ -1089,7 +1086,7 @@ impl TimestampMetadataBuilder {
         hash_algs: &[HashAlgorithm],
     ) -> Result<Self>
     where
-        D: DataInterchange,
+        D: Pouf,
     {
         let raw_snapshot = snapshot.to_raw()?;
         let description = MetadataDescription::from_slice(
@@ -1106,7 +1103,7 @@ impl TimestampMetadataBuilder {
     ///
     /// * version: 1
     /// * expires: 1 day from the current time.
-    pub fn from_metadata_description(description: MetadataDescription) -> Self {
+    pub fn from_metadata_description(description: MetadataDescription<SnapshotMetadata>) -> Self {
         TimestampMetadataBuilder {
             version: 1,
             expires: Utc::now() + Duration::days(1),
@@ -1137,7 +1134,7 @@ impl TimestampMetadataBuilder {
         private_key: &dyn PrivateKey,
     ) -> Result<SignedMetadata<D, TimestampMetadata>>
     where
-        D: DataInterchange,
+        D: Pouf,
     {
         SignedMetadata::new(&self.build()?, private_key)
     }
@@ -1148,7 +1145,7 @@ impl TimestampMetadataBuilder {
 pub struct TimestampMetadata {
     version: u32,
     expires: DateTime<Utc>,
-    snapshot: MetadataDescription,
+    snapshot: MetadataDescription<SnapshotMetadata>,
 }
 
 impl TimestampMetadata {
@@ -1156,13 +1153,12 @@ impl TimestampMetadata {
     pub fn new(
         version: u32,
         expires: DateTime<Utc>,
-        snapshot: MetadataDescription,
+        snapshot: MetadataDescription<SnapshotMetadata>,
     ) -> Result<Self> {
         if version < 1 {
-            return Err(Error::IllegalArgument(format!(
-                "Metadata version must be greater than zero. Found: {}",
-                version
-            )));
+            return Err(Error::MetadataVersionMustBeGreaterThanZero(
+                MetadataPath::timestamp(),
+            ));
         }
 
         Ok(TimestampMetadata {
@@ -1173,7 +1169,7 @@ impl TimestampMetadata {
     }
 
     /// An immutable reference to the snapshot description.
-    pub fn snapshot(&self) -> &MetadataDescription {
+    pub fn snapshot(&self) -> &MetadataDescription<SnapshotMetadata> {
         &self.snapshot
     }
 }
@@ -1211,16 +1207,15 @@ impl<'de> Deserialize<'de> for TimestampMetadata {
 }
 
 /// Description of a piece of metadata, used in verification.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct MetadataDescription {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MetadataDescription<M: Metadata> {
     version: u32,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     length: Option<usize>,
-    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     hashes: HashMap<HashAlgorithm, HashValue>,
+    _metadata: PhantomData<M>,
 }
 
-impl MetadataDescription {
+impl<M: Metadata> MetadataDescription<M> {
     /// Create a `MetadataDescription` from a slice. Size and hashes will be calculated.
     pub fn from_slice(buf: &[u8], version: u32, hash_algs: &[HashAlgorithm]) -> Result<Self> {
         if version < 1 {
@@ -1239,6 +1234,7 @@ impl MetadataDescription {
             version,
             length: Some(buf.len()),
             hashes,
+            _metadata: PhantomData,
         })
     }
 
@@ -1249,16 +1245,14 @@ impl MetadataDescription {
         hashes: HashMap<HashAlgorithm, HashValue>,
     ) -> Result<Self> {
         if version < 1 {
-            return Err(Error::IllegalArgument(format!(
-                "Metadata version must be greater than zero. Found: {}",
-                version
-            )));
+            return Err(Error::MetadataVersionMustBeGreaterThanZero(M::ROLE.into()));
         }
 
         Ok(MetadataDescription {
             version,
             length,
             hashes,
+            _metadata: PhantomData,
         })
     }
 
@@ -1278,9 +1272,18 @@ impl MetadataDescription {
     }
 }
 
-impl<'de> Deserialize<'de> for MetadataDescription {
+impl<M: Metadata> Serialize for MetadataDescription<M> {
+    fn serialize<S>(&self, ser: S) -> ::std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        shims::MetadataDescription::from(self).serialize(ser)
+    }
+}
+
+impl<'de, M: Metadata> Deserialize<'de> for MetadataDescription<M> {
     fn deserialize<D: Deserializer<'de>>(de: D) -> ::std::result::Result<Self, D::Error> {
-        let intermediate: shims::MetadataDescription = Deserialize::deserialize(de)?;
+        let intermediate = shims::MetadataDescription::deserialize(de)?;
         intermediate
             .try_into()
             .map_err(|e| DeserializeError::custom(format!("{:?}", e)))
@@ -1291,7 +1294,7 @@ impl<'de> Deserialize<'de> for MetadataDescription {
 pub struct SnapshotMetadataBuilder {
     version: u32,
     expires: DateTime<Utc>,
-    meta: HashMap<MetadataPath, MetadataDescription>,
+    meta: HashMap<MetadataPath, MetadataDescription<TargetsMetadata>>,
 }
 
 impl SnapshotMetadataBuilder {
@@ -1316,7 +1319,7 @@ impl SnapshotMetadataBuilder {
         hash_algs: &[HashAlgorithm],
     ) -> Result<Self>
     where
-        D: DataInterchange,
+        D: Pouf,
     {
         SnapshotMetadataBuilder::new().insert_metadata(targets, hash_algs)
     }
@@ -1341,7 +1344,7 @@ impl SnapshotMetadataBuilder {
     ) -> Result<Self>
     where
         M: Metadata,
-        D: DataInterchange,
+        D: Pouf,
     {
         self.insert_metadata_with_path(M::ROLE.name(), metadata, hash_algs)
     }
@@ -1356,7 +1359,7 @@ impl SnapshotMetadataBuilder {
     where
         P: Into<Cow<'static, str>>,
         M: Metadata,
-        D: DataInterchange,
+        D: Pouf,
     {
         let raw_metadata = metadata.to_raw()?;
         let description = MetadataDescription::from_slice(
@@ -1372,7 +1375,7 @@ impl SnapshotMetadataBuilder {
     pub fn insert_metadata_description(
         mut self,
         path: MetadataPath,
-        description: MetadataDescription,
+        description: MetadataDescription<TargetsMetadata>,
     ) -> Self {
         self.meta.insert(path, description);
         self
@@ -1389,7 +1392,7 @@ impl SnapshotMetadataBuilder {
         private_key: &dyn PrivateKey,
     ) -> Result<SignedMetadata<D, SnapshotMetadata>>
     where
-        D: DataInterchange,
+        D: Pouf,
     {
         SignedMetadata::new(&self.build()?, private_key)
     }
@@ -1416,7 +1419,7 @@ impl From<SnapshotMetadata> for SnapshotMetadataBuilder {
 pub struct SnapshotMetadata {
     version: u32,
     expires: DateTime<Utc>,
-    meta: HashMap<MetadataPath, MetadataDescription>,
+    meta: HashMap<MetadataPath, MetadataDescription<TargetsMetadata>>,
 }
 
 impl SnapshotMetadata {
@@ -1424,13 +1427,12 @@ impl SnapshotMetadata {
     pub fn new(
         version: u32,
         expires: DateTime<Utc>,
-        meta: HashMap<MetadataPath, MetadataDescription>,
+        meta: HashMap<MetadataPath, MetadataDescription<TargetsMetadata>>,
     ) -> Result<Self> {
         if version < 1 {
-            return Err(Error::IllegalArgument(format!(
-                "Metadata version must be greater than zero. Found: {}",
-                version
-            )));
+            return Err(Error::MetadataVersionMustBeGreaterThanZero(
+                MetadataPath::snapshot(),
+            ));
         }
 
         Ok(SnapshotMetadata {
@@ -1441,7 +1443,7 @@ impl SnapshotMetadata {
     }
 
     /// An immutable reference to the metadata paths and descriptions.
-    pub fn meta(&self) -> &HashMap<MetadataPath, MetadataDescription> {
+    pub fn meta(&self) -> &HashMap<MetadataPath, MetadataDescription<TargetsMetadata>> {
         &self.meta
     }
 }
@@ -1853,10 +1855,9 @@ impl TargetsMetadata {
         delegations: Delegations,
     ) -> Result<Self> {
         if version < 1 {
-            return Err(Error::IllegalArgument(format!(
-                "Metadata version must be greater than zero. Found: {}",
-                version
-            )));
+            return Err(Error::MetadataVersionMustBeGreaterThanZero(
+                MetadataPath::targets(),
+            ));
         }
 
         Ok(TargetsMetadata {
@@ -2001,7 +2002,7 @@ impl TargetsMetadataBuilder {
         private_key: &dyn PrivateKey,
     ) -> Result<SignedMetadata<D, TargetsMetadata>>
     where
-        D: DataInterchange,
+        D: Pouf,
     {
         SignedMetadata::new(&self.build()?, private_key)
     }
@@ -2281,7 +2282,7 @@ impl DelegationBuilder {
 mod test {
     use super::*;
     use crate::crypto::Ed25519PrivateKey;
-    use crate::interchange::Json;
+    use crate::pouf::Pouf1;
     use crate::verify::verify_signatures;
     use assert_matches::assert_matches;
     use chrono::prelude::*;
@@ -2311,6 +2312,23 @@ mod test {
             assert!(TargetPath::new(path.to_string()).is_err());
             assert!(MetadataPath::new(path.to_string()).is_err());
             assert!(TargetPath::new(path.to_string()).is_err());
+        }
+    }
+
+    #[test]
+    fn allow_asterisk_in_target_path() {
+        let good_paths = &[
+            "*",
+            "*/some/path",
+            "*/some/path/",
+            "some/*/path",
+            "some/*/path/*",
+        ];
+
+        for path in good_paths.iter() {
+            assert!(safe_path(path).is_ok());
+            assert!(TargetPath::new(path.to_string()).is_ok());
+            assert!(MetadataPath::new(path.to_string()).is_ok());
         }
     }
 
@@ -2419,7 +2437,7 @@ mod test {
         });
         let encoded = serde_json::to_value(&role_def).unwrap();
         assert_eq!(encoded, jsn);
-        let decoded: RoleDefinition = serde_json::from_value(encoded).unwrap();
+        let decoded: RoleDefinition<RootMetadata> = serde_json::from_value(encoded).unwrap();
         assert_eq!(decoded, role_def);
     }
 
@@ -2432,7 +2450,7 @@ mod test {
                 "4750eaf6878740780d6f97b12dbad079fb012bec88c78de2c380add56d3f51db",
             ],
         });
-        assert!(serde_json::from_value::<RoleDefinition>(jsn).is_err());
+        assert!(serde_json::from_value::<RoleDefinition<RootMetadata>>(jsn).is_err());
 
         let jsn = json!({
             "threshold": -1,
@@ -2441,7 +2459,7 @@ mod test {
                 "4750eaf6878740780d6f97b12dbad079fb012bec88c78de2c380add56d3f51db",
             ],
         });
-        assert!(serde_json::from_value::<RoleDefinition>(jsn).is_err());
+        assert!(serde_json::from_value::<RoleDefinition<RootMetadata>>(jsn).is_err());
     }
 
     #[test]
@@ -2596,7 +2614,7 @@ mod test {
     #[test]
     fn de_ser_root_metadata_wrong_key_id() {
         let jsn = jsn_root_metadata_without_keyid_hash_algos();
-        let mut jsn_str = str::from_utf8(&Json::canonicalize(&jsn).unwrap())
+        let mut jsn_str = str::from_utf8(&Pouf1::canonicalize(&jsn).unwrap())
             .unwrap()
             .to_owned();
         // Replace the key id to something else.
@@ -2614,7 +2632,7 @@ mod test {
         let root_key = Ed25519PrivateKey::from_pkcs8(ED25519_1_PK8).unwrap();
         let decoded: RootMetadata = serde_json::from_value(jsn).unwrap();
 
-        let signed: SignedMetadata<crate::interchange::cjson::Json, _> =
+        let signed: SignedMetadata<crate::pouf::pouf1::Pouf1, _> =
             SignedMetadata::new(&decoded, &root_key).unwrap();
         let raw_root = signed.to_raw().unwrap();
 
@@ -2639,7 +2657,7 @@ mod test {
             "signed": jsn_root_metadata_without_keyid_hash_algos()
         });
         let root_key = Ed25519PrivateKey::from_pkcs8(ED25519_1_PK8).unwrap();
-        let decoded: SignedMetadata<crate::interchange::cjson::Json, RootMetadata> =
+        let decoded: SignedMetadata<crate::pouf::pouf1::Pouf1, RootMetadata> =
             serde_json::from_value(jsn).unwrap();
         let raw_root = decoded.to_raw().unwrap();
 
@@ -2668,7 +2686,7 @@ mod test {
             "signed": jsn_root_metadata_without_keyid_hash_algos()
         });
         let root_key = Ed25519PrivateKey::from_pkcs8(ED25519_1_PK8).unwrap();
-        let decoded: SignedMetadata<crate::interchange::cjson::Json, RootMetadata> =
+        let decoded: SignedMetadata<crate::pouf::pouf1::Pouf1, RootMetadata> =
             serde_json::from_value(jsn).unwrap();
         let raw_root = decoded.to_raw().unwrap();
         assert_matches!(
@@ -2698,7 +2716,7 @@ mod test {
         let key = Ed25519PrivateKey::from_pkcs8(ED25519_1_PK8).unwrap();
         let public_keys = vec![key.public().clone()];
 
-        let mut standard = SignedMetadataBuilder::<Json, M>::from_raw_metadata(metadata.clone())
+        let mut standard = SignedMetadataBuilder::<Pouf1, M>::from_raw_metadata(metadata.clone())
             .unwrap()
             .sign(&key)
             .unwrap()
@@ -2715,7 +2733,7 @@ mod test {
                 "this-too": 42,
             }),
         );
-        let mut custom = SignedMetadataBuilder::<Json, M>::from_raw_metadata(metadata)
+        let mut custom = SignedMetadataBuilder::<Pouf1, M>::from_raw_metadata(metadata)
             .unwrap()
             .sign(&key)
             .unwrap()
@@ -3139,7 +3157,7 @@ mod test {
 
         let key = Ed25519PrivateKey::from_pkcs8(ED25519_1_PK8).unwrap();
 
-        let signed = SignedMetadata::<Json, _>::new(&snapshot, &key).unwrap();
+        let signed = SignedMetadata::<Pouf1, _>::new(&snapshot, &key).unwrap();
 
         let jsn = json!({
             "signatures": [
@@ -3169,7 +3187,7 @@ mod test {
 
         let encoded = serde_json::to_value(&signed).unwrap();
         assert_eq!(encoded, jsn, "{:#?} != {:#?}", encoded, jsn);
-        let decoded: SignedMetadata<Json, SnapshotMetadata> =
+        let decoded: SignedMetadata<Pouf1, SnapshotMetadata> =
             serde_json::from_value(encoded).unwrap();
         assert_eq!(decoded, signed);
     }
@@ -3375,7 +3393,7 @@ mod test {
     // Refuse to deserialize role definitions with illegal thresholds
     #[test]
     fn deserialize_json_role_definition_illegal_threshold() {
-        let role_def = RoleDefinition::new(
+        let role_def = RoleDefinition::<RootMetadata>::new(
             1,
             hashset![Ed25519PrivateKey::from_pkcs8(ED25519_1_PK8)
                 .unwrap()
@@ -3387,13 +3405,13 @@ mod test {
 
         let mut jsn = serde_json::to_value(&role_def).unwrap();
         set_threshold(&mut jsn, 0);
-        assert!(serde_json::from_value::<RoleDefinition>(jsn).is_err());
+        assert!(serde_json::from_value::<RoleDefinition<RootMetadata>>(jsn).is_err());
 
         let mut jsn = serde_json::to_value(&role_def).unwrap();
         set_threshold(&mut jsn, -1);
-        assert!(serde_json::from_value::<RoleDefinition>(jsn).is_err());
+        assert!(serde_json::from_value::<RoleDefinition<RootMetadata>>(jsn).is_err());
 
-        let role_def = RoleDefinition::new(
+        let role_def = RoleDefinition::<RootMetadata>::new(
             2,
             hashset![
                 Ed25519PrivateKey::from_pkcs8(ED25519_1_PK8)
@@ -3412,7 +3430,7 @@ mod test {
 
         let mut jsn = serde_json::to_value(&role_def).unwrap();
         set_threshold(&mut jsn, 3);
-        assert!(serde_json::from_value::<RoleDefinition>(jsn).is_err());
+        assert!(serde_json::from_value::<RoleDefinition<RootMetadata>>(jsn).is_err());
     }
 
     // Refuse to deserialize root metadata with wrong type field
@@ -3445,7 +3463,7 @@ mod test {
             .public()
             .key_id()
             .clone();
-        let role_def = RoleDefinition::new(1, hashset![key_id.clone()]).unwrap();
+        let role_def = RoleDefinition::<RootMetadata>::new(1, hashset![key_id.clone()]).unwrap();
         let mut jsn = serde_json::to_value(&role_def).unwrap();
 
         match jsn.as_object_mut() {
@@ -3456,7 +3474,7 @@ mod test {
             None => panic!(),
         }
 
-        assert!(serde_json::from_value::<RoleDefinition>(jsn).is_err());
+        assert!(serde_json::from_value::<RoleDefinition<RootMetadata>>(jsn).is_err());
     }
 
     // Refuse to deserialize snapshot metadata with illegal versions

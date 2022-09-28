@@ -12,7 +12,7 @@
 [package]
 edition = "2021"
 name = "tuf"
-version = "0.3.0-beta10"
+version = "0.3.0-beta11"
 authors = [
     "heartsucker <heartsucker@autistici.org>",
     "Erick Tryzelaar <etryzelaar@google.com>",
@@ -29,6 +29,7 @@ keywords = [
 categories = ["cryptography"]
 license = "MIT/Apache-2.0"
 repository = "https://github.com/theupdateframework/rust-tuf"
+resolver = "1"
 
 [lib]
 name = "tuf"

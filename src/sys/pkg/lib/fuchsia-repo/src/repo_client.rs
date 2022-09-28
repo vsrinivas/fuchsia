@@ -32,11 +32,11 @@ use {
     tuf::{
         client::{Client as TufClient, Config},
         crypto::KeyType,
-        interchange::Json,
         metadata::{
             Metadata as _, MetadataPath, MetadataVersion, RawSignedMetadata, TargetDescription,
             TargetPath, TargetsMetadata,
         },
+        pouf::Pouf1,
         repository::{
             EphemeralRepository, RepositoryProvider, RepositoryProvider as TufRepositoryProvider,
             RepositoryStorage as TufRepositoryStorage,
@@ -61,7 +61,7 @@ where
     rx_on_drop: futures::future::Shared<futures::channel::oneshot::Receiver<()>>,
 
     /// The TUF client for this repository
-    tuf_client: TufClient<Json, EphemeralRepository<Json>, R>,
+    tuf_client: TufClient<Pouf1, EphemeralRepository<Pouf1>, R>,
 }
 
 impl<R> RepoClient<R>
@@ -77,15 +77,14 @@ where
 
     /// Creates a [RepoClient] that communicates with the remote [RepoProvider] with a trusted TUF
     /// [Database].
-    pub async fn from_database(database: Database<Json>, remote: R) -> Result<Self> {
+    pub fn from_database(database: Database<Pouf1>, remote: R) -> Self {
         let local = EphemeralRepository::new();
-        let tuf_client =
-            TufClient::from_database(Config::default(), database, local, remote).await?;
+        let tuf_client = TufClient::from_database(Config::default(), database, local, remote);
 
-        Ok(Self::new(tuf_client))
+        Self::new(tuf_client)
     }
 
-    fn new(tuf_client: TufClient<Json, EphemeralRepository<Json>, R>) -> Self {
+    fn new(tuf_client: TufClient<Pouf1, EphemeralRepository<Pouf1>, R>) -> Self {
         let (tx_on_drop, rx_on_drop) = futures::channel::oneshot::channel();
         let rx_on_drop = rx_on_drop.shared();
 
@@ -98,7 +97,7 @@ where
     }
 
     /// Returns the client's tuf [Database].
-    pub fn database(&self) -> &tuf::Database<Json> {
+    pub fn database(&self) -> &tuf::Database<Pouf1> {
         self.tuf_client.database()
     }
 
@@ -420,7 +419,7 @@ where
     }
 }
 
-impl<R> TufRepositoryProvider<Json> for RepoClient<R>
+impl<R> TufRepositoryProvider<Pouf1> for RepoClient<R>
 where
     R: RepoProvider,
 {
@@ -440,25 +439,25 @@ where
     }
 }
 
-impl<R> TufRepositoryStorage<Json> for RepoClient<R>
+impl<R> TufRepositoryStorage<Pouf1> for RepoClient<R>
 where
-    R: RepoProvider + TufRepositoryStorage<Json>,
+    R: RepoProvider + TufRepositoryStorage<Pouf1>,
 {
     fn store_metadata<'a>(
-        &'a mut self,
+        &'a self,
         meta_path: &MetadataPath,
         version: MetadataVersion,
         metadata: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
     ) -> BoxFuture<'a, tuf::Result<()>> {
-        self.tuf_client.remote_repo_mut().store_metadata(meta_path, version, metadata)
+        self.tuf_client.remote_repo().store_metadata(meta_path, version, metadata)
     }
 
     fn store_target<'a>(
-        &'a mut self,
+        &'a self,
         target_path: &TargetPath,
         target: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
     ) -> BoxFuture<'a, tuf::Result<()>> {
-        self.tuf_client.remote_repo_mut().store_target(target_path, target)
+        self.tuf_client.remote_repo().store_target(target_path, target)
     }
 }
 
@@ -512,11 +511,11 @@ fn is_component_manifest(s: &str) -> bool {
 
 pub(crate) async fn get_tuf_client<R>(
     tuf_repo: R,
-) -> Result<TufClient<Json, EphemeralRepository<Json>, R>, anyhow::Error>
+) -> Result<TufClient<Pouf1, EphemeralRepository<Pouf1>, R>, anyhow::Error>
 where
-    R: RepositoryProvider<Json> + Sync,
+    R: RepositoryProvider<Pouf1> + Sync,
 {
-    let metadata_repo = EphemeralRepository::<Json>::new();
+    let metadata_repo = EphemeralRepository::<Pouf1>::new();
 
     let raw_signed_meta = {
         // FIXME(http://fxbug.dev/92126) we really should be initializing trust, rather than just
@@ -535,7 +534,7 @@ where
         let mut buf = Vec::new();
         root.read_to_end(&mut buf).await.context("reading metadata")?;
 
-        RawSignedMetadata::<Json, _>::new(buf)
+        RawSignedMetadata::<Pouf1, _>::new(buf)
     };
 
     let client =
@@ -727,10 +726,9 @@ mod tests {
         let metadata_dir = dir.join("repository");
         create_dir_all(&metadata_dir).unwrap();
 
-        let mut repo = FileSystemRepositoryBuilder::<Json>::new(metadata_dir.clone())
+        let mut repo = FileSystemRepositoryBuilder::<Pouf1>::new(metadata_dir.clone())
             .targets_prefix("targets")
-            .build()
-            .unwrap();
+            .build();
 
         let key = repo_private_key();
         let metadata = RepoBuilder::create(&mut repo)
@@ -755,12 +753,12 @@ mod tests {
             .await
             .unwrap();
 
-        let backend = PmRepository::new(dir.to_path_buf()).unwrap();
+        let backend = PmRepository::new(dir.to_path_buf());
         let _repo = RepoClient::from_trusted_remote(backend).await.unwrap();
 
         std::fs::remove_file(dir.join("repository").join("1.root.json")).unwrap();
 
-        let backend = PmRepository::new(dir.to_path_buf()).unwrap();
+        let backend = PmRepository::new(dir.to_path_buf());
         let _repo = RepoClient::from_trusted_remote(backend).await.unwrap();
     }
 

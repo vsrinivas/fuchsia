@@ -21,13 +21,10 @@ use {
         header::{CONTENT_LENGTH, CONTENT_RANGE, RANGE},
         Body, Method, Request, StatusCode, Uri,
     },
-    std::{
-        fmt::{self, Debug},
-        time::SystemTime,
-    },
+    std::{fmt::Debug, time::SystemTime},
     tuf::{
-        interchange::Json,
         metadata::{MetadataPath, MetadataVersion, TargetPath},
+        pouf::Pouf1,
         repository::{
             HttpRepository as TufHttpRepository, HttpRepositoryBuilder as TufHttpRepositoryBuilder,
             RepositoryProvider as TufRepositoryProvider,
@@ -36,12 +33,13 @@ use {
     url::Url,
 };
 
+#[derive(Debug)]
 pub struct HttpRepository<C>
 where
     C: Connect + Send + Sync + 'static,
 {
     client: Client<C, Body>,
-    tuf_repo: TufHttpRepository<C, Json>,
+    tuf_repo: TufHttpRepository<C, Pouf1>,
     metadata_repo_url: Url,
     blob_repo_url: Url,
 }
@@ -66,7 +64,7 @@ where
             blob_repo_url.set_path(&format!("{}/", blob_repo_url.path()));
         }
 
-        let tuf_repo = TufHttpRepositoryBuilder::<_, Json>::new(
+        let tuf_repo = TufHttpRepositoryBuilder::<_, Pouf1>::new(
             metadata_repo_url.clone().into(),
             client.clone(),
         )
@@ -216,19 +214,7 @@ where
     }
 }
 
-impl<C> Debug for HttpRepository<C>
-where
-    C: Connect + Clone + Debug + Send + Sync + 'static,
-{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("HttpRepository")
-            .field("metadata_repo_url", &self.metadata_repo_url)
-            .field("metadata_blob_url", &self.blob_repo_url)
-            .finish_non_exhaustive()
-    }
-}
-
-impl<C> TufRepositoryProvider<Json> for HttpRepository<C>
+impl<C> TufRepositoryProvider<Pouf1> for HttpRepository<C>
 where
     C: Connect + Clone + Debug + Send + Sync + 'static,
 {

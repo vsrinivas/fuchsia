@@ -11,7 +11,7 @@
 //! # use tuf::crypto::PublicKey;
 //! # use tuf::client::{Client, Config};
 //! # use tuf::metadata::{RootMetadata, Role, MetadataPath, MetadataVersion};
-//! # use tuf::interchange::Json;
+//! # use tuf::pouf::Pouf1;
 //! # use tuf::repository::{FileSystemRepository, HttpRepositoryBuilder};
 //! #
 //! # const PUBLIC_KEY: &'static [u8] = include_bytes!("../tests/ed25519/ed25519-1.pub");
@@ -23,7 +23,7 @@
 //! # fn main() -> Result<()> {
 //! # block_on(async {
 //! let root_public_keys = load_root_public_keys();
-//! let local = FileSystemRepository::<Json>::new(PathBuf::from("~/.rustup"))?;
+//! let local = FileSystemRepository::<Pouf1>::new(PathBuf::from("~/.rustup"));
 //!
 //! let remote = HttpRepositoryBuilder::new_with_uri(
 //!     "https://static.rust-lang.org/".parse::<http::Uri>().unwrap(),
@@ -56,11 +56,11 @@ use std::pin::Pin;
 use crate::crypto::{self, HashAlgorithm, HashValue, PublicKey};
 use crate::database::Database;
 use crate::error::{Error, Result};
-use crate::interchange::DataInterchange;
 use crate::metadata::{
     Metadata, MetadataPath, MetadataVersion, RawSignedMetadata, RootMetadata, SnapshotMetadata,
     TargetDescription, TargetPath, TargetsMetadata,
 };
+use crate::pouf::Pouf;
 use crate::repository::{Repository, RepositoryProvider, RepositoryStorage};
 use crate::verify::Verified;
 
@@ -68,7 +68,7 @@ use crate::verify::Verified;
 #[derive(Debug)]
 pub struct Client<D, L, R>
 where
-    D: DataInterchange + Sync,
+    D: Pouf,
     L: RepositoryProvider<D> + RepositoryStorage<D>,
     R: RepositoryProvider<D>,
 {
@@ -80,7 +80,7 @@ where
 
 impl<D, L, R> Client<D, L, R>
 where
-    D: DataInterchange + Sync,
+    D: Pouf,
     L: RepositoryProvider<D> + RepositoryStorage<D>,
     R: RepositoryProvider<D>,
 {
@@ -98,7 +98,7 @@ where
     /// # use futures_executor::block_on;
     /// # use tuf::{
     /// #     Error,
-    /// #     interchange::Json,
+    /// #     pouf::Pouf1,
     /// #     client::{Client, Config},
     /// #     crypto::{Ed25519PrivateKey, PrivateKey, SignatureScheme},
     /// #     metadata::{MetadataPath, MetadataVersion, Role, RootMetadataBuilder},
@@ -110,8 +110,8 @@ where
     /// #     &Ed25519PrivateKey::pkcs8()?,
     /// # )?;
     /// # let public_key = private_key.public().clone();
-    /// let mut local = EphemeralRepository::<Json>::new();
-    /// let remote = EphemeralRepository::<Json>::new();
+    /// let mut local = EphemeralRepository::<Pouf1>::new();
+    /// let remote = EphemeralRepository::<Pouf1>::new();
     ///
     /// let root_version = 1;
     /// let root = RootMetadataBuilder::new()
@@ -121,7 +121,7 @@ where
     ///     .snapshot_key(public_key.clone())
     ///     .targets_key(public_key.clone())
     ///     .timestamp_key(public_key.clone())
-    ///     .signed::<Json>(&private_key)?;
+    ///     .signed::<Pouf1>(&private_key)?;
     ///
     /// let root_path = MetadataPath::root();
     /// let root_version = MetadataVersion::Number(root_version);
@@ -166,7 +166,7 @@ where
     /// # use futures_executor::block_on;
     /// # use tuf::{
     /// #     Error,
-    /// #     interchange::Json,
+    /// #     pouf::Pouf1,
     /// #     client::{Client, Config},
     /// #     crypto::{Ed25519PrivateKey, KeyType, PrivateKey, SignatureScheme},
     /// #     metadata::{MetadataPath, MetadataVersion, Role, RootMetadataBuilder},
@@ -178,8 +178,8 @@ where
     /// #     &Ed25519PrivateKey::pkcs8()?,
     /// # )?;
     /// # let public_key = private_key.public().clone();
-    /// let local = EphemeralRepository::<Json>::new();
-    /// let remote = EphemeralRepository::<Json>::new();
+    /// let local = EphemeralRepository::<Pouf1>::new();
+    /// let remote = EphemeralRepository::<Pouf1>::new();
     ///
     /// let root_version = 1;
     /// let root_threshold = 1;
@@ -191,7 +191,7 @@ where
     ///     .snapshot_key(public_key.clone())
     ///     .targets_key(public_key.clone())
     ///     .timestamp_key(public_key.clone())
-    ///     .signed::<Json>(&private_key)
+    ///     .signed::<Pouf1>(&private_key)
     ///     .unwrap()
     ///     .to_raw()
     ///     .unwrap();
@@ -229,7 +229,7 @@ where
     /// # use std::iter::once;
     /// # use tuf::{
     /// #     Error,
-    /// #     interchange::Json,
+    /// #     pouf::Pouf1,
     /// #     client::{Client, Config},
     /// #     crypto::{Ed25519PrivateKey, KeyType, PrivateKey, SignatureScheme},
     /// #     metadata::{MetadataPath, MetadataVersion, Role, RootMetadataBuilder},
@@ -241,8 +241,8 @@ where
     /// #     &Ed25519PrivateKey::pkcs8()?,
     /// # )?;
     /// # let public_key = private_key.public().clone();
-    /// let local = EphemeralRepository::<Json>::new();
-    /// let mut remote = EphemeralRepository::<Json>::new();
+    /// let local = EphemeralRepository::<Pouf1>::new();
+    /// let mut remote = EphemeralRepository::<Pouf1>::new();
     ///
     /// let root_version = 1;
     /// let root_threshold = 1;
@@ -254,7 +254,7 @@ where
     ///     .snapshot_key(public_key.clone())
     ///     .targets_key(public_key.clone())
     ///     .timestamp_key(public_key.clone())
-    ///     .signed::<Json>(&private_key)?;
+    ///     .signed::<Pouf1>(&private_key)?;
     ///
     /// let root_path = MetadataPath::root();
     /// let root_version = MetadataVersion::Number(root_version);
@@ -332,14 +332,13 @@ where
     }
 
     /// Create a new TUF client. It will trust and update the TUF database.
-    pub async fn from_database(
-        config: Config,
-        tuf: Database<D>,
-        local: L,
-        remote: R,
-    ) -> Result<Self> {
-        let (local, remote) = (Repository::new(local), Repository::new(remote));
-        Self::new(config, tuf, local, remote).await
+    pub fn from_database(config: Config, tuf: Database<D>, local: L, remote: R) -> Self {
+        Self {
+            config,
+            tuf,
+            local: Repository::new(local),
+            remote: Repository::new(remote),
+        }
     }
 
     /// Construct a client with the given parts.
@@ -1128,7 +1127,7 @@ where
 #[derive(Debug)]
 pub struct Parts<D, L, R>
 where
-    D: DataInterchange + Sync,
+    D: Pouf,
     L: RepositoryProvider<D> + RepositoryStorage<D>,
     R: RepositoryProvider<D>,
 {
@@ -1157,7 +1156,7 @@ async fn fetch_metadata_from_local_or_else_remote<'a, D, L, R, M>(
     remote: &'a Repository<R, D>,
 ) -> Result<(bool, RawSignedMetadata<D, M>)>
 where
-    D: DataInterchange + Sync,
+    D: Pouf,
     L: RepositoryProvider<D> + RepositoryStorage<D>,
     R: RepositoryProvider<D>,
     M: Metadata + 'static,
@@ -1294,11 +1293,11 @@ impl ConfigBuilder {
 mod test {
     use super::*;
     use crate::crypto::{Ed25519PrivateKey, HashAlgorithm, PrivateKey};
-    use crate::interchange::Json;
     use crate::metadata::{
         MetadataDescription, MetadataPath, MetadataVersion, RootMetadataBuilder,
         SnapshotMetadataBuilder, TargetsMetadataBuilder, TimestampMetadataBuilder,
     };
+    use crate::pouf::Pouf1;
     use crate::repo_builder::RepoBuilder;
     use crate::repository::{
         fetch_metadata_to_string, EphemeralRepository, ErrorRepository, Track, TrackRepository,
@@ -1340,8 +1339,8 @@ mod test {
     #[test]
     fn client_constructors_err_with_not_found() {
         block_on(async {
-            let mut local = EphemeralRepository::<Json>::new();
-            let remote = EphemeralRepository::<Json>::new();
+            let mut local = EphemeralRepository::<Pouf1>::new();
+            let remote = EphemeralRepository::<Pouf1>::new();
 
             let private_key =
                 Ed25519PrivateKey::from_pkcs8(&Ed25519PrivateKey::pkcs8().unwrap()).unwrap();
@@ -1372,7 +1371,7 @@ mod test {
     #[test]
     fn client_constructors_err_with_invalid_keys() {
         block_on(async {
-            let mut remote = EphemeralRepository::<Json>::new();
+            let mut remote = EphemeralRepository::<Pouf1>::new();
 
             let good_private_key = &KEYS[0];
             let bad_private_key = &KEYS[1];
@@ -1432,23 +1431,21 @@ mod test {
 
     async fn constructors_load_metadata_from_local_repo(constructor_mode: ConstructorMode) {
         // Store an expired root in the local store.
-        let mut local = EphemeralRepository::<Json>::new();
+        let mut local = EphemeralRepository::<Pouf1>::new();
         let metadata1 = RepoBuilder::create(&mut local)
+            .current_time(Utc.timestamp(0, 0))
             .trusted_root_keys(&[&KEYS[0]])
             .trusted_targets_keys(&[&KEYS[0]])
             .trusted_snapshot_keys(&[&KEYS[0]])
             .trusted_timestamp_keys(&[&KEYS[0]])
-            .stage_root_with_builder(|bld| {
-                bld.consistent_snapshot(true)
-                    .expires(Utc.ymd(1970, 1, 1).and_hms(0, 0, 0))
-            })
+            .stage_root_with_builder(|bld| bld.consistent_snapshot(true))
             .unwrap()
-            .commit_skip_validation()
+            .commit()
             .await
             .unwrap();
 
         // Remote repo has unexpired metadata.
-        let mut remote = EphemeralRepository::<Json>::new();
+        let mut remote = EphemeralRepository::<Pouf1>::new();
         let metadata2 = RepoBuilder::create(&mut remote)
             .trusted_root_keys(&[&KEYS[0]])
             .trusted_targets_keys(&[&KEYS[0]])
@@ -1501,9 +1498,7 @@ mod test {
                 Database::from_trusted_root(metadata1.root().unwrap()).unwrap(),
                 track_local,
                 track_remote,
-            )
-            .await
-            .unwrap(),
+            ),
         };
 
         assert_eq!(client.tuf.trusted_root().version(), 1);
@@ -1548,13 +1543,7 @@ mod test {
                 );
             }
             ConstructorMode::FromDatabase => {
-                assert_eq!(
-                    client.local_repo().take_tracks(),
-                    vec![Track::FetchErr(
-                        MetadataPath::root(),
-                        MetadataVersion::Number(2)
-                    )],
-                );
+                assert_eq!(client.local_repo().take_tracks(), vec![],);
             }
         };
 
@@ -1602,8 +1591,8 @@ mod test {
     #[test]
     fn constructor_succeeds_with_missing_metadata() {
         block_on(async {
-            let mut local = EphemeralRepository::<Json>::new();
-            let remote = EphemeralRepository::<Json>::new();
+            let mut local = EphemeralRepository::<Pouf1>::new();
+            let remote = EphemeralRepository::<Pouf1>::new();
 
             // Store only a root in the local store.
             let metadata1 = RepoBuilder::create(&mut local)
@@ -1704,35 +1693,29 @@ mod test {
     #[test]
     fn constructor_succeeds_with_expired_metadata() {
         block_on(async {
-            let mut local = EphemeralRepository::<Json>::new();
-            let remote = EphemeralRepository::<Json>::new();
+            let mut local = EphemeralRepository::<Pouf1>::new();
+            let remote = EphemeralRepository::<Pouf1>::new();
 
             // Store an expired root in the local store.
             let metadata1 = RepoBuilder::create(&mut local)
+                .current_time(Utc.timestamp(0, 0))
                 .trusted_root_keys(&[&KEYS[0]])
                 .trusted_targets_keys(&[&KEYS[0]])
                 .trusted_snapshot_keys(&[&KEYS[0]])
                 .trusted_timestamp_keys(&[&KEYS[0]])
-                .stage_root_with_builder(|bld| {
-                    bld.version(1)
-                        .consistent_snapshot(true)
-                        .expires(Utc.ymd(1970, 1, 1).and_hms(0, 0, 0))
-                })
+                .stage_root_with_builder(|bld| bld.version(1).consistent_snapshot(true))
                 .unwrap()
-                .commit_skip_validation()
+                .commit()
                 .await
                 .unwrap();
 
             let metadata2 = RepoBuilder::create(&mut local)
+                .current_time(Utc.timestamp(0, 0))
                 .trusted_root_keys(&[&KEYS[0]])
                 .trusted_targets_keys(&[&KEYS[0]])
                 .trusted_snapshot_keys(&[&KEYS[0]])
                 .trusted_timestamp_keys(&[&KEYS[0]])
-                .stage_root_with_builder(|bld| {
-                    bld.version(2)
-                        .consistent_snapshot(true)
-                        .expires(Utc.ymd(1970, 1, 1).and_hms(0, 0, 0))
-                })
+                .stage_root_with_builder(|bld| bld.version(2).consistent_snapshot(true))
                 .unwrap()
                 .stage_targets_with_builder(|bld| bld.version(2))
                 .unwrap()
@@ -1740,7 +1723,7 @@ mod test {
                 .unwrap()
                 .stage_timestamp_with_builder(|bld| bld.version(2))
                 .unwrap()
-                .commit_skip_validation()
+                .commit()
                 .await
                 .unwrap();
 
@@ -1805,7 +1788,7 @@ mod test {
     fn constructor_succeeds_with_malformed_metadata() {
         block_on(async {
             // Store a malformed timestamp in the local repository.
-            let mut local = EphemeralRepository::<Json>::new();
+            let local = EphemeralRepository::<Pouf1>::new();
             let junk_timestamp = "junk timestamp";
 
             local
@@ -1818,7 +1801,7 @@ mod test {
                 .unwrap();
 
             // Create a normal repository on the remote server.
-            let mut remote = EphemeralRepository::<Json>::new();
+            let mut remote = EphemeralRepository::<Pouf1>::new();
             let metadata1 = RepoBuilder::create(&mut remote)
                 .trusted_root_keys(&[&KEYS[0]])
                 .trusted_targets_keys(&[&KEYS[0]])
@@ -1876,7 +1859,7 @@ mod test {
     }
 
     async fn root_chain_update(consistent_snapshot: bool) {
-        let mut repo = EphemeralRepository::<Json>::new();
+        let mut repo = EphemeralRepository::<Pouf1>::new();
 
         // First, create the initial metadata. We want to use the same non-root
         // metadata, so sign it with all the keys.
@@ -2100,7 +2083,7 @@ mod test {
 
     async fn test_fetch_target_description(path: String, expected_description: TargetDescription) {
         // Generate an ephemeral repository with a single target.
-        let mut remote = EphemeralRepository::<Json>::new();
+        let mut remote = EphemeralRepository::<Pouf1>::new();
 
         let metadata = RepoBuilder::create(&mut remote)
             .trusted_root_keys(&[&KEYS[0]])
@@ -2144,7 +2127,7 @@ mod test {
     #[test]
     fn update_eventually_succeeds_if_cannot_write_to_repo() {
         block_on(async {
-            let mut remote = EphemeralRepository::<Json>::new();
+            let mut remote = EphemeralRepository::<Pouf1>::new();
 
             // First, create the metadata.
             let _ = RepoBuilder::create(&mut remote)
@@ -2242,8 +2225,8 @@ mod test {
     #[test]
     fn test_local_and_remote_repo_methods() {
         block_on(async {
-            let local = EphemeralRepository::<Json>::new();
-            let mut remote = EphemeralRepository::<Json>::new();
+            let local = EphemeralRepository::<Pouf1>::new();
+            let mut remote = EphemeralRepository::<Pouf1>::new();
 
             let metadata1 = RepoBuilder::create(&mut remote)
                 .trusted_root_keys(&[&KEYS[0]])
@@ -2275,7 +2258,7 @@ mod test {
 
             // Generate some new metadata.
             let metadata2 = RepoBuilder::from_database(
-                &mut EphemeralRepository::<Json>::new(),
+                &mut EphemeralRepository::<Pouf1>::new(),
                 client.database(),
             )
             .trusted_root_keys(&[&KEYS[0]])
@@ -2347,7 +2330,7 @@ mod test {
     #[test]
     fn client_can_update_with_unknown_len_and_hashes() {
         block_on(async {
-            let mut repo = EphemeralRepository::<Json>::new();
+            let repo = EphemeralRepository::<Pouf1>::new();
 
             let root = RootMetadataBuilder::new()
                 .consistent_snapshot(true)
@@ -2355,7 +2338,7 @@ mod test {
                 .targets_key(KEYS[1].public().clone())
                 .snapshot_key(KEYS[2].public().clone())
                 .timestamp_key(KEYS[3].public().clone())
-                .signed::<Json>(&KEYS[0])
+                .signed::<Pouf1>(&KEYS[0])
                 .unwrap()
                 .to_raw()
                 .unwrap();
@@ -2369,7 +2352,7 @@ mod test {
             .unwrap();
 
             let targets = TargetsMetadataBuilder::new()
-                .signed::<Json>(&KEYS[1])
+                .signed::<Pouf1>(&KEYS[1])
                 .unwrap()
                 .to_raw()
                 .unwrap();
@@ -2388,7 +2371,7 @@ mod test {
 
             let snapshot = SnapshotMetadataBuilder::new()
                 .insert_metadata_description(MetadataPath::targets(), targets_description)
-                .signed::<Json>(&KEYS[2])
+                .signed::<Pouf1>(&KEYS[2])
                 .unwrap()
                 .to_raw()
                 .unwrap();
@@ -2403,11 +2386,11 @@ mod test {
 
             // Create a snapshot metadata description, and deliberately don't set the metadata length
             // or hashes.
-            let timestamp_description = MetadataDescription::new(1, None, HashMap::new()).unwrap();
+            let snapshot_description = MetadataDescription::new(1, None, HashMap::new()).unwrap();
 
             let timestamp =
-                TimestampMetadataBuilder::from_metadata_description(timestamp_description)
-                    .signed::<Json>(&KEYS[3])
+                TimestampMetadataBuilder::from_metadata_description(snapshot_description)
+                    .signed::<Pouf1>(&KEYS[3])
                     .unwrap()
                     .to_raw()
                     .unwrap();

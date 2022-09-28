@@ -29,8 +29,8 @@ use {
     },
     tempfile::NamedTempFile,
     tuf::{
-        interchange::DataInterchange,
         metadata::{MetadataPath, MetadataVersion, TargetDescription, TargetPath, TargetsMetadata},
+        pouf::Pouf,
         repository::{FileSystemRepository, RepositoryProvider, RepositoryStorage},
         verify::Verified,
         Error,
@@ -104,8 +104,7 @@ where
     let metadata_dir = metadata_dir.as_ref();
 
     // Cache the TUF metadata from the upstream repository into a temporary directory.
-    let mut local_repo =
-        FileSystemRepository::builder(&metadata_dir).targets_prefix("targets").build()?;
+    let local_repo = FileSystemRepository::builder(&metadata_dir).targets_prefix("targets").build();
 
     let mut batch_repo = local_repo.batch_update();
 
@@ -168,7 +167,7 @@ impl<U, C> CacheRepository<U, C> {
 
 impl<D, U, C> RepositoryProvider<D> for CacheRepository<U, C>
 where
-    D: DataInterchange + Sync,
+    D: Pouf + Sync,
     U: RepositoryProvider<D> + Send + Sync,
     C: RepositoryStorage<D> + Send + Sync,
 {
@@ -188,7 +187,7 @@ where
             let mut bytes = vec![];
             metadata.read_to_end(&mut bytes).await?;
 
-            let mut cache = cache.lock().await;
+            let cache = cache.lock().await;
             cache.store_metadata(&meta_path, version, &mut Cursor::new(&bytes)).await?;
 
             let reader: Box<dyn AsyncRead + Send + Unpin> = Box::new(Cursor::new(bytes));
@@ -212,7 +211,7 @@ where
             let mut bytes = vec![];
             target.read_to_end(&mut bytes).await?;
 
-            let mut cache = cache.lock().await;
+            let cache = cache.lock().await;
             cache.store_target(&target_path, &mut Cursor::new(&bytes)).await?;
 
             let reader: Box<dyn AsyncRead + Send + Unpin> = Box::new(Cursor::new(bytes));

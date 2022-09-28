@@ -1,7 +1,7 @@
 //! Read-only Repository implementation backed by a web server.
 
 use futures_io::AsyncRead;
-use futures_util::future::{BoxFuture, FutureExt};
+use futures_util::future::{BoxFuture, FutureExt as _, TryFutureExt as _};
 use futures_util::stream::TryStreamExt;
 use http::{Response, StatusCode, Uri};
 use hyper::body::Body;
@@ -9,13 +9,14 @@ use hyper::client::connect::Connect;
 use hyper::Client;
 use hyper::Request;
 use percent_encoding::utf8_percent_encode;
+use std::future::Future;
 use std::io;
 use std::marker::PhantomData;
 use url::Url;
 
 use crate::error::Error;
-use crate::interchange::DataInterchange;
 use crate::metadata::{MetadataPath, MetadataVersion, TargetPath};
+use crate::pouf::Pouf;
 use crate::repository::RepositoryProvider;
 use crate::util::SafeAsyncRead;
 use crate::Result;
@@ -24,7 +25,7 @@ use crate::Result;
 pub struct HttpRepositoryBuilder<C, D>
 where
     C: Connect + Sync + 'static,
-    D: DataInterchange,
+    D: Pouf,
 {
     uri: Uri,
     client: Client<C>,
@@ -32,13 +33,13 @@ where
     metadata_prefix: Option<Vec<String>>,
     targets_prefix: Option<Vec<String>>,
     min_bytes_per_second: u32,
-    _interchange: PhantomData<D>,
+    _pouf: PhantomData<D>,
 }
 
 impl<C, D> HttpRepositoryBuilder<C, D>
 where
     C: Connect + Sync + 'static,
-    D: DataInterchange,
+    D: Pouf,
 {
     /// Create a new repository with the given `Url` and `Client`.
     pub fn new(url: Url, client: Client<C>) -> Self {
@@ -49,7 +50,7 @@ where
             metadata_prefix: None,
             targets_prefix: None,
             min_bytes_per_second: 4096,
-            _interchange: PhantomData,
+            _pouf: PhantomData,
         }
     }
 
@@ -62,7 +63,7 @@ where
             metadata_prefix: None,
             targets_prefix: None,
             min_bytes_per_second: 4096,
-            _interchange: PhantomData,
+            _pouf: PhantomData,
         }
     }
 
@@ -116,16 +117,17 @@ where
             metadata_prefix: self.metadata_prefix,
             targets_prefix: self.targets_prefix,
             min_bytes_per_second: self.min_bytes_per_second,
-            _interchange: PhantomData,
+            _pouf: PhantomData,
         }
     }
 }
 
 /// A repository accessible over HTTP.
+#[derive(Debug)]
 pub struct HttpRepository<C, D>
 where
     C: Connect + Sync + 'static,
-    D: DataInterchange,
+    D: Pouf,
 {
     uri: Uri,
     client: Client<C>,
@@ -133,7 +135,7 @@ where
     metadata_prefix: Option<Vec<String>>,
     targets_prefix: Option<Vec<String>>,
     min_bytes_per_second: u32,
-    _interchange: PhantomData<D>,
+    _pouf: PhantomData<D>,
 }
 
 // Configuration for urlencoding URI path elements.
@@ -206,33 +208,29 @@ fn extend_uri(uri: &Uri, prefix: &Option<Vec<String>>, components: &[String]) ->
 impl<C, D> HttpRepository<C, D>
 where
     C: Connect + Clone + Send + Sync + 'static,
-    D: DataInterchange,
+    D: Pouf,
 {
-    async fn get<'a>(&'a self, uri: &Uri) -> Result<Response<Body>> {
-        match Request::builder()
+    fn get<'a>(&self, uri: &'a Uri) -> Result<impl Future<Output = Result<Response<Body>>> + 'a> {
+        let req = Request::builder()
             .uri(uri)
             .header("User-Agent", &*self.user_agent)
             .body(Body::default())
-        {
-            Ok(req) => match self.client.request(req).await {
-                Ok(resp) => Ok(resp),
-                Err(err) => Err(Error::Hyper {
-                    uri: uri.to_string(),
-                    err,
-                }),
-            },
-            Err(err) => Err(Error::Http {
+            .map_err(|err| Error::Http {
                 uri: uri.to_string(),
                 err,
-            }),
-        }
+            })?;
+
+        Ok(self.client.request(req).map_err(|err| Error::Hyper {
+            uri: uri.to_string(),
+            err,
+        }))
     }
 }
 
 impl<C, D> RepositoryProvider<D> for HttpRepository<C, D>
 where
     C: Connect + Clone + Send + Sync + 'static,
-    D: DataInterchange + Send + Sync,
+    D: Pouf,
 {
     fn fetch_metadata<'a>(
         &'a self,
@@ -247,7 +245,7 @@ where
             // TODO(#278) check content length if known and fail early if the payload is too large.
 
             let uri = uri?;
-            let resp = self.get(&uri).await?;
+            let resp = self.get(&uri)?.await?;
 
             let status = resp.status();
             if status == StatusCode::OK {
@@ -286,7 +284,7 @@ where
             // TODO(#278) check content length if known and fail early if the payload is too large.
 
             let uri = uri?;
-            let resp = self.get(&uri).await?;
+            let resp = self.get(&uri)?.await?;
 
             let status = resp.status();
             if status == StatusCode::OK {

@@ -21,8 +21,8 @@ use {
     },
     tuf::{
         crypto::{Ed25519PrivateKey, HashAlgorithm},
-        interchange::Json,
         metadata::{Delegation, Delegations, MetadataDescription, MetadataPath, TargetPath},
+        pouf::Pouf1,
         repo_builder::RepoBuilder,
         repository::FileSystemRepositoryBuilder,
     },
@@ -109,7 +109,7 @@ pub fn make_repo_dir(root: &Utf8Path) -> Result<()> {
 }
 
 pub async fn make_readonly_empty_repository() -> Result<RepoClient<Box<dyn RepoProvider>>> {
-    let backend = PmRepository::new(Utf8PathBuf::from(EMPTY_REPO_PATH))?;
+    let backend = PmRepository::new(Utf8PathBuf::from(EMPTY_REPO_PATH));
     let mut client = RepoClient::from_trusted_remote(Box::new(backend) as Box<_>)
         .await
         .map_err(|e| anyhow!(e))?;
@@ -121,7 +121,7 @@ pub async fn make_writable_empty_repository(
     root: Utf8PathBuf,
 ) -> Result<RepoClient<Box<dyn RepoProvider>>> {
     make_repo_dir(&root)?;
-    let backend = PmRepository::new(root)?;
+    let backend = PmRepository::new(root);
     let mut client = RepoClient::from_trusted_remote(Box::new(backend) as Box<_>).await?;
     client.update().await?;
     Ok(client)
@@ -191,10 +191,8 @@ pub async fn make_repository(metadata_dir: &Path, blobs_dir: &Path) {
     });
 
     // Write TUF metadata
-    let repo = FileSystemRepositoryBuilder::<Json>::new(metadata_dir)
-        .targets_prefix("targets")
-        .build()
-        .unwrap();
+    let repo =
+        FileSystemRepositoryBuilder::<Pouf1>::new(metadata_dir).targets_prefix("targets").build();
 
     let repo_keys = make_repo_keys();
     let root_keys = repo_keys.root_keys().iter().map(|k| &**k).collect::<Vec<_>>();
@@ -268,7 +266,7 @@ pub async fn make_pm_repository(dir: impl Into<Utf8PathBuf>) -> PmRepository {
     let empty_repo_dir = PathBuf::from(EMPTY_REPO_PATH).canonicalize().unwrap();
     copy_dir(&empty_repo_dir.join("keys"), keys_dir.as_std_path()).unwrap();
 
-    PmRepository::new(dir).unwrap()
+    PmRepository::new(dir)
 }
 
 pub async fn make_file_system_repository(
@@ -279,7 +277,7 @@ pub async fn make_file_system_repository(
     let blobs_dir = blobs_dir.into();
     make_repository(metadata_dir.as_std_path(), blobs_dir.as_std_path()).await;
 
-    let backend = FileSystemRepository::new(metadata_dir, blobs_dir).unwrap();
+    let backend = FileSystemRepository::new(metadata_dir, blobs_dir);
     let mut client = RepoClient::from_trusted_remote(Box::new(backend) as Box<_>).await.unwrap();
     client.update().await.unwrap();
     client

@@ -14,8 +14,8 @@ use {
     futures::{future::BoxFuture, stream::BoxStream, AsyncRead},
     std::{fmt::Debug, time::SystemTime},
     tuf::{
-        interchange::Json,
         metadata::{MetadataPath, MetadataVersion, TargetPath},
+        pouf::Pouf1,
         repository::{
             RepositoryProvider as TufRepositoryProvider, RepositoryStorage as TufRepositoryStorage,
             RepositoryStorageProvider,
@@ -32,12 +32,12 @@ pub struct PmRepository {
 
 impl PmRepository {
     /// Construct a [PmRepository].
-    pub fn new(pm_repo_path: Utf8PathBuf) -> Result<Self> {
+    pub fn new(pm_repo_path: Utf8PathBuf) -> Self {
         let metadata_repo_path = pm_repo_path.join("repository");
         let blob_repo_path = metadata_repo_path.join("blobs");
-        let repo = FileSystemRepository::new(metadata_repo_path, blob_repo_path)?;
+        let repo = FileSystemRepository::new(metadata_repo_path, blob_repo_path);
 
-        Ok(Self { pm_repo_path, repo })
+        Self { pm_repo_path, repo }
     }
 }
 
@@ -82,7 +82,7 @@ impl RepoProvider for PmRepository {
     }
 }
 
-impl TufRepositoryProvider<Json> for PmRepository {
+impl TufRepositoryProvider<Pouf1> for PmRepository {
     fn fetch_metadata<'a>(
         &'a self,
         meta_path: &MetadataPath,
@@ -99,9 +99,9 @@ impl TufRepositoryProvider<Json> for PmRepository {
     }
 }
 
-impl TufRepositoryStorage<Json> for PmRepository {
+impl TufRepositoryStorage<Pouf1> for PmRepository {
     fn store_metadata<'a>(
-        &'a mut self,
+        &'a self,
         meta_path: &MetadataPath,
         version: MetadataVersion,
         metadata: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
@@ -110,7 +110,7 @@ impl TufRepositoryStorage<Json> for PmRepository {
     }
 
     fn store_target<'a>(
-        &'a mut self,
+        &'a self,
         target_path: &TargetPath,
         target: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
     ) -> BoxFuture<'a, tuf::Result<()>> {
@@ -121,7 +121,7 @@ impl TufRepositoryStorage<Json> for PmRepository {
 impl RepoStorage for PmRepository {
     fn get_tuf_repo_storage(
         &self,
-    ) -> Result<Box<dyn RepositoryStorageProvider<Json> + Send + Sync>> {
+    ) -> Result<Box<dyn RepositoryStorageProvider<Pouf1> + Send + Sync>> {
         self.repo.get_tuf_repo_storage()
     }
 }

@@ -1,32 +1,38 @@
 //! Repository implementation backed by a file system.
 
-use futures_io::AsyncRead;
-use futures_util::future::{BoxFuture, FutureExt};
-use futures_util::io::{copy, AllowStdIo};
-use log::debug;
-use std::collections::HashMap;
-use std::fs::{DirBuilder, File};
-use std::io;
-use std::marker::PhantomData;
-use std::path::{Path, PathBuf};
-use tempfile::{NamedTempFile, TempPath};
-
-use crate::error::{Error, Result};
-use crate::interchange::DataInterchange;
-use crate::metadata::{MetadataPath, MetadataVersion, TargetPath};
-use crate::repository::{RepositoryProvider, RepositoryStorage};
+use {
+    crate::{
+        error::{Error, Result},
+        metadata::{MetadataPath, MetadataVersion, TargetPath},
+        pouf::Pouf,
+        repository::{RepositoryProvider, RepositoryStorage},
+    },
+    futures_io::AsyncRead,
+    futures_util::future::{BoxFuture, FutureExt},
+    futures_util::io::{copy, AllowStdIo},
+    log::debug,
+    std::{
+        collections::HashMap,
+        fs::{DirBuilder, File},
+        io,
+        marker::PhantomData,
+        path::{Path, PathBuf},
+        sync::RwLock,
+    },
+    tempfile::{NamedTempFile, TempPath},
+};
 
 /// A builder to create a repository contained on the local file system.
 pub struct FileSystemRepositoryBuilder<D> {
     local_path: PathBuf,
     metadata_prefix: Option<PathBuf>,
     targets_prefix: Option<PathBuf>,
-    _interchange: PhantomData<D>,
+    _pouf: PhantomData<D>,
 }
 
 impl<D> FileSystemRepositoryBuilder<D>
 where
-    D: DataInterchange,
+    D: Pouf,
 {
     /// Create a new repository with the given `local_path` prefix.
     pub fn new<P: Into<PathBuf>>(local_path: P) -> Self {
@@ -34,7 +40,7 @@ where
             local_path: local_path.into(),
             metadata_prefix: None,
             targets_prefix: None,
-            _interchange: PhantomData,
+            _pouf: PhantomData,
         }
     }
 
@@ -59,26 +65,25 @@ where
     }
 
     /// Build a `FileSystemRepository`.
-    pub fn build(self) -> Result<FileSystemRepository<D>> {
+    pub fn build(self) -> FileSystemRepository<D> {
         let metadata_path = if let Some(metadata_prefix) = self.metadata_prefix {
             self.local_path.join(metadata_prefix)
         } else {
             self.local_path.clone()
         };
-        DirBuilder::new().recursive(true).create(&metadata_path)?;
 
         let targets_path = if let Some(targets_prefix) = self.targets_prefix {
             self.local_path.join(targets_prefix)
         } else {
             self.local_path.clone()
         };
-        DirBuilder::new().recursive(true).create(&targets_path)?;
 
-        Ok(FileSystemRepository {
+        FileSystemRepository {
+            version: RwLock::new(0),
             metadata_path,
             targets_path,
-            _interchange: PhantomData,
-        })
+            _pouf: PhantomData,
+        }
     }
 }
 
@@ -86,16 +91,17 @@ where
 #[derive(Debug)]
 pub struct FileSystemRepository<D>
 where
-    D: DataInterchange,
+    D: Pouf,
 {
+    version: RwLock<u64>,
     metadata_path: PathBuf,
     targets_path: PathBuf,
-    _interchange: PhantomData<D>,
+    _pouf: PhantomData<D>,
 }
 
 impl<D> FileSystemRepository<D>
 where
-    D: DataInterchange,
+    D: Pouf,
 {
     /// Create a [FileSystemRepositoryBuilder].
     pub fn builder<P: Into<PathBuf>>(local_path: P) -> FileSystemRepositoryBuilder<D> {
@@ -103,7 +109,7 @@ where
     }
 
     /// Create a new repository on the local file system.
-    pub fn new<P: Into<PathBuf>>(local_path: P) -> Result<Self> {
+    pub fn new<P: Into<PathBuf>>(local_path: P) -> Self {
         FileSystemRepositoryBuilder::new(local_path)
             .metadata_prefix("metadata")
             .targets_prefix("targets")
@@ -112,11 +118,20 @@ where
 
     /// Returns a [FileSystemBatchUpdate] for manipulating this repository. This allows callers to
     /// stage a number of mutations, and optionally write them all at once.
-    pub fn batch_update(&mut self) -> FileSystemBatchUpdate<D> {
+    ///
+    /// [FileSystemBatchUpdate] will try to update any changed metadata or targets in a
+    /// single transaction, and will fail if there are any conflict writes, either by directly
+    /// calling [FileSystemRepository::store_metadata], [FileSystemRepository::store_target], or
+    /// another [FileSystemRepository::batch_update].
+    ///
+    /// Warning: The current implementation makes no effort to prevent manipulations of the
+    /// underlying filesystem, either in-process, or by an external process.
+    pub fn batch_update(&self) -> FileSystemBatchUpdate<D> {
         FileSystemBatchUpdate {
-            repo: self,
-            metadata: HashMap::new(),
-            targets: HashMap::new(),
+            initial_parent_version: *self.version.read().unwrap(),
+            parent_repo: self,
+            metadata: RwLock::new(HashMap::new()),
+            targets: RwLock::new(HashMap::new()),
         }
     }
 
@@ -187,7 +202,7 @@ where
 
 impl<D> RepositoryProvider<D> for FileSystemRepository<D>
 where
-    D: DataInterchange + Sync,
+    D: Pouf,
 {
     fn fetch_metadata<'a>(
         &'a self,
@@ -209,13 +224,13 @@ where
 
 impl<D> RepositoryStorage<D> for FileSystemRepository<D>
 where
-    D: DataInterchange + Sync + Send,
+    D: Pouf,
 {
     fn store_metadata<'a>(
-        &'a mut self,
+        &'a self,
         meta_path: &MetadataPath,
         version: MetadataVersion,
-        metadata: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
+        metadata: &'a mut (dyn AsyncRead + Send + Unpin),
     ) -> BoxFuture<'a, Result<()>> {
         let path = self.metadata_path(meta_path, version);
 
@@ -228,6 +243,11 @@ where
             if let Err(err) = copy(metadata, &mut temp_file).await {
                 return Err(Error::IoPath { path, err });
             }
+
+            // Lock the version counter to prevent other writers from manipulating the repository to
+            // avoid race conditions.
+            let mut version = self.version.write().unwrap();
+
             temp_file
                 .into_inner()
                 .persist(&path)
@@ -236,15 +256,18 @@ where
                     err: err.error,
                 })?;
 
+            // Increment our version since the repository changed.
+            *version += 1;
+
             Ok(())
         }
         .boxed()
     }
 
     fn store_target<'a>(
-        &'a mut self,
+        &'a self,
         target_path: &TargetPath,
-        read: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
+        read: &'a mut (dyn AsyncRead + Send + Unpin),
     ) -> BoxFuture<'a, Result<()>> {
         let path = self.target_path(target_path);
 
@@ -257,6 +280,9 @@ where
             if let Err(err) = copy(read, &mut temp_file).await {
                 return Err(Error::IoPath { path, err });
             }
+
+            let mut version = self.version.write().unwrap();
+
             temp_file
                 .into_inner()
                 .persist(&path)
@@ -264,6 +290,9 @@ where
                     path,
                     err: err.error,
                 })?;
+
+            // Increment our version since the repository changed.
+            *version += 1;
 
             Ok(())
         }
@@ -277,38 +306,72 @@ where
 /// Note: `FileSystemBatchUpdate::commit()` must be called in order to write the metadata and
 /// targets to the [FileSystemRepository]. Otherwise any queued changes will be lost on drop.
 #[derive(Debug)]
-pub struct FileSystemBatchUpdate<'a, D: DataInterchange> {
-    repo: &'a mut FileSystemRepository<D>,
-    metadata: HashMap<PathBuf, TempPath>,
-    targets: HashMap<PathBuf, TempPath>,
+pub struct FileSystemBatchUpdate<'a, D: Pouf> {
+    initial_parent_version: u64,
+    parent_repo: &'a FileSystemRepository<D>,
+    metadata: RwLock<HashMap<PathBuf, TempPath>>,
+    targets: RwLock<HashMap<PathBuf, TempPath>>,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum CommitError {
+    /// Conflict occurred during commit.
+    #[error("conflicting change occurred during commit")]
+    Conflict,
+
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+
+    /// An IO error occurred for a path.
+    #[error("IO error on path {path}")]
+    IoPath {
+        /// Path where the error occurred.
+        path: std::path::PathBuf,
+
+        /// The IO error.
+        #[source]
+        err: io::Error,
+    },
 }
 
 impl<'a, D> FileSystemBatchUpdate<'a, D>
 where
-    D: DataInterchange + Sync,
+    D: Pouf,
 {
     /// Write all the metadata and targets the [FileSystemBatchUpdate] to the source
     /// [FileSystemRepository] in a single batch operation.
     ///
     /// Note: While this function will atomically write each file, it's possible that this could
     /// fail with part of the files written if we experience a system error during the process.
-    pub async fn commit(self) -> Result<()> {
-        for (path, tmp_path) in self.targets {
+    pub async fn commit(self) -> std::result::Result<(), CommitError> {
+        let mut parent_version = self.parent_repo.version.write().unwrap();
+
+        if self.initial_parent_version != *parent_version {
+            return Err(CommitError::Conflict);
+        }
+
+        for (path, tmp_path) in self.targets.into_inner().unwrap() {
             if path.exists() {
                 debug!("Target path exists. Overwriting: {:?}", path);
             }
-            tmp_path.persist(&path).map_err(|err| Error::IoPath {
+            tmp_path.persist(&path).map_err(|err| CommitError::IoPath {
                 path,
                 err: err.error,
             })?;
         }
 
-        for (path, tmp_path) in self.metadata {
+        for (path, tmp_path) in self.metadata.into_inner().unwrap() {
             if path.exists() {
                 debug!("Metadata path exists. Overwriting: {:?}", path);
             }
-            tmp_path.persist(path).map_err(|err| err.error)?;
+            tmp_path.persist(&path).map_err(|err| CommitError::IoPath {
+                path,
+                err: err.error,
+            })?;
         }
+
+        // Increment the version because we wrote to it.
+        *parent_version += 1;
 
         Ok(())
     }
@@ -316,19 +379,19 @@ where
 
 impl<D> RepositoryProvider<D> for FileSystemBatchUpdate<'_, D>
 where
-    D: DataInterchange + Sync,
+    D: Pouf,
 {
     fn fetch_metadata<'a>(
         &'a self,
         meta_path: &MetadataPath,
         version: MetadataVersion,
     ) -> BoxFuture<'a, Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
-        let path = self.repo.metadata_path(meta_path, version);
-        if let Some(temp_path) = self.metadata.get(&path) {
-            self.repo
+        let path = self.parent_repo.metadata_path(meta_path, version);
+        if let Some(temp_path) = self.metadata.read().unwrap().get(&path) {
+            self.parent_repo
                 .fetch_metadata_from_path(meta_path, version, temp_path)
         } else {
-            self.repo
+            self.parent_repo
                 .fetch_metadata_from_path(meta_path, version, &path)
         }
     }
@@ -337,34 +400,37 @@ where
         &'a self,
         target_path: &TargetPath,
     ) -> BoxFuture<'a, Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
-        let path = self.repo.target_path(target_path);
-        if let Some(temp_path) = self.targets.get(&path) {
-            self.repo.fetch_target_from_path(target_path, temp_path)
+        let path = self.parent_repo.target_path(target_path);
+        if let Some(temp_path) = self.targets.read().unwrap().get(&path) {
+            self.parent_repo
+                .fetch_target_from_path(target_path, temp_path)
         } else {
-            self.repo.fetch_target_from_path(target_path, &path)
+            self.parent_repo.fetch_target_from_path(target_path, &path)
         }
     }
 }
 
 impl<D> RepositoryStorage<D> for FileSystemBatchUpdate<'_, D>
 where
-    D: DataInterchange + Sync,
+    D: Pouf,
 {
     fn store_metadata<'a>(
-        &'a mut self,
+        &'a self,
         meta_path: &MetadataPath,
         version: MetadataVersion,
-        read: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
+        read: &'a mut (dyn AsyncRead + Send + Unpin),
     ) -> BoxFuture<'a, Result<()>> {
-        let path = self.repo.metadata_path(meta_path, version);
-        let metadata = &mut self.metadata;
+        let path = self.parent_repo.metadata_path(meta_path, version);
 
         async move {
             let mut temp_file = AllowStdIo::new(create_temp_file(&path)?);
             if let Err(err) = copy(read, &mut temp_file).await {
                 return Err(Error::IoPath { path, err });
             }
-            metadata.insert(path, temp_file.into_inner().into_temp_path());
+            self.metadata
+                .write()
+                .unwrap()
+                .insert(path, temp_file.into_inner().into_temp_path());
 
             Ok(())
         }
@@ -372,19 +438,21 @@ where
     }
 
     fn store_target<'a>(
-        &'a mut self,
+        &'a self,
         target_path: &TargetPath,
-        read: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
+        read: &'a mut (dyn AsyncRead + Send + Unpin),
     ) -> BoxFuture<'a, Result<()>> {
-        let path = self.repo.target_path(target_path);
-        let targets = &mut self.targets;
+        let path = self.parent_repo.target_path(target_path);
 
         async move {
             let mut temp_file = AllowStdIo::new(create_temp_file(&path)?);
             if let Err(err) = copy(read, &mut temp_file).await {
                 return Err(Error::IoPath { path, err });
             }
-            targets.insert(path, temp_file.into_inner().into_temp_path());
+            self.targets
+                .write()
+                .unwrap()
+                .insert(path, temp_file.into_inner().into_temp_path());
 
             Ok(())
         }
@@ -422,8 +490,8 @@ fn create_temp_file(path: &Path) -> Result<NamedTempFile> {
 mod test {
     use super::*;
     use crate::error::Error;
-    use crate::interchange::Json;
     use crate::metadata::RootMetadata;
+    use crate::pouf::Pouf1;
     use crate::repository::{fetch_metadata_to_string, fetch_target_to_string, Repository};
     use assert_matches::assert_matches;
     use futures_executor::block_on;
@@ -437,12 +505,10 @@ mod test {
                 .prefix("rust-tuf")
                 .tempdir()
                 .unwrap();
-            let repo = FileSystemRepositoryBuilder::new(temp_dir.path())
-                .build()
-                .unwrap();
+            let repo = FileSystemRepositoryBuilder::new(temp_dir.path()).build();
 
             assert_matches!(
-                Repository::<_, Json>::new(repo)
+                Repository::<_, Pouf1>::new(repo)
                     .fetch_metadata::<RootMetadata>(
                         &MetadataPath::root(),
                         MetadataVersion::None,
@@ -466,15 +532,10 @@ mod test {
                 .prefix("rust-tuf")
                 .tempdir()
                 .unwrap();
-            let mut repo = FileSystemRepositoryBuilder::<Json>::new(temp_dir.path().to_path_buf())
+            let repo = FileSystemRepositoryBuilder::<Pouf1>::new(temp_dir.path().to_path_buf())
                 .metadata_prefix("meta")
                 .targets_prefix("targs")
-                .build()
-                .unwrap();
-
-            // test that init worked
-            assert!(temp_dir.path().join("meta").exists());
-            assert!(temp_dir.path().join("targs").exists());
+                .build();
 
             let data: &[u8] = b"like tears in the rain";
             let path = TargetPath::new("foo/bar/baz").unwrap();
@@ -515,11 +576,11 @@ mod test {
                 .prefix("rust-tuf")
                 .tempdir()
                 .unwrap();
-            let mut repo = FileSystemRepositoryBuilder::<Json>::new(temp_dir.path().to_path_buf())
+
+            let repo = FileSystemRepositoryBuilder::<Pouf1>::new(temp_dir.path().to_path_buf())
                 .metadata_prefix("meta")
                 .targets_prefix("targs")
-                .build()
-                .unwrap();
+                .build();
 
             let meta_path = MetadataPath::new("meta").unwrap();
             let meta_version = MetadataVersion::None;
@@ -537,7 +598,7 @@ mod test {
                 .await
                 .unwrap();
 
-            let mut batch = repo.batch_update();
+            let batch = repo.batch_update();
 
             // Make sure we can read back the committed stuff.
             assert_eq!(
@@ -591,7 +652,7 @@ mod test {
             );
 
             // Do the batch_update again, but this time write the data.
-            let mut batch = repo.batch_update();
+            let batch = repo.batch_update();
             batch
                 .store_metadata(&meta_path, meta_version, &mut staged_meta.as_bytes())
                 .await
@@ -613,6 +674,120 @@ mod test {
                 fetch_target_to_string(&repo, &target_path).await.unwrap(),
                 staged_target,
             );
+        })
+    }
+
+    #[test]
+    fn file_system_repo_batch_commit_fails_with_metadata_conflicts() {
+        block_on(async {
+            let temp_dir = tempfile::Builder::new()
+                .prefix("rust-tuf")
+                .tempdir()
+                .unwrap();
+
+            let repo = FileSystemRepository::<Pouf1>::new(temp_dir.path().to_path_buf());
+
+            // commit() fails if we did nothing to the batch, but the repo changed.
+            let batch = repo.batch_update();
+
+            repo.store_metadata(
+                &MetadataPath::new("meta1").unwrap(),
+                MetadataVersion::None,
+                &mut "meta1".as_bytes(),
+            )
+            .await
+            .unwrap();
+
+            assert_matches!(batch.commit().await, Err(CommitError::Conflict));
+
+            // writing to both the repo and the batch should conflict.
+            let batch = repo.batch_update();
+
+            repo.store_metadata(
+                &MetadataPath::new("meta2").unwrap(),
+                MetadataVersion::None,
+                &mut "meta2".as_bytes(),
+            )
+            .await
+            .unwrap();
+
+            batch
+                .store_metadata(
+                    &MetadataPath::new("meta3").unwrap(),
+                    MetadataVersion::None,
+                    &mut "meta3".as_bytes(),
+                )
+                .await
+                .unwrap();
+
+            assert_matches!(batch.commit().await, Err(CommitError::Conflict));
+        })
+    }
+
+    #[test]
+    fn file_system_repo_batch_commit_fails_with_target_conflicts() {
+        block_on(async {
+            let temp_dir = tempfile::Builder::new()
+                .prefix("rust-tuf")
+                .tempdir()
+                .unwrap();
+
+            let repo = FileSystemRepository::<Pouf1>::new(temp_dir.path().to_path_buf());
+
+            // commit() fails if we did nothing to the batch, but the repo changed.
+            let batch = repo.batch_update();
+
+            repo.store_target(
+                &TargetPath::new("target1").unwrap(),
+                &mut "target1".as_bytes(),
+            )
+            .await
+            .unwrap();
+
+            assert_matches!(batch.commit().await, Err(CommitError::Conflict));
+
+            // writing to both the repo and the batch should conflict.
+            let batch = repo.batch_update();
+
+            repo.store_target(
+                &TargetPath::new("target2").unwrap(),
+                &mut "target2".as_bytes(),
+            )
+            .await
+            .unwrap();
+
+            batch
+                .store_target(
+                    &TargetPath::new("target3").unwrap(),
+                    &mut "target3".as_bytes(),
+                )
+                .await
+                .unwrap();
+
+            assert_matches!(batch.commit().await, Err(CommitError::Conflict));
+
+            // multiple batches should conflict.
+            let batch1 = repo.batch_update();
+            let batch2 = repo.batch_update();
+
+            batch1
+                .store_target(
+                    &TargetPath::new("target4").unwrap(),
+                    &mut "target4".as_bytes(),
+                )
+                .await
+                .unwrap();
+
+            batch2
+                .store_target(
+                    &TargetPath::new("target5").unwrap(),
+                    &mut "target5".as_bytes(),
+                )
+                .await
+                .unwrap();
+
+            assert_matches!(batch1.commit().await, Ok(()));
+            assert_matches!(batch2.commit().await, Err(CommitError::Conflict));
         })
     }
 }

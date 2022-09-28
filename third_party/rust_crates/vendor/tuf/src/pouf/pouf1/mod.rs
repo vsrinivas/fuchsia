@@ -3,20 +3,14 @@ use serde::ser::Serialize;
 use std::collections::BTreeMap;
 
 use crate::error::Error;
-use crate::interchange::DataInterchange;
+use crate::pouf::Pouf;
 use crate::Result;
 
-pub(crate) mod pretty;
 pub(crate) mod shims;
 
-pub use pretty::JsonPretty;
-
-/// JSON data interchange.
+/// TUF POUF-1 implementation.
 ///
 /// # Schema
-///
-/// This doesn't use JSON Schema because that specification language is rage inducing. Here's
-/// something else instead.
 ///
 /// ## Common Entities
 ///
@@ -182,25 +176,25 @@ pub use pretty::JsonPretty;
 /// }
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Json;
+pub struct Pouf1;
 
-impl DataInterchange for Json {
+impl Pouf for Pouf1 {
     type RawData = serde_json::Value;
 
     /// ```
-    /// # use tuf::interchange::{DataInterchange, Json};
-    /// assert_eq!(Json::extension(), "json");
+    /// # use tuf::pouf::{Pouf, Pouf1};
+    /// assert_eq!(Pouf1::extension(), "json");
     /// ```
     fn extension() -> &'static str {
         "json"
     }
 
     /// ```
-    /// # use tuf::interchange::{DataInterchange, Json};
+    /// # use tuf::pouf::{Pouf, Pouf1};
     /// # use std::collections::HashMap;
     /// let jsn: &[u8] = br#"{"foo": "bar", "baz": "quux"}"#;
-    /// let raw = Json::from_slice(jsn).unwrap();
-    /// let out = Json::canonicalize(&raw).unwrap();
+    /// let raw = Pouf1::from_slice(jsn).unwrap();
+    /// let out = Pouf1::canonicalize(&raw).unwrap();
     /// assert_eq!(out, br#"{"baz":"quux","foo":"bar"}"#);
     /// ```
     fn canonicalize(raw_data: &Self::RawData) -> Result<Vec<u8>> {
@@ -211,7 +205,7 @@ impl DataInterchange for Json {
     /// # use serde_derive::Deserialize;
     /// # use serde_json::json;
     /// # use std::collections::HashMap;
-    /// # use tuf::interchange::{DataInterchange, Json};
+    /// # use tuf::pouf::{Pouf, Pouf1};
     /// #
     /// #[derive(Deserialize, Debug, PartialEq)]
     /// struct Thing {
@@ -221,7 +215,7 @@ impl DataInterchange for Json {
     ///
     /// let jsn = json!({"foo": "wat", "bar": "lol"});
     /// let thing = Thing { foo: "wat".into(), bar: "lol".into() };
-    /// let de: Thing = Json::deserialize(&jsn).unwrap();
+    /// let de: Thing = Pouf1::deserialize(&jsn).unwrap();
     /// assert_eq!(de, thing);
     /// ```
     fn deserialize<T>(raw_data: &Self::RawData) -> Result<T>
@@ -235,7 +229,7 @@ impl DataInterchange for Json {
     /// # use serde_derive::Serialize;
     /// # use serde_json::json;
     /// # use std::collections::HashMap;
-    /// # use tuf::interchange::{DataInterchange, Json};
+    /// # use tuf::pouf::{Pouf, Pouf1};
     /// #
     /// #[derive(Serialize)]
     /// struct Thing {
@@ -245,7 +239,7 @@ impl DataInterchange for Json {
     ///
     /// let jsn = json!({"foo": "wat", "bar": "lol"});
     /// let thing = Thing { foo: "wat".into(), bar: "lol".into() };
-    /// let se: serde_json::Value = Json::serialize(&thing).unwrap();
+    /// let se: serde_json::Value = Pouf1::serialize(&thing).unwrap();
     /// assert_eq!(se, jsn);
     /// ```
     fn serialize<T>(data: &T) -> Result<Self::RawData>
@@ -256,10 +250,10 @@ impl DataInterchange for Json {
     }
 
     /// ```
-    /// # use tuf::interchange::{DataInterchange, Json};
+    /// # use tuf::pouf::{Pouf, Pouf1};
     /// # use std::collections::HashMap;
     /// let jsn: &[u8] = br#"{"foo": "bar", "baz": "quux"}"#;
-    /// let _: HashMap<String, String> = Json::from_slice(&jsn).unwrap();
+    /// let _: HashMap<String, String> = Pouf1::from_slice(&jsn).unwrap();
     /// ```
     fn from_slice<T>(slice: &[u8]) -> Result<T>
     where

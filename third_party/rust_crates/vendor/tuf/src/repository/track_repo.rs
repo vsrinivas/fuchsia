@@ -1,7 +1,7 @@
 use {
     crate::{
-        interchange::DataInterchange,
         metadata::{Metadata, MetadataPath, MetadataVersion, RawSignedMetadata, TargetPath},
+        pouf::Pouf,
         repository::{RepositoryProvider, RepositoryStorage},
         Result,
     },
@@ -10,7 +10,7 @@ use {
         future::{BoxFuture, FutureExt},
         io::{AsyncReadExt, Cursor},
     },
-    std::sync::{Arc, Mutex},
+    std::sync::Mutex,
 };
 
 #[derive(Debug, PartialEq)]
@@ -46,7 +46,7 @@ impl Track {
     ) -> Self
     where
         M: Metadata,
-        D: DataInterchange,
+        D: Pouf,
     {
         Self::store(&M::ROLE.into(), version, metadata.as_bytes())
     }
@@ -72,7 +72,7 @@ impl Track {
     ) -> Self
     where
         M: Metadata,
-        D: DataInterchange,
+        D: Pouf,
     {
         Track::fetch_found(&M::ROLE.into(), version, metadata.as_bytes())
     }
@@ -81,14 +81,14 @@ impl Track {
 /// Helper Repository wrapper that tracks all the metadata fetches and stores for testing purposes.
 pub(crate) struct TrackRepository<R> {
     repo: R,
-    tracks: Arc<Mutex<Vec<Track>>>,
+    tracks: Mutex<Vec<Track>>,
 }
 
 impl<R> TrackRepository<R> {
     pub(crate) fn new(repo: R) -> Self {
         Self {
             repo,
-            tracks: Arc::new(Mutex::new(vec![])),
+            tracks: Mutex::new(vec![]),
         }
     }
 
@@ -104,13 +104,13 @@ impl<R> TrackRepository<R> {
 impl<D, R> RepositoryStorage<D> for TrackRepository<R>
 where
     R: RepositoryStorage<D> + Sync + Send,
-    D: DataInterchange + Sync,
+    D: Pouf,
 {
     fn store_metadata<'a>(
-        &'a mut self,
+        &'a self,
         meta_path: &MetadataPath,
         version: MetadataVersion,
-        metadata: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
+        metadata: &'a mut (dyn AsyncRead + Send + Unpin),
     ) -> BoxFuture<'a, Result<()>> {
         let meta_path = meta_path.clone();
         async move {
@@ -133,9 +133,9 @@ where
     }
 
     fn store_target<'a>(
-        &'a mut self,
+        &'a self,
         target_path: &TargetPath,
-        target: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
+        target: &'a mut (dyn AsyncRead + Send + Unpin),
     ) -> BoxFuture<'a, Result<()>> {
         self.repo.store_target(target_path, target)
     }
@@ -143,7 +143,7 @@ where
 
 impl<D, R> RepositoryProvider<D> for TrackRepository<R>
 where
-    D: DataInterchange + Sync,
+    D: Pouf,
     R: RepositoryProvider<D> + Sync,
 {
     fn fetch_metadata<'a>(

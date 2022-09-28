@@ -1,17 +1,31 @@
-use chrono::offset::Utc;
-use chrono::prelude::*;
-use serde_derive::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashSet};
-
-use crate::crypto;
-use crate::error::Error;
-use crate::metadata::{self, Metadata};
-use crate::Result;
+use {
+    crate::{
+        crypto,
+        error::Error,
+        metadata::{self, Metadata},
+        Result,
+    },
+    chrono::{offset::Utc, prelude::*},
+    serde_derive::{Deserialize, Serialize},
+    std::{
+        collections::{BTreeMap, HashSet},
+        marker::PhantomData,
+    },
+};
 
 const SPEC_VERSION: &str = "1.0";
 
+// Ensure the given spec version matches our spec version.
+//
+// We also need to handle the literal "1.0" here, despite that fact that it is not a valid version
+// according to the SemVer spec, because it is already baked into some of the old roots.
+fn valid_spec_version(other: &str) -> bool {
+    matches!(other, "1.0" | "1.0.0")
+}
+
 fn parse_datetime(ts: &str) -> Result<DateTime<Utc>> {
-    Utc.datetime_from_str(ts, "%FT%TZ")
+    DateTime::parse_from_rfc3339(ts)
+        .map(|ts| ts.with_timezone(&Utc))
         .map_err(|e| Error::Encoding(format!("Can't parse DateTime: {:?}", e)))
 }
 
@@ -65,12 +79,12 @@ impl RootMetadata {
     pub fn try_into(self) -> Result<metadata::RootMetadata> {
         if self.typ != metadata::Role::Root {
             return Err(Error::Encoding(format!(
-                "Attempted to decode root metdata labeled as {:?}",
+                "Attempted to decode root metadata labeled as {:?}",
                 self.typ
             )));
         }
 
-        if self.spec_version != SPEC_VERSION {
+        if !valid_spec_version(&self.spec_version) {
             return Err(Error::Encoding(format!(
                 "Unknown spec version {}",
                 self.spec_version
@@ -101,48 +115,52 @@ impl RootMetadata {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct RoleDefinitions {
-    root: metadata::RoleDefinition,
-    snapshot: metadata::RoleDefinition,
-    targets: metadata::RoleDefinition,
-    timestamp: metadata::RoleDefinition,
+    root: metadata::RoleDefinition<metadata::RootMetadata>,
+    snapshot: metadata::RoleDefinition<metadata::SnapshotMetadata>,
+    targets: metadata::RoleDefinition<metadata::TargetsMetadata>,
+    timestamp: metadata::RoleDefinition<metadata::TimestampMetadata>,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct RoleDefinition {
+pub struct RoleDefinition<M: Metadata> {
     threshold: u32,
     #[serde(rename = "keyids")]
     key_ids: Vec<crypto::KeyId>,
+    #[serde(skip)]
+    _metadata: PhantomData<M>,
 }
 
-impl RoleDefinition {
-    pub fn from(role: &metadata::RoleDefinition) -> Result<Self> {
+impl<M: Metadata> From<&metadata::RoleDefinition<M>> for RoleDefinition<M> {
+    fn from(role: &metadata::RoleDefinition<M>) -> Self {
+        // Sort the key ids so they're in a stable order.
         let mut key_ids = role.key_ids().iter().cloned().collect::<Vec<_>>();
         key_ids.sort();
 
-        Ok(RoleDefinition {
+        RoleDefinition {
             threshold: role.threshold(),
             key_ids,
-        })
+            _metadata: PhantomData,
+        }
     }
+}
 
-    pub fn try_into(self) -> Result<metadata::RoleDefinition> {
-        let key_ids_len = self.key_ids.len();
-        if key_ids_len < 1 {
-            return Err(Error::Encoding(
-                "Role defined with no assoiciated key IDs.".into(),
-            ));
+impl<M: Metadata> TryFrom<RoleDefinition<M>> for metadata::RoleDefinition<M> {
+    type Error = Error;
+
+    fn try_from(definition: RoleDefinition<M>) -> Result<Self> {
+        let key_ids_len = definition.key_ids.len();
+        let mut key_ids = HashSet::with_capacity(key_ids_len);
+
+        for key_id in definition.key_ids {
+            if let Some(old_key_id) = key_ids.replace(key_id) {
+                return Err(Error::MetadataRoleHasDuplicateKeyId {
+                    role: M::ROLE.into(),
+                    key_id: old_key_id,
+                });
+            }
         }
 
-        let key_ids = self.key_ids.into_iter().collect::<HashSet<_>>();
-
-        if key_ids.len() != key_ids_len {
-            return Err(Error::Encoding(format!(
-                "Found {} duplicate key IDs.",
-                key_ids_len - key_ids.len()
-            )));
-        }
-
-        metadata::RoleDefinition::new(self.threshold, key_ids)
+        metadata::RoleDefinition::new(definition.threshold, key_ids)
     }
 }
 
@@ -160,7 +178,7 @@ pub struct TimestampMetadata {
 #[serde(deny_unknown_fields)]
 struct TimestampMeta {
     #[serde(rename = "snapshot.json")]
-    snapshot: metadata::MetadataDescription,
+    snapshot: metadata::MetadataDescription<metadata::SnapshotMetadata>,
 }
 
 impl TimestampMetadata {
@@ -179,12 +197,12 @@ impl TimestampMetadata {
     pub fn try_into(self) -> Result<metadata::TimestampMetadata> {
         if self.typ != metadata::Role::Timestamp {
             return Err(Error::Encoding(format!(
-                "Attempted to decode timestamp metdata labeled as {:?}",
+                "Attempted to decode timestamp metadata labeled as {:?}",
                 self.typ
             )));
         }
 
-        if self.spec_version != SPEC_VERSION {
+        if !valid_spec_version(&self.spec_version) {
             return Err(Error::Encoding(format!(
                 "Unknown spec version {}",
                 self.spec_version
@@ -207,7 +225,7 @@ pub struct SnapshotMetadata {
     version: u32,
     expires: String,
     #[serde(deserialize_with = "deserialize_reject_duplicates::deserialize")]
-    meta: BTreeMap<String, metadata::MetadataDescription>,
+    meta: BTreeMap<String, metadata::MetadataDescription<metadata::TargetsMetadata>>,
 }
 
 impl SnapshotMetadata {
@@ -228,12 +246,12 @@ impl SnapshotMetadata {
     pub fn try_into(self) -> Result<metadata::SnapshotMetadata> {
         if self.typ != metadata::Role::Snapshot {
             return Err(Error::Encoding(format!(
-                "Attempted to decode snapshot metdata labeled as {:?}",
+                "Attempted to decode snapshot metadata labeled as {:?}",
                 self.typ
             )));
         }
 
-        if self.spec_version != SPEC_VERSION {
+        if !valid_spec_version(&self.spec_version) {
             return Err(Error::Encoding(format!(
                 "Unknown spec version {}",
                 self.spec_version
@@ -294,12 +312,12 @@ impl TargetsMetadata {
     pub fn try_into(self) -> Result<metadata::TargetsMetadata> {
         if self.typ != metadata::Role::Targets {
             return Err(Error::Encoding(format!(
-                "Attempted to decode targets metdata labeled as {:?}",
+                "Attempted to decode targets metadata labeled as {:?}",
                 self.typ
             )));
         }
 
-        if self.spec_version != SPEC_VERSION {
+        if !valid_spec_version(&self.spec_version) {
             return Err(Error::Encoding(format!(
                 "Unknown spec version {}",
                 self.spec_version
@@ -477,8 +495,8 @@ pub struct TargetDescription {
     custom: BTreeMap<String, serde_json::Value>,
 }
 
-impl TargetDescription {
-    pub fn from(description: &metadata::TargetDescription) -> TargetDescription {
+impl From<&metadata::TargetDescription> for TargetDescription {
+    fn from(description: &metadata::TargetDescription) -> TargetDescription {
         TargetDescription {
             length: description.length(),
             hashes: description
@@ -493,31 +511,54 @@ impl TargetDescription {
                 .collect(),
         }
     }
+}
 
-    pub fn try_into(self) -> Result<metadata::TargetDescription> {
+impl TryFrom<TargetDescription> for metadata::TargetDescription {
+    type Error = Error;
+
+    fn try_from(description: TargetDescription) -> Result<Self> {
         metadata::TargetDescription::new(
-            self.length,
-            self.hashes.into_iter().collect(),
-            self.custom.into_iter().collect(),
+            description.length,
+            description.hashes.into_iter().collect(),
+            description.custom.into_iter().collect(),
         )
     }
 }
 
-#[derive(Deserialize)]
-pub struct MetadataDescription {
+#[derive(Serialize, Deserialize)]
+pub struct MetadataDescription<M: Metadata> {
     version: u32,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     length: Option<usize>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     hashes: BTreeMap<crypto::HashAlgorithm, crypto::HashValue>,
+    #[serde(skip)]
+    _metadata: PhantomData<M>,
 }
 
-impl MetadataDescription {
-    pub fn try_into(self) -> Result<metadata::MetadataDescription> {
+impl<M: Metadata> From<&metadata::MetadataDescription<M>> for MetadataDescription<M> {
+    fn from(description: &metadata::MetadataDescription<M>) -> Self {
+        Self {
+            version: description.version(),
+            length: description.length(),
+            hashes: description
+                .hashes()
+                .iter()
+                .map(|(k, v)| (k.clone(), v.clone()))
+                .collect(),
+            _metadata: PhantomData,
+        }
+    }
+}
+
+impl<M: Metadata> TryFrom<MetadataDescription<M>> for metadata::MetadataDescription<M> {
+    type Error = Error;
+
+    fn try_from(description: MetadataDescription<M>) -> Result<Self> {
         metadata::MetadataDescription::new(
-            self.version,
-            self.length,
-            self.hashes.into_iter().collect(),
+            description.version,
+            description.length,
+            description.hashes.into_iter().collect(),
         )
     }
 }
@@ -568,5 +609,53 @@ mod deserialize_reject_duplicates {
         deserializer.deserialize_map(BTreeVisitor {
             marker: PhantomData,
         })
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn spec_version_validation() {
+        let valid_spec_versions = ["1.0.0", "1.0"];
+
+        for version in valid_spec_versions {
+            assert!(valid_spec_version(version), "{:?} should be valid", version);
+        }
+
+        let invalid_spec_versions = ["1.0.1", "1.1.0", "2.0.0", "3.0"];
+
+        for version in invalid_spec_versions {
+            assert!(
+                !valid_spec_version(version),
+                "{:?} should be invalid",
+                version
+            );
+        }
+    }
+
+    #[test]
+    fn datetime_formats() {
+        // The TUF spec says datetimes should be in ISO8601 format, specifically
+        // "YYYY-MM-DDTHH:MM:SSZ". Since not all TUF clients adhere strictly to that, we choose to
+        // be more lenient here. The following represent the intersection of valid ISO8601 and
+        // RFC3339 datetime formats (source: https://ijmacd.github.io/rfc3339-iso8601/).
+        let valid_formats = [
+            "2022-08-30T19:53:55Z",
+            "2022-08-30T19:53:55.7Z",
+            "2022-08-30T19:53:55.77Z",
+            "2022-08-30T19:53:55.775Z",
+            "2022-08-30T19:53:55+00:00",
+            "2022-08-30T19:53:55.7+00:00",
+            "2022-08-30T14:53:55-05:00",
+            "2022-08-30T14:53:55.7-05:00",
+            "2022-08-30T14:53:55.77-05:00",
+            "2022-08-30T14:53:55.775-05:00",
+        ];
+
+        for format in valid_formats {
+            assert!(parse_datetime(format).is_ok(), "should parse {:?}", format);
+        }
     }
 }

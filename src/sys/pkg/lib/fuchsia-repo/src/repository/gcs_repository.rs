@@ -20,8 +20,8 @@ use {
     hyper::{header::CONTENT_LENGTH, Body, Response, StatusCode},
     std::{fmt::Debug, io, time::SystemTime},
     tuf::{
-        interchange::Json,
         metadata::{MetadataPath, MetadataVersion, TargetPath},
+        pouf::Pouf1,
         repository::RepositoryProvider as TufRepositoryProvider,
     },
     url::Url,
@@ -251,7 +251,7 @@ where
     }
 }
 
-impl<T> TufRepositoryProvider<Json> for GcsRepository<T>
+impl<T> TufRepositoryProvider<Pouf1> for GcsRepository<T>
 where
     T: GcsClient + Debug + Send + Sync + 'static,
 {
@@ -261,7 +261,7 @@ where
         version: MetadataVersion,
     ) -> BoxFuture<'a, Result<Box<dyn AsyncRead + Send + Unpin + 'a>, tuf::Error>> {
         let meta_path = meta_path.clone();
-        let path = meta_path.components::<Json>(version).join("/");
+        let path = meta_path.components::<Pouf1>(version).join("/");
 
         async move {
             let resp =
@@ -392,8 +392,7 @@ mod tests {
 
             make_repository(blob_repo_path.as_std_path(), blob_repo_path.as_std_path()).await;
             let remote_repo =
-                FileSystemRepository::new(metadata_repo_path.clone(), blob_repo_path.clone())
-                    .unwrap();
+                FileSystemRepository::new(metadata_repo_path.clone(), blob_repo_path.clone());
 
             let tuf_url = "gs://my-tuf-repo/";
             let blob_url = "gs://my-blob-repo/";

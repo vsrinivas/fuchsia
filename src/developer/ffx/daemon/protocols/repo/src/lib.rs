@@ -192,24 +192,9 @@ async fn repo_spec_to_backend(
 ) -> Result<Box<dyn RepoProvider>, ffx::RepositoryError> {
     match repo_spec {
         RepositorySpec::FileSystem { metadata_repo_path, blob_repo_path } => Ok(Box::new(
-            FileSystemRepository::new(metadata_repo_path.into(), blob_repo_path.into()).map_err(
-                |err| {
-                    tracing::error!(
-                        "Unable to create file system repository {} {}: {:#}",
-                        metadata_repo_path,
-                        blob_repo_path,
-                        err
-                    );
-                    ffx::RepositoryError::IoError
-                },
-            )?,
+            FileSystemRepository::new(metadata_repo_path.into(), blob_repo_path.into()),
         )),
-        RepositorySpec::Pm { path } => {
-            Ok(Box::new(PmRepository::new(path.into()).map_err(|err| {
-                tracing::error!("Unable to create pm repository {}: {:#}", path, err);
-                ffx::RepositoryError::InvalidUrl
-            })?))
-        }
+        RepositorySpec::Pm { path } => Ok(Box::new(PmRepository::new(path.into()))),
         RepositorySpec::Http { metadata_repo_url, blob_repo_url } => {
             let metadata_repo_url = Url::parse(metadata_repo_url.as_str()).map_err(|err| {
                 tracing::error!(
@@ -2873,7 +2858,7 @@ mod tests {
         run_test(async {
             // Serve the empty repository
             let repo_path = fs::canonicalize(EMPTY_REPO_PATH).unwrap();
-            let pm_backend = PmRepository::new(repo_path.try_into().unwrap()).unwrap();
+            let pm_backend = PmRepository::new(repo_path.try_into().unwrap());
 
             let pm_repo =
                 RepoClient::from_trusted_remote(Box::new(pm_backend) as Box<_>).await.unwrap();

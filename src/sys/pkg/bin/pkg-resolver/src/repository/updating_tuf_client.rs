@@ -30,16 +30,16 @@ use {
     },
     tuf::{
         error::Error as TufError,
-        interchange::Json,
         metadata::{Metadata, TargetDescription, TargetPath},
+        pouf::Pouf1,
         repository::{RepositoryProvider, RepositoryStorageProvider},
     },
 };
 
 type TufClient = tuf::client::Client<
-    Json,
-    RWRepository<Json, Box<dyn RepositoryStorageProvider<Json> + Sync + Send>>,
-    Box<dyn RepositoryProvider<Json> + Send>,
+    Pouf1,
+    RWRepository<Pouf1, Box<dyn RepositoryStorageProvider<Pouf1> + Sync + Send>>,
+    Box<dyn RepositoryProvider<Pouf1> + Send>,
 >;
 
 pub struct UpdatingTufClient {

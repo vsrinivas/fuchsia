@@ -1,9 +1,13 @@
 //! Error types and converters.
 
-use std::io;
-use thiserror::Error;
-
-use crate::metadata::{MetadataPath, MetadataVersion, TargetPath};
+use {
+    crate::{
+        crypto::KeyId,
+        metadata::{MetadataPath, MetadataVersion, TargetPath},
+    },
+    std::io,
+    thiserror::Error,
+};
 
 /// Alias for `Result<T, Error>`.
 pub type Result<T> = std::result::Result<T, Error>;
@@ -111,13 +115,37 @@ pub enum Error {
     #[error("unknown signature scheme: {0}")]
     UnknownSignatureScheme(String),
 
-    /// The metadata threshold cannot equal 0.
-    #[error("metadata {0} threshold must be greater than zero")]
-    MetadataThresholdMustBeGreaterThanZero(MetadataPath),
+    /// The metadata's version must be greater than 0.
+    #[error("metadata {0} version should be greater than zero")]
+    MetadataVersionMustBeGreaterThanZero(MetadataPath),
 
     /// The metadata's version must be less than `u32::MAX`.
     #[error("metadata {0} version should be less than max u32")]
     MetadataVersionMustBeSmallerThanMaxU32(MetadataPath),
+
+    /// The metadata threshold must be greater than 0.
+    #[error("metadata {0} threshold must be greater than zero")]
+    MetadataThresholdMustBeGreaterThanZero(MetadataPath),
+
+    /// The metadata role has a duplicate keyid.
+    #[error("metadata role {role} has duplicate key id {key_id}")]
+    MetadataRoleHasDuplicateKeyId {
+        /// The metadata.
+        role: MetadataPath,
+        /// The duplicated keyid.
+        key_id: KeyId,
+    },
+
+    /// The metadata role does not have enough keyids.
+    #[error("metadata role {role} has {key_ids} keyid(s), must have at least {threshold}")]
+    MetadataRoleDoesNotHaveEnoughKeyIds {
+        /// The metadata.
+        role: MetadataPath,
+        /// The number of keyids.
+        key_ids: usize,
+        /// The minimum threshold of keys.
+        threshold: u32,
+    },
 
     /// The metadata was not signed with enough valid signatures.
     #[error(
@@ -175,6 +203,13 @@ pub enum Error {
         parent_role: MetadataPath,
         /// That child metadata that was not delegated to by the parent.
         child_role: MetadataPath,
+    },
+
+    /// The metadata must be signed with at least one private key.
+    #[error("{role} must be signed with at least one private key")]
+    MissingPrivateKey {
+        /// The metadata to be signed.
+        role: MetadataPath,
     },
 }
 

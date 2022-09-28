@@ -6,8 +6,8 @@ use std::collections::HashMap;
 
 use crate::crypto::{KeyId, PublicKey, Signature};
 use crate::error::Error;
-use crate::interchange::DataInterchange;
 use crate::metadata::{Metadata, MetadataPath, RawSignedMetadata};
+use crate::pouf::Pouf;
 
 /// `Verified` is a wrapper type that signifies the inner type has had it's signature verified.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -36,7 +36,7 @@ impl<T> std::ops::Deref for Verified<T> {
 /// ```
 /// # use chrono::prelude::*;
 /// # use tuf::crypto::{Ed25519PrivateKey, PrivateKey, SignatureScheme, HashAlgorithm};
-/// # use tuf::interchange::Json;
+/// # use tuf::pouf::Pouf1;
 /// # use tuf::metadata::{MetadataPath, SnapshotMetadataBuilder, SignedMetadata};
 /// # use tuf::verify::verify_signatures;
 ///
@@ -47,7 +47,7 @@ impl<T> std::ops::Deref for Verified<T> {
 /// let key_2 = Ed25519PrivateKey::from_pkcs8(&key_2).unwrap();
 ///
 /// let raw_snapshot = SnapshotMetadataBuilder::new()
-///     .signed::<Json>(&key_1)
+///     .signed::<Pouf1>(&key_1)
 ///     .unwrap()
 ///     .to_raw()
 ///     .unwrap();
@@ -89,7 +89,7 @@ pub fn verify_signatures<'a, D, M, I>(
     authorized_keys: I,
 ) -> Result<Verified<M>, Error>
 where
-    D: DataInterchange,
+    D: Pouf,
     M: Metadata,
     I: IntoIterator<Item = &'a PublicKey>,
 {
@@ -105,7 +105,7 @@ where
     // Extract the signatures and canonicalize the bytes.
     let (signatures, canonical_bytes) = {
         #[derive(Deserialize)]
-        pub struct SignedMetadata<D: DataInterchange> {
+        pub struct SignedMetadata<D: Pouf> {
             signatures: Vec<Signature>,
             signed: D::RawData,
         }

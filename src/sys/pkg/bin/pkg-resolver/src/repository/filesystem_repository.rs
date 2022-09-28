@@ -9,8 +9,8 @@ use {
     futures::{future::BoxFuture, prelude::*},
     std::{convert::TryInto as _, marker::PhantomData, path::Path},
     tuf::{
-        interchange::DataInterchange,
         metadata::{MetadataPath, MetadataVersion, TargetPath},
+        pouf::Pouf,
         repository::{RepositoryProvider, RepositoryStorage},
     },
 };
@@ -24,18 +24,18 @@ enum Mode {
 
 pub struct FuchsiaFileSystemRepository<D>
 where
-    D: DataInterchange,
+    D: Pouf,
 {
     repo_proxy: fio::DirectoryProxy,
-    _interchange: PhantomData<D>,
+    _pouf: PhantomData<D>,
 }
 
 impl<D> FuchsiaFileSystemRepository<D>
 where
-    D: DataInterchange,
+    D: Pouf,
 {
     pub fn new(repo_proxy: fio::DirectoryProxy) -> Self {
-        Self { repo_proxy, _interchange: PhantomData }
+        Self { repo_proxy, _pouf: PhantomData }
     }
 
     #[cfg(test)]
@@ -144,10 +144,7 @@ async fn write_all(
     }
 }
 
-fn get_metadata_path<D: DataInterchange>(
-    meta_path: &MetadataPath,
-    version: MetadataVersion,
-) -> String {
+fn get_metadata_path<D: Pouf>(meta_path: &MetadataPath, version: MetadataVersion) -> String {
     let mut path = vec!["metadata"];
     let components = meta_path.components::<D>(version);
     path.extend(components.iter().map(|s| s.as_str()));
@@ -163,7 +160,7 @@ fn get_target_path(target_path: &TargetPath) -> String {
 
 impl<D> RepositoryProvider<D> for FuchsiaFileSystemRepository<D>
 where
-    D: DataInterchange + Sync + Send,
+    D: Pouf + Sync + Send,
 {
     fn fetch_metadata<'a>(
         &'a self,
@@ -186,10 +183,10 @@ where
 
 impl<D> RepositoryStorage<D> for FuchsiaFileSystemRepository<D>
 where
-    D: DataInterchange + Sync + Send,
+    D: Pouf + Sync + Send,
 {
     fn store_metadata<'a>(
-        &'a mut self,
+        &'a self,
         meta_path: &MetadataPath,
         version: MetadataVersion,
         metadata: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
@@ -199,7 +196,7 @@ where
     }
 
     fn store_target<'a>(
-        &'a mut self,
+        &'a self,
         target_path: &TargetPath,
         target: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
     ) -> BoxFuture<'a, tuf::Result<()>> {
@@ -226,11 +223,11 @@ impl<D, R> RWRepository<D, R> {
 
 impl<D, R> RepositoryStorage<D> for RWRepository<D, R>
 where
-    D: DataInterchange + Sync + Send,
+    D: Pouf + Sync + Send,
     R: RepositoryStorage<D>,
 {
     fn store_metadata<'a>(
-        &'a mut self,
+        &'a self,
         meta_path: &MetadataPath,
         version: MetadataVersion,
         metadata: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
@@ -239,7 +236,7 @@ where
     }
 
     fn store_target<'a>(
-        &'a mut self,
+        &'a self,
         target_path: &TargetPath,
         target: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
     ) -> BoxFuture<'a, tuf::Result<()>> {
@@ -249,7 +246,7 @@ where
 
 impl<D, R> RepositoryProvider<D> for RWRepository<D, R>
 where
-    D: DataInterchange + Sync + Send,
+    D: Pouf + Sync + Send,
     R: RepositoryProvider<D>,
 {
     fn fetch_metadata<'a>(
@@ -283,8 +280,7 @@ where
 #[cfg(test)]
 mod tests {
     use {
-        super::*, fuchsia_async as fasync, futures::io::Cursor, tempfile::tempdir,
-        tuf::interchange::Json,
+        super::*, fuchsia_async as fasync, futures::io::Cursor, tempfile::tempdir, tuf::pouf::Pouf1,
     };
 
     fn get_random_buffer() -> Vec<u8> {
@@ -300,7 +296,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_store_and_fetch_path() {
         let temp = tempdir().unwrap();
-        let repo = FuchsiaFileSystemRepository::<Json>::from_temp_dir(&temp);
+        let repo = FuchsiaFileSystemRepository::<Pouf1>::from_temp_dir(&temp);
         // Intentionally duplicate test cases to make sure we can overwrite existing file.
         for path in ["file", "a/b", "1/2/3", "a/b"] {
             let expected_data = get_random_buffer();
@@ -351,7 +347,7 @@ mod tests {
         let expected_data = get_random_buffer();
         std::fs::create_dir(temp.path().join("metadata")).unwrap();
         std::fs::write(temp.path().join("metadata/root.json"), &expected_data).unwrap();
-        let repo = FuchsiaFileSystemRepository::<Json>::from_temp_dir(&temp);
+        let repo = FuchsiaFileSystemRepository::<Pouf1>::from_temp_dir(&temp);
         let mut result = repo
             .fetch_metadata(&MetadataPath::new("root").unwrap(), MetadataVersion::None)
             .await
@@ -368,7 +364,7 @@ mod tests {
         let expected_data = get_random_buffer();
         std::fs::create_dir_all(temp.path().join("targets")).unwrap();
         std::fs::write(temp.path().join("targets/foo"), &expected_data).unwrap();
-        let repo = FuchsiaFileSystemRepository::<Json>::from_temp_dir(&temp);
+        let repo = FuchsiaFileSystemRepository::<Pouf1>::from_temp_dir(&temp);
         let mut result = repo.fetch_target(&TargetPath::new("foo").unwrap()).await.unwrap();
 
         let mut data = Vec::new();
@@ -380,7 +376,7 @@ mod tests {
     async fn test_store_metadata() {
         let temp = tempdir().unwrap();
         let expected_data = get_random_buffer();
-        let mut repo = FuchsiaFileSystemRepository::<Json>::from_temp_dir(&temp);
+        let repo = FuchsiaFileSystemRepository::<Pouf1>::from_temp_dir(&temp);
         let mut cursor = Cursor::new(&expected_data);
         repo.store_metadata(
             &MetadataPath::new("root").unwrap(),
@@ -398,7 +394,7 @@ mod tests {
     async fn test_store_target() {
         let temp = tempdir().unwrap();
         let expected_data = get_random_buffer();
-        let mut repo = FuchsiaFileSystemRepository::<Json>::from_temp_dir(&temp);
+        let repo = FuchsiaFileSystemRepository::<Pouf1>::from_temp_dir(&temp);
         let mut cursor = Cursor::new(&expected_data);
         repo.store_target(&TargetPath::new("foo/bar").unwrap(), &mut cursor).await.unwrap();
 
@@ -409,7 +405,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_fetch_fail_when_write_only() {
         let temp = tempdir().unwrap();
-        let repo = FuchsiaFileSystemRepository::<Json>::from_temp_dir(&temp);
+        let repo = FuchsiaFileSystemRepository::<Pouf1>::from_temp_dir(&temp);
         let mut repo = RWRepository::new(repo);
         std::fs::create_dir(temp.path().join("metadata")).unwrap();
         std::fs::write(temp.path().join("metadata/foo.json"), get_random_buffer()).unwrap();

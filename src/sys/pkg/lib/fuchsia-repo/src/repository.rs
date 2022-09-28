@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_developer_ffx_ext::RepositorySpec,
     futures::{future::BoxFuture, stream::BoxStream},
     std::{fmt::Debug, io, sync::Arc, time::SystemTime},
-    tuf::{interchange::Json, repository::RepositoryProvider as TufRepositoryProvider},
+    tuf::{pouf::Pouf1, repository::RepositoryProvider as TufRepositoryProvider},
     url::ParseError,
 };
 
@@ -74,7 +74,7 @@ impl From<ParseError> for Error {
     }
 }
 
-pub trait RepoProvider: TufRepositoryProvider<Json> + Debug + Send + Sync {
+pub trait RepoProvider: TufRepositoryProvider<Pouf1> + Debug + Send + Sync {
     /// Get a [RepositorySpec] for this [Repository]
     fn spec(&self) -> RepositorySpec;
 

@@ -6,7 +6,7 @@ use {
     crate::{repo_client::get_tuf_client, repo_keys::RepoKeys},
     anyhow::{Context as _, Result},
     chrono::{DateTime, Duration, NaiveDateTime, Utc},
-    tuf::{interchange::Json, metadata::MetadataPath, repository::RepositoryStorageProvider},
+    tuf::{metadata::MetadataPath, pouf::Pouf1, repository::RepositoryStorageProvider},
 };
 
 /// Number of days from now before the root metadata is expired.
@@ -24,7 +24,7 @@ const DEFAULT_TIMESTAMP_EXPIRATION: i64 = 30;
 pub trait RepoStorage {
     fn get_tuf_repo_storage(
         &self,
-    ) -> Result<Box<dyn RepositoryStorageProvider<Json> + Send + Sync>>;
+    ) -> Result<Box<dyn RepositoryStorageProvider<Pouf1> + Send + Sync>>;
 }
 
 pub async fn refresh_repository(repo: &dyn RepoStorage, repo_keys: &RepoKeys) -> Result<()> {
