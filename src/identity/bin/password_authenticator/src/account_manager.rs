@@ -7,8 +7,6 @@ use crate::{
     account_metadata::{
         AccountMetadata, AccountMetadataStore, AccountMetadataStoreError, AuthenticatorMetadata,
     },
-    constants::{ACCOUNT_LABEL, FUCHSIA_DATA_GUID},
-    disk_management::{DiskError, DiskManager, EncryptedBlockDevice, Partition},
     keys::{Key, KeyEnrollment, KeyEnrollmentError, KeyRetrieval, KeyRetrievalError},
     pinweaver::{CredManager, PinweaverKeyEnroller, PinweaverKeyRetriever, PinweaverParams},
     scrypt::{ScryptKeySource, ScryptParams},
@@ -24,6 +22,10 @@ use fuchsia_component::client::connect_to_protocol;
 use futures::{lock::Mutex, prelude::*};
 use password_authenticator_config::Config;
 use std::{collections::HashMap, sync::Arc};
+use storage_manager::minfs::{
+    constants::{ACCOUNT_LABEL, FUCHSIA_DATA_GUID},
+    disk::{DiskError, DiskManager, EncryptedBlockDevice, Partition},
+};
 use tracing::{error, info, warn};
 
 /// The singleton account ID on the device.
@@ -834,7 +836,6 @@ mod test {
                 test::{TEST_NAME, TEST_PINWEAVER_METADATA, TEST_SCRYPT_METADATA},
                 AccountMetadata, AccountMetadataStoreError,
             },
-            disk_management::{DiskError, MockMinfs},
             keys::Key,
             pinweaver::test::{
                 MockCredManager, TEST_PINWEAVER_ACCOUNT_KEY, TEST_PINWEAVER_CREDENTIAL_LABEL,
@@ -847,6 +848,7 @@ mod test {
         fidl_fuchsia_io as fio,
         fuchsia_zircon::Status,
         lazy_static::lazy_static,
+        storage_manager::minfs::disk::{testing::MockMinfs, DiskError},
         vfs::execution_scope::ExecutionScope,
     };
 

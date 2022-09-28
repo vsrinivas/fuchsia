@@ -1,0 +1,18 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library test.identity;
+
+using fuchsia.device as device;
+using fuchsia.hardware.block.partition as partition;
+using fuchsia.io as io;
+
+/// A protocol that helps mock the behavior of devhost block devices,
+/// which have a hand-written method of protocol switching.
+/// Composing all of the desired protocols is the easier and safer
+/// way to mock this behavior.
+protocol MockPartition {
+    compose io.File; // For Clone and ReadAt.
+    compose partition.Partition;
+    compose device.Controller;
+};

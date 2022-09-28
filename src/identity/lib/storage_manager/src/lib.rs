@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 mod directory;
+pub mod minfs;
 mod volume;
 
 pub use directory::InsecureKeyDirectoryStorageManager;

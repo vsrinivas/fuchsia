@@ -5,8 +5,6 @@
 mod account;
 mod account_manager;
 mod account_metadata;
-mod constants;
-mod disk_management;
 mod keys;
 mod pinweaver;
 mod scrypt;
@@ -26,12 +24,12 @@ use fuchsia_fs::directory::open_in_namespace;
 use fuchsia_runtime::{self as fruntime, HandleInfo, HandleType};
 use futures::StreamExt;
 use std::sync::Arc;
+use storage_manager::minfs::disk::DevDiskManager;
 use tracing::{error, info};
 
 use crate::{
     account_manager::{AccountManager, EnvCredManagerProvider},
     account_metadata::DataDirAccountMetadataStore,
-    disk_management::DevDiskManager,
     storage_unlock_mechanism::StorageUnlockMechanism,
 };
 

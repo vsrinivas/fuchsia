@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{
-    disk_management::{DiskError, EncryptedBlockDevice, Minfs},
-    keys::Key,
-};
+use crate::keys::Key;
 use anyhow::Context;
 use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_identity_account::{
@@ -16,6 +13,7 @@ use fuchsia_zircon::Status;
 use futures::{lock::Mutex, prelude::*, select};
 use identity_common::{TaskGroup, TaskGroupCancel, TaskGroupError};
 use std::sync::Arc;
+use storage_manager::minfs::disk::{DiskError, EncryptedBlockDevice, Minfs};
 use thiserror::Error;
 use tracing::{error, info, warn};
 
@@ -270,7 +268,6 @@ mod test {
     use {
         super::*,
         crate::{
-            disk_management::MockMinfs,
             keys::{Key, KEY_LEN},
             testing::CallCounter,
         },
@@ -278,6 +275,7 @@ mod test {
         fidl_fuchsia_identity_account::{AccountMarker, AccountProxy},
         fuchsia_fs::{directory, file, node::OpenError},
         fuchsia_zircon::Status,
+        storage_manager::minfs::disk::testing::MockMinfs,
         vfs::execution_scope::ExecutionScope,
     };
 

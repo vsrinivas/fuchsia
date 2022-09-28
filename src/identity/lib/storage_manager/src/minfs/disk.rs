@@ -1,11 +1,8 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[cfg(test)]
-use vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope};
 use {
-    crate::keys::Key,
     async_trait::async_trait,
     fidl::endpoints::{ProtocolMarker, ServerEnd},
     fidl_fuchsia_device::ControllerMarker,
@@ -24,6 +21,12 @@ use {
     thiserror::Error,
     tracing::{error, warn},
 };
+
+/// The size, in bytes of a key.
+pub const KEY_LEN: usize = 32;
+
+/// A 256-bit key.
+pub type Key = [u8; KEY_LEN];
 
 #[derive(Error, Debug)]
 pub enum DiskError {
@@ -482,49 +485,53 @@ impl Minfs for DevMinfs {
     }
 }
 
-#[cfg(test)]
-#[derive(Debug, Clone)]
-pub struct MockMinfs(fio::DirectoryProxy);
+pub mod testing {
+    use crate::minfs::disk::Minfs;
+    use async_trait::async_trait;
+    use fidl::endpoints::ServerEnd;
+    use fidl_fuchsia_io as fio;
+    use vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope};
 
-#[cfg(test)]
-impl MockMinfs {
-    pub fn simple(scope: ExecutionScope) -> Self {
-        let (proxy, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
-        vfs::directory::mutable::simple().open(
-            scope,
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-            fio::MODE_TYPE_DIRECTORY,
-            vfs::path::Path::dot(),
-            ServerEnd::new(server_end.into_channel()),
-        );
-        MockMinfs(proxy)
+    #[derive(Debug, Clone)]
+    pub struct MockMinfs(fio::DirectoryProxy);
+
+    impl MockMinfs {
+        pub fn simple(scope: ExecutionScope) -> Self {
+            let (proxy, server_end) =
+                fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
+            vfs::directory::mutable::simple().open(
+                scope,
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                fio::MODE_TYPE_DIRECTORY,
+                vfs::path::Path::dot(),
+                ServerEnd::new(server_end.into_channel()),
+            );
+            MockMinfs(proxy)
+        }
     }
-}
 
-#[cfg(test)]
-#[async_trait]
-impl Minfs for MockMinfs {
-    fn root_dir(&self) -> &fio::DirectoryProxy {
-        &self.0
+    #[async_trait]
+    impl Minfs for MockMinfs {
+        fn root_dir(&self) -> &fio::DirectoryProxy {
+            &self.0
+        }
+
+        async fn shutdown(self) {}
     }
 
-    async fn shutdown(self) {}
-}
-
-#[cfg(test)]
-impl Default for MockMinfs {
-    fn default() -> Self {
-        let scope = ExecutionScope::build()
-            .entry_constructor(vfs::directory::mutable::simple::tree_constructor(
-                |_parent, _name| {
-                    Ok(vfs::file::vmo::read_write(vfs::file::vmo::simple_init_vmo_with_capacity(
-                        &[],
-                        100,
-                    )))
-                },
-            ))
-            .new();
-        Self::simple(scope)
+    impl Default for MockMinfs {
+        fn default() -> Self {
+            let scope = ExecutionScope::build()
+                .entry_constructor(vfs::directory::mutable::simple::tree_constructor(
+                    |_parent, _name| {
+                        Ok(vfs::file::vmo::read_write(
+                            vfs::file::vmo::simple_init_vmo_with_capacity(&[], 100),
+                        ))
+                    },
+                ))
+                .new();
+            Self::simple(scope)
+        }
     }
 }
 
@@ -532,10 +539,7 @@ impl Default for MockMinfs {
 pub mod test {
     use {
         super::*,
-        crate::{
-            constants::{ACCOUNT_LABEL, FUCHSIA_DATA_GUID},
-            scrypt::test::TEST_SCRYPT_KEY,
-        },
+        crate::minfs::constants::{ACCOUNT_LABEL, FUCHSIA_DATA_GUID},
         assert_matches::assert_matches,
         fidl_fuchsia_hardware_block::{BlockInfo, MAX_TRANSFER_UNBOUNDED},
         fidl_fuchsia_hardware_block_encrypted::{DeviceManagerRequest, DeviceManagerRequestStream},
@@ -557,6 +561,15 @@ pub mod test {
             pseudo_directory,
         },
     };
+
+    // We have precomputed the key produced by the fixed salt and params (see
+    // src/identity/bin/password_authenticator/src/scrypt.rs) so that each test
+    // that wants to use one doesn't need to perform an additional key
+    // derivation every single time.
+    pub const TEST_SCRYPT_KEY: [u8; KEY_LEN] = [
+        88, 91, 129, 123, 173, 34, 21, 1, 23, 147, 87, 189, 56, 149, 89, 132, 210, 235, 150, 102,
+        129, 93, 202, 53, 115, 170, 162, 217, 254, 115, 216, 181,
+    ];
 
     const BLOCK_SIZE: usize = 4096;
     const DATA_GUID: Guid = Guid { value: FUCHSIA_DATA_GUID };
