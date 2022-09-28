@@ -1127,7 +1127,7 @@ async fn load_registrations_from_config(
 
 async fn update_repository(
     repo_name: &str,
-    repo: &RwLock<RepoClient>,
+    repo: &RwLock<RepoClient<Box<dyn RepoProvider>>>,
 ) -> Result<bool, ffx::RepositoryError> {
     repo.write().await.update().await.map_err(|err| {
         tracing::error!("Unable to update repository {}: {:#?}", repo_name, err);

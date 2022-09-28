@@ -6,7 +6,7 @@ use {
     crate::{
         repo_client::RepoClient,
         repo_keys::RepoKeys,
-        repository::{FileSystemRepository, PmRepository},
+        repository::{FileSystemRepository, PmRepository, RepoProvider},
     },
     anyhow::{anyhow, Context, Result},
     camino::{Utf8Path, Utf8PathBuf},
@@ -108,18 +108,21 @@ pub fn make_repo_dir(root: &Utf8Path) -> Result<()> {
     Ok(())
 }
 
-pub async fn make_readonly_empty_repository() -> Result<RepoClient> {
+pub async fn make_readonly_empty_repository() -> Result<RepoClient<Box<dyn RepoProvider>>> {
     let backend = PmRepository::new(Utf8PathBuf::from(EMPTY_REPO_PATH))?;
-    let mut client =
-        RepoClient::from_trusted_remote(Box::new(backend)).await.map_err(|e| anyhow!(e))?;
+    let mut client = RepoClient::from_trusted_remote(Box::new(backend) as Box<_>)
+        .await
+        .map_err(|e| anyhow!(e))?;
     client.update().await?;
     Ok(client)
 }
 
-pub async fn make_writable_empty_repository(root: Utf8PathBuf) -> Result<RepoClient> {
+pub async fn make_writable_empty_repository(
+    root: Utf8PathBuf,
+) -> Result<RepoClient<Box<dyn RepoProvider>>> {
     make_repo_dir(&root)?;
     let backend = PmRepository::new(root)?;
-    let mut client = RepoClient::from_trusted_remote(Box::new(backend)).await?;
+    let mut client = RepoClient::from_trusted_remote(Box::new(backend) as Box<_>).await?;
     client.update().await?;
     Ok(client)
 }
@@ -271,13 +274,13 @@ pub async fn make_pm_repository(dir: impl Into<Utf8PathBuf>) -> PmRepository {
 pub async fn make_file_system_repository(
     metadata_dir: impl Into<Utf8PathBuf>,
     blobs_dir: impl Into<Utf8PathBuf>,
-) -> RepoClient {
+) -> RepoClient<Box<dyn RepoProvider>> {
     let metadata_dir = metadata_dir.into();
     let blobs_dir = blobs_dir.into();
     make_repository(metadata_dir.as_std_path(), blobs_dir.as_std_path()).await;
 
     let backend = FileSystemRepository::new(metadata_dir, blobs_dir).unwrap();
-    let mut client = RepoClient::from_trusted_remote(Box::new(backend)).await.unwrap();
+    let mut client = RepoClient::from_trusted_remote(Box::new(backend) as Box<_>).await.unwrap();
     client.update().await.unwrap();
     client
 }

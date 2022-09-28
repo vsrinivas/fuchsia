@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::repo_client::RepoClient,
+    crate::{repo_client::RepoClient, repository::RepoProvider},
     async_lock::RwLock as AsyncRwLock,
     std::{
         collections::HashMap,
@@ -11,7 +11,7 @@ use {
     },
 };
 
-type ArcRepoClient = Arc<AsyncRwLock<RepoClient>>;
+type ArcRepoClient = Arc<AsyncRwLock<RepoClient<Box<dyn RepoProvider>>>>;
 
 /// RepositoryManager is responsible for managing all the repositories in use by ffx.
 pub struct RepositoryManager {
@@ -25,7 +25,7 @@ impl RepositoryManager {
     }
 
     /// Add a [Repository] to the [RepositoryManager].
-    pub fn add(&self, repo_name: impl Into<String>, repo: RepoClient) {
+    pub fn add(&self, repo_name: impl Into<String>, repo: RepoClient<Box<dyn RepoProvider>>) {
         let repo_name = repo_name.into();
         self.repositories.write().unwrap().insert(repo_name, Arc::new(AsyncRwLock::new(repo)));
     }

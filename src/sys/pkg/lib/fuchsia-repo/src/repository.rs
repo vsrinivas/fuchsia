@@ -7,8 +7,8 @@ use {
     anyhow::Result,
     camino::Utf8PathBuf,
     fidl_fuchsia_developer_ffx_ext::RepositorySpec,
-    futures::stream::BoxStream,
-    std::{fmt::Debug, io, time::SystemTime},
+    futures::{future::BoxFuture, stream::BoxStream},
+    std::{fmt::Debug, io, sync::Arc, time::SystemTime},
     tuf::{interchange::Json, repository::RepositoryProvider as TufRepositoryProvider},
     url::ParseError,
 };
@@ -74,16 +74,23 @@ impl From<ParseError> for Error {
     }
 }
 
-#[async_trait::async_trait]
 pub trait RepoProvider: TufRepositoryProvider<Json> + Debug + Send + Sync {
     /// Get a [RepositorySpec] for this [Repository]
     fn spec(&self) -> RepositorySpec;
 
     /// Fetch a metadata [Resource] from this repository.
-    async fn fetch_metadata_range(&self, path: &str, range: Range) -> Result<Resource, Error>;
+    fn fetch_metadata_range<'a>(
+        &'a self,
+        path: &str,
+        range: Range,
+    ) -> BoxFuture<'a, Result<Resource, Error>>;
 
     /// Fetch a blob [Resource] from this repository.
-    async fn fetch_blob_range(&self, path: &str, range: Range) -> Result<Resource, Error>;
+    fn fetch_blob_range<'a>(
+        &'a self,
+        path: &str,
+        range: Range,
+    ) -> BoxFuture<'a, Result<Resource, Error>>;
 
     /// Whether or not the backend supports watching for file changes.
     fn supports_watch(&self) -> bool {
@@ -96,8 +103,67 @@ pub trait RepoProvider: TufRepositoryProvider<Json> + Debug + Send + Sync {
     }
 
     /// Get the length of a blob in this repository.
-    async fn blob_len(&self, path: &str) -> anyhow::Result<u64>;
+    fn blob_len<'a>(&'a self, path: &str) -> BoxFuture<'a, anyhow::Result<u64>>;
 
     /// Get the modification time of a blob in this repository if available.
-    async fn blob_modification_time(&self, path: &str) -> anyhow::Result<Option<SystemTime>>;
+    fn blob_modification_time<'a>(
+        &'a self,
+        path: &str,
+    ) -> BoxFuture<'a, anyhow::Result<Option<SystemTime>>>;
 }
+
+macro_rules! impl_provider {
+    (
+        <$($desc:tt)+
+    ) => {
+        impl <$($desc)+ {
+            fn spec(&self) -> RepositorySpec {
+                (**self).spec()
+            }
+
+            fn fetch_metadata_range<'a>(
+                &'a self,
+                path: &str,
+                range: Range,
+            ) -> BoxFuture<'a, Result<Resource, Error>> {
+                (**self).fetch_metadata_range(path, range)
+            }
+
+            fn fetch_blob_range<'a>(
+                &'a self,
+                path: &str,
+                range: Range,
+            ) -> BoxFuture<'a, Result<Resource, Error>> {
+                (**self).fetch_blob_range(path, range)
+            }
+
+            /// Whether or not the backend supports watching for file changes.
+            fn supports_watch(&self) -> bool {
+                (**self).supports_watch()
+            }
+
+            /// Returns a stream which sends a unit value every time the given path is modified.
+            fn watch(&self) -> anyhow::Result<BoxStream<'static, ()>> {
+                (**self).watch()
+            }
+
+            /// Get the length of a blob in this repository.
+            fn blob_len<'a>(&'a self, path: &str) -> BoxFuture<'a, anyhow::Result<u64>> {
+                (**self).blob_len(path)
+            }
+
+            /// Get the modification time of a blob in this repository if available.
+            fn blob_modification_time<'a>(
+                &'a self,
+                path: &str,
+            ) -> BoxFuture<'a, anyhow::Result<Option<SystemTime>>> {
+                (**self).blob_modification_time(path)
+            }
+        }
+    };
+}
+
+impl_provider!(<T: RepoProvider> RepoProvider for &T);
+impl_provider!(<T: RepoProvider> RepoProvider for &mut T);
+impl_provider!(<T: RepoProvider + ?Sized> RepoProvider for Box<T>);
+impl_provider!(<T: RepoProvider + ?Sized> RepoProvider for Arc<T>);

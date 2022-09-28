@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::repo_client::{get_tuf_client, RepoClient},
+    crate::{
+        repo_client::{get_tuf_client, RepoClient},
+        repository::RepoProvider,
+    },
     anyhow::{anyhow, bail, Context, Result},
     async_lock::Mutex,
     chrono::{DateTime, Utc},
@@ -40,12 +43,15 @@ use {
 /// `metadata_dir`: Write repository metadata to this directory.
 /// `output_blobs_dir`: Write the package blobs into this directory.
 /// `concurrency`: Maximum number of blobs to download at the same time.
-pub async fn resolve_repository(
-    repo: &RepoClient,
+pub async fn resolve_repository<R>(
+    repo: &RepoClient<R>,
     metadata_dir: impl AsRef<Path>,
     blobs_dir: impl AsRef<Path>,
     concurrency: usize,
-) -> Result<()> {
+) -> Result<()>
+where
+    R: RepoProvider,
+{
     let blobs_dir = blobs_dir.as_ref();
 
     let trusted_targets = resolve_repository_metadata(repo, metadata_dir).await?;
@@ -71,10 +77,13 @@ pub async fn resolve_repository(
 ///
 /// `repo`: Download the package from this repository.
 /// `metadata_dir`: Write repository metadata to this directory.
-pub async fn resolve_repository_metadata(
-    repo: &RepoClient,
+pub async fn resolve_repository_metadata<R>(
+    repo: &RepoClient<R>,
     metadata_dir: impl AsRef<Path>,
-) -> Result<Option<Verified<TargetsMetadata>>> {
+) -> Result<Option<Verified<TargetsMetadata>>>
+where
+    R: RepoProvider,
+{
     let metadata_dir = metadata_dir.as_ref();
     resolve_repository_metadata_with_start_time(repo, metadata_dir, &Utc::now()).await
 }
@@ -84,11 +93,14 @@ pub async fn resolve_repository_metadata(
 /// `repo`: Download the package from this repository.
 /// `metadata_dir`: Write repository metadata to this directory.
 /// `start_time`: Update metadata relative to this update start time.
-pub async fn resolve_repository_metadata_with_start_time(
-    upstream_repo: &RepoClient,
+pub async fn resolve_repository_metadata_with_start_time<R>(
+    upstream_repo: &RepoClient<R>,
     metadata_dir: impl AsRef<Path>,
     start_time: &DateTime<Utc>,
-) -> Result<Option<Verified<TargetsMetadata>>> {
+) -> Result<Option<Verified<TargetsMetadata>>>
+where
+    R: RepoProvider,
+{
     let metadata_dir = metadata_dir.as_ref();
 
     // Cache the TUF metadata from the upstream repository into a temporary directory.
@@ -119,12 +131,15 @@ pub async fn resolve_repository_metadata_with_start_time(
 /// `package_path`: Path to the package in the repository.
 /// `output_blobs_dir`: Write the package blobs into this directory.
 /// `concurrency`: Maximum number of blobs to download at the same time.
-pub async fn resolve_package(
-    repo: &RepoClient,
+pub async fn resolve_package<R>(
+    repo: &RepoClient<R>,
     package_path: &str,
     output_blobs_dir: impl AsRef<Path>,
     concurrency: usize,
-) -> Result<Hash> {
+) -> Result<Hash>
+where
+    R: RepoProvider,
+{
     let output_blobs_dir = output_blobs_dir.as_ref();
 
     let desc = repo.get_target_description(package_path).await?.with_context(|| {
@@ -224,9 +239,9 @@ fn merkle_from_description(desc: &TargetDescription) -> Result<Hash> {
 ///
 /// Note: This caches blob verification of the local blob. This means that it would miss if the
 /// local blob file was modified after verification.
-pub struct PackageFetcher<'a> {
+pub struct PackageFetcher<'a, R: RepoProvider> {
     /// Download the package from this repository.
-    repo: &'a RepoClient,
+    repo: &'a RepoClient<R>,
 
     /// Write the package blobs into this directory.
     blobs_dir: &'a Path,
@@ -238,14 +253,17 @@ pub struct PackageFetcher<'a> {
     verified_blobs: Mutex<HashMap<Hash, Shared<oneshot::Receiver<PathBuf>>>>,
 }
 
-impl<'a> PackageFetcher<'a> {
+impl<'a, R> PackageFetcher<'a, R>
+where
+    R: RepoProvider,
+{
     /// Create a package fetcher, which downloads a package from a repository and write the blobs to
     /// a directory.
     pub async fn new(
-        repo: &'a RepoClient,
+        repo: &'a RepoClient<R>,
         blobs_dir: &'a Path,
         concurrency: usize,
-    ) -> Result<PackageFetcher<'a>> {
+    ) -> Result<PackageFetcher<'a, R>> {
         if !blobs_dir.exists() {
             async_fs::create_dir_all(blobs_dir).await?;
         }
@@ -309,11 +327,14 @@ impl<'a> PackageFetcher<'a> {
     }
 }
 
-async fn download_blob_to_destination(
-    repo: &RepoClient,
+async fn download_blob_to_destination<R>(
+    repo: &RepoClient<R>,
     dir: &Path,
     blob: &Hash,
-) -> Result<PathBuf> {
+) -> Result<PathBuf>
+where
+    R: RepoProvider,
+{
     let blob_str = blob.to_string();
     let path = dir.join(&blob_str);
 

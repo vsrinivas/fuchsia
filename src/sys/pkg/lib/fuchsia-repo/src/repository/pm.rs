@@ -16,7 +16,10 @@ use {
     tuf::{
         interchange::Json,
         metadata::{MetadataPath, MetadataVersion, TargetPath},
-        repository::{RepositoryProvider as TufRepositoryProvider, RepositoryStorageProvider},
+        repository::{
+            RepositoryProvider as TufRepositoryProvider, RepositoryStorage as TufRepositoryStorage,
+            RepositoryStorageProvider,
+        },
     },
 };
 
@@ -38,22 +41,25 @@ impl PmRepository {
     }
 }
 
-#[async_trait::async_trait]
 impl RepoProvider for PmRepository {
     fn spec(&self) -> RepositorySpec {
         RepositorySpec::Pm { path: self.pm_repo_path.clone() }
     }
 
-    async fn fetch_metadata_range(
-        &self,
+    fn fetch_metadata_range<'a>(
+        &'a self,
         resource_path: &str,
         range: Range,
-    ) -> Result<Resource, Error> {
-        self.repo.fetch_metadata_range(resource_path, range).await
+    ) -> BoxFuture<'a, Result<Resource, Error>> {
+        self.repo.fetch_metadata_range(resource_path, range)
     }
 
-    async fn fetch_blob_range(&self, resource_path: &str, range: Range) -> Result<Resource, Error> {
-        self.repo.fetch_blob_range(resource_path, range).await
+    fn fetch_blob_range<'a>(
+        &'a self,
+        resource_path: &str,
+        range: Range,
+    ) -> BoxFuture<'a, Result<Resource, Error>> {
+        self.repo.fetch_blob_range(resource_path, range)
     }
 
     fn supports_watch(&self) -> bool {
@@ -64,12 +70,15 @@ impl RepoProvider for PmRepository {
         self.repo.watch()
     }
 
-    async fn blob_len(&self, path: &str) -> Result<u64> {
-        self.repo.blob_len(path).await
+    fn blob_len<'a>(&'a self, path: &str) -> BoxFuture<'a, Result<u64>> {
+        self.repo.blob_len(path)
     }
 
-    async fn blob_modification_time(&self, path: &str) -> Result<Option<SystemTime>> {
-        self.repo.blob_modification_time(path).await
+    fn blob_modification_time<'a>(
+        &'a self,
+        path: &str,
+    ) -> BoxFuture<'a, Result<Option<SystemTime>>> {
+        self.repo.blob_modification_time(path)
     }
 }
 
@@ -87,6 +96,25 @@ impl TufRepositoryProvider<Json> for PmRepository {
         target_path: &TargetPath,
     ) -> BoxFuture<'a, tuf::Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
         self.repo.fetch_target(target_path)
+    }
+}
+
+impl TufRepositoryStorage<Json> for PmRepository {
+    fn store_metadata<'a>(
+        &'a mut self,
+        meta_path: &MetadataPath,
+        version: MetadataVersion,
+        metadata: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
+    ) -> BoxFuture<'a, tuf::Result<()>> {
+        self.repo.store_metadata(meta_path, version, metadata)
+    }
+
+    fn store_target<'a>(
+        &'a mut self,
+        target_path: &TargetPath,
+        target: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
+    ) -> BoxFuture<'a, tuf::Result<()>> {
+        self.repo.store_target(target_path, target)
     }
 }
 

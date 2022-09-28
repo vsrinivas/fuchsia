@@ -15,7 +15,7 @@ use {
     },
     anyhow::{anyhow, Context as _, Result},
     fidl_fuchsia_developer_ffx_ext::RepositorySpec,
-    futures::{future::BoxFuture, AsyncRead, TryStreamExt as _},
+    futures::{future::BoxFuture, AsyncRead, FutureExt as _, TryStreamExt as _},
     hyper::{
         client::{connect::Connect, Client},
         header::{CONTENT_LENGTH, CONTENT_RANGE, RANGE},
@@ -80,90 +80,99 @@ impl<C> HttpRepository<C>
 where
     C: Connect + Clone + Send + Sync + 'static,
 {
-    async fn fetch_from(
-        &self,
+    fn fetch_from<'a>(
+        &'a self,
         root: &Url,
         resource_path: &str,
         range: Range,
-    ) -> Result<Resource, Error> {
-        let full_url = root.join(resource_path).map_err(|e| anyhow!(e))?;
-        let uri = full_url.as_str().parse::<Uri>().map_err(|e| anyhow!(e))?;
+    ) -> BoxFuture<'a, Result<Resource, Error>> {
+        let full_url = root.join(resource_path);
 
-        let mut builder = Request::builder().method(Method::GET).uri(uri);
+        async move {
+            let full_url = full_url.map_err(|e| anyhow!(e))?;
+            let uri = full_url.as_str().parse::<Uri>().map_err(|e| anyhow!(e))?;
 
-        // Add a 'Range' header if we're requesting a subset of the file.
-        if let Some(http_range) = range.to_http_request_header() {
-            builder = builder.header(RANGE, http_range);
-        }
+            let mut builder = Request::builder().method(Method::GET).uri(uri);
 
-        let request = builder.body(Body::empty()).context("creating http request")?;
-
-        let resp = self
-            .client
-            .request(request)
-            .await
-            .context(format!("fetching resource {}", full_url.as_str()))?;
-
-        // Check if the response was successful, or propagate the error.
-        //
-        // Note that according to [RFC-7233], it's possible for a 'Range' request from the client to
-        // get a `200 OK` response and the full resource in return. Furthermore, the server is
-        // allowed to return a `206 Partial Content` and a different subset `Content-Range` that was
-        // requested by the `Range` request. The RFC mentions that a server may do this to coalesce
-        // overlapping ranges, or separated by a gap. So we'll parse these headers and pass along
-        // the response range to the caller.
-        //
-        // [RFC-7233]: https://datatracker.ietf.org/doc/html/rfc7233#section-4.1
-        let content_range = match resp.status() {
-            StatusCode::OK => {
-                // The package resolver currently requires a 'Content-Length' header, so error out
-                // if one wasn't provided.
-                let content_length = resp.headers().get(CONTENT_LENGTH).ok_or_else(|| {
-                    Error::Other(anyhow!("response missing Content-Length header"))
-                })?;
-
-                ContentRange::from_http_content_length_header(content_length)
-                    .context("parsing Content-Length header")?
+            // Add a 'Range' header if we're requesting a subset of the file.
+            if let Some(http_range) = range.to_http_request_header() {
+                builder = builder.header(RANGE, http_range);
             }
-            StatusCode::PARTIAL_CONTENT => {
-                // According to [RFC-7233], a Partial Content status must come with a
-                // 'Content-Range' header.
-                //
-                // [RFC-7233]: https://datatracker.ietf.org/doc/html/rfc7233#section-4.1
-                let content_range = resp.headers().get(CONTENT_RANGE).ok_or_else(|| {
-                    Error::Other(anyhow!(
-                        "received Partial Content status, but missing Content-Range header"
-                    ))
-                })?;
 
-                ContentRange::from_http_content_range_header(content_range)
-                    .context("parsing Content-Range header")?
-            }
-            StatusCode::NOT_FOUND => {
-                return Err(Error::NotFound);
-            }
-            StatusCode::RANGE_NOT_SATISFIABLE => {
-                return Err(Error::RangeNotSatisfiable);
-            }
-            status => {
-                if status.is_success() {
-                    return Err(Error::Other(anyhow!("unexpected status code: {}", status)));
-                } else {
-                    return Err(Error::Other(anyhow!("error downloading resource: {}", status)));
+            let request = builder.body(Body::empty()).context("creating http request")?;
+
+            let resp = self
+                .client
+                .request(request)
+                .await
+                .context(format!("fetching resource {}", full_url.as_str()))?;
+
+            // Check if the response was successful, or propagate the error.
+            //
+            // Note that according to [RFC-7233], it's possible for a 'Range' request from the
+            // client to get a `200 OK` response and the full resource in return. Furthermore, the
+            // server is allowed to return a `206 Partial Content` and a different subset
+            // `Content-Range` that was requested by the `Range` request. The RFC mentions that a
+            // server may do this to coalesce overlapping ranges, or separated by a gap. So we'll
+            // parse these headers and pass along the response range to the caller.
+            //
+            // [RFC-7233]: https://datatracker.ietf.org/doc/html/rfc7233#section-4.1
+            let content_range = match resp.status() {
+                StatusCode::OK => {
+                    // The package resolver currently requires a 'Content-Length' header, so error out
+                    // if one wasn't provided.
+                    let content_length = resp.headers().get(CONTENT_LENGTH).ok_or_else(|| {
+                        Error::Other(anyhow!("response missing Content-Length header"))
+                    })?;
+
+                    ContentRange::from_http_content_length_header(content_length)
+                        .context("parsing Content-Length header")?
                 }
-            }
-        };
+                StatusCode::PARTIAL_CONTENT => {
+                    // According to [RFC-7233], a Partial Content status must come with a
+                    // 'Content-Range' header.
+                    //
+                    // [RFC-7233]: https://datatracker.ietf.org/doc/html/rfc7233#section-4.1
+                    let content_range = resp.headers().get(CONTENT_RANGE).ok_or_else(|| {
+                        Error::Other(anyhow!(
+                            "received Partial Content status, but missing Content-Range header"
+                        ))
+                    })?;
 
-        let body = resp.into_body();
+                    ContentRange::from_http_content_range_header(content_range)
+                        .context("parsing Content-Range header")?
+                }
+                StatusCode::NOT_FOUND => {
+                    return Err(Error::NotFound);
+                }
+                StatusCode::RANGE_NOT_SATISFIABLE => {
+                    return Err(Error::RangeNotSatisfiable);
+                }
+                status => {
+                    if status.is_success() {
+                        return Err(Error::Other(anyhow!("unexpected status code: {}", status)));
+                    } else {
+                        return Err(Error::Other(anyhow!(
+                            "error downloading resource: {}",
+                            status
+                        )));
+                    }
+                }
+            };
 
-        Ok(Resource {
-            content_range,
-            stream: Box::pin(body.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))),
-        })
+            let body = resp.into_body();
+
+            Ok(Resource {
+                content_range,
+                stream: Box::pin(
+                    body.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)),
+                ),
+            })
+        }
+        .boxed()
     }
 }
 
-#[async_trait::async_trait]
 impl<C> RepoProvider for HttpRepository<C>
 where
     C: Connect + Clone + Debug + Send + Sync + 'static,
@@ -175,27 +184,35 @@ where
         }
     }
 
-    async fn fetch_metadata_range(
-        &self,
+    fn fetch_metadata_range<'a>(
+        &'a self,
         resource_path: &str,
         range: Range,
-    ) -> Result<Resource, Error> {
-        self.fetch_from(&self.metadata_repo_url, resource_path, range).await
+    ) -> BoxFuture<'a, Result<Resource, Error>> {
+        self.fetch_from(&self.metadata_repo_url, resource_path, range)
     }
 
-    async fn fetch_blob_range(&self, resource_path: &str, range: Range) -> Result<Resource, Error> {
-        self.fetch_from(&self.blob_repo_url, resource_path, range).await
+    fn fetch_blob_range<'a>(
+        &'a self,
+        resource_path: &str,
+        range: Range,
+    ) -> BoxFuture<'a, Result<Resource, Error>> {
+        self.fetch_from(&self.blob_repo_url, resource_path, range)
     }
 
-    async fn blob_len(&self, path: &str) -> Result<u64> {
+    fn blob_len<'a>(&'a self, path: &str) -> BoxFuture<'a, Result<u64>> {
         // FIXME(http://fxbug.dev/98376): It may be more efficient to try to make a HEAD request and
         // see if that includes the content length before falling back to us requesting the blob and
         // dropping the stream.
-        Ok(self.fetch_blob_range(path, Range::Full).await?.total_len())
+        let fut = self.fetch_blob_range(path, Range::Full);
+        async move { Ok(fut.await?.total_len()) }.boxed()
     }
 
-    async fn blob_modification_time(&self, _path: &str) -> Result<Option<SystemTime>> {
-        Ok(None)
+    fn blob_modification_time<'a>(
+        &'a self,
+        _path: &str,
+    ) -> BoxFuture<'a, Result<Option<SystemTime>>> {
+        async move { Ok(None) }.boxed()
     }
 }
 
@@ -263,7 +280,7 @@ mod tests {
             let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
             // Create a repository and serve it with the server.
-            let remote_backend = Box::new(make_pm_repository(&dir).await);
+            let remote_backend = Box::new(make_pm_repository(&dir).await) as Box<_>;
             let remote_repo = RepoClient::from_trusted_remote(remote_backend).await.unwrap();
 
             let manager = RepositoryManager::new();

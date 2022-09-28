@@ -3,7 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::{manager::RepositoryManager, range::Range, repo_client::RepoClient, repository::Error},
+    crate::{
+        manager::RepositoryManager,
+        range::Range,
+        repo_client::RepoClient,
+        repository::{Error, RepoProvider},
+    },
     anyhow::Result,
     async_lock::RwLock as AsyncRwLock,
     async_net::{TcpListener, TcpStream},
@@ -434,7 +439,7 @@ async fn handle_auto(
     executor: TaskExecutor<()>,
     mut server_stopped: Shared<futures::channel::oneshot::Receiver<()>>,
     repo_name: &str,
-    repo: Arc<AsyncRwLock<RepoClient>>,
+    repo: Arc<AsyncRwLock<RepoClient<Box<dyn RepoProvider>>>>,
     sse_response_creators: Arc<SseResponseCreatorMap>,
 ) -> Response<Body> {
     let response_creator = sse_response_creators.read().unwrap().get(repo_name).map(Arc::clone);
@@ -518,7 +523,7 @@ struct TimestampFile {
 }
 
 async fn timestamp_watcher<S>(
-    repo: Weak<AsyncRwLock<RepoClient>>,
+    repo: Weak<AsyncRwLock<RepoClient<Box<dyn RepoProvider>>>>,
     sender: EventSender,
     mut watcher: S,
 ) where
@@ -558,7 +563,9 @@ async fn timestamp_watcher<S>(
 
 // Try to read the timestamp.json's version from the repository, or return `None` if we experience
 // any errors.
-async fn read_timestamp_version(repo: Arc<AsyncRwLock<RepoClient>>) -> Option<u32> {
+async fn read_timestamp_version(
+    repo: Arc<AsyncRwLock<RepoClient<Box<dyn RepoProvider>>>>,
+) -> Option<u32> {
     for _ in 0..MAX_PARSE_RETRIES {
         // Read the timestamp file.
         //

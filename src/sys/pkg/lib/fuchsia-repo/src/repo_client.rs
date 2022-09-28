@@ -39,6 +39,7 @@ use {
         },
         repository::{
             EphemeralRepository, RepositoryProvider, RepositoryProvider as TufRepositoryProvider,
+            RepositoryStorage as TufRepositoryStorage,
         },
         verify::Verified,
         Database,
@@ -47,7 +48,10 @@ use {
 
 const LIST_PACKAGE_CONCURRENCY: usize = 5;
 
-pub struct RepoClient {
+pub struct RepoClient<R>
+where
+    R: RepoProvider,
+{
     /// _tx_on_drop is a channel that will emit a `Cancelled` message to `rx_on_drop` when this
     /// repository is dropped. This is a convenient way to notify any downstream users to clean up
     /// any side tables that associate a repository to some other data.
@@ -57,23 +61,23 @@ pub struct RepoClient {
     rx_on_drop: futures::future::Shared<futures::channel::oneshot::Receiver<()>>,
 
     /// The TUF client for this repository
-    tuf_client: TufClient<Json, EphemeralRepository<Json>, Box<dyn RepoProvider>>,
+    tuf_client: TufClient<Json, EphemeralRepository<Json>, R>,
 }
 
-impl RepoClient {
+impl<R> RepoClient<R>
+where
+    R: RepoProvider,
+{
     /// Creates a [RepoClient] that downloads the initial TUF root metadata from the remote
     /// [RepoProvider].
-    pub async fn from_trusted_remote(remote: Box<dyn RepoProvider>) -> Result<Self, Error> {
-        let tuf_client = get_tuf_client(remote).await?;
+    pub async fn from_trusted_remote(backend: R) -> Result<Self, Error> {
+        let tuf_client = get_tuf_client(backend).await?;
         Ok(Self::new(tuf_client))
     }
 
     /// Creates a [RepoClient] that communicates with the remote [RepoProvider] with a trusted TUF
     /// [Database].
-    pub async fn from_database(
-        database: Database<Json>,
-        remote: Box<dyn RepoProvider>,
-    ) -> Result<Self> {
+    pub async fn from_database(database: Database<Json>, remote: R) -> Result<Self> {
         let local = EphemeralRepository::new();
         let tuf_client =
             TufClient::from_database(Config::default(), database, local, remote).await?;
@@ -81,7 +85,7 @@ impl RepoClient {
         Ok(Self::new(tuf_client))
     }
 
-    fn new(tuf_client: TufClient<Json, EphemeralRepository<Json>, Box<dyn RepoProvider>>) -> Self {
+    fn new(tuf_client: TufClient<Json, EphemeralRepository<Json>, R>) -> Self {
         let (tx_on_drop, rx_on_drop) = futures::channel::oneshot::channel();
         let rx_on_drop = rx_on_drop.shared();
 
@@ -99,7 +103,7 @@ impl RepoClient {
     }
 
     /// Returns the client's remote repository [RepoProvider].
-    pub fn remote_repo(&self) -> &Box<dyn RepoProvider> {
+    pub fn remote_repo(&self) -> &R {
         self.tuf_client.remote_repo()
     }
 
@@ -407,13 +411,19 @@ impl RepoClient {
     }
 }
 
-impl Debug for RepoClient {
+impl<R> Debug for RepoClient<R>
+where
+    R: RepoProvider,
+{
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Repository").field("tuf_client", &self.tuf_client).finish_non_exhaustive()
     }
 }
 
-impl TufRepositoryProvider<Json> for RepoClient {
+impl<R> TufRepositoryProvider<Json> for RepoClient<R>
+where
+    R: RepoProvider,
+{
     fn fetch_metadata<'a>(
         &'a self,
         meta_path: &MetadataPath,
@@ -427,6 +437,72 @@ impl TufRepositoryProvider<Json> for RepoClient {
         target_path: &TargetPath,
     ) -> BoxFuture<'a, tuf::Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
         self.tuf_client.remote_repo().fetch_target(target_path)
+    }
+}
+
+impl<R> TufRepositoryStorage<Json> for RepoClient<R>
+where
+    R: RepoProvider + TufRepositoryStorage<Json>,
+{
+    fn store_metadata<'a>(
+        &'a mut self,
+        meta_path: &MetadataPath,
+        version: MetadataVersion,
+        metadata: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
+    ) -> BoxFuture<'a, tuf::Result<()>> {
+        self.tuf_client.remote_repo_mut().store_metadata(meta_path, version, metadata)
+    }
+
+    fn store_target<'a>(
+        &'a mut self,
+        target_path: &TargetPath,
+        target: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
+    ) -> BoxFuture<'a, tuf::Result<()>> {
+        self.tuf_client.remote_repo_mut().store_target(target_path, target)
+    }
+}
+
+impl<R> RepoProvider for RepoClient<R>
+where
+    R: RepoProvider,
+{
+    fn spec(&self) -> RepositorySpec {
+        self.tuf_client.remote_repo().spec()
+    }
+
+    fn fetch_metadata_range<'a>(
+        &'a self,
+        resource_path: &str,
+        range: Range,
+    ) -> BoxFuture<'a, Result<Resource, Error>> {
+        self.tuf_client.remote_repo().fetch_metadata_range(resource_path, range)
+    }
+
+    fn fetch_blob_range<'a>(
+        &'a self,
+        resource_path: &str,
+        range: Range,
+    ) -> BoxFuture<'a, Result<Resource, Error>> {
+        self.tuf_client.remote_repo().fetch_blob_range(resource_path, range)
+    }
+
+    fn supports_watch(&self) -> bool {
+        self.tuf_client.remote_repo().supports_watch()
+    }
+
+    fn watch(&self) -> Result<BoxStream<'static, ()>> {
+        self.tuf_client.remote_repo().watch()
+    }
+
+    fn blob_len<'a>(&'a self, path: &str) -> BoxFuture<'a, Result<u64>> {
+        self.tuf_client.remote_repo().blob_len(path)
+    }
+
+    fn blob_modification_time<'a>(
+        &'a self,
+        path: &str,
+    ) -> BoxFuture<'a, Result<Option<SystemTime>>> {
+        self.tuf_client.remote_repo().blob_modification_time(path)
     }
 }
 
@@ -578,7 +654,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
-        let backend = Box::new(make_pm_repository(&dir).await);
+        let backend = make_pm_repository(&dir).await;
         let mut repo = RepoClient::from_trusted_remote(backend).await.unwrap();
         repo.update().await.unwrap();
 
@@ -680,12 +756,12 @@ mod tests {
             .unwrap();
 
         let backend = PmRepository::new(dir.to_path_buf()).unwrap();
-        let _repo = RepoClient::from_trusted_remote(Box::new(backend)).await.unwrap();
+        let _repo = RepoClient::from_trusted_remote(backend).await.unwrap();
 
         std::fs::remove_file(dir.join("repository").join("1.root.json")).unwrap();
 
         let backend = PmRepository::new(dir.to_path_buf()).unwrap();
-        let _repo = RepoClient::from_trusted_remote(Box::new(backend)).await.unwrap();
+        let _repo = RepoClient::from_trusted_remote(backend).await.unwrap();
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -693,7 +769,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
-        let backend = Box::new(make_pm_repository(&dir).await);
+        let backend = make_pm_repository(&dir).await;
         let mut repo = RepoClient::from_trusted_remote(backend).await.unwrap();
         repo.update().await.unwrap();
 

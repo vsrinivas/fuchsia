@@ -13,15 +13,14 @@ use {
     camino::{Utf8Component, Utf8Path, Utf8PathBuf},
     fidl_fuchsia_developer_ffx_ext::RepositorySpec,
     futures::{
-        future::BoxFuture, io::SeekFrom, stream::BoxStream, AsyncRead, AsyncSeekExt, Stream,
-        StreamExt,
+        future::BoxFuture, io::SeekFrom, stream::BoxStream, AsyncRead, AsyncSeekExt as _,
+        FutureExt as _, Stream, StreamExt as _,
     },
     notify::{immediate_watcher, RecursiveMode, Watcher as _},
-    parking_lot::Mutex,
     std::{
         ffi::OsStr,
         pin::Pin,
-        sync::Arc,
+        sync::Mutex,
         task::{Context, Poll},
         time::SystemTime,
     },
@@ -32,7 +31,8 @@ use {
         repository::{
             FileSystemRepository as TufFileSystemRepository,
             FileSystemRepositoryBuilder as TufFileSystemRepositoryBuilder,
-            RepositoryProvider as TufRepositoryProvider, RepositoryStorageProvider,
+            RepositoryProvider as TufRepositoryProvider, RepositoryStorage as TufRepositoryStorage,
+            RepositoryStorageProvider,
         },
     },
 };
@@ -53,65 +53,72 @@ impl FileSystemRepository {
         Ok(Self { metadata_repo_path, blob_repo_path, tuf_repo })
     }
 
-    async fn fetch(
-        &self,
+    fn fetch<'a>(
+        &'a self,
         repo_path: &Utf8Path,
         resource_path: &str,
         range: Range,
-    ) -> Result<Resource, Error> {
-        let file_path = sanitize_path(repo_path, resource_path)?;
-        let mut file = async_fs::File::open(&file_path).await?;
-        let total_len = file.metadata().await?.len();
+    ) -> BoxFuture<'a, Result<Resource, Error>> {
+        let file_path = sanitize_path(repo_path, resource_path);
+        async move {
+            let file_path = file_path?;
+            let mut file = async_fs::File::open(&file_path).await?;
+            let total_len = file.metadata().await?.len();
 
-        let content_range = match range {
-            Range::Full => ContentRange::Full { complete_len: total_len },
-            Range::Inclusive { first_byte_pos, last_byte_pos } => {
-                if first_byte_pos > last_byte_pos
-                    || first_byte_pos >= total_len
-                    || last_byte_pos >= total_len
-                {
-                    return Err(Error::RangeNotSatisfiable);
+            let content_range = match range {
+                Range::Full => ContentRange::Full { complete_len: total_len },
+                Range::Inclusive { first_byte_pos, last_byte_pos } => {
+                    if first_byte_pos > last_byte_pos
+                        || first_byte_pos >= total_len
+                        || last_byte_pos >= total_len
+                    {
+                        return Err(Error::RangeNotSatisfiable);
+                    }
+
+                    file.seek(SeekFrom::Start(first_byte_pos)).await?;
+
+                    ContentRange::Inclusive {
+                        first_byte_pos,
+                        last_byte_pos,
+                        complete_len: total_len,
+                    }
                 }
+                Range::From { first_byte_pos } => {
+                    if first_byte_pos >= total_len {
+                        return Err(Error::RangeNotSatisfiable);
+                    }
 
-                file.seek(SeekFrom::Start(first_byte_pos)).await?;
+                    file.seek(SeekFrom::Start(first_byte_pos)).await?;
 
-                ContentRange::Inclusive { first_byte_pos, last_byte_pos, complete_len: total_len }
-            }
-            Range::From { first_byte_pos } => {
-                if first_byte_pos >= total_len {
-                    return Err(Error::RangeNotSatisfiable);
+                    ContentRange::Inclusive {
+                        first_byte_pos,
+                        last_byte_pos: total_len - 1,
+                        complete_len: total_len,
+                    }
                 }
+                Range::Suffix { len } => {
+                    if len > total_len {
+                        return Err(Error::RangeNotSatisfiable);
+                    }
+                    let start = total_len - len;
+                    file.seek(SeekFrom::Start(start)).await?;
 
-                file.seek(SeekFrom::Start(first_byte_pos)).await?;
-
-                ContentRange::Inclusive {
-                    first_byte_pos,
-                    last_byte_pos: total_len - 1,
-                    complete_len: total_len,
+                    ContentRange::Inclusive {
+                        first_byte_pos: start,
+                        last_byte_pos: total_len - 1,
+                        complete_len: total_len,
+                    }
                 }
-            }
-            Range::Suffix { len } => {
-                if len > total_len {
-                    return Err(Error::RangeNotSatisfiable);
-                }
-                let start = total_len - len;
-                file.seek(SeekFrom::Start(start)).await?;
+            };
 
-                ContentRange::Inclusive {
-                    first_byte_pos: start,
-                    last_byte_pos: total_len - 1,
-                    complete_len: total_len,
-                }
-            }
-        };
+            let content_len = content_range.content_len();
 
-        let content_len = content_range.content_len();
-
-        Ok(Resource { content_range, stream: Box::pin(file_stream(content_len, file)) })
+            Ok(Resource { content_range, stream: Box::pin(file_stream(content_len, file)) })
+        }
+        .boxed()
     }
 }
 
-#[async_trait::async_trait]
 impl RepoProvider for FileSystemRepository {
     fn spec(&self) -> RepositorySpec {
         RepositorySpec::FileSystem {
@@ -120,16 +127,20 @@ impl RepoProvider for FileSystemRepository {
         }
     }
 
-    async fn fetch_metadata_range(
-        &self,
+    fn fetch_metadata_range<'a>(
+        &'a self,
         resource_path: &str,
         range: Range,
-    ) -> Result<Resource, Error> {
-        self.fetch(&self.metadata_repo_path, resource_path, range).await
+    ) -> BoxFuture<'a, Result<Resource, Error>> {
+        self.fetch(&self.metadata_repo_path, resource_path, range)
     }
 
-    async fn fetch_blob_range(&self, resource_path: &str, range: Range) -> Result<Resource, Error> {
-        self.fetch(&self.blob_repo_path, resource_path, range).await
+    fn fetch_blob_range<'a>(
+        &'a self,
+        resource_path: &str,
+        range: Range,
+    ) -> BoxFuture<'a, Result<Resource, Error>> {
+        self.fetch(&self.blob_repo_path, resource_path, range)
     }
 
     fn supports_watch(&self) -> bool {
@@ -149,7 +160,7 @@ impl RepoProvider for FileSystemRepository {
         //
         // We use a Mutex over a RefCell in case notify starts using the closure concurrently down
         // the road without us noticing.
-        let sender = Arc::new(Mutex::new(sender));
+        let sender = Mutex::new(sender);
 
         let mut watcher = immediate_watcher(move |event: notify::Result<notify::Event>| {
             let event = match event {
@@ -163,7 +174,7 @@ impl RepoProvider for FileSystemRepository {
             // Send an event if any applied to timestamp.json.
             let timestamp_name = OsStr::new("timestamp.json");
             if event.paths.iter().any(|p| p.file_name() == Some(timestamp_name)) {
-                if let Err(e) = sender.lock().try_send(()) {
+                if let Err(e) = sender.lock().unwrap().try_send(()) {
                     if e.is_full() {
                         // It's okay to ignore a full channel, since that just means that the other
                         // side of the channel still has an outstanding notice, which should be the
@@ -182,14 +193,25 @@ impl RepoProvider for FileSystemRepository {
         Ok(WatchStream { _watcher: watcher, receiver }.boxed())
     }
 
-    async fn blob_len(&self, path: &str) -> Result<u64> {
-        let file_path = sanitize_path(&self.blob_repo_path, path)?;
-        Ok(async_fs::metadata(&file_path).await?.len())
+    fn blob_len<'a>(&'a self, path: &str) -> BoxFuture<'a, Result<u64>> {
+        let file_path = sanitize_path(&self.blob_repo_path, path);
+        async move {
+            let file_path = file_path?;
+            Ok(async_fs::metadata(&file_path).await?.len())
+        }
+        .boxed()
     }
 
-    async fn blob_modification_time(&self, path: &str) -> Result<Option<SystemTime>> {
-        let file_path = sanitize_path(&self.blob_repo_path, path)?;
-        Ok(Some(async_fs::metadata(&file_path).await?.modified()?))
+    fn blob_modification_time<'a>(
+        &'a self,
+        path: &str,
+    ) -> BoxFuture<'a, Result<Option<SystemTime>>> {
+        let file_path = sanitize_path(&self.blob_repo_path, path);
+        async move {
+            let file_path = file_path?;
+            Ok(Some(async_fs::metadata(&file_path).await?.modified()?))
+        }
+        .boxed()
     }
 }
 
@@ -207,6 +229,25 @@ impl TufRepositoryProvider<Json> for FileSystemRepository {
         target_path: &TargetPath,
     ) -> BoxFuture<'a, tuf::Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
         self.tuf_repo.fetch_target(target_path)
+    }
+}
+
+impl TufRepositoryStorage<Json> for FileSystemRepository {
+    fn store_metadata<'a>(
+        &'a mut self,
+        meta_path: &MetadataPath,
+        version: MetadataVersion,
+        metadata: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
+    ) -> BoxFuture<'a, tuf::Result<()>> {
+        self.tuf_repo.store_metadata(meta_path, version, metadata)
+    }
+
+    fn store_target<'a>(
+        &'a mut self,
+        target_path: &TargetPath,
+        target: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
+    ) -> BoxFuture<'a, tuf::Result<()>> {
+        self.tuf_repo.store_target(target_path, target)
     }
 }
 

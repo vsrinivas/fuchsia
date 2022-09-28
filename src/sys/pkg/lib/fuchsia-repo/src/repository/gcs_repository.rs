@@ -62,7 +62,7 @@ pub struct GcsRepository<T = gcs::client::Client> {
 
 impl<T> GcsRepository<T>
 where
-    T: GcsClient + Debug,
+    T: GcsClient + Debug + Send + Sync,
 {
     pub fn new(
         client: T,
@@ -91,74 +91,91 @@ where
         Ok(Self { client, metadata_repo_url, blob_repo_url })
     }
 
-    async fn get(&self, root: &Url, path: &str, range: Range) -> Result<Resource, Error> {
-        let url = root.join(path).map_err(|err| anyhow!(err))?;
-        let bucket = url.host_str().ok_or_else(|| anyhow!("url must include a bucket: {}", url))?;
-        let object = url.path();
+    fn get<'a>(
+        &'a self,
+        root: &Url,
+        path: &str,
+        range: Range,
+    ) -> BoxFuture<'a, Result<Resource, Error>> {
+        let url = root.join(path);
 
-        // FIXME(http://fxbug.dev/98991): The gcs library does not yet support range requests, so
-        // always fetch the full range.
-        let resp = self.client.stream(bucket, object).await?;
+        async move {
+            let url = url.map_err(|err| anyhow!(err))?;
+            let bucket =
+                url.host_str().ok_or_else(|| anyhow!("url must include a bucket: {}", url))?;
+            let object = url.path();
 
-        match resp.status() {
-            StatusCode::OK => {
-                // `Resource` requires us to know the exact length of the artifact. That's the case
-                // if we get a `Content-Length` header.
-                if let Some(content_len) = resp.headers().get(CONTENT_LENGTH) {
-                    let content_len =
-                        ContentLength::from_http_content_length_header(content_len)
-                            .with_context(|| format!("parsing Content-Length header: {}", url))?;
+            // FIXME(http://fxbug.dev/98991): The gcs library does not yet support range requests, so
+            // always fetch the full range.
+            let resp = self.client.stream(bucket, object).await?;
 
-                    // Make sure we didn't try to fetch data that's out of bounds.
-                    if !content_len.contains_range(range) {
-                        return Err(Error::RangeNotSatisfiable);
+            match resp.status() {
+                StatusCode::OK => {
+                    // `Resource` requires us to know the exact length of the artifact. That's the case
+                    // if we get a `Content-Length` header.
+                    if let Some(content_len) = resp.headers().get(CONTENT_LENGTH) {
+                        let content_len =
+                            ContentLength::from_http_content_length_header(content_len)
+                                .with_context(|| {
+                                    format!("parsing Content-Length header: {}", url)
+                                })?;
+
+                        // Make sure we didn't try to fetch data that's out of bounds.
+                        if !content_len.contains_range(range) {
+                            return Err(Error::RangeNotSatisfiable);
+                        }
+
+                        let body = resp.into_body();
+
+                        return Ok(Resource {
+                            content_range: content_len.into(),
+                            stream: Box::pin(
+                                body.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)),
+                            ),
+                        });
                     }
 
-                    let body = resp.into_body();
+                    // If we didn't get a `Content-Length`, then maybe the artifact was stored
+                    // compressed, and sent to us uncompressed. When this happens, we instead get a
+                    // `x-goog-stored-content-length` header.
+                    //
+                    // See https://cloud.google.com/storage/docs/transcoding for more details.
+                    if resp.headers().contains_key(X_GOOG_STORED_CONTENT_LENGTH) {
+                        return self.get_with_stored_content_len(resp.into_body(), range).await;
+                    }
 
-                    return Ok(Resource {
-                        content_range: content_len.into(),
-                        stream: Box::pin(
-                            body.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)),
-                        ),
-                    });
-                }
-
-                // If we didn't get a `Content-Length`, then maybe the artifact was stored
-                // compressed, and sent to us uncompressed. When this happens, we instead get a
-                // `x-goog-stored-content-length` header.
-                //
-                // See https://cloud.google.com/storage/docs/transcoding for more details.
-                if resp.headers().contains_key(X_GOOG_STORED_CONTENT_LENGTH) {
-                    return self.get_with_stored_content_len(resp.into_body(), range).await;
-                }
-
-                Err(Error::Other(anyhow!(
+                    Err(Error::Other(anyhow!(
                     "response missing Content-Length or x-goog-stored-content-length headers: {}",
                     url
                 )))
-            }
-            StatusCode::NOT_FOUND => Err(Error::NotFound),
-            StatusCode::RANGE_NOT_SATISFIABLE => Err(Error::RangeNotSatisfiable),
-            status => {
-                if status.is_success() {
-                    Err(Error::Other(anyhow!("unexpected status code {}: {}", url, status)))
-                } else {
-                    // GCS may return a more detailed error description in the body.
-                    if let Ok(body) = hyper::body::to_bytes(resp.into_body()).await {
-                        let body_str = String::from_utf8_lossy(&body);
-                        Err(Error::Other(anyhow!(
-                            "error downloading resource {}: {}\n{}",
-                            url,
-                            status,
-                            body_str
-                        )))
+                }
+                StatusCode::NOT_FOUND => Err(Error::NotFound),
+                StatusCode::RANGE_NOT_SATISFIABLE => Err(Error::RangeNotSatisfiable),
+                status => {
+                    if status.is_success() {
+                        Err(Error::Other(anyhow!("unexpected status code {}: {}", url, status)))
                     } else {
-                        Err(Error::Other(anyhow!("error downloading resource {}: {}", url, status)))
+                        // GCS may return a more detailed error description in the body.
+                        if let Ok(body) = hyper::body::to_bytes(resp.into_body()).await {
+                            let body_str = String::from_utf8_lossy(&body);
+                            Err(Error::Other(anyhow!(
+                                "error downloading resource {}: {}\n{}",
+                                url,
+                                status,
+                                body_str
+                            )))
+                        } else {
+                            Err(Error::Other(anyhow!(
+                                "error downloading resource {}: {}",
+                                url,
+                                status
+                            )))
+                        }
                     }
                 }
             }
         }
+        .boxed()
     }
 
     /// Handles a response that contains a `x-goog-stored-content-length` header.
@@ -201,31 +218,36 @@ where
         }
     }
 
-    async fn fetch_metadata_range(
-        &self,
+    fn fetch_metadata_range<'a>(
+        &'a self,
         resource_path: &str,
         range: Range,
-    ) -> Result<Resource, Error> {
-        self.get(&self.metadata_repo_url, &resource_path, range).await
+    ) -> BoxFuture<'a, Result<Resource, Error>> {
+        self.get(&self.metadata_repo_url, &resource_path, range)
     }
 
-    async fn fetch_blob_range(&self, resource_path: &str, range: Range) -> Result<Resource, Error> {
-        self.get(&self.blob_repo_url, &resource_path, range).await
+    fn fetch_blob_range<'a>(
+        &'a self,
+        resource_path: &str,
+        range: Range,
+    ) -> BoxFuture<'a, Result<Resource, Error>> {
+        self.get(&self.blob_repo_url, &resource_path, range)
     }
 
-    async fn blob_len(&self, path: &str) -> Result<u64, anyhow::Error> {
+    fn blob_len<'a>(&'a self, path: &str) -> BoxFuture<'a, Result<u64, anyhow::Error>> {
         // FIXME(http://fxbug.dev/98993): The gcs library does not expose a more efficient API for
         // determining the blob size.
-        Ok(self.fetch_blob_range(path, Range::Full).await?.total_len())
+        let fut = self.fetch_blob_range(path, Range::Full);
+        async move { Ok(fut.await?.total_len()) }.boxed()
     }
 
-    async fn blob_modification_time(
-        &self,
+    fn blob_modification_time<'a>(
+        &'a self,
         _path: &str,
-    ) -> Result<Option<SystemTime>, anyhow::Error> {
+    ) -> BoxFuture<'a, Result<Option<SystemTime>, anyhow::Error>> {
         // FIXME(http://fxbug.dev/98993): The gcs library does not expose an API to determine the
         // blob modification time.
-        Ok(None)
+        async move { Ok(None) }.boxed()
     }
 }
 

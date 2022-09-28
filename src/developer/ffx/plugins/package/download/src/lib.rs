@@ -76,7 +76,7 @@ mod tests {
         let output_path = dir.join("pkg");
 
         // Create a server.
-        let backend = Box::new(make_pm_repository(&repo_path).await);
+        let backend = Box::new(make_pm_repository(&repo_path).await) as Box<_>;
         let repo = RepoClient::from_trusted_remote(backend).await.unwrap();
         let manager = RepositoryManager::new();
         manager.add("tuf", repo);

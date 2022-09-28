@@ -532,13 +532,13 @@ where
     }
 }
 
-async fn fetch_package_repository_from_backend<F>(
-    local_dir: &Path,
+async fn fetch_package_repository_from_backend<'a, F>(
+    local_dir: &'a Path,
     repo_keys_uri: Url,
     repo_metadata_uri: Url,
     repo_blobs_uri: Url,
     backend: Box<dyn RepoProvider>,
-    progress: &mut F,
+    progress: &'a mut F,
 ) -> Result<()>
 where
     F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
