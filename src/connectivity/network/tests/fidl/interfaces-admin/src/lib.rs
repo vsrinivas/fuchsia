@@ -9,7 +9,7 @@ use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_debug as fnet_debug;
 use fidl_fuchsia_net_interfaces_admin as finterfaces_admin;
 use fidl_fuchsia_netemul_network as fnetemul_network;
-use fuchsia_async::TimeoutExt as _;
+use fuchsia_async::{self as fasync, TimeoutExt as _};
 use fuchsia_zircon_status as zx_status;
 use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
 use net_declare::{fidl_ip, fidl_mac, fidl_subnet, std_ip_v6, std_socket_addr};
@@ -19,6 +19,7 @@ use netstack_testing_common::{
     devices::create_tun_device,
     interfaces,
     realms::{Netstack, Netstack2, NetstackVersion, TestRealmExt as _, TestSandboxExt as _},
+    ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
 };
 use netstack_testing_macros::variants_test;
 use std::collections::{HashMap, HashSet};
@@ -1109,6 +1110,29 @@ async fn device_control_closes_on_device_close<N: Netstack>(name: &str) {
         watcher.try_next().await.expect("watcher error").expect("watcher ended uexpectedly");
 }
 
+// TODO(https://fxbug.dev/110470) Remove this trait once the source of the
+// timeout-induced-flake has been identified.
+/// A wrapper for a [`futures::future::Future`] that panics if the future has
+/// not resolved within [`ASYNC_EVENT_POSITIVE_CHECK_TIME`].
+trait PanicOnTimeout: fasync::TimeoutExt {
+    /// Wraps the [`futures::future::Future`] in an [`fasync::OnTimeout`] that
+    /// panics if the future has not resolved within
+    /// [`ASYNC_EVENT_POSITIVE_CHECK_TIME`].
+    fn panic_on_timeout<S: std::fmt::Display + 'static>(
+        self,
+        name: S,
+    ) -> fasync::OnTimeout<Self, Box<dyn FnOnce() -> Self::Output>> {
+        self.on_timeout(
+            ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
+            Box::new(move || {
+                panic!("{}: Timed out after {:?}", name, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT)
+            }),
+        )
+    }
+}
+
+impl<T: fasync::TimeoutExt> PanicOnTimeout for T {}
+
 // Tests that interfaces created through installer have a valid datapath.
 #[variants_test]
 async fn installer_creates_datapath<N: Netstack, I: net_types::ip::Ip>(test_name: &str) {
@@ -1117,7 +1141,11 @@ async fn installer_creates_datapath<N: Netstack, I: net_types::ip::Ip>(test_name
     const BOB_IP_V4: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.2/24");
 
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let network = sandbox.create_network("net").await.expect("create network");
+    let network = sandbox
+        .create_network("net")
+        .panic_on_timeout("creating network")
+        .await
+        .expect("create network");
 
     struct RealmInfo<'a> {
         realm: netemul::TestRealm<'a>,
@@ -1140,14 +1168,23 @@ async fn installer_creates_datapath<N: Netstack, I: net_types::ip::Ip>(test_name
                     sandbox.create_netstack_realm::<N, _>(test_name.clone()).expect("create realm");
                 let endpoint = network
                     .create_endpoint::<netemul::NetworkDevice, _>(test_name)
+                    .panic_on_timeout(format!("create {} endpoint", name))
                     .await
                     .expect("create endpoint");
-                let () = endpoint.set_link_up(true).await.expect("set link up");
+                let () = endpoint
+                    .set_link_up(true)
+                    .panic_on_timeout(format!("set {} link up", name))
+                    .await
+                    .expect("set link up");
                 let installer = realm
                     .connect_to_protocol::<fidl_fuchsia_net_interfaces_admin::InstallerMarker>()
                     .expect("connect to protocol");
 
-                let (device, mut port_id) = endpoint.get_netdevice().await.expect("get netdevice");
+                let (device, mut port_id) = endpoint
+                    .get_netdevice()
+                    .panic_on_timeout(format!("get {} netdevice", name))
+                    .await
+                    .expect("get netdevice");
                 let (device_control, device_control_server_end) = fidl::endpoints::create_proxy::<
                     fidl_fuchsia_net_interfaces_admin::DeviceControlMarker,
                 >()
@@ -1170,10 +1207,18 @@ async fn installer_creates_datapath<N: Netstack, I: net_types::ip::Ip>(test_name
                         },
                     )
                     .expect("create interface");
-                let iface_id = control.get_id().await.expect("get id");
+                let iface_id = control
+                    .get_id()
+                    .panic_on_timeout(format!("get {} interface id", name))
+                    .await
+                    .expect("get id");
 
-                let did_enable =
-                    control.enable().await.expect("calling enable").expect("enable failed");
+                let did_enable = control
+                    .enable()
+                    .panic_on_timeout(format!("enable {} interface", name))
+                    .await
+                    .expect("calling enable")
+                    .expect("enable failed");
                 assert!(did_enable);
 
                 let (addr, address_state_provider) = match I::VERSION {
@@ -1183,6 +1228,7 @@ async fn installer_creates_datapath<N: Netstack, I: net_types::ip::Ip>(test_name
                             ipv4_addr,
                             fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
                         )
+                        .panic_on_timeout(format!("add {} ipv4 address", name))
                         .await
                         .expect("add address");
 
@@ -1198,6 +1244,7 @@ async fn installer_creates_datapath<N: Netstack, I: net_types::ip::Ip>(test_name
                                 next_hop: None,
                                 metric: 0,
                             })
+                            .panic_on_timeout(format!("add {} route", name))
                             .await
                             .expect("send add route")
                             .expect("add route");
@@ -1211,6 +1258,7 @@ async fn installer_creates_datapath<N: Netstack, I: net_types::ip::Ip>(test_name
                                 .expect("connect to protocol"),
                             iface_id,
                         )
+                        .panic_on_timeout(format!("wait for {} ipv6 address", name))
                         .await
                         .expect("get ipv6 link local");
                         (net_types::ip::IpAddr::V6(ipv6).into(), None)
@@ -1239,7 +1287,11 @@ async fn installer_creates_datapath<N: Netstack, I: net_types::ip::Ip>(test_name
         device_control: _alice_device_control,
         control: _alice_control,
         address_state_provider: _alice_asp,
-    } = realms_stream.next().await.expect("create alice realm");
+    } = realms_stream
+        .next()
+        .panic_on_timeout("setup alice fixture")
+        .await
+        .expect("create alice realm");
     let RealmInfo {
         realm: bob_realm,
         endpoint: _bob_endpoint,
@@ -1248,7 +1300,11 @@ async fn installer_creates_datapath<N: Netstack, I: net_types::ip::Ip>(test_name
         device_control: _bob_device_control,
         control: _bob_control,
         address_state_provider: _bob_asp,
-    } = realms_stream.next().await.expect("create bob realm");
+    } = realms_stream
+        .next()
+        .panic_on_timeout("setup bob fixture")
+        .await
+        .expect("create alice realm");
 
     const PORT: u16 = 8080;
     let (bob_addr, bind_ip) = match bob_addr {
@@ -1270,24 +1326,34 @@ async fn installer_creates_datapath<N: Netstack, I: net_types::ip::Ip>(test_name
         &alice_realm,
         std::net::SocketAddr::new(bind_ip, 0),
     )
+    .panic_on_timeout("bind alice socket")
     .await
     .expect("bind alice sock");
     let bob_sock = fuchsia_async::net::UdpSocket::bind_in_realm(
         &bob_realm,
         std::net::SocketAddr::new(bind_ip, PORT),
     )
+    .panic_on_timeout("bind bob socket")
     .await
     .expect("bind bob sock");
 
     const PAYLOAD: &'static str = "hello bob";
     let payload_bytes = PAYLOAD.as_bytes();
     assert_eq!(
-        alice_sock.send_to(payload_bytes, bob_addr).await.expect("sendto"),
+        alice_sock
+            .send_to(payload_bytes, bob_addr)
+            .panic_on_timeout("alice sendto bob")
+            .await
+            .expect("sendto"),
         payload_bytes.len()
     );
 
     let mut buff = [0; PAYLOAD.len() + 1];
-    let (read, from) = bob_sock.recv_from(&mut buff[..]).await.expect("recvfrom");
+    let (read, from) = bob_sock
+        .recv_from(&mut buff[..])
+        .panic_on_timeout("alice recvfrom bob")
+        .await
+        .expect("recvfrom");
     assert_eq!(from.ip(), alice_addr);
 
     assert_eq!(read, payload_bytes.len());
