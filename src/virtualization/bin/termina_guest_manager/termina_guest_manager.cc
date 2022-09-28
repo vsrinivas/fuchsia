@@ -28,14 +28,18 @@ void NotifyClient(fidl::Binding<fuchsia::virtualization::LinuxManager>& binding,
   binding.events().OnGuestInfoChanged(std::string(kLinuxEnvironmentName), std::move(info));
 }
 
-TerminaGuestManager::TerminaGuestManager(async_dispatcher_t* dispatcher)
-    : TerminaGuestManager(dispatcher, sys::ComponentContext::CreateAndServeOutgoingDirectory()) {}
+TerminaGuestManager::TerminaGuestManager(async_dispatcher_t* dispatcher,
+                                         fit::function<void()> stop_manager_callback)
+    : TerminaGuestManager(dispatcher, sys::ComponentContext::CreateAndServeOutgoingDirectory(),
+                          std::move(stop_manager_callback)) {}
 
 TerminaGuestManager::TerminaGuestManager(async_dispatcher_t* dispatcher,
-                                         std::unique_ptr<sys::ComponentContext> context)
+                                         std::unique_ptr<sys::ComponentContext> context,
+                                         fit::function<void()> stop_manager_callback)
     : GuestManager(dispatcher, context.get()),
       context_(std::move(context)),
-      structured_config_(termina_config::Config::TakeFromStartupHandle()) {
+      structured_config_(termina_config::Config::TakeFromStartupHandle()),
+      stop_manager_callback_(std::move(stop_manager_callback)) {
   guest_ = std::make_unique<Guest>(
       structured_config_, fit::bind_member(this, &TerminaGuestManager::OnGuestInfoChanged));
   context_->outgoing()->AddPublicService<fuchsia::virtualization::LinuxManager>(
@@ -102,8 +106,14 @@ void TerminaGuestManager::OnGuestLaunched() {
 }
 
 void TerminaGuestManager::OnGuestStopped() {
+  info_ = std::nullopt;
   guest_ = std::make_unique<Guest>(
       structured_config_, fit::bind_member(this, &TerminaGuestManager::OnGuestInfoChanged));
+
+  // The termina guest manager is dropping access to /dev preventing further accesses, so we can't
+  // restart the guest without restarting the guest manager component. Once we transition away from
+  // fvm, this restriction will go away.
+  stop_manager_callback_();
 }
 
 void TerminaGuestManager::StartAndGetLinuxGuestInfo(std::string label,
@@ -155,6 +165,12 @@ void TerminaGuestManager::WipeData(WipeDataCallback callback) {
   } else {
     callback(fuchsia::virtualization::LinuxManager_WipeData_Result::WithResponse(
         fuchsia::virtualization::LinuxManager_WipeData_Response()));
+  }
+}
+
+void TerminaGuestManager::GracefulShutdown() {
+  if (is_guest_started()) {
+    guest_->InitiateGuestShutdown();
   }
 }
 

@@ -471,9 +471,13 @@ grpc::Status Guest::VmReady(grpc::ServerContext* context, const vm_tools::EmptyM
       [this](fpromise::result<std::unique_ptr<vm_tools::Maitred::Stub>, zx_status_t>& result) {
         FX_CHECK(result.is_ok()) << "Failed to connect to Maitre'd";
         this->maitred_ = std::move(result.value());
-        MountFilesystems();
-        ConfigureNetwork();
-        StartTermina();
+        if (must_send_shutdown_rpc_) {
+          InitiateGuestShutdown();
+        } else {
+          MountFilesystems();
+          ConfigureNetwork();
+          StartTermina();
+        }
       };
   auto task =
       NewGrpcVsockStub<vm_tools::Maitred>(socket_endpoint_, kMaitredPort).then(start_maitred);
@@ -732,6 +736,28 @@ void Guest::PostContainerFailure(std::string failure_reason) {
       .container_status = fuchsia::virtualization::ContainerStatus::FAILED,
       .failure_reason = failure_reason,
   });
+}
+
+void Guest::InitiateGuestShutdown() {
+  if (!maitred_) {
+    FX_LOGS(INFO) << "Attempted to initiate a shutdown before a maitre'd connection was "
+                     "established. Waiting for the connection to send the RPC.";
+    must_send_shutdown_rpc_ = true;
+    return;
+  }
+
+  FX_LOGS(INFO) << "Initiating shutdown of VM";
+
+  ::grpc::ClientContext context;
+  ::vm_tools::EmptyMessage request;
+  ::vm_tools::EmptyMessage response;
+
+  {
+    TRACE_DURATION("termina_guest_manager", "ShutdownRPC");
+    auto grpc_status = maitred_->Shutdown(&context, request, &response);
+    FX_CHECK(grpc_status.ok()) << "Failed to initiate guest shutdown "
+                               << grpc_status.error_message();
+  }
 }
 
 }  // namespace termina_guest_manager

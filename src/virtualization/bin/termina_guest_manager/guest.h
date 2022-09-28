@@ -57,6 +57,9 @@ class Guest : public vm_tools::StartupListener::Service,
   void OnGuestLaunched(fuchsia::virtualization::GuestManager& guest_manager,
                        fuchsia::virtualization::Guest& guest);
 
+  // Send a shutdown RPC to the guest VM.
+  void InitiateGuestShutdown();
+
   std::vector<fuchsia::virtualization::Listener> take_vsock_listeners() {
     FX_CHECK(vsock_listeners_);
     std::optional<std::vector<fuchsia::virtualization::Listener>> result = std::nullopt;
@@ -157,6 +160,9 @@ class Guest : public vm_tools::StartupListener::Service,
   // the time the guest has reported itself as ready via the VmReady RPC in the
   // vm_tools::StartupListener::Service.
   const trace_async_id_t vm_ready_nonce_ = TRACE_NONCE();
+
+  // Set to true if a shutdown was attempted before a maitre'd connection was established.
+  bool must_send_shutdown_rpc_ = false;
 };
 }  // namespace termina_guest_manager
 

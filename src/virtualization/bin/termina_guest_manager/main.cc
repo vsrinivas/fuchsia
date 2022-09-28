@@ -15,7 +15,8 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
-  termina_guest_manager::TerminaGuestManager manager(loop.dispatcher());
+  termina_guest_manager::TerminaGuestManager manager(loop.dispatcher(),
+                                                     [&loop]() { loop.Shutdown(); });
   loop.Run();
   return 0;
 }
