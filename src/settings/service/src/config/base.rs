@@ -38,6 +38,16 @@ pub enum ConfigLoadStatus {
     UsingDefaults(String),
 }
 
+impl From<ConfigLoadStatus> for String {
+    fn from(status: ConfigLoadStatus) -> String {
+        match status {
+            ConfigLoadStatus::ParseFailure(_) => "ParseFailure".to_string(),
+            ConfigLoadStatus::Success => "Success".to_string(),
+            ConfigLoadStatus::UsingDefaults(_) => "UsingDefaults".to_string(),
+        }
+    }
+}
+
 /// Represents each agent that can be run.
 #[derive(Eq, PartialEq, Hash, Debug, Copy, Clone, Deserialize)]
 pub enum AgentType {

@@ -220,6 +220,9 @@ pub(crate) mod testing {
             config_loads: {
                 "nuthatch": {
                     "count": AnyProperty,
+                    "result_counts": {
+                        "UsingDefaults": 1u64,
+                    },
                     "timestamp": "0.000000000",
                     "value": "ConfigLoadInfo {\n    status: UsingDefaults(\n        \"File not found, using defaults\",\n    ),\n    contents: None,\n}",
                 }

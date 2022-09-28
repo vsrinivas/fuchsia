@@ -38,6 +38,9 @@ struct ConfigInspectInfo {
 
     /// Debug string representation of the value of this config load info.
     value: inspect::StringProperty,
+
+    /// Counts of different results for this config's load attempts.
+    result_counts: ManagedInspectMap<inspect::UintProperty>,
 }
 
 lazy_static! {
@@ -66,6 +69,7 @@ impl InspectConfigLogger {
     ) {
         let timestamp = clock::inspect_format_now();
         let config::base::ConfigLoadInfo { status, contents } = config_load_info;
+        let status_clone = status.clone();
 
         let config_inspect_info =
             self.config_load_values.get_or_insert_with(path, ConfigInspectInfo::default);
@@ -75,6 +79,10 @@ impl InspectConfigLogger {
             .value
             .set(&format!("{:#?}", config::base::ConfigLoadInfo { status, contents }));
         config_inspect_info.count.add(1u64);
+        config_inspect_info
+            .result_counts
+            .get_or_insert_with(status_clone.into(), inspect::UintProperty::default)
+            .add(1u64);
     }
 }
 
@@ -120,8 +128,63 @@ mod tests {
             config_loads: {
                 "test_path": {
                     "count": 1u64,
+                    "result_counts": {
+                        "Success": 1u64,
+                    },
                     "timestamp": "0.000000000",
                     "value": "ConfigLoadInfo {\n    status: Success,\n    contents: Some(\n        \"test\",\n    ),\n}"
+                }
+            }
+        });
+    }
+
+    #[test]
+    fn test_response_counts() {
+        // Set clock for consistent timestamps.
+        clock::mock::set(Time::from_nanos(0));
+
+        let mut logger = InspectConfigLogger::new();
+
+        logger.write_config_load_to_inspect(
+            "test_path".to_string(),
+            config::base::ConfigLoadInfo {
+                status: ConfigLoadStatus::Success,
+                contents: Some("test".to_string()),
+            },
+        );
+        logger.write_config_load_to_inspect(
+            "test_path".to_string(),
+            config::base::ConfigLoadInfo {
+                status: ConfigLoadStatus::ParseFailure("Fake parse failure".to_string()),
+                contents: Some("test".to_string()),
+            },
+        );
+        logger.write_config_load_to_inspect(
+            "test_path".to_string(),
+            config::base::ConfigLoadInfo {
+                status: ConfigLoadStatus::ParseFailure("Fake parse failure".to_string()),
+                contents: Some("test".to_string()),
+            },
+        );
+        logger.write_config_load_to_inspect(
+            "test_path".to_string(),
+            config::base::ConfigLoadInfo {
+                status: ConfigLoadStatus::UsingDefaults("default".to_string()),
+                contents: Some("test".to_string()),
+            },
+        );
+
+        assert_data_tree!(logger.inspector, root: {
+            config_loads: {
+                "test_path": {
+                    "count": 4u64,
+                    "result_counts": {
+                        "Success": 1u64,
+                        "ParseFailure": 2u64,
+                        "UsingDefaults": 1u64,
+                    },
+                    "timestamp": "0.000000000",
+                    "value": "ConfigLoadInfo {\n    status: UsingDefaults(\n        \"default\",\n    ),\n    contents: Some(\n        \"test\",\n    ),\n}"
                 }
             }
         });
