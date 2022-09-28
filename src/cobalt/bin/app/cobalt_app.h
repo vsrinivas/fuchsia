@@ -25,10 +25,8 @@
 #include "src/cobalt/bin/app/cobalt_controller_impl.h"
 #include "src/cobalt/bin/app/configuration_data.h"
 #include "src/cobalt/bin/app/diagnostics_impl.h"
-#include "src/cobalt/bin/app/logger_factory_impl.h"
 #include "src/cobalt/bin/app/process_lifecycle_impl.h"
 #include "src/cobalt/bin/app/system_data_updater_impl.h"
-#include "src/cobalt/bin/app/timer_manager.h"
 #include "src/cobalt/bin/app/user_consent_watcher.h"
 #include "src/cobalt/bin/utils/clock.h"
 #include "src/cobalt/bin/utils/fuchsia_http_client.h"
@@ -133,13 +131,8 @@ class CobaltApp {
 
   std::unique_ptr<FuchsiaSystemClockInterface> validated_clock_;
 
-  TimerManager timer_manager_;
-
   std::unique_ptr<CobaltControllerImpl> controller_impl_;
   fidl::BindingSet<fuchsia::cobalt::Controller> controller_bindings_;
-
-  std::unique_ptr<LoggerFactoryImpl> logger_factory_impl_;
-  fidl::BindingSet<fuchsia::cobalt::LoggerFactory> logger_factory_bindings_;
 
   std::unique_ptr<MetricEventLoggerFactoryImpl> metric_event_logger_factory_impl_;
   fidl::BindingSet<fuchsia::metrics::MetricEventLoggerFactory>

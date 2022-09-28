@@ -7,9 +7,7 @@
 
 #include <fuchsia/process/lifecycle/cpp/fidl.h>
 
-#include "fuchsia/cobalt/cpp/fidl.h"
 #include "lib/sys/cpp/outgoing_directory.h"
-#include "src/cobalt/bin/app/logger_factory_impl.h"
 #include "src/cobalt/bin/app/metric_event_logger_factory_impl.h"
 #include "third_party/cobalt/src/public/cobalt_service_interface.h"
 
@@ -17,13 +15,12 @@ namespace cobalt {
 
 class ProcessLifecycle : public fuchsia::process::lifecycle::Lifecycle {
  public:
-  ProcessLifecycle(CobaltServiceInterface* cobalt_service, LoggerFactoryImpl* logger_factory,
+  ProcessLifecycle(CobaltServiceInterface* cobalt_service,
                    MetricEventLoggerFactoryImpl* metric_event_logger_factory,
                    fit::callback<void()> shutdown,
                    fidl::InterfaceRequest<fuchsia::process::lifecycle::Lifecycle> lifecycle_request,
                    async_dispatcher_t* dispatcher)
       : cobalt_service_(cobalt_service),
-        logger_factory_(logger_factory),
         metric_event_logger_factory_(metric_event_logger_factory),
         shutdown_(std::move(shutdown)),
         lifecycle_binding_(this, std::move(lifecycle_request), dispatcher) {}
@@ -32,7 +29,6 @@ class ProcessLifecycle : public fuchsia::process::lifecycle::Lifecycle {
   void Stop() override {
     FX_LOGS(INFO) << "Cobalt is initiating shutdown.";
     cobalt_service_->ShutDown();
-    logger_factory_->ShutDown();
     metric_event_logger_factory_->ShutDown();
     lifecycle_binding_.Close(ZX_OK);
     shutdown_();
@@ -40,7 +36,6 @@ class ProcessLifecycle : public fuchsia::process::lifecycle::Lifecycle {
 
  private:
   CobaltServiceInterface* cobalt_service_;                     // not owned
-  LoggerFactoryImpl* logger_factory_;                          // not owned
   MetricEventLoggerFactoryImpl* metric_event_logger_factory_;  // not owned
   fit::callback<void()> shutdown_;
   fidl::Binding<fuchsia::process::lifecycle::Lifecycle> lifecycle_binding_;

@@ -6,21 +6,7 @@ group("testing") {
   testonly = true
   deps = [
     ":fake_clock_lib",
-    ":fake_logger_lib",
     "mock_cobalt",
-  ]
-}
-
-source_set("fake_logger_lib") {
-  testonly = true
-  sources = [
-    "fake_logger.cc",
-    "fake_logger.h",
-  ]
-
-  public_deps = [
-    ":log_method",
-    "//sdk/fidl/fuchsia.cobalt",
   ]
 }
 
@@ -42,11 +28,6 @@ source_set("fake_clock_lib") {
   sources = [ "fake_clock.h" ]
 
   public_deps = [ "//src/cobalt/bin/utils:clock" ]
-}
-
-source_set("log_method") {
-  testonly = true
-  sources = [ "log_method.h" ]
 }
 
 source_set("log_metric_method") {

@@ -72,14 +72,6 @@ bool CobaltTestApp::RunTests() {
   std::unique_ptr<component_testing::ScopedChild> child =
       std::make_unique<component_testing::ScopedChild>(Connect(kCobaltWithEventAggregatorWorker));
 
-  // TODO(zmbush): Create tests for all logger methods.
-  TRY_TEST(TestLogEvent(&logger_));
-  TRY_TEST(TestLogEventCount(&logger_));
-  TRY_TEST(TestLogElapsedTime(&logger_));
-  TRY_TEST(TestLogFrameRate(&logger_));
-  TRY_TEST(TestLogMemoryUsage(&logger_));
-  TRY_TEST(TestLogIntHistogram(&logger_));
-  TRY_TEST(TestLogCobaltEvent(&logger_));
   child->MakeTeardownAsync(loop_->dispatcher());
 
   return DoLocalAggregationTests(kEventAggregatorBackfillDays, kCobaltNoEventAggregatorWorker);
@@ -91,18 +83,6 @@ bool CobaltTestApp::DoLocalAggregationTests(const size_t backfill_days,
       (test_for_prober_ ? cobalt_prober_registry::kProjectId : cobalt_registry::kProjectId);
   // TODO(fxbug.dev/52750): We try each of these tests twice in case the failure
   // reason is that the calendar date has changed mid-test.
-  CONNECT_AND_TRY_TEST_TWICE(
-      TestLogEventWithAggregation(&logger_, clock_.get(), &cobalt_controller_, backfill_days,
-                                  project_id),
-      variant);
-  CONNECT_AND_TRY_TEST_TWICE(
-      TestLogEventCountWithAggregation(&logger_, clock_.get(), &cobalt_controller_, backfill_days,
-                                       project_id),
-      variant);
-  CONNECT_AND_TRY_TEST_TWICE(
-      TestLogElapsedTimeWithAggregation(&logger_, clock_.get(), &cobalt_controller_, backfill_days,
-                                        project_id),
-      variant);
   CONNECT_AND_TRY_TEST_TWICE(
       TestLogInteger(&logger_, clock_.get(), &cobalt_controller_, backfill_days, project_id),
       variant);
@@ -130,15 +110,9 @@ component_testing::ScopedChild CobaltTestApp::Connect(const std::string &variant
   logger_.SetCobaltUnderTestMoniker("realm_builder\\:" + child.GetChildName());
   scoped_children_ += 1;
 
-  fuchsia::cobalt::LoggerFactorySyncPtr logger_factory =
-      child.ConnectSync<fuchsia::cobalt::LoggerFactory>();
-  fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   uint32_t project_id =
       (test_for_prober_ ? cobalt_prober_registry::kProjectId : cobalt_registry::kProjectId);
   FX_LOGS(INFO) << "Test app is logging for the " << project_id << " project";
-  logger_factory->CreateLoggerFromProjectId(project_id, logger_.logger_.NewRequest(), &status);
-  FX_CHECK(status == fuchsia::cobalt::Status::OK) << "CreateLogger() => " << StatusToString(status);
-
   fuchsia::metrics::MetricEventLoggerFactorySyncPtr metric_event_logger_factory =
       child.ConnectSync<fuchsia::metrics::MetricEventLoggerFactory>();
 
@@ -173,7 +147,7 @@ component_testing::ScopedChild CobaltTestApp::Connect(const std::string &variant
   }
 
   child.Connect(system_data_updater_.NewRequest());
-  status = fuchsia::cobalt::Status::INTERNAL_ERROR;
+  fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   fuchsia::cobalt::SoftwareDistributionInfo info;
   info.set_current_channel("devhost");
   info.set_current_realm("");

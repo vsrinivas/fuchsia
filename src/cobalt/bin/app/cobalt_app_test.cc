@@ -178,22 +178,8 @@ class CobaltAppTest : public gtest::TestLoopFixture {
 
  protected:
   void SetUp() override {
-    context_provider_.ConnectToPublicService(factory_.NewRequest());
-    ASSERT_NE(factory_.get(), nullptr);
     context_provider_.ConnectToPublicService(metric_event_logger_factory_.NewRequest());
     ASSERT_NE(metric_event_logger_factory_.get(), nullptr);
-  }
-
-  // Call the LoggerFactory to create a Logger connection.
-  fuchsia::cobalt::LoggerPtr GetLogger(int project_id = testapp_registry::kProjectId) {
-    fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-    fuchsia::cobalt::LoggerPtr logger;
-    factory_->CreateLoggerFromProjectId(project_id, logger.NewRequest(),
-                                        [&](fuchsia::cobalt::Status status_) { status = status_; });
-    RunLoopUntilIdle();
-    EXPECT_EQ(status, fuchsia::cobalt::Status::OK);
-    EXPECT_NE(logger.get(), nullptr);
-    return logger;
   }
 
   // Call the MetricEventLoggerFactory to create a Logger connection.
@@ -230,42 +216,8 @@ class CobaltAppTest : public gtest::TestLoopFixture {
   testing::FakeCobaltService* fake_service_;
   inspect::Inspector inspector_;
   CobaltApp cobalt_app_;
-  fuchsia::cobalt::LoggerFactoryPtr factory_;
   fuchsia::metrics::MetricEventLoggerFactoryPtr metric_event_logger_factory_;
 };
-
-TEST_F(CobaltAppTest, CreateLogger) {
-  logger::testing::FakeLogger* fake_logger = fake_service_->last_logger_created();
-  EXPECT_EQ(fake_logger, nullptr);
-  fuchsia::cobalt::LoggerPtr logger = GetLogger();
-  fake_logger = fake_service_->last_logger_created();
-  EXPECT_NE(fake_logger, nullptr);
-  EXPECT_EQ(fake_logger->call_count(), 0);
-}
-
-TEST_F(CobaltAppTest, CreateLoggerNoValidLogger) {
-  // Make sure that the CobaltService returns nullptr for the next call to NewLogger().
-  fake_service_->FailNextNewLogger();
-
-  fuchsia::cobalt::Status status = fuchsia::cobalt::Status::OK;
-  fuchsia::cobalt::LoggerPtr logger;
-  factory_->CreateLoggerFromProjectId(/*project_id=*/987654321, logger.NewRequest(),
-                                      [&](fuchsia::cobalt::Status status_) { status = status_; });
-  RunLoopUntilIdle();
-  EXPECT_EQ(status, fuchsia::cobalt::Status::INVALID_ARGUMENTS);
-}
-
-TEST_F(CobaltAppTest, CreateLoggerForNonFuchsiaCustomer) {
-  fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-  fuchsia::cobalt::LoggerPtr logger;
-  // Use the customer and project ID for the cobalt_internal metrics project.
-  factory_->CreateLoggerFromProjectSpec(/*customer_id=*/2147483647, /*project_id=*/205836624,
-                                        logger.NewRequest(),
-                                        [&](fuchsia::cobalt::Status status_) { status = status_; });
-  RunLoopUntilIdle();
-  EXPECT_EQ(status, fuchsia::cobalt::Status::OK);
-  EXPECT_NE(logger.get(), nullptr);
-}
 
 TEST_F(CobaltAppTest, SystemClockIsAccurate) {
   bool callback_invoked = false;
@@ -287,23 +239,6 @@ TEST_F(CobaltAppTest, InspectData) {
             ChildrenMatch(UnorderedElementsAre(AllOf(
                 NodeMatches(NameMatches("cobalt_app")),
                 ChildrenMatch(UnorderedElementsAre(NodeMatches(NameMatches("system_data")))))))));
-}
-
-TEST_F(CobaltAppTest, LogEvent) {
-  fuchsia::cobalt::LoggerPtr logger = GetLogger();
-  logger::testing::FakeLogger* fake_logger = fake_service_->last_logger_created();
-  ASSERT_NE(fake_logger, nullptr);
-  EXPECT_EQ(fake_logger->call_count(), 0);
-
-  fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-  logger->LogEvent(testapp_registry::kErrorOccurredMetricId, /*event_code=*/2,
-                   [&](fuchsia::cobalt::Status status_) { status = status_; });
-  RunLoopUntilIdle();
-  ASSERT_EQ(status, fuchsia::cobalt::Status::OK);
-  EXPECT_EQ(fake_logger->call_count(), 1);
-  auto event = fake_logger->last_event_logged();
-  EXPECT_EQ(event.metric_id(), testapp_registry::kErrorOccurredMetricId);
-  EXPECT_EQ(event.event_occurred_event().event_code(), 2);
 }
 
 TEST_F(CobaltAppTest, SetSoftwareDistributionInfo) {
@@ -477,15 +412,12 @@ TEST_F(CobaltAppTest, ShutDown) {
   EXPECT_EQ(fake_service_->is_shut_down(), false);
 
   fuchsia::metrics::MetricEventLoggerPtr metric_logger = GetMetricEventLogger();
-  fuchsia::cobalt::LoggerPtr logger = GetLogger();
   EXPECT_TRUE(metric_logger.is_bound());
-  EXPECT_TRUE(logger.is_bound());
 
   lifecycle_->Stop();
   RunLoopUntilIdle();
   EXPECT_EQ(fake_service_->is_shut_down(), true);
   EXPECT_FALSE(metric_logger.is_bound());
-  EXPECT_FALSE(logger.is_bound());
   EXPECT_FALSE(lifecycle_.is_bound());
 }
 
@@ -494,8 +426,6 @@ TEST_F(CobaltAppTest, NoNewLoggersAfterShutDown) {
   RunLoopUntilIdle();
 
   fuchsia::metrics::MetricEventLoggerPtr metric_logger = nullptr;
-  fuchsia::cobalt::LoggerPtr logger = nullptr;
-  fuchsia::cobalt::Status cobalt_status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   fuchsia::metrics::MetricEventLoggerFactory_CreateMetricEventLogger_Result metrics_result;
   fuchsia::metrics::ProjectSpec project;
   project.set_customer_id(1);
@@ -510,13 +440,6 @@ TEST_F(CobaltAppTest, NoNewLoggersAfterShutDown) {
   EXPECT_TRUE(metrics_result.is_err());
   EXPECT_EQ(metrics_result.err(), fuchsia::metrics::Error::SHUT_DOWN);
   EXPECT_FALSE(metric_logger.is_bound());
-
-  factory_->CreateLoggerFromProjectId(
-      testapp_registry::kProjectId, logger.NewRequest(),
-      [&](fuchsia::cobalt::Status status_) { cobalt_status = status_; });
-  RunLoopUntilIdle();
-  EXPECT_EQ(cobalt_status, fuchsia::cobalt::Status::SHUT_DOWN);
-  EXPECT_FALSE(logger.is_bound());
 }
 
 }  // namespace cobalt

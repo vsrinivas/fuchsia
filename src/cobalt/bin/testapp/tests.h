@@ -22,56 +22,6 @@
 namespace cobalt {
 namespace testapp {
 
-bool TestLogEvent(CobaltTestAppLogger* logger);
-
-bool TestLogEventCount(CobaltTestAppLogger* logger);
-
-bool TestLogElapsedTime(CobaltTestAppLogger* logger);
-
-bool TestLogFrameRate(CobaltTestAppLogger* logger);
-
-bool TestLogMemoryUsage(CobaltTestAppLogger* logger);
-
-bool TestLogIntHistogram(CobaltTestAppLogger* logger);
-
-bool TestLogCobaltEvent(CobaltTestAppLogger* logger);
-
-// Tests of local aggregation.
-//
-// Each of these tests assumes that the EventAggregator has been updated with
-// the ProjectContext of |logger|, but that the EventAggregator's
-// AggregatedObservationHistoryStore is empty and that the LocalAggregateStore
-// contains no aggregates. One way to ensure this is to reconnect to the Cobalt
-// app immediately before running each of these tests.
-//
-// Each test logs some events for a locally aggregated report, generates
-// locally aggregated observations for the current day index in UTC according to
-// a system clock, and checks that the expected number of observations were
-// generated. Each test then generates locally aggregated observations
-// again, for the same day index, and checks that no observations were
-// generated.
-//
-// In addition, TestLogEventWithAggregation attempts to log an event with an
-// invalid event code and checks for failure.
-bool TestLogEventWithAggregation(CobaltTestAppLogger* logger, util::SystemClockInterface* clock,
-                                 fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
-                                 size_t backfill_days, uint32_t project_id);
-
-bool TestLogEventCountWithAggregation(CobaltTestAppLogger* logger,
-                                      util::SystemClockInterface* clock,
-                                      fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
-                                      size_t backfill_days, uint32_t project_id);
-
-bool TestLogElapsedTimeWithAggregation(CobaltTestAppLogger* logger,
-                                       util::SystemClockInterface* clock,
-                                       fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
-                                       size_t backfill_days, uint32_t project_id);
-
-bool TestLogElapsedTimeWithAggregationWorkerRunning(
-    CobaltTestAppLogger* logger, util::SystemClockInterface* clock,
-    fuchsia::cobalt::ControllerSyncPtr* cobalt_controller, size_t backfill_days,
-    uint32_t project_id);
-
 // Tests of Cobalt 1.1 metrics, all of which use local aggregation.
 //
 // Each of these tests assumes that the local_aggregation_1.1 has been updated with

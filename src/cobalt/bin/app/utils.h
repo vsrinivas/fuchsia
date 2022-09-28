@@ -5,7 +5,6 @@
 #ifndef SRC_COBALT_BIN_APP_UTILS_H_
 #define SRC_COBALT_BIN_APP_UTILS_H_
 
-#include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/metrics/cpp/fidl.h>
 #include <lib/fpromise/result.h>
 #include <stdlib.h>
@@ -15,8 +14,6 @@
 #include "third_party/cobalt/src/public/lib/status.h"
 
 namespace cobalt {
-
-fuchsia::cobalt::Status ToCobaltStatus(const Status &s);
 
 fpromise::result<void, fuchsia::metrics::Error> ToMetricsResult(const Status &s);
 

@@ -94,7 +94,7 @@ CobaltConfig CobaltApp::CreateCobaltConfig(
 
       .file_system = std::make_unique<PosixFileSystem>(),
       .use_memory_observation_store = use_memory_observation_store,
-      .max_bytes_per_event = fuchsia::cobalt::MAX_BYTES_PER_EVENT,
+      .max_bytes_per_event = fuchsia::metrics::MAX_BYTES_PER_EVENT,
       .max_bytes_per_envelope = static_cast<size_t>(
           kMaxBytesPerEnvelopeFactor * static_cast<float>(max_bytes_per_observation_store)),
       .max_bytes_total = max_bytes_per_observation_store,
@@ -190,19 +190,13 @@ CobaltApp::CobaltApp(
       inspect_node_(std::move(inspect_node)),
       inspect_config_node_(std::move(inspect_config_node)),
       cobalt_service_(std::move(cobalt_service)),
-      validated_clock_(std::move(validated_clock)),
-      timer_manager_(dispatcher) {
+      validated_clock_(std::move(validated_clock)) {
   validated_clock_->AwaitExternalSource([this, start_event_aggregator_worker]() {
     // Now that the clock is accurate, notify CobaltService.
     cobalt_service_->SystemClockIsAccurate(std::make_unique<util::SystemClock>(),
                                            start_event_aggregator_worker);
     controller_impl_->OnSystemClockBecomesAccurate();
   });
-
-  // Create LoggerFactory protocol implementation and start serving it.
-  logger_factory_impl_.reset(new LoggerFactoryImpl(&timer_manager_, cobalt_service_.get()));
-  context_->outgoing()->AddPublicService(
-      logger_factory_bindings_.GetHandler(logger_factory_impl_.get()));
 
   // Create MetricEventLoggerFactory protocol implementation and start serving it.
   metric_event_logger_factory_impl_ =
@@ -213,8 +207,8 @@ CobaltApp::CobaltApp(
   if (lifecycle_handle.is_valid()) {
     // Bind the ProcessLifecycle service to the provided handle.
     process_lifecycle_impl_ = std::make_unique<ProcessLifecycle>(
-        cobalt_service_.get(), logger_factory_impl_.get(), metric_event_logger_factory_impl_.get(),
-        std::move(shutdown), std::move(lifecycle_handle), dispatcher);
+        cobalt_service_.get(), metric_event_logger_factory_impl_.get(), std::move(shutdown),
+        std::move(lifecycle_handle), dispatcher);
   }
 
   // Create SystemDataUpdater protocol implementation and start serving it.

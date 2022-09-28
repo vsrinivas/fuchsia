@@ -13,33 +13,6 @@
 
 namespace cobalt {
 
-fuchsia::cobalt::Status ToCobaltStatus(const Status &s) {
-  switch (s.error_code()) {
-    case StatusCode::OK:
-      return fuchsia::cobalt::Status::OK;
-    case StatusCode::INVALID_ARGUMENT:
-      return fuchsia::cobalt::Status::INVALID_ARGUMENTS;
-    case StatusCode::RESOURCE_EXHAUSTED:
-      return fuchsia::cobalt::Status::BUFFER_FULL;
-    case StatusCode::CANCELLED:
-    case StatusCode::UNKNOWN:
-    case StatusCode::DEADLINE_EXCEEDED:
-    case StatusCode::NOT_FOUND:
-    case StatusCode::ALREADY_EXISTS:
-    case StatusCode::PERMISSION_DENIED:
-    case StatusCode::FAILED_PRECONDITION:
-    case StatusCode::ABORTED:
-    case StatusCode::OUT_OF_RANGE:
-    case StatusCode::UNIMPLEMENTED:
-    case StatusCode::INTERNAL:
-    case StatusCode::UNAVAILABLE:
-    case StatusCode::DATA_LOSS:
-    case StatusCode::UNAUTHENTICATED:
-    default:
-      return fuchsia::cobalt::Status::INTERNAL_ERROR;
-  }
-}
-
 fpromise::result<void, fuchsia::metrics::Error> ToMetricsResult(const Status &s) {
   switch (s.error_code()) {
     case StatusCode::OK:

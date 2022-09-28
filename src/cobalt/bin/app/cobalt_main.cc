@@ -4,7 +4,6 @@
 
 #include <fcntl.h>
 #include <fuchsia/buildinfo/cpp/fidl.h>
-#include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <fuchsia/sysinfo/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>

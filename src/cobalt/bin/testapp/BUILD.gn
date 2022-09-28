@@ -61,7 +61,6 @@ executable("cobalt_testapp") {
     "//src/cobalt/bin/utils:base64",
     "//src/cobalt/bin/utils:error_utils",
     "//src/cobalt/bin/utils:status_utils",
-    "//src/lib/cobalt/cpp:cobalt_event_builder",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//third_party/cobalt/src/lib/util:datetime_util",
