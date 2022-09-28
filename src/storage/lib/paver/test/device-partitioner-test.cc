@@ -783,6 +783,8 @@ TEST_F(EfiDevicePartitionerTests, InitPartitionTables) {
   EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kVbMetaR)));
   EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kAbrMeta)));
   EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager)));
+  EXPECT_OK(partitioner->FindPartition(
+      PartitionSpec(paver::Partition::kFuchsiaVolumeManager, paver::kOpaqueVolumeContentType)));
   // Check that we found the correct bootloader partition.
   auto status2 = partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloaderA));
   EXPECT_OK(status2);
@@ -811,6 +813,8 @@ TEST_F(EfiDevicePartitionerTests, SupportsPartition) {
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kAbrMeta)));
   EXPECT_TRUE(
       partitioner->SupportsPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager)));
+  EXPECT_TRUE(partitioner->SupportsPartition(
+      PartitionSpec(paver::Partition::kFuchsiaVolumeManager, paver::kOpaqueVolumeContentType)));
 
   // Unsupported partition type.
   EXPECT_FALSE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kUnknown)));

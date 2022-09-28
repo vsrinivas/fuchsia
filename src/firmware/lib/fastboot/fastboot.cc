@@ -45,11 +45,14 @@ FlashPartitionInfo GetPartitionInfo(std::string_view partition_label) {
   FlashPartitionInfo ret;
   ret.partition = partition_label.substr(0, len - 2);
   std::string_view slot_suffix = partition_label.substr(len - 2, 2);
-  if (slot_suffix == "_a") {
+  // TODO(b/241150035): Some platforms such as x64 still use legacy kernel partition name
+  // zircon-a/b/r. Hardcode these cases for backward compatibility. Once all products migrate to new
+  // name. Remove them.
+  if (slot_suffix == "_a" || partition_label == "zircon-a") {
     ret.configuration = fuchsia_paver::wire::Configuration::kA;
-  } else if (slot_suffix == "_b") {
+  } else if (slot_suffix == "_b" || partition_label == "zircon-b") {
     ret.configuration = fuchsia_paver::wire::Configuration::kB;
-  } else if (slot_suffix == "_r") {
+  } else if (slot_suffix == "_r" || partition_label == "zircon-r") {
     ret.configuration = fuchsia_paver::wire::Configuration::kRecovery;
   } else {
     ret.partition = partition_label;
