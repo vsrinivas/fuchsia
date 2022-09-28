@@ -229,6 +229,7 @@ func SplitOutMultipliers(
 						durationPerTest := divRoundUp(remainingDuration, len(fillUpTestIdxs))
 						test.Runs = max(1, divRoundUp(durationPerTest, int(testDurations.Get(test).MedianDuration)))
 						test.Runs = min(test.Runs, multipliedTestMaxRuns)
+						test.StopRepeatingAfterSecs = int(time.Duration(durationPerTest).Seconds())
 					} else if targetTestCount > 0 {
 						remainingCount := max(0, targetTestCount-usedUpCount)
 						countPerTest := divRoundUp(remainingCount, len(fillUpTestIdxs))

@@ -70,7 +70,7 @@ func TestSplitOutMultipliers(t *testing.T) {
 			test := makeTest(id, os)
 			test.Runs = runs
 			test.RunAlgorithm = StopOnFailure
-			test.StopRepeatingAfterSecs = timeoutSecs
+			test.StopRepeatingAfterSecs = int(timeoutSecs / len(ids))
 			tests = append(tests, test)
 		}
 		return &Shard{
@@ -84,6 +84,13 @@ func TestSplitOutMultipliers(t *testing.T) {
 	multShardWithIndex := func(env build.Environment, os string, runs, timeoutSecs, shardIndex int, ids ...int) *Shard {
 		shard := multShard(env, os, runs, timeoutSecs, ids...)
 		shard.Name = fmt.Sprintf("%s-(%d)", shard.Name, shardIndex)
+		return shard
+	}
+
+	withStopRepeatingAfterSecs := func(shard *Shard, stopRepeatingAfterSecs int) *Shard {
+		for i := range shard.Tests {
+			shard.Tests[i].StopRepeatingAfterSecs = stopRepeatingAfterSecs
+		}
 		return shard
 	}
 
@@ -344,9 +351,9 @@ func TestSplitOutMultipliers(t *testing.T) {
 			},
 			targetDuration: 10 * time.Second,
 			expected: []*Shard{
-				multShardWithIndex(env1, "fuchsia", 500, 10, 1, 6, 1),
-				multShardWithIndex(env1, "fuchsia", 500, 10, 2, 4, 2),
-				multShardWithIndex(env1, "fuchsia", 500, 10, 3, 5, 3),
+				withStopRepeatingAfterSecs(multShardWithIndex(env1, "fuchsia", 500, 10, 1, 6, 1), 10),
+				withStopRepeatingAfterSecs(multShardWithIndex(env1, "fuchsia", 500, 10, 2, 4, 2), 10),
+				withStopRepeatingAfterSecs(multShardWithIndex(env1, "fuchsia", 500, 10, 3, 5, 3), 10),
 			},
 		},
 		{
