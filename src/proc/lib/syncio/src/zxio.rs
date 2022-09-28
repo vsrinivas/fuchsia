@@ -659,3 +659,5 @@ extern "C" {
         abilities: zxio_abilities_t,
     ) -> u32;
 }
+pub const ZXIO_SHUTDOWN_OPTIONS_READ: zxio_shutdown_options_t = 2;
+pub const ZXIO_SHUTDOWN_OPTIONS_WRITE: zxio_shutdown_options_t = 1;

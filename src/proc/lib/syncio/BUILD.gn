@@ -22,6 +22,7 @@ rustc_library("syncio") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/proc/lib/linux_uapi",
     "//third_party/rust_crates:bitflags",
   ]
 

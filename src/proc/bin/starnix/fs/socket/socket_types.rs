@@ -8,6 +8,7 @@ use zerocopy::AsBytes;
 
 use crate::fs::*;
 use crate::types::*;
+pub use syncio::ZxioShutdownFlags as SocketShutdownFlags;
 
 bitflags! {
     pub struct SocketMessageFlags: u32 {
@@ -31,17 +32,6 @@ bitflags! {
         const BATCH = MSG_BATCH;
         const FASTOPEN = MSG_FASTOPEN;
         const CMSG_CLOEXEC = MSG_CMSG_CLOEXEC;
-    }
-}
-
-bitflags! {
-    /// The flags for shutting down sockets.
-    pub struct SocketShutdownFlags: u32 {
-        /// Further receptions will be disallowed.
-        const READ = 1 << 0;
-
-        /// Further transmissions will be disallowed.
-        const WRITE = 1 << 2;
     }
 }
 

@@ -10,4 +10,6 @@
 #include <lib/zxio/posix_mode.h>
 #include <lib/zxio/zxio.h>
 
+#include "stub/missing_includes.h"
+
 #endif  // SRC_PROC_LIB_SYNCIO_WRAPPER_H_

@@ -4,12 +4,14 @@
 
 use std::convert::From;
 
+use crate::zxio::{zxio_dirent_iterator_next, zxio_dirent_iterator_t};
 use bitflags::bitflags;
+use fidl::encoding::const_assert_eq;
 use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_io as fio;
 use fuchsia_zircon::{self as zx, HandleBased};
-
-use crate::zxio::{zxio_dirent_iterator_next, zxio_dirent_iterator_t};
+use linux_uapi::x86_64::sockaddr_storage;
+use zxio::{sockaddr, socklen_t, ZXIO_SHUTDOWN_OPTIONS_READ, ZXIO_SHUTDOWN_OPTIONS_WRITE};
 
 pub mod zxio;
 
@@ -32,6 +34,20 @@ bitflags! {
         const PEER_CLOSED     = 1 << 8;
     }
 }
+
+bitflags! {
+    /// The flags for shutting down sockets.
+    pub struct ZxioShutdownFlags: u32 {
+        /// Further transmissions will be disallowed.
+        const WRITE = 1 << 0;
+
+        /// Further receptions will be disallowed.
+        const READ = 1 << 1;
+    }
+}
+
+const_assert_eq!(ZxioShutdownFlags::WRITE.bits(), ZXIO_SHUTDOWN_OPTIONS_WRITE);
+const_assert_eq!(ZxioShutdownFlags::READ.bits(), ZXIO_SHUTDOWN_OPTIONS_READ);
 
 // TODO: We need a more comprehensive error strategy.
 // Our dependencies create elaborate error objects, but Starnix would prefer
@@ -109,6 +125,8 @@ impl ZxioDirent {
         ZxioDirent { protocols, abilities, id, name }
     }
 }
+
+pub struct ZxioErrorCode(i16);
 
 #[derive(Default)]
 pub struct Zxio {
@@ -267,6 +285,143 @@ impl Zxio {
         let iterator = DirentIterator { iterator: zxio_iterator, finished: false };
         zx::ok(status)?;
         Ok(iterator)
+    }
+
+    pub fn connect(&self, addr: &[u8]) -> Result<ZxioErrorCode, zx::Status> {
+        let mut out_code = 0;
+        let status = unsafe {
+            zxio::zxio_connect(
+                self.as_ptr(),
+                addr.as_ptr() as *const sockaddr,
+                addr.len() as socklen_t,
+                &mut out_code,
+            )
+        };
+        zx::ok(status)?;
+        Ok(ZxioErrorCode(out_code))
+    }
+
+    pub fn bind(&self, addr: &[u8]) -> Result<ZxioErrorCode, zx::Status> {
+        let mut out_code = 0;
+        let status = unsafe {
+            zxio::zxio_bind(
+                self.as_ptr(),
+                addr.as_ptr() as *const sockaddr,
+                addr.len() as socklen_t,
+                &mut out_code,
+            )
+        };
+        zx::ok(status)?;
+        Ok(ZxioErrorCode(out_code))
+    }
+
+    pub fn listen(&self, backlog: i32) -> Result<ZxioErrorCode, zx::Status> {
+        let mut out_code = 0;
+        let status = unsafe {
+            zxio::zxio_listen(self.as_ptr(), backlog as std::os::raw::c_int, &mut out_code)
+        };
+        zx::ok(status)?;
+        Ok(ZxioErrorCode(out_code))
+    }
+
+    pub fn accept(&self) -> Result<(Zxio, ZxioErrorCode), zx::Status> {
+        let mut addrlen = std::mem::size_of::<sockaddr_storage>() as socklen_t;
+        let mut addr = vec![0u8; addrlen as usize];
+        let zxio = Zxio::default();
+        let mut out_code = 0;
+        let status = unsafe {
+            zxio::zxio_accept(
+                self.as_ptr(),
+                addr.as_mut_ptr() as *mut sockaddr,
+                &mut addrlen,
+                zxio.as_storage_ptr(),
+                &mut out_code,
+            )
+        };
+        zx::ok(status)?;
+        Ok((zxio, ZxioErrorCode(out_code)))
+    }
+
+    pub fn getsockname(&self) -> Result<(Vec<u8>, ZxioErrorCode), zx::Status> {
+        let mut addrlen = std::mem::size_of::<sockaddr_storage>() as socklen_t;
+        let mut addr = vec![0u8; addrlen as usize];
+        let mut out_code = 0;
+        let status = unsafe {
+            zxio::zxio_getsockname(
+                self.as_ptr(),
+                addr.as_mut_ptr() as *mut sockaddr,
+                &mut addrlen,
+                &mut out_code,
+            )
+        };
+        zx::ok(status)?;
+        Ok((addr[..addrlen as usize].to_vec(), ZxioErrorCode(out_code)))
+    }
+
+    pub fn getpeername(&self) -> Result<(Vec<u8>, ZxioErrorCode), zx::Status> {
+        let mut addrlen = std::mem::size_of::<sockaddr_storage>() as socklen_t;
+        let mut addr = vec![0u8; addrlen as usize];
+        let mut out_code = 0;
+        let status = unsafe {
+            zxio::zxio_getpeername(
+                self.as_ptr(),
+                addr.as_mut_ptr() as *mut sockaddr,
+                &mut addrlen,
+                &mut out_code,
+            )
+        };
+        zx::ok(status)?;
+        Ok((addr[..addrlen as usize].to_vec(), ZxioErrorCode(out_code)))
+    }
+
+    pub fn getsockopt(
+        &self,
+        level: u32,
+        optname: u32,
+        mut optlen: socklen_t,
+    ) -> Result<(Vec<u8>, ZxioErrorCode), zx::Status> {
+        let mut optval = vec![0u8; optlen as usize];
+        let mut out_code = 0;
+        let status = unsafe {
+            zxio::zxio_getsockopt(
+                self.as_ptr(),
+                level as std::os::raw::c_int,
+                optname as std::os::raw::c_int,
+                optval.as_mut_ptr() as *mut std::os::raw::c_void,
+                &mut optlen,
+                &mut out_code,
+            )
+        };
+        zx::ok(status)?;
+        Ok((optval[..optlen as usize].to_vec(), ZxioErrorCode(out_code)))
+    }
+
+    pub fn setsockopt(
+        &self,
+        level: i32,
+        optname: i32,
+        optval: &[u8],
+    ) -> Result<ZxioErrorCode, zx::Status> {
+        let mut out_code = 0;
+        let status = unsafe {
+            zxio::zxio_setsockopt(
+                self.as_ptr(),
+                level,
+                optname,
+                optval.as_ptr() as *const std::os::raw::c_void,
+                optval.len() as socklen_t,
+                &mut out_code,
+            )
+        };
+        zx::ok(status)?;
+        Ok(ZxioErrorCode(out_code))
+    }
+
+    pub fn shutdown(&self, flags: ZxioShutdownFlags) -> Result<ZxioErrorCode, zx::Status> {
+        let mut out_code = 0;
+        let status = unsafe { zxio::zxio_shutdown(self.as_ptr(), flags.bits(), &mut out_code) };
+        zx::ok(status)?;
+        Ok(ZxioErrorCode(out_code))
     }
 }
 
