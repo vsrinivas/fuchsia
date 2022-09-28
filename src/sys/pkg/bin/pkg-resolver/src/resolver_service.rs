@@ -433,7 +433,7 @@ pub async fn run_resolver_service(
                         MetricEvent::builder(metrics::RESOLVE_DURATION_MIGRATED_METRIC_ID)
                             .with_event_codes((
                                 resolve_result_to_resolve_duration_code(&response),
-                                metrics::ResolveDurationMetricDimensionResolverType::Regular,
+                                metrics::ResolveDurationMigratedMetricDimensionResolverType::Regular,
                             ))
                             .as_integer(
                                 Instant::now().duration_since(start_time).as_micros() as i64
@@ -779,7 +779,7 @@ pub async fn run_font_resolver_service(
                 MetricEvent::builder(metrics::RESOLVE_MIGRATED_METRIC_ID)
                     .with_event_codes((
                         resolve_result_to_resolve_code(response_legacy),
-                        metrics::ResolveMetricDimensionResolverType::Font,
+                        metrics::ResolveMigratedMetricDimensionResolverType::Font,
                     ))
                     .as_occurrence(1),
             );
@@ -788,7 +788,7 @@ pub async fn run_font_resolver_service(
                 MetricEvent::builder(metrics::RESOLVE_DURATION_MIGRATED_METRIC_ID)
                     .with_event_codes((
                         resolve_result_to_resolve_duration_code(&response),
-                        metrics::ResolveDurationMetricDimensionResolverType::Font,
+                        metrics::ResolveDurationMigratedMetricDimensionResolverType::Font,
                     ))
                     .as_integer(Instant::now().duration_since(start_time).as_micros() as i64),
             );

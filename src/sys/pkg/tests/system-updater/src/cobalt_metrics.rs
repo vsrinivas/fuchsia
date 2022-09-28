@@ -6,7 +6,7 @@ use {super::*, pretty_assertions::assert_eq};
 
 async fn test_resolve_error_maps_to_cobalt_status_code(
     error: fidl_fuchsia_pkg::ResolveError,
-    expected_status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode,
+    expected_status_code: metrics::OtaResultAttemptsMigratedMetricDimensionStatusCode,
 ) {
     let env = TestEnv::builder().build().await;
 
@@ -26,9 +26,10 @@ async fn test_resolve_error_maps_to_cobalt_status_code(
     assert_eq!(
         env.get_ota_metrics().await,
         OtaMetrics {
-            initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
-                as u32,
-            phase: metrics::OtaResultAttemptsMetricDimensionPhase::PackageDownload as u32,
+            initiator:
+                metrics::OtaResultAttemptsMigratedMetricDimensionInitiator::UserInitiatedCheck
+                    as u32,
+            phase: metrics::OtaResultAttemptsMigratedMetricDimensionPhase::PackageDownload as u32,
             status_code: expected_status_code as u32,
         }
     );
@@ -36,7 +37,7 @@ async fn test_resolve_error_maps_to_cobalt_status_code(
 
 async fn test_resolve_error_maps_to_cobalt_status_code_v1(
     error: fidl_fuchsia_pkg::ResolveError,
-    expected_status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode,
+    expected_status_code: metrics::OtaResultAttemptsMigratedMetricDimensionStatusCode,
 ) {
     let env = TestEnv::builder().build().await;
 
@@ -56,9 +57,10 @@ async fn test_resolve_error_maps_to_cobalt_status_code_v1(
     assert_eq!(
         env.get_ota_metrics().await,
         OtaMetrics {
-            initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
-                as u32,
-            phase: metrics::OtaResultAttemptsMetricDimensionPhase::PackageDownload as u32,
+            initiator:
+                metrics::OtaResultAttemptsMigratedMetricDimensionInitiator::UserInitiatedCheck
+                    as u32,
+            phase: metrics::OtaResultAttemptsMigratedMetricDimensionPhase::PackageDownload as u32,
             status_code: expected_status_code as u32,
         }
     );
@@ -68,7 +70,7 @@ async fn test_resolve_error_maps_to_cobalt_status_code_v1(
 async fn reports_untrusted_tuf_repo() {
     test_resolve_error_maps_to_cobalt_status_code(
         fidl_fuchsia_pkg::ResolveError::AccessDenied,
-        metrics::OtaResultAttemptsMetricDimensionStatusCode::ErrorUntrustedTufRepo,
+        metrics::OtaResultAttemptsMigratedMetricDimensionStatusCode::ErrorUntrustedTufRepo,
     )
     .await;
 }
@@ -77,7 +79,7 @@ async fn reports_untrusted_tuf_repo() {
 async fn reports_out_of_space() {
     test_resolve_error_maps_to_cobalt_status_code(
         fidl_fuchsia_pkg::ResolveError::NoSpace,
-        metrics::OtaResultAttemptsMetricDimensionStatusCode::ErrorStorageOutOfSpace,
+        metrics::OtaResultAttemptsMigratedMetricDimensionStatusCode::ErrorStorageOutOfSpace,
     )
     .await;
 }
@@ -86,7 +88,7 @@ async fn reports_out_of_space() {
 async fn reports_misc_storage() {
     test_resolve_error_maps_to_cobalt_status_code(
         fidl_fuchsia_pkg::ResolveError::Io,
-        metrics::OtaResultAttemptsMetricDimensionStatusCode::ErrorStorage,
+        metrics::OtaResultAttemptsMigratedMetricDimensionStatusCode::ErrorStorage,
     )
     .await;
 }
@@ -95,7 +97,7 @@ async fn reports_misc_storage() {
 async fn reports_network() {
     test_resolve_error_maps_to_cobalt_status_code(
         fidl_fuchsia_pkg::ResolveError::UnavailableBlob,
-        metrics::OtaResultAttemptsMetricDimensionStatusCode::ErrorNetworking,
+        metrics::OtaResultAttemptsMigratedMetricDimensionStatusCode::ErrorNetworking,
     )
     .await;
 }
@@ -104,7 +106,7 @@ async fn reports_network() {
 async fn reports_untrusted_tuf_repo_v1() {
     test_resolve_error_maps_to_cobalt_status_code_v1(
         fidl_fuchsia_pkg::ResolveError::AccessDenied,
-        metrics::OtaResultAttemptsMetricDimensionStatusCode::ErrorUntrustedTufRepo,
+        metrics::OtaResultAttemptsMigratedMetricDimensionStatusCode::ErrorUntrustedTufRepo,
     )
     .await;
 }
@@ -113,7 +115,7 @@ async fn reports_untrusted_tuf_repo_v1() {
 async fn reports_out_of_space_v1() {
     test_resolve_error_maps_to_cobalt_status_code_v1(
         fidl_fuchsia_pkg::ResolveError::NoSpace,
-        metrics::OtaResultAttemptsMetricDimensionStatusCode::ErrorStorageOutOfSpace,
+        metrics::OtaResultAttemptsMigratedMetricDimensionStatusCode::ErrorStorageOutOfSpace,
     )
     .await;
 }
@@ -122,7 +124,7 @@ async fn reports_out_of_space_v1() {
 async fn reports_misc_storage_v1() {
     test_resolve_error_maps_to_cobalt_status_code_v1(
         fidl_fuchsia_pkg::ResolveError::Io,
-        metrics::OtaResultAttemptsMetricDimensionStatusCode::ErrorStorage,
+        metrics::OtaResultAttemptsMigratedMetricDimensionStatusCode::ErrorStorage,
     )
     .await;
 }
@@ -131,7 +133,7 @@ async fn reports_misc_storage_v1() {
 async fn reports_network_v1() {
     test_resolve_error_maps_to_cobalt_status_code_v1(
         fidl_fuchsia_pkg::ResolveError::UnavailableBlob,
-        metrics::OtaResultAttemptsMetricDimensionStatusCode::ErrorNetworking,
+        metrics::OtaResultAttemptsMigratedMetricDimensionStatusCode::ErrorNetworking,
     )
     .await;
 }

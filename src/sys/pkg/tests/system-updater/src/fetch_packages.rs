@@ -63,10 +63,11 @@ async fn fails_on_update_package_fetch_error_v1() {
     assert_eq!(
         env.get_ota_metrics().await,
         OtaMetrics {
-            initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
-                as u32,
-            phase: metrics::OtaResultAttemptsMetricDimensionPhase::PackageDownload as u32,
-            status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
+            initiator:
+                metrics::OtaResultAttemptsMigratedMetricDimensionInitiator::UserInitiatedCheck
+                    as u32,
+            phase: metrics::OtaResultAttemptsMigratedMetricDimensionPhase::PackageDownload as u32,
+            status_code: metrics::OtaResultAttemptsMigratedMetricDimensionStatusCode::Error as u32,
         }
     );
 
@@ -122,10 +123,11 @@ async fn fails_on_update_package_fetch_error() {
     assert_eq!(
         env.get_ota_metrics().await,
         OtaMetrics {
-            initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
-                as u32,
-            phase: metrics::OtaResultAttemptsMetricDimensionPhase::PackageDownload as u32,
-            status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
+            initiator:
+                metrics::OtaResultAttemptsMigratedMetricDimensionInitiator::UserInitiatedCheck
+                    as u32,
+            phase: metrics::OtaResultAttemptsMigratedMetricDimensionPhase::PackageDownload as u32,
+            status_code: metrics::OtaResultAttemptsMigratedMetricDimensionStatusCode::Error as u32,
         }
     );
 
@@ -232,10 +234,11 @@ async fn fails_on_content_package_fetch_error_v1() {
     assert_eq!(
         env.get_ota_metrics().await,
         OtaMetrics {
-            initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
-                as u32,
-            phase: metrics::OtaResultAttemptsMetricDimensionPhase::PackageDownload as u32,
-            status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
+            initiator:
+                metrics::OtaResultAttemptsMigratedMetricDimensionInitiator::UserInitiatedCheck
+                    as u32,
+            phase: metrics::OtaResultAttemptsMigratedMetricDimensionPhase::PackageDownload as u32,
+            status_code: metrics::OtaResultAttemptsMigratedMetricDimensionStatusCode::Error as u32,
         }
     );
 
@@ -357,10 +360,11 @@ async fn fails_on_content_package_fetch_error() {
     assert_eq!(
         env.get_ota_metrics().await,
         OtaMetrics {
-            initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
-                as u32,
-            phase: metrics::OtaResultAttemptsMetricDimensionPhase::PackageDownload as u32,
-            status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
+            initiator:
+                metrics::OtaResultAttemptsMigratedMetricDimensionInitiator::UserInitiatedCheck
+                    as u32,
+            phase: metrics::OtaResultAttemptsMigratedMetricDimensionPhase::PackageDownload as u32,
+            status_code: metrics::OtaResultAttemptsMigratedMetricDimensionStatusCode::Error as u32,
         }
     );
 

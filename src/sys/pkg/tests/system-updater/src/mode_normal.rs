@@ -28,10 +28,13 @@ async fn updates_the_system_v1() {
     assert_eq!(
         env.get_ota_metrics().await,
         OtaMetrics {
-            initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
+            initiator:
+                metrics::OtaResultAttemptsMigratedMetricDimensionInitiator::UserInitiatedCheck
+                    as u32,
+            phase: metrics::OtaResultAttemptsMigratedMetricDimensionPhase::SuccessPendingReboot
                 as u32,
-            phase: metrics::OtaResultAttemptsMetricDimensionPhase::SuccessPendingReboot as u32,
-            status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Success as u32,
+            status_code: metrics::OtaResultAttemptsMigratedMetricDimensionStatusCode::Success
+                as u32,
         }
     );
 
@@ -90,10 +93,13 @@ async fn updates_the_system() {
     assert_eq!(
         env.get_ota_metrics().await,
         OtaMetrics {
-            initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
+            initiator:
+                metrics::OtaResultAttemptsMigratedMetricDimensionInitiator::UserInitiatedCheck
+                    as u32,
+            phase: metrics::OtaResultAttemptsMigratedMetricDimensionPhase::SuccessPendingReboot
                 as u32,
-            phase: metrics::OtaResultAttemptsMetricDimensionPhase::SuccessPendingReboot as u32,
-            status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Success as u32,
+            status_code: metrics::OtaResultAttemptsMigratedMetricDimensionStatusCode::Success
+                as u32,
         }
     );
 
@@ -212,10 +218,13 @@ async fn updates_the_system_with_progress_v1() {
     assert_eq!(
         env.get_ota_metrics().await,
         OtaMetrics {
-            initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
+            initiator:
+                metrics::OtaResultAttemptsMigratedMetricDimensionInitiator::UserInitiatedCheck
+                    as u32,
+            phase: metrics::OtaResultAttemptsMigratedMetricDimensionPhase::SuccessPendingReboot
                 as u32,
-            phase: metrics::OtaResultAttemptsMetricDimensionPhase::SuccessPendingReboot as u32,
-            status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Success as u32,
+            status_code: metrics::OtaResultAttemptsMigratedMetricDimensionStatusCode::Success
+                as u32,
         }
     );
 
@@ -297,10 +306,13 @@ async fn updates_the_system_with_progress() {
     assert_eq!(
         env.get_ota_metrics().await,
         OtaMetrics {
-            initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
+            initiator:
+                metrics::OtaResultAttemptsMigratedMetricDimensionInitiator::UserInitiatedCheck
+                    as u32,
+            phase: metrics::OtaResultAttemptsMigratedMetricDimensionPhase::SuccessPendingReboot
                 as u32,
-            phase: metrics::OtaResultAttemptsMetricDimensionPhase::SuccessPendingReboot as u32,
-            status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Success as u32,
+            status_code: metrics::OtaResultAttemptsMigratedMetricDimensionStatusCode::Success
+                as u32,
         }
     );
 

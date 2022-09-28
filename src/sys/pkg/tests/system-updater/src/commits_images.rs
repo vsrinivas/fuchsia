@@ -28,10 +28,11 @@ async fn fails_setting_configuration_active_v1() {
     assert_eq!(
         env.get_ota_metrics().await,
         OtaMetrics {
-            initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
-                as u32,
-            phase: metrics::OtaResultAttemptsMetricDimensionPhase::ImageCommit as u32,
-            status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
+            initiator:
+                metrics::OtaResultAttemptsMigratedMetricDimensionInitiator::UserInitiatedCheck
+                    as u32,
+            phase: metrics::OtaResultAttemptsMigratedMetricDimensionPhase::ImageCommit as u32,
+            status_code: metrics::OtaResultAttemptsMigratedMetricDimensionStatusCode::Error as u32,
         }
     );
 
@@ -97,10 +98,11 @@ async fn fails_commit_recovery_v1() {
     assert_eq!(
         env.get_ota_metrics().await,
         OtaMetrics {
-            initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
-                as u32,
-            phase: metrics::OtaResultAttemptsMetricDimensionPhase::ImageCommit as u32,
-            status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
+            initiator:
+                metrics::OtaResultAttemptsMigratedMetricDimensionInitiator::UserInitiatedCheck
+                    as u32,
+            phase: metrics::OtaResultAttemptsMigratedMetricDimensionPhase::ImageCommit as u32,
+            status_code: metrics::OtaResultAttemptsMigratedMetricDimensionStatusCode::Error as u32,
         }
     );
 
@@ -167,10 +169,11 @@ async fn fails_setting_configuration_active() {
     assert_eq!(
         env.get_ota_metrics().await,
         OtaMetrics {
-            initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
-                as u32,
-            phase: metrics::OtaResultAttemptsMetricDimensionPhase::ImageCommit as u32,
-            status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
+            initiator:
+                metrics::OtaResultAttemptsMigratedMetricDimensionInitiator::UserInitiatedCheck
+                    as u32,
+            phase: metrics::OtaResultAttemptsMigratedMetricDimensionPhase::ImageCommit as u32,
+            status_code: metrics::OtaResultAttemptsMigratedMetricDimensionStatusCode::Error as u32,
         }
     );
 
@@ -234,10 +237,11 @@ async fn fails_commit_recovery() {
     assert_eq!(
         env.get_ota_metrics().await,
         OtaMetrics {
-            initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
-                as u32,
-            phase: metrics::OtaResultAttemptsMetricDimensionPhase::ImageCommit as u32,
-            status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
+            initiator:
+                metrics::OtaResultAttemptsMigratedMetricDimensionInitiator::UserInitiatedCheck
+                    as u32,
+            phase: metrics::OtaResultAttemptsMigratedMetricDimensionPhase::ImageCommit as u32,
+            status_code: metrics::OtaResultAttemptsMigratedMetricDimensionStatusCode::Error as u32,
         }
     );
 

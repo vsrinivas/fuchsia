@@ -82,7 +82,7 @@ async fn single_blob_resume_success() {
         metrics::FETCH_BLOB_MIGRATED_METRIC_ID,
         vec![(
             metrics::FetchBlobMigratedMetricDimensionResult::Success,
-            metrics::FetchBlobMetricDimensionResumed::True,
+            metrics::FetchBlobMigratedMetricDimensionResumed::True,
         )],
     )
     .await;
@@ -149,7 +149,7 @@ async fn two_blob_resume_success() {
         metrics::FETCH_BLOB_MIGRATED_METRIC_ID,
         vec![(
             metrics::FetchBlobMigratedMetricDimensionResult::Success,
-            metrics::FetchBlobMetricDimensionResumed::True,
+            metrics::FetchBlobMigratedMetricDimensionResumed::True,
         )],
     )
     .await;
@@ -228,7 +228,7 @@ async fn resume_validates_content_range() {
         vec![
             (
                 metrics::FetchBlobMigratedMetricDimensionResult::InvalidContentRangeHeader,
-                metrics::FetchBlobMetricDimensionResumed::True,
+                metrics::FetchBlobMigratedMetricDimensionResumed::True,
             );
             2
         ],
@@ -318,7 +318,7 @@ async fn resume_validates_content_length() {
         vec![
             (
                 metrics::FetchBlobMigratedMetricDimensionResult::ContentLengthContentRangeMismatch,
-                metrics::FetchBlobMetricDimensionResumed::True,
+                metrics::FetchBlobMigratedMetricDimensionResumed::True,
             );
             2
         ],
@@ -373,7 +373,7 @@ async fn resume_validates_206_status() {
         vec![
             (
                 metrics::FetchBlobMigratedMetricDimensionResult::ExpectedHttpStatus206,
-                metrics::FetchBlobMetricDimensionResumed::True,
+                metrics::FetchBlobMigratedMetricDimensionResumed::True,
             );
             2
         ],
@@ -426,7 +426,7 @@ async fn resume_enforces_max_resumption_limit() {
         vec![
             (
                 metrics::FetchBlobMigratedMetricDimensionResult::ExceededResumptionAttemptLimit,
-                metrics::FetchBlobMetricDimensionResumed::True,
+                metrics::FetchBlobMigratedMetricDimensionResumed::True,
             );
             2
         ],

@@ -64,10 +64,11 @@ async fn rejects_mismatched_board_v1() {
     assert_eq!(
         env.get_ota_metrics().await,
         OtaMetrics {
-            initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
-                as u32,
-            phase: metrics::OtaResultAttemptsMetricDimensionPhase::Tufupdate as u32,
-            status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
+            initiator:
+                metrics::OtaResultAttemptsMigratedMetricDimensionInitiator::UserInitiatedCheck
+                    as u32,
+            phase: metrics::OtaResultAttemptsMigratedMetricDimensionPhase::Tufupdate as u32,
+            status_code: metrics::OtaResultAttemptsMigratedMetricDimensionStatusCode::Error as u32,
         }
     );
 }
@@ -94,10 +95,11 @@ async fn rejects_mismatched_board() {
     assert_eq!(
         env.get_ota_metrics().await,
         OtaMetrics {
-            initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
-                as u32,
-            phase: metrics::OtaResultAttemptsMetricDimensionPhase::Tufupdate as u32,
-            status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
+            initiator:
+                metrics::OtaResultAttemptsMigratedMetricDimensionInitiator::UserInitiatedCheck
+                    as u32,
+            phase: metrics::OtaResultAttemptsMigratedMetricDimensionPhase::Tufupdate as u32,
+            status_code: metrics::OtaResultAttemptsMigratedMetricDimensionStatusCode::Error as u32,
         }
     );
 }

@@ -241,7 +241,7 @@ async fn resolve_duration_success() {
         metrics::RESOLVE_DURATION_MIGRATED_METRIC_ID,
         vec![(
             metrics::ResolveDurationMigratedMetricDimensionResult::Success,
-            metrics::ResolveDurationMetricDimensionResolverType::Regular,
+            metrics::ResolveDurationMigratedMetricDimensionResolverType::Regular,
         )],
     )
     .await;
@@ -261,7 +261,7 @@ async fn resolve_duration_failure() {
         metrics::RESOLVE_DURATION_MIGRATED_METRIC_ID,
         vec![(
             metrics::ResolveDurationMigratedMetricDimensionResult::Failure,
-            metrics::ResolveDurationMetricDimensionResolverType::Regular,
+            metrics::ResolveDurationMigratedMetricDimensionResolverType::Regular,
         )],
     )
     .await;
@@ -286,7 +286,7 @@ async fn resolve_duration_font_test_failure() {
         metrics::RESOLVE_DURATION_MIGRATED_METRIC_ID,
         vec![(
             metrics::ResolveDurationMigratedMetricDimensionResult::Failure,
-            metrics::ResolveDurationMetricDimensionResolverType::Font,
+            metrics::ResolveDurationMigratedMetricDimensionResolverType::Font,
         )],
     )
     .await;
@@ -303,7 +303,7 @@ async fn pkg_resolver_fetch_blob_success() {
         metrics::FETCH_BLOB_MIGRATED_METRIC_ID,
         vec![(
             metrics::FetchBlobMigratedMetricDimensionResult::Success,
-            metrics::FetchBlobMetricDimensionResumed::False,
+            metrics::FetchBlobMigratedMetricDimensionResumed::False,
         )],
     )
     .await;
@@ -326,7 +326,7 @@ async fn pkg_resolver_fetch_blob_failure() {
         vec![
             (
                 metrics::FetchBlobMigratedMetricDimensionResult::HttpNotFound,
-                metrics::FetchBlobMetricDimensionResumed::False
+                metrics::FetchBlobMigratedMetricDimensionResumed::False
             );
             2
         ],
@@ -632,7 +632,7 @@ mod pkg_resolver_blob_fetch {
                 statuses.append(&mut vec![
                     (
                         ent.status,
-                        metrics::FetchBlobMetricDimensionResumed::False
+                        metrics::FetchBlobMigratedMetricDimensionResumed::False
                     );
                     ent.count
                 ]);

@@ -803,9 +803,9 @@ async fn fetch_blob_http(
                 Err(e) => e.into(),
             };
             let resumed_event_code = if fetch_stats.resumptions() != 0 {
-                metrics::FetchBlobMetricDimensionResumed::True
+                metrics::FetchBlobMigratedMetricDimensionResumed::True
             } else {
-                metrics::FetchBlobMetricDimensionResumed::False
+                metrics::FetchBlobMigratedMetricDimensionResumed::False
             };
             cobalt_sender.send(
                 MetricEvent::builder(metrics::FETCH_BLOB_MIGRATED_METRIC_ID)

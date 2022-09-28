@@ -183,7 +183,7 @@ async fn download_blob_header_timeout() {
         vec![
             (
                 metrics::FetchBlobMigratedMetricDimensionResult::BlobHeaderDeadlineExceeded,
-                metrics::FetchBlobMetricDimensionResumed::False
+                metrics::FetchBlobMigratedMetricDimensionResumed::False
             );
             2
         ],
