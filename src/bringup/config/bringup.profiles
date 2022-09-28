@@ -3,5 +3,6 @@
   "scope": "bringup",
   "profiles": {
     "fuchsia.async.loop": { "priority": 16 },
+    "fuchsia.system.profile-provider.dispatch": { "capacity": "500us", "deadline": "1ms", "period": "1ms" },
   },
 }

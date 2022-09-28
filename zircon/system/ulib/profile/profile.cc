@@ -179,13 +179,36 @@ constexpr const char* profile_svc_names[] = {
 };
 
 zx_status_t init(void** out_ctx) {
+  const auto root_job = static_cast<zx_handle_t>(reinterpret_cast<uintptr_t>(*out_ctx));
+
   auto result = zircon_profile::LoadConfigs(kConfigPath);
   if (result.is_error()) {
     FX_LOGF(ERROR, "ProfileProvider", "Failed to load configs: %s", result.error_value().c_str());
     return ZX_ERR_INTERNAL;
   }
 
-  auto root_job = static_cast<zx_handle_t>(reinterpret_cast<uintptr_t>(*out_ctx));
+  // Apply the dispatch role if defined.
+  const std::string dispatch_role = "fuchsia.system.profile-provider.dispatch";
+  const auto search = result->find(dispatch_role);
+  if (search != result->end()) {
+    FX_LOGF(INFO, "ProfileProvider", "Role \"%s\" is defined. Applying to dispatcher.",
+            dispatch_role.c_str());
+
+    zx::profile profile;
+    zx_status_t status =
+        zx_profile_create(root_job, 0u, &search->second.info, profile.reset_and_get_address());
+    if (status != ZX_OK) {
+      FX_LOGF(ERROR, "ProfileProvider", "Failed to create profile for role \"%s\": %s",
+              dispatch_role.c_str(), zx_status_get_string(status));
+    } else {
+      status = zx_object_set_profile(zx_thread_self(), profile.get(), 0);
+      if (status != ZX_OK) {
+        FX_LOGF(ERROR, "ProfileProvider", "Failed to set profile: %s",
+                zx_status_get_string(status));
+      }
+    }
+  }
+
   *out_ctx = new Context{root_job, std::move(result.value())};
   return ZX_OK;
 }
