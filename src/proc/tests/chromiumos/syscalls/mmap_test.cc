@@ -59,4 +59,16 @@ TEST(MmapTest, MprotectMultipleMappings) {
   ASSERT_EQ(*page2, 0);  // would fail
 }
 
+TEST(MmapTest, MprotectSecondPageStringRead) {
+  char* addr = static_cast<char*>(
+      mmap(nullptr, PAGE_SIZE * 2, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
+
+  mprotect(addr + PAGE_SIZE, PAGE_SIZE, 0);
+  strcpy(addr, "/dev/null");
+  int fd = open(addr, O_RDONLY);
+  EXPECT_NE(fd, -1);
+  close(fd);
+  munmap(addr, PAGE_SIZE * 2);
+}
+
 }  // namespace
