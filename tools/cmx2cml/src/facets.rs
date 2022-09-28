@@ -103,7 +103,7 @@ impl TestFacets {
 
             for ((name, url, gn_target), protocols) in children_by_name {
                 let child_name =
-                    cml::Name::new(&name).with_context(|| format!("declaring child {name}"))?;
+                    cml::Name::try_new(&name).with_context(|| format!("declaring child {name}"))?;
                 let url =
                     cml::Url::new(&url).with_context(|| format!("parsing {url} as a CML URL"))?;
 
@@ -122,7 +122,7 @@ impl TestFacets {
                 let protocols = protocols
                     .into_iter()
                     .map(|p| {
-                        cml::Name::new(p)
+                        cml::Name::try_new(p)
                             .with_context(|| format!("defining name for use decl for {p}"))
                     })
                     .collect::<Result<Vec<_>, _>>()?;

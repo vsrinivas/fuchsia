@@ -80,7 +80,7 @@ impl RunnerSelection {
     pub fn runner_literal(&self) -> Option<cml::Name> {
         match self {
             Self::Elf => {
-                Some(cml::Name::new("elf".to_string()).expect("elf is always a valid name"))
+                Some(cml::Name::try_new("elf".to_string()).expect("elf is always a valid name"))
             }
 
             // handled by shards

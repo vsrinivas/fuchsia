@@ -563,7 +563,7 @@ mod tests {
             test.new_event_stream(vec![EventType::Discovered.into()], EventMode::Sync).await;
 
         // Test that a dynamic child with a long name can also be created.
-        let long_name = &"c".repeat(cm_types::MAX_DYNAMIC_NAME_LENGTH);
+        let long_name = &"c".repeat(cm_types::MAX_LONG_NAME_LENGTH);
 
         // Create children "a", "b", and "<long_name>" in collection. Expect a Discovered event for each.
         let mut collection_ref = fdecl::CollectionRef { name: "coll".to_string() };
@@ -683,10 +683,10 @@ mod tests {
                 .expect_err("unexpected success");
             assert_eq!(err, fcomponent::Error::InvalidArguments);
 
-            // Name length exceeds the MAX_DYNAMIC_LENGTH_LIMIT when `allow_long_names` is set.
+            // Name length exceeds the MAX_LONG_NAME_LENGTH when `allow_long_names` is set.
             let mut collection_ref = fdecl::CollectionRef { name: "pcoll".to_string() };
             let child_decl = fdecl::Child {
-                name: Some("a".repeat(cm_types::MAX_DYNAMIC_NAME_LENGTH + 1).to_string()),
+                name: Some("a".repeat(cm_types::MAX_LONG_NAME_LENGTH + 1).to_string()),
                 url: None,
                 startup: Some(fdecl::StartupMode::Lazy),
                 environment: None,

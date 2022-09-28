@@ -1890,7 +1890,7 @@ impl<'de> de::Deserialize<'de> for Program {
                 }
                 let runner = runner
                     .map(|r| {
-                        Name::new(r.clone()).map_err(|e| match e {
+                        Name::try_new(r.clone()).map_err(|e| match e {
                             ParseError::InvalidValue => de::Error::invalid_value(
                                 serde::de::Unexpected::Str(&r),
                                 &EXPECTED_RUNNER,
@@ -3286,7 +3286,7 @@ mod tests {
         );
         assert_eq!(
             CapabilityId::from_use(&Use {
-                event_stream: Some(OneOrMany::One(Name::new("test".to_string()).unwrap())),
+                event_stream: Some(OneOrMany::One(Name::try_new("test".to_string()).unwrap())),
                 path: Some(cm_types::Path::new("/svc/myevent".to_string()).unwrap()),
                 ..empty_use()
             },)?,
@@ -3294,7 +3294,7 @@ mod tests {
         );
         assert_eq!(
             CapabilityId::from_use(&Use {
-                event_stream: Some(OneOrMany::One(Name::new("test".to_string()).unwrap())),
+                event_stream: Some(OneOrMany::One(Name::try_new("test".to_string()).unwrap())),
                 ..empty_use()
             },)?,
             vec![CapabilityId::EventStream("/svc/fuchsia.component.EventStream".parse().unwrap()),]
@@ -3723,7 +3723,7 @@ mod tests {
     #[test_case(&Right::ReadExecuteAlias; "rx right")]
     #[test_case(&OfferFromRef::Self_; "offer from self")]
     #[test_case(&OfferFromRef::Parent; "offer from parent")]
-    #[test_case(&OfferFromRef::Named(Name::new("child".to_string()).unwrap()); "offer from named")]
+    #[test_case(&OfferFromRef::Named(Name::try_new("child".to_string()).unwrap()); "offer from named")]
     #[test_case(
         &document(json!({}));
         "empty document"

@@ -78,14 +78,6 @@ macro_rules! symmetrical_enums {
     };
 }
 
-pub const MAX_NAME_LENGTH: usize = 100;
-pub const MAX_DYNAMIC_NAME_LENGTH: usize = 1024;
-
-/// A name that can refer to a component, collection, or other entity in the
-/// Component Manifest.
-#[derive(Serialize, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Name(String);
-
 /// The error representing a failure to parse a type from string.
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum ParseError {
@@ -106,19 +98,32 @@ pub enum ParseError {
     NotAPath,
 }
 
-impl Name {
-    /// Creates a `Name` from a `String`, returning an `Err` if the string
-    /// fails validation. The string must be non-empty, no more than 100
+pub const MAX_NAME_LENGTH: usize = 100;
+pub const MAX_LONG_NAME_LENGTH: usize = 1024;
+
+/// A name that can refer to a component, collection, or other entity in the
+/// Component Manifest. Its length is bounded to `MAX_NAME_LENGTH`.
+pub type Name = BoundedName<MAX_NAME_LENGTH>;
+/// A `Name` with a higher string capacity of `MAX_LONG_NAME_LENGTH`.
+pub type LongName = BoundedName<MAX_LONG_NAME_LENGTH>;
+
+/// A `BoundedName` is a `Name` that can have a max length of `N` bytes.
+#[derive(Serialize, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct BoundedName<const N: usize>(String);
+
+impl<const N: usize> BoundedName<N> {
+    /// Creates a `BoundedName` from a `String`, returning an `Err` if the string
+    /// fails validation. The string must be non-empty, no more than `N`
     /// characters in length, and consist of one or more of the
     /// following characters: `a-z`, `0-9`, `_`, `.`, `-`.
-    pub fn new(name: impl Into<String>) -> Result<Self, ParseError> {
+    pub fn try_new(name: impl Into<String>) -> Result<Self, ParseError> {
         let name = name.into();
-        Self::validate(Cow::Owned(name.clone()), MAX_NAME_LENGTH)?;
+        Self::validate(&name)?;
         Ok(Self(name))
     }
 
-    pub fn validate(name: Cow<'_, str>, max_name_len: usize) -> Result<(), ParseError> {
-        if name.is_empty() || name.len() > max_name_len {
+    pub fn validate(name: &str) -> Result<(), ParseError> {
+        if name.is_empty() || name.len() > N {
             return Err(ParseError::InvalidLength);
         }
         let mut char_iter = name.chars();
@@ -136,56 +141,61 @@ impl Name {
     pub fn as_str(&self) -> &str {
         self.0.as_str()
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
-impl PartialEq<&str> for Name {
+impl<const N: usize> PartialEq<&str> for BoundedName<N> {
     fn eq(&self, o: &&str) -> bool {
         self.0 == *o
     }
 }
 
-impl PartialEq<String> for Name {
+impl<const N: usize> PartialEq<String> for BoundedName<N> {
     fn eq(&self, o: &String) -> bool {
         self.0 == *o
     }
 }
 
-impl fmt::Display for Name {
+impl<const N: usize> fmt::Display for BoundedName<N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         <String as fmt::Display>::fmt(&self.0, f)
     }
 }
 
-impl FromStr for Name {
+impl<const N: usize> FromStr for BoundedName<N> {
     type Err = ParseError;
 
     fn from_str(name: &str) -> Result<Self, Self::Err> {
-        Self::validate(Cow::Borrowed(name), MAX_NAME_LENGTH)?;
+        Self::validate(name)?;
         Ok(Self(name.to_owned()))
     }
 }
 
-impl From<Name> for String {
-    fn from(name: Name) -> String {
+impl<const N: usize> From<BoundedName<N>> for String {
+    fn from(name: BoundedName<N>) -> String {
         name.0
     }
 }
 
-impl<'de> de::Deserialize<'de> for Name {
+impl<'de, const N: usize> de::Deserialize<'de> for BoundedName<N> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: de::Deserializer<'de>,
     {
-        struct Visitor;
+        struct Visitor<const N: usize>;
 
-        impl<'de> de::Visitor<'de> for Visitor {
-            type Value = Name;
+        impl<'de, const N: usize> de::Visitor<'de> for Visitor<N> {
+            type Value = BoundedName<{ N }>;
 
             fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                f.write_str(
-                    "a non-empty string no more than 100 characters in length, \
+                f.write_str(&format!(
+                    "a non-empty string no more than {} characters in length, \
                     consisting of [A-Za-z0-9_.-] and starting with [A-Za-z0-9_]",
-                )
+                    N
+                ))
             }
 
             fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
@@ -199,7 +209,8 @@ impl<'de> de::Deserialize<'de> for Name {
                     ),
                     ParseError::InvalidLength => E::invalid_length(
                         s.len(),
-                        &"a non-empty name no more than 100 characters in length",
+                        &format!("a non-empty name no more than {} characters in length", N)
+                            .as_str(),
                     ),
                     e => {
                         panic!("unexpected parse error: {:?}", e);

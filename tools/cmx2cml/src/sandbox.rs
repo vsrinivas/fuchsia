@@ -68,7 +68,7 @@ impl CmxSandbox {
                 }
 
                 protocols_from_parent.push(
-                    cml::Name::new(protocol)
+                    cml::Name::try_new(protocol)
                         .with_context(|| format!("parsing {protocol} into a cml name"))?,
                 );
             }
@@ -90,7 +90,7 @@ impl CmxSandbox {
                 })?;
                 uses.push(cml::Use {
                     directory: Some(
-                        cml::Name::new(format!("dev-{}", device_class))
+                        cml::Name::try_new(format!("dev-{}", device_class))
                             .with_context(|| format!("creating a `use` name for {device_class}"))?,
                     ),
                     rights: Some(cml::Rights(vec![cml::Right::ReadAlias])),

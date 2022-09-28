@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    cm_types::{MAX_DYNAMIC_NAME_LENGTH, MAX_NAME_LENGTH},
+    cm_types::{LongName, Name},
     core::cmp::{Ord, Ordering},
-    moniker::{validate_moniker_part, ChildMoniker, ChildMonikerBase, MonikerError},
+    moniker::{ChildMoniker, ChildMonikerBase, MonikerError},
     std::fmt,
 };
 
@@ -69,8 +69,10 @@ impl ChildMonikerBase for InstancedChildMoniker {
             }
         };
 
-        validate_moniker_part(Some(&name), MAX_DYNAMIC_NAME_LENGTH)?;
-        validate_moniker_part(coll.as_deref(), MAX_NAME_LENGTH)?;
+        LongName::validate(&name).map_err(|_| MonikerError::invalid_moniker_part(name.clone()))?;
+        if let Some(ref c) = coll {
+            Name::validate(c).map_err(|_| MonikerError::invalid_moniker_part(c))?;
+        }
         Ok(Self::new(name, coll, instance))
     }
 
@@ -156,7 +158,10 @@ impl fmt::Display for InstancedChildMoniker {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {
+        super::*,
+        cm_types::{MAX_LONG_NAME_LENGTH, MAX_NAME_LENGTH},
+    };
 
     #[test]
     fn instanced_child_monikers() {
@@ -181,13 +186,13 @@ mod tests {
         assert_eq!(m, InstancedChildMoniker::from_child_moniker(&"coll:test".into(), 42));
 
         let max_coll_length_part = "f".repeat(MAX_NAME_LENGTH);
-        let max_name_length_part = "f".repeat(MAX_DYNAMIC_NAME_LENGTH);
+        let max_name_length_part = "f".repeat(MAX_LONG_NAME_LENGTH);
         let m = InstancedChildMoniker::parse(format!(
             "{}:{}:42",
             max_coll_length_part, max_name_length_part
         ))
         .expect("valid moniker");
-        assert_eq!(&max_name_length_part, m.name());
+        assert_eq!(max_name_length_part, m.name());
         assert_eq!(Some(max_coll_length_part.as_str()), m.collection());
         assert_eq!(42, m.instance());
 
@@ -227,7 +232,7 @@ mod tests {
             "invalid character in name with collection"
         );
         assert!(
-            InstancedChildMoniker::parse(&format!("f:{}", "x".repeat(MAX_DYNAMIC_NAME_LENGTH + 1)))
+            InstancedChildMoniker::parse(&format!("f:{}", "x".repeat(MAX_LONG_NAME_LENGTH + 1)))
                 .is_err(),
             "name too long"
         );

@@ -538,7 +538,7 @@ fn derive_source_and_availability(
     }
     match &source {
         fdecl::Ref::Child(fdecl::ChildRef { name, .. })
-            if !all_children.contains(&Name::new(name.clone()).unwrap()) =>
+            if !all_children.contains(&Name::try_new(name.clone()).unwrap()) =>
         {
             (
                 fdecl::Ref::VoidType(fdecl::VoidRef {}),
@@ -546,7 +546,7 @@ fn derive_source_and_availability(
             )
         }
         fdecl::Ref::Collection(fdecl::CollectionRef { name, .. })
-            if !all_collections.contains(&Name::new(name.clone()).unwrap()) =>
+            if !all_collections.contains(&Name::try_new(name.clone()).unwrap()) =>
         {
             (
                 fdecl::Ref::VoidType(fdecl::VoidRef {}),
@@ -554,7 +554,7 @@ fn derive_source_and_availability(
             )
         }
         fdecl::Ref::Capability(fdecl::CapabilityRef { name, .. })
-            if !all_capability_names.contains(&Name::new(name.clone()).unwrap()) =>
+            if !all_capability_names.contains(&Name::try_new(name.clone()).unwrap()) =>
         {
             (
                 fdecl::Ref::VoidType(fdecl::VoidRef {}),

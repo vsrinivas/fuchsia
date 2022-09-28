@@ -12,7 +12,7 @@ mod serde_ext;
 
 pub use self::{
     abs_moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
-    child_moniker::{validate_moniker_part, ChildMoniker, ChildMonikerBase},
+    child_moniker::{ChildMoniker, ChildMonikerBase},
     error::MonikerError,
     extended_moniker::ExtendedMoniker,
     relative_moniker::{RelativeMoniker, RelativeMonikerBase},

@@ -4,9 +4,9 @@
 
 use {
     crate::error::MonikerError,
-    cm_types::{Name, MAX_DYNAMIC_NAME_LENGTH, MAX_NAME_LENGTH},
+    cm_types::{LongName, Name},
     core::cmp::{Ord, Ordering},
-    std::{borrow::Cow, fmt},
+    std::fmt,
 };
 
 pub trait ChildMonikerBase: Eq + PartialOrd + Clone + Default + fmt::Display {
@@ -19,19 +19,6 @@ pub trait ChildMonikerBase: Eq + PartialOrd + Clone + Default + fmt::Display {
     fn collection(&self) -> Option<&str>;
 
     fn as_str(&self) -> &str;
-}
-
-/// Validates that the given string is valid as the instance or collection name in a moniker.
-// TODO(fxbug.dev/77563): The moniker types should be updated to use Name directly instead of String
-// so that it is clear what is validated and what isn't.
-pub fn validate_moniker_part(name: Option<&str>, max_name_len: usize) -> Result<(), MonikerError> {
-    // Reuse the validation in cm_types::Name for consistency.
-    name.map(|n| {
-        Name::validate(Cow::Borrowed(n), max_name_len)
-            .map_err(|_| MonikerError::invalid_moniker_part(n))
-    })
-    .transpose()?;
-    Ok(())
 }
 
 /// An child moniker locally identifies a child component instance using the name assigned by
@@ -64,10 +51,10 @@ impl ChildMonikerBase for ChildMoniker {
             Some(s) => (s, Some(first.to_string())),
             None => (first, None),
         };
-
-        // dynamic child names can be as long as `MAX_DYNAMIC_NAME_LENGTH`.
-        validate_moniker_part(Some(&name), MAX_DYNAMIC_NAME_LENGTH)?;
-        validate_moniker_part(coll.as_deref(), MAX_NAME_LENGTH)?;
+        LongName::validate(&name).map_err(|_| MonikerError::invalid_moniker_part(name))?;
+        if let Some(ref c) = coll {
+            Name::validate(c).map_err(|_| MonikerError::invalid_moniker_part(c))?;
+        }
         Ok(ChildMoniker::new(name.to_string(), coll))
     }
 
@@ -124,7 +111,10 @@ impl fmt::Display for ChildMoniker {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {
+        super::*,
+        cm_types::{MAX_LONG_NAME_LENGTH, MAX_NAME_LENGTH},
+    };
 
     #[test]
     fn child_monikers() {
@@ -143,7 +133,7 @@ mod tests {
         assert_eq!(m, ChildMoniker::from("coll:test"));
 
         let max_coll_length_part = "f".repeat(MAX_NAME_LENGTH);
-        let max_name_length_part = "f".repeat(MAX_DYNAMIC_NAME_LENGTH);
+        let max_name_length_part = "f".repeat(MAX_LONG_NAME_LENGTH);
         let max_moniker_length = format!("{}:{}", max_coll_length_part, max_name_length_part);
         let m = ChildMoniker::parse(max_moniker_length).expect("valid moniker");
         assert_eq!(&max_name_length_part, m.name());
@@ -158,7 +148,7 @@ mod tests {
         assert!(ChildMoniker::parse("@:f").is_err(), "invalid character in collection");
         assert!(ChildMoniker::parse("f:@").is_err(), "invalid character in name with collection");
         assert!(
-            ChildMoniker::parse(&format!("f:{}", "x".repeat(MAX_DYNAMIC_NAME_LENGTH + 1))).is_err(),
+            ChildMoniker::parse(&format!("f:{}", "x".repeat(MAX_LONG_NAME_LENGTH + 1))).is_err(),
             "name too long"
         );
         assert!(

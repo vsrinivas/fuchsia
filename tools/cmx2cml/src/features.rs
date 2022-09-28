@@ -61,7 +61,7 @@ impl CmxFeature {
         Ok(match self {
             CmxFeature::IsolatedPersistentStorage => (
                 Some(cml::Use {
-                    storage: Some(cml::Name::new("data").unwrap()),
+                    storage: Some(cml::Name::try_new("data").unwrap()),
                     path: Some(cml::Path::new("/data").unwrap()),
                     ..Default::default()
                 }),
@@ -70,7 +70,7 @@ impl CmxFeature {
             ),
             CmxFeature::IsolatedCacheStorage => (
                 Some(cml::Use {
-                    storage: Some(cml::Name::new("cache").unwrap()),
+                    storage: Some(cml::Name::try_new("cache").unwrap()),
                     path: Some(cml::Path::new("/cache").unwrap()),
                     ..Default::default()
                 }),
@@ -79,7 +79,7 @@ impl CmxFeature {
             ),
             CmxFeature::IsolatedTemp => (
                 Some(cml::Use {
-                    storage: Some(cml::Name::new("tmp").unwrap()),
+                    storage: Some(cml::Name::try_new("tmp").unwrap()),
                     path: Some(cml::Path::new("/tmp").unwrap()),
                     ..Default::default()
                 }),
@@ -88,7 +88,7 @@ impl CmxFeature {
             ),
             CmxFeature::FactoryData => (
                 Some(cml::Use {
-                    directory: Some(cml::Name::new("factory").unwrap()),
+                    directory: Some(cml::Name::try_new("factory").unwrap()),
                     rights: Some(cml::Rights(vec![cml::Right::ReadAlias])),
                     path: Some(cml::Path::new("/factory").unwrap()),
                     ..Default::default()
@@ -98,7 +98,7 @@ impl CmxFeature {
             ),
             CmxFeature::DurableData => (
                 Some(cml::Use {
-                    directory: Some(cml::Name::new("durable").unwrap()),
+                    directory: Some(cml::Name::try_new("durable").unwrap()),
                     rights: Some(cml::Rights(vec![cml::Right::ReadAlias])),
                     path: Some(cml::Path::new("/durable").unwrap()),
                     ..Default::default()
@@ -108,7 +108,7 @@ impl CmxFeature {
             ),
             CmxFeature::ShellCommands => (
                 Some(cml::Use {
-                    directory: Some(cml::Name::new("bin").unwrap()),
+                    directory: Some(cml::Name::try_new("bin").unwrap()),
                     rights: Some(cml::Rights(vec![cml::Right::ReadAlias])),
                     path: Some(cml::Path::new("/bin").unwrap()),
                     ..Default::default()
@@ -118,7 +118,7 @@ impl CmxFeature {
             ),
             CmxFeature::RootSslCerts => (
                 Some(cml::Use {
-                    directory: Some(cml::Name::new("root-ssl-certificates").unwrap()),
+                    directory: Some(cml::Name::try_new("root-ssl-certificates").unwrap()),
                     rights: Some(cml::Rights(vec![cml::Right::ReadAlias])),
                     path: Some(cml::Path::new("/config/ssl").unwrap()),
                     ..Default::default()
@@ -128,7 +128,7 @@ impl CmxFeature {
             ),
             CmxFeature::ConfigData => (
                 Some(cml::Use {
-                    directory: Some(cml::Name::new("config-data").unwrap()),
+                    directory: Some(cml::Name::try_new("config-data").unwrap()),
                     rights: Some(cml::Rights(vec![cml::Right::ReadAlias])),
                     path: Some(cml::Path::new("/config/data").unwrap()),
                     ..Default::default()
@@ -139,7 +139,7 @@ impl CmxFeature {
             CmxFeature::BuildInfo => (
                 Some(cml::Use {
                     protocol: Some(cml::OneOrMany::One(
-                        cml::Name::new(BUILD_INFO_PROTOCOL).unwrap(),
+                        cml::Name::try_new(BUILD_INFO_PROTOCOL).unwrap(),
                     )),
                     ..Default::default()
                 }),

@@ -48,10 +48,10 @@ pub fn compile(
     }
     if let Some(ref force_runner) = experimental_force_runner.as_ref() {
         if let Some(mut program) = document.program.as_mut() {
-            program.runner = Some(cm_types::Name::new(force_runner.to_string())?);
+            program.runner = Some(cm_types::Name::try_new(force_runner.to_string())?);
         } else {
             document.program = Some(cml::Program {
-                runner: Some(cm_types::Name::new(force_runner.to_string())?),
+                runner: Some(cm_types::Name::try_new(force_runner.to_string())?),
                 ..cml::Program::default()
             });
         }
