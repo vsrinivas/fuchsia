@@ -190,9 +190,22 @@ fuchsia_mediastreams::wire::AudioFormat DefaultFormatWithChannels(uint32_t chann
   };
 }
 
+// TODO(fxbug.dev/87651): Remove `ConfigOptions` above and directly pass in `CustomStage::Args`
+// instead of processor `config`.
 PipelineStagePtr MakeCustomStage(ProcessorConfiguration config, PipelineStagePtr source_stage) {
-  PipelineStagePtr custom_stage =
-      std::make_shared<CustomStage>("CustomStage", config, DefaultClock());
+  PipelineStagePtr custom_stage = std::make_shared<CustomStage>(CustomStage::Args{
+      .name = "CustomStage",
+      .reference_clock = DefaultClock(),
+      .source_format = Format::CreateLegacyOrDie(config.inputs()[0].format()),
+      .source_buffer = std::move(config.inputs()[0].buffer()),
+      .dest_format = Format::CreateLegacyOrDie(config.outputs()[0].format()),
+      .dest_buffer = std::move(config.outputs()[0].buffer()),
+      .block_size_frames = static_cast<int64_t>(config.block_size_frames()),
+      .latency_frames = static_cast<int64_t>(config.outputs()[0].latency_frames()),
+      .max_frames_per_call = static_cast<int64_t>(config.max_frames_per_call()),
+      .ring_out_frames = static_cast<int64_t>(config.outputs()[0].ring_out_frames()),
+      .processor = fidl::WireSyncClient(std::move(config.processor())),
+  });
   custom_stage->set_thread(DetachedThread::Create());
   ScopedThreadChecker checker(custom_stage->thread()->checker());
   custom_stage->AddSource(std::move(source_stage), /*options=*/{});

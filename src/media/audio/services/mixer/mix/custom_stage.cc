@@ -39,24 +39,23 @@ zx_koid_t GetKoid(const zx::vmo& vmo) {
 
 }  // namespace
 
-CustomStage::CustomStage(std::string_view name, ProcessorConfiguration config,
-                         UnreadableClock reference_clock)
-    : PipelineStage(name, Format::CreateLegacyOrDie(config.outputs()[0].format()), reference_clock),
-      block_size_frames_(static_cast<int64_t>(config.block_size_frames())),
-      latency_frames_(static_cast<int64_t>(config.outputs()[0].latency_frames())),
-      max_frames_per_call_(static_cast<int64_t>(config.max_frames_per_call())),
-      fidl_buffers_(config.inputs()[0].buffer(), config.outputs()[0].buffer()),
-      fidl_processor_(fidl::WireSyncClient(std::move(config.processor()))),
-      source_(Format::CreateLegacyOrDie(config.inputs()[0].format()), reference_clock,
-              Fixed(latency_frames_ + static_cast<int64_t>(config.outputs()[0].ring_out_frames())),
+CustomStage::CustomStage(Args args)
+    : PipelineStage(args.name, args.dest_format, args.reference_clock),
+      block_size_frames_(args.block_size_frames),
+      latency_frames_(args.latency_frames),
+      max_frames_per_call_(args.max_frames_per_call),
+      fidl_buffers_(args.source_buffer, args.dest_buffer),
+      fidl_processor_(std::move(args.processor)),
+      source_(args.source_format, std::move(args.reference_clock),
+              Fixed(args.latency_frames + args.ring_out_frames),
               /*round_down_fractional_frames=*/false),
-      source_buffer_(source_.format(), max_frames_per_call_) {
+      source_buffer_(source_.format(), args.max_frames_per_call) {
   // Validate processor config.
   FX_CHECK(block_size_frames_ > 0);
   FX_CHECK(max_frames_per_call_ >= block_size_frames_);
   FX_CHECK(max_frames_per_call_ % block_size_frames_ == 0);
   FX_CHECK(static_cast<uint64_t>(max_frames_per_call_) * source_.format().bytes_per_frame() <=
-           config.inputs()[0].buffer().size);
+           fidl_buffers_.input_size);
 }
 
 void CustomStage::AdvanceSelfImpl(Fixed frame) {

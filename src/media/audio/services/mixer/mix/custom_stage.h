@@ -29,12 +29,41 @@
 
 namespace media_audio {
 
-// Custom effect stage that has a single input and produces a single output.
+// Custom effect stage that has a single source stream and a single destination stream.
 // TODO(fxbug.dev/87651): Generalize this for all N inputs K outputs use cases.
 class CustomStage : public PipelineStage {
  public:
-  CustomStage(std::string_view name, fuchsia_audio_effects::wire::ProcessorConfiguration config,
-              UnreadableClock reference_clock);
+  struct Args {
+    // Name of this stage.
+    std::string_view name;
+
+    // Reference clock of this stage's output stream.
+    UnreadableClock reference_clock;
+
+    // Source stream config.
+    Format source_format;
+    fuchsia_mem::wire::Range source_buffer;
+
+    // Destination stream config.
+    Format dest_format;
+    fuchsia_mem::wire::Range dest_buffer;
+
+    // Processor block size in frames.
+    int64_t block_size_frames;
+
+    // Processor latency in frames.
+    int64_t latency_frames;
+
+    // Maximum frames to process per FIDL process call.
+    int64_t max_frames_per_call;
+
+    // Processor ring out in frames.
+    int64_t ring_out_frames;
+
+    // FIDL processor.
+    fidl::WireSyncClient<fuchsia_audio_effects::Processor> processor;
+  };
+  explicit CustomStage(Args args);
 
   // Implements `PipelineStage`.
   void AddSource(PipelineStagePtr source, AddSourceOptions options) final {
