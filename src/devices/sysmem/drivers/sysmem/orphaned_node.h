@@ -32,6 +32,8 @@ class OrphanedNode : public Node {
   const BufferCollectionToken* buffer_collection_token() const override;
   BufferCollection* buffer_collection() override;
   const BufferCollection* buffer_collection() const override;
+  BufferCollectionTokenGroup* buffer_collection_token_group() override;
+  const BufferCollectionTokenGroup* buffer_collection_token_group() const override;
   OrphanedNode* orphaned_node() override;
   const OrphanedNode* orphaned_node() const override;
   bool is_connected_type() const override;

@@ -373,8 +373,45 @@ protocol BufferCollectionToken {
     /// to another process.  For this reason, the client should take extra care
     /// to notice failure of that other process via other means.
     ///
+    /// While it is possible (and potentially useful) to SetDispensable() on a
+    /// direct child of a BufferCollectionTokenGroup, it isn't possible to later
+    /// replace a failed dispensable token that was a direct child of a group
+    /// with a new token using AttachToken() (since there's no AttachToken() on
+    /// a group).  Instead, to enable AttachToken() replacement in this case,
+    /// create an additional non-dispensable token (node) that's a direct child
+    /// of the group and make the existing dispensable token a child of the
+    /// additional token (node).  This way, the additional token (node) that is
+    /// a direct child of the group has BufferCollection.AttachToken() which can
+    /// be used to replace the failed dispensable token.
+    ///
     /// SetDispensable() on an already-dispensable token is idempotent.
     SetDispensable();
+
+    // CreateBufferCollectionTokenGroup()
+    //
+    /// Most sysmem clients and many participants don't need to care about this
+    /// message or about BufferCollectionTokenGroup(s) in general.
+    ///
+    /// A BufferCollectionTokenGroup is used to create a 1 of N OR among N child
+    /// tokens.  The child tokens which are not selected during aggregation will
+    /// fail (close), which a potential participant should notice when their
+    /// BufferCollection channel client endpoint sees PEER_CLOSED, allowing the
+    /// participant to clean up the speculative usage that didn't end up
+    /// happening (similarly to a normal BufferCollection server end closing
+    /// on failure of a logical buffer collection).
+    ///
+    /// See comments on protocol BufferCollectionTokenGroup.
+    ///
+    /// Any rights_attenuation_mask or AttachToken()/SetDispensable() to be
+    /// applied to the whole group can be achieved with a token for this purpose
+    /// as a direct parent of the group.
+    ///
+    /// group_request - the server end of a BufferCollectionTokenGroup channel
+    /// to be served by sysmem.
+    @available(added=9)
+    CreateBufferCollectionTokenGroup(resource struct {
+        group_request server_end:BufferCollectionTokenGroup;
+    });
 };
 
 /// BufferCollection is a connection directly from a participant to sysmem re.
@@ -717,4 +754,143 @@ protocol BufferCollection {
         server_end zx.handle:EVENTPAIR;
         buffers_remaining uint32;
     });
+};
+
+// BufferCollectionTokenGroup:
+//
+/// The sysmem implementation is guaranteed to be consistent with a logical /
+/// conceptual model as follows:
+///
+/// As usual, a logical allocation considers either the root and all nodes with
+/// connectivity to the root that don't transit an AttachToken(), or a sub-tree
+/// rooted at an AttachToken() token and all nodes with connectivity to that
+/// subtree that don't transit another AttachToken().  This is called the
+/// logical allocation pruned sub-tree, or pruned sub-tree for short.
+///
+/// During constraints aggregation, each BufferCollectionTokenGroup will select
+/// a single child token among its children.  The rest of the children will
+/// appear to fail the logical allocation, while the selected child may succeed.
+///
+/// When more than one BufferCollectionTokenGroup exists in the overall logical
+/// allocation pruned sub-tree, the relative priority between two groups is
+/// equivalent to their ordering in a DFS pre-order iteration of the tree, with
+/// parents higher priority than children, and left children higher priority
+/// than right children.
+///
+/// When a particular child of a group is selected (whether provisionally during
+/// a constraints aggregation attempt, or as a final selection), the
+/// non-selection of other children of the group can potentially "hide" other
+/// groups under those non-selected children.
+///
+/// Within a logical allocation, aggregation is attempted first by provisionally
+/// selecting the child 0 of the highest-priority group, and child 0 of the next
+/// highest-priority group that isn't hidden by the provisional selections so
+/// far, etc.
+///
+/// If that aggregation attempt fails, aggregation will be attempted with the
+/// ordinal 0 child of all the same groups except the lowest priority non-hidden
+/// group which will provisionally select its ordinal 1 child (and then child 2
+/// and so on).  If a new lowest-priority group is un-hidden as provisional
+/// selections are updated, that newly un-hidden lowest-priority group has all
+/// its children considered in order, before changing the provisional selection
+/// in the former lowest-priority group.  In terms of result, this is equivalent
+/// to systematic enumeration of all possible combinations of choices in a
+/// counting-like order updating the lowest-priority group the most often and
+/// the highest-priority group the least often.  Rather than actually attempting
+/// aggregation with all the combinations, we can skip over combinations which
+/// are redundant/equivalent due to hiding without any change to the result.
+///
+/// Attempted aggregations of enumerated non-equivalent combinations of choices
+/// continue in this manner until either (a) all aggregation attempts fail in
+/// which case the overall logical allocation fails, or (b) until an attempted
+/// aggregation succeeds, in which case buffer allocation (if needed) is
+/// attempted once.  If buffer allocation based on the first successful
+/// aggregation fails, the overall logical allocation fails (there is no buffer
+/// allocation retry / re-attempt).  If buffer allocation succeeds (or is not
+/// needed), the logical allocation succeeds.
+///
+/// If this prioritization scheme cannot reasonably work for your usage of
+/// sysmem, please contact sysmem folks to discuss potentially adding a way to
+/// achieve what you need.
+///
+/// Please avoid creating a large number of BufferCollectionTokenGroup(s) per
+/// logical allocation, especially with large number of children overall, and
+/// especially in cases where aggregation may reasonably be expected to often
+/// fail using ordinal 0 children and possibly with later children as well.  We
+/// anticipate mitigating potentially high time complexity of evaluating too
+/// many child combinations/selections across too many groups by simply failing
+/// logical allocation beyond a certain (fairly high, but not huge) max number
+/// of considered group child combinations/selections.  More advanced (and more
+/// complicated) mitigation is not anticipated to be practically necessary or
+/// worth the added complexity.  Please contact sysmem folks if the max limit
+/// is getting hit or if you anticipate it getting hit, to discuss potential
+/// options.
+///
+/// Prefer to use multiple ImageFormatConstraints in a single
+/// BufferCollectionConstraints when feasible (when a participant just needs to
+/// express the ability to work with more than a single PixelFormat, with
+/// sysmem choosing which PixelFormat to use among those supported by all
+/// participants).
+///
+/// Similar to BufferCollectionToken and BufferCollection, closure of the
+/// BufferCollectionTokenGroup channel without sending Close() first will cause
+/// logical buffer collection failure (or sub-tree failure if using
+/// SetDispensable() or AttachToken() and the BufferCollectionTokenGroup is part
+/// of a sub-tree under such a node that doesn't propagate failure to its
+/// parent).
+@available(added=9)
+protocol BufferCollectionTokenGroup {
+    compose Node;
+
+    /// Create a child token.  Before passing the client end of this token to
+    /// BindSharedCollection(), completion of Sync() after CreateChild() is
+    /// required.  Or the client can use CreateChildrenSync() which essentially
+    /// includes the Sync().
+    ///
+    /// token_request - the server end of the new token channel.
+    ///
+    /// rights_attenuation_mask - If ZX_RIGHT_SAME_RIGHTS, the created token
+    /// allows the holder to get the same rights to buffers as the parent token
+    /// (of the group) had.
+    CreateChild(resource table {
+        /// Must be set.
+        1: token_request server_end:BufferCollectionToken;
+
+        /// If not set, the default is ZX_RIGHT_SAME_RIGHTS.
+        2: rights_attenuation_mask uint32;
+    });
+
+    /// Create 1 or more child tokens at once, synchronously.  In contrast to
+    /// CreateChild(), no Sync() completion is required before passing the
+    /// client end of a returned token to BindSharedCollection().
+    ///
+    /// The size of the rights_attentuation_mask determines the number of
+    /// created child tokens.
+    ///
+    /// The lower-index child tokens are higher priority (attempted sooner) than
+    /// higher-index child tokens.
+    ///
+    /// As per all child tokens, successful aggregation will choose exactly one
+    /// child among all created children (across all children created across
+    /// potentially multiple calls to CreateChild() and CreateChildrenSync()).
+    ///
+    /// The maximum permissible total number of children per group, and total
+    /// number of nodes in an overall tree (from the root) are capped to limits
+    /// which are not configurable via these protocols.
+    CreateChildrenSync(struct {
+        rights_attenuation_masks vector<zx.rights>:MAX_COUNT_CREATE_CHILDREN;
+    }) -> (resource struct {
+        tokens vector<client_end:BufferCollectionToken>:MAX_COUNT_CREATE_CHILDREN;
+    });
+
+    /// AllChildrenPresent()
+    ///
+    /// After creating all children, the client must call AllChildrenPresent()
+    /// to inform sysmem that no more children will be created, so that sysmem
+    /// can know when it's ok to start aggregating constraints.
+    ///
+    /// If Close() is to be sent, it should be sent _after_
+    /// AllChildrenPresent(), else failure of the group and propagation of the
+    /// failure to the group's parent will still be triggered.
+    AllChildrenPresent();
 };

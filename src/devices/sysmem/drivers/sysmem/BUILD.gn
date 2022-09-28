@@ -29,6 +29,7 @@ source_set("sysmem_common_srcs") {
     "allocator.cc",
     "buffer_collection.cc",
     "buffer_collection_token.cc",
+    "buffer_collection_token_group.cc",
     "contiguous_pooled_memory_allocator.cc",
     "device.cc",
     "driver.cc",

@@ -30,11 +30,14 @@
 
 #include "buffer_collection.h"
 #include "buffer_collection_token.h"
+#include "buffer_collection_token_group.h"
 #include "device.h"
 #include "koid_util.h"
+#include "lib/fidl/cpp/wire/status.h"
 #include "logging.h"
 #include "macros.h"
 #include "orphaned_node.h"
+#include "src/devices/sysmem/drivers/sysmem/node_properties.h"
 #include "usage_pixel_format_cost.h"
 #include "utils.h"
 
@@ -49,6 +52,10 @@ const uint32_t kSysmemVmoRights = ZX_DEFAULT_VMO_RIGHTS & ~ZX_RIGHT_EXECUTE;
 const uint64_t kMaxTotalSizeBytesPerCollection = 1ull * 1024 * 1024 * 1024;
 // 256 MiB cap for now.
 const uint64_t kMaxSizeBytesPerBuffer = 256ull * 1024 * 1024;
+// Give up on attempting to aggregate constraints after exactly this many group
+// child combinations have been attempted.  This prevents sysmem getting stuck
+// trying too many combinations.
+const uint32_t kMaxGroupChildCombinations = 64;
 
 // Map of all supported color spaces to an unique semi arbitrary number. A higher number means
 // that the color space is less desirable and a lower number means that a color space is more
@@ -443,6 +450,101 @@ void LogicalBufferCollection::CreateBufferCollectionToken(
   token.Bind(token_request.TakeChannel());
 }
 
+void LogicalBufferCollection::CreateBufferCollectionTokenGroup(
+    fbl::RefPtr<LogicalBufferCollection> self, NodeProperties* new_node_properties,
+    fidl::ServerEnd<fuchsia_sysmem::BufferCollectionTokenGroup> group_request) {
+  ZX_DEBUG_ASSERT(group_request);
+  auto& group = BufferCollectionTokenGroup::EmplaceInTree(
+      self, new_node_properties, zx::unowned_channel(group_request.channel()));
+  group.SetErrorHandler([this, &group](zx_status_t status) {
+    // Clean close from FIDL channel point of view is ZX_ERR_PEER_CLOSED,
+    // and ZX_OK is never passed to the error handler.
+    ZX_DEBUG_ASSERT(status != ZX_OK);
+
+    // The dispatcher shut down before we were able to Bind(...)
+    if (status == ZX_ERR_BAD_STATE) {
+      LogAndFailRootNode(FROM_HERE, status, "sysmem dispatcher shutting down - status: %d", status);
+      return;
+    }
+
+    // We know |this| is alive because the group is alive and the group has
+    // a fbl::RefPtr<LogicalBufferCollection>.  The group is alive because
+    // the group is still under the tree rooted at root_.
+    //
+    // Any other deletion of the group out of the tree at root_ (outside of
+    // this error handler) doesn't run this error handler.
+    ZX_DEBUG_ASSERT(root_);
+
+    // If not clean Close()
+    if (!group.is_done()) {
+      // LogAndFailDownFrom() will also remove any no-longer-needed nodes from the tree.
+      //
+      // A group whose error handler sees anything other than clean Close() (is_done()) implies
+      // failure domain failure (possibly LogicalBufferCollection failure if not separated from
+      // root_ by AttachToken() or SetDispensable()).
+      //
+      // If a participant needs/wants to close its BufferCollectionTokenGroup channel without
+      // triggering failure domain failure, the participant should use Close() to avoid triggering
+      // this failure.
+      NodeProperties* tree_to_fail = FindTreeToFail(&group.node_properties());
+      if (tree_to_fail == root_.get()) {
+        LogAndFailDownFrom(FROM_HERE, tree_to_fail, status,
+                           "Group failure causing LogicalBufferCollection failure - status: %d",
+                           status);
+      } else {
+        LogAndFailDownFrom(FROM_HERE, tree_to_fail, status,
+                           "Group failure causing failure domain sub-tree failure - status: %d",
+                           status);
+      }
+      return;
+    }
+
+    // At this point we know the group channel was Close()ed.
+    ZX_DEBUG_ASSERT(status == ZX_ERR_PEER_CLOSED && group.is_done());
+
+    // Just like a Close()ed token or collection channel, we replace a Close()ed
+    // BufferCollectionTokenGroup with an OrphanedNode.  Since the 1 of N semantic of a group during
+    // constraints aggregation is handled by NodeProperties, we don't need the
+    // BufferCollectionTokenGroup object for that aspect.  The BufferCollectionTokenGroup is only
+    // for the protocol-serving aspect and driving state changes related to protocol-serving.  Now
+    // that protocol-serving is done, the BufferCollectionTokenGroup can go away.
+    //
+    // Unlike a token, since a group has no constraints of its own, the Close() doesn't implicitly
+    // set has_constraints false constraints (unconstrained constraints), so the only reason we're
+    // calling MaybeAllocate() in this path is in case there are zero remaining open channels to
+    // any node, in which case the MaybeAllocate() will call Fail().
+    //
+    // We want to stop tracking the group now that we've processed all its previously-queued inbound
+    // messages.
+    //
+    // Keep self alive fia "self" in case this will drop connected_node_count_ to zero.
+    auto self = group.shared_logical_buffer_collection();
+    ZX_DEBUG_ASSERT(self.get() == this);
+    // This OrphanedNode will have no BufferCollectionConstraints of its own (no group ever does),
+    // and the NodeConstraints is already configured as a group.  A group may be Close()ed before
+    // or after buffers are logically allocated (in contrast to a token which can only be Close()ed
+    // before buffers are logically allocated.
+    NodeProperties& node_properties = group.node_properties();
+    // This replaces group with an OrphanedNode, and also de-refs group.  It's not possible to send
+    // an epitaph because ZX_ERR_PEER_CLOSED.
+    OrphanedNode::EmplaceInTree(fbl::RefPtr(this), &node_properties);
+    // This will never actually allocate, since group Close() is never a state change that will
+    // enable allocation, but MaybeAllocate() may call Fail() if there are zero client connections
+    // to any node remaining.
+    MaybeAllocate();
+    // ~self may delete "this"
+  });
+
+  if (group.create_status() != ZX_OK) {
+    LogAndFailNode(FROM_HERE, new_node_properties, group.create_status(),
+                   "get_handle_koids() failed - status: %d", group.create_status());
+    return;
+  }
+
+  LogInfo(FROM_HERE, "CreateBufferCollectionTokenGroup() - server_koid: %lu", group.server_koid());
+  group.Bind(group_request.TakeChannel());
+}
+
 void LogicalBufferCollection::AttachLifetimeTracking(zx::eventpair server_end,
                                                      uint32_t buffers_remaining) {
   lifetime_tracking_.emplace(buffers_remaining, std::move(server_end));
@@ -467,7 +569,7 @@ void LogicalBufferCollection::SweepLifetimeTracking() {
   }
 }
 
-void LogicalBufferCollection::OnSetConstraints() {
+void LogicalBufferCollection::OnNodeReady() {
   // MaybeAllocate() requires the caller to keep "this" alive.
   auto self = fbl::RefPtr(this);
   MaybeAllocate();
@@ -727,8 +829,8 @@ void LogicalBufferCollection::VLogError(Location location, const char* format, v
 
 void LogicalBufferCollection::InitializeConstraintSnapshots(
     const ConstraintsList& constraints_list) {
-  ZX_DEBUG_ASSERT(constraints_at_allocation_.empty());
   ZX_DEBUG_ASSERT(!constraints_list.empty());
+  constraints_at_allocation_.clear();
   for (auto& constraints : constraints_list) {
     ConstraintInfoSnapshot snapshot;
     snapshot.inspect_node =
@@ -755,6 +857,71 @@ void LogicalBufferCollection::InitializeConstraintSnapshots(
     snapshot.inspect_node.RecordString("debug_name", constraints.client_debug_info().name);
     constraints_at_allocation_.push_back(std::move(snapshot));
   }
+}
+
+void LogicalBufferCollection::ResetGroupChildSelection(
+    std::vector<NodeProperties*>& groups_by_priority) {
+  // We intentionally set this to false in both ResetGroupChildSelection() and
+  // InitGroupChildSelection(), because both put the child selections into a non-"done" state.
+  done_with_group_child_selection_ = false;
+  for (auto& node_properties : groups_by_priority) {
+    node_properties->ResetWhichChild();
+  }
+}
+
+void LogicalBufferCollection::InitGroupChildSelection(
+    std::vector<NodeProperties*>& groups_by_priority) {
+  // We intentionally set this to false in both ResetGroupChildSelection() and
+  // InitGroupChildSelection(), because both put the child selections into a non-"done" state.
+  done_with_group_child_selection_ = false;
+  for (auto& node_properties : groups_by_priority) {
+    node_properties->SetWhichChild(0);
+  }
+}
+
+void LogicalBufferCollection::NextGroupChildSelection(
+    std::vector<NodeProperties*> groups_by_priority) {
+  ZX_DEBUG_ASSERT(groups_by_priority.empty() || groups_by_priority[0]->visible());
+  std::vector<NodeProperties*>::reverse_iterator iter;
+  if (groups_by_priority.empty()) {
+    done_with_group_child_selection_ = true;
+    ZX_DEBUG_ASSERT(DoneWithGroupChildSelections(groups_by_priority));
+    return;
+  }
+  for (iter = groups_by_priority.rbegin(); iter != groups_by_priority.rend(); ++iter) {
+    NodeProperties& np = **iter;
+    if (!np.visible()) {
+      // In this case we know there's another group before np in groups_by_priority, so in addition
+      // to not needing to update which_child() of np, we don't need to handle being out of child
+      // selections to consider in this path since we can handle that when we get to the first
+      // group, which is also always visible.
+      continue;
+    }
+    // If we're using NextGroupChildSelection(), we know that all groups have which_child() set.
+    ZX_DEBUG_ASSERT(np.which_child().has_value());
+    ZX_DEBUG_ASSERT(*np.which_child() < np.child_count());
+    auto which_child = *np.which_child();
+    if (which_child == np.child_count() - 1) {
+      // "carry"; we'll keep looking for a parent which can increment without running out of
+      // "digits".
+      np.SetWhichChild(0);
+      continue;
+    }
+    ZX_DEBUG_ASSERT(which_child + 1 < np.child_count());
+    np.SetWhichChild(which_child + 1);
+    // Successfully moved to next group child selection, and not done with child selections.
+    ZX_DEBUG_ASSERT(!DoneWithGroupChildSelections(groups_by_priority));
+    return;
+  }
+  // We tried to carry off the top (roughly speaking), so DoneWithGroupChildSelections() should now
+  // return true.
+  done_with_group_child_selection_ = true;
+  ZX_DEBUG_ASSERT(DoneWithGroupChildSelections(groups_by_priority));
+}
+
+bool LogicalBufferCollection::DoneWithGroupChildSelections(
+    const std::vector<NodeProperties*> groups_by_priority) {
+  return done_with_group_child_selection_;
 }
 
 void LogicalBufferCollection::MaybeAllocate() {
@@ -845,10 +1012,23 @@ void LogicalBufferCollection::MaybeAllocate() {
         return;
       }
 
-      auto nodes = NodesOfPrunedSubtreeEligibleForLogicalAllocation(*eligible_subtree);
-      ZX_DEBUG_ASSERT(nodes.front() == eligible_subtree);
+      // Group 0 is highest priority (most important), with decreasing priority after that.
+      std::vector<NodeProperties*> groups_by_priority =
+          PrioritizedGroupsOfPrunedSubtreeEligibleForLogicalAllocation(*eligible_subtree);
+      // All nodes of logical allocation (each group set to "all").
+      ResetGroupChildSelection(groups_by_priority);
+      auto all_subtree_nodes = NodesOfPrunedSubtreeEligibleForLogicalAllocation(*eligible_subtree);
+      if (is_verbose_logging()) {
+        // Just the NodeProperties* and whether it has constraints, in tree layout, accounting for
+        // which_child == all which shows all children.
+        //
+        // We also log this again with which_child != all below, per group child selection.
+        LogInfo(FROM_HERE, "pruned subtree (including all group children):");
+        LogPrunedSubTree(eligible_subtree);
+      }
+      ZX_DEBUG_ASSERT(all_subtree_nodes.front() == eligible_subtree);
       bool found_not_ready_node = false;
-      for (auto node_properties : nodes) {
+      for (auto node_properties : all_subtree_nodes) {
         if (!node_properties->node()->ReadyForAllocation()) {
           found_not_ready_node = true;
           break;
@@ -862,7 +1042,7 @@ void LogicalBufferCollection::MaybeAllocate() {
       if (is_verbose_logging()) {
         // All constraints, including NodeProperties* to ID the node.  Logged only once per subtree.
         LogInfo(FROM_HERE, "pruned subtree - node constraints:");
-        LogNodeConstraints(nodes);
+        LogNodeConstraints(all_subtree_nodes);
         // Log after constraints also, mainly to make the tree view easier to reference in the log
         // since the constraints log info can be a bit long.
         LogInfo(FROM_HERE, "pruned subtree (including all group children):");
@@ -876,30 +1056,122 @@ void LogicalBufferCollection::MaybeAllocate() {
       ZX_DEBUG_ASSERT((!is_allocate_attempted_) == (eligible_subtree == root_.get()));
       ZX_DEBUG_ASSERT(is_allocate_attempted_ || eligible_subtrees.size() == 1);
 
-      if (is_allocate_attempted_) {
-        // Allocate was already previously attempted.
-        TryLateLogicalAllocation(std::move(nodes));
-        did_something = true;
-        // next sub-tree
-        continue;
+      bool was_allocate_attempted = is_allocate_attempted_;
+      // By default, aggregation failure, unless we get a more immediate failure or success.
+      zx_status_t subtree_status = ZX_ERR_NOT_SUPPORTED;
+      uint32_t combination_ordinal = 0;
+      bool done_with_subtree;
+      for (done_with_subtree = false, InitGroupChildSelection(groups_by_priority);
+           !done_with_subtree && !DoneWithGroupChildSelections(groups_by_priority);
+           ++combination_ordinal,
+          static_cast<void>(done_with_subtree ||
+                            (NextGroupChildSelection(groups_by_priority), false))) {
+        if (combination_ordinal == kMaxGroupChildCombinations) {
+          LOG(INFO, "hit kMaxGroupChildCombinations before successful constraint aggregation");
+          subtree_status = ZX_ERR_OUT_OF_RANGE;
+          done_with_subtree = true;
+          break;
+        }
+        auto nodes = NodesOfPrunedSubtreeEligibleForLogicalAllocation(*eligible_subtree);
+        ZX_DEBUG_ASSERT(nodes.front() == eligible_subtree);
+
+        if (is_verbose_logging()) {
+          // Just the NodeProperties* and its type, in tree view, accounting for which_child, to
+          // show only the children that'll be included in the aggregation.
+          LogInfo(FROM_HERE, "pruned subtree (including only selected group children):");
+          LogPrunedSubTree(eligible_subtree);
+        }
+
+        if (is_allocate_attempted_) {
+          // Allocate was already previously attempted.
+          zx_status_t status = TryLateLogicalAllocation(nodes);
+          if (status != ZX_OK) {
+            switch (status) {
+              case ZX_ERR_NOT_SUPPORTED:
+                // next child selections (next iteration of the enclosing loop)
+                ZX_DEBUG_ASSERT(subtree_status == ZX_ERR_NOT_SUPPORTED);
+                break;
+              default:
+                subtree_status = status;
+                done_with_subtree = true;
+                break;
+            }
+            // next child selections or done_with_subtree
+            continue;
+          }
+          subtree_status = ZX_OK;
+          done_with_subtree = true;
+          // Succeed the nodes of the subtree that aren't currently hidden by which_child()
+          // selections, and fail the rest of the subtree as if ZX_ERR_NOT_SUPPORTED (like
+          // aggregation failure).
+          SetSucceededLateLogicalAllocationResult(std::move(nodes), std::move(all_subtree_nodes));
+          // done_with_subtree true means loop will be done
+          ZX_DEBUG_ASSERT(done_with_subtree);
+          continue;
+        }
+
+        // Initial allocation can only have one eligible subtree.
+        ZX_DEBUG_ASSERT(eligible_subtrees.size() == 1);
+        ZX_DEBUG_ASSERT(eligible_subtrees[0] == root_.get());
+
+        // All the views have seen SetConstraints(), and there are no tokens left.
+        // Regardless of whether allocation succeeds or fails, we remember we've
+        // started an attempt to allocate so we don't attempt again.
+        auto result = TryAllocate(nodes);
+        if (!result.is_ok()) {
+          switch (result.error()) {
+            case ZX_ERR_NOT_SUPPORTED:
+              ZX_DEBUG_ASSERT(subtree_status == ZX_ERR_NOT_SUPPORTED);
+              // next child selections
+              break;
+            default:
+              subtree_status = result.error();
+              done_with_subtree = true;
+              break;
+          }
+          // next child selections or done_with_subtree
+          continue;
+        }
+        subtree_status = ZX_OK;
+        done_with_subtree = true;
+        is_allocate_attempted_ = true;
+        // Succeed portion of pruned subtree indicated by current group child selections; fail
+        // rest of pruned subtree nodes with ZX_ERR_NOT_SUPPORTED as if they failed aggregation.
+        //
+        // For nodes outside the portion of the pruned subtree indicated by current group child
+        // selections, it's not relevant whether the node(s) were part of any attempted
+        // aggregations so far which happened to fail aggregation (with diffuse blame), or
+        // whether the node(s) just didn't need to be used/tried.  We just fail them with
+        // ZX_ERR_NOT_SUPPORTED as a sanitized/converged error so the relevant collection
+        // channels indicate failure and the corresponding Node(s) can be cleaned up.
+        SetAllocationResult(std::move(nodes), result.take_value(), std::move(all_subtree_nodes));
+        // The outermost loop will try again, in case there were ready AttachToken()(s) and/or
+        // dispensable views queued up behind the initial allocation.  In the next iteration if
+        // there's nothing to do we'll return.
+        //
+        // done_with_subtree true means loop will be done
+        ZX_DEBUG_ASSERT(done_with_subtree);
       }
-
-      // All the views have seen SetConstraints(), and there are no tokens left.
-      // Regardless of whether allocation succeeds or fails, we remember we've
-      // started an attempt to allocate so we don't attempt again.
-      is_allocate_attempted_ = true;
-      TryAllocate(std::move(nodes));
-      did_something = true;
-
-      // Try again, in case there were ready AttachToken()(s) and/or dispensable views queued up
-      // behind the initial allocation.  In the next iteration if there's nothing to do we'll
-      // return.
-      ZX_DEBUG_ASSERT(eligible_subtrees.size() == 1);
+      // This can still be ZX_ERR_NOT_SUPPORTED if we never got any more immediate failure and
+      // never got success, or this can be some other more immediate failure (still needs to be
+      // handled/propagated here), or this can be ZX_OK if we already handled success.
+      if (subtree_status != ZX_OK) {
+        if (was_allocate_attempted) {
+          // fail entire logical allocation, including all pruned subtree nodes, regardless of
+          // group child selections
+          SetFailedLateLogicalAllocationResult(all_subtree_nodes[0], subtree_status);
+        } else {
+          // fail the initial allocation from root_ down
+          LOG(INFO, "fail the initial allocation from root_ down");
+          SetFailedAllocationResult(subtree_status);
+        }
+      }
     }
   } while (did_something);
 }
 
-void LogicalBufferCollection::TryAllocate(std::vector<NodeProperties*> nodes) {
+fpromise::result<fuchsia_sysmem2::wire::BufferCollectionInfo, zx_status_t>
+LogicalBufferCollection::TryAllocate(std::vector<NodeProperties*> nodes) {
   TRACE_DURATION("gfx", "LogicalBufferCollection::TryAllocate", "this", this);
 
   // If we're here it means we have connected clients.
@@ -935,9 +1207,8 @@ void LogicalBufferCollection::TryAllocate(std::vector<NodeProperties*> nodes) {
   if (!combine_result.is_ok()) {
     // It's impossible to combine the constraints due to incompatible
     // constraints, or all participants set null constraints.
-    LOG(ERROR, "CombineConstraints() failed");
-    SetFailedAllocationResult(ZX_ERR_NOT_SUPPORTED);
-    return;
+    LogInfo(FROM_HERE, "CombineConstraints() failed");
+    return fpromise::error(ZX_ERR_NOT_SUPPORTED);
   }
   ZX_DEBUG_ASSERT(combine_result.is_ok());
   ZX_DEBUG_ASSERT(constraints_list.empty());
@@ -946,9 +1217,10 @@ void LogicalBufferCollection::TryAllocate(std::vector<NodeProperties*> nodes) {
   auto generate_result = GenerateUnpopulatedBufferCollectionInfo(combined_constraints);
   if (!generate_result.is_ok()) {
     ZX_DEBUG_ASSERT(generate_result.error() != ZX_OK);
-    LOG(ERROR, "GenerateUnpopulatedBufferCollectionInfo() failed");
-    SetFailedAllocationResult(generate_result.error());
-    return;
+    if (generate_result.error() != ZX_ERR_NOT_SUPPORTED) {
+      LogError(FROM_HERE, "GenerateUnpopulatedBufferCollectionInfo() failed");
+    }
+    return generate_result;
   }
   ZX_DEBUG_ASSERT(generate_result.is_ok());
   auto buffer_collection_info = generate_result.take_value();
@@ -965,9 +1237,9 @@ void LogicalBufferCollection::TryAllocate(std::vector<NodeProperties*> nodes) {
       sysmem::V2CloneBufferCollectionInfo(table_set_.allocator(), buffer_collection_info, 0, 0);
   if (!clone_result.is_ok()) {
     ZX_DEBUG_ASSERT(clone_result.error() != ZX_OK);
-    LOG(ERROR, "V2CloneBufferCollectionInfo() failed");
-    SetFailedAllocationResult(clone_result.error());
-    return;
+    ZX_DEBUG_ASSERT(clone_result.error() != ZX_ERR_NOT_SUPPORTED);
+    LogError(FROM_HERE, "V2CloneBufferCollectionInfo() failed");
+    return clone_result;
   }
   buffer_collection_info_before_population_.emplace(
       TableHolder(table_set_, clone_result.take_value()));
@@ -975,9 +1247,9 @@ void LogicalBufferCollection::TryAllocate(std::vector<NodeProperties*> nodes) {
       sysmem::V2CloneBufferCollectionInfo(table_set_.allocator(), buffer_collection_info, 0, 0);
   if (!clone_result.is_ok()) {
     ZX_DEBUG_ASSERT(clone_result.error() != ZX_OK);
-    LOG(ERROR, "V2CloneBufferCollectionInfo() failed");
-    SetFailedAllocationResult(clone_result.error());
-    return;
+    ZX_DEBUG_ASSERT(clone_result.error() != ZX_ERR_NOT_SUPPORTED);
+    LogError(FROM_HERE, "V2CloneBufferCollectionInfo() failed");
+    return clone_result;
   }
   auto tmp_buffer_collection_info_before_population = clone_result.take_value();
   // TODO(fxbug.dev/45252): Use FIDL at rest.
@@ -988,16 +1260,15 @@ void LogicalBufferCollection::TryAllocate(std::vector<NodeProperties*> nodes) {
       Allocate(combined_constraints, &buffer_collection_info);
   if (!result.is_ok()) {
     ZX_DEBUG_ASSERT(result.error() != ZX_OK);
-    SetFailedAllocationResult(result.error());
-    return;
+    ZX_DEBUG_ASSERT(result.error() != ZX_ERR_NOT_SUPPORTED);
+    return result;
   }
   ZX_DEBUG_ASSERT(result.is_ok());
-
-  SetAllocationResult(std::move(nodes), result.take_value());
+  return result;
 }
 
 // This requires that nodes have the sub-tree's root-most node at nodes[0].
-void LogicalBufferCollection::TryLateLogicalAllocation(std::vector<NodeProperties*> nodes) {
+zx_status_t LogicalBufferCollection::TryLateLogicalAllocation(std::vector<NodeProperties*> nodes) {
   TRACE_DURATION("gfx", "LogicalBufferCollection::TryLateLogicalAllocation", "this", this);
 
   // The initial allocation was attempted, or we wouldn't be here.
@@ -1142,13 +1413,12 @@ void LogicalBufferCollection::TryLateLogicalAllocation(std::vector<NodePropertie
 
   auto combine_result = CombineConstraints(&constraints_list);
   if (!combine_result.is_ok()) {
-    // It's impossible to combine the constraints due to incompatible
-    // constraints, or all participants set null constraints.
-    LOG(ERROR, "CombineConstraints() failed -> AttachToken() sequence failed");
+    // It's impossible to combine the constraints due to incompatible constraints, or all
+    // participants set null constraints.
+    //
     // While nodes are from the pruned tree, if a parent can't allocate, then its child can't
     // allocate either, so this fails the whole sub-tree.
-    SetFailedLateLogicalAllocationResult(nodes[0], ZX_ERR_NOT_SUPPORTED);
-    return;
+    return ZX_ERR_NOT_SUPPORTED;
   }
 
   ZX_DEBUG_ASSERT(combine_result.is_ok());
@@ -1158,12 +1428,13 @@ void LogicalBufferCollection::TryLateLogicalAllocation(std::vector<NodePropertie
   auto generate_result = GenerateUnpopulatedBufferCollectionInfo(combined_constraints);
   if (!generate_result.is_ok()) {
     ZX_DEBUG_ASSERT(generate_result.error() != ZX_OK);
-    LOG(ERROR,
-        "GenerateUnpopulatedBufferCollectionInfo() failed -> AttachToken() sequence failed "
-        "- status: %d",
-        generate_result.error());
-    SetFailedLateLogicalAllocationResult(nodes[0], generate_result.error());
-    return;
+    if (generate_result.error() != ZX_ERR_NOT_SUPPORTED) {
+      LogError(FROM_HERE,
+               "GenerateUnpopulatedBufferCollectionInfo() failed -> "
+               "AttachToken() sequence failed - status: %d",
+               generate_result.error());
+    }
+    return generate_result.error();
   }
   ZX_DEBUG_ASSERT(generate_result.is_ok());
   fuchsia_sysmem2::wire::BufferCollectionInfo unpopulated_buffer_collection_info =
@@ -1173,10 +1444,12 @@ void LogicalBufferCollection::TryLateLogicalAllocation(std::vector<NodePropertie
                                                           unpopulated_buffer_collection_info, 0, 0);
   if (!clone_result.is_ok()) {
     ZX_DEBUG_ASSERT(clone_result.error() != ZX_OK);
-    LOG(ERROR, "V2CloneBufferCollectionInfo() failed -> AttachToken() sequence failed - status: %d",
-        clone_result.error());
-    SetFailedLateLogicalAllocationResult(nodes[0], clone_result.error());
-    return;
+    ZX_DEBUG_ASSERT(clone_result.error() != ZX_ERR_NOT_SUPPORTED);
+    LogError(FROM_HERE,
+             "V2CloneBufferCollectionInfo() failed -> AttachToken() "
+             "sequence failed - status: %d",
+             clone_result.error());
+    return clone_result.error();
   }
   auto tmp_unpopulated_buffer_collection_info = clone_result.take_value();
   // This could be big so use heap.
@@ -1206,16 +1479,19 @@ void LogicalBufferCollection::TryLateLogicalAllocation(std::vector<NodePropertie
             "original_linear_buffer_collection_info.BytesMatch(new_linear_buffer_collection_info)");
     LogDiffsBufferCollectionInfo(**buffer_collection_info_before_population_,
                                  unpopulated_buffer_collection_info);
-    SetFailedLateLogicalAllocationResult(nodes[0], ZX_ERR_NOT_SUPPORTED);
-    return;
+    return ZX_ERR_NOT_SUPPORTED;
   }
 
   // Now that we know the new participants can be added without changing the BufferCollectionInfo,
   // we can inform the new participants that their logical allocation succeeded.
   //
-  // This sets success for nodes of the pruned sub-tree, not any AttachToken() children; those
-  // attempt logical allocation later assuming all goes well.
-  SetSucceededLateLogicalAllocationResult(std::move(nodes));
+  // This will set success for nodes of the pruned sub-tree, not any AttachToken() children; those
+  // attempt logical allocation later assuming all goes well.  The success only applies to the
+  // current which_child() selections; nodes of the pruned sub-tree outside the current
+  // which_child() selections will still be handled as if they are ZX_ERR_NOT_SUPPORTED aggregation
+  // failure (despite the possibility that perhaps a lower-priority list of selections could have
+  // succeeded if the current list of selections hadn't).
+  return ZX_OK;
 }
 
 void LogicalBufferCollection::SetFailedAllocationResult(zx_status_t status) {
@@ -1237,7 +1513,9 @@ void LogicalBufferCollection::SetFailedAllocationResult(zx_status_t status) {
 }
 
 void LogicalBufferCollection::SetAllocationResult(
-    std::vector<NodeProperties*> nodes, fuchsia_sysmem2::wire::BufferCollectionInfo&& info) {
+    std::vector<NodeProperties*> visible_pruned_sub_tree,
+    fuchsia_sysmem2::wire::BufferCollectionInfo&& info,
+    std::vector<NodeProperties*> whole_pruned_sub_tree) {
   // Setting empty constraints as the success case isn't allowed.  That's considered a failure.  At
   // least one participant must specify non-empty constraints.
   ZX_DEBUG_ASSERT(!info.IsEmpty());
@@ -1253,7 +1531,21 @@ void LogicalBufferCollection::SetAllocationResult(
   allocation_result_status_ = ZX_OK;
   allocation_result_info_.emplace(table_set_, std::move(info));
   has_allocation_result_ = true;
-  SendAllocationResult(std::move(nodes));
+  SendAllocationResult(std::move(visible_pruned_sub_tree));
+
+  std::vector<NodeProperties*>::reverse_iterator next;
+  for (auto iter = whole_pruned_sub_tree.rbegin(); iter != whole_pruned_sub_tree.rend();
+       iter = next) {
+    next = iter + 1;
+    auto& np = **iter;
+    if (np.buffers_logically_allocated()) {
+      // np is part of visible_pruned_sub_tree (or was, before the move above), so we're not failing
+      // this item
+      continue;
+    }
+    np.error_propagation_mode() = ErrorPropagationMode::kDoNotPropagate;
+    FailDownFrom(&np, ZX_ERR_NOT_SUPPORTED);
+  }
 }
 
 void LogicalBufferCollection::SendAllocationResult(std::vector<NodeProperties*> nodes) {
@@ -1293,12 +1585,25 @@ void LogicalBufferCollection::SetFailedLateLogicalAllocationResult(NodePropertie
 }
 
 void LogicalBufferCollection::SetSucceededLateLogicalAllocationResult(
-    std::vector<NodeProperties*> pruned_sub_tree) {
+    std::vector<NodeProperties*> visible_pruned_sub_tree,
+    std::vector<NodeProperties*> whole_pruned_sub_tree) {
   ZX_DEBUG_ASSERT(allocation_result().status == ZX_OK);
-  for (auto node_properties : pruned_sub_tree) {
+  for (auto node_properties : visible_pruned_sub_tree) {
     ZX_DEBUG_ASSERT(!node_properties->buffers_logically_allocated());
     node_properties->node()->OnBuffersAllocated(allocation_result());
     ZX_DEBUG_ASSERT(node_properties->buffers_logically_allocated());
+  }
+  std::vector<NodeProperties*>::reverse_iterator next;
+  for (auto iter = whole_pruned_sub_tree.rbegin(); iter != whole_pruned_sub_tree.rend();
+       iter = next) {
+    next = iter + 1;
+    auto& np = **iter;
+    if (np.buffers_logically_allocated()) {
+      // np is part of visible_pruned_sub_tree, so we're not failing this item
+      continue;
+    }
+    np.error_propagation_mode() = ErrorPropagationMode::kDoNotPropagate;
+    FailDownFrom(&np, ZX_ERR_NOT_SUPPORTED);
   }
 }
 
@@ -1488,26 +1793,81 @@ LogicalBufferCollection::NodesOfPrunedSubtreeEligibleForLogicalAllocation(NodePr
 fit::function<NodeFilterResult(const NodeProperties&)> LogicalBufferCollection::PrunedSubtreeFilter(
     NodeProperties& subtree, fit::function<bool(const NodeProperties&)> visit_keep) const {
   return [&subtree, visit_keep = std::move(visit_keep)](const NodeProperties& node_properties) {
-    bool in_subtree = false;
+    bool in_pruned_subtree = false;
     bool iterate_children = true;
-    for (const NodeProperties* iter = &node_properties; iter; iter = iter->parent()) {
-      if (iter == &subtree) {
-        ZX_DEBUG_ASSERT(iterate_children);
-        in_subtree = true;
-        break;
-      }
-      if (iter->error_propagation_mode() == ErrorPropagationMode::kDoNotPropagate) {
-        ZX_DEBUG_ASSERT(!in_subtree);
-        iterate_children = false;
-        break;
-      }
+    if (&node_properties != &subtree &&
+        ((node_properties.error_propagation_mode() == ErrorPropagationMode::kDoNotPropagate) ||
+         (node_properties.parent() && node_properties.parent()->which_child().has_value() &&
+          &node_properties.parent()->child(*node_properties.parent()->which_child()) !=
+              &node_properties))) {
+      ZX_DEBUG_ASSERT(!in_pruned_subtree);
+      iterate_children = false;
+    } else {
+      // We know we won't encounter any of the conditions checked above on the way from
+      // node_properties to subtree (before reaching subtree) since parents are iterated before
+      // children and we don't iterate any child of a node with any of the conditions checked above.
+      in_pruned_subtree = true;
     }
     bool keep_node = false;
-    if (in_subtree) {
+    if (in_pruned_subtree) {
       keep_node = visit_keep(node_properties);
     }
     return NodeFilterResult{.keep_node = keep_node, .iterate_children = iterate_children};
   };
+}
+
+std::vector<NodeProperties*>
+LogicalBufferCollection::PrioritizedGroupsOfPrunedSubtreeEligibleForLogicalAllocation(
+    NodeProperties& subtree) {
+  ZX_DEBUG_ASSERT(!subtree.buffers_logically_allocated());
+  ZX_DEBUG_ASSERT((&subtree == root_.get()) || subtree.parent()->buffers_logically_allocated());
+  return subtree.DepthFirstPreOrder([&subtree](const NodeProperties& node_properties) {
+    // This is only needed for a ZX_DEBUG_ASSERT() below.
+    bool in_pruned_subtree = false;
+    // By default we iterate children, but if we encounter kDoNotPropagate, we
+    // don't iterate children since node_properties is no longer
+    // in_pruned_subtree, and no children under node_properties are either.
+    bool iterate_children = true;
+    if (&node_properties != &subtree &&
+        node_properties.error_propagation_mode() == ErrorPropagationMode::kDoNotPropagate) {
+      // Groups can't have kDoNotPropagate, so we know iter is not a group.  We also know that
+      // node_properties is not in_pruned_subtree since we encountered kDoNotPropagate between
+      // node_properties and subtree (before reaching subtree).
+      ZX_DEBUG_ASSERT(!node_properties.node()->buffer_collection_token_group());
+      ZX_DEBUG_ASSERT(!in_pruned_subtree);
+      iterate_children = false;
+    } else {
+      // We won't encounter any kDoNotPropagate from node_properties up to subtree (before reaching
+      // subtree) because we only take this else path if the present node_properties is not
+      // kDoNotPropagate, and because if a parent node of this node_properties other than subtree
+      // were kDoNotPropagate, we wouldn't be iterating this child node of that parent node.
+      in_pruned_subtree = true;
+    }
+    bool is_group = !!node_properties.node()->buffer_collection_token_group();
+    // We can assert that all groups that we actually iterate to are in the
+    // pruned subtree, since we iterate only from "subtree" down, and because
+    // the nodes that we do potentially iterate which are not in the pruned
+    // subtree must be non-group nodes because groups can't have kDoNoPropagate.
+    // Since we don't iterate to any children of a kDoNotPropagate node, there's
+    // no way for the DepthFirstPreOrder() to get called with node_properties
+    // a group that is not in the pruned subtree.  If instead we did iterate
+    // children of a kDoNotPropagate node, we could encounter some groups that
+    // are not in_pruned_subtree, so we'd need to set
+    // keep_node = in_pruned_subtree && is_group.  But since we don't iterate
+    // children of a kDoNotPropagate node, we can just assert that it's
+    // impossible to be iterating a group that is not in the pruned subtree, and
+    // we don't need to include in_pruned_subtree in the keep_node expression
+    // since we know that if is_group is true, in_pruned_subtree must also be
+    // true, and if in_pruned_subtree is false, is_group is also false.
+    ZX_DEBUG_ASSERT(!is_group || in_pruned_subtree);
+    // The keep_node expressions with or without in_pruned_subtree will always
+    // have the same value (in this method), so we can just use "in_group" (in
+    // this method) since it's a simpler expression that accomplishes the same
+    // thing (in this method, not necessarily in other methods that still need
+    // in_pruned_subtree).
+    ZX_DEBUG_ASSERT((in_pruned_subtree && is_group) == is_group);
+    return NodeFilterResult{.keep_node = is_group, .iterate_children = iterate_children};
+  });
 }
 
 fpromise::result<fuchsia_sysmem2::wire::BufferCollectionConstraints, void>

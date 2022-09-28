@@ -69,7 +69,8 @@ enum class ErrorPropagationMode : uint32_t {
   // mode of a token after SetDispensable() on that token (unless the token was already
   // kDoNotPropagate, in which case it's still kDoNotPropagate).
   kPropagateBeforeAllocation,
-  // Never fail the parent.  This is the mode of a token created with AttachToken().
+  // Never fail the parent.  This is the mode of a token created with AttachToken(), or in a
+  // sub-tree rooted at a non-selected child of a group.
   kDoNotPropagate,
 };
 
@@ -164,6 +165,21 @@ class NodeProperties : public std::enable_shared_from_this<NodeProperties> {
 
   void SetNode(fbl::RefPtr<Node> node);
 
+  // Only used on NodeConstraints corresponding to a BufferCollectionTokenGroup.
+  //
+  // During attempted constraints aggregation, only the which_child child is aggregated.
+  //
+  // Required: which_child < child_count().
+  void SetWhichChild(uint32_t which_child);
+  // Set which_child() back to nullopt.
+  void ResetWhichChild();
+  std::optional<uint32_t> which_child() const;
+
+  // This means "this" is visible given group child selections at the moment.  The visible/hidden
+  // status remains consistent with the current which_child() setting of each group (even when
+  // SetWhichChild() has just changed which_child()).
+  bool visible() const;
+
   // These counts are for the current NodeProperties + any current children (direct and indirect) of
   // the current NodeProperties.  For LogicalBufferCollection::root_, these counts are for the whole
   // tree.
@@ -243,6 +259,12 @@ class NodeProperties : public std::enable_shared_from_this<NodeProperties> {
   uint32_t connected_client_count_ = 0;
   uint32_t buffer_collection_count_ = 0;
   uint32_t buffer_collection_token_count_ = 0;
+
+  // If not set, all children.  If set, just the one specified child.  Only ever set in
+  // NodeProperties corresponding to BufferCollectionTokenGroup Node(s).  This can be set and
+  // changed repeatedly for a BufferCollectionTokenGroup as we enumerate through combinations of
+  // child selections among all groups.
+  std::optional<uint32_t> which_child_ = std::nullopt;
 };
 
 }  // namespace sysmem_driver

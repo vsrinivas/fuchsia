@@ -29,7 +29,8 @@ class BufferCollection : public Node, public fidl::WireServer<fuchsia_sysmem::Bu
       zx::unowned_channel server_end);
   ~BufferCollection() override;
 
-  // FIDL "compose Node" "interface" (identical among BufferCollection, BufferCollectionToken)
+  // FIDL "compose Node" "interface" (identical among BufferCollection, BufferCollectionToken,
+  // BufferCollectionTokenGroup)
   void Sync(SyncCompleter::Sync& completer) override;
   void DeprecatedSync(DeprecatedSyncCompleter::Sync& completer) override;
   void Close(CloseCompleter::Sync& completer) override;
@@ -84,6 +85,8 @@ class BufferCollection : public Node, public fidl::WireServer<fuchsia_sysmem::Bu
   const BufferCollectionToken* buffer_collection_token() const override;
   BufferCollection* buffer_collection() override;
   const BufferCollection* buffer_collection() const override;
+  BufferCollectionTokenGroup* buffer_collection_token_group() override;
+  const BufferCollectionTokenGroup* buffer_collection_token_group() const override;
   OrphanedNode* orphaned_node() override;
   const OrphanedNode* orphaned_node() const override;
   bool is_connected_type() const override;

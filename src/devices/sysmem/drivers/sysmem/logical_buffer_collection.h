@@ -84,10 +84,16 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
       fbl::RefPtr<LogicalBufferCollection> self, NodeProperties* new_node_properties,
       fidl::ServerEnd<fuchsia_sysmem::BufferCollectionToken> token_request);
 
+  // This is used by BufferCollectionToken to create a BufferCollectionTokenGroup during the
+  // FIDL request of the same name.
+  void CreateBufferCollectionTokenGroup(
+      fbl::RefPtr<LogicalBufferCollection> self, NodeProperties* new_node_properties,
+      fidl::ServerEnd<fuchsia_sysmem::BufferCollectionTokenGroup> group_request);
+
   void AttachLifetimeTracking(zx::eventpair server_end, uint32_t buffers_remaining);
   void SweepLifetimeTracking();
 
-  void OnSetConstraints();
+  void OnNodeReady();
 
   void SetName(uint32_t priority, std::string name);
   void SetDebugTimeoutLogDeadline(int64_t deadline);
@@ -202,26 +208,34 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   void LogError(Location location, const char* format, ...) const __PRINTFLIKE(3, 4);
   void VLogError(Location location, const char* format, va_list args) const;
 
+  void ResetGroupChildSelection(std::vector<NodeProperties*>& groups_by_priority);
+  void InitGroupChildSelection(std::vector<NodeProperties*>& groups_by_priority);
+  void NextGroupChildSelection(std::vector<NodeProperties*> groups_by_priority);
+  bool DoneWithGroupChildSelections(const std::vector<NodeProperties*> groups_by_priority);
+
   // The caller must keep "this" alive.  We require this of the caller since the caller is fairly
   // likely to want to keep "this" alive longer than MaybeAllocate() could anyway.
   void MaybeAllocate();
 
-  void TryAllocate(std::vector<NodeProperties*> nodes);
+  fpromise::result<fuchsia_sysmem2::wire::BufferCollectionInfo, zx_status_t> TryAllocate(
+      std::vector<NodeProperties*> nodes);
 
-  void TryLateLogicalAllocation(std::vector<NodeProperties*> nodes);
+  zx_status_t TryLateLogicalAllocation(std::vector<NodeProperties*> nodes);
 
   void InitializeConstraintSnapshots(const ConstraintsList& constraints_list);
 
   void SetFailedAllocationResult(zx_status_t status);
 
-  void SetAllocationResult(std::vector<NodeProperties*> nodes,
-                           fuchsia_sysmem2::wire::BufferCollectionInfo&& info);
+  void SetAllocationResult(std::vector<NodeProperties*> visible_pruned_sub_tree,
+                           fuchsia_sysmem2::wire::BufferCollectionInfo&& info,
+                           std::vector<NodeProperties*> whole_pruned_sub_tree);
 
   void SendAllocationResult(std::vector<NodeProperties*> nodes);
 
   void SetFailedLateLogicalAllocationResult(NodeProperties* tree, zx_status_t status_param);
 
-  void SetSucceededLateLogicalAllocationResult(std::vector<NodeProperties*> nodes);
+  void SetSucceededLateLogicalAllocationResult(std::vector<NodeProperties*> visible_pruned_sub_tree,
+                                               std::vector<NodeProperties*> whole_pruned_sub_tree);
 
   void BindSharedCollectionInternal(BufferCollectionToken* token,
                                     zx::channel buffer_collection_request);
@@ -324,6 +338,9 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   // allocation granule has the root as its root-most Node, or has an ErrorPropagationMode
   // kDoNotPropagate Node as its root-most Node.
   std::vector<NodeProperties*> NodesOfPrunedSubtreeEligibleForLogicalAllocation(
+      NodeProperties& subtree);
+
+  std::vector<NodeProperties*> PrioritizedGroupsOfPrunedSubtreeEligibleForLogicalAllocation(
       NodeProperties& subtree);
 
   // For NodeProperties:
@@ -651,6 +668,8 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
       creation_timer_{this};
 
   bool is_verbose_logging_ = false;
+
+  bool done_with_group_child_selection_ = false;
 };
 
 }  // namespace sysmem_driver

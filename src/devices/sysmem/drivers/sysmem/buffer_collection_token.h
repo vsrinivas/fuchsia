@@ -29,7 +29,8 @@ class BufferCollectionToken : public Node,
       fbl::RefPtr<LogicalBufferCollection> logical_buffer_collection,
       NodeProperties* new_node_properties, zx::unowned_channel server_end);
 
-  // FIDL "compose Node" "interface" (identical among BufferCollection, BufferCollectionToken)
+  // FIDL "compose Node" "interface" (identical among BufferCollection, BufferCollectionToken,
+  // BufferCollectionTokenGroup)
   void Sync(SyncCompleter::Sync& completer) override;
   void DeprecatedSync(DeprecatedSyncCompleter::Sync& completer) override;
   void Close(CloseCompleter::Sync& completer) override;
@@ -55,6 +56,9 @@ class BufferCollectionToken : public Node,
   void DuplicateSync(DuplicateSyncRequestView request,
                      DuplicateSyncCompleter::Sync& completer) override;
   void Duplicate(DuplicateRequestView request, DuplicateCompleter::Sync& completer) override;
+  void CreateBufferCollectionTokenGroup(
+      CreateBufferCollectionTokenGroupRequestView request,
+      CreateBufferCollectionTokenGroupCompleter::Sync& completer) override;
   void SetDispensable(SetDispensableCompleter::Sync& completer) override;
 
   template <class CompleterSync>
@@ -90,6 +94,8 @@ class BufferCollectionToken : public Node,
   const BufferCollectionToken* buffer_collection_token() const override;
   BufferCollection* buffer_collection() override;
   const BufferCollection* buffer_collection() const override;
+  BufferCollectionTokenGroup* buffer_collection_token_group() override;
+  const BufferCollectionTokenGroup* buffer_collection_token_group() const override;
   OrphanedNode* orphaned_node() override;
   const OrphanedNode* orphaned_node() const override;
   bool is_connected_type() const override;

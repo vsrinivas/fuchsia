@@ -3,10 +3,8 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fidl/fuchsia.sysinfo/cpp/wire.h>
-#include <fidl/fuchsia.sysmem/cpp/markers.h>
-#include <fidl/fuchsia.sysmem/cpp/wire.h>
-#include <fidl/fuchsia.sysmem/cpp/wire_types.h>
+#include <fidl/fuchsia.sysinfo/cpp/fidl.h>
+#include <fidl/fuchsia.sysmem/cpp/fidl.h>
 #include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/ddk/hw/arch_ops.h>
@@ -62,8 +60,10 @@ namespace {
 
 using Token = fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken>;
 using Collection = fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>;
+using Group = fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionTokenGroup>;
 using SharedToken = std::shared_ptr<Token>;
 using SharedCollection = std::shared_ptr<Collection>;
+using SharedGroup = std::shared_ptr<Group>;
 
 // This test observer is used to get the name of the current test to send to sysmem to identify the
 // client.
@@ -312,11 +312,54 @@ fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken> create_token_under_t
   return token_b;
 }
 
+fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionTokenGroup> create_group_under_token(
+    fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken>& token) {
+  auto group_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionTokenGroup>();
+  ZX_ASSERT(group_endpoints.is_ok());
+  auto [group_client, group_server] = std::move(*group_endpoints);
+  auto create_result = token->CreateBufferCollectionTokenGroup(std::move(group_server));
+  ZX_ASSERT(create_result.ok());
+  auto group = fidl::WireSyncClient(std::move(group_client));
+  auto sync_result = group->Sync();
+  ZX_ASSERT(sync_result.ok());
+  return group;
+}
+
+fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken> create_token_under_group(
+    fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionTokenGroup>& group,
+    uint32_t rights_attenuation_mask = ZX_RIGHT_SAME_RIGHTS) {
+  auto token_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
+  ZX_ASSERT(token_endpoints.is_ok());
+  auto [token_client, token_server] = std::move(*token_endpoints);
+  fidl::Arena arena;
+  auto request_builder =
+      fuchsia_sysmem::wire::BufferCollectionTokenGroupCreateChildRequest::Builder(arena);
+  request_builder.token_request(std::move(token_server));
+  if (rights_attenuation_mask != ZX_RIGHT_SAME_RIGHTS) {
+    request_builder.rights_attenuation_mask(rights_attenuation_mask);
+  }
+  auto create_result = group->CreateChild(request_builder.Build());
+  ZX_ASSERT(create_result.ok());
+  auto token = fidl::WireSyncClient(std::move(token_client));
+  auto sync_result = token->Sync();
+  ZX_ASSERT(sync_result.ok());
+  return token;
+}
+
 void check_token_alive(fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken>& token) {
   constexpr uint32_t kIterations = 1;
   for (uint32_t i = 0; i < kIterations; ++i) {
     zx::nanosleep(zx::deadline_after(zx::usec(500)));
     auto sync_result = token->Sync();
+    ZX_ASSERT(sync_result.ok());
+  }
+}
+
+void check_group_alive(fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionTokenGroup>& group) {
+  constexpr uint32_t kIterations = 1;
+  for (uint32_t i = 0; i < kIterations; ++i) {
+    zx::nanosleep(zx::deadline_after(zx::usec(500)));
+    auto sync_result = group->Sync();
     ZX_ASSERT(sync_result.ok());
   }
 }
@@ -354,6 +397,35 @@ void set_picky_constraints(fidl::WireSyncClient<fuchsia_sysmem::BufferCollection
       .heap_permitted_count = 0,
       .heap_permitted = {},
   };
+  constraints.image_format_constraints_count = 0;
+  auto result = collection->SetConstraints(true, std::move(constraints));
+  ZX_ASSERT(result.ok());
+}
+
+void set_min_camping_constraints(fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>& collection,
+                                 uint32_t min_buffer_count_for_camping,
+                                 uint32_t max_buffer_count = 0) {
+  fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
+  constraints.usage.cpu =
+      fuchsia_sysmem::wire::kCpuUsageReadOften | fuchsia_sysmem::wire::kCpuUsageWriteOften;
+  constraints.min_buffer_count_for_camping = min_buffer_count_for_camping;
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints = fuchsia_sysmem::wire::BufferMemoryConstraints{
+      .min_size_bytes = zx_system_get_page_size(),
+      // Allow a max that's just large enough to accommodate the size implied
+      // by the min frame size and PixelFormat.
+      .max_size_bytes = zx_system_get_page_size(),
+      .physically_contiguous_required = false,
+      .secure_required = false,
+      .ram_domain_supported = false,
+      .cpu_domain_supported = true,
+      .inaccessible_domain_supported = false,
+      .heap_permitted_count = 0,
+      .heap_permitted = {},
+  };
+  if (max_buffer_count) {
+    constraints.max_buffer_count = max_buffer_count;
+  }
   constraints.image_format_constraints_count = 0;
   auto result = collection->SetConstraints(true, std::move(constraints));
   ZX_ASSERT(result.ok());
@@ -4475,6 +4547,606 @@ TEST(Sysmem, SetDispensable) {
     ASSERT_OK(collection_1->Sync());
 
     // next variant, if any
+  }
+}
+
+TEST(Sysmem, GroupPrefersFirstChild) {
+  const uint32_t kFirstChildSize = zx_system_get_page_size() * 16;
+  const uint32_t kSecondChildSize = zx_system_get_page_size() * 32;
+
+  auto root_token = create_initial_token();
+  auto group = create_group_under_token(root_token);
+  auto child_0_token = create_token_under_group(group);
+  auto child_1_token = create_token_under_group(group);
+
+  auto root = convert_token_to_collection(std::move(root_token));
+  auto child_0 = convert_token_to_collection(std::move(child_0_token));
+  auto child_1 = convert_token_to_collection(std::move(child_1_token));
+  auto set_result =
+      root->SetConstraints(false, ::fuchsia_sysmem::wire::BufferCollectionConstraints{});
+  ASSERT_TRUE(set_result.ok());
+  set_picky_constraints(child_0, kFirstChildSize);
+  set_picky_constraints(child_1, kSecondChildSize);
+
+  auto all_children_present_result = group->AllChildrenPresent();
+  ASSERT_TRUE(all_children_present_result.ok());
+
+  auto wait_result1 = root->WaitForBuffersAllocated();
+  ASSERT_TRUE(wait_result1.ok());
+  ASSERT_OK(wait_result1->status);
+  auto info = std::move(wait_result1->buffer_collection_info);
+  ASSERT_EQ(info.settings.buffer_settings.size_bytes, kFirstChildSize);
+
+  auto wait_result2 = child_0->WaitForBuffersAllocated();
+  ASSERT_TRUE(wait_result2.ok());
+  ASSERT_OK(wait_result2->status);
+  info = std::move(wait_result2->buffer_collection_info);
+  ASSERT_EQ(info.settings.buffer_settings.size_bytes, kFirstChildSize);
+
+  auto wait_result3 = child_1->WaitForBuffersAllocated();
+  // Most clients calling this way won't get the epitaph; this test doesn't either.
+  ASSERT_TRUE(!wait_result3.ok() && wait_result3.error().status() == ZX_ERR_PEER_CLOSED ||
+              wait_result3->status == ZX_ERR_NOT_SUPPORTED);
+}
+
+TEST(Sysmem, GroupPriority) {
+  constexpr uint32_t kIterations = 50;
+  for (uint32_t i = 0; i < kIterations; ++i) {
+    if ((i + 1) % 100 == 0) {
+      printf("iteration cardinal: %u\n", i + 1);
+    }
+
+    // We determine which group is lowest priority according to sysmem by noticing which group
+    // selects its ordinal 1 child instead of its ordinal 0 child.  We force one group to pick the
+    // ordinal 1 child by setting max_buffer_count to 1 buffer less than can be satisfied with all
+    // ordinal 0 children which each specify min_buffer_count_for_camping
+    // 1.  In contrast, the ordinal 1 children specify min_buffer_count_for_camping 0, so selecting
+    // a single ordinal 1 child is enough to succeed aggregation.
+
+    uint32_t constraints_count = 0;
+
+    std::random_device random_device;
+    std::uint_fast64_t seed{random_device()};
+    std::mt19937_64 prng{seed};
+    std::uniform_int_distribution<uint32_t> uint32_distribution(
+        0, std::numeric_limits<uint32_t>::max());
+
+    constexpr uint32_t kGroupCount = 4;
+    constexpr uint32_t kNonGroupCount = 12;
+    constexpr uint32_t kPickCount = 2;
+
+    using Item = std::variant<std::monostate, SharedToken, SharedCollection, SharedGroup>;
+    struct Node;
+    using SharedNode = std::shared_ptr<Node>;
+    struct Node {
+      bool is_group() { return item.index() == 3; }
+      Node* parent = nullptr;
+      std::vector<SharedNode> children;
+      // For a group, true means this group's direct child tokens all have is_camper true, and false
+      // means the second (ordinal 1) child has is_camper false.
+      //
+      // For a token, true means this token will specify min_buffer_count_for_camping 1, and false
+      // means this token will specify min_buffer_count_for_camping 0.
+      bool is_camper = true;
+      Item item;
+      std::optional<uint32_t> which_child;
+      uint32_t picked_group_dfs_preorder_ordinal;
+    };
+    std::vector<SharedNode> all_nodes;
+    std::vector<SharedNode> group_nodes;
+    std::vector<SharedNode> un_picked_group_nodes;
+    std::vector<SharedNode> picked_group_nodes;
+    std::vector<SharedNode> non_group_nodes;
+    std::vector<SharedNode> pre_groups_non_group_nodes;
+
+    SharedNode root_node;
+
+    auto create_node = [&](Node* parent, Item item) {
+      auto node = std::make_shared<Node>();
+      node->parent = parent;
+      bool is_parent_a_group = false;
+      if (parent) {
+        parent->children.emplace_back(node);
+        is_parent_a_group = parent->is_group();
+      }
+      node->item = std::move(item);
+      all_nodes.emplace_back(node);
+      if (node->is_group()) {
+        group_nodes.emplace_back(node);
+        un_picked_group_nodes.emplace_back(node);
+      } else {
+        non_group_nodes.emplace_back(node);
+        // this condition works for tallying constraints count only because we don't have nested
+        // groups in this test
+        if (!is_parent_a_group || parent->children.size() == 1) {
+          ++constraints_count;
+        }
+      }
+      if (group_nodes.empty() && !node->is_group()) {
+        pre_groups_non_group_nodes.emplace_back(node);
+      }
+      return node;
+    };
+
+    // This has a bias toward having more nodes directly under nodes that existed for longer, but
+    // that's fine.
+    auto add_random_nodes = [&]() {
+      for (uint32_t i = 0; i < kNonGroupCount; ++i) {
+        auto parent_node = all_nodes[uint32_distribution(prng) % all_nodes.size()];
+        auto node = create_node(parent_node.get(), std::make_shared<Token>(create_token_under_token(
+                                                       *std::get<SharedToken>(parent_node->item))));
+      }
+      for (uint32_t i = 0; i < kGroupCount; ++i) {
+        auto parent_node = pre_groups_non_group_nodes[uint32_distribution(prng) %
+                                                      pre_groups_non_group_nodes.size()];
+        auto group =
+            create_node(parent_node.get(), std::make_shared<Group>(create_group_under_token(
+                                               *std::get<SharedToken>(parent_node->item))));
+        // a group must have at least one child so go ahead and add that child when we add the group
+        create_node(
+            group.get(),
+            std::make_shared<Token>(create_token_under_group(*std::get<SharedGroup>(group->item))));
+      }
+    };
+
+    auto pick_groups = [&]() {
+      for (uint32_t i = 0; i < kPickCount; ++i) {
+        uint32_t which = uint32_distribution(prng) % un_picked_group_nodes.size();
+        auto group_node = un_picked_group_nodes[which];
+        group_node->is_camper = false;
+        un_picked_group_nodes.erase(un_picked_group_nodes.begin() + which);
+        picked_group_nodes.emplace_back(group_node);
+        auto group = std::get<SharedGroup>(group_node->item);
+        auto token = create_node(group_node.get(),
+                                 std::make_shared<Token>(create_token_under_group(*group)));
+        token->is_camper = false;
+      }
+    };
+
+    auto set_picked_group_dfs_preorder_ordinals = [&] {
+      struct StackLevel {
+        SharedNode node;
+        uint32_t next_child = 0;
+      };
+      uint32_t ordinal = 0;
+      std::vector<StackLevel> stack;
+      stack.emplace_back(StackLevel{.node = root_node, .next_child = 0});
+      while (!stack.empty()) {
+        auto& cur = stack.back();
+        if (cur.next_child == 0) {
+          // visit
+          if (cur.node->is_group() && !cur.node->is_camper) {
+            cur.node->picked_group_dfs_preorder_ordinal = ordinal;
+            ++ordinal;
+          }
+        }
+        if (cur.next_child == cur.node->children.size()) {
+          stack.pop_back();
+          continue;
+        }
+        auto child = cur.node->children[cur.next_child];
+        ++cur.next_child;
+        stack.push_back(StackLevel{.node = child, .next_child = 0});
+      }
+    };
+
+    auto finalize_nodes = [&] {
+      for (auto& node : all_nodes) {
+        if (node->is_group()) {
+          auto group = std::get<SharedGroup>(node->item);
+          auto result = (*group)->AllChildrenPresent();
+          ZX_ASSERT(result.ok());
+        } else {
+          auto token = std::get<SharedToken>(node->item);
+          auto collection =
+              std::make_shared<Collection>(convert_token_to_collection(std::move(*token)));
+          node->item.emplace<SharedCollection>(collection);
+          if (node.get() == root_node.get()) {
+            set_min_camping_constraints(*collection, node->is_camper ? 1 : 0,
+                                        constraints_count - 1);
+          } else {
+            set_min_camping_constraints(*collection, node->is_camper ? 1 : 0);
+          }
+        }
+      }
+    };
+
+    auto check_nodes = [&] {
+      for (auto& node : all_nodes) {
+        if (node->is_group()) {
+          continue;
+        }
+        auto collection = std::get<SharedCollection>(node->item);
+        auto wait_result = (*collection)->WaitForBuffersAllocated();
+        if (!wait_result.ok() || wait_result->status != ZX_OK) {
+          auto* group = node->parent;
+          ZX_ASSERT(!group->is_camper);
+          // Only the picked group enumerated last among the picked groups (in DFS pre-order) gives
+          // up on camping on a buffer by failing its camping child 0 and using it's non-camping
+          // child 1 instead.  The picked groups with higher priority (more important) instaed keep
+          // their camping child 0 and fail their non-camping child 1.
+          ZX_ASSERT((group->picked_group_dfs_preorder_ordinal < kPickCount - 1) ==
+                    (!node->is_camper));
+        }
+      }
+    };
+
+    root_node = create_node(nullptr, std::make_shared<Token>(create_initial_token()));
+    add_random_nodes();
+    pick_groups();
+    set_picked_group_dfs_preorder_ordinals();
+    finalize_nodes();
+    check_nodes();
+  }
+}
+
+TEST(Sysmem, Group_MiniStress) {
+  // In addition to some degree of stress, this tests whether sysmem can find the group child
+  // selections that work, given various arrangements of tokens, groups, and constraints
+  // compatibility / incompatibility.
+  constexpr uint32_t kIterations = 50;
+  for (uint32_t i = 0; i < kIterations; ++i) {
+    if ((i + 1) % 100 == 0) {
+      printf("iteration cardinal: %u\n", i + 1);
+    }
+    const uint32_t kCompatibleSize = zx_system_get_page_size();
+    const uint32_t kIncompatibleSize = 2 * zx_system_get_page_size();
+    // We can't go too high here, since we allow groups, and all the groups could end up as sibling
+    // groups whose child selections don't hide any of the other groups, leading to a high number of
+    // group child selection combinations.
+    //
+    // Child 0 of a group doesn't count as a "random" child since every group must have at least one
+    // child.
+    const uint32_t kRandomChildrenCount = 6;
+
+    using Item = std::variant<SharedToken, SharedCollection, SharedGroup>;
+
+    std::random_device random_device;
+    std::uint_fast64_t seed{random_device()};
+    std::mt19937_64 prng{seed};
+    std::uniform_int_distribution<uint32_t> uint32_distribution(
+        0, std::numeric_limits<uint32_t>::max());
+
+    struct Node;
+    using SharedNode = std::shared_ptr<Node>;
+    struct Node {
+      bool is_group() { return item.index() == 2; }
+      Node* parent;
+      std::vector<SharedNode> children;
+      bool is_compatible;
+      Item item;
+      std::optional<uint32_t> which_child;
+    };
+    std::vector<SharedNode> all_nodes;
+
+    auto create_node = [&](Node* parent, Item item) {
+      auto node = std::make_shared<Node>();
+      node->parent = parent;
+      if (parent) {
+        parent->children.emplace_back(node);
+      }
+      node->is_compatible = false;
+      node->item = std::move(item);
+      all_nodes.emplace_back(node);
+      return node;
+    };
+
+    // This has a bias toward having more nodes directly under nodes that existed for longer, but
+    // that's fine.
+    auto add_random_nodes = [&]() {
+      for (uint32_t i = 0; i < kRandomChildrenCount; ++i) {
+        auto parent_node = all_nodes[uint32_distribution(prng) % all_nodes.size()];
+        SharedNode node;
+        if (parent_node->is_group()) {
+          node = create_node(parent_node.get(), std::make_shared<Token>(create_token_under_group(
+                                                    *std::get<SharedGroup>(parent_node->item))));
+        } else if (uint32_distribution(prng) % 2 == 0) {
+          node = create_node(parent_node.get(), std::make_shared<Token>(create_token_under_token(
+                                                    *std::get<SharedToken>(parent_node->item))));
+        } else {
+          node = create_node(parent_node.get(), std::make_shared<Group>(create_group_under_token(
+                                                    *std::get<SharedToken>(parent_node->item))));
+          // a group must have at least one child so go ahead and add that child when we add the
+          // group
+          create_node(node.get(), std::make_shared<Token>(create_token_under_group(
+                                      *std::get<SharedGroup>(node->item))));
+        }
+      }
+    };
+
+    auto select_group_children = [&] {
+      for (auto& node : all_nodes) {
+        if (!node->is_group()) {
+          continue;
+        }
+        node->which_child = {uint32_distribution(prng) % node->children.size()};
+      }
+    };
+
+    auto is_visible = [&](SharedNode node) {
+      for (Node* iter = node.get(); iter; iter = iter->parent) {
+        if (!iter->parent) {
+          return true;
+        }
+        Node* parent = iter->parent;
+        if (!parent->is_group()) {
+          continue;
+        }
+        ZX_ASSERT(parent->which_child.has_value());
+        if (parent->children[*parent->which_child].get() != iter) {
+          return false;
+        }
+      }
+      ZX_PANIC("impossible\n");
+    };
+
+    auto find_visible_nodes_and_mark_compatible = [&] {
+      for (auto& node : all_nodes) {
+        if (!is_visible(node)) {
+          continue;
+        }
+        if (node->is_group()) {
+          continue;
+        }
+        node->is_compatible = true;
+      }
+    };
+
+    auto finalize_nodes = [&] {
+      std::atomic<uint32_t> ready_threads = 0;
+      std::atomic<bool> threads_go = false;
+      std::vector<std::thread> threads;
+      threads.reserve(all_nodes.size());
+      for (auto& node : all_nodes) {
+        threads.emplace_back(std::thread([&] {
+          ++ready_threads;
+          while (!threads_go) {
+            std::this_thread::yield();
+          }
+          if (node->is_group()) {
+            auto group = std::get<SharedGroup>(node->item);
+            auto result = (*group)->AllChildrenPresent();
+            ZX_ASSERT(result.ok());
+          } else {
+            auto token = std::get<SharedToken>(node->item);
+            auto collection =
+                std::make_shared<Collection>(convert_token_to_collection(std::move(*token)));
+            node->item.emplace<SharedCollection>(collection);
+            uint32_t size = node->is_compatible ? kCompatibleSize : kIncompatibleSize;
+            set_picky_constraints(*collection, size);
+          }
+        }));
+      }
+      while (ready_threads != threads.size()) {
+        std::this_thread::yield();
+      }
+      threads_go = true;
+      for (auto& thread : threads) {
+        thread.join();
+      }
+    };
+
+    auto check_nodes = [&] {
+      for (auto& node : all_nodes) {
+        if (node->is_group()) {
+          continue;
+        }
+        auto collection = std::get<SharedCollection>(node->item);
+        auto wait_result = (*collection)->WaitForBuffersAllocated();
+        if (!node->is_compatible) {
+          ZX_ASSERT(!wait_result.ok() && wait_result.error().status() == ZX_ERR_PEER_CLOSED ||
+                    wait_result.ok() && wait_result->status == ZX_ERR_NOT_SUPPORTED);
+          continue;
+        }
+        ZX_ASSERT(wait_result.ok());
+        ZX_ASSERT(wait_result->buffer_collection_info.settings.buffer_settings.size_bytes ==
+                  kCompatibleSize);
+      }
+    };
+
+    auto root_node = create_node(nullptr, std::make_shared<Token>(create_initial_token()));
+    add_random_nodes();
+    select_group_children();
+    find_visible_nodes_and_mark_compatible();
+    finalize_nodes();
+    check_nodes();
+  }
+}
+
+TEST(Sysmem, SkipUnreachableChildSelections) {
+  const uint32_t kCompatibleSize = zx_system_get_page_size();
+  const uint32_t kIncompatibleSize = 2 * zx_system_get_page_size();
+  std::vector<std::shared_ptr<Token>> incompatible_tokens;
+  std::vector<std::shared_ptr<Token>> compatible_tokens;
+  std::vector<std::shared_ptr<Group>> groups;
+  std::vector<std::shared_ptr<Collection>> collections;
+  auto root_token = std::make_shared<Token>(create_initial_token());
+  compatible_tokens.emplace_back(root_token);
+  auto cur_token = root_token;
+  // Essentially counting to 2^63 would take too long and cause the test to time out.  The fact
+  // that the test doesn't time out shows that sysmem isn't trying all the unreachable child
+  // selections.
+  //
+  // We use 63 instead of 64 to avoid hitting kMaxGroupChildCombinations.
+  //
+  // While this sysmem behavior can help cut down on the amount of unnecessary work as sysmem is
+  // enumerating through all potentially useful combinations of group child selections, this
+  // behavior doesn't prevent constructing a bunch of sibling groups (unlike this test which uses
+  // child groups) each with two options (for example) where only the right children can all
+  // succeed (for example).  In that case (and others with many reachable child selection
+  // combinations) sysmem would be forced to give up after trying several group child combinations
+  // instead of ever finding the highest priority combination that can succeed aggregation.
+  for (uint32_t i = 0; i < 63; ++i) {
+    auto group = std::make_shared<Group>(create_group_under_token(*cur_token));
+    groups.emplace_back(group);
+    // We create the next_token first, because we want to prefer the deeper sub-tree.
+    auto next_token = std::make_shared<Token>(create_token_under_group(*group));
+    incompatible_tokens.emplace_back(next_token);
+    auto shorter_child = std::make_shared<Token>(create_token_under_group(*group));
+    compatible_tokens.emplace_back(shorter_child);
+    cur_token = next_token;
+  }
+  for (auto& token : compatible_tokens) {
+    auto collection = std::make_shared<Collection>(convert_token_to_collection(std::move(*token)));
+    collections.emplace_back(collection);
+    set_picky_constraints(*collection, kCompatibleSize);
+  }
+  for (auto& token : incompatible_tokens) {
+    auto collection = std::make_shared<Collection>(convert_token_to_collection(std::move(*token)));
+    collections.emplace_back(collection);
+    set_picky_constraints(*collection, kIncompatibleSize);
+  }
+  for (auto& group : groups) {
+    auto result = (*group)->AllChildrenPresent();
+    ASSERT_TRUE(result.ok());
+  }
+  // Only two collections will succeed - the root and the right child of the group direclty under
+  // the root.
+  std::vector<std::shared_ptr<Collection>> success_collections;
+  auto root_collection = collections[0];
+  auto right_child_under_root_collection = collections[1];
+  success_collections.emplace_back(root_collection);
+  success_collections.emplace_back(right_child_under_root_collection);
+
+  // Remove the success collections so we can conveniently iterate over the failed collections.
+  //
+  // This is not efficient, but it's a test, and it's not super slow.
+  collections.erase(collections.begin());
+  collections.erase(collections.begin());
+
+  for (auto& collection : success_collections) {
+    auto wait_result = (*collection)->WaitForBuffersAllocated();
+    ASSERT_TRUE(wait_result.ok());
+    auto info = std::move(wait_result->buffer_collection_info);
+    ASSERT_EQ(info.settings.buffer_settings.size_bytes, kCompatibleSize);
+  }
+
+  for (auto& collection : collections) {
+    auto wait_result = (*collection)->WaitForBuffersAllocated();
+    ASSERT_TRUE(!wait_result.ok() && wait_result.error().status() == ZX_ERR_PEER_CLOSED ||
+                wait_result.ok() && wait_result->status == ZX_ERR_NOT_SUPPORTED);
+  }
+}
+
+TEST(Sysmem, GroupChildSelectionCombinationCountLimit) {
+  const uint32_t kCompatibleSize = zx_system_get_page_size();
+  const uint32_t kIncompatibleSize = 2 * zx_system_get_page_size();
+  std::vector<std::shared_ptr<Token>> incompatible_tokens;
+  std::vector<std::shared_ptr<Token>> compatible_tokens;
+  std::vector<std::shared_ptr<Group>> groups;
+  std::vector<std::shared_ptr<Collection>> collections;
+  auto root_token = std::make_shared<Token>(create_initial_token());
+  incompatible_tokens.emplace_back(root_token);
+  // Essentially counting to 2^64 would take too long and cause the test to time out.  The fact
+  // that the test doesn't time out (and instead the logical allocation fails) shows that sysmem
+  // isn't trying all the group child selections, by design.
+  for (uint32_t i = 0; i < 64; ++i) {
+    auto group = std::make_shared<Group>(create_group_under_token(*root_token));
+    groups.emplace_back(group);
+    auto child_token_0 = std::make_shared<Token>(create_token_under_group(*group));
+    compatible_tokens.emplace_back(child_token_0);
+    auto child_token_1 = std::make_shared<Token>(create_token_under_group(*group));
+    compatible_tokens.emplace_back(child_token_1);
+  }
+  for (auto& token : compatible_tokens) {
+    auto collection = std::make_shared<Collection>(convert_token_to_collection(std::move(*token)));
+    collections.emplace_back(collection);
+    set_picky_constraints(*collection, kCompatibleSize);
+  }
+  for (auto& token : incompatible_tokens) {
+    auto collection = std::make_shared<Collection>(convert_token_to_collection(std::move(*token)));
+    collections.emplace_back(collection);
+    set_picky_constraints(*collection, kIncompatibleSize);
+  }
+  for (auto& group : groups) {
+    auto result = (*group)->AllChildrenPresent();
+    ASSERT_TRUE(result.ok());
+  }
+  // Because the root has constraints that are incompatible with any group child token, the logical
+  // allocation will fail (eventually).  The fact that it fails in a duration that avoids the test
+  // timing out is passing the test.
+  for (auto& collection : collections) {
+    // If we get stuck here, it means the test will time out, which is effectively a failure.
+    auto wait_result = (*collection)->WaitForBuffersAllocated();
+    ASSERT_TRUE(!wait_result.ok() && wait_result.error().status() == ZX_ERR_PEER_CLOSED ||
+                wait_result.ok() && wait_result->status == ZX_ERR_OUT_OF_RANGE);
+  }
+}
+
+TEST(Sysmem, GroupCreateChildrenSync) {
+  for (uint32_t is_oddball_writable = 0; is_oddball_writable < 2; ++is_oddball_writable) {
+    const uint32_t kCompatibleSize = zx_system_get_page_size();
+    const uint32_t kIncompatibleSize = 2 * zx_system_get_page_size();
+    auto root_token = create_initial_token();
+    auto group = create_group_under_token(root_token);
+    check_group_alive(group);
+    constexpr uint32_t kTokenCount = 16;
+    zx_rights_t rights_attenuation_masks[kTokenCount];
+    for (auto& rights : rights_attenuation_masks) {
+      rights = ZX_RIGHT_SAME_RIGHTS;
+    }
+    constexpr uint32_t kOddballIndex = kTokenCount / 2;
+    if (!is_oddball_writable) {
+      rights_attenuation_masks[kOddballIndex] = (0xFFFFFFFF & ~ZX_RIGHT_WRITE);
+      ZX_ASSERT((rights_attenuation_masks[kOddballIndex] & ZX_RIGHT_WRITE) == 0);
+    }
+    auto result = group->CreateChildrenSync(
+        fidl::VectorView<zx_rights_t>::FromExternal(rights_attenuation_masks));
+    ASSERT_TRUE(result.ok());
+    std::vector<fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken>> tokens;
+    for (auto& token_client : result->tokens) {
+      tokens.emplace_back(fidl::WireSyncClient(std::move(token_client)));
+    }
+    tokens.emplace_back(std::move(root_token));
+    auto is_root = [&](uint32_t index) { return index == tokens.size() - 1; };
+    auto is_oddball = [&](uint32_t index) { return index == kOddballIndex; };
+    auto is_compatible = [&](uint32_t index) { return is_oddball(index) || is_root(index); };
+    std::vector<fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>> collections;
+    collections.reserve(tokens.size());
+    for (auto& token : tokens) {
+      collections.emplace_back(convert_token_to_collection(std::move(token)));
+    }
+    uint32_t index = 0;
+    for (auto& collection : collections) {
+      uint32_t size = is_compatible(index) ? kCompatibleSize : kIncompatibleSize;
+      set_picky_constraints(collection, size);
+      ++index;
+    }
+    auto group_done_result = group->AllChildrenPresent();
+    ASSERT_TRUE(group_done_result.ok());
+    index = 0;
+    for (auto& collection : collections) {
+      auto inc_index = fit::defer([&] { ++index; });
+      auto wait_result = collection->WaitForBuffersAllocated();
+      if (!is_compatible(index)) {
+        ASSERT_TRUE(!wait_result.ok() && wait_result.error().status() == ZX_ERR_PEER_CLOSED ||
+                    wait_result.ok() && wait_result->status == ZX_ERR_NOT_SUPPORTED);
+        continue;
+      }
+      ASSERT_TRUE(wait_result.ok());
+      ASSERT_OK(wait_result->status);
+      auto info = std::move(wait_result->buffer_collection_info);
+      // root and oddball both said min_buffer_count_for_camping 1
+      ASSERT_EQ(info.buffer_count, 2);
+      ASSERT_EQ(info.settings.buffer_settings.size_bytes, kCompatibleSize);
+      zx::unowned_vmo vmo(info.buffers[0].vmo);
+      zx_info_handle_basic_t basic_info{};
+      zx_status_t get_info_status =
+          vmo->get_info(ZX_INFO_HANDLE_BASIC, &basic_info, sizeof(basic_info), nullptr, nullptr);
+      ZX_ASSERT(get_info_status == ZX_OK);
+      uint8_t data = 42;
+      zx_status_t write_status = vmo->write(&data, 0, sizeof(data));
+      if (is_root(index)) {
+        ASSERT_OK(write_status);
+      } else {
+        ZX_ASSERT(is_oddball(index));
+        if (is_oddball_writable) {
+          ASSERT_OK(write_status);
+        } else {
+          ASSERT_EQ(write_status, ZX_ERR_ACCESS_DENIED);
+        }
+      }
+    }
   }
 }
 

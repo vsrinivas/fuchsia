@@ -178,7 +178,7 @@ void BufferCollection::SetConstraints(SetConstraintsRequestView request,
   //
   // The LogicalBufferCollection cares if this BufferCollection view has null
   // constraints, but only later when it asks for the specific constraints.
-  logical_buffer_collection().OnSetConstraints();
+  logical_buffer_collection().OnNodeReady();
   // |this| may be gone at this point, if the allocation failed.  Regardless,
   // SetConstraints() worked, so ZX_OK.
 }
@@ -575,6 +575,12 @@ const BufferCollectionToken* BufferCollection::buffer_collection_token() const {
 BufferCollection* BufferCollection::buffer_collection() { return this; }
 
 const BufferCollection* BufferCollection::buffer_collection() const { return this; }
+
+BufferCollectionTokenGroup* BufferCollection::buffer_collection_token_group() { return nullptr; }
+
+const BufferCollectionTokenGroup* BufferCollection::buffer_collection_token_group() const {
+  return nullptr;
+}
 
 OrphanedNode* BufferCollection::orphaned_node() { return nullptr; }
 

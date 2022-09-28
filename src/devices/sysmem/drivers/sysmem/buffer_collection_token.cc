@@ -206,6 +206,24 @@ void BufferCollectionToken::SetDispensableInternal() {
   }
 }
 
+void BufferCollectionToken::CreateBufferCollectionTokenGroup(
+    CreateBufferCollectionTokenGroupRequestView request,
+    CreateBufferCollectionTokenGroupCompleter::Sync& completer) {
+  TRACE_DURATION("gfx", "BufferCollectionTokenGroup::CreateBufferCollectionTokenGroup", "this",
+                 this, "logical_buffer_collection", &logical_buffer_collection());
+  table_set().MitigateChurn();
+  if (is_done_) {
+    // Probably a Close() followed by Duplicate(), which is illegal and
+    // causes the whole LogicalBufferCollection to fail.
+    FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
+             "BufferCollectionToken::CreateBufferCollectionTokenGroup() attempted when is_done_");
+    return;
+  }
+  NodeProperties* new_node_properties = node_properties().NewChild(&logical_buffer_collection());
+  logical_buffer_collection().CreateBufferCollectionTokenGroup(
+      shared_logical_buffer_collection(), new_node_properties, std::move(request->group_request));
+}
+
 void BufferCollectionToken::SetVerboseLogging(SetVerboseLoggingCompleter::Sync& completer) {
   SetVerboseLoggingImplV1(completer);
 }
@@ -258,6 +276,14 @@ const BufferCollectionToken* BufferCollectionToken::buffer_collection_token() co
 BufferCollection* BufferCollectionToken::buffer_collection() { return nullptr; }
 
 const BufferCollection* BufferCollectionToken::buffer_collection() const { return nullptr; }
+
+BufferCollectionTokenGroup* BufferCollectionToken::buffer_collection_token_group() {
+  return nullptr;
+}
+
+const BufferCollectionTokenGroup* BufferCollectionToken::buffer_collection_token_group() const {
+  return nullptr;
+}
 
 OrphanedNode* BufferCollectionToken::orphaned_node() { return nullptr; }
 

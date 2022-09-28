@@ -39,6 +39,12 @@ BufferCollection* OrphanedNode::buffer_collection() { return nullptr; }
 
 const BufferCollection* OrphanedNode::buffer_collection() const { return nullptr; }
 
+BufferCollectionTokenGroup* OrphanedNode::buffer_collection_token_group() { return nullptr; }
+
+const BufferCollectionTokenGroup* OrphanedNode::buffer_collection_token_group() const {
+  return nullptr;
+}
+
 OrphanedNode* OrphanedNode::orphaned_node() { return this; }
 
 const OrphanedNode* OrphanedNode::orphaned_node() const { return this; }

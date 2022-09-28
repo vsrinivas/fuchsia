@@ -31,9 +31,11 @@ namespace sysmem_driver {
 class NodeProperties;
 class BufferCollection;
 class BufferCollectionToken;
+class BufferCollectionTokenGroup;
 class OrphanedNode;
 
-// Implemented by BufferCollectionToken, BufferCollection, and OrphanedNode.
+// Implemented by BufferCollectionToken, BufferCollectionTokenGroup, BufferCollection, and
+// OrphanedNode.
 //
 // Things that can change when transmuting from BufferCollectionToken to BufferCollection, from
 // BufferCollectionToken to OrphanedNode, or from BufferCollection to OrphanedNode, should generally
@@ -74,6 +76,10 @@ class Node : public fbl::RefCounted<Node> {
   // If this Node is an OrphanedNode, returns the OrphanedNode*, else returns nullptr.
   virtual OrphanedNode* orphaned_node() = 0;
   virtual const OrphanedNode* orphaned_node() const = 0;
+  // If this Node is a BufferCollectionTokenGroup, returns the BufferCollectionTokenGroup*, else
+  // returns nullptr.
+  virtual BufferCollectionTokenGroup* buffer_collection_token_group() = 0;
+  virtual const BufferCollectionTokenGroup* buffer_collection_token_group() const = 0;
   // This is a constant per sub-class of Node.  When a "connected" node is no longer connected, the
   // Node sub-class is replaced with OrphanedNode, or deleted as appropriate.
   virtual bool is_connected_type() const = 0;

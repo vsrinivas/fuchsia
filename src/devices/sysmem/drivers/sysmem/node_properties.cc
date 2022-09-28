@@ -223,6 +223,36 @@ void NodeProperties::SetNode(fbl::RefPtr<Node> node) {
   node_ = std::move(node);
 }
 
+void NodeProperties::SetWhichChild(uint32_t which_child) {
+  ZX_DEBUG_ASSERT(which_child < child_count());
+  which_child_ = {which_child};
+}
+
+void NodeProperties::ResetWhichChild() { which_child_ = {std::nullopt}; }
+
+std::optional<uint32_t> NodeProperties::which_child() const { return which_child_; }
+
+bool NodeProperties::visible() const {
+  // We could stop at the root of the pruned sub-tree of the current logical allocation, but for now
+  // we just iterate to the root (in visibile true case).
+  for (const auto* iter = this; iter; iter = iter->parent()) {
+    if (!iter->parent()) {
+      return true;
+    }
+    auto* parent = iter->parent();
+    if (!parent->which_child()) {
+      // If which_child() isn't set, then that means "all", which can't be hiding "this".
+      continue;
+    }
+    ZX_DEBUG_ASSERT(*parent->which_child() < parent->child_count());
+    if (parent->children_[*parent->which_child()].get() != iter) {
+      return false;
+    }
+  }
+  ZX_PANIC("impossible\n");
+  return true;
+}
+
 NodeProperties::NodeProperties(LogicalBufferCollection* logical_buffer_collection)
     : logical_buffer_collection_(logical_buffer_collection) {
   ZX_DEBUG_ASSERT(logical_buffer_collection_);
