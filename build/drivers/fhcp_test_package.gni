@@ -1,0 +1,78 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components/fuchsia_test_package.gni")
+
+# Defines an FHCP driver test.
+# A test under the Fuchsia Hardware Compatibility Program is meant to be
+# generic to the type of device under test. These tests are used to qualify
+# a given driver as conforming to the standards of a Fuchsia driver.
+#
+# This template is equivalent to the `fuchsia_test_package` template, with
+# a specific set of additions that enable FHCP metadata gathering. These
+# additional parameters are all required so that FHCP tests are properly
+# categorized.
+#
+# TODO(fxb/108539): Link to further documentation about these parameters.
+#
+# Parameters
+#
+#   test_types (required)
+#     The criteria type this test falls under. If the test evaluates that the driver has correct
+#     functionality, then the value here should be `[ "functional" ]`. This is an array, so a test
+#     can have multiple categories.
+#     Type: array of strings
+#   device_categories (required)
+#     The types of devices that this test is intended to exercise. A device type consists of two
+#     parts: an overarching type (such as "imaging") and a sub-type (such as "camera"). These are
+#     paired up into braced ("{}") groups. A device can have multiple types, so this is an array
+#     of those groups.
+#     Example: [ {
+#                  category = "input"
+#                  subcategory = "touchpad"
+#                },
+#                {
+#                  category = "bluetooth"
+#                  subcategory = ""
+#                } ]
+#     Type: array of objects
+#   test_specs.environments (required)
+#     This is the same as `test_specs.environments` in fuchsia_test_package() but it is now
+#     required. You must specify what type of Fuchsia devices(s) this driver test is able to
+#     run on.
+#     See //build/testing/environments.gni for some existing choices.
+# See fuchsia_test_package() for additional parameters.
+template("fhcp_test_package") {
+  assert(defined(invoker.test_types),
+         "Must define at least one test_type for $target_name")
+  assert(defined(invoker.device_categories),
+         "Must define at least one device_category for $target_name")
+  assert(
+      defined(invoker.test_specs),
+      "Must define the test specs that are relevant for running $target_name")
+  specs = invoker.test_specs
+  assert(
+      defined(specs.environments),
+      "Must define the environments that are relevant for running $target_name")
+  target_path = get_label_info(":$target_name", "label_with_toolchain")
+
+  fuchsia_test_package(target_name) {
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "device_categories",
+                             "test_types",
+                           ])
+    metadata = {
+      fhcp = [
+        {
+          id = target_path
+          test_types = invoker.test_types
+          device_categories = invoker.device_categories
+          environments = specs.environments
+        },
+      ]
+    }
+  }
+}

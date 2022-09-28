@@ -28,6 +28,7 @@ group("tests") {
     "driver-register:tests",
     "driver-runtime:tests",
     "driver-transport:tests",
+    "fhcp:tests",
     "fidl-bindlib-generation:tests",
     "fidl-protocol:tests",
     "fidl-service:tests",
