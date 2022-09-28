@@ -5,14 +5,22 @@
 package project
 
 import (
+	"context"
 	"encoding/json"
 	"io/fs"
 	"log"
 	"path/filepath"
+
+	"go.fuchsia.dev/fuchsia/tools/check-licenses/util"
 )
 
-var AllProjects map[string]*Project
-var FilteredProjects map[string]*Project
+var (
+	AllProjects      map[string]*Project
+	FilteredProjects map[string]*Project
+
+	git *util.Git
+	ctx context.Context
+)
 
 func init() {
 	AllProjects = make(map[string]*Project)
@@ -20,6 +28,14 @@ func init() {
 }
 
 func Initialize(c *ProjectConfig) error {
+	var err error
+
+	ctx = context.Background()
+	git, err = util.NewGit()
+	if err != nil {
+		return err
+	}
+
 	// Save the config file to the out directory (if defined).
 	if b, err := json.MarshalIndent(c, "", "  "); err != nil {
 		return err

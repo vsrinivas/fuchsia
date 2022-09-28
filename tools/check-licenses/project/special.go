@@ -57,6 +57,28 @@ func NewSpecialProject(projectRootPath string) (*Project, error) {
 		SourceCodeIncluded: false,
 	}
 
+	switch {
+	case strings.Contains(p.Root, "dart-pkg"):
+		p.URL = fmt.Sprintf("https://pub.dev/packages/%v", projectName)
+
+	case strings.Contains(p.Root, "golibs"):
+		re := regexp.MustCompile(`(.*golibs\/vendor\/)`)
+		url := re.ReplaceAllString(p.Root, "")
+		url = strings.ReplaceAll(url, "/LICENSE", "")
+		p.URL = fmt.Sprintf("https://pkg.go.dev/%v", url)
+
+	case strings.Contains(p.Root, "rust_crates"):
+		url, err := git.GetURL(ctx, p.Root)
+		if err != nil {
+			return nil, err
+		}
+		hash, err := git.GetCommitHash(ctx, p.Root)
+		if err != nil {
+			return nil, err
+		}
+		p.URL = fmt.Sprintf("%v/+/%v", url, hash)
+	}
+
 	for _, l := range licenseFilePaths {
 		l = filepath.Join(p.Root, l)
 		l = filepath.Clean(l)
@@ -67,19 +89,14 @@ func NewSpecialProject(projectRootPath string) (*Project, error) {
 		}
 		p.LicenseFile = append(p.LicenseFile, licenseFile)
 
-		if strings.Contains(l, "dart-pkg") {
-			licenseFile.Url = fmt.Sprintf("https://pub.dev/packages/%v/license", projectName)
-		}
+		switch {
+		case strings.Contains(l, "dart-pkg"):
+			licenseFile.Url = fmt.Sprintf("%v/license", p.URL)
 
-		if strings.Contains(l, "golibs") {
-			re := regexp.MustCompile(`(.*golibs\/vendor\/)`)
-			url := re.ReplaceAllString(l, "")
-			url = strings.ReplaceAll(url, "/LICENSE", "")
-			url = fmt.Sprintf("https://pkg.go.dev/%v?tab=licenses", url)
-			licenseFile.Url = url
-		}
+		case strings.Contains(l, "golibs"):
+			licenseFile.Url = fmt.Sprintf("%v?tab=licenses", p.URL)
 
-		if strings.Contains(l, "rust_crates") {
+		case strings.Contains(l, "rust_crates"):
 			rel := l
 			if strings.Contains(l, Config.FuchsiaDir) {
 				rel, _ = filepath.Rel(Config.FuchsiaDir, l)

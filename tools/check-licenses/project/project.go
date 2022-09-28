@@ -133,6 +133,24 @@ func NewProject(readmePath string, projectRootPath string) (*Project, error) {
 		SourceCodeIncluded: false,
 	}
 
+	if Config.OutputLicenseFile {
+		// Retrieve the git repo of the given project by running
+		// "git config" in the project root.
+		url, err := git.GetURL(ctx, projectRootPath)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to get git URL for project %v: %v", projectRootPath, err)
+		}
+		// Turquoise repos return "sso" urls, so convert them to
+		// http links that a user can view in a browser.
+		url = strings.ReplaceAll(url, "sso://turquoise-internal", "https://turquoise-internal.googlesource.com")
+		// Append the current commit hash to the URL.
+		hash, err := git.GetCommitHash(ctx, projectRootPath)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to get git commit hash for project %v: %v", projectRootPath, err)
+		}
+		p.URL = fmt.Sprintf("%v/+/%v", url, hash)
+	}
+
 	f, err := os.Open(readmePath)
 	if err != nil {
 		return nil, fmt.Errorf("NewProject(%v): %v\n", projectRootPath, err)
@@ -149,7 +167,8 @@ func NewProject(readmePath string, projectRootPath string) (*Project, error) {
 			p.Name = strings.TrimSpace(strings.TrimPrefix(line, "Name:"))
 			multiline = ""
 		} else if strings.HasPrefix(line, "URL:") {
-			p.URL = strings.TrimSpace(strings.TrimPrefix(line, "URL:"))
+			// In practice, most README.fuchsia projects don't use
+			// this URL field correctly, so leave p.URL blank.
 			multiline = ""
 		} else if strings.HasPrefix(line, "Version:") {
 			p.Version = strings.TrimSpace(strings.TrimPrefix(line, "Version:"))
