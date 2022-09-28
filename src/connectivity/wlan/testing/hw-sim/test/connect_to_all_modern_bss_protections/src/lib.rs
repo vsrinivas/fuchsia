@@ -78,8 +78,10 @@ async fn connect_to_modern_wpa_network() {
             password_or_psk_to_policy_credential(credential),
         )
         .await;
+        let id =
+            fidl_policy::NetworkIdentifier { ssid: ssid.to_vec(), type_: policy_security_type };
         wait_until_client_state(&mut client_state_update_stream, |update| {
-            has_ssid_and_state(update, &ssid, fidl_policy::ConnectionState::Disconnected)
+            has_id_and_state(update, &id, fidl_policy::ConnectionState::Disconnected)
         })
         .await;
     }

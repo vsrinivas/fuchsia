@@ -204,16 +204,16 @@ pub async fn wait_until_client_state<F: Fn(fidl_policy::ClientStateSummary) -> b
     panic!("The stream unexpectedly terminated");
 }
 
-pub fn has_ssid_and_state(
+pub fn has_id_and_state(
     update: fidl_policy::ClientStateSummary,
-    ssid_to_match: &[u8],
+    id_to_match: &NetworkIdentifier,
     state_to_match: fidl_policy::ConnectionState,
 ) -> bool {
     for net_state in update.networks.expect("getting client networks") {
         let id = net_state.id.expect("empty network ID");
         let state = net_state.state.expect("empty network state");
 
-        if id.ssid == ssid_to_match && state == state_to_match {
+        if &id == id_to_match && state == state_to_match {
             return true;
         }
     }
@@ -290,9 +290,12 @@ pub async fn await_failed(
     network_identifier: fidl_policy::NetworkIdentifier,
     disconnect_status: fidl_policy::DisconnectStatus,
 ) {
-    let ssid = network_identifier.ssid.clone();
     wait_until_client_state(&mut client_state_update_stream, |update| {
-        if has_ssid_and_state(update.clone(), &ssid, fidl_policy::ConnectionState::Failed) {
+        if has_id_and_state(
+            update.clone(),
+            &network_identifier,
+            fidl_policy::ConnectionState::Failed,
+        ) {
             assert_eq!(
                 update.networks,
                 Some(vec![fidl_policy::NetworkState {

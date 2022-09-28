@@ -108,17 +108,20 @@ async fn verify_wlan_inspect() {
 
     let (client_controller, mut client_state_update_stream) =
         wlan_hw_sim::init_client_controller().await;
+    let security_type = fidl_policy::SecurityType::None;
     {
         let connect_fut = async {
             save_network(
                 &client_controller,
                 &AP_SSID,
-                fidl_policy::SecurityType::None,
+                security_type,
                 password_or_psk_to_policy_credential::<String>(None),
             )
             .await;
+            let id =
+                fidl_policy::NetworkIdentifier { ssid: AP_SSID.to_vec(), type_: security_type };
             wait_until_client_state(&mut client_state_update_stream, |update| {
-                has_ssid_and_state(update, &AP_SSID, fidl_policy::ConnectionState::Connected)
+                has_id_and_state(update, &id, fidl_policy::ConnectionState::Connected)
             })
             .await;
         };
@@ -204,8 +207,10 @@ async fn verify_wlan_inspect() {
         password_or_psk_to_policy_credential::<String>(None),
     )
     .await;
+
+    let id = fidl_policy::NetworkIdentifier { ssid: AP_SSID.to_vec(), type_: security_type };
     wait_until_client_state(&mut client_state_update_stream, |update| {
-        has_ssid_and_state(update, &AP_SSID, fidl_policy::ConnectionState::Disconnected)
+        has_id_and_state(update, &id, fidl_policy::ConnectionState::Disconnected)
     })
     .await;
 

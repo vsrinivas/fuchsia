@@ -784,8 +784,9 @@ pub async fn save_network_and_wait_until_connected(
     save_network(&client_controller, ssid, security_type, credential).await;
 
     // Wait until the policy layer indicates that the client has successfully connected.
+    let id = fidl_policy::NetworkIdentifier { ssid: ssid.to_vec(), type_: security_type.clone() };
     wait_until_client_state(&mut client_state_update_stream, |update| {
-        has_ssid_and_state(update, ssid, fidl_policy::ConnectionState::Connected)
+        has_id_and_state(update, &id, fidl_policy::ConnectionState::Connected)
     })
     .await;
 

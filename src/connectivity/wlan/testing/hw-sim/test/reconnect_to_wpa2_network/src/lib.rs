@@ -25,19 +25,21 @@ async fn test_actions(
     password: Option<&str>,
     second_association_confirm_receiver: oneshot::Receiver<()>,
 ) {
+    let security_type = fidl_policy::SecurityType::Wpa2;
     // Connect to the client policy service and get a client controller.
     let (_client_controller, mut client_state_update_stream) =
         save_network_and_wait_until_connected(
             ssid,
-            fidl_policy::SecurityType::Wpa2,
+            security_type,
             password_or_psk_to_policy_credential(password),
         )
         .await;
 
     let t = Task::spawn(async move {
+        let id = fidl_policy::NetworkIdentifier { ssid: ssid.to_vec(), type_: security_type };
         // Check updates from the policy. If we see disconnect, panic.
         wait_until_client_state(&mut client_state_update_stream, |update| {
-            has_ssid_and_state(update, ssid, fidl_policy::ConnectionState::Disconnected)
+            has_id_and_state(update, &id, fidl_policy::ConnectionState::Disconnected)
         })
         .await;
         panic!("Policy saw a disconnect!");

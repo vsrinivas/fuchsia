@@ -47,7 +47,7 @@ async fn initiate_connect(
 
     // Monitor the update stream for the connected notification.
     wait_until_client_state(&mut update_stream, |update| {
-        has_ssid_and_state(update, &AP_SSID, fidl_policy::ConnectionState::Connected)
+        has_id_and_state(update, config, fidl_policy::ConnectionState::Connected)
     })
     .await;
     sender.send(()).expect("done connecting, sending message to the other future");
