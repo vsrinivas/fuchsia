@@ -24,6 +24,16 @@ provided for consuming pre-allocated, fixed-sized buffers.  It's expected that
 users of the library will provide simple chunk allocation functions appropriate
 for their own context.
 
+## BasicOwningAllocator
+
+[<lib/trivial-allocator/basic-owning-allocator.h>](include/lib/trivial-allocator/basic-owning-allocator.h)
+provides a variant of the leaky allocator that can use the same underlying
+allocation functions.  However, where the leaky allocator simply loses track of
+all the underlying allocations (leaks them), the owning allocator retains
+ownership of every underlying allocation in the allocator object itself.  All
+the piecemeal allocations point into one or more underlying allocations that
+will be reclaimed en masse at the end of the allocator object's lifetime.
+
 ## PageAllocator
 
 The `trivial_allocator::PageAllocator` template class in

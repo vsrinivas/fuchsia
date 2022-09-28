@@ -13,6 +13,7 @@ zx_library("trivial-allocator") {
   sdk = "source"
   sdk_headers = [
     "lib/trivial-allocator/basic-leaky-allocator.h",
+    "lib/trivial-allocator/basic-owning-allocator.h",
     "lib/trivial-allocator/new.h",
     "lib/trivial-allocator/page-allocator.h",
     "lib/trivial-allocator/posix.h",
@@ -91,6 +92,7 @@ static_library("panic-delete") {
 test("trivial-allocator-unittests") {
   sources = [
     "basic-leaky-allocator-tests.cc",
+    "basic-owning-allocator-tests.cc",
     "new-tests.cc",
     "page-allocator-tests.cc",
     "single-heap-allocator-tests.cc",

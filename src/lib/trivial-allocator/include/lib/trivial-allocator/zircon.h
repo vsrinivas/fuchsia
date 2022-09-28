@@ -26,7 +26,7 @@ class ZirconVmar {
   ZirconVmar() = default;
   ZirconVmar(const ZirconVmar&) = default;
 
-  explicit ZirconVmar(const zx::vmar& vmar) : vmar_(vmar) {}
+  explicit ZirconVmar(const zx::vmar& vmar) : vmar_(vmar) { assert(vmar_->is_valid()); }
 
   ZirconVmar& operator=(const ZirconVmar&) = default;
 
@@ -35,6 +35,7 @@ class ZirconVmar {
   [[gnu::const]] size_t page_size() const { return zx_system_get_page_size(); }
 
   [[nodiscard]] std::pair<void*, zx::vmar> Allocate(size_t size) {
+    assert(vmar_->is_valid());
     zx::vmo vmo;
     zx_status_t status = zx::vmo::create(size, 0, &vmo);
     if (status == ZX_OK) {
@@ -56,7 +57,7 @@ class ZirconVmar {
 
   void Deallocate(zx::vmar sub_vmar, void* ptr, size_t size) {
     // Destruction of the VMAR object cleans up the mapping.
-    assert(vmar_->is_valid());
+    assert(sub_vmar.is_valid());
     [[maybe_unused]] zx_status_t status = sub_vmar.destroy();
     assert(status == ZX_OK);
   }
@@ -64,6 +65,7 @@ class ZirconVmar {
   // The VMAR handle is consumed here, so there will no longer be any way to
   // "unseal" this allocation (that is, change page protections on the memory).
   void Seal(zx::vmar sub_vmar, void* ptr, size_t size) {
+    assert(sub_vmar.is_valid());
     [[maybe_unused]] zx_status_t status =
         sub_vmar.protect(ZX_VM_PERM_READ, reinterpret_cast<uintptr_t>(ptr), size);
     assert(status == ZX_OK);
