@@ -565,7 +565,12 @@ TEST(PagerWriteback, DirtyRequestsOverlap) {
     return vmo->vmo().write((void*)&data, 4 * zx_system_get_page_size(), sizeof(data)) == ZX_OK;
   });
   ASSERT_TRUE(t1.Start());
-  ASSERT_TRUE(t1.WaitForBlocked());
+
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 4, 5, ZX_TIME_INFINITE));
+
+  // No other page requests seen.
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 
   TestThread t2([vmo, &expected]() -> bool {
     // write pages [2,9).
@@ -575,16 +580,13 @@ TEST(PagerWriteback, DirtyRequestsOverlap) {
     return vmo->vmo().write((void*)&data, 2 * zx_system_get_page_size(), sizeof(data)) == ZX_OK;
   });
   ASSERT_TRUE(t2.Start());
-  ASSERT_TRUE(t2.WaitForBlocked());
 
-  ASSERT_TRUE(pager.GetPageDirtyRequest(vmo, ZX_TIME_INFINITE, &offset, &length));
-  printf("saw DIRTY request for [%zu, %zu)\n", offset, offset + length);
-  ASSERT_EQ(4u, offset);
-  ASSERT_EQ(5u, length);
-  ASSERT_TRUE(pager.GetPageDirtyRequest(vmo, ZX_TIME_INFINITE, &offset, &length));
-  printf("saw DIRTY request for [%zu, %zu)\n", offset, offset + length);
-  ASSERT_EQ(2u, offset);
-  ASSERT_EQ(2u, length);
+  // We should only see a request for the non-overlapping portion.
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 2, 2, ZX_TIME_INFINITE));
+
+  // No other page requests seen.
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 
   // Dirty the range [4,9).
   ASSERT_TRUE(pager.DirtyPages(vmo, 4, 5));
