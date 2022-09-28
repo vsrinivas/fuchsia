@@ -157,7 +157,9 @@ group("test") {
     deps = [
       ":experiences_ermine_session_shell_e2e_test($host_toolchain)",
       ":experiences_ermine_smoke_e2e_test($host_toolchain)",
-      ":experiences_ermine_terminal_e2e_test($host_toolchain)",
+
+      # TODO(fxbug.dev/110585): Re-enable once terminal is supported.
+      # ":experiences_ermine_terminal_e2e_test($host_toolchain)",
     ]
   }
 }
