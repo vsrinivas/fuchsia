@@ -12,14 +12,12 @@
 
 #include <cstdint>
 
-#include "src/ui/a11y/lib/screen_reader/screen_reader.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader_action.h"
 #include "src/ui/a11y/lib/screen_reader/util/util.h"
 
 namespace a11y {
 namespace {
 using fuchsia::accessibility::semantics::Hit;
-using fuchsia::accessibility::tts::Utterance;
 
 }  // namespace
 
@@ -113,7 +111,7 @@ void ExploreAction::Run(GestureContext gesture_context) {
             if (!focus) {
               return fpromise::error();
             }
-            return fpromise::ok(std::move(*focus));
+            return fpromise::ok(*focus);
           })
           .and_then([this](const A11yFocusManager::A11yFocusInfo& focus) mutable {
             return BuildSpeechTaskFromNodePromise(focus.view_ref_koid, focus.node_id);

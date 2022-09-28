@@ -49,11 +49,13 @@ class A11yFocusManagerImpl : public A11yFocusManager, public AccessibilityFocusC
 
   // |A11yFocusManager|
   //
-  // Sets the a11y focus to a different node. If the current focused view is different than the one
-  // in this request, a focus Chain is first performed to change the focus to the other view.
-  // |callback| is invoked when this operation is done, indicating if the request was granted. The
-  // request can fail if the View is not providing semantics or if the Focus Chain request was
-  // denied.
+  // Sets the a11y focus.
+  //
+  // If the new focus is in a different view from the current focus, then the
+  // focus manager will request a focus chain update from scenic, unless:
+  //
+  // (1) The new view does not provide semantics.
+  // (2) The new view contains a visible virtual keyboard.
   void SetA11yFocus(zx_koid_t koid, uint32_t node_id, SetA11yFocusCallback callback) override;
 
   // |A11yFocusManager|
@@ -63,9 +65,8 @@ class A11yFocusManagerImpl : public A11yFocusManager, public AccessibilityFocusC
 
   // |A11yFocusManager|
   //
-  // Removes current highlights (if any), and highlights node specified by identifier
-  // |{currently_focused_view,
-  // focused_node_in_view_map_[currently_focused_view_]}|.
+  // Removes current highlights (if any), and highlights the node specified by (newly_focused_view,
+  // newly_focused_node).
   void UpdateHighlights(zx_koid_t newly_focused_view, uint32_t newly_focused_node) override;
 
   // |A11yFocusManager|
@@ -91,7 +92,9 @@ class A11yFocusManagerImpl : public A11yFocusManager, public AccessibilityFocusC
   // regardless of whether the focus change occurs within the same view.
   void UpdateFocus(zx_koid_t newly_focused_view, uint32_t newly_focused_node);
 
-  // Clears the current focus highlight (if any).
+  // Removes current highlights (if any), and highlights node specified by identifier
+  // |{currently_focused_view,
+  // focused_node_in_view_map_[currently_focused_view_]}|.
   void ClearHighlights();
 
   // Map for storing node_id which is in a11y focus for every viewref_koid.

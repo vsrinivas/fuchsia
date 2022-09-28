@@ -81,13 +81,13 @@ void A11yFocusManagerImpl::SetA11yFocus(zx_koid_t koid, uint32_t node_id,
       });
 }
 
-void A11yFocusManagerImpl::UpdateFocus(zx_koid_t koid, uint32_t node_id) {
+void A11yFocusManagerImpl::UpdateFocus(zx_koid_t newly_focused_view, uint32_t newly_focused_node) {
   // Update highlights BEFORE updating the focus state, because clearing the
   // old highlight requires the old focus state.
-  UpdateHighlights(koid, node_id);
+  UpdateHighlights(newly_focused_view, newly_focused_node);
 
-  focused_node_in_view_map_[koid] = node_id;
-  currently_focused_view_ = koid;
+  focused_node_in_view_map_[newly_focused_view] = newly_focused_node;
+  currently_focused_view_ = newly_focused_view;
 
   if (on_a11y_focus_updated_callback_) {
     on_a11y_focus_updated_callback_(GetA11yFocus());

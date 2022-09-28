@@ -56,7 +56,8 @@ class A11yFocusManager {
   // newly_focused_node).
   virtual void UpdateHighlights(zx_koid_t newly_focused_view, uint32_t newly_focused_node) = 0;
 
-  // Registers a callback that is invoked when the a11y focus is updated.
+  // Registers a callback that is invoked when the a11y focus is updated. For now, only one callback
+  // can be registered at a time.
   virtual void set_on_a11y_focus_updated_callback(
       OnA11yFocusUpdatedCallback on_a11y_focus_updated_callback) = 0;
 };
