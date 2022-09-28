@@ -91,6 +91,8 @@ if (is_host) {
       "//src/developer/ffx/lib/errors:lib",
       "//src/developer/ffx/lib/version:lib",
       "//src/developer/ffx/lib/writer:lib",
+      "//src/developer/ffx/plugins/daemon:ffx_daemon_plugin_args",
+      "//src/developer/ffx/plugins/daemon:ffx_daemon_plugin_sub_command",
       "//third_party/rust_crates:anyhow",
     ]
 

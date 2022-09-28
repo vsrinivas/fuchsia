@@ -154,6 +154,22 @@ impl Ffx {
     }
 }
 
+/// Whether the given subcommand forces logging to stdout
+pub fn forces_stdout_log(subcommand: &Option<SubCommand>) -> bool {
+    if let Some(SubCommand::FfxDaemonPlugin(ffx_daemon_plugin_args::DaemonCommand {
+        subcommand: ffx_daemon_plugin_sub_command::SubCommand::FfxDaemonStart(_),
+    })) = subcommand
+    {
+        return true;
+    }
+    false
+}
+
+/// Whether the given subcommand is actually the schema command, which we need to override
+pub fn is_schema(subcommand: &Option<SubCommand>) -> bool {
+    matches!(subcommand, Some(SubCommand::FfxSchema(_)))
+}
+
 /// Create a `FromArgs` type from the current process's `env::args`, potentially
 /// getting an overridden command name from the environment from FFX_WRAPPER_INVOKE
 /// by wrapper scripts.

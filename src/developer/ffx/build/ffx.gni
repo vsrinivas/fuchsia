@@ -56,7 +56,6 @@ template("ffx") {
 
     deps = ffx_deps + [
              ":" + suite_name + "_args",
-             ":" + suite_name + "_sub_command",
              ":" + suite_name + "_suite",
              "//src/connectivity/overnet/lib/hoist",
              "//src/developer/ffx/config:lib",
@@ -65,8 +64,6 @@ template("ffx") {
              "//src/developer/ffx/lib/buildid:lib",
              "//src/developer/ffx/lib/errors:lib",
              "//src/developer/ffx/lib/metrics:lib",
-             "//src/developer/ffx/plugins/daemon:ffx_daemon_plugin_args",
-             "//src/developer/ffx/plugins/daemon:ffx_daemon_plugin_sub_command",
              "//src/lib/analytics/rust:lib",
              "//src/lib/fuchsia-async",
              "//third_party/rust_crates:anyhow",

@@ -9,28 +9,13 @@ use errors::{ffx_error, ResultExt as _};
 use ffx_config::get_log_dirs;
 use ffx_core::Injector;
 use ffx_daemon_proxy::Injection;
-use ffx_lib_args::{from_env, redact_arg_values, Ffx};
-use ffx_lib_sub_command::SubCommand;
+use ffx_lib_args::{forces_stdout_log, from_env, is_schema, redact_arg_values, Ffx};
 use ffx_metrics::{add_ffx_launch_and_timing_events, init_metrics_svc};
 use fuchsia_async::TimeoutExt;
 use std::fs::File;
 use std::io::Write;
 use std::str::FromStr;
 use std::time::{Duration, Instant};
-
-fn is_daemon(subcommand: &Option<SubCommand>) -> bool {
-    if let Some(SubCommand::FfxDaemonPlugin(ffx_daemon_plugin_args::DaemonCommand {
-        subcommand: ffx_daemon_plugin_sub_command::SubCommand::FfxDaemonStart(_),
-    })) = subcommand
-    {
-        return true;
-    }
-    false
-}
-
-fn is_schema(subcommand: &Option<SubCommand>) -> bool {
-    matches!(subcommand, Some(SubCommand::FfxSchema(_)))
-}
 
 async fn report_log_hint(writer: &mut dyn std::io::Write) {
     let msg = if let Ok(log_dirs) = get_log_dirs().await {
@@ -88,8 +73,8 @@ async fn run() -> Result<()> {
         }
     };
 
-    let is_daemon = is_daemon(&app.subcommand);
-    ffx_config::logging::init(is_daemon || app.verbose, !is_daemon).await?;
+    let log_to_stdio = forces_stdout_log(&app.subcommand);
+    ffx_config::logging::init(log_to_stdio || app.verbose, !log_to_stdio).await?;
 
     tracing::info!("starting command: {:?}", std::env::args().collect::<Vec<String>>());
 
