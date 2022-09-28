@@ -38,7 +38,9 @@ fuchsia_driver("as370-driver") {
     "as370-i2c.cc",
     "as370-light.cc",
     "as370-nand.cc",
+    "as370-nna.cc",
     "as370-power.cc",
+    "as370-registers.cc",
     "as370-sdio.cc",
     "as370-thermal.cc",
     "as370-touch.cc",
@@ -48,6 +50,7 @@ fuchsia_driver("as370-driver") {
   deps = [
     ":as370-bind",
     ":as370-bind_header",
+    ":as370-nna-bind_header",
     ":as370-wifi-bind_header",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",
@@ -58,6 +61,7 @@ fuchsia_driver("as370-driver") {
     "//src/devices/lib/as370",
     "//src/devices/lib/driver",
     "//src/devices/lib/fidl-metadata",
+    "//src/devices/lib/metadata:llcpp",
     "//src/devices/lib/mmio",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
@@ -68,6 +72,10 @@ fuchsia_driver("as370-driver") {
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
   ]
+
+  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
+  # rather than builders.
+  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 
   # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
   # Consider switching to the C++ bindings. See linked bug for details.
@@ -85,10 +93,23 @@ fuchsia_driver_component("as370") {
   root_resource = true
 }
 
+driver_bind_rules("as370-nna-bind") {
+  rules = "bind/as370-nna.bind"
+  header_output = "as370_nna_bind.h"
+  bind_output = "as370_nna_bind.bc"
+  tests = "bind-tests/as370-nna-bind-test.json"
+  deps = [
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.registers",
+    "//src/devices/bind/fuchsia.synaptics.platform",
+  ]
+}
+
 group("tests") {
   testonly = true
   deps = [
     ":as370-bind_test",
+    ":as370-nna-bind_test",
     ":as370-wifi-bind_test",
   ]
 }

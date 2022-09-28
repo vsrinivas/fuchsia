@@ -1,0 +1,11 @@
+{
+    "short_description": "Verisilicon NNA driver",
+    "manufacturer": "Verisilicon",
+    "families": [],
+    "models": [
+        "AS370"
+    ],
+    "areas": [
+        "ML"
+    ]
+}

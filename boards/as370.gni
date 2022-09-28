@@ -17,11 +17,13 @@ _common_bootfs_deps = [
   "//src/devices/board/drivers/as370",
   "//src/devices/clock/drivers/as370-clk",
   "//src/devices/gpio/drivers/as370-gpio",
+  "//src/devices/ml/drivers/as370-nna",
   "//src/devices/nand/drivers/cadence-hpnfc",
   "//src/devices/nand/drivers/nand",
   "//src/devices/nand/drivers/nandpart",
   "//src/devices/nand/drivers/skip-block",
   "//src/devices/power/drivers/as370-power",
+  "//src/devices/registers/drivers/registers",
   "//src/devices/shareddma/drivers/syn-dma",
   "//src/devices/thermal/drivers/as370-thermal",
   "//src/devices/usb/drivers/as370-usb-phy",
@@ -43,6 +45,8 @@ board_bootfs_labels += _common_bootfs_deps
 board_zedboot_bootfs_labels += _common_bootfs_deps
 
 board_recovery_bootfs_labels += _common_bootfs_deps
+
+board_driver_package_labels += [ "//src/graphics/drivers/msd-vsi-vip" ]
 
 # TODO(fxbug.dev/94099): add back in the future
 board_package_labels += [

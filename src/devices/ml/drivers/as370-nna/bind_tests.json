@@ -1,0 +1,19 @@
+[
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "Protocol"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_COMPOSITE": "1",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.synaptics.platform.BIND_PLATFORM_DEV_DID.AS370_NNA",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.synaptics.platform.BIND_PLATFORM_DEV_PID.AS370",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.synaptics.platform.BIND_PLATFORM_DEV_VID.SYNAPTICS"
+        },
+        "expected": "match",
+        "name": "AS370"
+    }
+]

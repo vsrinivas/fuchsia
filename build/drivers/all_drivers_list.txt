@@ -158,6 +158,7 @@
 //src/devices/misc/drivers/test:test-driver
 //src/devices/misc/drivers/virtio-rng:virtio_rng-driver
 //src/devices/ml/drivers/aml-nna:aml-nna-driver
+//src/devices/ml/drivers/as370-nna:as370-nna-driver
 //src/devices/ml/drivers/usb-harriet:usb-harriet-driver
 //src/devices/nand/drivers/aml-rawnand:aml-rawnand-driver
 //src/devices/nand/drivers/broker:nand-broker-driver

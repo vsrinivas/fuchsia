@@ -19,6 +19,7 @@ enum {
   BTI_USB,
   BTI_AUDIO_DHUB,
   BTI_SDIO0,
+  BTI_NNA,
 };
 
 class As370 : public ddk::Device<As370> {
@@ -42,7 +43,9 @@ class As370 : public ddk::Device<As370> {
   zx_status_t ClockInit();
   zx_status_t LightInit();
   zx_status_t NandInit();
+  zx_status_t NnaInit();
   zx_status_t PowerInit();
+  zx_status_t RegistersInit();
   zx_status_t SdioInit();
   zx_status_t ThermalInit();
   zx_status_t TouchInit();

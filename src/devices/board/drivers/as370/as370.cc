@@ -73,6 +73,12 @@ int As370::Thread() {
     return thrd_error;
   }
 
+  status = RegistersInit();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: RegistersInit() failed: %s", __func__, zx_status_get_string(status));
+    return thrd_error;
+  }
+
   if (UsbInit() != ZX_OK) {
     zxlogf(ERROR, "%s: UsbInit() failed", __func__);
   }
@@ -92,6 +98,10 @@ int As370::Thread() {
 
   if (NandInit() != ZX_OK) {
     zxlogf(ERROR, "%s: NandInit() failed", __func__);
+  }
+
+  if (NnaInit() != ZX_OK) {
+    zxlogf(ERROR, "%s: NnaInit() failed", __func__);
   }
 
   if (PowerInit() != ZX_OK) {
