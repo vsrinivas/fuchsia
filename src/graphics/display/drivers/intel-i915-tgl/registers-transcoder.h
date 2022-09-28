@@ -5,6 +5,8 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_TGL_REGISTERS_TRANSCODER_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_TGL_REGISTERS_TRANSCODER_H_
 
+#include <zircon/assert.h>
+
 #include <optional>
 
 #include <hwreg/bitfields.h>
@@ -240,29 +242,199 @@ class TranscoderClockSelect : public hwreg::RegisterBase<TranscoderClockSelect, 
   }
 };
 
-// DATAM
-class TransDataM : public hwreg::RegisterBase<TransDataM, uint32_t> {
+// DATAM / TRANS_DATAM1 (Transcoder Data M Value 1)
+//
+// This register is double-buffered and the update triggers when the first
+// MSA (Main Stream Attributes packet) that is sent after LINKN is modified.
+//
+// All unassigned bits in this register are MBZ (must be zero), so it's safe to
+// assign this register without reading its old value.
+//
+// Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1 pages 328-329
+// Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 1 pages 427-428
+// Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 pages 422-423
+class TranscoderDataM : public hwreg::RegisterBase<TranscoderDataM, uint32_t> {
  public:
-  DEF_FIELD(30, 25, tu_or_vcpayload_size);
-  DEF_FIELD(23, 0, data_m_value);
+  DEF_RSVDZ_BIT(31);
+
+  // Selects the TU (transfer unit) or VC (Virtual Channel) payload size.
+  //
+  // This field has a non-trivial value encoding. The `payload_size()` and
+  // `set_payload_size()` helpers should be preferred to accessing the field
+  // directly.
+  DEF_FIELD(30, 25, payload_size_select);
+
+  // Selects the TU (transfer unit) or VC (Virtual Channel) payload size.
+  //
+  // In DisplayPort SST (Single Stream) mode, this field represents the TU
+  // (transfer unit size), which is typically set to 64.
+  //
+  // In DisplayPort MST (Multi-Stream) mode, this field represents the Virtual
+  // Channel payload size, which must be at most 63. This field must not be
+  // changed while the transcoder is in MST mode, even if the transcoder is
+  // disabled.
+  int32_t payload_size() const {
+    // The cast is lossless and the addition does not overflow (which would be
+    // UB) because `payload_size_select()` is a 24-bit field.
+    return static_cast<int32_t>(static_cast<int32_t>(payload_size_select()) + 1);
+  }
+
+  // See `payload_size()`.
+  TranscoderDataM& set_payload_size(int payload_size) {
+    ZX_DEBUG_ASSERT(payload_size > 0);
+    return set_payload_size_select(payload_size - 1);
+  }
+
+  DEF_RSVDZ_BIT(24);
+
+  // The M value in the data M/N ratio, which is used by the transcoder.
+  DEF_FIELD(23, 0, m);
+
+  static auto GetForKabyLakeTranscoder(Trans transcoder) {
+    ZX_ASSERT(transcoder >= Trans::TRANS_A);
+    ZX_ASSERT(transcoder <= Trans::TRANS_EDP);
+
+    if (transcoder == Trans::TRANS_EDP) {
+      return hwreg::RegisterAddr<TranscoderDataM>(0x6f030);
+    }
+
+    const int transcoder_index = transcoder - Trans::TRANS_A;
+    return hwreg::RegisterAddr<TranscoderDataM>(0x60030 + 0x1000 * transcoder_index);
+  }
+
+  static auto GetForTigerLakeTranscoder(Trans transcoder) {
+    ZX_ASSERT(transcoder >= Trans::TRANS_A);
+
+    // TODO(fxbug.dev/109278): Allow transcoder D, once we support it.
+    ZX_ASSERT(transcoder <= Trans::TRANS_C);
+
+    const int transcoder_index = transcoder - Trans::TRANS_A;
+    return hwreg::RegisterAddr<TranscoderDataM>(0x60030 + 0x1000 * transcoder_index);
+  }
 };
 
-// DATAN
-class TransDataN : public hwreg::RegisterBase<TransDataN, uint32_t> {
+// DATAN / TRANS_DATAN1 (Transcoder Data N Value 1)
+//
+// This register is double-buffered and the update triggers when the first
+// MSA (Main Stream Attributes packet) that is sent after LINKN is modified.
+//
+// All unassigned bits in this register are MBZ (must be zero), so it's safe to
+// assign this register without reading its old value.
+//
+// Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1 page 330
+// Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 1 page 429
+// Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 pages 424-425
+class TranscoderDataN : public hwreg::RegisterBase<TranscoderDataN, uint32_t> {
  public:
-  DEF_FIELD(23, 0, data_n_value);
+  DEF_RSVDZ_FIELD(31, 24);
+
+  // The N value in the data M/N ratio, which is used by the transcoder.
+  DEF_FIELD(23, 0, n);
+
+  static auto GetForKabyLakeTranscoder(Trans transcoder) {
+    ZX_ASSERT(transcoder >= Trans::TRANS_A);
+    ZX_ASSERT(transcoder <= Trans::TRANS_EDP);
+
+    if (transcoder == Trans::TRANS_EDP) {
+      return hwreg::RegisterAddr<TranscoderDataN>(0x6f034);
+    }
+
+    const int transcoder_index = transcoder - Trans::TRANS_A;
+    return hwreg::RegisterAddr<TranscoderDataN>(0x60034 + 0x1000 * transcoder_index);
+  }
+
+  static auto GetForTigerLakeTranscoder(Trans transcoder) {
+    ZX_ASSERT(transcoder >= Trans::TRANS_A);
+
+    // TODO(fxbug.dev/109278): Allow transcoder D, once we support it.
+    ZX_ASSERT(transcoder <= Trans::TRANS_C);
+
+    const int transcoder_index = transcoder - Trans::TRANS_A;
+    return hwreg::RegisterAddr<TranscoderDataN>(0x60034 + 0x1000 * transcoder_index);
+  }
 };
 
-// LINKM1
-class TransLinkM : public hwreg::RegisterBase<TransLinkM, uint32_t> {
+// LINKM / TRANS_LINKM1 (Transcoder Link M Value 1)
+//
+// This register is double-buffered and the update triggers when the first
+// MSA (Main Stream Attributes packet) that is sent after LINKN is modified.
+//
+// All unassigned bits in this register are MBZ (must be zero), so it's safe to
+// assign this register without reading its old value.
+//
+// Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1 page 1300
+// Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 1 page 1123
+// Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 pages 1112-1113
+class TranscoderLinkM : public hwreg::RegisterBase<TranscoderLinkM, uint32_t> {
  public:
-  DEF_FIELD(23, 0, link_m_value);
+  DEF_RSVDZ_FIELD(31, 24);
+
+  // The M value in the link M/N ratio transmitted in the MSA packet.
+  DEF_FIELD(23, 0, m);
+
+  static auto GetForKabyLakeTranscoder(Trans transcoder) {
+    ZX_ASSERT(transcoder >= Trans::TRANS_A);
+    ZX_ASSERT(transcoder <= Trans::TRANS_EDP);
+
+    if (transcoder == Trans::TRANS_EDP) {
+      return hwreg::RegisterAddr<TranscoderLinkM>(0x6f040);
+    }
+
+    const int transcoder_index = transcoder - Trans::TRANS_A;
+    return hwreg::RegisterAddr<TranscoderLinkM>(0x60040 + 0x1000 * transcoder_index);
+  }
+
+  static auto GetForTigerLakeTranscoder(Trans transcoder) {
+    ZX_ASSERT(transcoder >= Trans::TRANS_A);
+
+    // TODO(fxbug.dev/109278): Allow transcoder D, once we support it.
+    ZX_ASSERT(transcoder <= Trans::TRANS_C);
+
+    const int transcoder_index = transcoder - Trans::TRANS_A;
+    return hwreg::RegisterAddr<TranscoderLinkM>(0x60040 + 0x1000 * transcoder_index);
+  }
 };
 
-// LINKN1
-class TransLinkN : public hwreg::RegisterBase<TransLinkN, uint32_t> {
+// LINKN / TRANS_LINKN1 (Transcoder Link N Value 1)
+//
+// Updating this register triggers an update of all double-buffered M/N
+// registers (DATAM, DATAN, LINKM, LINKN) for the transcoder.
+//
+// All unassigned bits in this register are MBZ (must be zero), so it's safe to
+// assign this register without reading its old value.
+//
+// Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1 page 1301
+// Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 1 page 1124
+// Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 pages 1114-1115
+class TranscoderLinkN : public hwreg::RegisterBase<TranscoderLinkN, uint32_t> {
  public:
-  DEF_FIELD(23, 0, link_n_value);
+  DEF_RSVDZ_FIELD(31, 24);
+
+  // The N value in the link M/N ratio transmitted in the MSA packet. This is
+  // also transmitted in the VB-ID (Vertical Blanking ID).
+  DEF_FIELD(23, 0, n);
+
+  static auto GetForKabyLakeTranscoder(Trans transcoder) {
+    ZX_ASSERT(transcoder >= Trans::TRANS_A);
+    ZX_ASSERT(transcoder <= Trans::TRANS_EDP);
+
+    if (transcoder == Trans::TRANS_EDP) {
+      return hwreg::RegisterAddr<TranscoderLinkN>(0x6f044);
+    }
+
+    const int transcoder_index = transcoder - Trans::TRANS_A;
+    return hwreg::RegisterAddr<TranscoderLinkN>(0x60044 + 0x1000 * transcoder_index);
+  }
+
+  static auto GetForTigerLakeTranscoder(Trans transcoder) {
+    ZX_ASSERT(transcoder >= Trans::TRANS_A);
+
+    // TODO(fxbug.dev/109278): Allow transcoder D, once we support it.
+    ZX_ASSERT(transcoder <= Trans::TRANS_C);
+
+    const int transcoder_index = transcoder - Trans::TRANS_A;
+    return hwreg::RegisterAddr<TranscoderLinkN>(0x60044 + 0x1000 * transcoder_index);
+  }
 };
 
 // TRANS_MSA_MISC
@@ -307,10 +479,32 @@ class TranscoderRegs {
   hwreg::RegisterAddr<TranscoderClockSelect> ClockSelect() {
     return TranscoderClockSelect::GetForTranscoder(trans_);
   }
-  hwreg::RegisterAddr<TransDataM> DataM() { return GetReg<TransDataM>(0x60030); }
-  hwreg::RegisterAddr<TransDataN> DataN() { return GetReg<TransDataN>(0x60034); }
-  hwreg::RegisterAddr<TransLinkM> LinkM() { return GetReg<TransLinkM>(0x60040); }
-  hwreg::RegisterAddr<TransLinkN> LinkN() { return GetReg<TransLinkN>(0x60044); }
+
+  hwreg::RegisterAddr<TranscoderDataM> DataM() {
+    // This works for Tiger Lake too, because the supported transcoders are a
+    // subset of the Kaby Lake transcoders, and the MMIO addresses for these
+    // transcoders are the same.
+    return TranscoderDataM::GetForKabyLakeTranscoder(trans_);
+  }
+  hwreg::RegisterAddr<TranscoderDataN> DataN() {
+    // This works for Tiger Lake too, because the supported transcoders are a
+    // subset of the Kaby Lake transcoders, and the MMIO addresses for these
+    // transcoders are the same.
+    return TranscoderDataN::GetForKabyLakeTranscoder(trans_);
+  }
+  hwreg::RegisterAddr<TranscoderLinkM> LinkM() {
+    // This works for Tiger Lake too, because the supported transcoders are a
+    // subset of the Kaby Lake transcoders, and the MMIO addresses for these
+    // transcoders are the same.
+    return TranscoderLinkM::GetForKabyLakeTranscoder(trans_);
+  }
+  hwreg::RegisterAddr<TranscoderLinkN> LinkN() {
+    // This works for Tiger Lake too, because the supported transcoders are a
+    // subset of the Kaby Lake transcoders, and the MMIO addresses for these
+    // transcoders are the same.
+    return TranscoderLinkN::GetForKabyLakeTranscoder(trans_);
+  }
+
   hwreg::RegisterAddr<TransMsaMisc> MsaMisc() { return GetReg<TransMsaMisc>(0x60410); }
 
  private:

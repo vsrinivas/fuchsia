@@ -115,6 +115,7 @@ test("intel-i915-tgl-test") {
     "poll-until-unittest.cc",
     "power-unittest.cc",
     "registers-ddi-unittest.cc",
+    "registers-transcoder-unittest.cc",
     "registers-typec-unittest.cc",
     "registers-unittest.cc",
   ]

@@ -1762,11 +1762,11 @@ bool DpDisplay::DdiModeset(const display_mode_t& mode) { return true; }
 
 bool DpDisplay::PipeConfigPreamble(const display_mode_t& mode, tgl_registers::Pipe pipe,
                                    tgl_registers::Trans trans) {
-  tgl_registers::TranscoderRegs trans_regs(trans);
+  tgl_registers::TranscoderRegs transcoder_regs(trans);
 
   // Transcoder should be disabled first before reconfiguring the transcoder
   // clock. Will be re-enabled at `PipeConfigEpilogue()`.
-  auto trans_conf = trans_regs.Conf().ReadFrom(mmio_space());
+  auto trans_conf = transcoder_regs.Conf().ReadFrom(mmio_space());
   trans_conf.set_transcoder_enable(0).WriteTo(mmio_space());
   trans_conf.ReadFrom(mmio_space());
 
@@ -1781,7 +1781,7 @@ bool DpDisplay::PipeConfigPreamble(const display_mode_t& mode, tgl_registers::Pi
     // during the "Enable and Train DisplayPort" step (done before this method
     // is called). This is because Tiger Lake transcoders contain the
     // DisplayPort Transport modules used for link training.
-    auto clock_select = trans_regs.ClockSelect().ReadFrom(mmio_space());
+    auto clock_select = transcoder_regs.ClockSelect().ReadFrom(mmio_space());
     const std::optional<tgl_registers::Ddi> ddi_clock_source = clock_select.ddi_clock_tiger_lake();
     if (!ddi_clock_source.has_value()) {
       zxlogf(ERROR, "Transcoder %d clock source not set after DisplayPort training", trans);
@@ -1796,7 +1796,7 @@ bool DpDisplay::PipeConfigPreamble(const display_mode_t& mode, tgl_registers::Pi
     // On Kaby Lake and Skylake, the transcoder clock input must be set during
     // the pipe, plane and transcoder enablement stage.
     if (trans != tgl_registers::TRANS_EDP) {
-      auto clock_select = trans_regs.ClockSelect().ReadFrom(mmio_space());
+      auto clock_select = transcoder_regs.ClockSelect().ReadFrom(mmio_space());
       clock_select.set_ddi_clock_kaby_lake(ddi());
       clock_select.WriteTo(mmio_space());
     }
@@ -1819,6 +1819,15 @@ bool DpDisplay::PipeConfigPreamble(const display_mode_t& mode, tgl_registers::Pi
   uint32_t link_n;
   CalculateRatio(pixel_clock_rate, link_symbol_rate, &link_m, &link_n);
 
+  // Computing the M/N ratios is covered in the "Transcoder" > "Transcoder MN
+  // Values" section in the PRMs. The current implementation covers the
+  // straight-forward case - no reduced horizontal blanking, no DSC (Display
+  // Stream Compression), no FEC (Forward Error Correction).
+  //
+  // Tiger Lake: IHD-OS-TGL-Vol 12-1.22-Rev2.0 pages 330-332
+  // Kaby Lake: IHD-OS-KBL-Vol 12-1.17 pages 174-176
+  // Skylake: IHD-OS-SKL-Vol 12-05.16 page 171-172
+
   uint32_t pixel_bit_rate = pixel_clock_rate * kBitsPerPixel;
   uint32_t total_link_bit_rate = link_symbol_rate * 8 * dp_lane_count_;
   ZX_DEBUG_ASSERT(pixel_bit_rate <= total_link_bit_rate);  // Should be caught by CheckPixelRate
@@ -1827,22 +1836,14 @@ bool DpDisplay::PipeConfigPreamble(const display_mode_t& mode, tgl_registers::Pi
   uint32_t data_n;
   CalculateRatio(pixel_bit_rate, total_link_bit_rate, &data_m, &data_n);
 
-  auto data_m_reg = trans_regs.DataM().FromValue(0);
-  data_m_reg.set_tu_or_vcpayload_size(63);  // Size - 1, default TU size is 64
-  data_m_reg.set_data_m_value(data_m);
+  auto data_m_reg = transcoder_regs.DataM().FromValue(0);
+  data_m_reg.set_payload_size(64);  // The default TU size is 64.
+  data_m_reg.set_m(data_m);
   data_m_reg.WriteTo(mmio_space());
 
-  auto data_n_reg = trans_regs.DataN().FromValue(0);
-  data_n_reg.set_data_n_value(data_n);
-  data_n_reg.WriteTo(mmio_space());
-
-  auto link_m_reg = trans_regs.LinkM().FromValue(0);
-  link_m_reg.set_link_m_value(link_m);
-  link_m_reg.WriteTo(mmio_space());
-
-  auto link_n_reg = trans_regs.LinkN().FromValue(0);
-  link_n_reg.set_link_n_value(link_n);
-  link_n_reg.WriteTo(mmio_space());
+  transcoder_regs.DataN().FromValue(0).set_n(data_n).WriteTo(mmio_space());
+  transcoder_regs.LinkM().FromValue(0).set_m(link_m).WriteTo(mmio_space());
+  transcoder_regs.LinkN().FromValue(0).set_n(link_n).WriteTo(mmio_space());
 
   return true;
 }
@@ -2066,9 +2067,9 @@ bool DpDisplay::CheckPixelRate(uint64_t pixel_rate) {
 }
 
 uint32_t DpDisplay::LoadClockRateForTranscoder(tgl_registers::Trans transcoder) {
-  tgl_registers::TranscoderRegs trans_regs(transcoder);
-  uint32_t data_m = trans_regs.DataM().ReadFrom(mmio_space()).data_m_value();
-  uint32_t data_n = trans_regs.DataN().ReadFrom(mmio_space()).data_n_value();
+  tgl_registers::TranscoderRegs transcoder_regs(transcoder);
+  const uint32_t data_m = transcoder_regs.DataM().ReadFrom(mmio_space()).m();
+  const uint32_t data_n = transcoder_regs.DataN().ReadFrom(mmio_space()).n();
 
   double total_link_bit_rate_10khz = dp_link_rate_mhz_ * 100. * (8. / 10.) * dp_lane_count_;
   double res = (data_m * total_link_bit_rate_10khz) / (data_n * kBitsPerPixel);
