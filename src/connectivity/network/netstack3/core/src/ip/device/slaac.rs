@@ -147,10 +147,6 @@ pub(super) trait SlaacAddresses<C: InstantContext> {
     ) -> Result<(AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>, SlaacConfig<C::Instant>), NotFoundError>;
 }
 
-pub(super) trait SlaacStateLayout<'a, C: InstantContext> {
-    type SlaacAddrs: SlaacAddresses<C>;
-}
-
 pub(super) struct SlaacAddrsMutAndConfig<'a, C: InstantContext, A: SlaacAddresses<C>> {
     pub(super) addrs: &'a mut A,
     pub(super) config: SlaacConfiguration,
@@ -162,21 +158,22 @@ pub(super) struct SlaacAddrsMutAndConfig<'a, C: InstantContext, A: SlaacAddresse
 
 /// The state context provided to SLAAC.
 pub(super) trait SlaacStateContext<C: SlaacNonSyncContext<Self::DeviceId>>:
-    IpDeviceIdContext<Ipv6> + for<'a> SlaacStateLayout<'a, C>
+    IpDeviceIdContext<Ipv6>
 {
+    type SlaacAddrs<'a>: SlaacAddresses<C>
+    where
+        Self: 'a;
+
     fn with_slaac_addrs_mut_and_configs<
         O,
-        F: FnOnce(SlaacAddrsMutAndConfig<'_, C, <Self as SlaacStateLayout<'_, C>>::SlaacAddrs>) -> O,
+        F: FnOnce(SlaacAddrsMutAndConfig<'_, C, Self::SlaacAddrs<'_>>) -> O,
     >(
         &mut self,
         device_id: Self::DeviceId,
         cb: F,
     ) -> O;
 
-    fn with_slaac_addrs_mut<
-        O,
-        F: FnOnce(&mut <Self as SlaacStateLayout<'_, C>>::SlaacAddrs) -> O,
-    >(
+    fn with_slaac_addrs_mut<O, F: FnOnce(&mut Self::SlaacAddrs<'_>) -> O>(
         &mut self,
         device_id: Self::DeviceId,
         cb: F,
@@ -238,7 +235,7 @@ impl<DeviceId, C: RngContext + TimerContext<SlaacTimerId<DeviceId>> + CounterCon
 /// The execution context for SLAAC.
 trait SlaacContext<C: SlaacNonSyncContext<Self::DeviceId>>: SlaacStateContext<C> {}
 
-impl<C: SlaacNonSyncContext<SC::DeviceId>, SC: SlaacStateContext<C>> SlaacContext<C> for SC {}
+impl<'a, C: SlaacNonSyncContext<SC::DeviceId>, SC: SlaacStateContext<C>> SlaacContext<C> for SC {}
 
 /// An implementation of SLAAC.
 pub(crate) trait SlaacHandler<C: InstantContext>: IpDeviceIdContext<Ipv6> {
@@ -1232,7 +1229,7 @@ fn generate_global_temporary_address(
 }
 
 fn add_slaac_addr_sub<C: SlaacNonSyncContext<SC::DeviceId>, SC: SlaacContext<C>>(
-    slaac_addrs: &mut <SC as SlaacStateLayout<'_, C>>::SlaacAddrs,
+    slaac_addrs: &mut SC::SlaacAddrs<'_>,
     ctx: &mut C,
     device_id: SC::DeviceId,
     now: C::Instant,
@@ -1655,14 +1652,12 @@ mod tests {
         }
     }
 
-    impl<'a> SlaacStateLayout<'a, MockNonSyncCtx> for MockCtx {
-        type SlaacAddrs = &'a mut MockSlaacAddrs;
-    }
-
     impl SlaacStateContext<MockNonSyncCtx> for MockCtx {
+        type SlaacAddrs<'a> = &'a mut MockSlaacAddrs where MockCtx: 'a;
+
         fn with_slaac_addrs_mut_and_configs<
             O,
-            F: FnOnce(SlaacAddrsMutAndConfig<'_, MockNonSyncCtx, &mut MockSlaacAddrs>) -> O,
+            F: FnOnce(SlaacAddrsMutAndConfig<'_, MockNonSyncCtx, &'_ mut MockSlaacAddrs>) -> O,
         >(
             &mut self,
             DummyDeviceId: DummyDeviceId,

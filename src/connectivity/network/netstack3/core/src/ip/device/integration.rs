@@ -32,7 +32,7 @@ use crate::{
             send_ip_frame,
             slaac::{
                 SlaacAddressEntry, SlaacAddressEntryMut, SlaacAddresses, SlaacAddrsMutAndConfig,
-                SlaacStateContext, SlaacStateLayout,
+                SlaacStateContext,
             },
             state::{
                 AddrConfig, AddressState, IpDeviceConfiguration, Ipv4DeviceConfiguration,
@@ -177,22 +177,12 @@ impl<
 }
 
 impl<
-        'a,
         C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>,
-        SC: device::Ipv6DeviceContext<C> + GmpHandler<Ipv6, C> + DadHandler<C> + 'a,
-    > SlaacStateLayout<'a, C> for SC
-{
-    type SlaacAddrs = SlaacAddrs<'a, C, SC>;
-}
-
-impl<
-        C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>,
-        SC: device::Ipv6DeviceContext<C>
-            + GmpHandler<Ipv6, C>
-            + DadHandler<C>
-            + for<'a> SlaacStateLayout<'a, C, SlaacAddrs = SlaacAddrs<'a, C, SC>>,
+        SC: device::Ipv6DeviceContext<C> + GmpHandler<Ipv6, C> + DadHandler<C>,
     > SlaacStateContext<C> for SC
 {
+    type SlaacAddrs<'a> = SlaacAddrs<'a, C, SC> where SC: 'a;
+
     fn with_slaac_addrs_mut_and_configs<
         O,
         F: FnOnce(SlaacAddrsMutAndConfig<'_, C, SlaacAddrs<'_, C, SC>>) -> O,
