@@ -68,7 +68,7 @@ pub trait AbsoluteMonikerBase:
                 .rev()
                 .take(start_to_end.up_path().len()))
         {
-            return Err(MonikerError::invalid_moniker(format!("{}", start)));
+            return Err(MonikerError::invalid_moniker(start.to_string()));
         }
 
         Ok(Self::new(

@@ -40,18 +40,13 @@ impl ChildMonikerBase for ChildMoniker {
     /// Input strings should be of the format `<name>(:<collection>)?`, e.g. `foo` or `biz:foo`.
     fn parse<T: AsRef<str>>(rep: T) -> Result<Self, MonikerError> {
         let rep = rep.as_ref();
-        let mut parts = rep.split(":").fuse();
-        let invalid = || MonikerError::invalid_moniker(rep);
-        let first = parts.next().ok_or_else(invalid)?;
-        let second = parts.next();
-        if parts.next().is_some() || first.len() == 0 || second.map_or(false, |s| s.len() == 0) {
-            return Err(invalid());
-        }
-        let (name, coll) = match second {
-            Some(s) => (s, Some(first.to_string())),
-            None => (first, None),
+        let parts: Vec<&str> = rep.split(":").collect();
+        let (coll, name) = match parts.len() {
+            1 => (None, parts[0].to_string()),
+            2 => (Some(parts[0].to_string()), parts[1].to_string()),
+            _ => return Err(MonikerError::invalid_moniker(rep)),
         };
-        LongName::validate(&name).map_err(|_| MonikerError::invalid_moniker_part(name))?;
+        LongName::validate(&name).map_err(|_| MonikerError::invalid_moniker_part(&name))?;
         if let Some(ref c) = coll {
             Name::validate(c).map_err(|_| MonikerError::invalid_moniker_part(c))?;
         }

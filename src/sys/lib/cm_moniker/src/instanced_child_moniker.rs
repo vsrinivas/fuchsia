@@ -35,43 +35,26 @@ impl ChildMonikerBase for InstancedChildMoniker {
     fn parse<T: AsRef<str>>(rep: T) -> Result<Self, MonikerError> {
         let rep = rep.as_ref();
         let parts: Vec<_> = rep.split(":").collect();
-        let invalid = || MonikerError::invalid_moniker(rep);
         // An instanced moniker is either just a name (static instance), or
         // collection:name:instance_id.
-        if parts.len() != 2 && parts.len() != 3 {
-            return Err(invalid());
-        }
-        for p in parts.iter() {
-            if p.is_empty() {
-                return Err(invalid());
+        let (coll, name, instance) = match parts.len() {
+            2 => {
+                let instance = parts[1].parse().map_err(|_| MonikerError::invalid_moniker(rep))?;
+                (None, parts[0].to_string(), instance)
             }
-        }
-        let (name, coll, instance) = match parts.len() == 3 {
-            true => {
-                let name = parts[1].to_string();
+            3 => {
                 let coll = parts[0].to_string();
-                let instance: IncarnationId = match parts[2].parse() {
-                    Ok(i) => i,
-                    _ => {
-                        return Err(invalid());
-                    }
-                };
-                (name, Some(coll), instance)
+                let name = parts[1].to_string();
+                let instance = parts[2]
+                    .parse::<IncarnationId>()
+                    .map_err(|_| MonikerError::invalid_moniker(rep))?;
+                (Some(coll), name, instance)
             }
-            false => {
-                let instance: IncarnationId = match parts[1].parse() {
-                    Ok(i) => i,
-                    _ => {
-                        return Err(invalid());
-                    }
-                };
-                (parts[0].to_string(), None, instance)
-            }
+            _ => return Err(MonikerError::invalid_moniker(rep)),
         };
-
-        LongName::validate(&name).map_err(|_| MonikerError::invalid_moniker_part(name.clone()))?;
+        LongName::validate(&name).map_err(|_| MonikerError::invalid_moniker_part(&name))?;
         if let Some(ref c) = coll {
-            Name::validate(c).map_err(|_| MonikerError::invalid_moniker_part(c))?;
+            Name::validate(&c).map_err(|_| MonikerError::invalid_moniker_part(c))?;
         }
         Ok(Self::new(name, coll, instance))
     }
