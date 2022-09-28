@@ -25,7 +25,7 @@ using fidl::VectorPtr;
 using fuchsia::cobalt::Status;
 using util::SystemClockInterface;
 using util::TimeToDayIndex;
-using LoggerMethod = cobalt_internal_registry::PerProjectLoggerCallsMadeMetricDimensionLoggerMethod;
+using LoggerMethod = cobalt_internal_registry::LoggerCallsMadeMigratedMetricDimensionLoggerMethod;
 
 namespace {
 uint32_t CurrentDayIndex(SystemClockInterface* clock) {
