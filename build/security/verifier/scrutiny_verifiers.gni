@@ -144,49 +144,6 @@ template("scrutiny_verifiers") {
     ":${invoker.assembly_image_name}_verify_structured_config_policy_exists",
   ]
 
-  # TODO(fxbug.dev/102968): There is a need for scrutiny verifiers that process
-  # structured configuration files. Until such verifiers are ready, structured
-  # configuration files for sensitive components are verified using the
-  # strategy below.
-  verify_structured_config_by_build_type(
-      "${invoker.assembly_image_name}_verify_base_resolver_config") {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visiblity",
-                           ])
-    product_assembly_config_file = invoker.product_assembly_config_file
-    structured_config_target = "//src/sys/base-resolver:values_from_gn"
-    non_eng_golden =
-        "//src/security/policy/build/base_resolver_golden_non_eng.cvf"
-    eng_golden = "//src/security/policy/build/base_resolver_golden_eng.cvf"
-    deps = []
-    if (defined(invoker.product_assembly_config_dep)) {
-      deps += [ invoker.product_assembly_config_dep ]
-    }
-  }
-  verifiers += [ ":${invoker.assembly_image_name}_verify_base_resolver_config" ]
-
-  verify_structured_config_by_build_type(
-      "${invoker.assembly_image_name}_verify_power_manager_config") {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visiblity",
-                           ])
-    product_assembly_config_file = invoker.product_assembly_config_file
-    structured_config_target =
-        "//src/power/power-manager:default_component_config"
-    non_eng_golden =
-        "//src/security/policy/build/power_manager_golden_non_eng.cvf"
-    eng_golden = "//src/security/policy/build/power_manager_golden_eng.cvf"
-    deps = []
-    if (defined(invoker.product_assembly_config_dep)) {
-      deps += [ invoker.product_assembly_config_dep ]
-    }
-  }
-  verifiers += [ ":${invoker.assembly_image_name}_verify_power_manager_config" ]
-
   if (!is_coverage && custom_signing_script == "") {
     if (invoker.zbi_bootfs_filelist_goldens != [] ||
         invoker.zbi_bootfs_packages_goldens != []) {
