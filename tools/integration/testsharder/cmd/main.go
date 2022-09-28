@@ -172,7 +172,6 @@ func execute(ctx context.Context, flags testsharderFlags, m buildModules) error 
 		return t.RunAlgorithm == testsharder.StopOnFailure
 	}
 	multipliedShards, nonMultipliedShards := testsharder.PartitionShards(shards, multiplied, "")
-	multipliedShards = testsharder.SplitOutMultipliers(ctx, multipliedShards, testDurations, targetDuration, flags.targetTestCount, testsharder.MultipliedShardPrefix)
 
 	if flags.affectedTestsPath != "" {
 		affectedModifiers, err := testsharder.AffectedModifiers(m.TestSpecs(), flags.affectedTestsPath, flags.affectedTestsMaxAttempts, flags.affectedTestsMultiplyThreshold)
@@ -207,7 +206,6 @@ func execute(ctx context.Context, flags testsharderFlags, m buildModules) error 
 		return t.Affected && t.RunAlgorithm == testsharder.StopOnFailure
 	}
 	multipliedAffectedShards, nonMultipliedShards := testsharder.PartitionShards(nonMultipliedShards, multipliedAffected, "")
-	multipliedAffectedShards = testsharder.SplitOutMultipliers(ctx, multipliedAffectedShards, testDurations, targetDuration, flags.targetTestCount, testsharder.AffectedShardPrefix)
 
 	var skippedShards []*testsharder.Shard
 	if flags.affectedOnly {
@@ -246,9 +244,14 @@ func execute(ctx context.Context, flags testsharderFlags, m buildModules) error 
 		shards = append(shards, nonhermeticShards...)
 	}
 
-	shards = testsharder.WithTargetDuration(shards, targetDuration, flags.targetTestCount, flags.maxShardsPerEnvironment, testDurations)
+	shards, newTargetDuration := testsharder.WithTargetDuration(shards, targetDuration, flags.targetTestCount, flags.maxShardsPerEnvironment, testDurations)
 
 	// Add the multiplied shards back into the list of shards to run.
+	if newTargetDuration > targetDuration {
+		targetDuration = newTargetDuration
+	}
+	multipliedShards = testsharder.SplitOutMultipliers(ctx, multipliedShards, testDurations, targetDuration, flags.targetTestCount, testsharder.MultipliedShardPrefix)
+	multipliedAffectedShards = testsharder.SplitOutMultipliers(ctx, multipliedAffectedShards, testDurations, targetDuration, flags.targetTestCount, testsharder.AffectedShardPrefix)
 	shards = append(multipliedAffectedShards, shards...)
 	shards = append(shards, multipliedShards...)
 

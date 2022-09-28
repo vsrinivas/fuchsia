@@ -222,22 +222,32 @@ func SplitOutMultipliers(
 				// Fill up the remainder of the shard with the remaining tests,
 				// splitting up the duration/count evenly between the tests and
 				// running each at least once.
-				for _, idx := range fillUpTestIdxs {
+				sort.Slice(fillUpTestIdxs, func(a, b int) bool {
+					aDuration := testDurations.Get(newShard.Tests[fillUpTestIdxs[a]]).MedianDuration
+					bDuration := testDurations.Get(newShard.Tests[fillUpTestIdxs[b]]).MedianDuration
+					return aDuration > bDuration
+				})
+				for i := len(fillUpTestIdxs) - 1; i >= 0; i-- {
+					idx := fillUpTestIdxs[i]
 					test := newShard.Tests[idx]
 					if targetDuration > 0 {
 						remainingDuration := max(0, int(targetDuration-usedUpDuration))
 						durationPerTest := divRoundUp(remainingDuration, len(fillUpTestIdxs))
-						test.Runs = max(1, divRoundUp(durationPerTest, int(testDurations.Get(test).MedianDuration)))
-						test.Runs = min(test.Runs, multipliedTestMaxRuns)
+						testDuration := testDurations.Get(test).MedianDuration
+						test.Runs = min(multipliedTestMaxRuns, divRoundUp(durationPerTest, int(testDuration)))
+						usedUpDuration += time.Duration(min(int(testDuration)*multipliedTestMaxRuns, durationPerTest))
+						test.Runs = max(1, test.Runs)
 						test.StopRepeatingAfterSecs = int(time.Duration(durationPerTest).Seconds())
 					} else if targetTestCount > 0 {
 						remainingCount := max(0, targetTestCount-usedUpCount)
 						countPerTest := divRoundUp(remainingCount, len(fillUpTestIdxs))
+						usedUpCount += countPerTest
 						test.Runs = max(1, countPerTest)
 					} else {
 						test.Runs = 1
 					}
 					newShard.Tests[idx] = test
+					fillUpTestIdxs = fillUpTestIdxs[:i]
 				}
 				newShard.TimeoutSecs = int(computeShardTimeout(subshard{targetDuration, newShard.Tests}).Seconds())
 			}
@@ -397,9 +407,9 @@ func WithTargetDuration(
 	targetTestCount,
 	maxShardsPerEnvironment int,
 	testDurations TestDurationsMap,
-) []*Shard {
+) ([]*Shard, time.Duration) {
 	if targetDuration <= 0 && targetTestCount <= 0 {
-		return shards
+		return shards, targetDuration
 	}
 	if maxShardsPerEnvironment <= 0 {
 		maxShardsPerEnvironment = math.MaxInt64
@@ -467,7 +477,7 @@ func WithTargetDuration(
 		newShards := shardByTime(shard, testDurations, numNewShards)
 		output = append(output, newShards...)
 	}
-	return output
+	return output, targetDuration
 }
 
 type subshard struct {

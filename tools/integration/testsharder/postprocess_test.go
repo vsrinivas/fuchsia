@@ -87,8 +87,8 @@ func TestSplitOutMultipliers(t *testing.T) {
 		return shard
 	}
 
-	withStopRepeatingAfterSecs := func(shard *Shard, stopRepeatingAfterSecs int) *Shard {
-		for i := range shard.Tests {
+	withStopRepeatingAfterSecs := func(shard *Shard, indexToStopRepeatingAfterSecs map[int]int) *Shard {
+		for i, stopRepeatingAfterSecs := range indexToStopRepeatingAfterSecs {
 			shard.Tests[i].StopRepeatingAfterSecs = stopRepeatingAfterSecs
 		}
 		return shard
@@ -286,7 +286,42 @@ func TestSplitOutMultipliers(t *testing.T) {
 			},
 			targetDuration: 10 * time.Second,
 			expected: []*Shard{
-				multShard(env1, "fuchsia", 1000, 10, 4, 5, 6, 1, 2, 3),
+				withStopRepeatingAfterSecs(
+					multShard(env1, "fuchsia", 1000, 10, 4, 5, 6, 1, 2, 3),
+					// Tests are processed in reverse order (since they all
+					// have the same duration), so the earlier tests are given
+					// more time to repeat.
+					map[int]int{0: 5, 1: 3, 2: 2, 3: 2, 4: 1, 5: 1},
+				),
+			},
+		},
+		{
+			name: "more duration for longer tests",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1, 2, 3, 4, 5),
+			},
+			multipliers: []ModifierMatch{
+				makeModifierMatch(1, env1, 0),
+				makeModifierMatch(2, env1, 0),
+				makeModifierMatch(3, env1, 0),
+				makeModifierMatch(4, env1, 0),
+				makeModifierMatch(5, env1, 0),
+			},
+			testDurations: TestDurationsMap{
+				"*":                        {MedianDuration: 1 * time.Millisecond},
+				fullTestName(5, "fuchsia"): {MedianDuration: 5 * time.Millisecond},
+			},
+			targetDuration: 10 * time.Second,
+			expected: []*Shard{
+				withStopRepeatingAfterSecs(
+					// test 5 normally would've only been able to run 400 times
+					// if the duration was split evenly but since the shorter
+					// tests complete in half the time they were given, the
+					// remaining time was given to test 5 so that it could
+					// run the max times.
+					multShard(env1, "fuchsia", 1000, 10, 4, 5, 1, 2, 3),
+					map[int]int{0: 3, 1: 6, 2: 2, 3: 2, 4: 2},
+				),
 			},
 		},
 		{
@@ -351,9 +386,18 @@ func TestSplitOutMultipliers(t *testing.T) {
 			},
 			targetDuration: 10 * time.Second,
 			expected: []*Shard{
-				withStopRepeatingAfterSecs(multShardWithIndex(env1, "fuchsia", 500, 10, 1, 6, 1), 10),
-				withStopRepeatingAfterSecs(multShardWithIndex(env1, "fuchsia", 500, 10, 2, 4, 2), 10),
-				withStopRepeatingAfterSecs(multShardWithIndex(env1, "fuchsia", 500, 10, 3, 5, 3), 10),
+				withStopRepeatingAfterSecs(
+					multShardWithIndex(env1, "fuchsia", 500, 10, 1, 6, 1),
+					map[int]int{0: 10, 1: 10},
+				),
+				withStopRepeatingAfterSecs(
+					multShardWithIndex(env1, "fuchsia", 500, 10, 2, 4, 2),
+					map[int]int{0: 10, 1: 10},
+				),
+				withStopRepeatingAfterSecs(
+					multShardWithIndex(env1, "fuchsia", 500, 10, 3, 5, 3),
+					map[int]int{0: 10, 1: 10},
+				),
 			},
 		},
 		{
@@ -956,15 +1000,17 @@ func TestWithTargetDuration(t *testing.T) {
 	}
 
 	t.Run("does nothing if test count and duration are 0", func(t *testing.T) {
-		assertEqual(t, defaultInput, WithTargetDuration(defaultInput, 0, 0, 0, defaultDurations))
+		actual, _ := WithTargetDuration(defaultInput, 0, 0, 0, defaultDurations)
+		assertEqual(t, defaultInput, actual)
 	})
 
 	t.Run("does nothing if test count and duration are < 0", func(t *testing.T) {
-		assertEqual(t, defaultInput, WithTargetDuration(defaultInput, -5, -7, 0, defaultDurations))
+		actual, _ := WithTargetDuration(defaultInput, -5, -7, 0, defaultDurations)
+		assertEqual(t, defaultInput, actual)
 	})
 
 	t.Run("returns one shard if target test count is greater than test count", func(t *testing.T) {
-		actual := WithTargetDuration(defaultInput, 0, 20, 0, defaultDurations)
+		actual, _ := WithTargetDuration(defaultInput, 0, 20, 0, defaultDurations)
 		expectedTests := [][]string{
 			{test(1), test(2), test(3), test(4), test(5), test(6)},
 		}
@@ -976,14 +1022,14 @@ func TestWithTargetDuration(t *testing.T) {
 			{test(1), test(2), test(3), test(4), test(5), test(6)},
 		}
 		targetDuration := time.Duration(len(expectedTests[0]) + 1)
-		actual := WithTargetDuration(defaultInput, targetDuration, 0, 0, defaultDurations)
+		actual, _ := WithTargetDuration(defaultInput, targetDuration, 0, 0, defaultDurations)
 		assertShardsContainTests(t, actual, expectedTests)
 	})
 
 	t.Run("obeys max-shards-per-env", func(t *testing.T) {
 		input := []*Shard{shard(env1, "fuchsia", 1, 2, 3)}
 		maxShardsPerEnvironment := 1
-		actual := WithTargetDuration(input, 1, 0, maxShardsPerEnvironment, defaultDurations)
+		actual, _ := WithTargetDuration(input, 1, 0, maxShardsPerEnvironment, defaultDurations)
 		expectedTests := [][]string{
 			{test(1), test(2), test(3)},
 		}
@@ -991,7 +1037,7 @@ func TestWithTargetDuration(t *testing.T) {
 	})
 
 	t.Run("evenly distributes equal-duration tests", func(t *testing.T) {
-		actual := WithTargetDuration(defaultInput, 4, 0, 0, defaultDurations)
+		actual, _ := WithTargetDuration(defaultInput, 4, 0, 0, defaultDurations)
 		expectedTests := [][]string{
 			{test(1), test(3), test(5)},
 			{test(2), test(4), test(6)},
@@ -1004,7 +1050,7 @@ func TestWithTargetDuration(t *testing.T) {
 			"*":     {MedianDuration: 1},
 			test(1): {MedianDuration: 10},
 		}
-		actual := WithTargetDuration(defaultInput, 5, 0, 0, durations)
+		actual, _ := WithTargetDuration(defaultInput, 5, 0, 0, durations)
 		expectedTests := [][]string{
 			{test(1)},
 			{test(2), test(3), test(4), test(5), test(6)},
@@ -1023,7 +1069,7 @@ func TestWithTargetDuration(t *testing.T) {
 		// splitting the other tests into shards of duration < 10, so they
 		// should all go in the same shard, even if its duration is greater than
 		// the given target.
-		actual := WithTargetDuration(defaultInput, 2, 0, 0, durations)
+		actual, _ := WithTargetDuration(defaultInput, 2, 0, 0, durations)
 		expectedTests := [][]string{
 			{test(1)},
 			{test(2), test(3), test(4), test(5), test(6)},
@@ -1040,7 +1086,7 @@ func TestWithTargetDuration(t *testing.T) {
 			test(4): {MedianDuration: 2},
 			test(5): {MedianDuration: 5},
 		}
-		actual := WithTargetDuration(input, 7, 0, 0, durations)
+		actual, _ := WithTargetDuration(input, 7, 0, 0, durations)
 		expectedTests := [][]string{
 			{test(1), test(5)},          // total duration: 1 + 5 = 6
 			{test(2), test(3), test(4)}, // total duration: 2 + 2 + 2 = 6
@@ -1053,7 +1099,7 @@ func TestWithTargetDuration(t *testing.T) {
 			shard(env1, "fuchsia", 1),
 			shard(env2, "fuchsia", 2, 3, 4, 5, 6, 7),
 		}
-		actual := WithTargetDuration(input, 4, 0, 0, defaultDurations)
+		actual, _ := WithTargetDuration(input, 4, 0, 0, defaultDurations)
 		expectedTests := [][]string{
 			{test(1)},
 			{test(2), test(4), test(6)},
@@ -1069,7 +1115,7 @@ func TestWithTargetDuration(t *testing.T) {
 		durations := TestDurationsMap{
 			"*": {MedianDuration: 0},
 		}
-		actual := WithTargetDuration(input, 4, 0, 2, durations)
+		actual, _ := WithTargetDuration(input, 4, 0, 2, durations)
 		expectedTests := [][]string{
 			{test(1), test(3), test(5)},
 			{test(2), test(4), test(6)},
@@ -1083,7 +1129,7 @@ func TestWithTargetDuration(t *testing.T) {
 		durations := TestDurationsMap{
 			"*": {MedianDuration: 0},
 		}
-		actual := WithTargetDuration(input, 1, 0, maxShardsPerEnvironment, durations)
+		actual, _ := WithTargetDuration(input, 1, 0, maxShardsPerEnvironment, durations)
 		expectedTests := [][]string{
 			{test(1)}, {test(2)}, {test(3)},
 		}
@@ -1100,7 +1146,7 @@ func TestWithTargetDuration(t *testing.T) {
 			shard(env1, "fuchsia", 1, 2),
 			shard(env2, "fuchsia", env2Tests...),
 		}
-		actual := WithTargetDuration(input, 1, 0, maxShardsPerEnvironment, defaultDurations)
+		actual, _ := WithTargetDuration(input, 1, 0, maxShardsPerEnvironment, defaultDurations)
 		// The subshards created for env2 must each have two tests and take
 		// twice the target duration, since there are 2 *
 		// maxShardsPerEnvironment tests that each take 1ns (which is the target
@@ -1129,7 +1175,7 @@ func TestWithTargetDuration(t *testing.T) {
 		input := []*Shard{
 			shard(env1, "fuchsia", 3, 2, 1, 4, 0),
 		}
-		actual := WithTargetDuration(input, 1, 0, 0, defaultDurations)
+		actual, _ := WithTargetDuration(input, 1, 0, 0, defaultDurations)
 		if len(actual) != len(input[0].Tests) {
 			t.Fatalf("expected %d shards but got %d", len(actual), len(input[0].Tests))
 		}
@@ -1151,7 +1197,7 @@ func TestWithTargetDuration(t *testing.T) {
 				RunAlgorithm: KeepGoing,
 			}},
 		}}
-		actual := WithTargetDuration(input, 2, 0, 0, defaultDurations)
+		actual, _ := WithTargetDuration(input, 2, 0, 0, defaultDurations)
 		expectedTests := [][]string{
 			{test(1), test(1)},
 			{test(1), test(1)},
@@ -1189,7 +1235,7 @@ func TestWithTargetDuration(t *testing.T) {
 				},
 			},
 		}
-		actual := WithTargetDuration(input, 2, 0, 0, defaultDurations)
+		actual, _ := WithTargetDuration(input, 2, 0, 0, defaultDurations)
 		expectedTests := [][]string{
 			{test(1), test(2)},
 			{test(1), test(1)},
@@ -1211,7 +1257,7 @@ func TestWithTargetDuration(t *testing.T) {
 			"*":     {MedianDuration: 1 * time.Minute},
 			test(1): {MedianDuration: 5 * time.Minute},
 		}
-		actual := WithTargetDuration(defaultInput, 5, 0, 0, durations)
+		actual, _ := WithTargetDuration(defaultInput, 5, 0, 0, durations)
 		expectedTests := [][]string{
 			{test(1)},
 			{test(2), test(3), test(4), test(5), test(6)},
