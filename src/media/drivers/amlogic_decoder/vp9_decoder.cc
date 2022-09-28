@@ -340,7 +340,7 @@ zx_status_t Vp9Decoder::InitializeBuffers() {
     working_buffers.emplace();
     zx_status_t status = working_buffers->AllocateBuffers(owner_, is_secure());
     if (status != ZX_OK) {
-      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_AllocationError);
+      LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_AllocationError);
       LOG(ERROR, "working_buffers_->AllocateBuffers() failed");
       return status;
     }
@@ -409,7 +409,7 @@ zx_status_t Vp9Decoder::InitializeBuffers() {
           kMpredAlignment, is_secure(), /*is_writable=*/kMpredIsWritable,
           /*is_mapping_needed=*/kMpredIsMappingNeeded);
       if (!internal_buffer.is_ok()) {
-        LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_AllocationError);
+        LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_AllocationError);
         LOG(ERROR, "Alloc buffer error: %d", internal_buffer.error());
         return internal_buffer.error();
       }
