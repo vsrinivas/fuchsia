@@ -1,2 +1,0 @@
-(?P<text>[^\s]*[\s]*This file is distributed under the University of Illinois Open Source[^\n]*
-[^\s]*[\s]*License\. See LICENSE\.TXT for details\.)

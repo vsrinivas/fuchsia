@@ -1,6 +1,0 @@
-(?s)(.*)(?P<copyright>Copyright ([\d]{4}(-[\d]{4})?(,[\s]?)?)* The Fuchsia Authors
-(Copyright (\((?:c|C)\))? [\d]{4}(-[\d]{4})?(,[\s]?)? (.*)?)*)
-
-(?P<text>Use of this source code is governed by a MIT-style
-license that can be found in the LICENSE file or at
-https://opensource\.org/licenses/MIT)

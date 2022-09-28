@@ -37,7 +37,6 @@
         "patternRoot": [
             {
                 "paths": [
-                    "{FUCHSIA_DIR}/tools/check-licenses/golden/patterns",
                     "{FUCHSIA_DIR}/tools/check-licenses/license/patterns"
                 ],
                 "notes": [

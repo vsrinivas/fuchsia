@@ -1,4 +1,0 @@
-(?P<copyright>[^\n][^\s]* Copyright [\d]{4} Google Inc\.)
-
-(?P<text>[^\s]* Use of this source code is governed by a BSD-style license that can be
-[^\s]* found in the LICENSE file\.)

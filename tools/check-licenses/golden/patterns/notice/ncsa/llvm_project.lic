@@ -1,6 +1,0 @@
-(?P<text>LLVM System Interface Library
--------------------------------------------------------------------------------
-The LLVM System Interface Library is licensed under the Illinois Open Source
-License and has the following additional copyright:
-
-(?P<copyright>Copyright \((?:c|C)\) [\d]{4} eXtensible Systems, Inc\.))

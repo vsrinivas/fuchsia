@@ -1,5 +1,0 @@
-[^\s]* (?P<copyright>Copyright [\d]{4} The Fuchsia Authors)
-[^\s]*
-(?P<text>[^\s]* Use of this source code is governed by a MIT-style
-[^\s]* license that can be found in the LICENSE file or at
-[^\s]* https://opensource.org/licenses/MIT)
