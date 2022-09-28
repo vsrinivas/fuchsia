@@ -138,6 +138,13 @@ func doTestSuspend(
 	}
 	logger.Infof(ctx, "EC serial path: %s", ecSerialPath)
 
+	// Try connecting to EC serial. If this fails, abort the test as we will not be able to wake
+	// the device from suspend.
+	ecAvailable := executeAndCheckLog(ctx, "", "", ecSerialPath)
+	if !ecAvailable {
+		return fmt.Errorf("Could not connect to EC serial, not attempting suspend")
+	}
+
 	if err := device.Suspend(ctx); err != nil {
 		return fmt.Errorf("error suspending: %w", err)
 	}
@@ -185,13 +192,11 @@ func getSerialPath() string {
 }
 
 func executeAndCheckLog(ctx context.Context, cmd string, checkLog string, serialPath string) bool {
-	logFound := false
-
 	// Open a ReadWriteCloser to the EC serial line
 	localSerialSocket, err := serial.Open(serialPath)
 	if err != nil {
 		logger.Errorf(ctx, "Could not connect to serial: %s", err)
-		return logFound
+		return false
 	}
 	defer localSerialSocket.Close()
 
@@ -199,9 +204,17 @@ func executeAndCheckLog(ctx context.Context, cmd string, checkLog string, serial
 	_, err = io.WriteString(localSerialSocket, fmt.Sprintf("\n%s\n", cmd))
 	if err != nil {
 		logger.Errorf(ctx, "Could write command to serial: %s", err)
-		return logFound
+		return false
 	}
 	logger.Infof(ctx, "Sent '%s' command to serial", cmd)
+
+	if checkLog == "" {
+		// There is no log to search for so it is enough that we successfully sent the
+		// command.
+		return true
+	}
+
+	logFound := false
 
 	// We need this sleep to give the logs time to appear
 	time.Sleep(100 * time.Millisecond)
