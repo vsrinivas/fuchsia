@@ -5,7 +5,6 @@
 #include "src/developer/debug/e2e_tests/ffx_debug_agent_bridge.h"
 
 #include <fcntl.h>
-#include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/wait.h>
@@ -15,6 +14,8 @@
 #include <filesystem>
 #include <memory>
 
+#include "lib/syslog/cpp/macros.h"
+#include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
@@ -153,6 +154,15 @@ Err FfxDebugAgentBridge::SetupPipeAndFork(char** unix_env) {
 
   pipe_read_end_ = p[0];
   pipe_write_end_ = p[1];
+
+  // HACK: try to get the ffx daemon up and running before we setup debug_agent. I'm not sure if
+  // this will help.
+  // for (size_t i = 0; i < 5; i++) {
+  //   if (system("ffx target get-ssh-address") == 0) {
+  //     break;
+  //   }
+  //   usleep(5000);
+  // }
 
   const pid_t child_pid = fork();
 
