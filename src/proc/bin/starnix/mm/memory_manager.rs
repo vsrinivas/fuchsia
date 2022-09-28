@@ -737,7 +737,7 @@ impl MemoryManagerState {
     }
 
     /// Reads bytes starting at `addr`, continuing until either `bytes.len()` bytes have been read
-    /// or the end of the mapped area is reached.
+    /// or no more bytes can be read.
     ///
     /// This is used, for example, to read null-terminated strings where the exact length is not
     /// known, only the maximum length is.
@@ -749,7 +749,11 @@ impl MemoryManagerState {
         let mut bytes_read = 0;
         for (mapping, len) in self.get_contiguous_mappings_at(addr, bytes.len())? {
             let next_offset = bytes_read + len;
-            mapping.read_memory(addr + bytes_read, &mut bytes[bytes_read..next_offset])?;
+            if mapping.read_memory(addr + bytes_read, &mut bytes[bytes_read..next_offset]).is_err()
+            {
+                break;
+            }
+
             bytes_read = next_offset;
         }
 
@@ -2093,5 +2097,19 @@ mod tests {
         mm.read_objects(items_ref, &mut items_read).expect("Failed to read empty object array.");
 
         assert_eq!(items_written, items_read);
+    }
+
+    #[::fuchsia::test]
+    fn test_partial_read() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let mm = &current_task.mm;
+
+        let addr = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
+        let second_map = map_memory(&current_task, addr + *PAGE_SIZE, *PAGE_SIZE);
+
+        let mut bytes = vec![0xf; (*PAGE_SIZE * 2) as usize];
+        assert!(mm.write_memory(addr, &bytes).is_ok());
+        mm.state.write().protect(second_map, *PAGE_SIZE as usize, zx::VmarFlags::empty()).unwrap();
+        assert_eq!(mm.state.read().read_memory_partial(addr, &mut bytes), Ok(*PAGE_SIZE as usize));
     }
 }
