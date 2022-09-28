@@ -228,7 +228,7 @@ Do the following:
 
 1. Verify that the default device is set:
 
-   ```
+   ```posix-terminal
    tools/ffx target default get
    ```
 
