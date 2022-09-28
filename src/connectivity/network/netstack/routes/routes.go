@@ -184,14 +184,10 @@ func (rt *RouteTable) AddRouteLocked(route tcpip.Route, prf Preference, metric M
 	}
 
 	// Find the target position for the new route in the table so it remains
-	// sorted. Initialized to point to the end of the table.
-	targetIdx := len(rt.routes)
-	for i, er := range rt.routes {
-		if Less(&newEr, &er) {
-			targetIdx = i
-			break
-		}
-	}
+	// sorted.
+	targetIdx := sort.Search(len(rt.routes), func(i int) bool {
+		return Less(&newEr, &rt.routes[i])
+	})
 	// Extend the table by adding the new route at the end, then move it into its
 	// proper place.
 	rt.routes = append(rt.routes, newEr)
