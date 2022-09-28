@@ -474,6 +474,45 @@ TEST_F(TouchSourceTest, UpdateResponse_WithHOLD_ShouldCloseChannel) {
 }
 
 TEST_F(TouchSourceTest, ViewportIsDeliveredCorrectly) {
+  Viewport viewport;
+  viewport.extents = std::array<std::array<float, 2>, 2>{{{0, 0}, {10, 10}}};
+  viewport.receiver_from_viewport_transform = {
+      // clang-format off
+    1, 0, 0, // column one
+    0, 1, 0, // column two
+    0, 0, 1, // column three
+      // clang-format on
+  };
+  const view_tree::BoundingBox view_bounds{.min = {5, 5}, .max = {10, 10}};
+
+  // Submit the same viewport for all events.
+  {
+    auto event = IPEventTemplate(Phase::kAdd);
+    event.viewport = viewport;
+    touch_source_->UpdateStream(kStreamId, event, kStreamOngoing, view_bounds);
+  }
+  {
+    auto event = IPEventTemplate(Phase::kRemove);
+    event.viewport = viewport;
+    touch_source_->UpdateStream(kStreamId, event, kStreamEnding, view_bounds);
+  }
+
+  client_ptr_->Watch({}, [&](auto events) {
+    // Viewport should always be delivered for the first event.
+    ASSERT_EQ(events.size(), 2u);
+    EXPECT_TRUE(events[0].has_pointer_sample());
+    ASSERT_TRUE(events[0].has_view_parameters());
+    ExpectEqual(events[0].view_parameters(), viewport, view_bounds);
+
+    // Viewport should not be delivered when no changes have been made.
+    EXPECT_FALSE(events[1].has_view_parameters());
+    EXPECT_TRUE(events[1].has_pointer_sample());
+  });
+
+  RunLoopUntilIdle();
+}
+
+TEST_F(TouchSourceTest, WhenExtentsChange_ViewportShouldUpdate) {
   Viewport viewport1;
   viewport1.extents = std::array<std::array<float, 2>, 2>{{{0, 0}, {10, 10}}};
   viewport1.receiver_from_viewport_transform = {
@@ -485,8 +524,49 @@ TEST_F(TouchSourceTest, ViewportIsDeliveredCorrectly) {
   };
   const view_tree::BoundingBox view_bounds1{.min = {5, 5}, .max = {10, 10}};
 
-  Viewport viewport2;
+  // Change only the extents.
+  Viewport viewport2 = viewport1;
   viewport2.extents = std::array<std::array<float, 2>, 2>{{{-5, 1}, {100, 40}}};
+
+  {
+    auto event = IPEventTemplate(Phase::kAdd);
+    event.viewport = viewport1;
+    touch_source_->UpdateStream(kStreamId, event, kStreamOngoing, view_bounds1);
+  }
+  {  // viewport2 -> new viewport.
+    auto event = IPEventTemplate(Phase::kRemove);
+    event.viewport = viewport2;
+    touch_source_->UpdateStream(kStreamId, event, kStreamEnding, view_bounds1);
+  }
+
+  client_ptr_->Watch({}, [&](auto events) {
+    ASSERT_EQ(events.size(), 2u);
+    EXPECT_TRUE(events[0].has_pointer_sample());
+    ASSERT_TRUE(events[0].has_view_parameters());
+    ExpectEqual(events[0].view_parameters(), viewport1, view_bounds1);
+
+    EXPECT_TRUE(events[1].has_pointer_sample());
+    ASSERT_TRUE(events[1].has_view_parameters());
+    ExpectEqual(events[1].view_parameters(), viewport2, view_bounds1);
+  });
+
+  RunLoopUntilIdle();
+}
+
+TEST_F(TouchSourceTest, WhenTransformChanges_ViewportShouldUpdate) {
+  Viewport viewport1;
+  viewport1.extents = std::array<std::array<float, 2>, 2>{{{0, 0}, {10, 10}}};
+  viewport1.receiver_from_viewport_transform = {
+      // clang-format off
+    1, 0, 0, // column one
+    0, 1, 0, // column two
+    0, 0, 1, // column three
+      // clang-format on
+  };
+  const view_tree::BoundingBox view_bounds1{.min = {5, 5}, .max = {10, 10}};
+
+  // Change only the transform.
+  Viewport viewport2 = viewport1;
   viewport2.receiver_from_viewport_transform = {
       // clang-format off
      1,  2,  3, // column one
@@ -494,6 +574,43 @@ TEST_F(TouchSourceTest, ViewportIsDeliveredCorrectly) {
      7,  8,  9  // column three
       // clang-format on
   };
+
+  {
+    auto event = IPEventTemplate(Phase::kAdd);
+    event.viewport = viewport1;
+    touch_source_->UpdateStream(kStreamId, event, kStreamOngoing, view_bounds1);
+  }
+  {  // viewport2 -> new viewport.
+    auto event = IPEventTemplate(Phase::kRemove);
+    event.viewport = viewport2;
+    touch_source_->UpdateStream(kStreamId, event, kStreamEnding, view_bounds1);
+  }
+
+  client_ptr_->Watch({}, [&](auto events) {
+    ASSERT_EQ(events.size(), 2u);
+    EXPECT_TRUE(events[0].has_pointer_sample());
+    ASSERT_TRUE(events[0].has_view_parameters());
+    ExpectEqual(events[0].view_parameters(), viewport1, view_bounds1);
+
+    EXPECT_TRUE(events[1].has_pointer_sample());
+    ASSERT_TRUE(events[1].has_view_parameters());
+    ExpectEqual(events[1].view_parameters(), viewport2, view_bounds1);
+  });
+
+  RunLoopUntilIdle();
+}
+
+TEST_F(TouchSourceTest, WhenViewBoundsChange_ViewportShouldUpdate) {
+  Viewport viewport1;
+  viewport1.extents = std::array<std::array<float, 2>, 2>{{{0, 0}, {10, 10}}};
+  viewport1.receiver_from_viewport_transform = {
+      // clang-format off
+    1, 0, 0, // column one
+    0, 1, 0, // column two
+    0, 0, 1, // column three
+      // clang-format on
+  };
+  const view_tree::BoundingBox view_bounds1{.min = {5, 5}, .max = {10, 10}};
   const view_tree::BoundingBox view_bounds2{.min = {-1, -2}, .max = {3, 4}};
 
   {
@@ -501,29 +618,21 @@ TEST_F(TouchSourceTest, ViewportIsDeliveredCorrectly) {
     event.viewport = viewport1;
     touch_source_->UpdateStream(kStreamId, event, kStreamOngoing, view_bounds1);
   }
-  {
-    auto event = IPEventTemplate(Phase::kChange);
-    event.viewport = viewport1;
-    touch_source_->UpdateStream(kStreamId, event, kStreamOngoing, view_bounds1);
-  }
-  {
+  {  // view_bounds2 -> new viewport.
     auto event = IPEventTemplate(Phase::kRemove);
-    event.viewport = viewport2;
+    event.viewport = viewport1;
     touch_source_->UpdateStream(kStreamId, event, kStreamEnding, view_bounds2);
   }
 
   client_ptr_->Watch({}, [&](auto events) {
-    ASSERT_EQ(events.size(), 3u);
+    ASSERT_EQ(events.size(), 2u);
     EXPECT_TRUE(events[0].has_pointer_sample());
     ASSERT_TRUE(events[0].has_view_parameters());
     ExpectEqual(events[0].view_parameters(), viewport1, view_bounds1);
 
-    EXPECT_FALSE(events[1].has_view_parameters());
     EXPECT_TRUE(events[1].has_pointer_sample());
-
-    EXPECT_TRUE(events[2].has_pointer_sample());
-    ASSERT_TRUE(events[2].has_view_parameters());
-    ExpectEqual(events[2].view_parameters(), viewport2, view_bounds2);
+    ASSERT_TRUE(events[1].has_view_parameters());
+    ExpectEqual(events[1].view_parameters(), viewport1, view_bounds2);
   });
 
   RunLoopUntilIdle();

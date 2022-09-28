@@ -55,7 +55,8 @@ struct Viewport {
   // Used to check for exact equality in TouchSource
   inline bool operator==(const Viewport& other) const {
     return extents == other.extents &&
-           context_from_viewport_transform == other.context_from_viewport_transform;
+           context_from_viewport_transform == other.context_from_viewport_transform &&
+           receiver_from_viewport_transform == other.receiver_from_viewport_transform;
   }
   inline bool operator!=(const Viewport& other) const { return !(*this == other); }
 };
