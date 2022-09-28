@@ -17,7 +17,7 @@ zx_library("sysmem-connector") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zx",
   ]
   public_deps = [ "//sdk/fidl/fuchsia.cobalt" ]
