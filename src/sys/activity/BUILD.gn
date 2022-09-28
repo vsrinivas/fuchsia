@@ -16,8 +16,6 @@ source_set("lib") {
     "activity_provider_connection.h",
     "activity_state_machine.cc",
     "activity_state_machine.h",
-    "activity_tracker_connection.cc",
-    "activity_tracker_connection.h",
     "state_machine_driver.cc",
     "state_machine_driver.h",
   ]
@@ -67,7 +65,6 @@ executable("activity_test_bin") {
     "activity_app_test.cc",
     "activity_provider_connection_test.cc",
     "activity_state_machine_test.cc",
-    "activity_tracker_connection_test.cc",
     "fake_listener.h",
     "state_machine_driver_test.cc",
   ]

@@ -167,30 +167,12 @@ class ActivityCtl {
     (*provider_conn_)->WatchState(listener_.GetHandle(dispatcher_));
   }
 
-  void SendDiscreteActivity() {
-    tracker_conn_ = context_->svc()->Connect<fuchsia::ui::activity::Tracker>();
-    fuchsia::ui::activity::GenericActivity generic;
-    fuchsia::ui::activity::DiscreteActivity activity;
-    activity.set_generic(std::move(generic));
-    (*tracker_conn_)
-        ->ReportDiscreteActivity(std::move(activity), async::Now(dispatcher_).get(), []() {});
-    async::PostTask(dispatcher_, std::move(quit_callback_));
-  }
+  void SendDiscreteActivity() {}
 
-  void SendOngoingActivity() {
-    tracker_conn_ = context_->svc()->Connect<fuchsia::ui::activity::Tracker>();
-    fuchsia::ui::activity::GenericActivity generic;
-    fuchsia::ui::activity::OngoingActivity activity;
-    activity.set_generic(std::move(generic));
-    uint64_t id = static_cast<uint64_t>(random_());
-    (*tracker_conn_)
-        ->StartOngoingActivity(static_cast<uint32_t>(id), std::move(activity),
-                               async::Now(dispatcher_).get(), []() {});
-  }
+  void SendOngoingActivity() {}
 
  private:
   std::optional<fidl::InterfacePtr<fuchsia::ui::activity::Provider>> provider_conn_;
-  std::optional<fidl::InterfacePtr<fuchsia::ui::activity::Tracker>> tracker_conn_;
   std::optional<fidl::InterfacePtr<fuchsia::ui::activity::control::Control>> control_conn_;
   LoggingListener listener_;
   std::unique_ptr<sys::ComponentContext> context_;

@@ -29,10 +29,6 @@ int main(void) {
       [&app](fidl::InterfaceRequest<fuchsia::ui::activity::control::Control> request) {
         app.AddControlBinding(std::move(request));
       });
-  startup_context->outgoing()->AddPublicService<fuchsia::ui::activity::Tracker>(
-      [&app](fidl::InterfaceRequest<fuchsia::ui::activity::Tracker> request) {
-        app.AddTrackerBinding(std::move(request));
-      });
   startup_context->outgoing()->AddPublicService<fuchsia::ui::activity::Provider>(
       [&app](fidl::InterfaceRequest<fuchsia::ui::activity::Provider> request) {
         app.AddProviderBinding(std::move(request));

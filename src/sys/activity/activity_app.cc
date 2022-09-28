@@ -19,15 +19,6 @@ std::vector<const ActivityControlConnection*> ActivityApp::control_bindings() co
   return vec;
 }
 
-std::vector<const ActivityTrackerConnection*> ActivityApp::tracker_bindings() const {
-  std::vector<const ActivityTrackerConnection*> vec;
-  vec.reserve(tracker_bindings_.size());
-  for (const auto& entry : tracker_bindings_) {
-    vec.push_back(entry.second.get());
-  }
-  return vec;
-}
-
 std::vector<const ActivityProviderConnection*> ActivityApp::provider_bindings() const {
   std::vector<const ActivityProviderConnection*> vec;
   vec.reserve(provider_bindings_.size());
@@ -51,23 +42,6 @@ void ActivityApp::AddControlBinding(
     }
   });
   control_bindings_.emplace(std::move(unowned), std::move(conn));
-}
-
-void ActivityApp::AddTrackerBinding(
-    fidl::InterfaceRequest<fuchsia::ui::activity::Tracker> request) {
-  zx::unowned_channel unowned(request.channel());
-  auto conn = std::make_unique<ActivityTrackerConnection>(state_machine_driver_.get(), dispatcher_,
-                                                          std::move(request));
-  conn->set_error_handler([this, unowned, cp = conn.get()](zx_status_t status) {
-    cp->Stop();
-    auto entry = tracker_bindings_.find(unowned);
-    if (entry != tracker_bindings_.end()) {
-      tracker_bindings_.erase(entry);
-    } else {
-      FX_LOGS(ERROR) << "Failed to remove binding during cleanup";
-    }
-  });
-  tracker_bindings_.emplace(std::move(unowned), std::move(conn));
 }
 
 void ActivityApp::AddProviderBinding(

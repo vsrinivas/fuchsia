@@ -16,7 +16,6 @@
 #include "src/lib/fxl/macros.h"
 #include "src/sys/activity/activity_control_connection.h"
 #include "src/sys/activity/activity_provider_connection.h"
-#include "src/sys/activity/activity_tracker_connection.h"
 
 namespace activity {
 
@@ -30,10 +29,6 @@ class ActivityApp {
   // The binding is automatically cleaned up when the client terminates, or when a channel
   // error occurs.
   void AddControlBinding(fidl::InterfaceRequest<fuchsia::ui::activity::control::Control> request);
-  // Registers a new Tracker client and stores a binding created from |request|.
-  // The binding is automatically cleaned up when the client terminates, or when a channel
-  // error occurs.
-  void AddTrackerBinding(fidl::InterfaceRequest<fuchsia::ui::activity::Tracker> request);
   // Registers a new Provider client and stores a binding created from |request|.
   // The binding is automatically cleaned up when the client terminates, or when a channel
   // error occurs.
@@ -42,7 +37,6 @@ class ActivityApp {
   // Returns a list of weak references to the bindings managed by this instance.
   // Exposed for testing.
   std::vector<const ActivityControlConnection*> control_bindings() const;
-  std::vector<const ActivityTrackerConnection*> tracker_bindings() const;
   std::vector<const ActivityProviderConnection*> provider_bindings() const;
 
  private:
@@ -50,7 +44,6 @@ class ActivityApp {
   async_dispatcher_t* dispatcher_;
 
   std::map<zx::unowned_channel, std::unique_ptr<ActivityControlConnection>> control_bindings_;
-  std::map<zx::unowned_channel, std::unique_ptr<ActivityTrackerConnection>> tracker_bindings_;
   std::map<zx::unowned_channel, std::unique_ptr<ActivityProviderConnection>> provider_bindings_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(ActivityApp);
