@@ -447,7 +447,7 @@ zx_status_t iwl_pcie_txq_alloc(struct iwl_trans* trans, struct iwl_txq* txq, uin
     tfd_sz = trans_pcie->tfd_size * slots_num;
   }
 
-  iwl_irq_timer_create(trans->dev, iwl_pcie_txq_stuck_timer, &txq, &txq->stuck_timer);
+  iwl_irq_timer_create(trans->dev, iwl_pcie_txq_stuck_timer, txq, &txq->stuck_timer);
   txq->trans_pcie = trans_pcie;
 
   txq->n_window = slots_num;
