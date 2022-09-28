@@ -4,6 +4,7 @@
 
 use crate::node::Node;
 use anyhow::{format_err, Context, Error};
+use fuchsia_async as fasync;
 use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
 use fuchsia_inspect::component;
 use futures::{
@@ -69,8 +70,8 @@ impl PowerManager {
         // separated. Looking forward, we may try to get rid of the concept of `node_futures` anyway
         // (opting instead for nodes to own their own `fuchsia_async::Task` which polls any
         // long-running futures they may require).
-        let node_futures_task = fuchsia_async::Task::local(node_futures.collect::<()>());
-        let service_fs_task = fuchsia_async::Task::local(fs.collect::<()>());
+        let node_futures_task = fasync::Task::local(node_futures.collect::<()>());
+        let service_fs_task = fasync::Task::local(fs.collect::<()>());
 
         self.init_nodes().await?;
 
@@ -108,6 +109,7 @@ impl PowerManager {
         // Iterate through each object in the top-level array, which represents configuration for a
         // single node
         for node_config in json_data.as_array().unwrap().iter() {
+            info!("Creating node {}", node_config["name"]);
             let node = self
                 .create_node(node_config.clone(), service_fs, node_futures)
                 .await
@@ -125,6 +127,12 @@ impl PowerManager {
         service_fs: &'a mut ServiceFs<ServiceObjLocal<'b, ()>>,
         node_futures: &FuturesUnordered<LocalBoxFuture<'c, ()>>,
     ) -> Result<Rc<dyn Node>, Error> {
+        let node_name = json_data["name"].clone();
+        let _log_warning_task = fasync::Task::local(async move {
+            fasync::Timer::new(fasync::Duration::from_seconds(30)).await;
+            warn!("Creating {} not complete after 30s", node_name);
+        });
+
         Ok(match json_data["type"].as_str().unwrap() {
             "ActivityHandler" => {
                 activity_handler::ActivityHandlerBuilder::new_from_json(json_data, &self.nodes)
@@ -248,6 +256,11 @@ impl PowerManager {
         info!("Initializing nodes");
 
         join_all(self.nodes.iter().map(|node| async move {
+            let node_name = node.0.clone();
+            let _log_warning_task = fasync::Task::local(async move {
+                fasync::Timer::new(fasync::Duration::from_seconds(30)).await;
+                warn!("Init {} not complete after 30s", node_name);
+            });
             node.1.init().await.context(format!("Failed to init node: {}", node.0))
         }))
         .await
