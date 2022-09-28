@@ -679,6 +679,28 @@ where
         }
     }
 
+    async fn get_peer_name(&self) -> Result<fnet::SocketAddress, fposix::Errno> {
+        let mut guard = self.ctx.lock().await;
+        let Ctx { sync_ctx, non_sync_ctx: _ } = guard.deref_mut();
+        match self.id {
+            SocketId::Unbound(_, _) | SocketId::Bound(_, _) | SocketId::Listener(_) => {
+                Err(fposix::Errno::Enotconn)
+            }
+            SocketId::Connection(id) => Ok({
+                match I::VERSION {
+                    IpVersion::V4 => get_connection_v4_info(sync_ctx, id)
+                        .remote_addr
+                        .into_fidl()
+                        .into_sock_addr(),
+                    IpVersion::V6 => get_connection_v6_info(sync_ctx, id)
+                        .remote_addr
+                        .into_fidl()
+                        .into_sock_addr(),
+                }
+            }),
+        }
+    }
+
     async fn accept(
         &mut self,
         want_addr: bool,
@@ -944,7 +966,7 @@ where
                 responder_send!(responder, &mut self.get_sock_name().await);
             }
             fposix_socket::StreamSocketRequest::GetPeerName { responder } => {
-                responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                responder_send!(responder, &mut self.get_peer_name().await);
             }
             fposix_socket::StreamSocketRequest::Shutdown { mode: _, responder } => {
                 responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
