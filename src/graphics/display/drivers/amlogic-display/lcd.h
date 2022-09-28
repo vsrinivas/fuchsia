@@ -7,25 +7,30 @@
 
 #include <fuchsia/hardware/dsiimpl/cpp/banjo.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
+#include <lib/fit/function.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
 
 #include <fbl/alloc_checker.h>
 #include <hwreg/mmio.h>
 
-#include "src/graphics/display/drivers/amlogic-display/panel-config.h"
-
 namespace amlogic_display {
 
 // An Lcd controls the panel attached to a MIPI-DSI endpoint.
 class Lcd {
  public:
-  explicit Lcd(uint32_t panel_type) : panel_type_(panel_type) {}
+  Lcd(uint32_t panel_type, fit::function<void(bool)> set_signal_power)
+      : panel_type_(panel_type), set_signal_power_(std::move(set_signal_power)) {}
 
   // Create an Lcd to control the panel at `dsiimpl`. Panel type detection is
   // performed using `gpio`. If `already_enabled`, there will be no attempt to
   // power the LCD on or probe its panel type for correctness.
+  // `set_signal_power(bool on)` will be called when the DSI should be turned on
+  // or off.
   static zx::status<Lcd*> Create(fbl::AllocChecker* ac, uint32_t panel_type,
+                                 cpp20::span<const uint8_t> dsi_on,
+                                 cpp20::span<const uint8_t> dsi_off,
+                                 fit::function<void(bool)> set_signal_power,
                                  ddk::DsiImplProtocolClient dsiimpl, ddk::GpioProtocolClient gpio,
                                  bool already_enabled);
 
@@ -40,13 +45,17 @@ class Lcd {
   static zx_status_t GetDisplayId(ddk::DsiImplProtocolClient dsiimpl, uint32_t* id_out);
 
  private:
-  zx_status_t LoadInitTable(const uint8_t* buffer, size_t size);
+  zx_status_t LoadInitTable(cpp20::span<const uint8_t> buffer);
   // Print the display ID to the console.
   zx_status_t GetDisplayId();
 
   uint32_t panel_type_;
-  const PanelConfig* panel_config_ = nullptr;
+  fit::function<void(bool)> set_signal_power_;
   ddk::GpioProtocolClient gpio_;
+
+  // Init and shutdown sequences for the fixed panel.
+  cpp20::span<const uint8_t> dsi_on_;
+  cpp20::span<const uint8_t> dsi_off_;
   ddk::DsiImplProtocolClient dsiimpl_;
 
   bool enabled_ = false;

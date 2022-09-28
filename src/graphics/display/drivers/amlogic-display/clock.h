@@ -29,12 +29,13 @@ class Clock {
  public:
   // Map all necessary resources. This method does not change hardware state,
   // and is therefore safe to use when adopting a bootloader initialized device.
-  // Returns nullptr on failure.
-  static zx::status<std::unique_ptr<Clock>> Create(ddk::PDev& pdev);
+  static zx::status<std::unique_ptr<Clock>> Create(ddk::PDev& pdev, bool already_enabled);
 
   zx_status_t Enable(const display_setting_t& d);
   void Disable();
   void Dump();
+
+  void SetVideoOn(bool on);
 
   // This is only safe to call when the clock is Enable'd.
   uint32_t GetBitrate() const {

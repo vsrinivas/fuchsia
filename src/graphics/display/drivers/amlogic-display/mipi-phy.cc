@@ -195,7 +195,8 @@ zx_status_t MipiPhy::Startup() {
 }
 
 zx::status<std::unique_ptr<MipiPhy>> MipiPhy::Create(ddk::PDev& pdev,
-                                                     ddk::DsiImplProtocolClient dsi) {
+                                                     ddk::DsiImplProtocolClient dsi,
+                                                     bool already_enabled) {
   fbl::AllocChecker ac;
   std::unique_ptr<MipiPhy> self(new (&ac) MipiPhy);
   if (!ac.check()) {
@@ -203,6 +204,7 @@ zx::status<std::unique_ptr<MipiPhy>> MipiPhy::Create(ddk::PDev& pdev,
     return zx::error(ZX_ERR_NO_MEMORY);
   }
   self->dsiimpl_ = dsi;
+  self->phy_enabled_ = already_enabled;
 
   // Map Mipi Dsi and Dsi Phy registers
   zx_status_t status = pdev.MapMmio(MMIO_DSI_PHY, &self->dsi_phy_mmio_);

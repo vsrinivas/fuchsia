@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/dsiimpl/cpp/banjo.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
+#include <lib/fit/function.h>
 #include <lib/zx/status.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
@@ -18,11 +19,12 @@
 #include <ddktl/device.h>
 #include <hwreg/mmio.h>
 
-#include "common.h"
-#include "hhi-regs.h"
-#include "lcd.h"
-#include "mipi-phy.h"
-#include "vpu-regs.h"
+#include "src/graphics/display/drivers/amlogic-display/common.h"
+#include "src/graphics/display/drivers/amlogic-display/hhi-regs.h"
+#include "src/graphics/display/drivers/amlogic-display/lcd.h"
+#include "src/graphics/display/drivers/amlogic-display/mipi-phy.h"
+#include "src/graphics/display/drivers/amlogic-display/panel-config.h"
+#include "src/graphics/display/drivers/amlogic-display/vpu-regs.h"
 
 namespace amlogic_display {
 
@@ -53,7 +55,10 @@ class DsiHost {
   void PhyEnable();
   void PhyDisable();
   zx_status_t HostModeInit(const display_setting_t& disp_setting);
-
+  // Controls the shutdown register on the DSI host side.
+  void SetSignalPower(bool on);
+  zx_status_t LoadPowerTable(cpp20::span<const PowerOp> commands,
+                             fit::callback<zx_status_t()> power_on);
   std::optional<fdf::MmioBuffer> mipi_dsi_mmio_;
   std::optional<fdf::MmioBuffer> hhi_mmio_;
 
@@ -64,6 +69,7 @@ class DsiHost {
   ddk::GpioProtocolClient lcd_gpio_;
 
   uint32_t panel_type_;
+  const PanelConfig* panel_config_ = nullptr;
 
   bool enabled_ = false;
 

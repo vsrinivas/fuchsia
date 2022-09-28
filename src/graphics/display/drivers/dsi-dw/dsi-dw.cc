@@ -228,6 +228,7 @@ zx_status_t DsiDw::SendCommand(const fidl_dsi::wire::MipiDsiCmd& cmd,
   switch (cmd.dsi_data_type()) {
     case kMipiDsiDtDcsShortWrite0:
     case kMipiDsiDtDcsShortWrite1:
+    case /*kMipiDsiDtDcsShortWrite2=*/0x25:
       status = DcsWriteShort(cmd, txdata);
       break;
     case kMipiDsiDtDcsLongWrite:
@@ -250,11 +251,9 @@ zx_status_t DsiDw::SendCommand(const fidl_dsi::wire::MipiDsiCmd& cmd,
 }
 
 void DsiDw::DsiImplSetMode(dsi_mode_t mode) {
-  DsiDwPwrUpReg::Get().ReadFrom(&(*dsi_mmio_)).set_shutdown(kPowerReset).WriteTo(&(*dsi_mmio_));
   // Configure the operation mode (cmd or vid)
   DsiDwModeCfgReg::Get().ReadFrom(&(*dsi_mmio_)).set_cmd_video_mode(mode).WriteTo(&(*dsi_mmio_));
   DsiImplWriteReg(DW_DSI_VID_MODE_CFG, last_vidmode_);
-  DsiDwPwrUpReg::Get().ReadFrom(&(*dsi_mmio_)).set_shutdown(kPowerOn).WriteTo(&(*dsi_mmio_));
 }
 
 zx_status_t DsiDw::DsiImplConfig(const dsi_config_t* dsi_config) {

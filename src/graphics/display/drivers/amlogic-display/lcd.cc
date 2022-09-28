@@ -13,7 +13,7 @@
 #include <fbl/alloc_checker.h>
 
 #include "src/graphics/display/drivers/amlogic-display/common.h"
-#include "src/graphics/display/drivers/amlogic-display/initcodes-inl.h"
+#include "src/graphics/display/drivers/amlogic-display/panel-config.h"
 
 #define READ_DISPLAY_ID_CMD (0x04)
 #define READ_DISPLAY_ID_LEN (0x03)
@@ -22,57 +22,31 @@ namespace amlogic_display {
 
 namespace {
 
-const uint8_t empty_sequence[] = {};
+static zx_status_t CheckMipiReg(ddk::DsiImplProtocolClient* dsiimpl, uint8_t reg, size_t count) {
+  ZX_DEBUG_ASSERT(count > 0);
 
-// Convenience function for building PanelConfigs. Most op sequences are shared
-// between panel types.
-constexpr PanelConfig MakeConfig(const char* name, cpp20::span<const uint8_t> init_seq) {
-  return {name,
-          init_seq,
-          {lcd_shutdown_sequence, std::size(lcd_shutdown_sequence)},
-          {lcd_power_on_sequence, std::size(lcd_power_on_sequence)},
-          {lcd_power_off_sequence, std::size(lcd_power_off_sequence)}};
-}
+  const uint8_t payload[3] = {kMipiDsiDtGenShortRead1, 1, reg};
+  uint8_t rsp[count];
+  mipi_dsi_cmd_t cmd{
+      .virt_chn_id = kMipiDsiVirtualChanId,
+      .dsi_data_type = kMipiDsiDtGenShortRead1,
+      .pld_data_list = payload,
+      .pld_data_count = 1,
+      .rsp_data_list = rsp,
+      .rsp_data_count = count,
+      .flags = MIPI_DSI_CMD_FLAGS_ACK | MIPI_DSI_CMD_FLAGS_SET_MAX,
+  };
 
-// LINT.IfChange
-/// Panel type IDs are compact. This array should be updated when
-/// <lib/device-protocol/display-panel.h> is.
-PanelConfig kPanelConfig[] = {
-    MakeConfig("TV070WSM_FT",
-               {lcd_init_sequence_TV070WSM_FT, std::size(lcd_init_sequence_TV070WSM_FT)}),
-    MakeConfig("P070ACB_FT",
-               {lcd_init_sequence_P070ACB_FT, std::size(lcd_init_sequence_P070ACB_FT)}),
-    MakeConfig("TV101WXM_FT",
-               {lcd_init_sequence_TV101WXM_FT, std::size(lcd_init_sequence_TV101WXM_FT)}),
-    MakeConfig("G101B158_FT",
-               {lcd_init_sequence_G101B158_FT, std::size(lcd_init_sequence_G101B158_FT)}),
-    // ILI9881C & ST7701S are not supported
-    MakeConfig("ILI9881C", {empty_sequence, 0}),
-    MakeConfig("ST7701S", {empty_sequence, 0}),
-    MakeConfig("TV080WXM_FT",
-               {lcd_init_sequence_TV080WXM_FT, std::size(lcd_init_sequence_TV080WXM_FT)}),
-    MakeConfig("TV101WXM_FT_9365",
-               {lcd_init_sequence_TV101WXM_FT_9365, std::size(lcd_init_sequence_TV101WXM_FT_9365)}),
-    MakeConfig("TV070WSM_FT_9365",
-               {lcd_init_sequence_TV070WSM_FT_9365, std::size(lcd_init_sequence_TV070WSM_FT_9365)}),
-    MakeConfig("KD070D82_FT",
-               {lcd_init_sequence_KD070D82_FT_9365, std::size(lcd_init_sequence_KD070D82_FT_9365)}),
-    MakeConfig("KD070D82_FT_9365",
-               {lcd_init_sequence_KD070D82_FT_9365, std::size(lcd_init_sequence_KD070D82_FT_9365)}),
-    MakeConfig("TV070WSM_ST7703I",
-               {lcd_init_sequence_TV070WSM_ST7703I, std::size(lcd_init_sequence_TV070WSM_ST7703I)}),
-
-};
-// LINT.ThenChange(//src/graphics/display/lib/device-protocol-display/include/lib/device-protocol/display-panel.h)
-
-const PanelConfig* GetPanelConfig(uint32_t panel_type) {
-  ZX_DEBUG_ASSERT(panel_type <= PANEL_TV070WSM_ST7703I);
-  ZX_DEBUG_ASSERT(panel_type != PANEL_ILI9881C);
-  ZX_DEBUG_ASSERT(panel_type != PANEL_ST7701S);
-  if (panel_type == PANEL_ILI9881C || panel_type == PANEL_ST7701S) {
-    return nullptr;
+  zx_status_t status;
+  if ((status = dsiimpl->SendCmd(&cmd, 1)) != ZX_OK) {
+    DISP_ERROR("Could not read register %c\n", reg);
+    return status;
   }
-  return &(kPanelConfig[panel_type]);
+  if (cmd.rsp_data_count != count) {
+    DISP_ERROR("MIPI-DSI register read was short: got %zu want %zu. Ignoring", cmd.rsp_data_count,
+               count);
+  }
+  return ZX_OK;
 }
 
 }  // namespace
@@ -108,80 +82,147 @@ zx_status_t Lcd::GetDisplayId() {
 }
 
 // This function write DSI commands based on the input buffer.
-zx_status_t Lcd::LoadInitTable(const uint8_t* buffer, size_t size) {
+zx_status_t Lcd::LoadInitTable(cpp20::span<const uint8_t> buffer) {
   zx_status_t status = ZX_OK;
-  size_t i;
-  i = 0;
-  bool isDCS = false;
-  while (i < size) {
-    switch (buffer[i]) {
-      case kDsiOpSleep:
-        zx_nanosleep(zx_deadline_after(ZX_MSEC(buffer[i + 1])));
-        i += 2;
+  uint32_t delay_ms = 0;
+  constexpr size_t kMinCmdSize = 2;
+
+  for (size_t i = 0; i < buffer.size() - kMinCmdSize;) {
+    const uint8_t cmd_type = buffer[i];
+    const uint8_t payload_size = buffer[i + 1];
+    bool is_dcs = false;
+    // This command has an implicit size=2, treat it specially.
+    if (cmd_type == kDsiOpSleep) {
+      if (payload_size == 0 || payload_size == 0xff) {
+        return status;
+      }
+      zx::nanosleep(zx::deadline_after(zx::msec(payload_size)));
+      i += 2;
+      continue;
+    }
+    if (payload_size == 0) {
+      i += kMinCmdSize;
+      continue;
+    }
+    if ((i + payload_size + kMinCmdSize) > buffer.size()) {
+      DISP_ERROR("buffer[%lu] command 0x%x size=0x%x would overflow buffer size=%lu", i, cmd_type,
+                 payload_size, buffer.size());
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    switch (cmd_type) {
+      case kDsiOpDelay:
+        delay_ms = 0;
+        for (size_t j = 0; j < payload_size; j++) {
+          delay_ms += buffer[i + 2 + j];
+        }
+        if (delay_ms > 0) {
+          zx::nanosleep(zx::deadline_after(zx::msec(delay_ms)));
+        }
         break;
-      case /*kDsiOpDcsCmd*/ 0xFE:
-        isDCS = true;
+      case kDsiOpGpio:
+        DISP_TRACE("dsi_set_gpio size=%d value=%d", payload_size, buffer[i + 3]);
+        if (buffer[i + 2] != 0) {
+          DISP_ERROR("Unrecognized GPIO pin (%d)", buffer[i + 2]);
+          // We _should_ bail here, but this spec-violating behavior is present
+          // in the other drivers for this hardware.
+          //
+          // return ZX_ERR_UNKNOWN;
+        } else {
+          gpio_.ConfigOut(buffer[i + 3]);
+        }
+        if (payload_size > 2 && buffer[i + 4]) {
+          DISP_TRACE("dsi_set_gpio sleep %d", buffer[i + 4]);
+          zx::nanosleep(zx::deadline_after(zx::msec(buffer[i + 4])));
+        }
+        break;
+      case kDsiOpReadReg:
+        DISP_TRACE("dsi_read size=%d reg=%d, count=%d", payload_size, buffer[i + 2], buffer[i + 3]);
+        if (payload_size != 2) {
+          DISP_ERROR("Invalid MIPI-DSI reg check, expected a register and a target value!");
+        }
+        status = CheckMipiReg(&dsiimpl_, /*reg=*/buffer[i + 2], /*count=*/buffer[i + 3]);
+        if (status != ZX_OK) {
+          DISP_ERROR("Error reading MIPI register 0x%x (%d)", buffer[i + 2], status);
+          return status;
+        }
+        break;
+      case kDsiOpPhyPowerOn:
+        DISP_TRACE("dsi_phy_power_on size=%d", payload_size);
+        set_signal_power_(/*on=*/true);
+        break;
+      case kDsiOpPhyPowerOff:
+        DISP_TRACE("dsi_phy_power_off size=%d", payload_size);
+        set_signal_power_(/*on=*/false);
+        break;
+      // All other cmd_type bytes are real DSI commands
+      case kMipiDsiDtDcsShortWrite0:
+      case kMipiDsiDtDcsShortWrite1:
+      case /*kMipiDsiDtDcsShortWrite2*/ 0x25:
+      case kMipiDsiDtDcsLongWrite:
+      case kMipiDsiDtDcsRead0:
+        is_dcs = true;
         __FALLTHROUGH;
-      case /*kDsiOpGenCmd*/ 0xFD:
       default:
+        DISP_TRACE("dsi_cmd op=0x%x size=%d is_dcs=%s", cmd_type, payload_size,
+                   is_dcs ? "yes" : "no");
+        ZX_DEBUG_ASSERT(cmd_type != 0x37);
         // Create the command using mipi-dsi library
         mipi_dsi_cmd_t cmd;
         status =
-            mipi_dsi::MipiDsi::CreateCommand(&buffer[i + 2], buffer[i + 1], NULL, 0, isDCS, &cmd);
+            mipi_dsi::MipiDsi::CreateCommand(&buffer[i + 2], payload_size, NULL, 0, is_dcs, &cmd);
         if (status == ZX_OK) {
           if ((status = dsiimpl_.SendCmd(&cmd, 1)) != ZX_OK) {
             DISP_ERROR("Error loading LCD init table. Aborting %d\n", status);
             return status;
           }
         } else {
-          DISP_ERROR("Invalid command (%d). Skipping\n", status);
+          DISP_ERROR("Invalid command at byte 0x%lx (%d). Skipping\n", i, status);
         }
-        // increment by payload length
-        i += buffer[i + 1] + 2;  // the 2 includes current plus size field
-        isDCS = false;
         break;
     }
+    // increment by payload length
+    i += payload_size + kMinCmdSize;
   }
   return status;
 }
 
 zx_status_t Lcd::Disable() {
   if (!enabled_) {
+    DISP_INFO("LCD is already off, no work to do");
     return ZX_OK;
   }
-  if (panel_config_ == nullptr) {
+  if (dsi_off_.size() == 0) {
     DISP_ERROR("Unsupported panel (%d) detected!", panel_type_);
     return ZX_ERR_NOT_SUPPORTED;
   }
-  DISP_INFO("Powering off the LCD");
-  // First send shutdown command to LCD
-  zx_status_t status = LoadInitTable(panel_config_->dsi_off.data(), panel_config_->dsi_off.size());
-  if (status == ZX_OK) {
-    enabled_ = false;
+  DISP_INFO("Powering off the LCD [type=%d]", panel_type_);
+  auto status = LoadInitTable(dsi_off_);
+  if (status != ZX_OK) {
+    DISP_ERROR("Failed to execute panel off sequence (%d)", status);
+    return status;
   }
-  // TODO(rlb): use panel_config_->power_off for a graceful shutdown
-  return status;
+  enabled_ = false;
+  return ZX_OK;
 }
 
 zx_status_t Lcd::Enable() {
   if (enabled_) {
+    DISP_INFO("LCD is already on, no work to do");
     return ZX_OK;
   }
 
-  if (panel_config_ == nullptr) {
+  if (dsi_on_.size() == 0) {
     DISP_ERROR("Unsupported panel (%d) detected!", panel_type_);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // TODO(rlb): convert this sequence to using panel_config_->power_on
-  // reset LCD panel via GPIO according to vendor doc
-  gpio_.ConfigOut(1);
-  gpio_.Write(1);
-  zx_nanosleep(zx_deadline_after(ZX_MSEC(30)));
-  gpio_.Write(0);
-  zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
-  gpio_.Write(1);
-  zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
+  DISP_INFO("Powering on the LCD [type=%d]", panel_type_);
+  auto status = LoadInitTable(dsi_on_);
+  if (status != ZX_OK) {
+    DISP_ERROR("Failed to execute panel init sequence (%d)", status);
+    return status;
+  }
 
   // check status
   if (GetDisplayId() != ZX_OK) {
@@ -190,21 +231,20 @@ zx_status_t Lcd::Enable() {
   }
   zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
 
-  // The panel is powered on, now program it for the correct DSI video mode.
-  zx_status_t status = LoadInitTable(panel_config_->dsi_on.data(), panel_config_->dsi_on.size());
-
-  if (status == ZX_OK) {
-    // LCD is on now.
-    enabled_ = true;
-  }
-  return status;
+  // LCD is on now.
+  enabled_ = true;
+  return ZX_OK;
 }
 
 zx::status<Lcd*> Lcd::Create(fbl::AllocChecker* ac, uint32_t panel_type,
+                             cpp20::span<const uint8_t> dsi_on, cpp20::span<const uint8_t> dsi_off,
+                             fit::function<void(bool)> set_signal_power,
                              ddk::DsiImplProtocolClient dsiimpl, ddk::GpioProtocolClient gpio,
                              bool already_enabled) {
-  std::unique_ptr<Lcd> lcd = fbl::make_unique_checked<Lcd>(ac, panel_type);
-  lcd->panel_config_ = GetPanelConfig(panel_type);
+  std::unique_ptr<Lcd> lcd =
+      fbl::make_unique_checked<Lcd>(ac, panel_type, std::move(set_signal_power));
+  lcd->dsi_on_ = dsi_on;
+  lcd->dsi_off_ = dsi_off;
   lcd->dsiimpl_ = dsiimpl;
 
   if (!gpio.is_valid()) {

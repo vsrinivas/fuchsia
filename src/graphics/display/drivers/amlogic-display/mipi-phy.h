@@ -24,7 +24,8 @@ class MipiPhy {
  public:
   // This function initializes internal state of the object
   static zx::status<std::unique_ptr<MipiPhy>> Create(ddk::PDev& pdev,
-                                                     ddk::DsiImplProtocolClient dsi);
+                                                     ddk::DsiImplProtocolClient dsi,
+                                                     bool already_enabled);
   // This function enables and starts up the Mipi Phy
   zx_status_t Startup();
   // This function stops Mipi Phy

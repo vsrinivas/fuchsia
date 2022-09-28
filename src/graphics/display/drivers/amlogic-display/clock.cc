@@ -163,7 +163,7 @@ zx::status<PllConfig> Clock::GenerateHPLL(const display_setting_t& d) {
 
     // Make sure all clocks are within range
     // If these values are not within range, we will not have a valid display
-    uint32_t dsi_bit_rate_max_khz = d.bit_rate_max * 1000; // change to KHz
+    uint32_t dsi_bit_rate_max_khz = d.bit_rate_max * 1000;  // change to KHz
     uint32_t dsi_bit_rate_min_khz = dsi_bit_rate_max_khz - pll_cfg.fout;
     if ((pll_fout < dsi_bit_rate_min_khz) || (pll_fout > dsi_bit_rate_max_khz)) {
       DISP_TRACE("Calculated clocks out of range for xd = %u, skipped", clock_factor);
@@ -426,8 +426,10 @@ zx_status_t Clock::Enable(const display_setting_t& d) {
   return ZX_OK;
 }
 
+void Clock::SetVideoOn(bool on) { WRITE32_REG(VPU, ENCL_VIDEO_EN, on); }
+
 // static
-zx::status<std::unique_ptr<Clock>> Clock::Create(ddk::PDev& pdev) {
+zx::status<std::unique_ptr<Clock>> Clock::Create(ddk::PDev& pdev, bool already_enabled) {
   fbl::AllocChecker ac;
   auto self = fbl::make_unique_checked<Clock>(&ac);
   if (!ac.check()) {
@@ -447,6 +449,7 @@ zx::status<std::unique_ptr<Clock>> Clock::Create(ddk::PDev& pdev) {
     DISP_ERROR("Clock: Could not map HHI mmio");
     return zx::error(status);
   }
+  self->clock_enabled_ = already_enabled;
 
   return zx::ok(std::move(self));
 }

@@ -65,7 +65,7 @@ zx_status_t Vout::InitDsi(zx_device_t* parent, uint32_t panel_type, uint32_t wid
     DISP_ERROR("Could not get PDEV protocol\n");
     return status;
   }
-  auto clock = amlogic_display::Clock::Create(pdev);
+  auto clock = amlogic_display::Clock::Create(pdev, kBootloaderDisplayEnabled);
   if (clock.is_error()) {
     DISP_ERROR("Could not create Clock: %s\n", clock.status_string());
     return clock.status_value();
@@ -155,12 +155,15 @@ zx_status_t Vout::RestartDisplay() {
         return status;
       }
 
+      dsi_.clock->SetVideoOn(false);
       // Program and Enable DSI Host Interface
       status = dsi_.dsi_host->Enable(dsi_.disp_setting, dsi_.clock->GetBitrate());
       if (status != ZX_OK) {
         DISP_ERROR("DSI Host On failed! %d\n", status);
         return status;
       }
+      dsi_.clock->SetVideoOn(true);
+
       break;
     case VoutType::kHdmi:
       status = hdmi_.hdmi_host->HostOn();
