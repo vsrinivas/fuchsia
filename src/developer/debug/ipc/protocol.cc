@@ -14,82 +14,18 @@ constexpr uint64_t HelloReply::kStreamSignature;
 
 const char* MsgHeader::TypeToString(MsgHeader::Type type) {
   switch (type) {
-    case MsgHeader::Type::kNone:
-      return "None";
-    case MsgHeader::Type::kHello:
-      return "Hello";
-    case MsgHeader::Type::kStatus:
-      return "Status";
-    case MsgHeader::Type::kLaunch:
-      return "Launch";
-    case MsgHeader::Type::kKill:
-      return "Kill";
-    case MsgHeader::Type::kAttach:
-      return "Attach";
-    case MsgHeader::Type::kDetach:
-      return "Detach";
-    case MsgHeader::Type::kModules:
-      return "Modules";
-    case MsgHeader::Type::kPause:
-      return "Pause";
-    case MsgHeader::Type::kResume:
-      return "Resume";
-    case MsgHeader::Type::kProcessTree:
-      return "ProcessTree";
-    case MsgHeader::Type::kThreads:
-      return "Threads";
-    case MsgHeader::Type::kReadMemory:
-      return "ReadMemory";
-    case MsgHeader::Type::kWriteMemory:
-      return "WriteMemory";
-    case MsgHeader::Type::kLoadInfoHandleTable:
-      return "LoadInfoHandleTable";
-    case MsgHeader::Type::kUpdateGlobalSettings:
-      return "UpdateGlobalSettings";
-    case MsgHeader::Type::kSaveMinidump:
-      return "SaveCore";
-    case MsgHeader::Type::kReadRegisters:
-      return "ReadRegisters";
-    case MsgHeader::Type::kWriteRegisters:
-      return "WriteRegisters";
-    case MsgHeader::Type::kAddOrChangeBreakpoint:
-      return "AddOrChangeBreakpoint";
-    case MsgHeader::Type::kRemoveBreakpoint:
-      return "RemoveBreakpoint";
-    case MsgHeader::Type::kSysInfo:
-      return "SysInfo";
-    case MsgHeader::Type::kThreadStatus:
-      return "ThreadStatus";
-    case MsgHeader::Type::kAddressSpace:
-      return "AddressSpace";
-    case MsgHeader::Type::kUpdateFilter:
-      return "UpdateFilter";
-    case MsgHeader::Type::kNotifyProcessExiting:
-      return "NotifyProcessExiting";
-    case MsgHeader::Type::kNotifyProcessStarting:
-      return "NotifyProcessStarting";
-    case MsgHeader::Type::kNotifyThreadStarting:
-      return "NotifyThreadStarting";
-    case MsgHeader::Type::kNotifyThreadExiting:
-      return "NotifyThreadExiting";
-    case MsgHeader::Type::kNotifyException:
-      return "NotifyException";
-    case MsgHeader::Type::kNotifyModules:
-      return "NotifyModules";
-    case MsgHeader::Type::kNotifyIO:
-      return "NotifyIO";
-    case MsgHeader::Type::kNotifyLog:
-      return "NotifyLog";
-    case MsgHeader::Type::kNumMessages:
-      return "NumMessages";
-    case Type::kNotifyComponentExiting:
-      return "NotifyComponentExiting";
-    case Type::kNotifyComponentStarting:
-      return "NotifyComponentStarting";
-  }
+#define FN(type, ...)            \
+  case MsgHeader::Type::k##type: \
+    return #type;
+    FOR_EACH_REQUEST_TYPE(FN)
+    FOR_EACH_NOTIFICATION_TYPE(FN)
+#undef FN
 
-  FX_NOTREACHED();
-  return "<invalid>";
+    case Type::kNone:
+      return "None";
+    case Type::kNumMessages:
+      return "NumMessages";
+  }
 }
 
 const char* InferiorTypeToString(InferiorType type) {

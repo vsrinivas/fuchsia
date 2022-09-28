@@ -10,6 +10,8 @@
 
 #include <string>
 
+#include "src/developer/debug/shared/serialization.h"
+
 namespace debug {
 
 // Represents a range of addresses with common operations.
@@ -62,6 +64,8 @@ class AddressRange {
 
   // Returns a string representing this set of ranges for debugging purposes.
   std::string ToString() const;
+
+  void Serialize(Serializer& ser, uint32_t ver) { ser | begin_ | end_; }
 
  private:
   uint64_t begin_ = 0;

@@ -12,6 +12,8 @@
 #include <zircon/status.h>
 #endif
 
+#include "src/developer/debug/shared/serialization.h"
+
 namespace debug {
 
 class Status;
@@ -96,6 +98,8 @@ class Status {
            message_ == other.message_;
   }
   bool operator!=(const Status& other) const { return !operator==(other); }
+
+  void Serialize(Serializer& ser, uint32_t ver) { ser | type_ | platform_error_ | message_; }
 
  private:
   Type type_ = kSuccess;

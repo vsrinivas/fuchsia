@@ -26,6 +26,8 @@ static_library("shared") {
     "register_info.h",
     "register_value.cc",
     "register_value.h",
+    "serialization.cc",
+    "serialization.h",
     "status.cc",
     "status.h",
     "stream_buffer.cc",

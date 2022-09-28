@@ -8,43 +8,10 @@
 
 namespace debug_ipc {
 
-namespace {
-
-constexpr uint32_t kInitialSize = 32;
-
-}  // namespace
-
-MessageWriter::MessageWriter() : MessageWriter(kInitialSize) {}
-
-MessageWriter::MessageWriter(size_t initial_size) { buffer_.reserve(initial_size); }
-
-MessageWriter::~MessageWriter() {}
-
-void MessageWriter::WriteBytes(const void* data, uint32_t len) {
+void MessageWriter::SerializeBytes(void* data, uint32_t len) {
   const char* begin = static_cast<const char*>(data);
   const char* end = begin + len;
   buffer_.insert(buffer_.end(), begin, end);
-}
-
-void MessageWriter::WriteInt32(int32_t i) { WriteBytes(&i, sizeof(int32_t)); }
-void MessageWriter::WriteUint32(uint32_t i) { WriteBytes(&i, sizeof(uint32_t)); }
-void MessageWriter::WriteInt64(int64_t i) { WriteBytes(&i, sizeof(int64_t)); }
-void MessageWriter::WriteUint64(uint64_t i) { WriteBytes(&i, sizeof(uint64_t)); }
-
-void MessageWriter::WriteString(const std::string& str) {
-  // 32-bit size first, followed by bytes.
-  uint32_t size = static_cast<uint32_t>(str.size());
-  WriteUint32(size);
-  if (!str.empty())
-    WriteBytes(str.data(), size);
-}
-
-void MessageWriter::WriteBool(bool b) { WriteUint32(b ? 1u : 0u); }
-
-void MessageWriter::WriteHeader(MsgHeader::Type type, uint32_t transaction_id) {
-  WriteUint32(0);  // Size to be filled in by GetDataAndWriteSize() later.
-  WriteUint32(static_cast<uint32_t>(type));
-  WriteUint32(transaction_id);
 }
 
 std::vector<char> MessageWriter::MessageComplete() {
@@ -52,5 +19,33 @@ std::vector<char> MessageWriter::MessageComplete() {
   memcpy(buffer_.data(), &size, sizeof(uint32_t));
   return std::move(buffer_);
 }
+
+#define FN(msg_type)                                                                       \
+  std::vector<char> Serialize(const msg_type##Request& request, uint32_t transaction_id) { \
+    MsgHeader header{0, MsgHeader::Type::k##msg_type, transaction_id};                     \
+    MessageWriter writer(sizeof(header) + sizeof(request));                                \
+    writer | header | const_cast<msg_type##Request&>(request);                             \
+    return writer.MessageComplete();                                                       \
+  }                                                                                        \
+  std::vector<char> Serialize(const msg_type##Reply& reply, uint32_t transaction_id) {     \
+    MsgHeader header{0, MsgHeader::Type::k##msg_type, transaction_id};                     \
+    MessageWriter writer(sizeof(header) + sizeof(reply));                                  \
+    writer | header | const_cast<msg_type##Reply&>(reply);                                 \
+    return writer.MessageComplete();                                                       \
+  }
+
+FOR_EACH_REQUEST_TYPE(FN)
+#undef FN
+
+#define FN(msg_name, msg_type)                                    \
+  std::vector<char> Serialize##msg_name(const msg_type& notify) { \
+    MsgHeader header{0, MsgHeader::Type::k##msg_name, 0};         \
+    MessageWriter writer(sizeof(header) + sizeof(notify));        \
+    writer | header | const_cast<msg_type&>(notify);              \
+    return writer.MessageComplete();                              \
+  }
+
+FOR_EACH_NOTIFICATION_TYPE(FN)
+#undef FN
 
 }  // namespace debug_ipc

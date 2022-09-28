@@ -9,7 +9,6 @@
 #include <memory>
 #include <utility>
 
-#include "src/developer/debug/ipc/client_protocol.h"
 #include "src/developer/debug/ipc/decode_exception.h"
 #include "src/developer/debug/ipc/unwinder_support.h"
 #include "src/developer/debug/shared/logging/logging.h"

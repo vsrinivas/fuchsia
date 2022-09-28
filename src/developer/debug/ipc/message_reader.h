@@ -10,14 +10,14 @@
 #include <string>
 #include <vector>
 
+#include "src/developer/debug/ipc/protocol.h"
+#include "src/developer/debug/shared/serialization.h"
+
 namespace debug_ipc {
 
-struct MsgHeader;
-
-class MessageReader {
+class MessageReader : public Serializer {
  public:
-  explicit MessageReader(std::vector<char> message);
-  ~MessageReader();
+  explicit MessageReader(std::vector<char> message) : message_(std::move(message)) {}
 
   bool has_error() const { return has_error_; }
 
@@ -25,29 +25,31 @@ class MessageReader {
   size_t remaining() const { return message_.size() - offset_; }
   size_t message_size() const { return message_.size(); }
 
-  // These functions return true on success.
-  bool ReadBytes(uint32_t len, void* output);
-  bool ReadInt32(int32_t* output);
-  bool ReadUint32(uint32_t* output);
-  bool ReadInt64(int64_t* output);
-  bool ReadUint64(uint64_t* output);
-  bool ReadString(std::string* output);
-  bool ReadBool(bool* output);
-
-  bool ReadHeader(MsgHeader* output);
+  // Implement |Serializer|.
+  uint32_t GetVersion() const override { return kProtocolVersion; }
+  // Although it's called "SerializeBytes", it's actually "DeserializeBytes".
+  void SerializeBytes(void* data, uint32_t len) override;
 
  private:
-  // Sets the error flag and returns false. This is designed so that error
-  // handling code
-  // need only call "return SetError();".
-  bool SetError();
-
   const std::vector<char> message_;
 
   size_t offset_ = 0;  // Current read offset.
 
   bool has_error_ = false;
 };
+
+// Helper functions to deserialize bytes into messages. Returns true if succeeds.
+#define FN(msg_type)                                                                              \
+  bool Deserialize(std::vector<char> data, msg_type##Request* request, uint32_t* transaction_id); \
+  bool Deserialize(std::vector<char> data, msg_type##Reply* reply, uint32_t* transaction_id);
+
+FOR_EACH_REQUEST_TYPE(FN)
+#undef FN
+
+#define FN(msg_name, msg_type) bool Deserialize##msg_name(std::vector<char> data, msg_type* notify);
+
+FOR_EACH_NOTIFICATION_TYPE(FN)
+#undef FN
 
 }  // namespace debug_ipc
 

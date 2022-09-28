@@ -26,7 +26,6 @@
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
 #include "src/developer/debug/debug_agent/system_interface.h"
 #include "src/developer/debug/debug_agent/time.h"
-#include "src/developer/debug/ipc/agent_protocol.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
 #include "src/developer/debug/ipc/protocol.h"
@@ -594,18 +593,15 @@ void SendAttachReply(DebugAgent* debug_agent, uint32_t transaction_id, const deb
         debug_agent->system_interface().GetComponentManager().FindComponentInfo(*process);
   }
 
-  debug_ipc::MessageWriter writer;
-  debug_ipc::WriteReply(reply, transaction_id, &writer);
-  debug_agent->stream()->Write(writer.MessageComplete());
+  debug_agent->stream()->Write(debug_ipc::Serialize(reply, transaction_id));
 }
 
 }  // namespace
 
 void DebugAgent::OnAttach(std::vector<char> serialized) {
-  debug_ipc::MessageReader reader(std::move(serialized));
   debug_ipc::AttachRequest request;
   uint32_t transaction_id = 0;
-  if (!debug_ipc::ReadRequest(&reader, &request, &transaction_id)) {
+  if (!debug_ipc::Deserialize(std::move(serialized), &request, &transaction_id)) {
     LOGS(Warn) << "Got bad debugger attach request, ignoring.";
     return;
   }
@@ -788,9 +784,7 @@ void DebugAgent::OnProcessStart(std::unique_ptr<ProcessHandle> process_handle) {
     return;
   }
 
-  debug_ipc::MessageWriter writer;
-  debug_ipc::WriteNotifyProcessStarting(notify, &writer);
-  stream()->Write(writer.MessageComplete());
+  stream()->Write(debug_ipc::SerializeNotifyProcessStarting(notify));
 
   // In some edge-cases (see DebuggedProcess::RegisterDebugState() for more) the loader state is
   // known at startup. Send it if so.
@@ -805,10 +799,7 @@ void DebugAgent::OnComponentStarted(const std::string& moniker, const std::strin
     notify.component.url = url;
     notify.timestamp = GetNowTimestamp();
 
-    debug_ipc::MessageWriter writer;
-    debug_ipc::WriteNotifyComponent(debug_ipc::MsgHeader::Type::kNotifyComponentStarting, notify,
-                                    &writer);
-    stream()->Write(writer.MessageComplete());
+    stream()->Write(SerializeNotifyComponentStarting(notify));
   }
 }
 
@@ -820,10 +811,7 @@ void DebugAgent::OnComponentExited(const std::string& moniker, const std::string
     notify.component.url = url;
     notify.timestamp = GetNowTimestamp();
 
-    debug_ipc::MessageWriter writer;
-    debug_ipc::WriteNotifyComponent(debug_ipc::MsgHeader::Type::kNotifyComponentExiting, notify,
-                                    &writer);
-    stream()->Write(writer.MessageComplete());
+    stream()->Write(SerializeNotifyComponentExiting(notify));
   }
 }
 
@@ -850,9 +838,7 @@ void DebugAgent::OnProcessEnteredLimbo(const LimboProvider::Record& record) {
   process_starting.name = std::move(process_name);
   process_starting.timestamp = GetNowTimestamp();
 
-  debug_ipc::MessageWriter writer;
-  debug_ipc::WriteNotifyProcessStarting(std::move(process_starting), &writer);
-  stream()->Write(writer.MessageComplete());
+  stream()->Write(debug_ipc::SerializeNotifyProcessStarting(process_starting));
 }
 
 void DebugAgent::WriteLog(debug::LogSeverity severity, const debug::FileLineFunction& location,
@@ -873,9 +859,7 @@ void DebugAgent::WriteLog(debug::LogSeverity severity, const debug::FileLineFunc
   notify.location.line = location.line();
   notify.log = log;
 
-  debug_ipc::MessageWriter writer;
-  debug_ipc::WriteNotifyLog(notify, &writer);
-  stream()->Write(writer.MessageComplete());
+  stream()->Write(debug_ipc::SerializeNotifyLog(notify));
 }
 
 }  // namespace debug_agent

@@ -22,7 +22,6 @@
 #include "src/developer/debug/debug_agent/thread_handle.h"
 #include "src/developer/debug/debug_agent/time.h"
 #include "src/developer/debug/debug_agent/watchpoint.h"
-#include "src/developer/debug/ipc/agent_protocol.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
 #include "src/developer/debug/ipc/protocol.h"
@@ -270,9 +269,7 @@ void DebuggedProcess::SendModuleNotification() {
 
   DEBUG_LOG(Process) << LogPreamble(this) << "Sending modules.";
 
-  debug_ipc::MessageWriter writer;
-  debug_ipc::WriteNotifyModules(notify, &writer);
-  debug_agent_->stream()->Write(writer.MessageComplete());
+  debug_agent_->stream()->Write(debug_ipc::SerializeNotifyModules(notify));
 }
 
 SoftwareBreakpoint* DebuggedProcess::FindSoftwareBreakpoint(uint64_t address) const {
@@ -451,9 +448,7 @@ void DebuggedProcess::OnProcessTerminated() {
   notify.return_code = process_handle_->GetReturnCode();
   notify.timestamp = GetNowTimestamp();
 
-  debug_ipc::MessageWriter writer;
-  debug_ipc::WriteNotifyProcessExiting(notify, &writer);
-  debug_agent_->stream()->Write(writer.MessageComplete());
+  debug_agent_->stream()->Write(debug_ipc::SerializeNotifyProcessExiting(notify));
 
   debug_agent_->RemoveDebuggedProcess(koid());
   // "THIS" IS NOW DELETED.
@@ -506,9 +501,7 @@ void DebuggedProcess::OnThreadExiting(std::unique_ptr<ExceptionHandle> exception
   notify.record.state = debug_ipc::ThreadRecord::State::kDead;
   notify.timestamp = GetNowTimestamp();
 
-  debug_ipc::MessageWriter writer;
-  debug_ipc::WriteNotifyThread(debug_ipc::MsgHeader::Type::kNotifyThreadExiting, notify, &writer);
-  debug_agent_->stream()->Write(writer.MessageComplete());
+  debug_agent_->stream()->Write(debug_ipc::SerializeNotifyThreadExiting(notify));
 }
 
 void DebuggedProcess::OnException(std::unique_ptr<ExceptionHandle> exception) {
@@ -673,9 +666,7 @@ void DebuggedProcess::SendIO(debug_ipc::NotifyIO::Type type, const std::vector<c
     notify.data = std::move(msg);
     notify.timestamp = GetNowTimestamp();
 
-    debug_ipc::MessageWriter writer;
-    debug_ipc::WriteNotifyIO(notify, &writer);
-    debug_agent_->stream()->Write(writer.MessageComplete());
+    debug_agent_->stream()->Write(debug_ipc::SerializeNotifyIO(notify));
   }
 }
 

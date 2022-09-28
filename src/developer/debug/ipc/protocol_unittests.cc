@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <cstdint>
 #include <optional>
 #include <utility>
 
 #include <gtest/gtest.h>
 
-#include "src/developer/debug/ipc/agent_protocol.h"
-#include "src/developer/debug/ipc/client_protocol.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
-#include "src/developer/debug/ipc/protocol_helpers.h"
+#include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/shared/register_test_support.h"
+#include "src/developer/debug/shared/serialization.h"
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -23,48 +23,24 @@ namespace {
 
 using debug::RegisterID;
 
-template <typename RequestType>
-bool SerializeDeserializeRequest(const RequestType& in, RequestType* out) {
-  MessageWriter writer;
+template <typename Type>
+bool SerializeDeserialize(const Type& in, Type* out) {
   uint32_t in_transaction_id = 32;
-  WriteRequest(in, in_transaction_id, &writer);
+  std::vector<char> serialized = Serialize(in, in_transaction_id);
 
-  std::vector<char> serialized = writer.MessageComplete();
-
-  MessageReader reader(std::move(serialized));
   uint32_t out_transaction_id = 0;
-  if (!ReadRequest(&reader, out, &out_transaction_id))
+  if (!Deserialize(std::move(serialized), out, &out_transaction_id))
     return false;
   EXPECT_EQ(in_transaction_id, out_transaction_id);
   return true;
 }
 
-template <typename ReplyType>
-bool SerializeDeserializeReply(const ReplyType& in, ReplyType* out) {
-  MessageWriter writer;
-  uint32_t in_transaction_id = 32;
-  WriteReply(in, in_transaction_id, &writer);
-
-  std::vector<char> serialized = writer.MessageComplete();
-
-  MessageReader reader(std::move(serialized));
-  uint32_t out_transaction_id = 0;
-  if (!ReadReply(&reader, out, &out_transaction_id))
-    return false;
-  EXPECT_EQ(in_transaction_id, out_transaction_id);
-  return true;
-}
-
-template <typename NotificationType>
-bool SerializeDeserializeNotification(const NotificationType& in, NotificationType* out,
-                                      void (*write_fn)(const NotificationType&, MessageWriter*),
-                                      bool (*read_fn)(MessageReader*, NotificationType*)) {
-  MessageWriter writer;
-  write_fn(in, &writer);
-
-  MessageReader reader(writer.MessageComplete());
-  return read_fn(&reader, out);
-}
+#define FN(msg_name, msg_type)                                                              \
+  [[maybe_unused]] bool SerializeDeserialize##msg_name(const msg_type& in, msg_type* out) { \
+    return Deserialize##msg_name(Serialize##msg_name(in), out);                             \
+  }
+FOR_EACH_NOTIFICATION_TYPE(FN)
+#undef FN
 
 }  // namespace
 
@@ -75,7 +51,7 @@ constexpr uint64_t kTestTimestampDefault = 0x74657374l;  // hexadecimal for "tes
 TEST(Protocol, HelloRequest) {
   HelloRequest initial;
   HelloRequest second;
-  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 }
 
 TEST(Protocol, HelloReply) {
@@ -85,7 +61,7 @@ TEST(Protocol, HelloReply) {
   initial.page_size = 1024;
 
   HelloReply second;
-  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
   EXPECT_EQ(initial.version, second.version);
 }
 
@@ -120,7 +96,7 @@ ProcessRecord CreateProcessRecord(uint32_t process_koid, uint32_t thread_count,
 TEST(Protocol, StatusRequest) {
   StatusRequest initial;
   StatusRequest second;
-  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 }
 
 TEST(Protocol, StatusReply) {
@@ -131,7 +107,7 @@ TEST(Protocol, StatusReply) {
   one.limbo.push_back(CreateProcessRecord(0x3, 3, std::nullopt));
 
   StatusReply two;
-  ASSERT_TRUE(SerializeDeserializeReply(one, &two));
+  ASSERT_TRUE(SerializeDeserialize(one, &two));
 
   ASSERT_EQ(two.processes.size(), 2u);
   EXPECT_EQ(two.processes[0].process_koid, one.processes[0].process_koid);
@@ -174,7 +150,7 @@ TEST(Protocol, LaunchRequest) {
   initial.argv.push_back("--dosmode");
 
   LaunchRequest second;
-  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
   EXPECT_EQ(second.inferior_type, InferiorType::kBinary);
   ASSERT_EQ(initial.argv.size(), second.argv.size());
   for (size_t i = 0; i < initial.argv.size(); i++)
@@ -190,7 +166,7 @@ TEST(Protocol, LaunchReply) {
   initial.timestamp = kTestTimestampDefault;
 
   LaunchReply second;
-  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
   EXPECT_EQ(initial.status, second.status);
   EXPECT_EQ(initial.process_id, second.process_id);
   EXPECT_EQ(initial.process_name, second.process_name);
@@ -204,7 +180,7 @@ TEST(Protocol, KillRequest) {
   initial.process_koid = 5678;
 
   KillRequest second;
-  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
   EXPECT_EQ(initial.process_koid, second.process_koid);
 }
 
@@ -214,7 +190,7 @@ TEST(Protocol, KillReply) {
   initial.status = debug::Status();
 
   KillReply second;
-  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
   EXPECT_EQ(initial.timestamp, second.timestamp);
   EXPECT_EQ(initial.status, second.status);
 }
@@ -226,7 +202,7 @@ TEST(Protocol, AttachRequest) {
   initial.koid = 5678;
 
   AttachRequest second;
-  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
   EXPECT_EQ(initial.koid, second.koid);
 }
 
@@ -239,7 +215,7 @@ TEST(Protocol, AttachReply) {
   initial.component = ComponentInfo{.moniker = "/moniker", .url = "url"};
 
   AttachReply second;
-  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
   EXPECT_EQ(initial.timestamp, second.timestamp);
   EXPECT_EQ(initial.status, second.status);
   EXPECT_EQ(initial.name, second.name);
@@ -255,7 +231,7 @@ TEST(Protocol, DetachRequest) {
   initial.koid = 5678;
 
   DetachRequest second;
-  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
   EXPECT_EQ(initial.koid, second.koid);
 }
 
@@ -265,7 +241,7 @@ TEST(Protocol, DetachReply) {
   initial.status = debug::Status();
 
   DetachReply second;
-  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
   EXPECT_EQ(initial.timestamp, second.timestamp);
   EXPECT_EQ(initial.status, second.status);
 }
@@ -278,7 +254,7 @@ TEST(Protocol, PauseRequest) {
   initial.ids.push_back({.process = 3746234, .thread = 123523});
 
   PauseRequest second;
-  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
   EXPECT_EQ(initial.ids, second.ids);
 }
 
@@ -291,7 +267,7 @@ TEST(Protocol, PauseReply) {
   initial.threads[1].name = "thread 1";
 
   PauseReply second;
-  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
   ASSERT_EQ(initial.threads.size(), second.threads.size());
   for (size_t i = 0; i < initial.threads.size(); i++) {
     EXPECT_EQ(initial.threads[i].id, second.threads[i].id);
@@ -310,7 +286,7 @@ TEST(Protocol, ResumeRequest) {
   initial.range_end = 0x123456;
 
   ResumeRequest second;
-  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
   EXPECT_EQ(initial.ids, second.ids);
   EXPECT_EQ(initial.how, second.how);
   EXPECT_EQ(initial.count, second.count);
@@ -323,7 +299,7 @@ TEST(Protocol, ResumeRequest) {
 TEST(Protocol, ProcessTreeRequest) {
   ProcessTreeRequest initial;
   ProcessTreeRequest second;
-  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 }
 
 TEST(Protocol, ProcessTreeReply) {
@@ -341,7 +317,7 @@ TEST(Protocol, ProcessTreeReply) {
   initial.root.children[0].name = "hello";
 
   ProcessTreeReply second;
-  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 
   EXPECT_EQ(initial.root.type, second.root.type);
   EXPECT_EQ(initial.root.koid, second.root.koid);
@@ -361,7 +337,7 @@ TEST(Protocol, ThreadsRequest) {
   initial.process_koid = 36473476;
 
   ThreadsRequest second;
-  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
   EXPECT_EQ(initial.process_koid, second.process_koid);
 }
 
@@ -374,7 +350,7 @@ TEST(Protocol, ThreadsReply) {
   initial.threads[1].name = "two";
 
   ThreadsReply second;
-  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 
   ASSERT_EQ(initial.threads.size(), second.threads.size());
   EXPECT_EQ(initial.threads[0].id, second.threads[0].id);
@@ -392,7 +368,7 @@ TEST(Protocol, ReadMemoryRequest) {
   initial.size = 93453926;
 
   ReadMemoryRequest second;
-  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
   EXPECT_EQ(initial.process_koid, second.process_koid);
   EXPECT_EQ(initial.address, second.address);
   EXPECT_EQ(initial.size, second.size);
@@ -412,7 +388,7 @@ TEST(Protocol, ReadMemoryReply) {
   initial.blocks[1].size = 0;
 
   ReadMemoryReply second;
-  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 
   ASSERT_EQ(initial.blocks.size(), second.blocks.size());
 
@@ -467,7 +443,7 @@ TEST(Protocol, AddOrChangeBreakpointRequest) {
   pr_settings.address_range = {0x1234, 0x5678};
 
   AddOrChangeBreakpointRequest second;
-  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 
   EXPECT_EQ(initial.breakpoint.id, second.breakpoint.id);
   EXPECT_EQ(initial.breakpoint.type, second.breakpoint.type);
@@ -549,7 +525,7 @@ TEST(Protocol, AddOrChangeBreakpointReply) {
   initial.status = debug::Status("error");
 
   AddOrChangeBreakpointReply second;
-  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 
   EXPECT_EQ(initial.status, second.status);
 }
@@ -561,7 +537,7 @@ TEST(Protocol, RemoveBreakpointRequest) {
   initial.breakpoint_id = 8976;
 
   RemoveBreakpointRequest second;
-  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 
   EXPECT_EQ(initial.breakpoint_id, second.breakpoint_id);
 }
@@ -569,7 +545,7 @@ TEST(Protocol, RemoveBreakpointRequest) {
 TEST(Protocol, RemoveBreakpointReply) {
   RemoveBreakpointReply initial;
   RemoveBreakpointReply second;
-  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 }
 
 // SysInfo -----------------------------------------------------------------------------------------
@@ -577,7 +553,7 @@ TEST(Protocol, RemoveBreakpointReply) {
 TEST(Protocol, SysInfoRequest) {
   SysInfoRequest initial;
   SysInfoRequest second;
-  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 }
 
 TEST(Protocol, SysInfoReply) {
@@ -589,7 +565,7 @@ TEST(Protocol, SysInfoReply) {
   initial.hw_watchpoint_count = 4;
 
   SysInfoReply second;
-  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 
   EXPECT_EQ(initial.version, second.version);
   EXPECT_EQ(initial.num_cpus, second.num_cpus);
@@ -605,7 +581,7 @@ TEST(Protocol, ThreadStatusRequest) {
   initial.id = {.process = 1234, .thread = 8976};
 
   ThreadStatusRequest second;
-  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 
   EXPECT_EQ(initial.id, second.id);
 }
@@ -626,7 +602,7 @@ TEST(Protocol, ThreadStatusReply) {
                                         {RegisterID::kX64_rdi, static_cast<uint64_t>(1u)}});
 
   ThreadStatusReply second;
-  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 
   EXPECT_EQ(2u, second.record.frames.size());
   EXPECT_EQ(initial.record.id, second.record.id);
@@ -644,7 +620,7 @@ TEST(Protocol, ModulesRequest) {
   initial.process_koid = 1234;
 
   ModulesRequest second;
-  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 
   EXPECT_EQ(initial.process_koid, second.process_koid);
 }
@@ -658,7 +634,7 @@ TEST(Protocol, ModulesReply) {
   initial.modules[1].base = 0x1000;
 
   ModulesReply second;
-  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 
   EXPECT_EQ(2u, second.modules.size());
   EXPECT_EQ(initial.modules[0].name, second.modules[0].name);
@@ -675,7 +651,7 @@ TEST(Protocol, AspaceRequest) {
   initial.address = 0x717171;
 
   AddressSpaceRequest second;
-  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 
   EXPECT_EQ(initial.process_koid, second.process_koid);
   EXPECT_EQ(initial.address, second.address);
@@ -693,7 +669,7 @@ TEST(Protocol, AspaceReply) {
       AddressRegion{"initial-thread", 0x371f1277000, 4 * 1024, 2, 0b11, 56789, 0x1000, 3};
 
   AddressSpaceReply second;
-  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 
   ASSERT_EQ(4u, second.map.size());
   EXPECT_EQ(initial.map[0].name, second.map[0].name);
@@ -727,7 +703,7 @@ TEST(Protocol, UpdateFilterRequest) {
   initial.filters.push_back({Filter::Type::kComponentName, "Network"});
 
   UpdateFilterRequest second;
-  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
   EXPECT_EQ(initial.filters.size(), second.filters.size());
   for (size_t i = 0; i < initial.filters.size(); i++) {
     EXPECT_EQ(initial.filters[i].type, second.filters[i].type);
@@ -741,7 +717,7 @@ TEST(Protocol, UpdateFilterReply) {
   initial.matched_processes = {1234, 5678};
 
   UpdateFilterReply second;
-  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
   ASSERT_EQ(second.matched_processes.size(), 2u);
   EXPECT_EQ(second.matched_processes[0], initial.matched_processes[0]);
   EXPECT_EQ(second.matched_processes[1], initial.matched_processes[1]);
@@ -756,7 +732,7 @@ TEST(Protocol, WriteMemoryRequest) {
   initial.data = {0, 1, 2, 3, 4, 5};
 
   WriteMemoryRequest second;
-  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
   EXPECT_EQ(initial.process_koid, second.process_koid);
   EXPECT_EQ(initial.address, second.address);
   ASSERT_EQ(initial.data.size(), second.data.size());
@@ -769,7 +745,7 @@ TEST(Protocol, WriteMemoryReply) {
   initial.status = debug::Status();
 
   WriteMemoryReply second;
-  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 
   ASSERT_EQ(initial.status, second.status);
 }
@@ -781,7 +757,7 @@ TEST(Protocol, LoadInfoHandleTableRequest) {
   initial.process_koid = 91823765;
 
   LoadInfoHandleTableRequest second;
-  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
   EXPECT_EQ(initial.process_koid, second.process_koid);
 }
 
@@ -808,7 +784,7 @@ TEST(Protocol, LoadInfoHandleTableReply) {
   initial.handles.push_back(info);
 
   LoadInfoHandleTableReply second;
-  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 
   ASSERT_EQ(initial.status, second.status);
   ASSERT_EQ(initial.handles.size(), second.handles.size());
@@ -839,7 +815,7 @@ TEST(Protocol, UpdateGlobalSettingsRequest) {
   };
 
   UpdateGlobalSettingsRequest second;
-  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
   ASSERT_EQ(initial.exception_strategies.size(), 2u);
   ASSERT_EQ(initial.exception_strategies.size(), second.exception_strategies.size());
   EXPECT_EQ(initial.exception_strategies[0].type, second.exception_strategies[0].type);
@@ -854,7 +830,7 @@ TEST(Protocol, UpdateGlobalSettingsReply) {
       debug::Status(debug::Status::InternalValues(), debug::Status::kPlatformError, 12345, "foo");
 
   UpdateGlobalSettingsReply second;
-  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 
   ASSERT_EQ(initial.status, second.status);
 }
@@ -868,7 +844,7 @@ TEST(Protocol, ReadRegistersRequest) {
   initial.categories.push_back(debug::RegisterCategory::kVector);
 
   ReadRegistersRequest second;
-  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 
   EXPECT_EQ(initial.id, second.id);
   EXPECT_EQ(initial.categories, second.categories);
@@ -889,7 +865,7 @@ TEST(Protocol, ReadRegistersReply) {
   ASSERT_EQ(*(uint64_t*)&(initial.registers[3].data[0]), 0x0102030405060708u);
 
   ReadRegistersReply second;
-  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 
   ASSERT_EQ(second.registers.size(), 4u);
 
@@ -911,7 +887,7 @@ TEST(Protocol, WriteRegistersRequest) {
   initial.registers.push_back(CreateRegisterWithTestData(RegisterID::kARMv8_x4, 16));
 
   WriteRegistersRequest second;
-  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 
   EXPECT_EQ(initial.id, second.id);
   ASSERT_EQ(second.registers.size(), 5u);
@@ -932,7 +908,7 @@ TEST(Protocol, WriteRegistersReply) {
   initial.registers.push_back(CreateRegisterWithTestData(RegisterID::kARMv8_x1, 2));
 
   WriteRegistersReply second = {};
-  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 
   EXPECT_EQ(second.status, initial.status);
   EXPECT_EQ(second.registers, initial.registers);
@@ -948,12 +924,8 @@ TEST(Protocol, NotifyThread) {
   initial.record.stack_amount = ThreadRecord::StackAmount::kNone;
   initial.timestamp = kTestTimestampDefault;
 
-  MessageWriter writer;
-  WriteNotifyThread(MsgHeader::Type::kNotifyThreadStarting, initial, &writer);
-
-  MessageReader reader(writer.MessageComplete());
   NotifyThread second;
-  ASSERT_TRUE(ReadNotifyThread(&reader, &second));
+  ASSERT_TRUE(SerializeDeserializeNotifyThreadStarting(initial, &second));
 
   EXPECT_EQ(initial.record.id, second.record.id);
   EXPECT_EQ(initial.record.name, second.record.name);
@@ -1001,8 +973,7 @@ TEST(Protocol, NotifyException) {
   initial.memory_blocks[1].size = 0;
 
   NotifyException second;
-  ASSERT_TRUE(SerializeDeserializeNotification(initial, &second, &WriteNotifyException,
-                                               &ReadNotifyException));
+  ASSERT_TRUE(SerializeDeserializeNotifyException(initial, &second));
 
   EXPECT_EQ(initial.thread.id, second.thread.id);
   EXPECT_EQ(initial.thread.name, second.thread.name);
@@ -1058,8 +1029,7 @@ TEST(Protocol, NotifyModules) {
   initial.timestamp = kTestTimestampDefault;
 
   NotifyModules second;
-  ASSERT_TRUE(
-      SerializeDeserializeNotification(initial, &second, &WriteNotifyModules, &ReadNotifyModules));
+  ASSERT_TRUE(SerializeDeserializeNotifyModules(initial, &second));
 
   EXPECT_EQ(initial.process_koid, second.process_koid);
   ASSERT_EQ(initial.modules.size(), second.modules.size());
@@ -1080,8 +1050,7 @@ TEST(Protocol, NotifyProcessStarting) {
   initial.component = ComponentInfo{.moniker = "moniker", .url = "url"};
 
   NotifyProcessStarting second;
-  ASSERT_TRUE(SerializeDeserializeNotification(initial, &second, &WriteNotifyProcessStarting,
-                                               &ReadNotifyProcessStarting));
+  ASSERT_TRUE(SerializeDeserializeNotifyProcessStarting(initial, &second));
 
   EXPECT_EQ(second.type, initial.type);
   EXPECT_EQ(initial.koid, second.koid);
@@ -1099,8 +1068,7 @@ TEST(Protocol, NotifyProcessExiting) {
   initial.timestamp = kTestTimestampDefault;
 
   NotifyProcessExiting second;
-  ASSERT_TRUE(SerializeDeserializeNotification(initial, &second, &WriteNotifyProcessExiting,
-                                               &ReadNotifyProcessExiting));
+  ASSERT_TRUE(SerializeDeserializeNotifyProcessExiting(initial, &second));
 
   EXPECT_EQ(initial.process_koid, second.process_koid);
   EXPECT_EQ(initial.return_code, second.return_code);
@@ -1116,7 +1084,8 @@ TEST(Protocol, NotifyIO) {
   initial.timestamp = kTestTimestampDefault;
 
   NotifyIO second;
-  ASSERT_TRUE(SerializeDeserializeNotification(initial, &second, &WriteNotifyIO, &ReadNotifyIO));
+  ASSERT_TRUE(SerializeDeserializeNotifyIO(initial, &second));
+
   EXPECT_EQ(initial.process_koid, second.process_koid);
   EXPECT_EQ(initial.type, second.type);
   EXPECT_EQ(initial.data, second.data);
@@ -1134,7 +1103,8 @@ TEST(Protocol, NotifyLog) {
   initial.log = "Log message";
 
   NotifyLog second;
-  ASSERT_TRUE(SerializeDeserializeNotification(initial, &second, &WriteNotifyLog, &ReadNotifyLog));
+  ASSERT_TRUE(SerializeDeserializeNotifyLog(initial, &second));
+
   EXPECT_EQ(initial.timestamp, second.timestamp);
   EXPECT_EQ(initial.severity, second.severity);
   EXPECT_EQ(initial.location.file, second.location.file);
@@ -1149,13 +1119,9 @@ TEST(Protocol, NotifyComponent) {
   initial.component.moniker = "/moniker";
   initial.component.url = "fuchsia-pkg://url";
 
-  MessageWriter writer;
-  WriteNotifyComponent(MsgHeader::Type::kNotifyComponentStarting, initial, &writer);
-
-  MessageReader reader(writer.MessageComplete());
   NotifyComponent second;
+  ASSERT_TRUE(SerializeDeserializeNotifyComponentStarting(initial, &second));
 
-  ASSERT_TRUE(ReadNotifyComponent(&reader, &second));
   EXPECT_EQ(initial.timestamp, second.timestamp);
   EXPECT_EQ(initial.component.moniker, second.component.moniker);
   EXPECT_EQ(initial.component.url, second.component.url);

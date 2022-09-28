@@ -14,8 +14,8 @@ TEST(Message, ReadWriteBytes) {
   char bytes[byte_count] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
 
   MessageWriter writer;
-  writer.WriteBytes(bytes, byte_count);
-  writer.WriteBytes(bytes, byte_count);
+  writer.SerializeBytes(bytes, byte_count);
+  writer.SerializeBytes(bytes, byte_count);
 
   std::vector<char> output = writer.MessageComplete();
   EXPECT_EQ(byte_count * 2, output.size());
@@ -35,38 +35,41 @@ TEST(Message, ReadWriteBytes) {
 
   MessageReader reader(std::move(output));
   uint32_t read_size = 0;
-  ASSERT_TRUE(reader.ReadUint32(&read_size));
+  reader | read_size;
+  ASSERT_FALSE(reader.has_error());
   EXPECT_EQ(byte_count * 2, read_size);
 
   char read_first[byte_count - 4];
-  ASSERT_TRUE(reader.ReadBytes(byte_count - 4, read_first));
+  reader.SerializeBytes(read_first, byte_count - 4);
+  ASSERT_FALSE(reader.has_error());
   EXPECT_EQ(4, read_first[0]);
   EXPECT_EQ(5, read_first[1]);
   EXPECT_EQ(6, read_first[2]);
   EXPECT_EQ(7, read_first[3]);
 
   char read_second[byte_count];
-  ASSERT_TRUE(reader.ReadBytes(byte_count, read_second));
+  reader.SerializeBytes(read_second, byte_count);
+  ASSERT_FALSE(reader.has_error());
   for (uint32_t i = 0; i < byte_count; i++) {
     EXPECT_EQ(i, static_cast<uint32_t>(read_second[i]));
   }
 
   // Reading one more byte should fail.
-  EXPECT_FALSE(reader.has_error());
   char one_more;
-  EXPECT_FALSE(reader.ReadBytes(1, &one_more));
+  reader | one_more;
   EXPECT_TRUE(reader.has_error());
 }
 
 TEST(Message, ReadWriteNumbers) {
   MessageWriter writer;
-  writer.WriteUint32(0);  // Message size header.
+  uint32_t size = 0;  // Message size header.
+  writer | size;
 
   int64_t expected_int64 = -7;
   uint64_t expected_uint64 = static_cast<uint64_t>(-8);
 
-  writer.WriteInt64(expected_int64);
-  writer.WriteUint64(expected_uint64);
+  writer | expected_int64;
+  writer | expected_uint64;
 
   std::vector<char> message = writer.MessageComplete();
   constexpr uint32_t expected_message_size = 20;
@@ -76,21 +79,61 @@ TEST(Message, ReadWriteNumbers) {
 
   // Message size header.
   uint32_t read_message_size = 0;
-  ASSERT_TRUE(reader.ReadUint32(&read_message_size));
+  reader | read_message_size;
+  EXPECT_FALSE(reader.has_error());
   EXPECT_EQ(expected_message_size, read_message_size);
 
   int64_t read_int64 = 0;
-  ASSERT_TRUE(reader.ReadInt64(&read_int64));
+  reader | read_int64;
+  EXPECT_FALSE(reader.has_error());
   EXPECT_EQ(expected_int64, read_int64);
 
   uint64_t read_uint64 = 0;
-  ASSERT_TRUE(reader.ReadUint64(&read_uint64));
+  reader | read_uint64;
+  EXPECT_FALSE(reader.has_error());
   EXPECT_EQ(expected_uint64, read_uint64);
 
   // Reading one more byte should fail.
-  EXPECT_FALSE(reader.has_error());
   int64_t one_more;
-  EXPECT_FALSE(reader.ReadInt64(&one_more));
+  reader | one_more;
+  EXPECT_TRUE(reader.has_error());
+}
+
+TEST(Message, ReadWriteOptional) {
+  MessageWriter writer;
+  uint32_t size = 0;  // Message size header.
+  writer | size;
+
+  std::optional<uint64_t> initial;
+  writer | initial;
+
+  initial.emplace(42);
+  writer | initial;
+
+  std::vector<char> message = writer.MessageComplete();
+  constexpr uint32_t expected_message_size = 20;
+  ASSERT_EQ(expected_message_size, message.size());
+
+  MessageReader reader(std::move(message));
+
+  // Message size header.
+  uint32_t read_message_size = 0;
+  reader | read_message_size;
+  EXPECT_FALSE(reader.has_error());
+  EXPECT_EQ(expected_message_size, read_message_size);
+
+  std::optional<uint64_t> read;
+  reader | read;
+  EXPECT_FALSE(reader.has_error());
+  EXPECT_FALSE(read.has_value());
+
+  reader | read;
+  EXPECT_FALSE(reader.has_error());
+  EXPECT_EQ(read.value(), 42ull);
+
+  // Reading one more byte should fail.
+  int64_t one_more;
+  reader | one_more;
   EXPECT_TRUE(reader.has_error());
 }
 

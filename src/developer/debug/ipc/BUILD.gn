@@ -29,8 +29,6 @@ static_library("shared") {
     "message_writer.h",
     "protocol.cc",
     "protocol.h",
-    "protocol_helpers.cc",
-    "protocol_helpers.h",
     "records.cc",
     "records.h",
     "unwinder_support.cc",
@@ -48,21 +46,11 @@ static_library("shared") {
   ]
 }
 
-static_library("agent") {
-  sources = [
-    "agent_protocol.cc",
-    "agent_protocol.h",
-  ]
-
+group("agent") {
   public_deps = [ ":shared" ]
 }
 
-static_library("client") {
-  sources = [
-    "client_protocol.cc",
-    "client_protocol.h",
-  ]
-
+group("client") {
   public_deps = [ ":shared" ]
 }
 

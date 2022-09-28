@@ -7,7 +7,6 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "lib/fpromise/bridge.h"
-#include "src/developer/debug/ipc/client_protocol.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
 #include "src/developer/debug/shared/message_loop.h"
@@ -162,10 +161,7 @@ void RemoteAPIImpl::Send(const SendMsgType& send_msg,
     }
     return;
   }
-  debug_ipc::MessageWriter writer(sizeof(SendMsgType));
-  debug_ipc::WriteRequest(send_msg, transaction_id, &writer);
-  std::vector<char> serialized = writer.MessageComplete();
-  session_->stream_->Write(std::move(serialized));
+  session_->stream_->Write(debug_ipc::Serialize(send_msg, transaction_id));
   // This is the reply callback that unpacks the data in a vector, converts it to the requested
   // RecvMsgType struct, and issues the callback.
   Session::Callback dispatch_callback = [callback = std::move(callback)](
@@ -177,10 +173,9 @@ void RemoteAPIImpl::Send(const SendMsgType& send_msg,
         callback(err, std::move(reply));
       return;
     }
-    debug_ipc::MessageReader reader(std::move(data));
     uint32_t transaction_id = 0;
     Err deserialization_err;
-    if (!debug_ipc::ReadReply(&reader, &reply, &transaction_id)) {
+    if (!debug_ipc::Deserialize(std::move(data), &reply, &transaction_id)) {
       reply = RecvMsgType();  // Could be in a half-read state.
       deserialization_err =
           Err(ErrType::kCorruptMessage,

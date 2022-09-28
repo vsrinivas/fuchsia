@@ -15,7 +15,6 @@
 #include "src/developer/debug/debug_agent/mock_process_handle.h"
 #include "src/developer/debug/debug_agent/mock_thread_handle.h"
 #include "src/developer/debug/debug_agent/test_utils.h"
-#include "src/developer/debug/ipc/agent_protocol.h"
 #include "src/developer/debug/ipc/message_writer.h"
 #include "src/developer/debug/shared/logging/debug.h"
 #include "src/developer/debug/shared/test_with_loop.h"
@@ -44,9 +43,7 @@ class DebugAgentMockProcess : public MockProcess {
 
   void SuspendAndSendModulesIfKnown() override {
     // Send the modules over to the ipc.
-    debug_ipc::MessageWriter writer;
-    debug_ipc::WriteNotifyModules(modules_to_send_, &writer);
-    debug_agent()->stream()->Write(writer.MessageComplete());
+    debug_agent()->stream()->Write(debug_ipc::SerializeNotifyModules(modules_to_send_));
   }
 
   void set_modules_to_send(debug_ipc::NotifyModules m) { modules_to_send_ = std::move(m); }

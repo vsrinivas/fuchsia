@@ -5,7 +5,6 @@
 #include "src/developer/debug/debug_agent/remote_api_adapter.h"
 
 #include "src/developer/debug/debug_agent/remote_api.h"
-#include "src/developer/debug/ipc/agent_protocol.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
 #include "src/developer/debug/ipc/protocol.h"
@@ -22,12 +21,10 @@ template <typename RequestMsg, typename ReplyMsg>
 void DispatchMessage(RemoteAPIAdapter* adapter,
                      void (RemoteAPI::*handler)(const RequestMsg&, ReplyMsg*),
                      std::vector<char> data, const char* type_string) {
-  debug_ipc::MessageReader reader(std::move(data));
-
   RequestMsg request;
 
   uint32_t transaction_id = 0;
-  if (!debug_ipc::ReadRequest(&reader, &request, &transaction_id)) {
+  if (!debug_ipc::Deserialize(std::move(data), &request, &transaction_id)) {
     LOGS(Error) << "Got bad debugger " << type_string << "Request, ignoring.";
     return;
   }
@@ -35,10 +32,7 @@ void DispatchMessage(RemoteAPIAdapter* adapter,
   ReplyMsg reply;
   (adapter->api()->*handler)(request, &reply);
 
-  debug_ipc::MessageWriter writer;
-  debug_ipc::WriteReply(reply, transaction_id, &writer);
-
-  adapter->stream()->Write(writer.MessageComplete());
+  adapter->stream()->Write(debug_ipc::Serialize(reply, transaction_id));
 }
 
 }  // namespace

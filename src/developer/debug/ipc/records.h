@@ -15,6 +15,7 @@
 #include "src/developer/debug/shared/address_range.h"
 #include "src/developer/debug/shared/register_id.h"
 #include "src/developer/debug/shared/register_value.h"
+#include "src/developer/debug/shared/serialization.h"
 
 namespace debug_ipc {
 
@@ -105,6 +106,8 @@ struct ProcessThreadId {
   bool operator<(const ProcessThreadId& other) const {
     return std::tie(process, thread) < std::tie(other.process, other.thread);
   }
+
+  void Serialize(Serializer& ser, uint32_t ver) { ser | process | thread; }
 };
 
 struct ExceptionRecord {
@@ -131,11 +134,19 @@ struct ExceptionRecord {
   } arch;
 
   ExceptionStrategy strategy = ExceptionStrategy::kNone;
+
+  void Serialize(Serializer& ser, uint32_t ver) {
+    ser | valid;
+    ser.SerializeBytes(&arch, sizeof(Arch));
+    ser | strategy;
+  }
 };
 
 struct ComponentInfo {
   std::string moniker;
   std::string url;
+
+  void Serialize(Serializer& ser, uint32_t ver) { ser | moniker | url; }
 };
 
 // Note: see "ps" source:
@@ -153,6 +164,13 @@ struct ProcessTreeRecord {
   std::optional<ComponentInfo> component;
 
   std::vector<ProcessTreeRecord> children;
+
+  void Serialize(Serializer& ser, uint32_t ver) {
+    ser | type | koid | name;
+    if (type == Type::kJob) {
+      ser | component | children;
+    }
+  }
 };
 
 struct StackFrame {
@@ -182,6 +200,8 @@ struct StackFrame {
   // Every frame should contain the register for the IP and SP for the current
   // architecture (duplicating the above two fields).
   std::vector<debug::RegisterValue> regs;
+
+  void Serialize(Serializer& ser, uint32_t ver) { ser | ip | sp | cfa | regs; }
 };
 
 struct ThreadRecord {
@@ -250,6 +270,10 @@ struct ThreadRecord {
   // This could still be empty in the "kMinimal" or "kFull" cases if retrieval failed, which can
   // happen in some valid race conditions if the thread was killed out from under the debug agent.
   std::vector<StackFrame> frames;
+
+  void Serialize(Serializer& ser, uint32_t ver) {
+    ser | id | name | state | blocked_reason | stack_amount | frames;
+  }
 };
 
 struct ProcessRecord {
@@ -260,6 +284,10 @@ struct ProcessRecord {
   std::optional<ComponentInfo> component;
 
   std::vector<ThreadRecord> threads;
+
+  void Serialize(Serializer& ser, uint32_t ver) {
+    ser | process_koid | process_name | component | threads;
+  }
 };
 
 struct MemoryBlock {
@@ -278,6 +306,8 @@ struct MemoryBlock {
 
   // The actual memory. Filled in only if valid == true.
   std::vector<uint8_t> data;
+
+  void Serialize(Serializer& ser, uint32_t ver) { ser | address | valid | size | data; }
 };
 
 struct ProcessBreakpointSettings {
@@ -290,6 +320,8 @@ struct ProcessBreakpointSettings {
 
   // Range is used for watchpoints.
   debug::AddressRange address_range;
+
+  void Serialize(Serializer& ser, uint32_t ver) { ser | id | address | address_range; }
 };
 
 // What threads to stop when the breakpoint is hit. These are ordered such that the integer values
@@ -348,6 +380,10 @@ struct BreakpointSettings {
   bool has_automation = false;
 
   std::vector<debug_ipc::AutomationInstruction> instructions;
+
+  void Serialize(Serializer& ser, uint32_t ver) {
+    ser | id | type | name | one_shot | stop | locations | has_automation | instructions;
+  }
 };
 
 struct BreakpointStats {
@@ -359,6 +395,8 @@ struct BreakpointStats {
   // Whenever a client gets a breakpoint hit with this flag set, it should
   // clear the local state associated with the breakpoint.
   bool should_delete = false;
+
+  void Serialize(Serializer& ser, uint32_t ver) { ser | id | hit_count | should_delete; }
 };
 
 // Information on one loaded module.
@@ -367,6 +405,8 @@ struct Module {
   uint64_t base = 0;           // Load address of this file.
   uint64_t debug_address = 0;  // Link map address for this module.
   std::string build_id;
+
+  void Serialize(Serializer& ser, uint32_t ver) { ser | name | base | debug_address | build_id; }
 };
 
 struct AddressRegion {
@@ -378,6 +418,10 @@ struct AddressRegion {
   uint64_t vmo_koid = 0;
   uint64_t vmo_offset = 0;
   uint64_t committed_pages = 0;
+
+  void Serialize(Serializer& ser, uint32_t ver) {
+    ser | name | base | size | depth | mmu_flags | vmo_koid | vmo_offset | committed_pages;
+  }
 };
 
 // LoadInfoHandleTable -----------------------------------------------------------------------------
@@ -419,6 +463,8 @@ struct InfoHandle {
     InfoHandleVmo vmo;  // Valid when type == ZX_OBJ_TYPE_VMO.
     // Other types go here.
   } ext;
+
+  void Serialize(Serializer& ser, uint32_t ver) { ser.SerializeBytes(this, sizeof(*this)); }
 };
 
 // Filters -----------------------------------------------------------------------------------------
@@ -437,6 +483,8 @@ struct Filter {
 
   std::string pattern;
   uint64_t job_koid = 0;  // must be 0 when type is kComponent*.
+
+  void Serialize(Serializer& ser, uint32_t ver) { ser | type | pattern | job_koid; }
 };
 
 #pragma pack(pop)

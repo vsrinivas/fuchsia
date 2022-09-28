@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "src/developer/debug/shared/register_id.h"
+#include "src/developer/debug/shared/serialization.h"
 
 namespace debug {
 
@@ -53,6 +54,8 @@ struct RegisterValue {
   // This data is stored in the architecture's native endianness
   // (eg. the result of running memcpy over the data).
   std::vector<uint8_t> data;
+
+  void Serialize(Serializer& ser, uint32_t ver) { ser | id | data; }
 };
 
 }  // namespace debug

@@ -27,7 +27,6 @@
 #include "src/developer/debug/debug_agent/filter.h"
 #include "src/developer/debug/debug_agent/stdio_handles.h"
 #include "src/developer/debug/debug_agent/zircon_utils.h"
-#include "src/developer/debug/ipc/agent_protocol.h"
 #include "src/developer/debug/ipc/message_writer.h"
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/shared/logging/file_line_function.h"
@@ -169,9 +168,7 @@ void SendLogs(DebugAgent* debug_agent, std::vector<fuchsia::diagnostics::Formatt
     }
   }
 
-  debug_ipc::MessageWriter writer;
-  debug_ipc::WriteNotifyIO(notify, &writer);
-  debug_agent->stream()->Write(writer.MessageComplete());
+  debug_agent->stream()->Write(debug_ipc::SerializeNotifyIO(notify));
 }
 
 }  // namespace

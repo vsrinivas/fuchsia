@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "src/developer/debug/shared/register_id.h"
+#include "src/developer/debug/shared/serialization.h"
 
 namespace debug_ipc {
 
@@ -142,6 +143,8 @@ struct AutomationOperand {
 
   std::string ToString();
 
+  void Serialize(Serializer& ser, uint32_t ver) { ser | kind_ | index_ | value_; }
+
  private:
   AutomationOperandKind kind_ = AutomationOperandKind::kZero;
   uint32_t index_ = 0;
@@ -208,6 +211,8 @@ struct AutomationCondition {
   uint64_t constant() const { return constant_; }
   uint64_t mask() const { return mask_; }
   AutomationConditionKind kind() const { return kind_; }
+
+  void Serialize(Serializer& ser, uint32_t ver) { ser | kind_ | operand_ | constant_ | mask_; }
 
  private:
   AutomationConditionKind kind_ = AutomationConditionKind::kFalse;
@@ -322,6 +327,10 @@ struct AutomationInstruction {
   AutomationInstructionKind kind() const { return kind_; }
 
   std::string ToString();
+
+  void Serialize(Serializer& ser, uint32_t ver) {
+    ser | kind_ | address_ | length_ | extra_1_ | extra_2_ | value_ | conditions_;
+  }
 
  private:
   AutomationInstructionKind kind_ = AutomationInstructionKind::kNop;

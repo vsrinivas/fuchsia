@@ -17,7 +17,6 @@
 #include <variant>
 
 #include "lib/syslog/cpp/macros.h"
-#include "src/developer/debug/ipc/client_protocol.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
 #include "src/developer/debug/ipc/protocol.h"
@@ -209,9 +208,7 @@ void Session::PendingConnection::ConnectCompleteMainThread(fxl::RefPtr<PendingCo
 
   // Send "Hello" message. We can't use the Session::Send infrastructure since the connection hasn't
   // technically been established yet.
-  debug_ipc::MessageWriter writer;
-  debug_ipc::WriteRequest(debug_ipc::HelloRequest(), 1, &writer);
-  buffer_->stream().Write(writer.MessageComplete());
+  buffer_->stream().Write(debug_ipc::Serialize(debug_ipc::HelloRequest(), 1));
 }
 
 void Session::PendingConnection::DataAvailableMainThread(fxl::RefPtr<PendingConnection> owner) {
@@ -229,10 +226,9 @@ void Session::PendingConnection::DataAvailableMainThread(fxl::RefPtr<PendingConn
 
   debug_ipc::HelloReply reply;
   uint32_t transaction_id = 0;
-  debug_ipc::MessageReader reader(std::move(serialized));
 
   Err err;
-  if (!debug_ipc::ReadReply(&reader, &reply, &transaction_id) ||
+  if (!debug_ipc::Deserialize(std::move(serialized), &reply, &transaction_id) ||
       reply.signature != debug_ipc::HelloReply::kStreamSignature) {
     // Corrupt.
     err = Err("Corrupted reply, service is probably not the debug agent.");
@@ -318,12 +314,10 @@ void Session::OnStreamReadable() {
 
     debug_ipc::MessageReader reader(std::move(serialized_header));
     debug_ipc::MsgHeader header;
-    if (!reader.ReadHeader(&header)) {
-      // Since we already validated there is enough data for the header, the header read should not
-      // fail (it's just a memcpy).
-      FX_NOTREACHED();
-      return;
-    }
+    reader | header;
+    // Since we already validated there is enough data for the header, the header read should not
+    // fail (it's just a memcpy).
+    FX_CHECK(!reader.has_error());
 
     // Sanity checking on the size to prevent crashes.
     if (header.size > kMaxMessageSize) {
@@ -692,13 +686,11 @@ void Session::DispatchNotifyComponentExiting(const debug_ipc::NotifyComponent& n
 }
 
 void Session::DispatchNotification(const debug_ipc::MsgHeader& header, std::vector<char> data) {
-  debug_ipc::MessageReader reader(std::move(data));
-
   DEBUG_LOG(Session) << "Got notification: " << debug_ipc::MsgHeader::TypeToString(header.type);
   switch (header.type) {
     case debug_ipc::MsgHeader::Type::kNotifyProcessExiting: {
       debug_ipc::NotifyProcessExiting notify;
-      if (!debug_ipc::ReadNotifyProcessExiting(&reader, &notify))
+      if (!debug_ipc::DeserializeNotifyProcessExiting(std::move(data), &notify))
         return;
 
       Process* process = system_.ProcessFromKoid(notify.process_koid);
@@ -708,56 +700,56 @@ void Session::DispatchNotification(const debug_ipc::MsgHeader& header, std::vect
     }
     case debug_ipc::MsgHeader::Type::kNotifyProcessStarting: {
       debug_ipc::NotifyProcessStarting notify;
-      if (debug_ipc::ReadNotifyProcessStarting(&reader, &notify))
+      if (debug_ipc::DeserializeNotifyProcessStarting(std::move(data), &notify))
         DispatchProcessStarting(notify);
       break;
     }
-    case debug_ipc::MsgHeader::Type::kNotifyThreadStarting:
+    case debug_ipc::MsgHeader::Type::kNotifyThreadStarting: {
+      debug_ipc::NotifyThread thread;
+      if (debug_ipc::DeserializeNotifyThreadStarting(std::move(data), &thread))
+        DispatchNotifyThreadStarting(thread);
+      break;
+    }
     case debug_ipc::MsgHeader::Type::kNotifyThreadExiting: {
       debug_ipc::NotifyThread thread;
-      if (!debug_ipc::ReadNotifyThread(&reader, &thread))
-        break;
-      if (header.type == debug_ipc::MsgHeader::Type::kNotifyThreadStarting) {
-        DispatchNotifyThreadStarting(thread);
-      } else {
+      if (debug_ipc::DeserializeNotifyThreadExiting(std::move(data), &thread))
         DispatchNotifyThreadExiting(thread);
-      }
       break;
     }
     case debug_ipc::MsgHeader::Type::kNotifyException: {
       debug_ipc::NotifyException notify;
-      if (debug_ipc::ReadNotifyException(&reader, &notify))
+      if (debug_ipc::DeserializeNotifyException(std::move(data), &notify))
         DispatchNotifyException(notify);
       break;
     }
     case debug_ipc::MsgHeader::Type::kNotifyModules: {
       debug_ipc::NotifyModules notify;
-      if (debug_ipc::ReadNotifyModules(&reader, &notify))
+      if (debug_ipc::DeserializeNotifyModules(std::move(data), &notify))
         DispatchNotifyModules(notify);
       break;
     }
     case debug_ipc::MsgHeader::Type::kNotifyIO: {
       debug_ipc::NotifyIO notify;
-      if (debug_ipc::ReadNotifyIO(&reader, &notify))
+      if (debug_ipc::DeserializeNotifyIO(std::move(data), &notify))
         DispatchNotifyIO(notify);
       break;
     }
     case debug_ipc::MsgHeader::Type::kNotifyLog: {
       debug_ipc::NotifyLog notify;
-      if (debug_ipc::ReadNotifyLog(&reader, &notify))
+      if (debug_ipc::DeserializeNotifyLog(std::move(data), &notify))
         DispatchNotifyLog(notify);
       break;
     }
-    case debug_ipc::MsgHeader::Type::kNotifyComponentExiting:
     case debug_ipc::MsgHeader::Type::kNotifyComponentStarting: {
       debug_ipc::NotifyComponent notify;
-      if (!debug_ipc::ReadNotifyComponent(&reader, &notify))
-        break;
-      if (header.type == debug_ipc::MsgHeader::Type::kNotifyComponentExiting) {
-        DispatchNotifyComponentExiting(notify);
-      } else {
+      if (debug_ipc::DeserializeNotifyComponentStarting(std::move(data), &notify))
         DispatchNotifyComponentStarting(notify);
-      }
+      break;
+    }
+    case debug_ipc::MsgHeader::Type::kNotifyComponentExiting: {
+      debug_ipc::NotifyComponent notify;
+      if (debug_ipc::DeserializeNotifyComponentExiting(std::move(data), &notify))
+        DispatchNotifyComponentExiting(notify);
       break;
     }
     default:
