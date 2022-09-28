@@ -53,6 +53,11 @@ pub fn impl_derive_ref(ast: syn::DeriveInput) -> Result<TokenStream2, syn::Error
                         Self::Void => write!(f, "void"),
                     });
                 }
+                if self.variants.contains("All") {
+                    tokens.append_all(quote! {
+                        Self::All => write!(f, "all"),
+                    });
+                }
                 tokens
             };
             tokens.append_all(quote! {
@@ -118,6 +123,9 @@ pub fn impl_derive_ref(ast: syn::DeriveInput) -> Result<TokenStream2, syn::Error
                             "void" => Ok(Self::Void),
                         });
                     }
+                    if self.variants.contains("All") {
+                        tokens.append_all(quote! { "all" => Ok(Self::All), });
+                    }
                     tokens.append_all(quote! {_ => Err(ParseError::InvalidValue) });
                     tokens
                 };
@@ -177,6 +185,11 @@ pub fn impl_derive_ref(ast: syn::DeriveInput) -> Result<TokenStream2, syn::Error
                 if self.variants.contains("Named") {
                     tokens.append_all(quote! {
                         #name::Named(ref n) => Self::Named(n),
+                    });
+                }
+                if self.variants.contains("All") {
+                    tokens.append_all(quote! {
+                        #name::All => panic!("should not convert All to AnyRef"),
                     });
                 }
                 tokens
@@ -275,6 +288,7 @@ fn parse_reference_attributes(ast: &syn::DeriveInput) -> Result<ReferenceAttribu
         "Debug",
         "Self_",
         "Void",
+        "All",
     };
     for ty in variants.iter() {
         if !allowed_variants.contains(ty as &str) {

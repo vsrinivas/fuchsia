@@ -56,6 +56,7 @@ pub fn compile(
             });
         }
     }
+
     validate::validate_cml(&document, &file, &features, &required_protocols)?;
 
     util::ensure_directory_exists(&output)?;
@@ -143,7 +144,12 @@ mod tests {
         fs::File::open(&out_path).unwrap().read_to_end(&mut buffer).unwrap();
 
         let output: fdecl::Component = decode_persistent(&buffer).unwrap();
-        assert_eq!(output, expected_output, "compiled output did not match expected");
+        if output != expected_output {
+            panic!(
+                "compiled output did not match expected\nactual: {:#?}\nexpected: {:#?}",
+                output, expected_output
+            );
+        }
 
         Ok(())
     }

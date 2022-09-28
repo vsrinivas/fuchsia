@@ -7,15 +7,15 @@ use {
         error::Error, AnyRef, AsClause, Availability, Capability, CapabilityClause, Child,
         Collection, ConfigKey, ConfigNestedValueType, ConfigValueType, DebugRegistration, Document,
         Environment, EnvironmentExtends, EnvironmentRef, EventScope, EventSubscriptionsClause,
-        Expose, ExposeFromRef, ExposeToRef, FromClause, Offer, OneOrMany, Path, PathClause,
-        Program, ResolverRegistration, RightsClause, RunnerRegistration, SourceAvailability, Use,
-        UseFromRef,
+        Expose, ExposeFromRef, ExposeToRef, FromClause, Offer, OfferToRef, OneOrMany, Path,
+        PathClause, Program, ResolverRegistration, RightsClause, RunnerRegistration,
+        SourceAvailability, Use, UseFromRef,
     },
     cm_types::{self as cm, Name},
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
     serde_json::{Map, Value},
     sha2::{Digest, Sha256},
-    std::collections::{BTreeMap, HashSet},
+    std::collections::{BTreeMap, BTreeSet},
     std::convert::{Into, TryInto},
 };
 
@@ -26,7 +26,8 @@ pub fn compile(
     document: &Document,
     config_package_path: Option<&str>,
 ) -> Result<fdecl::Component, Error> {
-    let all_capability_names = document.all_capability_names();
+    let all_capability_names: BTreeSet<Name> =
+        document.all_capability_names().into_iter().collect();
     let all_children = document.all_children_names().into_iter().collect();
     let all_collections = document.all_collection_names().into_iter().collect();
     Ok(fdecl::Component {
@@ -194,9 +195,9 @@ fn translate_program(program: &Program) -> Result<fdecl::Program, Error> {
 /// `use` rules consume a single capability from one source (parent|framework).
 fn translate_use(
     use_in: &Vec<Use>,
-    all_capability_names: &HashSet<Name>,
-    all_children: &HashSet<&Name>,
-    all_collections: &HashSet<&Name>,
+    all_capability_names: &BTreeSet<Name>,
+    all_children: &BTreeSet<&Name>,
+    all_collections: &BTreeSet<&Name>,
 ) -> Result<Vec<fdecl::Use>, Error> {
     let mut out_uses = vec![];
     for use_ in use_in {
@@ -378,9 +379,9 @@ fn translate_use(
 /// one or more targets (parent|framework).
 fn translate_expose(
     expose_in: &Vec<Expose>,
-    all_capability_names: &HashSet<Name>,
-    all_collections: &HashSet<&Name>,
-    all_children: &HashSet<&Name>,
+    all_capability_names: &BTreeSet<Name>,
+    all_collections: &BTreeSet<&Name>,
+    all_children: &BTreeSet<&Name>,
 ) -> Result<Vec<fdecl::Expose>, Error> {
     let mut out_exposes = vec![];
     for expose in expose_in.iter() {
@@ -523,9 +524,9 @@ fn derive_source_and_availability(
     availability: Option<&Availability>,
     source: fdecl::Ref,
     source_availability: Option<&SourceAvailability>,
-    all_capability_names: &HashSet<Name>,
-    all_children: &HashSet<&Name>,
-    all_collections: &HashSet<&Name>,
+    all_capability_names: &BTreeSet<Name>,
+    all_children: &BTreeSet<&Name>,
+    all_collections: &BTreeSet<&Name>,
 ) -> (fdecl::Ref, fdecl::Availability) {
     let availability = availability.map(|a| match a {
         Availability::Required => fdecl::Availability::Required,
@@ -565,15 +566,49 @@ fn derive_source_and_availability(
     }
 }
 
+fn expand_offer_to_all(
+    offers_in: &Vec<Offer>,
+    children: &BTreeSet<&Name>,
+    collections: &BTreeSet<&Name>,
+) -> Result<Vec<Offer>, Error> {
+    let offers_to_all = offers_in
+        .iter()
+        .filter(|o| matches!(o.to, OneOrMany::One(OfferToRef::All)))
+        .collect::<Vec<_>>();
+
+    let mut final_offers = offers_in
+        .iter()
+        .filter(|o| !matches!(o.to, OneOrMany::One(OfferToRef::All)))
+        .map(Offer::clone)
+        .collect::<Vec<Offer>>();
+
+    offers_to_all.iter().for_each(|o| {
+        for child in children {
+            let mut local_offer = Offer::clone(o);
+            local_offer.to = OneOrMany::One(OfferToRef::Named((**child).clone()));
+            final_offers.push(local_offer);
+        }
+
+        for collection in collections {
+            let mut local_offer = Offer::clone(o);
+            local_offer.to = OneOrMany::One(OfferToRef::Named((**collection).clone()));
+            final_offers.push(local_offer);
+        }
+    });
+
+    Ok(final_offers)
+}
+
 /// `offer` rules route multiple capabilities from multiple sources to multiple targets.
 fn translate_offer(
     offer_in: &Vec<Offer>,
-    all_capability_names: &HashSet<Name>,
-    all_children: &HashSet<&Name>,
-    all_collections: &HashSet<&Name>,
+    all_capability_names: &BTreeSet<Name>,
+    all_children: &BTreeSet<&Name>,
+    all_collections: &BTreeSet<&Name>,
 ) -> Result<Vec<fdecl::Offer>, Error> {
     let mut out_offers = vec![];
-    for offer in offer_in.iter() {
+    let expanded_offers = expand_offer_to_all(offer_in, all_children, all_collections)?;
+    for offer in &expanded_offers {
         if let Some(n) = offer.service() {
             let entries = extract_offer_sources_and_targets(
                 offer,
@@ -946,7 +981,7 @@ fn translate_config(
 
 fn translate_environments(
     envs_in: &Vec<Environment>,
-    all_capability_names: &HashSet<Name>,
+    all_capability_names: &BTreeSet<Name>,
 ) -> Result<Vec<fdecl::Environment>, Error> {
     envs_in
         .iter()
@@ -1022,7 +1057,7 @@ fn translate_resolver_registration(
 
 fn translate_debug_capabilities(
     capabilities: &Vec<DebugRegistration>,
-    all_capability_names: &HashSet<Name>,
+    all_capability_names: &BTreeSet<Name>,
 ) -> Result<Vec<fdecl::DebugRegistration>, Error> {
     let mut out_capabilities = vec![];
     for capability in capabilities {
@@ -1061,8 +1096,8 @@ fn translate_debug_capabilities(
 
 fn extract_use_source(
     in_obj: &Use,
-    all_capability_names: &HashSet<Name>,
-    all_children_names: &HashSet<&Name>,
+    all_capability_names: &BTreeSet<Name>,
+    all_children_names: &BTreeSet<&Name>,
 ) -> Result<fdecl::Ref, Error> {
     match in_obj.from.as_ref() {
         Some(UseFromRef::Parent) => Ok(fdecl::Ref::Parent(fdecl::ParentRef {})),
@@ -1157,7 +1192,7 @@ fn extract_expose_rights(in_obj: &Expose) -> Result<Option<fio::Operations>, Err
                     "Rights provided to expose are not well formed.",
                 ));
             }
-            let mut seen_rights = HashSet::with_capacity(rights.len());
+            let mut seen_rights = BTreeSet::new();
             let mut operations: fio::Operations = fio::Operations::empty();
             for right in rights.iter() {
                 if seen_rights.contains(&right) {
@@ -1178,8 +1213,8 @@ fn extract_expose_rights(in_obj: &Expose) -> Result<Option<fio::Operations>, Err
 
 fn expose_source_from_ref(
     reference: &ExposeFromRef,
-    all_capability_names: Option<&HashSet<Name>>,
-    all_collections: Option<&HashSet<&Name>>,
+    all_capability_names: Option<&BTreeSet<Name>>,
+    all_collections: Option<&BTreeSet<&Name>>,
 ) -> Result<fdecl::Ref, Error> {
     match reference {
         ExposeFromRef::Named(name) => {
@@ -1201,7 +1236,7 @@ fn expose_source_from_ref(
 
 fn extract_single_expose_source(
     in_obj: &Expose,
-    all_capability_names: Option<&HashSet<Name>>,
+    all_capability_names: Option<&BTreeSet<Name>>,
 ) -> Result<fdecl::Ref, Error> {
     match &in_obj.from {
         OneOrMany::One(reference) => expose_source_from_ref(&reference, all_capability_names, None),
@@ -1216,7 +1251,7 @@ fn extract_single_expose_source(
 
 fn extract_all_expose_sources(
     in_obj: &Expose,
-    all_collections: Option<&HashSet<&Name>>,
+    all_collections: Option<&BTreeSet<&Name>>,
 ) -> Result<Vec<fdecl::Ref>, Error> {
     in_obj
         .from
@@ -1236,7 +1271,7 @@ fn extract_offer_rights(in_obj: &Offer) -> Result<Option<fio::Operations>, Error
             if rights.is_empty() {
                 return Err(Error::missing_rights("Rights provided to offer are not well formed."));
             }
-            let mut seen_rights = HashSet::with_capacity(rights.len());
+            let mut seen_rights = BTreeSet::new();
             let mut operations: fio::Operations = fio::Operations::empty();
             for right in rights.iter() {
                 if seen_rights.contains(&right) {
@@ -1257,7 +1292,7 @@ fn extract_offer_rights(in_obj: &Offer) -> Result<Option<fio::Operations>, Error
 
 fn extract_single_offer_source<T>(
     in_obj: &T,
-    all_capability_names: Option<&HashSet<Name>>,
+    all_capability_names: Option<&BTreeSet<Name>>,
 ) -> Result<fdecl::Ref, Error>
 where
     T: FromClause,
@@ -1275,8 +1310,8 @@ where
 
 fn extract_all_offer_sources<T: FromClause>(
     in_obj: &T,
-    all_capability_names: &HashSet<Name>,
-    all_collections: &HashSet<&Name>,
+    all_capability_names: &BTreeSet<Name>,
+    all_collections: &BTreeSet<&Name>,
 ) -> Result<Vec<fdecl::Ref>, Error> {
     in_obj
         .from_()
@@ -1290,8 +1325,8 @@ fn extract_all_offer_sources<T: FromClause>(
 
 fn translate_child_or_collection_ref(
     reference: AnyRef,
-    all_children: &HashSet<&Name>,
-    all_collections: &HashSet<&Name>,
+    all_children: &BTreeSet<&Name>,
+    all_collections: &BTreeSet<&Name>,
 ) -> Result<fdecl::Ref, Error> {
     match reference {
         AnyRef::Named(name) if all_children.contains(name) => {
@@ -1310,9 +1345,9 @@ fn translate_child_or_collection_ref(
 fn extract_offer_sources_and_targets(
     offer: &Offer,
     source_names: OneOrMany<Name>,
-    all_capability_names: &HashSet<Name>,
-    all_children: &HashSet<&Name>,
-    all_collections: &HashSet<&Name>,
+    all_capability_names: &BTreeSet<Name>,
+    all_children: &BTreeSet<&Name>,
+    all_collections: &BTreeSet<&Name>,
 ) -> Result<Vec<(fdecl::Ref, Name, fdecl::Ref, Name)>, Error> {
     let mut out = vec![];
 
@@ -1604,7 +1639,7 @@ where
                     keyword
                 )));
             }
-            let mut seen_rights = HashSet::with_capacity(rights.len());
+            let mut seen_rights = BTreeSet::new();
             let mut operations: fio::Operations = fio::Operations::empty();
             for right in rights.iter() {
                 if seen_rights.contains(&right) {
@@ -1628,8 +1663,8 @@ where
 
 pub fn offer_source_from_ref(
     reference: AnyRef<'_>,
-    all_capability_names: Option<&HashSet<Name>>,
-    all_collection_names: Option<&HashSet<&Name>>,
+    all_capability_names: Option<&BTreeSet<Name>>,
+    all_collection_names: Option<&BTreeSet<&Name>>,
 ) -> Result<fdecl::Ref, Error> {
     match reference {
         AnyRef::Named(name) => {
@@ -1666,9 +1701,10 @@ mod tests {
             RunnerRegistration, Use, UseFromRef,
         },
         cm_types::{self as cm, Name},
+        difference::Changeset,
         fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
         serde_json::{json, Map, Value},
-        std::collections::HashSet,
+        std::collections::BTreeSet,
         std::convert::Into,
     };
 
@@ -1688,7 +1724,11 @@ mod tests {
             fn $test_name() {
                 let input = serde_json::from_str(&$input.to_string()).expect("deserialization failed");
                 let actual = compile(&input, Some("fake.cvf")).expect("compilation failed");
-                assert_eq!(actual, $expected);
+                if actual != $expected {
+                    let e = format!("{:#?}", $expected);
+                    let a = format!("{:#?}", actual);
+                    panic!("{}", Changeset::new(&e, &a, "\n"));
+                }
             }
         )+
     }
@@ -1707,6 +1747,182 @@ mod tests {
         test_compile_empty_includes => {
             input = json!({ "include": [] }),
             output = default_component_decl(),
+        },
+
+        test_compile_offer_to_all_and_diff_sources => {
+            input = json!({
+                "children": [
+                    {
+                        "name": "logger",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                    },
+                ],
+                "collections": [
+                    {
+                        "name": "coll",
+                        "durability": "transient",
+                    },
+                ],
+                "offer": [
+                    {
+                        "protocol": "fuchsia.logger.LogSink",
+                        "from": "parent",
+                        "to": "all",
+                    },
+                    {
+                        "protocol": "fuchsia.logger.LogSink",
+                        "from": "framework",
+                        "to": "#logger",
+                        "as": "LogSink2",
+                    },
+                ],
+            }),
+            output = fdecl::Component {
+                offers: Some(vec![
+                    fdecl::Offer::Protocol(fdecl::OfferProtocol {
+                        source: Some(fdecl::Ref::Framework(fdecl::FrameworkRef {})),
+                        source_name: Some("fuchsia.logger.LogSink".into()),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                            name: "logger".into(),
+                            collection: None,
+                        })),
+                        target_name: Some("LogSink2".into()),
+                        dependency_type: Some(fdecl::DependencyType::Strong),
+                        availability: Some(fdecl::Availability::Required),
+                        unknown_data: None,
+                        ..fdecl::OfferProtocol::EMPTY
+                    }),
+                    fdecl::Offer::Protocol(fdecl::OfferProtocol {
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                        source_name: Some("fuchsia.logger.LogSink".into()),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                            name: "logger".into(),
+                            collection: None,
+                        })),
+                        target_name: Some("fuchsia.logger.LogSink".into()),
+                        dependency_type: Some(fdecl::DependencyType::Strong),
+                        availability: Some(fdecl::Availability::Required),
+                        unknown_data: None,
+                        ..fdecl::OfferProtocol::EMPTY
+                    }),
+                    fdecl::Offer::Protocol(fdecl::OfferProtocol {
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                        source_name: Some("fuchsia.logger.LogSink".into()),
+                        target: Some(fdecl::Ref::Collection(fdecl::CollectionRef {
+                            name: "coll".into(),
+                        })),
+                        target_name: Some("fuchsia.logger.LogSink".into()),
+                        dependency_type: Some(fdecl::DependencyType::Strong),
+                        availability: Some(fdecl::Availability::Required),
+                        unknown_data: None,
+                        ..fdecl::OfferProtocol::EMPTY
+                    }),
+                ]),
+                children: Some(vec![fdecl::Child {
+                    name: Some("logger".into()),
+                    url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".into()),
+                    startup: Some(fdecl::StartupMode::Lazy),
+                    ..fdecl::Child::EMPTY
+                }]),
+                collections: Some(vec![fdecl::Collection {
+                    name: Some("coll".into()),
+                    durability: Some(fdecl::Durability::Transient),
+                    ..fdecl::Collection::EMPTY
+                }]),
+                ..default_component_decl()
+            },
+        },
+
+        test_compile_offer_to_all => {
+            input = json!({
+                "children": [
+                    {
+                        "name": "logger",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                    },
+                    {
+                        "name": "something",
+                        "url": "fuchsia-pkg://fuchsia.com/something/stable#meta/something.cm",
+                    },
+                ],
+                "collections": [
+                    {
+                        "name": "coll",
+                        "durability": "transient",
+                    },
+                ],
+                "offer": [
+                    {
+                        "protocol": "fuchsia.logger.LogSink",
+                        "from": "parent",
+                        "to": "all",
+                    },
+                ],
+            }),
+            output = fdecl::Component {
+                offers: Some(vec![
+                    fdecl::Offer::Protocol(fdecl::OfferProtocol {
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                        source_name: Some("fuchsia.logger.LogSink".into()),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                            name: "logger".into(),
+                            collection: None,
+                        })),
+                        target_name: Some("fuchsia.logger.LogSink".into()),
+                        dependency_type: Some(fdecl::DependencyType::Strong),
+                        availability: Some(fdecl::Availability::Required),
+                        unknown_data: None,
+                        ..fdecl::OfferProtocol::EMPTY
+                    }),
+                    fdecl::Offer::Protocol(fdecl::OfferProtocol {
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                        source_name: Some("fuchsia.logger.LogSink".into()),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                            name: "something".into(),
+                            collection: None,
+                        })),
+                        target_name: Some("fuchsia.logger.LogSink".into()),
+                        dependency_type: Some(fdecl::DependencyType::Strong),
+                        availability: Some(fdecl::Availability::Required),
+                        unknown_data: None,
+                        ..fdecl::OfferProtocol::EMPTY
+                    }),
+                    fdecl::Offer::Protocol(fdecl::OfferProtocol {
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                        source_name: Some("fuchsia.logger.LogSink".into()),
+                        target: Some(fdecl::Ref::Collection(fdecl::CollectionRef {
+                            name: "coll".into(),
+                        })),
+                        target_name: Some("fuchsia.logger.LogSink".into()),
+                        dependency_type: Some(fdecl::DependencyType::Strong),
+                        availability: Some(fdecl::Availability::Required),
+                        unknown_data: None,
+                        ..fdecl::OfferProtocol::EMPTY
+                    }),
+                ]),
+                children: Some(vec![
+                    fdecl::Child {
+                        name: Some("logger".into()),
+                        url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".into()),
+                        startup: Some(fdecl::StartupMode::Lazy),
+                        ..fdecl::Child::EMPTY
+                    },
+                    fdecl::Child {
+                        name: Some("something".into()),
+                        url: Some(
+                            "fuchsia-pkg://fuchsia.com/something/stable#meta/something.cm".into(),
+                        ),
+                        startup: Some(fdecl::StartupMode::Lazy),
+                        ..fdecl::Child::EMPTY
+                    },
+                ]),
+                collections: Some(vec![fdecl::Collection {
+                    name: Some("coll".into()),
+                    durability: Some(fdecl::Durability::Transient),
+                    ..fdecl::Collection::EMPTY
+                }]),
+                ..default_component_decl()
+            },
         },
 
         test_compile_program => {

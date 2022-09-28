@@ -690,6 +690,9 @@ impl OfferFromRef {
 pub enum OfferToRef {
     /// A reference to a child or collection.
     Named(Name),
+
+    /// Syntax sugar that results in the offer decl applying to all children and collections
+    All,
 }
 
 /// A reference in an `offer to`.

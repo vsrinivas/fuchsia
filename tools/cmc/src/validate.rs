@@ -276,8 +276,41 @@ impl<'a> ValidationContext<'a> {
         // Validate "offer".
         if let Some(offers) = self.document.offer.as_ref() {
             let mut used_ids = HashMap::new();
+            let offered_to_all = offers
+                .iter()
+                .filter(|o| matches!(o.to, cml::OneOrMany::One(cml::OfferToRef::All)))
+                .filter(|o| o.protocol.is_some())
+                .map(cml::CapabilityId::from_offer_expose)
+                .collect::<Result<Vec<Vec<cml::CapabilityId>>, _>>()?
+                .into_iter()
+                .flatten()
+                .collect::<Vec<cml::CapabilityId>>();
+
+            let mut duplicate_check: HashSet<cml::CapabilityId> = HashSet::new();
+            let problem_protocols = offered_to_all
+                .iter()
+                .filter(|cap_id| !duplicate_check.insert((*cap_id).clone()))
+                .collect::<Vec<_>>();
+            if !problem_protocols.is_empty() {
+                return Err(Error::validate(format!(
+                    r#"Protocol(s) {:?} offered to "all" multiple times"#,
+                    problem_protocols
+                        .iter()
+                        .map(|p| match p {
+                            cml::CapabilityId::Protocol(name) => name.as_str(),
+                            _ => unreachable!(),
+                        })
+                        .collect::<Vec<_>>()
+                )));
+            }
+
             for offer in offers.iter() {
-                self.validate_offer(&offer, &mut used_ids, &mut strong_dependencies)?;
+                self.validate_offer(
+                    &offer,
+                    &mut used_ids,
+                    &mut strong_dependencies,
+                    &offered_to_all,
+                )?;
             }
         }
 
@@ -785,6 +818,7 @@ impl<'a> ValidationContext<'a> {
         offer: &'a cml::Offer,
         used_ids: &mut HashMap<&'a cml::Name, HashMap<String, cml::CapabilityId>>,
         strong_dependencies: &mut DirectedGraph<DependencyNode<'a>>,
+        protocols_offered_to_all: &[cml::CapabilityId],
     ) -> Result<(), Error> {
         // TODO: Many of these checks are repititious, see if we can unify them
 
@@ -962,7 +996,22 @@ impl<'a> ValidationContext<'a> {
             // Ensure the "to" value is a child.
             let to_target = match to {
                 cml::OfferToRef::Named(ref name) => name,
+                cml::OfferToRef::All => continue,
             };
+
+            // Ensure that no protocol is offered to "all" and a specific component.
+            // This is an aspect of multi-target-offer checking.
+            if let Some(bad_protocol_name) = target_cap_ids.iter().find(|proto_to_check| {
+                protocols_offered_to_all
+                    .iter()
+                    .any(|offered_to_all| proto_to_check == &offered_to_all)
+            }) {
+                return Err(Error::validate(format!(
+                    r#"Protocol "{}" is offered to both "all" and "{}""#,
+                    bad_protocol_name,
+                    to_target.as_str()
+                )));
+            }
 
             // Check that any referenced child actually exists.
             if !self.all_children.contains_key(to_target)
@@ -1044,6 +1093,7 @@ impl<'a> ValidationContext<'a> {
                     }
                     if let cml::OfferFromRef::Named(from) = from {
                         match to {
+                            cml::OfferToRef::All => panic!(r#"may not offer from "all""#),
                             cml::OfferToRef::Named(to) => {
                                 let source = DependencyNode::Named(from);
                                 let target = DependencyNode::Named(to);
@@ -1100,6 +1150,7 @@ impl<'a> ValidationContext<'a> {
                 if !offers.iter().any(|offer| {
                     let names_this_child = offer.to.iter().any(|target| match target {
                         cml::OfferToRef::Named(ref name) => name == &child.name,
+                        cml::OfferToRef::All => true,
                     });
 
                     let names_this_capability = match offer.protocol.as_ref() {
@@ -1121,6 +1172,7 @@ impl<'a> ValidationContext<'a> {
                 if !offers.iter().any(|offer| {
                     let names_this_collection = offer.to.iter().any(|target| match target {
                         cml::OfferToRef::Named(ref name) => name == &collection.name,
+                        cml::OfferToRef::All => true,
                     });
 
                     let names_this_capability = match offer.protocol.as_ref() {
@@ -1636,6 +1688,7 @@ impl<'a> DependencyNode<'a> {
     fn offer_to_ref(ref_: &'a cml::OfferToRef) -> DependencyNode<'a> {
         match ref_ {
             cml::OfferToRef::Named(name) => DependencyNode::Named(name),
+            cml::OfferToRef::All => panic!(r#"offer to "all" may not be in Dependency Graph"#),
         }
     }
 
@@ -1753,16 +1806,16 @@ mod tests {
         let input = r##"{
             children: [
                 {
-                    name: 'logger',
-                    'url': 'fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm',
+                    name: "logger",
+                    url: "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
                 },
                 {
-                    name: 'something',
-                    url: 'fuchsia-pkg://fuchsia.com/something#meta/something.cm',
+                    name: "something",
+                    url: "fuchsia-pkg://fuchsia.com/something#meta/something.cm",
                 },
                 {
-                    name: 'something_v2',
-                    url: 'fuchsia-pkg://fuchsia.com/something_v2#meta/something_v2.cm',
+                    name: "something_v2",
+                    url: "fuchsia-pkg://fuchsia.com/something_v2#meta/something_v2.cm",
                 },
             ],
             disable: {
@@ -1784,12 +1837,12 @@ mod tests {
         let input = r##"{
             children: [
                 {
-                    name: 'logger',
-                    'url': 'fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm',
+                    name: "logger",
+                    url: "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
                 },
                 {
-                    name: 'something',
-                    url: 'fuchsia-pkg://fuchsia.com/something#meta/something.cm',
+                    name: "something",
+                    url: "fuchsia-pkg://fuchsia.com/something#meta/something.cm",
                 },
             ],
         }"##;
@@ -1817,15 +1870,15 @@ mod tests {
         let input = r##"{
             children: [
                 {
-                    name: 'logger',
-                    'url': 'fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm',
+                    name: "logger",
+                    url: "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
                 },
             ],
 
             use: [
                 {
                     protocol: [ "fuchsia.component.Binder" ],
-                    from: 'framework',
+                    from: "framework",
                 }
             ],
         }"##;
@@ -1845,16 +1898,16 @@ mod tests {
         let input = r##"{
             children: [
                 {
-                    name: 'logger',
-                    'url': 'fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm',
+                    name: "logger",
+                    url: "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
                 },
                 {
-                    name: 'something',
-                    url: 'fuchsia-pkg://fuchsia.com/something#meta/something.cm',
+                    name: "something",
+                    url: "fuchsia-pkg://fuchsia.com/something#meta/something.cm",
                 },
                 {
-                    name: 'something_v2',
-                    url: 'fuchsia-pkg://fuchsia.com/something_v2#meta/something_v2.cm',
+                    name: "something_v2",
+                    url: "fuchsia-pkg://fuchsia.com/something_v2#meta/something_v2.cm",
                 },
             ],
 
@@ -1873,16 +1926,63 @@ mod tests {
     }
 
     #[test]
+    fn required_offer_to_all() {
+        let input = r##"{
+           children: [
+               {
+                   name: "logger",
+                   url: "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+               },
+               {
+                   name: "something",
+                   url: "fuchsia-pkg://fuchsia.com/something#meta/something.cm",
+               },
+           ],
+           collections: [
+               {
+                   name: "coll",
+                   durability: "transient",
+               },
+           ],
+           offer: [
+               {
+                   protocol: "fuchsia.logger.LogSink",
+                   from: "parent",
+                   to: "all"
+               },
+               {
+                   protocol: "fuchsia.inspect.InspectSink",
+                   from: "parent",
+                   to: "all"
+               },
+               {
+                   protocol: "fuchsia.process.Launcher",
+                   from: "parent",
+                   to: "#something",
+               },
+           ]
+       }"##;
+        let result = write_and_validate_with_features(
+            "test.cml",
+            input.as_bytes(),
+            &FeatureSet::empty(),
+            &vec!["fuchsia.logger.LogSink".into(), "fuchsia.inspect.InspectSink".into()],
+            &Vec::new(),
+        );
+        assert!(result.is_ok());
+    }
+
+    #[test]
     fn required_offer_to_all_manually() {
         let input = r##"{
             children: [
                 {
-                    name: 'logger',
-                    'url': 'fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm',
+                    name: "logger",
+                    url: "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
                 },
                 {
-                    name: 'something',
-                    url: 'fuchsia-pkg://fuchsia.com/something#meta/something.cm',
+                    name: "something",
+                    url: "fuchsia-pkg://fuchsia.com/something#meta/something.cm",
                 },
             ],
             collections: [
@@ -1921,16 +2021,16 @@ mod tests {
         let input = r##"{
             children: [
                 {
-                    name: 'logger',
-                    'url': 'fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm',
+                    name: "logger",
+                    url: "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
                 },
                 {
-                    name: 'something',
-                    url: 'fuchsia-pkg://fuchsia.com/something#meta/something.cm',
+                    name: "something",
+                    url: "fuchsia-pkg://fuchsia.com/something#meta/something.cm",
                 },
                 {
-                    name: 'something_v2',
-                    url: 'fuchsia-pkg://fuchsia.com/something_v2#meta/something_v2.cm',
+                    name: "something_v2",
+                    url: "fuchsia-pkg://fuchsia.com/something_v2#meta/something_v2.cm",
                 },
             ],
             collections: [
@@ -1943,7 +2043,7 @@ mod tests {
                 {
                     protocol: "fuchsia.logger.LogSink",
                     from: "parent",
-                    to: ["#logger", "#something", '#something_v2', '#coll'],
+                    to: ["#logger", "#something", "#something_v2", "#coll"],
                 },
             ]
         }"##;
@@ -1957,17 +2057,204 @@ mod tests {
         assert!(result.is_ok());
     }
 
+    // Test should fail because fuchsia.logger.LogSink is offered to #something twice
+    #[test]
+    fn offer_to_all_and_manual() {
+        let input = r##"{
+            children: [
+                {
+                    name: "logger",
+                    url: "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                },
+                {
+                    name: "something",
+                    url: "fuchsia-pkg://fuchsia.com/something#meta/something.cm",
+                },
+            ],
+            offer: [
+                {
+                    protocol: "fuchsia.logger.LogSink",
+                    from: "parent",
+                    to: "all"
+                },
+                {
+                    protocol: "fuchsia.logger.LogSink",
+                    from: "parent",
+                    to: "#something"
+                },
+            ]
+        }"##;
+
+        let result = write_and_validate_with_features(
+            "test.cml",
+            input.as_bytes(),
+            &FeatureSet::empty(),
+            &vec!["fuchsia.logger.LogSink".into()],
+            &Vec::new(),
+        );
+
+        match result {
+            Err(Error::Validate { schema_name, err, filename }) => {
+                assert_eq!(
+                    err,
+                    r#"Protocol "fuchsia.logger.LogSink" is offered to both "all" and "something""#
+                );
+                assert!(schema_name.is_none());
+                assert!(filename.is_some(), "Expected there to be a filename in error message");
+            }
+            _ => panic!("Expected Err(Error::Validate), got {:#?}", result),
+        }
+
+        let input = r##"{
+            children: [
+                {
+                    name: "logger",
+                    url: "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                },
+                {
+                    name: "something",
+                    url: "fuchsia-pkg://fuchsia.com/something#meta/something.cm",
+                },
+            ],
+            offer: [
+                {
+                    protocol: "fuchsia.logger.LogSink",
+                    from: "parent",
+                    to: "all"
+                },
+                {
+                    protocol: "fuchsia.logger.LogSink",
+                    from: "framework",
+                    to: "#something"
+                },
+            ]
+        }"##;
+
+        let result = write_and_validate_with_features(
+            "test.cml",
+            input.as_bytes(),
+            &FeatureSet::empty(),
+            &vec!["fuchsia.logger.LogSink".into()],
+            &Vec::new(),
+        );
+
+        match result {
+            Err(Error::Validate { schema_name, err, filename }) => {
+                assert_eq!(
+                    err,
+                    r#"Protocol "fuchsia.logger.LogSink" is offered to both "all" and "something""#
+                );
+                assert!(schema_name.is_none());
+                assert!(filename.is_some(), "Expected there to be a filename in error message");
+            }
+            _ => panic!("Expected Err(Error::Validate), got {:#?}", result),
+        }
+    }
+
+    #[test]
+    fn offer_to_all_from_diff_sources() {
+        let input = r##"{
+            children: [
+                {
+                    name: "logger",
+                    url: "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                },
+                {
+                    name: "something",
+                    url: "fuchsia-pkg://fuchsia.com/something#meta/something.cm",
+                },
+            ],
+            offer: [
+                {
+                    protocol: "fuchsia.logger.LogSink",
+                    from: "parent",
+                    to: "all"
+                },
+                {
+                    protocol: "fuchsia.logger.LogSink",
+                    from: "framework",
+                    to: "all"
+                },
+            ]
+        }"##;
+
+        let result = write_and_validate_with_features(
+            "test.cml",
+            input.as_bytes(),
+            &FeatureSet::empty(),
+            &vec!["fuchsia.logger.LogSink".into()],
+            &Vec::new(),
+        );
+
+        match result {
+            Err(Error::Validate { schema_name, err, filename }) => {
+                assert_eq!(
+                    err,
+                    r#"Protocol(s) ["fuchsia.logger.LogSink"] offered to "all" multiple times"#
+                );
+                assert!(schema_name.is_none());
+                assert!(filename.is_some(), "Expected there to be a filename in error message");
+            }
+            _ => panic!("Expected Err(Error::Validate), got {:#?}", result),
+        }
+    }
+
+    #[test]
+    fn offer_to_all_with_aliases() {
+        let input = r##"{
+            children: [
+                {
+                    name: "logger",
+                    url: "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                },
+                {
+                    name: "something",
+                    url: "fuchsia-pkg://fuchsia.com/something#meta/something.cm",
+                },
+            ],
+            offer: [
+                {
+                    protocol: "fuchsia.logger.LogSink",
+                    from: "parent",
+                    to: "all"
+                },
+                {
+                    protocol: "fuchsia.logger.LogSink",
+                    from: "framework",
+                    to: "all",
+                    as: "OtherLogSink",
+                },
+                {
+                    protocol: "fuchsia.logger.LogSink",
+                    from: "framework",
+                    to: "#something",
+                    as: "OtherOtherLogSink",
+                },
+            ]
+        }"##;
+
+        let result = write_and_validate_with_features(
+            "test.cml",
+            input.as_bytes(),
+            &FeatureSet::empty(),
+            &vec!["fuchsia.logger.LogSink".into()],
+            &Vec::new(),
+        );
+
+        assert!(result.is_ok());
+    }
+
     #[test]
     fn fail_to_offer_to_all_when_required() {
         let input = r##"{
             children: [
                 {
-                    name: 'logger',
-                    'url': 'fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm',
+                    name: "logger",
+                    url: "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
                 },
                 {
-                    name: 'something',
-                    url: 'fuchsia-pkg://fuchsia.com/something#meta/something.cm',
+                    name: "something",
+                    url: "fuchsia-pkg://fuchsia.com/something#meta/something.cm",
                 },
             ],
             offer: [
@@ -2001,8 +2288,8 @@ mod tests {
         let input = r##"{
             children: [
                 {
-                    name: 'logger',
-                    'url': 'fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm',
+                    name: "logger",
+                    url: "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
                 },
             ],
             collections: [

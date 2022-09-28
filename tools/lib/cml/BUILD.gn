@@ -29,6 +29,7 @@ rustc_library("cml") {
 
   test_deps = [
     "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:difference",
     "//third_party/rust_crates:test-case",
   ]
 
