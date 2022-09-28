@@ -7,10 +7,18 @@ use {
     crate::services,
     anyhow::{anyhow, Error},
     fidl::endpoints::{create_proxy, Proxy},
-    fidl_fuchsia_virtualization::{GuestManagerProxy, GuestMarker, GuestStatus},
+    fidl_fuchsia_virtualization::{
+        GuestManagerProxy, GuestMarker, GuestProxy, GuestStatus, LinuxManagerMarker,
+    },
     fuchsia_async::{self as fasync, TimeoutExt},
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon as zx,
 };
+
+enum ShutdownCommand {
+    DebianShutdownCommand,
+    ZirconShutdownCommand,
+}
 
 pub async fn handle_stop(args: &arguments::StopArgs) -> Result<(), Error> {
     let manager = services::connect_to_manager(args.guest_type)?;
@@ -28,16 +36,56 @@ pub async fn handle_stop(args: &arguments::StopArgs) -> Result<(), Error> {
     }
 }
 
-fn get_graceful_stop_command(guest: arguments::GuestType) -> Option<Vec<u8>> {
-    let arg_string = match guest {
-        arguments::GuestType::Zircon => "dm shutdown\n".to_string(),
-        arguments::GuestType::Debian => "shutdown now\n".to_string(),
-        arguments::GuestType::Termina => {
-            return None;
-        }
+fn get_graceful_stop_command(guest_cmd: ShutdownCommand) -> Vec<u8> {
+    let arg_string = match guest_cmd {
+        ShutdownCommand::ZirconShutdownCommand => "dm shutdown\n".to_string(),
+        ShutdownCommand::DebianShutdownCommand => "shutdown now\n".to_string(),
     };
 
-    Some(arg_string.into_bytes())
+    arg_string.into_bytes()
+}
+
+fn print_guest_stop_time(duration: zx::Duration) {
+    if duration.into_millis() > 1 {
+        println!("Guest finished stopping in {}ms", duration.into_millis());
+    } else {
+        println!("Guest finished stopping in {}μs", duration.into_micros());
+    }
+}
+
+async fn send_stop_shell_command(
+    guest_cmd: ShutdownCommand,
+    guest_endpoint: GuestProxy,
+) -> Result<(), Error> {
+    // TODO(fxbug.dev/104989): Use a different console for sending the stop command.
+    let socket = guest_endpoint
+        .get_console()
+        .await
+        .map_err(|err| anyhow!("failed to get a get_console response: {}", err))?
+        .map_err(|err| anyhow!("get_console failed with: {:?}", err))?;
+
+    println!("Sending stop command to guest");
+    let command = get_graceful_stop_command(guest_cmd);
+    let bytes_written = socket
+        .write(&command)
+        .map_err(|err| anyhow!("failed to write command to socket: {}", err))?;
+    if bytes_written != command.len() {
+        return Err(anyhow!(
+            "attempted to send command '{}', but only managed to write '{}'",
+            std::str::from_utf8(&command).expect("failed to parse as utf-8"),
+            std::str::from_utf8(&command[0..bytes_written]).expect("failed to parse as utf-8")
+        ));
+    }
+
+    Ok(())
+}
+
+async fn send_stop_rpc(guest: arguments::GuestType) -> Result<(), Error> {
+    assert!(guest == arguments::GuestType::Termina);
+    let linux_manager = connect_to_protocol::<LinuxManagerMarker>()?;
+    linux_manager
+        .graceful_shutdown()
+        .map_err(|err| anyhow!("failed to send shutdown to termina manager: {}", err))
 }
 
 async fn graceful_stop_guest(
@@ -52,37 +100,22 @@ async fn graceful_stop_guest(
         .map_err(|err| anyhow!("failed to get a connect_to_guest response: {}", err))?
         .map_err(|err| anyhow!("connect_to_guest failed with: {:?}", err))?;
 
-    // TODO(fxbug.dev/104989): Use a different console for sending the stop command.
-    let socket = guest_endpoint
-        .get_console()
-        .await
-        .map_err(|err| anyhow!("failed to get a get_console response: {}", err))?
-        .map_err(|err| anyhow!("get_console failed with: {:?}", err))?;
-
-    println!("Sending stop command to guest");
-    let command = get_graceful_stop_command(guest);
-    if command.is_none() {
-        // TODO(fxbug.dev/104989): Figure out how to shut down Termina.
-        println!("Graceful stop not supported, rerun this command with -f to force a shutdown");
-        return Ok(());
-    }
-
-    let command = command.unwrap();
-    let bytes_written = socket
-        .write(&command)
-        .map_err(|err| anyhow!("failed to write command to socket: {}", err))?;
-    if bytes_written != command.len() {
-        return Err(anyhow!(
-            "attempted to send command '{}', but only managed to write '{}'",
-            std::str::from_utf8(&command).expect("failed to parse as utf-8"),
-            std::str::from_utf8(&command[0..bytes_written]).expect("failed to parse as utf-8")
-        ));
-    }
+    match guest {
+        arguments::GuestType::Zircon => {
+            send_stop_shell_command(ShutdownCommand::ZirconShutdownCommand, guest_endpoint.clone())
+                .await
+        }
+        arguments::GuestType::Debian => {
+            send_stop_shell_command(ShutdownCommand::DebianShutdownCommand, guest_endpoint.clone())
+                .await
+        }
+        arguments::GuestType::Termina => send_stop_rpc(guest).await,
+    }?;
 
     let start = fasync::Time::now();
     println!("Waiting for guest to stop");
 
-    let unresponsive_help_delay = fasync::Time::after(zx::Duration::from_seconds(2));
+    let unresponsive_help_delay = fasync::Time::after(zx::Duration::from_seconds(10));
     let guest_closed = guest_endpoint
         .on_closed()
         .on_timeout(unresponsive_help_delay, || Err(zx::Status::TIMED_OUT));
@@ -97,7 +130,8 @@ async fn graceful_stop_guest(
     }
     .map_err(|err| anyhow!("failed to wait on guest stop signal: {}", err))?;
 
-    println!("Guest finished stopping in {}μs", (fasync::Time::now() - start).into_micros());
+    print_guest_stop_time(fasync::Time::now() - start);
+
     Ok(())
 }
 
@@ -108,7 +142,8 @@ async fn force_stop_guest(
     println!("Forcing {} to stop", guest.to_string());
     let start = fasync::Time::now();
     manager.force_shutdown_guest().await?;
-    println!("Guest finished stopping in {}μs", (fasync::Time::now() - start).into_micros());
+
+    print_guest_stop_time(fasync::Time::now() - start);
 
     Ok(())
 }
@@ -160,13 +195,13 @@ mod test {
 
         assert!(executor.run_until_stalled(&mut fut).is_pending());
 
-        let expected_command = get_graceful_stop_command(arguments::GuestType::Debian).unwrap();
+        let expected_command = get_graceful_stop_command(ShutdownCommand::DebianShutdownCommand);
         let mut actual_command = vec![0u8; expected_command.len()];
         assert_eq!(device.read(actual_command.as_mut_slice()).unwrap(), expected_command.len());
 
         // One nano past the helpful message timeout.
         executor.set_fake_time(fasync::Time::after(
-            zx::Duration::from_seconds(2) + zx::Duration::from_nanos(1),
+            zx::Duration::from_seconds(10) + zx::Duration::from_nanos(1),
         ));
 
         // Waiting for CHANNEL_PEER_CLOSED timed out (printing the helpful message), but then
