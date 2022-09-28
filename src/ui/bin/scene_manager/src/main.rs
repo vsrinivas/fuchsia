@@ -100,6 +100,15 @@ async fn inner_main() -> Result<(), Error> {
     // failures encountered. (Allocation failures can lead to missing data.)
     inspect::component::serve_inspect_stats();
 
+    // Initialize tracing.
+    //
+    // This is done once by the process, rather than making the libraries
+    // linked into the component (e.g. input pipeline) initialize tracing.
+    //
+    // Initializing at the process-level more closely models how a trace
+    // provider (e.g. scene_manager) interacts with the trace manager.
+    fuchsia_trace_provider::trace_provider_create_with_fdio();
+
     fs.dir("svc")
         .add_fidl_service(ExposedServices::AccessibilityViewRegistry)
         .add_fidl_service(ExposedServices::ColorAdjustmentHandler)

@@ -43,6 +43,7 @@ rustc_binary("scene_manager_bin") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/icu_data/rust",
+    "//src/lib/trace/rust:trace-provider",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/ui/lib/focus_chain_provider:lib",
     "//src/ui/lib/input_pipeline",

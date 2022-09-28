@@ -64,6 +64,12 @@
                 "fuchsia.accessibility.scene.Provider",
                 "fuchsia.recovery.FactoryReset",
                 "fuchsia.settings.Keyboard",
+
+                // Used by the input pipeline library to provide trace data
+                // for input events.
+                "fuchsia.tracing.provider.Registry",
+
+                // Graphics protocols needed for scene management.
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.composition.FlatlandDisplay",
                 "fuchsia.ui.display.color.Converter",
