@@ -65,7 +65,8 @@ pub async fn main() -> Result<(), Error> {
                         .context("Connect to Reboot watcher register")?;
 
                 reboot_watcher_register
-                    .register(reboot_watcher_client)
+                    .register_with_ack(reboot_watcher_client)
+                    .await
                     .context("Providing the reboot register with callback channel.")?;
             }
 
