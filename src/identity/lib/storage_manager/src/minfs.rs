@@ -16,6 +16,7 @@ use futures::{Stream, StreamExt};
 
 pub mod constants;
 pub mod disk;
+mod state;
 
 pub struct StorageManager<DM>
 where
