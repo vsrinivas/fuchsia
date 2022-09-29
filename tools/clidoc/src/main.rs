@@ -103,7 +103,6 @@ const ALLOW_LIST: &'static [&'static str] = &[
     "fvdl",
     "minfs",
     "pm",
-    "symbol-index",
     "symbolize",
     "symbolizer",
     "triage",
@@ -120,7 +119,6 @@ lazy_static! {
             "fssh",
             "fremote",
             "minfs",
-            "symbol-index",
             "symbolizer",
             "zxdb",
         ]);

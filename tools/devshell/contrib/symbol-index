@@ -4,88 +4,9 @@
 # found in the LICENSE file.
 
 #### CATEGORY=Build
-### manipulate the symbol-index file
-
-## "symbol-index" is a file used by debugging tools (zxdb, fidlcat, symbolizer) to
-## locate all debugging symbols from different source code checkouts on a local
-## machine. It's normally located at ~/.fuchsia/debug/symbol-index.
-##
-## This script interacts with a symbol-index file.
-##
-## Usage: fx symbol-index <verb> [<arguments> ...]
-##
-## Available verbs:
-##
-##   list
-##       Lists all paths in symbol-index.
-##
-##   register
-##       Add all symbols in the current Fuchsia checkout to symbol-index.
-##
-##   add <symbol path> [ <build directory> ]
-##       Adds a new symbol path to symbol-index. A symbol path could be either a
-##       a text file in "ids.txt" format, or a directory in ".build-id" structure.
-##       An optional build directory could be supplemented, which is used by zxdb
-##       to locate the source code. If the symbol path is already in symbol-index,
-##       no changes will be made regardless of the optional build directory.
-##
-##   add-all [ <input file> ]
-##       Reads the input and adds all symbol paths with optional build directories.
-##       The input file can contain multiple lines, each describing a symbol path.
-##       An optional build directory could be supplemented and separated from the
-##       symbol path with whitespaces. Relative paths will be resolved based on
-##       the input file. Empty lines and lines starting with "#" will be ignored.
-##       If the input file is not specified, the input will be read from the stdin.
-##
-##   remove <symbol path>
-##       Removes a symbol path from symbol-index.
-##
-##   purge
-##       Removes all non-existent paths from symbol-index.
+### (deprecated) manipulate the symbol-index file
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
-fx-config-read
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/symbol-index.sh || exit $?
 
-fx-warn "\"fx symbol-index\" is deprecated by \"ffx debug symbol-index\" and will be removed soon!"
-fx-warn "Sleep 3 seconds before continuing..."
-sleep 3
-
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --help|-h)
-      fx-command-help
-      exit 0
-      ;;
-    -*)
-      fx-error "Unknown option ${$1}"
-      exit 1
-      ;;
-    *)
-      break
-      ;;
-  esac
-  shift
-done
-
-if [[ $# -eq 0 ]]; then
-  fx-command-help
-  exit 1
-fi
-
-if [[ $1 == "register" ]]; then
-  if [[ $# -gt 1 ]]; then
-    fx-error "Verb register requires 0 arguments, but 1 is given."
-    exit 1
-  fi
-
-  if ensure-symbol-index-registered; then
-    echo "Registered ${FUCHSIA_DIR} successfully!"
-  else
-    fx-error "Failed to register ${FUCHSIA_DIR}!"
-    exit 1
-  fi
-else
-  symbol-index "$@"
-  exit $?
-fi
+fx-error "Please use \`ffx debug symbol-index\` instead. \"fx symbol-index\" is deprecated."
+exit 1

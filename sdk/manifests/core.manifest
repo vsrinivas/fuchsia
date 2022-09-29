@@ -213,7 +213,6 @@ sdk://tools/arm64/fvm
 sdk://tools/arm64/merkleroot
 sdk://tools/arm64/minfs
 sdk://tools/arm64/pm
-sdk://tools/arm64/symbol-index
 sdk://tools/arm64/symbolizer
 sdk://tools/arm64/zbi
 sdk://tools/arm64/zxdb
@@ -239,7 +238,6 @@ sdk://tools/x64/merkleroot
 sdk://tools/x64/minfs
 sdk://tools/x64/pm
 sdk://tools/x64/qemu_internal
-sdk://tools/x64/symbol-index
 sdk://tools/x64/symbolizer
 sdk://tools/x64/zbi
 sdk://tools/x64/zxdb

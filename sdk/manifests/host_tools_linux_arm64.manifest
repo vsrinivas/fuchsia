@@ -15,7 +15,6 @@ sdk://tools/arm64/fvm
 sdk://tools/arm64/merkleroot
 sdk://tools/arm64/minfs
 sdk://tools/arm64/pm
-sdk://tools/arm64/symbol-index
 sdk://tools/arm64/symbolizer
 sdk://tools/arm64/zbi
 sdk://tools/arm64/zxdb

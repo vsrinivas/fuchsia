@@ -19,14 +19,13 @@ BT_FILE_DEPS=(
   "tools/devshell/klog"
 )
 
-declare fx symbolizer loglistener symbol_index
+declare fx symbolizer loglistener
 
 BT_SET_UP() {
   source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
   fx="$(btf::setup_fx)"
   symbolizer="$(btf::make_hosttools_mock symbolizer)"
   loglistener="$(btf::make_installed_hosttools_mock loglistener)"
-  symbol_index="$(btf::make_hosttools_mock symbol-index)"
   ffx="$(btf::make_hosttools_mock ffx)"
 }
 

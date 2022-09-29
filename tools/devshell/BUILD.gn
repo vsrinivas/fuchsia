@@ -16,7 +16,6 @@ if (!is_host) {
       "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config($default_toolchain)",
       "//tools/bootserver_old:host",
       "//tools/net/device-finder:host",
-      "//tools/symbol-index:symbol-index",
       "//tools/symbolizer",
 
       # For `fx format-code`.

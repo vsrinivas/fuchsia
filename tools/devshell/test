@@ -48,7 +48,6 @@ if $info_only || ( ! $has_e2e && $host_tests_only ); then
 else
   # force build of required symbolizer host tools if they don't exist:
   fx-command-run host-tool --print symbolizer > /dev/null
-  fx-command-run host-tool --print symbol-index > /dev/null
 
   # initialize some variables required for E2E tests:
   export FUCHSIA_DEVICE_ADDR="$(get-fuchsia-device-addr)"

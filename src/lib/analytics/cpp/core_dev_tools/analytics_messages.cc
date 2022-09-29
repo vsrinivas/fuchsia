@@ -18,7 +18,6 @@ constexpr char kParticipatingTools[] = R"(  • device_launcher
   • Fuchsia extension for VS Code
   • Fuchsia Snapshot Viewer
   • scrutiny verify routes
-  • symbol-index
   • symbolizer
   • zxdb)";
 

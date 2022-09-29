@@ -1460,8 +1460,6 @@ tools/arm64/minfs
 tools/arm64/minfs-meta.json
 tools/arm64/pm
 tools/arm64/pm-meta.json
-tools/arm64/symbol-index
-tools/arm64/symbol-index-meta.json
 tools/arm64/symbolizer
 tools/arm64/symbolizer-meta.json
 tools/arm64/zbi
@@ -1512,8 +1510,6 @@ tools/x64/pm
 tools/x64/pm-meta.json
 tools/x64/qemu_internal-meta.json
 tools/x64/qemu_internal/
-tools/x64/symbol-index
-tools/x64/symbol-index-meta.json
 tools/x64/symbolizer
 tools/x64/symbolizer-meta.json
 tools/x64/zbi

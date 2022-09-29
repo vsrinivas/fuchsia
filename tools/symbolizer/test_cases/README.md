@@ -16,7 +16,7 @@ Currently the test cases are not hooked in any automated workflow. Here's an exa
 symbolizer against `cpp_crasher_syslog.in` manually.
 
 ```
-fx symbol-index add prebuilt/test_data/symbolizer/symbols
+ffx debug symbol-index add prebuilt/test_data/symbolizer/symbols
 fx symbolize < tools/symbolizer/test_cases/cpp_crasher_syslog.in
 ```
 

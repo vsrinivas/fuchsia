@@ -40,7 +40,6 @@ BT_SET_UP() {
   fx="$(btf::setup_fx)"
   btf::make_installed_hosttools_mock "ffx" > /dev/null
   btf::make_installed_hosttools_mock "symbolizer" > /dev/null
-  btf::make_installed_hosttools_mock "symbol-index" > /dev/null
   DATA_DIR="${BT_TEMP_DIR}/tools/devshell/tests/subcommands/data/fx_test_test"
 }
 
