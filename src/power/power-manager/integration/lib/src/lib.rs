@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+pub mod client_connectors;
 mod mocks;
 
 use {
@@ -12,7 +13,7 @@ use {
     },
     fidl::endpoints::DiscoverableProtocolMarker,
     fidl::AsHandleRef as _,
-    fidl_fuchsia_testing as ftesting, fidl_fuchsia_thermal as fthermal,
+    fidl_fuchsia_testing as ftesting,
     fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
     std::collections::HashMap,
     std::sync::atomic::{AtomicU64, Ordering},
@@ -204,7 +205,11 @@ impl TestEnvBuilder {
             .unwrap();
 
         let power_manager_to_parent_routes = Route::new()
-            .capability(Capability::protocol_by_name("fuchsia.thermal.ClientStateConnector"));
+            .capability(Capability::protocol_by_name(
+                "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
+            ))
+            .capability(Capability::protocol_by_name("fuchsia.thermal.ClientStateConnector"))
+            .capability(Capability::protocol_by_name("fuchsia.hardware.power.statecontrol.Admin"));
         realm_builder
             .add_route(power_manager_to_parent_routes.from(&power_manager).to(Ref::parent()))
             .await
@@ -255,8 +260,8 @@ impl TestEnvBuilder {
                 activity_service,
                 driver_manager,
                 input_settings_service,
-                temperature: temperature_mocks,
                 system_controller_service,
+                temperature: temperature_mocks,
             },
         }
     }
@@ -332,23 +337,4 @@ pub struct Mocks {
     pub input_settings_service: Arc<MockInputSettingsService>,
     pub system_controller_service: Arc<MockSystemControllerService>,
     pub temperature: HashMap<String, Arc<MockTemperatureDriver>>,
-}
-
-/// Convenience type for interacting with the Power Manager's thermal client service.
-pub struct ThermalClient {
-    watcher_proxy: fthermal::ClientStateWatcherProxy,
-}
-
-impl ThermalClient {
-    pub fn new(test_env: &TestEnv, client_type: &str) -> Self {
-        let connector = test_env.connect_to_protocol::<fthermal::ClientStateConnectorMarker>();
-        let (watcher_proxy, watcher_remote) =
-            fidl::endpoints::create_proxy::<fthermal::ClientStateWatcherMarker>().unwrap();
-        connector.connect(client_type, watcher_remote).expect("Failed to connect thermal client");
-        Self { watcher_proxy }
-    }
-
-    pub async fn get_thermal_state(&mut self) -> Result<u64, anyhow::Error> {
-        Ok(self.watcher_proxy.watch().await?)
-    }
 }

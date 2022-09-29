@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use power_manager_integration_test_lib::{TestEnvBuilder, ThermalClient};
+use power_manager_integration_test_lib::{client_connectors::ThermalClient, TestEnvBuilder};
 
 /// Integration test for Power Manager to verify correct behavior of the thermal client service.
 #[fuchsia::test]

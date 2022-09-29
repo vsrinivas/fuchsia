@@ -46,6 +46,9 @@ rustc_library("lib") {
   ]
 
   sources = [
+    "src/client_connectors/mod.rs",
+    "src/client_connectors/reboot_watcher_client.rs",
+    "src/client_connectors/thermal_client.rs",
     "src/lib.rs",
     "src/mocks/activity_service.rs",
     "src/mocks/driver_manager.rs",
