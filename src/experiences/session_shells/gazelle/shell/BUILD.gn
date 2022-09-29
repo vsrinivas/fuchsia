@@ -1,0 +1,19 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/dart/dart_component.gni")
+
+fuchsia_component("gazelle_shell") {
+  manifest = "meta/gazelle_shell.cml"
+}
+
+fuchsia_package("gazelle_shell_pkg") {
+  package_name = "gazelle_shell"
+  deps = [ ":gazelle_shell" ]
+}
+
+group("shell") {
+  public_deps = [ ":gazelle_shell_pkg" ]
+}

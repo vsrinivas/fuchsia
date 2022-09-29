@@ -20,7 +20,6 @@
     collections: [
         {
             name: "elements",
-            environment: "#application_env",
             durability: "transient",
         },
     ],
@@ -28,7 +27,6 @@
         {
             protocol: [
                 "fuchsia.logger.LogSink",
-                "fuchsia.session.scene.Manager",
                 "fuchsia.ui.composition.Flatland",
             ],
             from: "parent",
@@ -149,7 +147,10 @@
             from: "framework",
         },
         {
-            protocol: [ "fuchsia.element.GraphicalPresenter" ],
+            protocol: [
+                "fuchsia.element.GraphicalPresenter",
+                "fuchsia.ui.app.ViewProvider",
+            ],
             from: "#wm",
         },
         {

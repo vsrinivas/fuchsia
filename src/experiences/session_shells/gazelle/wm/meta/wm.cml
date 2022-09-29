@@ -12,20 +12,23 @@
     },
     capabilities: [
         {
-            protocol: [ "fuchsia.element.GraphicalPresenter" ],
+            protocol: [
+                "fuchsia.element.GraphicalPresenter",
+                "fuchsia.ui.app.ViewProvider",
+            ],
         },
     ],
     use: [
         {
-            protocol: [
-                "fuchsia.session.scene.Manager",
-                "fuchsia.ui.composition.Flatland",
-            ],
+            protocol: [ "fuchsia.ui.composition.Flatland" ],
         },
     ],
     expose: [
         {
-            protocol: [ "fuchsia.element.GraphicalPresenter" ],
+            protocol: [
+                "fuchsia.element.GraphicalPresenter",
+                "fuchsia.ui.app.ViewProvider",
+            ],
             from: "self",
         },
     ],

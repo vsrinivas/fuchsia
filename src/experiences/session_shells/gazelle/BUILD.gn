@@ -6,7 +6,7 @@ import("//build/components.gni")
 
 group("gazelle") {
   public_deps = [
-    "session",
+    "shell",
     "wm",
   ]
 }

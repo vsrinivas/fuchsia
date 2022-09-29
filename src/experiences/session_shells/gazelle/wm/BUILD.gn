@@ -20,7 +20,7 @@ rustc_binary("bin") {
   deps = [
     "//sdk/fidl/fuchsia.element:fuchsia.element_rust",
     "//sdk/fidl/fuchsia.math:fuchsia.math_rust",
-    "//sdk/fidl/fuchsia.session.scene:fuchsia.session.scene_rust",
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_rust",
     "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_rust",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_rust",
     "//src/lib/fidl/rust/fidl",
@@ -33,7 +33,6 @@ rustc_binary("bin") {
   ]
 
   test_deps = [
-    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_rust",
     "//sdk/fidl/fuchsia.ui.test.scene:fuchsia.ui.test.scene_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component-test",

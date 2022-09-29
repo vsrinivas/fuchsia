@@ -109,7 +109,14 @@ impl View {
             .set_solid_fill(
                 &mut root_content_id.clone(),
                 &mut BG_COLOR.clone(),
-                &mut viewport_size.clone(),
+                // TODO(fxbug.dev/110653): Mysteriously, Scenic blows up when
+                // you make a rectangle the size of the viewport, under very
+                // specific circumstances. When that bug is fixed, change this
+                // to just `viewport_size.clone()`.
+                &mut fmath::SizeU {
+                    width: viewport_size.width - 1,
+                    height: viewport_size.height - 1,
+                },
             )
             .context("filling desktop")?;
 

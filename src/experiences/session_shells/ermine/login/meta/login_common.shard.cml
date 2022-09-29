@@ -12,13 +12,6 @@
         args: [ "--expose_dirs=hosted_directories" ],
         data: "data/login",
     },
-    children: [
-        {
-            name: "ermine_shell",
-            url: "fuchsia-pkg://fuchsia.com/ermine#meta/ermine.cm",
-            startup: "lazy",
-        },
-    ],
     capabilities: [
         {
             protocol: [

@@ -7,6 +7,7 @@ import("//build/dart/dart_library.gni")
 import("//build/fidl/fidl.gni")
 import("//build/flutter/flutter_component.gni")
 import("//build/testing/flutter_driver.gni")
+import("//src/experiences/session_shells/development_flags.gni")
 
 declare_args() {
   # Whether or not to provide the data sharing consent step in OOBE
@@ -103,7 +104,13 @@ flutter_component("component") {
 
   component_name = "login"
 
-  manifest = "meta/login.cml"
+  # TODO(fxbug.dev/100284): Make Ermine/Gazelle a dynamic child, rather than
+  # requiring these separate variants.
+  if (application_shell == "ermine") {
+    manifest = "meta/login_ermine.cml"
+  } else if (application_shell == "gazelle") {
+    manifest = "meta/login_gazelle.cml"
+  }
 
   deps = [
     ":default_config",
