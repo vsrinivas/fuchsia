@@ -100,8 +100,6 @@ if (is_host) {
       "src/lib.rs",
       "src/main.rs",
     ]
-
-    test_deps = [ "//third_party/rust_crates:tempfile" ]
   }
 
   sdk_host_tool("bin_sdk") {

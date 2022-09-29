@@ -167,16 +167,11 @@ impl ResultExt for anyhow::Error {
 }
 
 const BUG_LINE: &str = "BUG: An internal command error occurred.";
-pub fn write_result<T>(
-    result: &anyhow::Result<T>,
-    w: &mut dyn std::io::Write,
-) -> std::io::Result<()> {
-    if let Some(err) = result.ffx_error() {
+pub fn write_result(err: &anyhow::Error, w: &mut dyn std::io::Write) -> std::io::Result<()> {
+    if let Some(err) = err.ffx_error() {
         writeln!(w, "{}", err)
-    } else if let Err(err) = result {
-        writeln!(w, "{}\n{:?}", BUG_LINE, err)
     } else {
-        Ok(())
+        writeln!(w, "{}\n{:?}", BUG_LINE, err)
     }
 }
 
@@ -210,7 +205,7 @@ mod test {
 
     #[test]
     fn test_write_result_ffx_error() {
-        let err = Result::<()>::Err(Error::new(ffx_error!(FFX_STR)));
+        let err = Error::new(ffx_error!(FFX_STR));
         let mut cursor = Cursor::new(Vec::new());
 
         assert_matches!(write_result(&err, &mut cursor), Ok(_));
@@ -220,7 +215,7 @@ mod test {
 
     #[test]
     fn test_write_result_arbitrary_error() {
-        let err = Result::<()>::Err(anyhow!(ERR_STR));
+        let err = anyhow!(ERR_STR);
         let mut cursor = Cursor::new(Vec::new());
 
         assert_matches!(write_result(&err, &mut cursor), Ok(_));

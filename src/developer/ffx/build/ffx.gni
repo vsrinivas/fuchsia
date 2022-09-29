@@ -55,21 +55,11 @@ template("ffx") {
     }
 
     deps = ffx_deps + [
-             ":" + suite_name + "_args",
-             ":" + suite_name + "_suite",
-             "//src/connectivity/overnet/lib/hoist",
+             "//src/developer/ffx/command:lib",
              "//src/developer/ffx/config:lib",
-             "//src/developer/ffx/core:lib",
-             "//src/developer/ffx/daemon/proxy:lib",
              "//src/developer/ffx/lib/buildid:lib",
              "//src/developer/ffx/lib/errors:lib",
-             "//src/developer/ffx/lib/metrics:lib",
-             "//src/lib/analytics/rust:lib",
              "//src/lib/fuchsia-async",
-             "//third_party/rust_crates:anyhow",
-             "//third_party/rust_crates:tracing",
-             "//third_party/rust_crates:simplelog",
-             "//third_party/rust_crates:tracing",
            ]
     non_rust_deps = [
       "//src/lib/chunked-compression",

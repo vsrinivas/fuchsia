@@ -147,6 +147,27 @@ pub async fn get_log_dirs() -> Result<Vec<String>> {
     }
 }
 
+/// Print out useful hints about where important log information might be found after an error.
+pub async fn print_log_hint<W: std::io::Write>(writer: &mut W) {
+    let msg = match get_log_dirs().await {
+        Ok(log_dirs) if log_dirs.len() == 1 => format!(
+                "More information may be available in ffx host logs in directory:\n    {}",
+                log_dirs[0]
+            ),
+        Ok(log_dirs) => format!(
+                "More information may be available in ffx host logs in directories:\n    {}",
+                log_dirs.join("\n    ")
+            ),
+        Err(err) => format!(
+                "More information may be available in ffx host logs, but ffx failed to retrieve configured log file locations. Error:\n    {}",
+                err,
+            ),
+    };
+    if writeln!(writer, "{}", msg).is_err() {
+        println!("{}", msg);
+    }
+}
+
 /// Gets the basic information about the sdk as configured, without diving deeper into the sdk's own configuration.
 async fn get_sdk_root() -> (Result<PathBuf, ConfigError>, String) {
     // All gets in this function should declare that they don't want the build directory searched, because
