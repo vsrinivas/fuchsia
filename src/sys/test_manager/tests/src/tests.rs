@@ -366,6 +366,24 @@ async fn launch_and_test_gtest_runner_sample_test() {
 }
 
 #[fuchsia::test]
+async fn launch_and_test_isolated_data() {
+    let test_url = "fuchsia-pkg://fuchsia.com/test_manager_test#meta/data_storage_test.cm";
+
+    let (events, _logs) = run_single_test(test_url, default_run_option()).await.unwrap();
+
+    let expected_events = vec![
+        RunEvent::suite_started(),
+        RunEvent::case_found("test_data_storage"),
+        RunEvent::case_started("test_data_storage"),
+        RunEvent::case_stopped("test_data_storage", CaseStatus::Passed),
+        RunEvent::case_finished("test_data_storage"),
+        RunEvent::suite_stopped(SuiteStatus::Passed),
+    ];
+
+    assert_eq!(&expected_events, &events);
+}
+
+#[fuchsia::test]
 async fn positive_filter_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/sample_tests.cm";
     let mut options = default_run_option();

@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Error},
-    fidl_fuchsia_component_resolution as fresolution, fidl_fuchsia_test_internal as ftest_internal,
-    fuchsia_async as fasync,
+    anyhow::{anyhow, Context, Error},
+    fidl_fuchsia_component_resolution as fresolution, fidl_fuchsia_io as fio,
+    fidl_fuchsia_test_internal as ftest_internal, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_component::server::ServiceFs,
     futures::StreamExt,
@@ -18,6 +18,8 @@ use {
 };
 
 const DEFAULT_MANIFEST_NAME: &str = "test_manager.cm";
+const DATA_FOR_TEST_DIR_NAME: &str = "data_for_test";
+const DATA_FOR_TESTS_PATH: &str = "/data/data_for_test";
 
 /// Arguments passed to test manager.
 struct TestManagerArgs {
@@ -53,6 +55,10 @@ async fn main() -> Result<(), Error> {
         return Err(anyhow!("Expected /tmp to be available"));
     }
 
+    if !std::path::Path::new("/data").exists() {
+        return Err(anyhow!("Expected /data to be available"));
+    }
+
     inspect_runtime::serve(fuchsia_inspect::component::inspector(), &mut fs)?;
 
     info!("Reading capabilities from {}", args.manifest_name());
@@ -70,6 +76,20 @@ async fn main() -> Result<(), Error> {
     let root_inspect = Arc::new(test_manager_lib::RootInspectNode::new(
         fuchsia_inspect::component::inspector().root(),
     ));
+
+    // Delete data from previous run if leftover due to deletion failure.
+    if std::path::Path::new(DATA_FOR_TESTS_PATH).exists() {
+        std::fs::remove_dir_all(DATA_FOR_TESTS_PATH).context("Removing data for test directory")?;
+    }
+
+    std::fs::create_dir(DATA_FOR_TESTS_PATH).context("Create data for test directory")?;
+    let data_directory = fuchsia_fs::directory::open_in_namespace(
+        DATA_FOR_TESTS_PATH,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+    )?;
+
+    fs.add_remote(DATA_FOR_TEST_DIR_NAME, data_directory);
+
     fs.dir("svc")
         .add_fidl_service(move |stream| {
             let routing_info_for_task = routing_info_clone.clone();

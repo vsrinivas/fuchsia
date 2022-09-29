@@ -219,10 +219,28 @@ fuchsia_component("nonhermetic_capability_test") {
   deps = [ ":nonhermetic_capability_test_bin" ]
 }
 
+rustc_test("data_storage_test_bin") {
+  testonly = true
+  name = "data_storage_test"
+  edition = "2021"
+  source_root = "data_storage_test.rs"
+
+  deps = [ "//src/lib/fuchsia" ]
+
+  sources = [ "data_storage_test.rs" ]
+}
+
+fuchsia_component("data_storage_test") {
+  testonly = true
+  manifest = "meta/data_storage_test.cml"
+  deps = [ ":data_storage_test_bin" ]
+}
+
 group("test_data") {
   testonly = true
   public_deps = [
     ":custom_artifact_realm_test",
+    ":data_storage_test",
     ":debug-data-test",
     ":debug_data_spam_test",
     ":debug_data_test_v1",

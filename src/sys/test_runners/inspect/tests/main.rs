@@ -75,6 +75,7 @@ async fn run_test(
                 .capability(Capability::protocol_by_name("fuchsia.sys2.EventSource"))
                 .capability(Capability::protocol_by_name("fuchsia.component.resolution.Resolver"))
                 .capability(Capability::storage("tmp"))
+                .capability(Capability::storage("data"))
                 .capability(Capability::event_stream("started_v2"))
                 .capability(Capability::event_stream("running_v2"))
                 .capability(Capability::event_stream("stopped_v2"))

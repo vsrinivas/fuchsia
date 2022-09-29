@@ -135,7 +135,7 @@
     ],
     capabilities: [
         {
-            storage: "data",
+            storage: "memfs_data",
             from: "#runner_memfs",
             backing_dir: "memfs",
             storage_id: "static_instance_id_or_moniker",
@@ -159,6 +159,17 @@
             from: "#test_tmpfs",
             subdir: "custom_artifacts",
             backing_dir: "memfs",
+            storage_id: "static_instance_id_or_moniker",
+        },
+        {
+            directory: "fxfs_data",
+            rights: [ "rw*" ],
+            path: "/data_for_test",
+        },
+        {
+            storage: "data",
+            from: "self",
+            backing_dir: "fxfs_data",
             storage_id: "static_instance_id_or_moniker",
         },
         { protocol: "fuchsia.test.manager.Query" },
@@ -197,6 +208,11 @@
             storage: "tmp",
             rights: [ "rw*" ],
             path: "/tmp",
+        },
+        {
+            storage: "data",
+            rights: [ "rw*" ],
+            path: "/data",
         },
     ],
     offer: [
@@ -469,8 +485,9 @@
             to: [ "#inspect_test_runner" ],
         },
         {
-            storage: "data",
+            storage: "memfs_data",
             from: "self",
+            as: "data",
             to: [
                 "#gtest_runner",
                 "#gunit_runner",
@@ -478,10 +495,17 @@
                 "#rust_test_runner",
                 "#starnix-tests",
                 "#starnix_test_runners",
+            ],
+        },
+        {
+            storage: "data",
+            from: "self",
+            to: [
                 "#system-tests",
                 "#tests",
                 "#tier-2-tests",
             ],
+            rights: [ "rw*" ],
         },
         {
             storage: "tmp",

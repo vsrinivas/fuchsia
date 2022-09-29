@@ -102,6 +102,11 @@
             source_availability: "unknown",
         },
         {
+            storage: "data",
+            from: "self",
+            to: "#test_manager",
+        },
+        {
             protocol: "fuchsia.tracing.provider.Registry",
             from: "#trace_manager",
             to: "#test_manager",

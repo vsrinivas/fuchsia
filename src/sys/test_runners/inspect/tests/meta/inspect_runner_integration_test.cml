@@ -22,5 +22,10 @@
             from: "parent",
             to: "#realm_builder",
         },
+        {
+            storage: "data",
+            from: "parent",
+            to: "#realm_builder",
+        },
     ],
 }

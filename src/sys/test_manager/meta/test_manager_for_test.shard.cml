@@ -39,5 +39,10 @@
             from: "parent",
             to: "#test_manager",
         },
+        {
+            storage: "data",
+            from: "parent",
+            to: "#test_manager",
+        },
     ],
 }
