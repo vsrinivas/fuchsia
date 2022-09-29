@@ -12,8 +12,6 @@ go_library("world") {
     "config.go",
     "csv.go",
     "diff.go",
-    "git.go",
-    "gn_test.go",
     "init.go",
     "metrics.go",
     "url.go",
@@ -29,7 +27,7 @@ go_library("world") {
 
 group("tests") {
   testonly = true
-  deps = [ ":check-licenses_world_tests($host_toolchain)" ]
+  deps = []
 }
 
 if (is_host) {
