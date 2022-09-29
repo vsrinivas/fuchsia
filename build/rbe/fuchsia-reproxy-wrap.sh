@@ -136,6 +136,7 @@ if test -n "$HOME"
 then export RBE_deps_cache_dir="$HOME/.cache/reproxy/deps"
 else export RBE_deps_cache_dir="/tmp/.cache/reproxy/deps"
 fi
+mkdir -p "$RBE_deps_cache_dir"
 
 gcloud="$(which gcloud)" || {
   cat <<EOF
