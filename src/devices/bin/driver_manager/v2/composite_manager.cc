@@ -104,9 +104,9 @@ zx::status<Node*> CompositeNodeManager::HandleMatchedCompositeInfo(
   for (auto name : matched_driver.node_names()) {
     parents_names.emplace_back(name.get());
   }
-  auto composite =
-      Node::CreateCompositeNode("composite", std::move(*completed_parents),
-                                std::move(parents_names), {}, node_manager_, dispatcher_);
+  auto composite = Node::CreateCompositeNode(
+      matched_driver.composite_name().get(), std::move(*completed_parents),
+      std::move(parents_names), {}, node_manager_, dispatcher_);
   if (composite.is_error()) {
     return composite.take_error();
   }

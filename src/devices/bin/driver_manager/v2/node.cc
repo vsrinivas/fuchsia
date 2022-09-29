@@ -611,8 +611,9 @@ zx::status<> Node::StartDriver(
 
   LOGF(INFO, "Binding %.*s to  %s", static_cast<int>(url.size()), url.data(), name().c_str());
   // Start the driver within the driver host.
-  auto start = (*driver_host_)
-                   ->Start(std::move(endpoints->client), std::move(symbols), std::move(start_info));
+  auto start =
+      (*driver_host_)
+          ->Start(std::move(endpoints->client), name(), std::move(symbols), std::move(start_info));
   if (start.is_error()) {
     return zx::error(start.error_value());
   }

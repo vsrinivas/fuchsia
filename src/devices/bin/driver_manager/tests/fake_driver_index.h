@@ -14,6 +14,7 @@
 class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_index::DriverIndex> {
  public:
   struct CompositeDriverInfo {
+    std::string composite_name;
     uint32_t node_index;
     uint32_t num_nodes;
     std::vector<std::string> node_names;
@@ -138,6 +139,7 @@ class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_index::Driv
     return fuchsia_driver_index::wire::MatchedCompositeInfo::Builder(arena)
         .node_index(composite.node_index)
         .num_nodes(composite.num_nodes)
+        .composite_name(composite.composite_name)
         .driver_info(
             fidl::ObjectView<fuchsia_driver_index::wire::MatchedDriverInfo>(arena, driver_info))
         .node_names(std::move(node_names))

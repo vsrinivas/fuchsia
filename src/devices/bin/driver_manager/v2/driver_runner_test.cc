@@ -275,6 +275,7 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
         return zx::ok(FakeDriverIndex::MatchResult{
             .url = "fuchsia-boot:///#meta/composite-driver.cm",
             .composite = std::make_optional(FakeDriverIndex::CompositeDriverInfo{
+                .composite_name = "my-composite",
                 .node_index = 0u,
                 .num_nodes = 2u,
                 .node_names = {"one", "two"},
@@ -283,6 +284,7 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
         return zx::ok(FakeDriverIndex::MatchResult{
             .url = "fuchsia-boot:///#meta/composite-driver.cm",
             .composite = std::make_optional(FakeDriverIndex::CompositeDriverInfo{
+                .composite_name = "my-composite",
                 .node_index = 1u,
                 .num_nodes = 2u,
                 .node_names = {"one", "two"},
@@ -1996,23 +1998,23 @@ TEST_F(DriverRunnerTest, StartAndInspect_CompositeDriver) {
                             }}));
 
   ASSERT_NO_FATAL_FAILURE(CheckNode(hierarchy, {.node_name = {"node_topology", "root", "part-1"},
-                                                .child_names = {"composite"},
+                                                .child_names = {"my-composite"},
                                                 .str_properties = {
                                                     {"offers", "fuchsia.package.RenamedA"},
                                                     {"driver", "unbound"},
                                                 }}));
 
-  ASSERT_NO_FATAL_FAILURE(CheckNode(
-      hierarchy,
-      {.node_name = {"node_topology", "root", "part-1", "composite"}, .child_names = {"child"}}));
+  ASSERT_NO_FATAL_FAILURE(
+      CheckNode(hierarchy, {.node_name = {"node_topology", "root", "part-1", "my-composite"},
+                            .child_names = {"child"}}));
 
   ASSERT_NO_FATAL_FAILURE(CheckNode(
       hierarchy, {
-                     .node_name = {"node_topology", "root", "part-1", "composite", "child"},
+                     .node_name = {"node_topology", "root", "part-1", "my-composite", "child"},
                  }));
 
   ASSERT_NO_FATAL_FAILURE(CheckNode(hierarchy, {.node_name = {"node_topology", "root", "part-2"},
-                                                .child_names = {"composite"},
+                                                .child_names = {"my-composite"},
                                                 .str_properties = {
                                                     {"offers", "fuchsia.package.RenamedB"},
                                                     {"driver", "unbound"},

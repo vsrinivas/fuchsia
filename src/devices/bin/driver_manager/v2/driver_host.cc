@@ -54,7 +54,7 @@ DriverHostComponent::DriverHostComponent(
                    fidl::ObserveTeardown([this, driver_hosts] { driver_hosts->erase(*this); })) {}
 
 zx::status<fidl::ClientEnd<fdh::Driver>> DriverHostComponent::Start(
-    fidl::ClientEnd<fdf::Node> client_end,
+    fidl::ClientEnd<fdf::Node> client_end, std::string node_name,
     fidl::VectorView<fuchsia_driver_framework::wire::NodeSymbol> symbols,
     frunner::wire::ComponentStartInfo start_info) {
   auto endpoints = fidl::CreateEndpoints<fdh::Driver>();
@@ -66,6 +66,7 @@ zx::status<fidl::ClientEnd<fdh::Driver>> DriverHostComponent::Start(
   fidl::Arena arena;
   fdf::wire::DriverStartArgs args(arena);
   args.set_node(std::move(client_end))
+      .set_node_name(arena, fidl::StringView::FromExternal(node_name))
       .set_url(arena, start_info.resolved_url())
       .set_program(arena, start_info.program())
       .set_ns(arena, start_info.ns())

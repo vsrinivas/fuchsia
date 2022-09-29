@@ -79,7 +79,7 @@ class DriverHost final : public dfv2::DriverHost,
  private:
   // dfv2::DriverHost
   zx::status<fidl::ClientEnd<fuchsia_driver_host::Driver>> Start(
-      fidl::ClientEnd<fuchsia_driver_framework::Node> client_end,
+      fidl::ClientEnd<fuchsia_driver_framework::Node> client_end, std::string node_name,
       fidl::VectorView<fuchsia_driver_framework::wire::NodeSymbol> symbols,
       fuchsia_component_runner::wire::ComponentStartInfo start_info) override;
 

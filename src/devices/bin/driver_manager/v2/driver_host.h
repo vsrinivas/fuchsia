@@ -14,7 +14,7 @@ namespace dfv2 {
 class DriverHost {
  public:
   virtual zx::status<fidl::ClientEnd<fuchsia_driver_host::Driver>> Start(
-      fidl::ClientEnd<fuchsia_driver_framework::Node> client_end,
+      fidl::ClientEnd<fuchsia_driver_framework::Node> client_end, std::string node_node,
       fidl::VectorView<fuchsia_driver_framework::wire::NodeSymbol> symbols,
       fuchsia_component_runner::wire::ComponentStartInfo start_info) = 0;
 
@@ -30,7 +30,7 @@ class DriverHostComponent final
                       fbl::DoublyLinkedList<std::unique_ptr<DriverHostComponent>>* driver_hosts);
 
   zx::status<fidl::ClientEnd<fuchsia_driver_host::Driver>> Start(
-      fidl::ClientEnd<fuchsia_driver_framework::Node> client_end,
+      fidl::ClientEnd<fuchsia_driver_framework::Node> client_end, std::string node_name,
       fidl::VectorView<fuchsia_driver_framework::wire::NodeSymbol> symbols,
       fuchsia_component_runner::wire::ComponentStartInfo start_info) override;
 

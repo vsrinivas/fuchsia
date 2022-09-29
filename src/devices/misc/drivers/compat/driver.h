@@ -107,6 +107,7 @@ class Driver : public driver::DriverBase {
   // The directory to store nodes that we are putting into devfs.
   fbl::RefPtr<fs::PseudoDir> devfs_dir_;
   driver::DevfsExporter devfs_exporter_;
+  std::string node_name_;
 
   driver::Logger inner_logger_;
   Device device_;

@@ -51,7 +51,7 @@ func TestNetworking(t *testing.T) {
 	i.WaitForLogMessage("console.shell: enabled")
 
 	// Ensure the network device comes up in DFv2.
-	i.RunCommand("waitfor verbose class=network topo=/dev/sys/platform/; echo NETWORK_READY")
+	i.RunCommand("waitfor verbose class=network topo=/dev/; echo NETWORK_READY")
 	i.WaitForLogMessage("NETWORK_READY")
 }
 

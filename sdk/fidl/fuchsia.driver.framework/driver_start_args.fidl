@@ -16,6 +16,9 @@ type DriverStartArgs = resource table {
     /// Node that the driver is bound to.
     1: node client_end:Node;
 
+    /// The name of the node the driver is bound to.
+    8: node_name string:MAX;
+
     /// Symbols provided to the driver, for |node|. These come from the driver
     /// that added |node|, and are filtered to the symbols requested in the bind
     /// program.

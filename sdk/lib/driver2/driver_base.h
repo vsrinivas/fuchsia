@@ -142,6 +142,9 @@ class DriverBase {
   std::optional<std::string>& url() { return start_args_.url(); }
   const std::optional<std::string>& url() const { return start_args_.url(); }
 
+  std::optional<std::string>& node_name() { return start_args_.node_name(); }
+  const std::optional<std::string>& node_name() const { return start_args_.node_name(); }
+
   std::optional<std::vector<fuchsia_driver_framework::NodeSymbol>>& symbols() {
     return start_args_.symbols();
   }
