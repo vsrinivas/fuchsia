@@ -91,6 +91,16 @@ Whether to run API compatibility tests.
 
 From //build/fidl/fidl_library.gni:20
 
+### application_shell
+Whether to use "ermine" or "gazelle" as the application shell in
+workstation.
+
+TODO(fxbug.dev/110571): Remove this.
+
+**Current value (from the default):** `"ermine"`
+
+From //src/experiences/session_shells/development_flags.gni:13
+
 ### arm_sdk_tools
 If true, then the arm64 host tools are included in the SDK.
 
@@ -1319,7 +1329,7 @@ Whether or not to provide the data sharing consent step in OOBE
 
 **Current value (from the default):** `false`
 
-From //src/experiences/session_shells/ermine/login/BUILD.gn:13
+From //src/experiences/session_shells/ermine/login/BUILD.gn:14
 
 ### debian_guest_earlycon
 
