@@ -224,10 +224,10 @@ pub(crate) trait TransportState<I: Ip>: Transport<I> {
     type LocalIdentifier: OptionFromU16 + Into<u16> + Send;
     type RemoteIdentifier: OptionFromU16 + Into<u16> + Send;
 
-    fn create_unbound<C: NonSyncContext>(ctx: &mut SyncCtx<C>) -> Self::UnboundId;
+    fn create_unbound<C: NonSyncContext>(ctx: &SyncCtx<C>) -> Self::UnboundId;
 
     fn connect_unbound<C: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<C>,
+        sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         id: Self::UnboundId,
         remote_ip: ZonedAddr<I::Addr, DeviceId>,
@@ -235,7 +235,7 @@ pub(crate) trait TransportState<I: Ip>: Transport<I> {
     ) -> Result<Self::ConnId, Self::CreateConnError>;
 
     fn listen_on_unbound<C: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<C>,
+        sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         id: Self::UnboundId,
         addr: Option<ZonedAddr<I::Addr, DeviceId>>,
@@ -243,7 +243,7 @@ pub(crate) trait TransportState<I: Ip>: Transport<I> {
     ) -> Result<Self::ListenerId, Self::CreateListenerError>;
 
     fn connect_listener<C: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<C>,
+        sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         id: Self::ListenerId,
         remote_ip: ZonedAddr<I::Addr, DeviceId>,
@@ -251,13 +251,13 @@ pub(crate) trait TransportState<I: Ip>: Transport<I> {
     ) -> Result<Self::ConnId, (Self::ConnectListenerError, Self::ListenerId)>;
 
     fn disconnect_connected<C: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<C>,
+        sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         id: Self::ConnId,
     ) -> Self::ListenerId;
 
     fn reconnect_conn<C: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<C>,
+        sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         id: Self::ConnId,
         remote_ip: ZonedAddr<I::Addr, DeviceId>,
@@ -282,7 +282,7 @@ pub(crate) trait TransportState<I: Ip>: Transport<I> {
     ) -> (Option<ZonedAddr<I::Addr, DeviceId>>, Self::LocalIdentifier);
 
     fn remove_conn<C: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<C>,
+        sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         id: Self::ConnId,
     ) -> (
@@ -293,19 +293,15 @@ pub(crate) trait TransportState<I: Ip>: Transport<I> {
     );
 
     fn remove_listener<C: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<C>,
+        sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         id: Self::ListenerId,
     ) -> (Option<ZonedAddr<I::Addr, DeviceId>>, Self::LocalIdentifier);
 
-    fn remove_unbound<C: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<C>,
-        ctx: &mut C,
-        id: Self::UnboundId,
-    );
+    fn remove_unbound<C: NonSyncContext>(sync_ctx: &SyncCtx<C>, ctx: &mut C, id: Self::UnboundId);
 
     fn set_socket_device<C: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<C>,
+        sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         id: SocketId<I, Self>,
         device: Option<DeviceId>,
@@ -318,7 +314,7 @@ pub(crate) trait TransportState<I: Ip>: Transport<I> {
     ) -> Option<DeviceId>;
 
     fn set_reuse_port<C: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<C>,
+        sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         id: Self::UnboundId,
         reuse_port: bool,
@@ -331,7 +327,7 @@ pub(crate) trait TransportState<I: Ip>: Transport<I> {
     ) -> bool;
 
     fn set_multicast_membership<C: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<C>,
+        sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         id: SocketId<I, Self>,
         multicast_group: MulticastAddr<I::Addr>,
@@ -340,14 +336,14 @@ pub(crate) trait TransportState<I: Ip>: Transport<I> {
     ) -> Result<(), Self::SetMulticastMembershipError>;
 
     fn set_unicast_hop_limit<C: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<C>,
+        sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         id: SocketId<I, Self>,
         hop_limit: Option<NonZeroU8>,
     );
 
     fn set_multicast_hop_limit<C: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<C>,
+        sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         id: SocketId<I, Self>,
         hop_limit: Option<NonZeroU8>,
@@ -373,7 +369,7 @@ pub(crate) trait BufferTransportState<I: Ip, B: BufferMut>: TransportState<I> {
     type SendListenerError: IntoErrno;
 
     fn send_conn<C: BufferNonSyncContext<B>>(
-        sync_ctx: &mut SyncCtx<C>,
+        sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         conn: Self::ConnId,
         body: B,
@@ -381,7 +377,7 @@ pub(crate) trait BufferTransportState<I: Ip, B: BufferMut>: TransportState<I> {
     ) -> Result<(), (B, Self::SendConnError)>;
 
     fn send_listener<C: BufferNonSyncContext<B>>(
-        sync_ctx: &mut SyncCtx<C>,
+        sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         listener: Self::ListenerId,
         local_ip: Option<SpecifiedAddr<I::Addr>>,
@@ -435,12 +431,12 @@ impl<I: IpExt> TransportState<I> for Udp {
     type LocalIdentifier = NonZeroU16;
     type RemoteIdentifier = NonZeroU16;
 
-    fn create_unbound<C: NonSyncContext>(ctx: &mut SyncCtx<C>) -> Self::UnboundId {
+    fn create_unbound<C: NonSyncContext>(ctx: &SyncCtx<C>) -> Self::UnboundId {
         core_udp::create_udp_unbound(ctx)
     }
 
     fn connect_unbound<C: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<C>,
+        sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         id: Self::UnboundId,
         remote_ip: ZonedAddr<I::Addr, DeviceId>,
@@ -450,7 +446,7 @@ impl<I: IpExt> TransportState<I> for Udp {
     }
 
     fn listen_on_unbound<C: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<C>,
+        sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         id: Self::UnboundId,
         addr: Option<ZonedAddr<I::Addr, DeviceId>>,
@@ -460,7 +456,7 @@ impl<I: IpExt> TransportState<I> for Udp {
     }
 
     fn connect_listener<C: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<C>,
+        sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         id: Self::ListenerId,
         remote_ip: ZonedAddr<I::Addr, DeviceId>,
@@ -470,7 +466,7 @@ impl<I: IpExt> TransportState<I> for Udp {
     }
 
     fn disconnect_connected<C: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<C>,
+        sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         id: Self::ConnId,
     ) -> Self::ListenerId {
@@ -478,7 +474,7 @@ impl<I: IpExt> TransportState<I> for Udp {
     }
 
     fn reconnect_conn<C: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<C>,
+        sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         id: Self::ConnId,
         remote_ip: ZonedAddr<I::Addr, DeviceId>,
@@ -513,7 +509,7 @@ impl<I: IpExt> TransportState<I> for Udp {
     }
 
     fn remove_conn<C: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<C>,
+        sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         id: Self::ConnId,
     ) -> (
@@ -528,7 +524,7 @@ impl<I: IpExt> TransportState<I> for Udp {
     }
 
     fn remove_listener<C: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<C>,
+        sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         id: Self::ListenerId,
     ) -> (Option<ZonedAddr<I::Addr, DeviceId>>, Self::LocalIdentifier) {
@@ -537,16 +533,12 @@ impl<I: IpExt> TransportState<I> for Udp {
         (local_ip, local_port)
     }
 
-    fn remove_unbound<C: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<C>,
-        ctx: &mut C,
-        id: Self::UnboundId,
-    ) {
+    fn remove_unbound<C: NonSyncContext>(sync_ctx: &SyncCtx<C>, ctx: &mut C, id: Self::UnboundId) {
         core_udp::remove_udp_unbound(sync_ctx, ctx, id)
     }
 
     fn set_socket_device<C: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<C>,
+        sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         id: SocketId<I, Self>,
         device: Option<DeviceId>,
@@ -577,7 +569,7 @@ impl<I: IpExt> TransportState<I> for Udp {
     }
 
     fn set_reuse_port<C: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<C>,
+        sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         id: Self::UnboundId,
         reuse_port: bool,
@@ -594,7 +586,7 @@ impl<I: IpExt> TransportState<I> for Udp {
     }
 
     fn set_multicast_membership<C: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<C>,
+        sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         id: SocketId<I, Self>,
         multicast_group: MulticastAddr<I::Addr>,
@@ -612,7 +604,7 @@ impl<I: IpExt> TransportState<I> for Udp {
     }
 
     fn set_unicast_hop_limit<C: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<C>,
+        sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         id: SocketId<I, Self>,
         hop_limit: Option<NonZeroU8>,
@@ -621,7 +613,7 @@ impl<I: IpExt> TransportState<I> for Udp {
     }
 
     fn set_multicast_hop_limit<C: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<C>,
+        sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         id: SocketId<I, Self>,
         hop_limit: Option<NonZeroU8>,
@@ -652,7 +644,7 @@ impl<I: IpExt, B: BufferMut> BufferTransportState<I, B> for Udp {
     type SendListenerError = UdpSendListenerError;
 
     fn send_conn<C: BufferNonSyncContext<B>>(
-        sync_ctx: &mut SyncCtx<C>,
+        sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         conn: Self::ConnId,
         body: B,
@@ -673,7 +665,7 @@ impl<I: IpExt, B: BufferMut> BufferTransportState<I, B> for Udp {
     }
 
     fn send_listener<C: BufferNonSyncContext<B>>(
-        sync_ctx: &mut SyncCtx<C>,
+        sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         listener: Self::ListenerId,
         _local_ip: Option<SpecifiedAddr<I::Addr>>,
@@ -800,23 +792,23 @@ impl IntoErrno for IcmpSendError {
 /// An extension trait that allows generic access to IP-specific ICMP functionality in the Core.
 pub(crate) trait IcmpEchoIpExt: IcmpIpExt {
     fn new_icmp_unbound<NonSyncCtx: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        sync_ctx: &SyncCtx<NonSyncCtx>,
     ) -> icmp::IcmpUnboundId<Self>;
 
     fn remove_icmp_unbound<NonSyncCtx: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        sync_ctx: &SyncCtx<NonSyncCtx>,
         unbound: icmp::IcmpUnboundId<Self>,
     );
 
     fn new_icmp_connection<NonSyncCtx: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        sync_ctx: &SyncCtx<NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         unbound: icmp::IcmpUnboundId<Self>,
         remote_addr: SpecifiedAddr<Self::Addr>,
     ) -> Result<icmp::IcmpConnId<Self>, icmp::IcmpSockCreationError>;
 
     fn send_icmp_echo_request<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>(
-        sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        sync_ctx: &SyncCtx<NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         conn: icmp::IcmpConnId<Self>,
         seq: u16,
@@ -824,7 +816,7 @@ pub(crate) trait IcmpEchoIpExt: IcmpIpExt {
     ) -> Result<(), (B, IcmpSendError)>;
 
     fn send_conn<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>(
-        sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        sync_ctx: &SyncCtx<NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         conn: icmp::IcmpConnId<Self>,
         mut body: B,
@@ -877,20 +869,20 @@ pub(crate) trait IcmpEchoIpExt: IcmpIpExt {
 
 impl IcmpEchoIpExt for Ipv4 {
     fn new_icmp_unbound<NonSyncCtx: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        sync_ctx: &SyncCtx<NonSyncCtx>,
     ) -> icmp::IcmpUnboundId<Self> {
         icmp::create_icmpv4_unbound(sync_ctx)
     }
 
     fn remove_icmp_unbound<NonSyncCtx: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        sync_ctx: &SyncCtx<NonSyncCtx>,
         unbound: icmp::IcmpUnboundId<Self>,
     ) {
         icmp::remove_icmpv4_unbound(sync_ctx, unbound)
     }
 
     fn new_icmp_connection<NonSyncCtx: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        sync_ctx: &SyncCtx<NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         unbound: icmp::IcmpUnboundId<Ipv4>,
         remote_addr: SpecifiedAddr<Self::Addr>,
@@ -899,7 +891,7 @@ impl IcmpEchoIpExt for Ipv4 {
     }
 
     fn send_icmp_echo_request<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>(
-        sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        sync_ctx: &SyncCtx<NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         conn: icmp::IcmpConnId<Self>,
         seq: u16,
@@ -912,20 +904,20 @@ impl IcmpEchoIpExt for Ipv4 {
 
 impl IcmpEchoIpExt for Ipv6 {
     fn new_icmp_unbound<NonSyncCtx: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        sync_ctx: &SyncCtx<NonSyncCtx>,
     ) -> icmp::IcmpUnboundId<Self> {
         icmp::create_icmpv6_unbound(sync_ctx)
     }
 
     fn remove_icmp_unbound<NonSyncCtx: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        sync_ctx: &SyncCtx<NonSyncCtx>,
         unbound: icmp::IcmpUnboundId<Self>,
     ) {
         icmp::remove_icmpv6_unbound(sync_ctx, unbound)
     }
 
     fn new_icmp_connection<NonSyncCtx: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        sync_ctx: &SyncCtx<NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         unbound: icmp::IcmpUnboundId<Ipv6>,
         remote_addr: SpecifiedAddr<Self::Addr>,
@@ -934,7 +926,7 @@ impl IcmpEchoIpExt for Ipv6 {
     }
 
     fn send_icmp_echo_request<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>(
-        sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        sync_ctx: &SyncCtx<NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         conn: icmp::IcmpConnId<Self>,
         seq: u16,
@@ -962,13 +954,13 @@ impl<I: IcmpEchoIpExt> TransportState<I> for IcmpEcho {
     type RemoteIdentifier = IcmpRemoteIdentifier;
 
     fn create_unbound<NonSyncCtx: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        sync_ctx: &SyncCtx<NonSyncCtx>,
     ) -> Self::UnboundId {
         I::new_icmp_unbound(sync_ctx)
     }
 
     fn connect_unbound<NonSyncCtx: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        sync_ctx: &SyncCtx<NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         id: Self::UnboundId,
         remote_addr: ZonedAddr<I::Addr, DeviceId>,
@@ -981,7 +973,7 @@ impl<I: IcmpEchoIpExt> TransportState<I> for IcmpEcho {
     }
 
     fn listen_on_unbound<NonSyncCtx: NonSyncContext>(
-        _sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        _sync_ctx: &SyncCtx<NonSyncCtx>,
         _ctx: &mut NonSyncCtx,
         _id: Self::UnboundId,
         _addr: Option<ZonedAddr<I::Addr, DeviceId>>,
@@ -991,7 +983,7 @@ impl<I: IcmpEchoIpExt> TransportState<I> for IcmpEcho {
     }
 
     fn connect_listener<NonSyncCtx: NonSyncContext>(
-        _sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        _sync_ctx: &SyncCtx<NonSyncCtx>,
         _ctx: &mut NonSyncCtx,
         _id: Self::ListenerId,
         _remote_ip: ZonedAddr<I::Addr, DeviceId>,
@@ -1001,7 +993,7 @@ impl<I: IcmpEchoIpExt> TransportState<I> for IcmpEcho {
     }
 
     fn disconnect_connected<NonSyncCtx: NonSyncContext>(
-        _sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        _sync_ctx: &SyncCtx<NonSyncCtx>,
         _ctx: &mut NonSyncCtx,
         _id: Self::ConnId,
     ) -> Self::ListenerId {
@@ -1009,7 +1001,7 @@ impl<I: IcmpEchoIpExt> TransportState<I> for IcmpEcho {
     }
 
     fn reconnect_conn<NonSyncCtx: NonSyncContext>(
-        _sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        _sync_ctx: &SyncCtx<NonSyncCtx>,
         _ctx: &mut NonSyncCtx,
         _id: Self::ConnId,
         _remote_ip: ZonedAddr<I::Addr, DeviceId>,
@@ -1040,7 +1032,7 @@ impl<I: IcmpEchoIpExt> TransportState<I> for IcmpEcho {
     }
 
     fn remove_conn<NonSyncCtx: NonSyncContext>(
-        _sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        _sync_ctx: &SyncCtx<NonSyncCtx>,
         _ctx: &mut NonSyncCtx,
         _id: Self::ConnId,
     ) -> (
@@ -1053,7 +1045,7 @@ impl<I: IcmpEchoIpExt> TransportState<I> for IcmpEcho {
     }
 
     fn remove_listener<NonSyncCtx: NonSyncContext>(
-        _sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        _sync_ctx: &SyncCtx<NonSyncCtx>,
         _ctx: &mut NonSyncCtx,
         _id: Self::ListenerId,
     ) -> (Option<ZonedAddr<I::Addr, DeviceId>>, Self::LocalIdentifier) {
@@ -1061,7 +1053,7 @@ impl<I: IcmpEchoIpExt> TransportState<I> for IcmpEcho {
     }
 
     fn remove_unbound<NonSyncCtx: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        sync_ctx: &SyncCtx<NonSyncCtx>,
         _ctx: &mut NonSyncCtx,
         id: Self::UnboundId,
     ) {
@@ -1069,7 +1061,7 @@ impl<I: IcmpEchoIpExt> TransportState<I> for IcmpEcho {
     }
 
     fn set_socket_device<NonSyncCtx: NonSyncContext>(
-        _sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        _sync_ctx: &SyncCtx<NonSyncCtx>,
         _ctx: &mut NonSyncCtx,
         _id: SocketId<I, Self>,
         _device: Option<DeviceId>,
@@ -1086,7 +1078,7 @@ impl<I: IcmpEchoIpExt> TransportState<I> for IcmpEcho {
     }
 
     fn set_reuse_port<NonSyncCtx: NonSyncContext>(
-        _sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        _sync_ctx: &SyncCtx<NonSyncCtx>,
         _ctx: &mut NonSyncCtx,
         _id: Self::UnboundId,
         _reuse_port: bool,
@@ -1103,7 +1095,7 @@ impl<I: IcmpEchoIpExt> TransportState<I> for IcmpEcho {
     }
 
     fn set_multicast_membership<NonSyncCtx: NonSyncContext>(
-        _sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        _sync_ctx: &SyncCtx<NonSyncCtx>,
         _ctx: &mut NonSyncCtx,
         _id: SocketId<I, Self>,
         _multicast_group: MulticastAddr<I::Addr>,
@@ -1114,7 +1106,7 @@ impl<I: IcmpEchoIpExt> TransportState<I> for IcmpEcho {
     }
 
     fn set_unicast_hop_limit<NonSyncCtx: NonSyncContext>(
-        _sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        _sync_ctx: &SyncCtx<NonSyncCtx>,
         _ctx: &mut NonSyncCtx,
         _id: SocketId<I, Self>,
         _hop_limit: Option<NonZeroU8>,
@@ -1123,7 +1115,7 @@ impl<I: IcmpEchoIpExt> TransportState<I> for IcmpEcho {
     }
 
     fn set_multicast_hop_limit<NonSyncCtx: NonSyncContext>(
-        _sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        _sync_ctx: &SyncCtx<NonSyncCtx>,
         _ctx: &mut NonSyncCtx,
         _id: SocketId<I, Self>,
         _hop_limit: Option<NonZeroU8>,
@@ -1157,7 +1149,7 @@ where
     type SendListenerError = IcmpSendError;
 
     fn send_conn<NonSyncCtx: BufferNonSyncContext<B>>(
-        sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        sync_ctx: &SyncCtx<NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         conn: Self::ConnId,
         body: B,
@@ -1172,7 +1164,7 @@ where
     }
 
     fn send_listener<NonSyncCtx: BufferNonSyncContext<B>>(
-        _sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        _sync_ctx: &SyncCtx<NonSyncCtx>,
         _ctx: &mut NonSyncCtx,
         _listener: Self::ListenerId,
         _local_ip: Option<SpecifiedAddr<I::Addr>>,
@@ -2431,7 +2423,7 @@ where
 
     /// Helper function for common functionality to self.bind() and self.send_msg().
     fn bind_inner(
-        sync_ctx: &mut SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx>,
+        sync_ctx: &SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx>,
         non_sync_ctx: &mut <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
         unbound_id: <T as Transport<I>>::UnboundId,
         available_data: &Arc<Mutex<MessageQueue<I, T>>>,
