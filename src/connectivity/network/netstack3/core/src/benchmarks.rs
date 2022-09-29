@@ -50,9 +50,10 @@ use crate::{
 // IPv4 packet frame which we expect will be parsed and forwarded without
 // requiring any new buffers to be allocated.
 fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
-    let Ctx { mut sync_ctx, mut non_sync_ctx } =
+    let Ctx { sync_ctx, mut non_sync_ctx } =
         DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
             .build_with::<DummyNonSyncCtx>(StackStateBuilder::default());
+    let mut sync_ctx = &sync_ctx;
     crate::ip::device::set_routing_enabled::<_, _, Ipv4>(
         &mut sync_ctx,
         &mut non_sync_ctx,

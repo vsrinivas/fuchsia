@@ -221,8 +221,9 @@ mod tests {
     fn test_no_extension_headers() {
         // Test that if we have no extension headers, we continue
 
-        let Ctx { mut sync_ctx, non_sync_ctx: _ } =
+        let Ctx { sync_ctx, non_sync_ctx: _ } =
             DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6).build();
+        let mut sync_ctx = &sync_ctx;
         let builder = Ipv6PacketBuilder::new(
             DUMMY_CONFIG_V6.remote_ip,
             DUMMY_CONFIG_V6.local_ip,

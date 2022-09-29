@@ -370,7 +370,7 @@ impl_timer_context!(TimerId, TransportLayerTimerId, TimerId(TimerIdInner::Transp
 
 /// Handles a generic timer event.
 pub fn handle_timer<NonSyncCtx: NonSyncContext>(
-    sync_ctx: &mut SyncCtx<NonSyncCtx>,
+    mut sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     id: TimerId,
 ) {
@@ -378,19 +378,19 @@ pub fn handle_timer<NonSyncCtx: NonSyncContext>(
 
     match id {
         TimerId(TimerIdInner::DeviceLayer(x)) => {
-            device::handle_timer(sync_ctx, ctx, x);
+            device::handle_timer(&mut sync_ctx, ctx, x);
         }
         TimerId(TimerIdInner::TransportLayer(x)) => {
-            transport::handle_timer(sync_ctx, ctx, x);
+            transport::handle_timer(&mut sync_ctx, ctx, x);
         }
         TimerId(TimerIdInner::IpLayer(x)) => {
-            ip::handle_timer(sync_ctx, ctx, x);
+            ip::handle_timer(&mut sync_ctx, ctx, x);
         }
         TimerId(TimerIdInner::Ipv4Device(x)) => {
-            ip::device::handle_ipv4_timer(sync_ctx, ctx, x);
+            ip::device::handle_ipv4_timer(&mut sync_ctx, ctx, x);
         }
         TimerId(TimerIdInner::Ipv6Device(x)) => {
-            ip::device::handle_ipv6_timer(sync_ctx, ctx, x);
+            ip::device::handle_ipv6_timer(&mut sync_ctx, ctx, x);
         }
         #[cfg(test)]
         TimerId(TimerIdInner::Nop(_)) => {
@@ -428,25 +428,25 @@ pub fn get_all_ip_addr_subnets<NonSyncCtx: NonSyncContext>(
     ctx: &SyncCtx<NonSyncCtx>,
     device: DeviceId,
 ) -> Vec<AddrSubnetEither> {
-    DualStackDeviceHandler::get_all_ip_addr_subnets(ctx, device)
+    DualStackDeviceHandler::get_all_ip_addr_subnets(&ctx, device)
 }
 
 /// Set the IP address and subnet for a device.
 pub fn add_ip_addr_subnet<NonSyncCtx: NonSyncContext>(
-    sync_ctx: &mut SyncCtx<NonSyncCtx>,
+    mut sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     device: DeviceId,
     addr_sub: AddrSubnetEither,
 ) -> Result<(), error::ExistsError> {
     map_addr_version!(
         addr_sub: AddrSubnetEither;
-        crate::device::add_ip_addr_subnet(sync_ctx, ctx, device, addr_sub)
+        crate::device::add_ip_addr_subnet(&mut sync_ctx, ctx, device, addr_sub)
     )
 }
 
 /// Delete an IP address on a device.
 pub fn del_ip_addr<NonSyncCtx: NonSyncContext>(
-    sync_ctx: &mut SyncCtx<NonSyncCtx>,
+    mut sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     device: DeviceId,
     addr: SpecifiedAddr<IpAddr>,
@@ -454,13 +454,13 @@ pub fn del_ip_addr<NonSyncCtx: NonSyncContext>(
     let addr = addr.into();
     map_addr_version!(
         addr: IpAddr;
-        crate::device::del_ip_addr(sync_ctx, ctx, device, &addr)
+        crate::device::del_ip_addr(&mut sync_ctx, ctx, device, &addr)
     )
 }
 
 /// Adds a route to the forwarding table.
 pub fn add_route<NonSyncCtx: NonSyncContext>(
-    sync_ctx: &mut SyncCtx<NonSyncCtx>,
+    mut sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     entry: ip::types::AddableEntryEither<DeviceId>,
 ) -> Result<(), ip::forwarding::AddRouteError> {
@@ -468,16 +468,16 @@ pub fn add_route<NonSyncCtx: NonSyncContext>(
     match (device, gateway) {
         (Some(device), None) => map_addr_version!(
             subnet: SubnetEither;
-            crate::ip::add_device_route::<Ipv4, _, _>(sync_ctx, ctx, subnet, device),
-            crate::ip::add_device_route::<Ipv6, _, _>(sync_ctx, ctx, subnet, device)
+            crate::ip::add_device_route::<Ipv4, _, _>(&mut sync_ctx, ctx, subnet, device),
+            crate::ip::add_device_route::<Ipv6, _, _>(&mut sync_ctx, ctx, subnet, device)
         )
         .map_err(From::from),
         (None, Some(next_hop)) => {
             let next_hop = next_hop.into();
             map_addr_version!(
                 (subnet: SubnetEither, next_hop: IpAddr);
-                crate::ip::add_route::<Ipv4, _, _>(sync_ctx, ctx, subnet, next_hop),
-                crate::ip::add_route::<Ipv6, _, _>(sync_ctx, ctx, subnet, next_hop),
+                crate::ip::add_route::<Ipv4, _, _>(&mut sync_ctx, ctx, subnet, next_hop),
+                crate::ip::add_route::<Ipv6, _, _>(&mut sync_ctx, ctx, subnet, next_hop),
                 unreachable!()
             )
         }
@@ -488,14 +488,14 @@ pub fn add_route<NonSyncCtx: NonSyncContext>(
 /// Delete a route from the forwarding table, returning `Err` if no
 /// route was found to be deleted.
 pub fn del_route<NonSyncCtx: NonSyncContext>(
-    sync_ctx: &mut SyncCtx<NonSyncCtx>,
+    mut sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     subnet: SubnetEither,
 ) -> error::Result<()> {
     map_addr_version!(
         subnet: SubnetEither;
-        crate::ip::del_route::<Ipv4, _, _>(sync_ctx, ctx, subnet),
-        crate::ip::del_route::<Ipv6, _, _>(sync_ctx, ctx, subnet)
+        crate::ip::del_route::<Ipv4, _, _>(&mut sync_ctx, ctx, subnet),
+        crate::ip::del_route::<Ipv6, _, _>(&mut sync_ctx, ctx, subnet)
     )
     .map_err(From::from)
 }

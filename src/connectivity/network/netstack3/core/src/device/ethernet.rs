@@ -140,7 +140,9 @@ pub(crate) trait EthernetIpLinkDeviceContext<C: EthernetIpLinkDeviceNonSyncConte
     );
 }
 
-impl<NonSyncCtx: NonSyncContext> EthernetIpLinkDeviceContext<NonSyncCtx> for SyncCtx<NonSyncCtx> {
+impl<NonSyncCtx: NonSyncContext> EthernetIpLinkDeviceContext<NonSyncCtx>
+    for &'_ SyncCtx<NonSyncCtx>
+{
     fn with_static_ethernet_device_state<O, F: FnOnce(&StaticEthernetDeviceState) -> O>(
         &self,
         EthernetDeviceId(id): EthernetDeviceId,
@@ -243,7 +245,7 @@ impl<
 }
 
 impl<NonSyncCtx: NonSyncContext> NudContext<Ipv6, EthernetLinkDevice, NonSyncCtx>
-    for SyncCtx<NonSyncCtx>
+    for &'_ SyncCtx<NonSyncCtx>
 {
     fn retrans_timer(&self, EthernetDeviceId(id): EthernetDeviceId) -> NonZeroDuration {
         let devices = self.state.device.devices.read();
@@ -322,7 +324,7 @@ fn send_ip_frame_to_dst<
 }
 
 impl<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>
-    BufferNudContext<B, Ipv6, EthernetLinkDevice, NonSyncCtx> for SyncCtx<NonSyncCtx>
+    BufferNudContext<B, Ipv6, EthernetLinkDevice, NonSyncCtx> for &'_ SyncCtx<NonSyncCtx>
 {
     fn send_ip_packet_to_neighbor_link_addr<S: Serializer<Buffer = B>>(
         &mut self,
@@ -803,7 +805,7 @@ impl<
     }
 }
 
-impl<C: NonSyncContext> ArpContext<EthernetLinkDevice, C> for SyncCtx<C> {
+impl<C: NonSyncContext> ArpContext<EthernetLinkDevice, C> for &'_ SyncCtx<C> {
     fn get_protocol_addr(
         &self,
         _ctx: &mut C,
@@ -831,7 +833,7 @@ impl<C: NonSyncContext> ArpContext<EthernetLinkDevice, C> for SyncCtx<C> {
 }
 
 impl<B: BufferMut, C: BufferNonSyncContext<B>> BufferArpContext<EthernetLinkDevice, C, B>
-    for SyncCtx<C>
+    for &'_ SyncCtx<C>
 {
     fn send_ip_packet_to_neighbor_link_addr<S: Serializer<Buffer = B>>(
         &mut self,
@@ -1097,7 +1099,7 @@ mod tests {
     }
 
     fn contains_addr<A: IpAddress>(
-        sync_ctx: &crate::testutil::DummySyncCtx,
+        sync_ctx: &&crate::testutil::DummySyncCtx,
         device: DeviceId,
         addr: SpecifiedAddr<A>,
     ) -> bool {
@@ -1158,7 +1160,8 @@ mod tests {
         // Should only receive a frame if the device is enabled.
 
         let config = I::DUMMY_CONFIG;
-        let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let mut sync_ctx = &sync_ctx;
         let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
@@ -1200,7 +1203,8 @@ mod tests {
         // Should only send a frame if the device is enabled.
 
         let config = I::DUMMY_CONFIG;
-        let Ctx { mut sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
+        let Ctx { sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
+        let mut sync_ctx = &sync_ctx;
         let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
@@ -1263,7 +1267,8 @@ mod tests {
 
     #[test]
     fn initialize_once() {
-        let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let mut sync_ctx = &sync_ctx;
         let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
@@ -1274,7 +1279,7 @@ mod tests {
     }
 
     fn is_routing_enabled<I: Ip>(
-        sync_ctx: &crate::testutil::DummySyncCtx,
+        sync_ctx: &&crate::testutil::DummySyncCtx,
         device: DeviceId,
     ) -> bool {
         match I::VERSION {
@@ -1286,7 +1291,7 @@ mod tests {
     #[ip_test]
     fn test_set_ip_routing<I: Ip + TestIpExt + IcmpIpExt + IpExt>() {
         fn check_other_is_routing_enabled<I: Ip>(
-            sync_ctx: &crate::testutil::DummySyncCtx,
+            sync_ctx: &&crate::testutil::DummySyncCtx,
             device: DeviceId,
             expected: bool,
         ) {
@@ -1345,7 +1350,8 @@ mod tests {
         let mut builder = DummyEventDispatcherBuilder::from_config(config.clone());
         let device_builder_id = 0;
         add_arp_or_ndp_table_entry(&mut builder, device_builder_id, src_ip.get(), src_mac);
-        let Ctx { mut sync_ctx, mut non_sync_ctx } = builder.build();
+        let Ctx { sync_ctx, mut non_sync_ctx } = builder.build();
+        let mut sync_ctx = &sync_ctx;
 
         // Should not be a router (default).
         assert!(!is_routing_enabled::<I>(&sync_ctx, device));
@@ -1435,8 +1441,9 @@ mod tests {
         // that are destined for a device must always be accepted.
 
         let config = I::DUMMY_CONFIG;
-        let Ctx { mut sync_ctx, mut non_sync_ctx } =
+        let Ctx { sync_ctx, mut non_sync_ctx } =
             DummyEventDispatcherBuilder::from_config(config.clone()).build();
+        let mut sync_ctx = &sync_ctx;
         let device = DeviceId::new_ethernet(0);
         let other_mac = Mac::new([13, 14, 15, 16, 17, 18]);
 
@@ -1507,7 +1514,8 @@ mod tests {
     #[ip_test]
     fn test_add_remove_ip_addresses<I: Ip + TestIpExt>() {
         let config = I::DUMMY_CONFIG;
-        let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let mut sync_ctx = &sync_ctx;
         let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
@@ -1582,7 +1590,7 @@ mod tests {
     }
 
     fn receive_simple_ip_packet_test<A: IpAddress>(
-        sync_ctx: &mut crate::testutil::DummySyncCtx,
+        sync_ctx: &mut &crate::testutil::DummySyncCtx,
         non_sync_ctx: &mut crate::testutil::DummyNonSyncCtx,
         device: DeviceId,
         src_ip: A,
@@ -1617,7 +1625,8 @@ mod tests {
     #[ip_test]
     fn test_multiple_ip_addresses<I: Ip + TestIpExt>() {
         let config = I::DUMMY_CONFIG;
-        let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let mut sync_ctx = &sync_ctx;
         let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
@@ -1734,20 +1743,20 @@ mod tests {
     }
 
     fn join_ip_multicast<A: IpAddress, NonSyncCtx: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        mut sync_ctx: &SyncCtx<NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         device: DeviceId,
         multicast_addr: MulticastAddr<A>,
     ) {
         match multicast_addr.into() {
             IpAddr::V4(multicast_addr) => crate::ip::device::join_ip_multicast::<Ipv4, _, _>(
-                sync_ctx,
+                &mut sync_ctx,
                 ctx,
                 device,
                 multicast_addr,
             ),
             IpAddr::V6(multicast_addr) => crate::ip::device::join_ip_multicast::<Ipv6, _, _>(
-                sync_ctx,
+                &mut sync_ctx,
                 ctx,
                 device,
                 multicast_addr,
@@ -1756,20 +1765,20 @@ mod tests {
     }
 
     fn leave_ip_multicast<A: IpAddress, NonSyncCtx: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        mut sync_ctx: &SyncCtx<NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         device: DeviceId,
         multicast_addr: MulticastAddr<A>,
     ) {
         match multicast_addr.into() {
             IpAddr::V4(multicast_addr) => crate::ip::device::leave_ip_multicast::<Ipv4, _, _>(
-                sync_ctx,
+                &mut sync_ctx,
                 ctx,
                 device,
                 multicast_addr,
             ),
             IpAddr::V6(multicast_addr) => crate::ip::device::leave_ip_multicast::<Ipv6, _, _>(
-                sync_ctx,
+                &mut sync_ctx,
                 ctx,
                 device,
                 multicast_addr,
@@ -1783,7 +1792,8 @@ mod tests {
     #[ip_test]
     fn test_ip_join_leave_multicast_addr_ref_count<I: Ip + TestIpExt>() {
         let config = I::DUMMY_CONFIG;
-        let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let mut sync_ctx = &sync_ctx;
         let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
@@ -1832,7 +1842,8 @@ mod tests {
     #[should_panic(expected = "attempted to leave IP multicast group we were not a member of:")]
     fn test_ip_leave_unjoined_multicast<I: Ip + TestIpExt>() {
         let config = I::DUMMY_CONFIG;
-        let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let mut sync_ctx = &sync_ctx;
         let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
@@ -1858,7 +1869,8 @@ mod tests {
         // solicited-node multicast address.
 
         let config = Ipv6::DUMMY_CONFIG;
-        let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let mut sync_ctx = &sync_ctx;
         let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
@@ -1978,7 +1990,8 @@ mod tests {
         // Test that `add_ip_addr_subnet` allows link-local addresses.
 
         let config = Ipv6::DUMMY_CONFIG;
-        let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let mut sync_ctx = &sync_ctx;
         let device = EthernetDeviceId(0);
         assert_eq!(
             crate::device::add_ethernet_device(

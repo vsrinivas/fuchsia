@@ -1168,8 +1168,9 @@ mod tests {
             subnet: _,
         } = Ipv6::DUMMY_CONFIG;
 
-        let crate::testutil::DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+        let crate::testutil::DummyCtx { sync_ctx, mut non_sync_ctx } =
             crate::testutil::DummyCtx::default();
+        let mut sync_ctx = &sync_ctx;
         let device_id =
             sync_ctx.state.device.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::ip::device::update_ipv6_configuration(
@@ -1251,8 +1252,9 @@ mod tests {
             subnet: _,
         } = Ipv6::DUMMY_CONFIG;
 
-        let crate::testutil::DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+        let crate::testutil::DummyCtx { sync_ctx, mut non_sync_ctx } =
             crate::testutil::DummyCtx::default();
+        let mut sync_ctx = &sync_ctx;
         let device_id =
             sync_ctx.state.device.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::ip::device::update_ipv6_configuration(

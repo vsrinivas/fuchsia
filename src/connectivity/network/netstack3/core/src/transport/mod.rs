@@ -111,7 +111,7 @@ pub(crate) struct TransportLayerState<C: TcpNonSyncContext> {
     tcpv6: TcpState<Ipv6, DeviceId, C>,
 }
 
-impl<C: NonSyncContext> TcpSyncContext<Ipv4, C> for SyncCtx<C> {
+impl<C: NonSyncContext> TcpSyncContext<Ipv4, C> for &'_ SyncCtx<C> {
     fn with_isn_generator_and_tcp_sockets_mut<
         O,
         F: FnOnce(&IsnGenerator<C::Instant>, &mut TcpSockets<Ipv4, Self::DeviceId, C>) -> O,
@@ -119,7 +119,7 @@ impl<C: NonSyncContext> TcpSyncContext<Ipv4, C> for SyncCtx<C> {
         &mut self,
         cb: F,
     ) -> O {
-        let TcpState { isn_generator, sockets } = &mut self.state.transport.tcpv4;
+        let TcpState { isn_generator, sockets } = &self.state.transport.tcpv4;
         cb(isn_generator, &mut sockets.lock())
     }
 
@@ -132,7 +132,7 @@ impl<C: NonSyncContext> TcpSyncContext<Ipv4, C> for SyncCtx<C> {
     }
 }
 
-impl<C: NonSyncContext> TcpSyncContext<Ipv6, C> for SyncCtx<C> {
+impl<C: NonSyncContext> TcpSyncContext<Ipv6, C> for &'_ SyncCtx<C> {
     fn with_isn_generator_and_tcp_sockets_mut<
         O,
         F: FnOnce(&IsnGenerator<C::Instant>, &mut TcpSockets<Ipv6, Self::DeviceId, C>) -> O,
@@ -140,7 +140,7 @@ impl<C: NonSyncContext> TcpSyncContext<Ipv6, C> for SyncCtx<C> {
         &mut self,
         cb: F,
     ) -> O {
-        let TcpState { isn_generator, sockets } = &mut self.state.transport.tcpv6;
+        let TcpState { isn_generator, sockets } = &self.state.transport.tcpv6;
         cb(isn_generator, &mut sockets.lock())
     }
 
@@ -161,12 +161,12 @@ pub(crate) enum TransportLayerTimerId {
 
 /// Handle a timer event firing in the transport layer.
 pub(crate) fn handle_timer<NonSyncCtx: NonSyncContext>(
-    sync_ctx: &mut SyncCtx<NonSyncCtx>,
+    mut sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     id: TransportLayerTimerId,
 ) {
     match id {
-        TransportLayerTimerId::Tcp(id) => tcp::socket::handle_timer(sync_ctx, ctx, id),
+        TransportLayerTimerId::Tcp(id) => tcp::socket::handle_timer(&mut sync_ctx, ctx, id),
     }
 }
 

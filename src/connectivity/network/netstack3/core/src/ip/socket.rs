@@ -1117,10 +1117,10 @@ mod tests {
     }
 
     fn remove_all_local_addrs<I: Ip + IpLayerIpExt + IpDeviceIpExt<DummyInstant, DeviceId>>(
-        sync_ctx: &mut DummySyncCtx,
+        sync_ctx: &mut &DummySyncCtx,
         ctx: &mut DummyNonSyncCtx,
     ) where
-        DummySyncCtx: DeviceIpDeviceContext<I, DummyNonSyncCtx, DeviceId = DeviceId>,
+        for<'a> &'a DummySyncCtx: DeviceIpDeviceContext<I, DummyNonSyncCtx, DeviceId = DeviceId>,
         DummyNonSyncCtx: IpDeviceNonSyncContext<I, DeviceId, Instant = DummyInstant>,
     {
         let devices = DeviceIpDeviceContext::<I, _>::with_devices(sync_ctx, |devices| {
@@ -1226,7 +1226,7 @@ mod tests {
     fn test_new<I: Ip + IpSocketIpExt + IpLayerIpExt + IpDeviceIpExt<DummyInstant, DeviceId>>(
         test_case: NewSocketTestCase,
     ) where
-        DummySyncCtx: IpSocketHandler<I, DummyNonSyncCtx>
+        for<'a> &'a DummySyncCtx: IpSocketHandler<I, DummyNonSyncCtx>
             + IpDeviceIdContext<I, DeviceId = DeviceId>
             + DeviceIpDeviceContext<I, DummyNonSyncCtx, DeviceId = DeviceId>,
         DummyNonSyncCtx: TimerContext<I::Timer>,
@@ -1238,8 +1238,9 @@ mod tests {
 
         let DummyEventDispatcherConfig { local_ip, remote_ip, subnet, local_mac: _, remote_mac: _ } =
             cfg;
-        let Ctx { mut sync_ctx, mut non_sync_ctx } =
+        let Ctx { sync_ctx, mut non_sync_ctx } =
             DummyEventDispatcherBuilder::from_config(cfg).build();
+        let mut sync_ctx = &sync_ctx;
         let loopback_device_id =
             crate::device::add_loopback_device(&mut sync_ctx, &mut non_sync_ctx, u16::MAX.into())
                 .expect("create the loopback interface");
@@ -1353,7 +1354,7 @@ mod tests {
         from_addr_type: AddressType,
         to_addr_type: AddressType,
     ) where
-        DummySyncCtx: BufferIpSocketHandler<I, DummyNonSyncCtx, packet::EmptyBuf>
+        for<'a> &'a DummySyncCtx: BufferIpSocketHandler<I, DummyNonSyncCtx, packet::EmptyBuf>
             + IpDeviceIdContext<I, DeviceId = DeviceId>,
         IcmpEchoReply: IcmpMessage<I, &'static [u8], Code = IcmpUnusedCode>,
     {
@@ -1371,7 +1372,8 @@ mod tests {
 
         let mut builder = DummyEventDispatcherBuilder::default();
         let device_id = DeviceId::new_ethernet(builder.add_device(local_mac));
-        let Ctx { mut sync_ctx, mut non_sync_ctx } = builder.build();
+        let Ctx { sync_ctx, mut non_sync_ctx } = builder.build();
+        let mut sync_ctx = &sync_ctx;
         crate::device::add_ip_addr_subnet(
             &mut sync_ctx,
             &mut non_sync_ctx,
@@ -1470,7 +1472,7 @@ mod tests {
     #[ip_test]
     fn test_send<I: Ip + IpSocketIpExt + IpLayerStateIpExt<DummyInstant, DeviceId>>()
     where
-        DummySyncCtx: BufferIpSocketHandler<I, DummyNonSyncCtx, packet::EmptyBuf>
+        for<'a> &'a DummySyncCtx: BufferIpSocketHandler<I, DummyNonSyncCtx, packet::EmptyBuf>
             + IpDeviceContext<I, DummyNonSyncCtx, DeviceId = DeviceId>
             + IpStateContext<I, <DummyNonSyncCtx as InstantContext>::Instant>,
         context::testutil::DummyNonSyncCtx<TimerId, DispatchedEvent, DummyNonSyncCtxState>:
@@ -1486,8 +1488,9 @@ mod tests {
         let DummyEventDispatcherConfig::<_> { local_mac, remote_mac, local_ip, remote_ip, subnet } =
             cfg;
 
-        let Ctx { mut sync_ctx, mut non_sync_ctx } =
+        let Ctx { sync_ctx, mut non_sync_ctx } =
             DummyEventDispatcherBuilder::from_config(cfg.clone()).build();
+        let mut sync_ctx = &sync_ctx;
 
         // Create a normal, routable socket.
         let sock = IpSocketHandler::<I, _>::new_ip_socket(
@@ -1608,7 +1611,7 @@ mod tests {
     #[ip_test]
     fn test_send_hop_limits<I: Ip + IpSocketIpExt + IpLayerStateIpExt<DummyInstant, DeviceId>>()
     where
-        DummySyncCtx: BufferIpSocketHandler<I, DummyNonSyncCtx, packet::EmptyBuf>
+        for<'a> &'a DummySyncCtx: BufferIpSocketHandler<I, DummyNonSyncCtx, packet::EmptyBuf>
             + IpDeviceContext<I, DummyNonSyncCtx, DeviceId = DeviceId>
             + IpStateContext<I, <DummyNonSyncCtx as InstantContext>::Instant>,
     {
@@ -1636,7 +1639,8 @@ mod tests {
 
         let mut builder = DummyEventDispatcherBuilder::default();
         let device_id = DeviceId::new_ethernet(builder.add_device(local_mac));
-        let Ctx { mut sync_ctx, mut non_sync_ctx } = builder.build();
+        let Ctx { sync_ctx, mut non_sync_ctx } = builder.build();
+        let mut sync_ctx = &sync_ctx;
         crate::device::add_ip_addr_subnet(
             &mut sync_ctx,
             &mut non_sync_ctx,

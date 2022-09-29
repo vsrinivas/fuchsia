@@ -30,7 +30,7 @@ pub(super) fn send_ip_frame<
     A: IpAddress,
     S: Serializer<Buffer = B>,
 >(
-    sync_ctx: &mut SyncCtx<NonSyncCtx>,
+    sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     _local_addr: SpecifiedAddr<A>,
     body: S,
@@ -76,7 +76,8 @@ mod tests {
     #[test]
     fn test_loopback_methods() {
         const MTU: u32 = 66;
-        let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let mut sync_ctx = &sync_ctx;
         let device = crate::device::add_loopback_device(&mut sync_ctx, &mut non_sync_ctx, MTU)
             .expect("error adding loopback device");
         crate::device::testutil::enable_device(&mut sync_ctx, &mut non_sync_ctx, device);
@@ -88,10 +89,10 @@ mod tests {
             I: TestIpExt + IpDeviceStateIpExt<NonSyncCtx::Instant>,
             NonSyncCtx: NonSyncContext,
         >(
-            sync_ctx: &mut SyncCtx<NonSyncCtx>,
+            sync_ctx: &mut &SyncCtx<NonSyncCtx>,
             ctx: &mut NonSyncCtx,
             device: DeviceId,
-            get_addrs: fn(&SyncCtx<NonSyncCtx>, DeviceId) -> Vec<SpecifiedAddr<I::Addr>>,
+            get_addrs: fn(&mut &SyncCtx<NonSyncCtx>, DeviceId) -> Vec<SpecifiedAddr<I::Addr>>,
         ) {
             assert_eq!(get_addrs(sync_ctx, device), []);
 

@@ -12,7 +12,7 @@ use crate::{
     DeviceId, NonSyncContext, SyncCtx,
 };
 
-impl<C: NonSyncContext> UdpStateContext<Ipv4, C> for SyncCtx<C> {
+impl<C: NonSyncContext> UdpStateContext<Ipv4, C> for &'_ SyncCtx<C> {
     fn join_multicast_group(
         &mut self,
         ctx: &mut C,
@@ -44,7 +44,7 @@ impl<C: NonSyncContext> UdpStateContext<Ipv4, C> for SyncCtx<C> {
     }
 }
 
-impl<C: NonSyncContext> UdpStateContext<Ipv6, C> for SyncCtx<C> {
+impl<C: NonSyncContext> UdpStateContext<Ipv6, C> for &'_ SyncCtx<C> {
     fn join_multicast_group(
         &mut self,
         ctx: &mut C,

@@ -78,7 +78,7 @@ impl<D, I: Ip> RecvIpFrameMeta<D, I> {
 
 impl<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>
     RecvFrameContext<NonSyncCtx, B, RecvIpFrameMeta<EthernetDeviceId, Ipv4>>
-    for SyncCtx<NonSyncCtx>
+    for &'_ SyncCtx<NonSyncCtx>
 {
     fn receive_frame(
         &mut self,
@@ -98,7 +98,7 @@ impl<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>
 
 impl<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>
     RecvFrameContext<NonSyncCtx, B, RecvIpFrameMeta<EthernetDeviceId, Ipv6>>
-    for SyncCtx<NonSyncCtx>
+    for &'_ SyncCtx<NonSyncCtx>
 {
     fn receive_frame(
         &mut self,
@@ -150,22 +150,22 @@ fn with_devices<
     ))
 }
 
-fn get_mtu<NonSyncCtx: NonSyncContext>(ctx: &SyncCtx<NonSyncCtx>, device: DeviceId) -> u32 {
+fn get_mtu<NonSyncCtx: NonSyncContext>(mut ctx: &SyncCtx<NonSyncCtx>, device: DeviceId) -> u32 {
     match device.inner() {
-        DeviceIdInner::Ethernet(id) => self::ethernet::get_mtu(ctx, id),
+        DeviceIdInner::Ethernet(id) => self::ethernet::get_mtu(&mut ctx, id),
         DeviceIdInner::Loopback => self::loopback::get_mtu(ctx),
     }
 }
 
 fn join_link_multicast_group<NonSyncCtx: NonSyncContext, A: IpAddress>(
-    sync_ctx: &mut SyncCtx<NonSyncCtx>,
+    mut sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     device_id: DeviceId,
     multicast_addr: MulticastAddr<A>,
 ) {
     match device_id.inner() {
         DeviceIdInner::Ethernet(id) => self::ethernet::join_link_multicast(
-            sync_ctx,
+            &mut sync_ctx,
             ctx,
             id,
             MulticastAddr::from(&multicast_addr),
@@ -175,14 +175,14 @@ fn join_link_multicast_group<NonSyncCtx: NonSyncContext, A: IpAddress>(
 }
 
 fn leave_link_multicast_group<NonSyncCtx: NonSyncContext, A: IpAddress>(
-    sync_ctx: &mut SyncCtx<NonSyncCtx>,
+    mut sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     device_id: DeviceId,
     multicast_addr: MulticastAddr<A>,
 ) {
     match device_id.inner() {
         DeviceIdInner::Ethernet(id) => self::ethernet::leave_link_multicast(
-            sync_ctx,
+            &mut sync_ctx,
             ctx,
             id,
             MulticastAddr::from(&multicast_addr),
@@ -191,7 +191,7 @@ fn leave_link_multicast_group<NonSyncCtx: NonSyncContext, A: IpAddress>(
     }
 }
 
-impl<NonSyncCtx: NonSyncContext> DualStackDeviceContext<NonSyncCtx> for SyncCtx<NonSyncCtx> {
+impl<NonSyncCtx: NonSyncContext> DualStackDeviceContext<NonSyncCtx> for &'_ SyncCtx<NonSyncCtx> {
     fn with_dual_stack_device_state<
         O,
         F: FnOnce(DualStackDeviceStateRef<'_, NonSyncCtx::Instant>) -> O,
@@ -208,7 +208,7 @@ impl<NonSyncCtx: NonSyncContext> DualStackDeviceContext<NonSyncCtx> for SyncCtx<
     }
 }
 
-impl<NonSyncCtx: NonSyncContext> IpDeviceContext<Ipv4, NonSyncCtx> for SyncCtx<NonSyncCtx> {
+impl<NonSyncCtx: NonSyncContext> IpDeviceContext<Ipv4, NonSyncCtx> for &'_ SyncCtx<NonSyncCtx> {
     fn with_ip_device_state<O, F: FnOnce(&Ipv4DeviceState<NonSyncCtx::Instant>) -> O>(
         &self,
         device: Self::DeviceId,
@@ -258,7 +258,7 @@ fn send_ip_frame<
     S: Serializer<Buffer = B>,
     A: IpAddress,
 >(
-    sync_ctx: &mut SyncCtx<NonSyncCtx>,
+    mut sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     device: DeviceId,
     local_addr: SpecifiedAddr<A>,
@@ -266,7 +266,7 @@ fn send_ip_frame<
 ) -> Result<(), S> {
     match device.inner() {
         DeviceIdInner::Ethernet(id) => {
-            self::ethernet::send_ip_frame(sync_ctx, ctx, id, local_addr, body)
+            self::ethernet::send_ip_frame(&mut sync_ctx, ctx, id, local_addr, body)
         }
         DeviceIdInner::Loopback => self::loopback::send_ip_frame(sync_ctx, ctx, local_addr, body),
     }
@@ -282,9 +282,9 @@ fn bytes_to_mac(b: &[u8]) -> Option<Mac> {
     })
 }
 
-impl<I: Ip, C: NonSyncContext> NudIpHandler<I, C> for SyncCtx<C>
+impl<I: Ip, C: NonSyncContext> NudIpHandler<I, C> for &'_ SyncCtx<C>
 where
-    SyncCtx<C>: NudHandler<I, EthernetLinkDevice, C>
+    Self: NudHandler<I, EthernetLinkDevice, C>
         + DeviceIdContext<EthernetLinkDevice, DeviceId = EthernetDeviceId>,
 {
     fn handle_neighbor_probe(
@@ -346,7 +346,7 @@ where
 }
 
 impl<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>> BufferIpDeviceContext<Ipv4, NonSyncCtx, B>
-    for SyncCtx<NonSyncCtx>
+    for &'_ SyncCtx<NonSyncCtx>
 {
     fn send_ip_frame<S: Serializer<Buffer = B>>(
         &mut self,
@@ -359,7 +359,7 @@ impl<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>> BufferIpDeviceContext<Ip
     }
 }
 
-impl<NonSyncCtx: NonSyncContext> IpDeviceContext<Ipv6, NonSyncCtx> for SyncCtx<NonSyncCtx> {
+impl<NonSyncCtx: NonSyncContext> IpDeviceContext<Ipv6, NonSyncCtx> for &'_ SyncCtx<NonSyncCtx> {
     fn with_ip_device_state<O, F: FnOnce(&Ipv6DeviceState<NonSyncCtx::Instant>) -> O>(
         &self,
         device: Self::DeviceId,
@@ -416,7 +416,7 @@ impl AsRef<[u8]> for Ipv6DeviceLinkLayerAddr {
     }
 }
 
-impl<NonSyncCtx: NonSyncContext> Ipv6DeviceContext<NonSyncCtx> for SyncCtx<NonSyncCtx> {
+impl<NonSyncCtx: NonSyncContext> Ipv6DeviceContext<NonSyncCtx> for &'_ SyncCtx<NonSyncCtx> {
     type LinkLayerAddr = Ipv6DeviceLinkLayerAddr;
 
     fn get_link_layer_addr_bytes(
@@ -453,7 +453,7 @@ impl<NonSyncCtx: NonSyncContext> Ipv6DeviceContext<NonSyncCtx> for SyncCtx<NonSy
 }
 
 impl<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>> BufferIpDeviceContext<Ipv6, NonSyncCtx, B>
-    for SyncCtx<NonSyncCtx>
+    for &'_ SyncCtx<NonSyncCtx>
 {
     fn send_ip_frame<S: Serializer<Buffer = B>>(
         &mut self,
@@ -467,7 +467,7 @@ impl<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>> BufferIpDeviceContext<Ip
 }
 
 impl<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>
-    FrameContext<NonSyncCtx, B, EthernetDeviceId> for SyncCtx<NonSyncCtx>
+    FrameContext<NonSyncCtx, B, EthernetDeviceId> for &'_ SyncCtx<NonSyncCtx>
 {
     fn send_frame<S: Serializer<Buffer = B>>(
         &mut self,
@@ -519,7 +519,7 @@ impl From<EthernetTimerId<EthernetDeviceId>> for DeviceLayerTimerId {
     }
 }
 
-impl<NonSyncCtx: NonSyncContext> DeviceIdContext<EthernetLinkDevice> for SyncCtx<NonSyncCtx> {
+impl<NonSyncCtx: NonSyncContext> DeviceIdContext<EthernetLinkDevice> for &'_ SyncCtx<NonSyncCtx> {
     type DeviceId = EthernetDeviceId;
 }
 
@@ -532,12 +532,12 @@ impl_timer_context!(
 
 /// Handle a timer event firing in the device layer.
 pub(crate) fn handle_timer<NonSyncCtx: NonSyncContext>(
-    sync_ctx: &mut SyncCtx<NonSyncCtx>,
+    mut sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     id: DeviceLayerTimerId,
 ) {
     match id.0 {
-        DeviceLayerTimerIdInner::Ethernet(id) => ethernet::handle_timer(sync_ctx, ctx, id),
+        DeviceLayerTimerIdInner::Ethernet(id) => ethernet::handle_timer(&mut sync_ctx, ctx, id),
     }
 }
 
@@ -672,7 +672,7 @@ impl<I: Instant> DeviceLayerState<I> {
     /// `add` adds a new `EthernetDeviceState` with the given MAC address and
     /// MTU. The MTU will be taken as a limit on the size of Ethernet payloads -
     /// the Ethernet header is not counted towards the MTU.
-    pub(crate) fn add_ethernet_device(&mut self, mac: UnicastAddr<Mac>, mtu: u32) -> DeviceId {
+    pub(crate) fn add_ethernet_device(&self, mac: UnicastAddr<Mac>, mtu: u32) -> DeviceId {
         let Devices { ethernet, loopback: _ } = &mut *self.devices.write();
 
         let id = ethernet
@@ -682,7 +682,7 @@ impl<I: Instant> DeviceLayerState<I> {
     }
 
     /// Adds a new loopback device to the device layer.
-    pub(crate) fn add_loopback_device(&mut self, mtu: u32) -> Result<DeviceId, ExistsError> {
+    pub(crate) fn add_loopback_device(&self, mtu: u32) -> Result<DeviceId, ExistsError> {
         let Devices { ethernet: _, loopback } = &mut *self.devices.write();
 
         if let Some(IpLinkDeviceState { .. }) = loopback {
@@ -720,15 +720,16 @@ pub trait DeviceLayerEventDispatcher<B: BufferMut> {
 ///
 /// Panics if `device` does not refer to an existing device.
 pub fn remove_device<NonSyncCtx: NonSyncContext>(
-    sync_ctx: &mut SyncCtx<NonSyncCtx>,
+    mut sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     device: DeviceId,
 ) {
     // Uninstall all routes associated with the device.
-    crate::ip::del_device_routes::<Ipv4, _, _>(sync_ctx, ctx, &device);
-    crate::ip::del_device_routes::<Ipv6, _, _>(sync_ctx, ctx, &device);
+    crate::ip::del_device_routes::<Ipv4, _, _>(&mut sync_ctx, ctx, &device);
+    crate::ip::del_device_routes::<Ipv6, _, _>(&mut sync_ctx, ctx, &device);
 
     let mut devices = sync_ctx.state.device.devices.write();
+
     match device.inner() {
         DeviceIdInner::Ethernet(id) => {
             let EthernetDeviceId(id) = id;
@@ -751,7 +752,7 @@ pub fn remove_device<NonSyncCtx: NonSyncContext>(
 /// Adds a new Ethernet device and installs routes for the link-local subnet and
 /// the multicast subnets.
 pub fn add_ethernet_device<NonSyncCtx: NonSyncContext>(
-    sync_ctx: &mut SyncCtx<NonSyncCtx>,
+    sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     mac: UnicastAddr<Mac>,
     mtu: u32,
@@ -780,7 +781,7 @@ pub fn add_ethernet_device<NonSyncCtx: NonSyncContext>(
 /// installed at any point in time, so if there is one already, an error is
 /// returned.
 pub fn add_loopback_device<NonSyncCtx: NonSyncContext>(
-    sync_ctx: &mut SyncCtx<NonSyncCtx>,
+    sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     mtu: u32,
 ) -> Result<DeviceId, crate::error::ExistsError> {
@@ -802,7 +803,7 @@ pub fn add_loopback_device<NonSyncCtx: NonSyncContext>(
 }
 
 fn add_multicast_routes<NonSyncCtx: NonSyncContext>(
-    sync_ctx: &mut SyncCtx<NonSyncCtx>,
+    sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     id: DeviceId,
 ) {
@@ -819,13 +820,15 @@ fn add_multicast_routes<NonSyncCtx: NonSyncContext>(
 
 /// Receive a device layer frame from the network.
 pub fn receive_frame<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>(
-    sync_ctx: &mut SyncCtx<NonSyncCtx>,
+    mut sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     device: DeviceId,
     buffer: B,
 ) -> Result<(), NotSupportedError> {
     match device.inner() {
-        DeviceIdInner::Ethernet(id) => Ok(self::ethernet::receive_frame(sync_ctx, ctx, id, buffer)),
+        DeviceIdInner::Ethernet(id) => {
+            Ok(self::ethernet::receive_frame(&mut sync_ctx, ctx, id, buffer))
+        }
         DeviceIdInner::Loopback => Err(NotSupportedError),
     }
 }
@@ -834,14 +837,14 @@ pub fn receive_frame<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>(
 // TODO(rheacock): remove `allow(dead_code)` when this is used.
 #[allow(dead_code)]
 pub(crate) fn set_promiscuous_mode<NonSyncCtx: NonSyncContext>(
-    sync_ctx: &mut SyncCtx<NonSyncCtx>,
+    mut sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     device: DeviceId,
     enabled: bool,
 ) -> Result<(), NotSupportedError> {
     match device.inner() {
         DeviceIdInner::Ethernet(id) => {
-            Ok(self::ethernet::set_promiscuous_mode(sync_ctx, ctx, id, enabled))
+            Ok(self::ethernet::set_promiscuous_mode(&mut sync_ctx, ctx, id, enabled))
         }
         DeviceIdInner::Loopback => Err(NotSupportedError),
     }
@@ -852,7 +855,7 @@ pub(crate) fn set_promiscuous_mode<NonSyncCtx: NonSyncContext>(
 /// For IPv6, this function also joins the solicited-node multicast group and
 /// begins performing Duplicate Address Detection (DAD).
 pub(crate) fn add_ip_addr_subnet<NonSyncCtx: NonSyncContext, A: IpAddress>(
-    sync_ctx: &mut SyncCtx<NonSyncCtx>,
+    mut sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     device: DeviceId,
     addr_sub: AddrSubnet<A>,
@@ -861,10 +864,10 @@ pub(crate) fn add_ip_addr_subnet<NonSyncCtx: NonSyncContext, A: IpAddress>(
 
     match addr_sub.into() {
         AddrSubnetEither::V4(addr_sub) => {
-            crate::ip::device::add_ipv4_addr_subnet(sync_ctx, ctx, device, addr_sub)
+            crate::ip::device::add_ipv4_addr_subnet(&mut sync_ctx, ctx, device, addr_sub)
         }
         AddrSubnetEither::V6(addr_sub) => crate::ip::device::add_ipv6_addr_subnet(
-            sync_ctx,
+            &mut sync_ctx,
             ctx,
             device,
             addr_sub,
@@ -877,7 +880,7 @@ pub(crate) fn add_ip_addr_subnet<NonSyncCtx: NonSyncContext, A: IpAddress>(
 ///
 /// Should only be called on user action.
 pub(crate) fn del_ip_addr<NonSyncCtx: NonSyncContext, A: IpAddress>(
-    sync_ctx: &mut SyncCtx<NonSyncCtx>,
+    mut sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     device: DeviceId,
     addr: &SpecifiedAddr<A>,
@@ -885,9 +888,9 @@ pub(crate) fn del_ip_addr<NonSyncCtx: NonSyncContext, A: IpAddress>(
     trace!("del_ip_addr: removing addr {:?} from device {:?}", addr, device);
 
     match Into::into(*addr) {
-        IpAddr::V4(addr) => crate::ip::device::del_ipv4_addr(sync_ctx, ctx, device, &addr),
+        IpAddr::V4(addr) => crate::ip::device::del_ipv4_addr(&mut sync_ctx, ctx, device, &addr),
         IpAddr::V6(addr) => crate::ip::device::del_ipv6_addr_with_reason(
-            sync_ctx,
+            &mut sync_ctx,
             ctx,
             device,
             &addr,
@@ -896,13 +899,13 @@ pub(crate) fn del_ip_addr<NonSyncCtx: NonSyncContext, A: IpAddress>(
     }
 }
 
-impl<NonSyncCtx: NonSyncContext> DualStackDeviceIdContext for SyncCtx<NonSyncCtx> {
+impl<NonSyncCtx: NonSyncContext> DualStackDeviceIdContext for &'_ SyncCtx<NonSyncCtx> {
     type DualStackDeviceId = DeviceId;
 }
 
 // Temporary blanket impl until we switch over entirely to the traits defined in
 // the `context` module.
-impl<NonSyncCtx: NonSyncContext, I: Ip> IpDeviceIdContext<I> for SyncCtx<NonSyncCtx> {
+impl<NonSyncCtx: NonSyncContext, I: Ip> IpDeviceIdContext<I> for &'_ SyncCtx<NonSyncCtx> {
     type DeviceId = DeviceId;
 
     fn loopback_id(&self) -> Option<DeviceId> {
@@ -919,16 +922,20 @@ impl<NonSyncCtx: NonSyncContext, I: Ip> IpDeviceIdContext<I> for SyncCtx<NonSync
 // called by a pub fn in the device mod.
 #[cfg(test)]
 pub(super) fn insert_static_arp_table_entry<NonSyncCtx: NonSyncContext>(
-    sync_ctx: &mut SyncCtx<NonSyncCtx>,
+    mut sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     device: DeviceId,
     addr: Ipv4Addr,
     mac: UnicastAddr<Mac>,
 ) -> Result<(), NotSupportedError> {
     match device.inner() {
-        DeviceIdInner::Ethernet(id) => {
-            Ok(self::ethernet::insert_static_arp_table_entry(sync_ctx, ctx, id, addr, mac.into()))
-        }
+        DeviceIdInner::Ethernet(id) => Ok(self::ethernet::insert_static_arp_table_entry(
+            &mut sync_ctx,
+            ctx,
+            id,
+            addr,
+            mac.into(),
+        )),
         DeviceIdInner::Loopback => Err(NotSupportedError),
     }
 }
@@ -941,7 +948,7 @@ pub(super) fn insert_static_arp_table_entry<NonSyncCtx: NonSyncContext>(
 // TODO(rheacock): Remove when this is called from non-test code.
 #[cfg(test)]
 pub(crate) fn insert_ndp_table_entry<NonSyncCtx: NonSyncContext>(
-    sync_ctx: &mut SyncCtx<NonSyncCtx>,
+    mut sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     device: DeviceId,
     addr: UnicastAddr<Ipv6Addr>,
@@ -949,7 +956,7 @@ pub(crate) fn insert_ndp_table_entry<NonSyncCtx: NonSyncContext>(
 ) -> Result<(), NotSupportedError> {
     match device.inner() {
         DeviceIdInner::Ethernet(id) => {
-            Ok(self::ethernet::insert_ndp_table_entry(sync_ctx, ctx, id, addr, mac))
+            Ok(self::ethernet::insert_ndp_table_entry(&mut sync_ctx, ctx, id, addr, mac))
         }
         DeviceIdInner::Loopback => Err(NotSupportedError),
     }
@@ -957,18 +964,18 @@ pub(crate) fn insert_ndp_table_entry<NonSyncCtx: NonSyncContext>(
 
 /// Gets the IPv4 Configuration for a `device`.
 pub fn get_ipv4_configuration<NonSyncCtx: NonSyncContext>(
-    ctx: &SyncCtx<NonSyncCtx>,
+    mut ctx: &SyncCtx<NonSyncCtx>,
     device: DeviceId,
 ) -> Ipv4DeviceConfiguration {
-    crate::ip::device::get_ipv4_configuration(ctx, device)
+    crate::ip::device::get_ipv4_configuration(&mut ctx, device)
 }
 
 /// Gets the IPv6 Configuration for a `device`.
 pub fn get_ipv6_configuration<NonSyncCtx: NonSyncContext>(
-    ctx: &SyncCtx<NonSyncCtx>,
+    mut ctx: &SyncCtx<NonSyncCtx>,
     device: DeviceId,
 ) -> Ipv6DeviceConfiguration {
-    crate::ip::device::get_ipv6_configuration(ctx, device)
+    crate::ip::device::get_ipv6_configuration(&mut ctx, device)
 }
 
 /// Updates the IPv4 Configuration for a `device`.
@@ -976,12 +983,12 @@ pub fn update_ipv4_configuration<
     NonSyncCtx: NonSyncContext,
     F: FnOnce(&mut Ipv4DeviceConfiguration),
 >(
-    sync_ctx: &mut SyncCtx<NonSyncCtx>,
+    mut sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     device: DeviceId,
     update_cb: F,
 ) {
-    crate::ip::device::update_ipv4_configuration(sync_ctx, ctx, device, update_cb)
+    crate::ip::device::update_ipv4_configuration(&mut sync_ctx, ctx, device, update_cb)
 }
 
 /// Updates the IPv6 Configuration for a `device`.
@@ -989,12 +996,12 @@ pub fn update_ipv6_configuration<
     NonSyncCtx: NonSyncContext,
     F: FnOnce(&mut Ipv6DeviceConfiguration),
 >(
-    sync_ctx: &mut SyncCtx<NonSyncCtx>,
+    mut sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     device: DeviceId,
     update_cb: F,
 ) {
-    crate::ip::device::update_ipv6_configuration(sync_ctx, ctx, device, update_cb)
+    crate::ip::device::update_ipv6_configuration(&mut sync_ctx, ctx, device, update_cb)
 }
 
 /// An address that may be "tentative" in that it has not yet passed duplicate
@@ -1023,14 +1030,14 @@ pub(crate) mod testutil {
     }
 
     pub fn enable_device<NonSyncCtx: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        mut sync_ctx: &SyncCtx<NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         device: DeviceId,
     ) {
-        crate::ip::device::update_ipv4_configuration(sync_ctx, ctx, device, |config| {
+        crate::ip::device::update_ipv4_configuration(&mut sync_ctx, ctx, device, |config| {
             config.ip_config.ip_enabled = true;
         });
-        crate::ip::device::update_ipv6_configuration(sync_ctx, ctx, device, |config| {
+        crate::ip::device::update_ipv6_configuration(&mut sync_ctx, ctx, device, |config| {
             config.ip_config.ip_enabled = true;
         });
     }
@@ -1053,9 +1060,10 @@ mod tests {
 
     #[test]
     fn test_iter_devices() {
-        let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let mut sync_ctx = &sync_ctx;
 
-        fn check(sync_ctx: &DummySyncCtx, expected: &[DeviceId]) {
+        fn check(sync_ctx: &&DummySyncCtx, expected: &[DeviceId]) {
             assert_eq!(
                 IpDeviceContext::<Ipv4, _>::with_devices(sync_ctx, |devices| devices
                     .collect::<Vec<_>>()),

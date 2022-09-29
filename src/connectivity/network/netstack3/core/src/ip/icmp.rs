@@ -746,7 +746,7 @@ pub(crate) trait InnerIcmpv4Context<C: IcmpNonSyncCtx<Ipv4>>:
     fn should_send_timestamp_reply(&self) -> bool;
 }
 
-impl<C: NonSyncContext> InnerIcmpv4Context<C> for SyncCtx<C> {
+impl<C: NonSyncContext> InnerIcmpv4Context<C> for &'_ SyncCtx<C> {
     fn should_send_timestamp_reply(&self) -> bool {
         self.state.ipv4.icmp.send_timestamp_reply
     }
@@ -2708,13 +2708,13 @@ fn receive_icmp_echo_reply<
 /// `send_icmpv4_echo_request` panics if `conn` is not associated with an ICMPv4
 /// connection.
 pub fn send_icmpv4_echo_request<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>(
-    sync_ctx: &mut SyncCtx<NonSyncCtx>,
+    mut sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     conn: IcmpConnId<Ipv4>,
     seq_num: u16,
     body: B,
 ) -> Result<(), (B, IpSockSendError)> {
-    send_icmp_echo_request_inner(sync_ctx, ctx, conn, seq_num, body)
+    send_icmp_echo_request_inner(&mut sync_ctx, ctx, conn, seq_num, body)
 }
 
 /// Send an ICMPv6 echo request on an existing connection.
@@ -2724,13 +2724,13 @@ pub fn send_icmpv4_echo_request<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B
 /// `send_icmpv6_echo_request` panics if `conn` is not associated with an ICMPv6
 /// connection.
 pub fn send_icmpv6_echo_request<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>(
-    sync_ctx: &mut SyncCtx<NonSyncCtx>,
+    mut sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     conn: IcmpConnId<Ipv6>,
     seq_num: u16,
     body: B,
 ) -> Result<(), (B, IpSockSendError)> {
-    send_icmp_echo_request_inner(sync_ctx, ctx, conn, seq_num, body)
+    send_icmp_echo_request_inner(&mut sync_ctx, ctx, conn, seq_num, body)
 }
 
 fn send_icmp_echo_request_inner<
@@ -2788,9 +2788,9 @@ pub enum IcmpSockCreationError {
 
 /// Creates a new unbound ICMPv4 socket.
 pub fn create_icmpv4_unbound<NonSyncCtx: NonSyncContext>(
-    ctx: &mut SyncCtx<NonSyncCtx>,
+    mut ctx: &SyncCtx<NonSyncCtx>,
 ) -> IcmpUnboundId<Ipv4> {
-    create_icmpv4_unbound_inner(ctx)
+    create_icmpv4_unbound_inner(&mut ctx)
 }
 
 // TODO(https://fxbug.dev/48578): Make this the external function (replacing the
@@ -2806,9 +2806,9 @@ fn create_icmpv4_unbound_inner<C: IcmpNonSyncCtx<Ipv4>, SC: InnerIcmpv4Context<C
 
 /// Creates a new unbound ICMPv6 socket.
 pub fn create_icmpv6_unbound<NonSyncCtx: NonSyncContext>(
-    sync_ctx: &mut SyncCtx<NonSyncCtx>,
+    mut sync_ctx: &SyncCtx<NonSyncCtx>,
 ) -> IcmpUnboundId<Ipv6> {
-    create_icmpv6_unbound_inner(sync_ctx)
+    create_icmpv6_unbound_inner(&mut sync_ctx)
 }
 
 // TODO(https://fxbug.dev/48578): Make this the external function (replacing the
@@ -2828,10 +2828,10 @@ fn create_icmpv6_unbound_inner<C: IcmpNonSyncCtx<Ipv6>, SC: InnerIcmpv6Context<C
 ///
 /// Panics if `id` is not a valid [`IcmpUnboundId`].
 pub fn remove_icmpv4_unbound<NonSyncCtx: NonSyncContext>(
-    ctx: &mut SyncCtx<NonSyncCtx>,
+    mut ctx: &SyncCtx<NonSyncCtx>,
     id: IcmpUnboundId<Ipv4>,
 ) {
-    remove_icmpv4_unbound_inner(ctx, id)
+    remove_icmpv4_unbound_inner(&mut ctx, id)
 }
 
 // TODO(https://fxbug.dev/48578): Make this the external function (replacing the
@@ -2857,10 +2857,10 @@ fn remove_icmpv4_unbound_inner<C: IcmpNonSyncCtx<Ipv4>, SC: InnerIcmpv4Context<C
 ///
 /// Panics if `id` is not a valid [`IcmpUnboundId`].
 pub fn remove_icmpv6_unbound<NonSyncCtx: NonSyncContext>(
-    ctx: &mut SyncCtx<NonSyncCtx>,
+    mut ctx: &SyncCtx<NonSyncCtx>,
     id: IcmpUnboundId<Ipv6>,
 ) {
-    remove_icmpv6_unbound_inner(ctx, id)
+    remove_icmpv6_unbound_inner(&mut ctx, id)
 }
 
 // TODO(https://fxbug.dev/48578): Make this the external function (replacing the
@@ -2893,14 +2893,14 @@ fn remove_icmpv6_unbound_inner<C: IcmpNonSyncCtx<Ipv6>, SC: InnerIcmpv6Context<C
 ///
 /// Panics if `id` is an invalid [`IcmpUnboundId`].
 pub fn connect_icmpv4<NonSyncCtx: NonSyncContext>(
-    sync_ctx: &mut SyncCtx<NonSyncCtx>,
+    mut sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     id: IcmpUnboundId<Ipv4>,
     local_addr: Option<SpecifiedAddr<Ipv4Addr>>,
     remote_addr: SpecifiedAddr<Ipv4Addr>,
     icmp_id: u16,
 ) -> Result<IcmpConnId<Ipv4>, IcmpSockCreationError> {
-    connect_icmpv4_inner(sync_ctx, ctx, id, local_addr, remote_addr, icmp_id)
+    connect_icmpv4_inner(&mut sync_ctx, ctx, id, local_addr, remote_addr, icmp_id)
 }
 
 // TODO(https://fxbug.dev/48578): Make this the external function (replacing the
@@ -2935,14 +2935,14 @@ fn connect_icmpv4_inner<C: IcmpNonSyncCtx<Ipv4>, SC: InnerIcmpv4Context<C>>(
 ///
 /// Panics if `id` is an invalid [`IcmpUnboundId`].
 pub fn connect_icmpv6<NonSyncCtx: NonSyncContext>(
-    sync_ctx: &mut SyncCtx<NonSyncCtx>,
+    mut sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     id: IcmpUnboundId<Ipv6>,
     local_addr: Option<SpecifiedAddr<Ipv6Addr>>,
     remote_addr: SpecifiedAddr<Ipv6Addr>,
     icmp_id: u16,
 ) -> Result<IcmpConnId<Ipv6>, IcmpSockCreationError> {
-    connect_icmpv6_inner(sync_ctx, ctx, id, local_addr, remote_addr, icmp_id)
+    connect_icmpv6_inner(&mut sync_ctx, ctx, id, local_addr, remote_addr, icmp_id)
 }
 
 // TODO(https://fxbug.dev/48578): Make this the external function (replacing the
@@ -3029,7 +3029,7 @@ mod tests {
 
     trait TestIpExt: crate::testutil::TestIpExt + crate::testutil::TestutilIpExt {
         fn new_icmp_connection<NonSyncCtx: NonSyncContext>(
-            sync_ctx: &mut SyncCtx<NonSyncCtx>,
+            sync_ctx: &SyncCtx<NonSyncCtx>,
             ctx: &mut NonSyncCtx,
             local_addr: Option<SpecifiedAddr<Self::Addr>>,
             remote_addr: SpecifiedAddr<Self::Addr>,
@@ -3037,7 +3037,7 @@ mod tests {
         ) -> Result<IcmpConnId<Self>, IcmpSockCreationError>;
 
         fn send_icmp_echo_request<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>(
-            sync_ctx: &mut SyncCtx<NonSyncCtx>,
+            sync_ctx: &SyncCtx<NonSyncCtx>,
             ctx: &mut NonSyncCtx,
             conn: IcmpConnId<Self>,
             seq_num: u16,
@@ -3047,7 +3047,7 @@ mod tests {
 
     impl TestIpExt for Ipv4 {
         fn new_icmp_connection<NonSyncCtx: NonSyncContext>(
-            sync_ctx: &mut SyncCtx<NonSyncCtx>,
+            sync_ctx: &SyncCtx<NonSyncCtx>,
             ctx: &mut NonSyncCtx,
             local_addr: Option<SpecifiedAddr<Ipv4Addr>>,
             remote_addr: SpecifiedAddr<Ipv4Addr>,
@@ -3058,7 +3058,7 @@ mod tests {
         }
 
         fn send_icmp_echo_request<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>(
-            sync_ctx: &mut SyncCtx<NonSyncCtx>,
+            sync_ctx: &SyncCtx<NonSyncCtx>,
             ctx: &mut NonSyncCtx,
             conn: IcmpConnId<Ipv4>,
             seq_num: u16,
@@ -3070,7 +3070,7 @@ mod tests {
 
     impl TestIpExt for Ipv6 {
         fn new_icmp_connection<NonSyncCtx: NonSyncContext>(
-            sync_ctx: &mut SyncCtx<NonSyncCtx>,
+            sync_ctx: &SyncCtx<NonSyncCtx>,
             ctx: &mut NonSyncCtx,
             local_addr: Option<SpecifiedAddr<Ipv6Addr>>,
             remote_addr: SpecifiedAddr<Ipv6Addr>,
@@ -3081,7 +3081,7 @@ mod tests {
         }
 
         fn send_icmp_echo_request<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>(
-            sync_ctx: &mut SyncCtx<NonSyncCtx>,
+            sync_ctx: &SyncCtx<NonSyncCtx>,
             ctx: &mut NonSyncCtx,
             conn: IcmpConnId<Ipv6>,
             seq_num: u16,
@@ -3142,8 +3142,9 @@ mod tests {
         modify_packet_builder(&mut pb);
         let buffer = Buf::new(body, ..).encapsulate(pb).serialize_vec_outer().unwrap();
 
-        let Ctx { mut sync_ctx, mut non_sync_ctx } =
+        let Ctx { sync_ctx, mut non_sync_ctx } =
             I::DUMMY_CONFIG.into_builder().build_with_modifications(modify_stack_state_builder);
+        let mut sync_ctx = &sync_ctx;
 
         let device = DeviceId::new_ethernet(0);
         set_routing_enabled::<_, _, I>(&mut sync_ctx, &mut non_sync_ctx, device, true)
@@ -3739,13 +3740,17 @@ mod tests {
 
         let loopback_device_id =
             net.with_context(LOCAL_CTX_NAME, |Ctx { sync_ctx, non_sync_ctx }| {
-                crate::device::add_loopback_device(sync_ctx, non_sync_ctx, u16::MAX.into())
+                crate::device::add_loopback_device(&mut &*sync_ctx, non_sync_ctx, u16::MAX.into())
                     .expect("create the loopback interface")
             });
 
         let echo_body = vec![1, 2, 3, 4];
         let conn = net.with_context(LOCAL_CTX_NAME, |Ctx { sync_ctx, non_sync_ctx }| {
-            crate::device::testutil::enable_device(sync_ctx, non_sync_ctx, loopback_device_id);
+            crate::device::testutil::enable_device(
+                &mut &*sync_ctx,
+                non_sync_ctx,
+                loopback_device_id,
+            );
 
             let conn = I::new_icmp_connection(
                 sync_ctx,
@@ -3770,7 +3775,9 @@ mod tests {
 
         net.run_until_idle(
             crate::device::testutil::receive_frame_or_panic,
-            |Ctx { sync_ctx, non_sync_ctx }, _, id| crate::handle_timer(sync_ctx, non_sync_ctx, id),
+            |Ctx { sync_ctx, non_sync_ctx }, _, id| {
+                crate::handle_timer(&mut &*sync_ctx, non_sync_ctx, id)
+            },
         );
 
         assert_eq!(

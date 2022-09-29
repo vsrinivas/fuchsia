@@ -2372,7 +2372,6 @@ mod tests {
                 iid: IID,
                 slaac_addrs: Default::default(),
             }));
-        let sync_ctx = &mut sync_ctx;
 
         let mut dup_rng = non_sync_ctx.rng().clone();
 
@@ -2434,7 +2433,7 @@ mod tests {
 
         // Generate the first temporary SLAAC address.
         SlaacHandler::apply_slaac_update(
-            sync_ctx,
+            &mut sync_ctx,
             &mut non_sync_ctx,
             DummyDeviceId,
             SUBNET,
@@ -2460,7 +2459,7 @@ mod tests {
         // Trigger the regenerate timer to generate the second temporary SLAAC
         // address.
         assert_eq!(
-            non_sync_ctx.trigger_next_timer(sync_ctx, TimerHandler::handle_timer),
+            non_sync_ctx.trigger_next_timer(&mut sync_ctx, TimerHandler::handle_timer),
             Some(first_regenerate_timer_id),
         );
         let AddrProps {
@@ -2487,7 +2486,7 @@ mod tests {
 
         // Deprecate first address.
         assert_eq!(
-            non_sync_ctx.trigger_next_timer(sync_ctx, TimerHandler::handle_timer),
+            non_sync_ctx.trigger_next_timer(&mut sync_ctx, TimerHandler::handle_timer),
             Some(first_deprecate_timer_id),
         );
         let first_entry = SlaacAddressEntry { deprecated: true, ..first_entry };
@@ -2514,7 +2513,7 @@ mod tests {
                 let timer_id = *timer_id;
 
                 assert_eq!(
-                    non_sync_ctx.trigger_next_timer(sync_ctx, TimerHandler::handle_timer),
+                    non_sync_ctx.trigger_next_timer(&mut sync_ctx, TimerHandler::handle_timer),
                     Some(timer_id),
                 );
 
@@ -2604,7 +2603,8 @@ mod tests {
             const_unwrap::const_unwrap_option(NonZeroU64::new(TWO_HOURS_AS_SECS as u64)),
         );
 
-        let Ctx { mut sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
+        let Ctx { sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
+        let mut sync_ctx = &sync_ctx;
         let device_id =
             sync_ctx.state.device.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::ip::device::update_ipv6_configuration(
@@ -2624,7 +2624,7 @@ mod tests {
             },
         );
 
-        let set_ip_enabled = |sync_ctx: &mut crate::testutil::DummySyncCtx,
+        let set_ip_enabled = |sync_ctx: &mut &crate::testutil::DummySyncCtx,
                               non_sync_ctx: &mut crate::testutil::DummyNonSyncCtx,
                               enabled| {
             crate::ip::device::update_ipv6_configuration(

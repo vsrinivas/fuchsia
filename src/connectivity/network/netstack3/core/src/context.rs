@@ -96,7 +96,7 @@ use crate::{Instant, NonSyncContext, SyncCtx};
 /// [this issue]: https://github.com/rust-lang/rust/issues/97811
 pub(crate) trait NonTestCtxMarker {}
 
-impl<NonSyncCtx: NonSyncContext> NonTestCtxMarker for SyncCtx<NonSyncCtx> {}
+impl<NonSyncCtx: NonSyncContext> NonTestCtxMarker for &'_ SyncCtx<NonSyncCtx> {}
 
 /// A context that provides access to a monotonic clock.
 pub trait InstantContext {
@@ -674,9 +674,9 @@ pub(crate) mod testutil {
         ///
         /// `trigger_next_timer` triggers the next timer, if any, advances the
         /// internal clock to the timer's scheduled time, and returns its ID.
-        fn trigger_next_timer<C, F: FnMut(&mut C, &mut Self, Id)>(
+        fn trigger_next_timer<C, F: FnMut(C, &mut Self, Id)>(
             &mut self,
-            ctx: &mut C,
+            ctx: C,
             mut f: F,
         ) -> Option<Id> {
             self.as_mut().timers.pop().map(|InstantAndData(t, id)| {
@@ -839,6 +839,13 @@ pub(crate) mod testutil {
         F: FnMut(&mut SC, &mut C, Id) + 'a,
     >(
         sync_ctx: &'a mut SC,
+        mut f: F,
+    ) -> impl FnMut(&mut C, Id) + 'a {
+        move |non_sync_ctx, id| f(sync_ctx, non_sync_ctx, id)
+    }
+
+    pub(crate) fn handle_timer_helper_with_sc_ref<'a, Id, SC, C, F: FnMut(&SC, &mut C, Id) + 'a>(
+        sync_ctx: &'a SC,
         mut f: F,
     ) -> impl FnMut(&mut C, Id) + 'a {
         move |non_sync_ctx, id| f(sync_ctx, non_sync_ctx, id)

@@ -833,7 +833,7 @@ mod tests {
 
         net.with_context("alice", |Ctx { sync_ctx, non_sync_ctx }| {
             BufferIpSocketHandler::<Ipv4, _, _>::send_oneshot_ip_packet(
-                sync_ctx,
+                &mut &*sync_ctx,
                 non_sync_ctx,
                 None, // device
                 None, // local_ip
@@ -994,7 +994,7 @@ mod tests {
         // Alice sends Bob a ping.
         net.with_context("alice", |Ctx { sync_ctx, non_sync_ctx }| {
             BufferIpSocketHandler::<Ipv4, _, _>::send_oneshot_ip_packet(
-                sync_ctx,
+                &mut &*sync_ctx,
                 non_sync_ctx,
                 None, // device
                 None, // local_ip
@@ -1079,14 +1079,14 @@ mod tests {
         assert!(net.step(receive_frame_or_panic, handle_timer).is_idle());
     }
 
-    fn send_packet<A: IpAddress>(
-        sync_ctx: &mut DummySyncCtx,
+    fn send_packet<'a, A: IpAddress>(
+        mut sync_ctx: &'a DummySyncCtx,
         ctx: &mut DummyNonSyncCtx,
         src_ip: SpecifiedAddr<A>,
         dst_ip: SpecifiedAddr<A>,
         device: DeviceId,
     ) where
-        DummySyncCtx:
+        &'a DummySyncCtx:
             BufferIpLayerHandler<A::Version, DummyNonSyncCtx, Buf<Vec<u8>>, DeviceId = DeviceId>,
     {
         let meta = SendIpPacketMeta {
@@ -1099,7 +1099,7 @@ mod tests {
             mtu: None,
         };
         BufferIpLayerHandler::<A::Version, _, _>::send_ip_packet_from_device(
-            sync_ctx,
+            &mut sync_ctx,
             ctx,
             meta,
             Buf::new(vec![1, 2, 3, 4], ..),
@@ -1110,7 +1110,8 @@ mod tests {
     #[ip_test]
     fn test_send_to_many<I: Ip + TestIpExt>()
     where
-        DummySyncCtx: BufferIpLayerHandler<I, DummyNonSyncCtx, Buf<Vec<u8>>, DeviceId = DeviceId>,
+        for<'a> &'a DummySyncCtx:
+            BufferIpLayerHandler<I, DummyNonSyncCtx, Buf<Vec<u8>>, DeviceId = DeviceId>,
     {
         let device_builder_id = 0;
         let device = DeviceId::new_ethernet(device_builder_id);

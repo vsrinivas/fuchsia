@@ -586,9 +586,14 @@ mod tests {
         let Ctx { sync_ctx, non_sync_ctx } = &mut ctx;
         let device_id =
             sync_ctx.state.device.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        crate::ip::device::update_ipv6_configuration(sync_ctx, non_sync_ctx, device_id, |config| {
-            config.ip_config.ip_enabled = true;
-        });
+        crate::ip::device::update_ipv6_configuration(
+            &mut &*sync_ctx,
+            non_sync_ctx,
+            device_id,
+            |config| {
+                config.ip_config.ip_enabled = true;
+            },
+        );
 
         non_sync_ctx.timer_ctx().assert_no_timers_installed();
 
@@ -622,7 +627,7 @@ mod tests {
     #[test]
     fn discovery_integration() {
         let (
-            mut ctx,
+            Ctx { sync_ctx, mut non_sync_ctx },
             device_id,
             DummyEventDispatcherConfig {
                 local_mac: _,
@@ -632,7 +637,7 @@ mod tests {
                 subnet,
             },
         ) = setup();
-        let Ctx { sync_ctx, non_sync_ctx } = &mut ctx;
+        let mut sync_ctx = &sync_ctx;
 
         let src_ip = remote_mac.to_ipv6_link_local().addr();
 
@@ -651,20 +656,20 @@ mod tests {
         // Do nothing as router with no valid lifetime has not been discovered
         // yet and prefix does not make on-link determination.
         receive_ipv6_packet(
-            sync_ctx,
-            non_sync_ctx,
+            &mut sync_ctx,
+            &mut non_sync_ctx,
             device_id,
             FrameDestination::Unicast,
             buf(0, false, as_secs(ONE_SECOND).into()),
         );
-        assert_eq!(take_route_discovery_events(non_sync_ctx), HashSet::from([]));
+        assert_eq!(take_route_discovery_events(&mut non_sync_ctx), HashSet::from([]));
         non_sync_ctx.timer_ctx().assert_no_timers_installed();
 
         // Discover a default router only as on-link prefix has no valid
         // lifetime.
         receive_ipv6_packet(
-            sync_ctx,
-            non_sync_ctx,
+            &mut sync_ctx,
+            &mut non_sync_ctx,
             device_id,
             FrameDestination::Unicast,
             buf(as_secs(ONE_SECOND), true, 0),
@@ -672,7 +677,7 @@ mod tests {
         let gateway_route =
             Ipv6DiscoveredRoute { subnet: IPV6_DEFAULT_SUBNET, gateway: Some(src_ip) };
         assert_eq!(
-            take_route_discovery_events(non_sync_ctx),
+            take_route_discovery_events(&mut non_sync_ctx),
             HashSet::from([Ipv6RouteDiscoveryEvent {
                 device_id,
                 route: gateway_route,
@@ -687,15 +692,15 @@ mod tests {
         // Discover an on-link prefix and update valid lifetime for default
         // router.
         receive_ipv6_packet(
-            sync_ctx,
-            non_sync_ctx,
+            &mut sync_ctx,
+            &mut non_sync_ctx,
             device_id,
             FrameDestination::Unicast,
             buf(as_secs(TWO_SECONDS), true, as_secs(ONE_SECOND).into()),
         );
         let on_link_route = Ipv6DiscoveredRoute { subnet, gateway: None };
         assert_eq!(
-            take_route_discovery_events(non_sync_ctx),
+            take_route_discovery_events(&mut non_sync_ctx),
             HashSet::from([Ipv6RouteDiscoveryEvent {
                 device_id,
                 route: on_link_route,
@@ -710,14 +715,14 @@ mod tests {
         // Invalidate default router and update valid lifetime for on-link
         // prefix.
         receive_ipv6_packet(
-            sync_ctx,
-            non_sync_ctx,
+            &mut sync_ctx,
+            &mut non_sync_ctx,
             device_id,
             FrameDestination::Unicast,
             buf(0, true, as_secs(TWO_SECONDS).into()),
         );
         assert_eq!(
-            take_route_discovery_events(non_sync_ctx),
+            take_route_discovery_events(&mut non_sync_ctx),
             HashSet::from([Ipv6RouteDiscoveryEvent {
                 device_id,
                 route: gateway_route,
@@ -732,13 +737,13 @@ mod tests {
         // Do nothing as prefix does not make on-link determination and router
         // with valid lifetime is not discovered.
         receive_ipv6_packet(
-            sync_ctx,
-            non_sync_ctx,
+            &mut sync_ctx,
+            &mut non_sync_ctx,
             device_id,
             FrameDestination::Unicast,
             buf(0, false, 0),
         );
-        assert_eq!(take_route_discovery_events(non_sync_ctx), HashSet::from([]));
+        assert_eq!(take_route_discovery_events(&mut non_sync_ctx), HashSet::from([]));
         non_sync_ctx.timer_ctx().assert_timers_installed([(
             timer_id(on_link_route),
             DummyInstant::from(TWO_SECONDS.get()),
@@ -746,14 +751,14 @@ mod tests {
 
         // Invalidate on-link prefix.
         receive_ipv6_packet(
-            sync_ctx,
-            non_sync_ctx,
+            &mut sync_ctx,
+            &mut non_sync_ctx,
             device_id,
             FrameDestination::Unicast,
             buf(0, true, 0),
         );
         assert_eq!(
-            take_route_discovery_events(non_sync_ctx),
+            take_route_discovery_events(&mut non_sync_ctx),
             HashSet::from([Ipv6RouteDiscoveryEvent {
                 device_id,
                 route: on_link_route,
@@ -766,7 +771,7 @@ mod tests {
     #[test]
     fn discovery_integration_infinite_to_finite_to_infinite_lifetime() {
         let (
-            mut ctx,
+            Ctx { sync_ctx, mut non_sync_ctx },
             device_id,
             DummyEventDispatcherConfig {
                 local_mac: _,
@@ -776,7 +781,7 @@ mod tests {
                 subnet,
             },
         ) = setup();
-        let Ctx { sync_ctx, non_sync_ctx } = &mut ctx;
+        let mut sync_ctx = &sync_ctx;
 
         let src_ip = remote_mac.to_ipv6_link_local().addr();
 
@@ -801,14 +806,14 @@ mod tests {
         let router_lifetime_secs = u16::MAX;
         let prefix_lifetime_secs = u32::MAX;
         receive_ipv6_packet(
-            sync_ctx,
-            non_sync_ctx,
+            &mut sync_ctx,
+            &mut non_sync_ctx,
             device_id,
             FrameDestination::Unicast,
             buf(router_lifetime_secs, true, prefix_lifetime_secs),
         );
         assert_eq!(
-            take_route_discovery_events(non_sync_ctx),
+            take_route_discovery_events(&mut non_sync_ctx),
             HashSet::from([
                 Ipv6RouteDiscoveryEvent {
                     device_id,
@@ -831,8 +836,8 @@ mod tests {
         let router_lifetime_secs = u16::MAX - 1;
         let prefix_lifetime_secs = u32::MAX - 1;
         receive_ipv6_packet(
-            sync_ctx,
-            non_sync_ctx,
+            &mut sync_ctx,
+            &mut non_sync_ctx,
             device_id,
             FrameDestination::Unicast,
             buf(router_lifetime_secs, true, prefix_lifetime_secs),
@@ -853,8 +858,8 @@ mod tests {
         let router_lifetime_secs = u16::MAX;
         let prefix_lifetime_secs = u32::MAX;
         receive_ipv6_packet(
-            sync_ctx,
-            non_sync_ctx,
+            &mut sync_ctx,
+            &mut non_sync_ctx,
             device_id,
             FrameDestination::Unicast,
             buf(router_lifetime_secs, true, prefix_lifetime_secs),
@@ -868,14 +873,14 @@ mod tests {
         let router_lifetime_secs = 0;
         let prefix_lifetime_secs = 0;
         receive_ipv6_packet(
-            sync_ctx,
-            non_sync_ctx,
+            &mut sync_ctx,
+            &mut non_sync_ctx,
             device_id,
             FrameDestination::Unicast,
             buf(router_lifetime_secs, true, prefix_lifetime_secs),
         );
         assert_eq!(
-            take_route_discovery_events(non_sync_ctx),
+            take_route_discovery_events(&mut non_sync_ctx),
             HashSet::from([
                 Ipv6RouteDiscoveryEvent {
                     device_id,
@@ -895,7 +900,7 @@ mod tests {
     #[test]
     fn flush_routes_on_interface_disabled_integration() {
         let (
-            mut ctx,
+            Ctx { sync_ctx, mut non_sync_ctx },
             device_id,
             DummyEventDispatcherConfig {
                 local_mac: _,
@@ -905,7 +910,7 @@ mod tests {
                 subnet,
             },
         ) = setup();
-        let Ctx { sync_ctx, non_sync_ctx } = &mut ctx;
+        let mut sync_ctx = &sync_ctx;
 
         let src_ip = remote_mac.to_ipv6_link_local().addr();
         let gateway_route =
@@ -916,8 +921,8 @@ mod tests {
 
         // Discover both an on-link prefix and default router.
         receive_ipv6_packet(
-            sync_ctx,
-            non_sync_ctx,
+            &mut sync_ctx,
+            &mut non_sync_ctx,
             device_id,
             FrameDestination::Unicast,
             router_advertisement_buf(
@@ -929,7 +934,7 @@ mod tests {
             ),
         );
         assert_eq!(
-            take_route_discovery_events(non_sync_ctx),
+            take_route_discovery_events(&mut non_sync_ctx),
             HashSet::from([
                 Ipv6RouteDiscoveryEvent {
                     device_id,
@@ -949,11 +954,16 @@ mod tests {
         ]);
 
         // Disable the interface.
-        crate::ip::device::update_ipv6_configuration(sync_ctx, non_sync_ctx, device_id, |config| {
-            config.ip_config.ip_enabled = false;
-        });
+        crate::ip::device::update_ipv6_configuration(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            device_id,
+            |config| {
+                config.ip_config.ip_enabled = false;
+            },
+        );
         assert_eq!(
-            take_route_discovery_events(non_sync_ctx),
+            take_route_discovery_events(&mut non_sync_ctx),
             HashSet::from([
                 Ipv6RouteDiscoveryEvent {
                     device_id,

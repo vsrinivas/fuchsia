@@ -23,7 +23,7 @@ use packet_formats::{
 };
 
 use crate::{
-    context::testutil::{handle_timer_helper_with_sc_ref_mut, DummyTimerCtxExt},
+    context::testutil::{handle_timer_helper_with_sc_ref, DummyTimerCtxExt},
     Ctx, DeviceId, TimerId,
 };
 
@@ -320,7 +320,7 @@ fn dispatch(
         AdvanceTime(SmallDuration(duration)) => {
             let _: Vec<TimerId> = non_sync_ctx.trigger_timers_for(
                 duration,
-                handle_timer_helper_with_sc_ref_mut(sync_ctx, crate::handle_timer),
+                handle_timer_helper_with_sc_ref(&*sync_ctx, crate::handle_timer),
             );
         }
     }

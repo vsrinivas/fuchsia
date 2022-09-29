@@ -684,12 +684,12 @@ macro_rules! with_ip_version {
 }
 
 /// Creates a new socket in unbound state.
-pub fn create_socket<I, C>(sync_ctx: &mut SyncCtx<C>, ctx: &mut C) -> UnboundId
+pub fn create_socket<I, C>(mut sync_ctx: &SyncCtx<C>, ctx: &mut C) -> UnboundId
 where
     I: IpExt,
     C: NonSyncContext,
 {
-    with_ip_version!(Ip, I, create_socket(sync_ctx, ctx))
+    with_ip_version!(Ip, I, create_socket(&mut sync_ctx, ctx))
 }
 
 /// Possible errors for the bind operation.
@@ -705,7 +705,7 @@ pub enum BindError {
 
 /// Binds an unbound socket to a local socket address.
 pub fn bind<I, C>(
-    sync_ctx: &mut SyncCtx<C>,
+    mut sync_ctx: &SyncCtx<C>,
     ctx: &mut C,
     id: UnboundId,
     local_ip: I::Addr,
@@ -715,7 +715,7 @@ where
     I: IpExt,
     C: NonSyncContext,
 {
-    with_ip_version!(Address, local_ip, bind(sync_ctx, ctx, id, local_ip, port))
+    with_ip_version!(Address, local_ip, bind(&mut sync_ctx, ctx, id, local_ip, port))
 }
 
 fn bind_inner<I, SC, C>(
@@ -765,7 +765,7 @@ where
 
 /// Listens on an already bound socket.
 pub fn listen<I, C>(
-    sync_ctx: &mut SyncCtx<C>,
+    mut sync_ctx: &SyncCtx<C>,
     ctx: &mut C,
     id: BoundId,
     backlog: NonZeroUsize,
@@ -774,7 +774,7 @@ where
     I: IpExt,
     C: NonSyncContext,
 {
-    with_ip_version!(Ip, I, listen(sync_ctx, ctx, id, backlog))
+    with_ip_version!(Ip, I, listen(&mut sync_ctx, ctx, id, backlog))
 }
 
 /// Possible errors for accept operation.
@@ -786,7 +786,7 @@ pub enum AcceptError {
 
 /// Accepts an established socket from the queue of a listener socket.
 pub fn accept<I: Ip, C>(
-    sync_ctx: &mut SyncCtx<C>,
+    mut sync_ctx: &SyncCtx<C>,
     ctx: &mut C,
     id: ListenerId,
 ) -> Result<(ConnectionId, SocketAddr<I::Addr>, C::ReturnedBuffers), AcceptError>
@@ -794,7 +794,7 @@ where
     C: NonSyncContext,
 {
     I::map_ip::<_, Result<_, _>>(
-        IpInv((sync_ctx, ctx, id)),
+        IpInv((&mut sync_ctx, ctx, id)),
         |IpInv((sync_ctx, ctx, id))| {
             TcpSocketHandler::<Ipv4, _>::accept(sync_ctx, ctx, id)
                 .map(|(a, b, c)| (IpInv(a), b, IpInv(c)))
@@ -821,7 +821,7 @@ pub enum ConnectError {
 
 /// Connects a socket that has been bound locally.
 pub fn connect_bound<I, C>(
-    sync_ctx: &mut SyncCtx<C>,
+    mut sync_ctx: &SyncCtx<C>,
     ctx: &mut C,
     id: BoundId,
     remote: SocketAddr<I::Addr>,
@@ -831,12 +831,16 @@ where
     I: IpExt,
     C: NonSyncContext,
 {
-    with_ip_version!(Address, remote, connect_bound(sync_ctx, ctx, id, remote, netstack_buffers))
+    with_ip_version!(
+        Address,
+        remote,
+        connect_bound(&mut sync_ctx, ctx, id, remote, netstack_buffers)
+    )
 }
 
 /// Connects a socket that is in unbound state.
 pub fn connect_unbound<I, C>(
-    sync_ctx: &mut SyncCtx<C>,
+    mut sync_ctx: &SyncCtx<C>,
     ctx: &mut C,
     id: UnboundId,
     remote: SocketAddr<I::Addr>,
@@ -846,7 +850,11 @@ where
     I: IpExt,
     C: NonSyncContext,
 {
-    with_ip_version!(Address, remote, connect_unbound(sync_ctx, ctx, id, remote, netstack_buffers))
+    with_ip_version!(
+        Address,
+        remote,
+        connect_unbound(&mut sync_ctx, ctx, id, remote, netstack_buffers)
+    )
 }
 
 fn connect_inner<I, SC, C>(
@@ -947,7 +955,7 @@ pub fn get_bound_v4_info<C: NonSyncContext>(
     sync_ctx: &SyncCtx<C>,
     id: BoundId,
 ) -> BoundInfo<Ipv4Addr> {
-    TcpSocketHandler::<Ipv4, _>::get_bound_info(sync_ctx, id)
+    TcpSocketHandler::<Ipv4, _>::get_bound_info(&sync_ctx, id)
 }
 
 /// Get information for listener IPv4 TCP socket.
@@ -955,7 +963,7 @@ pub fn get_listener_v4_info<C: NonSyncContext>(
     sync_ctx: &SyncCtx<C>,
     id: ListenerId,
 ) -> BoundInfo<Ipv4Addr> {
-    TcpSocketHandler::<Ipv4, _>::get_listener_info(sync_ctx, id)
+    TcpSocketHandler::<Ipv4, _>::get_listener_info(&sync_ctx, id)
 }
 
 /// Get information for connection IPv4 TCP socket.
@@ -963,7 +971,7 @@ pub fn get_connection_v4_info<C: NonSyncContext>(
     sync_ctx: &SyncCtx<C>,
     id: ConnectionId,
 ) -> ConnectionInfo<Ipv4Addr> {
-    TcpSocketHandler::<Ipv4, _>::get_connection_info(sync_ctx, id)
+    TcpSocketHandler::<Ipv4, _>::get_connection_info(&sync_ctx, id)
 }
 
 /// Get information for bound IPv6 TCP socket.
@@ -971,7 +979,7 @@ pub fn get_bound_v6_info<C: NonSyncContext>(
     sync_ctx: &SyncCtx<C>,
     id: BoundId,
 ) -> BoundInfo<Ipv6Addr> {
-    TcpSocketHandler::<Ipv6, _>::get_bound_info(sync_ctx, id)
+    TcpSocketHandler::<Ipv6, _>::get_bound_info(&sync_ctx, id)
 }
 
 /// Get information for listener IPv6 TCP socket.
@@ -979,7 +987,7 @@ pub fn get_listener_v6_info<C: NonSyncContext>(
     sync_ctx: &SyncCtx<C>,
     id: ListenerId,
 ) -> BoundInfo<Ipv6Addr> {
-    TcpSocketHandler::<Ipv6, _>::get_listener_info(sync_ctx, id)
+    TcpSocketHandler::<Ipv6, _>::get_listener_info(&sync_ctx, id)
 }
 
 /// Get information for connection IPv6 TCP socket.
@@ -987,7 +995,7 @@ pub fn get_connection_v6_info<C: NonSyncContext>(
     sync_ctx: &SyncCtx<C>,
     id: ConnectionId,
 ) -> ConnectionInfo<Ipv6Addr> {
-    TcpSocketHandler::<Ipv6, _>::get_connection_info(sync_ctx, id)
+    TcpSocketHandler::<Ipv6, _>::get_connection_info(&sync_ctx, id)
 }
 
 /// Call this function whenever a socket can push out more data. That means either:
@@ -995,12 +1003,12 @@ pub fn get_connection_v6_info<C: NonSyncContext>(
 /// - A retransmission timer fires.
 /// - An ack received from peer so that our send window is enlarged.
 /// - The user puts data into the buffer and we are notified.
-pub fn do_send<I, C>(sync_ctx: &mut SyncCtx<C>, ctx: &mut C, conn_id: ConnectionId)
+pub fn do_send<I, C>(mut sync_ctx: &SyncCtx<C>, ctx: &mut C, conn_id: ConnectionId)
 where
     I: IpExt,
     C: NonSyncContext,
 {
-    with_ip_version!(Ip, I, do_send(sync_ctx, ctx, conn_id))
+    with_ip_version!(Ip, I, do_send(&mut sync_ctx, ctx, conn_id))
 }
 
 pub(crate) fn handle_timer<SC, C>(
