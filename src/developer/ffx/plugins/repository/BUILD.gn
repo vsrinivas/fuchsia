@@ -13,9 +13,11 @@ ffx_plugin("ffx_repository") {
 
   plugin_deps = [
     "add-from-pm:ffx_repository_add_from_pm",
+    "create:ffx_repository_create",
     "default:ffx_repository_default",
     "list:ffx_repository_list",
     "packages:ffx_repository_packages",
+    "publish:ffx_repository_publish",
     "remove:ffx_repository_remove",
     "server:ffx_repository_server",
   ]

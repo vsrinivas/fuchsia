@@ -5,26 +5,41 @@
 import("//build/host.gni")
 import("//build/rust/rustc_binary.gni")
 
-rustc_binary("package-tool") {
-  version = "0.1.0"
-  edition = "2021"
-  with_unit_tests = true
-  deps = [
-    "//src/lib/fuchsia",
-    "//src/sys/pkg/lib/package-tool",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:argh",
-  ]
+if (is_host) {
+  rustc_binary("package-tool") {
+    version = "0.1.0"
+    edition = "2021"
+    with_unit_tests = true
+    deps = [
+      "//src/lib/fuchsia",
+      "//src/sys/pkg/lib/package-tool",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:argh",
+    ]
 
-  sources = [ "src/main.rs" ]
-}
+    sources = [ "src/main.rs" ]
+  }
 
-install_host_tools("host") {
-  deps = [ ":package-tool" ]
-  outputs = [ "package-tool" ]
-}
+  install_host_tools("host") {
+    deps = [ ":package-tool" ]
+    outputs = [ "package-tool" ]
+  }
 
-group("tests") {
-  testonly = true
-  deps = [ ":package-tool_test($host_toolchain)" ]
+  group("tests") {
+    testonly = true
+    deps = [ ":package-tool_test($host_toolchain)" ]
+  }
+} else {
+  group("package-tool") {
+    deps = [ ":package-tool($host_toolchain)" ]
+  }
+
+  group("host") {
+    deps = [ ":host($host_toolchain)" ]
+  }
+
+  group("tests") {
+    testonly = true
+    deps = [ ":tests($host_toolchain)" ]
+  }
 }

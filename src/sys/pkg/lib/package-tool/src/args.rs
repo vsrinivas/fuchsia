@@ -7,7 +7,7 @@ use {argh::FromArgs, camino::Utf8PathBuf, std::path::PathBuf};
 /// Builds a package.
 #[derive(FromArgs, PartialEq, Debug, Default)]
 #[argh(subcommand, name = "build")]
-pub struct BuildCommand {
+pub struct PackageBuildCommand {
     #[argh(
         option,
         short = 'o',
@@ -45,4 +45,44 @@ pub struct BuildCommand {
 
     #[argh(positional, description = "path to the creation manifest file")]
     pub creation_manifest_path: PathBuf,
+}
+
+/// Create a repository.
+#[derive(FromArgs, PartialEq, Debug, Default)]
+#[argh(subcommand, name = "create")]
+pub struct RepoCreateCommand {
+    #[argh(
+        switch,
+        description = "set repository version based on the current time rather than monotonically increasing version"
+    )]
+    pub time_versioning: bool,
+
+    #[argh(option, description = "path to the repository keys directory")]
+    pub keys: PathBuf,
+
+    #[argh(positional, description = "path to the repository directory")]
+    pub repo_path: Utf8PathBuf,
+}
+
+/// Publish packages.
+#[derive(FromArgs, PartialEq, Debug, Default)]
+#[argh(subcommand, name = "publish")]
+pub struct RepoPublishCommand {
+    #[argh(option, description = "path to the repository keys directory")]
+    pub keys: Option<Utf8PathBuf>,
+
+    #[argh(option, long = "package", description = "path to a package manifest")]
+    pub package_manifests: Vec<PathBuf>,
+
+    #[argh(option, long = "package-list", description = "path to a packages list manifest")]
+    pub package_list_manifests: Vec<PathBuf>,
+
+    #[argh(
+        switch,
+        description = "set repository version based on time rather than monotonically increasing version"
+    )]
+    pub time_versioning: bool,
+
+    #[argh(positional, description = "path to the repository directory")]
+    pub repo_path: Utf8PathBuf,
 }

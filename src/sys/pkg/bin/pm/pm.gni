@@ -240,6 +240,7 @@ template("pm_build") {
     ]
 
     args = [
+      "package",
       "build",
       "-o",
       rebase_path(package_out_dir, root_build_dir),

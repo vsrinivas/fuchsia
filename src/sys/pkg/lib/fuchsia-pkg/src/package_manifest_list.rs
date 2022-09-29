@@ -34,15 +34,19 @@ impl PackageManifestList {
         Iter(self.0.iter())
     }
 
-    /// Returns an iterator over the package manifest path entries.
-    pub fn into_iter(self) -> IntoIter {
-        IntoIter(self.0.into_iter())
-    }
-
     pub fn from_reader(reader: impl std::io::Read) -> Result<Self, std::io::Error> {
         let reader = std::io::BufReader::new(reader);
         let lines = reader.lines().collect::<Result<Vec<_>, _>>()?;
         Ok(Self(lines))
+    }
+}
+
+impl IntoIterator for PackageManifestList {
+    type Item = String;
+    type IntoIter = IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        IntoIter(self.0.into_iter())
     }
 }
 
