@@ -13,9 +13,24 @@ void RebootMethodsWatcherRegister::Register(
   watcher_->OnReboot(reason_, [] {});
 }
 
+void RebootMethodsWatcherRegister::RegisterWithAck(
+    ::fidl::InterfaceHandle<fuchsia::hardware::power::statecontrol::RebootMethodsWatcher> watcher,
+    RegisterWithAckCallback callback) {
+  watcher_ = watcher.Bind();
+  callback();
+  watcher_->OnReboot(reason_, [] {});
+}
+
 void RebootMethodsWatcherRegisterHangs::Register(
     ::fidl::InterfaceHandle<fuchsia::hardware::power::statecontrol::RebootMethodsWatcher> watcher) {
   watcher_ = watcher.Bind();
+}
+
+void RebootMethodsWatcherRegisterHangs::RegisterWithAck(
+    ::fidl::InterfaceHandle<fuchsia::hardware::power::statecontrol::RebootMethodsWatcher> watcher,
+    RegisterWithAckCallback callback) {
+  watcher_ = watcher.Bind();
+  callback();
 }
 
 }  // namespace stubs

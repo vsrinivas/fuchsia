@@ -18,6 +18,8 @@ namespace stubs {
 using RebootMethodsWatcherRegisterBase = SINGLE_BINDING_STUB_FIDL_SERVER(
     fuchsia::hardware::power::statecontrol, RebootMethodsWatcherRegister);
 
+// A RebootMethodsWatcherRegister that binds then immediately sends the provided `reason` to the
+// watcher.
 class RebootMethodsWatcherRegister : public RebootMethodsWatcherRegisterBase {
  public:
   RebootMethodsWatcherRegister(fuchsia::hardware::power::statecontrol::RebootReason reason)
@@ -27,6 +29,9 @@ class RebootMethodsWatcherRegister : public RebootMethodsWatcherRegisterBase {
   void Register(
       ::fidl::InterfaceHandle<fuchsia::hardware::power::statecontrol::RebootMethodsWatcher> watcher)
       override;
+  void RegisterWithAck(
+      ::fidl::InterfaceHandle<fuchsia::hardware::power::statecontrol::RebootMethodsWatcher> watcher,
+      RegisterWithAckCallback callback) override;
 
  private:
   fuchsia::hardware::power::statecontrol::RebootReason reason_;
@@ -42,6 +47,9 @@ class RebootMethodsWatcherRegisterHangs : public RebootMethodsWatcherRegisterBas
   void Register(
       ::fidl::InterfaceHandle<fuchsia::hardware::power::statecontrol::RebootMethodsWatcher> watcher)
       override;
+  void RegisterWithAck(
+      ::fidl::InterfaceHandle<fuchsia::hardware::power::statecontrol::RebootMethodsWatcher> watcher,
+      RegisterWithAckCallback callback) override;
 
  private:
   fuchsia::hardware::power::statecontrol::RebootMethodsWatcherPtr watcher_;

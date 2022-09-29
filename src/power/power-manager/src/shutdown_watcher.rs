@@ -119,8 +119,10 @@ impl ShutdownWatcher {
         });
     }
 
-    /// Called each time a client connects. For each client, a future is created to handle the
-    /// request stream.
+    /// Handles a new client connection to the RebootMethodsWatcherRegister service.
+    ///
+    /// This function is called each time a client connects. For each client, a new Task is created
+    /// to handle the client's request stream.
     fn handle_new_service_connection(
         self: Rc<Self>,
         mut stream: fpower::RebootMethodsWatcherRegisterRequestStream,
@@ -140,6 +142,13 @@ impl ShutdownWatcher {
                             control_handle: _,
                         } => {
                             self.add_reboot_watcher(watcher.into_proxy()?);
+                        }
+                        fpower::RebootMethodsWatcherRegisterRequest::RegisterWithAck {
+                            watcher,
+                            responder,
+                        } => {
+                            self.add_reboot_watcher(watcher.into_proxy()?);
+                            let _ = responder.send();
                         }
                     }
                 }
@@ -289,7 +298,7 @@ mod tests {
     use super::*;
     use crate::utils::run_all_tasks_until_stalled::run_all_tasks_until_stalled;
     use assert_matches::assert_matches;
-    use fidl::prelude::*;
+    use fidl::endpoints::{ControlHandle, RequestStream};
     use inspect::assert_data_tree;
 
     /// Tests that well-formed configuration JSON does not panic the `new_from_json` function.
@@ -382,9 +391,8 @@ mod tests {
 
     /// Tests that a client can successfully register a reboot watcher, and the registered watcher
     /// receives the expected reboot notification.
-    #[test]
-    fn test_add_reboot_watcher() {
-        let mut exec = fasync::TestExecutor::new().unwrap();
+    #[fasync::run_singlethreaded(test)]
+    async fn test_add_reboot_watcher() {
         let node = ShutdownWatcherBuilder::new().build().unwrap();
 
         // Create the proxy/stream to register the watcher
@@ -402,22 +410,15 @@ mod tests {
             fidl::endpoints::create_request_stream::<fpower::RebootMethodsWatcherMarker>().unwrap();
 
         // Call the Register API, passing in the watcher_client end
-        assert!(register_proxy.register(watcher_client).is_ok());
-
-        // The server runs asynchronously, so we need to give it a chance to run now
-        assert!(exec.run_until_stalled(&mut future::pending::<()>()).is_pending());
+        assert_matches!(register_proxy.register_with_ack(watcher_client).await, Ok(()));
 
         // Signal the watchers
-        exec.run_singlethreaded(
-            node.notify_reboot_watchers(RebootReason::UserRequest, Seconds(0.0)),
-        );
+        node.notify_reboot_watchers(RebootReason::UserRequest, Seconds(0.0)).await;
 
         // Verify the watcher_stream gets the correct reboot notification
         assert_matches!(
-            exec.run_until_stalled(&mut watcher_stream.try_next()),
-            futures::task::Poll::Ready(Ok(Some(
-                fpower::RebootMethodsWatcherRequest::OnReboot { .. }
-            )))
+            watcher_stream.try_next().await.unwrap().unwrap(),
+            fpower::RebootMethodsWatcherRequest::OnReboot { reason: RebootReason::UserRequest, .. }
         );
     }
 
@@ -492,13 +493,44 @@ mod tests {
         };
     }
 
-    /// Tests that the function `notify_reboot_watchers` does not return until the watchers have
-    /// completed or timed out. The test also verifies that when a watcher times out, it is removed
-    /// from the list of registered reboot watchers.
+    /// Tests that a reboot watcher is able to delay the shutdown.
     #[test]
     fn test_watcher_response_delay() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
         let node = ShutdownWatcherBuilder::new().build().unwrap();
+
+        // Register the reboot watcher
+        let (watcher_proxy, mut watcher_stream) =
+            fidl::endpoints::create_proxy_and_stream::<fpower::RebootMethodsWatcherMarker>()
+                .unwrap();
+        node.add_reboot_watcher(watcher_proxy);
+        assert_eq!(node.reboot_watchers.borrow().len(), 1);
+
+        // Set up the notify future
+        let notify_future =
+            node.notify_reboot_watchers(RebootReason::HighTemperature, Seconds(1.0));
+        futures::pin_mut!(notify_future);
+
+        // Verify that the notify future can't complete on the first attempt (because the watcher
+        // will not have responded)
+        assert!(exec.run_until_stalled(&mut notify_future).is_pending());
+
+        // Ack the reboot notification, allowing the shutdown flow to continue
+        let fpower::RebootMethodsWatcherRequest::OnReboot { responder, .. } =
+            exec.run_singlethreaded(&mut watcher_stream.try_next()).unwrap().unwrap();
+        assert_matches!(responder.send(), Ok(()));
+
+        // Verify the notify future can now complete
+        assert!(exec.run_until_stalled(&mut notify_future).is_ready());
+    }
+
+    /// Tests that a reboot watcher is able to delay the shutdown but will time out after the
+    /// expected duration. The test also verifies that when a watcher times out, it is removed
+    /// from the list of registered reboot watchers.
+    #[test]
+    fn test_watcher_response_timeout() {
         let mut exec = fasync::TestExecutor::new_with_fake_time().unwrap();
+        let node = ShutdownWatcherBuilder::new().build().unwrap();
         exec.set_fake_time(fasync::Time::from_nanos(0));
 
         // Register the reboot watcher
@@ -513,7 +545,7 @@ mod tests {
             node.notify_reboot_watchers(RebootReason::HighTemperature, Seconds(1.0));
         futures::pin_mut!(notify_future);
 
-        // Verify that the notify future can'tq complete on the first attempt (because the watcher
+        // Verify that the notify future can't complete on the first attempt (because the watcher
         // will not have responded)
         assert!(exec.run_until_stalled(&mut notify_future).is_pending());
 
@@ -525,5 +557,28 @@ mod tests {
 
         // Since the watcher timed out, verify it is removed from `reboot_watchers`
         assert_eq!(node.reboot_watchers.borrow().len(), 0);
+    }
+
+    /// Tests that an unsuccessful RebootWatcher registration results in the
+    /// RebootMethodsWatcherRegister channel being closed.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_watcher_register_fail() {
+        let node = ShutdownWatcherBuilder::new().build().unwrap();
+
+        // Create the registration proxy/stream
+        let (register_proxy, register_stream) = fidl::endpoints::create_proxy_and_stream::<
+            fpower::RebootMethodsWatcherRegisterMarker,
+        >()
+        .unwrap();
+
+        // Start the RebootMethodsWatcherRegister server that will handle Register requests from
+        // `register_proxy`
+        node.clone().handle_new_service_connection(register_stream);
+
+        // Send an invalid request to the server to force a failure
+        assert_matches!(register_proxy.as_channel().write(&[], &mut []), Ok(()));
+
+        // Verify the RebootMethodsWatcherRegister channel is closed
+        assert_matches!(register_proxy.on_closed().await, Ok(zx::Signals::CHANNEL_PEER_CLOSED));
     }
 }

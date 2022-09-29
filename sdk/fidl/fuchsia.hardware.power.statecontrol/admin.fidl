@@ -75,26 +75,48 @@ protocol Admin {
     SuspendToRam() -> (struct {}) error zx.status;
 };
 
-// Component Framework's orderly shutdown is tracked with bug 51034.
-/// Allows components to register a callback that will be executed when a Reboot method is called.
-/// The main purpose of this protocol is to be able to track reboot reasons. Consider relying on
-/// Component Framework's orderly shutdown if you're looking at using this protocol.
+/// Allows components to register a callback that will be executed when a Reboot
+/// method is called. The main purpose of this protocol is to be able to track
+/// reboot reasons. Consider relying on Component Framework's orderly shutdown
+/// if you're looking at using this protocol.
 @discoverable
 protocol RebootMethodsWatcherRegister {
-    /// Register a watcher to be notified when a Reboot method is called. The Register channel
-    /// will be used at most once to notify the watcher of an impending reboot and allow it
-    /// the chance to respond.
+    /// Register a watcher to be notified when a Reboot method is called. The
+    /// Register channel will be used at most once to notify the watcher of an
+    /// impending reboot and allow it the chance to respond.
     ///
     /// Watchers can unregister by closing the underlying channel.
+    @available(deprecated=HEAD)
     Register(resource struct {
         watcher client_end:RebootMethodsWatcher;
     });
+
+    /// Registers a watcher to be notified when a Reboot method is called.
+    ///
+    /// Once the watcher has been successfully registered with the server, then
+    /// the request will be completed and the RebootMethodsWatcherRegister
+    /// channel will be left open (though a client is free to close it at this
+    /// time).
+    ///
+    /// If there is an error in registering the watcher, then the
+    /// RebootMethodsWatcherRegister channel will be closed without completing
+    /// the request.
+    ///
+    /// The provided `watcher` channel will be used at most once to notify the
+    /// watcher of an impending reboot and allow it the chance to respond.
+    ///
+    /// Watchers can unregister by closing their `RebootMethodsWatcher` channel.
+    @available(added=HEAD)
+    RegisterWithAck(resource struct {
+        watcher client_end:RebootMethodsWatcher;
+    }) -> ();
 };
 
-/// Allows components to be notified when Reboot related methods are called. Watchers will be given
-/// 'MAX_REBOOT_WATCHER_RESPONSE_TIME_SECONDS' to return before the system power state is changed.
-/// The channel will be used once to send a notification to the watcher. Once the watcher responds
-/// or the timeout expires, the channel will be closed by the client of RebootMethodsWatcher.
+/// Allows components to be notified when Reboot related methods are called.
+/// Watchers will be given 'MAX_REBOOT_WATCHER_RESPONSE_TIME_SECONDS' to return
+/// before the system power state is changed. The channel will be used once to
+/// send a notification to the watcher. Once the watcher responds or the timeout
+/// expires, the channel will be closed by the client of RebootMethodsWatcher.
 protocol RebootMethodsWatcher {
     OnReboot(struct {
         reason RebootReason;
