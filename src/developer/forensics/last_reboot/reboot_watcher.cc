@@ -34,7 +34,10 @@ void ImminentGracefulRebootWatcher::Connect() {
   // endpoint to a long-lived connection we maintain.
   auto reboot_watcher_register =
       services_->Connect<fuchsia::hardware::power::statecontrol::RebootMethodsWatcherRegister>();
-  reboot_watcher_register->Register(connection_.NewBinding());
+
+  // |connection_| is bound with a fire-and-forget request that ignores the ack because failures
+  // aren't expected unless the system is in a dire state.
+  reboot_watcher_register->RegisterWithAck(connection_.NewBinding(), [] {});
 }
 
 void ImminentGracefulRebootWatcher::OnReboot(
