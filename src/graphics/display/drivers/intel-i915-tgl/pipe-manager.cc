@@ -5,10 +5,17 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/pipe-manager.h"
 
 #include <lib/mmio/mmio-buffer.h>
+#include <zircon/assert.h>
+
+#include <algorithm>
+#include <optional>
+#include <utility>
 
 #include "src/graphics/display/drivers/intel-i915-tgl/hardware-common.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/intel-i915-tgl.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/pipe.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/registers-ddi.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/registers-pipe.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-transcoder.h"
 
 namespace i915_tgl {
@@ -81,21 +88,21 @@ void PipeManagerSkylake::ResetInactiveTranscoders() {
         edp_transcoder_in_use = true;
 
         const tgl_registers::Trans unused_transcoder = pipe->tied_transcoder_id();
-        Pipe::ResetTrans(unused_transcoder, mmio_space_);
+        Pipe::ResetTranscoder(unused_transcoder, mmio_space_);
         zxlogf(
             DEBUG,
             "Reset unused transcoder %d tied to pipe %d, which is connected to the EDP transcoder",
             unused_transcoder, pipe->pipe_id());
       }
     } else {
-      Pipe::ResetTrans(pipe->tied_transcoder_id(), mmio_space_);
+      Pipe::ResetTranscoder(pipe->tied_transcoder_id(), mmio_space_);
       zxlogf(DEBUG, "Reset unused transcoder %d tied to inactive pipe %d",
              pipe->tied_transcoder_id(), pipe->pipe_id());
     }
   }
 
   if (!edp_transcoder_in_use) {
-    Pipe::ResetTrans(tgl_registers::TRANS_EDP, mmio_space_);
+    Pipe::ResetTranscoder(tgl_registers::TRANS_EDP, mmio_space_);
     zxlogf(DEBUG, "Reset unused transcoder TRANS_EDP (not used by any pipe)");
   }
 }
@@ -110,33 +117,27 @@ Pipe* PipeManagerSkylake::GetAvailablePipe() {
 }
 
 Pipe* PipeManagerSkylake::GetPipeFromHwState(tgl_registers::Ddi ddi, fdf::MmioBuffer* mmio_space) {
-  // In Skylake, DDI_A always maps to eDP display.
+  // On Kaby Lake and Skylake, DDI_A is attached to the EDP transcoder.
   if (ddi == tgl_registers::DDI_A) {
-    tgl_registers::TranscoderRegs regs(tgl_registers::TRANS_EDP);
-    auto ddi_func_ctrl = regs.DdiFuncControl().ReadFrom(mmio_space);
+    tgl_registers::TranscoderRegs transcoder_regs(tgl_registers::TRANS_EDP);
+    auto transcoder_ddi_control = transcoder_regs.DdiControl().ReadFrom(mmio_space);
 
-    switch (ddi_func_ctrl.edp_input_select()) {
-      case tgl_registers::TransDdiFuncControl::kPipeA:
-        return At(tgl_registers::PIPE_A);
-      case tgl_registers::TransDdiFuncControl::kPipeB:
-        return At(tgl_registers::PIPE_B);
-      case tgl_registers::TransDdiFuncControl::kPipeC:
-        return At(tgl_registers::PIPE_C);
-      default:
-        // Not reachable
-        ZX_DEBUG_ASSERT(false);
-        return nullptr;
+    const tgl_registers::Pipe pipe = transcoder_ddi_control.input_pipe();
+    if (pipe == tgl_registers::Pipe::PIPE_INVALID) {
+      // The transceiver DDI control register is configured incorrectly.
+      return nullptr;
     }
+    return At(pipe);
   }
 
   for (Pipe* pipe : *this) {
     const tgl_registers::Trans tied_transcoder = pipe->tied_transcoder_id();
     ZX_DEBUG_ASSERT_MSG(tied_transcoder != tgl_registers::Trans::TRANS_EDP,
-                        "The EDP transcoder is not attached to a pipe");
+                        "The EDP transcoder is not tied to a pipe");
 
     tgl_registers::TranscoderRegs transcoder_regs(tied_transcoder);
     if (transcoder_regs.ClockSelect().ReadFrom(mmio_space).ddi_clock_kaby_lake() == ddi &&
-        transcoder_regs.DdiFuncControl().ReadFrom(mmio_space).ddi_kaby_lake() == ddi) {
+        transcoder_regs.DdiControl().ReadFrom(mmio_space).ddi_kaby_lake() == ddi) {
       return pipe;
     }
   }
@@ -175,7 +176,7 @@ Pipe* PipeManagerTigerLake::GetPipeFromHwState(tgl_registers::Ddi ddi,
     auto transcoder = static_cast<tgl_registers::Trans>(pipe->pipe_id());
     tgl_registers::TranscoderRegs regs(transcoder);
     if (regs.ClockSelect().ReadFrom(mmio_space).ddi_clock_tiger_lake() == ddi &&
-        regs.DdiFuncControl().ReadFrom(mmio_space).ddi_tiger_lake() == ddi) {
+        regs.DdiControl().ReadFrom(mmio_space).ddi_tiger_lake() == ddi) {
       return pipe;
     }
   }
@@ -185,7 +186,7 @@ Pipe* PipeManagerTigerLake::GetPipeFromHwState(tgl_registers::Ddi ddi,
 void PipeManagerTigerLake::ResetInactiveTranscoders() {
   for (Pipe* pipe : *this) {
     if (!pipe->in_use()) {
-      Pipe::ResetTrans(pipe->connected_transcoder_id(), mmio_space_);
+      Pipe::ResetTranscoder(pipe->connected_transcoder_id(), mmio_space_);
       zxlogf(DEBUG, "Reset unused transcoder %d for pipe %d (pipe inactive)",
              pipe->connected_transcoder_id(), pipe->pipe_id());
     }

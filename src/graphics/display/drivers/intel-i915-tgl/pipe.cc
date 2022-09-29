@@ -11,6 +11,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 
 #include "src/graphics/display/drivers/intel-i915-tgl/hardware-common.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/poll-until.h"
@@ -100,8 +101,8 @@ void Pipe::ResetPipe(tgl_registers::Pipe pipe, fdf::MmioBuffer* mmio_space) {
 }
 
 // static
-void Pipe::ResetTrans(tgl_registers::Trans trans, fdf::MmioBuffer* mmio_space) {
-  tgl_registers::TranscoderRegs trans_regs(trans);
+void Pipe::ResetTranscoder(tgl_registers::Trans transcoder, fdf::MmioBuffer* mmio_space) {
+  tgl_registers::TranscoderRegs transcoder_regs(transcoder);
 
   // Disable transcoder and wait for it to stop. These are the "Disable
   // Transcoder" steps from:
@@ -120,38 +121,39 @@ void Pipe::ResetTrans(tgl_registers::Trans trans, fdf::MmioBuffer* mmio_space) {
   //
   // The transcoder should be turned off only after the associated backlight,
   // audio, and image planes are disabled.
-  auto trans_conf = trans_regs.Conf().ReadFrom(mmio_space);
-  trans_conf.set_transcoder_enable(0);
-  trans_conf.WriteTo(mmio_space);
+  auto transcoder_config = transcoder_regs.Config().ReadFrom(mmio_space);
+  transcoder_config.set_enabled_target(false).WriteTo(mmio_space);
 
   // Wait for off status in TRANS_CONF, timeout after two frames.
   // Here we wait for 60 msecs, which is enough to guarantee to include two
   // whole frames in ~50 fps.
   constexpr size_t kTransConfStatusWaitTimeoutMs = 60;
-  if (!PollUntil([&] { return !trans_regs.Conf().ReadFrom(mmio_space).transcoder_state(); },
-                 zx::msec(1), kTransConfStatusWaitTimeoutMs)) {
+  if (!PollUntil([&] { return !transcoder_config.ReadFrom(mmio_space).enabled(); }, zx::msec(1),
+                 kTransConfStatusWaitTimeoutMs)) {
     // Because this is a logical "reset", we only log failures rather than
     // crashing the driver.
     zxlogf(WARNING, "Failed to reset transcoder");
     return;
   }
 
-  // Disable transcoder ddi select and clock select
-  auto trans_ddi_ctl = trans_regs.DdiFuncControl().ReadFrom(mmio_space);
-  trans_ddi_ctl.set_trans_ddi_function_enable(0);
-  // This works on both Tiger Lake and Skylake / Kaby Lake, since on Kaby Lake
-  // the highest bit of "ddi_tiger_lake" is reserved to be zero, so it is safe
-  // to set the whole field to zero.
-  trans_ddi_ctl.set_ddi_tiger_lake(std::nullopt);
-  trans_ddi_ctl.WriteTo(mmio_space);
+  // Disable transcoder DDI select and clock select.
+  auto transcoder_ddi_control = transcoder_regs.DdiControl().ReadFrom(mmio_space);
 
-  if (trans != tgl_registers::TRANS_EDP) {
-    auto trans_clk_sel = trans_regs.ClockSelect().ReadFrom(mmio_space);
-    // This works on both Tiger Lake and Skylake / Kaby Lake, since on Kaby Lake
-    // the highest bit of "ddi_clock_tiger_lake" is reserved to be zero, so it
-    // is safe to set the whole field to zero.
-    trans_clk_sel.set_ddi_clock_tiger_lake(std::nullopt);
-    trans_clk_sel.WriteTo(mmio_space);
+  // `set_ddi_tiger_lake()` works on both Tiger Lake and Skylake / Kaby Lake
+  // when passed std::nullopt, because nullopt translates to zeroing out all the
+  // field's bits, and on Kaby Lake the highest bit of "ddi_tiger_lake" is
+  // reserved to be zero, so it is safe to set the whole field to zero.
+  transcoder_ddi_control.set_enabled(false).set_ddi_tiger_lake(std::nullopt).WriteTo(mmio_space);
+
+  if (transcoder != tgl_registers::TRANS_EDP) {
+    auto transcoder_clock_select = transcoder_regs.ClockSelect().ReadFrom(mmio_space);
+
+    // `set_ddi_tiger_lake()` works on both Tiger Lake and Skylake / Kaby Lake
+    // when passed std::nullopt, because nullopt translates to zeroing out all
+    // the field's bits, and on Kaby Lake the highest bit of
+    // "ddi_clock_tiger_lake" is reserved to be zero, so it is safe to set the
+    // whole field to zero.
+    transcoder_clock_select.set_ddi_clock_kaby_lake(std::nullopt).WriteTo(mmio_space);
   }
 }
 
@@ -162,7 +164,7 @@ void Pipe::Reset() {
 
 void Pipe::ResetActiveTranscoder() {
   if (in_use()) {
-    ResetTrans(connected_transcoder_id(), mmio_space_);
+    ResetTranscoder(connected_transcoder_id(), mmio_space_);
     zxlogf(DEBUG, "Reset active transcoder %d for pipe %d", connected_transcoder_id(), pipe_id());
   }
 }
@@ -254,14 +256,14 @@ void Pipe::LoadActiveMode(display_mode_t* mode) {
   mode->v_blanking = v_total - v_active;
 
   mode->flags = 0;
-  auto ddi_func_ctrl = trans_regs.DdiFuncControl().ReadFrom(mmio_space_);
-  if (ddi_func_ctrl.sync_polarity() & 0x2) {
+  auto transcoder_ddi_control = trans_regs.DdiControl().ReadFrom(mmio_space_);
+  if (transcoder_ddi_control.vsync_polarity_not_inverted()) {
     mode->flags |= MODE_FLAG_VSYNC_POSITIVE;
   }
-  if (ddi_func_ctrl.sync_polarity() & 0x1) {
+  if (transcoder_ddi_control.hsync_polarity_not_inverted()) {
     mode->flags |= MODE_FLAG_HSYNC_POSITIVE;
   }
-  if (trans_regs.Conf().ReadFrom(mmio_space_).interlaced_mode()) {
+  if (trans_regs.Config().ReadFrom(mmio_space_).interlaced_display()) {
     mode->flags |= MODE_FLAG_INTERLACED;
   }
 

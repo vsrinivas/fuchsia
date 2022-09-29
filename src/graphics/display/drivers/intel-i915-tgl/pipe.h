@@ -60,7 +60,7 @@ class Pipe {
   // A helper method to reset |pipe| given its pipe number.
   static void ResetPipe(tgl_registers::Pipe pipe, fdf::MmioBuffer* mmio_space);
   // A helper method to reset |transcoder| given its transcoder number.
-  static void ResetTrans(tgl_registers::Trans trans, fdf::MmioBuffer* mmio_space);
+  static void ResetTranscoder(tgl_registers::Trans transcoder, fdf::MmioBuffer* mmio_space);
 
   void LoadActiveMode(display_mode_t* mode);
 

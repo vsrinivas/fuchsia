@@ -632,48 +632,53 @@ bool HdmiDisplay::DdiModeset(const display_mode_t& mode) {
 }
 
 bool HdmiDisplay::PipeConfigPreamble(const display_mode_t& mode, tgl_registers::Pipe pipe,
-                                     tgl_registers::Trans trans) {
-  tgl_registers::TranscoderRegs trans_regs(trans);
+                                     tgl_registers::Trans transcoder) {
+  ZX_DEBUG_ASSERT_MSG(transcoder != tgl_registers::Trans::TRANS_EDP,
+                      "The EDP transcoder doesn't do HDMI");
+
+  tgl_registers::TranscoderRegs transcoder_regs(transcoder);
 
   // Configure Transcoder Clock Select
-  auto trans_clk_sel = trans_regs.ClockSelect().ReadFrom(mmio_space());
+  auto transcoder_clock_select = transcoder_regs.ClockSelect().ReadFrom(mmio_space());
   if (is_tgl(controller()->device_id())) {
-    trans_clk_sel.set_ddi_clock_tiger_lake(ddi());
+    transcoder_clock_select.set_ddi_clock_tiger_lake(ddi());
   } else {
-    trans_clk_sel.set_ddi_clock_kaby_lake(ddi());
+    transcoder_clock_select.set_ddi_clock_kaby_lake(ddi());
   }
-  trans_clk_sel.WriteTo(mmio_space());
+  transcoder_clock_select.WriteTo(mmio_space());
 
   return true;
 }
 
 bool HdmiDisplay::PipeConfigEpilogue(const display_mode_t& mode, tgl_registers::Pipe pipe,
-                                     tgl_registers::Trans trans) {
+                                     tgl_registers::Trans transcoder) {
   ZX_DEBUG_ASSERT(type() == DisplayDevice::Type::kHdmi || type() == DisplayDevice::Type::kDvi);
+  ZX_DEBUG_ASSERT_MSG(transcoder != tgl_registers::Trans::TRANS_EDP,
+                      "The EDP transcoder doesn't do HDMI");
 
-  tgl_registers::TranscoderRegs trans_regs(trans);
+  tgl_registers::TranscoderRegs transcoder_regs(transcoder);
 
-  auto ddi_func = trans_regs.DdiFuncControl().ReadFrom(mmio_space());
-  ddi_func.set_trans_ddi_function_enable(1);
+  auto transcoder_ddi_control = transcoder_regs.DdiControl().ReadFrom(mmio_space());
+  transcoder_ddi_control.set_enabled(true);
   if (is_tgl(controller()->device_id())) {
-    ddi_func.set_ddi_tiger_lake(ddi());
+    transcoder_ddi_control.set_ddi_tiger_lake(ddi());
   } else {
-    ddi_func.set_ddi_kaby_lake(ddi());
+    transcoder_ddi_control.set_ddi_kaby_lake(ddi());
   }
-  ddi_func.set_trans_ddi_mode_select(type() == DisplayDevice::Type::kHdmi
-                                         ? tgl_registers::TransDdiFuncControl::kModeHdmi
-                                         : tgl_registers::TransDdiFuncControl::kModeDvi);
-  ddi_func.set_bits_per_color(tgl_registers::TransDdiFuncControl::k8bbc);
-  ddi_func.set_sync_polarity((!!(mode.flags & MODE_FLAG_VSYNC_POSITIVE)) << 1 |
-                             (!!(mode.flags & MODE_FLAG_HSYNC_POSITIVE)));
-  ddi_func.set_port_sync_mode_enable(0);
-  ddi_func.set_dp_vc_payload_allocate(0);
-  ddi_func.WriteTo(mmio_space());
+  transcoder_ddi_control.set_ddi_mode(type() == DisplayDevice::Type::kHdmi
+                                          ? tgl_registers::TranscoderDdiControl::kModeHdmi
+                                          : tgl_registers::TranscoderDdiControl::kModeDvi);
+  transcoder_ddi_control.set_bits_per_color(tgl_registers::TranscoderDdiControl::k8bpc)
+      .set_vsync_polarity_not_inverted((mode.flags & MODE_FLAG_VSYNC_POSITIVE) != 0)
+      .set_hsync_polarity_not_inverted((mode.flags & MODE_FLAG_HSYNC_POSITIVE) != 0)
+      .set_is_port_sync_secondary_kaby_lake(false)
+      .set_allocate_display_port_virtual_circuit_payload(false)
+      .WriteTo(mmio_space());
 
-  auto trans_conf = trans_regs.Conf().ReadFrom(mmio_space());
-  trans_conf.set_transcoder_enable(1);
-  trans_conf.set_interlaced_mode(!!(mode.flags & MODE_FLAG_INTERLACED));
-  trans_conf.WriteTo(mmio_space());
+  auto transcoder_config = transcoder_regs.Config().ReadFrom(mmio_space());
+  transcoder_config.set_enabled_target(true)
+      .set_interlaced_display((mode.flags & MODE_FLAG_INTERLACED) != 0)
+      .WriteTo(mmio_space());
 
   // Configure voltage swing and related IO settings.
 

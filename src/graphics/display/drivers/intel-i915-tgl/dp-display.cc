@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <optional>
 #include <variant>
 
 #include <fbl/string_printf.h>
@@ -834,31 +835,31 @@ bool DpDisplay::LinkTrainingSetupTigerLake() {
   // Tiger Lake: IHD-OS-TGL-Vol 12-1.22-Rev 2.0, Page 144
 
   // Transcoder must be disabled while doing link training.
-  tgl_registers::TranscoderRegs trans_regs(pipe()->connected_transcoder_id());
-  auto trans_conf = trans_regs.Conf().ReadFrom(mmio_space());
-  trans_conf.set_transcoder_enable(0).WriteTo(mmio_space());
-  trans_conf.ReadFrom(mmio_space());
+  tgl_registers::TranscoderRegs transcoder_regs(pipe()->connected_transcoder_id());
+  auto transcoder_config = transcoder_regs.Config().ReadFrom(mmio_space());
+  transcoder_config.set_enabled(false).WriteTo(mmio_space());
+  transcoder_config.ReadFrom(mmio_space());
 
   // Configure "Transcoder Clock Select" to direct the Port clock to the
   // transcoder.
-  auto clock_select = trans_regs.ClockSelect().ReadFrom(mmio_space());
+  auto clock_select = transcoder_regs.ClockSelect().ReadFrom(mmio_space());
   clock_select.set_ddi_clock_tiger_lake(ddi());
   clock_select.WriteTo(mmio_space());
 
   // Configure "Transcoder DDI Control" to select DDI and DDI mode.
-  auto ddi_func = trans_regs.DdiFuncControl().ReadFrom(mmio_space());
-  ddi_func.set_ddi_tiger_lake(ddi());
-  // No MST set
-  ddi_func.set_trans_ddi_mode_select(tgl_registers::TransDdiFuncControl::kModeDisplayPortSst);
-  ddi_func.WriteTo(mmio_space());
+  auto ddi_control = transcoder_regs.DdiControl().ReadFrom(mmio_space());
+  ddi_control.set_ddi_tiger_lake(ddi());
+  // TODO(fxbug.dev/110411): Support MST (Multi-Stream).
+  ddi_control.set_ddi_mode(tgl_registers::TranscoderDdiControl::kModeDisplayPortSingleStream);
+  ddi_control.WriteTo(mmio_space());
 
   // Configure and enable "DP Transport Control" register with link training
   // pattern 1 selected
   auto dp_transport_control = tgl_registers::DpTransportControl::GetForTigerLakeTranscoder(
                                   pipe()->connected_transcoder_id())
                                   .ReadFrom(mmio_space());
-  dp_transport_control.set_enabled(1)
-      .set_is_multi_stream(0)
+  dp_transport_control.set_enabled(true)
+      .set_is_multi_stream(false)
       .set_sst_enhanced_framing(capabilities_->enhanced_frame_capability())
       .set_training_pattern(tgl_registers::DpTransportControl::kTrainingPattern1)
       .WriteTo(mmio_space());
@@ -1761,14 +1762,14 @@ bool DpDisplay::ComputeDpllState(uint32_t pixel_clock_10khz, DpllState* config) 
 bool DpDisplay::DdiModeset(const display_mode_t& mode) { return true; }
 
 bool DpDisplay::PipeConfigPreamble(const display_mode_t& mode, tgl_registers::Pipe pipe,
-                                   tgl_registers::Trans trans) {
-  tgl_registers::TranscoderRegs transcoder_regs(trans);
+                                   tgl_registers::Trans transcoder) {
+  tgl_registers::TranscoderRegs transcoder_regs(transcoder);
 
   // Transcoder should be disabled first before reconfiguring the transcoder
   // clock. Will be re-enabled at `PipeConfigEpilogue()`.
-  auto trans_conf = transcoder_regs.Conf().ReadFrom(mmio_space());
-  trans_conf.set_transcoder_enable(0).WriteTo(mmio_space());
-  trans_conf.ReadFrom(mmio_space());
+  auto transcoder_config = transcoder_regs.Config().ReadFrom(mmio_space());
+  transcoder_config.set_enabled(false).WriteTo(mmio_space());
+  transcoder_config.ReadFrom(mmio_space());
 
   // Step "Enable Planes, Pipe, and Transcoder" in the "Sequences for
   // DisplayPort" > "Enable Sequence" section of Intel's display documentation.
@@ -1784,18 +1785,18 @@ bool DpDisplay::PipeConfigPreamble(const display_mode_t& mode, tgl_registers::Pi
     auto clock_select = transcoder_regs.ClockSelect().ReadFrom(mmio_space());
     const std::optional<tgl_registers::Ddi> ddi_clock_source = clock_select.ddi_clock_tiger_lake();
     if (!ddi_clock_source.has_value()) {
-      zxlogf(ERROR, "Transcoder %d clock source not set after DisplayPort training", trans);
+      zxlogf(ERROR, "Transcoder %d clock source not set after DisplayPort training", transcoder);
       return false;
     }
     if (*ddi_clock_source != ddi()) {
       zxlogf(ERROR, "Transcoder %d clock set to DDI %d instead of %d after DisplayPort training.",
-             trans, ddi(), *ddi_clock_source);
+             transcoder, ddi(), *ddi_clock_source);
       return false;
     }
   } else {
     // On Kaby Lake and Skylake, the transcoder clock input must be set during
     // the pipe, plane and transcoder enablement stage.
-    if (trans != tgl_registers::TRANS_EDP) {
+    if (transcoder != tgl_registers::TRANS_EDP) {
       auto clock_select = transcoder_regs.ClockSelect().ReadFrom(mmio_space());
       clock_select.set_ddi_clock_kaby_lake(ddi());
       clock_select.WriteTo(mmio_space());
@@ -1849,41 +1850,67 @@ bool DpDisplay::PipeConfigPreamble(const display_mode_t& mode, tgl_registers::Pi
 }
 
 bool DpDisplay::PipeConfigEpilogue(const display_mode_t& mode, tgl_registers::Pipe pipe,
-                                   tgl_registers::Trans trans) {
-  tgl_registers::TranscoderRegs trans_regs(trans);
-  auto msa_misc = trans_regs.MsaMisc().FromValue(0);
-  msa_misc.set_sync_clock(1);
-  msa_misc.set_bits_per_color(msa_misc.k8Bbc);  // kPixelFormat
-  msa_misc.set_color_format(msa_misc.kRgb);     // kPixelFormat
-  msa_misc.WriteTo(mmio_space());
+                                   tgl_registers::Trans transcoder) {
+  tgl_registers::TranscoderRegs transcoder_regs(transcoder);
+  auto main_stream_attribute_misc = transcoder_regs.MainStreamAttributeMisc().FromValue(0);
+  main_stream_attribute_misc.set_video_stream_clock_sync_with_link_clock(true)
+      .set_colorimetry_in_vsc_sdp(false)
+      .set_colorimetry_top_bit(0);
 
-  auto ddi_func = trans_regs.DdiFuncControl().ReadFrom(mmio_space());
-  ddi_func.set_trans_ddi_function_enable(1);
+  // TODO(fxbug.dev/85601): Decide the color model / pixel format based on pipe
+  //                        configuration and display capabilities.
+  main_stream_attribute_misc
+      .set_bits_per_component_select(tgl_registers::DisplayPortMsaBitsPerComponent::k8Bpc)
+      .set_colorimetry_select(tgl_registers::DisplayPortMsaColorimetry::kRgbUnspecifiedLegacy)
+      .WriteTo(mmio_space());
+
+  auto transcoder_ddi_control = transcoder_regs.DdiControl().ReadFrom(mmio_space());
+  transcoder_ddi_control.set_enabled(true);
+
+  // The EDP transcoder ignores the DDI select field, because it's always
+  // connected to DDI A. Since the field is ignored (as opposed to reserved),
+  // it's still OK to set it. We set it to None, because it seems less misleadng
+  // than setting it to one of the other DDIs.
+  const std::optional<tgl_registers::Ddi> transcoder_ddi =
+      (transcoder == tgl_registers::TRANS_EDP) ? std::nullopt : std::make_optional(ddi());
   if (is_tgl(controller()->device_id())) {
-    ddi_func.set_ddi_tiger_lake(ddi());
+    ZX_DEBUG_ASSERT_MSG(transcoder != tgl_registers::Trans::TRANS_EDP,
+                        "The EDP transcoder does not exist on this display engine");
+    transcoder_ddi_control.set_ddi_tiger_lake(transcoder_ddi);
   } else {
-    ddi_func.set_ddi_kaby_lake(ddi());
+    ZX_DEBUG_ASSERT_MSG(
+        transcoder != tgl_registers::Trans::TRANS_EDP || ddi() == tgl_registers::Ddi::DDI_A,
+        "The EDP transcoder is attached to DDI A");
+    transcoder_ddi_control.set_ddi_kaby_lake(transcoder_ddi);
   }
-  ddi_func.set_trans_ddi_mode_select(ddi_func.kModeDisplayPortSst);
-  ddi_func.set_bits_per_color(ddi_func.k8bbc);  // kPixelFormat
-  ddi_func.set_sync_polarity((!!(mode.flags & MODE_FLAG_VSYNC_POSITIVE)) << 1 |
-                             (!!(mode.flags & MODE_FLAG_HSYNC_POSITIVE)));
-  ddi_func.set_dp_vc_payload_allocate(0);
-  if (!is_tgl(controller()->device_id())) {
-    // These fields don't exist on Tiger Lake.
-    ddi_func.set_port_sync_mode_enable(0);
-    ddi_func.set_edp_input_select(
-        pipe == tgl_registers::PIPE_A
-            ? ddi_func.kPipeA
-            : (pipe == tgl_registers::PIPE_B ? ddi_func.kPipeB : ddi_func.kPipeC));
-  }
-  ddi_func.set_dp_port_width_selection(dp_lane_count_ - 1);
-  ddi_func.WriteTo(mmio_space());
 
-  auto trans_conf = trans_regs.Conf().ReadFrom(mmio_space());
-  trans_conf.set_transcoder_enable(1);
-  trans_conf.set_interlaced_mode(!!(mode.flags & MODE_FLAG_INTERLACED));
-  trans_conf.WriteTo(mmio_space());
+  // TODO(fxbug.dev/85601): Decide the color model / pixel format based on pipe
+  //                        configuration and display capabilities.
+  transcoder_ddi_control
+      .set_ddi_mode(tgl_registers::TranscoderDdiControl::kModeDisplayPortSingleStream)
+      .set_bits_per_color(tgl_registers::TranscoderDdiControl::k8bpc)
+      .set_vsync_polarity_not_inverted((mode.flags & MODE_FLAG_VSYNC_POSITIVE) != 0)
+      .set_hsync_polarity_not_inverted((mode.flags & MODE_FLAG_HSYNC_POSITIVE) != 0);
+
+  if (!is_tgl(controller()->device_id())) {
+    // Fields that only exist on Kaby Lake and Skylake.
+    transcoder_ddi_control.set_is_port_sync_secondary_kaby_lake(false);
+  }
+
+  // The input pipe field is ignored on all transcoders except for EDP (on Kaby
+  // Lake and Skylake) and DSI (on Tiger Lake, not yet supported by our driver).
+  // Since the field is ignored (as opposed to reserved), it's OK to still set
+  // it everywhere.
+  transcoder_ddi_control.set_input_pipe_select(pipe);
+
+  transcoder_ddi_control.set_allocate_display_port_virtual_circuit_payload(false)
+      .set_display_port_lane_count(dp_lane_count_)
+      .WriteTo(mmio_space());
+
+  auto transcoder_config = transcoder_regs.Config().FromValue(0);
+  transcoder_config.set_enabled_target(true)
+      .set_interlaced_display((mode.flags & MODE_FLAG_INTERLACED) != 0)
+      .WriteTo(mmio_space());
 
   return true;
 }

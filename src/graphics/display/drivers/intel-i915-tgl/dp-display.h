@@ -206,9 +206,9 @@ class DpDisplay : public DisplayDevice {
   bool InitDdi() final;
   bool DdiModeset(const display_mode_t& mode) final;
   bool PipeConfigPreamble(const display_mode_t& mode, tgl_registers::Pipe pipe,
-                          tgl_registers::Trans trans) final;
+                          tgl_registers::Trans transcoder) final;
   bool PipeConfigEpilogue(const display_mode_t& mode, tgl_registers::Pipe pipe,
-                          tgl_registers::Trans trans) final;
+                          tgl_registers::Trans transcoder) final;
   bool ComputeDpllState(uint32_t pixel_clock_10khz, DpllState* config) final;
   uint32_t LoadClockRateForTranscoder(tgl_registers::Trans transcoder) final;
 

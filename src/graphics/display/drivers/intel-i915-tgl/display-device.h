@@ -141,9 +141,9 @@ class DisplayDevice : public fidl::WireServer<FidlBacklight::Device> {
   // and PipeConfigEpilogue are responsible for display-type-specific configuration that
   // must be done before and after the generic configuration.
   virtual bool PipeConfigPreamble(const display_mode_t& mode, tgl_registers::Pipe pipe,
-                                  tgl_registers::Trans trans) = 0;
+                                  tgl_registers::Trans transcoder) = 0;
   virtual bool PipeConfigEpilogue(const display_mode_t& mode, tgl_registers::Pipe pipe,
-                                  tgl_registers::Trans trans) = 0;
+                                  tgl_registers::Trans transcoder) = 0;
 
   fdf::MmioBuffer* mmio_space() const;
 
