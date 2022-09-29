@@ -396,3 +396,5 @@ toc:
     path: /docs/contribute/governance/rfcs/0189_window_management.md
   - title: "RFC-0190: FIDL Support for Syscalls"
     path: /docs/contribute/governance/rfcs/0190_fidl_support_for_syscalls.md
+  - title: "RFC-0191: Fuchsia-on-GCE as a supported system configuration"
+    path: /docs/contribute/governance/rfcs/0191_fuchsia-on-gce_as_a_supported_system_configuration.md

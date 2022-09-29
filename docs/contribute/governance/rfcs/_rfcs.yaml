@@ -2471,7 +2471,7 @@
   reviewers: ['abarth@google.com', 'dworsham@google.com', 'thatguy@google.com', 'sanjayc@google.com', 'asz@google.com', 'wez@google.com']
   submitted: '2022-08-12'
   reviewed: '2022-09-20'
-  
+
 - name: 'RFC-0190'
   title: 'FIDL Support for Syscalls'
   short_description: 'Extend FIDL to support syscall declarations and make a FIDL representation of the interface our source-of-truth.'
@@ -2484,3 +2484,16 @@
   reviewers: ['abarth@google.com', 'brettw@google.com', 'mcgrathr@google.com', 'hjfreyer@google.com', 'palmer@google.com']
   submitted: '2022-07-08'
   reviewed: '2022-09-22'
+
+- name: 'RFC-0191'
+  title: 'Fuchsia-on-GCE as a supported system configuration'
+  short_description: 'Add Google Compute Engine (x64 and arm64) as a supported system configuration for Fuchsia.'
+  authors: ['rudymathu@']
+  file: '0191_fuchsia-on-gce_as_a_supported_system_configuration.md'
+  area: ['Governance']
+  issue: ['9127']
+  gerrit_change_id: ['717989']
+  status: 'Accepted'
+  reviewers: ['cpu@google.com', 'curtisgalloway@google.com', 'tkilbourn@google.com', 'travisg@google.com']
+  submitted: '2022-08-29'
+  reviewed: '2022-09-28'
