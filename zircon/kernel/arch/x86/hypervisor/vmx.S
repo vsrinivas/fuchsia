@@ -107,6 +107,22 @@ vmx_exit_asm:
     // Set function result to ZX_OK.
     xor %rax, %rax  // RAX = ZX_OK
 
+    // Zero guest-controlled GPRs; this prevents speculative execution from
+    // using guest-controlled values by limiting the lifetime of those values.
+    xor %ebx, %ebx
+    xor %ecx, %ecx
+    xor %edx, %edx
+    xor %esi, %esi
+    xor %edi, %edi
+    xor %r8, %r8
+    xor %r9, %r9
+    xor %r10, %r10
+    xor %r11, %r11
+    xor %r12, %r12
+    xor %r13, %r13
+    xor %r14, %r14
+    xor %r15, %r15
+
 .Lrestore_host_regs:
     // Restore the host registers.
     //
