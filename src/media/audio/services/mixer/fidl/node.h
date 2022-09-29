@@ -266,9 +266,6 @@ class Node {
  private:
   friend class FakeGraph;
 
-  static fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> CreateEdgeInner(
-      GlobalTaskQueue& global_queue, NodePtr source, NodePtr dest);
-
   // Implementation of `CreateEdge`.
   void AddSource(NodePtr source);
   void SetDest(NodePtr dest);

@@ -1107,5 +1107,50 @@ TEST_F(NodeDestroyTest, MetaToMeta) {
   }
 }
 
+TEST_F(NodeDestroyTest, OrdinaryMultipleSources) {
+  FakeGraph graph({
+      .edges = {{1, 3}, {2, 3}},
+  });
+
+  auto q = graph.global_task_queue();
+  auto source1 = graph.node(1);
+  auto source2 = graph.node(2);
+  auto dest = graph.node(3);
+
+  bool destroyed = false;
+  dest->SetOnDestroySelf([&destroyed]() { destroyed = true; });
+
+  Node::Destroy(*q, graph.detached_thread(), dest);
+
+  EXPECT_EQ(source1->dest(), nullptr);
+  EXPECT_EQ(source2->dest(), nullptr);
+  EXPECT_THAT(dest->sources(), ElementsAre());
+  EXPECT_TRUE(destroyed);
+}
+
+TEST_F(NodeDestroyTest, MetaMultipleChildren) {
+  FakeGraph graph({
+      .meta_nodes = {{3, {.source_children = {1, 2}, .dest_children = {4, 5}}}},
+      .edges =
+          {
+              {11, 1},
+              {12, 2},
+              {4, 14},
+              {5, 15},
+          },
+  });
+
+  auto q = graph.global_task_queue();
+  auto meta = graph.node(3);
+  Node::Destroy(*q, graph.detached_thread(), meta);
+
+  EXPECT_EQ(graph.node(11)->dest(), nullptr);
+  EXPECT_EQ(graph.node(12)->dest(), nullptr);
+  EXPECT_EQ(graph.node(14)->sources().size(), 0u);
+  EXPECT_EQ(graph.node(15)->sources().size(), 0u);
+  EXPECT_EQ(meta->child_sources().size(), 0u);
+  EXPECT_EQ(meta->child_dests().size(), 0u);
+}
+
 }  // namespace
 }  // namespace media_audio

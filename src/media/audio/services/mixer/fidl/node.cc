@@ -77,7 +77,98 @@ fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdge(
     return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kCycle);
   }
 
-  return CreateEdgeInner(global_queue, std::move(source), std::move(dest));
+  NodePtr source_parent;
+  NodePtr dest_parent;
+
+  // Create a node in source->child_dests() if needed.
+  if (source->is_meta()) {
+    if (HasDestInChildren(source->child_dests(), dest)) {
+      return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kAlreadyConnected);
+    }
+    NodePtr child = source->CreateNewChildDest();
+    if (!child) {
+      return fpromise::error(
+          fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
+    }
+    source_parent = source;
+    source = child;
+  }
+
+  // Create a node in dest->child_sources() if needed.
+  if (dest->is_meta()) {
+    if (HasSourceInChildren(dest->child_sources(), source)) {
+      return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kAlreadyConnected);
+    }
+    NodePtr child = dest->CreateNewChildSource();
+    if (!child) {
+      return fpromise::error(
+          fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
+    }
+    dest_parent = dest;
+    dest = child;
+  }
+
+  if (source->dest() == dest) {
+    return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kAlreadyConnected);
+  }
+  if (source->dest() || !source->AllowsDest()) {
+    return fpromise::error(
+        fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
+  }
+  if (auto max = dest->MaxSources(); max && dest->sources().size() >= *max) {
+    return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
+  }
+  if (!dest->CanAcceptSourceFormat(source->pipeline_stage()->format())) {
+    return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
+  }
+  if (dest->pipeline_direction() == PipelineDirection::kOutput &&
+      source->pipeline_direction() == PipelineDirection::kInput) {
+    return fpromise::error(
+        fuchsia_audio_mixer::CreateEdgeError::kOutputPipelineCannotReadFromInputPipeline);
+  }
+
+  // Since there is no forwards link (source -> dest), the backwards link (dest -> source) shouldn't
+  // exist either.
+  FX_CHECK(!HasNode(dest->sources(), source));
+
+  // Create this edge.
+  dest->AddSource(source);
+  source->SetDest(dest);
+
+  if (source_parent) {
+    source_parent->AddChildDest(source);
+  }
+  if (dest_parent) {
+    dest_parent->AddChildSource(dest);
+  }
+
+  // Since the source was not previously connected, it must be owned by the detached thread.
+  // This means we can move source to dest's thread.
+  FX_CHECK(source->thread()->id() == GraphDetachedThread::kId);
+  source->set_thread(dest->thread());
+
+  // TODO(fxbug.dev/87651): update topological order of consumer stages
+
+  // Save this now since we can't read Nodes from the mix threads.
+  const auto dest_stage_thread_id = dest->thread()->id();
+
+  // Update the PipelineStages asynchronously, on dest's thread.
+  global_queue.Push(dest_stage_thread_id,
+                    [dest_stage = dest->pipeline_stage(),      //
+                     source_stage = source->pipeline_stage(),  //
+                     dest_stage_thread_id]() {
+                      FX_CHECK(dest_stage->thread()->id() == dest_stage_thread_id)
+                          << dest_stage->thread()->id() << " != " << dest_stage_thread_id;
+                      FX_CHECK(source_stage->thread()->id() == GraphDetachedThread::kId)
+                          << source_stage->thread()->id() << " != " << GraphDetachedThread::kId;
+
+                      ScopedThreadChecker checker(dest_stage->thread()->checker());
+                      source_stage->set_thread(dest_stage->thread());
+                      // TODO(fxbug.dev/87651): Pass in `gain_ids`.
+                      dest_stage->AddSource(source_stage, /*options=*/{});
+                    });
+
+  return fpromise::ok();
 }
 
 fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
@@ -86,11 +177,14 @@ fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
   FX_CHECK(source);
   FX_CHECK(dest);
 
-  if (source->is_meta_) {
-    // Find the node in source->child_dests() that connects to dest or a child of dest.
+  NodePtr source_parent;
+  NodePtr dest_parent;
+
+  if (source->is_meta()) {
+    // Find the node in `source->child_dests()` that connects to `dest` or a child of `dest`.
     NodePtr child;
-    for (auto& c : source->child_dests_) {
-      if (c->dest_ == dest || c->dest_->parent() == dest) {
+    for (auto& c : source->child_dests()) {
+      if (c->dest() == dest || c->dest()->parent() == dest) {
         child = c;
         break;
       }
@@ -98,21 +192,17 @@ fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
     if (!child) {
       return fpromise::error(fuchsia_audio_mixer::DeleteEdgeError::kEdgeNotFound);
     }
-    // Remove the edge child -> dest. This MUST succeed because we've found a child that connects
-    // to dest. If this fails, there must be a bug in CreateEdge.
-    const auto result = DeleteEdge(global_queue, detached_thread, child, dest);
-    FX_CHECK(result.is_ok()) << "unexpected DeleteEdge(child, dest) failure with code "
-                             << static_cast<int>(result.error());
-    source->RemoveChildDest(child);
-    return fpromise::ok();
+
+    // Remove the edge child -> dest.
+    source_parent = source;
+    source = child;
   }
 
-  if (dest->is_meta_) {
-    // Find the node in dest->child_sources() that connects to source (which must be an ordinary
-    // node).
+  if (dest->is_meta()) {
+    // Find the node in `dest->child_sources()` that connects to `source`.
     NodePtr child;
-    for (auto& c : dest->child_sources_) {
-      if (HasNode(c->sources_, source)) {
+    for (auto& c : dest->child_sources()) {
+      if (HasNode(c->sources(), source)) {
         child = c;
         break;
       }
@@ -120,40 +210,38 @@ fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
     if (!child) {
       return fpromise::error(fuchsia_audio_mixer::DeleteEdgeError::kEdgeNotFound);
     }
-    // Remove the edge source -> child. This MUST succeed because we've found a child that connects
-    // with source. If this fails, there must be a bug in CreateEdge.
-    auto result = DeleteEdge(global_queue, detached_thread, source, child);
-    FX_CHECK(result.is_ok()) << "unexpected DeleteEdge(source, child) failure with code "
-                             << static_cast<int>(result.error());
-    // TODO(fxbug.dev/87651): Consider a rule that each child node can have at most one source. This
-    // is implied by the CreateNewChild{Source,Dest}() API, but tests in reachability_unittest.cc
-    // create child nodes with multiple sources.
-    if (child->sources().empty()) {
-      dest->RemoveChildSource(child);
-    }
-    return result;
+    // Remove the edge source -> child.
+    dest_parent = dest;
+    dest = child;
   }
 
-  if (!HasNode(dest->sources_, source)) {
+  if (!HasNode(dest->sources(), source)) {
     return fpromise::error(fuchsia_audio_mixer::DeleteEdgeError::kEdgeNotFound);
   }
 
-  // If the backwards (dest -> source) link exists, the forwards (source -> dest) link must exist
-  // too.
-  FX_CHECK(source->dest_ == dest);
+  // The backwards link (dest -> source) exists. The forwards link (source -> dest) must exist too.
+  FX_CHECK(source->dest() == dest);
 
+  // Remove this edge.
   source->RemoveDest(dest);
   dest->RemoveSource(source);
+
+  if (source_parent && !source_parent->built_in_children_) {
+    source_parent->RemoveChildDest(source);
+  }
+  if (dest_parent && !dest_parent->built_in_children_ && dest->sources().empty()) {
+    dest_parent->RemoveChildSource(dest);
+  }
 
   // Since the source was previously connected to dest, it must be owned by the same thread as dest.
   // Since the source is now disconnected, it moves to the detached thread.
   FX_CHECK(source->thread() == dest->thread());
   source->set_thread(detached_thread);
 
+  // TODO(fxbug.dev/87651): update topological order of consumer stages
+
   // Save this for the closure since we can't read Nodes from the mix threads.
   const auto dest_stage_thread_id = dest->thread()->id();
-
-  // TODO(fxbug.dev/87651): update topological order of consumer stages
 
   // The PipelineStages are updated asynchronously.
   global_queue.Push(dest_stage_thread_id,
@@ -208,8 +296,9 @@ void Node::Destroy(GlobalTaskQueue& global_queue, GraphDetachedThreadPtr detache
   };
 
   if (!node->is_meta()) {
-    for (auto& source : node->sources()) {
-      delete_edge(source, node);
+    const auto& sources = node->sources();
+    while (!sources.empty()) {
+      delete_edge(sources.front(), node);
     }
     if (node->dest()) {
       delete_edge(node, node->dest());
@@ -219,14 +308,18 @@ void Node::Destroy(GlobalTaskQueue& global_queue, GraphDetachedThreadPtr detache
     FX_CHECK(node->dest() == nullptr);
 
   } else {
-    for (auto& child_source : node->child_sources()) {
-      for (auto& source : child_source->sources()) {
-        delete_edge(source, node);
+    const auto& child_sources = node->child_sources();
+    const auto& child_dests = node->child_dests();
+
+    // Iterate backwards through these vectors so as children are removed, our position stays valid.
+    for (size_t k = child_sources.size(); k > 0; k--) {
+      for (auto& sources = child_sources[k - 1]->sources(); !sources.empty();) {
+        delete_edge(sources.front(), node);
       }
     }
-    for (auto& child_dest : node->child_dests()) {
-      if (child_dest->dest()) {
-        delete_edge(node, child_dest->dest());
+    for (size_t k = child_dests.size(); k > 0; k--) {
+      if (auto dest = child_dests[k - 1]->dest(); dest) {
+        delete_edge(node, dest);
       }
     }
 
@@ -275,96 +368,6 @@ std::shared_ptr<GraphThread> Node::thread() const {
 void Node::set_thread(std::shared_ptr<GraphThread> t) {
   FX_CHECK(!is_meta_);
   thread_ = t;
-}
-
-fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdgeInner(
-    GlobalTaskQueue& global_queue, NodePtr source, NodePtr dest) {
-  // Create a node in source->child_dests() if needed.
-  if (source->is_meta_) {
-    if (HasDestInChildren(source->child_dests(), dest)) {
-      return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kAlreadyConnected);
-    }
-    NodePtr child = source->CreateNewChildDest();
-    if (!child) {
-      return fpromise::error(
-          fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
-    }
-    auto result = CreateEdgeInner(global_queue, child, dest);
-    if (result.is_ok()) {
-      source->AddChildDest(child);
-    }
-    return result;
-  }
-
-  // Create a node in dest->child_sources() if needed.
-  if (dest->is_meta_) {
-    if (HasSourceInChildren(dest->child_sources(), source)) {
-      return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kAlreadyConnected);
-    }
-    NodePtr child = dest->CreateNewChildSource();
-    if (!child) {
-      return fpromise::error(
-          fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
-    }
-    auto result = CreateEdgeInner(global_queue, source, child);
-    if (result.is_ok()) {
-      dest->AddChildSource(child);
-    }
-    return result;
-  }
-
-  if (source->dest() == dest) {
-    return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kAlreadyConnected);
-  }
-  if (source->dest() || !source->AllowsDest()) {
-    return fpromise::error(
-        fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
-  }
-  if (auto max = dest->MaxSources(); max && dest->sources().size() >= *max) {
-    return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
-  }
-  if (!dest->CanAcceptSourceFormat(source->pipeline_stage()->format())) {
-    return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
-  }
-  if (dest->pipeline_direction() == PipelineDirection::kOutput &&
-      source->pipeline_direction() == PipelineDirection::kInput) {
-    return fpromise::error(
-        fuchsia_audio_mixer::CreateEdgeError::kOutputPipelineCannotReadFromInputPipeline);
-  }
-
-  // Since source->dest() is not set, source should not appear in dest->sources().
-  FX_CHECK(!HasNode(dest->sources(), source));
-
-  dest->AddSource(source);
-  source->SetDest(dest);
-
-  // Since the source was not previously connected, it must be owned by the detached thread.
-  // This means we can move source to dest's thread.
-  FX_CHECK(source->thread()->id() == GraphDetachedThread::kId);
-  source->set_thread(dest->thread());
-
-  // Save this now since we can't read Nodes from the mix threads.
-  const auto dest_stage_thread_id = dest->thread()->id();
-
-  // TODO(fxbug.dev/87651): update topological order of consumer stages
-
-  // Update the PipelineStages asynchronously, on dest's thread.
-  global_queue.Push(dest_stage_thread_id,
-                    [dest_stage = dest->pipeline_stage(),      //
-                     source_stage = source->pipeline_stage(),  //
-                     dest_stage_thread_id]() {
-                      FX_CHECK(dest_stage->thread()->id() == dest_stage_thread_id)
-                          << dest_stage->thread()->id() << " != " << dest_stage_thread_id;
-                      FX_CHECK(source_stage->thread()->id() == GraphDetachedThread::kId)
-                          << source_stage->thread()->id() << " != " << GraphDetachedThread::kId;
-
-                      ScopedThreadChecker checker(dest_stage->thread()->checker());
-                      source_stage->set_thread(dest_stage->thread());
-                      // TODO(fxbug.dev/87651): Pass in `gain_ids`.
-                      dest_stage->AddSource(source_stage, /*options=*/{});
-                    });
-
-  return fpromise::ok();
 }
 
 void Node::SetBuiltInChildren(std::vector<NodePtr> child_sources,
