@@ -15,6 +15,9 @@ namespace cobalt {
 // This class connects to the MetricsEventLoggerFactory and MetricsEventLogger fidl endpoints using
 // ServiceHubConnector. We are using ServiceHubConnector to handle fidl endpoint reconnects
 // and fidl call retries.
+//
+// TODO(b/249376344): Remove this class when the functionality of ServiceHubConnector is built into
+// fidl api call.
 class MetricsImpl final
     : public Metrics,
       private fidl::contrib::ServiceHubConnector<fuchsia_metrics::MetricEventLoggerFactory,
