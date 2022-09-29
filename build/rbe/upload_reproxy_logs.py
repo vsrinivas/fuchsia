@@ -145,9 +145,9 @@ def convert_reproxy_actions_log(
     return log_dump
 
 
-def read_reproxy_metrics_proto(reproxy_logdir: str) -> stats_pb2.Stats:
+def read_reproxy_metrics_proto(metrics_file: str) -> stats_pb2.Stats:
     stats = stats_pb2.Stats()
-    with open(os.path.join(reproxy_logdir, "rbe_metrics.pb"), mode='rb') as f:
+    with open(metrics_file, mode='rb') as f:
         stats.ParseFromString(f.read())
     return stats
 
@@ -198,7 +198,9 @@ def main_upload_metrics(
 ) -> int:
     if verbose:
         msg(f"Ingesting reproxy metrics from {reproxy_logdir}")
-    stats = read_reproxy_metrics_proto(reproxy_logdir=reproxy_logdir)
+
+    metrics_file = os.path.join(reproxy_logdir, "rbe_metrics.pb")
+    stats = read_reproxy_metrics_proto(metrics_file=metrics_file)
 
     if len(stats.stats) == 0:
         if verbose:
@@ -307,11 +309,21 @@ def main_single_logdir(
     verbose: bool,
 ) -> int:
 
+    # The rbe_metrics.pb file is a sign that a build finished.
+    # Skip over unfinished builds.
+    metrics_file = os.path.join(reproxy_logdir, "rbe_metrics.pb")
+    if not os.path.isfile(metrics_file):
+        if verbose:
+            msg(
+                f"Metrics file {metrics_file} not found.  Assuming build is not finished and skipping {reproxy_logdir}."
+            )
+        return 0
+
     # Use a stamp-file to know whether or not this directory has been uploaded.
     upload_stamp_file = os.path.join(reproxy_logdir, "upload_stamp")
     if not dry_run and os.path.exists(upload_stamp_file):
         msg(f"Already uploaded logs in {reproxy_logdir}.  Skipping.")
-        return
+        return 0
 
     # Make sure we have a uuid.
     # "build_id" comes from build/rbe/fuchsia-reproxy-wrap.sh.

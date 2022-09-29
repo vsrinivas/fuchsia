@@ -18,7 +18,39 @@ import upload_reproxy_logs
 # Most tests here are testing for python syntax/semantic errors.
 
 
-class MainUploadMetricsTest(unittest.TestCase):
+class ReproxyLogdirTestHarness(unittest.TestCase):
+
+    def setUp(self):
+        self._reproxy_logdir = tempfile.mkdtemp()
+        # The majority of tests expect the metrics file to be present
+        # as a sign that a build is done.
+        self.touch_metrics_file()
+
+    def tearDown(self):
+        shutil.rmtree(self._reproxy_logdir)
+
+    @property
+    def _stamp_file(self):
+        return os.path.join(self._reproxy_logdir, "upload_stamp")
+
+    @property
+    def _build_id_file(self):
+        return os.path.join(self._reproxy_logdir, "build_id")
+
+    @property
+    def _metrics_file(self):
+        return os.path.join(self._reproxy_logdir, "rbe_metrics.pb")
+
+    def touch_stamp_file(self):
+        with open(self._stamp_file, "w") as f:
+            f.write("\n")
+
+    def touch_metrics_file(self):
+        with open(self._metrics_file, "wb") as f:
+            f.write("\n".encode())
+
+
+class MainUploadMetricsTest(ReproxyLogdirTestHarness):
 
     def test_dry_run(self):
         with mock.patch.object(
@@ -26,7 +58,7 @@ class MainUploadMetricsTest(unittest.TestCase):
                 return_value=stats_pb2.Stats()) as mock_read_proto:
             exit_code = upload_reproxy_logs.main_upload_metrics(
                 uuid="feed-face-feed-face",
-                reproxy_logdir="/tmp/reproxy.log.dir",
+                reproxy_logdir=self._reproxy_logdir,
                 bq_metrics_table="project.dataset.rbe_metrics",
                 dry_run=True,
                 verbose=False)
@@ -42,7 +74,7 @@ class MainUploadMetricsTest(unittest.TestCase):
                                    return_value=0) as mock_upload:
                 exit_code = upload_reproxy_logs.main_upload_metrics(
                     uuid="feed-face-feed-face",
-                    reproxy_logdir="/tmp/reproxy.log.dir",
+                    reproxy_logdir=self._reproxy_logdir,
                     bq_metrics_table="project.dataset.rbe_metrics",
                     dry_run=False,
                     verbose=False)
@@ -59,7 +91,7 @@ class MainUploadMetricsTest(unittest.TestCase):
                                    return_value=1) as mock_upload:
                 exit_code = upload_reproxy_logs.main_upload_metrics(
                     uuid="feed-face-feed-face",
-                    reproxy_logdir="/tmp/reproxy.log.dir",
+                    reproxy_logdir=self._reproxy_logdir,
                     bq_metrics_table="project.dataset.rbe_metrics",
                     dry_run=False,
                     verbose=False)
@@ -68,6 +100,8 @@ class MainUploadMetricsTest(unittest.TestCase):
         self.assertEqual(exit_code, 1)
 
     def test_empty_stats(self):
+        with open(self._metrics_file, "wb") as metrics_file:
+            pass
         with mock.patch.object(
                 upload_reproxy_logs, "read_reproxy_metrics_proto",
                 return_value=stats_pb2.Stats()) as mock_read_proto:
@@ -75,7 +109,7 @@ class MainUploadMetricsTest(unittest.TestCase):
                                    return_value=0) as mock_upload:
                 exit_code = upload_reproxy_logs.main_upload_metrics(
                     uuid="feed-face-feed-face",
-                    reproxy_logdir="/tmp/reproxy.log.dir",
+                    reproxy_logdir=self._reproxy_logdir,
                     bq_metrics_table="project.dataset.rbe_metrics",
                     dry_run=False,
                     verbose=False)
@@ -195,7 +229,7 @@ class ReadReproxyMetricsProto(unittest.TestCase):
             with mock.patch.object(stats_pb2.Stats,
                                    "ParseFromString") as mock_parse:
                 stats = upload_reproxy_logs.read_reproxy_metrics_proto(
-                    reproxy_logdir="/tmp/reproxy.log.dir",
+                    metrics_file="/tmp/reproxy.log.dir/rbe_metrics.pb",
                 )
         mock_open.assert_called_once()
         mock_parse.assert_called_once()
@@ -237,25 +271,32 @@ class BQUploadMetricsTest(unittest.TestCase):
         mock_process_call.assert_called_once()
 
 
-class MainSingleLogdirTest(unittest.TestCase):
+class MainSingleLogdirTest(ReproxyLogdirTestHarness):
 
-    def setUp(self):
-        self._reproxy_logdir = tempfile.mkdtemp()
-
-    def tearDown(self):
-        shutil.rmtree(self._reproxy_logdir)
-
-    @property
-    def _stamp_file(self):
-        return os.path.join(self._reproxy_logdir, "upload_stamp")
-
-    @property
-    def _build_id_file(self):
-        return os.path.join(self._reproxy_logdir, "build_id")
+    def test_build_not_done_yet(self):
+        os.remove(self._metrics_file)  # cause this log dir to be skipped
+        with mock.patch.object(upload_reproxy_logs,
+                               "main_upload_metrics") as mock_upload_metrics:
+            with mock.patch.object(upload_reproxy_logs,
+                                   "main_upload_logs") as mock_upload_logs:
+                exit_code = upload_reproxy_logs.main_single_logdir(
+                    reproxy_logdir=self._reproxy_logdir,
+                    reclient_bindir="/re-client/tools",
+                    metrics_table="project:metrics.metrics_table",
+                    logs_table="project:metrics.logs_table",
+                    uuid_flag="feed-face",
+                    upload_batch_size=10,
+                    print_sample=False,
+                    dry_run=False,
+                    verbose=False,
+                )
+        mock_upload_metrics.assert_not_called()
+        mock_upload_logs.assert_not_called()
+        self.assertEqual(exit_code, 0)
+        self.assertFalse(os.path.exists(self._stamp_file))
 
     def test_already_uploaded(self):
-        with open(self._stamp_file, "w") as stamp:
-            stamp.write("\n")
+        self.touch_stamp_file()
         with mock.patch.object(upload_reproxy_logs,
                                "main_upload_metrics") as mock_upload_metrics:
             with mock.patch.object(upload_reproxy_logs,
