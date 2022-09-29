@@ -154,6 +154,12 @@ template("fuchsia_structured_config_values") {
                 ":$manifest_resource_target",
                 "${invoker.cm_label}",
               ] + _value_file_deps
+      if (defined(visibility)) {
+        # The group we create below for the non-default toolchains needs to depend on this target.
+        # We can't explicitly list all of the toolchain suffixes that might dep on this, because not
+        # all of them have variable shortcuts defined.
+        visibility += [ ":${target_name}" ]
+      }
     }
 
     # package the value file

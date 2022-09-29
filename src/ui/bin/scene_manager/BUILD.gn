@@ -102,10 +102,7 @@ fuchsia_structured_config_rust_lib("input_config_lib") {
 }
 
 fuchsia_structured_config_values("config_for_test") {
-  visibility = [
-    ":config_for_test",
-    ":scene_manager_component_for_test",
-  ]
+  visibility = [ ":scene_manager_component_for_test" ]
   cm_label = ":manifest"
   values = {
     idle_threshold_minutes = 15
