@@ -851,9 +851,8 @@ void System::OnFilterMatches(const std::vector<uint64_t>& matched_pids) {
   // Go over the targets and see if we find a valid one for each pid.
   for (uint64_t matched_pid : matched_pids) {
     // If we found an already attached process, we don't care about this match.
-    if (ProcessFromKoid(matched_pid)) {
+    if (Process* process = ProcessFromKoid(matched_pid); process)
       continue;
-    }
 
     AttachToProcess(matched_pid, [matched_pid](fxl::WeakPtr<Target> target, const Err& err,
                                                uint64_t timestamp) {

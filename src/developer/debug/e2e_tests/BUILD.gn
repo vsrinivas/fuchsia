@@ -6,12 +6,8 @@ import("//build/host.gni")
 import("//build/test.gni")
 import("//build/testing/environments.gni")
 import("//build/testing/host_test_data.gni")
-import("//build/zircon/c_utils.gni")
 
 if (is_host) {
-  unstripped_binaries_list_file =
-      "$target_gen_dir/zxdb_e2e_test_unstripped_binaries.list"
-
   test("zxdb_e2e_tests") {
     sources = [
       "e2e_test.cc",
@@ -20,9 +16,7 @@ if (is_host) {
       "ffx_debug_agent_bridge.h",
       "main_e2e_test.cc",
       "main_e2e_test.h",
-      "test_run_and_kill_process.cc",
-      "test_run_failing_test_component.cc",
-      "test_status.cc",
+      "status_test.cc",
     ]
 
     deps = [
@@ -38,15 +32,14 @@ if (is_host) {
       "//src/developer/debug/shared",
       "//src/developer/debug/zxdb/client",
       "//src/developer/debug/zxdb/common:test_support",
-      "//src/developer/debug/zxdb/console:test_support",
       "//src/developer/debug/zxdb/symbols:test_support",
       "//src/lib/fxl/test:test_settings",
       "//third_party/googletest:gtest",
     ]
 
     # Only x64 hosts supports host tests, the arm64 emulator is run from an arm64 host and therefore
-    # cannot run the host test binary produced by this target. https://fxbug.dev/64897 tracks
-    # enabling host tests to run in arm64 environment.
+    # cannot run the x64 binary produced by this target. https://fxbug.dev/64897 tracks enabling
+    # host tests to run in arm64 environment.
     environments = all_fuchsia_envs
     if (target_cpu == "arm64") {
       # FIXME(fxb/108369): Disable this test for sherlock because we're seeing higher flake rates
@@ -60,55 +53,10 @@ if (is_host) {
     }
   }
 
-  # This action takes the output of the link_output_rspfile target and copies them into a well known
-  # location. This is necessary in variant builds where an extra directory is created in
-  # root_build_dir and we cannot know from the host toolchain which variant is being built. In
-  # default toolchain builds, this action does nothing.
-  action("copy_unstripped_binaries") {
-    testonly = true
-
-    stamp_file = "$target_gen_dir/copy_unstripped_binaries.stamp"
-    inputs = [ unstripped_binaries_list_file ]
-    outputs = [ stamp_file ]
-
-    script = "copy_unstripped_binaries.py"
-    args = [
-      rebase_path(unstripped_binaries_list_file, root_build_dir),
-      rebase_path(stamp_file, root_build_dir),
-      rebase_path("$root_build_dir/exe.unstripped/", root_build_dir),
-    ]
-
-    deps = [ ":unstripped_binaries_list" ]
-  }
-
   host_test_data("zxdb_e2e_test_data") {
-    sources = [
-      # The action target above ensures that these files are always present in this location,
-      # regardless of whether or not this is a variant build. Additional inferior programs that are
-      # to be used in these tests should be added both in this list and to the deps of the
-      # unstripped_binaries_list target below.
-      "$root_build_dir/exe.unstripped/crasher",
-      "$root_build_dir/exe.unstripped/crasher_test",
-      "$root_out_dir/ffx",
-    ]
+    sources = [ "$root_out_dir/ffx" ]
 
-    deps = [
-      ":copy_unstripped_binaries",
-      "//src/developer/ffx:ffx_bin",
-    ]
-  }
-
-  # This is the magic that will point to the output directory for target binaries. This is
-  # particularly helpful in variant builds where the host toolchain doesn't know the toolchain
-  # variant that built the target binaries. The action copy_unstripped_binaries will then process
-  # this file and put the unstripped binaries in a common location to be consumed by the tests.
-  link_output_rspfile("unstripped_binaries_list") {
-    testonly = true
-    outputs = [ unstripped_binaries_list_file ]
-
-    deps = [
-      "//src/developer/forensics/crasher:crasher($target_toolchain)",
-      "//src/developer/forensics/crasher:crasher_test($target_toolchain)",
-    ]
+    # Ensure the non-asan variant is built even in asan builds.
+    deps = [ "//src/developer/ffx:ffx_bin" ]
   }
 }
