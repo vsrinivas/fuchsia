@@ -1,0 +1,22 @@
+[
+    {
+        type: "DriverManagerHandler",
+        name: "driver_manager_handler",
+        config: {},
+    },
+    {
+        type: "ShutdownWatcher",
+        name: "shutdown_watcher",
+    },
+    {
+        type: "SystemShutdownHandler",
+        name: "sys_shutdown",
+        config: {
+            shutdown_timeout_s: 3600,
+        },
+        dependencies: {
+            driver_manager_handler_node: "driver_manager_handler",
+            shutdown_watcher_node: "shutdown_watcher",
+        },
+    },
+]

@@ -13,12 +13,19 @@ resource("thermal-client-service-integration-test-resources") {
   outputs = [ "thermal_client_service_test/{{source_file_part}}" ]
 }
 
+resource("shutdown-integration-test-resources") {
+  sources = [ "config_files/shutdown_test/node_config.json5" ]
+  outputs = [ "shutdown_test/{{source_file_part}}" ]
+}
+
 rustc_test("integration-test") {
   name = "power_manager_integration_test"
   testonly = true
   edition = "2021"
   deps = [
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_rust",
     "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
     "//src/power/power-manager/integration/lib",
   ]
 
@@ -29,6 +36,7 @@ fuchsia_unittest_package("integration-test-package") {
   manifest = "meta/power-manager-integration-test.cml"
   deps = [
     ":integration-test",
+    ":shutdown-integration-test-resources",
     ":thermal-client-service-integration-test-resources",
   ]
 }
