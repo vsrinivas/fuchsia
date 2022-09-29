@@ -8,7 +8,7 @@
 #include <memory>
 #include <new>
 
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 namespace {
 
@@ -25,7 +25,7 @@ TEST(TrivialAllocatorTests, BasicOwningAllocator) {
 
   for (int*& iptr : held_allocations) {
     void* ptr = allocator.allocate(sizeof(int), alignof(int));
-    EXPECT_NOT_NULL(ptr);
+    EXPECT_TRUE(ptr);
     iptr = reinterpret_cast<int*>(ptr);
     *iptr = 17;
   }
@@ -33,15 +33,15 @@ TEST(TrivialAllocatorTests, BasicOwningAllocator) {
   constexpr size_t kBigAlignment = 128;
   for (int*& iptr : aligned_allocations) {
     void* ptr = allocator.allocate(sizeof(int), kBigAlignment);
-    EXPECT_NOT_NULL(ptr);
-    EXPECT_EQ(reinterpret_cast<uintptr_t>(ptr) & (kBigAlignment - 1), 0);
+    EXPECT_TRUE(ptr);
+    EXPECT_EQ(reinterpret_cast<uintptr_t>(ptr) & (kBigAlignment - 1), 0u);
     iptr = reinterpret_cast<int*>(ptr);
     *iptr = 42;
   }
 
   for (int*& iptr : released_allocations) {
     void* ptr = allocator.allocate(sizeof(int), alignof(int));
-    EXPECT_NOT_NULL(ptr);
+    EXPECT_TRUE(ptr);
     iptr = reinterpret_cast<int*>(ptr);
     *iptr = 23;
     allocator.deallocate(ptr);
