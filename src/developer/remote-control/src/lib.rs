@@ -99,21 +99,6 @@ impl RemoteControlService {
                 responder.send(&mut self.clone().select(selector).await)?;
                 Ok(())
             }
-            rcs::RemoteControlRequest::OpenHub { server, responder } => {
-                responder.send(
-                    &mut fuchsia_fs::directory::open_channel_in_namespace(
-                        HUB_ROOT,
-                        io::OpenFlags::RIGHT_READABLE | io::OpenFlags::RIGHT_WRITABLE,
-                        server,
-                    )
-                    .map_err(|e| match e {
-                        fuchsia_fs::node::OpenError::Namespace(s) => s.into_raw(),
-                        fuchsia_fs::node::OpenError::OpenError(s) => s.into_raw(),
-                        _ => fuchsia_zircon::Status::INTERNAL.into_raw(),
-                    }),
-                )?;
-                Ok(())
-            }
             rcs::RemoteControlRequest::RootRealmExplorer { server, responder } => {
                 responder.send(
                     &mut fdio::service_connect(

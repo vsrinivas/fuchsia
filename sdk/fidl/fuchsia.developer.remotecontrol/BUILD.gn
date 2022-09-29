@@ -17,7 +17,6 @@ fidl("fuchsia.developer.remotecontrol") {
     "//sdk/fidl/fuchsia.device",
     "//sdk/fidl/fuchsia.diagnostics",
     "//sdk/fidl/fuchsia.hwinfo",
-    "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.logger",
     "//sdk/fidl/fuchsia.net",
     "//sdk/fidl/fuchsia.sys2",

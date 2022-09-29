@@ -160,10 +160,6 @@ pub fn setup_fake_rcs() -> RemoteControlProxy {
         let querier = Arc::new(mock_realm_query);
         while let Ok(Some(req)) = stream.try_next().await {
             match req {
-                RemoteControlRequest::OpenHub { server: _, responder } => {
-                    // OpenHub deprecated.
-                    responder.send(&mut Err(0)).unwrap();
-                }
                 RemoteControlRequest::RootRealmExplorer { server, responder } => {
                     let explorer = Arc::clone(&explorer);
                     fuchsia_async::Task::local(async move { explorer.serve(server).await })
