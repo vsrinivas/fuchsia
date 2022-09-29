@@ -31,14 +31,13 @@ std::shared_ptr<ConsumerNode> ConsumerNode::Create(Args args) {
       .command_queue = command_queue,
       .writer = std::move(args.writer),
   });
-  pipeline_stage->set_thread(args.thread);
-  // TODO(fxbug.dev/87651): also need to call `args.thread->AddConsumer(pipeline_stage)` on the
-  // appropriate thread
+  pipeline_stage->set_thread(args.thread->pipeline_thread());
+  args.thread->AddConsumer(pipeline_stage);
 
   auto node = std::make_shared<WithPublicCtor>(args.name, args.pipeline_direction,
                                                std::move(pipeline_stage), args.format,
                                                std::move(command_queue));
-  node->set_pipeline_stage_thread(args.thread);
+  node->set_thread(args.thread);
   return node;
 }
 

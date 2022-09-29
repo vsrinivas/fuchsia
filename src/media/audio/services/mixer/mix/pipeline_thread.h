@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_MIX_THREAD_H_
-#define SRC_MEDIA_AUDIO_SERVICES_MIXER_MIX_THREAD_H_
+#ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_MIX_PIPELINE_THREAD_H_
+#define SRC_MEDIA_AUDIO_SERVICES_MIXER_MIX_PIPELINE_THREAD_H_
 
 #include <memory>
 #include <string>
@@ -18,7 +18,7 @@ namespace media_audio {
 //
 // As a general rule, const methods are safe to call from any thread, while mutable methods are not
 // thread safe, but see individual methods for specific semantics.
-class Thread {
+class PipelineThread {
  public:
   // Returns the thread's ID.
   // This is guaranteed to be a unique identifier.
@@ -34,24 +34,17 @@ class Thread {
   // Safe to call from any thread.
   virtual const ThreadChecker& checker() const = 0;
 
-  // Adds a consumer to this thread.
-  // This thread becomes responsible for running mix jobs on this consumer.
-  virtual void AddConsumer(ConsumerStagePtr consumer) TA_REQ(checker()) = 0;
-
-  // Removes a consumer from this thread.
-  virtual void RemoveConsumer(ConsumerStagePtr consumer) TA_REQ(checker()) = 0;
-
  protected:
-  Thread() = default;
-  virtual ~Thread() = default;
+  PipelineThread() = default;
+  virtual ~PipelineThread() = default;
 
-  Thread(const Thread&) = delete;
-  Thread& operator=(const Thread&) = delete;
+  PipelineThread(const PipelineThread&) = delete;
+  PipelineThread& operator=(const PipelineThread&) = delete;
 
-  Thread(Thread&&) = delete;
-  Thread& operator=(Thread&&) = delete;
+  PipelineThread(PipelineThread&&) = delete;
+  PipelineThread& operator=(PipelineThread&&) = delete;
 };
 
 }  // namespace media_audio
 
-#endif  // SRC_MEDIA_AUDIO_SERVICES_MIXER_MIX_THREAD_H_
+#endif  // SRC_MEDIA_AUDIO_SERVICES_MIXER_MIX_PIPELINE_THREAD_H_

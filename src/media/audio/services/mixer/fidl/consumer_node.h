@@ -8,9 +8,9 @@
 #include <zircon/types.h>
 
 #include "src/media/audio/services/mixer/common/basic_types.h"
+#include "src/media/audio/services/mixer/fidl/graph_mix_thread.h"
 #include "src/media/audio/services/mixer/fidl/node.h"
 #include "src/media/audio/services/mixer/mix/consumer_stage.h"
-#include "src/media/audio/services/mixer/mix/thread.h"
 
 namespace media_audio {
 
@@ -34,13 +34,10 @@ class ConsumerNode : public Node {
     std::shared_ptr<ConsumerStage::Writer> writer;
 
     // Which thread the consumer is assigned to.
-    ThreadPtr thread;
+    std::shared_ptr<GraphMixThread> thread;
   };
 
   static std::shared_ptr<ConsumerNode> Create(Args args);
-
-  // Returns the same object as `pipeline_stage()`, but with a more specialized type.
-  ConsumerStagePtr consumer_stage() const { return consumer_stage_; }
 
   // Starts this consumer.
   void Start(ConsumerStage::StartCommand cmd) const;
@@ -52,6 +49,7 @@ class ConsumerNode : public Node {
   zx::duration GetSelfPresentationDelayForSource(const NodePtr& source) const final;
 
  private:
+  friend class ConsumerNodeTest;
   using CommandQueue = ConsumerStage::CommandQueue;
 
   ConsumerNode(std::string_view name, PipelineDirection pipeline_direction,

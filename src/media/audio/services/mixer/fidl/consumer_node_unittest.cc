@@ -9,9 +9,9 @@
 
 #include "src/media/audio/lib/clock/synthetic_clock_realm.h"
 #include "src/media/audio/services/mixer/fidl/testing/fake_graph.h"
+#include "src/media/audio/services/mixer/fidl/testing/graph_mix_thread_without_loop.h"
 #include "src/media/audio/services/mixer/mix/testing/defaults.h"
 #include "src/media/audio/services/mixer/mix/testing/fake_consumer_stage_writer.h"
-#include "src/media/audio/services/mixer/mix/testing/fake_thread.h"
 
 namespace media_audio {
 namespace {
@@ -27,57 +27,96 @@ const auto kPipelineDirection = PipelineDirection::kOutput;
 constexpr auto kMixJobFrames = 10;
 constexpr auto kMixJobPeriod = zx::msec(1);
 
+}  // namespace
+
 class ConsumerNodeTest : public ::testing::Test {
  protected:
-  const ThreadPtr mix_thread_ = FakeThread::Create(1);
-  const DetachedThreadPtr detached_thread_ = DetachedThread::Create();
+  struct TestHarness {
+    TestHarness() = default;
+    TestHarness(TestHarness&&) = default;
+    ~TestHarness();
 
-  const std::shared_ptr<SyntheticClockRealm> clock_realm_ = SyntheticClockRealm::Create();
-  const std::shared_ptr<SyntheticClock> clock_ =
-      clock_realm_->CreateClock("clock", Clock::kMonotonicDomain, false);
+    std::unique_ptr<FakeGraph> graph;
+    std::shared_ptr<SyntheticClockRealm> clock_realm;
+    std::shared_ptr<SyntheticClock> clock;
+    std::shared_ptr<GraphMixThread> mix_thread;
+    std::shared_ptr<FakeConsumerStageWriter> consumer_writer;
+    std::shared_ptr<ConsumerNode> consumer_node;
+  };
 
-  const std::shared_ptr<FakeConsumerStageWriter> consumer_writer_ =
-      std::make_shared<FakeConsumerStageWriter>();
-  const std::shared_ptr<ConsumerNode> consumer_node_ = ConsumerNode::Create({
-      .pipeline_direction = kPipelineDirection,
-      .format = kFormat,
-      .reference_clock = UnreadableClock(clock_),
-      .writer = consumer_writer_,
-      .thread = mix_thread_,
-  });
+  TestHarness MakeTestHarness(FakeGraph::Args graph_args);
 };
 
-TEST_F(ConsumerNodeTest, CreateEdgeSourceBadFormat) {
-  GlobalTaskQueue q;
-  FakeGraph graph({
-      .unconnected_ordinary_nodes = {1},
-      .formats = {{&kWrongFormat, {1}}},
-      .default_thread = detached_thread_,
+ConsumerNodeTest::TestHarness ConsumerNodeTest::MakeTestHarness(FakeGraph::Args graph_args) {
+  TestHarness h;
+  h.graph = std::make_unique<FakeGraph>(std::move(graph_args));
+  h.clock_realm = SyntheticClockRealm::Create();
+  h.clock = h.clock_realm->CreateClock("clock", Clock::kMonotonicDomain, false);
+
+  // Since we don't run the mix loop, immediately stop the timer so the realm never waits for it.
+  auto timer = h.clock_realm->CreateTimer();
+  timer->Stop();
+  h.mix_thread = CreateGraphMixThreadWithoutLoop({
+      .id = 1,
+      .name = "TestThread",
+      .mix_period = kMixJobPeriod,
+      .cpu_per_period = kMixJobPeriod / 2,
+      .global_task_queue = h.graph->global_task_queue(),
+      .timer = std::move(timer),
+      .mono_clock = h.clock_realm->CreateClock("mono_clock", Clock::kMonotonicDomain, false),
   });
 
+  h.consumer_writer = std::make_shared<FakeConsumerStageWriter>();
+  h.consumer_node = ConsumerNode::Create({
+      .pipeline_direction = kPipelineDirection,
+      .format = kFormat,
+      .reference_clock = UnreadableClock(h.clock),
+      .writer = h.consumer_writer,
+      .thread = h.mix_thread,
+  });
+
+  return h;
+}
+
+// This removes a circular references between the consumer and thread objects.
+ConsumerNodeTest::TestHarness::~TestHarness() {
+  mix_thread->RemoveConsumer(consumer_node->consumer_stage_);
+  graph->global_task_queue()->RunForThread(mix_thread->id());
+}
+
+TEST_F(ConsumerNodeTest, CreateEdgeSourceBadFormat) {
+  auto h = MakeTestHarness({
+      .unconnected_ordinary_nodes = {1},
+      .formats = {{&kWrongFormat, {1}}},
+  });
+
+  auto& graph = *h.graph;
+  auto& q = *graph.global_task_queue();
+
   // Cannot create an edge where a the source has a different format than the consumer.
-  auto result = Node::CreateEdge(q, graph.node(1), consumer_node_);
+  auto result = Node::CreateEdge(q, graph.node(1), h.consumer_node);
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
 }
 
 TEST_F(ConsumerNodeTest, CreateEdgeTooManySources) {
-  GlobalTaskQueue q;
-  FakeGraph graph({
+  auto h = MakeTestHarness({
       .unconnected_ordinary_nodes = {1, 2},
       .formats = {{&kFormat, {1, 2}}},
-      .default_thread = detached_thread_,
   });
+
+  auto& graph = *h.graph;
+  auto& q = *graph.global_task_queue();
 
   // First edge is OK.
   {
-    auto result = Node::CreateEdge(q, graph.node(1), consumer_node_);
+    auto result = Node::CreateEdge(q, graph.node(1), h.consumer_node);
     ASSERT_TRUE(result.is_ok());
   }
 
   // Cannot create a second incoming edge.
   {
-    auto result = Node::CreateEdge(q, graph.node(2), consumer_node_);
+    auto result = Node::CreateEdge(q, graph.node(2), h.consumer_node);
     ASSERT_FALSE(result.is_ok());
     EXPECT_EQ(result.error(),
               fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
@@ -85,46 +124,48 @@ TEST_F(ConsumerNodeTest, CreateEdgeTooManySources) {
 }
 
 TEST_F(ConsumerNodeTest, CreateEdgeDestNotAllowed) {
-  GlobalTaskQueue q;
-  FakeGraph graph({
+  auto h = MakeTestHarness({
       .unconnected_ordinary_nodes = {1},
       .formats = {{&kFormat, {1}}},
-      .default_thread = detached_thread_,
   });
 
+  auto& graph = *h.graph;
+  auto& q = *graph.global_task_queue();
+
   // Cannot use consumers as a source.
-  auto result = Node::CreateEdge(q, consumer_node_, graph.node(1));
+  auto result = Node::CreateEdge(q, h.consumer_node, graph.node(1));
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(),
             fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
 }
 
 TEST_F(ConsumerNodeTest, CreateEdgeSuccess) {
-  GlobalTaskQueue q;
-  FakeGraph graph({
+  auto h = MakeTestHarness({
       .unconnected_ordinary_nodes = {1},
       .formats = {{&kFormat, {1}}},
-      .default_thread = detached_thread_,
   });
+
+  auto& graph = *h.graph;
+  auto& q = *graph.global_task_queue();
 
   // Connect source -> consumer.
   auto source = graph.node(1);
   {
-    auto result = Node::CreateEdge(q, source, consumer_node_);
+    auto result = Node::CreateEdge(q, source, h.consumer_node);
     ASSERT_TRUE(result.is_ok());
   }
 
-  auto consumer_stage = static_cast<ConsumerStage*>(consumer_node_->pipeline_stage().get());
-  EXPECT_EQ(consumer_node_->pipeline_direction(), kPipelineDirection);
-  EXPECT_EQ(consumer_node_->pipeline_stage_thread(), mix_thread_);
-  EXPECT_EQ(consumer_stage->thread(), mix_thread_);
+  auto consumer_stage = static_cast<ConsumerStage*>(h.consumer_node->pipeline_stage().get());
+  EXPECT_EQ(h.consumer_node->pipeline_direction(), kPipelineDirection);
+  EXPECT_EQ(h.consumer_node->thread(), h.mix_thread);
+  EXPECT_EQ(consumer_stage->thread(), h.mix_thread->pipeline_thread());
   EXPECT_EQ(consumer_stage->format(), kFormat);
-  EXPECT_EQ(consumer_stage->reference_clock(), clock_);
+  EXPECT_EQ(consumer_stage->reference_clock(), h.clock);
 
-  q.RunForThread(mix_thread_->id());
+  q.RunForThread(h.mix_thread->id());
 
   // Start the consumer.
-  consumer_node_->Start({
+  h.consumer_node->Start({
       .start_presentation_time = zx::time(0),
       .start_frame = 0,
   });
@@ -143,48 +184,47 @@ TEST_F(ConsumerNodeTest, CreateEdgeSuccess) {
   // Run a mix job, which should write the source data to the destination buffer.
   {
     ClockSnapshots clock_snapshots;
-    clock_snapshots.AddClock(clock_);
-    clock_snapshots.Update(clock_realm_->now());
+    clock_snapshots.AddClock(h.clock);
+    clock_snapshots.Update(h.clock_realm->now());
 
     MixJobContext ctx(clock_snapshots);
-    auto status = consumer_stage->RunMixJob(ctx, clock_realm_->now(), kMixJobPeriod);
+    auto status = consumer_stage->RunMixJob(ctx, h.clock_realm->now(), kMixJobPeriod);
     ASSERT_TRUE(std::holds_alternative<ConsumerStage::StartedStatus>(status));
 
-    ASSERT_EQ(consumer_writer_->packets().size(), 1u);
-    EXPECT_FALSE(consumer_writer_->packets()[0].is_silence);
-    EXPECT_EQ(consumer_writer_->packets()[0].start_frame, kMixJobFrames);  // first mix job
-    EXPECT_EQ(consumer_writer_->packets()[0].length, kMixJobFrames);
-    EXPECT_EQ(consumer_writer_->packets()[0].data, source_payload.data());
-    consumer_writer_->packets().clear();
+    ASSERT_EQ(h.consumer_writer->packets().size(), 1u);
+    EXPECT_FALSE(h.consumer_writer->packets()[0].is_silence);
+    EXPECT_EQ(h.consumer_writer->packets()[0].start_frame, kMixJobFrames);  // first mix job
+    EXPECT_EQ(h.consumer_writer->packets()[0].length, kMixJobFrames);
+    EXPECT_EQ(h.consumer_writer->packets()[0].data, source_payload.data());
+    h.consumer_writer->packets().clear();
   }
 
   // Disconnect source -> consumer.
   {
-    auto result = Node::DeleteEdge(q, source, consumer_node_, detached_thread_);
+    auto result = Node::DeleteEdge(q, graph.detached_thread(), source, h.consumer_node);
     ASSERT_TRUE(result.is_ok());
-    EXPECT_THAT(consumer_node_->sources(), ElementsAre());
+    EXPECT_THAT(h.consumer_node->sources(), ElementsAre());
   }
 
-  q.RunForThread(mix_thread_->id());
+  q.RunForThread(h.mix_thread->id());
 
   // Run a mix job, which should write silence now that the source is disconnected.
   {
-    clock_realm_->AdvanceBy(kMixJobPeriod);
+    h.clock_realm->AdvanceBy(kMixJobPeriod);
 
     ClockSnapshots clock_snapshots;
-    clock_snapshots.AddClock(clock_);
-    clock_snapshots.Update(clock_realm_->now());
+    clock_snapshots.AddClock(h.clock);
+    clock_snapshots.Update(h.clock_realm->now());
 
     MixJobContext ctx(clock_snapshots);
-    auto status = consumer_stage->RunMixJob(ctx, clock_realm_->now(), kMixJobPeriod);
+    auto status = consumer_stage->RunMixJob(ctx, h.clock_realm->now(), kMixJobPeriod);
     ASSERT_TRUE(std::holds_alternative<ConsumerStage::StartedStatus>(status));
 
-    ASSERT_EQ(consumer_writer_->packets().size(), 1u);
-    EXPECT_TRUE(consumer_writer_->packets()[0].is_silence);
-    EXPECT_EQ(consumer_writer_->packets()[0].start_frame, 2 * kMixJobFrames);  // second mix job
-    EXPECT_EQ(consumer_writer_->packets()[0].length, kMixJobFrames);
+    ASSERT_EQ(h.consumer_writer->packets().size(), 1u);
+    EXPECT_TRUE(h.consumer_writer->packets()[0].is_silence);
+    EXPECT_EQ(h.consumer_writer->packets()[0].start_frame, 2 * kMixJobFrames);  // second mix job
+    EXPECT_EQ(h.consumer_writer->packets()[0].length, kMixJobFrames);
   }
 }
 
-}  // namespace
 }  // namespace media_audio

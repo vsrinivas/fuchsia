@@ -15,6 +15,9 @@ namespace media_audio {
 class Node;
 using NodePtr = std::shared_ptr<Node>;
 
+class GraphDetachedThread;
+using GraphDetachedThreadPtr = std::shared_ptr<GraphDetachedThread>;
+
 }  // namespace media_audio
 
 #endif  // SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_PTR_DECLS_H_

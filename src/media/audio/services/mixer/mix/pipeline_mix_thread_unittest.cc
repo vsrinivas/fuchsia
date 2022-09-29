@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/services/mixer/mix/mix_thread.h"
+#include "src/media/audio/services/mixer/mix/pipeline_mix_thread.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -11,6 +11,7 @@
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/services/mixer/mix/consumer_stage.h"
 #include "src/media/audio/services/mixer/mix/testing/consumer_stage_wrapper.h"
+#include "src/media/audio/services/mixer/mix/testing/pipeline_mix_thread_without_loop.h"
 
 namespace media_audio {
 namespace {
@@ -26,12 +27,12 @@ const Format kFormat = Format::CreateOrDie({SampleType::kFloat32, 2, 48000});
 
 }  // namespace
 
-class MixThreadRunMixJobsTest : public ::testing::Test {
+class PipelineMixThreadRunMixJobsTest : public ::testing::Test {
  public:
   static constexpr auto kPeriod = zx::msec(100);
   static constexpr int64_t kPeriodFrames = 4800;
 
-  MixThreadRunMixJobsTest() {
+  PipelineMixThreadRunMixJobsTest() {
     // Since these tests don't call RunLoop, stop the timer so that `realm_->AdvanceTo` doesn't wait
     // for this timer to be blocked in `SleepUntil`.
     timer_->Stop();
@@ -39,7 +40,7 @@ class MixThreadRunMixJobsTest : public ::testing::Test {
 
   SyntheticClockRealm& realm() { return *realm_; }
   std::shared_ptr<const Clock> mono_clock() { return mono_clock_; }
-  MixThread& thread() { return *thread_; }
+  PipelineMixThread& thread() { return *thread_; }
 
   zx::time RunMixJobs(zx::time mono_start_time, zx::time mono_now) TA_REQ(thread().checker()) {
     return thread().RunMixJobs(mono_start_time, mono_now);
@@ -52,7 +53,7 @@ class MixThreadRunMixJobsTest : public ::testing::Test {
   std::shared_ptr<const Clock> mono_clock_ =
       realm_->CreateClock("mono_clock", Clock::kMonotonicDomain, false);
 
-  MixThreadPtr thread_ = MixThread::CreateWithoutLoop({
+  std::shared_ptr<PipelineMixThread> thread_ = CreatePipelineMixThreadWithoutLoop({
       .id = 1,
       .name = "TestThread",
       .mix_period = kPeriod,
@@ -63,7 +64,7 @@ class MixThreadRunMixJobsTest : public ::testing::Test {
   });
 };
 
-TEST_F(MixThreadRunMixJobsTest, RunAfterDeadline) {
+TEST_F(PipelineMixThreadRunMixJobsTest, RunAfterDeadline) {
   ScopedThreadChecker checker(thread().checker());
 
   // pt0 is the presentation time consumed by c.consumer->RunMixJob(ctx, 0, kPeriod). Since we
@@ -90,7 +91,7 @@ TEST_F(MixThreadRunMixJobsTest, RunAfterDeadline) {
   EXPECT_THAT(c.writer->packets(), ElementsAre());
 }
 
-TEST_F(MixThreadRunMixJobsTest, OneConsumerUnstarted) {
+TEST_F(PipelineMixThreadRunMixJobsTest, OneConsumerUnstarted) {
   ScopedThreadChecker checker(thread().checker());
 
   ConsumerStageWrapper c(kFormat, /*presentation_delay=*/zx::nsec(0), PipelineDirection::kOutput,
@@ -105,7 +106,7 @@ TEST_F(MixThreadRunMixJobsTest, OneConsumerUnstarted) {
   EXPECT_THAT(c.writer->packets(), ElementsAre());
 }
 
-TEST_F(MixThreadRunMixJobsTest, OneConsumerStartCommandQueued) {
+TEST_F(PipelineMixThreadRunMixJobsTest, OneConsumerStartCommandQueued) {
   ScopedThreadChecker checker(thread().checker());
 
   // pt0 is the presentation time consumed by c.consumer->RunMixJob(ctx, 0, kPeriod). Since we
@@ -145,7 +146,7 @@ TEST_F(MixThreadRunMixJobsTest, OneConsumerStartCommandQueued) {
                                                          kPeriodFrames, nullptr)));
 }
 
-TEST_F(MixThreadRunMixJobsTest, OneConsumerStarted) {
+TEST_F(PipelineMixThreadRunMixJobsTest, OneConsumerStarted) {
   ScopedThreadChecker checker(thread().checker());
 
   // pt0 is the presentation time consumed by c.consumer->RunMixJob(ctx, 0, kPeriod). Since we
@@ -174,7 +175,7 @@ TEST_F(MixThreadRunMixJobsTest, OneConsumerStarted) {
               ElementsAre(FieldsAre(false, kPeriodFrames, kPeriodFrames, payload1->data())));
 }
 
-TEST_F(MixThreadRunMixJobsTest, OneConsumerStartedNonMonotonicClock) {
+TEST_F(PipelineMixThreadRunMixJobsTest, OneConsumerStartedNonMonotonicClock) {
   ScopedThreadChecker checker(thread().checker());
 
   // The reference clock runs -1000 PPM slower than the system monotonic clock.
@@ -223,7 +224,7 @@ TEST_F(MixThreadRunMixJobsTest, OneConsumerStartedNonMonotonicClock) {
   }
 }
 
-TEST_F(MixThreadRunMixJobsTest, OneConsumerStopsDuringJob) {
+TEST_F(PipelineMixThreadRunMixJobsTest, OneConsumerStopsDuringJob) {
   ScopedThreadChecker checker(thread().checker());
 
   // pt0 is the presentation time consumed by c.consumer->RunMixJob(ctx, 0, kPeriod). Since we
@@ -243,7 +244,7 @@ TEST_F(MixThreadRunMixJobsTest, OneConsumerStopsDuringJob) {
   EXPECT_THAT(c.writer->packets(), ElementsAre(FieldsAre(/*is_silent=*/true, 0, 1, nullptr)));
 }
 
-TEST_F(MixThreadRunMixJobsTest, MultipleConsumers) {
+TEST_F(PipelineMixThreadRunMixJobsTest, MultipleConsumers) {
   ScopedThreadChecker checker(thread().checker());
 
   // pt0 is the presentation time consumed by c.consumer->RunMixJob(ctx, 0, kPeriod). Since we
@@ -292,7 +293,7 @@ TEST_F(MixThreadRunMixJobsTest, MultipleConsumers) {
               ElementsAre(FieldsAre(/*is_silent=*/true, 0, kPeriodFrames, nullptr)));
 }
 
-class MixThreadRunLoopTest : public ::testing::Test {
+class PipelineMixThreadRunLoopTest : public ::testing::Test {
  public:
   static constexpr auto kPeriod = zx::msec(10);
   static constexpr int64_t kPeriodFrames = 480;
@@ -300,7 +301,7 @@ class MixThreadRunLoopTest : public ::testing::Test {
   GlobalTaskQueue& task_queue() { return *task_queue_; }
   SyntheticClockRealm& realm() { return *realm_; }
   std::shared_ptr<const Clock> mono_clock() { return mono_clock_; }
-  MixThread& thread() { return *thread_; }
+  PipelineMixThread& thread() { return *thread_; }
 
  private:
   std::shared_ptr<GlobalTaskQueue> task_queue_ = std::make_shared<GlobalTaskQueue>();
@@ -308,7 +309,7 @@ class MixThreadRunLoopTest : public ::testing::Test {
   std::shared_ptr<const Clock> mono_clock_ =
       realm_->CreateClock("mono_clock", Clock::kMonotonicDomain, false);
 
-  MixThreadPtr thread_ = MixThread::Create({
+  std::shared_ptr<PipelineMixThread> thread_ = PipelineMixThread::Create({
       .id = 1,
       .name = "TestThread",
       .mix_period = kPeriod,
@@ -319,7 +320,7 @@ class MixThreadRunLoopTest : public ::testing::Test {
   });
 };
 
-TEST_F(MixThreadRunLoopTest, AddStartedConsumers) {
+TEST_F(PipelineMixThreadRunLoopTest, AddStartedConsumers) {
   // pt0 is the presentation time consumed by consumer->RunMixJob(ctx, 0, kPeriod). Since we
   // consume one period ahead, this is start of the second mix period.
   const auto pt0 = zx::time(0) + kPeriod;
@@ -368,7 +369,7 @@ TEST_F(MixThreadRunLoopTest, AddStartedConsumers) {
               ElementsAre(FieldsAre(/*is_silent=*/true, 5 * kPeriodFrames, 10, nullptr)));
 }
 
-TEST_F(MixThreadRunLoopTest, AddRemoveUnstartedConsumers) {
+TEST_F(PipelineMixThreadRunLoopTest, AddRemoveUnstartedConsumers) {
   // pt0 is the presentation time consumed by consumer->RunMixJob(ctx, 0, kPeriod). Since we
   // consume one period ahead, this is start of the second mix period.
   const auto pt0 = zx::time(0) + kPeriod;

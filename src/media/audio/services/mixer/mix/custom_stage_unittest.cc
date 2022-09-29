@@ -27,8 +27,8 @@
 #include "src/media/audio/lib/format2/fixed.h"
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/services/common/thread_checker.h"
-#include "src/media/audio/services/mixer/mix/detached_thread.h"
 #include "src/media/audio/services/mixer/mix/mix_job_context.h"
+#include "src/media/audio/services/mixer/mix/pipeline_detached_thread.h"
 #include "src/media/audio/services/mixer/mix/ptr_decls.h"
 #include "src/media/audio/services/mixer/mix/simple_packet_queue_producer_stage.h"
 #include "src/media/audio/services/mixer/mix/testing/defaults.h"
@@ -206,7 +206,7 @@ PipelineStagePtr MakeCustomStage(ProcessorConfiguration config, PipelineStagePtr
       .ring_out_frames = static_cast<int64_t>(config.outputs()[0].ring_out_frames()),
       .processor = fidl::WireSyncClient(std::move(config.processor())),
   });
-  custom_stage->set_thread(DetachedThread::Create());
+  custom_stage->set_thread(std::make_shared<PipelineDetachedThread>());
   ScopedThreadChecker checker(custom_stage->thread()->checker());
   custom_stage->AddSource(std::move(source_stage), /*options=*/{});
   custom_stage->UpdatePresentationTimeToFracFrame(

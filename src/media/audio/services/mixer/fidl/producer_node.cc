@@ -28,11 +28,11 @@ std::shared_ptr<ProducerNode> ProducerNode::Create(Args args) {
       .command_queue = std::move(args.start_stop_command_queue),
       .internal_source = std::move(args.internal_source),
   });
-  pipeline_stage->set_thread(args.detached_thread);
+  pipeline_stage->set_thread(args.detached_thread->pipeline_thread());
 
   auto node = std::make_shared<WithPublicCtor>(args.name, args.pipeline_direction,
                                                std::move(pipeline_stage), std::move(args.parent));
-  node->set_pipeline_stage_thread(args.detached_thread);
+  node->set_thread(args.detached_thread);
   return node;
 }
 

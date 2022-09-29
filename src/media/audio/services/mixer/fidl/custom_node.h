@@ -37,8 +37,8 @@ class CustomNode : public Node {
     // Process configuration of the custom effect.
     fuchsia_audio_effects::wire::ProcessorConfiguration config;
 
-    // On creation, the node is initially assigned to this `DetachedThread`.
-    DetachedThreadPtr detached_thread;
+    // On creation, the node is initially assigned to this detached thread.
+    GraphDetachedThreadPtr detached_thread;
   };
 
   static std::shared_ptr<CustomNode> Create(Args args);
@@ -54,7 +54,7 @@ class CustomNode : public Node {
    public:
     ChildSourceNode(std::string_view name, PipelineDirection pipeline_direction,
                     PipelineStagePtr pipeline_stage, NodePtr parent,
-                    DetachedThreadPtr detached_thread, const Format& format,
+                    GraphDetachedThreadPtr detached_thread, const Format& format,
                     zx::duration presentation_delay);
 
     // Implements `Node`.
@@ -80,7 +80,7 @@ class CustomNode : public Node {
    public:
     ChildDestNode(std::string_view name, PipelineDirection pipeline_direction,
                   PipelineStagePtr pipeline_stage, NodePtr parent,
-                  DetachedThreadPtr detached_thread);
+                  GraphDetachedThreadPtr detached_thread);
 
     // Implements `Node`.
     zx::duration GetSelfPresentationDelayForSource(const NodePtr& source) const final;
@@ -101,7 +101,7 @@ class CustomNode : public Node {
              PipelineDirection pipeline_direction);
 
   void InitializeChildNodes(PipelineStagePtr pipeline_stage, NodePtr parent,
-                            DetachedThreadPtr detached_thread, const Format& source_format,
+                            GraphDetachedThreadPtr detached_thread, const Format& source_format,
                             zx::duration presentation_delay);
 
   NodePtr CreateNewChildSource() final;

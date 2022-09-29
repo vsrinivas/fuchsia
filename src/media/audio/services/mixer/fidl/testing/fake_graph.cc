@@ -90,7 +90,8 @@ bool FakeNode::AllowsDest() const {
 FakeGraph::FakeGraph(Args args)
     : pipeline_directions_(std::move(args.pipeline_directions)),
       default_pipeline_direction_(args.default_pipeline_direction),
-      default_thread_(args.default_thread) {
+      global_task_queue_(std::make_shared<GlobalTaskQueue>()),
+      detached_thread_(std::make_shared<GraphDetachedThread>(global_task_queue_)) {
   // Populate `formats_`.
   for (auto& [format_ptr, nodes] : args.formats) {
     auto format = std::make_shared<Format>(*format_ptr);
@@ -135,11 +136,12 @@ FakeGraph::FakeGraph(Args args)
   }
 
   // Assign to threads.
-  for (auto& [thread, node_ids] : args.threads) {
+  for (auto& [thread_id, node_ids] : args.threads) {
+    auto thread = threads_.count(thread_id) ? threads_[thread_id] : CreateThread(thread_id);
     for (auto& n : node_ids) {
       FX_CHECK(nodes_.find(n) != nodes_.end()) << "node " << n << " is not defined";
-      nodes_[n]->set_pipeline_stage_thread(thread);
-      nodes_[n]->fake_pipeline_stage()->set_thread(thread);
+      nodes_[n]->set_thread(thread);
+      nodes_[n]->fake_pipeline_stage()->set_thread(thread->pipeline_thread());
     }
   }
 }
@@ -171,6 +173,15 @@ FakeGraph::~FakeGraph() {
   }
 }
 
+FakeGraphThreadPtr FakeGraph::CreateThread(std::optional<ThreadId> id) {
+  if (!id) {
+    id = NextThreadId();
+  }
+  std::shared_ptr<FakeGraphThread> thread(new FakeGraphThread(*id, global_task_queue_));
+  threads_[*id] = thread;
+  return thread;
+}
+
 FakeNodePtr FakeGraph::CreateMetaNode(std::optional<NodeId> id) {
   if (id) {
     if (auto it = nodes_.find(*id); it != nodes_.end()) {
@@ -179,7 +190,7 @@ FakeNodePtr FakeGraph::CreateMetaNode(std::optional<NodeId> id) {
       return it->second;
     }
   } else {
-    id = NextId();
+    id = NextNodeId();
   }
 
   std::shared_ptr<FakeNode> node(
@@ -202,7 +213,7 @@ FakeNodePtr FakeGraph::CreateOrdinaryNode(std::optional<NodeId> id, FakeNodePtr 
       return it->second;
     }
   } else {
-    id = NextId();
+    id = NextNodeId();
   }
 
   const Format* format = formats_.count(*id) ? formats_[*id].get() : &kDefaultFormat;
@@ -212,12 +223,22 @@ FakeNodePtr FakeGraph::CreateOrdinaryNode(std::optional<NodeId> id, FakeNodePtr 
   std::shared_ptr<FakeNode> node(
       new FakeNode(*this, *id, false, pipeline_direction, parent, format));
   nodes_[*id] = node;
-  node->set_pipeline_stage_thread(default_thread_);
-  node->fake_pipeline_stage()->set_thread(default_thread_);
+  node->set_thread(detached_thread_);
+  node->fake_pipeline_stage()->set_thread(detached_thread_->pipeline_thread());
   return node;
 }
 
-NodeId FakeGraph::NextId() {
+ThreadId FakeGraph::NextThreadId() {
+  // Since CreateThread can create nodes with arbitrary IDs, we can't guarantee that IDs are densely
+  // monotonically increasing (0,1,2,...), so we need to go searching for an unused ID.
+  ThreadId id = threads_.size();
+  while (threads_.count(id) > 0) {
+    id++;
+  }
+  return id;
+}
+
+NodeId FakeGraph::NextNodeId() {
   // Since the Create*Node methods can create nodes with arbitrary IDs, we can't guarantee that IDs
   // are densely monotonically increasing (0,1,2,...), so we need to go searching for an unused ID.
   NodeId id = nodes_.size();

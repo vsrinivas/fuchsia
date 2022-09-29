@@ -8,7 +8,6 @@
 #include <gtest/gtest.h>
 
 #include "src/media/audio/services/mixer/fidl/testing/fake_graph.h"
-#include "src/media/audio/services/mixer/mix/testing/fake_thread.h"
 
 namespace media_audio {
 namespace {
@@ -17,32 +16,36 @@ using ::testing::ElementsAre;
 
 class NodeCreateEdgeTest : public ::testing::Test {
  protected:
-  void CheckPipelineStagesAfterCreate(GlobalTaskQueue& q, FakePipelineStagePtr source,
+  static inline ThreadId kThreadId = 1;
+
+  void CheckPipelineStagesAfterCreate(FakeGraph& graph, FakePipelineStagePtr source,
                                       FakePipelineStagePtr dest) {
-    // The PipelineStages are updated asynchronously by fake_thread_.
+    auto q = graph.global_task_queue();
+
+    auto detached_thread = graph.detached_thread()->pipeline_thread();
+    auto mix_thread = graph.thread(kThreadId)->pipeline_thread();
+
+    // The PipelineStages are updated asynchronously by kThreadId.
     // Initially, they are not connected.
     EXPECT_THAT(source->sources(), ElementsAre());
     EXPECT_THAT(dest->sources(), ElementsAre());
-    EXPECT_EQ(source->thread(), detached_thread_);
-    EXPECT_EQ(dest->thread(), fake_thread_);
+    EXPECT_EQ(source->thread(), detached_thread);
+    EXPECT_EQ(dest->thread(), mix_thread);
 
-    // Still not connected because fake_thread_ hasn't run yet.
-    q.RunForThread(detached_thread_->id());
+    // Still not connected because kThreadId hasn't run yet.
+    q->RunForThread(detached_thread->id());
     EXPECT_THAT(source->sources(), ElementsAre());
     EXPECT_THAT(dest->sources(), ElementsAre());
-    EXPECT_EQ(source->thread(), detached_thread_);
-    EXPECT_EQ(dest->thread(), fake_thread_);
+    EXPECT_EQ(source->thread(), detached_thread);
+    EXPECT_EQ(dest->thread(), mix_thread);
 
     // Finally connected.
-    q.RunForThread(fake_thread_->id());
+    q->RunForThread(mix_thread->id());
     EXPECT_THAT(source->sources(), ElementsAre());
     EXPECT_THAT(dest->sources(), ElementsAre(source));
-    EXPECT_EQ(source->thread(), fake_thread_);
-    EXPECT_EQ(dest->thread(), fake_thread_);
+    EXPECT_EQ(source->thread(), mix_thread);
+    EXPECT_EQ(dest->thread(), mix_thread);
   }
-
-  const DetachedThreadPtr detached_thread_ = DetachedThread::Create();
-  const FakeThreadPtr fake_thread_ = FakeThread::Create(1);
 };
 
 // For CreateEdge, we test the following kinds of edges:
@@ -63,83 +66,77 @@ class NodeCreateEdgeTest : public ::testing::Test {
 //
 // In the "success" scenarios, we verify that the nodes are properly connected and that the source
 // PipelineStage is assigned to the same thread as destination PipelineStage (which is assigned to
-// fake_thread_).
+// kThreadId).
 
 TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinaryAlreadyConnected) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .edges = {{1, 2}},
-      .default_thread = detached_thread_,
   });
 
-  auto result = Node::CreateEdge(q, /*source=*/graph.node(1), /*dest=*/graph.node(2));
+  auto q = graph.global_task_queue();
+  auto result = Node::CreateEdge(*q, /*source=*/graph.node(1), /*dest=*/graph.node(2));
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kAlreadyConnected);
 }
 
 TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinarySourceDisallowsOutgoingEdges) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .unconnected_ordinary_nodes = {1, 2},
-      .default_thread = detached_thread_,
   });
 
   auto source = graph.node(1);
   source->SetOnAllowsDest([]() { return false; });
 
-  auto result = Node::CreateEdge(q, source, /*dest=*/graph.node(2));
+  auto q = graph.global_task_queue();
+  auto result = Node::CreateEdge(*q, source, /*dest=*/graph.node(2));
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(),
             fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
 }
 
 TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinarySourceAlreadyHasOutgoingEdge) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .edges = {{1, 2}},
       .unconnected_ordinary_nodes = {3},
-      .default_thread = detached_thread_,
   });
 
-  auto result = Node::CreateEdge(q, /*source=*/graph.node(1), /*dest=*/graph.node(3));
+  auto q = graph.global_task_queue();
+  auto result = Node::CreateEdge(*q, /*source=*/graph.node(1), /*dest=*/graph.node(3));
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(),
             fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
 }
 
 TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinaryDestNodeTooManyIncomingEdges) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .edges = {{1, 3}},
       .unconnected_ordinary_nodes = {2},
-      .default_thread = detached_thread_,
   });
 
   auto dest = graph.node(3);
   dest->SetOnMaxSources([]() { return 1; });
 
-  auto result = Node::CreateEdge(q, /*source=*/graph.node(2), dest);
+  auto q = graph.global_task_queue();
+  auto result = Node::CreateEdge(*q, /*source=*/graph.node(2), dest);
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
 }
 
 TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinaryIncompatibleFormats) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .unconnected_ordinary_nodes = {1, 2},
-      .default_thread = detached_thread_,
   });
 
   auto dest = graph.node(2);
   dest->SetOnCanAcceptSourceFormat([](auto n) { return false; });
 
-  auto result = Node::CreateEdge(q, /*source=*/graph.node(1), dest);
+  auto q = graph.global_task_queue();
+  auto result = Node::CreateEdge(*q, /*source=*/graph.node(1), dest);
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
 }
 
 TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinaryPipelineMismatch) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .unconnected_ordinary_nodes = {1, 2},
       .pipeline_directions =
@@ -147,103 +144,96 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinaryPipelineMismatch) {
               {PipelineDirection::kInput, {1}},
               {PipelineDirection::kOutput, {2}},
           },
-      .default_thread = detached_thread_,
   });
 
-  auto result = Node::CreateEdge(q, /*source=*/graph.node(1), /*dest=*/graph.node(2));
+  auto q = graph.global_task_queue();
+  auto result = Node::CreateEdge(*q, /*source=*/graph.node(1), /*dest=*/graph.node(2));
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(),
             fuchsia_audio_mixer::CreateEdgeError::kOutputPipelineCannotReadFromInputPipeline);
 }
 
 TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinaryCycle) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .edges = {{1, 2}, {2, 3}},
-      .default_thread = detached_thread_,
   });
 
-  auto result = Node::CreateEdge(q, /*source=*/graph.node(3), /*dest=*/graph.node(1));
+  auto q = graph.global_task_queue();
+  auto result = Node::CreateEdge(*q, /*source=*/graph.node(3), /*dest=*/graph.node(1));
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kCycle);
 }
 
 TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinarySuccess) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .unconnected_ordinary_nodes = {1, 2},
-      .threads = {{fake_thread_, {2}}},
-      .default_thread = detached_thread_,
+      .threads = {{kThreadId, {2}}},
   });
 
   auto source = graph.node(1);
   auto dest = graph.node(2);
 
-  ASSERT_EQ(source->pipeline_stage_thread(), detached_thread_);
-  ASSERT_EQ(dest->pipeline_stage_thread(), fake_thread_);
+  ASSERT_EQ(source->thread(), graph.detached_thread());
+  ASSERT_EQ(dest->thread(), graph.thread(kThreadId));
 
-  auto result = Node::CreateEdge(q, source, dest);
+  auto q = graph.global_task_queue();
+  auto result = Node::CreateEdge(*q, source, dest);
   ASSERT_TRUE(result.is_ok());
 
   EXPECT_EQ(source->dest(), dest);
   EXPECT_THAT(dest->sources(), ElementsAre(source));
 
-  EXPECT_EQ(source->pipeline_stage_thread(), fake_thread_);
-  EXPECT_EQ(dest->pipeline_stage_thread(), fake_thread_);
+  EXPECT_EQ(source->thread(), graph.thread(kThreadId));
+  EXPECT_EQ(dest->thread(), graph.thread(kThreadId));
 
-  CheckPipelineStagesAfterCreate(q, source->fake_pipeline_stage(), dest->fake_pipeline_stage());
+  CheckPipelineStagesAfterCreate(graph, source->fake_pipeline_stage(), dest->fake_pipeline_stage());
 }
 
 TEST_F(NodeCreateEdgeTest, OrdinaryToMetaAlreadyConnected) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes = {{3, {.source_children = {2}, .dest_children = {}}}},
       .edges = {{1, 2}},
-      .default_thread = detached_thread_,
   });
 
-  auto result = Node::CreateEdge(q, /*source=*/graph.node(1), /*dest=*/graph.node(3));
+  auto q = graph.global_task_queue();
+  auto result = Node::CreateEdge(*q, /*source=*/graph.node(1), /*dest=*/graph.node(3));
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kAlreadyConnected);
 }
 
 TEST_F(NodeCreateEdgeTest, OrdinaryToMetaSourceDisallowsOutgoingEdges) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes = {{2, {.source_children = {}, .dest_children = {}}}},
       .unconnected_ordinary_nodes = {1},
-      .default_thread = detached_thread_,
   });
 
   auto source = graph.node(1);
   source->SetOnAllowsDest([]() { return false; });
 
-  auto result = Node::CreateEdge(q, source, /*dest=*/graph.node(2));
+  auto q = graph.global_task_queue();
+  auto result = Node::CreateEdge(*q, source, /*dest=*/graph.node(2));
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(),
             fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
 }
 
 TEST_F(NodeCreateEdgeTest, OrdinaryToMetaSourceAlreadyHasOutgoingEdge) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes = {{3, {.source_children = {}, .dest_children = {}}}},
       .edges = {{1, 2}},
-      .default_thread = detached_thread_,
   });
 
-  auto result = Node::CreateEdge(q, /*source=*/graph.node(1), /*dest=*/graph.node(3));
+  auto q = graph.global_task_queue();
+  auto result = Node::CreateEdge(*q, /*source=*/graph.node(1), /*dest=*/graph.node(3));
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(),
             fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
 }
 
 TEST_F(NodeCreateEdgeTest, OrdinaryToMetaIncompatibleFormats) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes = {{2, {.source_children = {}, .dest_children = {}}}},
       .unconnected_ordinary_nodes = {1},
-      .default_thread = detached_thread_,
   });
 
   auto dest = graph.node(2);
@@ -253,13 +243,13 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToMetaIncompatibleFormats) {
     return child;
   });
 
-  auto result = Node::CreateEdge(q, /*source=*/graph.node(1), dest);
+  auto q = graph.global_task_queue();
+  auto result = Node::CreateEdge(*q, /*source=*/graph.node(1), dest);
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
 }
 
 TEST_F(NodeCreateEdgeTest, OrdinaryToMetaPipelineMismatch) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes = {{2, {.source_children = {}, .dest_children = {}}}},
       .unconnected_ordinary_nodes = {1},
@@ -268,63 +258,62 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToMetaPipelineMismatch) {
               {PipelineDirection::kInput, {1}},
               {PipelineDirection::kOutput, {2}},
           },
-      .default_thread = detached_thread_,
   });
 
-  auto result = Node::CreateEdge(q, /*source=*/graph.node(1), /*dest=*/graph.node(2));
+  auto q = graph.global_task_queue();
+  auto result = Node::CreateEdge(*q, /*source=*/graph.node(1), /*dest=*/graph.node(2));
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(),
             fuchsia_audio_mixer::CreateEdgeError::kOutputPipelineCannotReadFromInputPipeline);
 }
 
 TEST_F(NodeCreateEdgeTest, OrdinaryToMetaDestNodeTooManyIncomingEdges) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes = {{2, {.source_children = {}, .dest_children = {}}}},
       .unconnected_ordinary_nodes = {1},
-      .default_thread = detached_thread_,
   });
 
   auto dest = graph.node(2);
   dest->SetOnCreateNewChildSource([]() { return nullptr; });
 
-  auto result = Node::CreateEdge(q, /*source=*/graph.node(1), dest);
+  auto q = graph.global_task_queue();
+  auto result = Node::CreateEdge(*q, /*source=*/graph.node(1), dest);
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
 }
 
 TEST_F(NodeCreateEdgeTest, OrdinaryToMetaCycle) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes = {{1, {.source_children = {}, .dest_children = {2}}}},
       .edges = {{2, 3}},
-      .default_thread = detached_thread_,
   });
 
-  auto result = Node::CreateEdge(q, /*source=*/graph.node(3), /*dest=*/graph.node(1));
+  auto q = graph.global_task_queue();
+  auto result = Node::CreateEdge(*q, /*source=*/graph.node(3), /*dest=*/graph.node(1));
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kCycle);
 }
 
 TEST_F(NodeCreateEdgeTest, OrdinaryToMetaSuccess) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes = {{2, {.source_children = {}, .dest_children = {}}}},
       .unconnected_ordinary_nodes = {1},
-      .default_thread = detached_thread_,
+      .threads = {{kThreadId, {}}},
   });
 
   auto source = graph.node(1);
   auto dest = graph.node(2);
 
-  dest->SetOnCreateNewChildSource([this, &graph, dest]() {
+  dest->SetOnCreateNewChildSource([&graph, dest]() {
     auto child = graph.CreateOrdinaryNode(std::nullopt, dest);
-    child->set_pipeline_stage_thread(fake_thread_);
-    child->fake_pipeline_stage()->set_thread(fake_thread_);
+    auto thread = graph.thread(kThreadId);
+    child->set_thread(thread);
+    child->fake_pipeline_stage()->set_thread(thread->pipeline_thread());
     return child;
   });
 
-  auto result = Node::CreateEdge(q, source, dest);
+  auto q = graph.global_task_queue();
+  auto result = Node::CreateEdge(*q, source, dest);
   ASSERT_TRUE(result.is_ok());
   ASSERT_EQ(dest->child_sources().size(), 1u);
   ASSERT_EQ(dest->child_dests().size(), 0u);
@@ -333,32 +322,30 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToMetaSuccess) {
   EXPECT_EQ(source->dest(), dest_child);
   EXPECT_THAT(dest_child->sources(), ElementsAre(source));
 
-  EXPECT_EQ(source->pipeline_stage_thread(), fake_thread_);
-  EXPECT_EQ(dest_child->pipeline_stage_thread(), fake_thread_);
+  EXPECT_EQ(source->thread(), graph.thread(kThreadId));
+  EXPECT_EQ(dest_child->thread(), graph.thread(kThreadId));
 
-  CheckPipelineStagesAfterCreate(q, source->fake_pipeline_stage(),
+  CheckPipelineStagesAfterCreate(graph, source->fake_pipeline_stage(),
                                  dest_child->fake_pipeline_stage());
 }
 
 TEST_F(NodeCreateEdgeTest, MetaToOrdinarySourceNodeTooManyOutgoingEdges) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes = {{1, {.source_children = {}, .dest_children = {}}}},
       .unconnected_ordinary_nodes = {2},
-      .default_thread = detached_thread_,
   });
 
   auto source = graph.node(1);
   source->SetOnCreateNewChildDest([]() { return nullptr; });
 
-  auto result = Node::CreateEdge(q, source, /*dest=*/graph.node(2));
+  auto q = graph.global_task_queue();
+  auto result = Node::CreateEdge(*q, source, /*dest=*/graph.node(2));
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(),
             fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
 }
 
 TEST_F(NodeCreateEdgeTest, MetaToOrdinaryDestNodeTooManyIncomingEdges) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes =
           {
@@ -366,35 +353,33 @@ TEST_F(NodeCreateEdgeTest, MetaToOrdinaryDestNodeTooManyIncomingEdges) {
               {3, {.source_children = {}, .dest_children = {}}},
           },
       .edges = {{2, 4}},
-      .default_thread = detached_thread_,
   });
 
   auto dest = graph.node(4);
   dest->SetOnMaxSources([]() { return 1; });
 
-  auto result = Node::CreateEdge(q, /*source=*/graph.node(3), dest);
+  auto q = graph.global_task_queue();
+  auto result = Node::CreateEdge(*q, /*source=*/graph.node(3), dest);
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
 }
 
 TEST_F(NodeCreateEdgeTest, MetaToOrdinaryIncompatibleFormats) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes = {{1, {.source_children = {}, .dest_children = {}}}},
       .unconnected_ordinary_nodes = {2},
-      .default_thread = detached_thread_,
   });
 
   auto dest = graph.node(2);
   dest->SetOnCanAcceptSourceFormat([](auto n) { return false; });
 
-  auto result = Node::CreateEdge(q, /*source=*/graph.node(1), dest);
+  auto q = graph.global_task_queue();
+  auto result = Node::CreateEdge(*q, /*source=*/graph.node(1), dest);
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
 }
 
 TEST_F(NodeCreateEdgeTest, MetaToOrdinaryPipelineMismatch) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes = {{1, {.source_children = {}, .dest_children = {}}}},
       .unconnected_ordinary_nodes = {2},
@@ -403,41 +388,39 @@ TEST_F(NodeCreateEdgeTest, MetaToOrdinaryPipelineMismatch) {
               {PipelineDirection::kInput, {1}},
               {PipelineDirection::kOutput, {2}},
           },
-      .default_thread = detached_thread_,
   });
 
-  auto result = Node::CreateEdge(q, /*source=*/graph.node(1), /*dest=*/graph.node(2));
+  auto q = graph.global_task_queue();
+  auto result = Node::CreateEdge(*q, /*source=*/graph.node(1), /*dest=*/graph.node(2));
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(),
             fuchsia_audio_mixer::CreateEdgeError::kOutputPipelineCannotReadFromInputPipeline);
 }
 
 TEST_F(NodeCreateEdgeTest, MetaToOrdinaryCycle) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes = {{3, {.source_children = {2}, .dest_children = {}}}},
       .edges = {{1, 2}},
-      .default_thread = detached_thread_,
   });
 
-  auto result = Node::CreateEdge(q, /*source=*/graph.node(3), /*dest=*/graph.node(1));
+  auto q = graph.global_task_queue();
+  auto result = Node::CreateEdge(*q, /*source=*/graph.node(3), /*dest=*/graph.node(1));
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kCycle);
 }
 
 TEST_F(NodeCreateEdgeTest, MetaToOrdinarySuccess) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes = {{1, {.source_children = {}, .dest_children = {}}}},
       .unconnected_ordinary_nodes = {2},
-      .threads = {{fake_thread_, {2}}},
-      .default_thread = detached_thread_,
+      .threads = {{kThreadId, {2}}},
   });
 
   auto source = graph.node(1);
   auto dest = graph.node(2);
 
-  auto result = Node::CreateEdge(q, source, dest);
+  auto q = graph.global_task_queue();
+  auto result = Node::CreateEdge(*q, source, dest);
   ASSERT_TRUE(result.is_ok());
   ASSERT_EQ(source->child_sources().size(), 0u);
   ASSERT_EQ(source->child_dests().size(), 1u);
@@ -446,61 +429,57 @@ TEST_F(NodeCreateEdgeTest, MetaToOrdinarySuccess) {
   EXPECT_EQ(source_child->dest(), dest);
   EXPECT_THAT(dest->sources(), ElementsAre(source_child));
 
-  EXPECT_EQ(source_child->pipeline_stage_thread(), fake_thread_);
-  EXPECT_EQ(dest->pipeline_stage_thread(), fake_thread_);
+  EXPECT_EQ(source_child->thread(), graph.thread(kThreadId));
+  EXPECT_EQ(dest->thread(), graph.thread(kThreadId));
 
-  CheckPipelineStagesAfterCreate(q, source_child->fake_pipeline_stage(),
+  CheckPipelineStagesAfterCreate(graph, source_child->fake_pipeline_stage(),
                                  dest->fake_pipeline_stage());
 }
 
 TEST_F(NodeCreateEdgeTest, MetaToMetaSourceNodeTooManyOutgoingEdges) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes =
           {
               {1, {.source_children = {}, .dest_children = {}}},
               {2, {.source_children = {}, .dest_children = {}}},
           },
-      .default_thread = detached_thread_,
   });
 
   auto source = graph.node(1);
   source->SetOnCreateNewChildDest([]() { return nullptr; });
 
-  auto result = Node::CreateEdge(q, source, /*dest=*/graph.node(2));
+  auto q = graph.global_task_queue();
+  auto result = Node::CreateEdge(*q, source, /*dest=*/graph.node(2));
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(),
             fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
 }
 
 TEST_F(NodeCreateEdgeTest, MetaToMetaDestNodeTooManyIncomingEdges) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes =
           {
               {1, {.source_children = {}, .dest_children = {}}},
               {2, {.source_children = {}, .dest_children = {}}},
           },
-      .default_thread = detached_thread_,
   });
 
   auto dest = graph.node(2);
   dest->SetOnCreateNewChildSource([]() { return nullptr; });
 
-  auto result = Node::CreateEdge(q, /*source=*/graph.node(1), dest);
+  auto q = graph.global_task_queue();
+  auto result = Node::CreateEdge(*q, /*source=*/graph.node(1), dest);
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
 }
 
 TEST_F(NodeCreateEdgeTest, MetaToMetaIncompatibleFormats) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes =
           {
               {1, {.source_children = {}, .dest_children = {}}},
               {2, {.source_children = {}, .dest_children = {}}},
           },
-      .default_thread = detached_thread_,
   });
 
   auto dest = graph.node(2);
@@ -510,13 +489,13 @@ TEST_F(NodeCreateEdgeTest, MetaToMetaIncompatibleFormats) {
     return child;
   });
 
-  auto result = Node::CreateEdge(q, /*source=*/graph.node(1), dest);
+  auto q = graph.global_task_queue();
+  auto result = Node::CreateEdge(*q, /*source=*/graph.node(1), dest);
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
 }
 
 TEST_F(NodeCreateEdgeTest, MetaToMetaPipelineMismatch) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes =
           {
@@ -528,17 +507,16 @@ TEST_F(NodeCreateEdgeTest, MetaToMetaPipelineMismatch) {
               {PipelineDirection::kInput, {1}},
               {PipelineDirection::kOutput, {2}},
           },
-      .default_thread = detached_thread_,
   });
 
-  auto result = Node::CreateEdge(q, /*source=*/graph.node(1), /*dest=*/graph.node(2));
+  auto q = graph.global_task_queue();
+  auto result = Node::CreateEdge(*q, /*source=*/graph.node(1), /*dest=*/graph.node(2));
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(),
             fuchsia_audio_mixer::CreateEdgeError::kOutputPipelineCannotReadFromInputPipeline);
 }
 
 TEST_F(NodeCreateEdgeTest, MetaToMetaCycle) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes =
           {
@@ -546,36 +524,37 @@ TEST_F(NodeCreateEdgeTest, MetaToMetaCycle) {
               {1, {.source_children = {}, .dest_children = {2}}},
           },
       .edges = {{2, 3}},
-      .default_thread = detached_thread_,
   });
 
-  auto result = Node::CreateEdge(q, /*source=*/graph.node(4), /*dest=*/graph.node(1));
+  auto q = graph.global_task_queue();
+  auto result = Node::CreateEdge(*q, /*source=*/graph.node(4), /*dest=*/graph.node(1));
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kCycle);
 }
 
 TEST_F(NodeCreateEdgeTest, MetaToMetaSuccess) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes =
           {
               {1, {.source_children = {}, .dest_children = {}}},
               {2, {.source_children = {}, .dest_children = {}}},
           },
-      .default_thread = detached_thread_,
+      .threads = {{kThreadId, {}}},
   });
 
   auto source = graph.node(1);
   auto dest = graph.node(2);
 
-  dest->SetOnCreateNewChildSource([this, &graph, dest]() {
+  dest->SetOnCreateNewChildSource([&graph, dest]() {
     auto child = graph.CreateOrdinaryNode(std::nullopt, dest);
-    child->set_pipeline_stage_thread(fake_thread_);
-    child->fake_pipeline_stage()->set_thread(fake_thread_);
+    auto thread = graph.thread(kThreadId);
+    child->set_thread(thread);
+    child->fake_pipeline_stage()->set_thread(thread->pipeline_thread());
     return child;
   });
 
-  auto result = Node::CreateEdge(q, source, dest);
+  auto q = graph.global_task_queue();
+  auto result = Node::CreateEdge(*q, source, dest);
   ASSERT_TRUE(result.is_ok());
   ASSERT_EQ(source->child_sources().size(), 0u);
   ASSERT_EQ(source->child_dests().size(), 1u);
@@ -588,41 +567,45 @@ TEST_F(NodeCreateEdgeTest, MetaToMetaSuccess) {
   EXPECT_EQ(source_child->dest(), dest_child);
   EXPECT_THAT(dest_child->sources(), ElementsAre(source_child));
 
-  EXPECT_EQ(source_child->pipeline_stage_thread(), fake_thread_);
-  EXPECT_EQ(dest_child->pipeline_stage_thread(), fake_thread_);
+  EXPECT_EQ(source_child->thread(), graph.thread(kThreadId));
+  EXPECT_EQ(dest_child->thread(), graph.thread(kThreadId));
 
-  CheckPipelineStagesAfterCreate(q, source_child->fake_pipeline_stage(),
+  CheckPipelineStagesAfterCreate(graph, source_child->fake_pipeline_stage(),
                                  dest_child->fake_pipeline_stage());
 }
 
 class NodeDeleteEdgeTest : public ::testing::Test {
  protected:
-  void CheckPipelineStagesAfterDelete(GlobalTaskQueue& q, FakePipelineStagePtr source,
+  static inline ThreadId kThreadId = 1;
+
+  void CheckPipelineStagesAfterDelete(FakeGraph& graph, FakePipelineStagePtr source,
                                       FakePipelineStagePtr dest) {
-    // The PipelineStages are updated asynchronously, by fake_thread_.
+    auto q = graph.global_task_queue();
+
+    auto detached_thread = graph.detached_thread()->pipeline_thread();
+    auto mix_thread = graph.thread(kThreadId)->pipeline_thread();
+
+    // The PipelineStages are updated asynchronously, by kThreadId.
     // Initially, they are connected.
     EXPECT_THAT(source->sources(), ElementsAre());
     EXPECT_THAT(dest->sources(), ElementsAre(source));
-    EXPECT_EQ(source->thread(), fake_thread_);
-    EXPECT_EQ(dest->thread(), fake_thread_);
+    EXPECT_EQ(source->thread(), mix_thread);
+    EXPECT_EQ(dest->thread(), mix_thread);
 
-    // Still connected because fake_thread_ hasn't run yet.
-    q.RunForThread(detached_thread_->id());
+    // Still connected because kThreadId hasn't run yet.
+    q->RunForThread(detached_thread->id());
     EXPECT_THAT(source->sources(), ElementsAre());
     EXPECT_THAT(dest->sources(), ElementsAre(source));
-    EXPECT_EQ(source->thread(), fake_thread_);
-    EXPECT_EQ(dest->thread(), fake_thread_);
+    EXPECT_EQ(source->thread(), mix_thread);
+    EXPECT_EQ(dest->thread(), mix_thread);
 
     // Finally, not connected.
-    q.RunForThread(fake_thread_->id());
+    q->RunForThread(mix_thread->id());
     EXPECT_THAT(source->sources(), ElementsAre());
     EXPECT_THAT(dest->sources(), ElementsAre());
-    EXPECT_EQ(source->thread(), detached_thread_);
-    EXPECT_EQ(dest->thread(), fake_thread_);
+    EXPECT_EQ(source->thread(), detached_thread);
+    EXPECT_EQ(dest->thread(), mix_thread);
   }
-
-  const DetachedThreadPtr detached_thread_ = DetachedThread::Create();
-  const FakeThreadPtr fake_thread_ = FakeThread::Create(1);
 };
 
 // For DeleteEdge, we test the following kinds of edges:
@@ -636,90 +619,89 @@ class NodeDeleteEdgeTest : public ::testing::Test {
 // - (error) connected backwards
 // - success
 //
-// In the "success" scenarios, the source PipelineStage is initially assigned to fake_thread_, but
-// must be assigned to detached_thread_ after the edge is deleted.
+// In the "success" scenarios, the source PipelineStage is initially assigned to kThreadId , but
+// must be assigned to the detached thread after the edge is deleted.
 
 TEST_F(NodeDeleteEdgeTest, OrdinaryToOrdinaryNotConnected) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .unconnected_ordinary_nodes = {1, 2},
   });
 
-  auto result =
-      Node::DeleteEdge(q, /*source=*/graph.node(1), /*dest=*/graph.node(2), detached_thread_);
+  auto q = graph.global_task_queue();
+  auto result = Node::DeleteEdge(*q, graph.detached_thread(), /*source=*/graph.node(1),
+                                 /*dest=*/graph.node(2));
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::DeleteEdgeError::kEdgeNotFound);
 }
 
 TEST_F(NodeDeleteEdgeTest, OrdinaryToOrdinaryConnectedBackwards) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .edges = {{1, 2}},
   });
 
-  auto result =
-      Node::DeleteEdge(q, /*source=*/graph.node(2), /*dest=*/graph.node(1), detached_thread_);
+  auto q = graph.global_task_queue();
+  auto result = Node::DeleteEdge(*q, graph.detached_thread(), /*source=*/graph.node(2),
+                                 /*dest=*/graph.node(1));
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::DeleteEdgeError::kEdgeNotFound);
 }
 
 TEST_F(NodeDeleteEdgeTest, OrdinaryToOrdinarySuccess) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .edges = {{1, 2}},
-      .threads = {{fake_thread_, {1, 2}}},
+      .threads = {{kThreadId, {1, 2}}},
   });
 
   auto source = graph.node(1);
   auto dest = graph.node(2);
 
-  ASSERT_EQ(source->pipeline_stage_thread(), fake_thread_);
-  ASSERT_EQ(dest->pipeline_stage_thread(), fake_thread_);
+  ASSERT_EQ(source->thread(), graph.thread(kThreadId));
+  ASSERT_EQ(dest->thread(), graph.thread(kThreadId));
 
-  auto result = Node::DeleteEdge(q, source, dest, detached_thread_);
+  auto q = graph.global_task_queue();
+  auto result = Node::DeleteEdge(*q, graph.detached_thread(), source, dest);
   ASSERT_TRUE(result.is_ok());
 
   EXPECT_EQ(source->dest(), nullptr);
   EXPECT_THAT(dest->sources(), ElementsAre());
 
-  EXPECT_EQ(source->pipeline_stage_thread(), detached_thread_);
-  EXPECT_EQ(dest->pipeline_stage_thread(), fake_thread_);
+  EXPECT_EQ(source->thread(), graph.detached_thread());
+  EXPECT_EQ(dest->thread(), graph.thread(kThreadId));
 
-  CheckPipelineStagesAfterDelete(q, source->fake_pipeline_stage(), dest->fake_pipeline_stage());
+  CheckPipelineStagesAfterDelete(graph, source->fake_pipeline_stage(), dest->fake_pipeline_stage());
 }
 
 TEST_F(NodeDeleteEdgeTest, OrdinaryToMetaNotConnected) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes = {{2, {.source_children = {}, .dest_children = {}}}},
       .unconnected_ordinary_nodes = {1},
   });
 
-  auto result =
-      Node::DeleteEdge(q, /*source=*/graph.node(1), /*dest=*/graph.node(2), detached_thread_);
+  auto q = graph.global_task_queue();
+  auto result = Node::DeleteEdge(*q, graph.detached_thread(), /*source=*/graph.node(1),
+                                 /*dest=*/graph.node(2));
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::DeleteEdgeError::kEdgeNotFound);
 }
 
 TEST_F(NodeDeleteEdgeTest, OrdinaryToMetaConnectedBackwards) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes = {{2, {.source_children = {3}, .dest_children = {}}}},
       .edges = {{1, 3}},
   });
 
-  auto result =
-      Node::DeleteEdge(q, /*source=*/graph.node(2), /*dest=*/graph.node(1), detached_thread_);
+  auto q = graph.global_task_queue();
+  auto result = Node::DeleteEdge(*q, graph.detached_thread(), /*source=*/graph.node(2),
+                                 /*dest=*/graph.node(1));
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::DeleteEdgeError::kEdgeNotFound);
 }
 
 TEST_F(NodeDeleteEdgeTest, OrdinaryToMetaSuccess) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes = {{2, {.source_children = {3}, .dest_children = {}}}},
       .edges = {{1, 3}},
-      .threads = {{fake_thread_, {1, 3}}},
+      .threads = {{kThreadId, {1, 3}}},
   });
 
   auto source = graph.node(1);
@@ -736,50 +718,50 @@ TEST_F(NodeDeleteEdgeTest, OrdinaryToMetaSuccess) {
         dest_destroyed = true;
       });
 
-  auto result = Node::DeleteEdge(q, source, dest, detached_thread_);
+  auto q = graph.global_task_queue();
+  auto result = Node::DeleteEdge(*q, graph.detached_thread(), source, dest);
   ASSERT_TRUE(result.is_ok());
 
   EXPECT_EQ(source->dest(), nullptr);
-  EXPECT_EQ(source->pipeline_stage_thread(), detached_thread_);
+  EXPECT_EQ(source->thread(), graph.detached_thread());
   EXPECT_EQ(dest->child_sources().size(), 0u);
   EXPECT_EQ(dest->child_dests().size(), 0u);
   EXPECT_TRUE(dest_destroyed);
 
-  CheckPipelineStagesAfterDelete(q, source_stage, dest_stage);
+  CheckPipelineStagesAfterDelete(graph, source_stage, dest_stage);
 }
 
 TEST_F(NodeDeleteEdgeTest, MetaToOrdinaryNotConnected) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes = {{1, {.source_children = {}, .dest_children = {}}}},
       .unconnected_ordinary_nodes = {2},
   });
 
-  auto result =
-      Node::DeleteEdge(q, /*source=*/graph.node(1), /*dest=*/graph.node(2), detached_thread_);
+  auto q = graph.global_task_queue();
+  auto result = Node::DeleteEdge(*q, graph.detached_thread(), /*source=*/graph.node(1),
+                                 /*dest=*/graph.node(2));
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::DeleteEdgeError::kEdgeNotFound);
 }
 
 TEST_F(NodeDeleteEdgeTest, MetaToOrdinaryConnectedBackwards) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes = {{1, {.source_children = {}, .dest_children = {3}}}},
       .edges = {{3, 2}},
   });
 
-  auto result =
-      Node::DeleteEdge(q, /*source=*/graph.node(2), /*dest=*/graph.node(1), detached_thread_);
+  auto q = graph.global_task_queue();
+  auto result = Node::DeleteEdge(*q, graph.detached_thread(), /*source=*/graph.node(2),
+                                 /*dest=*/graph.node(1));
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::DeleteEdgeError::kEdgeNotFound);
 }
 
 TEST_F(NodeDeleteEdgeTest, MetaToOrdinarySuccess) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes = {{1, {.source_children = {}, .dest_children = {3}}}},
       .edges = {{3, 2}},
-      .threads = {{fake_thread_, {2, 3}}},
+      .threads = {{kThreadId, {2, 3}}},
   });
 
   auto source = graph.node(1);
@@ -796,20 +778,20 @@ TEST_F(NodeDeleteEdgeTest, MetaToOrdinarySuccess) {
         source_destroyed = true;
       });
 
-  auto result = Node::DeleteEdge(q, source, dest, detached_thread_);
+  auto q = graph.global_task_queue();
+  auto result = Node::DeleteEdge(*q, graph.detached_thread(), source, dest);
   ASSERT_TRUE(result.is_ok());
 
   EXPECT_EQ(source->child_sources().size(), 0u);
   EXPECT_EQ(source->child_dests().size(), 0u);
   EXPECT_EQ(dest->sources().size(), 0u);
-  EXPECT_EQ(dest->pipeline_stage_thread(), fake_thread_);
+  EXPECT_EQ(dest->thread(), graph.thread(kThreadId));
   EXPECT_TRUE(source_destroyed);
 
-  CheckPipelineStagesAfterDelete(q, source_stage, dest_stage);
+  CheckPipelineStagesAfterDelete(graph, source_stage, dest_stage);
 }
 
 TEST_F(NodeDeleteEdgeTest, MetaToMetaNotConnected) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes =
           {
@@ -818,14 +800,14 @@ TEST_F(NodeDeleteEdgeTest, MetaToMetaNotConnected) {
           },
   });
 
-  auto result =
-      Node::DeleteEdge(q, /*source=*/graph.node(1), /*dest=*/graph.node(2), detached_thread_);
+  auto q = graph.global_task_queue();
+  auto result = Node::DeleteEdge(*q, graph.detached_thread(), /*source=*/graph.node(1),
+                                 /*dest=*/graph.node(2));
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::DeleteEdgeError::kEdgeNotFound);
 }
 
 TEST_F(NodeDeleteEdgeTest, MetaToMetaConnectedBackwards) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes =
           {
@@ -835,14 +817,14 @@ TEST_F(NodeDeleteEdgeTest, MetaToMetaConnectedBackwards) {
       .edges = {{3, 4}},
   });
 
-  auto result =
-      Node::DeleteEdge(q, /*source=*/graph.node(2), /*dest=*/graph.node(1), detached_thread_);
+  auto q = graph.global_task_queue();
+  auto result = Node::DeleteEdge(*q, graph.detached_thread(), /*source=*/graph.node(2),
+                                 /*dest=*/graph.node(1));
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::DeleteEdgeError::kEdgeNotFound);
 }
 
 TEST_F(NodeDeleteEdgeTest, MetaToMetaSuccess) {
-  GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes =
           {
@@ -850,7 +832,7 @@ TEST_F(NodeDeleteEdgeTest, MetaToMetaSuccess) {
               {2, {.source_children = {4}, .dest_children = {}}},
           },
       .edges = {{3, 4}},
-      .threads = {{fake_thread_, {3, 4}}},
+      .threads = {{kThreadId, {3, 4}}},
   });
 
   auto source = graph.node(1);
@@ -876,7 +858,8 @@ TEST_F(NodeDeleteEdgeTest, MetaToMetaSuccess) {
         dest_destroyed = true;
       });
 
-  auto result = Node::DeleteEdge(q, source, dest, detached_thread_);
+  auto q = graph.global_task_queue();
+  auto result = Node::DeleteEdge(*q, graph.detached_thread(), source, dest);
   ASSERT_TRUE(result.is_ok());
 
   EXPECT_EQ(source->child_sources().size(), 0u);
@@ -886,7 +869,7 @@ TEST_F(NodeDeleteEdgeTest, MetaToMetaSuccess) {
   EXPECT_TRUE(source_destroyed);
   EXPECT_TRUE(dest_destroyed);
 
-  CheckPipelineStagesAfterDelete(q, source_stage, dest_stage);
+  CheckPipelineStagesAfterDelete(graph, source_stage, dest_stage);
 }
 
 }  // namespace

@@ -38,7 +38,6 @@ class MetaProducerNodeTestStreamSink : public ::testing::Test {
 
  protected:
   fidl::Arena<> arena_;
-  const DetachedThreadPtr detached_thread_ = DetachedThread::Create();
 
  private:
   std::shared_ptr<FidlThread> thread_ = FidlThread::CreateFromNewThread("test_fidl_thread");
@@ -46,44 +45,44 @@ class MetaProducerNodeTestStreamSink : public ::testing::Test {
 };
 
 TEST_F(MetaProducerNodeTestStreamSink, CreateEdgeCannotAcceptSource) {
+  FakeGraph graph({
+      .unconnected_ordinary_nodes = {1},
+  });
+
+  auto q = graph.global_task_queue();
+
   auto producer = MetaProducerNode::Create({
       .format = kFormat,
       .reference_clock = DefaultClock(),
       .data_source = stream_sink().server_ptr(),
-      .detached_thread = detached_thread_,
-  });
-
-  GlobalTaskQueue q;
-  FakeGraph graph({
-      .unconnected_ordinary_nodes = {1},
-      .default_thread = detached_thread_,
+      .detached_thread = graph.detached_thread(),
   });
 
   // Cannot create an edge where a Producer node is the destination.
-  auto result = Node::CreateEdge(q, graph.node(1), producer);
+  auto result = Node::CreateEdge(*q, graph.node(1), producer);
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
 }
 
 TEST_F(MetaProducerNodeTestStreamSink, CreateEdgeSuccess) {
+  FakeGraph graph({
+      .unconnected_ordinary_nodes = {1},
+  });
+
+  auto q = graph.global_task_queue();
+
   const auto clock = RealClock::CreateFromMonotonic("ReferenceClock", Clock::kExternalDomain, true);
   auto producer = MetaProducerNode::Create({
       .format = kFormat,
       .reference_clock = UnreadableClock(clock),
       .data_source = stream_sink().server_ptr(),
-      .detached_thread = detached_thread_,
-  });
-
-  GlobalTaskQueue q;
-  FakeGraph graph({
-      .unconnected_ordinary_nodes = {1},
-      .default_thread = detached_thread_,
+      .detached_thread = graph.detached_thread(),
   });
 
   // Connect producer -> dest.
   auto dest = graph.node(1);
   {
-    auto result = Node::CreateEdge(q, producer, dest);
+    auto result = Node::CreateEdge(*q, producer, dest);
     ASSERT_TRUE(result.is_ok());
   }
 
@@ -91,14 +90,14 @@ TEST_F(MetaProducerNodeTestStreamSink, CreateEdgeSuccess) {
   ASSERT_EQ(producer->child_dests().size(), 1u);
 
   auto producer_child = std::static_pointer_cast<FakeNode>(producer->child_dests()[0]);
-  EXPECT_EQ(producer_child->pipeline_stage_thread(), detached_thread_);
+  EXPECT_EQ(producer_child->thread(), graph.detached_thread());
   EXPECT_EQ(producer_child->dest(), dest);
-  EXPECT_EQ(producer_child->pipeline_stage()->thread(), detached_thread_);
+  EXPECT_EQ(producer_child->pipeline_stage()->thread(), graph.detached_thread()->pipeline_thread());
   EXPECT_EQ(producer_child->pipeline_stage()->format(), kFormat);
   EXPECT_EQ(producer_child->pipeline_stage()->reference_clock(), clock);
   EXPECT_THAT(dest->sources(), ElementsAre(producer_child));
 
-  q.RunForThread(detached_thread_->id());
+  q->RunForThread(graph.detached_thread()->id());
   EXPECT_THAT(dest->fake_pipeline_stage()->sources(),
               ElementsAre(producer_child->pipeline_stage()));
 
@@ -139,7 +138,7 @@ TEST_F(MetaProducerNodeTestStreamSink, CreateEdgeSuccess) {
 
   // Disconnect producer -> dest.
   {
-    auto result = Node::DeleteEdge(q, producer, dest, detached_thread_);
+    auto result = Node::DeleteEdge(*q, graph.detached_thread(), producer, dest);
     ASSERT_TRUE(result.is_ok());
   }
 
@@ -147,15 +146,20 @@ TEST_F(MetaProducerNodeTestStreamSink, CreateEdgeSuccess) {
   EXPECT_EQ(producer->child_dests().size(), 0u);
   EXPECT_THAT(dest->sources(), ElementsAre());
 
-  q.RunForThread(detached_thread_->id());
+  q->RunForThread(graph.detached_thread()->id());
   EXPECT_THAT(dest->fake_pipeline_stage()->sources(), ElementsAre());
 }
 
 TEST(MetaProducerNodeTestRingBuffer, CreateEdgeSuccess) {
+  FakeGraph graph({
+      .unconnected_ordinary_nodes = {1},
+  });
+
+  auto q = graph.global_task_queue();
+
   const auto clock = RealClock::CreateFromMonotonic("ReferenceClock", Clock::kExternalDomain, true);
   constexpr int64_t kRingBufferFrames = 10;
 
-  auto detached_thread = DetachedThread::Create();
   auto buffer =
       MemoryMappedBuffer::CreateOrDie(kRingBufferFrames * kFormat.bytes_per_frame(), true);
   auto ring_buffer = RingBuffer::Create({
@@ -170,19 +174,13 @@ TEST(MetaProducerNodeTestRingBuffer, CreateEdgeSuccess) {
       .format = kFormat,
       .reference_clock = UnreadableClock(clock),
       .data_source = ring_buffer,
-      .detached_thread = detached_thread,
-  });
-
-  GlobalTaskQueue q;
-  FakeGraph graph({
-      .unconnected_ordinary_nodes = {1},
-      .default_thread = detached_thread,
+      .detached_thread = graph.detached_thread(),
   });
 
   // Connect producer -> dest.
   auto dest = graph.node(1);
   {
-    auto result = Node::CreateEdge(q, producer, dest);
+    auto result = Node::CreateEdge(*q, producer, dest);
     ASSERT_TRUE(result.is_ok());
   }
 
@@ -193,13 +191,13 @@ TEST(MetaProducerNodeTestRingBuffer, CreateEdgeSuccess) {
   auto producer_child = std::static_pointer_cast<FakeNode>(producer->child_dests()[0]);
   EXPECT_EQ(producer_child->dest(), dest);
   EXPECT_EQ(producer_child->pipeline_direction(), PipelineDirection::kInput);
-  EXPECT_EQ(producer_child->pipeline_stage_thread(), detached_thread);
-  EXPECT_EQ(producer_child->pipeline_stage()->thread(), detached_thread);
+  EXPECT_EQ(producer_child->thread(), graph.detached_thread());
+  EXPECT_EQ(producer_child->pipeline_stage()->thread(), graph.detached_thread()->pipeline_thread());
   EXPECT_EQ(producer_child->pipeline_stage()->format(), kFormat);
   EXPECT_EQ(producer_child->pipeline_stage()->reference_clock(), clock);
   EXPECT_THAT(dest->sources(), ElementsAre(producer_child));
 
-  q.RunForThread(detached_thread->id());
+  q->RunForThread(graph.detached_thread()->id());
   EXPECT_THAT(dest->fake_pipeline_stage()->sources(),
               ElementsAre(producer_child->pipeline_stage()));
 
@@ -235,7 +233,7 @@ TEST(MetaProducerNodeTestRingBuffer, CreateEdgeSuccess) {
 
   // Disconnect producer -> dest.
   {
-    auto result = Node::DeleteEdge(q, producer, dest, detached_thread);
+    auto result = Node::DeleteEdge(*q, graph.detached_thread(), producer, dest);
     ASSERT_TRUE(result.is_ok());
   }
 
@@ -243,7 +241,7 @@ TEST(MetaProducerNodeTestRingBuffer, CreateEdgeSuccess) {
   EXPECT_EQ(producer->child_dests().size(), 0u);
   EXPECT_THAT(dest->sources(), ElementsAre());
 
-  q.RunForThread(detached_thread->id());
+  q->RunForThread(graph.detached_thread()->id());
   EXPECT_THAT(dest->fake_pipeline_stage()->sources(), ElementsAre());
 }
 

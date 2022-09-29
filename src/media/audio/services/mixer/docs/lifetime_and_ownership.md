@@ -57,7 +57,7 @@ parts of FidlGraphs' ownership tree are summarized below:
         *   ConsumerNode (for the input)
         *   ProducerNodes (for the outputs)
 
-    *   Thread
+    *   GraphMixThread
 
         *   underlying kernel thread
 

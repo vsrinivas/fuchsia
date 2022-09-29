@@ -12,14 +12,8 @@ namespace media_audio {
 // This file exists to break circular dependencies.
 // Since shared_ptr use is ubiquitous, we use XPtr as a more concise name for std::shared_ptr<X>.
 
-class Thread;
-using ThreadPtr = std::shared_ptr<Thread>;
-
-class DetachedThread;
-using DetachedThreadPtr = std::shared_ptr<DetachedThread>;
-
-class MixThread;
-using MixThreadPtr = std::shared_ptr<MixThread>;
+class PipelineThread;
+using PipelineThreadPtr = std::shared_ptr<PipelineThread>;
 
 class PipelineStage;
 using PipelineStagePtr = std::shared_ptr<PipelineStage>;

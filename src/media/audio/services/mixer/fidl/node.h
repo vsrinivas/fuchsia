@@ -19,8 +19,9 @@
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/common/global_task_queue.h"
+#include "src/media/audio/services/mixer/fidl/graph_detached_thread.h"
+#include "src/media/audio/services/mixer/fidl/graph_thread.h"
 #include "src/media/audio/services/mixer/fidl/ptr_decls.h"
-#include "src/media/audio/services/mixer/mix/detached_thread.h"
 #include "src/media/audio/services/mixer/mix/ptr_decls.h"
 
 namespace media_audio {
@@ -107,8 +108,8 @@ class Node {
   //
   // Returns an error if the edge does not exist.
   static fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> DeleteEdge(
-      GlobalTaskQueue& global_queue, NodePtr source, NodePtr dest,
-      DetachedThreadPtr detached_thread);
+      GlobalTaskQueue& global_queue, GraphDetachedThreadPtr detached_thread, NodePtr source,
+      NodePtr dest);
 
   // Returns the node's name. This is used for diagnostics only.
   // The name may not be a unique identifier.
@@ -145,9 +146,10 @@ class Node {
   // REQUIRED: !is_meta()
   [[nodiscard]] PipelineStagePtr pipeline_stage() const;
 
-  // Returns the Thread which controls this node's PipelineStage.
+  // Returns the thread which controls this node's PipelineStage. This is eventually-consistent with
+  // value returned by `pipeline_stage()->thread()`.
   // REQUIRED: !is_meta()
-  [[nodiscard]] ThreadPtr pipeline_stage_thread() const;
+  [[nodiscard]] std::shared_ptr<GraphThread> thread() const;
 
   // Kind of pipeline this node participates in.
   [[nodiscard]] PipelineDirection pipeline_direction() const { return pipeline_direction_; }
@@ -173,12 +175,11 @@ class Node {
   Node(Node&&) = delete;
   Node& operator=(Node&&) = delete;
 
-  // Sets our view of the PipelineStage's current thread. This is the value returned by
-  // `pipeline_stage_thread()`, however it may differ from `pipeline_stage()->set_thread()`.
-  // Caller is responsible for updating the PipelineStage asynchronously as described in
-  // ../docs/execution_model.md.
+  // Set the Thread which controls our PipelineStage. Caller is responsible for asynchronously
+  // updating `PipelineStage::thread()` as described in ../docs/execution_model.md.
+  //
   // REQUIRED: !is_meta()
-  void set_pipeline_stage_thread(ThreadPtr t);
+  void set_thread(std::shared_ptr<GraphThread> t);
 
   //
   // The following methods are implementation details of CreateEdge.
@@ -264,7 +265,7 @@ class Node {
   // Hence we have the invariant: a->HasSource(b) iff b->dest_ == a
   std::vector<NodePtr> sources_;
   NodePtr dest_;
-  ThreadPtr pipeline_stage_thread_;
+  std::shared_ptr<GraphThread> thread_;
 
   // If is_meta_.
   std::vector<NodePtr> child_sources_;

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_MIX_MIX_THREAD_H_
-#define SRC_MEDIA_AUDIO_SERVICES_MIXER_MIX_MIX_THREAD_H_
+#ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_MIX_PIPELINE_MIX_THREAD_H_
+#define SRC_MEDIA_AUDIO_SERVICES_MIXER_MIX_PIPELINE_MIX_THREAD_H_
 
 #include <fidl/fuchsia.audio.mixer/cpp/wire.h>
 #include <lib/sync/cpp/completion.h>
@@ -20,7 +20,7 @@
 #include "src/media/audio/lib/clock/timer.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/common/global_task_queue.h"
-#include "src/media/audio/services/mixer/mix/thread.h"
+#include "src/media/audio/services/mixer/mix/pipeline_thread.h"
 
 namespace media_audio {
 
@@ -42,7 +42,7 @@ namespace media_audio {
 // This class is not thread safe: with the exception of a few const methods, all methods
 // on this class must be called from the kernel thread owned by this thread. This is
 // usually done by posting a closure to the GlobalTaskQueue.
-class MixThread : public Thread {
+class PipelineMixThread : public PipelineThread {
  public:
   struct Args {
     // Caller must ensure that `id` is a unique identifier for this thread.
@@ -52,7 +52,7 @@ class MixThread : public Thread {
     // The name may not be a unique identifier.
     std::string_view name;
 
-    // Deadline profile to apply to the kernel thread backing this MixThread.
+    // Deadline profile to apply to the kernel thread backing this PipelineMixThread.
     // Optional: this may be an invalid handle if a deadline profile should not be applied.
     zx::profile deadline_profile;
 
@@ -74,14 +74,12 @@ class MixThread : public Thread {
     std::shared_ptr<const Clock> mono_clock;
   };
 
-  static MixThreadPtr Create(Args args);
+  static std::shared_ptr<PipelineMixThread> Create(Args args);
 
   // Implementation of Thread.
   ThreadId id() const override { return id_; }
   std::string_view name() const override { return name_; }
   const ThreadChecker& checker() const override { return *checker_; }
-  void AddConsumer(ConsumerStagePtr consumer) final TA_REQ(checker());
-  void RemoveConsumer(ConsumerStagePtr consumer) final TA_REQ(checker());
 
   // Reports the mix period.
   zx::duration mix_period() const { return mix_period_; }
@@ -89,6 +87,13 @@ class MixThread : public Thread {
   // Shuts down this thread.
   // The underlying kernel thread will tear itself down asynchronously.
   void Shutdown() TA_REQ(checker());
+
+  // Adds a consumer to this thread.
+  // This thread becomes responsible for running mix jobs on this consumer.
+  void AddConsumer(ConsumerStagePtr consumer) TA_REQ(checker());
+
+  // Removes a consumer from this thread.
+  void RemoveConsumer(ConsumerStagePtr consumer) TA_REQ(checker());
 
   // Notifies this thread that `consumer` is about to start running. This should be called
   // immediately after a StartCommand is sent to `consumer`, and also after AddConsumer if the
@@ -110,13 +115,17 @@ class MixThread : public Thread {
   }
 
  private:
+  // For RunMixJobs.
+  friend class PipelineMixThreadRunMixJobsTest;
+
   // For testing only: like Create, but reuses the current thread and doesn't start a RunLoop.
-  friend class MixThreadRunMixJobsTest;
-  static MixThreadPtr CreateWithoutLoop(Args args);
+  friend std::shared_ptr<PipelineMixThread> CreatePipelineMixThreadWithoutLoop(Args args);
+  static std::shared_ptr<PipelineMixThread> CreateWithoutLoop(Args args);
 
-  explicit MixThread(Args args);
+  explicit PipelineMixThread(Args args);
 
-  static void Run(MixThreadPtr thread, std::shared_ptr<libsync::Completion> checker_ready,
+  static void Run(std::shared_ptr<PipelineMixThread> thread,
+                  std::shared_ptr<libsync::Completion> checker_ready,
                   std::shared_ptr<libsync::Completion> task_queue_ready);
   void RunLoop() TA_REQ(checker());
 
@@ -141,7 +150,7 @@ class MixThread : public Thread {
   const std::shared_ptr<const Clock> mono_clock_;
 
   // Logically const, but cannot be created until after we've created the std::thread,
-  // which we can't do until after the ctor. See implementation of MixThread::Create.
+  // which we can't do until after the ctor. See implementation of PipelineMixThread::Create.
   std::unique_ptr<ThreadChecker> checker_;
 
   // Set of clocks used by this thread.
@@ -169,4 +178,4 @@ class MixThread : public Thread {
 
 }  // namespace media_audio
 
-#endif  // SRC_MEDIA_AUDIO_SERVICES_MIXER_MIX_MIX_THREAD_H_
+#endif  // SRC_MEDIA_AUDIO_SERVICES_MIXER_MIX_PIPELINE_MIX_THREAD_H_

@@ -27,8 +27,8 @@
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/mix/mix_job_context.h"
 #include "src/media/audio/services/mixer/mix/packet_view.h"
+#include "src/media/audio/services/mixer/mix/pipeline_thread.h"
 #include "src/media/audio/services/mixer/mix/ptr_decls.h"
-#include "src/media/audio/services/mixer/mix/thread.h"
 
 namespace media_audio {
 
@@ -184,10 +184,12 @@ class PipelineStage {
   // Returns the stage's next readable frame.
   [[nodiscard]] std::optional<Fixed> next_readable_frame() { return next_readable_frame_; }
 
-  // Returns the thread which currently controls this stage.
-  // It is safe to call this method on any thread, but if not called from thread(),
-  // the returned value may change concurrently.
-  [[nodiscard]] ThreadPtr thread() const { return std::atomic_load(&thread_); }
+  // Returns the thread which currently controls this stage. It is safe to call this method on any
+  // thread -- this allows callers to check that they are running on the correct thread. However, if
+  // not called from `thread()`, the returned value may change concurrently.
+  [[nodiscard]] std::shared_ptr<PipelineThread> thread() const {
+    return std::atomic_load(&thread_);
+  }
 
   // Returns the clock used by the stage's destination stream.
   // The source streams may use different clocks.
@@ -203,12 +205,9 @@ class PipelineStage {
   // If `f` is not `std::nullopt`, it must be an invertible function.
   virtual void UpdatePresentationTimeToFracFrame(std::optional<TimelineFunction> f) = 0;
 
-  // Sets the stage's thread.
-  // TODO(fxbug.dev/87651): Clarify from which thread this can be called and make `thread_` and
-  // ordinary (non-atomic) field. Probably:
-  // - Pass to ctor so the initial value is always written safely
-  // - Must call from thread_, unless thread_ is the detached thread, then can call from anywhere
-  void set_thread(ThreadPtr thread) { std::atomic_store(&thread_, std::move(thread)); }
+  // Sets the stage's thread. This must be called from `thread()`, unless `thread()` is a detached
+  // thread, in which case this may be called from any thread.
+  void set_thread(std::shared_ptr<PipelineThread> new_thread);
 
  protected:
   PipelineStage(std::string_view name, Format format, UnreadableClock reference_clock)
@@ -326,8 +325,9 @@ class PipelineStage {
   bool is_locked_ = false;
 
   // This is accessed with atomic instructions (std::atomic_load and std::atomic_store) so that any
-  // thread can call thread()->checker(). This can't be a std::atomic<ThreadPtr> until C++20.
-  ThreadPtr thread_;
+  // thread can call thread()->checker(). This can be a std::atomic<std::shared_ptr<PipelineThread>>
+  // after our build supports C++20.
+  std::shared_ptr<PipelineThread> thread_;
 
   // Current translation from frame numbers to presentation timestamps.
   // This is nullopt iff the stage is stopped. Otherwise the stage is started.

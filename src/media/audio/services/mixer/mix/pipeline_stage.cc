@@ -67,6 +67,30 @@ std::optional<PipelineStage::Packet> PipelineStage::Read(MixJobContext& ctx, Fix
   return out_packet;
 }
 
+void PipelineStage::set_thread(std::shared_ptr<PipelineThread> new_thread) {
+  FX_CHECK(new_thread);
+
+  // `set_thread` must always be called from `thread()`, except the first call, where `thread_` has
+  // not been set yet.
+  //
+  // TODO(fxbug.dev/87651): consider passing the initial thread in the constructor
+  //
+  // In a correct data-race-free program, std::atomic is not necessary here -- an ordinary
+  // assignment is sufficient -- but we use std::atomic anyway for improved bug checking.
+  //
+  // We often call `thread().checker()` to check that we are running on the correct thread. By
+  // storing and loading `thread_` using atomics, we guarantee that `thread()` always returns a
+  // valid pointer, even in incorrect (racy) programs, which means that `thread().checker()` will
+  // always return a valid ThreadChecker object, which helps detect data race bugs in a clean way.
+  //
+  // If we do not access `thread_` using atomics, then `thread()` might return a garbage value,
+  // leading to undefined behavior.
+  if (auto t = thread(); t) {
+    FX_CHECK(t->checker().IsValid());
+  }
+  std::atomic_store(&thread_, std::move(new_thread));
+}
+
 PipelineStage::Packet PipelineStage::MakeCachedPacket(Fixed start_frame, int64_t frame_count,
                                                       void* payload) {
   // This packet will be stored in `cached_packet_`. It won't be returned to the `Read` caller,

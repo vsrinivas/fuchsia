@@ -41,8 +41,8 @@ class MetaProducerNode : public Node, public std::enable_shared_from_this<MetaPr
     // Object from which to produce data.
     DataSource data_source;
 
-    // On creation, child nodes are initially assigned to this DetachedThread.
-    DetachedThreadPtr detached_thread;
+    // On creation, child nodes are initially assigned to this detached thread.
+    GraphDetachedThreadPtr detached_thread;
   };
 
   static std::shared_ptr<MetaProducerNode> Create(Args args);
@@ -87,7 +87,7 @@ class MetaProducerNode : public Node, public std::enable_shared_from_this<MetaPr
 
   const Format format_;
   const DataSource data_source_;
-  const DetachedThreadPtr detached_thread_;
+  const GraphDetachedThreadPtr detached_thread_;
 
   int64_t num_links_ = 0;
   struct CommandQueues {

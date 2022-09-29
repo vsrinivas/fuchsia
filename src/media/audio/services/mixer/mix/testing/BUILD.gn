@@ -19,7 +19,9 @@ source_set("testing") {
     "defaults.h",
     "fake_consumer_stage_writer.h",
     "fake_pipeline_stage.h",
-    "fake_thread.h",
+    "fake_pipeline_thread.h",
+    "pipeline_mix_thread_without_loop.cc",
+    "pipeline_mix_thread_without_loop.h",
     "test_fence.h",
   ]
 

@@ -13,12 +13,13 @@ source_set("testing") {
   sources = [
     "fake_graph.cc",
     "fake_graph.h",
+    "graph_mix_thread_without_loop.cc",
+    "graph_mix_thread_without_loop.h",
   ]
 
   public_deps = [
     "//src/media/audio/services/mixer/common",
     "//src/media/audio/services/mixer/fidl",
+    "//src/media/audio/services/mixer/mix/testing",
   ]
-
-  deps = [ "//src/media/audio/services/mixer/mix/testing" ]
 }

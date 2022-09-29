@@ -51,7 +51,7 @@ std::shared_ptr<CustomNode> CustomNode::Create(Args args) {
       .ring_out_frames = static_cast<int64_t>(args.config.outputs()[0].ring_out_frames()),
       .processor = fidl::WireSyncClient(std::move(args.config.processor())),
   });
-  pipeline_stage->set_thread(args.detached_thread);
+  pipeline_stage->set_thread(args.detached_thread->pipeline_thread());
 
   const zx::duration presentation_delay =
       zx::nsec(pipeline_stage->format().frames_per_ns().Inverse().Scale(
@@ -67,13 +67,13 @@ std::shared_ptr<CustomNode> CustomNode::Create(Args args) {
 CustomNode::ChildSourceNode::ChildSourceNode(std::string_view name,
                                              PipelineDirection pipeline_direction,
                                              PipelineStagePtr pipeline_stage, NodePtr parent,
-                                             DetachedThreadPtr detached_thread,
+                                             GraphDetachedThreadPtr detached_thread,
                                              const Format& format, zx::duration presentation_delay)
     : Node(name, /*is_meta=*/false, pipeline_stage->reference_clock(), pipeline_direction,
            std::move(pipeline_stage), std::move(parent)),
       format_(format),
       presentation_delay_(presentation_delay) {
-  set_pipeline_stage_thread(std::move(detached_thread));
+  set_thread(std::move(detached_thread));
 }
 
 zx::duration CustomNode::ChildSourceNode::GetSelfPresentationDelayForSource(
@@ -93,10 +93,10 @@ bool CustomNode::ChildSourceNode::AllowsDest() const { return false; }
 CustomNode::ChildDestNode::ChildDestNode(std::string_view name,
                                          PipelineDirection pipeline_direction,
                                          PipelineStagePtr pipeline_stage, NodePtr parent,
-                                         DetachedThreadPtr detached_thread)
+                                         GraphDetachedThreadPtr detached_thread)
     : Node(name, /*is_meta=*/false, pipeline_stage->reference_clock(), pipeline_direction,
            std::move(pipeline_stage), std::move(parent)) {
-  set_pipeline_stage_thread(std::move(detached_thread));
+  set_thread(std::move(detached_thread));
 }
 
 zx::duration CustomNode::ChildDestNode::GetSelfPresentationDelayForSource(
@@ -118,7 +118,7 @@ CustomNode::CustomNode(std::string_view name, UnreadableClock reference_clock,
            /*pipeline_stage=*/nullptr, /*parent=*/nullptr) {}
 
 void CustomNode::InitializeChildNodes(PipelineStagePtr pipeline_stage, NodePtr parent,
-                                      DetachedThreadPtr detached_thread,
+                                      GraphDetachedThreadPtr detached_thread,
                                       const Format& source_format,
                                       zx::duration presentation_delay) {
   // TODO(fxbug.dev/87651): This is currently hardcoded for the 1 -> 1 `CustomStage` implementation.

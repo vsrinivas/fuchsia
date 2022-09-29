@@ -17,12 +17,13 @@ namespace {
 
 const Format kFormat = Format::CreateOrDie({fuchsia_audio::SampleType::kFloat32, 2, 48000});
 
-class ProducerNodeTest : public ::testing::Test {
- protected:
-  const DetachedThreadPtr detached_thread_ = DetachedThread::Create();
-};
+TEST(ProducerNodeTest, CreateEdgeCannotAcceptSource) {
+  FakeGraph graph({
+      .unconnected_ordinary_nodes = {1},
+  });
 
-TEST_F(ProducerNodeTest, CreateEdgeCannotAcceptSource) {
+  auto q = graph.global_task_queue();
+
   auto producer = ProducerNode::Create({
       .start_stop_command_queue = std::make_shared<ProducerStage::CommandQueue>(),
       .internal_source =
@@ -31,24 +32,24 @@ TEST_F(ProducerNodeTest, CreateEdgeCannotAcceptSource) {
               .reference_clock = DefaultClock(),
               .command_queue = std::make_shared<SimplePacketQueueProducerStage::CommandQueue>(),
           }),
-      .detached_thread = detached_thread_,
+      .detached_thread = graph.detached_thread(),
   });
 
-  EXPECT_EQ(producer->pipeline_stage_thread(), detached_thread_);
-  EXPECT_EQ(producer->pipeline_stage()->thread(), detached_thread_);
+  EXPECT_EQ(producer->thread(), graph.detached_thread());
+  EXPECT_EQ(producer->pipeline_stage()->thread(), graph.detached_thread()->pipeline_thread());
 
-  GlobalTaskQueue q;
-  FakeGraph graph({
-      .unconnected_ordinary_nodes = {1},
-      .default_thread = detached_thread_,
-  });
-
-  auto result = Node::CreateEdge(q, graph.node(1), producer);
+  auto result = Node::CreateEdge(*q, graph.node(1), producer);
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
 }
 
-TEST_F(ProducerNodeTest, CreateEdgeSuccess) {
+TEST(ProducerNodeTest, CreateEdgeSuccess) {
+  FakeGraph graph({
+      .unconnected_ordinary_nodes = {1},
+  });
+
+  auto q = graph.global_task_queue();
+
   const auto clock = RealClock::CreateFromMonotonic("ReferenceClock", Clock::kExternalDomain, true);
   auto start_stop_command_queue = std::make_shared<ProducerStage::CommandQueue>();
   auto packet_command_queue = std::make_shared<SimplePacketQueueProducerStage::CommandQueue>();
@@ -62,33 +63,27 @@ TEST_F(ProducerNodeTest, CreateEdgeSuccess) {
               .reference_clock = UnreadableClock(clock),
               .command_queue = packet_command_queue,
           }),
-      .detached_thread = detached_thread_,
+      .detached_thread = graph.detached_thread(),
   });
 
   EXPECT_EQ(producer->pipeline_direction(), PipelineDirection::kInput);
   EXPECT_EQ(producer->reference_clock(), clock);
-  EXPECT_EQ(producer->pipeline_stage_thread(), detached_thread_);
-  EXPECT_EQ(producer->pipeline_stage()->thread(), detached_thread_);
+  EXPECT_EQ(producer->thread(), graph.detached_thread());
+  EXPECT_EQ(producer->pipeline_stage()->thread(), graph.detached_thread()->pipeline_thread());
   EXPECT_EQ(producer->pipeline_stage()->format(), kFormat);
   EXPECT_EQ(producer->pipeline_stage()->reference_clock(), clock);
-
-  GlobalTaskQueue q;
-  FakeGraph graph({
-      .unconnected_ordinary_nodes = {1},
-      .default_thread = detached_thread_,
-  });
 
   // Connect producer -> dest.
   auto dest = graph.node(1);
   {
-    auto result = Node::CreateEdge(q, producer, dest);
+    auto result = Node::CreateEdge(*q, producer, dest);
     ASSERT_TRUE(result.is_ok());
   }
 
   EXPECT_EQ(producer->dest(), dest);
   EXPECT_THAT(dest->sources(), ::testing::ElementsAre(producer));
 
-  q.RunForThread(detached_thread_->id());
+  q->RunForThread(graph.detached_thread()->id());
   EXPECT_THAT(dest->fake_pipeline_stage()->sources(),
               ::testing::ElementsAre(producer->pipeline_stage()));
 
@@ -126,14 +121,14 @@ TEST_F(ProducerNodeTest, CreateEdgeSuccess) {
 
   // Disconnect producer -> dest.
   {
-    auto result = Node::DeleteEdge(q, producer, dest, detached_thread_);
+    auto result = Node::DeleteEdge(*q, graph.detached_thread(), producer, dest);
     ASSERT_TRUE(result.is_ok());
   }
 
   EXPECT_EQ(producer->dest(), nullptr);
   EXPECT_THAT(dest->sources(), ::testing::ElementsAre());
 
-  q.RunForThread(detached_thread_->id());
+  q->RunForThread(graph.detached_thread()->id());
   EXPECT_THAT(dest->fake_pipeline_stage()->sources(), ::testing::ElementsAre());
 }
 

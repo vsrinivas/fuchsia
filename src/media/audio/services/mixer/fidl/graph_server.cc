@@ -17,7 +17,6 @@
 #include "src/media/audio/services/mixer/fidl/meta_producer_node.h"
 #include "src/media/audio/services/mixer/fidl_realtime/stream_sink_client.h"
 #include "src/media/audio/services/mixer/fidl_realtime/stream_sink_server.h"
-#include "src/media/audio/services/mixer/mix/mix_thread.h"
 #include "src/media/audio/services/mixer/mix/ring_buffer.h"
 #include "src/media/audio/services/mixer/mix/ring_buffer_consumer_writer.h"
 #include "src/media/audio/services/mixer/mix/stream_sink_consumer_writer.h"
@@ -308,7 +307,7 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
     return;
   }
 
-  auto& mix_thread = mix_thread_it->second.ptr;
+  auto& mix_thread = mix_thread_it->second;
   const auto name = NameOrEmpty(*request);
   std::shared_ptr<ConsumerStage::Writer> writer;
   std::optional<Format> format;
@@ -389,16 +388,6 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
   });
   nodes_[id] = consumer;
 
-  // Add this consumer to its thread. Since the consumer was just created, it cannot have been
-  // started yet, hence we don't call NotifyConsumerStarting.
-  global_task_queue_->Push(mix_thread->id(),
-                           [mix_thread, consumer_stage = consumer->consumer_stage()]() {
-                             ScopedThreadChecker checker(mix_thread->checker());
-                             mix_thread->AddConsumer(consumer_stage);
-                             // TODO(fxbug.dev/87651): mix_thread->AddClock?
-                           });
-  mix_thread_it->second.num_consumers++;
-
   fidl::Arena arena;
   completer.ReplySuccess(
       fuchsia_audio_mixer::wire::GraphCreateConsumerResponse::Builder(arena).id(id).Build());
@@ -463,21 +452,17 @@ void GraphServer::CreateThread(CreateThreadRequestView request,
   }
 
   const auto id = NextThreadId();
-  mix_threads_[id] = {
-      .ptr = MixThread::Create({
-          .id = id,
-          .name = NameOrEmpty(*request),
-          .deadline_profile = request->has_deadline_profile()
-                                  ? std::move(request->deadline_profile())
-                                  : zx::profile(),
-          .mix_period = zx::nsec(request->period()),
-          .cpu_per_period = zx::nsec(request->cpu_per_period()),
-          .global_task_queue = global_task_queue_,
-          .timer = clock_factory_->CreateTimer(),
-          .mono_clock = clock_factory_->SystemMonotonicClock(),
-      }),
-      .num_consumers = 0,
-  };
+  mix_threads_[id] = std::make_shared<GraphMixThread>(PipelineMixThread::Args{
+      .id = id,
+      .name = NameOrEmpty(*request),
+      .deadline_profile =
+          request->has_deadline_profile() ? std::move(request->deadline_profile()) : zx::profile(),
+      .mix_period = zx::nsec(request->period()),
+      .cpu_per_period = zx::nsec(request->cpu_per_period()),
+      .global_task_queue = global_task_queue_,
+      .timer = clock_factory_->CreateTimer(),
+      .mono_clock = clock_factory_->SystemMonotonicClock(),
+  });
 
   fidl::Arena arena;
   completer.ReplySuccess(
@@ -502,19 +487,16 @@ void GraphServer::DeleteThread(DeleteThreadRequestView request,
     return;
   }
 
-  if (it->second.num_consumers > 0) {
+  auto& mix_thread = it->second;
+  if (mix_thread->num_consumers() > 0) {
     FX_LOGS(WARNING) << "DeleteThread: thread " << request->id() << " still in use by "
-                     << it->second.num_consumers << " consumers";
+                     << mix_thread->num_consumers() << " consumers";
     completer.ReplyError(fuchsia_audio_mixer::DeleteThreadError::kStillInUse);
     return;
   }
 
   // Shutdown this thread and delete it.
-  const auto mix_thread = it->second.ptr;
-  global_task_queue_->Push(mix_thread->id(), [mix_thread]() {
-    ScopedThreadChecker checker(mix_thread->checker());
-    mix_thread->Shutdown();
-  });
+  mix_thread->Shutdown();
   mix_threads_.erase(it);
 
   fidl::Arena arena;

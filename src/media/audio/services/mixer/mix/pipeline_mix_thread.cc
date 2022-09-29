@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/services/mixer/mix/mix_thread.h"
+#include "src/media/audio/services/mixer/mix/pipeline_mix_thread.h"
 
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/thread.h>
@@ -24,19 +24,20 @@ const TimelineRate kMonoTicksPerFastestRefTicks(1'000'000,
                                                 1'000'000 + ZX_CLOCK_UPDATE_MAX_RATE_ADJUST);
 }  // namespace
 
-MixThreadPtr MixThread::Create(Args args) {
+std::shared_ptr<PipelineMixThread> PipelineMixThread::Create(Args args) {
   // std::make_shared requires a public ctor, but we hide our ctor to force callers to use Create.
-  struct WithPublicCtor : public MixThread {
-    WithPublicCtor(Args args) : MixThread(std::move(args)) {}
+  struct WithPublicCtor : public PipelineMixThread {
+    WithPublicCtor(Args args) : PipelineMixThread(std::move(args)) {}
   };
 
-  MixThreadPtr thread = std::make_shared<WithPublicCtor>(std::move(args));
+  auto thread = std::make_shared<WithPublicCtor>(std::move(args));
 
-  // Start the kernel thread. This can't happen in the constructor because we want MixThread::Run to
-  // hold a MixThreadPtr, which we can't get until after the constructor.
+  // Start the kernel thread. This can't happen in the constructor because we want
+  // PipelineMixThread::Run to hold a std::shared_ptr<PipelineMixThread>, which we can't get until
+  // after the constructor.
   auto checker_ready = std::make_shared<libsync::Completion>();
   auto task_queue_ready = std::make_shared<libsync::Completion>();
-  std::thread t(MixThread::Run, thread, checker_ready, task_queue_ready);
+  std::thread t(PipelineMixThread::Run, thread, checker_ready, task_queue_ready);
 
   // Now that we have a std::thread, we can create the checker.
   thread->checker_ = std::make_unique<ThreadChecker>(t.get_id());
@@ -54,17 +55,17 @@ MixThreadPtr MixThread::Create(Args args) {
   return thread;
 }
 
-MixThreadPtr MixThread::CreateWithoutLoop(Args args) {
-  struct WithPublicCtor : public MixThread {
-    WithPublicCtor(Args args) : MixThread(std::move(args)) {}
+std::shared_ptr<PipelineMixThread> PipelineMixThread::CreateWithoutLoop(Args args) {
+  struct WithPublicCtor : public PipelineMixThread {
+    WithPublicCtor(Args args) : PipelineMixThread(std::move(args)) {}
   };
 
-  MixThreadPtr thread = std::make_shared<WithPublicCtor>(std::move(args));
+  auto thread = std::make_shared<WithPublicCtor>(std::move(args));
   thread->checker_ = std::make_unique<ThreadChecker>(std::this_thread::get_id());
   return thread;
 }
 
-MixThread::MixThread(Args args)
+PipelineMixThread::PipelineMixThread(Args args)
     : id_(args.id),
       name_(args.name),
       deadline_profile_(std::move(args.deadline_profile)),
@@ -77,7 +78,7 @@ MixThread::MixThread(Args args)
   FX_CHECK(zx::nsec(0) <= cpu_per_period_ && cpu_per_period_ <= mix_period_);
 }
 
-void MixThread::AddConsumer(ConsumerStagePtr consumer) {
+void PipelineMixThread::AddConsumer(ConsumerStagePtr consumer) {
   FX_CHECK(FindConsumer(consumer) == consumers_.end())
       << "cannot add Consumer twice: " << consumer->name();
 
@@ -85,20 +86,20 @@ void MixThread::AddConsumer(ConsumerStagePtr consumer) {
   ReSortConsumers();
 }
 
-void MixThread::RemoveConsumer(ConsumerStagePtr consumer) {
+void PipelineMixThread::RemoveConsumer(ConsumerStagePtr consumer) {
   auto it = FindConsumer(consumer);
   FX_CHECK(it != consumers_.end()) << "cannot find Consumer to remove: " << consumer->name();
   consumers_.erase(it);
 }
 
-void MixThread::Shutdown() {
+void PipelineMixThread::Shutdown() {
   // Run will exit the next time it wakes up.
   // Technically this is thread safe, but Shutdown is annotated with TA_REQ(checker())
   // anyway because it's simpler to say that all non-const methods are not thread safe.
   timer_->SetShutdownBit();
 }
 
-void MixThread::NotifyConsumerStarting(ConsumerStagePtr consumer) {
+void PipelineMixThread::NotifyConsumerStarting(ConsumerStagePtr consumer) {
   auto it = FindConsumer(consumer);
   FX_CHECK(it != consumers_.end()) << "cannot find Consumer to start: " << consumer->name();
 
@@ -109,7 +110,7 @@ void MixThread::NotifyConsumerStarting(ConsumerStagePtr consumer) {
   }
 }
 
-void MixThread::ReSortConsumers() {
+void PipelineMixThread::ReSortConsumers() {
   std::sort(consumers_.begin(), consumers_.end(), [](const ConsumerInfo& a, const ConsumerInfo& b) {
     // We want a topological sort with sources ordered before sinks, so `a` goes first if it's
     // "higher" in the graph.
@@ -118,8 +119,9 @@ void MixThread::ReSortConsumers() {
 }
 
 // static
-void MixThread::Run(MixThreadPtr thread, std::shared_ptr<libsync::Completion> checker_ready,
-                    std::shared_ptr<libsync::Completion> task_queue_ready) {
+void PipelineMixThread::Run(std::shared_ptr<PipelineMixThread> thread,
+                            std::shared_ptr<libsync::Completion> checker_ready,
+                            std::shared_ptr<libsync::Completion> task_queue_ready) {
   if (thread->deadline_profile_) {
     if (auto status = zx::thread::self()->set_profile(thread->deadline_profile_, 0);
         status != ZX_OK) {
@@ -131,7 +133,7 @@ void MixThread::Run(MixThreadPtr thread, std::shared_ptr<libsync::Completion> ch
   // Wait until private fields are fully initialized.
   FX_CHECK(checker_ready->Wait(zx::sec(5)) == ZX_OK);
 
-  FX_LOGS(INFO) << "MixThread starting: id=" << thread->id() << " name='" << thread->name()
+  FX_LOGS(INFO) << "PipelineMixThread starting: id=" << thread->id() << " name='" << thread->name()
                 << "' ptr=" << thread.get();
   thread->global_task_queue_->RegisterTimer(thread->id_, thread->timer_);
   task_queue_ready->Signal();
@@ -140,13 +142,13 @@ void MixThread::Run(MixThreadPtr thread, std::shared_ptr<libsync::Completion> ch
   ScopedThreadChecker check(thread->checker());
   thread->RunLoop();
 
-  FX_LOGS(INFO) << "MixThread stopping: id=" << thread->id() << " name='" << thread->name()
+  FX_LOGS(INFO) << "PipelineMixThread stopping: id=" << thread->id() << " name='" << thread->name()
                 << "' ptr=" << thread.get();
   thread->global_task_queue_->UnregisterTimer(thread->id_);
   thread->timer_->Stop();
 }
 
-void MixThread::RunLoop() {
+void PipelineMixThread::RunLoop() {
   std::optional<zx::time> prior_job_time;
 
   zx::time current_job_time = zx::time::infinite();
@@ -205,9 +207,9 @@ void MixThread::RunLoop() {
   }
 }
 
-zx::time MixThread::RunMixJobs(const zx::time mono_start_time, const zx::time mono_now) {
+zx::time PipelineMixThread::RunMixJobs(const zx::time mono_start_time, const zx::time mono_now) {
   MixJobContext ctx(clocks_);
-  MixJobSubtask subtask("MixThread::RunMixJobs");
+  MixJobSubtask subtask("PipelineMixThread::RunMixJobs");
 
   clocks_.Update(mono_start_time);
 
@@ -228,7 +230,7 @@ zx::time MixThread::RunMixJobs(const zx::time mono_start_time, const zx::time mo
   // for this mix job, it's possible we might underflow. This is worth noting in metrics.
   if (const auto t = mono_deadline - cpu_per_period_; mono_now > t) {
     MixJobSubtask::Metrics late_metrics;
-    late_metrics.name.Append("MixThread::LateWakeup");
+    late_metrics.name.Append("PipelineMixThread::LateWakeup");
     late_metrics.wall_time = mono_now - t;
     ctx.AddSubtaskMetrics(late_metrics);
   }
@@ -292,7 +294,7 @@ zx::time MixThread::RunMixJobs(const zx::time mono_start_time, const zx::time mo
   return next_job_mono_start_time;
 }
 
-std::vector<MixThread::ConsumerInfo>::iterator MixThread::FindConsumer(
+std::vector<PipelineMixThread::ConsumerInfo>::iterator PipelineMixThread::FindConsumer(
     const ConsumerStagePtr& consumer) {
   return std::find_if(consumers_.begin(), consumers_.end(),
                       [&consumer](const auto& info) { return info.consumer == consumer; });

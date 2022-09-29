@@ -17,16 +17,38 @@
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
+#include "src/media/audio/services/mixer/fidl/graph_thread.h"
 #include "src/media/audio/services/mixer/fidl/node.h"
 #include "src/media/audio/services/mixer/fidl/ptr_decls.h"
 #include "src/media/audio/services/mixer/mix/testing/fake_pipeline_stage.h"
+#include "src/media/audio/services/mixer/mix/testing/fake_pipeline_thread.h"
 
 namespace media_audio {
 
 class FakeNode;
+class FakeGraphThread;
 class FakeGraph;
 
+using FakeGraphThreadPtr = std::shared_ptr<FakeGraphThread>;
 using FakeNodePtr = std::shared_ptr<FakeNode>;
+
+// A fake mix thread for use in tests.
+// See FakeGraph for creation methods.
+class FakeGraphThread : public GraphThread {
+ public:
+  // Implementation of GraphThread.
+  std::shared_ptr<PipelineThread> pipeline_thread() const final { return pipeline_thread_; }
+
+ private:
+  // All FakeGraphThreads belong to a FakeGraph. The constructor is private to ensure that it's
+  // impossible to create a FakeThread which outlives its parent FakeGraph.
+  friend class FakeGraph;
+  FakeGraphThread(ThreadId id, std::shared_ptr<GlobalTaskQueue> global_task_queue)
+      : GraphThread(std::move(global_task_queue)),
+        pipeline_thread_(std::make_shared<FakePipelineThread>(id)) {}
+
+  const std::shared_ptr<PipelineThread> pipeline_thread_;
+};
 
 // A fake node for use in tests.
 // See FakeGraph for creation methods.
@@ -81,7 +103,7 @@ class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
   void SetOnAllowsDest(std::function<bool()> handler) { on_allows_dest_ = std::move(handler); }
 
   // Allow anyone to set the thread.
-  using Node::set_pipeline_stage_thread;
+  using Node::set_thread;
 
   // Our PipelineStage is always this type.
   FakePipelineStagePtr fake_pipeline_stage() const {
@@ -189,17 +211,19 @@ class FakeGraph {
     // The default direction if not specified above.
     PipelineDirection default_pipeline_direction;
 
-    // Assignment of nodes to threads.
-    // All nodes must be ordinary nodes (i.e. not a key of `meta_nodes`).
-    std::unordered_map<ThreadPtr, std::vector<NodeId>> threads;
-
-    // The default thread to use if not specified above.
-    // May be nullptr.
-    ThreadPtr default_thread;
+    // Assignment of nodes to threads. If a node is not assigned a thread, it's assigned to
+    // `FakeGraph::DetachedThread()`. All nodes must be ordinary nodes (i.e. not a key of
+    // `meta_nodes`).
+    std::unordered_map<ThreadId, std::vector<NodeId>> threads;
   };
 
   explicit FakeGraph(Args args);
   ~FakeGraph();
+
+  // Creates a thread with the given `id`.
+  //
+  // If `id` is unspecified, an `id` is selected automatically.
+  FakeGraphThreadPtr CreateThread(std::optional<ThreadId> id);
 
   // Creates a meta node or return the node if the `id` already exists.
   // It is illegal to call CreateMetaNode and CreateOrdinaryNode with the same `id`.
@@ -214,6 +238,14 @@ class FakeGraph {
   // If `parent` is specified and `id` already exists, the given `parent` must match the old parent.
   FakeNodePtr CreateOrdinaryNode(std::optional<NodeId> id, FakeNodePtr parent);
 
+  // Returns the thread with the given ID.
+  // Must exist.
+  FakeGraphThreadPtr thread(ThreadId id) const {
+    auto it = threads_.find(id);
+    FX_CHECK(it != threads_.end()) << "FakeGraph does have thread " << id;
+    return it->second;
+  }
+
   // Returns the node with the given ID.
   // Must exist.
   FakeNodePtr node(NodeId id) const {
@@ -222,15 +254,28 @@ class FakeGraph {
     return it->second;
   }
 
+  // Returns the task queue used by this FakeGraph.
+  std::shared_ptr<GlobalTaskQueue> global_task_queue() const { return global_task_queue_; }
+
+  // Returns the detached thread used by this FakeGraph.
+  GraphDetachedThreadPtr detached_thread() const { return detached_thread_; }
+
  private:
-  NodeId NextId();
+  FakeGraph(const FakeGraph&) = delete;
+  FakeGraph& operator=(const FakeGraph&) = delete;
+
+  ThreadId NextThreadId();
+  NodeId NextNodeId();
   PipelineDirection PipelineDirectionForNode(NodeId id) const;
 
+  std::unordered_map<ThreadId, FakeGraphThreadPtr> threads_;
   std::unordered_map<NodeId, FakeNodePtr> nodes_;
   std::unordered_map<NodeId, std::shared_ptr<Format>> formats_;
   std::unordered_map<PipelineDirection, std::unordered_set<NodeId>> pipeline_directions_;
   PipelineDirection default_pipeline_direction_;
-  ThreadPtr default_thread_;
+
+  std::shared_ptr<GlobalTaskQueue> global_task_queue_;
+  GraphDetachedThreadPtr detached_thread_;
 };
 
 }  // namespace media_audio

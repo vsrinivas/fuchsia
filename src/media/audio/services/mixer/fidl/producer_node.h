@@ -36,8 +36,8 @@ class ProducerNode : public Node {
     // Internal source for the ProducerStage.
     PipelineStagePtr internal_source;
 
-    // On creation, the node is initially assigned to this DetachedThread.
-    DetachedThreadPtr detached_thread;
+    // On creation, the node is initially assigned to this detached thread.
+    GraphDetachedThreadPtr detached_thread;
   };
 
   static std::shared_ptr<ProducerNode> Create(Args args);

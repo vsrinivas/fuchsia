@@ -18,9 +18,10 @@
 #include "src/media/audio/services/common/base_fidl_server.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/fidl/clock_registry.h"
+#include "src/media/audio/services/mixer/fidl/graph_detached_thread.h"
+#include "src/media/audio/services/mixer/fidl/graph_mix_thread.h"
 #include "src/media/audio/services/mixer/fidl/node.h"
 #include "src/media/audio/services/mixer/fidl/ptr_decls.h"
-#include "src/media/audio/services/mixer/mix/detached_thread.h"
 
 namespace media_audio {
 
@@ -90,8 +91,10 @@ class GraphServer
 
   const std::string name_;
   const std::shared_ptr<const FidlThread> realtime_fidl_thread_;
-  const std::shared_ptr<DetachedThread> detached_thread_ = DetachedThread::Create();
   const std::shared_ptr<GlobalTaskQueue> global_task_queue_ = std::make_shared<GlobalTaskQueue>();
+  const std::shared_ptr<GraphDetachedThread> detached_thread_ =
+      std::make_shared<GraphDetachedThread>(global_task_queue_);
+
   const std::shared_ptr<ClockFactory> clock_factory_;
   const std::shared_ptr<ClockRegistry> clock_registry_;
 
@@ -100,11 +103,7 @@ class GraphServer
   NodeId next_node_id_ = 1;
 
   // Threads mapping.
-  struct MixThreadInfo {
-    MixThreadPtr ptr;
-    int64_t num_consumers = 0;
-  };
-  std::unordered_map<ThreadId, MixThreadInfo> mix_threads_;
+  std::unordered_map<ThreadId, std::shared_ptr<GraphMixThread>> mix_threads_;
   ThreadId next_thread_id_ = 1;
 
   // List of pending one-shot waiters. Each waiter is responsible for removing themselves from this
