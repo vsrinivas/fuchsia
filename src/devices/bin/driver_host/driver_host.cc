@@ -650,18 +650,13 @@ zx_status_t DriverHostContext::FindDriver(std::string_view libname, zx::vmo vmo,
     new_driver->set_status(ZX_ERR_IO);
     return new_driver->status();
   }
-  auto ops = static_cast<const zx_driver_ops_t**>(dlsym(dl, "__zircon_driver_ops__"));
   auto dr = static_cast<zx_driver_rec_t*>(dlsym(dl, "__zircon_driver_rec__"));
   if (dr == nullptr) {
     LOGF(ERROR, "Driver '%s' missing __zircon_driver_rec__ symbol", c_libname);
     new_driver->set_status(ZX_ERR_IO);
     return new_driver->status();
   }
-  // TODO(kulakowski) Eventually just check __zircon_driver_ops__,
-  // when bind programs are standalone.
-  if (ops == nullptr) {
-    ops = &dr->ops;
-  }
+  auto ops = &dr->ops;
   if (!(*ops)) {
     LOGF(ERROR, "Driver '%s' has nullptr ops", c_libname);
     new_driver->set_status(ZX_ERR_INVALID_ARGS);
