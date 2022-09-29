@@ -4,8 +4,10 @@
 
 use {
     crate::driver_utils::{connect_proxy, map_topo_paths_to_class_paths, Driver},
+    crate::MIN_INTERVAL_FOR_SYSLOG_MS,
     anyhow::{format_err, Error, Result},
-    fidl_fuchsia_gpu_magma as fgpu, fuchsia_async as fasync,
+    fidl_fuchsia_gpu_magma as fgpu, fidl_fuchsia_metricslogger_test as fmetrics,
+    fuchsia_async as fasync,
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_zircon as zx,
     futures::{stream::FuturesUnordered, StreamExt},
@@ -15,25 +17,25 @@ use {
     zerocopy::FromBytes,
 };
 
+const GPU_SERVICE_DIRS: [&str; 1] = ["/dev/class/gpu"];
+
 // Type aliases for convenience.
 pub type GpuDriver = Driver<fgpu::DeviceProxy>;
 
-pub const MAGMA_TOTAL_TIME_QUERY_RESULT_SIZE: usize =
-    mem::size_of::<magma_total_time_query_result>();
+const MAGMA_TOTAL_TIME_QUERY_RESULT_SIZE: usize = mem::size_of::<magma_total_time_query_result>();
 
 /// Generates a list of `GpuDriver` from driver paths and aliases.
 pub async fn generate_gpu_drivers(
-    service_dirs: &[&str],
     driver_aliases: HashMap<String, String>,
 ) -> Result<Vec<GpuDriver>> {
-    let topo_to_class = map_topo_paths_to_class_paths(service_dirs).await?;
+    let topo_to_class = map_topo_paths_to_class_paths(&GPU_SERVICE_DIRS).await?;
 
     let mut drivers = Vec::new();
     for (topological_path, class_path) in topo_to_class {
         let proxy = connect_proxy::<fgpu::DeviceMarker>(&class_path)?;
         let alias = driver_aliases.get(&topological_path).map(|c| c.to_string());
         // Add driver if querying `MagmaQueryTotalTime` is supported.
-        if is_total_time_supported(&proxy).await.unwrap() {
+        if is_total_time_supported(&proxy).await? {
             drivers.push(Driver { alias, topological_path, proxy });
         } else {
             info!("GPU driver {:?}: `MagmaQueryTotalTime` is not supported", alias);
@@ -109,29 +111,41 @@ pub struct GpuUsageLogger {
 }
 
 impl GpuUsageLogger {
-    pub fn new(
+    pub async fn new(
         drivers: Rc<Vec<GpuDriver>>,
-        interval: zx::Duration,
-        duration: Option<zx::Duration>,
+        interval_ms: u32,
+        duration_ms: Option<u32>,
         client_inspect: &inspect::Node,
-        driver_names: Vec<String>,
         client_id: String,
         output_samples_to_syslog: bool,
-    ) -> Self {
+    ) -> Result<Self, fmetrics::MetricsLoggerError> {
+        if interval_ms == 0
+            || output_samples_to_syslog && interval_ms < MIN_INTERVAL_FOR_SYSLOG_MS
+            || duration_ms.map_or(false, |d| d <= interval_ms)
+        {
+            return Err(fmetrics::MetricsLoggerError::InvalidSamplingInterval);
+        }
+        if drivers.len() == 0 {
+            return Err(fmetrics::MetricsLoggerError::NoDrivers);
+        }
+
+        let driver_names: Vec<String> = drivers.iter().map(|c| c.name().to_string()).collect();
         let start_time = fasync::Time::now();
-        let end_time = duration.map_or(fasync::Time::INFINITE, |d| fasync::Time::now() + d);
+        let end_time = duration_ms.map_or(fasync::Time::INFINITE, |ms| {
+            fasync::Time::now() + zx::Duration::from_millis(ms as i64)
+        });
         let inspect = InspectData::new(client_inspect, driver_names);
 
-        GpuUsageLogger {
+        Ok(GpuUsageLogger {
             last_samples: vec![None; drivers.len()],
             drivers,
-            interval,
+            interval: zx::Duration::from_millis(interval_ms as i64),
             client_id,
             inspect,
             output_samples_to_syslog,
             start_time,
             end_time,
-        }
+        })
     }
 
     pub async fn log_gpu_usages(mut self) {

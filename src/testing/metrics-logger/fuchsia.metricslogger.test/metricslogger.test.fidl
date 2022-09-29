@@ -26,6 +26,8 @@ type MetricsLoggerError = strict enum : uint32 {
     /// Indicates that statistics is enabled and an invalid statistics interval
     /// is provided.
     INVALID_STATISTICS_INTERVAL = 6;
+    /// Indicates that the request failed due to an internal error.
+    INTERNAL = 7;
 };
 
 /// Metric type requested in MetricsLogger methods.

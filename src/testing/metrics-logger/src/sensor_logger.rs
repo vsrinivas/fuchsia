@@ -4,10 +4,12 @@
 
 use {
     crate::driver_utils::{connect_proxy, map_topo_paths_to_class_paths, Driver},
+    crate::MIN_INTERVAL_FOR_SYSLOG_MS,
     anyhow::{format_err, Error, Result},
     async_trait::async_trait,
     fidl_fuchsia_hardware_power_sensor as fpower,
-    fidl_fuchsia_hardware_temperature as ftemperature, fuchsia_async as fasync,
+    fidl_fuchsia_hardware_temperature as ftemperature, fidl_fuchsia_metricslogger_test as fmetrics,
+    fuchsia_async as fasync,
     fuchsia_inspect::{self as inspect, ArrayProperty, Property},
     fuchsia_zircon as zx,
     futures::{stream::FuturesUnordered, StreamExt},
@@ -15,14 +17,32 @@ use {
     tracing::{error, info},
 };
 
+// The fuchsia.hardware.temperature.Device is composed into fuchsia.hardware.thermal.Device, so
+// drivers are found in two directories.
+const TEMPERATURE_SERVICE_DIRS: [&str; 2] = ["/dev/class/temperature", "/dev/class/thermal"];
+const POWER_SERVICE_DIRS: [&str; 1] = ["/dev/class/power-sensor"];
+
 // Type aliases for convenience.
 pub type TemperatureDriver = Driver<ftemperature::DeviceProxy>;
 pub type PowerDriver = Driver<fpower::DeviceProxy>;
 pub type TemperatureLogger = SensorLogger<ftemperature::DeviceProxy>;
 pub type PowerLogger = SensorLogger<fpower::DeviceProxy>;
 
+pub async fn generate_temperature_drivers(
+    driver_aliases: HashMap<String, String>,
+) -> Result<Vec<Driver<ftemperature::DeviceProxy>>> {
+    generate_sensor_drivers::<ftemperature::DeviceMarker>(&TEMPERATURE_SERVICE_DIRS, driver_aliases)
+        .await
+}
+
+pub async fn generate_power_drivers(
+    driver_aliases: HashMap<String, String>,
+) -> Result<Vec<Driver<fpower::DeviceProxy>>> {
+    generate_sensor_drivers::<fpower::DeviceMarker>(&POWER_SERVICE_DIRS, driver_aliases).await
+}
+
 /// Generates a list of `Driver` from driver paths and aliases.
-pub async fn generate_sensor_drivers<T: fidl::endpoints::ProtocolMarker>(
+async fn generate_sensor_drivers<T: fidl::endpoints::ProtocolMarker>(
     service_dirs: &[&str],
     driver_aliases: HashMap<String, String>,
 ) -> Result<Vec<Driver<T::Proxy>>> {
@@ -212,17 +232,36 @@ pub struct SensorLogger<T> {
 }
 
 impl<T: Sensor<T>> SensorLogger<T> {
-    pub fn new(
+    pub async fn new(
         drivers: Rc<Vec<Driver<T>>>,
         sampling_interval_ms: u32,
         statistics_interval_ms: Option<u32>,
         duration_ms: Option<u32>,
         client_inspect: &inspect::Node,
-        driver_names: Vec<String>,
         client_id: String,
         output_samples_to_syslog: bool,
         output_stats_to_syslog: bool,
-    ) -> Self {
+    ) -> Result<Self, fmetrics::MetricsLoggerError> {
+        if let Some(interval) = statistics_interval_ms {
+            if sampling_interval_ms > interval
+                || duration_ms.map_or(false, |d| d <= interval)
+                || output_stats_to_syslog && interval < MIN_INTERVAL_FOR_SYSLOG_MS
+            {
+                return Err(fmetrics::MetricsLoggerError::InvalidStatisticsInterval);
+            }
+        }
+        if sampling_interval_ms == 0
+            || output_samples_to_syslog && sampling_interval_ms < MIN_INTERVAL_FOR_SYSLOG_MS
+            || duration_ms.map_or(false, |d| d <= sampling_interval_ms)
+        {
+            return Err(fmetrics::MetricsLoggerError::InvalidSamplingInterval);
+        }
+        if drivers.len() == 0 {
+            return Err(fmetrics::MetricsLoggerError::NoDrivers);
+        }
+
+        let driver_names: Vec<String> = drivers.iter().map(|c| c.name().to_string()).collect();
+
         let start_time = fasync::Time::now();
         let end_time = duration_ms
             .map_or(fasync::Time::INFINITE, |d| start_time + zx::Duration::from_millis(d as i64));
@@ -240,7 +279,7 @@ impl<T: Sensor<T>> SensorLogger<T> {
         };
         let inspect = InspectData::new(client_inspect, logger_name, driver_names, T::unit());
 
-        SensorLogger {
+        Ok(SensorLogger {
             drivers,
             sampling_interval,
             start_time,
@@ -250,7 +289,7 @@ impl<T: Sensor<T>> SensorLogger<T> {
             inspect,
             output_samples_to_syslog,
             output_stats_to_syslog,
-        }
+        })
     }
 
     /// Logs data from all provided sensors.
@@ -429,6 +468,7 @@ impl InspectData {
         unit: String,
     ) -> Self {
         Self {
+            logger_root: parent.create_child(logger_name),
             data: Vec::new(),
             statistics: Vec::new(),
             statistics_periods: Vec::new(),
@@ -437,7 +477,6 @@ impl InspectData {
             sensor_nodes: Vec::new(),
             sensor_names,
             unit,
-            logger_root: parent.create_child(logger_name),
         }
     }
 

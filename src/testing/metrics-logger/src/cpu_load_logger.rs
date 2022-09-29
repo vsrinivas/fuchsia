@@ -3,9 +3,13 @@
 // found in the LICENSE file.
 
 use {
+    crate::MIN_INTERVAL_FOR_SYSLOG_MS,
     anyhow::{format_err, Result},
-    fidl_fuchsia_kernel as fkernel, fuchsia_async as fasync,
+    fidl_fuchsia_boot as fboot, fidl_fuchsia_kernel as fkernel,
+    fidl_fuchsia_metricslogger_test as fmetrics, fuchsia_async as fasync,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_inspect::{self as inspect, Property},
+    fuchsia_zbi_abi::ZbiType,
     fuchsia_zbi_abi::{ZbiTopologyEntityType, ZbiTopologyNode},
     fuchsia_zircon as zx,
     futures::stream::StreamExt,
@@ -23,6 +27,29 @@ use {
 };
 
 pub const ZBI_TOPOLOGY_NODE_SIZE: usize = mem::size_of::<ZbiTopologyNode>();
+
+pub async fn generate_cpu_stats_driver() -> Result<CpuStatsDriver> {
+    let items_proxy = connect_to_protocol::<fboot::ItemsMarker>()?;
+    let proxy = connect_to_protocol::<fkernel::StatsMarker>()?;
+
+    match items_proxy.get(ZbiType::CpuTopology as u32, ZBI_TOPOLOGY_NODE_SIZE as u32).await {
+        Ok((Some(vmo), length)) => match vmo_to_topology(vmo, length) {
+            Ok(topology) => Ok(CpuStatsDriver { proxy, topology: Some(topology) }),
+            Err(err) => Err(format_err!("Parsing VMO failed with error {}", err)),
+        },
+        Ok((None, _)) => {
+            info!("Query Zbi with ZbiType::CpuTopology returned None");
+            Ok(CpuStatsDriver { proxy, topology: None })
+        }
+        Err(err) => Err(format_err!("ItemsProxy IPC failed with error {}", err)),
+    }
+}
+
+pub struct CpuStatsDriver {
+    /// CPU topology represented by a list of Cluster. None if it's not available.
+    pub topology: Option<Vec<Cluster>>,
+    pub proxy: fkernel::StatsProxy,
+}
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Cluster {
@@ -103,10 +130,9 @@ fn calculate_cpu_usage(
 }
 
 pub struct CpuLoadLogger {
-    cpu_topology: Option<Vec<Cluster>>,
     interval: zx::Duration,
     last_sample: Option<CpuLoadSample>,
-    stats_proxy: Rc<fkernel::StatsProxy>,
+    cpu_stats_driver: Rc<CpuStatsDriver>,
     client_id: String,
     inspect: InspectData,
     output_samples_to_syslog: bool,
@@ -121,30 +147,37 @@ pub struct CpuLoadLogger {
 }
 
 impl CpuLoadLogger {
-    pub fn new(
-        cpu_topology: Option<Vec<Cluster>>,
-        interval: zx::Duration,
-        duration: Option<zx::Duration>,
+    pub async fn new(
+        cpu_stats_driver: Rc<CpuStatsDriver>,
+        interval_ms: u32,
+        duration_ms: Option<u32>,
         client_inspect: &inspect::Node,
-        stats_proxy: Rc<fkernel::StatsProxy>,
         client_id: String,
         output_samples_to_syslog: bool,
-    ) -> Self {
-        let start_time = fasync::Time::now();
-        let end_time = duration.map_or(fasync::Time::INFINITE, |d| fasync::Time::now() + d);
-        let inspect = InspectData::new(client_inspect, cpu_topology.clone());
+    ) -> Result<Self, fmetrics::MetricsLoggerError> {
+        if interval_ms == 0
+            || output_samples_to_syslog && interval_ms < MIN_INTERVAL_FOR_SYSLOG_MS
+            || duration_ms.map_or(false, |d| d <= interval_ms)
+        {
+            return Err(fmetrics::MetricsLoggerError::InvalidSamplingInterval);
+        }
 
-        CpuLoadLogger {
-            cpu_topology,
-            interval,
+        let start_time = fasync::Time::now();
+        let end_time = duration_ms.map_or(fasync::Time::INFINITE, |ms| {
+            fasync::Time::now() + zx::Duration::from_millis(ms as i64)
+        });
+        let inspect = InspectData::new(client_inspect, cpu_stats_driver.topology.clone());
+
+        Ok(CpuLoadLogger {
+            cpu_stats_driver,
+            interval: zx::Duration::from_millis(interval_ms as i64),
             last_sample: None,
-            stats_proxy,
             client_id,
             inspect,
             output_samples_to_syslog,
             start_time,
             end_time,
-        }
+        })
     }
 
     pub async fn log_cpu_usages(mut self) {
@@ -166,13 +199,13 @@ impl CpuLoadLogger {
         self.client_id.hash(&mut hasher);
         let trace_counter_id = hasher.finish();
 
-        match self.stats_proxy.get_cpu_stats().await {
+        match self.cpu_stats_driver.proxy.get_cpu_stats().await {
             Ok(cpu_stats) => {
                 let cpu_num = cpu_stats.actual_num_cpus;
                 let current_sample = CpuLoadSample { time_stamp: now, cpu_stats };
 
                 if let Some(last_sample) = self.last_sample.take() {
-                    if let Some(cpu_topology) = self.cpu_topology.as_ref() {
+                    if let Some(cpu_topology) = self.cpu_stats_driver.topology.as_ref() {
                         for (index, cluster) in cpu_topology.iter().enumerate() {
                             let cpu_usage = calculate_cpu_usage(
                                 cluster.cpu_indexes.clone(),

@@ -5,9 +5,28 @@
 use {
     anyhow::{format_err, Result},
     fidl_fuchsia_device as fdevice, fuchsia_zircon as zx,
+    serde_derive::Deserialize,
     std::collections::HashMap,
     tracing::{error, info},
 };
+
+#[derive(Deserialize)]
+pub struct DriverAlias {
+    /// Human-readable alias.
+    pub name: String,
+    /// Topological path.
+    pub topological_path: String,
+}
+
+/// Helper struct to deserialize the optional config file loaded from CONFIG_PATH
+/// (//src/testing/metrics-logger/src/main.rs). The config file maps the human-readable aliases
+/// to the topological paths of the drivers.
+#[derive(Deserialize)]
+pub struct Config {
+    pub temperature_drivers: Option<Vec<DriverAlias>>,
+    pub power_drivers: Option<Vec<DriverAlias>>,
+    pub gpu_drivers: Option<Vec<DriverAlias>>,
+}
 
 pub fn connect_proxy<T: fidl::endpoints::ProtocolMarker>(path: &str) -> Result<T::Proxy> {
     let (proxy, server) = fidl::endpoints::create_proxy::<T>()

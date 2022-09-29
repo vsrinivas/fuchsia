@@ -8,28 +8,24 @@ mod gpu_usage_logger;
 mod sensor_logger;
 
 use {
-    crate::cpu_load_logger::{vmo_to_topology, Cluster, CpuLoadLogger, ZBI_TOPOLOGY_NODE_SIZE},
+    crate::cpu_load_logger::{generate_cpu_stats_driver, CpuLoadLogger, CpuStatsDriver},
+    crate::driver_utils::Config,
     crate::gpu_usage_logger::{generate_gpu_drivers, GpuDriver, GpuUsageLogger},
     crate::sensor_logger::{
-        generate_sensor_drivers, PowerDriver, PowerLogger, TemperatureDriver, TemperatureLogger,
+        generate_power_drivers, generate_temperature_drivers, PowerDriver, PowerLogger,
+        TemperatureDriver, TemperatureLogger,
     },
     anyhow::{Error, Result},
-    fidl_fuchsia_boot as fboot, fidl_fuchsia_hardware_power_sensor as fpower,
-    fidl_fuchsia_hardware_temperature as ftemperature, fidl_fuchsia_kernel as fkernel,
     fidl_fuchsia_metricslogger_test::{self as fmetrics, MetricsLoggerRequest},
     fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_protocol,
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect as inspect,
-    fuchsia_zbi_abi::ZbiType,
-    fuchsia_zircon as zx,
     futures::{
         future::join_all,
-        stream::{StreamExt, TryStreamExt},
+        stream::{FuturesUnordered, StreamExt, TryStreamExt},
         task::Context,
         FutureExt, TryFutureExt,
     },
-    serde_derive::Deserialize,
     serde_json as json,
     std::{
         cell::RefCell,
@@ -50,88 +46,39 @@ const MIN_INTERVAL_FOR_SYSLOG_MS: u32 = 500;
 
 const CONFIG_PATH: &'static str = "/config/data/config.json";
 
-// The fuchsia.hardware.temperature.Device is composed into fuchsia.hardware.thermal.Device, so
-// drivers are found in two directories.
-const TEMPERATURE_SERVICE_DIRS: [&str; 2] = ["/dev/class/temperature", "/dev/class/thermal"];
-const POWER_SERVICE_DIRS: [&str; 1] = ["/dev/class/power-sensor"];
-const GPU_SERVICE_DIRS: [&str; 1] = ["/dev/class/gpu"];
-
 /// Builds a MetricsLoggerServer.
 pub struct ServerBuilder<'a> {
-    /// Aliases for temperature sensor drivers. Empty if no aliases are provided.
-    temperature_driver_aliases: HashMap<String, String>,
-
     /// Optional drivers for test usage.
     temperature_drivers: Option<Vec<TemperatureDriver>>,
-
-    /// Aliases for power sensor drivers. Empty if no aliases are provided.
-    power_driver_aliases: HashMap<String, String>,
 
     /// Optional drivers for test usage.
     power_drivers: Option<Vec<PowerDriver>>,
 
-    /// Aliases for gpu drivers. Empty if no aliases are provided.
-    gpu_driver_aliases: HashMap<String, String>,
-
     /// Optional drivers for test usage.
     gpu_drivers: Option<Vec<GpuDriver>>,
 
-    // Optional proxy for test usage.
-    cpu_stats_proxy: Option<fkernel::StatsProxy>,
-
-    // Optional cpu topology for test usage.
-    cpu_topology: Option<Vec<Cluster>>,
+    /// Optional proxy for test usage.
+    cpu_stats_driver: Option<CpuStatsDriver>,
 
     /// Optional inspect root for test usage.
     inspect_root: Option<&'a inspect::Node>,
+
+    /// Config for driver aliases.
+    config: Option<Config>,
 }
 
 impl<'a> ServerBuilder<'a> {
     /// Constructs a new ServerBuilder from a JSON configuration.
     fn new_from_json(json_data: Option<json::Value>) -> Self {
-        #[derive(Deserialize)]
-        struct DriverAlias {
-            /// Human-readable alias.
-            name: String,
-            /// Topological path.
-            topological_path: String,
-        }
-        #[derive(Deserialize)]
-        struct Config {
-            temperature_drivers: Option<Vec<DriverAlias>>,
-            power_drivers: Option<Vec<DriverAlias>>,
-            gpu_drivers: Option<Vec<DriverAlias>>,
-        }
         let config: Option<Config> = json_data.map(|d| json::from_value(d).unwrap());
 
-        let (temperature_driver_aliases, power_driver_aliases, gpu_driver_aliases) = match config {
-            None => (HashMap::new(), HashMap::new(), HashMap::new()),
-            Some(c) => (
-                c.temperature_drivers.map_or_else(
-                    || HashMap::new(),
-                    |d| d.into_iter().map(|m| (m.topological_path, m.name)).collect(),
-                ),
-                c.power_drivers.map_or_else(
-                    || HashMap::new(),
-                    |d| d.into_iter().map(|m| (m.topological_path, m.name)).collect(),
-                ),
-                c.gpu_drivers.map_or_else(
-                    || HashMap::new(),
-                    |d| d.into_iter().map(|m| (m.topological_path, m.name)).collect(),
-                ),
-            ),
-        };
-
         ServerBuilder {
-            temperature_driver_aliases,
             temperature_drivers: None,
-            power_driver_aliases,
             power_drivers: None,
-            gpu_driver_aliases,
             gpu_drivers: None,
-            cpu_stats_proxy: None,
-            cpu_topology: None,
+            cpu_stats_driver: None,
             inspect_root: None,
+            config,
         }
     }
 
@@ -155,14 +102,8 @@ impl<'a> ServerBuilder<'a> {
     }
 
     #[cfg(test)]
-    fn with_cpu_stats_proxy(mut self, cpu_stats_proxy: fkernel::StatsProxy) -> Self {
-        self.cpu_stats_proxy = Some(cpu_stats_proxy);
-        self
-    }
-
-    #[cfg(test)]
-    fn with_cpu_topology(mut self, cpu_topology: Vec<Cluster>) -> Self {
-        self.cpu_topology = Some(cpu_topology);
+    fn with_cpu_stats_driver(mut self, cpu_stats_driver: CpuStatsDriver) -> Self {
+        self.cpu_stats_driver = Some(cpu_stats_driver);
         self
     }
 
@@ -175,79 +116,35 @@ impl<'a> ServerBuilder<'a> {
 
     /// Builds a MetricsLoggerServer.
     async fn build(self) -> Result<Rc<MetricsLoggerServer>> {
-        // If no proxies are provided, create proxies based on driver paths.
-        let temperature_drivers: Vec<TemperatureDriver> = match self.temperature_drivers {
-            None => {
-                generate_sensor_drivers::<ftemperature::DeviceMarker>(
-                    &TEMPERATURE_SERVICE_DIRS,
-                    self.temperature_driver_aliases,
-                )
-                .await?
-            }
-            Some(drivers) => drivers,
+        let temperature_drivers = match self.temperature_drivers {
+            None => RefCell::new(None),
+            Some(drivers) => RefCell::new(Some(Rc::new(drivers))),
         };
 
-        // If no proxies are provided, create proxies based on driver paths.
         let power_drivers = match self.power_drivers {
-            None => {
-                generate_sensor_drivers::<fpower::DeviceMarker>(
-                    &POWER_SERVICE_DIRS,
-                    self.power_driver_aliases,
-                )
-                .await?
-            }
-            Some(drivers) => drivers,
+            None => RefCell::new(None),
+            Some(drivers) => RefCell::new(Some(Rc::new(drivers))),
         };
 
-        // If no proxy is provided, create proxy for polling CPU stats
-        let cpu_stats_proxy = match &self.cpu_stats_proxy {
-            Some(proxy) => proxy.clone(),
-            None => connect_to_protocol::<fkernel::StatsMarker>()?,
+        let cpu_stats_driver = match self.cpu_stats_driver {
+            None => RefCell::new(None),
+            Some(proxy) => RefCell::new(Some(Rc::new(proxy))),
         };
 
-        let cpu_topology = match self.cpu_topology {
-            None => {
-                let items_proxy = connect_to_protocol::<fboot::ItemsMarker>()?;
-
-                match items_proxy
-                    .get(ZbiType::CpuTopology as u32, ZBI_TOPOLOGY_NODE_SIZE as u32)
-                    .await
-                {
-                    Ok((Some(vmo), length)) => match vmo_to_topology(vmo, length) {
-                        Ok(topology) => Some(topology),
-                        Err(err) => {
-                            error!(?err, "Parsing VMO failed with error");
-                            None
-                        }
-                    },
-                    Ok((None, _)) => {
-                        info!("Query Zbi with ZbiType::CpuTopology returned None");
-                        None
-                    }
-                    Err(err) => {
-                        error!(?err, "ItemsProxy IPC failed with error");
-                        None
-                    }
-                }
-            }
-            Some(cpu_topology) => Some(cpu_topology),
-        };
-
-        // If no proxies are provided, create proxies based on driver paths.
         let gpu_drivers = match self.gpu_drivers {
-            None => generate_gpu_drivers(&GPU_SERVICE_DIRS, self.gpu_driver_aliases).await?,
-            Some(drivers) => drivers,
+            None => RefCell::new(None),
+            Some(drivers) => RefCell::new(Some(Rc::new(drivers))),
         };
 
         // Optionally use the default inspect root node
         let inspect_root = self.inspect_root.unwrap_or(inspect::component::inspector().root());
 
         Ok(MetricsLoggerServer::new(
-            Rc::new(temperature_drivers),
-            Rc::new(power_drivers),
-            Rc::new(gpu_drivers),
-            Rc::new(cpu_stats_proxy),
-            cpu_topology,
+            temperature_drivers,
+            power_drivers,
+            gpu_drivers,
+            cpu_stats_driver,
+            self.config,
             inspect_root.create_child("MetricsLogger"),
         ))
     }
@@ -255,22 +152,22 @@ impl<'a> ServerBuilder<'a> {
 
 struct MetricsLoggerServer {
     /// List of temperature sensor drivers for polling temperatures.
-    temperature_drivers: Rc<Vec<TemperatureDriver>>,
+    temperature_drivers: RefCell<Option<Rc<Vec<TemperatureDriver>>>>,
 
     /// List of power sensor drivers for polling powers.
-    power_drivers: Rc<Vec<PowerDriver>>,
+    power_drivers: RefCell<Option<Rc<Vec<PowerDriver>>>>,
 
     /// List of gpu drivers for polling GPU stats.
-    gpu_drivers: Rc<Vec<GpuDriver>>,
-
-    /// CPU topology represented by a list of Cluster. None if it's not available.
-    cpu_topology: Option<Vec<Cluster>>,
+    gpu_drivers: RefCell<Option<Rc<Vec<GpuDriver>>>>,
 
     /// Proxy for polling CPU stats.
-    cpu_stats_proxy: Rc<fkernel::StatsProxy>,
+    cpu_stats_driver: RefCell<Option<Rc<CpuStatsDriver>>>,
 
     /// Root node for MetricsLogger
     inspect_root: inspect::Node,
+
+    /// Config for driver aliases.
+    config: Option<Config>,
 
     /// Map that stores the logging task for all clients. Once a logging request is received
     /// with a new client_id, a task is lazily inserted into the map using client_id as the key.
@@ -279,20 +176,20 @@ struct MetricsLoggerServer {
 
 impl MetricsLoggerServer {
     fn new(
-        temperature_drivers: Rc<Vec<TemperatureDriver>>,
-        power_drivers: Rc<Vec<PowerDriver>>,
-        gpu_drivers: Rc<Vec<GpuDriver>>,
-        cpu_stats_proxy: Rc<fkernel::StatsProxy>,
-        cpu_topology: Option<Vec<Cluster>>,
+        temperature_drivers: RefCell<Option<Rc<Vec<TemperatureDriver>>>>,
+        power_drivers: RefCell<Option<Rc<Vec<PowerDriver>>>>,
+        gpu_drivers: RefCell<Option<Rc<Vec<GpuDriver>>>>,
+        cpu_stats_driver: RefCell<Option<Rc<CpuStatsDriver>>>,
+        config: Option<Config>,
         inspect_root: inspect::Node,
     ) -> Rc<Self> {
         Rc::new(Self {
             temperature_drivers,
             power_drivers,
             gpu_drivers,
-            cpu_topology,
-            cpu_stats_proxy,
+            cpu_stats_driver,
             inspect_root,
+            config,
             client_tasks: RefCell::new(HashMap::new()),
         })
     }
@@ -386,87 +283,84 @@ impl MetricsLoggerServer {
             return Err(fmetrics::MetricsLoggerError::DuplicatedMetric);
         }
 
-        for metric in metrics.iter() {
+        let client_inspect = self.inspect_root.create_child(&client_id.to_string());
+        let futures: FuturesUnordered<Box<dyn futures::Future<Output = ()>>> =
+            FuturesUnordered::new();
+
+        for metric in metrics {
             match metric {
                 fmetrics::Metric::CpuLoad(fmetrics::CpuLoad { interval_ms }) => {
-                    if *interval_ms == 0
-                        || output_samples_to_syslog && *interval_ms < MIN_INTERVAL_FOR_SYSLOG_MS
-                        || duration_ms.map_or(false, |d| d <= *interval_ms)
-                    {
-                        return Err(fmetrics::MetricsLoggerError::InvalidSamplingInterval);
-                    }
+                    let driver = self.get_cpu_driver().await?;
+                    let cpu_load_logger = CpuLoadLogger::new(
+                        driver,
+                        interval_ms,
+                        duration_ms,
+                        &client_inspect,
+                        String::from(&client_id.to_string()),
+                        output_samples_to_syslog,
+                    )
+                    .await?;
+                    futures.push(Box::new(cpu_load_logger.log_cpu_usages()));
                 }
                 fmetrics::Metric::GpuUsage(fmetrics::GpuUsage { interval_ms }) => {
-                    if self.gpu_drivers.len() == 0 {
-                        return Err(fmetrics::MetricsLoggerError::NoDrivers);
-                    }
-                    if *interval_ms == 0
-                        || output_samples_to_syslog && *interval_ms < MIN_INTERVAL_FOR_SYSLOG_MS
-                        || duration_ms.map_or(false, |d| d <= *interval_ms)
-                    {
-                        return Err(fmetrics::MetricsLoggerError::InvalidSamplingInterval);
-                    }
+                    let drivers = self.get_gpu_drivers().await?;
+                    let gpu_usage_logger = GpuUsageLogger::new(
+                        drivers,
+                        interval_ms,
+                        duration_ms,
+                        &client_inspect,
+                        String::from(&client_id.to_string()),
+                        output_samples_to_syslog,
+                    )
+                    .await?;
+                    futures.push(Box::new(gpu_usage_logger.log_gpu_usages()));
                 }
                 fmetrics::Metric::Temperature(fmetrics::Temperature {
                     sampling_interval_ms,
                     statistics_args,
                 }) => {
-                    if self.temperature_drivers.len() == 0 {
-                        return Err(fmetrics::MetricsLoggerError::NoDrivers);
-                    }
-                    if let Some(args) = statistics_args {
-                        if *sampling_interval_ms > args.statistics_interval_ms
-                            || duration_ms.map_or(false, |d| d <= args.statistics_interval_ms)
-                            || output_stats_to_syslog
-                                && args.statistics_interval_ms < MIN_INTERVAL_FOR_SYSLOG_MS
-                        {
-                            return Err(fmetrics::MetricsLoggerError::InvalidStatisticsInterval);
-                        }
-                    }
-                    if *sampling_interval_ms == 0
-                        || output_samples_to_syslog
-                            && *sampling_interval_ms < MIN_INTERVAL_FOR_SYSLOG_MS
-                        || duration_ms.map_or(false, |d| d <= *sampling_interval_ms)
-                    {
-                        return Err(fmetrics::MetricsLoggerError::InvalidSamplingInterval);
-                    }
+                    let drivers = self.get_temperature_drivers().await?;
+                    let temperature_logger = TemperatureLogger::new(
+                        drivers,
+                        sampling_interval_ms,
+                        statistics_args.map(|i| i.statistics_interval_ms),
+                        duration_ms,
+                        &client_inspect,
+                        String::from(&client_id.to_string()),
+                        output_samples_to_syslog,
+                        output_stats_to_syslog,
+                    )
+                    .await?;
+                    futures.push(Box::new(temperature_logger.log_data()));
                 }
                 fmetrics::Metric::Power(fmetrics::Power {
                     sampling_interval_ms,
                     statistics_args,
                 }) => {
-                    if self.power_drivers.len() == 0 {
-                        return Err(fmetrics::MetricsLoggerError::NoDrivers);
-                    }
-                    if let Some(args) = statistics_args {
-                        if *sampling_interval_ms > args.statistics_interval_ms
-                            || duration_ms.map_or(false, |d| d <= args.statistics_interval_ms)
-                            || output_stats_to_syslog
-                                && args.statistics_interval_ms < MIN_INTERVAL_FOR_SYSLOG_MS
-                        {
-                            return Err(fmetrics::MetricsLoggerError::InvalidStatisticsInterval);
-                        }
-                    }
-                    if *sampling_interval_ms == 0
-                        || output_samples_to_syslog
-                            && *sampling_interval_ms < MIN_INTERVAL_FOR_SYSLOG_MS
-                        || duration_ms.map_or(false, |d| d <= *sampling_interval_ms)
-                    {
-                        return Err(fmetrics::MetricsLoggerError::InvalidSamplingInterval);
-                    }
+                    let drivers = self.get_power_drivers().await?;
+                    let power_logger = PowerLogger::new(
+                        drivers,
+                        sampling_interval_ms,
+                        statistics_args.map(|i| i.statistics_interval_ms),
+                        duration_ms,
+                        &client_inspect,
+                        String::from(&client_id.to_string()),
+                        output_samples_to_syslog,
+                        output_stats_to_syslog,
+                    )
+                    .await?;
+                    futures.push(Box::new(power_logger.log_data()));
                 }
             }
         }
 
         self.client_tasks.borrow_mut().insert(
             client_id.to_string(),
-            self.spawn_client_tasks(
-                client_id.to_string(),
-                metrics,
-                duration_ms,
-                output_samples_to_syslog,
-                output_stats_to_syslog,
-            ),
+            fasync::Task::local(async move {
+                // Move ownership of `client_inspect` to the client task.
+                let _inspect = client_inspect;
+                join_all(futures.into_iter().map(|f| Pin::from(f))).await;
+            }),
         );
 
         Ok(())
@@ -478,97 +372,89 @@ impl MetricsLoggerServer {
         });
     }
 
-    fn spawn_client_tasks(
+    async fn get_temperature_drivers(
         &self,
-        client_id: String,
-        metrics: Vec<fmetrics::Metric>,
-        duration_ms: Option<u32>,
-        output_samples_to_syslog: bool,
-        output_stats_to_syslog: bool,
-    ) -> fasync::Task<()> {
-        let cpu_stats_proxy = self.cpu_stats_proxy.clone();
-        let temperature_drivers = self.temperature_drivers.clone();
-        let power_drivers = self.power_drivers.clone();
-        let gpu_drivers = self.gpu_drivers.clone();
-        let client_inspect = self.inspect_root.create_child(&client_id);
-        let cpu_topology = self.cpu_topology.clone();
+    ) -> Result<Rc<Vec<TemperatureDriver>>, fmetrics::MetricsLoggerError> {
+        match self.temperature_drivers.borrow().as_ref() {
+            Some(drivers) => return Ok(drivers.clone()),
+            _ => (),
+        }
 
-        fasync::Task::local(async move {
-            let mut futures: Vec<Box<dyn futures::Future<Output = ()>>> = Vec::new();
+        let driver_aliases = match &self.config {
+            None => HashMap::new(),
+            Some(c) => c.temperature_drivers.as_ref().map_or_else(
+                || HashMap::new(),
+                |d| d.into_iter().map(|m| (m.topological_path.clone(), m.name.clone())).collect(),
+            ),
+        };
 
-            for metric in metrics {
-                match metric {
-                    fmetrics::Metric::CpuLoad(fmetrics::CpuLoad { interval_ms }) => {
-                        let cpu_load_logger = CpuLoadLogger::new(
-                            cpu_topology.clone(),
-                            zx::Duration::from_millis(interval_ms as i64),
-                            duration_ms.map(|ms| zx::Duration::from_millis(ms as i64)),
-                            &client_inspect,
-                            cpu_stats_proxy.clone(),
-                            String::from(&client_id),
-                            output_samples_to_syslog,
-                        );
-                        futures.push(Box::new(cpu_load_logger.log_cpu_usages()));
-                    }
-                    fmetrics::Metric::GpuUsage(fmetrics::GpuUsage { interval_ms }) => {
-                        let gpu_driver_names: Vec<String> =
-                            gpu_drivers.iter().map(|c| c.name().to_string()).collect();
+        let drivers =
+            Rc::new(generate_temperature_drivers(driver_aliases).await.map_err(|err| {
+                error!(%err, "Request failed with internal error");
+                fmetrics::MetricsLoggerError::Internal
+            })?);
+        self.temperature_drivers.replace(Some(drivers.clone()));
+        Ok(drivers)
+    }
 
-                        let gpu_usage_logger = GpuUsageLogger::new(
-                            gpu_drivers.clone(),
-                            zx::Duration::from_millis(interval_ms as i64),
-                            duration_ms.map(|ms| zx::Duration::from_millis(ms as i64)),
-                            &client_inspect,
-                            gpu_driver_names,
-                            String::from(&client_id),
-                            output_samples_to_syslog,
-                        );
-                        futures.push(Box::new(gpu_usage_logger.log_gpu_usages()));
-                    }
-                    fmetrics::Metric::Temperature(fmetrics::Temperature {
-                        sampling_interval_ms,
-                        statistics_args,
-                    }) => {
-                        let temperature_driver_names: Vec<String> =
-                            temperature_drivers.iter().map(|c| c.name().to_string()).collect();
+    async fn get_power_drivers(
+        &self,
+    ) -> Result<Rc<Vec<PowerDriver>>, fmetrics::MetricsLoggerError> {
+        match self.power_drivers.borrow().as_ref() {
+            Some(drivers) => return Ok(drivers.clone()),
+            _ => (),
+        }
 
-                        let temperature_logger = TemperatureLogger::new(
-                            temperature_drivers.clone(),
-                            sampling_interval_ms,
-                            statistics_args.map(|i| i.statistics_interval_ms),
-                            duration_ms,
-                            &client_inspect,
-                            temperature_driver_names,
-                            String::from(&client_id),
-                            output_samples_to_syslog,
-                            output_stats_to_syslog,
-                        );
-                        futures.push(Box::new(temperature_logger.log_data()));
-                    }
-                    fmetrics::Metric::Power(fmetrics::Power {
-                        sampling_interval_ms,
-                        statistics_args,
-                    }) => {
-                        let power_driver_names: Vec<String> =
-                            power_drivers.iter().map(|c| c.name().to_string()).collect();
+        let driver_aliases = match &self.config {
+            None => HashMap::new(),
+            Some(c) => c.power_drivers.as_ref().map_or_else(
+                || HashMap::new(),
+                |d| d.into_iter().map(|m| (m.topological_path.clone(), m.name.clone())).collect(),
+            ),
+        };
 
-                        let power_logger = PowerLogger::new(
-                            power_drivers.clone(),
-                            sampling_interval_ms,
-                            statistics_args.map(|i| i.statistics_interval_ms),
-                            duration_ms,
-                            &client_inspect,
-                            power_driver_names,
-                            String::from(&client_id),
-                            output_samples_to_syslog,
-                            output_stats_to_syslog,
-                        );
-                        futures.push(Box::new(power_logger.log_data()));
-                    }
-                }
-            }
-            join_all(futures.into_iter().map(|f| Pin::from(f))).await;
-        })
+        let drivers = Rc::new(generate_power_drivers(driver_aliases).await.map_err(|err| {
+            error!(%err, "Request failed with internal error");
+            fmetrics::MetricsLoggerError::Internal
+        })?);
+        self.power_drivers.replace(Some(drivers.clone()));
+        Ok(drivers)
+    }
+
+    async fn get_gpu_drivers(&self) -> Result<Rc<Vec<GpuDriver>>, fmetrics::MetricsLoggerError> {
+        match self.gpu_drivers.borrow().as_ref() {
+            Some(drivers) => return Ok(drivers.clone()),
+            _ => (),
+        }
+
+        let driver_aliases = match &self.config {
+            None => HashMap::new(),
+            Some(c) => c.gpu_drivers.as_ref().map_or_else(
+                || HashMap::new(),
+                |d| d.into_iter().map(|m| (m.topological_path.clone(), m.name.clone())).collect(),
+            ),
+        };
+
+        let drivers = Rc::new(generate_gpu_drivers(driver_aliases).await.map_err(|err| {
+            error!(%err, "Request failed with internal error");
+            fmetrics::MetricsLoggerError::Internal
+        })?);
+        self.gpu_drivers.replace(Some(drivers.clone()));
+        Ok(drivers)
+    }
+
+    async fn get_cpu_driver(&self) -> Result<Rc<CpuStatsDriver>, fmetrics::MetricsLoggerError> {
+        match self.cpu_stats_driver.borrow().as_ref() {
+            Some(driver) => return Ok(driver.clone()),
+            _ => (),
+        }
+
+        let driver = Rc::new(generate_cpu_stats_driver().await.map_err(|err| {
+            error!(%err, "Request failed with internal error");
+            fmetrics::MetricsLoggerError::Internal
+        })?);
+        self.cpu_stats_driver.replace(Some(driver.clone()));
+        Ok(driver)
     }
 }
 
@@ -615,14 +501,19 @@ async fn inner_main() -> Result<()> {
 mod tests {
     use {
         super::*,
-        crate::cpu_load_logger::tests::{
-            create_vmo_from_topology_nodes, generate_cluster_node, generate_processor_node,
+        crate::cpu_load_logger::{
+            tests::{
+                create_vmo_from_topology_nodes, generate_cluster_node, generate_processor_node,
+            },
+            vmo_to_topology,
         },
         crate::gpu_usage_logger::tests::create_magma_total_time_query_result_vmo,
         assert_matches::assert_matches,
-        fidl_fuchsia_gpu_magma as fgpu,
+        fidl_fuchsia_gpu_magma as fgpu, fidl_fuchsia_hardware_power_sensor as fpower,
+        fidl_fuchsia_hardware_temperature as ftemperature, fidl_fuchsia_kernel as fkernel,
         fidl_fuchsia_kernel::{CpuStats, PerCpuStats},
         fmetrics::{CpuLoad, GpuUsage, Metric, Power, StatisticsArgs, Temperature},
+        fuchsia_zircon as zx,
         futures::{task::Poll, FutureExt, TryStreamExt},
         inspect::assert_data_tree,
         std::cell::Cell,
@@ -812,7 +703,7 @@ mod tests {
 
             let cpu_idle_time = Rc::new(Cell::new([0, 0, 0, 0, 0]));
             let cpu_idle_time_clone = cpu_idle_time.clone();
-            let (cpu_stats_proxy, task) = setup_fake_cpu_stats_service(move || CpuStats {
+            let (proxy, task) = setup_fake_cpu_stats_service(move || CpuStats {
                 actual_num_cpus: 5,
                 per_cpu_stats: Some(vec![
                     PerCpuStats {
@@ -849,15 +740,14 @@ mod tests {
                 generate_processor_node(/*parent_index*/ 3, /*logical_id*/ 4),
             ])
             .unwrap();
-            let cpu_topology = vmo_to_topology(vmo, size as u32).unwrap();
+            let topology = vmo_to_topology(vmo, size as u32).unwrap();
 
             // Build the server.
             let builder = ServerBuilder::new_from_json(None)
                 .with_temperature_drivers(temperature_drivers)
                 .with_power_drivers(power_drivers)
                 .with_gpu_drivers(gpu_drivers)
-                .with_cpu_stats_proxy(cpu_stats_proxy)
-                .with_cpu_topology(cpu_topology)
+                .with_cpu_stats_driver(CpuStatsDriver { proxy, topology: Some(topology) })
                 .with_inspect_root(inspector.root());
             let poll = executor.run_until_stalled(&mut builder.build().boxed_local());
             let server = match poll {
@@ -921,7 +811,7 @@ mod tests {
         );
 
         // Create a logging request.
-        let mut query = runner.proxy.start_logging(
+        let mut _query = runner.proxy.start_logging(
             "test",
             &mut vec![
                 &mut Metric::CpuLoad(CpuLoad { interval_ms: 100 }),
@@ -934,18 +824,6 @@ mod tests {
             1000,
             false,
             false,
-        );
-
-        assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(Ok(()))));
-
-        // Check client Inspect node is added.
-        assert_data_tree!(
-            runner.inspector,
-            root: {
-                MetricsLogger: {
-                    test: {}
-                }
-            }
         );
 
         // Run `server_task` until stalled to create futures for logging temperatures and CpuLoads.
