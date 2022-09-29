@@ -83,8 +83,6 @@ context->svc()->Connect(proxy.NewRequest());
 In this section, you'll use the generated FIDL bindings for
 `fidl.examples.routing.echo` to implement client and server components.
 
-<<../_common/_start_femu_with_packages.md>>
-
 ### Create the server component
 
 Begin by creating a new component project to implement the echo server. This
@@ -322,6 +320,8 @@ Run `bazel build` and verify that the build completes successfully:
 bazel build --config=fuchsia_x64 //fuchsia-codelab/echo-realm:pkg \
      --publish_to=$HOME/.package_repos/sdk-samples
 ```
+
+<<../_common/_start_femu_with_packages.md>>
 
 ### Add the components to the topology
 
