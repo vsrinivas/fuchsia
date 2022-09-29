@@ -6,8 +6,5 @@ import("//build/dist/component_manifest_resources.gni")
 
 component_manifest_resources("bootstrap") {
   sources = [ "meta/bootstrap.cml" ]
-  restricted_features = [
-    "dynamic_offers",
-    "allow_long_names",
-  ]
+  restricted_features = [ "allow_long_names" ]
 }

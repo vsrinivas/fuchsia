@@ -375,9 +375,6 @@ impl<'a> ValidationContext<'a> {
         collection: &'a cml::Collection,
         strong_dependencies: &mut DirectedGraph<DependencyNode<'a>>,
     ) -> Result<(), Error> {
-        if collection.allowed_offers.is_some() {
-            self.features.check(Feature::DynamicOffers)?;
-        }
         if collection.allow_long_names.is_some() {
             self.features.check(Feature::AllowLongNames)?;
         }
@@ -6633,63 +6630,6 @@ mod tests {
             Err(Error::Parse { err, .. }) if &err == "expected a non-zero value"
         ),
     }}
-
-    // Tests the use of `allowed_offers` when the "DynamicOffers" feature is set.
-    test_validate_cml_with_feature! { FeatureSet::from(vec![Feature::DynamicOffers]), {
-        test_cml_validate_set_allowed_offers_static(
-            json!({
-                "collections": [
-                    {
-                        "name": "foo",
-                        "durability": "transient",
-                        "allowed_offers": "static_only"
-                    },
-                ],
-            }),
-            Ok(())
-        ),
-        test_cml_validate_set_allowed_offers_dynamic(
-            json!({
-                "collections": [
-                    {
-                        "name": "foo",
-                        "durability": "transient",
-                        "allowed_offers": "static_and_dynamic"
-                    },
-                ],
-            }),
-            Ok(())
-        ),
-    }}
-
-    // Tests that the use of `allowed_offers` fails when the "DynamicOffers"
-    // feature is not set.
-    test_validate_cml! {
-        test_cml_static_only_without_feature(
-            json!({
-                "collections": [
-                    {
-                        "name": "foo",
-                        "durability": "transient",
-                        "allowed_offers": "static_only"
-                    },
-                ],
-            }),
-            Err(Error::RestrictedFeature(s)) if s == "dynamic_offers"
-        ),
-        test_cml_static_and_dynamic_offers_without_feature(
-            json!({
-                "collections": [
-                    {
-                        "name": "foo",
-                        "durability": "transient",
-                        "allowed_offers": "static_and_dynamic"
-                    },
-                ],
-            }),
-            Err(Error::RestrictedFeature(s)) if s == "dynamic_offers"
-        ),
-    }
 
     // Tests the use of hub when the "hub" feature is set.
     test_validate_cml_with_feature! { FeatureSet::from(vec![Feature::Hub]), {

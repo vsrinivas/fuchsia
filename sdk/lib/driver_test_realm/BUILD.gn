@@ -71,7 +71,6 @@ fuchsia_component("driver_test_realm_component") {
   component_name = "driver_test_realm"
   testonly = true
   manifest = "meta/driver_test_realm.cml"
-  restricted_features = [ "dynamic_offers" ]
   deps = [
     ":driver_manager_support",
     ":driver_manager_test",

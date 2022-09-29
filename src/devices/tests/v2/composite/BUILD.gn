@@ -104,7 +104,6 @@ cmc_merge("realm.cml") {
 
 fuchsia_test_component("realm") {
   manifest = "${target_out_dir}/realm.cml"
-  restricted_features = [ "dynamic_offers" ]
   manifest_deps = [ ":realm.cml" ]
 }
 

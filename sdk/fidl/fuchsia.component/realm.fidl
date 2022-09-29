@@ -140,8 +140,6 @@ type CreateChildArgs = resource table {
     /// In order to set this field to a non-empty value, the collection in which
     /// the child component is being created must specify
     /// `ComponentDecl.allowed_offers = STATIC_AND_DYNAMIC`.
-    ///
-    /// TODO(fxbug.dev/81109): Implementation is in progress.
     2: dynamic_offers vector<fuchsia.component.decl.Offer>:MAX_DYNAMIC_OFFER_COUNT;
 };
 

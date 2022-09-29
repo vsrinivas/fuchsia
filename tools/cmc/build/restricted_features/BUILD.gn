@@ -2,18 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# The allowlist of components that can use the "dynamic_offers" feature in CML.
-group("dynamic_offers") {
-  visibility = [
-    "//sdk/lib/driver_test_realm:*",
-    "//src/devices/tests/*",
-    "//src/sys/bootstrap:*",
-    "//src/sys/component_manager/tests/services:*",
-    "//src/sys/component_manager/tests/structured_config/client_integration/cpp_driver:*",
-    "//tools/cmc:*",
-  ]
-}
-
 # The allowlist of components that can use the "structured_config" feature in CML.
 group("structured_config") {
   # Available to all components in fuchsia.git

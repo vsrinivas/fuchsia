@@ -655,55 +655,6 @@ mod tests {
         },
     }}
 
-    test_compile_with_features! { FeatureSet::from(vec![Feature::DynamicOffers]), {
-        test_compile_dynamic_offers => {
-            input = json!({
-                "collections": [
-                    {
-                        "name": "modular",
-                        "durability": "transient",
-                    },
-                    {
-                        "name": "tests",
-                        "durability": "transient",
-                        "allowed_offers": "static_only",
-                    },
-                    {
-                        "name": "dynamic_offers",
-                        "durability": "transient",
-                        "allowed_offers": "static_and_dynamic",
-                    },
-                ],
-            }),
-            output = fdecl::Component {
-                collections: Some(vec![
-                    fdecl::Collection {
-                        name: Some("modular".to_string()),
-                        durability: Some(fdecl::Durability::Transient),
-                        allowed_offers: None,
-                        allow_long_names: None,
-                        ..fdecl::Collection::EMPTY
-                    },
-                    fdecl::Collection {
-                        name: Some("tests".to_string()),
-                        durability: Some(fdecl::Durability::Transient),
-                        allowed_offers: Some(fdecl::AllowedOffers::StaticOnly),
-                        allow_long_names: None,
-                        ..fdecl::Collection::EMPTY
-                    },
-                    fdecl::Collection {
-                        name: Some("dynamic_offers".to_string()),
-                        durability: Some(fdecl::Durability::Transient),
-                        allowed_offers: Some(fdecl::AllowedOffers::StaticAndDynamic),
-                        allow_long_names: None,
-                        ..fdecl::Collection::EMPTY
-                    }
-                  ]),
-                ..fdecl::Component::EMPTY
-            },
-        },
-    }}
-
     test_compile_with_features! { FeatureSet::from(vec![Feature::AllowLongNames]), {
         test_compile_allow_long_names => {
             input = json!({

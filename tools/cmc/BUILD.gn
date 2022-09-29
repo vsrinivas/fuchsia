@@ -89,10 +89,7 @@ rustc_test("cmc_integration_test_bin") {
 
 fuchsia_component_manifest("example_component_manifest") {
   testonly = true
-  restricted_features = [
-    "dynamic_offers",
-    "allow_long_names",
-  ]
+  restricted_features = [ "allow_long_names" ]
   component_name = "example"
   manifest = "meta/example.cml"
 }

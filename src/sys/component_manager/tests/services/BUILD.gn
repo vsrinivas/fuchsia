@@ -80,7 +80,6 @@ rustc_test("filtered-service-routing-test-bin") {
 
 fuchsia_test_component("filtered-service-routing-test") {
   manifest = "meta/filtered-service-routing-test.cml"
-  restricted_features = [ "dynamic_offers" ]
   deps = [ ":filtered-service-routing-test-bin" ]
 }
 
