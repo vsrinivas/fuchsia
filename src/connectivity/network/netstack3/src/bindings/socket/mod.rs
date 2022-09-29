@@ -24,7 +24,10 @@ use net_types::{
 use netstack3_core::{
     error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError, ZonedAddressError},
     ip::socket::{IpSockCreationError, IpSockRouteError, IpSockSendError, IpSockUnroutableError},
-    socket::datagram::{MulticastInterfaceSelector, SetMulticastMembershipError},
+    socket::datagram::{
+        MulticastInterfaceSelector, MulticastMembershipInterfaceSelector,
+        SetMulticastMembershipError,
+    },
     transport::udp::{
         UdpConnectListenerError, UdpSendError, UdpSendListenerError, UdpSockCreationError,
     },
@@ -340,7 +343,7 @@ pub(crate) trait SockMulticastMembership: Sized {
 
     fn into_addr_selector(
         self,
-    ) -> (Self::AddrType, MulticastInterfaceSelector<Self::AddrType, NonZeroU64>);
+    ) -> (Self::AddrType, MulticastMembershipInterfaceSelector<Self::AddrType, NonZeroU64>);
 }
 
 impl SockMulticastMembership for psocket::IpMulticastMembership {
@@ -355,7 +358,7 @@ impl SockMulticastMembership for psocket::IpMulticastMembership {
 
     fn into_addr_selector(
         self,
-    ) -> (Self::AddrType, MulticastInterfaceSelector<Self::AddrType, NonZeroU64>) {
+    ) -> (Self::AddrType, MulticastMembershipInterfaceSelector<Self::AddrType, NonZeroU64>) {
         let Self { mcast_addr, iface, local_addr } = self;
         // Match Linux behavior by ignoring the address if an interface
         // identifier is provided.
@@ -365,7 +368,8 @@ impl SockMulticastMembership for psocket::IpMulticastMembership {
                 SpecifiedAddr::new(local_addr.into_core())
                     .map(MulticastInterfaceSelector::LocalAddress)
             })
-            .unwrap_or(MulticastInterfaceSelector::AnyInterfaceWithRoute);
+            .map(MulticastMembershipInterfaceSelector::Specified)
+            .unwrap_or(MulticastMembershipInterfaceSelector::AnyInterfaceWithRoute);
         (mcast_addr.into_core(), selector)
     }
 }
@@ -382,11 +386,12 @@ impl SockMulticastMembership for psocket::Ipv6MulticastMembership {
 
     fn into_addr_selector(
         self,
-    ) -> (Self::AddrType, MulticastInterfaceSelector<Self::AddrType, NonZeroU64>) {
+    ) -> (Self::AddrType, MulticastMembershipInterfaceSelector<Self::AddrType, NonZeroU64>) {
         let Self { mcast_addr, iface } = self;
         let selector = NonZeroU64::new(iface)
             .map(MulticastInterfaceSelector::Interface)
-            .unwrap_or(MulticastInterfaceSelector::AnyInterfaceWithRoute);
+            .map(MulticastMembershipInterfaceSelector::Specified)
+            .unwrap_or(MulticastMembershipInterfaceSelector::AnyInterfaceWithRoute);
         (mcast_addr.into_core(), selector)
     }
 }

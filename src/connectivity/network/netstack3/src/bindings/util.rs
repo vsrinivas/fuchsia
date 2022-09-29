@@ -28,7 +28,7 @@ use netstack3_core::{
         forwarding::AddRouteError,
         types::{AddableEntry, AddableEntryEither, EntryEither},
     },
-    socket::datagram::MulticastInterfaceSelector,
+    socket::datagram::{MulticastInterfaceSelector, MulticastMembershipInterfaceSelector},
 };
 
 use crate::bindings::socket::{IntoErrno, IpSockAddrExt, SockAddr};
@@ -588,8 +588,8 @@ where
     }
 }
 
-impl<A, D1, D2> TryFromFidlWithContext<MulticastInterfaceSelector<A, D1>>
-    for MulticastInterfaceSelector<A, D2>
+impl<A, D1, D2> TryFromFidlWithContext<MulticastMembershipInterfaceSelector<A, D1>>
+    for MulticastMembershipInterfaceSelector<A, D2>
 where
     D2: TryFromFidlWithContext<D1>,
 {
@@ -597,14 +597,17 @@ where
 
     fn try_from_fidl_with_ctx<C: ConversionContext>(
         ctx: &C,
-        selector: MulticastInterfaceSelector<A, D1>,
+        selector: MulticastMembershipInterfaceSelector<A, D1>,
     ) -> Result<Self, Self::Error> {
+        use MulticastMembershipInterfaceSelector::*;
         Ok(match selector {
-            MulticastInterfaceSelector::Interface(id) => {
-                Self::Interface(id.try_into_core_with_ctx(ctx)?)
+            Specified(MulticastInterfaceSelector::Interface(id)) => {
+                Specified(MulticastInterfaceSelector::Interface(id.try_into_core_with_ctx(ctx)?))
             }
-            MulticastInterfaceSelector::LocalAddress(addr) => Self::LocalAddress(addr),
-            MulticastInterfaceSelector::AnyInterfaceWithRoute => Self::AnyInterfaceWithRoute,
+            Specified(MulticastInterfaceSelector::LocalAddress(addr)) => {
+                Specified(MulticastInterfaceSelector::LocalAddress(addr))
+            }
+            AnyInterfaceWithRoute => AnyInterfaceWithRoute,
         })
     }
 }

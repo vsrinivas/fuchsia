@@ -784,12 +784,13 @@ fn pick_matching_interface<
     SC: DatagramStateContext<A, C, S>,
 >(
     sync_ctx: &SC,
-    interface: MulticastInterfaceSelector<A::IpAddr, A::DeviceId>,
+    interface: MulticastMembershipInterfaceSelector<A::IpAddr, A::DeviceId>,
 ) -> Result<Option<A::DeviceId>, SetMulticastMembershipError> {
+    use MulticastMembershipInterfaceSelector::*;
     match interface {
-        MulticastInterfaceSelector::Interface(device) => Ok(Some(device)),
-        MulticastInterfaceSelector::AnyInterfaceWithRoute => Ok(None),
-        MulticastInterfaceSelector::LocalAddress(addr) => sync_ctx
+        Specified(MulticastInterfaceSelector::Interface(device)) => Ok(Some(device)),
+        AnyInterfaceWithRoute => Ok(None),
+        Specified(MulticastInterfaceSelector::LocalAddress(addr)) => sync_ctx
             .get_device_with_assigned_addr(addr)
             .ok_or(SetMulticastMembershipError::NoDeviceWithAddress)
             .map(Some),
@@ -819,16 +820,31 @@ pub(crate) enum DatagramSocketId<S: DatagramSocketStateSpec> {
     Bound(DatagramBoundId<S>),
 }
 
-/// Selector for the device to affect when changing multicast membership
-/// settings.
+/// Selector for the device to affect when changing multicast settings.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum MulticastInterfaceSelector<A, D> {
     /// Use the device with the assigned address.
     LocalAddress(SpecifiedAddr<A>),
     /// Use the device with the specified identifier.
     Interface(D),
+}
+
+/// Selector for the device to use when changing multicast membership settings.
+///
+/// This is like `Option<MulticastInterfaceSelector` except it specifies the
+/// semantics of the `None` value as "pick any device".
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum MulticastMembershipInterfaceSelector<A, D> {
+    /// Use the specified interface.
+    Specified(MulticastInterfaceSelector<A, D>),
     /// Pick any device with a route to the multicast target address.
     AnyInterfaceWithRoute,
+}
+
+impl<A, D> From<MulticastInterfaceSelector<A, D>> for MulticastMembershipInterfaceSelector<A, D> {
+    fn from(selector: MulticastInterfaceSelector<A, D>) -> Self {
+        Self::Specified(selector)
+    }
 }
 
 /// Sets the specified socket's membership status for the given group.
@@ -848,7 +864,7 @@ pub(crate) fn set_multicast_membership<
     ctx: &mut C,
     id: impl Into<DatagramSocketId<S>>,
     multicast_group: MulticastAddr<A::IpAddr>,
-    interface: MulticastInterfaceSelector<A::IpAddr, A::DeviceId>,
+    interface: MulticastMembershipInterfaceSelector<A::IpAddr, A::DeviceId>,
     want_membership: bool,
 ) -> Result<(), SetMulticastMembershipError>
 where

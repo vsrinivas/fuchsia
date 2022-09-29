@@ -36,7 +36,7 @@ use netstack3_core::{
     device::DeviceId,
     error::{LocalAddressError, SocketError},
     ip::{icmp, socket::IpSockSendError, IpExt},
-    socket::datagram::{MulticastInterfaceSelector, SetMulticastMembershipError},
+    socket::datagram::{MulticastMembershipInterfaceSelector, SetMulticastMembershipError},
     sync::Mutex,
     transport::udp::{
         self as core_udp, BufferUdpContext, UdpBoundId, UdpConnId, UdpConnInfo,
@@ -331,7 +331,7 @@ pub(crate) trait TransportState<I: Ip>: Transport<I> {
         ctx: &mut C,
         id: SocketId<I, Self>,
         multicast_group: MulticastAddr<I::Addr>,
-        interface: MulticastInterfaceSelector<I::Addr, DeviceId>,
+        interface: MulticastMembershipInterfaceSelector<I::Addr, DeviceId>,
         want_membership: bool,
     ) -> Result<(), Self::SetMulticastMembershipError>;
 
@@ -590,7 +590,7 @@ impl<I: IpExt> TransportState<I> for Udp {
         ctx: &mut C,
         id: SocketId<I, Self>,
         multicast_group: MulticastAddr<I::Addr>,
-        interface: MulticastInterfaceSelector<I::Addr, DeviceId>,
+        interface: MulticastMembershipInterfaceSelector<I::Addr, DeviceId>,
         want_membership: bool,
     ) -> Result<(), Self::SetMulticastMembershipError> {
         core_udp::set_udp_multicast_membership(
@@ -1099,7 +1099,7 @@ impl<I: IcmpEchoIpExt> TransportState<I> for IcmpEcho {
         _ctx: &mut NonSyncCtx,
         _id: SocketId<I, Self>,
         _multicast_group: MulticastAddr<I::Addr>,
-        _interface: MulticastInterfaceSelector<I::Addr, DeviceId>,
+        _interface: MulticastMembershipInterfaceSelector<I::Addr, DeviceId>,
         _want_membership: bool,
     ) -> Result<(), Self::SetMulticastMembershipError> {
         todo!("https://fxbug.dev/47321: needs Core implementation")

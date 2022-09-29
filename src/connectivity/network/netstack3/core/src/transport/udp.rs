@@ -54,8 +54,8 @@ use crate::{
         datagram::{
             self, ConnState, DatagramBoundId, DatagramSocketId, DatagramSocketStateSpec,
             DatagramSockets, DatagramStateContext, DatagramStateNonSyncContext, InUseError,
-            IpOptions, ListenerState, MulticastInterfaceSelector, SetMulticastMembershipError,
-            SocketHopLimits, UnboundSocketState,
+            IpOptions, ListenerState, MulticastMembershipInterfaceSelector,
+            SetMulticastMembershipError, SocketHopLimits, UnboundSocketState,
         },
         posix::{
             PosixAddrState, PosixAddrVecIter, PosixAddrVecTag, PosixConflictPolicy,
@@ -1149,7 +1149,7 @@ pub(crate) trait UdpSocketHandler<I: IpExt, C>: IpDeviceIdContext<I> {
         ctx: &mut C,
         id: UdpSocketId<I>,
         multicast_group: MulticastAddr<I::Addr>,
-        interface: MulticastInterfaceSelector<I::Addr, Self::DeviceId>,
+        interface: MulticastMembershipInterfaceSelector<I::Addr, Self::DeviceId>,
         want_membership: bool,
     ) -> Result<(), SetMulticastMembershipError>;
 
@@ -1372,7 +1372,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> UdpSocke
         ctx: &mut C,
         id: UdpSocketId<I>,
         multicast_group: MulticastAddr<I::Addr>,
-        interface: MulticastInterfaceSelector<I::Addr, Self::DeviceId>,
+        interface: MulticastMembershipInterfaceSelector<I::Addr, Self::DeviceId>,
         want_membership: bool,
     ) -> Result<(), SetMulticastMembershipError> {
         datagram::set_multicast_membership(
@@ -2309,8 +2309,8 @@ pub fn get_udp_posix_reuse_port<I: IpExt, C: NonSyncContext>(
     reuse_port
 }
 
-impl<A: IpAddress, D> GenericOverIp for MulticastInterfaceSelector<A, D> {
-    type Type<I: Ip> = MulticastInterfaceSelector<I::Addr, D>;
+impl<A: IpAddress, D> GenericOverIp for MulticastMembershipInterfaceSelector<A, D> {
+    type Type<I: Ip> = MulticastMembershipInterfaceSelector<I::Addr, D>;
 }
 
 /// Sets the specified socket's membership status for the given group.
@@ -2325,7 +2325,7 @@ pub fn set_udp_multicast_membership<I: IpExt, C: NonSyncContext>(
     ctx: &mut C,
     id: UdpSocketId<I>,
     multicast_group: MulticastAddr<I::Addr>,
-    interface: MulticastInterfaceSelector<I::Addr, DeviceId>,
+    interface: MulticastMembershipInterfaceSelector<I::Addr, DeviceId>,
     want_membership: bool,
 ) -> Result<(), SetMulticastMembershipError> {
     I::map_ip::<_, Result<_, _>>(
@@ -2757,6 +2757,7 @@ mod tests {
             testutil::{DummyDeviceId, MultipleDevicesId},
             HopLimits, IpDeviceIdContext, SendIpPacketMeta, TransportIpContext, DEFAULT_HOP_LIMITS,
         },
+        socket::datagram::MulticastInterfaceSelector,
         testutil::{assert_empty, set_logger_for_test},
     };
 
@@ -3509,7 +3510,7 @@ mod tests {
             &mut non_sync_ctx,
             unbound.into(),
             multicast_addr,
-            MulticastInterfaceSelector::LocalAddress(local_ip),
+            MulticastInterfaceSelector::LocalAddress(local_ip).into(),
             true,
         )
         .expect("join multicast group should succeed");
@@ -3549,7 +3550,7 @@ mod tests {
                 &mut non_sync_ctx,
                 conn.into(),
                 multicast_addr,
-                MulticastInterfaceSelector::LocalAddress(local_ip),
+                MulticastInterfaceSelector::LocalAddress(local_ip).into(),
                 true
             ),
             Err(SetMulticastMembershipError::NoMembershipChange)
@@ -3581,7 +3582,7 @@ mod tests {
             &mut non_sync_ctx,
             unbound.into(),
             multicast_addr,
-            MulticastInterfaceSelector::LocalAddress(local_ip),
+            MulticastInterfaceSelector::LocalAddress(local_ip).into(),
             true,
         )
         .expect("join multicast group should succeed");
@@ -3631,7 +3632,7 @@ mod tests {
                 &mut non_sync_ctx,
                 listener.into(),
                 multicast_addr,
-                MulticastInterfaceSelector::LocalAddress(local_ip),
+                MulticastInterfaceSelector::LocalAddress(local_ip).into(),
                 true
             ),
             Err(SetMulticastMembershipError::NoMembershipChange)
@@ -5034,7 +5035,7 @@ mod tests {
 
     fn try_join_leave_multicast<I: Ip + TestIpExt>(
         mcast_addr: MulticastAddr<I::Addr>,
-        interface: MulticastInterfaceSelector<I::Addr, MultipleDevicesId>,
+        interface: MulticastMembershipInterfaceSelector<I::Addr, MultipleDevicesId>,
         make_socket: impl FnOnce(
             &mut MultiDeviceDummySyncCtx<I>,
             &mut DummyNonSyncCtx<I>,
@@ -5152,7 +5153,8 @@ mod tests {
     {
         let mcast_addr = I::get_multicast_addr(3);
 
-        let (result, ip_options) = try_join_leave_multicast(mcast_addr, interface, make_socket);
+        let (result, ip_options) =
+            try_join_leave_multicast(mcast_addr, interface.into(), make_socket);
         assert_eq!(result, Ok(()));
         assert_eq!(
             ip_options,
@@ -5186,7 +5188,8 @@ mod tests {
             mcast_addr,
             interface_addr
                 .map(MulticastInterfaceSelector::LocalAddress)
-                .unwrap_or(MulticastInterfaceSelector::AnyInterfaceWithRoute),
+                .map(Into::into)
+                .unwrap_or(MulticastMembershipInterfaceSelector::AnyInterfaceWithRoute),
             |sync_ctx, non_sync_ctx, unbound| {
                 UdpSocketHandler::set_unbound_udp_device(
                     sync_ctx,
@@ -5222,7 +5225,7 @@ mod tests {
             &mut non_sync_ctx,
             unbound.into(),
             group,
-            MulticastInterfaceSelector::LocalAddress(local_ip::<I>()),
+            MulticastInterfaceSelector::LocalAddress(local_ip::<I>()).into(),
             true,
         )
         .expect("join group failed");
@@ -5253,7 +5256,7 @@ mod tests {
             &mut non_sync_ctx,
             unbound.into(),
             first_group,
-            MulticastInterfaceSelector::LocalAddress(local_ip),
+            MulticastInterfaceSelector::LocalAddress(local_ip).into(),
             true,
         )
         .expect("join group failed");
@@ -5272,7 +5275,7 @@ mod tests {
             &mut non_sync_ctx,
             list.into(),
             second_group,
-            MulticastInterfaceSelector::LocalAddress(local_ip),
+            MulticastInterfaceSelector::LocalAddress(local_ip).into(),
             true,
         )
         .expect("join group failed");
@@ -5306,7 +5309,7 @@ mod tests {
             &mut non_sync_ctx,
             unbound.into(),
             first_group,
-            MulticastInterfaceSelector::LocalAddress(local_ip),
+            MulticastInterfaceSelector::LocalAddress(local_ip).into(),
             true,
         )
         .expect("join group failed");
@@ -5326,7 +5329,7 @@ mod tests {
             &mut non_sync_ctx,
             conn.into(),
             second_group,
-            MulticastInterfaceSelector::LocalAddress(local_ip),
+            MulticastInterfaceSelector::LocalAddress(local_ip).into(),
             true,
         )
         .expect("join group failed");
