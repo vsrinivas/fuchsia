@@ -8,10 +8,9 @@ use alloc::vec::Vec;
 use core::cmp::PartialEq;
 use core::convert::Infallible as Never;
 use core::fmt::{Debug, Display};
-use core::marker::PhantomData;
 
 use net_types::ip::{Ip, IpAddr, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
-use packet::{BufferView, BufferViewMut, PacketBuilder, ParsablePacket, ParseMetadata};
+use packet::{BufferViewMut, PacketBuilder, ParsablePacket, ParseMetadata};
 use zerocopy::{ByteSlice, ByteSliceMut};
 
 use crate::error::{IpParseError, IpParseResult};
@@ -19,37 +18,11 @@ use crate::ipv4::{Ipv4Header, Ipv4OnlyMeta, Ipv4Packet, Ipv4PacketBuilder};
 use crate::ipv6::{Ipv6Header, Ipv6Packet, Ipv6PacketBuilder};
 use crate::private::Sealed;
 
-mod private {
-    use super::*;
-
-    /// Used as a default type for traits. Not exported.
-    #[derive(Ord, PartialOrd, Eq, PartialEq, Clone, Debug)]
-    pub struct NeverPacket<I: Ip>(Never, PhantomData<I>);
-}
-use private::NeverPacket;
-
-impl<B: ByteSlice, I: Ip, ParseArgs> ParsablePacket<B, ParseArgs> for NeverPacket<I> {
-    type Error = IpParseError<I>;
-
-    fn parse<BV: BufferView<B>>(_buffer: BV, _args: ParseArgs) -> Result<Self, Self::Error> {
-        unreachable!()
-    }
-
-    fn parse_mut<BV: BufferViewMut<B>>(_buffer: BV, _args: ParseArgs) -> Result<Self, Self::Error>
-    where
-        B: ByteSliceMut,
-    {
-        unreachable!()
-    }
-
-    fn parse_metadata(&self) -> ParseMetadata {
-        unreachable!()
-    }
-}
-
-/// An extension trait to the `Ip` trait adding an associated `PacketBuilder`
-/// type.
+/// An extension trait to the `Ip` trait adding associated types relevant for
+/// packet parsing and serialization.
 pub trait IpExt: Ip {
+    /// An IP packet type for this IP version.
+    type Packet<B: ByteSlice>: IpPacket<B, Self, Builder = Self::PacketBuilder>;
     /// An IP packet builder type for the IP version.
     type PacketBuilder: IpPacketBuilder<Self> + Eq;
     /// The type representing an IPv4 or IPv6 protocol number.
@@ -59,11 +32,13 @@ pub trait IpExt: Ip {
 }
 
 impl IpExt for Ipv4 {
+    type Packet<B: ByteSlice> = Ipv4Packet<B>;
     type PacketBuilder = Ipv4PacketBuilder;
     type Proto = Ipv4Proto;
 }
 
 impl IpExt for Ipv6 {
+    type Packet<B: ByteSlice> = Ipv6Packet<B>;
     type PacketBuilder = Ipv6PacketBuilder;
     type Proto = Ipv6Proto;
 }
@@ -84,60 +59,6 @@ pub enum Nat64TranslationResult<S, E> {
     Drop,
     /// An error was encountered.
     Err(E),
-}
-
-/// An extension trait to the `IpExt` trait adding an associated `Packet` type.
-///
-/// `IpExtByteSlice` extends the `IpExt` trait, adding an associated `Packet`
-/// type. It cannot be part of the `IpExt` trait because it requires a `B:
-/// ByteSlice` parameter (due to the requirements of `packet::ParsablePacket`).
-pub trait IpExtByteSlice<B: ByteSlice>: IpExt {
-    /// An IP packet type for the IP version.
-    // TODO(fxbug.dev/48578): This previously had the bound `Builder =
-    // Self::PacketBuilder`, but that cannot be satisfied when writing an
-    // implementation for NeverPacket<I: Ip>; the only value for
-    // Self::PacketBuilder we have is a defaulted type, which could be
-    // overridden for some particular value of I.
-    type Packet: IpPacket<B, Self>;
-
-    /// Reassembles a fragmented packet into a parsed IP packet.
-    fn reassemble_fragmented_packet<BV: BufferViewMut<B>, IT: Iterator<Item = Vec<u8>>>(
-        buffer: BV,
-        header: Vec<u8>,
-        body_fragments: IT,
-    ) -> IpParseResult<Self, Self::Packet>
-    where
-        B: ByteSliceMut;
-}
-
-impl<B: ByteSlice> IpExtByteSlice<B> for Ipv4 {
-    type Packet = Ipv4Packet<B>;
-
-    fn reassemble_fragmented_packet<BV: BufferViewMut<B>, IT: Iterator<Item = Vec<u8>>>(
-        buffer: BV,
-        header: Vec<u8>,
-        body_fragments: IT,
-    ) -> IpParseResult<Self, Self::Packet>
-    where
-        B: ByteSliceMut,
-    {
-        crate::ipv4::reassemble_fragmented_packet(buffer, header, body_fragments)
-    }
-}
-
-impl<B: ByteSlice> IpExtByteSlice<B> for Ipv6 {
-    type Packet = Ipv6Packet<B>;
-
-    fn reassemble_fragmented_packet<BV: BufferViewMut<B>, IT: Iterator<Item = Vec<u8>>>(
-        buffer: BV,
-        header: Vec<u8>,
-        body_fragments: IT,
-    ) -> IpParseResult<Self, Self::Packet>
-    where
-        B: ByteSliceMut,
-    {
-        crate::ipv6::reassemble_fragmented_packet(buffer, header, body_fragments)
-    }
 }
 
 /// An IPv4 or IPv6 packet.
@@ -192,6 +113,15 @@ pub trait IpPacket<B: ByteSlice, I: IpExt>:
 
     /// Converts a packet reference into a dynamically-typed reference.
     fn as_ip_addr_ref(&self) -> IpAddr<&'_ Ipv4Packet<B>, &'_ Ipv6Packet<B>>;
+
+    /// Reassembles a fragmented packet into a parsed IP packet.
+    fn reassemble_fragmented_packet<BV: BufferViewMut<B>, IT: Iterator<Item = Vec<u8>>>(
+        buffer: BV,
+        header: Vec<u8>,
+        body_fragments: IT,
+    ) -> IpParseResult<I, Self>
+    where
+        B: ByteSliceMut;
 }
 
 impl<B: ByteSlice> IpPacket<B, Ipv4> for Ipv4Packet<B> {
@@ -227,6 +157,17 @@ impl<B: ByteSlice> IpPacket<B, Ipv4> for Ipv4Packet<B> {
     fn as_ip_addr_ref(&self) -> IpAddr<&'_ Self, &'_ Ipv6Packet<B>> {
         IpAddr::V4(self)
     }
+
+    fn reassemble_fragmented_packet<BV: BufferViewMut<B>, IT: Iterator<Item = Vec<u8>>>(
+        buffer: BV,
+        header: Vec<u8>,
+        body_fragments: IT,
+    ) -> IpParseResult<Ipv4, Ipv4Packet<B>>
+    where
+        B: ByteSliceMut,
+    {
+        crate::ipv4::reassemble_fragmented_packet(buffer, header, body_fragments)
+    }
 }
 
 impl<B: ByteSlice> IpPacket<B, Ipv6> for Ipv6Packet<B> {
@@ -261,40 +202,15 @@ impl<B: ByteSlice> IpPacket<B, Ipv6> for Ipv6Packet<B> {
     fn as_ip_addr_ref(&self) -> IpAddr<&'_ Ipv4Packet<B>, &'_ Self> {
         IpAddr::V6(self)
     }
-}
-
-impl<B: ByteSlice, I: IpExt> IpPacket<B, I> for NeverPacket<I> {
-    type Builder = Never;
-    type VersionSpecificMeta = Never;
-
-    fn src_ip(&self) -> I::Addr {
-        unreachable!()
-    }
-    fn dst_ip(&self) -> I::Addr {
-        unreachable!()
-    }
-    fn proto(&self) -> I::Proto {
-        unreachable!()
-    }
-    fn ttl(&self) -> u8 {
-        unreachable!()
-    }
-    fn set_ttl(&mut self, _ttl: u8)
+    fn reassemble_fragmented_packet<BV: BufferViewMut<B>, IT: Iterator<Item = Vec<u8>>>(
+        buffer: BV,
+        header: Vec<u8>,
+        body_fragments: IT,
+    ) -> IpParseResult<Ipv6, Ipv6Packet<B>>
     where
         B: ByteSliceMut,
     {
-        unreachable!()
-    }
-    fn body(&self) -> &[u8] {
-        unreachable!()
-    }
-
-    fn version_specific_meta(&self) -> Never {
-        unreachable!()
-    }
-
-    fn as_ip_addr_ref(&self) -> IpAddr<&'_ Ipv4Packet<B>, &'_ Ipv6Packet<B>> {
-        unreachable!()
+        crate::ipv6::reassemble_fragmented_packet(buffer, header, body_fragments)
     }
 }
 

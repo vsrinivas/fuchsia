@@ -35,7 +35,7 @@ use nonzero_ext::nonzero;
 use packet::{Buf, BufferMut, ParseMetadata, Serializer};
 use packet_formats::{
     error::IpParseError,
-    ip::{IpExtByteSlice, IpPacket, IpProto, Ipv4Proto, Ipv6Proto},
+    ip::{IpPacket, IpProto, Ipv4Proto, Ipv6Proto},
     ipv4::{Ipv4FragmentType, Ipv4Packet, Ipv4PacketBuilder},
     ipv6::{Ipv6Packet, Ipv6PacketBuilder},
 };
@@ -118,12 +118,7 @@ enum TransportReceiveErrorInner {
 }
 
 /// An [`Ip`] extension trait adding functionality specific to the IP layer.
-pub trait IpExt:
-    packet_formats::ip::IpExt
-    + IcmpIpExt
-    + for<'a> IpExtByteSlice<&'a [u8]>
-    + for<'a> IpExtByteSlice<&'a mut [u8]>
-{
+pub trait IpExt: packet_formats::ip::IpExt + IcmpIpExt {
     /// The type used to specify an IP packet's source address in a call to
     /// [`BufferIpTransportContext::receive_ip_packet`].
     ///
@@ -2645,7 +2640,7 @@ mod tests {
         let mut buffer = Buf::new(device_frames[offset].1.as_slice(), ..);
         let _frame =
             buffer.parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check).unwrap();
-        let packet = buffer.parse::<<Ipv6 as IpExtByteSlice<&[u8]>>::Packet>().unwrap();
+        let packet = buffer.parse::<<Ipv6 as packet_formats::ip::IpExt>::Packet<_>>().unwrap();
         let (src_ip, dst_ip, proto, _): (_, _, _, ParseMetadata) = packet.into_metadata();
         assert_eq!(dst_ip, DUMMY_CONFIG_V6.remote_ip.get());
         assert_eq!(src_ip, DUMMY_CONFIG_V6.local_ip.get());

@@ -1039,7 +1039,7 @@ mod tests {
     use packet::{Buf, InnerPacketBuilder, ParseBuffer};
     use packet_formats::{
         icmp::{IcmpEchoReply, IcmpIpExt, IcmpMessage, IcmpUnusedCode},
-        ip::{IpExt, IpExtByteSlice, IpPacket, Ipv4Proto},
+        ip::{IpExt, IpPacket, Ipv4Proto},
         ipv4::{Ipv4OnlyMeta, Ipv4Packet},
         testutil::{parse_ethernet_frame, parse_ip_packet_in_ethernet_frame},
     };
@@ -1609,12 +1609,7 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_send_hop_limits<
-        I: Ip
-            + IpSocketIpExt
-            + IpLayerStateIpExt<DummyInstant, DeviceId>
-            + for<'a> IpExtByteSlice<&'a [u8]>,
-    >()
+    fn test_send_hop_limits<I: Ip + IpSocketIpExt + IpLayerStateIpExt<DummyInstant, DeviceId>>()
     where
         for<'a> &'a DummySyncCtx: BufferIpSocketHandler<I, DummyNonSyncCtx, packet::EmptyBuf>
             + IpDeviceContext<I, DummyNonSyncCtx, DeviceId = DeviceId>

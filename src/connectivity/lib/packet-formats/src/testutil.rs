@@ -16,7 +16,7 @@ use packet::{ParsablePacket, ParseBuffer};
 use crate::error::{IpParseResult, ParseError, ParseResult};
 use crate::ethernet::{EtherType, EthernetFrame, EthernetFrameLengthCheck};
 use crate::icmp::{IcmpIpExt, IcmpMessage, IcmpPacket, IcmpParseArgs};
-use crate::ip::{IpExt, IpExtByteSlice, Ipv4Proto};
+use crate::ip::{IpExt, Ipv4Proto};
 use crate::ipv4::{Ipv4FragmentType, Ipv4Header, Ipv4Packet};
 use crate::ipv6::{Ipv6Header, Ipv6Packet};
 use crate::tcp::options::TcpOption;
@@ -180,12 +180,12 @@ pub fn parse_ethernet_frame(mut buf: &[u8]) -> ParseResult<(&[u8], Mac, Mac, Opt
 /// `parse_ip_packet` parses an IP packet, returning the body along with some
 /// important header fields.
 #[allow(clippy::type_complexity)]
-pub fn parse_ip_packet<I: IpExt + for<'a> IpExtByteSlice<&'a [u8]>>(
+pub fn parse_ip_packet<I: IpExt>(
     mut buf: &[u8],
 ) -> IpParseResult<I, (&[u8], I::Addr, I::Addr, I::Proto, u8)> {
     use crate::ip::IpPacket;
 
-    let packet = (&mut buf).parse::<<I as IpExtByteSlice<_>>::Packet>()?;
+    let packet = (&mut buf).parse::<I::Packet<_>>()?;
     let src_ip = packet.src_ip();
     let dst_ip = packet.dst_ip();
     let proto = packet.proto();
@@ -233,7 +233,7 @@ where
 /// frame, returning the body of the IP packet along with some important fields
 /// from both the IP and Ethernet headers.
 #[allow(clippy::type_complexity)]
-pub fn parse_ip_packet_in_ethernet_frame<I: IpExt + for<'a> IpExtByteSlice<&'a [u8]>>(
+pub fn parse_ip_packet_in_ethernet_frame<I: IpExt>(
     buf: &[u8],
 ) -> IpParseResult<I, (&[u8], Mac, Mac, I::Addr, I::Addr, I::Proto, u8)> {
     use crate::ethernet::EthernetIpExt;
@@ -255,7 +255,7 @@ pub fn parse_ip_packet_in_ethernet_frame<I: IpExt + for<'a> IpExtByteSlice<&'a [
 /// headers. Before returning, it invokes the callback `f` on the parsed packet.
 #[allow(clippy::type_complexity)]
 pub fn parse_icmp_packet_in_ip_packet_in_ethernet_frame<
-    I: IcmpIpExt + for<'a> IpExtByteSlice<&'a [u8]>,
+    I: IcmpIpExt,
     C,
     M: for<'a> IcmpMessage<I, &'a [u8], Code = C>,
     F: for<'a> FnOnce(&IcmpPacket<I, &'a [u8], M>),

@@ -2733,7 +2733,7 @@ mod tests {
     use packet::{Buf, InnerPacketBuilder, ParsablePacket, Serializer};
     use packet_formats::{
         icmp::{Icmpv4DestUnreachableCode, Icmpv6DestUnreachableCode},
-        ip::{IpExtByteSlice, IpPacketBuilder},
+        ip::IpPacketBuilder,
         ipv4::{Ipv4Header, Ipv4PacketRaw},
         ipv6::{Ipv6Header, Ipv6PacketRaw},
     };
@@ -3184,7 +3184,7 @@ mod tests {
     /// notifications for that listener, and that we can send data using that
     /// listener.
     #[ip_test]
-    fn test_listen_udp<I: Ip + TestIpExt + for<'a> IpExtByteSlice<&'a [u8]>>()
+    fn test_listen_udp<I: Ip + TestIpExt>()
     where
         DummySyncCtx<I>: DummySyncCtxBound<I>,
     {
@@ -3305,7 +3305,7 @@ mod tests {
     ///
     /// Only tests with specified local port and address bounds.
     #[ip_test]
-    fn test_udp_conn_basic<I: Ip + TestIpExt + for<'a> IpExtByteSlice<&'a [u8]>>()
+    fn test_udp_conn_basic<I: Ip + TestIpExt>()
     where
         DummySyncCtx<I>: DummySyncCtxBound<I>,
     {
@@ -3750,7 +3750,7 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_send_udp_conn_to<I: Ip + TestIpExt + for<'a> IpExtByteSlice<&'a [u8]>>()
+    fn test_send_udp_conn_to<I: Ip + TestIpExt>()
     where
         DummySyncCtx<I>: DummySyncCtxBound<I>,
         DummyUdpCtx<I, DummyDeviceId>: DummyUdpCtxExt<I>,

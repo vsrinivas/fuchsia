@@ -32,7 +32,7 @@ use packet_formats::{
         IcmpEchoRequest, IcmpIpExt, IcmpMessage, IcmpPacket, IcmpPacketBuilder, IcmpParseArgs,
         IcmpUnusedCode, MessageBody as _, OriginalPacket,
     },
-    ip::{IpExtByteSlice, IpPacketBuilder as _},
+    ip::{IpExt, IpPacketBuilder as _},
 };
 use test_case::test_case;
 
@@ -650,7 +650,7 @@ fn test_forwarding_v6(
         Some(ForwardingConfiguration::Iface2Only(fidl_fuchsia_net::IpVersion::V6)),
         false,
     ); "v6_iface2_forward_v6_icmp_v6")]
-async fn test_forwarding<E: netemul::Endpoint, I: IcmpIpExt + for<'a> IpExtByteSlice<&'a [u8]>>(
+async fn test_forwarding<E: netemul::Endpoint, I: IpExt + IcmpIpExt>(
     test_name: &str,
     sub_test_name: &str,
     test_case: ForwardingTestCase<I>,
@@ -758,12 +758,7 @@ async fn test_forwarding<E: netemul::Endpoint, I: IcmpIpExt + for<'a> IpExtByteS
             IcmpUnusedCode,
             IcmpEchoRequest::new(ECHO_ID, ECHO_SEQ),
         ))
-        .encapsulate(<I as packet_formats::ip::IpExt>::PacketBuilder::new(
-            src_ip,
-            dst_ip,
-            TTL,
-            I::ICMP_IP_PROTO,
-        ))
+        .encapsulate(<I as IpExt>::PacketBuilder::new(src_ip, dst_ip, TTL, I::ICMP_IP_PROTO))
         .encapsulate(EthernetFrameBuilder::new(
             net_types::ethernet::Mac::new([1, 2, 3, 4, 5, 6]),
             net_types::ethernet::Mac::BROADCAST,

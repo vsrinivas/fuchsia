@@ -2998,7 +2998,7 @@ mod tests {
             mld::MldPacket, IcmpEchoReply, IcmpEchoRequest, IcmpMessage, IcmpPacket,
             IcmpUnusedCode, Icmpv4TimestampRequest, MessageBody,
         },
-        ip::{IpExtByteSlice, IpPacketBuilder, IpProto},
+        ip::{IpPacketBuilder, IpProto},
         testutil::parse_icmp_packet_in_ip_packet_in_ethernet_frame,
         udp::UdpPacketBuilder,
         utils::NonZeroDuration,
@@ -3115,7 +3115,7 @@ mod tests {
     /// The state is initialized to `I::DUMMY_CONFIG` when testing.
     #[allow(clippy::too_many_arguments)]
     fn test_receive_ip_packet<
-        I: TestIpExt + IcmpIpExt + for<'a> IpExtByteSlice<&'a [u8]>,
+        I: TestIpExt + IcmpIpExt,
         C: PartialEq + Debug,
         M: for<'a> IcmpMessage<I, &'a [u8], Code = C> + PartialEq + Debug,
         PBF: FnOnce(&mut <I as packet_formats::ip::IpExt>::PacketBuilder),
@@ -3197,9 +3197,8 @@ mod tests {
         // Test that, when receiving an echo request, we respond with an echo
         // reply with the appropriate parameters.
 
-        fn test<I: TestIpExt + IcmpIpExt + for<'a> IpExtByteSlice<&'a [u8]>>(
-            assert_counters: &[&str],
-        ) where
+        fn test<I: TestIpExt + IcmpIpExt>(assert_counters: &[&str])
+        where
             IcmpEchoRequest: for<'a> IcmpMessage<I, &'a [u8], Code = IcmpUnusedCode>,
             IcmpEchoReply: for<'a> IcmpMessage<
                 I,
@@ -3326,7 +3325,7 @@ mod tests {
         // the same for a stack which has the UDP `send_port_unreachable` option
         // disable, and make sure that we DON'T respond with an ICMP message.
 
-        fn test<I: TestIpExt + IcmpIpExt + for<'a> IpExtByteSlice<&'a [u8]>, C: PartialEq + Debug>(
+        fn test<I: TestIpExt + IcmpIpExt, C: PartialEq + Debug>(
             code: C,
             assert_counters: &[&str],
             original_packet_len: usize,
