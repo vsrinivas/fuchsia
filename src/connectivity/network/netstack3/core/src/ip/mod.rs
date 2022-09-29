@@ -35,7 +35,7 @@ use nonzero_ext::nonzero;
 use packet::{Buf, BufferMut, ParseMetadata, Serializer};
 use packet_formats::{
     error::IpParseError,
-    ip::{IpPacket, IpProto, Ipv4Proto, Ipv6Proto},
+    ip::{IpExtByteSlice, IpPacket, IpProto, Ipv4Proto, Ipv6Proto},
     ipv4::{Ipv4FragmentType, Ipv4Packet, Ipv4PacketBuilder},
     ipv6::{Ipv6Packet, Ipv6PacketBuilder},
 };
@@ -118,7 +118,12 @@ enum TransportReceiveErrorInner {
 }
 
 /// An [`Ip`] extension trait adding functionality specific to the IP layer.
-pub trait IpExt: packet_formats::ip::IpExt + IcmpIpExt {
+pub trait IpExt:
+    packet_formats::ip::IpExt
+    + IcmpIpExt
+    + for<'a> IpExtByteSlice<&'a [u8]>
+    + for<'a> IpExtByteSlice<&'a mut [u8]>
+{
     /// The type used to specify an IP packet's source address in a call to
     /// [`BufferIpTransportContext::receive_ip_packet`].
     ///
@@ -2206,7 +2211,9 @@ impl<I: packet_formats::ip::IpExt, D> From<SendIpPacketMeta<I, D, SpecifiedAddr<
     }
 }
 
-pub(crate) trait BufferIpLayerHandler<I: Ip, C, B: BufferMut>: IpDeviceIdContext<I> {
+pub(crate) trait BufferIpLayerHandler<I: IpExt, C, B: BufferMut>:
+    IpDeviceIdContext<I>
+{
     fn send_ip_packet_from_device<S: Serializer<Buffer = B>>(
         &mut self,
         ctx: &mut C,
@@ -2598,7 +2605,7 @@ mod tests {
             Icmpv4DestUnreachableCode, Icmpv6Packet, Icmpv6PacketTooBig,
             Icmpv6ParameterProblemCode, MessageBody,
         },
-        ip::{IpExtByteSlice, IpPacketBuilder, Ipv6ExtHdrType},
+        ip::{IpPacketBuilder, Ipv6ExtHdrType},
         ipv4::Ipv4PacketBuilder,
         ipv6::{ext_hdrs::ExtensionHeaderOptionAction, Ipv6PacketBuilder},
         testutil::parse_icmp_packet_in_ip_packet_in_ethernet_frame,

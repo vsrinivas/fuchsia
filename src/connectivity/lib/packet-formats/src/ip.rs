@@ -58,13 +58,6 @@ pub trait IpExt: Ip {
     type Proto: IpProtocol + Copy + Clone + Debug + Display + PartialEq;
 }
 
-// NOTE(joshlf): We know that this is safe because the Ip trait is sealed to
-// only be implemented by Ipv4 and Ipv6.
-impl<I: Ip> IpExt for I {
-    default type PacketBuilder = Never;
-    default type Proto = Never;
-}
-
 impl IpExt for Ipv4 {
     type PacketBuilder = Ipv4PacketBuilder;
     type Proto = Ipv4Proto;
@@ -115,23 +108,6 @@ pub trait IpExtByteSlice<B: ByteSlice>: IpExt {
     ) -> IpParseResult<Self, Self::Packet>
     where
         B: ByteSliceMut;
-}
-
-// NOTE(joshlf): We know that this is safe because the Ip trait is sealed to
-// only be implemented by Ipv4 and Ipv6.
-impl<B: ByteSlice, I: Ip> IpExtByteSlice<B> for I {
-    default type Packet = NeverPacket<I>;
-
-    default fn reassemble_fragmented_packet<BV: BufferViewMut<B>, IT: Iterator<Item = Vec<u8>>>(
-        _buffer: BV,
-        _header: Vec<u8>,
-        _body_fragments: IT,
-    ) -> IpParseResult<Self, Self::Packet>
-    where
-        B: ByteSliceMut,
-    {
-        unimplemented!()
-    }
 }
 
 impl<B: ByteSlice> IpExtByteSlice<B> for Ipv4 {

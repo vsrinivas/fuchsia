@@ -180,7 +180,7 @@ pub fn parse_ethernet_frame(mut buf: &[u8]) -> ParseResult<(&[u8], Mac, Mac, Opt
 /// `parse_ip_packet` parses an IP packet, returning the body along with some
 /// important header fields.
 #[allow(clippy::type_complexity)]
-pub fn parse_ip_packet<I: IpExt>(
+pub fn parse_ip_packet<I: IpExt + for<'a> IpExtByteSlice<&'a [u8]>>(
     mut buf: &[u8],
 ) -> IpParseResult<I, (&[u8], I::Addr, I::Addr, I::Proto, u8)> {
     use crate::ip::IpPacket;
@@ -233,7 +233,7 @@ where
 /// frame, returning the body of the IP packet along with some important fields
 /// from both the IP and Ethernet headers.
 #[allow(clippy::type_complexity)]
-pub fn parse_ip_packet_in_ethernet_frame<I: IpExt>(
+pub fn parse_ip_packet_in_ethernet_frame<I: IpExt + for<'a> IpExtByteSlice<&'a [u8]>>(
     buf: &[u8],
 ) -> IpParseResult<I, (&[u8], Mac, Mac, I::Addr, I::Addr, I::Proto, u8)> {
     use crate::ethernet::EthernetIpExt;
@@ -255,7 +255,7 @@ pub fn parse_ip_packet_in_ethernet_frame<I: IpExt>(
 /// headers. Before returning, it invokes the callback `f` on the parsed packet.
 #[allow(clippy::type_complexity)]
 pub fn parse_icmp_packet_in_ip_packet_in_ethernet_frame<
-    I: IcmpIpExt,
+    I: IcmpIpExt + for<'a> IpExtByteSlice<&'a [u8]>,
     C,
     M: for<'a> IcmpMessage<I, &'a [u8], Code = C>,
     F: for<'a> FnOnce(&IcmpPacket<I, &'a [u8], M>),

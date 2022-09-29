@@ -77,13 +77,12 @@ pub mod udp;
 pub mod utils;
 
 use core::convert::TryInto;
+use core::num::TryFromIntError;
 
 use internet_checksum::Checksum;
-use net_types::ip::{IpAddress, Ipv4Addr, Ipv6Addr};
+use net_types::ip::{Ip, IpAddress, IpInvariant as IpInv, Ipv6Addr};
 use packet::SerializeBuffer;
 use zerocopy::byteorder::{ByteOrder, NetworkEndian};
-
-use crate::ip::{IpExt, Ipv4Proto, Ipv6Proto};
 
 // The "sealed trait" pattern.
 //
@@ -95,83 +94,61 @@ mod private {
 type U16 = zerocopy::U16<NetworkEndian>;
 type U32 = zerocopy::U32<NetworkEndian>;
 
-trait IpAddressExt: IpAddress
-where
-    <Self as IpAddress>::Version: IpExt,
-{
-    fn update_transport_checksum_pseudo_header(
-        checksum: &mut Checksum,
-        src_ip: Self,
-        dst_ip: Self,
-        proto: <Self::Version as IpExt>::Proto,
-        transport_len: usize,
-    ) -> Result<(), core::num::TryFromIntError>;
-}
-
-impl<A: IpAddress> IpAddressExt for A {
-    default fn update_transport_checksum_pseudo_header(
-        _checksum: &mut Checksum,
-        _src_ip: A,
-        _dst_ip: A,
-        _proto: <Self::Version as IpExt>::Proto,
-        _transport_len: usize,
-    ) -> Result<(), core::num::TryFromIntError> {
-        unimplemented!()
-    }
-}
-
-impl IpAddressExt for Ipv4Addr {
-    fn update_transport_checksum_pseudo_header(
-        checksum: &mut Checksum,
-        src_ip: Ipv4Addr,
-        dst_ip: Ipv4Addr,
-        proto: Ipv4Proto,
-        transport_len: usize,
-    ) -> Result<(), core::num::TryFromIntError> {
-        let pseudo_header = {
-            // 4 bytes for src_ip + 4 bytes for dst_ip + 1 byte of zeros + 1 byte
-            // for protocol + 2 bytes for total_len
-            let mut pseudo_header = [0u8; 12];
-            (&mut pseudo_header[..4]).copy_from_slice(src_ip.bytes());
-            (&mut pseudo_header[4..8]).copy_from_slice(dst_ip.bytes());
-            pseudo_header[9] = proto.into();
-            NetworkEndian::write_u16(&mut pseudo_header[10..12], transport_len.try_into()?);
-            pseudo_header
-        };
-        // add_bytes contains some branching logic at the beginning which is a bit
-        // more expensive than the main loop of the algorithm. In order to make sure
-        // we go through that logic as few times as possible, we construct the
-        // entire pseudo-header first, and then add it to the checksum all at once.
-        checksum.add_bytes(&pseudo_header[..]);
-        Ok(())
-    }
-}
-
-impl IpAddressExt for Ipv6Addr {
-    fn update_transport_checksum_pseudo_header(
-        checksum: &mut Checksum,
-        src_ip: Ipv6Addr,
-        dst_ip: Ipv6Addr,
-        proto: Ipv6Proto,
-        transport_len: usize,
-    ) -> Result<(), core::num::TryFromIntError> {
-        let pseudo_header = {
-            // 16 bytes for src_ip + 16 bytes for dst_ip + 4 bytes for total_len + 3
-            // bytes of zeroes + 1 byte for next header
-            let mut pseudo_header = [0u8; 40];
-            (&mut pseudo_header[..16]).copy_from_slice(src_ip.bytes());
-            (&mut pseudo_header[16..32]).copy_from_slice(dst_ip.bytes());
-            NetworkEndian::write_u32(&mut pseudo_header[32..36], transport_len.try_into()?);
-            pseudo_header[39] = proto.into();
-            pseudo_header
-        };
-        // add_bytes contains some branching logic at the beginning which is a bit
-        // more expensive than the main loop of the algorithm. In order to make sure
-        // we go through that logic as few times as possible, we construct the
-        // entire pseudo-header first, and then add it to the checksum all at once.
-        checksum.add_bytes(&pseudo_header[..]);
-        Ok(())
-    }
+fn update_transport_checksum_pseudo_header<I: Ip>(
+    checksum: &mut Checksum,
+    src_ip: I::Addr,
+    dst_ip: I::Addr,
+    proto: u8,
+    transport_len: usize,
+) -> Result<(), TryFromIntError> {
+    I::map_ip::<_, Result<(), IpInv<TryFromIntError>>>(
+        (IpInv(checksum), src_ip, dst_ip, IpInv(proto), IpInv(transport_len)),
+        |(IpInv(checksum), src_ip, dst_ip, IpInv(proto), IpInv(transport_len))| {
+            let pseudo_header = {
+                // 4 bytes for src_ip + 4 bytes for dst_ip + 1 byte of zeros + 1
+                // byte for protocol + 2 bytes for total_len
+                let mut pseudo_header = [0u8; 12];
+                (&mut pseudo_header[..4]).copy_from_slice(src_ip.bytes());
+                (&mut pseudo_header[4..8]).copy_from_slice(dst_ip.bytes());
+                pseudo_header[9] = proto;
+                NetworkEndian::write_u16(
+                    &mut pseudo_header[10..12],
+                    transport_len.try_into().map_err(IpInv)?,
+                );
+                pseudo_header
+            };
+            // add_bytes contains some branching logic at the beginning which is
+            // a bit more expensive than the main loop of the algorithm. In
+            // order to make sure we go through that logic as few times as
+            // possible, we construct the entire pseudo-header first, and then
+            // add it to the checksum all at once.
+            checksum.add_bytes(&pseudo_header[..]);
+            Ok(())
+        },
+        |(IpInv(checksum), src_ip, dst_ip, IpInv(proto), IpInv(transport_len))| {
+            let pseudo_header = {
+                // 16 bytes for src_ip + 16 bytes for dst_ip + 4 bytes for
+                // total_len + 3 bytes of zeroes + 1 byte for next header
+                let mut pseudo_header = [0u8; 40];
+                (&mut pseudo_header[..16]).copy_from_slice(src_ip.bytes());
+                (&mut pseudo_header[16..32]).copy_from_slice(dst_ip.bytes());
+                NetworkEndian::write_u32(
+                    &mut pseudo_header[32..36],
+                    transport_len.try_into().map_err(IpInv)?,
+                );
+                pseudo_header[39] = proto;
+                pseudo_header
+            };
+            // add_bytes contains some branching logic at the beginning which is
+            // a bit more expensive than the main loop of the algorithm. In
+            // order to make sure we go through that logic as few times as
+            // possible, we construct the entire pseudo-header first, and then
+            // add it to the checksum all at once.
+            checksum.add_bytes(&pseudo_header[..]);
+            Ok(())
+        },
+    )
+    .map_err(|IpInv(err)| err)
 }
 
 /// Compute the checksum used by TCP and UDP.
@@ -180,21 +157,27 @@ impl IpAddressExt for Ipv6Addr {
 /// IPv4, the total packet length `transport_len` must fit in a `u16`, and for
 /// IPv6, a `u32`. If the provided packet is too big,
 /// `compute_transport_checksum` returns `None`.
-fn compute_transport_checksum_parts<'a, A: IpAddressExt, I>(
+fn compute_transport_checksum_parts<'a, A: IpAddress, P>(
     src_ip: A,
     dst_ip: A,
-    proto: <A::Version as IpExt>::Proto,
-    parts: I,
+    proto: u8,
+    parts: P,
 ) -> Option<[u8; 2]>
 where
-    I: Iterator<Item = &'a &'a [u8]> + Clone,
+    P: Iterator<Item = &'a &'a [u8]> + Clone,
 {
     // See for details:
     // https://en.wikipedia.org/wiki/Transmission_Control_Protocol#Checksum_computation
     let mut checksum = Checksum::new();
     let transport_len = parts.clone().map(|b| b.len()).sum();
-    A::update_transport_checksum_pseudo_header(&mut checksum, src_ip, dst_ip, proto, transport_len)
-        .ok()?;
+    update_transport_checksum_pseudo_header::<A::Version>(
+        &mut checksum,
+        src_ip,
+        dst_ip,
+        proto,
+        transport_len,
+    )
+    .ok()?;
     for p in parts {
         checksum.add_bytes(p);
     }
@@ -205,18 +188,24 @@ where
 ///
 /// Same as [`compute_transport_checksum_parts`] but gets the parts from a
 /// `SerializeBuffer`.
-fn compute_transport_checksum_serialize<A: IpAddressExt>(
+fn compute_transport_checksum_serialize<A: IpAddress>(
     src_ip: A,
     dst_ip: A,
-    proto: <A::Version as IpExt>::Proto,
+    proto: u8,
     buffer: &mut SerializeBuffer<'_, '_>,
 ) -> Option<[u8; 2]> {
     // See for details:
     // https://en.wikipedia.org/wiki/Transmission_Control_Protocol#Checksum_computation
     let mut checksum = Checksum::new();
     let transport_len = buffer.len();
-    A::update_transport_checksum_pseudo_header(&mut checksum, src_ip, dst_ip, proto, transport_len)
-        .ok()?;
+    update_transport_checksum_pseudo_header::<A::Version>(
+        &mut checksum,
+        src_ip,
+        dst_ip,
+        proto,
+        transport_len,
+    )
+    .ok()?;
 
     checksum.add_bytes(buffer.header());
     for p in buffer.body().iter_fragments() {
@@ -230,15 +219,21 @@ fn compute_transport_checksum_serialize<A: IpAddressExt>(
 ///
 /// Same as [`compute_transport_checksum_parts`] but with a single part.
 #[cfg(test)]
-fn compute_transport_checksum<A: IpAddressExt>(
+fn compute_transport_checksum<A: IpAddress>(
     src_ip: A,
     dst_ip: A,
-    proto: <A::Version as IpExt>::Proto,
+    proto: u8,
     packet: &[u8],
 ) -> Option<[u8; 2]> {
     let mut checksum = Checksum::new();
-    A::update_transport_checksum_pseudo_header(&mut checksum, src_ip, dst_ip, proto, packet.len())
-        .ok()?;
+    update_transport_checksum_pseudo_header::<A::Version>(
+        &mut checksum,
+        src_ip,
+        dst_ip,
+        proto,
+        packet.len(),
+    )
+    .ok()?;
     checksum.add_bytes(packet);
     Some(checksum.checksum())
 }

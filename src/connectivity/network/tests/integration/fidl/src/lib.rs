@@ -32,7 +32,7 @@ use packet_formats::{
         IcmpEchoRequest, IcmpIpExt, IcmpMessage, IcmpPacket, IcmpPacketBuilder, IcmpParseArgs,
         IcmpUnusedCode, MessageBody as _, OriginalPacket,
     },
-    ip::IpPacketBuilder as _,
+    ip::{IpExtByteSlice, IpPacketBuilder as _},
 };
 use test_case::test_case;
 
@@ -650,7 +650,7 @@ fn test_forwarding_v6(
         Some(ForwardingConfiguration::Iface2Only(fidl_fuchsia_net::IpVersion::V6)),
         false,
     ); "v6_iface2_forward_v6_icmp_v6")]
-async fn test_forwarding<E: netemul::Endpoint, I: IcmpIpExt>(
+async fn test_forwarding<E: netemul::Endpoint, I: IcmpIpExt + for<'a> IpExtByteSlice<&'a [u8]>>(
     test_name: &str,
     sub_test_name: &str,
     test_case: ForwardingTestCase<I>,

@@ -898,7 +898,7 @@ mod tests {
     use net_types::ip::{Ip, IpVersion};
     use packet::Buf;
     use packet_formats::{
-        icmp::{IcmpDestUnreachable, IcmpIpExt},
+        icmp::IcmpDestUnreachable,
         ip::{IpExt, IpPacketBuilder, IpProto},
         testdata::{dns_request_v4, dns_request_v6},
         testutil::{
@@ -1289,7 +1289,7 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_set_ip_routing<I: Ip + TestIpExt + IcmpIpExt + IpExt>() {
+    fn test_set_ip_routing<I: Ip + TestIpExt>() {
         fn check_other_is_routing_enabled<I: Ip>(
             sync_ctx: &&crate::testutil::DummySyncCtx,
             device: DeviceId,
@@ -1596,9 +1596,11 @@ mod tests {
         src_ip: A,
         dst_ip: A,
         expected: usize,
-    ) {
+    ) where
+        A::Version: TestIpExt,
+    {
         let buf = Buf::new(Vec::new(), ..)
-            .encapsulate(<A::Version as IpExt>::PacketBuilder::new(
+            .encapsulate(<<A::Version as IpExt>::PacketBuilder as IpPacketBuilder<_>>::new(
                 src_ip,
                 dst_ip,
                 64,

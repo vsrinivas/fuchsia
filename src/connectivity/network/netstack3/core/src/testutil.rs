@@ -274,7 +274,7 @@ pub(crate) fn get_counter_val(ctx: &DummyNonSyncCtx, key: &str) -> usize {
 }
 
 /// An extension trait for `Ip` providing test-related functionality.
-pub(crate) trait TestIpExt: Ip {
+pub(crate) trait TestIpExt: crate::ip::IpExt {
     /// Either [`DUMMY_CONFIG_V4`] or [`DUMMY_CONFIG_V6`].
     const DUMMY_CONFIG: DummyEventDispatcherConfig<Self::Addr>;
 
@@ -1086,6 +1086,7 @@ mod tests {
         dst_ip: SpecifiedAddr<A>,
         device: DeviceId,
     ) where
+        A::Version: TestIpExt,
         &'a DummySyncCtx:
             BufferIpLayerHandler<A::Version, DummyNonSyncCtx, Buf<Vec<u8>>, DeviceId = DeviceId>,
     {

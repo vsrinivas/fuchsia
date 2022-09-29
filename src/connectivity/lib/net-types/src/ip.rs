@@ -294,7 +294,10 @@ pub trait Ip:
     /// The address type for this IP version.
     ///
     /// [`Ipv4Addr`] for IPv4 and [`Ipv6Addr`] for IPv6.
-    type Addr: IpAddress<Version = Self>;
+    type Addr: IpAddress<Version = Self>
+        + GenericOverIp<Type<Self> = Self::Addr>
+        + GenericOverIp<Type<Ipv4> = Ipv4Addr>
+        + GenericOverIp<Type<Ipv6> = Ipv6Addr>;
 
     /// Apply one of the given functions to the input and return the result.
     ///
@@ -2676,6 +2679,10 @@ pub struct IpInvariant<T>(pub T);
 
 impl<T> GenericOverIp for IpInvariant<T> {
     type Type<I: Ip> = Self;
+}
+
+impl GenericOverIp for core::convert::Infallible {
+    type Type<I: Ip> = core::convert::Infallible;
 }
 
 /// Calls the provided macro with all suffixes of the input.

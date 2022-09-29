@@ -11,7 +11,7 @@ use packet::{Nested, NestedPacketBuilder as _};
 use packet_formats::{
     ethernet::{EtherType, EthernetFrameBuilder, EthernetFrameLengthCheck},
     icmp::IcmpParseArgs,
-    ip::IpPacketBuilder,
+    ip::{IpExt, IpPacketBuilder},
     ipv4::Ipv4PacketBuilder,
     ipv6::Ipv6PacketBuilder,
     tcp::{TcpParseArgs, TcpSegmentBuilder},
@@ -118,6 +118,7 @@ impl<'a, A: IpAddress + FromBytes> Arbitrary<'a> for Fuzzed<TcpParseArgs<A>> {
 impl<'a, A: IpAddress, B: IpPacketBuilder<A::Version>> Arbitrary<'a>
     for Fuzzed<Nested<UdpPacketBuilder<A>, B>>
 where
+    A::Version: IpExt,
     Fuzzed<B>: Arbitrary<'a>,
 {
     fn arbitrary(u: &mut Unstructured<'a>) -> Result<Self> {
@@ -135,6 +136,7 @@ where
 impl<'a, A: IpAddress, B: IpPacketBuilder<A::Version>> Arbitrary<'a>
     for Fuzzed<Nested<TcpSegmentBuilder<A>, B>>
 where
+    A::Version: IpExt,
     Fuzzed<B>: Arbitrary<'a>,
 {
     fn arbitrary(u: &mut Unstructured<'a>) -> Result<Self> {

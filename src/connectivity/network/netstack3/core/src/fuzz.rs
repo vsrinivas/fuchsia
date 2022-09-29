@@ -18,8 +18,12 @@ use packet::{
     FragmentedBuffer, Nested, NestedPacketBuilder, Serializer,
 };
 use packet_formats::{
-    ethernet::EthernetFrameBuilder, ip::IpPacketBuilder, ipv4::Ipv4PacketBuilder,
-    ipv6::Ipv6PacketBuilder, tcp::TcpSegmentBuilder, udp::UdpPacketBuilder,
+    ethernet::EthernetFrameBuilder,
+    ip::{IpExt, IpPacketBuilder},
+    ipv4::Ipv4PacketBuilder,
+    ipv6::Ipv6PacketBuilder,
+    tcp::TcpSegmentBuilder,
+    udp::UdpPacketBuilder,
 };
 
 use crate::{
@@ -209,6 +213,7 @@ impl IpFrameType {
         u: &mut Unstructured<'a>,
     ) -> arbitrary::Result<(Buf<Vec<u8>>, String)>
     where
+        A::Version: IpExt,
         Fuzzed<IPB>: Arbitrary<'a>,
     {
         match self {

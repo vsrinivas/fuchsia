@@ -116,10 +116,11 @@ pub(crate) trait FragmentHandler<I: Ip, C> {
     fn process_fragment<B: ByteSlice>(
         &mut self,
         ctx: &mut C,
-        packet: <I as IpExtByteSlice<B>>::Packet,
+        packet: I::Packet,
     ) -> FragmentProcessingState<B, I>
     where
-        <I as IpExtByteSlice<B>>::Packet: FragmentablePacket;
+        I: IpExtByteSlice<B>,
+        I::Packet: FragmentablePacket;
 
     /// Attempts to reassemble a packet.
     ///
@@ -143,17 +144,20 @@ pub(crate) trait FragmentHandler<I: Ip, C> {
         ctx: &mut C,
         key: &FragmentCacheKey<I::Addr>,
         buffer: BV,
-    ) -> Result<<I as IpExtByteSlice<B>>::Packet, FragmentReassemblyError>;
+    ) -> Result<I::Packet, FragmentReassemblyError>
+    where
+        I: IpExtByteSlice<B>;
 }
 
 impl<I: Ip, C: FragmentNonSyncContext<I>, SC: FragmentContext<I, C>> FragmentHandler<I, C> for SC {
     fn process_fragment<B: ByteSlice>(
         &mut self,
         ctx: &mut C,
-        packet: <I as IpExtByteSlice<B>>::Packet,
+        packet: I::Packet,
     ) -> FragmentProcessingState<B, I>
     where
-        <I as IpExtByteSlice<B>>::Packet: FragmentablePacket,
+        I: IpExtByteSlice<B>,
+        I::Packet: FragmentablePacket,
     {
         self.with_state_mut(|cache| {
             let (res, timer_id) = cache.process_fragment(packet);
@@ -178,7 +182,10 @@ impl<I: Ip, C: FragmentNonSyncContext<I>, SC: FragmentContext<I, C>> FragmentHan
         ctx: &mut C,
         key: &FragmentCacheKey<I::Addr>,
         buffer: BV,
-    ) -> Result<<I as IpExtByteSlice<B>>::Packet, FragmentReassemblyError> {
+    ) -> Result<I::Packet, FragmentReassemblyError>
+    where
+        I: IpExtByteSlice<B>,
+    {
         self.with_state_mut(|cache| {
             let res = cache.reassemble_packet(key, buffer);
 
@@ -247,10 +254,10 @@ impl<B: ByteSlice> FragmentablePacket for Ipv6Packet<B> {
 
 /// Possible return values for [`IpPacketFragmentCache::process_fragment`].
 #[derive(Debug)]
-pub(crate) enum FragmentProcessingState<B: ByteSlice, I: Ip> {
+pub(crate) enum FragmentProcessingState<B: ByteSlice, I: Ip + IpExtByteSlice<B>> {
     /// The provided packet is not fragmented so no processing is required.
     /// The packet is returned with this value without any modification.
-    NotNeeded(<I as IpExtByteSlice<B>>::Packet),
+    NotNeeded(I::Packet),
 
     /// The provided packet is fragmented but it is malformed.
     ///
@@ -462,10 +469,11 @@ impl<I: Ip, Instant> IpPacketFragmentCache<I, Instant> {
     /// Panics if the packet has no fragment data.
     fn process_fragment<B: ByteSlice>(
         &mut self,
-        packet: <I as IpExtByteSlice<B>>::Packet,
+        packet: I::Packet,
     ) -> (FragmentProcessingState<B, I>, Option<CacheTimerAction<I::Addr>>)
     where
-        <I as IpExtByteSlice<B>>::Packet: FragmentablePacket,
+        I: IpExtByteSlice<B>,
+        I::Packet: FragmentablePacket,
     {
         if self.above_size_threshold() {
             return (FragmentProcessingState::OutOfMemory, None);
@@ -716,7 +724,10 @@ impl<I: Ip, Instant> IpPacketFragmentCache<I, Instant> {
         &mut self,
         key: &FragmentCacheKey<I::Addr>,
         buffer: BV,
-    ) -> Result<<I as IpExtByteSlice<B>>::Packet, FragmentReassemblyError> {
+    ) -> Result<I::Packet, FragmentReassemblyError>
+    where
+        I: IpExtByteSlice<B>,
+    {
         let entry = match self.cache.entry(*key) {
             Entry::Occupied(entry) => entry,
             Entry::Vacant(_) => return Err(FragmentReassemblyError::InvalidKey),
@@ -1251,7 +1262,9 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_ip_reassemble_with_missing_blocks<I: Ip + TestIpExt>() {
+    fn test_ip_reassemble_with_missing_blocks<
+        I: Ip + TestIpExt + for<'a> IpExtByteSlice<&'a [u8]>,
+    >() {
         let dummy_config = I::DUMMY_CONFIG;
         let MockCtx { mut sync_ctx, mut non_sync_ctx } =
             MockCtx::<I>::with_sync_ctx(MockSyncCtx::<I>::default());
@@ -1295,7 +1308,7 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_ip_reassemble_after_timer<I: Ip + TestIpExt>() {
+    fn test_ip_reassemble_after_timer<I: Ip + TestIpExt + for<'a> IpExtByteSlice<&'a [u8]>>() {
         let dummy_config = I::DUMMY_CONFIG;
         let MockCtx { mut sync_ctx, mut non_sync_ctx } =
             MockCtx::<I>::with_sync_ctx(MockSyncCtx::<I>::default());
