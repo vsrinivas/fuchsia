@@ -329,7 +329,8 @@ type SuiteStatus = flexible enum {
     /// At least one test case in the suite failed.
     FAILED = 1;
 
-    /// Suite implementation crashed or did not send `Finish` event.
+    /// Suite implementation crashed, did not send `Finish` event, or did not report
+    /// test case status for one or more test cases.
     DID_NOT_FINISH = 3;
 
     /// At least one test case in the suite timed out.

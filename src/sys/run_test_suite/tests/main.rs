@@ -980,7 +980,7 @@ async fn launch_and_test_incomplete_test(
     .await
     .expect("Running test should not fail");
 
-    assert_eq!(outcome, Outcome::DidNotFinish);
+    assert_eq!(outcome, Outcome::Inconclusive);
 
     directory::testing::assert_run_result(
         output_dir.path(),
@@ -1015,7 +1015,7 @@ async fn launch_and_test_invalid_test(
     .await
     .expect("Running test should not fail");
 
-    assert_eq!(outcome, Outcome::DidNotFinish);
+    assert_eq!(outcome, Outcome::Inconclusive);
 
     directory::testing::assert_run_result(
         output_dir.path(),

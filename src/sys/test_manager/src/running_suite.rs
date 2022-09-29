@@ -1000,7 +1000,7 @@ fn get_suite_status_from_case_status(
         CaseStatus::Failed => SuiteStatus::Failed,
         CaseStatus::TimedOut => SuiteStatus::TimedOut,
         CaseStatus::Skipped => SuiteStatus::Passed,
-        CaseStatus::Error => SuiteStatus::Failed,
+        CaseStatus::Error => SuiteStatus::DidNotFinish,
         _ => {
             panic!("this should not happen");
         }
@@ -1143,10 +1143,11 @@ mod tests {
 
         for status in &all_case_status {
             let s = get_suite_status_from_case_status(SuiteStatus::Failed, *status);
-            let mut expected = SuiteStatus::Failed;
-            if status == &CaseStatus::TimedOut {
-                expected = SuiteStatus::TimedOut;
-            }
+            let expected = match *status {
+                CaseStatus::TimedOut => SuiteStatus::TimedOut,
+                CaseStatus::Error => SuiteStatus::DidNotFinish,
+                _ => SuiteStatus::Failed,
+            };
             assert_eq!(s, expected);
         }
 
@@ -1154,7 +1155,7 @@ mod tests {
             let s = get_suite_status_from_case_status(SuiteStatus::Passed, *status);
             let mut expected = SuiteStatus::Passed;
             if status == &CaseStatus::Error {
-                expected = SuiteStatus::Failed;
+                expected = SuiteStatus::DidNotFinish;
             }
             if status == &CaseStatus::TimedOut {
                 expected = SuiteStatus::TimedOut;
