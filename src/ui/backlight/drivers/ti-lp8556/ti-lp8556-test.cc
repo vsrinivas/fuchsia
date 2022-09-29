@@ -9,6 +9,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/ddk/metadata.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/inspect/cpp/reader.h>
 #include <lib/mock-i2c/mock-i2c.h>
 #include <lib/stdcompat/span.h>
@@ -20,6 +21,7 @@
 #include <zxtest/zxtest.h>
 
 #include "sdk/lib/inspect/testing/cpp/zxtest/inspect.h"
+#include "src/devices/bus/testing/fake-pdev/fake-pdev.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace {
@@ -485,8 +487,14 @@ TEST_F(Lp8556DeviceTest, GetBackLightPower) {
       .register_count = 0,
   };
 
-  fake_parent_->AddProtocol(ZX_PROTOCOL_PDEV, nullptr, nullptr, "pdev");
+  constexpr uint32_t kPanelId = 2;
+
+  fake_pdev::FakePDev pdev;
+  pdev.set_board_info(pdev_board_info_t{.pid = PDEV_PID_NELSON});
+
+  fake_parent_->AddProtocol(ZX_PROTOCOL_PDEV, pdev.proto()->ops, pdev.proto()->ctx, "pdev");
   fake_parent_->SetMetadata(DEVICE_METADATA_PRIVATE, &kDeviceMetadata, sizeof(kDeviceMetadata));
+  fake_parent_->SetMetadata(DEVICE_METADATA_BOARD_PRIVATE, &kPanelId, sizeof(kPanelId));
 
   mock_i2c_.ExpectWrite({kCfg2Reg})
       .ExpectReadStop({kCfg2Default})
@@ -519,8 +527,14 @@ TEST_F(Lp8556DeviceTest, GetPowerWatts) {
       .register_count = 0,
   };
 
-  fake_parent_->AddProtocol(ZX_PROTOCOL_PDEV, nullptr, nullptr, "pdev");
+  constexpr uint32_t kPanelId = 2;
+
+  fake_pdev::FakePDev pdev;
+  pdev.set_board_info(pdev_board_info_t{.pid = PDEV_PID_NELSON});
+
+  fake_parent_->AddProtocol(ZX_PROTOCOL_PDEV, pdev.proto()->ops, pdev.proto()->ctx, "pdev");
   fake_parent_->SetMetadata(DEVICE_METADATA_PRIVATE, &kDeviceMetadata, sizeof(kDeviceMetadata));
+  fake_parent_->SetMetadata(DEVICE_METADATA_BOARD_PRIVATE, &kPanelId, sizeof(kPanelId));
 
   mock_i2c_.ExpectWrite({kCfg2Reg})
       .ExpectReadStop({kCfg2Default})

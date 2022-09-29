@@ -24,11 +24,17 @@ constexpr pbus_mmio_t backlight_mmios[] = {
     },
 };
 
+static const pbus_boot_metadata_t backlight_boot_metadata[] = {
+    {
+        .zbi_type = DEVICE_METADATA_BOARD_PRIVATE,
+        .zbi_extra = 0,
+    },
+};
+
 constexpr double kMaxBrightnessInNits = 250.0;
 
 zx_status_t Nelson::BacklightInit() {
   TiLp8556Metadata kDeviceMetadata = {
-      .panel_id = uint8_t(GetDisplayId()),
       .allow_set_current_scale = false,
       .registers =
           {
@@ -67,6 +73,8 @@ zx_status_t Nelson::BacklightInit() {
       .mmio_count = std::size(backlight_mmios),
       .metadata_list = backlight_metadata,
       .metadata_count = std::size(backlight_metadata),
+      .boot_metadata_list = backlight_boot_metadata,
+      .boot_metadata_count = std::size(backlight_boot_metadata),
   };
 
   auto status = pbus_.AddComposite(&backlight_dev, reinterpret_cast<uint64_t>(backlight_fragments),
