@@ -1,0 +1,42 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//src/lib/vulkan/vulkan.gni")
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":display_rotation_pixel_test" ]
+}
+
+executable("display_rotation_pixel_test_bin") {
+  testonly = true
+  sources = [ "display_rotation_pixel_test.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.ui.display.singleton",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//src/ui/testing/ui_test_manager",
+    "//src/ui/testing/util",
+    "//src/ui/testing/views",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+fuchsia_test_component("display_rotation_pixel_test_component") {
+  manifest = "meta/display_rotation_pixel_test.cml"
+  deps = [ ":display_rotation_pixel_test_bin" ]
+}
+
+fuchsia_test_package("display_rotation_pixel_test") {
+  test_components = [ ":display_rotation_pixel_test_component" ]
+  test_specs = {
+    log_settings = {
+      # TODO(fxbug.dev/93081): Investigate flakes and remove allowing ERROR severity.
+      max_severity = "ERROR"
+    }
+    environments = vulkan_envs
+  }
+}
