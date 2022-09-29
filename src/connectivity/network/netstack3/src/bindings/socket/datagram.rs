@@ -9,7 +9,7 @@ use std::{
     convert::TryInto as _,
     fmt::Debug,
     marker::PhantomData,
-    num::{NonZeroU16, NonZeroU8, TryFromIntError},
+    num::{NonZeroU16, NonZeroU64, NonZeroU8, TryFromIntError},
     ops::{ControlFlow, Deref as _, DerefMut as _},
     sync::Arc,
 };
@@ -36,7 +36,10 @@ use netstack3_core::{
     device::DeviceId,
     error::{LocalAddressError, SocketError},
     ip::{icmp, socket::IpSockSendError, IpExt},
-    socket::datagram::{MulticastMembershipInterfaceSelector, SetMulticastMembershipError},
+    socket::datagram::{
+        MulticastInterfaceSelector, MulticastMembershipInterfaceSelector,
+        SetMulticastMembershipError,
+    },
     sync::Mutex,
     transport::udp::{
         self as core_udp, BufferUdpContext, UdpBoundId, UdpConnId, UdpConnInfo,
@@ -58,15 +61,15 @@ use thiserror::Error;
 use crate::bindings::{
     devices::Devices,
     util::{
-        self, DeviceNotFoundError, IntoCore as _, TryFromFidlWithContext, TryIntoCoreWithContext,
-        TryIntoFidlWithContext,
+        self, DeviceNotFoundError, IntoCore as _, TryFromFidlWithContext, TryIntoCore,
+        TryIntoCoreWithContext, TryIntoFidlWithContext,
     },
     CommonInfo, LockableContext,
 };
 
 use super::{
-    IntoErrno, IpSockAddrExt, SockAddr, SockMulticastMembership, SocketWorkerProperties,
-    ZXSIO_SIGNAL_INCOMING, ZXSIO_SIGNAL_OUTGOING,
+    IntoErrno, IpSockAddrExt, SockAddr, SocketWorkerProperties, ZXSIO_SIGNAL_INCOMING,
+    ZXSIO_SIGNAL_OUTGOING,
 };
 
 // These values were picked to match Linux behavior.
@@ -2088,10 +2091,7 @@ where
                 responder,
             } => {
                 responder_send!(responder, &mut {
-                    match I::MulticastMembership::new(membership) {
-                        Some(membership) => self.set_multicast_membership(membership, true).await,
-                        None => Err(fposix::Errno::Enoprotoopt),
-                    }
+                    self.set_multicast_membership(membership, true).await
                 });
             }
             fposix_socket::SynchronousDatagramSocketRequest::DropIpMembership {
@@ -2099,10 +2099,7 @@ where
                 responder,
             } => {
                 responder_send!(responder, &mut {
-                    match I::MulticastMembership::new(membership) {
-                        Some(membership) => self.set_multicast_membership(membership, false).await,
-                        None => Err(fposix::Errno::Enoprotoopt),
-                    }
+                    self.set_multicast_membership(membership, false).await
                 });
             }
             fposix_socket::SynchronousDatagramSocketRequest::AddIpv6Membership {
@@ -2110,10 +2107,7 @@ where
                 responder,
             } => {
                 responder_send!(responder, &mut {
-                    match I::MulticastMembership::new(membership) {
-                        Some(membership) => self.set_multicast_membership(membership, true).await,
-                        None => Err(fposix::Errno::Enoprotoopt),
-                    }
+                    self.set_multicast_membership(membership, true).await
                 });
             }
             fposix_socket::SynchronousDatagramSocketRequest::DropIpv6Membership {
@@ -2121,10 +2115,7 @@ where
                 responder,
             } => {
                 responder_send!(responder, &mut {
-                    match I::MulticastMembership::new(membership) {
-                        Some(membership) => self.set_multicast_membership(membership, false).await,
-                        None => Err(fposix::Errno::Enoprotoopt),
-                    }
+                    self.set_multicast_membership(membership, false).await
                 });
             }
             fposix_socket::SynchronousDatagramSocketRequest::SetIpv6ReceiveTrafficClass {
@@ -2778,13 +2769,23 @@ where
         Err(fposix::Errno::Enotconn)
     }
 
-    async fn set_multicast_membership(
+    async fn set_multicast_membership<
+        M: TryIntoCore<(
+            MulticastAddr<I::Addr>,
+            Option<MulticastInterfaceSelector<I::Addr, NonZeroU64>>,
+        )>,
+    >(
         self,
-        membership: I::MulticastMembership,
+        membership: M,
         want_membership: bool,
-    ) -> Result<(), fposix::Errno> {
-        let (mcast_addr, interface) = membership.into_addr_selector();
-        let multicast_group = MulticastAddr::new(mcast_addr).ok_or(fposix::Errno::Einval)?;
+    ) -> Result<(), fposix::Errno>
+    where
+        M::Error: IntoErrno,
+    {
+        let (multicast_group, interface) =
+            membership.try_into_core().map_err(IntoErrno::into_errno)?;
+        let interface = interface
+            .map_or(MulticastMembershipInterfaceSelector::AnyInterfaceWithRoute, Into::into);
 
         let id = (&self.data.info.state).into();
 

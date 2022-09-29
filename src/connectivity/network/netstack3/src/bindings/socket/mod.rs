@@ -24,10 +24,7 @@ use net_types::{
 use netstack3_core::{
     error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError, ZonedAddressError},
     ip::socket::{IpSockCreationError, IpSockRouteError, IpSockSendError, IpSockUnroutableError},
-    socket::datagram::{
-        MulticastInterfaceSelector, MulticastMembershipInterfaceSelector,
-        SetMulticastMembershipError,
-    },
+    socket::datagram::SetMulticastMembershipError,
     transport::udp::{
         UdpConnectListenerError, UdpSendError, UdpSendListenerError, UdpSockCreationError,
     },
@@ -305,17 +302,14 @@ impl SockAddr for fnet::Ipv4SocketAddress {
 /// [`Ipv6`].
 pub(crate) trait IpSockAddrExt: Ip {
     type SocketAddress: SockAddr<AddrType = Self::Addr>;
-    type MulticastMembership: SockMulticastMembership<AddrType = Self::Addr> + Send;
 }
 
 impl IpSockAddrExt for Ipv4 {
     type SocketAddress = fnet::Ipv4SocketAddress;
-    type MulticastMembership = psocket::IpMulticastMembership;
 }
 
 impl IpSockAddrExt for Ipv6 {
     type SocketAddress = fnet::Ipv6SocketAddress;
-    type MulticastMembership = psocket::Ipv6MulticastMembership;
 }
 
 pub(crate) enum IpMulticastMembership {
@@ -332,67 +326,6 @@ impl From<psocket::IpMulticastMembership> for IpMulticastMembership {
 impl From<psocket::Ipv6MulticastMembership> for IpMulticastMembership {
     fn from(membership: psocket::Ipv6MulticastMembership) -> Self {
         Self::V6(membership)
-    }
-}
-
-/// A trait for generalizing over multicast membership options for sockets.
-pub(crate) trait SockMulticastMembership: Sized {
-    type AddrType: IpAddress;
-
-    fn new(membership: impl Into<IpMulticastMembership>) -> Option<Self>;
-
-    fn into_addr_selector(
-        self,
-    ) -> (Self::AddrType, MulticastMembershipInterfaceSelector<Self::AddrType, NonZeroU64>);
-}
-
-impl SockMulticastMembership for psocket::IpMulticastMembership {
-    type AddrType = Ipv4Addr;
-
-    fn new(membership: impl Into<IpMulticastMembership>) -> Option<Self> {
-        match membership.into() {
-            IpMulticastMembership::V4(m) => Some(m),
-            IpMulticastMembership::V6(_) => None,
-        }
-    }
-
-    fn into_addr_selector(
-        self,
-    ) -> (Self::AddrType, MulticastMembershipInterfaceSelector<Self::AddrType, NonZeroU64>) {
-        let Self { mcast_addr, iface, local_addr } = self;
-        // Match Linux behavior by ignoring the address if an interface
-        // identifier is provided.
-        let selector = NonZeroU64::new(iface)
-            .map(MulticastInterfaceSelector::Interface)
-            .or_else(|| {
-                SpecifiedAddr::new(local_addr.into_core())
-                    .map(MulticastInterfaceSelector::LocalAddress)
-            })
-            .map(MulticastMembershipInterfaceSelector::Specified)
-            .unwrap_or(MulticastMembershipInterfaceSelector::AnyInterfaceWithRoute);
-        (mcast_addr.into_core(), selector)
-    }
-}
-
-impl SockMulticastMembership for psocket::Ipv6MulticastMembership {
-    type AddrType = Ipv6Addr;
-
-    fn new(membership: impl Into<IpMulticastMembership>) -> Option<Self> {
-        match membership.into() {
-            IpMulticastMembership::V6(m) => Some(m),
-            IpMulticastMembership::V4(_) => None,
-        }
-    }
-
-    fn into_addr_selector(
-        self,
-    ) -> (Self::AddrType, MulticastMembershipInterfaceSelector<Self::AddrType, NonZeroU64>) {
-        let Self { mcast_addr, iface } = self;
-        let selector = NonZeroU64::new(iface)
-            .map(MulticastInterfaceSelector::Interface)
-            .map(MulticastMembershipInterfaceSelector::Specified)
-            .unwrap_or(MulticastMembershipInterfaceSelector::AnyInterfaceWithRoute);
-        (mcast_addr.into_core(), selector)
     }
 }
 

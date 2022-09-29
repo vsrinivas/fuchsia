@@ -2309,10 +2309,6 @@ pub fn get_udp_posix_reuse_port<I: IpExt, C: NonSyncContext>(
     reuse_port
 }
 
-impl<A: IpAddress, D> GenericOverIp for MulticastMembershipInterfaceSelector<A, D> {
-    type Type<I: Ip> = MulticastMembershipInterfaceSelector<I::Addr, D>;
-}
-
 /// Sets the specified socket's membership status for the given group.
 ///
 /// If `id` is unbound, the membership state will take effect when it is bound.

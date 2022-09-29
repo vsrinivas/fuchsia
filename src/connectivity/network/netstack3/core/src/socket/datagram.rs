@@ -12,7 +12,10 @@ use core::{
 };
 
 use derivative::Derivative;
-use net_types::{ip::IpAddress, MulticastAddr, MulticastAddress as _, SpecifiedAddr, ZonedAddr};
+use net_types::{
+    ip::{GenericOverIp, Ip, IpAddress},
+    MulticastAddr, MulticastAddress as _, SpecifiedAddr, ZonedAddr,
+};
 
 use crate::{
     algorithm::ProtocolFlowId,
@@ -829,6 +832,10 @@ pub enum MulticastInterfaceSelector<A, D> {
     Interface(D),
 }
 
+impl<A, D> GenericOverIp for MulticastInterfaceSelector<A, D> {
+    type Type<I: Ip> = MulticastInterfaceSelector<I::Addr, D>;
+}
+
 /// Selector for the device to use when changing multicast membership settings.
 ///
 /// This is like `Option<MulticastInterfaceSelector` except it specifies the
@@ -845,6 +852,10 @@ impl<A, D> From<MulticastInterfaceSelector<A, D>> for MulticastMembershipInterfa
     fn from(selector: MulticastInterfaceSelector<A, D>) -> Self {
         Self::Specified(selector)
     }
+}
+
+impl<A, D> GenericOverIp for MulticastMembershipInterfaceSelector<A, D> {
+    type Type<I: Ip> = MulticastMembershipInterfaceSelector<I::Addr, D>;
 }
 
 /// Sets the specified socket's membership status for the given group.

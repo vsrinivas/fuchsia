@@ -15,10 +15,10 @@ use fidl_fuchsia_posix_socket as fposix_socket;
 use net_types::{
     ethernet::Mac,
     ip::{
-        AddrSubnetEither, AddrSubnetError, IpAddr, IpAddress, Ipv4Addr, Ipv6Addr, SubnetEither,
-        SubnetError,
+        AddrSubnetEither, AddrSubnetError, GenericOverIp, Ip, IpAddr, IpAddress,
+        IpInvariant as IpInv, Ipv4Addr, Ipv6Addr, SubnetEither, SubnetError,
     },
-    AddrAndZone, ZonedAddr,
+    AddrAndZone, MulticastAddr, ZonedAddr,
 };
 use net_types::{SpecifiedAddr, Witness};
 use netstack3_core::{
@@ -72,8 +72,12 @@ pub(crate) trait TryIntoFidl<F>: Sized {
 ///
 /// [`TryIntoFidl<F, Error = Never>`]: crate::bindings::util::TryIntoFidl
 /// [`into_fidl`]: crate::bindings::util::IntoFidl::into_fidl
-pub(crate) trait IntoFidl<F>: TryIntoFidl<F, Error = Never> {
+pub(crate) trait IntoFidl<F> {
     /// Infallibly convert `self` into an instance of `F`.
+    fn into_fidl(self) -> F;
+}
+
+impl<C: TryIntoFidl<F, Error = Never>, F> IntoFidl<F> for C {
     fn into_fidl(self) -> F {
         match self.try_into_fidl() {
             Ok(f) => f,
@@ -82,25 +86,26 @@ pub(crate) trait IntoFidl<F>: TryIntoFidl<F, Error = Never> {
     }
 }
 
-impl<F, T: TryIntoFidl<F, Error = Never>> IntoFidl<F> for T {}
-
 /// A FIDL type which can be fallibly converted from the core type `C`.
 ///
 /// `TryFromCore<C>` is automatically implemented for all `F` where [`C:
 /// TryIntoFidl<F>`].
 ///
 /// [`C: TryIntoFidl<F>`]: crate::bindings::util::TryIntoFidl
-pub(crate) trait TryFromCore<C>: Sized
-where
-    C: TryIntoFidl<Self>,
-{
+pub(crate) trait TryFromCore<C>: Sized {
+    /// The error type on conversion failure.
+    type Error;
+
     /// Attempt to convert from `core` into an instance of `Self`.
-    fn try_from_core(core: C) -> Result<Self, C::Error> {
+    fn try_from_core(core: C) -> Result<Self, Self::Error>;
+}
+
+impl<F, C: TryIntoFidl<F>> TryFromCore<C> for F {
+    type Error = C::Error;
+    fn try_from_core(core: C) -> Result<Self, Self::Error> {
         core.try_into_fidl()
     }
 }
-
-impl<F, C: TryIntoFidl<F>> TryFromCore<C> for F {}
 
 /// A FIDL type which can be fallibly converted into the core type `C`.
 ///
@@ -108,21 +113,24 @@ impl<F, C: TryIntoFidl<F>> TryFromCore<C> for F {}
 /// TryFromFidl<F>`].
 ///
 /// [`C: TryFromFidl<F>`]: crate::bindings::util::TryFromFidl
-pub(crate) trait TryIntoCore<C>: Sized
-where
-    C: TryFromFidl<Self>,
-{
+pub(crate) trait TryIntoCore<C>: Sized {
+    /// The error returned on conversion failure.
+    type Error;
+
     /// Attempt to convert from `self` into an instance of `C`.
     ///
     /// This is equivalent to [`C::try_from_fidl(self)`].
     ///
     /// [`C::try_from_fidl(self)`]: crate::bindings::util::TryFromFidl::try_from_fidl
-    fn try_into_core(self) -> Result<C, C::Error> {
+    fn try_into_core(self) -> Result<C, Self::Error>;
+}
+
+impl<F, C: TryFromFidl<F>> TryIntoCore<C> for F {
+    type Error = C::Error;
+    fn try_into_core(self) -> Result<C, Self::Error> {
         C::try_from_fidl(self)
     }
 }
-
-impl<F, C: TryFromFidl<F>> TryIntoCore<C> for F {}
 
 /// A FIDL type which can be infallibly converted into the core type `C`.
 ///
@@ -131,11 +139,12 @@ impl<F, C: TryFromFidl<F>> TryIntoCore<C> for F {}
 ///
 /// [`TryIntoCore<C>`]: crate::bindings::util::TryIntoCore
 /// [`into_fidl`]: crate::bindings::util::IntoCore::into_core
-pub(crate) trait IntoCore<C>: TryIntoCore<C>
-where
-    C: TryFromFidl<Self, Error = Never>,
-{
+pub(crate) trait IntoCore<C> {
     /// Infallibly convert `self` into an instance of `C`.
+    fn into_core(self) -> C;
+}
+
+impl<F, C: TryFromFidl<F, Error = Never>> IntoCore<C> for F {
     fn into_core(self) -> C {
         match self.try_into_core() {
             Ok(c) => c,
@@ -143,8 +152,6 @@ where
         }
     }
 }
-
-impl<F, C: TryFromFidl<F, Error = Never>> IntoCore<C> for F {}
 
 impl<T> TryIntoFidl<T> for Never {
     type Error = Never;
@@ -395,6 +402,71 @@ where
     fn try_into_fidl(self) -> Result<<A::Version as IpSockAddrExt>::SocketAddress, Self::Error> {
         let (addr, port) = self;
         Ok(SockAddr::new(addr.map(ZonedAddr::Unzoned), port.get()))
+    }
+}
+
+pub(crate) enum MulticastMembershipConversionError {
+    AddrNotMulticast,
+    WrongIpVersion,
+}
+
+impl GenericOverIp for MulticastMembershipConversionError {
+    type Type<I: Ip> = Self;
+}
+
+impl IntoErrno for MulticastMembershipConversionError {
+    fn into_errno(self) -> fposix::Errno {
+        match self {
+            Self::AddrNotMulticast => fposix::Errno::Einval,
+            Self::WrongIpVersion => fposix::Errno::Enoprotoopt,
+        }
+    }
+}
+
+impl<A: IpAddress> TryFromFidl<fposix_socket::IpMulticastMembership>
+    for (MulticastAddr<A>, Option<MulticastInterfaceSelector<A, NonZeroU64>>)
+{
+    type Error = MulticastMembershipConversionError;
+
+    fn try_from_fidl(fidl: fposix_socket::IpMulticastMembership) -> Result<Self, Self::Error> {
+        <A::Version as Ip>::map_ip(
+            IpInv(fidl),
+            |IpInv(fidl)| {
+                let fposix_socket::IpMulticastMembership { iface, local_addr, mcast_addr } = fidl;
+                let mcast_addr = MulticastAddr::new(mcast_addr.into_core())
+                    .ok_or(Self::Error::AddrNotMulticast)?;
+                // Match Linux behavior by ignoring the address if an interface
+                // identifier is provided.
+                let selector = NonZeroU64::new(iface)
+                    .map(MulticastInterfaceSelector::Interface)
+                    .or_else(|| {
+                        SpecifiedAddr::new(local_addr.into_core())
+                            .map(MulticastInterfaceSelector::LocalAddress)
+                    });
+                Ok((mcast_addr, selector))
+            },
+            |IpInv(_fidl)| Err(Self::Error::WrongIpVersion),
+        )
+    }
+}
+
+impl<A: IpAddress> TryFromFidl<fposix_socket::Ipv6MulticastMembership>
+    for (MulticastAddr<A>, Option<MulticastInterfaceSelector<A, NonZeroU64>>)
+{
+    type Error = MulticastMembershipConversionError;
+
+    fn try_from_fidl(fidl: fposix_socket::Ipv6MulticastMembership) -> Result<Self, Self::Error> {
+        <A::Version as Ip>::map_ip(
+            IpInv(fidl),
+            |IpInv(_fidl)| Err(Self::Error::WrongIpVersion),
+            |IpInv(fidl)| {
+                let fposix_socket::Ipv6MulticastMembership { iface, mcast_addr } = fidl;
+                let mcast_addr = MulticastAddr::new(mcast_addr.into_core())
+                    .ok_or(Self::Error::AddrNotMulticast)?;
+                let selector = NonZeroU64::new(iface).map(MulticastInterfaceSelector::Interface);
+                Ok((mcast_addr, selector))
+            },
+        )
     }
 }
 
