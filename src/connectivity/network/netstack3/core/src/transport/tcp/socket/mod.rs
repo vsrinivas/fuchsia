@@ -926,6 +926,10 @@ pub struct BoundInfo<A: IpAddress> {
     pub port: NonZeroU16,
 }
 
+impl<A: IpAddress> GenericOverIp for BoundInfo<A> {
+    type Type<I: Ip> = BoundInfo<I::Addr>;
+}
+
 /// Information about a connected socket's address.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ConnectionInfo<A: IpAddress> {
@@ -933,6 +937,10 @@ pub struct ConnectionInfo<A: IpAddress> {
     pub local_addr: SocketAddr<A>,
     /// The remote address the socket is connected to.
     pub remote_addr: SocketAddr<A>,
+}
+
+impl<A: IpAddress> GenericOverIp for ConnectionInfo<A> {
+    type Type<I: Ip> = ConnectionInfo<I::Addr>;
 }
 
 impl<A: IpAddress, D> From<ListenerAddr<A, D, NonZeroU16>> for BoundInfo<A> {
@@ -950,52 +958,40 @@ impl<A: IpAddress, D> From<ConnAddr<A, D, NonZeroU16, NonZeroU16>> for Connectio
     }
 }
 
-/// Get information for bound IPv4 TCP socket.
-pub fn get_bound_v4_info<C: NonSyncContext>(
-    sync_ctx: &SyncCtx<C>,
+/// Get information for bound TCP socket.
+pub fn get_bound_info<I: Ip, C: NonSyncContext>(
+    mut sync_ctx: &SyncCtx<C>,
     id: BoundId,
-) -> BoundInfo<Ipv4Addr> {
-    TcpSocketHandler::<Ipv4, _>::get_bound_info(&sync_ctx, id)
+) -> BoundInfo<I::Addr> {
+    I::map_ip(
+        IpInv((&mut sync_ctx, id)),
+        |IpInv((sync_ctx, id))| TcpSocketHandler::<Ipv4, _>::get_bound_info(sync_ctx, id),
+        |IpInv((sync_ctx, id))| TcpSocketHandler::<Ipv6, _>::get_bound_info(sync_ctx, id),
+    )
 }
 
-/// Get information for listener IPv4 TCP socket.
-pub fn get_listener_v4_info<C: NonSyncContext>(
-    sync_ctx: &SyncCtx<C>,
+/// Get information for listener TCP socket.
+pub fn get_listener_info<I: Ip, C: NonSyncContext>(
+    mut sync_ctx: &SyncCtx<C>,
     id: ListenerId,
-) -> BoundInfo<Ipv4Addr> {
-    TcpSocketHandler::<Ipv4, _>::get_listener_info(&sync_ctx, id)
+) -> BoundInfo<I::Addr> {
+    I::map_ip(
+        IpInv((&mut sync_ctx, id)),
+        |IpInv((mut sync_ctx, id))| TcpSocketHandler::<Ipv4, _>::get_listener_info(sync_ctx, id),
+        |IpInv((mut sync_ctx, id))| TcpSocketHandler::<Ipv6, _>::get_listener_info(sync_ctx, id),
+    )
 }
 
-/// Get information for connection IPv4 TCP socket.
-pub fn get_connection_v4_info<C: NonSyncContext>(
-    sync_ctx: &SyncCtx<C>,
+/// Get information for connection TCP socket.
+pub fn get_connection_info<I: Ip, C: NonSyncContext>(
+    mut sync_ctx: &SyncCtx<C>,
     id: ConnectionId,
-) -> ConnectionInfo<Ipv4Addr> {
-    TcpSocketHandler::<Ipv4, _>::get_connection_info(&sync_ctx, id)
-}
-
-/// Get information for bound IPv6 TCP socket.
-pub fn get_bound_v6_info<C: NonSyncContext>(
-    sync_ctx: &SyncCtx<C>,
-    id: BoundId,
-) -> BoundInfo<Ipv6Addr> {
-    TcpSocketHandler::<Ipv6, _>::get_bound_info(&sync_ctx, id)
-}
-
-/// Get information for listener IPv6 TCP socket.
-pub fn get_listener_v6_info<C: NonSyncContext>(
-    sync_ctx: &SyncCtx<C>,
-    id: ListenerId,
-) -> BoundInfo<Ipv6Addr> {
-    TcpSocketHandler::<Ipv6, _>::get_listener_info(&sync_ctx, id)
-}
-
-/// Get information for connection IPv6 TCP socket.
-pub fn get_connection_v6_info<C: NonSyncContext>(
-    sync_ctx: &SyncCtx<C>,
-    id: ConnectionId,
-) -> ConnectionInfo<Ipv6Addr> {
-    TcpSocketHandler::<Ipv6, _>::get_connection_info(&sync_ctx, id)
+) -> ConnectionInfo<I::Addr> {
+    I::map_ip(
+        IpInv((&mut sync_ctx, id)),
+        |IpInv((sync_ctx, id))| TcpSocketHandler::<Ipv4, _>::get_connection_info(sync_ctx, id),
+        |IpInv((sync_ctx, id))| TcpSocketHandler::<Ipv6, _>::get_connection_info(sync_ctx, id),
+    )
 }
 
 /// Call this function whenever a socket can push out more data. That means either:

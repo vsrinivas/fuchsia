@@ -28,13 +28,13 @@ use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, Peered as _};
 use futures::{stream::FusedStream, task::AtomicWaker, Stream, StreamExt as _};
 use net_types::{
-    ip::{IpAddress, IpVersion, IpVersionMarker, Ipv4, Ipv6},
+    ip::{IpAddress, IpVersionMarker, Ipv4, Ipv6},
     SpecifiedAddr, ZonedAddr,
 };
 
 use crate::bindings::{
     socket::{IntoErrno, IpSockAddrExt, SockAddr, ZXSIO_SIGNAL_CONNECTED, ZXSIO_SIGNAL_INCOMING},
-    util::{IntoFidl as _, TryIntoFidl},
+    util::{IntoFidl, TryIntoFidl},
     LockableContext,
 };
 
@@ -44,9 +44,8 @@ use netstack3_core::{
         buffer::{Buffer, IntoBuffers, ReceiveBuffer, RingBuffer, SendBuffer, SendPayload},
         segment::Payload,
         socket::{
-            accept, bind, connect_bound, connect_unbound, create_socket, get_bound_v4_info,
-            get_bound_v6_info, get_connection_v4_info, get_connection_v6_info,
-            get_listener_v4_info, get_listener_v6_info, listen, AcceptError, BindError, BoundId,
+            accept, bind, connect_bound, connect_unbound, create_socket, get_bound_info,
+            get_connection_info, get_listener_info, listen, AcceptError, BindError, BoundId,
             BoundInfo, ConnectError, ConnectionId, ListenerId, SocketAddr, TcpNonSyncContext,
             UnboundId,
         },
@@ -640,43 +639,21 @@ where
     async fn get_sock_name(&self) -> Result<fnet::SocketAddress, fposix::Errno> {
         let mut guard = self.ctx.lock().await;
         let Ctx { sync_ctx, non_sync_ctx: _ } = guard.deref_mut();
-        match self.id {
-            SocketId::Unbound(_, _) => Err(fposix::Errno::Einval),
-            SocketId::Bound(id, _) => Ok({
-                match I::VERSION {
-                    IpVersion::V4 => {
-                        let BoundInfo { addr, port } = get_bound_v4_info(sync_ctx, id);
-                        (addr, port).into_fidl().into_sock_addr()
-                    }
-                    IpVersion::V6 => {
-                        let BoundInfo { addr, port } = get_bound_v6_info(sync_ctx, id);
-                        (addr, port).into_fidl().into_sock_addr()
-                    }
-                }
-            }),
-            SocketId::Listener(id) => Ok({
-                match I::VERSION {
-                    IpVersion::V4 => {
-                        let BoundInfo { addr, port } = get_listener_v4_info(sync_ctx, id);
-                        (addr, port).into_fidl().into_sock_addr()
-                    }
-                    IpVersion::V6 => {
-                        let BoundInfo { addr, port } = get_listener_v6_info(sync_ctx, id);
-                        (addr, port).into_fidl().into_sock_addr()
-                    }
-                }
-            }),
-            SocketId::Connection(id) => Ok({
-                match I::VERSION {
-                    IpVersion::V4 => {
-                        get_connection_v4_info(sync_ctx, id).local_addr.into_fidl().into_sock_addr()
-                    }
-                    IpVersion::V6 => {
-                        get_connection_v6_info(sync_ctx, id).local_addr.into_fidl().into_sock_addr()
-                    }
-                }
-            }),
-        }
+        let fidl = match self.id {
+            SocketId::Unbound(_, _) => return Err(fposix::Errno::Einval),
+            SocketId::Bound(id, _) => {
+                let BoundInfo { addr, port } = get_bound_info::<I, _>(sync_ctx, id);
+                (addr, port).into_fidl()
+            }
+            SocketId::Listener(id) => {
+                let BoundInfo { addr, port } = get_listener_info::<I, _>(sync_ctx, id);
+                (addr, port).into_fidl()
+            }
+            SocketId::Connection(id) => {
+                get_connection_info::<I, _>(sync_ctx, id).local_addr.into_fidl()
+            }
+        };
+        Ok(fidl.into_sock_addr())
     }
 
     async fn get_peer_name(&self) -> Result<fnet::SocketAddress, fposix::Errno> {
@@ -687,16 +664,7 @@ where
                 Err(fposix::Errno::Enotconn)
             }
             SocketId::Connection(id) => Ok({
-                match I::VERSION {
-                    IpVersion::V4 => get_connection_v4_info(sync_ctx, id)
-                        .remote_addr
-                        .into_fidl()
-                        .into_sock_addr(),
-                    IpVersion::V6 => get_connection_v6_info(sync_ctx, id)
-                        .remote_addr
-                        .into_fidl()
-                        .into_sock_addr(),
-                }
+                get_connection_info::<I, _>(sync_ctx, id).remote_addr.into_fidl().into_sock_addr()
             }),
         }
     }
