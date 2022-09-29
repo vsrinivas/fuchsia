@@ -17,6 +17,7 @@
 
 #include <hwreg/bitfields.h>
 
+#include "src/graphics/display/drivers/intel-i915-tgl/acpi-memory-region.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-ddi.h"
 
 namespace i915_tgl {
@@ -286,13 +287,11 @@ class IgdOpRegion {
              uint32_t additional_param, uint16_t* exit_param, uint32_t* additional_res);
   void ProcessBacklightData();
 
-  zx::vmo igd_opregion_pages_;
-  uintptr_t igd_opregion_pages_base_;
-  uintptr_t igd_opregion_pages_len_;
-  // Vbt region is optional; may be located in mailbox4
-  zx::vmo vbt_region_vmo_;
-  uintptr_t vbt_region_base_ = {};
-  uint32_t vbt_region_size_ = {};
+  AcpiMemoryRegion memory_op_region_;
+
+  // Empty if the VBT fits in the Memory OpRegion's Mailbox 4.
+  AcpiMemoryRegion extended_vbt_region_;
+
   igd_opregion_t* igd_opregion_;
   bios_data_blocks_header_t* bdb_;
 

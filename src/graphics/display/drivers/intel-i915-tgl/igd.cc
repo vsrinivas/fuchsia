@@ -6,12 +6,13 @@
 
 #include <lib/device-protocol/pci.h>
 #include <lib/zircon-internal/align.h>
-#include <lib/zx/object.h>
-#include <lib/zx/vmar.h>
+#include <lib/zx/status.h>
 #include <limits.h>
+#include <zircon/status.h>
 
 #include <hwreg/bitfields.h>
 
+#include "src/graphics/display/drivers/intel-i915-tgl/acpi-memory-region.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/intel-i915-tgl.h"
 
 namespace {
@@ -183,14 +184,7 @@ std::optional<tgl_registers::Ddi> PortToDdi(uint8_t dvo_port) {
 
 namespace i915_tgl {
 
-IgdOpRegion::~IgdOpRegion() {
-  if (vbt_region_base_) {
-    zx::vmar::root_self()->unmap(vbt_region_base_, vbt_region_size_);
-  }
-  if (igd_opregion_pages_base_) {
-    zx::vmar::root_self()->unmap(igd_opregion_pages_base_, igd_opregion_pages_len_);
-  }
-}
+IgdOpRegion::~IgdOpRegion() = default;
 
 template <typename T>
 T* IgdOpRegion::GetSection(uint16_t* size) {
@@ -413,33 +407,21 @@ zx_status_t IgdOpRegion::Init(const ddk::Pci& pci) {
     return status;
   }
 
-  // igd_addr may not be page aligned
-  uint32_t igd_offset = igd_addr & (PAGE_SIZE - 1);
-  uint32_t igd_base = igd_addr & ~(PAGE_SIZE - 1);
+  {
+    zx::status<AcpiMemoryRegion> memory_op_region =
+        AcpiMemoryRegion::Create(igd_addr, kIgdOpRegionLen);
+    if (memory_op_region.is_error()) {
+      zxlogf(ERROR, "Failed to map IGD Memory OpRegion: %s",
+             zx_status_get_string(memory_op_region.error_value()));
+      return memory_op_region.error_value();
+    }
 
-  // TODO(stevensd): This is directly mapping a physical address into our address space, which
-  // is not something we'll be able to do forever. At some point, there will need to be an
-  // actual API (probably in ACPI) to do this.
-  igd_opregion_pages_len_ = ZX_PAGE_ALIGN(kIgdOpRegionLen + igd_offset);
-  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
-  status = zx::vmo::create_physical(*zx::unowned_resource(get_root_resource()), igd_base,
-                                    igd_opregion_pages_len_, &igd_opregion_pages_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to access IGD OpRegion (%d)", status);
-    return status;
-  }
-
-  status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, igd_opregion_pages_, 0,
-                                      igd_opregion_pages_len_, &igd_opregion_pages_base_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to map IGD OpRegion (%d)", status);
-    return status;
-  }
-
-  igd_opregion_ = reinterpret_cast<igd_opregion_t*>(igd_opregion_pages_base_ + igd_offset);
-  if (!igd_opregion_->validate()) {
-    zxlogf(ERROR, "Failed to validate IGD OpRegion");
-    return ZX_ERR_INTERNAL;
+    memory_op_region_ = std::move(memory_op_region).value();
+    igd_opregion_ = reinterpret_cast<igd_opregion_t*>(memory_op_region_.data().data());
+    if (!igd_opregion_->validate()) {
+      zxlogf(ERROR, "Failed to validate IGD Memory OpRegion");
+      return ZX_ERR_INTERNAL;
+    }
   }
 
   vbt_header_t* vbt_header = nullptr;
@@ -448,27 +430,16 @@ zx_status_t IgdOpRegion::Init(const ddk::Pci& pci) {
       igd_opregion_->asle_supported()) {
     auto [rvda, rvds] = igd_opregion_->vbt_region();
 
-    rvda += igd_base;
-    rvds += igd_offset;
-
-    vbt_region_size_ = ZX_PAGE_ALIGN(rvds);
-
-    status = zx::vmo::create_physical(*zx::unowned_resource(get_root_resource()), rvda,
-                                      vbt_region_size_, &vbt_region_vmo_);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "Failed to create vbt region (%d)", status);
-      return status;
+    zx::status<AcpiMemoryRegion> extended_vbt_region =
+        AcpiMemoryRegion::Create(igd_addr + rvda, rvds);
+    if (extended_vbt_region.is_error()) {
+      zxlogf(ERROR, "Failed to map extended VBT: %s",
+             zx_status_get_string(extended_vbt_region.error_value()));
+      return extended_vbt_region.error_value();
     }
 
-    status = zx::vmar::root_self()->map(ZX_VM_PERM_READ, 0 /*vmar_offset*/, vbt_region_vmo_,
-                                        0 /*vmo_offset*/, vbt_region_size_, &vbt_region_base_);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "Failed to map IGD OpRegion (%d)", status);
-      return status;
-    }
-
-    vbt_header = reinterpret_cast<vbt_header_t*>(vbt_region_base_ + igd_offset);
-
+    extended_vbt_region_ = std::move(extended_vbt_region).value();
+    vbt_header = reinterpret_cast<vbt_header_t*>(extended_vbt_region_.data().data());
   } else {
     vbt_header = reinterpret_cast<vbt_header_t*>(&igd_opregion_->mailbox4);
   }
