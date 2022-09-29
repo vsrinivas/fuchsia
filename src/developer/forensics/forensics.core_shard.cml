@@ -59,9 +59,10 @@
         {
             // This comes from appmgr.
             protocol: "fuchsia.sys.internal.CrashIntrospect",
-            from: "void",
+            from: "#appmgr",
             to: "#exceptions",
-            availability: "optional",
+            source_availability: "unknown",
+            dependency: "weak_for_migration",
         },
         {
             protocol: [

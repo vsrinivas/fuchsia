@@ -29,13 +29,14 @@
         },
         {
             protocol: "fuchsia.sys.internal.LogConnector",
-            from: "self",
             path: "/appmgr_svc/fuchsia.sys.internal.LogConnector",
         },
         {
             protocol: "fuchsia.sys.internal.ComponentEventProvider",
-            from: "self",
             path: "/appmgr_svc/fuchsia.sys.internal.ComponentEventProvider",
+        },
+        {
+            protocol: "fuchsia.sys.internal.CrashIntrospect",
         },
 
         // `svc_from_sys` and `svc_for_sys` contain protocols that are routed from `appmgr` to
@@ -140,6 +141,7 @@
         {
             protocol: [
                 "fuchsia.appmgr.Startup",
+                "fuchsia.sys.internal.CrashIntrospect",
                 "fuchsia.sys.internal.ComponentEventProvider",
                 "fuchsia.sys.internal.LogConnector",
                 "fuchsia.sys.Launcher",
