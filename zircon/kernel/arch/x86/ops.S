@@ -26,7 +26,7 @@
 FUNCTION(x86_enable_ints_and_hlt)
     sti
     hlt  /* HLT must immediately follow STI; it executes in the interrupt shadow */
-    ret
+    RET_AND_SPECULATION_POSTFENCE
 END_FUNCTION(x86_enable_ints_and_hlt)
 
 
@@ -55,7 +55,7 @@ FUNCTION(read_msr_safe)
     mov %rdx, (%rsi)
 
     mov $ZX_OK, %rax
-    ret
+    RET_AND_SPECULATION_POSTFENCE
 .Lgpf_handler:
     // Cleanup GPF handler
     movq $0, %gs:PERCPU_GPF_RETURN_OFFSET
@@ -63,7 +63,7 @@ FUNCTION(read_msr_safe)
     popfq
 
     mov $ZX_ERR_NOT_SUPPORTED, %rax
-    ret
+    RET_AND_SPECULATION_POSTFENCE
 END_FUNCTION(read_msr_safe)
 
 /* zx_status_t write_msr_safe(uint32_t msr_id, uint64_t val); */
@@ -88,13 +88,13 @@ FUNCTION(write_msr_safe)
     movq $0, %gs:PERCPU_GPF_RETURN_OFFSET
     popfq
     movq $ZX_OK, %rax
-    ret
+    RET_AND_SPECULATION_POSTFENCE
 
 .Lwrite_msr_safe_gpf:
     movq $0, %gs:PERCPU_GPF_RETURN_OFFSET
     popfq
     mov $ZX_ERR_NOT_SUPPORTED, %rax
-    ret
+    RET_AND_SPECULATION_POSTFENCE
 END_FUNCTION(write_msr_safe)
 
 /* void x86_enable_ints_and_mwait(uint32_t hints); */
@@ -104,7 +104,7 @@ FUNCTION(x86_enable_ints_and_mwait)
     xor %ecx, %ecx
     sti
     mwait /* MWAIT must immediately follow STI; it executes in the interrupt shadow */
-    ret
+    RET_AND_SPECULATION_POSTFENCE
 END_FUNCTION(x86_enable_ints_and_mwait)
 
 /* void x86_monitor(void* addr); */
@@ -115,7 +115,7 @@ FUNCTION(x86_monitor)
     xor %ecx, %ecx
     xor %edx, %edx
     monitor
-    ret
+    RET_AND_SPECULATION_POSTFENCE
 END_FUNCTION(x86_monitor)
 
 // void x86_ras_fill(void)
@@ -167,5 +167,5 @@ FUNCTION(x86_ras_fill)
 
     addq $256, %rsp
     popq %rcx
-    ret
+    RET_AND_SPECULATION_POSTFENCE
 END_FUNCTION(x86_ras_fill)

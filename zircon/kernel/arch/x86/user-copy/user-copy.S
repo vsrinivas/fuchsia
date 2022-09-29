@@ -89,6 +89,7 @@
   // Reset fault return.
   movq $0, (%r10)
   ret
+  int3  // AMD SB-1036: Insert int3 after unconditional jmps to constrain speculation
 
 .Lfault_copy:
   // If we are capturing faults the flags will have been placed in rcx and the fault address in
@@ -99,4 +100,5 @@
   movl $ZX_ERR_INVALID_ARGS, %eax
   or %rcx, %rax
   jmp .Lcleanup_copy
+  int3  // AMD SB-1036: Insert int3 after unconditional jmps to constrain speculation
 .end_function

@@ -91,4 +91,19 @@ add $\value, %rsp
   .cfi_undefined %r14 ; \
   .cfi_undefined %r15
 
+// RET with a dispatch-serializing instruction afterwards. Prevents processors
+// from speculatively executing instructions after the RET. Some processors
+// may speculatively execute instructions after RET without this fence.
+#define RET_AND_SPECULATION_POSTFENCE \
+  ret; \
+  int3
+
+// Unconditional JMP with a dispatch-serializing instruction afterwards.
+// Prevents processors from speculatively executing instructions after the JMP.
+// Some processors may speculatively execute instructions after RET without this
+// fence.
+#define JMP_AND_SPECULATION_POSTFENCE(_x) \
+  jmp _x; \
+  int3
+
 #endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_ASM_MACROS_H_

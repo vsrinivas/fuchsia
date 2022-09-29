@@ -16,4 +16,5 @@
 .LINT1:
   movq %r11, (%rsp)
   ret
+  int3
 .end_function

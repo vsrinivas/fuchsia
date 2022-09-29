@@ -37,7 +37,7 @@ FUNCTION(x86_64_context_switch)
     pop_reg %rbp
     pop_reg %rbx
 
-    retq
+    RET_AND_SPECULATION_POSTFENCE
 END_FUNCTION(x86_64_context_switch)
 
 /* rep stos version of page zero */
@@ -48,7 +48,7 @@ FUNCTION(arch_zero_page)
 
     rep     stosq
 
-    ret
+    RET_AND_SPECULATION_POSTFENCE
 END_FUNCTION(arch_zero_page)
 
 // This clobbers %rax and memory below %rsp, but preserves all other registers.
@@ -57,7 +57,7 @@ FUNCTION(load_startup_idt)
     movw $(16 * 256) - 1, -16(%rsp)
     movq %rax, -16+2(%rsp)
     lidt -16(%rsp)
-    ret
+    RET_AND_SPECULATION_POSTFENCE
 END_FUNCTION(load_startup_idt)
 
 // void mds_buff_overwrite(void)
@@ -72,5 +72,5 @@ FUNCTION(mds_buff_overwrite)
     movw    %ds, (%rsp)
     verw    (%rsp)
     addq    $8, %rsp
-    ret
+    RET_AND_SPECULATION_POSTFENCE
 END_FUNCTION(mds_buff_overwrite)

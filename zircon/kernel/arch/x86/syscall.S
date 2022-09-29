@@ -168,7 +168,7 @@
     post_pop (\n - 5)
 .endif
 
-    jmp x86_syscall_cleanup_and_return
+    JMP_AND_SPECULATION_POSTFENCE(x86_syscall_cleanup_and_return)
 .endm
 
 .macro cfi_outermost_frame
@@ -302,12 +302,12 @@ FUNCTION_LABEL(x86_syscall)
     leaq    .Lcall_wrapper_table(%rip), %r11
     movq    (%r11,%rax,8), %r11
     // Spectre V2: Use retpoline to invoke system call handler.
-    jmp     __x86_indirect_thunk_r11
+    JMP_AND_SPECULATION_POSTFENCE(__x86_indirect_thunk_r11)
 .Lunknown_syscall:
     mov     %rax, %rdi // move the syscall number into the 0 arg slot
     mov     %rcx, %rsi // pc into arg 1
     call    unknown_syscall
-    jmp     x86_syscall_cleanup_and_return
+    JMP_AND_SPECULATION_POSTFENCE(x86_syscall_cleanup_and_return)
 
 .Lrestricted_syscall:
     mov     %rsp, %rdi
@@ -414,7 +414,7 @@ syscall_maybe_mds_buff_overwrite:
     call    x86_syscall_process_pending_signals
 
     cli
-    jmp     .Lreturn_from_syscall
+    JMP_AND_SPECULATION_POSTFENCE(.Lreturn_from_syscall)
 END_FUNCTION(x86_syscall_cleanup_and_return)
 
 // One of these macros is invoked by kernel.inc for each syscall.

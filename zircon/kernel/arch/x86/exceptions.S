@@ -52,7 +52,7 @@
    .endif
     // Fill in the interrupt number.
     push_value $isr.current
-    jmp interrupt_common
+    JMP_AND_SPECULATION_POSTFENCE(interrupt_common)
   .end_function
   .popsection
 
@@ -257,7 +257,7 @@
   mov %rbx, %rax
   wrmsr64 MSR_IA32_GS_BASE
 
-  jmp .Lcommon_return
+  JMP_AND_SPECULATION_POSTFENCE(.Lcommon_return)
 
 .end_function
 
@@ -291,8 +291,8 @@
   // We can actually avoid this jump if we put this code above
   // interrupt_common and just fall through, but benefits of doing this are
   // not obvious so for now for the sake of clarity keep this jump.
-  jmp interrupt_common
+  JMP_AND_SPECULATION_POSTFENCE(interrupt_common)
 
 .Lexit:
-  ret
+  RET_AND_SPECULATION_POSTFENCE
 .end_function
