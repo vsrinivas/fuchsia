@@ -16,9 +16,10 @@ std::shared_ptr<ConsumerNode> ConsumerNode::Create(Args args) {
    public:
     explicit WithPublicCtor(std::string_view name, PipelineDirection pipeline_direction,
                             ConsumerStagePtr pipeline_stage, const Format& format,
-                            std::shared_ptr<CommandQueue> command_queue)
+                            std::shared_ptr<CommandQueue> command_queue,
+                            std::shared_ptr<GraphMixThread> mix_thread)
         : ConsumerNode(name, pipeline_direction, std::move(pipeline_stage), format,
-                       std::move(command_queue)) {}
+                       std::move(command_queue), std::move(mix_thread)) {}
   };
 
   auto command_queue = std::make_shared<CommandQueue>();
@@ -36,9 +37,21 @@ std::shared_ptr<ConsumerNode> ConsumerNode::Create(Args args) {
 
   auto node = std::make_shared<WithPublicCtor>(args.name, args.pipeline_direction,
                                                std::move(pipeline_stage), args.format,
-                                               std::move(command_queue));
-  node->set_thread(args.thread);
+                                               std::move(command_queue), std::move(args.thread));
   return node;
+}
+
+ConsumerNode::ConsumerNode(std::string_view name, PipelineDirection pipeline_direction,
+                           ConsumerStagePtr pipeline_stage, const Format& format,
+                           std::shared_ptr<CommandQueue> command_queue,
+                           std::shared_ptr<GraphMixThread> mix_thread)
+    : Node(name, /*is_meta=*/false, pipeline_stage->reference_clock(), pipeline_direction,
+           pipeline_stage, /*parent=*/nullptr),
+      format_(format),
+      command_queue_(std::move(command_queue)),
+      mix_thread_(std::move(mix_thread)),
+      consumer_stage_(std::move(pipeline_stage)) {
+  set_thread(mix_thread_);
 }
 
 void ConsumerNode::Start(ConsumerStage::StartCommand cmd) const { command_queue_->push(cmd); }
@@ -47,6 +60,11 @@ void ConsumerNode::Stop(ConsumerStage::StopCommand cmd) const { command_queue_->
 zx::duration ConsumerNode::GetSelfPresentationDelayForSource(const NodePtr& source) const {
   // TODO(fxbug.dev/87651): Implement this.
   return zx::duration(0);
+}
+
+void ConsumerNode::DestroySelf() {
+  // Deregister from the thread.
+  mix_thread_->RemoveConsumer(consumer_stage_);
 }
 
 bool ConsumerNode::CanAcceptSourceFormat(const Format& format) const { return format == format_; }

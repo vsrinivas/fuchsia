@@ -27,8 +27,6 @@ const auto kPipelineDirection = PipelineDirection::kOutput;
 constexpr auto kMixJobFrames = 10;
 constexpr auto kMixJobPeriod = zx::msec(1);
 
-}  // namespace
-
 class ConsumerNodeTest : public ::testing::Test {
  protected:
   struct TestHarness {
@@ -80,7 +78,8 @@ ConsumerNodeTest::TestHarness ConsumerNodeTest::MakeTestHarness(FakeGraph::Args 
 
 // This removes a circular references between the consumer and thread objects.
 ConsumerNodeTest::TestHarness::~TestHarness() {
-  mix_thread->RemoveConsumer(consumer_node->consumer_stage_);
+  Node::Destroy(*graph->global_task_queue(), graph->detached_thread(), consumer_node);
+  EXPECT_EQ(mix_thread->num_consumers(), 0);
   graph->global_task_queue()->RunForThread(mix_thread->id());
 }
 
@@ -138,7 +137,6 @@ TEST_F(ConsumerNodeTest, CreateEdgeDestNotAllowed) {
   EXPECT_EQ(result.error(),
             fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
 }
-
 TEST_F(ConsumerNodeTest, CreateEdgeSuccess) {
   auto h = MakeTestHarness({
       .unconnected_ordinary_nodes = {1},
@@ -161,6 +159,7 @@ TEST_F(ConsumerNodeTest, CreateEdgeSuccess) {
   EXPECT_EQ(consumer_stage->thread(), h.mix_thread->pipeline_thread());
   EXPECT_EQ(consumer_stage->format(), kFormat);
   EXPECT_EQ(consumer_stage->reference_clock(), h.clock);
+  EXPECT_EQ(h.mix_thread->num_consumers(), 1);
 
   q.RunForThread(h.mix_thread->id());
 
@@ -227,4 +226,5 @@ TEST_F(ConsumerNodeTest, CreateEdgeSuccess) {
   }
 }
 
+}  // namespace
 }  // namespace media_audio

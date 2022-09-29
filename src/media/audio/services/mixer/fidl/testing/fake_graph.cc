@@ -66,6 +66,12 @@ void FakeNode::DestroyChildDest(NodePtr child_dest) {
   }
 }
 
+void FakeNode::DestroySelf() {
+  if (on_destroy_self_) {
+    on_destroy_self_();
+  }
+}
+
 bool FakeNode::CanAcceptSourceFormat(const Format& format) const {
   if (on_can_accept_source_format_) {
     return on_can_accept_source_format_(format);
@@ -103,6 +109,21 @@ FakeGraph::FakeGraph(Args args)
   // Create all meta nodes and their children.
   for (auto& [meta_id, meta_args] : args.meta_nodes) {
     auto meta = CreateMetaNode(meta_id);
+
+    if (meta_args.built_in_children) {
+      std::vector<NodePtr> builtin_sources;
+      for (auto id : meta_args.source_children) {
+        builtin_sources.push_back(CreateOrdinaryNode(id, meta));
+      }
+
+      std::vector<NodePtr> builtin_dests;
+      for (auto id : meta_args.dest_children) {
+        builtin_dests.push_back(CreateOrdinaryNode(id, meta));
+      }
+
+      meta->SetBuiltInChildren(std::move(builtin_sources), std::move(builtin_dests));
+      continue;
+    }
 
     for (auto id : meta_args.source_children) {
       meta->AddChildSource(CreateOrdinaryNode(id, meta));
@@ -148,20 +169,19 @@ FakeGraph::FakeGraph(Args args)
 
 FakeGraph::~FakeGraph() {
   for (auto [id, node] : nodes_) {
-    // Clear all shared_ptrs. This removes circular references so all FakeNodes can be deleted.
-    node->sources_.clear();
-    node->dest_ = nullptr;
-    node->child_sources_.clear();
-    node->child_dests_.clear();
     // Clear closures that might have additional references.
     node->on_get_self_presentation_delay_for_source_ = nullptr;
     node->on_create_new_child_source_ = nullptr;
     node->on_create_new_child_dest_ = nullptr;
     node->on_destroy_child_source_ = nullptr;
     node->on_destroy_child_dest_ = nullptr;
+    node->on_destroy_self_ = nullptr;
     node->on_can_accept_source_format_ = nullptr;
     node->on_max_sources_ = nullptr;
     node->on_allows_dest_ = nullptr;
+    // Remove all circular references so that every FakeNode and FakePipelineStage can be deleted.
+    // Do this after clearing closures so the closures don't run.
+    Node::Destroy(*global_task_queue_, detached_thread_, node);
     // Also clear PipelineStage sources. This is necessary in certain error-case tests, such as
     // tests that intentionally create cycles.
     if (!node->is_meta()) {

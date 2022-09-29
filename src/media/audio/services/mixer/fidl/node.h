@@ -90,6 +90,22 @@ namespace media_audio {
 // and destination nodes. Hence, a node ill not be deleted until all of its edges are explicitly
 // deleted by `DeleteEdge` calls.
 //
+// # META NODE CHILDREN
+//
+// Meta nodes can create their children in two ways:
+//
+// * When the meta node is created. In this mode, the meta node's children are set immediately after
+//   the meta node is created, by `SetBuiltInChildren` and from that point forward, child nodes
+//   cannot be added or removed. The child nodes are "built-in" to the meta node.
+//
+// * Dynamically each time we create an edge `A -> Meta` or `Meta -> A`. In this mode, there is one
+//   `child_source` node for each "source" edge of the meta node, and one `child_dest` node for each
+//   "destination" edge of the meta node.
+//
+// CustomNode uses built-in child nodes because the set of input and output ports is fixed.
+// SplitterNode and MetaProducerNode use dynamic child nodes that are created and deleted along with
+// incoming and outgoing edges.
+//
 // # THREAD SAFETY
 //
 // Nodes are not thread safe. Nodes must be accessed by the main FIDL thread only and should
@@ -110,6 +126,14 @@ class Node {
   static fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> DeleteEdge(
       GlobalTaskQueue& global_queue, GraphDetachedThreadPtr detached_thread, NodePtr source,
       NodePtr dest);
+
+  // TODO(fxbug.dev/87651): Consider renaming Destroy. It does destroy some internal resources (e.g.
+  // child nodes) but it doesn't fully destroy the `node`, hence the name may be somewhat confusing.
+
+  // Calls DeleteEdge for each incoming and outgoing edge, then deletes all child nodes. After this
+  // is called, all references to this Node can be dropped.
+  static void Destroy(GlobalTaskQueue& global_queue, GraphDetachedThreadPtr detached_thread,
+                      NodePtr node);
 
   // Returns the node's name. This is used for diagnostics only.
   // The name may not be a unique identifier.
@@ -154,13 +178,10 @@ class Node {
   // Kind of pipeline this node participates in.
   [[nodiscard]] PipelineDirection pipeline_direction() const { return pipeline_direction_; }
 
-  // Prepares this node to be destroyed by removing all links from it. This is useful to make sure
-  // that all node references are cleared up before destroying this node.
-  void PrepareToDestroy();
-
   // Returns total "self" presentation delay contribution for this node if reached through `source`.
   // This typically consists of the internal processing delay contribution of this node with respect
   // to `source` edge.
+  //
   // REQUIRED: !is_meta() and an edge exists from `source` to this node (unless source == nullptr).
   virtual zx::duration GetSelfPresentationDelayForSource(const NodePtr& source) const = 0;
 
@@ -211,6 +232,13 @@ class Node {
   // REQUIRED: is_meta()
   virtual void DestroyChildDest(NodePtr child_dest) {}
 
+  // Called by Destroy just after incoming links, outgoing links, and child nodes have been removed.
+  // This allows subclasses to destroy any references to this node which would prevent this node
+  // from being deleted. The default implementation is a no-op.
+  //
+  // This is called for both meta and ordinary nodes.
+  virtual void DestroySelf() {}
+
   // Reports whether this node can accept a source edge with the given format. If MaxSources() is 0,
   // this should return false.
   //
@@ -228,9 +256,18 @@ class Node {
   // REQUIRED: !is_meta()
   virtual bool AllowsDest() const = 0;
 
-  // TODO(fxbug.dev/87651): Below methods are moved here to have "protected" visibility in order to
-  // allow `CustomNode` to create its built-in child source and destination nodes. Ideally, we'd
-  // like the hide this implementation detail back to "private" scope.
+  // Sets built-in child nodes for this meta node. If a meta node has built-in children, this must
+  // be called immediately after the meta node is created. See "META NODE CHILDREN" in the class
+  // comments.
+  //
+  // REQUIRED: is_meta()
+  void SetBuiltInChildren(std::vector<NodePtr> child_sources, std::vector<NodePtr> child_dests);
+
+ private:
+  friend class FakeGraph;
+
+  static fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> CreateEdgeInner(
+      GlobalTaskQueue& global_queue, NodePtr source, NodePtr dest);
 
   // Implementation of `CreateEdge`.
   void AddSource(NodePtr source);
@@ -243,12 +280,6 @@ class Node {
   void RemoveDest(NodePtr dest);
   void RemoveChildSource(NodePtr child_source);
   void RemoveChildDest(NodePtr child_dest);
-
- private:
-  friend class FakeGraph;
-
-  static fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> CreateEdgeInner(
-      GlobalTaskQueue& global_queue, NodePtr source, NodePtr dest);
 
   const std::string name_;
   const bool is_meta_;
@@ -270,6 +301,7 @@ class Node {
   // If is_meta_.
   std::vector<NodePtr> child_sources_;
   std::vector<NodePtr> child_dests_;
+  bool built_in_children_ = false;
 };
 
 }  // namespace media_audio

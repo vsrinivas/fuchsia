@@ -14,6 +14,30 @@ namespace {
 
 using ::testing::ElementsAre;
 
+//
+// CreateEdge
+//
+// We test the following kinds of edges:
+// - (ordinary -> ordinary)
+// - (ordinary -> meta)
+// - (meta -> ordinary)
+// - (meta -> meta)
+//
+// In these scenarios:
+// - (error) source already connected to the same node node (if !source->is_meta)
+// - (error) source already connected to a different node (if !source->is_meta)
+// - (error) source has too many dest edges (if source->is_meta)
+// - (error) dest has too many source edges
+// - (error) dest doesn't accept source's format
+// - (error) dest is an output pipeline, source is an input pipeline
+// - (error) would create a cycle
+// - success
+//
+// In the "success" scenarios, we verify that the nodes are properly connected and that the source
+// PipelineStage is assigned to the same thread as destination PipelineStage (which is assigned to
+// fake_thread_).
+//
+
 class NodeCreateEdgeTest : public ::testing::Test {
  protected:
   static inline ThreadId kThreadId = 1;
@@ -47,26 +71,6 @@ class NodeCreateEdgeTest : public ::testing::Test {
     EXPECT_EQ(dest->thread(), mix_thread);
   }
 };
-
-// For CreateEdge, we test the following kinds of edges:
-// - (ordinary -> ordinary)
-// - (ordinary -> meta)
-// - (meta -> ordinary)
-// - (meta -> meta)
-//
-// In these scenarios:
-// - (error) source already connected to the same node node (if !source->is_meta)
-// - (error) source already connected to a different node (if !source->is_meta)
-// - (error) source has too many dest edges (if source->is_meta)
-// - (error) dest has too many source edges
-// - (error) dest doesn't accept source's format
-// - (error) dest is an output pipeline, source is an input pipeline
-// - (error) would create a cycle
-// - success
-//
-// In the "success" scenarios, we verify that the nodes are properly connected and that the source
-// PipelineStage is assigned to the same thread as destination PipelineStage (which is assigned to
-// kThreadId).
 
 TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinaryAlreadyConnected) {
   FakeGraph graph({
@@ -574,6 +578,24 @@ TEST_F(NodeCreateEdgeTest, MetaToMetaSuccess) {
                                  dest_child->fake_pipeline_stage());
 }
 
+//
+// DeleteEdge
+//
+// We test the following kinds of edges:
+// - (ordinary -> ordinary)
+// - (ordinary -> meta)
+// - (meta -> ordinary)
+// - (meta -> meta)
+//
+// In these scenarios:
+// - (error) not connected
+// - (error) connected backwards
+// - success
+//
+// In the "success" scenarios, the source PipelineStage is initially assigned to fake_thread_, but
+// must be assigned to detached_thread_ after the edge is deleted.
+//
+
 class NodeDeleteEdgeTest : public ::testing::Test {
  protected:
   static inline ThreadId kThreadId = 1;
@@ -607,20 +629,6 @@ class NodeDeleteEdgeTest : public ::testing::Test {
     EXPECT_EQ(dest->thread(), mix_thread);
   }
 };
-
-// For DeleteEdge, we test the following kinds of edges:
-// - (ordinary -> ordinary)
-// - (ordinary -> meta)
-// - (meta -> ordinary)
-// - (meta -> meta)
-//
-// In these scenarios:
-// - (error) not connected
-// - (error) connected backwards
-// - success
-//
-// In the "success" scenarios, the source PipelineStage is initially assigned to kThreadId , but
-// must be assigned to the detached thread after the edge is deleted.
 
 TEST_F(NodeDeleteEdgeTest, OrdinaryToOrdinaryNotConnected) {
   FakeGraph graph({
@@ -870,6 +878,233 @@ TEST_F(NodeDeleteEdgeTest, MetaToMetaSuccess) {
   EXPECT_TRUE(dest_destroyed);
 
   CheckPipelineStagesAfterDelete(graph, source_stage, dest_stage);
+}
+
+//
+// DestroyAllEdges
+//
+// We create the following pairs of edges:
+// - (ordinary -> ordinary)
+// - (ordinary -> meta)
+// - (meta -> ordinary)
+// - (meta -> meta)
+//
+// Then for each pair, we run these cases
+// - delete the source
+// - delete the dest
+//
+// Plus two additional cases:
+// - delete A, where there exists an edge (A->B), where B is a built-in child of a meta node
+// - delete A, where there exists an edge (B->A), where B is a built-in child of a meta node
+//
+
+class NodeDestroyTest : public NodeDeleteEdgeTest {};
+
+TEST_F(NodeDestroyTest, OrdinaryToOrdinary) {
+  for (int k = 0; k < 2; k++) {
+    SCOPED_TRACE(std::string("Delete ") + (k == 0 ? "source" : "dest"));
+
+    FakeGraph graph({
+        .edges = {{1, 2}},
+        .threads = {{kThreadId, {1, 2}}},
+    });
+
+    auto q = graph.global_task_queue();
+    auto source = graph.node(1);
+    auto dest = graph.node(2);
+
+    auto to_destroy = (k == 0) ? source : dest;
+    bool destroyed = false;
+    to_destroy->SetOnDestroySelf([&destroyed]() { destroyed = true; });
+
+    Node::Destroy(*q, graph.detached_thread(), to_destroy);
+
+    EXPECT_EQ(source->dest(), nullptr);
+    EXPECT_THAT(dest->sources(), ElementsAre());
+    EXPECT_TRUE(destroyed);
+
+    CheckPipelineStagesAfterDelete(graph, source->fake_pipeline_stage(),
+                                   dest->fake_pipeline_stage());
+  }
+}
+
+TEST_F(NodeDestroyTest, OrdinaryToMeta) {
+  for (int k = 0; k < 2; k++) {
+    SCOPED_TRACE(std::string("Delete ") + (k == 0 ? "source" : "dest"));
+
+    FakeGraph graph({
+        .meta_nodes = {{2, {.source_children = {3}, .dest_children = {}}}},
+        .edges = {{1, 3}},
+        .threads = {{kThreadId, {1, 3}}},
+    });
+
+    auto q = graph.global_task_queue();
+    auto source = graph.node(1);
+    auto dest = graph.node(2);
+    auto dest_child_source = std::static_pointer_cast<FakeNode>(dest->child_sources()[0]);
+
+    bool dest_destroyed = false;
+    dest->SetOnDestroyChildSource(
+        [&dest_destroyed, expected = dest_child_source](NodePtr child_source) {
+          EXPECT_EQ(child_source, expected);
+          dest_destroyed = true;
+        });
+
+    auto to_destroy = (k == 0) ? source : dest;
+    bool destroyed = false;
+    to_destroy->SetOnDestroySelf([&destroyed]() { destroyed = true; });
+
+    Node::Destroy(*q, graph.detached_thread(), to_destroy);
+
+    EXPECT_EQ(source->dest(), nullptr);
+    EXPECT_EQ(dest->child_sources().size(), 0u);
+    EXPECT_TRUE(dest_destroyed);
+    EXPECT_TRUE(destroyed);
+
+    CheckPipelineStagesAfterDelete(graph, source->fake_pipeline_stage(),
+                                   dest_child_source->fake_pipeline_stage());
+  }
+}
+
+TEST_F(NodeDestroyTest, OrdinaryToMetaWithBuiltinChild) {
+  FakeGraph graph({
+      .meta_nodes = {{2, {.source_children = {3}, .built_in_children = true}}},
+      .edges = {{1, 3}},
+      .threads = {{kThreadId, {1, 3}}},
+  });
+
+  auto q = graph.global_task_queue();
+  auto source = graph.node(1);
+  auto dest = graph.node(2);
+  auto dest_child_source = graph.node(3);
+
+  NodePtr destroyed;
+  dest->SetOnDestroyChildSource(
+      [&destroyed](NodePtr child_source) mutable { destroyed = child_source; });
+
+  // When destroying node 1, we disconnect from child node 3, but don't delete child node 3 because
+  // it's a builtin child of meta node 2.
+  Node::Destroy(*q, graph.detached_thread(), source);
+
+  EXPECT_EQ(source->dest(), nullptr);
+  EXPECT_EQ(dest->child_sources().size(), 1u);
+  EXPECT_EQ(dest_child_source->sources().size(), 0u);
+  EXPECT_FALSE(destroyed) << "should not have destroyed " << destroyed->name();
+}
+
+TEST_F(NodeDestroyTest, MetaToOrdinary) {
+  for (int k = 0; k < 2; k++) {
+    SCOPED_TRACE(std::string("Delete ") + (k == 0 ? "source" : "dest"));
+
+    FakeGraph graph({
+        .meta_nodes = {{1, {.source_children = {}, .dest_children = {3}}}},
+        .edges = {{3, 2}},
+        .threads = {{kThreadId, {2, 3}}},
+    });
+
+    auto q = graph.global_task_queue();
+    auto source = graph.node(1);
+    auto dest = graph.node(2);
+    auto source_child_dest = std::static_pointer_cast<FakeNode>(source->child_dests()[0]);
+
+    bool source_destroyed = false;
+    source->SetOnDestroyChildDest(
+        [&source_destroyed, expected = source_child_dest](NodePtr child_dest) {
+          EXPECT_EQ(child_dest, expected);
+          source_destroyed = true;
+        });
+
+    auto to_destroy = (k == 0) ? source : dest;
+    bool destroyed = false;
+    to_destroy->SetOnDestroySelf([&destroyed]() { destroyed = true; });
+
+    Node::Destroy(*q, graph.detached_thread(), to_destroy);
+
+    EXPECT_EQ(source->child_dests().size(), 0u);
+    EXPECT_EQ(dest->sources().size(), 0u);
+    EXPECT_TRUE(source_destroyed);
+    EXPECT_TRUE(destroyed);
+
+    CheckPipelineStagesAfterDelete(graph, source_child_dest->fake_pipeline_stage(),
+                                   dest->fake_pipeline_stage());
+  }
+}
+
+TEST_F(NodeDestroyTest, MetaToOrdinaryWithBuiltinChild) {
+  FakeGraph graph({
+      .meta_nodes = {{1, {.dest_children = {3}, .built_in_children = true}}},
+      .edges = {{3, 2}},
+      .threads = {{kThreadId, {2, 3}}},
+  });
+
+  auto q = graph.global_task_queue();
+  auto source = graph.node(1);
+  auto dest = graph.node(2);
+  auto source_child_dest = graph.node(3);
+
+  NodePtr destroyed;
+  source->SetOnDestroyChildDest(
+      [&destroyed](NodePtr child_source) mutable { destroyed = child_source; });
+
+  // When destroying node 2, we disconnect from child node 3, but don't delete child node 3 because
+  // it's a builtin child of meta node 1.
+  Node::Destroy(*q, graph.detached_thread(), dest);
+
+  EXPECT_EQ(source->child_dests().size(), 1u);
+  EXPECT_EQ(source_child_dest->dest(), nullptr);
+  EXPECT_EQ(dest->sources().size(), 0u);
+  EXPECT_FALSE(destroyed) << "should not have destroyed " << destroyed->name();
+}
+
+TEST_F(NodeDestroyTest, MetaToMeta) {
+  for (int k = 0; k < 2; k++) {
+    SCOPED_TRACE(std::string("Delete ") + (k == 0 ? "source" : "dest"));
+
+    FakeGraph graph({
+        .meta_nodes =
+            {
+                {1, {.source_children = {}, .dest_children = {3}}},
+                {2, {.source_children = {4}, .dest_children = {}}},
+            },
+        .edges = {{3, 4}},
+        .threads = {{kThreadId, {3, 4}}},
+    });
+
+    auto q = graph.global_task_queue();
+    auto source = graph.node(1);
+    auto dest = graph.node(2);
+    auto source_child_dest = std::static_pointer_cast<FakeNode>(source->child_dests()[0]);
+    auto dest_child_source = std::static_pointer_cast<FakeNode>(dest->child_sources()[0]);
+
+    bool source_destroyed = false;
+    source->SetOnDestroyChildDest(
+        [&source_destroyed, expected = source_child_dest](NodePtr child_dest) {
+          EXPECT_EQ(child_dest, expected);
+          source_destroyed = true;
+        });
+
+    bool dest_destroyed = false;
+    dest->SetOnDestroyChildSource(
+        [&dest_destroyed, expected = dest_child_source](NodePtr child_source) {
+          EXPECT_EQ(child_source, expected);
+          dest_destroyed = true;
+        });
+
+    auto to_destroy = (k == 0) ? source : dest;
+    bool destroyed = false;
+    to_destroy->SetOnDestroySelf([&destroyed]() { destroyed = true; });
+
+    Node::Destroy(*q, graph.detached_thread(), to_destroy);
+
+    EXPECT_EQ(source->child_dests().size(), 0u);
+    EXPECT_EQ(dest->child_sources().size(), 0u);
+    EXPECT_TRUE(source_destroyed);
+    EXPECT_TRUE(dest_destroyed);
+    EXPECT_TRUE(destroyed);
+
+    CheckPipelineStagesAfterDelete(graph, source_child_dest->fake_pipeline_stage(),
+                                   dest_child_source->fake_pipeline_stage());
+  }
 }
 
 }  // namespace

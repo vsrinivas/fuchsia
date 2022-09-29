@@ -86,6 +86,10 @@ class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
     on_destroy_child_dest_ = std::move(handler);
   }
 
+  // Registers a handler for `DestroySelf`.
+  // If a handler is not registered, a default handler is used.
+  void SetOnDestroySelf(std::function<void()> handler) { on_destroy_self_ = std::move(handler); }
+
   // Registers a handler for `CanAcceptSourceFormat`.
   // The default handler always returns true.
   void SetOnCanAcceptSourceFormat(std::function<bool(const Format&)> handler) {
@@ -118,6 +122,7 @@ class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
   NodePtr CreateNewChildDest() final;
   void DestroyChildSource(NodePtr child_source) final;
   void DestroyChildDest(NodePtr child_dest) final;
+  void DestroySelf() final;
   bool CanAcceptSourceFormat(const Format& format) const final;
   std::optional<size_t> MaxSources() const final;
   bool AllowsDest() const final;
@@ -135,6 +140,7 @@ class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
   std::function<NodePtr()> on_create_new_child_dest_;
   std::function<void(NodePtr)> on_destroy_child_source_;
   std::function<void(NodePtr)> on_destroy_child_dest_;
+  std::function<void()> on_destroy_self_;
   std::function<bool(const Format&)> on_can_accept_source_format_;
   std::function<std::optional<size_t>()> on_max_sources_;
   std::function<bool()> on_allows_dest_;
@@ -182,6 +188,7 @@ class FakeGraph {
   struct MetaNodeArgs {
     std::unordered_set<NodeId> source_children;
     std::unordered_set<NodeId> dest_children;
+    bool built_in_children = false;
   };
 
   struct Edge {

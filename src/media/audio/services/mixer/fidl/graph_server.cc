@@ -417,7 +417,26 @@ void GraphServer::CreateCustom(CreateCustomRequestView request,
 void GraphServer::DeleteNode(DeleteNodeRequestView request, DeleteNodeCompleter::Sync& completer) {
   TRACE_DURATION("audio", "Graph:::DeleteNode");
   ScopedThreadChecker checker(thread().checker());
-  FX_CHECK(false) << "not implemented";
+
+  if (!request->has_id()) {
+    FX_LOGS(WARNING) << "DeleteNode: missing id";
+    completer.ReplyError(fuchsia_audio_mixer::DeleteNodeError::kDoesNotExist);
+    return;
+  }
+
+  auto it = nodes_.find(request->id());
+  if (it == nodes_.end()) {
+    FX_LOGS(WARNING) << "DeleteNode: invalid id";
+    completer.ReplyError(fuchsia_audio_mixer::DeleteNodeError::kDoesNotExist);
+    return;
+  }
+
+  Node::Destroy(*global_task_queue_, detached_thread_, it->second);
+  nodes_.erase(it);
+
+  fidl::Arena arena;
+  completer.ReplySuccess(
+      fuchsia_audio_mixer::wire::GraphDeleteNodeResponse::Builder(arena).Build());
 }
 
 void GraphServer::CreateEdge(CreateEdgeRequestView request, CreateEdgeCompleter::Sync& completer) {

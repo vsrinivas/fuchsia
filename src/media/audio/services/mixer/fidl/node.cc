@@ -125,7 +125,12 @@ fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
     auto result = DeleteEdge(global_queue, detached_thread, source, child);
     FX_CHECK(result.is_ok()) << "unexpected DeleteEdge(source, child) failure with code "
                              << static_cast<int>(result.error());
-    dest->RemoveChildSource(child);
+    // TODO(fxbug.dev/87651): Consider a rule that each child node can have at most one source. This
+    // is implied by the CreateNewChild{Source,Dest}() API, but tests in reachability_unittest.cc
+    // create child nodes with multiple sources.
+    if (child->sources().empty()) {
+      dest->RemoveChildSource(child);
+    }
     return result;
   }
 
@@ -168,6 +173,70 @@ fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
   return fpromise::ok();
 }
 
+void Node::Destroy(GlobalTaskQueue& global_queue, GraphDetachedThreadPtr detached_thread,
+                   NodePtr node) {
+  // We call DeleteEdge for each existing edge. Since these edges exist, DeleteEdge cannot fail.
+  auto delete_edge = [&global_queue, &detached_thread](NodePtr source, NodePtr dest) {
+    // When deleting an edge A->B, if A is a dynamically-created child node, then we should delete
+    // the edge [A.parent]->B to ensure we cleanup state in A.parent.
+    auto lift_source_to_parent = [](NodePtr a) {
+      if (a->is_meta() || !a->parent()) {
+        return a;
+      }
+      if (auto meta = a->parent(); meta->built_in_children_) {
+        return a;  // built-in node, don't lift to parent
+      } else {
+        return meta;  // dynamic node, lift to parent
+      }
+    };
+
+    // Similarly for B->A.
+    auto lift_dest_to_parent = [](NodePtr a) {
+      if (a->is_meta() || !a->parent()) {
+        return a;
+      }
+      if (auto meta = a->parent(); meta->built_in_children_) {
+        return a;  // built-in node, don't lift to parent
+      } else {
+        return meta;  // dynamic node, lift to parent
+      }
+    };
+
+    auto result = DeleteEdge(global_queue, detached_thread, lift_source_to_parent(source),
+                             lift_dest_to_parent(dest));
+    FX_CHECK(result.is_ok()) << result.error();
+  };
+
+  if (!node->is_meta()) {
+    for (auto& source : node->sources()) {
+      delete_edge(source, node);
+    }
+    if (node->dest()) {
+      delete_edge(node, node->dest());
+    }
+
+    FX_CHECK(node->sources().empty());
+    FX_CHECK(node->dest() == nullptr);
+
+  } else {
+    for (auto& child_source : node->child_sources()) {
+      for (auto& source : child_source->sources()) {
+        delete_edge(source, node);
+      }
+    }
+    for (auto& child_dest : node->child_dests()) {
+      if (child_dest->dest()) {
+        delete_edge(node, child_dest->dest());
+      }
+    }
+
+    node->child_sources_.clear();
+    node->child_dests_.clear();
+  }
+
+  node->DestroySelf();
+}
+
 const std::vector<NodePtr>& Node::sources() const {
   FX_CHECK(!is_meta_);
   return sources_;
@@ -206,16 +275,6 @@ std::shared_ptr<GraphThread> Node::thread() const {
 void Node::set_thread(std::shared_ptr<GraphThread> t) {
   FX_CHECK(!is_meta_);
   thread_ = t;
-}
-
-void Node::PrepareToDestroy() {
-  if (is_meta_) {
-    child_sources_.clear();
-    child_dests_.clear();
-  } else {
-    sources_.clear();
-    dest_ = nullptr;
-  }
 }
 
 fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdgeInner(
@@ -308,6 +367,17 @@ fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdgeInn
   return fpromise::ok();
 }
 
+void Node::SetBuiltInChildren(std::vector<NodePtr> child_sources,
+                              std::vector<NodePtr> child_dests) {
+  FX_CHECK(is_meta_);
+  FX_CHECK(child_sources_.empty());
+  FX_CHECK(child_dests_.empty());
+
+  child_sources_ = std::move(child_sources);
+  child_dests_ = std::move(child_dests);
+  built_in_children_ = true;
+}
+
 void Node::AddSource(NodePtr source) {
   FX_CHECK(!is_meta_);
   FX_CHECK(source);
@@ -322,12 +392,14 @@ void Node::SetDest(NodePtr dest) {
 
 void Node::AddChildSource(NodePtr child_source) {
   FX_CHECK(is_meta_);
+  FX_CHECK(!built_in_children_);
   FX_CHECK(child_source);
   child_sources_.push_back(std::move(child_source));
 }
 
 void Node::AddChildDest(NodePtr child_dest) {
   FX_CHECK(is_meta_);
+  FX_CHECK(!built_in_children_);
   FX_CHECK(child_dest);
   child_dests_.push_back(std::move(child_dest));
 }
@@ -351,6 +423,7 @@ void Node::RemoveDest(NodePtr dest) {
 
 void Node::RemoveChildSource(NodePtr child_source) {
   FX_CHECK(is_meta_);
+  FX_CHECK(!built_in_children_);
   FX_CHECK(child_source);
 
   const auto it = std::find(child_sources_.begin(), child_sources_.end(), child_source);
@@ -361,6 +434,7 @@ void Node::RemoveChildSource(NodePtr child_source) {
 
 void Node::RemoveChildDest(NodePtr child_dest) {
   FX_CHECK(is_meta_);
+  FX_CHECK(!built_in_children_);
   FX_CHECK(child_dest);
 
   const auto it = std::find(child_dests_.begin(), child_dests_.end(), child_dest);

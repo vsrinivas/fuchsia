@@ -123,12 +123,17 @@ void CustomNode::InitializeChildNodes(PipelineStagePtr pipeline_stage, NodePtr p
                                       zx::duration presentation_delay) {
   // TODO(fxbug.dev/87651): This is currently hardcoded for the 1 -> 1 `CustomStage` implementation.
   // Refactor this to use `CustomNodeProperties` instead once M -> N edges are supported.
-  AddChildSource(std::make_shared<ChildSourceNode>(
-      std::string(parent->name()) + "ChildSource", parent->pipeline_direction(), pipeline_stage,
-      parent, detached_thread, source_format, presentation_delay));
-  AddChildDest(std::make_shared<ChildDestNode>(
-      std::string(parent->name()) + "ChildDest", parent->pipeline_direction(),
-      std::move(pipeline_stage), std::move(parent), std::move(detached_thread)));
+  SetBuiltInChildren(
+      std::vector<NodePtr>{
+          std::make_shared<ChildSourceNode>(std::string(parent->name()) + "ChildSource",
+                                            parent->pipeline_direction(), pipeline_stage, parent,
+                                            detached_thread, source_format, presentation_delay),
+      },
+      std::vector<NodePtr>{
+          std::make_shared<ChildDestNode>(std::string(parent->name()) + "ChildDest",
+                                          parent->pipeline_direction(), std::move(pipeline_stage),
+                                          std::move(parent), std::move(detached_thread)),
+      });
 }
 
 NodePtr CustomNode::CreateNewChildSource() {

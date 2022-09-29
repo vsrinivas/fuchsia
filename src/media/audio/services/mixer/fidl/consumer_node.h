@@ -49,17 +49,12 @@ class ConsumerNode : public Node {
   zx::duration GetSelfPresentationDelayForSource(const NodePtr& source) const final;
 
  private:
-  friend class ConsumerNodeTest;
   using CommandQueue = ConsumerStage::CommandQueue;
 
   ConsumerNode(std::string_view name, PipelineDirection pipeline_direction,
                ConsumerStagePtr pipeline_stage, const Format& format,
-               std::shared_ptr<CommandQueue> command_queue)
-      : Node(name, /*is_meta=*/false, pipeline_stage->reference_clock(), pipeline_direction,
-             pipeline_stage, /*parent=*/nullptr),
-        format_(format),
-        command_queue_(std::move(command_queue)),
-        consumer_stage_(std::move(pipeline_stage)) {}
+               std::shared_ptr<CommandQueue> command_queue,
+               std::shared_ptr<GraphMixThread> mix_thread);
 
   // Implementation of Node.
   NodePtr CreateNewChildSource() final {
@@ -68,12 +63,14 @@ class ConsumerNode : public Node {
   NodePtr CreateNewChildDest() final {
     UNREACHABLE << "CreateNewChildDest should not be called on ordinary nodes";
   }
+  void DestroySelf() final;
   bool CanAcceptSourceFormat(const Format& format) const final;
   std::optional<size_t> MaxSources() const final;
   bool AllowsDest() const final;
 
   const Format format_;
   const std::shared_ptr<CommandQueue> command_queue_;
+  const std::shared_ptr<GraphMixThread> mix_thread_;
   const ConsumerStagePtr consumer_stage_;
 };
 
