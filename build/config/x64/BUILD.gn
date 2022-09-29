@@ -26,6 +26,14 @@ config("mitigate_skylake_jcc") {
   }
 }
 
+# Mitigate Straight Line Speculation (CVE-2021-26341, fxrev.dev/661362) by inserting
+# INT3/fences after certain control transfer instructions. The INT3s are never
+# executed; they just confine speculative execution to valid paths in those cases.
+config("harden_sls") {
+  defines = [ "HARDEN_SLS" ]
+  cflags = [ "-mharden-sls=all" ]
+}
+
 # Optimize for Intel Haswell
 config("haswell") {
   cflags = [ "-mcpu=haswell" ]

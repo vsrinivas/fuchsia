@@ -432,6 +432,9 @@ void x86_feature_debug(void) {
 #ifdef X64_KERNEL_JCC_WORKAROUND
   print_property("jcc_fix");
 #endif
+#ifdef HARDEN_SLS
+  print_property("harden_sls");
+#endif
   if (arch::BootCpuidSupports<arch::CpuidPerformanceMonitoringA>()) {
     const arch::CpuidPerformanceMonitoringA eax = io.Read<arch::CpuidPerformanceMonitoringA>();
     const arch::CpuidPerformanceMonitoringD edx = io.Read<arch::CpuidPerformanceMonitoringD>();

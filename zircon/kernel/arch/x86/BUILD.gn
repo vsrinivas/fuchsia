@@ -43,6 +43,7 @@ config("abi") {
   # "expected resilience of generated code" contract that should be uniform
   # across all the privileged code.
   configs = [
+    "//build/config/x64:harden_sls",
     ":retpoline",
     ":skylake_jcc",
   ]
