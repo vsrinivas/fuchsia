@@ -9,10 +9,12 @@ use crate::types::{Hertz, PState, Volts};
 use crate::utils::connect_to_driver;
 use anyhow::{Context as _, Error};
 use async_trait::async_trait;
+use async_utils::event::Event as AsyncEvent;
 use fidl_fuchsia_hardware_cpu_ctrl as fcpu_ctrl;
 use fuchsia_inspect as inspect;
 use serde_derive::Deserialize;
 use serde_json as json;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -103,115 +105,70 @@ impl<'a, 'b> CpuDeviceHandlerBuilder<'a, 'b> {
         self
     }
 
-    /// Retrieves all P-states from the provided cpu_ctrl proxy
-    async fn get_pstates(
-        cpu_driver_path: &str,
-        cpu_ctrl_proxy: &fcpu_ctrl::DeviceProxy,
-    ) -> Result<Vec<PState>, Error> {
-        fuchsia_trace::duration!(
-            "power_manager",
-            "CpuDeviceHandler::get_pstates",
-            "driver" => cpu_driver_path
-        );
-
-        // Query P-state metadata from the cpu_ctrl interface. Each supported performance state
-        // has accompanying P-state metadata.
-        let mut pstates = Vec::new();
-
-        for i in 0..dev_control_handler::MAX_PERF_STATES {
-            if let Ok(info) = cpu_ctrl_proxy.get_performance_state_info(i).await? {
-                pstates.push(PState {
-                    frequency: Hertz(info.frequency_hz as f64),
-                    voltage: Volts(info.voltage_uv as f64 / 1e6),
-                })
-            } else {
-                break;
-            }
-        }
-
-        Ok(pstates)
-    }
-
-    /// Checks that the given list of P-states satisfies the following conditions:
-    ///  - Contains at least one element;
-    ///  - Is primarily sorted by frequency;
-    ///  - Is strictly secondarily sorted by voltage.
-    fn validate_pstates(pstates: &Vec<PState>) -> Result<(), Error> {
-        if pstates.len() == 0 {
-            anyhow::bail!("Must have at least one P-state");
-        } else if pstates.len() > 1 {
-            for pair in pstates.as_slice().windows(2) {
-                if pair[1].frequency > pair[0].frequency
-                    || (pair[1].frequency == pair[0].frequency
-                        && pair[1].voltage >= pair[0].voltage)
-                {
-                    anyhow::bail!(
-                        "P-states must be primarily sorted by decreasing frequency and secondarily \
-                        sorted by decreasing voltage; violated by {:?} and {:?}.",
-                        pair[0],
-                        pair[1]
-                    );
-                }
-            }
-        }
-        Ok(())
-    }
-
-    pub async fn build(self) -> Result<Rc<CpuDeviceHandler>, Error> {
-        // Optionally use the default proxy
-        let cpu_ctrl_proxy = match self.cpu_ctrl_proxy {
-            Some(proxy) => proxy,
-            None => connect_to_driver::<fcpu_ctrl::DeviceMarker>(&self.driver_path)
-                .await
-                .context("Failed connecting to CPU driver")?,
-        };
-
-        let pstates = Self::get_pstates(&self.driver_path, &cpu_ctrl_proxy).await?;
-        Self::validate_pstates(&pstates)?;
-
+    pub fn build(self) -> Result<Rc<CpuDeviceHandler>, Error> {
         // Optionally use the default inspect root node
         let inspect_root = self.inspect_root.unwrap_or(inspect::component::inspector().root());
-
-        // Create the root Inspect node for CpuDeviceHandler
-        let local_root =
-            inspect_root.create_child(format!("CpuDeviceHandler ({})", &self.driver_path));
-        Self::add_pstates_to_inspect(&local_root, &pstates);
+        let inspect =
+            InspectData::new(inspect_root, format!("CpuDeviceHandler ({})", self.driver_path));
 
         // Build the DeviceControlHandler
-        let dev_handler_builder = self.dev_handler_builder.inspect_root(&local_root);
+        let dev_handler_builder = self.dev_handler_builder.inspect_root(&inspect.root_node);
         let dev_control_handler = dev_handler_builder.build()?;
-        dev_control_handler.init().await?;
 
-        // Since CpuDeviceHandler has no dynamic Inspect data, its node will be owned by the root
-        inspect_root.record(local_root);
+        let mutable_inner =
+            MutableInner { cpu_ctrl_proxy: self.cpu_ctrl_proxy, pstates: Vec::new() };
 
         Ok(Rc::new(CpuDeviceHandler {
+            init_done: AsyncEvent::new(),
             driver_path: self.driver_path,
             dev_control_handler,
-            pstates,
+            inspect,
+            mutable_inner: RefCell::new(mutable_inner),
         }))
     }
 
-    fn add_pstates_to_inspect(parent: &inspect::Node, pstates: &Vec<PState>) {
-        parent.record_child("P-states", |pstates_node| {
-            // Iterate P-states in reverse order so that the Inspect nodes appear in the same order
-            // as the vector (`record_child` inserts nodes at the head).
-            for (i, pstate) in pstates.iter().enumerate().rev() {
-                pstates_node.record_child(format!("pstate_{:02}", i), |node| {
-                    node.record_double("voltage (V)", pstate.voltage.0);
-                    node.record_double("frequency (Hz)", pstate.frequency.0);
-                });
-            }
-        });
+    #[cfg(test)]
+    pub async fn build_and_init(self) -> Rc<CpuDeviceHandler> {
+        let node = self.build().unwrap();
+        node.init().await.unwrap();
+        node
     }
 }
 
 pub struct CpuDeviceHandler {
+    /// Signalled after `init()` has completed. Used to ensure node doesn't process messages until
+    /// its `init()` has completed.
+    init_done: AsyncEvent,
+
     /// Path to the underlying CPU driver
     driver_path: String,
 
     /// Child node to handle GetPerformanceState and SetPerformanceState
     dev_control_handler: Rc<DeviceControlHandler>,
+
+    /// A struct for managing Component Inspection data
+    inspect: InspectData,
+
+    /// Mutable inner state.
+    mutable_inner: RefCell<MutableInner>,
+}
+
+impl CpuDeviceHandler {
+    async fn handle_get_cpu_performance_states(&self) -> Result<MessageReturn, PowerManagerError> {
+        fuchsia_trace::duration!(
+            "power_manager",
+            "CpuDeviceHandler::handle_get_cpu_performance_states",
+            "driver" => self.driver_path.as_str()
+        );
+
+        self.init_done.wait().await;
+
+        Ok(MessageReturn::GetCpuPerformanceStates(self.mutable_inner.borrow().pstates.clone()))
+    }
+}
+
+struct MutableInner {
+    cpu_ctrl_proxy: Option<fcpu_ctrl::DeviceProxy>,
 
     /// All P-states provided by the underlying CPU driver
     pstates: Vec<PState>,
@@ -223,16 +180,125 @@ impl Node for CpuDeviceHandler {
         format!("CpuDeviceHandler ({})", self.driver_path)
     }
 
+    /// Initializes internal state.
+    ///
+    /// Connects to the cpu-ctrl driver unless a proxy was already provided (in a test).
+    async fn init(&self) -> Result<(), Error> {
+        fuchsia_trace::duration!("power_manager", "CpuDeviceHandler::init");
+
+        self.dev_control_handler.init().await.context("Failed to init dev_control_handler")?;
+
+        // Connect to the cpu-ctrl driver. Typically this is None, but it may be set by tests.
+        let cpu_ctrl_proxy = match &self.mutable_inner.borrow().cpu_ctrl_proxy {
+            Some(p) => p.clone(),
+            None => connect_to_driver::<fcpu_ctrl::DeviceMarker>(&self.driver_path).await?,
+        };
+
+        // Query the CPU P-states
+        let pstates = get_pstates(&self.driver_path, &cpu_ctrl_proxy)
+            .await
+            .context("Failed to get CPU P-states")?;
+        validate_pstates(&pstates).context("Invalid CPU control params")?;
+        self.inspect.record_pstates(&pstates);
+
+        {
+            let mut mutable_inner = self.mutable_inner.borrow_mut();
+            mutable_inner.cpu_ctrl_proxy = Some(cpu_ctrl_proxy);
+            mutable_inner.pstates = pstates;
+        }
+
+        self.init_done.signal();
+
+        Ok(())
+    }
+
     async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {
         match msg {
             &Message::GetPerformanceState | Message::SetPerformanceState(_) => {
                 self.dev_control_handler.handle_message(msg).await
             }
-            Message::GetCpuPerformanceStates => {
-                Ok(MessageReturn::GetCpuPerformanceStates(self.pstates.clone()))
-            }
+            Message::GetCpuPerformanceStates => self.handle_get_cpu_performance_states().await,
             _ => Err(PowerManagerError::Unsupported),
         }
+    }
+}
+
+/// Retrieves all P-states from the provided cpu_ctrl proxy.
+async fn get_pstates(
+    cpu_driver_path: &str,
+    cpu_ctrl_proxy: &fcpu_ctrl::DeviceProxy,
+) -> Result<Vec<PState>, Error> {
+    fuchsia_trace::duration!(
+        "power_manager",
+        "CpuDeviceHandler::get_pstates",
+        "driver" => cpu_driver_path
+    );
+
+    // Query P-state metadata from the cpu_ctrl interface. Each supported performance state has
+    // accompanying P-state metadata.
+    let mut pstates = Vec::new();
+
+    for i in 0..dev_control_handler::MAX_PERF_STATES {
+        if let Ok(info) = cpu_ctrl_proxy.get_performance_state_info(i).await? {
+            pstates.push(PState {
+                frequency: Hertz(info.frequency_hz as f64),
+                voltage: Volts(info.voltage_uv as f64 / 1e6),
+            })
+        } else {
+            break;
+        }
+    }
+
+    Ok(pstates)
+}
+
+/// Checks that the given list of P-states satisfies the following conditions:
+///  - Contains at least one element;
+///  - Is primarily sorted by frequency;
+///  - Is strictly secondarily sorted by voltage.
+fn validate_pstates(pstates: &Vec<PState>) -> Result<(), Error> {
+    if pstates.len() == 0 {
+        anyhow::bail!("Must have at least one P-state");
+    } else if pstates.len() > 1 {
+        for pair in pstates.as_slice().windows(2) {
+            if pair[1].frequency > pair[0].frequency
+                || (pair[1].frequency == pair[0].frequency && pair[1].voltage >= pair[0].voltage)
+            {
+                anyhow::bail!(
+                    "P-states must be primarily sorted by decreasing frequency and secondarily \
+                    sorted by decreasing voltage; violated by {:?} and {:?}.",
+                    pair[0],
+                    pair[1]
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
+struct InspectData {
+    // Nodes
+    root_node: inspect::Node,
+}
+
+impl InspectData {
+    fn new(parent: &inspect::Node, node_name: String) -> Self {
+        // Create a local root node and properties
+        let root_node = parent.create_child(node_name);
+        InspectData { root_node }
+    }
+
+    fn record_pstates(&self, pstates: &Vec<PState>) {
+        self.root_node.record_child("P-states", |pstates_node| {
+            // Iterate P-states in reverse order so that the Inspect nodes appear in the same order
+            // as the vector (`record_child` inserts nodes at the head).
+            for (i, pstate) in pstates.iter().enumerate().rev() {
+                pstates_node.record_child(format!("pstate_{:02}", i), |node| {
+                    node.record_double("voltage (V)", pstate.voltage.0);
+                    node.record_double("frequency (Hz)", pstate.frequency.0);
+                });
+            }
+        });
     }
 }
 
@@ -299,7 +365,7 @@ mod tests {
             setup_fake_controller_proxy(),
             setup_fake_cpu_ctrl_proxy(pstates),
         );
-        builder.build().await.unwrap()
+        builder.build_and_init().await
     }
 
     /// Tests that an unsupported message is handled gracefully and an Unsupported error is returned
@@ -391,7 +457,7 @@ mod tests {
             setup_fake_controller_proxy(),
             setup_fake_cpu_ctrl_proxy(pstates),
         );
-        assert!(builder.build().await.is_err());
+        assert!(builder.build().unwrap().init().await.is_err());
 
         // Secondary sort by voltage is violated.
         let pstates = vec![
@@ -403,7 +469,7 @@ mod tests {
             setup_fake_controller_proxy(),
             setup_fake_cpu_ctrl_proxy(pstates),
         );
-        assert!(builder.build().await.is_err());
+        assert!(builder.build().unwrap().init().await.is_err());
 
         // Duplicated P-state (detected as violation of secondary sort by voltage).
         let pstates = vec![
@@ -415,7 +481,7 @@ mod tests {
             setup_fake_controller_proxy(),
             setup_fake_cpu_ctrl_proxy(pstates),
         );
-        assert!(builder.build().await.is_err());
+        assert!(builder.build().unwrap().init().await.is_err());
     }
 
     /// Tests that Inspect data is populated as expected
@@ -434,7 +500,7 @@ mod tests {
         )
         .with_inspect_root(inspector.root());
 
-        let _node = builder.build().await.unwrap();
+        let _node = builder.build_and_init().await;
 
         assert_data_tree!(
             inspector,
