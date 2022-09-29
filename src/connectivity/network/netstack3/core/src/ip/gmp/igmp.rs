@@ -508,7 +508,7 @@ mod tests {
     use super::*;
     use crate::{
         context::{
-            testutil::{DummyInstant, DummyTimerCtxExt},
+            testutil::{handle_timer_helper_with_sc_ref_mut, DummyInstant, DummyTimerCtxExt},
             InstantContext as _,
         },
         ip::{
@@ -1017,9 +1017,8 @@ mod tests {
             // The initial unsolicited report.
             assert_eq!(sync_ctx.frames().len(), 2);
             non_sync_ctx.trigger_timers_and_expect_unordered(
-                &mut sync_ctx,
                 [REPORT_DELAY_TIMER_ID, REPORT_DELAY_TIMER_ID_2],
-                TimerHandler::handle_timer,
+                handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, TimerHandler::handle_timer),
             );
             assert_eq!(sync_ctx.frames().len(), 4);
             const RESP_TIME: Duration = Duration::from_secs(10);
@@ -1032,9 +1031,8 @@ mod tests {
                 (REPORT_DELAY_TIMER_ID_2, range),
             ]);
             non_sync_ctx.trigger_timers_and_expect_unordered(
-                &mut sync_ctx,
                 [REPORT_DELAY_TIMER_ID, REPORT_DELAY_TIMER_ID_2],
-                TimerHandler::handle_timer,
+                handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, TimerHandler::handle_timer),
             );
             // Two new reports should be sent.
             assert_eq!(sync_ctx.frames().len(), 6);

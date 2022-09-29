@@ -583,7 +583,10 @@ mod tests {
     use super::*;
     use crate::{
         context::{
-            testutil::{DummyCtx, DummyNonSyncCtx, DummySyncCtx, DummyTimerCtxExt as _},
+            testutil::{
+                handle_timer_helper_with_sc_ref_mut, DummyCtx, DummyNonSyncCtx, DummySyncCtx,
+                DummyTimerCtxExt as _,
+            },
             FrameContext as _, InstantContext as _,
         },
         device::link::testutil::{DummyLinkAddress, DummyLinkDevice, DummyLinkDeviceId},
@@ -1050,9 +1053,8 @@ mod tests {
 
             assert_eq!(
                 non_sync_ctx.trigger_timers_for(
-                    &mut sync_ctx,
                     retrans_timer,
-                    TimerHandler::handle_timer
+                    handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, TimerHandler::handle_timer),
                 ),
                 [timer_id]
             );

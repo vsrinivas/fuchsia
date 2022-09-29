@@ -417,7 +417,10 @@ mod tests {
 
     use crate::{
         context::{
-            testutil::{DummyCtx, DummyInstant, DummySyncCtx, DummyTimerCtxExt},
+            testutil::{
+                handle_timer_helper_with_sc_ref_mut, DummyCtx, DummyInstant, DummySyncCtx,
+                DummyTimerCtxExt,
+            },
             InstantContext,
         },
         testutil::{assert_empty, TestIpExt},
@@ -502,9 +505,8 @@ mod tests {
 
         // Advance time to 1s.
         assert_empty(non_sync_ctx.trigger_timers_for(
-            &mut sync_ctx,
             duration,
-            TimerHandler::handle_timer,
+            handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, TimerHandler::handle_timer),
         ));
 
         // Update pmtu from local to remote. PMTU should be updated to
@@ -520,9 +522,8 @@ mod tests {
 
         // Advance time to 2s.
         assert_empty(non_sync_ctx.trigger_timers_for(
-            &mut sync_ctx,
             duration,
-            TimerHandler::handle_timer,
+            handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, TimerHandler::handle_timer),
         ));
 
         // Make sure the update worked. PMTU should be updated to `new_mtu1` and
@@ -542,9 +543,8 @@ mod tests {
 
         // Advance time to 3s.
         assert_empty(non_sync_ctx.trigger_timers_for(
-            &mut sync_ctx,
             duration,
-            TimerHandler::handle_timer,
+            handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, TimerHandler::handle_timer),
         ));
 
         // Updating again should return the last pmtu PMTU should be updated to
@@ -560,9 +560,8 @@ mod tests {
 
         // Advance time to 4s.
         assert_empty(non_sync_ctx.trigger_timers_for(
-            &mut sync_ctx,
             duration,
-            TimerHandler::handle_timer,
+            handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, TimerHandler::handle_timer),
         ));
 
         // Make sure the update worked. PMTU should be updated to `new_mtu2` and
@@ -582,9 +581,8 @@ mod tests {
 
         // Advance time to 5s.
         assert_empty(non_sync_ctx.trigger_timers_for(
-            &mut sync_ctx,
             duration,
-            TimerHandler::handle_timer,
+            handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, TimerHandler::handle_timer),
         ));
 
         // Make sure update only if new PMTU is less than current (it is). PMTU
@@ -600,9 +598,8 @@ mod tests {
 
         // Advance time to 6s.
         assert_empty(non_sync_ctx.trigger_timers_for(
-            &mut sync_ctx,
             duration,
-            TimerHandler::handle_timer,
+            handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, TimerHandler::handle_timer),
         ));
 
         // Make sure the update worked. PMTU should be updated to `new_mtu3` and
@@ -623,9 +620,8 @@ mod tests {
 
         // Advance time to 7s.
         assert_empty(non_sync_ctx.trigger_timers_for(
-            &mut sync_ctx,
             duration,
-            TimerHandler::handle_timer,
+            handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, TimerHandler::handle_timer),
         ));
 
         // Make sure update only if new PMTU is less than current (it isn't)
@@ -639,9 +635,8 @@ mod tests {
 
         // Advance time to 8s.
         assert_empty(non_sync_ctx.trigger_timers_for(
-            &mut sync_ctx,
             duration,
-            TimerHandler::handle_timer,
+            handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, TimerHandler::handle_timer),
         ));
 
         // Make sure the update didn't work. PMTU and last updated should not
@@ -660,9 +655,8 @@ mod tests {
 
         // Advance time to 9s.
         assert_empty(non_sync_ctx.trigger_timers_for(
-            &mut sync_ctx,
             duration,
-            TimerHandler::handle_timer,
+            handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, TimerHandler::handle_timer),
         ));
 
         // Updating with MTU value less than the minimum MTU should fail.
@@ -676,9 +670,8 @@ mod tests {
 
         // Advance time to 10s.
         assert_empty(non_sync_ctx.trigger_timers_for(
-            &mut sync_ctx,
             duration,
-            TimerHandler::handle_timer,
+            handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, TimerHandler::handle_timer),
         ));
 
         // Make sure the update didn't work. PMTU and last updated should not
@@ -708,9 +701,8 @@ mod tests {
 
         // Advance time to 1s.
         assert_empty(non_sync_ctx.trigger_timers_for(
-            &mut sync_ctx,
             duration,
-            TimerHandler::handle_timer,
+            handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, TimerHandler::handle_timer),
         ));
 
         // Update pmtu from local to remote. PMTU should be updated to
@@ -732,9 +724,8 @@ mod tests {
 
         // Advance time to 2s.
         assert_empty(non_sync_ctx.trigger_timers_for(
-            &mut sync_ctx,
             duration,
-            TimerHandler::handle_timer,
+            handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, TimerHandler::handle_timer),
         ));
 
         // Make sure the update worked. PMTU should be updated to `new_mtu1` and
@@ -752,9 +743,8 @@ mod tests {
 
         // Advance time to 30mins.
         assert_empty(non_sync_ctx.trigger_timers_for(
-            &mut sync_ctx,
             duration * 1798,
-            TimerHandler::handle_timer,
+            handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, TimerHandler::handle_timer),
         ));
 
         // Update pmtu from local to another remote. PMTU should be updated to
@@ -801,10 +791,9 @@ mod tests {
 
         // Advance time to 1hr + 1s. Should have triggered a timer.
         non_sync_ctx.trigger_timers_for_and_expect(
-            &mut sync_ctx,
             duration * 1801,
             [PmtuTimerId::default()],
-            TimerHandler::handle_timer,
+            handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, TimerHandler::handle_timer),
         );
         // Make sure none of the cache data has been marked as stale and
         // removed.
@@ -833,10 +822,9 @@ mod tests {
 
         // Advance time to 3hr + 1s. Should have triggered 2 timers.
         non_sync_ctx.trigger_timers_for_and_expect(
-            &mut sync_ctx,
             duration * 7200,
             [PmtuTimerId::default(), PmtuTimerId::default()],
-            TimerHandler::handle_timer,
+            handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, TimerHandler::handle_timer),
         );
         // Make sure only the earlier PMTU data got marked as stale and removed.
         assert_eq!(
@@ -863,10 +851,9 @@ mod tests {
 
         // Advance time to 4hr + 1s. Should have triggered 1 timers.
         non_sync_ctx.trigger_timers_for_and_expect(
-            &mut sync_ctx,
             duration * 3600,
             [PmtuTimerId::default()],
-            TimerHandler::handle_timer,
+            handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, TimerHandler::handle_timer),
         );
         // Make sure both PMTU data got marked as stale and removed.
         assert_eq!(

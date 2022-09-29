@@ -22,7 +22,10 @@ use packet_formats::{
     ipv6::Ipv6PacketBuilder, tcp::TcpSegmentBuilder, udp::UdpPacketBuilder,
 };
 
-use crate::{context::testutil::DummyTimerCtxExt, Ctx, DeviceId, TimerId};
+use crate::{
+    context::testutil::{handle_timer_helper_with_sc_ref_mut, DummyTimerCtxExt},
+    Ctx, DeviceId, TimerId,
+};
 
 mod print_on_panic {
     use core::fmt::{self, Display, Formatter};
@@ -315,8 +318,10 @@ fn dispatch(
                 .expect("error receiving frame")
         }
         AdvanceTime(SmallDuration(duration)) => {
-            let _: Vec<TimerId> =
-                non_sync_ctx.trigger_timers_for(sync_ctx, duration, crate::handle_timer);
+            let _: Vec<TimerId> = non_sync_ctx.trigger_timers_for(
+                duration,
+                handle_timer_helper_with_sc_ref_mut(sync_ctx, crate::handle_timer),
+            );
         }
     }
 }

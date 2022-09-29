@@ -60,7 +60,10 @@ mod tests {
             generate_opaque_interface_identifier, OpaqueIidNonce, STABLE_IID_SECRET_KEY_BYTES,
         },
         context::{
-            testutil::{DummyInstant, DummyTimerCtxExt as _, StepResult},
+            testutil::{
+                handle_timer_helper_with_sc_ref_mut, DummyInstant, DummyTimerCtxExt as _,
+                StepResult,
+            },
             InstantContext as _, RngContext as _, TimerContext,
         },
         device::{
@@ -667,9 +670,8 @@ mod tests {
             dad_timer_id(dev_id.try_into().expect("expected ethernet ID"), local_ip());
         assert_eq!(
             non_sync_ctx.trigger_timers_for(
-                &mut sync_ctx,
                 Duration::from_secs(1),
-                crate::handle_timer
+                handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, crate::handle_timer)
             ),
             [local_timer_id]
         );
@@ -698,9 +700,8 @@ mod tests {
             dad_timer_id(dev_id.try_into().expect("expected ethernet ID"), remote_ip());
         assert_eq!(
             non_sync_ctx.trigger_timers_for(
-                &mut sync_ctx,
                 Duration::from_secs(2),
-                crate::handle_timer
+                handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, crate::handle_timer)
             ),
             [local_timer_id, remote_timer_id, local_timer_id, remote_timer_id]
         );
@@ -714,9 +715,8 @@ mod tests {
         // Run to the end for DAD for local ip
         assert_eq!(
             non_sync_ctx.trigger_timers_for(
-                &mut sync_ctx,
                 Duration::from_secs(1),
-                crate::handle_timer
+                handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, crate::handle_timer)
             ),
             [remote_timer_id]
         );
@@ -772,9 +772,8 @@ mod tests {
             dad_timer_id(dev_id.try_into().expect("expected ethernet ID"), local_ip());
         assert_eq!(
             non_sync_ctx.trigger_timers_for(
-                &mut sync_ctx,
                 Duration::from_secs(1),
-                crate::handle_timer
+                handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, crate::handle_timer)
             ),
             [local_timer_id]
         );
@@ -803,9 +802,8 @@ mod tests {
             dad_timer_id(dev_id.try_into().expect("expected ethernet ID"), remote_ip());
         assert_eq!(
             non_sync_ctx.trigger_timers_for(
-                &mut sync_ctx,
                 Duration::from_secs(1),
-                crate::handle_timer
+                handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, crate::handle_timer)
             ),
             [local_timer_id, remote_timer_id]
         );
@@ -832,9 +830,8 @@ mod tests {
         // Run to the end for DAD for local ip
         assert_eq!(
             non_sync_ctx.trigger_timers_for(
-                &mut sync_ctx,
                 Duration::from_secs(2),
-                crate::handle_timer
+                handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, crate::handle_timer)
             ),
             [remote_timer_id, remote_timer_id]
         );
@@ -2350,9 +2347,8 @@ mod tests {
         // Make remaining lifetime < 2 hrs.
         assert_eq!(
             non_sync_ctx.trigger_timers_for(
-                &mut sync_ctx,
                 Duration::from_secs(1000),
-                crate::handle_timer
+                handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, crate::handle_timer)
             ),
             []
         );
@@ -2439,9 +2435,8 @@ mod tests {
         // Make remaining lifetime < 2 hrs.
         assert_eq!(
             non_sync_ctx.trigger_timers_for(
-                &mut sync_ctx,
                 Duration::from_secs(1000),
-                crate::handle_timer
+                handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, crate::handle_timer)
             ),
             []
         );
@@ -3047,10 +3042,9 @@ mod tests {
         .map(|entry| dad_timer_id(device_id, entry.addr_sub().addr()))
         .collect::<Vec<_>>();
         non_sync_ctx.trigger_timers_until_and_expect_unordered(
-            &mut sync_ctx,
             before_regen,
             dad_timer_ids,
-            crate::handle_timer,
+            |non_sync_ctx, id| crate::handle_timer(&mut sync_ctx, non_sync_ctx, id),
         );
 
         let preferred_until = non_sync_ctx
@@ -3096,7 +3090,10 @@ mod tests {
         // The regeneration is still handled by timer, so handle any pending
         // events.
         assert_eq!(
-            non_sync_ctx.trigger_timers_for(&mut sync_ctx, Duration::ZERO, crate::handle_timer),
+            non_sync_ctx.trigger_timers_for(
+                Duration::ZERO,
+                handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, crate::handle_timer)
+            ),
             vec![SlaacTimerId::new_regenerate_temporary_slaac_address(
                 device,
                 *first_addr_entry.addr_sub()
@@ -3194,9 +3191,8 @@ mod tests {
 
         assert_eq!(
             non_sync_ctx.trigger_timers_for(
-                &mut sync_ctx,
                 Duration::from_secs(1000),
-                crate::handle_timer
+                handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, crate::handle_timer)
             ),
             []
         );

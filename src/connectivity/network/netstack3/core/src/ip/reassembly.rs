@@ -842,7 +842,10 @@ mod tests {
     use super::*;
     use crate::{
         context::{
-            testutil::{DummyCtx, DummyInstant, DummySyncCtx, DummyTimerCtxExt},
+            testutil::{
+                handle_timer_helper_with_sc_ref_mut, DummyCtx, DummyInstant, DummySyncCtx,
+                DummyTimerCtxExt,
+            },
             InstantContext as _,
         },
         testutil::{assert_empty, DummyEventDispatcherConfig, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6},
@@ -1417,9 +1420,8 @@ mod tests {
         // Trigger the timers, which will clear the cache.
         let timers = non_sync_ctx
             .trigger_timers_for(
-                &mut sync_ctx,
                 REASSEMBLY_TIMEOUT + Duration::from_secs(1),
-                TimerHandler::handle_timer,
+                handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, TimerHandler::handle_timer),
             )
             .len();
         assert!(timers == 171 || timers == 293); // ipv4 || ipv6
@@ -1753,9 +1755,8 @@ mod tests {
 
         // Advance time by 30s (should be at 30s now).
         assert_empty(non_sync_ctx.trigger_timers_for(
-            &mut sync_ctx,
             Duration::from_secs(30),
-            TimerHandler::handle_timer,
+            handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, TimerHandler::handle_timer),
         ));
 
         // Process fragment #2 for packet #0
@@ -1770,9 +1771,8 @@ mod tests {
 
         // Advance time by 10s (should be at 40s now).
         assert_empty(non_sync_ctx.trigger_timers_for(
-            &mut sync_ctx,
             Duration::from_secs(10),
-            TimerHandler::handle_timer,
+            handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, TimerHandler::handle_timer),
         ));
 
         // Process fragment #1 for packet #2
@@ -1799,9 +1799,8 @@ mod tests {
 
         // Advance time by 10s (should be at 50s now).
         assert_empty(non_sync_ctx.trigger_timers_for(
-            &mut sync_ctx,
             Duration::from_secs(10),
-            TimerHandler::handle_timer,
+            handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, TimerHandler::handle_timer),
         ));
 
         // Process fragment #0 for packet #1
@@ -1829,10 +1828,9 @@ mod tests {
         // Advance time by 10s (should be at 60s now)), triggering the timer for
         // the reassembly of packet #1
         non_sync_ctx.trigger_timers_for_and_expect(
-            &mut sync_ctx,
             Duration::from_secs(10),
             [test_key::<I>(fragment_id_1.into())],
-            TimerHandler::handle_timer,
+            handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, TimerHandler::handle_timer),
         );
 
         // Make sure no other times exist.

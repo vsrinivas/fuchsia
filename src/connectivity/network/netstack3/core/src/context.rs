@@ -694,9 +694,8 @@ pub(crate) mod testutil {
         /// # Panics
         ///
         /// Panics if `instant` is in the past.
-        fn trigger_timers_until_instant<C, F: FnMut(&mut C, &mut Self, Id)>(
+        fn trigger_timers_until_instant<F: FnMut(&mut Self, Id)>(
             &mut self,
-            ctx: &mut C,
             instant: DummyInstant,
             mut f: F,
         ) -> Vec<Id> {
@@ -710,7 +709,7 @@ pub(crate) mod testutil {
                 .map(|InstantAndData(i, _id)| i <= &instant)
                 .unwrap_or(false)
             {
-                timers.push(self.trigger_next_timer(ctx, &mut f).unwrap())
+                timers.push(self.trigger_next_timer(&mut (), |_: &mut (), s, id| f(s, id)).unwrap())
             }
 
             assert!(self.as_mut().now() <= instant);
@@ -723,9 +722,8 @@ pub(crate) mod testutil {
         /// until then, inclusive, by calling `f` on them.
         ///
         /// Returns the timers which were triggered.
-        fn trigger_timers_for<C, F: FnMut(&mut C, &mut Self, Id)>(
+        fn trigger_timers_for<F: FnMut(&mut Self, Id)>(
             &mut self,
-            ctx: &mut C,
             duration: Duration,
             f: F,
         ) -> Vec<Id> {
@@ -733,7 +731,7 @@ pub(crate) mod testutil {
             // We know the call to `self.trigger_timers_until_instant` will not
             // panic because we provide an instant that is greater than or equal
             // to the current time.
-            self.trigger_timers_until_instant(ctx, instant, f)
+            self.trigger_timers_until_instant(instant, f)
         }
 
         /// Triggers timers and expects them to be the given timers.
@@ -749,12 +747,10 @@ pub(crate) mod testutil {
         /// - Timers that were expected were not triggered
         #[track_caller]
         fn trigger_timers_and_expect_unordered<
-            C,
             I: IntoIterator<Item = Id>,
-            F: FnMut(&mut C, &mut Self, Id),
+            F: FnMut(&mut Self, Id),
         >(
             &mut self,
-            ctx: &mut C,
             timers: I,
             mut f: F,
         ) where
@@ -763,8 +759,9 @@ pub(crate) mod testutil {
             let mut timers = RefCountedHashSet::from_iter(timers);
 
             for _ in 0..timers.len() {
-                let id =
-                    self.trigger_next_timer(ctx, &mut f).expect("ran out of timers to trigger");
+                let id = self
+                    .trigger_next_timer(&mut (), |_: &mut (), s, id| f(s, id))
+                    .expect("ran out of timers to trigger");
                 match timers.remove(id.clone()) {
                     RemoveResult::Removed(()) | RemoveResult::StillPresent => {}
                     RemoveResult::NotPresent => panic!("triggered unexpected timer: {:?}", id),
@@ -786,12 +783,10 @@ pub(crate) mod testutil {
         /// Like `trigger_timers_and_expect_unordered`, except that timers will
         /// only be triggered until `instant` (inclusive).
         fn trigger_timers_until_and_expect_unordered<
-            C,
             I: IntoIterator<Item = Id>,
-            F: FnMut(&mut C, &mut Self, Id),
+            F: FnMut(&mut Self, Id),
         >(
             &mut self,
-            ctx: &mut C,
             instant: DummyInstant,
             timers: I,
             f: F,
@@ -800,7 +795,7 @@ pub(crate) mod testutil {
         {
             let mut timers = RefCountedHashSet::from_iter(timers);
 
-            let triggered_timers = self.trigger_timers_until_instant(ctx, instant, f);
+            let triggered_timers = self.trigger_timers_until_instant(instant, f);
 
             for id in triggered_timers {
                 match timers.remove(id.clone()) {
@@ -823,13 +818,8 @@ pub(crate) mod testutil {
         ///
         /// Like `trigger_timers_and_expect_unordered`, except that timers will
         /// only be triggered for `duration` (inclusive).
-        fn trigger_timers_for_and_expect<
-            C,
-            I: IntoIterator<Item = Id>,
-            F: FnMut(&mut C, &mut Self, Id),
-        >(
+        fn trigger_timers_for_and_expect<I: IntoIterator<Item = Id>, F: FnMut(&mut Self, Id)>(
             &mut self,
-            ctx: &mut C,
             duration: Duration,
             timers: I,
             f: F,
@@ -837,8 +827,21 @@ pub(crate) mod testutil {
             Id: Debug + Hash + Eq,
         {
             let instant = self.as_mut().now().saturating_add(duration);
-            self.trigger_timers_until_and_expect_unordered(ctx, instant, timers, f);
+            self.trigger_timers_until_and_expect_unordered(instant, timers, f);
         }
+    }
+
+    pub(crate) fn handle_timer_helper_with_sc_ref_mut<
+        'a,
+        Id,
+        SC,
+        C,
+        F: FnMut(&mut SC, &mut C, Id) + 'a,
+    >(
+        sync_ctx: &'a mut SC,
+        mut f: F,
+    ) -> impl FnMut(&mut C, Id) + 'a {
+        move |non_sync_ctx, id| f(sync_ctx, non_sync_ctx, id)
     }
 
     impl<Id: Clone, T: AsMut<DummyTimerCtx<Id>>> DummyTimerCtxExt<Id> for T {}
@@ -1799,9 +1802,8 @@ pub(crate) mod testutil {
             assert_eq!(non_sync_ctx.schedule_timer(Duration::from_secs(2), 2), None,);
             assert_eq!(
                 non_sync_ctx.trigger_timers_until_instant(
-                    &mut sync_ctx,
                     ONE_SEC_INSTANT,
-                    TimerHandler::handle_timer
+                    handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, TimerHandler::handle_timer)
                 ),
                 vec![0, 1],
             );
@@ -1835,10 +1837,9 @@ pub(crate) mod testutil {
             assert_eq!(non_sync_ctx.schedule_timer(Duration::from_secs(0), 0), None);
             assert_eq!(non_sync_ctx.schedule_timer(Duration::from_secs(2), 1), None);
             non_sync_ctx.trigger_timers_until_and_expect_unordered(
-                &mut sync_ctx,
                 ONE_SEC_INSTANT,
                 vec![0],
-                TimerHandler::handle_timer,
+                |non_sync_ctx, id| TimerHandler::handle_timer(&mut sync_ctx, non_sync_ctx, id),
             );
             assert_eq!(non_sync_ctx.now(), ONE_SEC_INSTANT);
         }

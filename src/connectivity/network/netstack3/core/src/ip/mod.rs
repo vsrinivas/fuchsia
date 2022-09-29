@@ -2599,7 +2599,9 @@ mod tests {
 
     use super::*;
     use crate::{
-        context::testutil::{DummyInstant, DummyTimerCtxExt as _},
+        context::testutil::{
+            handle_timer_helper_with_sc_ref_mut, DummyInstant, DummyTimerCtxExt as _,
+        },
         device::{receive_frame, testutil::receive_frame_or_panic, FrameDestination},
         ip::{device::set_routing_enabled, testutil::is_in_ip_multicast},
         testutil::{
@@ -3876,9 +3878,8 @@ mod tests {
         // more precise condition to ensure that DAD is complete.
         let now = non_sync_ctx.now();
         let _: Vec<_> = non_sync_ctx.trigger_timers_until_instant(
-            &mut sync_ctx,
             now + Duration::from_secs(60 * 60 * 24 * 365),
-            crate::handle_timer,
+            handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, crate::handle_timer),
         );
 
         // Received packet should have been dispatched.
@@ -3911,9 +3912,8 @@ mod tests {
         // TODO(https://fxbug.dev/48578): Once this test is contextified, use a
         // more precise condition to ensure that DAD is complete.
         let _: Vec<_> = non_sync_ctx.trigger_timers_until_instant(
-            &mut sync_ctx,
             DummyInstant::LATEST,
-            crate::handle_timer,
+            handle_timer_helper_with_sc_ref_mut(&mut sync_ctx, crate::handle_timer),
         );
 
         // Received packet should have been dispatched.
