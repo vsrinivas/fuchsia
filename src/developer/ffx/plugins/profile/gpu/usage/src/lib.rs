@@ -71,6 +71,9 @@ pub async fn start(
         Err(fmetrics::MetricsLoggerError::TooManyActiveClients) => ffx_bail!(
             "MetricsLogger is running too many clients. Retry after any other client is stopped."
         ),
+        Err(fmetrics::MetricsLoggerError::Internal) => {
+            ffx_bail!("Request failed due to an internal error. Check syslog for more details.")
+        }
         _ => Ok(()),
     }
 }
@@ -289,5 +292,26 @@ mod tests {
         let proxy = make_proxy!(StartLoggingForever, NoDrivers);
         let error = start(proxy, args).await.unwrap_err();
         assert!(error.to_string().contains("no compatible gpu driver"));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_start_logging_internal_error() {
+        let args = args_mod::StartCommand {
+            interval: ONE_SEC,
+            duration: Some(2 * ONE_SEC),
+            output_to_syslog: false,
+        };
+        let proxy = make_proxy!(StartLogging, Internal);
+        let error = start(proxy, args).await.unwrap_err();
+        assert!(error.to_string().contains("an internal error"));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_start_logging_forever_internal_error() {
+        let args =
+            args_mod::StartCommand { interval: ONE_SEC, duration: None, output_to_syslog: false };
+        let proxy = make_proxy!(StartLoggingForever, Internal);
+        let error = start(proxy, args).await.unwrap_err();
+        assert!(error.to_string().contains("an internal error"));
     }
 }

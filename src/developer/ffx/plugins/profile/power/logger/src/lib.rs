@@ -83,6 +83,9 @@ pub async fn start(
             2) Must be smaller than `duration` if `duration` is specified; \n\
             3) Must not be smaller than 500ms if `output_stats_to_syslog` is enabled."
         ),
+        Err(fmetrics::MetricsLoggerError::Internal) => {
+            ffx_bail!("Request failed due to an internal error. Check syslog for more details.")
+        }
         _ => Ok(()),
     }
 }
@@ -478,5 +481,33 @@ mod tests {
         let logger = make_logger!(StartLoggingForever, NoDrivers);
         let error = start(logger, args).await.unwrap_err();
         assert!(error.to_string().contains("no sensor"));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_start_logging_internal_error() {
+        let args = args_mod::StartCommand {
+            sampling_interval: ONE_SEC,
+            statistics_interval: None,
+            duration: Some(2 * ONE_SEC),
+            output_samples_to_syslog: false,
+            output_stats_to_syslog: false,
+        };
+        let logger = make_logger!(StartLogging, Internal);
+        let error = start(logger, args).await.unwrap_err();
+        assert!(error.to_string().contains("an internal error"));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_start_logging_forever_internal_error() {
+        let args = args_mod::StartCommand {
+            sampling_interval: ONE_SEC,
+            statistics_interval: None,
+            duration: None,
+            output_samples_to_syslog: false,
+            output_stats_to_syslog: false,
+        };
+        let logger = make_logger!(StartLoggingForever, Internal);
+        let error = start(logger, args).await.unwrap_err();
+        assert!(error.to_string().contains("an internal error"));
     }
 }
