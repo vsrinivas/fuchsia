@@ -4,19 +4,36 @@
 
 use crate::*;
 use fuchsia_async as fasync;
+use futures::channel::mpsc::unbounded;
+use futures::channel::oneshot::channel as oneshot;
 
 /// Given two nodes that both exist in this process, connect them directly to oneanother. This
 /// function runs the connection and must be polled continuously.
 ///
 /// This is written as a test function. In short: it panics at the slightest irregularity.
 async fn connect_nodes(a: &Node, b: &Node) -> impl std::future::Future<Output = ()> + Send + Sync {
-    let mut a = a.connect_node(Quality::IN_PROCESS).await;
-    let mut b = b.connect_node(Quality::IN_PROCESS).await;
+    let (a_control_reader, write_a_control_reader) = stream::stream();
+    let (read_a_control_writer, a_control_writer) = stream::stream();
+    let (b_control_reader, write_b_control_reader) = stream::stream();
+    let (read_b_control_writer, b_control_writer) = stream::stream();
+    let (a_new_stream_sender, mut a_new_streams) = unbounded();
+    let (b_new_stream_sender, mut b_new_streams) = unbounded();
+    let (a_new_stream_requests, a_new_stream_receiver) = unbounded();
+    let (b_new_stream_requests, b_new_stream_receiver) = unbounded();
+    let a_runner = a.link_node(
+        Some((read_a_control_writer, write_a_control_reader)),
+        a_new_stream_sender,
+        a_new_stream_receiver,
+        Quality::IN_PROCESS,
+    );
+    let b_runner = b.link_node(
+        Some((read_b_control_writer, write_b_control_reader)),
+        b_new_stream_sender,
+        b_new_stream_receiver,
+        Quality::IN_PROCESS,
+    );
 
     async move {
-        let (a_control_reader, a_control_writer) = a.take_control_stream().unwrap();
-        let (b_control_reader, b_control_writer) = b.take_control_stream().unwrap();
-
         let a_to_b = async move {
             loop {
                 let got = a_control_reader
@@ -60,9 +77,6 @@ async fn connect_nodes(a: &Node, b: &Node) -> impl std::future::Future<Output = 
 
         let control = futures::future::join(a_to_b, b_to_a);
 
-        let a_runner = a.take_run_future().unwrap();
-        let b_runner = b.take_run_future().unwrap();
-
         let a_runner = async move {
             let _ = a_runner.await;
         };
@@ -75,18 +89,19 @@ async fn connect_nodes(a: &Node, b: &Node) -> impl std::future::Future<Output = 
 
         let runners = futures::future::join(a_runner, b_runner);
 
-        let mut a_new_streams = a.take_new_streams().unwrap();
-        let mut b_new_streams = b.take_new_streams().unwrap();
-
         let a_to_b = async move {
             while let Some((reader, writer)) = a_new_streams.next().await {
-                b.create_stream(reader, writer).await.unwrap();
+                let (err_sender, err) = oneshot();
+                b_new_stream_requests.unbounded_send((reader, writer, err_sender)).unwrap();
+                err.await.unwrap().unwrap();
             }
         };
 
         let b_to_a = async move {
             while let Some((reader, writer)) = b_new_streams.next().await {
-                a.create_stream(reader, writer).await.unwrap();
+                let (err_sender, err) = oneshot();
+                a_new_stream_requests.unbounded_send((reader, writer, err_sender)).unwrap();
+                err.await.unwrap().unwrap();
             }
         };
 
@@ -101,16 +116,21 @@ async fn connect_nodes(a: &Node, b: &Node) -> impl std::future::Future<Output = 
 
 #[fuchsia::test]
 async fn connection_test() {
-    let mut a = Node::new("a", "test").unwrap();
-    let mut b = Node::new("b", "test").unwrap();
+    let (new_peer_sender_a, mut new_peers) = unbounded();
+    let (new_peer_sender_b, _new_peers_b) = unbounded();
+    let (incoming_streams_sender_a, _streams_a) = unbounded();
+    let (incoming_streams_sender_b, mut streams) = unbounded();
+    let a = Node::new("a", "test", new_peer_sender_a, incoming_streams_sender_a).unwrap();
+    let b = Node::new("b", "test", new_peer_sender_b, incoming_streams_sender_b).unwrap();
 
     let _conn = fasync::Task::spawn(connect_nodes(&a, &b).await);
 
-    let mut new_peers = a.take_new_peers().unwrap();
     let new_peer = new_peers.next().await.unwrap();
     assert_eq!("b", &new_peer);
 
-    let (_reader, writer) = a.connect_to_peer("b").await.unwrap();
+    let (_reader, peer_writer) = stream::stream();
+    let (peer_reader, writer) = stream::stream();
+    a.connect_to_peer(peer_reader, peer_writer, "b").await.unwrap();
 
     writer
         .write(8, |buf| {
@@ -119,7 +139,6 @@ async fn connection_test() {
         })
         .unwrap();
 
-    let mut streams = b.take_incoming_streams().unwrap();
     let (reader, _writer, from) = streams.next().await.unwrap();
     assert_eq!("a", &from);
 
@@ -134,17 +153,23 @@ async fn connection_test() {
 
 #[fuchsia::test]
 async fn connection_test_duplex() {
-    let mut a = Node::new("a", "test").unwrap();
-    let mut b = Node::new("b", "test").unwrap();
+    let (new_peer_sender_a, new_peers_a) = unbounded();
+    let (new_peer_sender_b, new_peers_b) = unbounded();
+    let (incoming_streams_sender_a, streams_a) = unbounded();
+    let (incoming_streams_sender_b, streams_b) = unbounded();
+    let a = Node::new("a", "test", new_peer_sender_a, incoming_streams_sender_a).unwrap();
+    let b = Node::new("b", "test", new_peer_sender_b, incoming_streams_sender_b).unwrap();
 
     let _conn = fasync::Task::spawn(connect_nodes(&a, &b).await);
 
     let a_task = async move {
-        let mut new_peers = a.take_new_peers().unwrap();
+        let mut new_peers = new_peers_a;
         let new_peer = new_peers.next().await.unwrap();
         assert_eq!("b", &new_peer);
 
-        let (_reader, writer) = a.connect_to_peer("b").await.unwrap();
+        let (_reader, peer_writer) = stream::stream();
+        let (peer_reader, writer) = stream::stream();
+        a.connect_to_peer(peer_reader, peer_writer, "b").await.unwrap();
 
         writer
             .write(8, |buf| {
@@ -153,7 +178,7 @@ async fn connection_test_duplex() {
             })
             .unwrap();
 
-        let mut streams = a.take_incoming_streams().unwrap();
+        let mut streams = streams_a;
         let (reader, _writer, from) = streams.next().await.unwrap();
         assert_eq!("b", &from);
 
@@ -167,11 +192,13 @@ async fn connection_test_duplex() {
     };
 
     let b_task = async move {
-        let mut new_peers = b.take_new_peers().unwrap();
+        let mut new_peers = new_peers_b;
         let new_peer = new_peers.next().await.unwrap();
         assert_eq!("a", &new_peer);
 
-        let (_reader, writer) = b.connect_to_peer("a").await.unwrap();
+        let (_reader, peer_writer) = stream::stream();
+        let (peer_reader, writer) = stream::stream();
+        b.connect_to_peer(peer_reader, peer_writer, "a").await.unwrap();
 
         writer
             .write(8, |buf| {
@@ -180,7 +207,7 @@ async fn connection_test_duplex() {
             })
             .unwrap();
 
-        let mut streams = b.take_incoming_streams().unwrap();
+        let mut streams = streams_b;
         let (reader, _writer, from) = streams.next().await.unwrap();
         assert_eq!("a", &from);
 
@@ -201,22 +228,36 @@ async fn connection_test_duplex() {
 
 #[fuchsia::test]
 async fn connection_test_with_router() {
-    let mut a = Node::new("a", "test").unwrap();
-    let mut b = Node::new("b", "test").unwrap();
-    let (router, router_task) =
-        Node::new_with_router("router", "test", std::time::Duration::from_millis(100)).unwrap();
+    let (new_peer_sender_a, new_peers_a) = unbounded();
+    let (new_peer_sender_b, new_peers_b) = unbounded();
+    let (incoming_streams_sender_a, streams_a) = unbounded();
+    let (incoming_streams_sender_b, streams_b) = unbounded();
+    let a = Node::new("a", "test", new_peer_sender_a, incoming_streams_sender_a).unwrap();
+    let b = Node::new("b", "test", new_peer_sender_b, incoming_streams_sender_b).unwrap();
+    let (new_peer_sender_router, _new_peers_router) = unbounded();
+    let (incoming_streams_sender_router, _streams_router) = unbounded();
+    let (router, router_task) = Node::new_with_router(
+        "router",
+        "test",
+        std::time::Duration::from_millis(100),
+        new_peer_sender_router,
+        incoming_streams_sender_router,
+    )
+    .unwrap();
 
     let _conn_a = fasync::Task::spawn(connect_nodes(&a, &router).await);
     let _conn_b = fasync::Task::spawn(connect_nodes(&b, &router).await);
     let _router_task = fasync::Task::spawn(router_task);
 
     let a_task = async move {
-        let mut new_peers = a.take_new_peers().unwrap();
+        let mut new_peers = new_peers_a;
         let new_peers = [new_peers.next().await.unwrap(), new_peers.next().await.unwrap()];
         assert!(new_peers.iter().any(|x| x == "b"));
         assert!(new_peers.iter().any(|x| x == "router"));
 
-        let (_reader, writer) = a.connect_to_peer("b").await.unwrap();
+        let (_reader, peer_writer) = stream::stream();
+        let (peer_reader, writer) = stream::stream();
+        a.connect_to_peer(peer_reader, peer_writer, "b").await.unwrap();
 
         writer
             .write(8, |buf| {
@@ -225,7 +266,7 @@ async fn connection_test_with_router() {
             })
             .unwrap();
 
-        let mut streams = a.take_incoming_streams().unwrap();
+        let mut streams = streams_a;
         let (reader, _writer, from) = streams.next().await.unwrap();
         assert_eq!("b", &from);
 
@@ -239,12 +280,14 @@ async fn connection_test_with_router() {
     };
 
     let b_task = async move {
-        let mut new_peers = b.take_new_peers().unwrap();
+        let mut new_peers = new_peers_b;
         let new_peers = [new_peers.next().await.unwrap(), new_peers.next().await.unwrap()];
         assert!(new_peers.iter().any(|x| x == "a"));
         assert!(new_peers.iter().any(|x| x == "router"));
 
-        let (_reader, writer) = b.connect_to_peer("a").await.unwrap();
+        let (_reader, peer_writer) = stream::stream();
+        let (peer_reader, writer) = stream::stream();
+        b.connect_to_peer(peer_reader, peer_writer, "a").await.unwrap();
 
         writer
             .write(8, |buf| {
@@ -253,7 +296,7 @@ async fn connection_test_with_router() {
             })
             .unwrap();
 
-        let mut streams = b.take_incoming_streams().unwrap();
+        let mut streams = streams_b;
         let (reader, _writer, from) = streams.next().await.unwrap();
         assert_eq!("a", &from);
 

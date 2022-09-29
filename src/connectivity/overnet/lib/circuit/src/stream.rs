@@ -126,6 +126,41 @@ impl Reader {
     pub async fn read_protocol_message<P: protocol::ProtocolMessage>(&self) -> Result<P> {
         self.read(P::MIN_SIZE, P::try_from_bytes).await
     }
+
+    /// This writes the given protocol message to the stream at the *beginning* of the stream,
+    /// meaning that it will be the next thing read off the stream.
+    pub(crate) fn push_back_protocol_message<P: protocol::ProtocolMessage>(
+        &self,
+        message: &P,
+    ) -> Result<()> {
+        let size = message.byte_size();
+        let mut state = self.0.lock().unwrap();
+        let readable = state.readable;
+        state.deque.resize(readable + size, 0);
+        state.deque.rotate_right(size);
+        let (first, _) = state.deque.as_mut_slices();
+
+        let mut first = if first.len() >= size {
+            first
+        } else {
+            state.deque.make_contiguous();
+            state.deque.as_mut_slices().0
+        };
+
+        let got = message.write_bytes(&mut first)?;
+        debug_assert!(got == size);
+        state.readable += size;
+
+        if let Some((sender, size)) = state.notify_readable.take() {
+            if size <= state.readable {
+                let _ = sender.send(());
+            } else {
+                state.notify_readable = Some((sender, size));
+            }
+        }
+
+        Ok(())
+    }
 }
 
 impl Drop for Reader {
@@ -240,6 +275,26 @@ pub fn stream() -> (Reader, Writer) {
 mod test {
     use super::*;
 
+    impl protocol::ProtocolMessage for [u8; 4] {
+        const MIN_SIZE: usize = 4;
+        fn byte_size(&self) -> usize {
+            4
+        }
+
+        fn write_bytes<W: std::io::Write>(&self, out: &mut W) -> Result<usize> {
+            out.write_all(self)?;
+            Ok(4)
+        }
+
+        fn try_from_bytes(bytes: &[u8]) -> Result<(Self, usize)> {
+            if bytes.len() < 4 {
+                return Err(Error::BufferTooShort(4));
+            }
+
+            Ok((bytes[..4].try_into().unwrap(), 4))
+        }
+    }
+
     #[fuchsia::test]
     async fn stream_test() {
         let (reader, writer) = stream();
@@ -264,6 +319,34 @@ mod test {
         let got = reader.read(6, |buf| Ok((buf[..6].to_vec(), 6))).await.unwrap();
 
         assert_eq!(vec![5, 6, 7, 8, 9, 10], got);
+    }
+
+    #[fuchsia::test]
+    async fn push_back_test() {
+        let (reader, writer) = stream();
+        writer
+            .write(8, |buf| {
+                buf[..8].copy_from_slice(&[1, 2, 3, 4, 5, 6, 7, 8]);
+                Ok(8)
+            })
+            .unwrap();
+
+        let got = reader.read(4, |buf| Ok((buf[..4].to_vec(), 4))).await.unwrap();
+
+        assert_eq!(vec![1, 2, 3, 4], got);
+
+        reader.push_back_protocol_message(&[4, 3, 2, 1]).unwrap();
+
+        writer
+            .write(2, |buf| {
+                buf[..2].copy_from_slice(&[9, 10]);
+                Ok(2)
+            })
+            .unwrap();
+
+        let got = reader.read(10, |buf| Ok((buf[..10].to_vec(), 6))).await.unwrap();
+
+        assert_eq!(vec![4, 3, 2, 1, 5, 6, 7, 8, 9, 10], got);
     }
 
     #[fuchsia::test]

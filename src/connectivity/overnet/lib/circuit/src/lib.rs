@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use fuchsia_async::Timer;
-use futures::channel::mpsc::{unbounded, UnboundedReceiver, UnboundedSender};
+use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
 use futures::channel::oneshot;
 use futures::future::Either;
 use futures::lock::Mutex;
@@ -34,8 +34,9 @@ pub use protocol::Quality;
 use crate::protocol::ProtocolMessage;
 
 /// A list of other nodes we can see on the mesh. For each such node we retain a vector of senders
-/// which allow us to establish new streams with that node. For each sender we also store the sum of
-/// all quality values for hops to that peer (see `header::NodeState::Online`).
+/// which allow us to establish new streams with that node. Each sender in the vector corresponds to
+/// a different path we could take to the desired peer. For each sender we also store the sum of all
+/// quality values for hops to that peer (see `header::NodeState::Online`).
 struct PeerMap {
     /// The actual map of peers itself.
     peers:
@@ -139,247 +140,6 @@ impl PeerMap {
     }
 }
 
-/// This is all the state necessary to run the background task that keeps a connection to another
-/// node running.
-struct ConnectionState {
-    /// ID of the local node.
-    node_id: EncodableString,
-    /// Quality of the connection. If we get a `NodeState::Online` for another node via this
-    /// connection, the quality mentioned in that message is to the peer node. To account for the
-    /// quality of the connection itself, we combine this quality with it.
-    quality: Quality,
-    /// If we want to open a new stream via this connection, we send a reader and writer through
-    /// this channel. `ConnectionState` doesn't use this directly, but passes it through the peer
-    /// map to other tasks that may need it.
-    new_stream_sender: UnboundedSender<(stream::Reader, stream::Writer)>,
-    /// A message from this channel indicates the other end of this connection wants to open a new
-    /// stream through us. We receive a reader and writer for the new stream, and a oneshot sender
-    /// through which we can send an error code if something goes wrong while establishing the
-    /// stream.
-    new_stream_receiver:
-        UnboundedReceiver<(stream::Reader, stream::Writer, oneshot::Sender<Result<()>>)>,
-    /// If we receive a stream from `new_stream_receiver` that is trying to connect to this node (as
-    /// opposed to being forwarded to another node), we can send the reader and writer back out
-    /// through this channel. The included `String` is the identity of the node on the other end of
-    /// the stream.
-    incoming_stream_sender: UnboundedSender<(stream::Reader, stream::Writer, String)>,
-    /// Reader for the initial control stream that was established with this connection. We should
-    /// see a handshake message come out of this, followed by routing updates. We'll always get at
-    /// least one routing update where the node at the other end of the connection identifies
-    /// itself. Further messages will be about nodes that we can forward to through that node. If
-    /// the node we are directly connected to is a leaf node, there will thus be no further messages.
-    control_reader: stream::Reader,
-    /// Peer map for this node.
-    peers: Arc<Mutex<PeerMap>>,
-    /// Protocol identifier string sent with every handshake.
-    protocol: EncodableString,
-
-    /// Sender on which to announce new peers as they become available.
-    new_peer_sender: UnboundedSender<String>,
-}
-
-impl ConnectionState {
-    /// Runs all necessary background processing for a connection. Tasks include:
-    /// 1) Send a handshake message to the other node.
-    /// 2) Wait for and validate the handshake from the peer.
-    /// 3) Receive updated routing information from the peer and update the peer map accordingly.
-    /// 4) When the peer tries to open a new stream to us, either forward that stream to another
-    ///    node or, if it's destined for us directly, consume the initial handshake from it and send
-    ///    it out to be processed by the user.
-    async fn run(mut self) -> Result<()> {
-        // Start by reading and validating a handshake message from the stream.
-        let header = self.control_reader.read_protocol_message::<Identify>().await?;
-
-        if header.circuit_version != CIRCUIT_VERSION {
-            return Err(Error::VersionMismatch);
-        } else if header.protocol != self.protocol {
-            return Err(Error::ProtocolMismatch);
-        }
-
-        // Reads routing updates from the control stream one at a time and updates the peer map.
-        let read_control = {
-            let peers = Arc::clone(&self.peers);
-            let new_stream_sender = self.new_stream_sender.clone();
-            let node_id = self.node_id.clone();
-            async move {
-                loop {
-                    let state = match self.control_reader.read_protocol_message::<NodeState>().await
-                    {
-                        Err(Error::ConnectionClosed) => break Ok(()),
-                        other => other?,
-                    };
-
-                    match state {
-                        NodeState::Online(peer, quality) => {
-                            if peer == node_id {
-                                continue;
-                            }
-
-                            let quality = quality.combine(self.quality);
-                            let mut peers = peers.lock().await;
-                            let peers = peers.peers();
-                            let peer_string = peer.to_string();
-                            let peer_list = peers.entry(peer).or_insert_with(Vec::new);
-                            if peer_list.is_empty() {
-                                let _ = self.new_peer_sender.unbounded_send(peer_string);
-                            }
-                            peer_list.retain(|x| !x.0.same_receiver(&new_stream_sender));
-                            peer_list.push((new_stream_sender.clone(), quality));
-                            peer_list.sort_by_key(|x| x.1);
-                        }
-                        NodeState::Offline(peer) => {
-                            let mut peers = peers.lock().await;
-                            let peers = peers.peers();
-                            let peer_list = peers.get_mut(&peer);
-
-                            if let Some(peer_list) = peer_list {
-                                peer_list.retain(|x| !x.0.same_receiver(&new_stream_sender));
-                            }
-                        }
-                    }
-                }
-            }
-        };
-
-        // Responds from requests from the other end of the connection to start a new stream.
-        let new_streams = {
-            let peers = Arc::clone(&self.peers);
-            async move {
-                while let Some((reader, writer, result_sender)) =
-                    self.new_stream_receiver.next().await
-                {
-                    let _ = result_sender.send(
-                        async {
-                            let dest = reader
-                                .read(EncodableString::MIN_SIZE, |buf| {
-                                    EncodableString::try_from_bytes(buf).map(|(dest, size)| {
-                                        if dest == self.node_id {
-                                            // If the destination is this node, discard the string
-                                            // itself (we know where we are, so we don't need it)
-                                            // and return as usual.
-                                            (None, size)
-                                        } else {
-                                            // If the destination node is another node, return a
-                                            // size of zero, which tells the reader to leave the
-                                            // destination string in the stream. When we forward the
-                                            // stream, the node we forward it to will be able to
-                                            // read the destination again.
-                                            (Some(dest), 0)
-                                        }
-                                    })
-                                })
-                                .await?;
-
-                            if let Some(dest) = dest {
-                                connect_to_peer(Arc::clone(&peers), reader, writer, &dest).await?;
-                            } else {
-                                let src = reader.read_protocol_message::<EncodableString>().await?;
-                                self.incoming_stream_sender
-                                    .unbounded_send((reader, writer, src.to_string()))
-                                    .map_err(|_| Error::ConnectionClosed)?;
-                            }
-                            Ok(())
-                        }
-                        .await,
-                    );
-                }
-            }
-        };
-
-        futures::pin_mut!(read_control);
-        futures::pin_mut!(new_streams);
-
-        let ret = match futures::future::select(read_control, new_streams).await {
-            Either::Left((result, new_streams)) => {
-                if result.is_ok() {
-                    new_streams.await;
-                }
-                result
-            }
-            Either::Right(((), read_control)) => read_control.now_or_never().unwrap_or(Ok(())),
-        };
-
-        {
-            let mut peers = self.peers.lock().await;
-            let peers = peers.peers();
-            for peer_list in peers.values_mut() {
-                peer_list.retain(|x| !x.0.same_receiver(&self.new_stream_sender));
-            }
-        }
-
-        ret
-    }
-}
-
-/// A connection from one node to another.
-pub struct Connection {
-    /// See `take_control_stream`
-    control_stream: Option<(stream::Reader, stream::Writer)>,
-    /// State for the background task that keeps the connection functioning.
-    state: Option<ConnectionState>,
-    /// See `take_new_streams`,
-    new_streams: Option<UnboundedReceiver<(stream::Reader, stream::Writer)>>,
-    /// When the local node wants to create a new stream that travels via this connection, it can
-    /// send the reader and writer for the service end of the stream here, along with a oneshot to
-    /// receive an error code.
-    new_stream_sender:
-        UnboundedSender<(stream::Reader, stream::Writer, oneshot::Sender<Result<()>>)>,
-}
-
-impl Connection {
-    /// When we connect to another node, we immediately start a "control stream" that performs a
-    /// handshake and sends routing messages. This returns the "service side" of the control stream.
-    /// When our connection writes to the control stream, the write will come out of the reader
-    /// given here. It's up to whatever connection back end we have, e.g. the QUIC back end, to then
-    /// forward that message over the actual underlying protocol.
-    ///
-    /// This method transfers ownership of the streams out of the `Connection` object, so it will
-    /// return `Some` the first time it is called and `None` ever after.
-    pub fn take_control_stream(&mut self) -> Option<(stream::Reader, stream::Writer)> {
-        self.control_stream.take()
-    }
-
-    /// Called the first time, produces a future which must be polled to completion to keep the
-    /// connection functioning. The future may complete early or may run for the entire lifetime of
-    /// the connection.
-    pub fn take_run_future(
-        &mut self,
-    ) -> Option<impl std::future::Future<Output = Result<()>> + Send> {
-        self.state.take().map(ConnectionState::run)
-    }
-
-    /// Removes and returns a receiver which gives us the "service end" of new streams this
-    /// connection wants to start.
-    ///
-    /// e.g. if the QUIC back end were servicing this connection, it would wait for values from the
-    /// receiver returned here, then for each of them it would allocate a new stream on the
-    /// underlying QUIC connection, and forward traffic through that newly-allocated stream from the
-    /// reader and writer it obtained here.
-    pub fn take_new_streams(
-        &mut self,
-    ) -> Option<UnboundedReceiver<(stream::Reader, stream::Writer)>> {
-        self.new_streams.take()
-    }
-
-    /// Indicates to the connection that the back end wants to create a new stream.
-    ///
-    /// e.g. if the QUIC back end saw a new incoming stream request from the peer it was connected
-    /// to, it would call this method, and forward the reader and writer it obtained therefrom to
-    /// the new QUIC stream.
-    pub async fn create_stream(
-        &self,
-        remote_reader: stream::Reader,
-        remote_writer: stream::Writer,
-    ) -> Result<()> {
-        let (err_sender, err_receiver) = oneshot::channel();
-        self.new_stream_sender
-            .unbounded_send((remote_reader, remote_writer, err_sender))
-            .map_err(|_| Error::ConnectionClosed)?;
-        err_receiver.await.map_err(|_| Error::ConnectionClosed)??;
-        Ok(())
-    }
-}
-
 /// Represents a node on the circuit network.
 ///
 /// A node can connect to one or more other nodes, and a stream can be established between any two
@@ -401,34 +161,32 @@ pub struct Node {
     /// this sender.
     incoming_stream_sender: UnboundedSender<(stream::Reader, stream::Writer, String)>,
 
-    /// We will hand this receiver to the user to notify them of incoming stream connections from
-    /// other nodes.
-    incoming_stream_receiver: Option<UnboundedReceiver<(stream::Reader, stream::Writer, String)>>,
-
     /// If a new peer becomes available we will send its name through this sender to notify the user.
     new_peer_sender: UnboundedSender<String>,
-
-    /// We will hand this receiver to the user to notify them when new peers become available.
-    new_peer_receiver: Option<UnboundedReceiver<String>>,
 }
 
 impl Node {
     /// Establish a new node.
-    pub fn new(node_id: &str, protocol: &str) -> Result<Node> {
+    ///
+    /// Any time a new peer becomes visible to this node, the peer's node ID will be sent to
+    /// `new_peer_sender`.
+    ///
+    /// Any time a peer wants to establish a stream with this node, a reader and writer for the new
+    /// stream as well as the peer's node ID will be sent to `incoming_stream_sender`.
+    pub fn new(
+        node_id: &str,
+        protocol: &str,
+        new_peer_sender: UnboundedSender<String>,
+        incoming_stream_sender: UnboundedSender<(stream::Reader, stream::Writer, String)>,
+    ) -> Result<Node> {
         let node_id = node_id.to_owned().try_into()?;
         let protocol = protocol.to_owned().try_into()?;
 
-        let (incoming_stream_sender, incoming_stream_receiver) = unbounded();
-        let (new_peer_sender, new_peer_receiver) = unbounded();
-        let incoming_stream_receiver = Some(incoming_stream_receiver);
-        let new_peer_receiver = Some(new_peer_receiver);
         Ok(Node {
             node_id,
             protocol,
             new_peer_sender,
-            new_peer_receiver,
             incoming_stream_sender,
-            incoming_stream_receiver,
             peers: Arc::new(Mutex::new(PeerMap::new())),
             has_router: false,
         })
@@ -440,8 +198,10 @@ impl Node {
         node_id: &str,
         protocol: &str,
         interval: Duration,
+        new_peer_sender: UnboundedSender<String>,
+        incoming_stream_sender: UnboundedSender<(stream::Reader, stream::Writer, String)>,
     ) -> Result<(Node, impl Future<Output = ()> + Send)> {
-        let mut node = Self::new(node_id, protocol)?;
+        let mut node = Self::new(node_id, protocol, new_peer_sender, incoming_stream_sender)?;
         node.has_router = true;
 
         let weak_peers = Arc::downgrade(&node.peers);
@@ -449,37 +209,25 @@ impl Node {
         Ok((node, router(weak_peers, interval)))
     }
 
-    /// Take possession of the incoming streams from this node. The returned `UnboundedReceiver`
-    /// will provide a reader, writer, and source node ID every time another node establishes a
-    /// stream with this one.
-    pub fn take_incoming_streams(
-        &mut self,
-    ) -> Option<UnboundedReceiver<(stream::Reader, stream::Writer, String)>> {
-        self.incoming_stream_receiver.take()
-    }
-
-    /// Take possession of the new peer stream from this connection. The returned
-    /// `UnboundedReceiver` will provide a node ID for each new peer that becomes visible to this
-    /// node.
-    pub fn take_new_peers(&mut self) -> Option<UnboundedReceiver<String>> {
-        self.new_peer_receiver.take()
-    }
-
-    /// Establish a stream with another node.
-    pub async fn connect_to_peer(&self, node_id: &str) -> Result<(stream::Reader, stream::Writer)> {
-        let (connection_reader, return_writer) = stream::stream();
-        let (return_reader, connection_writer) = stream::stream();
-        let connection_reader = connection_reader.into();
-
+    /// Establish a stream with another node. Data will be sent to the peer with
+    /// `connection_writer`, and received with `connection_reader`.
+    pub async fn connect_to_peer(
+        &self,
+        connection_reader: stream::Reader,
+        connection_writer: stream::Writer,
+        node_id: &str,
+    ) -> Result<()> {
         if self.node_id == node_id {
             self.incoming_stream_sender
                 .unbounded_send((connection_reader, connection_writer, node_id.to_owned()))
                 .map_err(|_| Error::NoSuchPeer(node_id.to_owned()))?;
         } else {
             let node_id: EncodableString = node_id.to_owned().try_into()?;
-            let source_node_id = self.node_id.clone();
-            return_writer.write_protocol_message(&node_id)?;
-            return_writer.write_protocol_message(&source_node_id)?;
+            // Write the destination node ID and the source node ID (us). Keep in mind because of
+            // the semantics of push_back_protocol_message, these will come off the wire in the
+            // *reverse* of the order we're putting them on here.
+            connection_reader.push_back_protocol_message(&self.node_id)?;
+            connection_reader.push_back_protocol_message(&node_id)?;
             connect_to_peer(
                 Arc::clone(&self.peers),
                 connection_reader,
@@ -489,50 +237,243 @@ impl Node {
             .await?;
         }
 
-        Ok((return_reader, return_writer))
+        Ok(())
     }
 
     /// Connect to another node.
     ///
-    /// This establishes the internal state to connect this node directly to another one. To
-    /// actually perform the networking necessary to create such a connection, a back end will have
-    /// to service the returned `Connection` object.
-    pub async fn connect_node(&self, quality: Quality) -> Connection {
-        let (new_stream_sender, new_streams) = unbounded();
-        let (initial_reader, control_writer) = stream::stream();
-        let (control_reader, initial_writer) = stream::stream();
-        let (new_remote_stream_sender, new_stream_receiver) = unbounded();
+    /// This establishes the internal state to link this node directly to another one, there by
+    /// joining it to the circuit network. To actually perform the networking necessary to create
+    /// such a link, a back end will have to service the streams given to this function via
+    /// its arguments. To keep the link running, the returned future must also be polled to
+    /// completion. Depending on configuration, it may complete swiftly or may poll for the entire
+    /// lifetime of the link.
+    ///
+    /// When we link to another node, we immediately start a "control stream" that performs a
+    /// handshake and sends routing messages. The reader and writer passed in through
+    /// `control_stream` will be used to service this stream. If `control_stream` is `None` the
+    /// first stream emitted from `new_stream_receiver` will be used.
+    ///
+    /// When the local node needs to create a new stream to the linked node, it will send a reader
+    /// and writer to `new_stream_sender`.
+    ///
+    /// When the linked node wants to create a new stream to this node, the back end may send a
+    /// reader and writer through `new_stream_receiver`, as well as a `oneshot::Sender` which will
+    /// be used to report if the link is established successfully or if an error occurs.
+    ///
+    /// The returned future will continue to poll for the lifetime of the link and return the error
+    /// that terminated it.
+    pub fn link_node(
+        &self,
+        control_stream: Option<(stream::Reader, stream::Writer)>,
+        new_stream_sender: UnboundedSender<(stream::Reader, stream::Writer)>,
+        mut new_stream_receiver: UnboundedReceiver<(
+            stream::Reader,
+            stream::Writer,
+            oneshot::Sender<Result<()>>,
+        )>,
+        quality: Quality,
+    ) -> impl Future<Output = Result<()>> + Send {
+        let has_router = self.has_router;
+        let peers = Arc::clone(&self.peers);
+        let node_id = self.node_id.clone();
+        let protocol = self.protocol.clone();
+        let (new_stream_receiver_sender, new_stream_receiver_receiver) = oneshot::channel();
+        let (control_reader_sender, control_reader_receiver) = oneshot::channel();
+        let new_streams_loop = self.handle_new_streams(new_stream_receiver_receiver);
+        let control_stream_loop =
+            self.handle_control_stream(control_reader_receiver, new_stream_sender.clone(), quality);
 
-        let header = Identify::new(self.protocol.clone());
-        control_writer.write_protocol_message(&header).expect("We just created this writer!");
+        // Runs all necessary background processing for a connection. Tasks include:
+        // 1) Fetch a control stream from the new_stream_receiver if we don't have one from
+        //    control_stream already.
+        // 2) Send a handshake message to the other node.
+        // 3) Wait for and validate the handshake from the peer.
+        // 4) Receive updated routing information from the peer and update the peer map accordingly.
+        // 5) When the peer tries to open a new stream to us, either forward that stream to another
+        //    node or, if it's destined for us directly, consume the initial handshake from it and send
+        //    it out to be processed by the user.
+        async move {
+            let (control_reader, control_writer) = if let Some(control_stream) = control_stream {
+                control_stream
+            } else {
+                let (reader, writer, error_sender) =
+                    new_stream_receiver.next().await.ok_or(Error::ConnectionClosed)?;
+                let _ = error_sender.send(Ok(()));
+                (reader, writer)
+            };
 
-        let state = NodeState::Online(self.node_id.clone(), Quality::SELF);
-        control_writer.write_protocol_message(&state).expect("We just created this writer!");
+            let _ = new_stream_receiver_sender.send(new_stream_receiver);
 
-        if self.has_router {
-            self.peers
-                .lock()
-                .await
-                .add_control_channel(control_writer, quality)
-                .await
-                .expect("We just created this channel!");
+            let header = Identify::new(protocol.clone());
+            control_writer.write_protocol_message(&header)?;
+
+            let state = NodeState::Online(node_id.clone(), Quality::SELF);
+            control_writer.write_protocol_message(&state)?;
+
+            if has_router {
+                peers
+                    .lock()
+                    .await
+                    .add_control_channel(control_writer, quality)
+                    .await
+                    .expect("We just created this channel!");
+            } else {
+                // No router means no further routing messages. Just let 'er go.
+                std::mem::drop(control_writer);
+            }
+
+            // Start by reading and validating a handshake message from the stream.
+            let header = control_reader.read_protocol_message::<Identify>().await?;
+
+            if header.circuit_version != CIRCUIT_VERSION {
+                return Err(Error::VersionMismatch);
+            } else if header.protocol != protocol {
+                return Err(Error::ProtocolMismatch);
+            }
+
+            control_reader_sender.send(control_reader).map_err(|_| Error::ConnectionClosed)?;
+
+            futures::pin_mut!(control_stream_loop);
+            futures::pin_mut!(new_streams_loop);
+
+            let ret = match futures::future::select(control_stream_loop, new_streams_loop).await {
+                Either::Left((result, new_streams)) => {
+                    if result.is_ok() {
+                        new_streams.await;
+                    }
+                    result
+                }
+                Either::Right(((), read_control)) => read_control.now_or_never().unwrap_or(Ok(())),
+            };
+
+            {
+                let mut peers = peers.lock().await;
+                let peers = peers.peers();
+                for peer_list in peers.values_mut() {
+                    peer_list.retain(|x| !x.0.same_receiver(&new_stream_sender));
+                }
+            }
+
+            ret
         }
+    }
 
-        Connection {
-            control_stream: Some((initial_reader, initial_writer)),
-            new_streams: Some(new_streams),
-            new_stream_sender: new_remote_stream_sender,
-            state: Some(ConnectionState {
-                node_id: self.node_id.clone(),
-                quality,
-                new_peer_sender: self.new_peer_sender.clone(),
-                new_stream_sender,
-                new_stream_receiver,
-                incoming_stream_sender: self.incoming_stream_sender.clone(),
-                control_reader,
-                peers: Arc::clone(&self.peers),
-                protocol: self.protocol.clone(),
-            }),
+    /// Handles messages we receive on a control stream, i.e. routing updates. `new_stream_sender`
+    /// is a channel by which streams destined for another peer can be forwarded to the node on the
+    /// other end of this control stream. The routing table will associate that sender with any
+    /// peers that can be reached via that node.
+    ///
+    /// The returned future will poll until the control stream hangs up or a protocol error occurs.
+    fn handle_control_stream(
+        &self,
+        control_reader: oneshot::Receiver<stream::Reader>,
+        new_stream_sender: UnboundedSender<(stream::Reader, stream::Writer)>,
+        quality: Quality,
+    ) -> impl Future<Output = Result<()>> + Send {
+        let peers = Arc::clone(&self.peers);
+        let new_stream_sender = new_stream_sender.clone();
+        let node_id = self.node_id.clone();
+        let new_peer_sender = self.new_peer_sender.clone();
+
+        async move {
+            let control_reader = control_reader.await.map_err(|_| Error::ConnectionClosed)?;
+            loop {
+                let state = match control_reader.read_protocol_message::<NodeState>().await {
+                    Err(Error::ConnectionClosed) => break Ok(()),
+                    other => other?,
+                };
+
+                match state {
+                    NodeState::Online(peer, path_quality) => {
+                        if peer == node_id {
+                            continue;
+                        }
+
+                        let quality = path_quality.combine(quality);
+                        let mut peers = peers.lock().await;
+                        let peers = peers.peers();
+                        let peer_string = peer.to_string();
+                        let peer_list = peers.entry(peer).or_insert_with(Vec::new);
+                        if peer_list.is_empty() {
+                            let _ = new_peer_sender.unbounded_send(peer_string);
+                        }
+                        peer_list.retain(|x| !x.0.same_receiver(&new_stream_sender));
+                        peer_list.push((new_stream_sender.clone(), quality));
+                        peer_list.sort_by_key(|x| x.1);
+                    }
+                    NodeState::Offline(peer) => {
+                        let mut peers = peers.lock().await;
+                        let peers = peers.peers();
+                        let peer_list = peers.get_mut(&peer);
+
+                        if let Some(peer_list) = peer_list {
+                            peer_list.retain(|x| !x.0.same_receiver(&new_stream_sender));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Handles requests for new streams. The `new_stream_receiver` provides a reader and writer for
+    /// every stream that gets established to or through this node, as well as a `Result` sender so
+    /// we can indicate if we have any trouble handling this stream. We read a bit of protocol
+    /// header from each incoming stream and either accept it or forward it to another peer.
+    ///
+    /// The returned future will poll until the back end hangs up the other end of the receiver.
+    fn handle_new_streams(
+        &self,
+        new_stream_receiver_receiver: oneshot::Receiver<
+            UnboundedReceiver<(stream::Reader, stream::Writer, oneshot::Sender<Result<()>>)>,
+        >,
+    ) -> impl Future<Output = ()> {
+        let peers = Arc::clone(&self.peers);
+        let incoming_stream_sender = self.incoming_stream_sender.clone();
+        let node_id = self.node_id.clone();
+        async move {
+            let mut new_stream_receiver = if let Ok(x) = new_stream_receiver_receiver.await {
+                x
+            } else {
+                return;
+            };
+
+            while let Some((reader, writer, result_sender)) = new_stream_receiver.next().await {
+                let _ = result_sender.send(
+                    async {
+                        let dest = reader
+                            .read(EncodableString::MIN_SIZE, |buf| {
+                                EncodableString::try_from_bytes(buf).map(|(dest, size)| {
+                                    if dest == node_id {
+                                        // If the destination is this node, discard the string
+                                        // itself (we know where we are, so we don't need it)
+                                        // and return as usual.
+                                        (None, size)
+                                    } else {
+                                        // If the destination node is another node, return a
+                                        // size of zero, which tells the reader to leave the
+                                        // destination string in the stream. When we forward the
+                                        // stream, the node we forward it to will be able to
+                                        // read the destination again.
+                                        (Some(dest), 0)
+                                    }
+                                })
+                            })
+                            .await?;
+
+                        if let Some(dest) = dest {
+                            connect_to_peer(Arc::clone(&peers), reader, writer, &dest).await?;
+                        } else {
+                            let src = reader.read_protocol_message::<EncodableString>().await?;
+                            incoming_stream_sender
+                                .unbounded_send((reader, writer, src.to_string()))
+                                .map_err(|_| Error::ConnectionClosed)?;
+                        }
+                        Ok(())
+                    }
+                    .await,
+                );
+            }
         }
     }
 }
