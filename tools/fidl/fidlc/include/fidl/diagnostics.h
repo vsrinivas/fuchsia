@@ -443,6 +443,6 @@ constexpr ErrorDef<180, flat::Name> ErrExperimentalZxCTypesDisallowed(
     "{} is an experimental type that must be enabled by with `--experimental zx_c_types`");
 
 }  // namespace fidl
-// LINT.ThenChange(//docs/reference/fidl/language/errcat.md)
+// LINT.ThenChange(/docs/reference/fidl/language/errcat.md)
 
 #endif  // TOOLS_FIDL_FIDLC_INCLUDE_FIDL_DIAGNOSTICS_H_
