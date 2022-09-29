@@ -22,6 +22,11 @@ remote_compiler_swapper="$script_dir"/cxx-swap-remote-compiler.sh
 # The value is an absolute path.
 default_project_root="$(readlink -f "$script_dir"/../..)"
 
+# This is where the working directory happens to be in remote execution.
+# This assumed constant is only needed for a few workarounds elsewhere
+# in this script.
+readonly remote_project_root="/b/f/w"
+
 function usage() {
 cat <<EOF
 $script [options] -- C++-command...
@@ -325,14 +330,19 @@ EOF
   shift
 done
 
+# Detect compiler family based on name.
+is_clang=0
+is_gcc=0
+case "$cc" in
+  *clang* ) is_clang=1 ;;
+  *gcc* | *g++* ) is_gcc=1 ;;
+esac
+
 # -E tells the compiler to stop after C-preprocessing
 cpreprocess_command+=( -E )
 # -fno-blocks works around an issue where C-preprocessing includes
 # blocks-featured code when it is not wanted.
-case "$cc" in
-  */bin/clang*) cpreprocess_command+=( -fno-blocks ) ;;
-  # Not a feature of gcc/g++
-esac
+test "$is_clang" != 1 || cpreprocess_command+=( -fno-blocks )
 
 # Craft a command that consumes a C-preprocessed input.
 # This must be constructed in a second pass because there is no ordering
@@ -443,21 +453,18 @@ test -z "$profile_list" || {
 }
 
 # Workaround b/239101612: missing gcc support libexec binaries for remote build
-case "$cc" in
-  *clang* ) ;;
-  *gcc* | *g++* )
-    _gcc_bindir="$(dirname "$cc")"
-    _gcc_install_root="$(dirname "$_gcc_bindir")"
-    # * contains a version number
-    _gcc_libexec_dir="$(ls -d "$_gcc_install_root"/libexec/gcc/x86_64-elf/* )"
-    extra_inputs+=(
-      "$_gcc_install_root"/x86_64-elf/bin/as
-      "$_gcc_libexec_dir"/cc1
-      "$_gcc_libexec_dir"/cc1plus
-      # Only need collect2 if we are linking remotely.
-    )
-    ;;
-esac
+test "$is_gcc" != 1 || {
+  _gcc_bindir="$(dirname "$cc")"
+  _gcc_install_root="$(dirname "$_gcc_bindir")"
+  # * contains a version number
+  _gcc_libexec_dir="$(ls -d "$_gcc_install_root"/libexec/gcc/x86_64-elf/* )"
+  extra_inputs+=(
+    "$_gcc_install_root"/x86_64-elf/bin/as
+    "$_gcc_libexec_dir"/cc1
+    "$_gcc_libexec_dir"/cc1plus
+    # Only need collect2 if we are linking remotely.
+  )
+}
 
 extra_inputs_rel_project_root=()
 for f in "${extra_inputs[@]}"
@@ -511,6 +518,7 @@ dump_vars() {
   debug_var "compiler" "$cc"
   debug_var "primary source" "$first_source"
   debug_var "primary output" "$output"
+  debug_var "depfile" "$depfile"
   debug_var "C-preprocess strategy" "$cpreprocess_strategy"
   debug_var "remote inputs" "${remote_inputs[@]}"
   debug_var "extra outputs" "${extra_outputs[@]}"
@@ -571,6 +579,27 @@ status="$?"
 
 test "$status" = 0 || test "$verbose" = 1 || test "$cpreprocess_strategy" = integrated || {
   msg "local C-preprocessing was: ${cpreprocess_command[@]}"
+}
+
+test ! -f "$depfile" || test "$cpreprocess_strategy" = "local" || test "$is_gcc" != 1 || {
+  # The depfile written by the compiler might contain absolute paths, despite
+  # best efforts to specify include dependencies with relative paths.
+  # (gcc seems to have this issue, but clang does not.)
+  # Absolute paths from the remote execution environment make no sense locally,
+  # so we must relativize paths in the depfile.
+  # It is acceptable for locally-generated depfiles to contain absolute paths.
+  #
+  # Assume that the output dir is two levels down from the exec_root.
+  #
+  # When using the `canonicalize_working_dir` rewrapper option,
+  # the output directory is coerced to a predictable 'set_by_reclient' constant.
+  # See https://source.corp.google.com/foundry-x-re-client/internal/pkg/reproxy/action.go;l=131
+  #
+  # Mac OS sed: cannot use -i -e ... -e ... file (interprets second -e as a
+  # file), so we are forced to combine into a single -e.
+
+  sed -i -e "s|$remote_project_root/out/[^/]*/||g;s|$remote_project_root/set_by_reclient/[^/]*/||g;s|$remote_project_root|$project_root_rel|g" \
+    "$depfile"
 }
 
 exit "$status"

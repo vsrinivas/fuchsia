@@ -28,7 +28,7 @@ default_project_root="$(readlink -f "$script_dir"/../..)"
 # This is where the working directory happens to be in remote execution.
 # This assumed constant is only needed for a few workarounds elsewhere
 # in this script.
-remote_project_root="/b/f/w"
+readonly remote_project_root="/b/f/w"
 
 # Some support tools/steps use Python.
 # Point to our prebuilt host-platform python3.
@@ -1098,7 +1098,7 @@ then
   #
   # Assume that the output dir is two levels down from the exec_root.
   #
-  # When using the `canonicalize_working_dir` reproxy option,
+  # When using the `canonicalize_working_dir` rewrapper option,
   # the output directory is coerced to a predictable 'set_by_reclient' constant.
   # See https://source.corp.google.com/foundry-x-re-client/internal/pkg/reproxy/action.go;l=131
   # It is still possible for a tool to leak absolute paths, which could
@@ -1106,8 +1106,8 @@ then
   # We forgive this for depfiles, but other artifacts should be verified
   # separately.
 
-  # Mac OS sed: cannot use -i -e ... -e ... file (interprets second -e as a file),
-  # so we are forced to combine into a single -e
+  # Mac OS sed: cannot use -i -e ... -e ... file (interprets second -e as a
+  # file), so we are forced to combine into a single -e.
   sed -i -e "s|$remote_project_root/out/[^/]*/||g;s|$remote_project_root/set_by_reclient/[^/]*/||g" \
     "$depfile"
 
