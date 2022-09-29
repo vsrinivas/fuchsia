@@ -139,6 +139,29 @@ class DataProviderNeverReturning : public DataProviderBase {
                               GetSnapshotInternalCallback callback)
 };
 
+class DataProviderReturnsOnDemand : public DataProviderBase {
+ public:
+  DataProviderReturnsOnDemand(const std::map<std::string, std::string>& annotations,
+                              std::string snapshot_key)
+      : annotations_(annotations), snapshot_key_(std::move(snapshot_key)) {}
+
+  // |fuchsia::feedback::DataProvider|
+  void GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
+                   GetSnapshotCallback callback) override;
+
+  // |feedback::DataProviderInternal|
+  void GetSnapshotInternal(zx::duration timeout, GetSnapshotInternalCallback callback) override;
+
+  void PopSnapshotCallback();
+  void PopSnapshotInternalCallback();
+
+ private:
+  const std::map<std::string, std::string> annotations_;
+  const std::string snapshot_key_;
+  std::queue<GetSnapshotCallback> snapshot_callbacks_;
+  std::queue<GetSnapshotInternalCallback> snapshot_internal_callbacks_;
+};
+
 class DataProviderSnapshotOnly : public DataProviderBase {
  public:
   DataProviderSnapshotOnly(fuchsia::feedback::Attachment snapshot)

@@ -4,9 +4,12 @@
 
 #include "src/developer/forensics/crash_reports/snapshot_store.h"
 
+#include <lib/stdcompat/internal/erase.h>
+
 #include <fstream>
 
 #include "src/developer/forensics/crash_reports/constants.h"
+#include "src/developer/forensics/crash_reports/snapshot.h"
 
 namespace forensics::crash_reports {
 namespace {
@@ -131,6 +134,9 @@ bool SnapshotStore::Release(const SnapshotUuid& uuid) {
 
   RecordAsGarbageCollected(uuid);
   data_.erase(uuid);
+
+  cpp20::internal::remove_then_erase(insertion_order_, uuid);
+
   return true;
 }
 
@@ -153,6 +159,15 @@ void SnapshotStore::AddSnapshot(const SnapshotUuid& uuid, fuchsia::feedback::Att
     data->archive_size += StorageSize::Bytes(data->archive->key.size());
     data->archive_size += StorageSize::Bytes(data->archive->value.size());
     current_archives_size_ += data->archive_size;
+  }
+
+  insertion_order_.push_back(uuid);
+
+  while (!insertion_order_.empty() && SizeLimitsExceeded()) {
+    FX_CHECK(SnapshotExists(insertion_order_.front()));
+
+    EnforceSizeLimits(insertion_order_.front());
+    insertion_order_.pop_front();
   }
 }
 

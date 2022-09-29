@@ -5,6 +5,8 @@
 #ifndef SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_SNAPSHOT_STORE_H_
 #define SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_SNAPSHOT_STORE_H_
 
+#include <deque>
+
 #include "src/developer/forensics/crash_reports/snapshot.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/utils/storage_size.h"
@@ -34,9 +36,6 @@ class SnapshotStore {
   // Tell SnapshotStore that an additional client needs the snapshot for |uuid|. Must call
   // StartSnapshot for |uuid| first.
   void IncrementClientCount(const SnapshotUuid& uuid);
-
-  // Drops archives if size limits are exceeded. Must call StartSnapshot for |uuid| first.
-  void EnforceSizeLimits(const SnapshotUuid& uuid);
 
   // Returns true if data for |uuid| is currently stored in the SnapshotStore.
   bool SnapshotExists(const SnapshotUuid& uuid);
@@ -73,6 +72,9 @@ class SnapshotStore {
     std::shared_ptr<const ManagedSnapshot::Archive> archive;
   };
 
+  // Drops archives if size limits are exceeded. Must call StartSnapshot for |uuid| first.
+  void EnforceSizeLimits(const SnapshotUuid& uuid);
+
   // Drop the archive for |data| and clean up state associated with it.
   void DropArchive(SnapshotData* data);
 
@@ -87,6 +89,7 @@ class SnapshotStore {
   StorageSize current_archives_size_;
 
   std::map<SnapshotUuid, SnapshotData> data_;
+  std::deque<SnapshotUuid> insertion_order_;
   std::set<SnapshotUuid> garbage_collected_snapshots_;
 
   // SnapshotUuid and annotations to return under specific conditions, e.g., garbage collection,

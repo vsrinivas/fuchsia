@@ -130,16 +130,13 @@ TEST_F(SnapshotStoreTest, Check_ArchivesMaxSizeIsEnforced) {
   AddDefaultSnapshot();
 
   EXPECT_FALSE(snapshot_store_->SizeLimitsExceeded());
-  snapshot_store_->EnforceSizeLimits(kTestUuid);
   EXPECT_TRUE(snapshot_store_->SnapshotExists(kTestUuid));
   ASSERT_TRUE(AsManaged(snapshot_store_->GetSnapshot(kTestUuid)).LockArchive());
 
   const SnapshotUuid kTestUuid2 = kTestUuid + "2";
   AddDefaultSnapshot(kTestUuid2);
 
-  EXPECT_TRUE(snapshot_store_->SizeLimitsExceeded());
-  snapshot_store_->EnforceSizeLimits(kTestUuid);
-  snapshot_store_->EnforceSizeLimits(kTestUuid2);
+  EXPECT_FALSE(snapshot_store_->SizeLimitsExceeded());
   EXPECT_FALSE(snapshot_store_->SnapshotExists(kTestUuid));
   EXPECT_TRUE(snapshot_store_->SnapshotExists(kTestUuid2));
 

@@ -107,14 +107,6 @@ class SnapshotCollector {
   void CompleteWithSnapshot(const SnapshotUuid& uuid, feedback::Annotations annotations,
                             fuchsia::feedback::Attachment archive);
 
-  // Remove the annotations and archives of the oldest requests, independently of one another, until
-  // |current_annotations_size_| is less than or equal to |max_annotations_size_| and
-  // |current_archives_size_| is less than or equal to |max_archives_size_|.
-  //
-  // Note: References into |requests_| and |data_| will be invalidated during this process. Be
-  // cautious using the function!
-  void EnforceSizeLimits();
-
   // Retrieves the MissingSnapshot from the store and returns the combination of annotations and
   // presence annotations.
   feedback::Annotations GetMissingSnapshotAnnotations(const SnapshotUuid& uuid);

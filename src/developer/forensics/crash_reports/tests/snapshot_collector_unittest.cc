@@ -26,6 +26,7 @@
 #include "src/developer/forensics/testing/gpretty_printers.h"
 #include "src/developer/forensics/testing/stubs/data_provider.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
+#include "src/developer/forensics/utils/storage_size.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/timekeeper/clock.h"
@@ -72,9 +73,12 @@ class SnapshotCollectorTest : public UnitTestFixture {
         clock_(),
         executor_(dispatcher()),
         snapshot_collector_(nullptr),
-        report_store_(&annotation_manager_, std::make_shared<InfoContext>(
-                                                &InspectRoot(), &clock_, dispatcher(), services())),
-        path_(files::JoinPath(tmp_dir_.path(), "garbage_collected_snapshots.txt")) {}
+
+        path_(files::JoinPath(tmp_dir_.path(), "garbage_collected_snapshots.txt")) {
+    report_store_ = std::make_unique<ScopedTestReportStore>(
+        &annotation_manager_,
+        std::make_shared<InfoContext>(&InspectRoot(), &clock_, dispatcher(), services()));
+  }
 
  protected:
   void SetUpDefaultSnapshotManager() {
@@ -86,7 +90,7 @@ class SnapshotCollectorTest : public UnitTestFixture {
     clock_.Set(zx::time(0u));
     snapshot_collector_ = std::make_unique<SnapshotCollector>(
         dispatcher(), &clock_, data_provider_server_.get(),
-        report_store_.GetReportStore().GetSnapshotStore(), kWindow);
+        report_store_->GetReportStore().GetSnapshotStore(), kWindow);
   }
 
   std::set<std::string> ReadGarbageCollectedSnapshots() {
@@ -137,14 +141,14 @@ class SnapshotCollectorTest : public UnitTestFixture {
   bool is_server_bound() { return data_provider_server_->IsBound(); }
 
   Snapshot GetSnapshot(const std::string& uuid) {
-    return report_store_.GetReportStore().GetSnapshotStore()->GetSnapshot(uuid);
+    return report_store_->GetReportStore().GetSnapshotStore()->GetSnapshot(uuid);
   }
 
   timekeeper::TestClock clock_;
   async::Executor executor_;
   std::unique_ptr<SnapshotCollector> snapshot_collector_;
   feedback::AnnotationManager annotation_manager_{dispatcher(), {}};
-  ScopedTestReportStore report_store_;
+  std::unique_ptr<ScopedTestReportStore> report_store_;
 
  private:
   std::unique_ptr<stubs::DataProviderBase> data_provider_server_;
@@ -209,6 +213,49 @@ TEST_F(SnapshotCollectorTest, Check_GetReportRequestsCombined) {
   ASSERT_TRUE(snapshot_uuid1.has_value());
   ASSERT_TRUE(snapshot_uuid2.has_value());
   EXPECT_NE(snapshot_uuid1.value(), snapshot_uuid2.value());
+}
+
+TEST_F(SnapshotCollectorTest, Check_MultipleSimultaneousRequests) {
+  // Setup report store to not have room for more than 1 report.
+  report_store_ = std::make_unique<ScopedTestReportStore>(
+      &annotation_manager_,
+      std::make_shared<InfoContext>(&InspectRoot(), &clock_, dispatcher(), services()),
+      StorageSize::Bytes(1));
+
+  auto data_provider_owner =
+      std::make_unique<stubs::DataProviderReturnsOnDemand>(kDefaultAnnotations, kDefaultArchiveKey);
+  auto data_provider = data_provider_owner.get();
+
+  SetUpDataProviderServer(std::move(data_provider_owner));
+  SetUpDefaultSnapshotManager();
+
+  std::optional<Report> report1{std::nullopt};
+  ScheduleGetReportAndThen(zx::duration::infinite(), 1,
+                           ([&report1](Report& new_report) { report1 = std::move(new_report); }));
+
+  RunLoopFor(kWindow);
+
+  std::optional<Report> report2{std::nullopt};
+  ScheduleGetReportAndThen(zx::duration::infinite(), 2,
+                           ([&report2](Report& new_report) { report2 = std::move(new_report); }));
+  RunLoopFor(kWindow);
+
+  // |report1| should only have a value once snapshot generation is complete.
+  RunLoopUntilIdle();
+  ASSERT_FALSE(report1.has_value());
+  data_provider->PopSnapshotInternalCallback();
+
+  RunLoopUntilIdle();
+  ASSERT_TRUE(report1.has_value());
+
+  // |report2| should only have a value once snapshot generation is complete.
+  RunLoopUntilIdle();
+  ASSERT_FALSE(report2.has_value());
+
+  data_provider->PopSnapshotInternalCallback();
+
+  RunLoopUntilIdle();
+  ASSERT_TRUE(report2.has_value());
 }
 
 TEST_F(SnapshotCollectorTest, Check_Timeout) {

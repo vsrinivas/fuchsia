@@ -130,6 +130,36 @@ void DataProviderTracksNumCalls::GetSnapshotInternal(
   callback({}, {});
 }
 
+void DataProviderReturnsOnDemand::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
+                                              GetSnapshotCallback callback) {
+  snapshot_callbacks_.push(std::move(callback));
+}
+
+void DataProviderReturnsOnDemand::GetSnapshotInternal(
+    const zx::duration timeout,
+    fit::callback<void(feedback::Annotations, fuchsia::feedback::Attachment)> callback) {
+  snapshot_internal_callbacks_.push(std::move(callback));
+}
+
+void DataProviderReturnsOnDemand::PopSnapshotCallback() {
+  FX_CHECK(!snapshot_callbacks_.empty());
+
+  Snapshot snapshot;
+  snapshot.set_annotations(BuildFidlAnnotations(annotations_));
+  snapshot.set_archive(BuildAttachment(snapshot_key_));
+
+  snapshot_callbacks_.front()(std::move(snapshot));
+  snapshot_callbacks_.pop();
+}
+
+void DataProviderReturnsOnDemand::PopSnapshotInternalCallback() {
+  FX_CHECK(!snapshot_internal_callbacks_.empty());
+
+  snapshot_internal_callbacks_.front()(BuildFeedbackAnnotations(annotations_),
+                                       BuildAttachment(snapshot_key_));
+  snapshot_internal_callbacks_.pop();
+}
+
 void DataProviderSnapshotOnly::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
                                            GetSnapshotCallback callback) {
   callback(std::move(Snapshot().set_archive(std::move(snapshot_))));

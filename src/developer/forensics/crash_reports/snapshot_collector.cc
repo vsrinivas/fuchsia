@@ -169,7 +169,6 @@ SnapshotUuid SnapshotCollector::MakeNewSnapshotRequest(const zx::time start_time
         collection_timeout_per_data,
         [this, uuid](feedback::Annotations annotations, fuchsia::feedback::Attachment archive) {
           CompleteWithSnapshot(uuid, std::move(annotations), std::move(archive));
-          EnforceSizeLimits();
         });
   });
   snapshot_requests_.back()->delayed_get_snapshot.PostForTime(dispatcher_,
@@ -243,28 +242,6 @@ void SnapshotCollector::CompleteWithSnapshot(const SnapshotUuid& uuid,
   // Now that all crash reports associated with this snapshot have extracted the necessary
   // annotations we can move the snapshot to |snapshot_store_|.
   snapshot_store_->AddSnapshot(uuid, std::move(archive));
-}
-
-void SnapshotCollector::EnforceSizeLimits() {
-  std::vector<std::unique_ptr<SnapshotRequest>> surviving_requests;
-  for (auto& request : snapshot_requests_) {
-    // If the size limits aren't exceeded, keep the request.
-    if (!snapshot_store_->SizeLimitsExceeded()) {
-      surviving_requests.push_back(std::move(request));
-
-      // Continue in order to keep the rest of the requests alive.
-      continue;
-    }
-
-    // Tell SnapshotStore to free space if needed. Keep the request if at least part of the snapshot
-    // data survives the garbage collection.
-    snapshot_store_->EnforceSizeLimits(request->uuid);
-    if (snapshot_store_->SnapshotExists(request->uuid)) {
-      surviving_requests.push_back(std::move(request));
-    }
-  }
-
-  snapshot_requests_.swap(surviving_requests);
 }
 
 bool SnapshotCollector::UseLatestRequest() const {
