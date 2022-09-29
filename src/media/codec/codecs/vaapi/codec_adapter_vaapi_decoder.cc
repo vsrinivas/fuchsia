@@ -1029,6 +1029,18 @@ template <class... Args>
 void CodecAdapterVaApiDecoder::SetCodecFailure(const char* format, Args&&... args) {
   state_ = DecoderState::kError;
   events_->onCoreCodecFailCodec(format, std::forward<Args>(args)...);
+
+  // Calling |onCoreCodecFailCodec()| will result in the closing of the StreamProcessor channel.
+  // This task will be posted on the stream control thread, so it is possible that the channel will
+  // not immediately be closed and therefore the call to |CoreCodecStopStream()| might have a slight
+  // delay. The caller is expecting |SetCodecFailure()| to prevent further processing to be done
+  // since it is possible the reason why the caller is failing is because it has detected an
+  // unrecoverable error and wants to stops all video decoding processing. To handle this
+  // gracefully, we will stop all waits on |input_queue_|. This will exit the |ProcessInputLoop()|
+  // task which will cancel all pending and future operations. While it does not prevent the
+  // enqueuing of new data, the call to |CoreCodecStopStream()| will happen in the near future,
+  // which will clear out any operations that were enqueued in that time.
+  input_queue_.StopAllWaits();
 }
 
 fitx::result<std::string, bool> CodecAdapterVaApiDecoder::IsBufferReconfigurationNeeded() const {
