@@ -643,7 +643,7 @@ pub trait IpAddress:
     + Send
     + LinkLocalAddress
     + ScopeableAddress
-    + GenericOverIp
+    + GenericOverIp<Type<Self::Version> = Self>
     + sealed::Sealed
     + 'static
 {

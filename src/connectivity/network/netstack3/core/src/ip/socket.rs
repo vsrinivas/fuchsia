@@ -25,7 +25,7 @@ use crate::{
 };
 
 /// An execution context defining a type of IP socket.
-pub trait IpSocketHandler<I: IpExt, C>: IpDeviceIdContext<I> {
+pub(crate) trait IpSocketHandler<I: IpExt, C>: IpDeviceIdContext<I> {
     /// Constructs a new [`IpSock`].
     ///
     /// `new_ip_socket` constructs a new `IpSock` to the given remote IP
@@ -94,7 +94,9 @@ pub enum IpSockCreateAndSendError {
 
 /// An extension of [`IpSocketHandler`] adding the ability to send packets on an
 /// IP socket.
-pub trait BufferIpSocketHandler<I: IpExt, C, B: BufferMut>: IpSocketHandler<I, C> {
+pub(crate) trait BufferIpSocketHandler<I: IpExt, C, B: BufferMut>:
+    IpSocketHandler<I, C>
+{
     /// Sends an IP packet on a socket.
     ///
     /// The generated packet has its metadata initialized from `socket`,
@@ -219,7 +221,7 @@ pub enum IpSockUnroutableError {
 /// An IP socket.
 #[derive(Clone, Debug)]
 #[cfg_attr(test, derive(PartialEq))]
-pub struct IpSock<I: IpExt, D, O> {
+pub(crate) struct IpSock<I: IpExt, D, O> {
     /// The definition of the socket.
     ///
     /// This does not change for the lifetime of the socket.

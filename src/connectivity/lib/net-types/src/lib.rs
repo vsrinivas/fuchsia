@@ -78,6 +78,8 @@ use core::convert::TryFrom;
 use core::fmt::{self, Display, Formatter};
 use core::ops::Deref;
 
+use crate::ip::{GenericOverIp, Ip, IpAddress};
+
 mod sealed {
     // Used to ensure that certain traits cannot be implemented by anyone
     // outside this crate, such as the Ip and IpAddress traits.
@@ -925,6 +927,18 @@ impl<A, Z> From<AddrAndZone<A, Z>> for ZonedAddr<A, Z> {
     fn from(a: AddrAndZone<A, Z>) -> Self {
         Self::Zoned(a)
     }
+}
+
+impl<A: IpAddress> GenericOverIp for SpecifiedAddr<A> {
+    type Type<I: Ip> = SpecifiedAddr<I::Addr>;
+}
+
+impl<A: IpAddress> GenericOverIp for MulticastAddr<A> {
+    type Type<I: Ip> = MulticastAddr<I::Addr>;
+}
+
+impl<A: IpAddress, D> GenericOverIp for ZonedAddr<A, D> {
+    type Type<I: Ip> = ZonedAddr<I::Addr, D>;
 }
 
 #[cfg(test)]

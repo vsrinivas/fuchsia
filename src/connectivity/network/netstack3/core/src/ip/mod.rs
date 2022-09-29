@@ -221,7 +221,9 @@ impl<I: IpExt, C, SC: IpDeviceIdContext<I> + ?Sized, B: BufferMut>
 }
 
 /// The execution context provided by the IP layer to transport layer protocols.
-pub trait TransportIpContext<I: IpExt, C>: IpDeviceIdContext<I> + IpSocketHandler<I, C> {
+pub(crate) trait TransportIpContext<I: IpExt, C>:
+    IpDeviceIdContext<I> + IpSocketHandler<I, C>
+{
     /// Is this one of our local addresses, and is it in the assigned state?
     ///
     /// If `addr` is the address associated with a local interface and, for
@@ -246,7 +248,7 @@ pub trait TransportIpContext<I: IpExt, C>: IpDeviceIdContext<I> + IpSocketHandle
 /// type `B`. This is used when a buffer of type `B` is provided to IP, and
 /// allows any generated link-layer frames to reuse that buffer rather than
 /// needing to always allocate a new one.
-pub trait BufferTransportIpContext<I: IpExt, C, B: BufferMut>:
+pub(crate) trait BufferTransportIpContext<I: IpExt, C, B: BufferMut>:
     TransportIpContext<I, C> + BufferIpSocketHandler<I, C, B>
 {
 }
@@ -363,7 +365,7 @@ pub(crate) trait DualStackDeviceIdContext {
 /// the same `DeviceId` type rather than each providing their own, which would
 /// require lots of verbose type bounds when they need to be interoperable (such
 /// as when ICMP delivers an MLD packet to the `mld` module for processing).
-pub trait IpDeviceIdContext<I: Ip> {
+pub(crate) trait IpDeviceIdContext<I: Ip> {
     /// The type of device IDs.
     type DeviceId: IpDeviceId + 'static;
 
