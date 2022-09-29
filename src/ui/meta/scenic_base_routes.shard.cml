@@ -1,0 +1,65 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This shard is shared across all production and test UI realms that
+// contain scenic.
+//
+// It contains any capabilities that:
+//
+// (1) Scenic exposes from every production or test UI realm in which it's
+//     present.
+// (2) Scenic always consumes from the same source in every production or
+//     test UI realm in which it's present.
+//
+// This shard should **NOT** include:
+//
+// (1) Routes that have different sources in different ui realms. For
+//     example, scenic consumes the metrics logger factory from "parent"
+//     in production ui realms, but "#mock_cobalt" in test ui realms.
+// (2) Scenic's child definition, as we may use a differnt url for
+//     scenic in test vs. production ui realms.
+// (3) Capabilities that other components consume from scenic. Those
+//     routes belong on those components' routing shards.
+{
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.stash.Store",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: [ "#scenic" ],
+        },
+    ],
+    expose: [
+        {
+            // Expose FlatlandDisplay to the V1 realm for the benefit of
+            // flatland_benchmark.
+            // TODO(fxbug.dev/104906): Remove this when no longer needed.
+            protocol: [ "fuchsia.ui.composition.FlatlandDisplay" ],
+            from: "#scenic",
+        },
+        {
+            protocol: [
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.composition.internal.ScreenCapture",
+                "fuchsia.ui.composition.ScreenCapture",
+                "fuchsia.ui.composition.Screenshot",
+                "fuchsia.ui.display.internal.DisplayPower",
+                "fuchsia.ui.display.singleton.Info",
+                "fuchsia.ui.focus.FocusChainListenerRegistry",
+                "fuchsia.ui.pointer.augment.GlobalMouse",
+                "fuchsia.ui.pointerinjector.Registry",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.ui.views.ViewRefInstalled",
+            ],
+            from: "#scenic",
+        },
+    ],
+}

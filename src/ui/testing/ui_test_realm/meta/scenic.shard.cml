@@ -1,10 +1,10 @@
 // Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
-// TDOO(fxb.dev/98336): Replace with //src/ui/scenic/tests/meta/scenic_realm.cml.
 {
     include: [
+        // Defines a base set of services scenic uses and exposes.
+        "//src/ui/meta/scenic_base_routes.shard.cml",
         "syslog/client.shard.cml",
         "vulkan/client.shard.cml",
     ],
@@ -20,9 +20,6 @@
         {
             name: "scenic",
             url: "#meta/scenic.cm",
-
-            // Known missing capabilities:
-            //
         },
     ],
     offer: [
@@ -32,19 +29,7 @@
             to: [
                 "#fake_display_provider",
                 "#mock_cobalt",
-                "#scenic",
             ],
-        },
-        {
-            protocol: [
-                "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.stash.Store",
-                "fuchsia.sysmem.Allocator",
-                "fuchsia.tracing.provider.Registry",
-                "fuchsia.vulkan.loader.Loader",
-            ],
-            from: "parent",
-            to: [ "#scenic" ],
         },
         {
             protocol: [
@@ -70,24 +55,15 @@
             protocol: [ "fuchsia.cobalt.LoggerFactory" ],
             from: "#mock_cobalt",
         },
+
+        // Additional capabilities not exposed from the production ui realm.
         {
             protocol: [
                 "fuchsia.ui.annotation.Registry",
-                "fuchsia.ui.composition.Allocator",
-                "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.composition.FlatlandDisplay",
-                "fuchsia.ui.composition.internal.ScreenCapture",
-                "fuchsia.ui.composition.ScreenCapture",
-                "fuchsia.ui.composition.Screenshot",
-                "fuchsia.ui.display.singleton.Info",
-                "fuchsia.ui.focus.FocusChainListenerRegistry",
                 "fuchsia.ui.observation.scope.Registry",
                 "fuchsia.ui.observation.test.Registry",
-                "fuchsia.ui.pointer.augment.GlobalMouse",
                 "fuchsia.ui.pointer.augment.LocalHit",
-                "fuchsia.ui.pointerinjector.Registry",
-                "fuchsia.ui.scenic.Scenic",
-                "fuchsia.ui.views.ViewRefInstalled",
             ],
             from: "#scenic",
         },

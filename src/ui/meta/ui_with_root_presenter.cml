@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "syslog/client.shard.cml" ],
+    include: [
+        // Defines a base set of services scenic uses and exposes.
+        "//src/ui/meta/scenic_routes.shard.cml",
+        "syslog/client.shard.cml",
+    ],
     children: [
         {
             name: "a11y_manager",
@@ -15,10 +19,6 @@
         {
             name: "root_presenter",
             url: "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cm",
-        },
-        {
-            name: "scenic",
-            url: "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cm",
         },
         {
             name: "text_manager",
@@ -39,17 +39,6 @@
             subdir: "input-pipeline",
         },
         {
-            directory: "config-data",
-            from: "parent",
-            to: "#scenic",
-            subdir: "scenic",
-        },
-        {
-            directory: "dev-display-controller",
-            from: "parent",
-            to: "#scenic",
-        },
-        {
             directory: "dev-input-report",
             from: "parent",
             to: [ "#input_pipeline" ],
@@ -58,11 +47,6 @@
             storage: "data",
             from: "parent",
             to: [ "#root_presenter" ],
-        },
-        {
-            storage: "tmp",
-            from: "parent",
-            to: "#scenic",
         },
         {
             protocol: [
@@ -74,7 +58,6 @@
                 "#a11y_manager",
                 "#input_pipeline",
                 "#root_presenter",
-                "#scenic",
                 "#text_manager",
             ],
         },
@@ -107,18 +90,6 @@
             protocol: [ "fuchsia.ui.keyboard.focus.Controller" ],
             from: "#text_manager",
             to: [ "#root_presenter" ],
-        },
-        {
-            protocol: [
-                "fuchsia.media.ProfileProvider",
-                "fuchsia.metrics.MetricEventLoggerFactory",
-                "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.stash.Store",
-                "fuchsia.sysmem.Allocator",
-                "fuchsia.vulkan.loader.Loader",
-            ],
-            from: "parent",
-            to: [ "#scenic" ],
         },
         {
             protocol: [
@@ -195,28 +166,6 @@
                 "fuchsia.ui.policy.Presenter",
             ],
             from: "#root_presenter",
-        },
-        {
-            // Expose FlatlandDisplay to the V1 realm for the benefit of
-            // flatland_benchmark.
-            // TODO(fxbug.dev/104906): Remove this when no longer needed.
-            protocol: [ "fuchsia.ui.composition.FlatlandDisplay" ],
-            from: "#scenic",
-        },
-        {
-            protocol: [
-                "fuchsia.ui.composition.Allocator",
-                "fuchsia.ui.composition.Flatland",
-                "fuchsia.ui.composition.ScreenCapture",
-                "fuchsia.ui.composition.Screenshot",
-                "fuchsia.ui.display.internal.DisplayPower",
-                "fuchsia.ui.display.singleton.Info",
-                "fuchsia.ui.focus.FocusChainListenerRegistry",
-                "fuchsia.ui.pointerinjector.Registry",
-                "fuchsia.ui.scenic.Scenic",
-                "fuchsia.ui.views.ViewRefInstalled",
-            ],
-            from: "#scenic",
         },
         {
             protocol: [
