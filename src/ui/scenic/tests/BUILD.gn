@@ -409,6 +409,9 @@ fuchsia_test_package("flatland_integration_tests") {
   ]
   test_specs = {
     environments = vulkan_envs
+    log_settings = {
+      max_severity = "ERROR"
+    }
   }
 }
 
