@@ -136,16 +136,9 @@ impl EventLoop {
         let if_watcher_stream = {
             let interface_state = connect_to_protocol::<fnet_interfaces::StateMarker>()
                 .context("network_manager failed to connect to interface state")?;
-            let (watcher, watcher_server) =
-                fidl::endpoints::create_proxy::<fnet_interfaces::WatcherMarker>()
-                    .context("failed to create fuchsia.net.interfaces/Watcher proxy")?;
-            interface_state
-                .get_watcher(
-                    fnet_interfaces::WatcherOptions { ..fnet_interfaces::WatcherOptions::EMPTY },
-                    watcher_server,
-                )
-                .context("failed to call fuchsia.net.interfaces/State.get_watcher")?;
-            fidl_fuchsia_net_interfaces_ext::event_stream(watcher).fuse()
+            fnet_interfaces_ext::event_stream_from_state(&interface_state)
+                .context("get interface event stream")?
+                .fuse()
         };
 
         let neigh_watcher_stream = {

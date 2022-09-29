@@ -119,7 +119,7 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name
         .expect("connect to fuchsia.net.interfaces/State service");
     let interfaces_stream =
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
-            .expect("interface event stream")
+            .expect("get interface event stream")
             .map(|r| r.expect("watcher error"))
             .filter_map(|event| {
                 futures::future::ready(match event {
@@ -315,15 +315,13 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
         let interface_state = realm
             .connect_to_protocol::<fnet_interfaces::StateMarker>()
             .expect("connect to fuchsia.net.interfaces/State service");
-        let (watcher, watcher_server) =
-            ::fidl::endpoints::create_proxy::<fnet_interfaces::WatcherMarker>()
-                .expect("create proxy");
-        let () = interface_state
-            .get_watcher(fnet_interfaces::WatcherOptions::EMPTY, watcher_server)
-            .expect("failed to initialize interface watcher");
+        let event_stream =
+            fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
+                .expect("get interface event stream");
+        futures::pin_mut!(event_stream);
         let mut if_map = HashMap::new();
         let (wlan_ap_id, wlan_ap_name) = fidl_fuchsia_net_interfaces_ext::wait_interface(
-            fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
+            event_stream.by_ref(),
             &mut if_map,
             |if_map| {
                 if_map.iter().find_map(
@@ -429,7 +427,7 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
             .unwrap_or_else(|e| panic!("add host virtual device {}: {:?}", path.display(), e));
         let () = host.set_link_up(true).await.expect("set host link up");
         let host_id = fidl_fuchsia_net_interfaces_ext::wait_interface(
-            fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
+            event_stream.by_ref(),
             &mut if_map,
             |if_map| {
                 if_map.iter().find_map(
@@ -482,7 +480,7 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
         // time.
         drop(host);
         let () = fidl_fuchsia_net_interfaces_ext::wait_interface(
-            fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
+            event_stream.by_ref(),
             &mut if_map,
             |if_map| (!if_map.contains_key(&host_id)).then_some(()),
         )

@@ -219,15 +219,10 @@ pub async fn wait_for_addresses<T, F>(
 where
     F: FnMut(&[fidl_fuchsia_net_interfaces_ext::Address]) -> Option<T>,
 {
-    let (watcher, server_end) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()
-            .context("failed to create fuchsia.net.interfaces/Watcher proxy")?;
-    let () = interfaces_state
-        .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::EMPTY, server_end)
-        .context("get_watcher")?;
     let mut state = fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(u64::from(id));
     fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
-        fidl_fuchsia_net_interfaces_ext::event_stream(watcher),
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)
+            .context("get interface event stream")?,
         &mut state,
         |fidl_fuchsia_net_interfaces_ext::Properties {
              addresses,

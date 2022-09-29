@@ -481,15 +481,13 @@ async fn add_address_success<N: Netstack>(name: &str) {
             .into_iter()
             .all(|r| r.subnet != subnet));
 
-        let (watcher, server_endpoint) =
-            ::fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()
-                .expect("create watcher proxy endpoints");
-        let () = interface_state
-            .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::EMPTY, server_endpoint)
-            .expect("error calling fuchsia.net.interfaces/State.GetWatcher");
+        let event_stream =
+            fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
+                .expect("event stream from state");
+        futures::pin_mut!(event_stream);
         let mut properties = fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(*id);
         let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
-            fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
+            event_stream.by_ref(),
             &mut properties,
             |fidl_fuchsia_net_interfaces_ext::Properties {
                  id: _,
@@ -515,7 +513,7 @@ async fn add_address_success<N: Netstack>(name: &str) {
         std::mem::drop(address_state_provider);
 
         let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
-            fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
+            event_stream.by_ref(),
             &mut properties,
             |fidl_fuchsia_net_interfaces_ext::Properties {
                  id: _,
@@ -556,7 +554,7 @@ async fn add_address_success<N: Netstack>(name: &str) {
         let mut properties = fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(*id);
         let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
             fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
-                .expect("create interface event stream"),
+                .expect("get interface event stream"),
             &mut properties,
             |fidl_fuchsia_net_interfaces_ext::Properties {
                  id: _,

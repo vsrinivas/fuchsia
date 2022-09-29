@@ -471,15 +471,6 @@ where
     .map_err(|acc| WatcherOperationError::UnexpectedEnd { final_state: acc })
 }
 
-/// Returns a stream of interface change events obtained by repeatedly calling watch on `watcher`.
-pub fn event_stream(
-    watcher: fnet_interfaces::WatcherProxy,
-) -> impl Stream<Item = Result<fnet_interfaces::Event, fidl::Error>> {
-    futures::stream::try_unfold(watcher, |watcher| async {
-        Ok(Some((watcher.watch().await?, watcher)))
-    })
-}
-
 /// Initialize a watcher and return its events as a stream.
 pub fn event_stream_from_state(
     interface_state: &fnet_interfaces::StateProxy,
@@ -489,7 +480,9 @@ pub fn event_stream_from_state(
     let () = interface_state
         .get_watcher(fnet_interfaces::WatcherOptions::EMPTY, server)
         .map_err(WatcherCreationError::GetWatcher)?;
-    Ok(event_stream(watcher))
+    Ok(futures::stream::try_unfold(watcher, |watcher| async {
+        Ok(Some((watcher.watch().await?, watcher)))
+    }))
 }
 
 #[cfg(test)]

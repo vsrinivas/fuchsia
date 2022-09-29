@@ -243,9 +243,8 @@ pub async fn setup_masquerade_nat_network<'a, E: netemul::Endpoint>(
 
     if *cycle_dst_net {
         let router_ep2_id = router_ep2.id();
-        let state_stream = fnet_interfaces_ext::event_stream(
-            router_ep2.get_interfaces_watcher().expect("error getting interfaces watcher"),
-        );
+        let state_stream =
+            router_ep2.get_interface_event_stream().expect("error getting interface event stream");
         futures::pin_mut!(state_stream);
 
         // Make sure the interfaces watcher stream knows about router_ep2's existence

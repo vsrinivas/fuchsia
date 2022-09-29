@@ -75,9 +75,7 @@ async fn create_realm<'a>(
 
     // Get IPv6 address.
     let ipv6 = fidl_fuchsia_net_interfaces_ext::wait_interface(
-        fidl_fuchsia_net_interfaces_ext::event_stream(
-            ep.get_interfaces_watcher().expect("get interfaces watcher"),
-        ),
+        ep.get_interface_event_stream().expect("get interface event stream"),
         &mut std::collections::HashMap::new(),
         |interfaces| {
             interfaces.get(&ep.id())?.addresses.iter().find_map(

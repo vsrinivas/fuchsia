@@ -171,12 +171,11 @@ async fn assert_client_acquires_addr(
     let client_interface_state = client_realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
         .expect("failed to connect to client fuchsia.net.interfaces/State");
-    let (watcher, watcher_server) =
-        ::fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()
-            .expect("failed to create interface watcher proxy");
-    let () = client_interface_state
-        .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::EMPTY, watcher_server)
-        .expect("failed to initialize interface watcher");
+    let event_stream =
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&client_interface_state)
+            .expect("event stream from state");
+    futures::pin_mut!(event_stream);
+
     let mut properties =
         fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(client_interface.id());
     for () in std::iter::repeat(()).take(cycles) {
@@ -196,7 +195,7 @@ async fn assert_client_acquires_addr(
         let () = assert_interface_assigned_addr(
             client_realm,
             expected_acquired,
-            &watcher,
+            event_stream.by_ref(),
             &mut properties,
         )
         .await;
@@ -209,7 +208,7 @@ async fn assert_client_acquires_addr(
             let () = assert_interface_assigned_addr(
                 client_realm,
                 expected_acquired,
-                &watcher,
+                event_stream.by_ref(),
                 &mut properties,
             )
             .await;
@@ -218,7 +217,7 @@ async fn assert_client_acquires_addr(
         let () = client_interface.set_link_up(false).await.expect("failed to bring link down");
 
         let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
-            fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
+            event_stream.by_ref(),
             &mut properties,
             |fidl_fuchsia_net_interfaces_ext::Properties {
                  id: _,
@@ -248,11 +247,13 @@ async fn assert_client_acquires_addr(
 async fn assert_interface_assigned_addr(
     client_realm: &netemul::TestRealm<'_>,
     expected_acquired: fidl_fuchsia_net::Subnet,
-    watcher: &fidl_fuchsia_net_interfaces::WatcherProxy,
+    event_stream: impl futures::Stream<
+        Item = std::result::Result<fidl_fuchsia_net_interfaces::Event, fidl::Error>,
+    >,
     mut properties: &mut fidl_fuchsia_net_interfaces_ext::InterfaceState,
 ) {
     let addr = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
-        fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
+        event_stream,
         &mut properties,
         |fidl_fuchsia_net_interfaces_ext::Properties {
              id: _,

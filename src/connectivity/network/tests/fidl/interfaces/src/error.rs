@@ -22,12 +22,8 @@ async fn interfaces_watcher_after_invalid_state_request<N: Netstack>(name: &str)
     let interfaces_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
         .expect("failed to connect fuchsia.net.interfaces/State");
-    let (watcher, server) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()
-            .expect("failed to create watcher proxy");
-    let () = interfaces_state
-        .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::EMPTY, server)
-        .expect("failed to get watcher");
+    let stream = fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)
+        .expect("get interface event stream");
 
     // Writes some garbage into the channel and verify an error on the State
     // doesn't cause trouble using an obtained Watcher.
@@ -40,7 +36,6 @@ async fn interfaces_watcher_after_invalid_state_request<N: Netstack>(name: &str)
     assert_eq!(interfaces_state.on_closed().await, Ok(zx::Signals::CHANNEL_PEER_CLOSED));
 
     // But we should still be able to use the already obtained watcher.
-    let stream = fidl_fuchsia_net_interfaces_ext::event_stream(watcher);
     let interfaces = fidl_fuchsia_net_interfaces_ext::existing(stream, HashMap::new())
         .await
         .expect("failed to collect interfaces");

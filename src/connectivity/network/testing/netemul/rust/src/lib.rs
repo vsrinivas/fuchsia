@@ -643,6 +643,18 @@ impl<'a> TestRealm<'a> {
             .map_err(zx::Status::from_raw)
             .context("add_entry failed")
     }
+
+    /// Get a stream of interface events from a new watcher.
+    pub fn get_interface_event_stream(
+        &self,
+    ) -> Result<impl futures::Stream<Item = std::result::Result<fnet_interfaces::Event, fidl::Error>>>
+    {
+        let interface_state = self
+            .connect_to_protocol::<fnet_interfaces::StateMarker>()
+            .context("connect to protocol")?;
+        fnet_interfaces_ext::event_stream_from_state(&interface_state)
+            .context("get interface event stream")
+    }
 }
 
 /// A virtual Network.
@@ -1123,16 +1135,13 @@ impl<'a> TestInterface<'a> {
         Ok(name)
     }
 
-    /// Gets a fuchsia.net.interfaces/Watcher proxy.
-    pub fn get_interfaces_watcher(&self) -> Result<fnet_interfaces::WatcherProxy> {
-        let (watcher, server_end) =
-            fidl::endpoints::create_proxy::<fnet_interfaces::WatcherMarker>()
-                .context("failed to create fuchsia.net.interfaces/Watcher proxy")?;
-        let () = self
-            .interface_state
-            .get_watcher(fnet_interfaces::WatcherOptions::EMPTY, server_end)
-            .context("failed to create interface property watcher")?;
-        Ok(watcher)
+    /// Gets a stream of interface events yielded by calling watch on a new watcher.
+    pub fn get_interface_event_stream(
+        &self,
+    ) -> Result<impl futures::Stream<Item = std::result::Result<fnet_interfaces::Event, fidl::Error>>>
+    {
+        fnet_interfaces_ext::event_stream_from_state(&self.interface_state)
+            .context("event stream from state")
     }
 
     async fn set_dhcp_client_enabled(&self, enable: bool) -> Result<()> {

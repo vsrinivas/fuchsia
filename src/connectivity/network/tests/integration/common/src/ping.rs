@@ -58,11 +58,7 @@ impl<'a> Node<'a> {
     ) -> Result<Node<'a>> {
         let mut state = fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(interface.id());
         let (v4_addrs, v6_addrs) = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
-            fidl_fuchsia_net_interfaces_ext::event_stream(
-                interface
-                    .get_interfaces_watcher()
-                    .context("failed to get interface property watcher to wait for addresses")?,
-            ),
+            interface.get_interface_event_stream()?,
             &mut state,
             |fidl_fuchsia_net_interfaces_ext::Properties {
                  addresses,
