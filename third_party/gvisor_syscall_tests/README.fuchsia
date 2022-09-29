@@ -10,7 +10,8 @@ vendors a subset of the test sources used by gVisor to validate
 POSIX behavior.
 
 Local Modifications:
-Retained subset of test sources under `test/syscalls/linux` and utils under `test/util`.
+gVisor sources are imported under the `gvisor/` subdirectory.
+Test sources are imported under `gvisor/test/syscalls/linux` and utils under `gvisor/test/util`.
 Added Fuchsia test targets and component manifests (BUILD.gn, *.cml).
 Added files tracking expectations on Fuchsia (*_expectations.cc).
 Added custom main file to run tests with expectations (gtest_main.cc).
