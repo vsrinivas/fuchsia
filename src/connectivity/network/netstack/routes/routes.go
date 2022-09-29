@@ -215,6 +215,10 @@ func (rt *RouteTable) DelRouteLocked(route tcpip.Route) []ExtendedRoute {
 	var routesDeleted []ExtendedRoute
 	oldTable := rt.routes
 	rt.routes = oldTable[:0]
+	if cap(oldTable) > 2*len(oldTable) {
+		// Remove excess route table capacity instead of reusing old capacity.
+		rt.routes = make([]ExtendedRoute, 0, len(oldTable))
+	}
 	for _, er := range oldTable {
 		if er.Route.Destination == route.Destination && er.Route.NIC == route.NIC {
 			// Match any route if Gateway is empty.
@@ -229,6 +233,12 @@ func (rt *RouteTable) DelRouteLocked(route tcpip.Route) []ExtendedRoute {
 
 	if len(routesDeleted) == 0 {
 		return nil
+	}
+
+	// Zero out unused entries in the routes slice so that they can be garbage collected.
+	deadRoutes := rt.routes[len(rt.routes):cap(rt.routes)]
+	for i := range deadRoutes {
+		deadRoutes[i] = ExtendedRoute{}
 	}
 
 	rt.dumpLocked()
