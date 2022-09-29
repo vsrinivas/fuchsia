@@ -188,7 +188,7 @@ where
             match account_state {
                 Some(AccountState::Provisioned(account)) => {
                     info!(%account_id, "Locking account...");
-                    account.lock().await?;
+                    account.lock_account().await?;
                     info!(%account_id, "account locked.");
                 }
                 Some(AccountState::Provisioning(provisioning_lock)) => {
@@ -729,7 +729,7 @@ where
             Some(AccountState::Provisioned(account)) => {
                 // Try to lock the Account.  (If it wasn't in
                 // self.accounts, we're not serving any requests for it.)
-                let res = account.clone().lock().await;
+                let res = account.clone().lock_account().await;
                 res.map_err(|err| {
                     error!(account_id = %id, "remove_account: could not lock: {:?}", err);
                     faccount::Error::Internal

@@ -95,7 +95,7 @@ impl<EB: EncryptedBlockDevice, M: Minfs> Account<EB, M> {
 
     /// Locks this [`Account`] instance, shutting down the filesystem and canceling any outstanding
     /// tasks.
-    pub async fn lock(self: Arc<Self>) -> Result<(), AccountError> {
+    pub async fn lock_account(self: Arc<Self>) -> Result<(), AccountError> {
         let mut state = self.state.lock().await;
         match self.task_group.cancel_no_wait().await {
             // Tolerate an already canceling task group, in case a previous attempt to lock failed.
@@ -176,7 +176,7 @@ impl<EB: EncryptedBlockDevice, M: Minfs> Account<EB, M> {
     ) -> Result<(), anyhow::Error> {
         match request {
             AccountRequest::Lock { responder } => {
-                let mut res = match self.clone().lock().await {
+                let mut res = match self.clone().lock_account().await {
                     Ok(()) => Ok(()),
                     Err(err) => {
                         error!("{}", err);
@@ -372,7 +372,7 @@ mod test {
             account.check_new_client(&WRONG_KEY).await,
             CheckNewClientResult::UnlockedDifferentKey
         );
-        assert!(Arc::clone(&account).lock().await.is_ok());
+        assert!(Arc::clone(&account).lock_account().await.is_ok());
         assert_eq!(account.check_new_client(&TEST_KEY).await, CheckNewClientResult::Locked);
     }
 
