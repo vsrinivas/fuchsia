@@ -1,0 +1,21 @@
+{
+  "license": {
+    "exceptions": [
+      {
+        "entries": [
+          {
+            "bug": "",
+            "projects": [
+              "prebuilt/connectivity/bluetooth/firmware/intel",
+              "third_party/github.com/intel/intel-linux-processor-microcode-data-files"
+            ]
+          }
+        ],
+        "example": "http://shortn/_wJ4uPSDsLD , http://shortn/_FlBPDNUrrc",
+        "licenseType": "intel",
+        "notes": [],
+        "patternRoot": "//tools/check-licenses/license/patterns/exception_unclassified/intel"
+      }
+    ]
+  }
+}

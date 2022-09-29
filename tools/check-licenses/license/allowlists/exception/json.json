@@ -1,0 +1,20 @@
+{
+  "license": {
+    "exceptions": [
+      {
+        "entries": [
+          {
+            "bug": "",
+            "projects": [
+              "third_party/imgtec-pvr-rgx-km"
+            ]
+          }
+        ],
+        "example": "http://shortn/_gQSbZ4nZCE",
+        "licenseType": "json",
+        "notes": [],
+        "patternRoot": "//tools/check-licenses/license/patterns/exception/json"
+      }
+    ]
+  }
+}

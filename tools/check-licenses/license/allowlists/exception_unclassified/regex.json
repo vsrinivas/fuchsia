@@ -1,0 +1,21 @@
+{
+  "license": {
+    "exceptions": [
+      {
+        "entries": [
+          {
+            "bug": "",
+            "projects": [
+              "third_party/rust_crates/ask2patch/regex-automata/data/fowler-tests",
+              "third_party/rust_crates/ask2patch/regex-automata/data/tests/fowler"
+            ]
+          }
+        ],
+        "example": "http://shortn/_48QlPPidSH",
+        "licenseType": "regex",
+        "notes": [],
+        "patternRoot": "//tools/check-licenses/license/patterns/exception_unclassified/regex"
+      }
+    ]
+  }
+}

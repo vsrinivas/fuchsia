@@ -1,0 +1,20 @@
+{
+  "license": {
+    "exceptions": [
+      {
+        "entries": [
+          {
+            "bug": "",
+            "projects": [
+              "prebuilt/third_party/flutter"
+            ]
+          }
+        ],
+        "example": "http://shortn/_LXn6X04Vhy",
+        "licenseType": "ftl",
+        "notes": [],
+        "patternRoot": "//tools/check-licenses/license/patterns/exception/ftl"
+      }
+    ]
+  }
+}

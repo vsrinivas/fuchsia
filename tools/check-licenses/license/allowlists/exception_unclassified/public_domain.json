@@ -1,0 +1,20 @@
+{
+  "license": {
+    "exceptions": [
+      {
+        "entries": [
+          {
+            "bug": "",
+            "projects": [
+              "prebuilt/third_party/android/aemu/release/linux-x64"
+            ]
+          }
+        ],
+        "example": "http://shortn/_Yx0jSAbIB0 , http://shortn/_Jgc3XKriG9",
+        "licenseType": "public_domain",
+        "notes": [],
+        "patternRoot": "//tools/check-licenses/license/patterns/exception_unclassified/public_domain"
+      }
+    ]
+  }
+}

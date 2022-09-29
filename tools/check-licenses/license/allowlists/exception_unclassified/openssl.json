@@ -1,0 +1,20 @@
+{
+  "license": {
+    "exceptions": [
+      {
+        "entries": [
+          {
+            "bug": "",
+            "projects": [
+              "prebuilt/third_party/flutter"
+            ]
+          }
+        ],
+        "example": "http://shortn/_CpG8ObiiRs , http://shortn/_KT5rpK1XvZ , http://shortn/_WE6rU0Tz7D , http://shortn/_lngk5bYZHp",
+        "licenseType": "openssl",
+        "notes": [],
+        "patternRoot": "//tools/check-licenses/license/patterns/exception_unclassified/openssl"
+      }
+    ]
+  }
+}

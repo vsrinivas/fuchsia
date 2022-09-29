@@ -1,0 +1,33 @@
+{
+  "license": {
+    "exceptions": [
+      {
+        "entries": [
+          {
+            "bug": "",
+            "projects": [
+              "prebuilt/third_party/flutter"
+            ]
+          },
+          {
+            "bug": "",
+            "projects": [
+              "third_party/dart-pkg/pub/characters/third_party/Unicode_Consortium"
+            ]
+          },
+          {
+            "bug": "",
+            "projects": [
+              "third_party/rust_crates/vendor/bstr/src/unicode/data",
+              "third_party/rust_crates/vendor/regex-syntax/src/unicode_tables"
+            ]
+          }
+        ],
+        "example": "http://shortn/_umnZl0Eie0 , http://shortn/_2Jn0nGTI3Y , http://shortn/_ODITfCbrGh , http://shortn/_ZhIYPDJqNS",
+        "licenseType": "unicode-dfs-2016",
+        "notes": [],
+        "patternRoot": "//tools/check-licenses/license/patterns/exception/unicode-dfs-2016"
+      }
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "license": {
+    "exceptions": [
+      {
+        "entries": [
+          {
+            "bug": "fxbug.dev/21696",
+            "projects": [
+              "third_party/flite"
+            ]
+          }
+        ],
+        "example": "http://shortn/_eIMWmQcP8a",
+        "licenseType": "flite",
+        "notes": [
+          "Multiple license texts in the flite COPYING file",
+          "TODO: Separate this into separate licenses."
+        ],
+        "patternRoot": "//tools/check-licenses/license/patterns/exception/flite"
+      }
+    ]
+  }
+}

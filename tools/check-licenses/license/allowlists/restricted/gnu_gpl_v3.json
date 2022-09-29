@@ -1,0 +1,23 @@
+{
+  "license": {
+    "exceptions": [
+      {
+        "entries": [
+          {
+            "bug": "fxbug.dev/106671",
+            "projects": [
+              "prebuilt/third_party/binutils-gdb/linux-x64",
+              "prebuilt/third_party/gcc/linux-x64"
+            ]
+          }
+        ],
+        "example": "http://shortn/_QTcxA5GoFL",
+        "licenseType": "gnu_gpl_v3",
+        "notes": [
+          "This is being deleted soon."
+        ],
+        "patternRoot": "//tools/check-licenses/license/patterns/restricted/gnu_gpl_v3"
+      }
+    ]
+  }
+}

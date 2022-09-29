@@ -1,0 +1,26 @@
+{
+  "license": {
+    "exceptions": [
+      {
+        "entries": [
+          {
+            "bug": "",
+            "projects": [
+              "prebuilt/third_party/flutter"
+            ]
+          },
+          {
+            "bug": "",
+            "projects": [
+              "third_party/spirv-headers"
+            ]
+          }
+        ],
+        "example": "http://shortn/_BKGZwz2OaS",
+        "licenseType": "khronos",
+        "notes": [],
+        "patternRoot": "//tools/check-licenses/license/patterns/exception/khronos"
+      }
+    ]
+  }
+}

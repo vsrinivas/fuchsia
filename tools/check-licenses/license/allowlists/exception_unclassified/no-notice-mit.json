@@ -1,0 +1,20 @@
+{
+  "license": {
+    "exceptions": [
+      {
+        "entries": [
+          {
+            "bug": "",
+            "projects": [
+              "third_party/pytoml"
+            ]
+          }
+        ],
+        "example": "http://shortn/_XkizhKa6yc",
+        "licenseType": "no-notice-mit",
+        "notes": [],
+        "patternRoot": "//tools/check-licenses/license/patterns/exception_unclassified/no-notice-mit"
+      }
+    ]
+  }
+}

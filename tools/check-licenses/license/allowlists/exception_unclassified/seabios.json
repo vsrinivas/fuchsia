@@ -1,0 +1,20 @@
+{
+  "license": {
+    "exceptions": [
+      {
+        "entries": [
+          {
+            "bug": "",
+            "projects": [
+              "prebuilt/third_party/android/aemu/release/linux-x64"
+            ]
+          }
+        ],
+        "example": "http://shortn/_KOUugfJWVi",
+        "licenseType": "seabios",
+        "notes": [],
+        "patternRoot": "//tools/check-licenses/license/patterns/exception_unclassified/seabios"
+      }
+    ]
+  }
+}

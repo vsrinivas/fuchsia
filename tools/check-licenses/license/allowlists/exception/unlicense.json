@@ -1,0 +1,30 @@
+{
+  "license": {
+    "exceptions": [
+      {
+        "entries": [
+          {
+            "bug": "",
+            "projects": [
+              "third_party/rust_crates/ask2patch/aho-corasick",
+              "third_party/rust_crates/ask2patch/byteorder",
+              "third_party/rust_crates/ask2patch/csv",
+              "third_party/rust_crates/ask2patch/csv-core",
+              "third_party/rust_crates/ask2patch/memchr",
+              "third_party/rust_crates/ask2patch/regex-automata",
+              "third_party/rust_crates/ask2patch/same-file",
+              "third_party/rust_crates/ask2patch/streaming-stats",
+              "third_party/rust_crates/ask2patch/termcolor",
+              "third_party/rust_crates/ask2patch/walkdir"
+            ]
+          }
+        ],
+        "example": "http://shortn/_cSNA36ff8u",
+        "licenseType": "unlicense",
+        "notes": [
+        ],
+        "patternRoot": "//tools/check-licenses/license/patterns/exception/unlicense"
+      }
+    ]
+  }
+}

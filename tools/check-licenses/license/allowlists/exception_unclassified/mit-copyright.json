@@ -1,0 +1,24 @@
+{
+  "license": {
+    "exceptions": [
+      {
+        "entries": [
+          {
+            "bug": "",
+            "projects": [
+              "prebuilt/third_party/flutter"
+            ]
+          }
+        ],
+        "example": "http://shortn/_6PQgpvUxYH",
+        "licenseType": "mit-copyright",
+        "notes": [
+          "This is just a copyright statement, but this is all that some",
+          "third-party projects gives us, so check-licenses must be able",
+          "to recognize it."
+        ],
+        "patternRoot": "//tools/check-licenses/license/patterns/exception_unclassified/mit-copyright"
+      }
+    ]
+  }
+}

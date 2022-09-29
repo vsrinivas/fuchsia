@@ -1,0 +1,24 @@
+{
+  "license": {
+    "exceptions": [
+      {
+        "entries": [
+          {
+            "bug": "",
+            "projects": [
+              "prebuilt/media/firmware/amlogic-decoder",
+              "prebuilt/media/firmware/amlogic_encoder",
+              "prebuilt/vendor/amlogic"
+            ]
+          }
+        ],
+        "example": "http://shortn/_3FYEKebxI6",
+        "licenseType": "amlogic",
+        "notes": [
+          "Amlogic firmware artifacts."
+        ],
+        "patternRoot": "//tools/check-licenses/license/patterns/exception_unclassified/amlogic"
+      }
+    ]
+  }
+}

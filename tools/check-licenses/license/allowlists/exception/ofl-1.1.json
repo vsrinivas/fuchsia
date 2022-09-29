@@ -1,0 +1,23 @@
+{
+  "license": {
+    "exceptions": [
+      {
+        "entries": [
+          {
+            "bug": "",
+            "projects": [
+              "prebuilt/third_party/fonts/noto-cjk",
+              "prebuilt/third_party/fonts/noto-emoji",
+              "prebuilt/third_party/fonts/notosans",
+              "prebuilt/third_party/fonts/notosansui"
+            ]
+          }
+        ],
+        "example": "http://shortn/_te7mhiLC12",
+        "licenseType": "ofl-1.1",
+        "notes": [],
+        "patternRoot": "//tools/check-licenses/license/patterns/exception/ofl-1.1"
+      }
+    ]
+  }
+}
