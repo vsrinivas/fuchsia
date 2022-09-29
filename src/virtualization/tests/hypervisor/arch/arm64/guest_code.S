@@ -28,6 +28,7 @@
 .set GICC_IAR_OFFSET,           0xc
 
 .set PSCI64_SYSTEM_OFF,         0x84000008
+.set PSCI64_SYSTEM_RESET,       0x84000009
 
 // TCR_EL1 for configuring the MMU.
 //
@@ -356,6 +357,11 @@ END_FUNCTION
 
 FUNCTION vcpu_psci_system_off
     movlit x0, PSCI64_SYSTEM_OFF
+    smc #0
+END_FUNCTION
+
+FUNCTION vcpu_psci_system_reset
+    movlit x0, PSCI64_SYSTEM_RESET
     smc #0
 END_FUNCTION
 

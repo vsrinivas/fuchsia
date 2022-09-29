@@ -123,6 +123,9 @@ zx_status_t handle_smc_instruction(uint32_t iss, GuestState* guest_state,
       return ZX_ERR_STOP;
     case PSCI64_SYSTEM_OFF:
       return ZX_ERR_UNAVAILABLE;
+    case PSCI64_SYSTEM_RESET:
+      // See ARM PSCI Platform Design Document, Section 5.11.
+      return ZX_ERR_CANCELED;
     default:
       dprintf(CRITICAL, "hypervisor: Unhandled guest SMC PSCI instruction %#lx\n",
               guest_state->x[0]);

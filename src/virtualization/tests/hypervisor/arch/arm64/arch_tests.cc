@@ -23,6 +23,7 @@ DECLARE_TEST_FUNCTION(vcpu_wfi_aarch32)
 DECLARE_TEST_FUNCTION(vcpu_fp)
 DECLARE_TEST_FUNCTION(vcpu_fp_aarch32)
 DECLARE_TEST_FUNCTION(vcpu_psci_system_off)
+DECLARE_TEST_FUNCTION(vcpu_psci_system_reset)
 DECLARE_TEST_FUNCTION(vcpu_dc_set_way_ops)
 DECLARE_TEST_FUNCTION(vcpu_enable_mmu)
 DECLARE_TEST_FUNCTION(vcpu_enable_disable_mmu)
@@ -182,6 +183,15 @@ TEST(Guest, VcpuPsciSystemOff) {
 
   zx_port_packet_t packet = {};
   ASSERT_EQ(test.vcpu.enter(&packet), ZX_ERR_UNAVAILABLE);
+}
+
+TEST(Guest, VcpuPsciSystemRestart) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(
+      SetupGuest(&test, vcpu_psci_system_reset_start, vcpu_psci_system_reset_end));
+
+  zx_port_packet_t packet = {};
+  ASSERT_EQ(test.vcpu.enter(&packet), ZX_ERR_CANCELED);
 }
 
 TEST(Guest, VcpuWriteStateIoAarch32) {
