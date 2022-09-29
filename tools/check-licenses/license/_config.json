@@ -2,33 +2,12 @@
     "includes": [
         {
             "paths": [
-                "{FUCHSIA_DIR}/tools/check-licenses/license/allowlists/android.json",
-                "{FUCHSIA_DIR}/tools/check-licenses/license/allowlists/binutils-gdb.json",
-                "{FUCHSIA_DIR}/tools/check-licenses/license/allowlists/boringssl.json",
-                "{FUCHSIA_DIR}/tools/check-licenses/license/allowlists/clang.json",
-                "{FUCHSIA_DIR}/tools/check-licenses/license/allowlists/ffmpeg.json",
-                "{FUCHSIA_DIR}/tools/check-licenses/license/allowlists/fonts.json",
-                "{FUCHSIA_DIR}/tools/check-licenses/license/allowlists/gcc.json",
-                "{FUCHSIA_DIR}/tools/check-licenses/license/allowlists/glslang.json",
-                "{FUCHSIA_DIR}/tools/check-licenses/license/allowlists/goma.json",
-                "{FUCHSIA_DIR}/tools/check-licenses/license/allowlists/icu.json",
-                "{FUCHSIA_DIR}/tools/check-licenses/license/allowlists/libpng.json",
-                "{FUCHSIA_DIR}/tools/check-licenses/license/allowlists/mesa.json",
-                "{FUCHSIA_DIR}/tools/check-licenses/license/allowlists/network-conformance.json",
-                "{FUCHSIA_DIR}/tools/check-licenses/license/allowlists/openthread.json",
-                "{FUCHSIA_DIR}/tools/check-licenses/license/allowlists/openvx_nn_server.json",
-                "{FUCHSIA_DIR}/tools/check-licenses/license/allowlists/qemu.json",
-                "{FUCHSIA_DIR}/tools/check-licenses/license/allowlists/rust_crates.json",
-                "{FUCHSIA_DIR}/tools/check-licenses/license/allowlists/rust.json",
-                "{FUCHSIA_DIR}/tools/check-licenses/license/allowlists/scudo.json",
-                "{FUCHSIA_DIR}/tools/check-licenses/license/allowlists/spirv-cross.json",
-                "{FUCHSIA_DIR}/tools/check-licenses/license/allowlists/spirv-headers.json",
-                "{FUCHSIA_DIR}/tools/check-licenses/license/allowlists/wayland.json",
-                "{FUCHSIA_DIR}/tools/check-licenses/license/allowlists/zstd.json"
+                "{FUCHSIA_DIR}/tools/check-licenses/license/allowlists"
             ],
             "notes": [
-                "Allowlists."
+                "Allow lists."
             ],
+            "recursive": true,
             "required": true
         }
     ],
