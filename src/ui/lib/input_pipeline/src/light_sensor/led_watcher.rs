@@ -16,7 +16,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 #[derive(Debug, Clone)]
-pub(crate) struct LightGroup {
+pub struct LightGroup {
     /// Name of the light group.
     name: String,
     /// None brightness implies the light is disabled.
@@ -168,7 +168,7 @@ impl LedWatcher {
 }
 
 #[derive(Clone)]
-pub(crate) struct LedWatcherHandle {
+pub struct LedWatcherHandle {
     light_groups: Rc<RefCell<HashMap<String, LightGroup>>>,
     backlight_brightness: Rc<RefCell<f32>>,
 }
@@ -183,12 +183,12 @@ impl LedState for LedWatcherHandle {
     }
 }
 
-pub(crate) trait LedState {
+pub trait LedState {
     fn light_groups(&self) -> HashMap<String, LightGroup>;
     fn backlight_brightness(&self) -> f32;
 }
 
-pub(crate) struct CancelableTask {
+pub struct CancelableTask {
     inner: fasync::Task<()>,
     cancelation_tx: oneshot::Sender<()>,
 }
@@ -199,7 +199,7 @@ impl CancelableTask {
     }
 
     /// Submit a cancelation request and wait for the task to end.
-    pub(crate) async fn cancel(self) {
+    pub async fn cancel(self) {
         // If the send fails, the watcher has already ended so there's no need to worry about the
         // result.
         let _ = self.cancelation_tx.send(());

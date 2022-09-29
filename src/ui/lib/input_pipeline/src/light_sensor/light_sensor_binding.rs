@@ -2,27 +2,34 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![allow(dead_code, unused_variables)]
-
 use super::types::Rgbc;
 use crate::input_device::{self, Handled, InputDeviceBinding, InputDeviceDescriptor, InputEvent};
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
-use fidl_fuchsia_input_report::{InputDeviceProxy, InputReport, SensorDescriptor};
+use fidl_fuchsia_input_report::{InputDeviceProxy, InputReport, SensorDescriptor, SensorType};
 use fidl_fuchsia_ui_input_config::FeaturesRequest as InputConfigFeaturesRequest;
-use fuchsia_syslog::fx_log_err;
+use fuchsia_syslog::{fx_log_err, fx_log_warn};
 use fuchsia_zircon as zx;
 use futures::channel::mpsc::Sender;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 pub struct LightSensorEvent {
+    pub(crate) device_proxy: InputDeviceProxy,
     pub(crate) rgbc: Rgbc<u16>,
 }
+
+impl PartialEq for LightSensorEvent {
+    fn eq(&self, other: &Self) -> bool {
+        self.rgbc == other.rgbc
+    }
+}
+
+impl Eq for LightSensorEvent {}
 
 /// A [`LightSensorBinding`] represents a connection to a light sensor input device.
 ///
 /// TODO more details
-pub struct LightSensorBinding {
+pub(crate) struct LightSensorBinding {
     /// The channel to stream InputEvents to.
     event_sender: Sender<input_device::InputEvent>,
 
@@ -33,13 +40,16 @@ pub struct LightSensorBinding {
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct LightSensorDeviceDescriptor {
     /// The vendor id of the connected light sensor input device.
-    pub vendor_id: u32,
+    pub(crate) vendor_id: u32,
 
     /// The product id of the connected light sensor input device.
-    pub product_id: u32,
+    pub(crate) product_id: u32,
 
     /// The device id of the connected light sensor input device.
-    pub device_id: u32,
+    pub(crate) device_id: u32,
+
+    /// Layout of the color channels in the sensor report.
+    pub(crate) sensor_layout: Rgbc<usize>,
 }
 
 #[async_trait]
@@ -73,7 +83,7 @@ impl LightSensorBinding {
     ///
     /// # Errors
     /// If there was an error binding to the proxy.
-    pub async fn new(
+    pub(crate) async fn new(
         device_proxy: InputDeviceProxy,
         device_id: u32,
         input_event_sender: Sender<input_device::InputEvent>,
@@ -81,10 +91,18 @@ impl LightSensorBinding {
         let device_binding =
             Self::bind_device(&device_proxy, device_id, input_event_sender).await?;
         input_device::initialize_report_stream(
-            device_proxy,
+            device_proxy.clone(),
             device_binding.get_device_descriptor(),
             device_binding.input_event_sender(),
-            Self::process_reports,
+            move |report, previous_report, device_descriptor, input_event_sender| {
+                Self::process_reports(
+                    report,
+                    previous_report,
+                    device_descriptor,
+                    input_event_sender,
+                    device_proxy.clone(),
+                )
+            },
         );
 
         Ok(device_binding)
@@ -106,20 +124,89 @@ impl LightSensorBinding {
         input_event_sender: Sender<input_device::InputEvent>,
     ) -> Result<Self, Error> {
         let descriptor = device.get_descriptor().await?;
-        let device_info = descriptor.device_info.ok_or({
+        let device_info = descriptor.device_info.ok_or_else(|| {
             // Logging in addition to returning an error, as in some test
             // setups the error may never be displayed to the user.
             fx_log_err!("DRIVER BUG: empty device_info for device_id: {}", device_id);
             format_err!("empty device info for device_id: {}", device_id)
         })?;
         match descriptor.sensor {
-            Some(SensorDescriptor { input: Some(_), feature: Some(_), .. }) => {
+            Some(SensorDescriptor {
+                input: Some(input_descriptors),
+                feature: Some(features),
+                ..
+            }) => {
+                let (_sensitivity, _sampling_rate, sensor_layout) = input_descriptors
+                    .into_iter()
+                    .zip(features.into_iter())
+                    .filter_map(|(input_descriptor, feature)| {
+                        input_descriptor
+                            .values
+                            .and_then(|values| {
+                                let mut red_value = None;
+                                let mut green_value = None;
+                                let mut blue_value = None;
+                                let mut clear_value = None;
+                                for (i, value) in values.iter().enumerate() {
+                                    let old = match value.type_ {
+                                        SensorType::LightRed => {
+                                            std::mem::replace(&mut red_value, Some(i))
+                                        }
+                                        SensorType::LightGreen => {
+                                            std::mem::replace(&mut green_value, Some(i))
+                                        }
+                                        SensorType::LightBlue => {
+                                            std::mem::replace(&mut blue_value, Some(i))
+                                        }
+                                        SensorType::LightIlluminance => {
+                                            std::mem::replace(&mut clear_value, Some(i))
+                                        }
+                                        type_ => {
+                                            fx_log_warn!(
+                                                "unexpected sensor type {type_:?} found on light \
+                                                sensor device"
+                                            );
+                                            None
+                                        }
+                                    };
+                                    if old.is_some() {
+                                        fx_log_warn!(
+                                            "existing index for light sensor {:?} replaced",
+                                            value.type_
+                                        );
+                                    }
+                                }
+
+                                red_value.and_then(|red| {
+                                    green_value.and_then(|green| {
+                                        blue_value.and_then(|blue| {
+                                            clear_value.map(|clear| Rgbc {
+                                                red,
+                                                green,
+                                                blue,
+                                                clear,
+                                            })
+                                        })
+                                    })
+                                })
+                            })
+                            .and_then(|sensor_layout| {
+                                feature.sampling_rate.and_then(|sampling_rate| {
+                                    feature.sensitivity.map(|sensitivity| {
+                                        (sensitivity, sampling_rate, sensor_layout)
+                                    })
+                                })
+                            })
+                    })
+                    .next()
+                    .ok_or_else(|| format_err!("missing sensor data in device"))?;
                 Ok(LightSensorBinding {
                     event_sender: input_event_sender,
                     device_descriptor: LightSensorDeviceDescriptor {
                         vendor_id: device_info.vendor_id,
                         product_id: device_info.product_id,
                         device_id,
+                        sensor_layout,
                     },
                 })
             }
@@ -148,6 +235,7 @@ impl LightSensorBinding {
         previous_report: Option<InputReport>,
         device_descriptor: &input_device::InputDeviceDescriptor,
         input_event_sender: &mut Sender<input_device::InputEvent>,
+        device_proxy: InputDeviceProxy,
     ) -> Option<InputReport> {
         let light_sensor_descriptor =
             if let input_device::InputDeviceDescriptor::LightSensor(ref light_sensor_descriptor) =
@@ -171,10 +259,15 @@ impl LightSensorBinding {
 
         let event_time: zx::Time = input_device::event_time_or_now(report.event_time);
 
-        // TODO(fxbug.dev/100664) track layout in device registration, then update here.
         if let Err(e) = input_event_sender.try_send(input_device::InputEvent {
             device_event: input_device::InputDeviceEvent::LightSensor(LightSensorEvent {
-                rgbc: Rgbc { red: 0, green: 0, blue: 0, clear: 0 },
+                device_proxy,
+                rgbc: Rgbc {
+                    red: values[light_sensor_descriptor.sensor_layout.red] as u16,
+                    green: values[light_sensor_descriptor.sensor_layout.green] as u16,
+                    blue: values[light_sensor_descriptor.sensor_layout.blue] as u16,
+                    clear: values[light_sensor_descriptor.sensor_layout.clear] as u16,
+                },
             }),
             device_descriptor: device_descriptor.clone(),
             event_time,

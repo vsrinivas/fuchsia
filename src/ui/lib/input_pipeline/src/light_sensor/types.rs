@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(fxbug.dev/100665) Remove allow once used
-#![cfg_attr(not(test), allow(dead_code))]
-
 use anyhow::{bail, format_err, Context, Error};
 use async_trait::async_trait;
 use futures::Future;
@@ -195,8 +192,6 @@ pub struct CalibrationConfiguration {
 
 /// Light Sensor configuration
 #[derive(Deserialize, Debug)]
-// TODO(fxbug.dev/100665) Remove allow once used
-#[allow(dead_code)]
 pub struct SensorConfiguration {
     /// Vendor id of the product, which is used to validate `input_report_path`.
     pub(crate) vendor_id: u32,
@@ -352,8 +347,6 @@ impl Calibration {
 
 /// Settings used to configure a light sensor.
 #[derive(Copy, Clone, Deserialize, Debug)]
-// TODO(fxbug.dev/100665) Remove allow once used
-#[allow(dead_code)]
 pub(crate) struct AdjustmentSetting {
     /// Rgbc integration time.
     pub(crate) atime: u32,

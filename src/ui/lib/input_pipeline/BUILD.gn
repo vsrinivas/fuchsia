@@ -124,6 +124,7 @@ rustc_library("input_pipeline") {
     "src/light_sensor/led_watcher/led_watcher_tests.rs",
     "src/light_sensor/light_sensor_binding.rs",
     "src/light_sensor/light_sensor_handler.rs",
+    "src/light_sensor/light_sensor_handler/light_sensor_handler_tests.rs",
     "src/light_sensor/test_utils.rs",
     "src/light_sensor/types.rs",
     "src/light_sensor/types/types_tests.rs",

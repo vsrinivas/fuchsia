@@ -45,14 +45,14 @@ fn calculate_coex(left: Rgbc<Parameters>, right: Rgbc<Parameters>) -> Rgbc<f32> 
     left.map(|c| c.intercept) - right.map(|c| c.intercept)
 }
 
-pub(crate) trait Calibrate {
+pub trait Calibrate {
     /// Calibrate the supplied `sensor_data`.
     fn calibrate(&self, rgbc: Rgbc<f32>) -> Rgbc<f32>;
 }
 
 /// Handles the calibration calculation.
 #[derive(Clone)]
-pub(crate) struct Calibrator<T> {
+pub struct Calibrator<T> {
     calibration: Calibration,
     led_state: T,
     coex_leds: Rc<RefCell<Vec<CoexLed>>>,
