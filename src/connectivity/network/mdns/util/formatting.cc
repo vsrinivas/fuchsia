@@ -7,36 +7,46 @@
 #include <iomanip>
 #include <iostream>
 
+#include "src/lib/fostr/hex_dump.h"
+#include "src/lib/fostr/zx_types.h"
+
 namespace mdns {
 
-template <typename T>
-std::ostream& operator<<(std::ostream& os, const std::vector<T>& value) {
+std::ostream& operator<<(std::ostream& os, const std::vector<uint8_t>& value) {
   if (value.empty()) {
     return os << "<empty>";
   }
 
-  int index = 0;
-  for (auto& element : value) {
-    os << fostr::NewLine << "[" << index++ << "] " << element;
+  if (std::all_of(value.cbegin(), value.cend(), [](uint8_t b) { return b >= ' ' && b <= '~'; })) {
+    std::cout << "\"" << std::string(value.begin(), value.end()) << "\"";
+  } else {
+    std::cout << fostr::NewLine << fostr::HexDump(value);
   }
 
   return os;
 }
 
 std::ostream& operator<<(std::ostream& os, const fuchsia::net::mdns::ServiceInstance& value) {
-  os << value.service() << " " << value.instance();
   os << fostr::Indent;
 
-  if (value.has_ipv4_endpoint()) {
-    os << fostr::NewLine << "IPV4 endpoint: " << value.ipv4_endpoint();
+  if (value.has_addresses() && !value.addresses().empty()) {
+    os << fostr::NewLine << "addresses:" << value.addresses();
   }
 
-  if (value.has_ipv6_endpoint()) {
-    os << fostr::NewLine << "IPV6 endpoint: " << value.ipv6_endpoint();
+  if (value.has_text_strings() && !value.text_strings().empty()) {
+    os << fostr::NewLine << "text:" << value.text();
   }
 
-  if (value.has_text() && !value.text().empty()) {
-    os << fostr::NewLine << "text: " << value.text();
+  if (value.has_target()) {
+    os << fostr::NewLine << "target: " << value.target();
+  }
+
+  if (value.has_srv_priority() && value.srv_priority() != 0) {
+    os << fostr::NewLine << "srv priority: " << value.srv_priority();
+  }
+
+  if (value.has_srv_weight() && value.srv_weight() != 0) {
+    os << fostr::NewLine << "srv weight: " << value.srv_weight();
   }
 
   return os << fostr::Outdent;
@@ -85,7 +95,7 @@ std::ostream& operator<<(std::ostream& os, const fuchsia::net::Ipv6Address& valu
     best_zeros_seen = zeros_seen;
   }
 
-  os << "[" << std::hex;
+  os << std::hex;
   for (uint8_t i = 0; i < 8; ++i) {
     if (i < start_of_best_zeros || i >= start_of_best_zeros + best_zeros_seen) {
       os << words[i];
@@ -101,7 +111,15 @@ std::ostream& operator<<(std::ostream& os, const fuchsia::net::Ipv6Address& valu
     }
   }
 
-  return os << std::dec << "]";
+  return os << std::dec;
+}
+
+std::ostream& operator<<(std::ostream& os, const fuchsia::net::IpAddress& value) {
+  if (value.is_ipv4()) {
+    return os << value.ipv4();
+  } else {
+    return os << value.ipv6();
+  }
 }
 
 std::ostream& operator<<(std::ostream& os, const fuchsia::net::Ipv4SocketAddress& value) {
@@ -109,7 +127,23 @@ std::ostream& operator<<(std::ostream& os, const fuchsia::net::Ipv4SocketAddress
 }
 
 std::ostream& operator<<(std::ostream& os, const fuchsia::net::Ipv6SocketAddress& value) {
-  return os << value.address << ":" << value.port;
+  return os << "[" << value.address << "]:" << value.port;
+}
+
+std::ostream& operator<<(std::ostream& os, const fuchsia::net::SocketAddress& value) {
+  if (value.is_ipv4()) {
+    return os << value.ipv4();
+  } else {
+    return os << value.ipv6();
+  }
+}
+
+std::ostream& operator<<(std::ostream& os, const fuchsia::net::mdns::HostAddress& value) {
+  os << fostr::Indent;
+  os << fostr::NewLine << "address: " << value.address;
+  os << fostr::NewLine << "interface: " << value.interface;
+  os << fostr::NewLine << "ttl: " << zx::duration(value.ttl);
+  return os << fostr::Outdent;
 }
 
 }  // namespace mdns

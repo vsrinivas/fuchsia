@@ -8,17 +8,22 @@
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/connectivity/network/mdns/util/commands.h"
 #include "src/connectivity/network/mdns/util/mdns_impl.h"
-#include "src/connectivity/network/mdns/util/mdns_params.h"
 #include "src/lib/fxl/command_line.h"
 
 int main(int argc, const char** argv) {
   syslog::SetTags({"mdns-util"});
 
-  fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  mdns::MdnsParams params(command_line);
-  if (!params.is_valid()) {
-    return 1;
+  mdns::CommandParser parser(argc, argv);
+  mdns::Command command = parser.Parse();
+  switch (command.verb()) {
+    case mdns::CommandVerb::kHelp:
+    case mdns::CommandVerb::kMalformed:
+      mdns::Command::ShowHelp(command.help_verb());
+      return 0;
+    default:
+      break;
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
@@ -26,7 +31,7 @@ int main(int argc, const char** argv) {
   std::unique_ptr<sys::ComponentContext> component_context =
       sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
-  mdns::MdnsImpl impl(component_context.get(), &params, [&loop]() {
+  mdns::MdnsImpl impl(component_context.get(), std::move(command), loop.dispatcher(), [&loop]() {
     async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); });
   });
 

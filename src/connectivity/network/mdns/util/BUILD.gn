@@ -17,13 +17,13 @@ executable("bin") {
   output_name = "mdns-util"
 
   sources = [
+    "commands.cc",
+    "commands.h",
     "formatting.cc",
     "formatting.h",
     "main.cc",
     "mdns_impl.cc",
     "mdns_impl.h",
-    "mdns_params.cc",
-    "mdns_params.h",
   ]
 
   deps = [
@@ -33,6 +33,8 @@ executable("bin") {
     "//src/lib/fostr",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//src/lib/inet",
+    "//src/lib/line_input",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

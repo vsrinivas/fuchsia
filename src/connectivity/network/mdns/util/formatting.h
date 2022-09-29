@@ -21,19 +21,38 @@ std::ostream& operator<<(std::ostream& os, const fidl::VectorPtr<T>& value) {
     return os << "<empty>";
   }
 
-  int index = 0;
+  os << fostr::Indent;
+
   for (const T& element : *value) {
-    os << fostr::NewLine << "[" << index++ << "] " << element;
+    os << fostr::NewLine << element;
   }
 
-  return os;
+  return os << fostr::Outdent;
 }
 
 std::ostream& operator<<(std::ostream& os, const fuchsia::net::mdns::ServiceInstance& value);
 std::ostream& operator<<(std::ostream& os, const fuchsia::net::Ipv4Address& value);
 std::ostream& operator<<(std::ostream& os, const fuchsia::net::Ipv6Address& value);
+std::ostream& operator<<(std::ostream& os, const fuchsia::net::IpAddress& value);
 std::ostream& operator<<(std::ostream& os, const fuchsia::net::Ipv4SocketAddress& value);
 std::ostream& operator<<(std::ostream& os, const fuchsia::net::Ipv6SocketAddress& value);
+std::ostream& operator<<(std::ostream& os, const fuchsia::net::SocketAddress& value);
+std::ostream& operator<<(std::ostream& os, const fuchsia::net::mdns::HostAddress& value);
+
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const std::vector<T>& value) {
+  if (value.empty()) {
+    return os << "<empty>";
+  }
+
+  os << fostr::Indent;
+
+  for (auto& element : value) {
+    os << fostr::NewLine << element;
+  }
+
+  return os << fostr::Outdent;
+}
 
 }  // namespace mdns
 
