@@ -69,10 +69,14 @@
         enable_debug_service: { type: "bool" },
 
         // Path to a node config file for the Power Manager to use. Typically set as a default
-        // value, but can be overriden for integration tests.
+        // value, but can be overridden for integration tests.
         node_config_path: {
             type: "string",
             max_size: 128,
         },
+
+        // Disables the temperature filter for all TemperatureHandler nodes. Typically false, but
+        // may be overridden for integration tests.
+        disable_temperature_filter: { type: "bool" },
     },
 }

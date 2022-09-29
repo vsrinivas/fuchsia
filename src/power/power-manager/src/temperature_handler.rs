@@ -632,7 +632,7 @@ pub struct TemperatureReadings {
 
 /// Wrapper for reading and filtering temperature samples from a TemperatureHandler node.
 pub struct TemperatureFilter {
-    /// Filter time constant
+    /// Filter time constant. A value of 0 effectively disables filtering.
     time_constant: Seconds,
 
     /// Previous sample temperature
@@ -649,7 +649,6 @@ impl TemperatureFilter {
     /// Constucts a new TemperatureFilter with the specified TemperatureHandler node and filter time
     /// constant.
     pub fn new(temperature_handler: Rc<dyn Node>, time_constant: Seconds) -> Self {
-        assert!(time_constant > Seconds(0.0));
         Self {
             time_constant,
             prev_temperature: Cell::new(None),
@@ -683,15 +682,6 @@ impl TemperatureFilter {
         Ok(TemperatureReadings { raw: raw_temperature, filtered: filtered_temperature })
     }
 
-    /// Reset the internal state of the temperature filter. This has the effect of causing the
-    /// filter to return the same value for both the `raw` and `filtered` temperature fields on the
-    /// next call to `get_temperature`.
-    #[cfg(test)]
-    pub fn reset(&self) {
-        self.prev_temperature.set(None);
-        self.prev_timestamp.set(Nanoseconds(0));
-    }
-
     /// Queries the current temperature from the temperature handler node
     async fn read_temperature(&self) -> Result<Celsius, Error> {
         fuchsia_trace::duration!("power_manager", "TemperatureFilter::read_temperature");
@@ -710,7 +700,11 @@ impl TemperatureFilter {
         time_delta: Seconds,
         time_constant: Seconds,
     ) -> Celsius {
-        Celsius(y_prev.0 + (time_delta.0 / time_constant.0) * (y.0 - y_prev.0))
+        if time_constant == Seconds(0.0) {
+            y
+        } else {
+            Celsius(y_prev.0 + (time_delta.0 / time_constant.0) * (y.0 - y_prev.0))
+        }
     }
 }
 
@@ -733,6 +727,9 @@ mod temperature_filter_tests {
             TemperatureFilter::low_pass_filter(y_1, y_0, time_delta, time_constant),
             Celsius(1.0)
         );
+
+        // Filter constant of 0 is valid and should be treated as "no filtering"
+        assert_eq!(TemperatureFilter::low_pass_filter(y_1, y_0, time_delta, Seconds(0.0)), y_1);
     }
 
     /// Tests that the TemperatureFilter `get_temperature` function queries the TemperatureHandler

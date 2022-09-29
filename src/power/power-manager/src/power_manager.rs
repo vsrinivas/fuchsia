@@ -46,17 +46,17 @@ impl PowerManager {
         let inspector = component::inspector();
         inspect_runtime::serve(inspector, &mut fs).context("Failed to serve inspect")?;
 
-        let config = power_manager_config_lib::Config::take_from_startup_handle();
-        config.record_inspect(fuchsia_inspect::component::inspector().root());
-        log_config(&config);
+        let structured_config = power_manager_config_lib::Config::take_from_startup_handle();
+        structured_config.record_inspect(fuchsia_inspect::component::inspector().root());
+        log_config(&structured_config);
 
         // Create the nodes according to the config file
         let node_futures = FuturesUnordered::new();
-        self.create_nodes_from_config(&config.node_config_path, &mut fs, &node_futures)
+        self.create_nodes_from_config(&structured_config, &mut fs, &node_futures)
             .await
             .context("Failed to create nodes from config")?;
 
-        if config.enable_debug_service {
+        if structured_config.enable_debug_service {
             debug_service::publish_debug_service(fs.dir("svc"), self.nodes.clone());
         }
 
@@ -87,21 +87,23 @@ impl PowerManager {
     /// Create the nodes by reading and parsing the node config JSON file.
     async fn create_nodes_from_config<'a, 'b, 'c>(
         &mut self,
-        node_config_path: &str,
+        structured_config: &power_manager_config_lib::Config,
         service_fs: &'a mut ServiceFs<ServiceObjLocal<'b, ()>>,
         node_futures: &FuturesUnordered<LocalBoxFuture<'c, ()>>,
     ) -> Result<(), Error> {
+        let node_config_path = &structured_config.node_config_path;
         let contents = std::fs::read_to_string(node_config_path)?;
         let json_data: json::Value = serde_json5::from_str(&contents)
             .context(format!("Failed to parse file {}", node_config_path))?;
 
         info!("Creating nodes from config file: {}", node_config_path);
-        self.create_nodes(json_data, service_fs, node_futures).await
+        self.create_nodes(structured_config, json_data, service_fs, node_futures).await
     }
 
     /// Creates the nodes using the specified JSON object, adding them to the `nodes` HashMap.
     async fn create_nodes<'a, 'b, 'c>(
         &mut self,
+        structured_config: &power_manager_config_lib::Config,
         json_data: json::Value,
         service_fs: &'a mut ServiceFs<ServiceObjLocal<'b, ()>>,
         node_futures: &FuturesUnordered<LocalBoxFuture<'c, ()>>,
@@ -111,7 +113,7 @@ impl PowerManager {
         for node_config in json_data.as_array().unwrap().iter() {
             info!("Creating node {}", node_config["name"]);
             let node = self
-                .create_node(node_config.clone(), service_fs, node_futures)
+                .create_node(structured_config, node_config.clone(), service_fs, node_futures)
                 .await
                 .with_context(|| format!("Failed creating node {}", node_config["name"]))?;
             self.nodes.insert(node_config["name"].as_str().unwrap().to_string(), node);
@@ -123,6 +125,7 @@ impl PowerManager {
     /// object corresponding to a single node configuration.
     async fn create_node<'a, 'b, 'c>(
         &mut self,
+        structured_config: &power_manager_config_lib::Config,
         json_data: json::Value,
         service_fs: &'a mut ServiceFs<ServiceObjLocal<'b, ()>>,
         node_futures: &FuturesUnordered<LocalBoxFuture<'c, ()>>,
@@ -225,10 +228,12 @@ impl PowerManager {
                 &self.nodes,
             )
             .build()?,
-            "ThermalLoadDriver" => {
-                thermal_load_driver::ThermalLoadDriverBuilder::new_from_json(json_data, &self.nodes)
-                    .build()?
-            }
+            "ThermalLoadDriver" => thermal_load_driver::ThermalLoadDriverBuilder::new_from_json(
+                json_data,
+                &self.nodes,
+                &structured_config,
+            )
+            .build()?,
             "ThermalPolicy" => {
                 thermal_policy::ThermalPolicyBuilder::new_from_json(json_data, &self.nodes)
                     .build(node_futures)
@@ -269,10 +274,14 @@ impl PowerManager {
 }
 
 fn log_config(config: &power_manager_config_lib::Config) {
-    let power_manager_config_lib::Config { enable_debug_service, node_config_path } = config;
+    let power_manager_config_lib::Config {
+        enable_debug_service,
+        node_config_path,
+        disable_temperature_filter,
+    } = config;
     info!(
-        "Configuration: enable_debug_service={} node_config_path={}",
-        enable_debug_service, node_config_path
+        "Configuration: enable_debug_service={} node_config_path={} disable_temperature_filter={}",
+        enable_debug_service, node_config_path, disable_temperature_filter
     );
 }
 
@@ -299,7 +308,16 @@ mod tests {
         let mut power_manager = PowerManager::new();
         let node_futures = FuturesUnordered::new();
         power_manager
-            .create_nodes(json_data, &mut ServiceFs::new_local(), &node_futures)
+            .create_nodes(
+                &power_manager_config_lib::Config {
+                    enable_debug_service: false,
+                    node_config_path: String::new(),
+                    disable_temperature_filter: false,
+                },
+                json_data,
+                &mut ServiceFs::new_local(),
+                &node_futures,
+            )
             .await
             .unwrap();
     }

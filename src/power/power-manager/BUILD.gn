@@ -156,8 +156,9 @@ fuchsia_structured_config_values("default_component_config") {
   values = {
     enable_debug_service = enable_power_manager_debug
 
-    # Default value may be overridden by integration tests
+    # Below are default values that are only expected to be changed for integration tests.
     node_config_path = "/pkg/config/power_manager/node_config.json"
+    disable_temperature_filter = false
   }
 }
 

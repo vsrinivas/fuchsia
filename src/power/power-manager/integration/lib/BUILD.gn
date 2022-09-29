@@ -68,6 +68,7 @@ fuchsia_structured_config_values("integration-structured-config") {
   values = {
     enable_debug_service = false
     node_config_path = ""
+    disable_temperature_filter = true
   }
 }
 

@@ -975,6 +975,7 @@ pub mod tests {
         policy_params.controller_params.proportional_gain = 0.0;
         policy_params.controller_params.integral_gain = 0.1;
         policy_params.controller_params.sustainable_power = Watts(1.0);
+        policy_params.controller_params.filter_time_constant = Seconds(0.0);
 
         // The executor's fake time must be set before node creation to ensure the periodic timer's
         // deadline is properly initialized.
@@ -998,7 +999,7 @@ pub mod tests {
         })
         .build(&node_futures);
 
-        let node = match executor.run_until_stalled(&mut node_builder.boxed_local()) {
+        let _node = match executor.run_until_stalled(&mut node_builder.boxed_local()) {
             futures::task::Poll::Ready(Ok(node)) => node,
             _ => panic!("Failed to create node"),
         };
@@ -1011,7 +1012,6 @@ pub mod tests {
         // 3. Verify metric expectations.
         struct TimeStepper<'a> {
             executor: fasync::TestExecutor,
-            node: Rc<ThermalPolicy>,
             node_futures: FuturesUnordered<LocalBoxFuture<'a, ()>>,
         }
 
@@ -1020,8 +1020,6 @@ pub mod tests {
                 let wakeup_time = self.executor.wake_next_timer().unwrap();
                 self.executor.set_fake_time(wakeup_time);
 
-                self.node.state.temperature_filter.reset();
-
                 assert_eq!(
                     futures::task::Poll::Pending,
                     self.executor.run_until_stalled(&mut self.node_futures.next())
@@ -1029,7 +1027,7 @@ pub mod tests {
             }
         }
 
-        let mut stepper = TimeStepper { executor, node, node_futures };
+        let mut stepper = TimeStepper { executor, node_futures };
 
         // Not throttled yet
         mock_temperature.add_msg_response_pair((

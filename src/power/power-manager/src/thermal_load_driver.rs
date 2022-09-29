@@ -60,7 +60,11 @@ pub struct ThermalLoadDriverBuilder<'a> {
 }
 
 impl ThermalLoadDriverBuilder<'_> {
-    pub fn new_from_json(json_data: json::Value, nodes: &HashMap<String, Rc<dyn Node>>) -> Self {
+    pub fn new_from_json(
+        json_data: json::Value,
+        nodes: &HashMap<String, Rc<dyn Node>>,
+        structured_config: &power_manager_config_lib::Config,
+    ) -> Self {
         #[derive(Deserialize)]
         struct JsonTemperatureInputConfig {
             temperature_handler_node_name: String,
@@ -101,7 +105,13 @@ impl ThermalLoadDriverBuilder<'_> {
                     onset_temperature: Celsius(config.onset_temperature_c),
                     reboot_temperature: Celsius(config.reboot_temperature_c),
                     poll_interval: Seconds(config.poll_interval_s),
-                    filter_time_constant: Seconds(config.filter_time_constant_s),
+                    filter_time_constant: Seconds(
+                        if structured_config.disable_temperature_filter {
+                            0.0
+                        } else {
+                            config.filter_time_constant_s
+                        },
+                    ),
                 })
                 .collect(),
             thermal_load_notify_nodes: data
@@ -274,7 +284,8 @@ struct TemperatureInputConfig {
     /// Polling interval at which a new filtered temperature value will be read from the sensor.
     poll_interval: Seconds,
 
-    /// Time constant to be used for filtering raw temperature readings.
+    /// Time constant to be used for filtering raw temperature readings. A value of 0 effectively
+    /// disables filtering.
     filter_time_constant: Seconds,
 }
 
@@ -460,7 +471,13 @@ mod tests {
         nodes.insert("shutdown".to_string(), create_dummy_node());
         nodes.insert("thermal_load_notify".to_string(), create_dummy_node());
         nodes.insert("platform_metrics".to_string(), create_dummy_node());
-        let _ = ThermalLoadDriverBuilder::new_from_json(json_data, &nodes);
+
+        let structured_config = power_manager_config_lib::Config {
+            enable_debug_service: false,
+            node_config_path: String::new(),
+            disable_temperature_filter: false,
+        };
+        let _ = ThermalLoadDriverBuilder::new_from_json(json_data, &nodes, &structured_config);
     }
 
     // Convenience function to add an UpdateThermalLoad message to a mock node's expected messages.
