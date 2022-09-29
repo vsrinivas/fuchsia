@@ -336,7 +336,7 @@ impl<T: Sensor<T>> SensorLogger<T> {
         for driver in self.drivers.iter() {
             let topological_path = &driver.topological_path;
             let sensor_name = driver.alias.as_ref().map_or(topological_path.to_string(), |alias| {
-                format!("{:?}({:?})", alias, topological_path)
+                format!("{}({})", alias, topological_path)
             });
             sensor_names.push(sensor_name);
         }

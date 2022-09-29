@@ -170,7 +170,7 @@ impl GpuUsageLogger {
         for (index, driver) in self.drivers.iter().enumerate() {
             let topological_path = &driver.topological_path;
             let driver_name = driver.alias.as_ref().map_or(topological_path.to_string(), |alias| {
-                format!("{:?}({:?})", alias, topological_path)
+                format!("{}({})", alias, topological_path)
             });
             driver_names.push(driver_name);
 
