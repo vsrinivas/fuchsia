@@ -1,7 +1,6 @@
 #ifndef __{{header_guard}}_H__
 #define __{{header_guard}}_H__
 
-#include <iostream>
 #include <string>
 #include <vector>
 
@@ -12,11 +11,10 @@ struct Config {
 public:
   static constexpr bool kIsStructuredConfig = true;
   static Config TakeFromStartupHandle() noexcept;
+  const std::string ToString() noexcept;
 
   {{> typedef }}
 };
-
-std::ostream& operator<<(std::ostream& os, const {{cpp_namespace}}::Config& c);
 }
 
 #endif

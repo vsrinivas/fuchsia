@@ -1,7 +1,6 @@
 #ifndef __{{header_guard}}_H__
 #define __{{header_guard}}_H__
 
-#include <iostream>
 #include <string>
 #include <vector>
 
@@ -15,11 +14,10 @@ public:
   static constexpr bool kIsDriverStructuredConfig = true;
   static Config TakeFromStartArgs(fuchsia_driver_framework::DriverStartArgs& start_args) noexcept;
   static Config TakeFromStartArgs(fuchsia_driver_framework::wire::DriverStartArgs& start_args) noexcept;
+  const std::string ToString() noexcept;
 
   {{> typedef }}
 };
-
-std::ostream& operator<<(std::ostream& os, const {{cpp_namespace}}::Config& c);
 }
 
 #endif

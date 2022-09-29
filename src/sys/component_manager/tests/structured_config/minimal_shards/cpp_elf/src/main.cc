@@ -7,5 +7,5 @@
 #include "src/sys/component_manager/tests/structured_config/minimal_shards/cpp_elf/receiver_config.h"
 
 int main(int argc, const char** argv) {
-  std::cout << receiver_config::Config::TakeFromStartupHandle() << std::endl;
+  std::cout << receiver_config::Config::TakeFromStartupHandle().ToString() << std::endl;
 }

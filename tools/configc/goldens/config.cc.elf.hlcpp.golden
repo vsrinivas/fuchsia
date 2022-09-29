@@ -80,90 +80,113 @@ void Config::RecordInspect(inspect::Node* node) {
   node->Record(std::move(my_vector_of_uint8_array_));
 }
 
-std::ostream& operator<<(std::ostream& os, const Config& c) {
-  if (c.my_flag()) {
-    os << "my_flag; ";
+const std::string Config::ToString() noexcept {
+  std::string str;
+  str.reserve(4096);  // minimize reallocations
+
+  if (my_flag()) {
+    str += "my_flag; ";
   }
-  os << "my_int16=" << c.my_int16() << "; ";
-  os << "my_int32=" << c.my_int32() << "; ";
-  os << "my_int64=" << c.my_int64() << "; ";
-  os << "my_int8=" << c.my_int8() << "; ";
-  os << "my_string=" << c.my_string() << "; ";
-  os << "my_uint16=" << c.my_uint16() << "; ";
-  os << "my_uint32=" << c.my_uint32() << "; ";
-  os << "my_uint64=" << c.my_uint64() << "; ";
-  os << "my_uint8=" << c.my_uint8() << "; ";
-  os << "my_vector_of_flag: [";
-  for (auto iter = c.my_vector_of_flag().begin();
-       iter != c.my_vector_of_flag().end(); iter++) {
-    if (iter != c.my_vector_of_flag().begin()) os << ", ";
-    os << *iter;
+  str += "my_int16=";
+  str += std::to_string(my_int16());
+  str += "; ";
+  str += "my_int32=";
+  str += std::to_string(my_int32());
+  str += "; ";
+  str += "my_int64=";
+  str += std::to_string(my_int64());
+  str += "; ";
+  str += "my_int8=";
+  str += std::to_string(my_int8());
+  str += "; ";
+  str += "my_string=";
+  str += my_string();
+  str += "; ";
+  str += "my_uint16=";
+  str += std::to_string(my_uint16());
+  str += "; ";
+  str += "my_uint32=";
+  str += std::to_string(my_uint32());
+  str += "; ";
+  str += "my_uint64=";
+  str += std::to_string(my_uint64());
+  str += "; ";
+  str += "my_uint8=";
+  str += std::to_string(my_uint8());
+  str += "; ";
+  str += "my_vector_of_flag: [";
+  for (auto iter = my_vector_of_flag().begin();
+       iter != my_vector_of_flag().end(); iter++) {
+    if (iter != my_vector_of_flag().begin()) str += ", ";
+    str += std::to_string(*iter);
   }
-  os << "]";
-  os << "my_vector_of_int16: [";
-  for (auto iter = c.my_vector_of_int16().begin();
-       iter != c.my_vector_of_int16().end(); iter++) {
-    if (iter != c.my_vector_of_int16().begin()) os << ", ";
-    os << *iter;
+  str += "]";
+  str += "my_vector_of_int16: [";
+  for (auto iter = my_vector_of_int16().begin();
+       iter != my_vector_of_int16().end(); iter++) {
+    if (iter != my_vector_of_int16().begin()) str += ", ";
+    str += std::to_string(*iter);
   }
-  os << "]";
-  os << "my_vector_of_int32: [";
-  for (auto iter = c.my_vector_of_int32().begin();
-       iter != c.my_vector_of_int32().end(); iter++) {
-    if (iter != c.my_vector_of_int32().begin()) os << ", ";
-    os << *iter;
+  str += "]";
+  str += "my_vector_of_int32: [";
+  for (auto iter = my_vector_of_int32().begin();
+       iter != my_vector_of_int32().end(); iter++) {
+    if (iter != my_vector_of_int32().begin()) str += ", ";
+    str += std::to_string(*iter);
   }
-  os << "]";
-  os << "my_vector_of_int64: [";
-  for (auto iter = c.my_vector_of_int64().begin();
-       iter != c.my_vector_of_int64().end(); iter++) {
-    if (iter != c.my_vector_of_int64().begin()) os << ", ";
-    os << *iter;
+  str += "]";
+  str += "my_vector_of_int64: [";
+  for (auto iter = my_vector_of_int64().begin();
+       iter != my_vector_of_int64().end(); iter++) {
+    if (iter != my_vector_of_int64().begin()) str += ", ";
+    str += std::to_string(*iter);
   }
-  os << "]";
-  os << "my_vector_of_int8: [";
-  for (auto iter = c.my_vector_of_int8().begin();
-       iter != c.my_vector_of_int8().end(); iter++) {
-    if (iter != c.my_vector_of_int8().begin()) os << ", ";
-    os << *iter;
+  str += "]";
+  str += "my_vector_of_int8: [";
+  for (auto iter = my_vector_of_int8().begin();
+       iter != my_vector_of_int8().end(); iter++) {
+    if (iter != my_vector_of_int8().begin()) str += ", ";
+    str += std::to_string(*iter);
   }
-  os << "]";
-  os << "my_vector_of_string: [";
-  for (auto iter = c.my_vector_of_string().begin();
-       iter != c.my_vector_of_string().end(); iter++) {
-    if (iter != c.my_vector_of_string().begin()) os << ", ";
-    os << *iter;
+  str += "]";
+  str += "my_vector_of_string: [";
+  for (auto iter = my_vector_of_string().begin();
+       iter != my_vector_of_string().end(); iter++) {
+    if (iter != my_vector_of_string().begin()) str += ", ";
+    str += *iter;
   }
-  os << "]";
-  os << "my_vector_of_uint16: [";
-  for (auto iter = c.my_vector_of_uint16().begin();
-       iter != c.my_vector_of_uint16().end(); iter++) {
-    if (iter != c.my_vector_of_uint16().begin()) os << ", ";
-    os << *iter;
+  str += "]";
+  str += "my_vector_of_uint16: [";
+  for (auto iter = my_vector_of_uint16().begin();
+       iter != my_vector_of_uint16().end(); iter++) {
+    if (iter != my_vector_of_uint16().begin()) str += ", ";
+    str += std::to_string(*iter);
   }
-  os << "]";
-  os << "my_vector_of_uint32: [";
-  for (auto iter = c.my_vector_of_uint32().begin();
-       iter != c.my_vector_of_uint32().end(); iter++) {
-    if (iter != c.my_vector_of_uint32().begin()) os << ", ";
-    os << *iter;
+  str += "]";
+  str += "my_vector_of_uint32: [";
+  for (auto iter = my_vector_of_uint32().begin();
+       iter != my_vector_of_uint32().end(); iter++) {
+    if (iter != my_vector_of_uint32().begin()) str += ", ";
+    str += std::to_string(*iter);
   }
-  os << "]";
-  os << "my_vector_of_uint64: [";
-  for (auto iter = c.my_vector_of_uint64().begin();
-       iter != c.my_vector_of_uint64().end(); iter++) {
-    if (iter != c.my_vector_of_uint64().begin()) os << ", ";
-    os << *iter;
+  str += "]";
+  str += "my_vector_of_uint64: [";
+  for (auto iter = my_vector_of_uint64().begin();
+       iter != my_vector_of_uint64().end(); iter++) {
+    if (iter != my_vector_of_uint64().begin()) str += ", ";
+    str += std::to_string(*iter);
   }
-  os << "]";
-  os << "my_vector_of_uint8: [";
-  for (auto iter = c.my_vector_of_uint8().begin();
-       iter != c.my_vector_of_uint8().end(); iter++) {
-    if (iter != c.my_vector_of_uint8().begin()) os << ", ";
-    os << *iter;
+  str += "]";
+  str += "my_vector_of_uint8: [";
+  for (auto iter = my_vector_of_uint8().begin();
+       iter != my_vector_of_uint8().end(); iter++) {
+    if (iter != my_vector_of_uint8().begin()) str += ", ";
+    str += std::to_string(*iter);
   }
-  os << "]";
-  return os;
+  str += "]";
+  str.shrink_to_fit();  // give back excess allocations if above reservation was
+                        // too much
+  return str;
 }
 
 Config Config::TakeFromStartupHandle() noexcept {

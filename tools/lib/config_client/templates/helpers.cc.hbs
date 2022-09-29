@@ -22,24 +22,40 @@ void Config::RecordInspect(inspect::Node* node) {
   {{/each}}
 }
 
-std::ostream& operator<<(std::ostream& os, const Config& c) {
+const std::string Config::ToString() noexcept {
+  std::string str;
+  str.reserve(4096); // minimize reallocations
+
   {{#each fields}}
     {{#if (is_vector type_)}}
-      os << "{{ident}}: [";
-      for (auto iter = c.{{ident}}().begin(); iter != c.{{ident}}().end(); iter++) {
-        if (iter != c.{{ident}}().begin()) os << ", ";
-        os << *iter;
+      str += "{{ident}}: [";
+      for (auto iter = {{ident}}().begin(); iter != {{ident}}().end(); iter++) {
+        if (iter != {{ident}}().begin()) str += ", ";
+        {{#if (is_string_vector type_)}}
+          str += *iter;
+        {{else}}
+          str += std::to_string(*iter);
+        {{/if}}
       }
-      os << "]";
+      str += "]";
     {{else}}
       {{#if (is_bool type_)}}
-        if (c.{{ident}}()) {
-          os << "{{ident}}; ";
+        if ({{ident}}()) {
+          str += "{{ident}}; ";
         }
       {{else}}
-        os << "{{ident}}=" << c.{{ident}}() << "; ";
+        str += "{{ident}}=";
+        {{#if (is_string type_)}}
+          str += {{ident}}();
+        {{else}}
+          str += std::to_string({{ident}}());
+        {{/if}}
+        str += "; ";
       {{/if}}
     {{/if}}
+
   {{~/each~}}
-  return os;
+
+  str.shrink_to_fit(); // give back excess allocations if above reservation was too much
+  return str;
 }

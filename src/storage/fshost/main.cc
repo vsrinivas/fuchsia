@@ -160,7 +160,7 @@ int Main() {
   ApplyBootArgsToConfig(config, *boot_args);
 
   // NB There are tests that look for "fshost started".
-  FX_LOGS(INFO) << "fshost started, Config: " << config;
+  FX_LOGS(INFO) << "fshost started, Config: " << config.ToString();
 
   // Initialize the local filesystem in isolation.
   fidl::ServerEnd<fio::Directory> dir_request{

@@ -5,7 +5,6 @@
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <lib/inspect/cpp/inspect.h>
 
-#include <iostream>
 #include <string>
 #include <vector>
 
@@ -17,6 +16,7 @@ struct Config {
       fuchsia_driver_framework::DriverStartArgs& start_args) noexcept;
   static Config TakeFromStartArgs(
       fuchsia_driver_framework::wire::DriverStartArgs& start_args) noexcept;
+  const std::string ToString() noexcept;
 
  private:
   struct Storage_;
@@ -155,9 +155,6 @@ struct Config {
 
   Storage_ storage_;
 };
-
-std::ostream& operator<<(std::ostream& os,
-                         const cpp_driver_config_lib::Config& c);
 }  // namespace cpp_driver_config_lib
 
 #endif
