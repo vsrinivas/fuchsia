@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include <fidl/fuchsia.driver.framework/cpp/fidl.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <lib/inspect/cpp/inspect.h>
 
@@ -12,6 +13,7 @@ namespace {{cpp_namespace}} {
 struct Config {
 public:
   static constexpr bool kIsDriverStructuredConfig = true;
+  static Config TakeFromStartArgs(fuchsia_driver_framework::DriverStartArgs& start_args) noexcept;
   static Config TakeFromStartArgs(fuchsia_driver_framework::wire::DriverStartArgs& start_args) noexcept;
 
   {{> typedef }}

@@ -709,7 +709,6 @@ template("fuchsia_structured_config_cpp_driver_lib") {
     sources = [ cpp_driver_cc_source_file ]
     deps = [
       ":${fidl_library_target}_cpp_wire",
-      "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_cpp_wire",
       "//sdk/lib/fidl",
       "//sdk/lib/sys/cpp",
     ]
@@ -717,6 +716,8 @@ template("fuchsia_structured_config_cpp_driver_lib") {
     public_deps = [
       ":${cpp_driver_headers_target}",
       ":${cpp_driver_source_target}($default_toolchain)",
+      "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_cpp",
+      "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_cpp_wire",
       "//sdk/lib/sys/inspect/cpp",
     ]
 

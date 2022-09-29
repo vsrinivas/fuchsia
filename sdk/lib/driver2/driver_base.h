@@ -118,13 +118,7 @@ class DriverBase {
     static_assert(component::IsDriverStructuredConfigV<StructuredConfig>,
                   "Invalid type supplied. StructuredConfig must be a driver flavored "
                   "structured config type. Example usage: take_config<my_driverconfig::Config>().");
-    // TODO(https://fxbug.dev/110078): Remove the wire/natural double convert when TakeFromStartArgs
-    // has support for natural type input.
-    fidl::Arena<> arena;
-    auto wire_start_args = fidl::ToWire(arena, std::move(start_args_));
-    auto config = StructuredConfig::TakeFromStartArgs(wire_start_args);
-    start_args_ = fidl::ToNatural(wire_start_args);
-    return config;
+    return StructuredConfig::TakeFromStartArgs(start_args_);
   }
 
   DriverContext& context() { return driver_context_; }
