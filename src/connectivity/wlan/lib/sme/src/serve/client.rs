@@ -608,20 +608,14 @@ mod tests {
         // TODO(fxbug.dev/83740): Merge this with a similar function in wlancfg.
         wlan_common::scan::ScanResult {
             compatibility: match rng.gen_range(0..4) {
-                0 => Some(
-                    wlan_common::scan::Compatibility::try_new([SecurityDescriptor::OPEN]).unwrap(),
-                ),
-                1 => Some(
-                    wlan_common::scan::Compatibility::try_new([SecurityDescriptor::WPA2_PERSONAL])
-                        .unwrap(),
-                ),
-                2 => Some(
-                    wlan_common::scan::Compatibility::try_new([
-                        SecurityDescriptor::WPA2_PERSONAL,
-                        SecurityDescriptor::WPA3_PERSONAL,
-                    ])
-                    .unwrap(),
-                ),
+                0 => wlan_common::scan::Compatibility::expect_some([SecurityDescriptor::OPEN]),
+                1 => wlan_common::scan::Compatibility::expect_some([
+                    SecurityDescriptor::WPA2_PERSONAL,
+                ]),
+                2 => wlan_common::scan::Compatibility::expect_some([
+                    SecurityDescriptor::WPA2_PERSONAL,
+                    SecurityDescriptor::WPA3_PERSONAL,
+                ]),
                 _ => None,
             },
             timestamp: zx::Time::from_nanos(rng.gen()),

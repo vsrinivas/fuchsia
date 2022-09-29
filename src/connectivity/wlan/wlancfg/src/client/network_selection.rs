@@ -195,7 +195,7 @@ impl InternalBss<'_> {
             rssi,
             channel,
             self.score(),
-            if !self.scanned_bss.compatible { ", NOT compatible" } else { "" },
+            if !self.scanned_bss.is_compatible() { ", NOT compatible" } else { "" },
             if recent_failure_count > 0 {
                 format!(", {} recent failures", recent_failure_count)
             } else {
@@ -220,7 +220,7 @@ impl<'a> WriteInspect for InternalBss<'a> {
             security_type_saved: self.saved_security_type_to_string(),
             security_type_scanned: format!("{}", wlan_common::bss::Protection::from(self.security_type_detailed)),
             channel: InspectWlanChan(&self.scanned_bss.channel.into()),
-            compatible: self.scanned_bss.compatible,
+            compatible: self.scanned_bss.is_compatible(),
             recent_failure_count: self.recent_failure_count(),
             saved_network_has_ever_connected: self.saved_network_info.has_ever_connected,
         });
@@ -454,7 +454,7 @@ fn select_best_connection_candidate<'a>(
         })
         .filter(|bss| {
             // Filter out incompatible BSSs
-            if !bss.scanned_bss.compatible {
+            if !bss.scanned_bss.is_compatible() {
                 trace!("BSS is incompatible, filtering: {:?}", bss);
                 return false;
             };
@@ -481,7 +481,13 @@ fn select_best_connection_candidate<'a>(
                     bss_description: bss.scanned_bss.bss_description.clone(),
                     observation: bss.scanned_bss.observation,
                     has_multiple_bss_candidates: bss.multiple_bss_candidates,
-                    security_type_detailed: bss.security_type_detailed,
+                    mutual_security_protocols: bss
+                        .scanned_bss
+                        .compatibility
+                        .as_ref()
+                        .expect("compatible BSS has no compatibility data")
+                        .mutual_security_protocols()
+                        .clone(),
                 }),
             },
             bss.scanned_bss.channel,
@@ -711,7 +717,10 @@ mod tests {
         rand::Rng,
         std::{convert::TryFrom, sync::Arc},
         test_case::test_case,
-        wlan_common::{assert_variant, random_fidl_bss_description},
+        wlan_common::{
+            assert_variant, random_fidl_bss_description, scan::Compatibility,
+            security::SecurityDescriptor,
+        },
     };
 
     struct TestValues {
@@ -1238,14 +1247,15 @@ mod tests {
 
         let mut networks = vec![];
 
+        let security_protocol_1 = SecurityDescriptor::WPA3_PERSONAL;
         let bss_1 = types::Bss {
-            compatible: true,
+            compatibility: Compatibility::expect_some([security_protocol_1]),
             rssi: -14,
             channel: generate_channel(36),
             ..generate_random_bss()
         };
         networks.push(InternalBss {
-            security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+            security_type_detailed: types::SecurityTypeDetailed::Wpa3Personal,
             saved_network_info: InternalSavedNetworkData {
                 network_id: test_id_1.clone(),
                 credential: credential_1.clone(),
@@ -1258,14 +1268,15 @@ mod tests {
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
 
+        let security_protocol_2 = SecurityDescriptor::WPA1;
         let bss_2 = types::Bss {
-            compatible: true,
+            compatibility: Compatibility::expect_some([security_protocol_2]),
             rssi: -10,
             channel: generate_channel(1),
             ..generate_random_bss()
         };
         networks.push(InternalBss {
-            security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+            security_type_detailed: types::SecurityTypeDetailed::Wpa1,
             saved_network_info: InternalSavedNetworkData {
                 network_id: test_id_1.clone(),
                 credential: credential_1.clone(),
@@ -1278,14 +1289,15 @@ mod tests {
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
 
+        let security_protocol_3 = SecurityDescriptor::WPA2_PERSONAL;
         let bss_3 = types::Bss {
-            compatible: true,
+            compatibility: Compatibility::expect_some([security_protocol_3]),
             rssi: -8,
             channel: generate_channel(1),
             ..generate_random_bss()
         };
         networks.push(InternalBss {
-            security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+            security_type_detailed: types::SecurityTypeDetailed::Wpa1,
             saved_network_info: InternalSavedNetworkData {
                 network_id: test_id_2.clone(),
                 credential: credential_2.clone(),
@@ -1309,7 +1321,7 @@ mod tests {
                         bss_description: bss_1.bss_description.clone(),
                         observation: bss_1.observation,
                         has_multiple_bss_candidates: true,
-                        security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+                        mutual_security_protocols: [security_protocol_1].into_iter().collect(),
                     }),
                 },
                 bss_1.channel,
@@ -1335,7 +1347,7 @@ mod tests {
                         bss_description: networks[2].scanned_bss.bss_description.clone(),
                         observation: networks[2].scanned_bss.observation,
                         has_multiple_bss_candidates: false,
-                        security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+                        mutual_security_protocols: [security_protocol_3].into_iter().collect(),
                     }),
                 },
                 networks[2].scanned_bss.channel,
@@ -1368,8 +1380,10 @@ mod tests {
 
         let mut networks = vec![];
 
+        let mutual_security_protocols_1 =
+            [SecurityDescriptor::WPA2_PERSONAL, SecurityDescriptor::WPA3_PERSONAL];
         let bss_1 = types::Bss {
-            compatible: true,
+            compatibility: Compatibility::expect_some(mutual_security_protocols_1),
             rssi: -34,
             channel: generate_channel(3),
             ..generate_random_bss()
@@ -1388,8 +1402,10 @@ mod tests {
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
 
+        let mutual_security_protocols_2 =
+            [SecurityDescriptor::WPA2_PERSONAL, SecurityDescriptor::WPA3_PERSONAL];
         let bss_2 = types::Bss {
-            compatible: true,
+            compatibility: Compatibility::expect_some(mutual_security_protocols_2),
             rssi: -50,
             channel: generate_channel(3),
             ..generate_random_bss()
@@ -1419,8 +1435,9 @@ mod tests {
                         bss_description: bss_1.bss_description.clone(),
                         observation: networks[0].scanned_bss.observation,
                         has_multiple_bss_candidates: false,
-                        security_type_detailed:
-                            types::SecurityTypeDetailed::Wpa1Wpa2PersonalTkipOnly,
+                        mutual_security_protocols: mutual_security_protocols_1
+                            .into_iter()
+                            .collect(),
                     }),
                 },
                 bss_1.channel,
@@ -1446,8 +1463,9 @@ mod tests {
                         bss_description: bss_2.bss_description.clone(),
                         observation: networks[1].scanned_bss.observation,
                         has_multiple_bss_candidates: false,
-                        security_type_detailed:
-                            types::SecurityTypeDetailed::Wpa1Wpa2PersonalTkipOnly,
+                        mutual_security_protocols: mutual_security_protocols_2
+                            .into_iter()
+                            .collect(),
                     }),
                 },
                 bss_2.channel,
@@ -1470,8 +1488,9 @@ mod tests {
                         bss_description: bss_1.bss_description.clone(),
                         observation: networks[0].scanned_bss.observation,
                         has_multiple_bss_candidates: false,
-                        security_type_detailed:
-                            types::SecurityTypeDetailed::Wpa1Wpa2PersonalTkipOnly,
+                        mutual_security_protocols: mutual_security_protocols_1
+                            .into_iter()
+                            .collect(),
                     }),
                 },
                 bss_1.channel,
@@ -1504,10 +1523,13 @@ mod tests {
 
         let mut networks = vec![];
 
+        // NOTE: The corresponding BSS has random compatibility. These mutual security protocols
+        //       are only used to verify the results and not to configure the BSS.
+        let mutual_security_protocols_1 = [SecurityDescriptor::WPA3_PERSONAL];
         let bss_1 = types::Bss {
-            compatible: true,
             rssi: -14,
             channel: generate_channel(1),
+            compatibility: Compatibility::expect_some([SecurityDescriptor::WPA3_PERSONAL]),
             ..generate_random_bss()
         };
         networks.push(InternalBss {
@@ -1525,7 +1547,7 @@ mod tests {
         });
 
         let bss_2 = types::Bss {
-            compatible: false,
+            compatibility: None,
             rssi: -10,
             channel: generate_channel(1),
             ..generate_random_bss()
@@ -1544,8 +1566,9 @@ mod tests {
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
 
+        let mutual_security_protocols_3 = [SecurityDescriptor::WPA1];
         let bss_3 = types::Bss {
-            compatible: true,
+            compatibility: Compatibility::expect_some(mutual_security_protocols_3),
             rssi: -12,
             channel: generate_channel(1),
             ..generate_random_bss()
@@ -1575,7 +1598,9 @@ mod tests {
                         bss_description: bss_3.bss_description.clone(),
                         observation: networks[2].scanned_bss.observation,
                         has_multiple_bss_candidates: false,
-                        security_type_detailed: types::SecurityTypeDetailed::Wpa1,
+                        mutual_security_protocols: mutual_security_protocols_3
+                            .into_iter()
+                            .collect()
                     }),
                 },
                 bss_3.channel,
@@ -1585,7 +1610,8 @@ mod tests {
 
         // mark the stronger network as incompatible
         let mut modified_network = networks[2].clone();
-        let modified_bss = types::Bss { compatible: false, ..modified_network.scanned_bss.clone() };
+        let modified_bss =
+            types::Bss { compatibility: None, ..modified_network.scanned_bss.clone() };
         modified_network.scanned_bss = &modified_bss;
         networks[2] = modified_network;
 
@@ -1600,7 +1626,9 @@ mod tests {
                         bss_description: networks[0].scanned_bss.bss_description.clone(),
                         observation: networks[0].scanned_bss.observation,
                         has_multiple_bss_candidates: true,
-                        security_type_detailed: types::SecurityTypeDetailed::Wpa3Personal,
+                        mutual_security_protocols: mutual_security_protocols_1
+                            .into_iter()
+                            .collect(),
                     }),
                 },
                 networks[0].scanned_bss.channel,
@@ -1633,7 +1661,12 @@ mod tests {
 
         let mut networks = vec![];
 
-        let bss_1 = types::Bss { compatible: true, rssi: -100, ..generate_random_bss() };
+        let mutual_security_protocols_1 = [SecurityDescriptor::WPA2_PERSONAL];
+        let bss_1 = types::Bss {
+            compatibility: Compatibility::expect_some(mutual_security_protocols_1),
+            rssi: -100,
+            ..generate_random_bss()
+        };
         networks.push(InternalBss {
             security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: InternalSavedNetworkData {
@@ -1648,7 +1681,12 @@ mod tests {
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
 
-        let bss_2 = types::Bss { compatible: true, rssi: -12, ..generate_random_bss() };
+        let mutual_security_protocols_2 = [SecurityDescriptor::WPA2_PERSONAL];
+        let bss_2 = types::Bss {
+            compatibility: Compatibility::expect_some(mutual_security_protocols_2),
+            rssi: -12,
+            ..generate_random_bss()
+        };
         networks.push(InternalBss {
             security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: InternalSavedNetworkData {
@@ -1674,7 +1712,9 @@ mod tests {
                         bss_description: bss_2.bss_description.clone(),
                         observation: networks[1].scanned_bss.observation,
                         has_multiple_bss_candidates: false,
-                        security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+                        mutual_security_protocols: mutual_security_protocols_2
+                            .into_iter()
+                            .collect(),
                     }),
                 },
                 bss_2.channel,
@@ -1697,7 +1737,9 @@ mod tests {
                         bss_description: bss_1.bss_description.clone(),
                         observation: networks[0].scanned_bss.observation,
                         has_multiple_bss_candidates: false,
-                        security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+                        mutual_security_protocols: mutual_security_protocols_1
+                            .into_iter()
+                            .collect(),
                     }),
                 },
                 bss_1.channel,
@@ -1730,8 +1772,9 @@ mod tests {
 
         let mut networks = vec![];
 
+        let mutual_security_protocols_1 = [SecurityDescriptor::WPA2_PERSONAL];
         let bss_1 = types::Bss {
-            compatible: true,
+            compatibility: Compatibility::expect_some(mutual_security_protocols_1),
             rssi: -14,
             channel: generate_channel(1),
             ..generate_random_bss()
@@ -1751,7 +1794,7 @@ mod tests {
         });
 
         let bss_2 = types::Bss {
-            compatible: false,
+            compatibility: None,
             rssi: -10,
             channel: generate_channel(1),
             ..generate_random_bss()
@@ -1770,8 +1813,9 @@ mod tests {
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
 
+        let mutual_security_protocols_3 = [SecurityDescriptor::WPA2_PERSONAL];
         let bss_3 = types::Bss {
-            compatible: true,
+            compatibility: Compatibility::expect_some(mutual_security_protocols_3),
             rssi: -12,
             channel: generate_channel(1),
             ..generate_random_bss()
@@ -1801,7 +1845,9 @@ mod tests {
                         bss_description: bss_3.bss_description.clone(),
                         observation: networks[2].scanned_bss.observation,
                         has_multiple_bss_candidates: false,
-                        security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+                        mutual_security_protocols: mutual_security_protocols_3
+                            .into_iter()
+                            .collect(),
                     }),
                 },
                 bss_3.channel,
@@ -1837,7 +1883,7 @@ mod tests {
                             primary: u64::from(fidl_channel.primary),
                             secondary80: u64::from(fidl_channel.secondary80),
                         },
-                        compatible: networks[2].scanned_bss.compatible,
+                        compatible: networks[2].scanned_bss.compatibility.is_some(),
                         recent_failure_count: networks[2].recent_failure_count(),
                         saved_network_has_ever_connected: networks[2].saved_network_info.has_ever_connected,
                     },
@@ -1856,8 +1902,9 @@ mod tests {
             security_type: types::SecurityType::Wpa3,
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
+        let mutual_security_protocols_1 = [SecurityDescriptor::WPA3_PERSONAL];
         let bss_1 = types::Bss {
-            compatible: true,
+            compatibility: Compatibility::expect_some(mutual_security_protocols_1),
             rssi: -14,
             channel: generate_channel(36),
             ..generate_random_bss()
@@ -1869,7 +1916,7 @@ mod tests {
                 bss_description: bss_1.bss_description.clone(),
                 observation: types::ScanObservation::Active,
                 has_multiple_bss_candidates: false,
-                security_type_detailed: types::SecurityTypeDetailed::Wpa3Personal,
+                mutual_security_protocols: mutual_security_protocols_1.into_iter().collect(),
             }),
         };
 
@@ -1898,8 +1945,9 @@ mod tests {
             security_type: types::SecurityType::Wpa3,
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
+        let mutual_security_protocols_1 = [SecurityDescriptor::WPA2_PERSONAL];
         let bss_1 = types::Bss {
-            compatible: true,
+            compatibility: Compatibility::expect_some(mutual_security_protocols_1),
             rssi: -14,
             channel: generate_channel(36),
             ..generate_random_bss()
@@ -1911,7 +1959,7 @@ mod tests {
                 bss_description: bss_1.bss_description.clone(),
                 observation: types::ScanObservation::Passive,
                 has_multiple_bss_candidates: true,
-                security_type_detailed: types::SecurityTypeDetailed::Wpa2Personal,
+                mutual_security_protocols: mutual_security_protocols_1.into_iter().collect(),
             }),
         };
 
@@ -1987,7 +2035,7 @@ mod tests {
                     // Multiple BSSes were observed prior to the directed active scan, so this
                     // field should remain `true`.
                     has_multiple_bss_candidates: true,
-                    security_type_detailed: types::SecurityTypeDetailed::Wpa2Personal,
+                    mutual_security_protocols: mutual_security_protocols_1.into_iter().collect(),
                 }),
                 ..connect_req
             }
@@ -2225,7 +2273,9 @@ mod tests {
                     bss_description: bss_desc1_active,
                     observation: types::ScanObservation::Passive,
                     has_multiple_bss_candidates: false,
-                    security_type_detailed: types::SecurityTypeDetailed::Wpa3Personal,
+                    mutual_security_protocols: [SecurityDescriptor::WPA3_PERSONAL]
+                        .into_iter()
+                        .collect(),
                 }),
             })
         );
@@ -2276,7 +2326,7 @@ mod tests {
                     bss_description: bss_desc2_active,
                     observation: types::ScanObservation::Passive,
                     has_multiple_bss_candidates: false,
-                    security_type_detailed: types::SecurityTypeDetailed::Wpa1,
+                    mutual_security_protocols: [SecurityDescriptor::WPA1].into_iter().collect(),
                 }),
             })
         );
@@ -2405,6 +2455,7 @@ mod tests {
             ssids: vec![test_id_1.ssid.to_vec()],
             channels: vec![],
         });
+        let mutual_security_protocols_1 = [SecurityDescriptor::WPA3_PERSONAL];
         let bss_desc_1 = random_fidl_bss_description!(
             // This network is WPA3, but should still match against the desired WPA2 network
             Wpa3,
@@ -2461,7 +2512,7 @@ mod tests {
                     // observation mode cannot be known and this field should be `Unknown`.
                     observation: types::ScanObservation::Unknown,
                     has_multiple_bss_candidates: false,
-                    security_type_detailed: types::SecurityTypeDetailed::Wpa3Personal,
+                    mutual_security_protocols: mutual_security_protocols_1.into_iter().collect(),
                 }),
             })
         );
@@ -2564,8 +2615,11 @@ mod tests {
             recent_failures: Vec::new(),
             past_connections: PastConnectionsByBssid::new(),
         };
-        let test_bss_1 =
-            types::Bss { observation: types::ScanObservation::Passive, ..generate_random_bss() };
+        let test_bss_1 = types::Bss {
+            observation: types::ScanObservation::Passive,
+            compatibility: Compatibility::expect_some([SecurityDescriptor::WPA2_PERSONAL]),
+            ..generate_random_bss()
+        };
         mock_scan_results.push(InternalBss {
             security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: test_network_info_1.clone(),
@@ -2574,8 +2628,11 @@ mod tests {
             hasher: hasher.clone(),
         });
 
-        let test_bss_2 =
-            types::Bss { observation: types::ScanObservation::Passive, ..generate_random_bss() };
+        let test_bss_2 = types::Bss {
+            observation: types::ScanObservation::Passive,
+            compatibility: Compatibility::expect_some([SecurityDescriptor::WPA2_PERSONAL]),
+            ..generate_random_bss()
+        };
         mock_scan_results.push(InternalBss {
             security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: test_network_info_1.clone(),
@@ -2585,8 +2642,11 @@ mod tests {
         });
 
         // mark one BSS as found in active scan
-        let test_bss_3 =
-            types::Bss { observation: types::ScanObservation::Active, ..generate_random_bss() };
+        let test_bss_3 = types::Bss {
+            observation: types::ScanObservation::Active,
+            compatibility: Compatibility::expect_some([SecurityDescriptor::WPA2_PERSONAL]),
+            ..generate_random_bss()
+        };
         mock_scan_results.push(InternalBss {
             security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: test_network_info_1.clone(),
@@ -2595,8 +2655,11 @@ mod tests {
             hasher: hasher.clone(),
         });
 
-        let test_bss_4 =
-            types::Bss { observation: types::ScanObservation::Passive, ..generate_random_bss() };
+        let test_bss_4 = types::Bss {
+            observation: types::ScanObservation::Passive,
+            compatibility: Compatibility::expect_some([SecurityDescriptor::WPA2_PERSONAL]),
+            ..generate_random_bss()
+        };
         mock_scan_results.push(InternalBss {
             security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: InternalSavedNetworkData {

@@ -80,7 +80,6 @@ pub struct StateMachineMetadata {
 
 async fn create_client_state_machine(
     iface_id: u16,
-    has_wpa3_support: bool,
     dev_monitor_proxy: &mut fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
     client_update_sender: listener::ClientListenerMessageSender,
     saved_networks: Arc<dyn SavedNetworksManagerApi>,
@@ -112,7 +111,6 @@ async fn create_client_state_machine(
 
     let fut = client_fsm::serve(
         iface_id,
-        has_wpa3_support,
         sme_proxy,
         event_stream,
         receiver,
@@ -446,7 +444,6 @@ impl IfaceManagerService {
                 // Create the state machine and controller.
                 let (new_client, fut) = create_client_state_machine(
                     client_iface.iface_id,
-                    wpa3_supported(client_iface.security_support),
                     &mut self.dev_monitor_proxy,
                     self.client_update_sender.clone(),
                     self.saved_networks.clone(),
@@ -537,7 +534,6 @@ impl IfaceManagerService {
                 // Create the state machine and controller.
                 let (new_client, fut) = create_client_state_machine(
                     client.iface_id,
-                    wpa3_supported(client.security_support),
                     &mut self.dev_monitor_proxy,
                     self.client_update_sender.clone(),
                     self.saved_networks.clone(),
@@ -579,7 +575,6 @@ impl IfaceManagerService {
                 // monitor loop that the interface needs attention.
                 let (new_client, fut) = create_client_state_machine(
                     client_iface.iface_id,
-                    wpa3_supported(client_iface.security_support),
                     &mut self.dev_monitor_proxy,
                     self.client_update_sender.clone(),
                     self.saved_networks.clone(),
@@ -1300,7 +1295,10 @@ mod tests {
         pin_utils::pin_mut,
         std::convert::TryFrom,
         test_case::test_case,
-        wlan_common::{assert_variant, channel::Cbw, random_fidl_bss_description, RadioConfig},
+        wlan_common::{
+            assert_variant, channel::Cbw, random_fidl_bss_description,
+            security::SecurityDescriptor, RadioConfig,
+        },
     };
 
     // Responses that FakePhyManager will provide
@@ -1332,7 +1330,7 @@ mod tests {
                     bss_description: random_fidl_bss_description!(Wpa1, ssid: ssid.clone()),
                     observation: client_types::ScanObservation::Passive,
                     has_multiple_bss_candidates: true,
-                    security_type_detailed: client_types::SecurityTypeDetailed::Wpa1,
+                    mutual_security_protocols: [SecurityDescriptor::WPA1].into_iter().collect(),
                 }),
             },
             reason: client_types::ConnectReason::FidlConnectRequest,
@@ -2036,7 +2034,9 @@ mod tests {
                         bss_description: random_fidl_bss_description!(Wpa3, ssid: TEST_SSID.clone()),
                         observation: client_types::ScanObservation::Passive,
                         has_multiple_bss_candidates: true,
-                        security_type_detailed: client_types::SecurityTypeDetailed::Wpa3Personal,
+                        mutual_security_protocols: [SecurityDescriptor::WPA3_PERSONAL]
+                            .into_iter()
+                            .collect(),
                     }),
                 },
                 reason: client_types::ConnectReason::FidlConnectRequest,
@@ -2134,7 +2134,9 @@ mod tests {
                     bss_description: random_fidl_bss_description!(Wpa3, ssid: ssid.clone()),
                     observation: client_types::ScanObservation::Passive,
                     has_multiple_bss_candidates: false,
-                    security_type_detailed: client_types::SecurityTypeDetailed::Wpa3Personal,
+                    mutual_security_protocols: [SecurityDescriptor::WPA3_PERSONAL]
+                        .into_iter()
+                        .collect(),
                 }),
             },
             reason: client_types::ConnectReason::FidlConnectRequest,
@@ -2166,7 +2168,9 @@ mod tests {
                     bss_description: random_fidl_bss_description!(Wpa3, ssid: ssid.clone()),
                     observation: client_types::ScanObservation::Passive,
                     has_multiple_bss_candidates: true,
-                    security_type_detailed: client_types::SecurityTypeDetailed::Wpa3Personal,
+                    mutual_security_protocols: [SecurityDescriptor::WPA3_PERSONAL]
+                        .into_iter()
+                        .collect(),
                 }),
             },
             reason: client_types::ConnectReason::FidlConnectRequest,
@@ -5110,7 +5114,7 @@ mod tests {
                 bss_description: random_fidl_bss_description!(Open, bssid: [20, 30, 40, 50, 60, 70]),
                 observation: client_types::ScanObservation::Passive,
                 has_multiple_bss_candidates: true,
-                security_type_detailed: client_types::SecurityTypeDetailed::Open,
+                mutual_security_protocols: [SecurityDescriptor::OPEN].into_iter().collect(),
             }),
         });
 
@@ -5182,7 +5186,7 @@ mod tests {
                 bss_description: random_fidl_bss_description!(Open, bssid: [20, 30, 40, 50, 60, 70]),
                 observation: client_types::ScanObservation::Passive,
                 has_multiple_bss_candidates: true,
-                security_type_detailed: client_types::SecurityTypeDetailed::Open,
+                mutual_security_protocols: [SecurityDescriptor::OPEN].into_iter().collect(),
             }),
         });
 

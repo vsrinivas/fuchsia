@@ -31,7 +31,6 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_rust",
     "//sdk/fidl/fuchsia.power.clientlevel:fuchsia.power.clientlevel_rust",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_rust",
-    "//sdk/fidl/fuchsia.wlan.common.security:fuchsia.wlan.common.security_rust",
     "//sdk/fidl/fuchsia.wlan.device.service:fuchsia.wlan.device.service_rust",
     "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211_rust",
     "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_rust",
@@ -69,6 +68,7 @@ rustc_library("lib") {
   test_deps = [
     "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
     "//sdk/fidl/fuchsia.stash:fuchsia.stash_rust",
+    "//sdk/fidl/fuchsia.wlan.common.security:fuchsia.wlan.common.security_rust",
     "//src/lib/fuchsia",
     "//src/lib/test_util",
     "//third_party/rust_crates:hex",

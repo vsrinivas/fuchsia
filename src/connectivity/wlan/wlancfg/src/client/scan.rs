@@ -364,7 +364,7 @@ fn insert_bss_to_network_bss_map(
                 } else {
                     types::ScanObservation::Active
                 },
-                compatible: scan_result.is_compatible(),
+                compatibility: scan_result.compatibility,
                 bss_description: scan_result.bss_description.into(),
             });
         };
@@ -377,7 +377,7 @@ fn network_bss_map_to_scan_result(
     let mut scan_results: Vec<types::ScanResult> = bss_by_network
         .drain()
         .map(|(SmeNetworkIdentifier { ssid, protection }, bss_entries)| {
-            let compatibility = if bss_entries.iter().any(|bss| bss.compatible) {
+            let compatibility = if bss_entries.iter().any(|bss| bss.is_compatible()) {
                 fidl_policy::Compatibility::Supported
             } else {
                 fidl_policy::Compatibility::DisallowedNotSupported
@@ -457,7 +457,7 @@ pub fn scan_result_to_policy_scan_result(
                             })
                             .collect(),
                     ),
-                    compatibility: if internal.entries.iter().any(|bss| bss.compatible) {
+                    compatibility: if internal.entries.iter().any(|bss| bss.is_compatible()) {
                         Some(fidl_policy::Compatibility::Supported)
                     } else {
                         Some(fidl_policy::Compatibility::DisallowedNotSupported)
@@ -594,7 +594,10 @@ mod tests {
         pin_utils::pin_mut,
         std::{convert::TryInto, sync::Arc},
         test_case::test_case,
-        wlan_common::{assert_variant, random_fidl_bss_description},
+        wlan_common::{
+            assert_variant, random_fidl_bss_description, scan::Compatibility,
+            security::SecurityDescriptor,
+        },
     };
 
     const CENTER_FREQ_CHAN_1: u32 = 2412;
@@ -786,7 +789,9 @@ mod tests {
                         snr_db: 1,
                         channel: types::WlanChan::new(1, types::Cbw::Cbw20),
                         observation: types::ScanObservation::Passive,
-                        compatible: true,
+                        compatibility: Compatibility::expect_some([
+                            SecurityDescriptor::WPA3_PERSONAL,
+                        ]),
                         bss_description: passive_result_1.bss_description.clone(),
                     },
                     types::Bss {
@@ -796,7 +801,7 @@ mod tests {
                         snr_db: 3,
                         channel: types::WlanChan::new(11, types::Cbw::Cbw20),
                         observation: types::ScanObservation::Passive,
-                        compatible: false,
+                        compatibility: None,
                         bss_description: passive_result_3.bss_description.clone(),
                     },
                 ],
@@ -812,7 +817,7 @@ mod tests {
                     snr_db: 2,
                     channel: types::WlanChan::new(8, types::Cbw::Cbw20),
                     observation: types::ScanObservation::Passive,
-                    compatible: true,
+                    compatibility: Compatibility::expect_some([SecurityDescriptor::WPA2_PERSONAL]),
                     bss_description: passive_result_2.bss_description.clone(),
                 }],
                 compatibility: types::Compatibility::Supported,
@@ -901,7 +906,9 @@ mod tests {
                         snr_db: 1,
                         channel: types::WlanChan::new(1, types::Cbw::Cbw20),
                         observation: types::ScanObservation::Passive,
-                        compatible: true,
+                        compatibility: Compatibility::expect_some([
+                            SecurityDescriptor::WPA3_PERSONAL,
+                        ]),
                         bss_description: passive_result_1.bss_description.clone(),
                     },
                     types::Bss {
@@ -911,7 +918,7 @@ mod tests {
                         snr_db: 3,
                         channel: types::WlanChan::new(11, types::Cbw::Cbw20),
                         observation: types::ScanObservation::Passive,
-                        compatible: false,
+                        compatibility: None,
                         bss_description: passive_result_3.bss_description.clone(),
                     },
                 ],
@@ -927,7 +934,7 @@ mod tests {
                     snr_db: 8,
                     channel: types::WlanChan::new(1, types::Cbw::Cbw20),
                     observation: types::ScanObservation::Active,
-                    compatible: true,
+                    compatibility: Compatibility::expect_some([SecurityDescriptor::WPA3_PERSONAL]),
                     bss_description: active_result_1.bss_description.clone(),
                 }],
                 compatibility: types::Compatibility::Supported,
@@ -942,7 +949,7 @@ mod tests {
                     snr_db: 9,
                     channel: types::WlanChan::new(8, types::Cbw::Cbw20),
                     observation: types::ScanObservation::Active,
-                    compatible: true,
+                    compatibility: Compatibility::expect_some([SecurityDescriptor::WPA2_PERSONAL]),
                     bss_description: active_result_2.bss_description.clone(),
                 }],
                 compatibility: types::Compatibility::Supported,
@@ -957,7 +964,7 @@ mod tests {
                     snr_db: 2,
                     channel: types::WlanChan::new(8, types::Cbw::Cbw20),
                     observation: types::ScanObservation::Passive,
-                    compatible: true,
+                    compatibility: Compatibility::expect_some([SecurityDescriptor::WPA2_PERSONAL]),
                     bss_description: passive_result_2.bss_description.clone(),
                 }],
                 compatibility: types::Compatibility::Supported,
@@ -1719,7 +1726,7 @@ mod tests {
             snr_db: 1,
             channel: types::WlanChan::new(1, types::Cbw::Cbw20),
             observation: types::ScanObservation::Passive,
-            compatible: true,
+            compatibility: Compatibility::expect_some([SecurityDescriptor::WPA3_PERSONAL]),
             bss_description: passive_result.bss_description.clone(),
         }];
 
@@ -1778,7 +1785,7 @@ mod tests {
                 snr_db: 1,
                 channel: types::WlanChan::new(1, types::Cbw::Cbw20),
                 observation: types::ScanObservation::Passive,
-                compatible: true,
+                compatibility: Compatibility::expect_some([SecurityDescriptor::WPA3_PERSONAL]),
                 bss_description: passive_result.bss_description.clone(),
             },
             types::Bss {
@@ -1788,7 +1795,7 @@ mod tests {
                 snr_db: 101,
                 channel: types::WlanChan::new(101, types::Cbw::Cbw40),
                 observation: types::ScanObservation::Active,
-                compatible: true,
+                compatibility: Compatibility::expect_some([SecurityDescriptor::WPA3_PERSONAL]),
                 bss_description: active_result.bss_description.clone(),
             },
         ];

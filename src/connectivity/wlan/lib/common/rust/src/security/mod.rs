@@ -114,9 +114,6 @@ impl From<PskError> for SecurityError {
     }
 }
 
-// TODO(fxbug.dev/96416): In a term longer than fxbug.dev/95873, this type should probably be
-//                        removed. In general, code should not deal in bare credentials and instead
-//                        should use authenticators (or descriptors).
 /// General credential data that is not explicitly coupled to a particular security protocol.
 ///
 /// The variants of this enumeration are particular to general protocols (i.e., WEP and WPA), but
@@ -186,6 +183,27 @@ impl TryFrom<fidl_security::Credentials> for BareCredentials {
             // Unknown variant.
             _ => Err(SecurityError::Incompatible),
         }
+    }
+}
+
+/// Conversion from a WPA passphrase into bare credentials.
+impl From<Passphrase> for BareCredentials {
+    fn from(passphrase: Passphrase) -> Self {
+        BareCredentials::WpaPassphrase(passphrase)
+    }
+}
+
+/// Conversion from a WPA PSK into bare credentials.
+impl From<Psk> for BareCredentials {
+    fn from(psk: Psk) -> Self {
+        BareCredentials::WpaPsk(psk)
+    }
+}
+
+/// Conversion from a WEP key into bare credentials.
+impl From<WepKey> for BareCredentials {
+    fn from(key: WepKey) -> Self {
+        BareCredentials::WepKey(key)
     }
 }
 

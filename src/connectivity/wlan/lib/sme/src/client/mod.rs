@@ -1003,9 +1003,7 @@ mod tests {
         assert_eq!(
             scan_result,
             ScanResult {
-                compatibility: Some(
-                    Compatibility::try_new([SecurityDescriptor::WPA2_PERSONAL]).unwrap()
-                ),
+                compatibility: Compatibility::expect_some([SecurityDescriptor::WPA2_PERSONAL]),
                 timestamp,
                 bss_description,
             }
@@ -1035,9 +1033,7 @@ mod tests {
         assert_eq!(
             scan_result,
             ScanResult {
-                compatibility: Some(
-                    Compatibility::try_new([SecurityDescriptor::WPA2_PERSONAL]).unwrap()
-                ),
+                compatibility: Compatibility::expect_some([SecurityDescriptor::WPA2_PERSONAL]),
                 timestamp,
                 bss_description,
             }
@@ -1083,7 +1079,7 @@ mod tests {
         assert_eq!(
             scan_result,
             ScanResult {
-                compatibility: Some(Compatibility::try_new([SecurityDescriptor::WEP],).unwrap()),
+                compatibility: Compatibility::expect_some([SecurityDescriptor::WEP]),
                 timestamp,
                 bss_description,
             }

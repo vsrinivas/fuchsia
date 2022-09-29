@@ -5,7 +5,9 @@
 use {
     crate::config_management,
     fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_policy as fidl_policy,
-    fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_zircon as zx, wlan_common,
+    fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_zircon as zx,
+    std::collections::HashSet,
+    wlan_common::{self, security::SecurityDescriptor},
     wlan_metrics_registry::{
         PolicyConnectionAttemptMigratedMetricDimensionReason,
         PolicyDisconnectionMigratedMetricDimensionReason,
@@ -106,13 +108,16 @@ pub struct Bss {
     pub timestamp: zx::Time,
     /// The scanning mode used to observe the BSS.
     pub observation: ScanObservation,
-    // TODO(fxbug.dev/108289): Replace this with a `compatibility` field that mirrors SME scan
-    //                         result compatibility and provides compatible modes of operation. In
-    //                         particular, this should include supported security protocols.
-    /// Compatible with this device's network stack.
-    pub compatible: bool,
+    /// Compatibility with this device's network stack.
+    pub compatibility: Option<wlan_common::scan::Compatibility>,
     /// The BSS description with information that SME needs for connecting.
     pub bss_description: fidl_internal::BssDescription,
+}
+
+impl Bss {
+    pub fn is_compatible(&self) -> bool {
+        self.compatibility.is_some()
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -120,7 +125,7 @@ pub struct ScannedCandidate {
     pub bss_description: fidl_internal::BssDescription,
     pub observation: ScanObservation,
     pub has_multiple_bss_candidates: bool,
-    pub security_type_detailed: SecurityTypeDetailed,
+    pub mutual_security_protocols: HashSet<SecurityDescriptor>,
 }
 
 /// Data for connecting to a specific network and keeping track of what is connected to.

@@ -25,6 +25,10 @@ pub struct Compatibility {
 }
 
 impl Compatibility {
+    /// Constructs a `Compatibility` from a set of mutually supported security protocols.
+    ///
+    /// Returns `None` if the set of mutually supported security protocols is empty, because this
+    /// implies incompatibility.
     pub fn try_new(
         mutual_security_protocols: impl IntoIterator<Item = SecurityDescriptor>,
     ) -> Option<Self> {
@@ -36,6 +40,25 @@ impl Compatibility {
                 .chain(mutual_security_protocols)
                 .collect(),
         })
+    }
+
+    /// Constructs a `Compatibility` from a set of mutually supported security protocols.
+    ///
+    /// While this function presents a fallible interface and returns an `Option`, it panics on
+    /// failure and never returns `None`. This can be used when `Compatibility` is optional but it
+    /// is important to assert success, such as in tests.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a `Compatibility` cannot be constructed from the given set of mutually supported
+    /// security protocols. This occurs if `Compatibility::try_new` returns `None`.
+    pub fn expect_some(
+        mutual_security_protocols: impl IntoIterator<Item = SecurityDescriptor>,
+    ) -> Option<Self> {
+        match Compatibility::try_new(mutual_security_protocols) {
+            Some(compatibility) => Some(compatibility),
+            None => panic!("compatibility modes imply incompatiblity"),
+        }
     }
 
     /// Gets the set of mutually supported security protocols.
@@ -66,6 +89,12 @@ impl From<Compatibility> for fidl_sme::Compatibility {
                 .map(From::from)
                 .collect(),
         }
+    }
+}
+
+impl From<Compatibility> for HashSet<SecurityDescriptor> {
+    fn from(compatibility: Compatibility) -> Self {
+        compatibility.mutual_security_protocols
     }
 }
 

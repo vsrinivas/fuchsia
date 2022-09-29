@@ -29,9 +29,12 @@ use {
         stream::{self, FuturesUnordered, StreamExt, TryStreamExt},
     },
     log::{debug, error, info},
-    std::{convert::TryFrom, sync::Arc},
+    std::{collections::HashSet, convert::TryFrom, sync::Arc},
     void::ResultVoidErrExt,
-    wlan_common::{bss::BssDescription, energy::DecibelMilliWatt, stats::SignalStrengthAverage},
+    wlan_common::{
+        bss::BssDescription, energy::DecibelMilliWatt, security::SecurityDescriptor,
+        stats::SignalStrengthAverage,
+    },
 };
 
 const MAX_CONNECTION_ATTEMPTS: u8 = 4; // arbitrarily chosen until we have some data
@@ -107,7 +110,6 @@ fn send_listener_state_update(
 
 pub async fn serve(
     iface_id: u16,
-    has_wpa3_support: bool,
     proxy: fidl_sme::ClientSmeProxy,
     sme_event_stream: fidl_sme::ClientSmeEventStream,
     req_stream: mpsc::Receiver<ManualRequest>,
@@ -136,7 +138,6 @@ pub async fn serve(
         network_selector,
         telemetry_sender,
         iface_id,
-        has_wpa3_support,
         stats_sender,
     };
     let state_machine =
@@ -167,7 +168,6 @@ struct CommonStateOptions {
     network_selector: Arc<network_selection::NetworkSelector>,
     telemetry_sender: TelemetrySender,
     iface_id: u16,
-    has_wpa3_support: bool,
     /// Used to send periodic connection stats used to determine whether or not to roam.
     stats_sender: mpsc::UnboundedSender<PeriodicConnectionStats>,
 }
@@ -321,7 +321,7 @@ struct ConnectResult {
 struct ScanResult {
     bss_description: fidl_internal::BssDescription,
     has_multiple_bss_candidates: bool,
-    security_type_detailed: types::SecurityTypeDetailed,
+    mutual_security_protocols: HashSet<SecurityDescriptor>,
 }
 
 impl From<types::ScannedCandidate> for ScanResult {
@@ -329,10 +329,10 @@ impl From<types::ScannedCandidate> for ScanResult {
         let types::ScannedCandidate {
             bss_description,
             has_multiple_bss_candidates,
-            security_type_detailed,
+            mutual_security_protocols,
             ..
         } = candidate;
-        ScanResult { bss_description, has_multiple_bss_candidates, security_type_detailed }
+        ScanResult { bss_description, has_multiple_bss_candidates, mutual_security_protocols }
     }
 }
 
@@ -451,7 +451,7 @@ async fn connecting_state<'a>(
                     let ScanResult {
                         bss_description,
                         has_multiple_bss_candidates: multiple_bss_candidates,
-                        security_type_detailed,
+                        mutual_security_protocols,
                     } = match scan {
                         Some(scan) => scan,
                         None => {
@@ -472,17 +472,17 @@ async fn connecting_state<'a>(
                     //                         result into a field of `ScannedCandidate`. This code
                     //                         should read that field instead of calling this
                     //                         function directly.
-                    let authentication = config_management::select_authentication_method(
-                        security_type_detailed,
-                        options.connect_request.target.credential.clone(),
-                        common_options.has_wpa3_support,
+                    let authenticator = config_management::select_authentication_method(
+                        mutual_security_protocols.clone(),
+                        &options.connect_request.target.credential,
                     )
                     .ok_or_else(|| {
                         // This only occurs if invalid or unsupported security criteria are
                         // received from the network selector, which should never happen.
                         ExitReason(Err(format_err!(
-                            "Failed to negotiate authentication for {:?} network.",
-                            security_type_detailed,
+                            "Failed to negotiate authentication for network with mutually
+                             supported security protocols: {:?}.",
+                            mutual_security_protocols,
                         )))
                     })?;
                     // Send a connect request to the SME
@@ -492,7 +492,7 @@ async fn connecting_state<'a>(
                         ssid: options.connect_request.target.network.ssid.to_vec(),
                         bss_description,
                         multiple_bss_candidates,
-                        authentication,
+                        authentication: authenticator.into(),
                         deprecated_scan_type: fidl_fuchsia_wlan_common::ScanType::Active,
                     };
                     common_options.proxy.connect(&mut sme_connect_request, Some(remote)).map_err(|e| {
@@ -1027,7 +1027,6 @@ mod tests {
                 network_selector,
                 telemetry_sender,
                 iface_id: 1,
-                has_wpa3_support: false,
                 stats_sender,
             },
             sme_req_stream,
@@ -1099,7 +1098,7 @@ mod tests {
                     bss_description: bss_description.clone(),
                     observation: types::ScanObservation::Passive,
                     has_multiple_bss_candidates: true,
-                    security_type_detailed: types::SecurityTypeDetailed::Wep,
+                    mutual_security_protocols: [SecurityDescriptor::WEP].into_iter().collect(),
                 }),
             },
             reason: types::ConnectReason::FidlConnectRequest,
@@ -1470,7 +1469,6 @@ mod tests {
             network_selector,
             telemetry_sender,
             iface_id: 1,
-            has_wpa3_support: false,
             stats_sender,
         };
         let initial_state = connecting_state(common_options, connecting_options);
@@ -1530,7 +1528,7 @@ mod tests {
         credential: Credential,
         requested: types::SecurityType,
         scanned: types::SecurityTypeDetailed,
-        has_wpa3_support: bool,
+        mutual_security_protocols: Vec<fidl_security::Protocol>,
     }
 
     impl AuthenticationTestCase {
@@ -1539,7 +1537,7 @@ mod tests {
                 credential: Credential::None,
                 requested: types::SecurityType::None,
                 scanned: types::SecurityTypeDetailed::Open,
-                has_wpa3_support: false,
+                mutual_security_protocols: vec![fidl_security::Protocol::Open],
             }
         }
 
@@ -1548,7 +1546,7 @@ mod tests {
                 credential: wep_key(),
                 requested: types::SecurityType::Wep,
                 scanned: types::SecurityTypeDetailed::Wpa1,
-                has_wpa3_support: false,
+                mutual_security_protocols: vec![fidl_security::Protocol::Wpa1],
             }
         }
 
@@ -1557,7 +1555,7 @@ mod tests {
                 credential: wpa_psk(),
                 requested: types::SecurityType::Wpa,
                 scanned: types::SecurityTypeDetailed::Wpa2Personal,
-                has_wpa3_support: false,
+                mutual_security_protocols: vec![fidl_security::Protocol::Wpa2Personal],
             }
         }
 
@@ -1566,7 +1564,7 @@ mod tests {
                 credential: wpa_password(),
                 requested: types::SecurityType::Wpa2,
                 scanned: types::SecurityTypeDetailed::Open,
-                has_wpa3_support: false,
+                mutual_security_protocols: vec![fidl_security::Protocol::Open],
             }
         }
 
@@ -1578,7 +1576,11 @@ mod tests {
                 credential: if has_wpa3_credential_support { wpa_password() } else { wpa_psk() },
                 requested: types::SecurityType::Wpa2,
                 scanned: types::SecurityTypeDetailed::Wpa3Personal,
-                has_wpa3_support: has_wpa3_hardware_support,
+                mutual_security_protocols: if has_wpa3_hardware_support {
+                    vec![fidl_security::Protocol::Wpa3Personal]
+                } else {
+                    vec![]
+                },
             }
         }
 
@@ -1587,7 +1589,14 @@ mod tests {
                 credential: wpa_password(),
                 requested: types::SecurityType::Wpa3,
                 scanned: types::SecurityTypeDetailed::Wpa2Wpa3Personal,
-                has_wpa3_support: has_wpa3_hardware_support,
+                mutual_security_protocols: if has_wpa3_hardware_support {
+                    vec![
+                        fidl_security::Protocol::Wpa3Personal,
+                        fidl_security::Protocol::Wpa2Personal,
+                    ]
+                } else {
+                    vec![fidl_security::Protocol::Wpa2Personal]
+                },
             }
         }
 
@@ -1600,7 +1609,14 @@ mod tests {
                 credential: if has_wpa3_credential_support { wpa_password() } else { wpa_psk() },
                 requested,
                 scanned: types::SecurityTypeDetailed::Wpa2Wpa3Personal,
-                has_wpa3_support: has_wpa3_hardware_support,
+                mutual_security_protocols: if has_wpa3_hardware_support {
+                    vec![
+                        fidl_security::Protocol::Wpa3Personal,
+                        fidl_security::Protocol::Wpa2Personal,
+                    ]
+                } else {
+                    vec![fidl_security::Protocol::Wpa2Personal]
+                },
             }
         }
     }
@@ -1692,7 +1708,6 @@ mod tests {
             network_selector,
             telemetry_sender,
             iface_id: 1,
-            has_wpa3_support: case.has_wpa3_support,
             stats_sender: stats_tx,
         };
         let initial_state = connecting_state(common_options, connecting_options);
@@ -1709,16 +1724,11 @@ mod tests {
         let bss_description =
             random_fidl_bss_description!(protection => case.scanned, ssid: ssid.clone());
         let scan_results = vec![fidl_sme::ScanResult {
-            compatibility: match case.scanned {
-                types::SecurityTypeDetailed::Wpa3Personal => case.has_wpa3_support.then(|| {
-                    Box::new(fidl_sme::Compatibility {
-                        mutual_security_protocols: vec![fidl_security::Protocol::Wpa3Personal],
-                    })
-                }),
-                _ => Some(Box::new(fidl_sme::Compatibility {
-                    mutual_security_protocols: vec![fidl_security::Protocol::Open],
-                })),
-            },
+            compatibility: (!case.mutual_security_protocols.is_empty()).then(|| {
+                Box::new(fidl_sme::Compatibility {
+                    mutual_security_protocols: case.mutual_security_protocols,
+                })
+            }),
             timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
             bss_description: bss_description.clone(),
         }];
@@ -1728,116 +1738,6 @@ mod tests {
             &expected_scan_request,
             scan_results,
         );
-        assert_variant!(executor.run_until_stalled(&mut run_state_machine_future), Poll::Pending);
-
-        // Assert that SME is sent a connect request.
-        let sme_req_future = sme_req_stream.into_future();
-        pin_mut!(sme_req_future);
-        assert_variant!(
-            poll_sme_req(&mut executor, &mut sme_req_future),
-            Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, .. }) => {
-                assert_eq!(req.ssid, ssid.to_vec());
-                assert_eq!(connect_request.target.credential, req.authentication.credentials);
-                assert_eq!(req.bss_description, bss_description);
-                assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
-            }
-        );
-    }
-
-    // TODO(fxbug.dev/92693): Test with WPA Enterprise security protocols.
-    /// Tests for success when forwarding an authentication method in a scanned candidate.
-    #[test_case(Credential::None, types::SecurityTypeDetailed::Open, false)]
-    #[test_case(wep_key(), types::SecurityTypeDetailed::Wep, false)]
-    #[test_case(wpa_psk(), types::SecurityTypeDetailed::Wpa1, false)]
-    #[test_case(wpa_psk(), types::SecurityTypeDetailed::Wpa1Wpa2PersonalTkipOnly, false)]
-    #[test_case(wpa_psk(), types::SecurityTypeDetailed::Wpa1Wpa2Personal, false)]
-    #[test_case(wpa_psk(), types::SecurityTypeDetailed::Wpa2PersonalTkipOnly, false)]
-    #[test_case(wpa_psk(), types::SecurityTypeDetailed::Wpa2Personal, false)]
-    #[test_case(wpa_password(), types::SecurityTypeDetailed::Wpa2Wpa3Personal, false)]
-    #[test_case(wpa_psk(), types::SecurityTypeDetailed::Wpa2Wpa3Personal, false)]
-    #[test_case(wpa_password(), types::SecurityTypeDetailed::Wpa2Wpa3Personal, true)]
-    #[test_case(wpa_psk(), types::SecurityTypeDetailed::Wpa2Wpa3Personal, true)]
-    #[test_case(wpa_password(), types::SecurityTypeDetailed::Wpa3Personal, true)]
-    #[fuchsia::test(add_test_attr = false)]
-    fn connecting_state_forward_authentication(
-        credential: Credential,
-        scanned: types::SecurityTypeDetailed,
-        has_wpa3_support: bool,
-    ) {
-        let mut executor = fasync::TestExecutor::new().expect("failed to create an executor");
-        // Configure channels and WLAN components for the test. This test must save networks, so it
-        // does not use the common setup functions seen in other tests in this module.
-        let (_client_req_tx, client_req_rx) = mpsc::channel(1);
-        let (update_tx, _update_rx) = mpsc::unbounded();
-        let (sme_proxy, sme_server) =
-            create_proxy::<fidl_sme::ClientSmeMarker>().expect("failed to create an sme channel");
-        let sme_req_stream = sme_server.into_stream().expect("could not create SME request stream");
-        let (saved_networks, mut stash_server) =
-            executor.run_singlethreaded(SavedNetworksManager::new_and_stash_server());
-        let saved_networks_manager = Arc::new(saved_networks);
-        let (persistence_tx, _persistence_rx) = create_inspect_persistence_channel();
-        let (telementry_tx, _telemetry_rx) = mpsc::channel::<TelemetryEvent>(100);
-        let telemetry_sender = TelemetrySender::new(telementry_tx);
-        let (stats_tx, _stats_rx) = mpsc::unbounded();
-        let network_selector = Arc::new(network_selection::NetworkSelector::new(
-            saved_networks_manager.clone(),
-            create_wlan_hasher(),
-            inspect::Inspector::new().root().create_child("network_selector"),
-            persistence_tx,
-            telemetry_sender.clone(),
-        ));
-
-        // Create an SSID and connect request for the requested network of the test case. Note that
-        // the security types of the network identifier and BSS description need not corroborate
-        // the scanned candidate; these security protocol specifications should not interact in the
-        // state machine when a scanned candidate is provided.
-        let ssid = types::Ssid::try_from("test").unwrap();
-        let id = types::NetworkIdentifier {
-            ssid: ssid.clone(),
-            security_type: match credential {
-                Credential::None => types::SecurityType::None,
-                Credential::Password(_) | Credential::Psk(_) => types::SecurityType::Wpa,
-            },
-        };
-        let bss_description = random_fidl_bss_description!(Open, ssid: ssid.clone());
-        let connect_request = types::ConnectRequest {
-            target: types::ConnectionCandidate {
-                network: id.clone(),
-                credential: credential.clone(),
-                scanned: Some(types::ScannedCandidate {
-                    bss_description: bss_description.clone(),
-                    observation: types::ScanObservation::Active,
-                    has_multiple_bss_candidates: false,
-                    security_type_detailed: scanned,
-                }),
-            },
-            reason: types::ConnectReason::FidlConnectRequest,
-        };
-
-        // Store the requested network of the test case.
-        let store_future = saved_networks_manager.store(id, credential);
-        pin_mut!(store_future);
-        assert_variant!(executor.run_until_stalled(&mut store_future), Poll::Pending);
-        process_stash_write(&mut executor, &mut stash_server);
-        assert_variant!(executor.run_until_stalled(&mut store_future), Poll::Ready(Ok(None)));
-
-        // Create a state machine in the connecting state and begin running it.
-        let connecting_options =
-            ConnectingOptions { connect_request: connect_request.clone(), attempt_counter: 0 };
-        let common_options = CommonStateOptions {
-            proxy: sme_proxy,
-            req_stream: client_req_rx.fuse(),
-            update_sender: update_tx,
-            saved_networks_manager: saved_networks_manager.clone(),
-            network_selector,
-            telemetry_sender,
-            iface_id: 1,
-            has_wpa3_support,
-            stats_sender: stats_tx,
-        };
-        let initial_state = connecting_state(common_options, connecting_options);
-        let run_state_machine_future = run_state_machine(initial_state);
-        pin_mut!(run_state_machine_future);
         assert_variant!(executor.run_until_stalled(&mut run_state_machine_future), Poll::Pending);
 
         // Assert that SME is sent a connect request.
@@ -1872,7 +1772,9 @@ mod tests {
                     bss_description: bss_description.clone().into(),
                     observation: types::ScanObservation::Passive,
                     has_multiple_bss_candidates: true,
-                    security_type_detailed: types::SecurityTypeDetailed::Wpa2Personal,
+                    mutual_security_protocols: [SecurityDescriptor::WPA2_PERSONAL]
+                        .into_iter()
+                        .collect(),
                 }),
             },
             reason: types::ConnectReason::FidlConnectRequest,
@@ -2068,7 +1970,6 @@ mod tests {
             network_selector,
             telemetry_sender,
             iface_id: 1,
-            has_wpa3_support: false,
             stats_sender,
         };
         let initial_state = connecting_state(common_options, connecting_options);
@@ -2215,7 +2116,6 @@ mod tests {
             network_selector,
             telemetry_sender,
             iface_id: 1,
-            has_wpa3_support: false,
             stats_sender,
         };
 
@@ -2246,7 +2146,7 @@ mod tests {
                     bss_description: bss_description.clone(),
                     observation: types::ScanObservation::Passive,
                     has_multiple_bss_candidates: true,
-                    security_type_detailed: types::SecurityTypeDetailed::Open,
+                    mutual_security_protocols: [SecurityDescriptor::OPEN].into_iter().collect(),
                 }),
             },
             reason: types::ConnectReason::FidlConnectRequest,
@@ -2350,7 +2250,6 @@ mod tests {
             network_selector,
             telemetry_sender,
             iface_id: 1,
-            has_wpa3_support: false,
             stats_sender,
         };
 
@@ -2381,7 +2280,9 @@ mod tests {
                     bss_description: bss_description.clone(),
                     observation: types::ScanObservation::Passive,
                     has_multiple_bss_candidates: true,
-                    security_type_detailed: types::SecurityTypeDetailed::Wpa2Personal,
+                    mutual_security_protocols: [SecurityDescriptor::WPA2_PERSONAL]
+                        .into_iter()
+                        .collect(),
                 }),
             },
             reason: types::ConnectReason::ProactiveNetworkSwitch,
@@ -2471,7 +2372,9 @@ mod tests {
                     bss_description: bss_description.clone(),
                     observation: types::ScanObservation::Passive,
                     has_multiple_bss_candidates: true,
-                    security_type_detailed: types::SecurityTypeDetailed::Wpa2Personal,
+                    mutual_security_protocols: [SecurityDescriptor::WPA2_PERSONAL]
+                        .into_iter()
+                        .collect(),
                 }),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
@@ -2591,7 +2494,9 @@ mod tests {
                     bss_description: bss_description.clone(),
                     observation: types::ScanObservation::Passive,
                     has_multiple_bss_candidates: true,
-                    security_type_detailed: types::SecurityTypeDetailed::Wpa2Personal,
+                    mutual_security_protocols: [SecurityDescriptor::WPA2_PERSONAL]
+                        .into_iter()
+                        .collect(),
                 }),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
@@ -2639,7 +2544,9 @@ mod tests {
                     bss_description: bss_desc2.clone(),
                     observation: types::ScanObservation::Passive,
                     has_multiple_bss_candidates: false,
-                    security_type_detailed: types::SecurityTypeDetailed::Wpa2Personal,
+                    mutual_security_protocols: [SecurityDescriptor::WPA2_PERSONAL]
+                        .into_iter()
+                        .collect(),
                 }),
             },
             reason: types::ConnectReason::FidlConnectRequest,
@@ -2782,7 +2689,9 @@ mod tests {
                     bss_description: bss_description.clone(),
                     observation: types::ScanObservation::Passive,
                     has_multiple_bss_candidates: true,
-                    security_type_detailed: types::SecurityTypeDetailed::Wpa2Personal,
+                    mutual_security_protocols: [SecurityDescriptor::WPA2_PERSONAL]
+                        .into_iter()
+                        .collect(),
                 }),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
@@ -2923,7 +2832,9 @@ mod tests {
                     bss_description: bss_description.clone().into(),
                     observation: types::ScanObservation::Passive,
                     has_multiple_bss_candidates: true,
-                    security_type_detailed: types::SecurityTypeDetailed::Wpa2Personal,
+                    mutual_security_protocols: [SecurityDescriptor::WPA2_PERSONAL]
+                        .into_iter()
+                        .collect(),
                 }),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
@@ -3063,7 +2974,9 @@ mod tests {
                     bss_description: bss_description.clone().into(),
                     observation: types::ScanObservation::Passive,
                     has_multiple_bss_candidates: true,
-                    security_type_detailed: types::SecurityTypeDetailed::Wpa2Personal,
+                    mutual_security_protocols: [SecurityDescriptor::WPA2_PERSONAL]
+                        .into_iter()
+                        .collect(),
                 }),
             },
             reason: types::ConnectReason::RetryAfterFailedConnectAttempt,
@@ -3165,7 +3078,9 @@ mod tests {
                     bss_description: bss_description.clone().into(),
                     observation: types::ScanObservation::Passive,
                     has_multiple_bss_candidates: true,
-                    security_type_detailed: types::SecurityTypeDetailed::Wpa2Personal,
+                    mutual_security_protocols: [SecurityDescriptor::WPA2_PERSONAL]
+                        .into_iter()
+                        .collect(),
                 }),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
@@ -3376,7 +3291,9 @@ mod tests {
                     bss_description: bss_description.clone().into(),
                     observation: types::ScanObservation::Passive,
                     has_multiple_bss_candidates: true,
-                    security_type_detailed: types::SecurityTypeDetailed::Wpa2Personal,
+                    mutual_security_protocols: [SecurityDescriptor::WPA2_PERSONAL]
+                        .into_iter()
+                        .collect(),
                 }),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
@@ -3437,7 +3354,9 @@ mod tests {
                     bss_description: bss_description.clone().into(),
                     observation: types::ScanObservation::Passive,
                     has_multiple_bss_candidates: true,
-                    security_type_detailed: types::SecurityTypeDetailed::Wpa2Personal,
+                    mutual_security_protocols: [SecurityDescriptor::WPA2_PERSONAL]
+                        .into_iter()
+                        .collect(),
                 }),
             },
             reason: types::ConnectReason::IdleInterfaceAutoconnect,
@@ -3481,7 +3400,9 @@ mod tests {
                     bss_description: second_bss_desc.clone().into(),
                     observation: types::ScanObservation::Passive,
                     has_multiple_bss_candidates: true,
-                    security_type_detailed: types::SecurityTypeDetailed::Wpa2Personal,
+                    mutual_security_protocols: [SecurityDescriptor::WPA2_PERSONAL]
+                        .into_iter()
+                        .collect(),
                 }),
             },
             reason: types::ConnectReason::ProactiveNetworkSwitch,
@@ -3653,7 +3574,9 @@ mod tests {
                     bss_description: bss_description.clone().into(),
                     observation: types::ScanObservation::Passive,
                     has_multiple_bss_candidates: true,
-                    security_type_detailed: types::SecurityTypeDetailed::Wpa2Personal,
+                    mutual_security_protocols: [SecurityDescriptor::WPA2_PERSONAL]
+                        .into_iter()
+                        .collect(),
                 }),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
@@ -3677,7 +3600,6 @@ mod tests {
             network_selector,
             telemetry_sender,
             iface_id: 1,
-            has_wpa3_support: false,
             stats_sender,
         };
         let (connect_txn_proxy, connect_txn_stream) =
@@ -3828,7 +3750,9 @@ mod tests {
                     bss_description: bss_description.clone().into(),
                     observation: types::ScanObservation::Passive,
                     has_multiple_bss_candidates: true,
-                    security_type_detailed: types::SecurityTypeDetailed::Wpa2Personal,
+                    mutual_security_protocols: [SecurityDescriptor::WPA2_PERSONAL]
+                        .into_iter()
+                        .collect(),
                 }),
             },
             reason: types::ConnectReason::IdleInterfaceAutoconnect,
@@ -3907,7 +3831,9 @@ mod tests {
                     bss_description: bss_description.clone().into(),
                     observation: types::ScanObservation::Passive,
                     has_multiple_bss_candidates: true,
-                    security_type_detailed: types::SecurityTypeDetailed::Wpa2Personal,
+                    mutual_security_protocols: [SecurityDescriptor::WPA2_PERSONAL]
+                        .into_iter()
+                        .collect(),
                 }),
             },
             reason: types::ConnectReason::IdleInterfaceAutoconnect,
@@ -4287,25 +4213,26 @@ mod tests {
     ) -> (impl Future<Output = Result<State, ExitReason>>, fidl_sme::ConnectTransactionRequestStream)
     {
         let protection = bss_description.protection();
+        let security_protocol = match protection {
+            Protection::Open => SecurityDescriptor::OPEN,
+            Protection::Wep => SecurityDescriptor::WEP,
+            Protection::Wpa1 => SecurityDescriptor::WPA1,
+            Protection::Wpa2Personal => SecurityDescriptor::WPA2_PERSONAL,
+            Protection::Wpa3Personal => SecurityDescriptor::WPA3_PERSONAL,
+            _ => panic!("unsupported BssDescription protection type for unit tests."),
+        };
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
                     ssid: bss_description.ssid.clone(),
-                    security_type: match protection {
-                        Protection::Open => types::SecurityType::None,
-                        Protection::Wep => types::SecurityType::Wep,
-                        Protection::Wpa1 => types::SecurityType::Wpa,
-                        Protection::Wpa2Personal => types::SecurityType::Wpa2,
-                        Protection::Wpa3Personal => types::SecurityType::Wpa3,
-                        _ => panic!("unsupported BssDescription protection type for unit tests."),
-                    },
+                    security_type: security_protocol.into(),
                 },
                 credential: Credential::None,
                 scanned: Some(types::ScannedCandidate {
                     bss_description: bss_description.clone().into(),
                     observation: types::ScanObservation::Passive,
                     has_multiple_bss_candidates: true,
-                    security_type_detailed: protection.into(),
+                    mutual_security_protocols: [security_protocol].into_iter().collect(),
                 }),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
@@ -4388,7 +4315,9 @@ mod tests {
                     bss_description: bss_description.clone(),
                     observation: types::ScanObservation::Passive,
                     has_multiple_bss_candidates: true,
-                    security_type_detailed: types::SecurityTypeDetailed::Wpa2Personal,
+                    mutual_security_protocols: [SecurityDescriptor::WPA2_PERSONAL]
+                        .into_iter()
+                        .collect(),
                 }),
             },
             reason: types::ConnectReason::ProactiveNetworkSwitch,
@@ -4518,7 +4447,6 @@ mod tests {
 
         let fut = serve(
             0,
-            false,
             sme_proxy,
             sme_event_stream,
             client_req_stream,
@@ -4577,7 +4505,6 @@ mod tests {
 
         let fut = serve(
             0,
-            false,
             sme_proxy,
             sme_event_stream,
             client_req_stream,
@@ -4632,7 +4559,7 @@ mod tests {
                     bss_description: bss_description.clone(),
                     observation: types::ScanObservation::Passive,
                     has_multiple_bss_candidates: true,
-                    security_type_detailed: types::SecurityTypeDetailed::Open,
+                    mutual_security_protocols: [SecurityDescriptor::OPEN].into_iter().collect(),
                 }),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
@@ -4640,7 +4567,6 @@ mod tests {
 
         let fut = serve(
             0,
-            false,
             sme_proxy,
             sme_event_stream,
             client_req_stream,
@@ -4729,7 +4655,6 @@ mod tests {
 
         let fut = serve(
             0,
-            false,
             sme_proxy,
             sme_event_stream,
             client_req_stream,

@@ -14,6 +14,8 @@ use {
     wlan_common::{
         channel::{Cbw, Channel},
         random_fidl_bss_description,
+        scan::Compatibility,
+        security::SecurityDescriptor,
     },
 };
 
@@ -80,7 +82,15 @@ pub fn generate_random_bss() -> types::Bss {
         } else {
             types::ScanObservation::Active
         },
-        compatible: rng.gen::<bool>(),
+        compatibility: match rng.gen_range(0..4) {
+            0 => Compatibility::expect_some([SecurityDescriptor::OPEN]),
+            1 => Compatibility::expect_some([SecurityDescriptor::WPA2_PERSONAL]),
+            2 => Compatibility::expect_some([
+                SecurityDescriptor::WPA2_PERSONAL,
+                SecurityDescriptor::WPA3_PERSONAL,
+            ]),
+            _ => None,
+        },
         bss_description: random_fidl_bss_description!(
             bssid: bssid.0,
             rssi_dbm: rssi,
