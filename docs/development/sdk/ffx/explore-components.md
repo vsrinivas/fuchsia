@@ -1,10 +1,9 @@
 # ffx component explore
 
-`ffx component explore` is an experimental ffx plugin that allows you to
-interactively explore the internals of fuchsia components. Unlike `fx shell`,
-you only get access to your component's incoming & outgoing capabilities. This
-means you're able to explore in an environment almost identical to what your
-component sees.
+`ffx component explore` is an ffx plugin that allows you to interactively explore
+the internals of fuchsia components. Unlike `fx shell`, the namespace only contains
+your component's incoming & outgoing capabilities. This restriction means you're able
+to explore in an environment almost identical to what your component sees.
 
 Currently, it launches a [Dash](#what_is_dash) process scoped to your component.
 In this process:
@@ -30,7 +29,6 @@ presented as files and directories to aid in exploration.
     ```none
     > ffx component explore /bootstrap/archivist
     $ ls
-    bin
     exposed
     ns
     out
@@ -63,6 +61,17 @@ $ ls
 logs.txt
 $ mv logs.txt logs2.txt
 $ mkdir captures
+```
+
+If you want the shell namespace to match the component namespace, use
+the `-l`/`--layout` flag.
+
+```none
+> ffx component explore /bootstrap/archvisit -l namespace
+$ ls
+pkg
+data
+svc
 ```
 
 ### Explore the capabilities exposed by my component?
@@ -109,30 +118,21 @@ $ cat process_id
 7352
 ```
 
+### Run a command non-interactively?
+
+Use the `-c`/`--command` flag to run a command in the shell non-interactively and receive
+its stdout, stderr and exit code.
+
+```none
+> ffx component explore /bootstrap/archivist -c "cat /runtime/elf/process_id"
+2542
+```
+
 ### Run a command-line tool I built for my component?
 
 This isn't supported yet, but we're working on it. Soon, we will add support for
-running custom command-line tools that can use your component's incoming/exposed
+running custom command-line tools that can use your component's namespace
 capabilities.
-
-This is great because:
-
-+   Current models for running tools on device are deprecated or provide too
-    much privilege.
-    +   The ongoing deprecation of `.cmx` components means that we will no
-        longer have support for CMX shell tools.
-    +   Raw binaries run in `fx shell` have access to more capabilities than
-        they need.
-+   Tools do not need to know the component topology to access capabilities.
-    +   `ffx component explore` provides a predictable directory structure that
-        isn't tied to the component's moniker.
-+   Tools often need capabilities exposed by the component they are built for.
-    +   `net` uses `fuchsia.net.*` capabilities exposed by the netstack
-        component.
-    +   `activity-ctl` uses `fuchsia.activity.*` capabilities exposed by the
-        `activity` component.
-    +   `stash-ctl` uses fuchsia.stash.* capabilities exposed by the stash
-        component.
 
 ## FAQ
 
@@ -165,13 +165,12 @@ you just created using `ffx component run`.
 
 ### What is the namespace root (/) in ffx component explore? {: #what_is_root}
 
-`ffx component explore` creates a virtual file system at the namespace root that
-contains the following directories:
+By default, `ffx component explore` creates a virtual file system at the namespace
+root that contains the following directories:
 
 | Directory  | Description                                                   |
 | ---------- | ------------------------------------------------------------- |
-| `/bin`     | contains a standard set of tools such as `ls`, `cat`, `mkdir` |
-:            : etc.                                                          :
+| `/.dash`   | contains binaries needed by `Dash`.                           |
 | `/exposed` | contains all exposed capabilities.                            |
 | `/ns`      | contains the component's namespace, exactly as your component |
 :            : would see it.                                                 :
@@ -183,6 +182,9 @@ Directory  | Description
 ---------- | ------------------------------------------------------------------
 `/out`     | contains all capabilities currently being served by the component.
 `/runtime` | contains debug information served by the component’s runner.
+
+If the `--layout namespace` flag is set, then the shell's namespace will match
+the component's namespace.
 
 ### Can I access Zircon handles or make FIDL calls via the Dash shell?
 
