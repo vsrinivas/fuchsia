@@ -104,6 +104,7 @@ pub const MISSING_PRODUCT: &str = "Manifest does not contain product";
 
 const LARGE_FILE: &str = "large file, please wait... ";
 const REVISION_VAR: &str = "hw-revision";
+const IS_USERSPACE_VAR: &str = "is-userspace";
 
 const LOCKED_VAR: &str = "vx-locked";
 const LOCK_COMMAND: &str = "vx-lock";
@@ -450,6 +451,13 @@ where
     flash_product(writer, file_resolver, product, fastboot_proxy, &cmd).await
 }
 
+pub async fn is_userspace_fastboot(fastboot_proxy: &FastbootProxy) -> Result<bool> {
+    match fastboot_proxy.get_var(IS_USERSPACE_VAR).await.map_err(map_fidl_error)? {
+        Ok(rev) => Ok(rev == "yes"),
+        _ => Ok(false),
+    }
+}
+
 pub async fn flash_bootloader<W, F, Part, P>(
     writer: &mut W,
     file_resolver: &mut F,
@@ -465,7 +473,10 @@ where
 {
     flash_partitions(writer, file_resolver, product.bootloader_partitions(), fastboot_proxy)
         .await?;
-    if product.bootloader_partitions().len() > 0 && !cmd.no_bootloader_reboot {
+    if product.bootloader_partitions().len() > 0
+        && !cmd.no_bootloader_reboot
+        && !is_userspace_fastboot(fastboot_proxy).await?
+    {
         reboot_bootloader(writer, &fastboot_proxy).await?;
     }
     Ok(())
@@ -484,8 +495,12 @@ where
     Part: Partition,
     P: Product<Part>,
 {
-    stage_oem_files(writer, file_resolver, false, &cmd.oem_stage, fastboot_proxy).await?;
     flash_partitions(writer, file_resolver, product.partitions(), fastboot_proxy).await?;
+    if is_userspace_fastboot(fastboot_proxy).await? {
+        write!(writer, "Rebooting into updated userspace fastboot...\n")?;
+        reboot_bootloader(writer, &fastboot_proxy).await?;
+    }
+    stage_oem_files(writer, file_resolver, false, &cmd.oem_stage, fastboot_proxy).await?;
     stage_oem_files(writer, file_resolver, true, product.oem_files(), fastboot_proxy).await
 }
 
