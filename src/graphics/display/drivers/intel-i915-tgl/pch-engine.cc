@@ -18,7 +18,7 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/pci-ids.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/poll-until.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-ddi.h"
-#include "src/graphics/display/drivers/intel-i915-tgl/registers.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/registers-pch.h"
 
 namespace i915_tgl {
 

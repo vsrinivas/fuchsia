@@ -9,7 +9,7 @@
 
 #include <cstdint>
 
-#include "src/graphics/display/drivers/intel-i915-tgl/registers.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/registers-pch.h"
 
 namespace i915_tgl {
 
