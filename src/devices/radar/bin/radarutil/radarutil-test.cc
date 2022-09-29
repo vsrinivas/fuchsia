@@ -36,6 +36,8 @@ class FakeRadarDevice : public fidl::WireServer<BurstReader> {
   }
   ~FakeRadarDevice() override {
     run_ = false;
+    sync_completion_signal(&worker_thread_notify_);
+    vmo_available_.Signal();
     thrd_join(worker_thread_, nullptr);
   }
 
@@ -114,22 +116,29 @@ class FakeRadarDevice : public fidl::WireServer<BurstReader> {
   }
 
   void StartBursts(StartBurstsCompleter::Sync& completer) override {
-    send_bursts_ = true;
+    sync_completion_signal(&worker_thread_notify_);
     bursts_started_ = true;
   }
 
   void StopBursts(StopBurstsCompleter::Sync& completer) override {
-    send_bursts_ = false;
+    run_ = false;
     bursts_stopped_ = true;
     completer.Reply();
   }
 
   void UnlockVmo(UnlockVmoRequestView request, UnlockVmoCompleter::Sync& completer) override {
-    fbl::AutoLock lock(&lock_);
-    auto it = registered_vmos_.find(request->vmo_id);
-    if (it != registered_vmos_.end()) {
-      it->second.locked = false;
+    {
+      fbl::AutoLock lock(&lock_);
+      auto it = registered_vmos_.find(request->vmo_id);
+      if (it != registered_vmos_.end()) {
+        it->second.locked = false;
+      } else {
+        return;
+      }
     }
+
+    // Alert the (potentially) waiting fake radar driver that a new VMO is available to fill.
+    vmo_available_.Signal();
   }
 
  private:
@@ -172,42 +181,45 @@ class FakeRadarDevice : public fidl::WireServer<BurstReader> {
     fuchsia_hardware_radar::wire::RadarBurstReaderOnBurstResult result;
     bool sent_error = false;
 
+    sync_completion_wait(&worker_thread_notify_, ZX_TIME_INFINITE);
+
     while (run_) {
-      zx::nanosleep(zx::deadline_after(zx::usec(33'333)));
-
-      if (!send_bursts_) {
-        continue;
-      }
-
-      if (bursts_sent_++ == error_burst_) {
+      if (bursts_sent_++ == error_burst_ && !sent_error) {
         SendBurstError(StatusCode::kSensorTimeout);
         sent_error = true;
       }
 
-      std::optional<uint32_t> vmo = GetUnlockedVmo();
-      if (vmo) {
-        SendBurst(*vmo);
-        sent_error = false;
-      } else if (!sent_error) {
-        SendBurstError(StatusCode::kOutOfVmos);
-        sent_error = true;
-      }
+      SendBurst(GetUnlockedVmo());
+      sent_error = false;
     }
 
     return thrd_success;
   }
 
-  std::optional<uint32_t> GetUnlockedVmo() {
-    fbl::AutoLock lock(&lock_);
-    for (auto& pair : registered_vmos_) {
-      if (!pair.second.locked) {
-        pair.second.locked = true;
-        pair.second.vmo.write(&bursts_sent_, 0, sizeof(bursts_sent_));
-        return pair.first;
+  uint32_t GetUnlockedVmo() {
+    lock_.Acquire();
+
+    // Loop until a VMO is unlocked. If needed, wait for the radarutil thread to signal that a new
+    // VMO is available.
+    while (run_) {
+      for (auto& pair : registered_vmos_) {
+        if (!pair.second.locked) {
+          pair.second.locked = true;
+          pair.second.vmo.write(&bursts_sent_, 0, sizeof(bursts_sent_));
+          const uint32_t vmo_id = pair.first;
+
+          lock_.Release();
+
+          return vmo_id;
+        }
       }
+
+      vmo_available_.Wait(&lock_);
     }
 
-    return {};
+    lock_.Release();
+    // Any ID can be reported -- at this point the test is shutting down.
+    return 0;
   }
 
   void SendBurst(uint32_t vmo_id) {
@@ -230,8 +242,9 @@ class FakeRadarDevice : public fidl::WireServer<BurstReader> {
   fbl::Mutex lock_;
   std::map<uint32_t, RegisteredVmo> registered_vmos_ TA_GUARDED(lock_);
   std::atomic<bool> run_ = true;
-  std::atomic<bool> send_bursts_ = false;
   thrd_t worker_thread_;
+  sync_completion_t worker_thread_notify_;
+  fbl::ConditionVariable vmo_available_;
 
   size_t error_burst_ = SIZE_MAX;
 
@@ -244,7 +257,7 @@ class FakeRadarDevice : public fidl::WireServer<BurstReader> {
 
 TEST(RadarUtilTest, RunTimed) {
   FakeRadarDevice device;
-  EXPECT_OK(device.RunRadarUtil({"radarutil", "-t", "10s", "-v", "20", "-p", "1ms"}));
+  EXPECT_OK(device.RunRadarUtil({"radarutil", "-t", "2s", "-v", "20", "-p", "1ms"}));
   EXPECT_EQ(device.GetRegisteredVmoCount(), 20);
   ASSERT_NO_FATAL_FAILURE(device.Ok());
 }
@@ -316,8 +329,7 @@ TEST(RadarUtilTest, InjectError) {
   FakeRadarDevice device;
   device.SetErrorOnBurst(10);
 
-  EXPECT_EQ(device.RunRadarUtil({"radarutil", "--time", "10s", "-v", "20", "-p", "1ms"}),
-            ZX_ERR_IO);
+  EXPECT_EQ(device.RunRadarUtil({"radarutil", "-b", "20", "-v", "20", "-p", "1ms"}), ZX_ERR_IO);
   EXPECT_EQ(device.GetRegisteredVmoCount(), 20);
   ASSERT_NO_FATAL_FAILURE(device.Ok());
 }
@@ -345,7 +357,8 @@ TEST(RadarUtilTest, ErrorRateFail) {
 
 TEST(RadarUtilTest, BurstPeriod) {
   FakeRadarDevice device;
-  EXPECT_OK(device.RunRadarUtil({"radarutil", "--time", "5s", "--burst-period-ns", "33333000"}));
+  EXPECT_OK(
+      device.RunRadarUtil({"radarutil", "--burst-count", "300", "--burst-period-ns", "33333000"}));
 }
 
 }  // namespace radarutil
