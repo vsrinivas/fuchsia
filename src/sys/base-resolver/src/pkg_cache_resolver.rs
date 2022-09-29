@@ -5,6 +5,7 @@
 use {
     anyhow::{self, Context},
     fidl::endpoints::{ClientEnd, Proxy},
+    fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_component_resolution::{
         self as fresolution, ResolverRequest, ResolverRequestStream,
     },
@@ -133,17 +134,40 @@ async fn resolve_pkg_cache(
     let data = mem_util::open_file_data(&proxy, fuchsia_pkg_cache_manifest_path_str())
         .await
         .map_err(crate::ResolverError::ComponentNotFound)?;
-    let client = ClientEnd::new(
-        proxy.into_channel().expect("could not convert proxy to channel").into_zx_channel(),
-    );
+
+    let decl: fdecl::Component = fidl::encoding::decode_persistent(
+        &mem_util::bytes_from_data(&data).map_err(crate::ResolverError::ReadManifest)?[..],
+    )
+    .map_err(crate::ResolverError::ParsingManifest)?;
+    let config_values = if let Some(config_decl) = decl.config {
+        let config_path =
+            match config_decl.value_source.ok_or(crate::ResolverError::InvalidConfigSource)? {
+                fdecl::ConfigValueSource::PackagePath(path) => path,
+                other => return Err(crate::ResolverError::UnsupportedConfigSource(other)),
+            };
+        Some(
+            mem_util::open_file_data(&proxy, &config_path)
+                .await
+                .map_err(crate::ResolverError::ConfigValuesNotFound)?,
+        )
+    } else {
+        None
+    };
+
     Ok(fresolution::Component {
         url: Some(fuchsia_pkg_cache_component_url().clone().into_string()),
         decl: Some(data),
         package: Some(fresolution::Package {
             url: Some(fuchsia_pkg_cache_package_url().clone().into_string()),
-            directory: Some(client),
+            directory: Some(ClientEnd::new(
+                proxy
+                    .into_channel()
+                    .map_err(|_| crate::ResolverError::ConvertProxyToClient)?
+                    .into_zx_channel(),
+            )),
             ..fresolution::Package::EMPTY
         }),
+        config_values,
         ..fresolution::Component::EMPTY
     })
 }
@@ -176,32 +200,93 @@ mod tests {
         assert_matches!(client, Ok(Err(fresolution::ResolverError::Io)));
     }
 
-    #[fuchsia::test]
-    async fn serve_success() {
+    // Creates a blobfs, writes `pkg_cache` to it, then runs serve_impl and verifies the resolved
+    // Component.
+    async fn serve_success(
+        pkg_cache: &fuchsia_pkg_testing::Package,
+        additional_verifier: impl Fn(&fresolution::Component),
+    ) {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fresolution::ResolverMarker>().unwrap();
         let (blobfs, fake) = blobfs::Client::new_temp_dir_fake();
-        let package = fuchsia_pkg_testing::PackageBuilder::new("fake-pkg-cache")
-            .add_resource_at("meta/pkg-cache.cm", [0u8, 1, 2].as_slice())
-            .build()
-            .await
-            .unwrap();
-        package.write_to_blobfs_dir(&fake.backing_dir_as_openat_dir());
+        pkg_cache.write_to_blobfs_dir(&fake.backing_dir_as_openat_dir());
 
-        let server = serve_impl(stream, &blobfs, *package.meta_far_merkle_root());
+        let server = serve_impl(stream, &blobfs, *pkg_cache.meta_far_merkle_root());
         let client = async move { proxy.resolve("fuchsia-pkg-cache:///#meta/pkg-cache.cm").await };
         let (server, client) = futures::join!(server, client);
 
         let () = server.unwrap();
         let component = client.unwrap().unwrap();
+        let () = additional_verifier(&component);
         assert_eq!(component.url.unwrap(), "fuchsia-pkg-cache:///#meta/pkg-cache.cm");
         assert_matches!(component.decl.unwrap(), fmem::Data::Buffer(_));
         assert_eq!(
             component.package.as_ref().unwrap().url.as_ref().unwrap(),
             "fuchsia-pkg-cache:///"
         );
-        let resolved_package = component.package.unwrap().directory.unwrap().into_proxy().unwrap();
-        package.verify_contents(&resolved_package).await.unwrap();
+        let resolved_pkg_cache =
+            component.package.unwrap().directory.unwrap().into_proxy().unwrap();
+        pkg_cache.verify_contents(&resolved_pkg_cache).await.unwrap();
+    }
+
+    #[fuchsia::test]
+    async fn serve_success_with_structured_config() {
+        let package = fuchsia_pkg_testing::PackageBuilder::new("fake-pkg-cache")
+            .add_resource_at(
+                "meta/pkg-cache.cm",
+                fidl::encoding::encode_persistent(&mut fdecl::Component {
+                    config: Some(fdecl::ConfigSchema {
+                        value_source: Some(fdecl::ConfigValueSource::PackagePath(
+                            "meta/pkg-cache.cvf".into(),
+                        )),
+                        ..fdecl::ConfigSchema::EMPTY
+                    }),
+                    ..fdecl::Component::EMPTY
+                })
+                .unwrap()
+                .as_slice(),
+            )
+            .add_resource_at(
+                "meta/pkg-cache.cvf",
+                fidl::encoding::encode_persistent(
+                    &mut fidl_fuchsia_component_config::ValuesData::EMPTY.clone(),
+                )
+                .unwrap()
+                .as_slice(),
+            )
+            .build()
+            .await
+            .unwrap();
+
+        let () = serve_success(&package, |component| {
+            assert_matches!(
+                component,
+                fresolution::Component { decl: Some(..), config_values: Some(..), .. }
+            )
+        })
+        .await;
+    }
+
+    #[fuchsia::test]
+    async fn serve_success_no_structured_config() {
+        let package = fuchsia_pkg_testing::PackageBuilder::new("fake-pkg-cache")
+            .add_resource_at(
+                "meta/pkg-cache.cm",
+                fidl::encoding::encode_persistent(&mut fdecl::Component::EMPTY.clone())
+                    .unwrap()
+                    .as_slice(),
+            )
+            .build()
+            .await
+            .unwrap();
+
+        let () = serve_success(&package, |component| {
+            assert_matches!(
+                component,
+                fresolution::Component { decl: Some(..), config_values: None, .. }
+            )
+        })
+        .await;
     }
 
     #[fuchsia::test]

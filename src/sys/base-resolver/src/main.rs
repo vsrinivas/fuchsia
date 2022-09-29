@@ -58,42 +58,49 @@ enum ResolverError {
 
     #[error("serve package directory")]
     ServePackageDirectory(#[source] package_directory::Error),
+
     #[error("failed to read the resolution context")]
     ReadingContext(#[source] anyhow::Error),
+
     #[error("failed to create the resolution context")]
     CreatingContext(#[source] anyhow::Error),
+
     #[error("subpackage name was not found in the package's subpackage list")]
     SubpackageNotFound(#[source] anyhow::Error),
+
     #[error("the subpackage hash was not found in the system base package index: {0}")]
     SubpackageNotInBase(#[source] anyhow::Error),
+
     #[error("missing context required to resolve relative url: {0}")]
     RelativeUrlMissingContext(String),
+
+    #[error("converting a FIDL proxy into a FIDL client")]
+    ConvertProxyToClient,
+
     #[error("internal error")]
     Internal,
 }
 
 impl From<&ResolverError> for fresolution::ResolverError {
     fn from(err: &ResolverError) -> fresolution::ResolverError {
-        use ResolverError::*;
+        use {fresolution::ResolverError as ferror, ResolverError::*};
         match err {
-            InvalidUrl(_) | PackageHashNotSupported => fresolution::ResolverError::InvalidArgs,
-            UnsupportedRepo => fresolution::ResolverError::NotSupported,
-            ComponentNotFound(_) => fresolution::ResolverError::ManifestNotFound,
-            PackageNotFound(_) => fresolution::ResolverError::PackageNotFound,
-            ConfigValuesNotFound(_) => fresolution::ResolverError::ConfigValuesNotFound,
+            InvalidUrl(_) | PackageHashNotSupported => ferror::InvalidArgs,
+            UnsupportedRepo => ferror::NotSupported,
+            ComponentNotFound(_) => ferror::ManifestNotFound,
+            PackageNotFound(_) => ferror::PackageNotFound,
+            ConfigValuesNotFound(_) => ferror::ConfigValuesNotFound,
             ParsingManifest(_) | UnsupportedConfigSource(_) | InvalidConfigSource => {
-                fresolution::ResolverError::InvalidManifest
+                ferror::InvalidManifest
             }
-            ReadManifest(_) | CreateEndpoints(_) | ServePackageDirectory(_) => {
-                fresolution::ResolverError::Io
+            ReadManifest(_)
+            | CreateEndpoints(_)
+            | ServePackageDirectory(_)
+            | ConvertProxyToClient => ferror::Io,
+            CreatingContext(_) | ReadingContext(_) | RelativeUrlMissingContext(_) | Internal => {
+                ferror::Internal
             }
-            CreatingContext(_) => fresolution::ResolverError::Internal,
-            ReadingContext(_) => fresolution::ResolverError::Internal,
-            SubpackageNotInBase(_) | SubpackageNotFound(_) => {
-                fresolution::ResolverError::PackageNotFound
-            }
-            RelativeUrlMissingContext(_) => fresolution::ResolverError::InvalidArgs,
-            Internal => fresolution::ResolverError::Internal,
+            SubpackageNotInBase(_) | SubpackageNotFound(_) => ferror::PackageNotFound,
         }
     }
 }
