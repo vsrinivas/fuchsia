@@ -72,7 +72,7 @@ impl<'a, 'b> CpuDeviceHandlerBuilder<'a, 'b> {
     pub fn new_with_driver_path(driver_path: String) -> Self {
         Self {
             driver_path: driver_path.clone(),
-            dev_handler_builder: DeviceControlHandlerBuilder::new_with_driver_path(driver_path),
+            dev_handler_builder: DeviceControlHandlerBuilder::new().driver_path(&driver_path),
             cpu_ctrl_proxy: None,
             inspect_root: None,
         }
@@ -85,8 +85,9 @@ impl<'a, 'b> CpuDeviceHandlerBuilder<'a, 'b> {
         controller_proxy: fidl_fuchsia_device::ControllerProxy,
         cpu_ctrl_proxy: fcpu_ctrl::DeviceProxy,
     ) -> Self {
-        let dev_handler_builder =
-            DeviceControlHandlerBuilder::new_with_proxy(driver_path.clone(), controller_proxy);
+        let dev_handler_builder = DeviceControlHandlerBuilder::new()
+            .driver_path(&driver_path)
+            .driver_proxy(controller_proxy);
         Self {
             driver_path,
             dev_handler_builder,
@@ -177,8 +178,9 @@ impl<'a, 'b> CpuDeviceHandlerBuilder<'a, 'b> {
         Self::add_pstates_to_inspect(&local_root, &pstates);
 
         // Build the DeviceControlHandler
-        let dev_handler_builder = self.dev_handler_builder.with_inspect_root(&local_root);
-        let dev_control_handler = dev_handler_builder.build().await?;
+        let dev_handler_builder = self.dev_handler_builder.inspect_root(&local_root);
+        let dev_control_handler = dev_handler_builder.build()?;
+        dev_control_handler.init().await?;
 
         // Since CpuDeviceHandler has no dynamic Inspect data, its node will be owned by the root
         inspect_root.record(local_root);
@@ -252,7 +254,10 @@ mod tests {
         let set_performance_state = move |state| {
             perf_state_clone_2.set(state);
         };
-        dev_control_handler::tests::setup_fake_driver(get_performance_state, set_performance_state)
+        dev_control_handler::tests::fake_dev_ctrl_driver(
+            get_performance_state,
+            set_performance_state,
+        )
     }
 
     /// Creates a fake fuchsia.hardware.cpu_ctrl.Device proxy

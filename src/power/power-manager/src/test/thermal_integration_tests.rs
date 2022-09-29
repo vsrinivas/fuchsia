@@ -348,11 +348,13 @@ impl<'a> ThermalPolicyTest<'a> {
             Simulator::make_shutdown_function(&sim),
         );
 
-        let cpu_dev_handler = dev_control_handler::tests::setup_test_node(
-            Simulator::make_p_state_getter(&sim),
-            Simulator::make_p_state_setter(&sim),
-        )
-        .await;
+        let cpu_dev_handler = dev_control_handler::DeviceControlHandlerBuilder::new()
+            .driver_proxy(dev_control_handler::tests::fake_dev_ctrl_driver(
+                Simulator::make_p_state_getter(&sim),
+                Simulator::make_p_state_setter(&sim),
+            ))
+            .build_and_init()
+            .await;
 
         // Note that the model capacitance used by the control node could differ from the one
         // used by the simulator. This could be leveraged to simulate discrepancies between

@@ -6,14 +6,17 @@ use crate::error::PowerManagerError;
 use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
-use crate::utils::connect_to_driver;
+use crate::ok_or_default_err;
+use crate::utils::{connect_to_driver, result_debug_panic::ResultDebugPanic};
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
+use async_utils::event::Event as AsyncEvent;
 use fidl_fuchsia_device as fdev;
 use fuchsia_inspect::{self as inspect, NumericProperty, Property};
 use fuchsia_zircon as zx;
 use serde_derive::Deserialize;
 use serde_json as json;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -36,19 +39,34 @@ pub const MAX_PERF_STATES: u32 = fdev::MAX_DEVICE_PERFORMANCE_STATES;
 
 /// A builder for constructing the DeviceControlhandler node
 pub struct DeviceControlHandlerBuilder<'a> {
-    driver_path: String,
+    driver_path: Option<String>,
     driver_proxy: Option<fdev::ControllerProxy>,
     inspect_root: Option<&'a inspect::Node>,
 }
 
 impl<'a> DeviceControlHandlerBuilder<'a> {
-    pub fn new_with_driver_path(driver_path: String) -> Self {
-        Self { driver_path, driver_proxy: None, inspect_root: None }
+    pub fn new() -> Self {
+        Self {
+            driver_path: Some("/test/driver/path".to_string()),
+            driver_proxy: None,
+            inspect_root: None,
+        }
+    }
+
+    pub fn driver_path(mut self, path: &str) -> Self {
+        self.driver_path = Some(path.to_string());
+        self
     }
 
     #[cfg(test)]
-    pub fn new_with_proxy(driver_path: String, proxy: fdev::ControllerProxy) -> Self {
-        Self { driver_path, driver_proxy: Some(proxy), inspect_root: None }
+    pub fn driver_proxy(mut self, proxy: fdev::ControllerProxy) -> Self {
+        self.driver_proxy = Some(proxy);
+        self
+    }
+
+    pub fn inspect_root(mut self, inspect_root: &'a inspect::Node) -> Self {
+        self.inspect_root = Some(inspect_root);
+        self
     }
 
     pub fn new_from_json(json_data: json::Value, _nodes: &HashMap<String, Rc<dyn Node>>) -> Self {
@@ -63,42 +81,44 @@ impl<'a> DeviceControlHandlerBuilder<'a> {
         }
 
         let data: JsonData = json::from_value(json_data).unwrap();
-        Self::new_with_driver_path(data.config.driver_path)
+        Self { driver_path: Some(data.config.driver_path), driver_proxy: None, inspect_root: None }
     }
 
-    pub fn with_inspect_root(mut self, root: &'a inspect::Node) -> Self {
-        self.inspect_root = Some(root);
-        self
-    }
-
-    pub async fn build(self) -> Result<Rc<DeviceControlHandler>, Error> {
-        // Optionally use the default proxy
-        let proxy = if self.driver_proxy.is_none() {
-            connect_to_driver::<fdev::ControllerMarker>(&self.driver_path).await?
-        } else {
-            self.driver_proxy.unwrap()
-        };
+    pub fn build(self) -> Result<Rc<DeviceControlHandler>, Error> {
+        let driver_path = ok_or_default_err!(self.driver_path).or_debug_panic()?;
 
         // Optionally use the default inspect root node
         let inspect_root = self.inspect_root.unwrap_or(inspect::component::inspector().root());
 
         Ok(Rc::new(DeviceControlHandler {
-            driver_path: self.driver_path.clone(),
-            driver_proxy: proxy,
+            driver_proxy: RefCell::new(self.driver_proxy),
             inspect: InspectData::new(
                 inspect_root,
-                format!("DeviceControlHandler ({})", self.driver_path),
+                format!("DeviceControlHandler ({})", driver_path),
             ),
+            driver_path: driver_path,
+            init_done: AsyncEvent::new(),
         }))
+    }
+
+    #[cfg(test)]
+    pub async fn build_and_init(self) -> Rc<DeviceControlHandler> {
+        let node = self.build().unwrap();
+        node.init().await.unwrap();
+        node
     }
 }
 
 pub struct DeviceControlHandler {
     driver_path: String,
-    driver_proxy: fdev::ControllerProxy,
+    driver_proxy: RefCell<Option<fdev::ControllerProxy>>,
 
     /// A struct for managing Component Inspection data
     inspect: InspectData,
+
+    /// Signalled after `init()` has completed. Used to ensure node doesn't process messages until
+    /// its `init()` has completed.
+    init_done: AsyncEvent,
 }
 
 impl DeviceControlHandler {
@@ -108,6 +128,8 @@ impl DeviceControlHandler {
             "DeviceControlHandler::handle_get_performance_state",
             "driver" => self.driver_path.as_str()
         );
+
+        self.init_done.wait().await;
 
         let result = self.get_performance_state().await;
         log_if_err!(result, "Failed to get performance state");
@@ -129,12 +151,18 @@ impl DeviceControlHandler {
     }
 
     async fn get_performance_state(&self) -> Result<u32, Error> {
-        let state =
-            self.driver_proxy.get_current_performance_state().await.map_err(|e| {
-                format_err!("{}: get_performance_state IPC failed: {}", self.name(), e)
-            })?;
+        let proxy = self
+            .driver_proxy
+            .borrow()
+            .as_ref()
+            .ok_or(format_err!("Missing driver_proxy"))
+            .or_debug_panic()?
+            .clone();
 
-        Ok(state)
+        proxy
+            .get_current_performance_state()
+            .await
+            .map_err(|e| format_err!("{}: get_performance_state IPC failed: {}", self.name(), e))
     }
 
     async fn handle_set_performance_state(
@@ -147,6 +175,8 @@ impl DeviceControlHandler {
             "driver" => self.driver_path.as_str(),
             "state" => in_state
         );
+
+        self.init_done.wait().await;
 
         let result = self.set_performance_state(in_state).await;
         log_if_err!(result, "Failed to set performance state");
@@ -172,11 +202,19 @@ impl DeviceControlHandler {
     }
 
     async fn set_performance_state(&self, in_state: u32) -> Result<(), Error> {
+        let proxy = self
+            .driver_proxy
+            .borrow()
+            .as_ref()
+            .ok_or(format_err!("Missing driver_proxy"))
+            .or_debug_panic()?
+            .clone();
+
         // Make the FIDL call
-        let (status, _out_state) =
-            self.driver_proxy.set_performance_state(in_state).await.map_err(|e| {
-                format_err!("{}: set_performance_state IPC failed: {}", self.name(), e)
-            })?;
+        let (status, _out_state) = proxy
+            .set_performance_state(in_state)
+            .await
+            .map_err(|e| format_err!("{}: set_performance_state IPC failed: {}", self.name(), e))?;
 
         // Check the status code
         zx::Status::ok(status).map_err(|e| {
@@ -191,6 +229,24 @@ impl DeviceControlHandler {
 impl Node for DeviceControlHandler {
     fn name(&self) -> String {
         format!("DeviceControlHandler ({})", self.driver_path)
+    }
+
+    /// Initializes internal state.
+    ///
+    /// Connects to the temperature driver unless a proxy was already provided (in a test).
+    async fn init(&self) -> Result<(), Error> {
+        fuchsia_trace::duration!("power_manager", "DeviceControlHandler::init");
+
+        // Connect to the driver. Typically this is None, but it may be set by tests.
+        let driver_proxy = match self.driver_proxy.borrow().as_ref() {
+            Some(p) => p.clone(),
+            None => connect_to_driver::<fdev::ControllerMarker>(&self.driver_path).await?,
+        };
+
+        *self.driver_proxy.borrow_mut() = Some(driver_proxy);
+        self.init_done.signal();
+
+        Ok(())
     }
 
     async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {
@@ -239,7 +295,7 @@ pub mod tests {
     use inspect::assert_data_tree;
     use std::cell::Cell;
 
-    pub fn setup_fake_driver(
+    pub fn fake_dev_ctrl_driver(
         get_performance_state: impl Fn() -> u32 + 'static,
         mut set_performance_state: impl FnMut(u32) + 'static,
     ) -> fdev::ControllerProxy {
@@ -268,20 +324,7 @@ pub mod tests {
         proxy
     }
 
-    pub async fn setup_test_node(
-        get_performance_state: impl Fn() -> u32 + 'static,
-        set_performance_state: impl FnMut(u32) + 'static,
-    ) -> Rc<DeviceControlHandler> {
-        DeviceControlHandlerBuilder::new_with_proxy(
-            "Fake".to_string(),
-            setup_fake_driver(get_performance_state, set_performance_state),
-        )
-        .build()
-        .await
-        .unwrap()
-    }
-
-    pub async fn setup_simple_test_node() -> Rc<DeviceControlHandler> {
+    async fn setup_simple_test_node() -> Rc<DeviceControlHandler> {
         let perf_state = Rc::new(Cell::new(0));
         let perf_state_clone_1 = perf_state.clone();
         let perf_state_clone_2 = perf_state.clone();
@@ -289,7 +332,11 @@ pub mod tests {
         let set_performance_state = move |state| {
             perf_state_clone_2.set(state);
         };
-        setup_test_node(get_performance_state, set_performance_state).await
+
+        DeviceControlHandlerBuilder::new()
+            .driver_proxy(fake_dev_ctrl_driver(get_performance_state, set_performance_state))
+            .build_and_init()
+            .await
     }
 
     /// Tests that an unsupported message is handled gracefully and an Unsupported error is returned
@@ -351,19 +398,16 @@ pub mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_inspect_data() {
         let inspector = inspect::Inspector::new();
-        let _node = DeviceControlHandlerBuilder::new_with_proxy(
-            "Fake".to_string(),
-            fidl::endpoints::create_proxy::<fdev::ControllerMarker>().unwrap().0,
-        )
-        .with_inspect_root(inspector.root())
-        .build()
-        .await
-        .unwrap();
+        let _node = DeviceControlHandlerBuilder::new()
+            .driver_proxy(fidl::endpoints::create_proxy::<fdev::ControllerMarker>().unwrap().0)
+            .inspect_root(inspector.root())
+            .build_and_init()
+            .await;
 
         assert_data_tree!(
             inspector,
             root: {
-                "DeviceControlHandler (Fake)": contains {}
+                "DeviceControlHandler (/test/driver/path)": contains {}
             }
         );
     }

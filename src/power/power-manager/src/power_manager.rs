@@ -165,8 +165,7 @@ impl PowerManager {
                     json_data,
                     &self.nodes,
                 )
-                .build()
-                .await?
+                .build()?
             }
             "DriverManagerHandler" => {
                 driver_manager_handler::DriverManagerHandlerBuilder::new_from_json(
