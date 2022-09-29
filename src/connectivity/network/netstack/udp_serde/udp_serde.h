@@ -39,7 +39,6 @@ typedef enum DeserializeSendMsgMetaError {
   DeserializeSendMsgMetaErrorNone,
   DeserializeSendMsgMetaErrorInputBufferNull,
   DeserializeSendMsgMetaErrorInputBufferTooSmall,
-  DeserializeSendMsgMetaErrorNonZeroPrelude,
   DeserializeSendMsgMetaErrorFailedToDecode,
 } DeserializeSendMsgMetaError;
 

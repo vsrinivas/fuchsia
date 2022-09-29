@@ -6,6 +6,11 @@ library fuchsia.io;
 
 using zx;
 
+@available(added=10)
+type UdpMetadataEncodingProtocolVersion = flexible enum : uint16 {
+    ZERO = 0;
+};
+
 /// Connection information.
 ///
 /// Refer to [`Node.Describe`] and [`Node.OnOpen`] for usage.
@@ -85,6 +90,10 @@ type NodeInfoDeprecated = strict resource union {
         tx_meta_buf_size uint64;
         /// Size of the buffer used to receive Rx metadata.
         rx_meta_buf_size uint64;
+        /// Identifies the version of the protocol used to encode and decode
+        /// metadata sent alongside payloads over the socket.
+        @available(added=10)
+        metadata_encoding_protocol_version UdpMetadataEncodingProtocolVersion;
     };
 };
 

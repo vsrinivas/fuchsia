@@ -181,7 +181,6 @@ func TestDeserializeSendMsgMetaFailures(t *testing.T) {
 	const (
 		DeserializeSendMsgMetaErrInputBufferNil DeserializeSendMsgMetaErrorCondition = iota
 		DeserializeSendMsgMetaErrInputBufferTooSmall
-		DeserializeSendMsgMetaErrNonZeroPrelude
 		DeserializeSendMsgMetaErrFailedToDecode
 	)
 	for _, testCase := range []struct {
@@ -191,7 +190,6 @@ func TestDeserializeSendMsgMetaFailures(t *testing.T) {
 	}{
 		{"nil buffer", DeserializeSendMsgMetaErrInputBufferNil, &InputBufferNullErr{}},
 		{"buffer too small", DeserializeSendMsgMetaErrInputBufferTooSmall, &InputBufferTooSmallErr{}},
-		{"nonzero prelude", DeserializeSendMsgMetaErrNonZeroPrelude, &NonZeroPreludeErr{}},
 		{"failed to decode", DeserializeSendMsgMetaErrFailedToDecode, &FailedToDecodeErr{}},
 	} {
 
@@ -203,8 +201,6 @@ func TestDeserializeSendMsgMetaFailures(t *testing.T) {
 				buf = nil
 			case DeserializeSendMsgMetaErrInputBufferTooSmall:
 				buf = buf[:preludeOffset-1]
-			case DeserializeSendMsgMetaErrNonZeroPrelude:
-				buf[preludeOffset] = 1
 			case DeserializeSendMsgMetaErrFailedToDecode:
 			}
 
@@ -370,7 +366,6 @@ func TestDeserializeRecvMsgMetaFailures(t *testing.T) {
 	const (
 		DeserializeRecvMsgMetaErrInputBufferNil DeserializeRecvMsgMetaErrorCondition = iota
 		DeserializeRecvMsgMetaErrInputBufferTooSmall
-		DeserializeRecvMsgMetaErrNonZeroPrelude
 		DeserializeRecvMsgMetaErrFailedToDecode
 	)
 	for _, testCase := range []struct {
@@ -380,7 +375,6 @@ func TestDeserializeRecvMsgMetaFailures(t *testing.T) {
 	}{
 		{"nil buffer", DeserializeRecvMsgMetaErrInputBufferNil, &InputBufferNullErr{}},
 		{"buffer too small", DeserializeRecvMsgMetaErrInputBufferTooSmall, &UnspecifiedDecodingFailure{}},
-		{"nonzero prelude", DeserializeRecvMsgMetaErrNonZeroPrelude, &UnspecifiedDecodingFailure{}},
 		{"failed to decode", DeserializeRecvMsgMetaErrFailedToDecode, &UnspecifiedDecodingFailure{}},
 	} {
 
@@ -392,8 +386,6 @@ func TestDeserializeRecvMsgMetaFailures(t *testing.T) {
 				buf = nil
 			case DeserializeRecvMsgMetaErrInputBufferTooSmall:
 				buf = buf[:preludeOffset-1]
-			case DeserializeRecvMsgMetaErrNonZeroPrelude:
-				buf[preludeOffset] = 1
 			case DeserializeRecvMsgMetaErrFailedToDecode:
 			}
 

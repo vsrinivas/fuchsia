@@ -39,8 +39,6 @@ func convertDeserializeSendMsgMetaErr(err C.DeserializeSendMsgMetaError) error {
 		return &InputBufferNullErr{}
 	case C.DeserializeSendMsgMetaErrorInputBufferTooSmall:
 		return &InputBufferTooSmallErr{}
-	case C.DeserializeSendMsgMetaErrorNonZeroPrelude:
-		return &NonZeroPreludeErr{}
 	case C.DeserializeSendMsgMetaErrorFailedToDecode:
 		return &FailedToDecodeErr{}
 	default:

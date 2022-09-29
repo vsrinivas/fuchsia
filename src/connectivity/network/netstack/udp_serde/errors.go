@@ -20,12 +20,6 @@ func (*InputBufferTooSmallErr) Error() string {
 	return "input buffer too small"
 }
 
-type NonZeroPreludeErr struct{}
-
-func (*NonZeroPreludeErr) Error() string {
-	return "non zero prelude"
-}
-
 type FailedToDecodeErr struct{}
 
 func (*FailedToDecodeErr) Error() string {

@@ -735,6 +735,11 @@ zx_status_t zxio_socket(zxio_service_connector service_connector, int domain, in
           if (!response.has_rx_meta_buf_size()) {
             return ZX_ERR_NOT_SUPPORTED;
           }
+          if (!(response.has_metadata_encoding_protocol_version() &&
+                response.metadata_encoding_protocol_version() ==
+                    fuchsia_io::UdpMetadataEncodingProtocolVersion::kZero)) {
+            return ZX_ERR_NOT_SUPPORTED;
+          }
           zx::socket& socket = response.socket();
           zx_info_socket_t info;
           if (zx_status_t status =

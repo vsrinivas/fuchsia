@@ -14,24 +14,12 @@ namespace fnet = fuchsia_net;
 
 namespace {
 
-constexpr uint8_t kVersioningSegmentSize = 8;
-constexpr uint8_t kVersioningSegment[kVersioningSegmentSize] = {0};
-constexpr cpp20::span<const uint8_t> kVersioningSegmentSpan(kVersioningSegment,
-                                                            kVersioningSegmentSize);
-
 constexpr uint8_t kMetadataSizeSegmentSize = 8;
 constexpr uint8_t kMetadataSizeSize = sizeof(uint16_t);
 constexpr uint8_t kMetadataSizeSegmentPaddingSize = kMetadataSizeSegmentSize - kMetadataSizeSize;
 constexpr uint8_t kMetadataSizeSegmentPadding[kMetadataSizeSegmentPaddingSize] = {0};
 constexpr cpp20::span<const uint8_t> kMetaSizeSegmentPaddingSpan(kMetadataSizeSegmentPadding,
                                                                  kMetadataSizeSegmentPaddingSize);
-
-constexpr uint8_t kSumOfSegmentSizes = kVersioningSegmentSize + kMetadataSizeSegmentSize;
-
-template <class T, class U, std::size_t N, std::size_t M>
-constexpr bool starts_with(const cpp20::span<T, N>& data, const cpp20::span<U, M>& prefix) {
-  return data.size() >= prefix.size() && std::equal(prefix.begin(), prefix.end(), data.begin());
-}
 
 template <class T, class U, std::size_t N, std::size_t M>
 void copy_into(cpp20::span<U, M>& to, const cpp20::span<T, N>& from) {
@@ -52,14 +40,6 @@ void copy_into_and_advance_by(cpp20::span<U, M>& to, const cpp20::span<T, N>& fr
   advance_by(to, from.size());
 }
 
-bool consume_versioning_segment_unchecked(cpp20::span<uint8_t>& buf) {
-  if (!starts_with(buf, kVersioningSegmentSpan)) {
-    return false;
-  }
-  advance_by(buf, kVersioningSegmentSpan.size());
-  return true;
-}
-
 uint16_t consume_meta_size_segment_unchecked(cpp20::span<uint8_t>& buf) {
   uint8_t meta_size[kMetadataSizeSize];
   cpp20::span<uint8_t, sizeof(meta_size)> meta_size_span(meta_size);
@@ -73,13 +53,6 @@ void serialize_unchecked(cpp20::span<uint8_t>& buf, uint16_t meta_size,
   copy_into_and_advance_by(
       buf, cpp20::span<uint8_t>(reinterpret_cast<uint8_t*>(&meta_size), sizeof(meta_size)));
   copy_into_and_advance_by(buf, kMetaSizeSegmentPaddingSpan);
-
-  // This prelude is zeroed in preparation for the transition to use FIDL-at-rest as an encoding
-  // scheme. Since FIDL-at-rest serializes a non-zero magic number within the first eight bytes
-  // (see
-  // https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0120_standalone_use_of_fidl_wire_format?hl=en#fidl_wire_format)
-  // zero-ing them will let us signal the encoding scheme during the period of transition.
-  copy_into_and_advance_by(buf, kVersioningSegmentSpan);
 
   for (uint32_t i = 0; i < msg.iovec_actual(); ++i) {
     copy_into_and_advance_by(
@@ -102,7 +75,8 @@ std::optional<uint16_t> compute_and_validate_message_size(const fidl::OutgoingMe
 }
 
 bool can_serialize_into(const cpp20::span<uint8_t>& buf, uint16_t meta_size) {
-  return static_cast<uint64_t>(meta_size) + static_cast<uint64_t>(kSumOfSegmentSizes) < buf.size();
+  return static_cast<uint64_t>(meta_size) + static_cast<uint64_t>(kMetadataSizeSegmentSize) <
+         buf.size();
 }
 
 // Copies the address in `src_addr` into the provided SocketAddress data structures.
@@ -171,12 +145,12 @@ void copy_from_fidl_sockaddr(T& dest, const fnet::wire::SocketAddress& sockaddr)
 // Size occupied by the prelude bytes in a Tx message.
 const uint32_t kTxUdpPreludeSize =
     fidl::MaxSizeInChannel<fsocket::wire::SendMsgMeta, fidl::MessageDirection::kSending>() +
-    kSumOfSegmentSizes;
+    kMetadataSizeSegmentSize;
 
 // Size occupied by the prelude bytes in an Rx message.
 const uint32_t kRxUdpPreludeSize =
     fidl::MaxSizeInChannel<fsocket::wire::RecvMsgMeta, fidl::MessageDirection::kSending>() +
-    kSumOfSegmentSizes;
+    kMetadataSizeSegmentSize;
 
 DeserializeSendMsgMetaResult deserialize_send_msg_meta(Buffer buf) {
   DeserializeSendMsgMetaResult res = {};
@@ -184,16 +158,12 @@ DeserializeSendMsgMetaResult deserialize_send_msg_meta(Buffer buf) {
     res.err = DeserializeSendMsgMetaErrorInputBufferNull;
     return res;
   }
-  if (buf.buf_size < kSumOfSegmentSizes) {
+  if (buf.buf_size < kMetadataSizeSegmentSize) {
     res.err = DeserializeSendMsgMetaErrorInputBufferTooSmall;
     return res;
   }
   cpp20::span<uint8_t> span{buf.buf, buf.buf_size};
   uint16_t meta_size = consume_meta_size_segment_unchecked(span);
-  if (!consume_versioning_segment_unchecked(span)) {
-    res.err = DeserializeSendMsgMetaErrorNonZeroPrelude;
-    return res;
-  }
   if (span.size() < meta_size) {
     res.err = DeserializeSendMsgMetaErrorInputBufferTooSmall;
     return res;
@@ -415,14 +385,10 @@ DeserializeRecvMsgMetaResult deserialize_recv_msg_meta(Buffer buf) {
 
 fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta> deserialize_recv_msg_meta(
     cpp20::span<uint8_t> buf) {
-  if (buf.size() < kSumOfSegmentSizes) {
+  if (buf.size() < kMetadataSizeSegmentSize) {
     return fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta>(nullptr, 0);
   }
   uint16_t meta_size = consume_meta_size_segment_unchecked(buf);
-  if (!consume_versioning_segment_unchecked(buf)) {
-    return fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta>(nullptr, 0);
-  }
-
   if (meta_size > buf.size()) {
     return fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta>(nullptr, 0);
   }

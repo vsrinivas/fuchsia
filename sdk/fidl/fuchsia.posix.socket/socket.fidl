@@ -665,6 +665,9 @@ protocol DatagramSocket {
         2: tx_meta_buf_size uint64;
         /// Size of the buffer used to receive Rx metadata.
         3: rx_meta_buf_size uint64;
+        /// Identifies the version of the protocol used to encode and decode
+        /// metadata sent alongside payloads over the socket.
+        4: metadata_encoding_protocol_version fuchsia.io.UdpMetadataEncodingProtocolVersion;
     });
 
     /// Validates that data can be sent.

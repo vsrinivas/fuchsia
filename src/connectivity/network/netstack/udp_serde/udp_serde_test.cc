@@ -305,11 +305,6 @@ TEST_P(UdpSerdeMultiDataFormatTest, DeserializeRecvErrors) {
   ASSERT_NO_FATAL_FAILURE(
       expect_deserialize_fails_with(nullptr, 0, DeserializeRecvMsgMetaErrorInputBufferNull));
 
-  // Nonzero prelude.
-  memset(kBuf, 1, kRxUdpPreludeSize);
-  ASSERT_NO_FATAL_FAILURE(expect_deserialize_fails_with(
-      kBuf, kRxUdpPreludeSize, DeserializeRecvMsgMetaErrorUnspecifiedDecodingFailure));
-
   // Meta size too large.
   memset(kBuf, 0, kRxUdpPreludeSize);
   uint16_t meta_size = std::numeric_limits<uint16_t>::max();
@@ -348,14 +343,6 @@ TEST_P(UdpSerdeTest, DeserializeSendErrors) {
       .buf_size = 0,
   });
   EXPECT_EQ(buf_too_short.err, DeserializeSendMsgMetaErrorInputBufferTooSmall);
-
-  // Nonzero prelude.
-  memset(kBuf, 1, kTxUdpPreludeSize);
-  const DeserializeSendMsgMetaResult nonzero_prelude = deserialize_send_msg_meta({
-      .buf = kBuf,
-      .buf_size = kTxUdpPreludeSize,
-  });
-  EXPECT_EQ(nonzero_prelude.err, DeserializeSendMsgMetaErrorNonZeroPrelude);
 
   // Meta size too large.
   memset(kBuf, 0, kTxUdpPreludeSize);

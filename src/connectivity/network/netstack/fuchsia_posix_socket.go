@@ -2582,9 +2582,10 @@ func (s *datagramSocketImpl) DescribeDeprecated(fidl.Context) (fidlio.NodeInfoDe
 		return fidlio.NodeInfoDeprecated{}, err
 	}
 	return fidlio.NodeInfoDeprecatedWithDatagramSocket(fidlio.DatagramSocket{
-		Socket:        zx.Socket(handle),
-		TxMetaBufSize: uint64(udpTxPreludeSize),
-		RxMetaBufSize: uint64(udpRxPreludeSize),
+		Socket:                          zx.Socket(handle),
+		TxMetaBufSize:                   uint64(udpTxPreludeSize),
+		RxMetaBufSize:                   uint64(udpRxPreludeSize),
+		MetadataEncodingProtocolVersion: fidlio.UdpMetadataEncodingProtocolVersionZero,
 	}), nil
 }
 
@@ -2601,6 +2602,7 @@ func (s *datagramSocketImpl) Describe2(fidl.Context) (socket.DatagramSocketDescr
 	response.SetSocket(zx.Socket(handle))
 	response.SetTxMetaBufSize(uint64(udpTxPreludeSize))
 	response.SetRxMetaBufSize(uint64(udpRxPreludeSize))
+	response.SetMetadataEncodingProtocolVersion(fidlio.UdpMetadataEncodingProtocolVersionZero)
 	return response, nil
 }
 
