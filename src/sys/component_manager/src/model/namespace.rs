@@ -20,6 +20,7 @@ use {
     },
     cm_logger::scoped::ScopedLogger,
     cm_rust::{self, CapabilityPath, ComponentDecl, UseDecl, UseProtocolDecl},
+    cm_task_scope::TaskScope,
     fidl::{
         endpoints::{create_endpoints, ClientEnd, ServerEnd},
         prelude::*,
@@ -131,7 +132,8 @@ impl IncomingNamespace {
 
         // Start hosting the services directories and add them to the namespace
         self.serve_and_install_svc_dirs(&mut ns, svc_dirs)?;
-        self.start_directory_waiters(directory_waiters).await;
+        let component = component.upgrade()?;
+        self.start_directory_waiters(directory_waiters, &component.task_scope()).await;
 
         if let Some(log_decl) = &log_sink_decl {
             let (ns_, logger) = self.get_logger_from_ns(ns, log_decl).await;
@@ -340,17 +342,16 @@ impl IncomingNamespace {
     }
 
     /// start_directory_waiters will spawn the futures in directory_waiters
-    async fn start_directory_waiters(&mut self, directory_waiters: Vec<BoxFuture<'static, ()>>) {
+    async fn start_directory_waiters(
+        &mut self,
+        directory_waiters: Vec<BoxFuture<'static, ()>>,
+        scope: &TaskScope,
+    ) {
         for waiter in directory_waiters {
             // The future for a directory waiter will only terminate once the directory channel is
-            // first used. Run the future in a detached task instead of calling await on it
-            // directly.
-            //
-            // TODO(fxbug.dev/76579): Formulate a more rigorous lifecycle strategy for routing
-            // tasks. detach() assigns them the global scope, which guarantees we'll never
-            // give up on them, but also means if they never terminate (for example, due to a
-            // stuck resolver call), any resources attached to it are effectively leaked.
-            fasync::Task::spawn(waiter).detach();
+            // first used. Run the future in a task bound to the component's scope instead of
+            // calling await on it directly.
+            scope.add_task(waiter).await;
         }
     }
 
@@ -438,13 +439,9 @@ impl IncomingNamespace {
                         .await;
                     }
                 };
-                // We must spawn the task here because we're in a non-async callback.
-                //
-                // TODO(fxbug.dev/76579): Formulate a more rigorous lifecycle strategy for routing
-                // tasks. detach() assigns them the global scope, which guarantees we'll never
-                // give up on them, but also means if they never terminate (for example, due to a
-                // stuck resolver call), any resources attached to it are effectively leaked.
-                fasync::Task::spawn(task).detach();
+                // This is a non-async callback, so we must spawn a task to add the task.
+                fasync::Task::spawn(async move { component.task_scope().add_task(task).await })
+                    .detach();
             };
 
         let service_dir = svc_dirs.entry(capability_path.dirname.clone()).or_insert_with(|| {
