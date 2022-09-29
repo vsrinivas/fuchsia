@@ -123,6 +123,8 @@ class GraphServerTest : public ::testing::Test {
   GraphServer& server() { return wrapper_.server(); }
   fidl::WireSyncClient<fuchsia_audio_mixer::Graph>& client() { return wrapper_.client(); }
 
+  void CreateProducerAndConsumer(NodeId* producer_id, NodeId* consumer_id);
+
  protected:
   fidl::Arena<> arena_;
 
@@ -771,6 +773,246 @@ TEST_F(GraphServerTest, DeleteNodeSuccess) {
 
 // TODO(fxbug.dev/87651): after CreateEdge is implemented, DeleteNodeSuccess should verify that
 // CreateEdge fails when passed the deleted node ID
+
+//
+// CreateEdge
+//
+
+void GraphServerTest::CreateProducerAndConsumer(NodeId* producer_id, NodeId* consumer_id) {
+  // Each consumer needs a thread.
+  ThreadId thread_id;
+  {
+    auto result = client()->CreateThread(MakeDefaultCreateThreadRequest(arena_).Build());
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+    ASSERT_TRUE(result->value()->has_id());
+    thread_id = result->value()->id();
+  }
+
+  // Producer.
+  {
+    auto result = client()->CreateProducer(
+        fuchsia_audio_mixer::wire::GraphCreateProducerRequest::Builder(arena_)
+            .name(fidl::StringView::FromExternal("producer"))
+            .direction(PipelineDirection::kOutput)
+            .data_source(fuchsia_audio_mixer::wire::ProducerDataSource::WithRingBuffer(
+                arena_, MakeDefaultRingBuffer(arena_).Build()))
+            .Build());
+
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+    ASSERT_TRUE(result->value()->has_id());
+    *producer_id = result->value()->id();
+  }
+
+  // Consumer.
+  {
+    auto result = client()->CreateConsumer(
+        fuchsia_audio_mixer::wire::GraphCreateConsumerRequest::Builder(arena_)
+            .name(fidl::StringView::FromExternal("consumer"))
+            .direction(PipelineDirection::kOutput)
+            .data_source(fuchsia_audio_mixer::wire::ConsumerDataSource::WithRingBuffer(
+                arena_, MakeDefaultRingBuffer(arena_).Build()))
+            .options(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_)
+                         .thread(thread_id)
+                         .Build())
+            .Build());
+
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+    ASSERT_TRUE(result->value()->has_id());
+    *consumer_id = result->value()->id();
+  }
+}
+
+TEST_F(GraphServerTest, CreateEdgeFails) {
+  using CreateEdgeError = fuchsia_audio_mixer::CreateEdgeError;
+
+  NodeId producer_id;
+  NodeId consumer_id;
+  ASSERT_NO_FATAL_FAILURE(CreateProducerAndConsumer(&producer_id, &consumer_id));
+
+  // This only tests error cases detected by GraphServer::CreateEdge. Other error cases are detected
+  // by Node::CreateEdge -- those cases are tested in node_unittest.cc.
+  struct TestCase {
+    std::string name;
+    std::optional<NodeId> source_id;
+    std::optional<NodeId> dest_id;
+    CreateEdgeError expected_error;
+  };
+  std::vector<TestCase> cases = {
+      {
+          .name = "Missing source_id",
+          .dest_id = consumer_id,
+          .expected_error = CreateEdgeError::kInvalidSourceId,
+      },
+      {
+          .name = "Missing dest_id",
+          .source_id = producer_id,
+          .expected_error = CreateEdgeError::kInvalidDestId,
+      },
+      {
+          .name = "Invalid dest_id",
+          .source_id = 99,
+          .dest_id = consumer_id,
+          .expected_error = CreateEdgeError::kInvalidSourceId,
+      },
+      {
+          .name = "Invalid dest_id",
+          .source_id = producer_id,
+          .dest_id = 99,
+          .expected_error = CreateEdgeError::kInvalidDestId,
+      },
+  };
+
+  for (auto& tc : cases) {
+    SCOPED_TRACE("TestCase: " + tc.name);
+
+    auto builder = fuchsia_audio_mixer::wire::GraphCreateEdgeRequest::Builder(arena_);
+    if (tc.source_id) {
+      builder.source_id(*tc.source_id);
+    }
+    if (tc.dest_id) {
+      builder.dest_id(*tc.dest_id);
+    }
+
+    auto result = client()->CreateEdge(builder.Build());
+    if (!result.ok()) {
+      ADD_FAILURE() << "failed to send method call: " << result;
+      continue;
+    }
+    if (!result->is_error()) {
+      ADD_FAILURE() << "CreateEdge did not fail";
+      continue;
+    }
+    EXPECT_EQ(result->error_value(), tc.expected_error);
+  }
+}
+
+TEST_F(GraphServerTest, CreateEdgeSuccess) {
+  NodeId producer_id;
+  NodeId consumer_id;
+  ASSERT_NO_FATAL_FAILURE(CreateProducerAndConsumer(&producer_id, &consumer_id));
+
+  auto result =
+      client()->CreateEdge(fuchsia_audio_mixer::wire::GraphCreateEdgeRequest::Builder(arena_)
+                               .source_id(producer_id)
+                               .dest_id(consumer_id)
+                               .Build());
+
+  ASSERT_TRUE(result.ok()) << result;
+  ASSERT_FALSE(result->is_error()) << result->error_value();
+}
+
+//
+// DeleteEdge
+//
+
+TEST_F(GraphServerTest, DeleteEdgeFails) {
+  using DeleteEdgeError = fuchsia_audio_mixer::DeleteEdgeError;
+
+  NodeId producer_id;
+  NodeId consumer_id;
+  ASSERT_NO_FATAL_FAILURE(CreateProducerAndConsumer(&producer_id, &consumer_id));
+
+  // Start with an edge.
+  {
+    auto result =
+        client()->CreateEdge(fuchsia_audio_mixer::wire::GraphCreateEdgeRequest::Builder(arena_)
+                                 .source_id(producer_id)
+                                 .dest_id(consumer_id)
+                                 .Build());
+
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+  }
+
+  // This only tests error cases detected by GraphServer::DeleteEdge. Other error cases are detected
+  // by Node::DeleteEdge -- those cases are tested in node_unittest.cc.
+  struct TestCase {
+    std::string name;
+    std::optional<NodeId> source_id;
+    std::optional<NodeId> dest_id;
+    DeleteEdgeError expected_error;
+  };
+  std::vector<TestCase> cases = {
+      {
+          .name = "Missing source_id",
+          .dest_id = consumer_id,
+          .expected_error = DeleteEdgeError::kInvalidSourceId,
+      },
+      {
+          .name = "Missing dest_id",
+          .source_id = producer_id,
+          .expected_error = DeleteEdgeError::kInvalidDestId,
+      },
+      {
+          .name = "Invalid dest_id",
+          .source_id = 99,
+          .dest_id = consumer_id,
+          .expected_error = DeleteEdgeError::kInvalidSourceId,
+      },
+      {
+          .name = "Invalid dest_id",
+          .source_id = producer_id,
+          .dest_id = 99,
+          .expected_error = DeleteEdgeError::kInvalidDestId,
+      },
+  };
+
+  for (auto& tc : cases) {
+    SCOPED_TRACE("TestCase: " + tc.name);
+
+    auto builder = fuchsia_audio_mixer::wire::GraphDeleteEdgeRequest::Builder(arena_);
+    if (tc.source_id) {
+      builder.source_id(*tc.source_id);
+    }
+    if (tc.dest_id) {
+      builder.dest_id(*tc.dest_id);
+    }
+
+    auto result = client()->DeleteEdge(builder.Build());
+    if (!result.ok()) {
+      ADD_FAILURE() << "failed to send method call: " << result;
+      continue;
+    }
+    if (!result->is_error()) {
+      ADD_FAILURE() << "DeleteEdge did not fail";
+      continue;
+    }
+    EXPECT_EQ(result->error_value(), tc.expected_error);
+  }
+}
+
+TEST_F(GraphServerTest, DeleteEdgeSuccess) {
+  NodeId producer_id;
+  NodeId consumer_id;
+  ASSERT_NO_FATAL_FAILURE(CreateProducerAndConsumer(&producer_id, &consumer_id));
+
+  // Start the edge.
+  {
+    auto result =
+        client()->CreateEdge(fuchsia_audio_mixer::wire::GraphCreateEdgeRequest::Builder(arena_)
+                                 .source_id(producer_id)
+                                 .dest_id(consumer_id)
+                                 .Build());
+
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+  }
+
+  // Delete it.
+  {
+    auto result =
+        client()->DeleteEdge(fuchsia_audio_mixer::wire::GraphDeleteEdgeRequest::Builder(arena_)
+                                 .source_id(producer_id)
+                                 .dest_id(consumer_id)
+                                 .Build());
+
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+  }
+}
 
 //
 // CreateThread

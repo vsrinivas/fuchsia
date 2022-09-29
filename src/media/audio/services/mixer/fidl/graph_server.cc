@@ -244,7 +244,8 @@ void GraphServer::CreateProducer(CreateProducerRequestView request,
 
     reference_clock = result.value().reference_clock;
     format = result.value().format;
-    source = StreamSinkServer::Create(
+
+    auto server = StreamSinkServer::Create(
         realtime_fidl_thread_, std::move(stream_sink.server_end()),
         StreamSinkServer::Args{
             .format = *format,
@@ -252,6 +253,8 @@ void GraphServer::CreateProducer(CreateProducerRequestView request,
                                                stream_sink.media_ticks_per_second_denominator()),
             .payload_buffers = {{0, std::move(result.value().payload_buffer)}},
         });
+    AddChildServer(server);
+    source = std::move(server);
 
   } else if (request->data_source().is_ring_buffer()) {
     auto result =
@@ -442,13 +445,88 @@ void GraphServer::DeleteNode(DeleteNodeRequestView request, DeleteNodeCompleter:
 void GraphServer::CreateEdge(CreateEdgeRequestView request, CreateEdgeCompleter::Sync& completer) {
   TRACE_DURATION("audio", "Graph:::CreateEdge");
   ScopedThreadChecker checker(thread().checker());
-  FX_CHECK(false) << "not implemented";
+
+  // TODO(fxbug.dev/87651): also handle `request->mixer_sampler` and `request->gain_stages` (which
+  // should be renamed to `request->gain_controls`)
+
+  if (!request->has_source_id()) {
+    FX_LOGS(WARNING) << "CreateEdge: missing source_id";
+    completer.ReplyError(fuchsia_audio_mixer::CreateEdgeError::kInvalidSourceId);
+    return;
+  }
+  if (!request->has_dest_id()) {
+    FX_LOGS(WARNING) << "CreateEdge: missing dest_id";
+    completer.ReplyError(fuchsia_audio_mixer::CreateEdgeError::kInvalidDestId);
+    return;
+  }
+
+  auto source_it = nodes_.find(request->source_id());
+  if (source_it == nodes_.end()) {
+    FX_LOGS(WARNING) << "CreateEdge: invalid source_id";
+    completer.ReplyError(fuchsia_audio_mixer::CreateEdgeError::kInvalidSourceId);
+    return;
+  }
+
+  auto dest_it = nodes_.find(request->dest_id());
+  if (dest_it == nodes_.end()) {
+    FX_LOGS(WARNING) << "CreateEdge: invalid dest_id";
+    completer.ReplyError(fuchsia_audio_mixer::CreateEdgeError::kInvalidDestId);
+    return;
+  }
+
+  auto& source = source_it->second;
+  auto& dest = dest_it->second;
+  auto result = Node::CreateEdge(*global_task_queue_, source, dest);
+  if (!result.is_ok()) {
+    completer.ReplyError(result.error());
+    return;
+  }
+
+  fidl::Arena arena;
+  completer.ReplySuccess(
+      fuchsia_audio_mixer::wire::GraphCreateEdgeResponse::Builder(arena).Build());
 }
 
 void GraphServer::DeleteEdge(DeleteEdgeRequestView request, DeleteEdgeCompleter::Sync& completer) {
   TRACE_DURATION("audio", "Graph:::DeleteEdge");
   ScopedThreadChecker checker(thread().checker());
-  FX_CHECK(false) << "not implemented";
+
+  if (!request->has_source_id()) {
+    FX_LOGS(WARNING) << "DeleteEdge: missing source_id";
+    completer.ReplyError(fuchsia_audio_mixer::DeleteEdgeError::kInvalidSourceId);
+    return;
+  }
+  if (!request->has_dest_id()) {
+    FX_LOGS(WARNING) << "DeleteEdge: missing dest_id";
+    completer.ReplyError(fuchsia_audio_mixer::DeleteEdgeError::kInvalidDestId);
+    return;
+  }
+
+  auto source_it = nodes_.find(request->source_id());
+  if (source_it == nodes_.end()) {
+    FX_LOGS(WARNING) << "DeleteEdge: invalid source_id";
+    completer.ReplyError(fuchsia_audio_mixer::DeleteEdgeError::kInvalidSourceId);
+    return;
+  }
+
+  auto dest_it = nodes_.find(request->dest_id());
+  if (dest_it == nodes_.end()) {
+    FX_LOGS(WARNING) << "DeleteEdge: invalid dest_id";
+    completer.ReplyError(fuchsia_audio_mixer::DeleteEdgeError::kInvalidDestId);
+    return;
+  }
+
+  auto& source = source_it->second;
+  auto& dest = dest_it->second;
+  auto result = Node::DeleteEdge(*global_task_queue_, detached_thread_, source, dest);
+  if (!result.is_ok()) {
+    completer.ReplyError(result.error());
+    return;
+  }
+
+  fidl::Arena arena;
+  completer.ReplySuccess(
+      fuchsia_audio_mixer::wire::GraphDeleteEdgeResponse::Builder(arena).Build());
 }
 
 void GraphServer::CreateThread(CreateThreadRequestView request,
@@ -585,6 +663,19 @@ void GraphServer::CreateGraphControlledReferenceClock(
 void GraphServer::OnShutdown(fidl::UnbindInfo info) {
   // Clearing this list will cancel all pending waiters.
   pending_one_shot_waiters_.clear();
+
+  // Destroy nodes to remove circular references.
+  for (auto [id, node] : nodes_) {
+    Node::Destroy(*global_task_queue_, detached_thread_, node);
+  }
+  nodes_.clear();
+
+  // Shutdown all threads.
+  for (auto [id, mix_thread] : mix_threads_) {
+    mix_thread->Shutdown();
+  }
+  mix_threads_.clear();
+
   BaseFidlServer::OnShutdown(info);
 }
 
