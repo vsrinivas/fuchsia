@@ -324,22 +324,28 @@ async fn recv_loop(sock: Rc<UdpSocket>, mdns_protocol: Weak<MdnsProtocolInner>) 
     }
 }
 
+fn construct_query_buf(service: &str) -> &'static [u8] {
+    let question = dns::QuestionBuilder::new(
+        dns::DomainBuilder::from_str(service).unwrap(),
+        dns::Type::Ptr,
+        dns::Class::In,
+        true,
+    );
+
+    let mut message = dns::MessageBuilder::new(0, true);
+    message.add_question(question);
+
+    let mut buf = vec![0; message.bytes_len()];
+    message.serialize(buf.as_mut_slice());
+    Box::leak(buf.into_boxed_slice())
+}
+
 lazy_static::lazy_static! {
-    static ref QUERY_BUF: &'static [u8] = {
-        let question = dns::QuestionBuilder::new(
-            dns::DomainBuilder::from_str("_fuchsia._udp.local").unwrap(),
-            dns::Type::Ptr,
-            dns::Class::In,
-            true,
-        );
-
-        let mut message = dns::MessageBuilder::new(0, true);
-        message.add_question(question);
-
-        let mut buf = vec![0; message.bytes_len()];
-        message.serialize(buf.as_mut_slice());
-        Box::leak(buf.into_boxed_slice())
-    };
+    static ref QUERY_BUF: [&'static [u8]; 2] =
+    [
+        &construct_query_buf("_fuchsia._udp.local"),
+        &construct_query_buf("_fastboot._tcp.local"),
+    ];
 }
 
 // query_loop broadcasts an mdns query on sock every interval.
@@ -354,15 +360,16 @@ async fn query_loop(sock: Rc<UdpSocket>, interval: Duration) {
     };
 
     loop {
-        if let Err(err) = sock.send_to(&QUERY_BUF, to_addr).await {
-            tracing::info!(
-                "mdns query failed from {}: {}",
-                sock.local_addr().map(|a| a.to_string()).unwrap_or("unknown".to_string()),
-                err
-            );
-            return;
+        for query_buf in QUERY_BUF.iter() {
+            if let Err(err) = sock.send_to(&query_buf, to_addr).await {
+                tracing::info!(
+                    "mdns query failed from {}: {}",
+                    sock.local_addr().map(|a| a.to_string()).unwrap_or("unknown".to_string()),
+                    err
+                );
+                return;
+            }
         }
-
         Timer::new(interval).await;
     }
 }
