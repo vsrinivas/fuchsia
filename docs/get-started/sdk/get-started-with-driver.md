@@ -17,7 +17,7 @@ Complete the following sections:
 2. [Clone the SDK driver samples repository](#clone-the-sdk-driver-samples-repository).
 3. [Start the emulator](#start-the-emulator).
 4. [Build and load the sample driver](#build-and-load-the-sample-driver).
-5. [Build and run a tools component](#build-and-run-a-tools-component).
+5. [Build and run a tool](#build-and-run-a-tool).
 6. [Debug the sample driver](#debug-the-sample-driver).
 7. [Modify and reload the sample driver](#modify-and-reload-the-sample-driver).
 
@@ -96,9 +96,9 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    $ tools/bazel build --config=fuchsia_x64 //src/qemu_edu/drivers:qemu_edu
    ...
-   INFO: Elapsed time: 156.844s, Critical Path: 34.80s
-   INFO: 777 processes: 510 internal, 267 linux-sandbox.
-   INFO: Build completed successfully, 777 total actions
+   INFO: Elapsed time: 263.954s, Critical Path: 67.11s
+   INFO: 952 processes: 587 internal, 365 linux-sandbox.
+   INFO: Build completed successfully, 952 total actions
    ```
 
 5. To verify that you can use the `ffx` tool in your environment, run the
@@ -112,12 +112,13 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx sdk version
-   9.20220807.3.1
+   9.20220919.2.1
    ```
 
    At this point, you only need to confirm that you can run `ffx` commands
    without error. (However for your information, the output above shows the version
-   `9.20220807.3.1`, which indicates that this SDK was built and published on August 7, 2022.)
+   `9.20220919.2.1`, which indicates that this SDK was built and published on
+   September 19, 2022.)
 
    Note: To ensure that you’re using the right version of `ffx` during development,
    consider updating your `PATH` to include the SDK's `tools` directory
@@ -292,19 +293,31 @@ Do the following:
    $ tools/ffx driver list --loaded
    fuchsia-boot:///#meta/block.core.cm
    fuchsia-boot:///#meta/bus-pci.cm
+   fuchsia-boot:///#meta/display.cm
    fuchsia-boot:///#meta/fvm.cm
+   fuchsia-boot:///#meta/goldfish-display.cm
+   fuchsia-boot:///#meta/goldfish.cm
+   fuchsia-boot:///#meta/goldfish_address_space.cm
+   fuchsia-boot:///#meta/goldfish_control.cm
+   fuchsia-boot:///#meta/goldfish_sensor.cm
+   fuchsia-boot:///#meta/goldfish_sync.cm
+   fuchsia-boot:///#meta/hid-input-report.cm
    fuchsia-boot:///#meta/hid.cm
+   fuchsia-boot:///#meta/intel-hda.cm
    fuchsia-boot:///#meta/intel-rtc.cm
    fuchsia-boot:///#meta/netdevice-migration.cm
    fuchsia-boot:///#meta/network-device.cm
    fuchsia-boot:///#meta/pc-ps2.cm
    fuchsia-boot:///#meta/platform-bus-x86.cm
    fuchsia-boot:///#meta/platform-bus.cm
+   fuchsia-boot:///#meta/qemu-audio-codec.cm
    fuchsia-boot:///#meta/ramdisk.cm
    fuchsia-boot:///#meta/sysmem.cm
    fuchsia-boot:///#meta/virtio_block.cm
    fuchsia-boot:///#meta/virtio_ethernet.cm
+   fuchsia-boot:///#meta/virtio_input.cm
    fuchsia-pkg://fuchsia.com/virtual_audio#meta/virtual_audio_driver.cm
+   fuchsia-boot:///#meta/ahci.cm
    ```
 
 2. Build and publish the `qemu_edu` driver component:
@@ -317,18 +330,18 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/bazel run --config=fuchsia_x64 //src/qemu_edu/drivers:pkg.component
-   INFO: Analyzed target //src/qemu_edu/drivers:pkg.component (8 packages loaded, 498 targets configured).
+   INFO: Analyzed target //src/qemu_edu/drivers:pkg.component (8 packages loaded, 513 targets configured).
    INFO: Found 1 target...
    Target //src/qemu_edu/drivers:pkg.component up-to-date:
      bazel-bin/src/qemu_edu/drivers/pkg.component_run_component.sh
-   INFO: Elapsed time: 43.548s, Critical Path: 35.04s
-   INFO: 795 processes: 519 internal, 275 linux-sandbox, 1 local.
-   INFO: Build completed successfully, 795 total actions
-   INFO: Build completed successfully, 795 total actions
+   INFO: Elapsed time: 101.652s, Critical Path: 66.01s
+   INFO: 970 processes: 596 internal, 373 linux-sandbox, 1 local.
+   INFO: Build completed successfully, 970 total actions
+   INFO: Build completed successfully, 970 total actions
    added repository bazel.pkg.component
    Registering fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm
    Successfully bound:
-   Node 'root.sys.platform.platform-passthrough.PCI0.bus.00_06_0_', Driver 'fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm'.
+   Node 'root.sys.platform.platform-passthrough.PCI0.bus.00_06_0_.pci-00_06.0-fidl', Driver 'fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm'.
    ```
 
 3. Verify that the `qemu_edu` driver is now loaded to the Fuchsia emulator
@@ -342,22 +355,34 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx driver list --loaded
+   fuchsia-boot:///#meta/block.core.cm
    fuchsia-boot:///#meta/bus-pci.cm
+   fuchsia-boot:///#meta/display.cm
    fuchsia-boot:///#meta/fvm.cm
+   fuchsia-boot:///#meta/goldfish-display.cm
+   fuchsia-boot:///#meta/goldfish.cm
+   fuchsia-boot:///#meta/goldfish_address_space.cm
+   fuchsia-boot:///#meta/goldfish_control.cm
+   fuchsia-boot:///#meta/goldfish_sensor.cm
+   fuchsia-boot:///#meta/goldfish_sync.cm
+   fuchsia-boot:///#meta/hid-input-report.cm
    fuchsia-boot:///#meta/hid.cm
+   fuchsia-boot:///#meta/intel-hda.cm
    fuchsia-boot:///#meta/intel-rtc.cm
    fuchsia-boot:///#meta/netdevice-migration.cm
    fuchsia-boot:///#meta/network-device.cm
    fuchsia-boot:///#meta/pc-ps2.cm
    fuchsia-boot:///#meta/platform-bus-x86.cm
    fuchsia-boot:///#meta/platform-bus.cm
+   fuchsia-boot:///#meta/qemu-audio-codec.cm
    fuchsia-boot:///#meta/ramdisk.cm
    fuchsia-boot:///#meta/sysmem.cm
    fuchsia-boot:///#meta/virtio_block.cm
    fuchsia-boot:///#meta/virtio_ethernet.cm
+   fuchsia-boot:///#meta/virtio_input.cm
    fuchsia-pkg://fuchsia.com/virtual_audio#meta/virtual_audio_driver.cm
    {{ '<strong>' }}fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm{{ '</strong>' }}
-   fuchsia-boot:///#meta/block.core.cm
+   fuchsia-boot:///#meta/ahci.cm
    ```
 
    Notice that the `qemu_edu` driver is shown in the loaded drivers list.
@@ -372,7 +397,7 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx component show qemu_edu.cm
-                  Moniker:  /bootstrap/universe-pkg-drivers:root.sys.platform.platform-passthrough.PCI0.bus.00_06_0_
+                  Moniker:  /bootstrap/universe-pkg-drivers:root.sys.platform.platform-passthrough.PCI0.bus.00_06_0_.pci-00_06.0-fidl
                       URL:  fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm
               Instance ID:  None
                      Type:  CML Component
@@ -380,11 +405,11 @@ Do the following:
     Incoming Capabilities:  /svc/fuchsia.device.fs.Exporter
                             /svc/fuchsia.driver.compat.Service
                             /svc/fuchsia.logger.LogSink
-     Exposed Capabilities:  fuchsia.hardware.qemuedu.Service
-              Merkle root:  b4c34c971b6e191a021f59be92feec56868ce3c1602b88fb094a4f07923d4e1e
+     Exposed Capabilities:  fuchsia.examples.qemuedu.Service
+              Merkle root:  4543f40fc3f7403ad30bfe9d964a97eeeaeb8faeab6cd52b3bdc2d0e60e686a3
           Execution State:  Running
              Start reason:  Instance is in a single_run collection
-    Outgoing Capabilities:  fuchsia.hardware.qemuedu.Service
+    Outgoing Capabilities:  fuchsia.examples.qemuedu.Service
    ```
 
 5. View the device logs of the `qemu_edu` driver:
@@ -398,77 +423,77 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx log --filter qemu_edu dump
    ...
-   [173.618][pkg-resolver][pkg-resolver][I] resolved fuchsia-pkg://bazel.pkg.component/qemu_edu as fuchsia-pkg://bazel.pkg.component/qemu_edu to 957cd123aba43515a5acc8b95a2abfecba3d714655f3a2a4e581c13ca0db6f7d with TUF
-   [173.618][pkg-resolver][pkg-resolver][I] get_hash for fuchsia-pkg://bazel.pkg.component/qemu_edu as fuchsia-pkg://bazel.pkg.component/qemu_edu to 957cd123aba43515a5acc8b95a2abfecba3d714655f3a2a4e581c13ca0db6f7d with TUF
-   [173.623][driver_index][driver_index,driver][I] Registered driver successfully: fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm.
-   [173.653][pkg-resolver][pkg-resolver][I] Fetching blobs for fuchsia-pkg://bazel.pkg.component/qemu_edu: []
-   [173.656][pkg-resolver][pkg-resolver][I] resolved fuchsia-pkg://bazel.pkg.component/qemu_edu as fuchsia-pkg://bazel.pkg.component/qemu_edu to 957cd123aba43515a5acc8b95a2abfecba3d714655f3a2a4e581c13ca0db6f7d with TUF
-   [173.662][driver_manager][driver_manager.cm][I]: [driver_runner.cc:377] Binding fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm to  00_06_0_
-   [173.891][universe-pkg-drivers:root.sys.platform.platform-passthrough.PCI0.bus.00_06_0_][qemu-edu,driver][I]: [src/qemu_edu/qemu_edu.cc:117] edu device version major=1 minor=0
+   [196.250][pkg-resolver][pkg-resolver][I] resolved fuchsia-pkg://bazel.pkg.component/qemu_edu as fuchsia-pkg://bazel.pkg.component/qemu_edu to 4543f40fc3f7403ad30bfe9d964a97eeeaeb8faeab6cd52b3bdc2d0e60e686a3 with TUF
+   [196.250][pkg-resolver][pkg-resolver][I] get_hash for fuchsia-pkg://bazel.pkg.component/qemu_edu as fuchsia-pkg://bazel.pkg.component/qemu_edu to 4543f40fc3f7403ad30bfe9d964a97eeeaeb8faeab6cd52b3bdc2d0e60e686a3 with TUF
+   [196.257][driver_index][driver_index,driver][I] Registered driver successfully: fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm.
+   [196.346][pkg-resolver][pkg-resolver][I] Fetching blobs for fuchsia-pkg://bazel.pkg.component/qemu_edu: []
+   [196.352][pkg-resolver][pkg-resolver][I] resolved fuchsia-pkg://bazel.pkg.component/qemu_edu as fuchsia-pkg://bazel.pkg.component/qemu_edu to 4543f40fc3f7403ad30bfe9d964a97eeeaeb8faeab6cd52b3bdc2d0e60e686a3 with TUF
+   [196.361][driver_manager][driver_manager.cm][I]: [node.cc:608] Binding fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm to  pci-00_06.0-fidl
+   [196.729][universe-pkg-drivers:root.sys.platform.platform-passthrough.PCI0.bus.00_06_0_.pci-00_06.0-fidl][qemu-edu,driver][I]: [src/qemu_edu/drivers/qemu_edu.cc:77] edu device version major=1 minor=0
    ```
 
-## 5. Build and run a tools component {:#build-and-run-a-tools-component}
+## 5. Build and run a tool {:#build-and-run-a-tool}
 
-The `qemu_edu` driver sample has a “tools” component named `eductl`, which can
-interact with the sample driver. Developers create these tools components for
-testing and debugging drivers during development.
+The `qemu_edu` driver sample includes [tools][eductl_tools] for interacting with the
+`qemu_edu` driver running in a Fuchsia system. Developers often include binary executables
+in a Fuchsia package and run those executables as a component for testing and debugging
+drivers.
 
-In this case, the `eductl` component contacts the `qemu_edu` driver and passes
-an integer as input. The driver (using the resource of the `edu` virtual device)
-computes the integer's factorial and returns the result to the `eductl`
-component. The component then prints the result in the log.
+In this driver sample, an executable named `eductl_tool` provides two options: `live` and
+`fact`. The `live` command checks for the liveness of the `qemu_edu` driver in the system.
+The `fact` takes an integer as an argument. The integer is then passed to the
+`qemu_edu` driver and used as input for computing the factorial (using the resource of the
+`edu` virtual device). Once computed, the driver returns the result to `eductl_tool`.
 
 The tasks include:
 
-*   Build and run the `eductl` component.
-*   Verify that the component can interact with the `qemu_edu` driver.
+*   Build and run `eductl_tool`.
+*   Verify that this tool can interact with the `qemu_edu` driver.
 
 Do the following:
 
-1. Build and run the `eductl` component:
+1. Build and run `eductl_tool` (and run the `live` command):
 
    ```posix-terminal
-   tools/bazel run --config=fuchsia_x64 //src/qemu_edu/tools:pkg.component
+   tools/bazel run --config=fuchsia_x64 //src/qemu_edu/tools:pkg.eductl_tool live
    ```
 
    This command prints output similar to the following:
 
    ```none {:.devsite-disable-click-to-copy}
-   $ tools/bazel run --config=fuchsia_x64 //src/qemu_edu/tools:pkg.component
-   INFO: Analyzed target //src/qemu_edu/tools:pkg.component (1 packages loaded, 19 targets configured).
+   $ tools/bazel run --config=fuchsia_x64 //src/qemu_edu/tools:pkg.eductl_tool live
+   INFO: Analyzed target //src/qemu_edu/tools:pkg.eductl_tool (0 packages loaded, 0 targets configured).
    INFO: Found 1 target...
-   Target //src/qemu_edu/tools:pkg.component up-to-date:
-     bazel-bin/src/qemu_edu/tools/pkg.component_run_component.sh
-   INFO: Elapsed time: 2.189s, Critical Path: 1.63s
-   INFO: 23 processes: 7 internal, 15 linux-sandbox, 1 local.
-   INFO: Build completed successfully, 23 total actions
-   INFO: Build completed successfully, 23 total actions
-   added repository bazel.pkg.component
-   URL: fuchsia-pkg://bazel.pkg.component/eductl#meta/eductl.cm
-   Moniker: /core/ffx-laboratory:eductl
-   Creating component instance...
-   Starting component instance...
-   Success! The component instance has been started.
+   Target //src/qemu_edu/tools:pkg.eductl_tool up-to-date:
+     bazel-bin/src/qemu_edu/tools/pkg.eductl_tool_run_driver_tool.sh
+   INFO: Elapsed time: 0.286s, Critical Path: 0.01s
+   INFO: 1 process: 1 internal.
+   INFO: Build completed successfully, 1 total action
+   INFO: Build completed successfully, 1 total action
+   added repository bazel.pkg.eductl.tool
+   {{ '<strong>' }}Liveness check passed!{{ '</strong>' }}
    ```
 
-2. View the device logs:
+   Verify that the line `Liveness check passed!` is printed in the end.
+
+1. Run `eductl_tool` using `fact` and `12` as input:
 
    ```posix-terminal
-   tools/ffx log --filter qemu_edu --filter eductl dump
+   tools/bazel run --config=fuchsia_x64 //src/qemu_edu/tools:pkg.eductl_tool fact 12
    ```
 
-   The device logs contain lines similar to the following:
+   This command prints output similar to the following:
 
    ```none {:.devsite-disable-click-to-copy}
-   $ tools/ffx log --filter qemu_edu --filter eductl dump
+   $ tools/bazel run --config=fuchsia_x64 //src/qemu_edu/tools:pkg.eductl_tool fact 12
    ...
-   [214.156][universe-pkg-drivers:root.sys.platform.platform-passthrough.PCI0.bus.00_06_0_][qemu-edu,driver][I]: [src/qemu_edu/qemu_edu.cc:234] Replying with factorial=479001600
-   [214.157][ffx-laboratory:eductl][][I] Factorial(12) = 479001600
+   INFO: Build completed successfully, 1 total action
+   added repository bazel.pkg.eductl.tool
+   {{ '<strong>' }}Factorial(12) = 479001600{{ '</strong>' }}
    ```
 
-   These lines show that the driver replied the result of `factorial=479001600`
-   to the `eductl` component, which previously passed 12 as input to the driver.
-   (For the default input, see this [`eductl.cml`][eductl-cml] file.)
+   The last line shows that the driver replied `479001600` as the result of the factorial
+   to `eductl_tool`, which passed 12 as input to the driver.
 
 ## 6. Debug the sample driver {:#debug-the-sample-driver}
 
@@ -482,7 +507,7 @@ The tasks include:
 *   Start the Fuchsia debugger and connect it to the emulator instance.
 *   Attach the debugger to the driver host.
 *   Set a breakpoint on the driver’s code.
-*   Run the tools component, which triggers the driver to execute its
+*   Run `eductl_tool`, which triggers the driver to execute its
     instructions.
 *   Step through the driver’s code.
 
@@ -498,36 +523,63 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx driver list-hosts
-   Driver Host: 4690
-       fuchsia-boot:///#meta/block.core.cm
+   Driver Host: 5173
        fuchsia-boot:///#meta/bus-pci.cm
-       fuchsia-boot:///#meta/fvm.cm
+       fuchsia-boot:///#meta/display.cm
+       fuchsia-boot:///#meta/goldfish-display.cm
+       fuchsia-boot:///#meta/goldfish.cm
+       fuchsia-boot:///#meta/goldfish_control.cm
+       fuchsia-boot:///#meta/goldfish_sensor.cm
+       fuchsia-boot:///#meta/goldfish_sync.cm
        fuchsia-boot:///#meta/hid.cm
-       fuchsia-boot:///#meta/netdevice-migration.cm
-       fuchsia-boot:///#meta/network-device.cm
+       fuchsia-boot:///#meta/intel-hda.cm
        fuchsia-boot:///#meta/platform-bus-x86.cm
        fuchsia-boot:///#meta/platform-bus.cm
+       fuchsia-boot:///#meta/qemu-audio-codec.cm
        fuchsia-boot:///#meta/ramdisk.cm
        fuchsia-boot:///#meta/sysmem.cm
-       fuchsia-boot:///#meta/virtio_block.cm
-       fuchsia-boot:///#meta/virtio_ethernet.cm
-       fuchsia-boot:///#meta/zxcrypt.cm
        fuchsia-pkg://fuchsia.com/virtual_audio#meta/virtual_audio_driver.cm
 
-   Driver Host: 7820
+   Driver Host: 8256
        fuchsia-boot:///#meta/intel-rtc.cm
 
-   Driver Host: 7903
+   Driver Host: 8334
        fuchsia-boot:///#meta/pc-ps2.cm
 
-   Driver Host: 50125
+   Driver Host: 9577
+       fuchsia-boot:///#meta/block.core.cm
+       fuchsia-boot:///#meta/fvm.cm
+       fuchsia-boot:///#meta/virtio_block.cm
+
+   Driver Host: 9762
+       fuchsia-boot:///#meta/hid-input-report.cm
+       fuchsia-boot:///#meta/hid.cm
+       fuchsia-boot:///#meta/virtio_input.cm
+
+   Driver Host: 9911
+       fuchsia-boot:///#meta/goldfish_address_space.cm
+
+   Driver Host: 10166
+       fuchsia-boot:///#meta/netdevice-migration.cm
+       fuchsia-boot:///#meta/network-device.cm
+       fuchsia-boot:///#meta/virtio_ethernet.cm
+
+   Driver Host: 10346
+       fuchsia-boot:///#meta/hid-input-report.cm
+       fuchsia-boot:///#meta/hid.cm
+       fuchsia-boot:///#meta/virtio_input.cm
+
+   Driver Host: 10352
+       fuchsia-boot:///#meta/ahci.cm
+
+   Driver Host: 80789
        fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm
    ```
 
-   Make a note of the PID of the `qemu_edu` driver host (`50125` in the
+   Make a note of the PID of the `qemu_edu` driver host (`80789` in the
    example above).
 
-2. Start the Fuchsia debugger:
+1. Start the Fuchsia debugger:
 
    ```posix-terminal
    tools/ffx debug connect
@@ -543,7 +595,7 @@ Do the following:
    [zxdb]
    ```
 
-3. Attach the debugger to the `qemu_edu` driver host:
+1. Attach the debugger to the `qemu_edu` driver host:
 
    <pre class="devsite-click-to-copy">
    <span class="no-select">[zxdb] </span>attach <var>PID</var>
@@ -553,59 +605,74 @@ Do the following:
    in Step 1, for example:
 
    ```none {:.devsite-disable-click-to-copy}
-   [zxdb] attach 50125
+   [zxdb] attach 80789
    ```
 
    This command prints output similar to the following:
 
    ```none {:.devsite-disable-click-to-copy}
-   [zxdb] attach 50125
-   Attached Process 1 state=Running koid=50125 name=driver_host2.cm
+   [zxdb] attach 80789
+   Attached Process 1 state=Running koid=80789 name=driver_host2.cm component=driver_host2.cm
    Downloading symbols...
-   Symbol downloading complete. 7 succeeded, 0 failed.
+   Symbol downloading complete. 2 succeeded, 0 failed.
    [zxdb]
    ```
 
-4. Set a breakpoint at the driver’s `ComputeFactorial` function:
+1. Set a breakpoint at the driver’s `ComputeFactorial` function:
 
    <pre class="devsite-click-to-copy">
-   <span class="no-select">[zxdb] </span>break QemuEduDriver::ComputeFactorial
+   <span class="no-select">[zxdb] </span>break QemuEduServer::ComputeFactorial
    </pre>
 
    This command prints output similar to the following:
 
    ```none {:.devsite-disable-click-to-copy}
-   [zxdb] break QemuEduDriver::ComputeFactorial
-   Created Breakpoint 1 @ QemuEduDriver::ComputeFactorial
-      203 void QemuEduDriver::ComputeFactorial(ComputeFactorialRequestView request,
-    {{ '<strong>' }}◉ 204                                      ComputeFactorialCompleter::Sync& completer) { {{ '</strong>' }}
-      205   // Write a value into the factorial register.
+   Created Breakpoint 2 @ QemuEduServer::ComputeFactorial
+      143 void QemuEduServer::ComputeFactorial(ComputeFactorialRequestView request,
+    {{ '<strong>' }}◉ 144                                      ComputeFactorialCompleter::Sync& completer) { {{ '</strong>' }}
+      145   auto edu_device = device_.lock();
    [zxdb]
    ```
 
-5. In different terminal, run the tools component:
+1. In different terminal, run `eductl_tool` (using `fact` and `12` as input)
+   to interact with the driver:
 
    Note:  In this new terminal, make sure that you change to the same work
    directory (for instance, `cd $HOME/drivers`).
 
    ```posix-terminal
-   tools/bazel run --config=fuchsia_x64 //src/qemu_edu/tools:pkg.component
+   tools/bazel run --config=fuchsia_x64 //src/qemu_edu/tools:pkg.eductl_tool fact 12
+   ```
+
+   After printing output similar to the following, the command now hangs:
+
+   ```none {:.devsite-disable-click-to-copy}
+   $ tools/bazel run --config=fuchsia_x64 //src/qemu_edu/tools:pkg.eductl_tool fact 12
+   INFO: Analyzed target //src/qemu_edu/tools:pkg.eductl_tool (0 packages loaded, 0 targets configured).
+   INFO: Found 1 target...
+   Target //src/qemu_edu/tools:pkg.eductl_tool up-to-date:
+     bazel-bin/src/qemu_edu/tools/pkg.eductl_tool_run_driver_tool.sh
+   INFO: Elapsed time: 0.348s, Critical Path: 0.01s
+   INFO: 1 process: 1 internal.
+   INFO: Build completed successfully, 1 total action
+   INFO: Build completed successfully, 1 total action
+   added repository bazel.pkg.eductl.tool
    ```
 
    In the `zxdb` terminal, verify that the debugger is stopped at the driver’s
    `ComputeFactorial` function, for example:
 
    ```none {:.devsite-disable-click-to-copy}
-   🛑 thread 2 on bp 1 qemu_edu::QemuEduDriver::ComputeFactorial(qemu_edu::QemuEduDriver*, fidl::WireServer<fuchsia_hardware_qemuedu::Device>::ComputeFactorialRequestView, fidl::Completer<fidl::internal::WireCompleterBase<fuchsia_hardware_qemuedu::Device::ComputeFactorial> >::Sync&) • qemu_edu.cc:218
-      202 // Driver Service: Compute factorial on the edu device
-      203 void QemuEduDriver::ComputeFactorial(ComputeFactorialRequestView request,
-    {{ '<strong>' }}▶ 204                                      ComputeFactorialCompleter::Sync& completer) { {{ '</strong>' }}
-      205   // Write a value into the factorial register.
-      206   uint32_t input = request->input;
+   🛑 thread 2 on bp 2 qemu_edu::QemuEduServer::ComputeFactorial(qemu_edu::QemuEduServer*, fidl::WireServer<fuchsia_examples_qemuedu::Device>::ComputeFactorialRequestView, fidl::Completer<fidl::internal::WireCompleterBase<fuchsia_examples_qemuedu::Device::ComputeFactorial> >::Sync&) • qemu_edu.cc:144
+      142 // Driver Service: Compute factorial on the edu device
+      143 void QemuEduServer::ComputeFactorial(ComputeFactorialRequestView request,
+    {{ '<strong>' }}▶ 144                                      ComputeFactorialCompleter::Sync& completer) { {{ '</strong>' }}
+      145   auto edu_device = device_.lock();
+      146   if (!edu_device) {
    [zxdb]
    ```
 
-6. In the `zxdb` terminal, view the source code around the current breakpoint:
+1. In the `zxdb` terminal, view the source code around the current breakpoint:
 
    <pre class="devsite-click-to-copy">
    <span class="no-select">[zxdb] </span>list
@@ -615,28 +682,28 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    [zxdb] list
-      199 // [END interrupt_mmio]
-      200
-      201 // [START compute_factorial]
-      202 // Driver Service: Compute factorial on the edu device
-      203 void QemuEduDriver::ComputeFactorial(ComputeFactorialRequestView request,
-    {{ '<strong>' }}▶ 204                                      ComputeFactorialCompleter::Sync& completer) { {{ '</strong>' }}
-      205   // Write a value into the factorial register.
-      206   uint32_t input = request->input;
-      207
-      208   mmio_->Write32(input, edu_device_registers::kFactorialCompoutationOffset);
-      209
-      210   // Busy wait on the factorial status bit.
-      211   while (true) {
-      212     const auto status = edu_device_registers::Status::Get().ReadFrom(&*mmio_);
-      213     if (!status.busy())
-      214       break;
+      139 // [END run_method_end]
+      140
+      141 // [START compute_factorial]
+      142 // Driver Service: Compute factorial on the edu device
+      143 void QemuEduServer::ComputeFactorial(ComputeFactorialRequestView request,
+    {{ '<strong>' }}▶ 144                                      ComputeFactorialCompleter::Sync& completer) { {{ '</strong>' }}
+      145   auto edu_device = device_.lock();
+      146   if (!edu_device) {
+      147     FDF_LOG(ERROR, "Unable to access device resources");
+      148     return;
+      149   }
+      150
+      151   uint32_t input = request->input;
+      152
+      153   uint32_t factorial = edu_device->ComputeFactorial(input);
+      154
    [zxdb]
    ```
 
-7. In the `zxdb` terminal, step through the code using the `next`
+1. In the `zxdb` terminal, step through the code using the `next`
    command until the value of `factorial` is read from the device (that is,
-   until the line 220 is reached):
+   until the line 155 is reached):
 
    <pre class="devsite-click-to-copy">
    <span class="no-select">[zxdb] </span>next
@@ -647,16 +714,16 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    ...
    [zxdb] next
-   🛑 thread 2 qemu_edu::QemuEduDriver::ComputeFactorial(qemu_edu::QemuEduDriver*, fidl::WireServer<fuchsia_hardware_qemuedu::Device>::ComputeFactorialRequestView, fidl::Completer<fidl::internal::WireCompleterBase<fuchsia_hardware_qemuedu::Device::ComputeFactorial> >::Sync&) • qemu_edu.cc:234
-      218   uint32_t factorial = mmio_->Read32(edu_device_registers::kFactorialCompoutationOffset);
-      219
-    {{ '<strong>' }}▶ 220   FDF_SLOG(INFO, "Replying with", KV("factorial", factorial));{{ '</strong>' }}
-      221   completer.Reply(factorial);
-      222 }
+   🛑 thread 2 qemu_edu::QemuEduServer::ComputeFactorial(qemu_edu::QemuEduServer*, fidl::WireServer<fuchsia_examples_qemuedu::Device>::ComputeFactorialRequestView, fidl::Completer<fidl::internal::WireCompleterBase<fuchsia_examples_qemuedu::Device::ComputeFactorial> >::Sync&) • qemu_edu.cc:155
+      153   uint32_t factorial = edu_device->ComputeFactorial(input);
+      154
+    {{ '<strong>' }}▶ 155   FDF_SLOG(INFO, "Replying with", KV("factorial", factorial)); {{ '</strong>' }}
+      156   completer.Reply(factorial);
+      157 }
    [zxdb]
    ```
 
-8. Print the `factorial` variable:
+1. Print the `factorial` variable:
 
    <pre class="devsite-click-to-copy">
    <span class="no-select">[zxdb] </span>print factorial
@@ -670,7 +737,40 @@ Do the following:
    [zxdb]
    ```
 
-1. To exit the `zxdb` terminal, type `exit` or press `Ctrl-D`.
+1. Step through the code using the `next` command until the `Reply()` method is called (that is,
+   until the line 157 is reached):
+
+   <pre class="devsite-click-to-copy">
+   <span class="no-select">[zxdb] </span>next
+   </pre>
+
+   The last `next` command prints output similar to the following:
+
+   ```none {:.devsite-disable-click-to-copy}
+   ...
+   [zxdb] next
+   🛑 thread 2 qemu_edu::QemuEduServer::ComputeFactorial(qemu_edu::QemuEduServer*, fidl::WireServer<fuchsia_examples_qemuedu::Device>::ComputeFactorialRequestView, fidl::Completer<fidl::internal::WireCompleterBase<fuchsia_examples_qemuedu::Device::ComputeFactorial> >::Sync&) • qemu_edu.cc:156
+      155   FDF_SLOG(INFO, "Replying with", KV("factorial", factorial));
+      156   completer.Reply(factorial);
+    {{ '<strong>' }}▶ 157 } {{ '</strong>' }}
+      158 // [END compute_factorial]
+      159
+   [zxdb]
+   ```
+
+   In the other terminal, verify that `eductl_tool` has exited after printing
+   the factorial result:
+
+   ```none {:.devsite-disable-click-to-copy}
+   $ tools/bazel run --config=fuchsia_x64 //src/qemu_edu/tools:pkg.eductl_tool fact 12
+   ...
+   INFO: Build completed successfully, 1 total action
+   added repository bazel.pkg.eductl.tool
+   Factorial(12) = 479001600
+   $
+   ```
+
+1. In the `zxdb` terminal, type `exit` or press `Ctrl-D` to exit the debugger.
 
    Note: For more information on usages and best practices on `zxdb`, see the
    [zxdb user guide][zxdb-user-guide].
@@ -685,7 +785,7 @@ The tasks include:
 *   Restart the emulator instance to unload the `qemu_edu` driver.
 *   Update the source code of the `qemu_edu` driver.
 *   Load the updated driver.
-*   Run the tools component to verify the change.
+*   Run `eductl_tool` to verify the change.
 
 Do the following:
 
@@ -715,10 +815,10 @@ Do the following:
    nano src/qemu_edu/drivers/qemu_edu.cc
    ```
 
-1. In the `QemuEduDriver::ComputeFactorial` function,
+1. In the `QemuEduServer::ComputeFactorial` function,
    between the line
-   `uint32_t factorial = mmio_->Read32(regs::kFactorialCompoutationOffset);`
-   (Line 218) and the `FDF_SLOG()` call (Line 220), add the following line:
+   `uint32_t factorial = edu_device->ComputeFactorial(input)`
+   (Line 153) and the `FDF_SLOG()` call (Line 155), add the following line:
 
    ```
    factorial=12345;
@@ -727,29 +827,24 @@ Do the following:
    The function should look like below:
 
    ```none {:.devsite-disable-click-to-copy}
-   void QemuEduDriver::ComputeFactorial(ComputeFactorialRequestView request,
+   void QemuEduServer::ComputeFactorial(ComputeFactorialRequestView request,
                                         ComputeFactorialCompleter::Sync& completer) {
-     // Write a value into the factorial register.
-     uint32_t input = request->input;
-
-     mmio_->Write32(input, regs::kFactorialCompoutationOffset);
-
-     // Busy wait on the factorial status bit.
-     while (true) {
-       const auto status = regs::Status::Get().ReadFrom(&*mmio_);
-       if (!status.busy())
-         break;
+     auto edu_device = device_.lock();
+     if (!edu_device) {
+       FDF_LOG(ERROR, "Unable to access device resources");
+       return;
      }
 
-     // Return the result.
-     uint32_t factorial = mmio_->Read32(regs::kFactorialCompoutationOffset);
+     uint32_t input = request->input;
+
+     uint32_t factorial = edu_device->ComputeFactorial(input);
      {{ '<strong>' }}factorial = 12345;{{ '</strong>' }}
      FDF_SLOG(INFO, "Replying with", KV("factorial", factorial));
      completer.Reply(factorial);
    }
    ```
 
-   The function is now updated to return the value of `12345` only.
+   The function is now updated to always return the value of `12345`.
 
 1. Save the file and close the text editor.
 
@@ -759,29 +854,24 @@ Do the following:
    tools/bazel run --config=fuchsia_x64 //src/qemu_edu/drivers:pkg.component
    ```
 
-1. Run the tools component:
+1. Run `eductl_tool` using `fact` and `12` as input:
 
    ```posix-terminal
-   tools/bazel run --config=fuchsia_x64 //src/qemu_edu/tools:pkg.component
+   tools/bazel run --config=fuchsia_x64 //src/qemu_edu/tools:pkg.eductl_tool fact 12
    ```
 
-1. To verify that change, view the device logs:
-
-   ```posix-terminal
-   tools/ffx log --filter qemu_edu --filter eductl dump
-   ```
-
-   The device logs contain lines similar to the following:
+   This command now prints output similar to the following:
 
    ```none {:.devsite-disable-click-to-copy}
-   $ tools/ffx log --filter qemu_edu --filter eductl dump
+   $ tools/bazel run --config=fuchsia_x64 //src/qemu_edu/tools:pkg.eductl_tool fact 12
    ...
-   [94.914][universe-pkg-drivers:root.sys.platform.platform-passthrough.PCI0.bus.00_06_0_][qemu-edu,driver][I]: [src/qemu_edu/qemu_edu.cc:234] Replying with factorial=12345
-   [94.916][ffx-laboratory:eductl][][I] Factorial(12) = 12345
+   INFO: Build completed successfully, 1 total action
+   added repository bazel.pkg.eductl.tool
+   Factorial(12) = 12345
    ```
 
-   These lines show that the `qemu_edu` driver replied with the
-   hardcoded value of `factorial=12345` to the `eductl` tools component.
+   The last line shows that the `qemu_edu` driver replied with the
+   hardcoded value of `12345` to `eductl_tool`.
 
 **Congratulations! You’re now all set with the Fuchsia driver development!**
 
@@ -880,3 +970,4 @@ killall pm
 [codelab-qemu-edu-driver]: /docs/get-started/sdk/learn/driver/introduction.md
 [driver-framework]: /docs/concepts/drivers/driver_framework.md
 [femu]: /docs/development/sdk/ffx/start-the-fuchsia-emulator.md
+[eductl_tools]: https://fuchsia.googlesource.com/sdk-samples/drivers/+/refs/heads/main/src/qemu_edu/tools/
