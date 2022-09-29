@@ -70,10 +70,18 @@ async fn main() -> Result<(), Error> {
     drop(cleanup_res);
 
     let cred_manager_provider = EnvCredManagerProvider {};
-    let storage_manager = MinfsStorageManager {};
-    let account_manager = Arc::new(AccountManager::new(
+    let storage_manager = MinfsStorageManager::new(disk_manager);
+
+    type MainStorageManager = MinfsStorageManager<DevDiskManager>;
+    type MainAccountManager = AccountManager<
+        DevDiskManager,
+        DataDirAccountMetadataStore,
+        EnvCredManagerProvider,
+        MainStorageManager,
+    >;
+
+    let account_manager = Arc::new(MainAccountManager::new(
         config,
-        disk_manager,
         account_metadata_store,
         cred_manager_provider,
         storage_manager,
