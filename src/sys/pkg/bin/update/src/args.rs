@@ -100,7 +100,7 @@ pub struct ForceInstall {
     pub reboot: bool,
 
     /// the url of the update package describing the update to install. Ex:
-    /// fuchsia-pkg://fuchsia.com/update.
+    /// fuchsia-pkg://fuchsia.example/update.
     #[argh(positional)]
     pub update_pkg_url: String,
 
