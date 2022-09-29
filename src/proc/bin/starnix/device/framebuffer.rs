@@ -44,7 +44,9 @@ impl Framebuffer {
             let vmo = server.get_vmo()?;
             let vmo_len = vmo.info().map_err(|_| errno!(EINVAL))?.size_bytes as u32;
             // Fill the buffer with white pixels as a placeholder.
-            vmo.write(&vec![0xff; vmo_len as usize], 0).expect("");
+            if vmo.write(&vec![0xff; vmo_len as usize], 0).is_err() {
+                tracing::warn!("could not write initial framebuffer");
+            }
 
             Ok(Arc::new(Self { vmo, vmo_len, server: Some(server), info: RwLock::new(info) }))
         } else {
