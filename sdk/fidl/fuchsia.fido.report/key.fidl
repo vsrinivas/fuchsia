@@ -11,7 +11,7 @@ const MAX_DATA_LENGTH uint64 = 7609;
 
 /// CTAPHID commands as defined in the CTAP specification.
 /// Note that the logical rather than numeric ordering here matches that in the specification.
-type CtapHidCommand = flexible enum {
+type CtapHidCommand = flexible enum : uint8 {
     /// Mandatory commands required by a CTAPHID device.
     MSG = 0x03;
     CBOR = 0x10;
