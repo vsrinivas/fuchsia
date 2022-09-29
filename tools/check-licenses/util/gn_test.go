@@ -5,29 +5,34 @@
 package util
 
 import (
+	"flag"
 	"testing"
 )
 
-func CheckLabelToDirectory(t *testing.T, input string, expected string) {
-	actual, err := LabelToDirectory(input)
-	if err != nil {
-		t.Errorf("LabelToDirectory(\"%s\"): Expected \"%s\" got error \"%s\".", input, expected, err)
+var (
+	gnPath   = flag.String("gn_path", "", "Path to gn executable")
+	buildDir = flag.String("build_dir", "", "Path to out directory")
+)
+
+func CheckLabelToDirectory(t *testing.T, gn *Gn, input string, expected string) {
+	actual := gn.labelToDirectory(input)
+	if len(actual) < 1 {
+		t.Errorf("LabelToDirectory(\"%s\"): Expected at least 1 entry, got 0.", input)
 	}
-	if actual != expected {
+	if actual[0] != expected {
 		t.Errorf("LabelToDirectory(\"%s\"): Expected \"%s\" got \"%s\".", input, expected, actual)
 	}
 }
 
 func TestLabelToDirectory(t *testing.T) {
-	CheckLabelToDirectory(t, "//abc", "abc")
-	CheckLabelToDirectory(t, "//abc:label", "abc")
-	CheckLabelToDirectory(t, "//abc/def", "abc/def")
-	CheckLabelToDirectory(t, "//abc/def:label", "abc/def")
-	CheckLabelToDirectory(t, "//abc/def:label(toolchain)", "abc/def")
-
-	input := "no slashes"
-	actual, err := LabelToDirectory(input)
-	if err == nil {
-		t.Errorf("LabelToDirectory(\"%s\"): Expected error (no leading slashes) got \"%s\".", input, actual)
+	gn, err := NewGn(*gnPath, *buildDir)
+	if err != nil {
+		t.Errorf("LabelToDirectory(\"%s\"): Error creating GN object.", err)
 	}
+
+	CheckLabelToDirectory(t, gn, "//abc", "//abc")
+	CheckLabelToDirectory(t, gn, "//abc:label", "//abc")
+	CheckLabelToDirectory(t, gn, "//abc/def", "//abc/def")
+	CheckLabelToDirectory(t, gn, "//abc/def:label", "//abc/def")
+	CheckLabelToDirectory(t, gn, "//abc/def:label(toolchain)", "//abc/def")
 }
