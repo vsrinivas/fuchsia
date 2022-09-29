@@ -201,7 +201,7 @@ void Injector::Inject(std::vector<fuchsia::ui::pointerinjector::Event> events,
         }
       }
       viewport_ = {.extents = {new_viewport.extents()},
-                   .context_from_viewport_transform = utils::ColumnMajorMat3VectorToMat4(
+                   .context_from_viewport_transform = utils::ColumnMajorMat3ArrayToMat4(
                        new_viewport.viewport_to_context_transform())};
       continue;
     } else if (event.data().is_pointer_sample()) {
@@ -323,7 +323,7 @@ zx_status_t Injector::IsValidViewport(const fuchsia::ui::pointerinjector::Viewpo
 
   // Must be invertible, i.e. determinant must be non-zero.
   const glm::mat4 viewport_to_context_transform =
-      utils::ColumnMajorMat3VectorToMat4(viewport.viewport_to_context_transform());
+      utils::ColumnMajorMat3ArrayToMat4(viewport.viewport_to_context_transform());
   if (fabs(glm::determinant(viewport_to_context_transform)) <=
       std::numeric_limits<float>::epsilon()) {
     FX_LOGS(ERROR) << "Provided fuchsia::ui::pointerinjector::Viewport had a non-invertible matrix";

@@ -116,7 +116,7 @@ void PointerinjectorRegistry::Register(
   Viewport viewport{
       .extents = {config.viewport().extents()},
       .context_from_viewport_transform =
-          utils::ColumnMajorMat3VectorToMat4(config.viewport().viewport_to_context_transform()),
+          utils::ColumnMajorMat3ArrayToMat4(config.viewport().viewport_to_context_transform()),
   };
 
   fit::function<bool(/*descendant*/ zx_koid_t, /*ancestor*/ zx_koid_t)>

@@ -20,7 +20,12 @@ glm::vec2 TransformPointerCoords(const glm::vec2& pointer, const glm::mat4& tran
   return homogenized_transformed_pointer;
 }
 
-glm::mat4 ColumnMajorMat3VectorToMat4(const std::array<float, 9>& matrix_array) {
+std::array<float, 9> Mat4ToColumnMajorMat3Array(const glm::mat4& mat) {
+  return {mat[0][0], mat[0][1], mat[0][3], mat[1][0], mat[1][1],
+          mat[1][3], mat[3][0], mat[3][1], mat[3][3]};
+}
+
+glm::mat4 ColumnMajorMat3ArrayToMat4(const std::array<float, 9>& matrix_array) {
   // clang-format off
   return glm::mat4(matrix_array[0], matrix_array[1], 0.f, matrix_array[2],  // first column
                    matrix_array[3], matrix_array[4], 0.f, matrix_array[5],  // second column

@@ -187,7 +187,7 @@ void TouchSystem::Upgrade(fidl::InterfaceHandle<fuchsia::ui::pointer::TouchSourc
                     GetDestinationFromViewportTransform(event, top_koid, *view_tree_snapshot_);
                 local_point = utils::TransformPointerCoords(
                     event.position_in_viewport,
-                    utils::ColumnMajorMat3VectorToMat4(top_view_from_viewport_transform));
+                    utils::ColumnMajorMat3ArrayToMat4(top_view_from_viewport_transform));
               }
               return std::pair<zx_koid_t, std::array<float, 2>>{top_koid,
                                                                 {local_point.x, local_point.y}};
@@ -617,17 +617,16 @@ void TouchSystem::ReportPointerEventToGfxLegacyView(const InternalTouchEvent& ev
   if (!event_reporter)
     return;
 
-  std::optional<glm::mat4> view_from_context_transform =
-      view_tree_snapshot_->GetDestinationViewFromSourceViewTransform(
-          /*source*/ event.context, /*destination*/ view_ref_koid);
-  if (!view_from_context_transform)
+  if (view_tree_snapshot_->view_tree.count(view_ref_koid) == 0)
     return;
 
   const uint64_t trace_id = TRACE_NONCE();
   TRACE_FLOW_BEGIN("input", "dispatch_event_to_client", trace_id);
   InputEvent input_event;
   input_event.set_pointer(InternalTouchEventToGfxPointerEvent(
-      event, view_from_context_transform.value(), type, trace_id));
+      EventWithReceiverFromViewportTransform(event, /*destination=*/view_ref_koid,
+                                             *view_tree_snapshot_),
+      type, trace_id));
   FX_VLOGS(1) << "Event dispatch to view=" << view_ref_koid << ": " << input_event;
   ChattyGfxLog(input_event);
   contender_inspector_.OnInjectedEvents(view_ref_koid, 1);

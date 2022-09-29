@@ -43,7 +43,6 @@ PointerEventPhase InternalPhaseToGfxPhase(Phase phase) {
 }
 
 GfxPointerEvent InternalTouchEventToGfxPointerEvent(const InternalTouchEvent& internal_event,
-                                                    const glm::mat4& view_from_context_transform,
                                                     fuchsia::ui::input::PointerEventType type,
                                                     uint64_t trace_id) {
   GfxPointerEvent event;
@@ -54,8 +53,9 @@ GfxPointerEvent InternalTouchEventToGfxPointerEvent(const InternalTouchEvent& in
   event.buttons = internal_event.buttons;
 
   // Convert to view-local coordinates.
-  const glm::mat4 view_from_viewport_transform =
-      view_from_context_transform * internal_event.viewport.context_from_viewport_transform;
+  FX_DCHECK(internal_event.viewport.receiver_from_viewport_transform.has_value());
+  const glm::mat4 view_from_viewport_transform = utils::ColumnMajorMat3ArrayToMat4(
+      internal_event.viewport.receiver_from_viewport_transform.value());
   const glm::vec2 local_position = utils::TransformPointerCoords(
       internal_event.position_in_viewport, view_from_viewport_transform);
   event.x = local_position.x;
@@ -68,11 +68,6 @@ GfxPointerEvent InternalTouchEventToGfxPointerEvent(const InternalTouchEvent& in
   event.phase = InternalPhaseToGfxPhase(internal_event.phase);
 
   return event;
-}
-
-Mat3ColumnMajorArray Mat4ToMat3ColumnMajorArray(const glm::mat4& mat) {
-  return {mat[0][0], mat[0][1], mat[0][3], mat[1][0], mat[1][1],
-          mat[1][3], mat[3][0], mat[3][1], mat[3][3]};
 }
 
 }  // namespace scenic_impl::input

@@ -99,15 +99,14 @@ fuchsia::ui::pointer::TouchEvent NewEndEvent(StreamId stream_id, uint32_t device
 
 void AddViewParametersToEvent(fuchsia::ui::pointer::TouchEvent& event, const Viewport& viewport,
                               view_tree::BoundingBox view_bounds) {
-  event.set_view_parameters(
-      fuchsia::ui::pointer::ViewParameters{
-          .view = fuchsia::ui::pointer::Rectangle{.min = view_bounds.min, .max = view_bounds.max},
-          .viewport =
-              fuchsia::ui::pointer::Rectangle{
-                  .min = {{viewport.extents.min[0], viewport.extents.min[1]}},
-                  .max = {{viewport.extents.max[0], viewport.extents.max[1]}}},
-          .viewport_to_view_transform = viewport.receiver_from_viewport_transform.value(),
-      });
+  const auto& [extents, _, receiver_from_viewport_transform] = viewport;
+  FX_DCHECK(receiver_from_viewport_transform.has_value());
+  event.set_view_parameters(fuchsia::ui::pointer::ViewParameters{
+      .view = fuchsia::ui::pointer::Rectangle{.min = view_bounds.min, .max = view_bounds.max},
+      .viewport = fuchsia::ui::pointer::Rectangle{.min = {{extents.min[0], extents.min[1]}},
+                                                  .max = {{extents.max[0], extents.max[1]}}},
+      .viewport_to_view_transform = receiver_from_viewport_transform.value(),
+  });
 }
 
 bool IsHold(GestureResponse response) {

@@ -48,7 +48,7 @@ scenic_impl::input::InjectorSettings InjectorSettingsTemplate() {
 scenic_impl::input::Viewport ViewportTemplate() {
   return {
       .extents = std::array<std::array<float, 2>, 2>{{{0, 0}, {1000, 1000}}},
-      .context_from_viewport_transform = utils::ColumnMajorMat3VectorToMat4(kIdentityMatrix),
+      .context_from_viewport_transform = utils::ColumnMajorMat3ArrayToMat4(kIdentityMatrix),
   };
 }
 
