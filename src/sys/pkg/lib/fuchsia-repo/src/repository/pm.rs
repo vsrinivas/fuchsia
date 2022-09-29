@@ -5,12 +5,12 @@
 use {
     crate::{
         range::Range,
-        repo_storage::RepoStorage,
-        repository::{Error, FileSystemRepository, RepoProvider, RepositorySpec},
+        repository::{Error, FileSystemRepository, RepoProvider, RepoStorage, RepositorySpec},
         resource::Resource,
     },
     anyhow::Result,
-    camino::Utf8PathBuf,
+    camino::{Utf8Path, Utf8PathBuf},
+    fuchsia_merkle::Hash,
     futures::{future::BoxFuture, stream::BoxStream, AsyncRead},
     std::{fmt::Debug, time::SystemTime},
     tuf::{
@@ -18,7 +18,6 @@ use {
         pouf::Pouf1,
         repository::{
             RepositoryProvider as TufRepositoryProvider, RepositoryStorage as TufRepositoryStorage,
-            RepositoryStorageProvider,
         },
     },
 };
@@ -119,9 +118,7 @@ impl TufRepositoryStorage<Pouf1> for PmRepository {
 }
 
 impl RepoStorage for PmRepository {
-    fn get_tuf_repo_storage(
-        &self,
-    ) -> Result<Box<dyn RepositoryStorageProvider<Pouf1> + Send + Sync>> {
-        self.repo.get_tuf_repo_storage()
+    fn store_blob<'a>(&'a self, hash: &Hash, path: &Utf8Path) -> BoxFuture<'a, Result<()>> {
+        self.repo.store_blob(hash, path)
     }
 }

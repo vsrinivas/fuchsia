@@ -5,11 +5,15 @@
 use {
     crate::{range::Range, resource::Resource},
     anyhow::Result,
-    camino::Utf8PathBuf,
+    camino::{Utf8Path, Utf8PathBuf},
     fidl_fuchsia_developer_ffx_ext::RepositorySpec,
+    fuchsia_merkle::Hash,
     futures::{future::BoxFuture, stream::BoxStream},
     std::{fmt::Debug, io, sync::Arc, time::SystemTime},
-    tuf::{pouf::Pouf1, repository::RepositoryProvider as TufRepositoryProvider},
+    tuf::{
+        pouf::Pouf1, repository::RepositoryProvider as TufRepositoryProvider,
+        repository::RepositoryStorage as TufRepositoryStorage,
+    },
     url::ParseError,
 };
 
@@ -112,6 +116,14 @@ pub trait RepoProvider: TufRepositoryProvider<Pouf1> + Debug + Send + Sync {
     ) -> BoxFuture<'a, anyhow::Result<Option<SystemTime>>>;
 }
 
+pub trait RepoStorage: TufRepositoryStorage<Pouf1> + Send + Sync {
+    /// Store a blob in this repository.
+    fn store_blob<'a>(&'a self, hash: &Hash, path: &Utf8Path) -> BoxFuture<'a, Result<()>>;
+}
+
+pub trait RepoStorageProvider: RepoStorage + RepoProvider {}
+impl<T: RepoStorage + RepoProvider> RepoStorageProvider for T {}
+
 macro_rules! impl_provider {
     (
         <$($desc:tt)+
@@ -163,7 +175,24 @@ macro_rules! impl_provider {
     };
 }
 
-impl_provider!(<T: RepoProvider> RepoProvider for &T);
-impl_provider!(<T: RepoProvider> RepoProvider for &mut T);
+impl_provider!(<T: RepoProvider + ?Sized> RepoProvider for &T);
+impl_provider!(<T: RepoProvider + ?Sized> RepoProvider for &mut T);
 impl_provider!(<T: RepoProvider + ?Sized> RepoProvider for Box<T>);
 impl_provider!(<T: RepoProvider + ?Sized> RepoProvider for Arc<T>);
+
+macro_rules! impl_storage {
+    (
+        <$($desc:tt)+
+    ) => {
+        impl <$($desc)+ {
+            fn store_blob<'a>(&'a self, hash: &Hash, path: &Utf8Path) -> BoxFuture<'a, Result<()>> {
+                (**self).store_blob(hash, path)
+            }
+        }
+    };
+}
+
+impl_storage!(<T: RepoStorage + ?Sized> RepoStorage for &T);
+impl_storage!(<T: RepoStorage + ?Sized> RepoStorage for &mut T);
+impl_storage!(<T: RepoStorage + ?Sized> RepoStorage for Box<T>);
+impl_storage!(<T: RepoStorage + ?Sized> RepoStorage for Arc<T>);

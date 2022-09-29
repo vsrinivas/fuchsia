@@ -52,7 +52,6 @@ if (is_host) {
     test_deps = [
       "//src/developer/ffx/lib/pkg:empty-repo-keys",
       "//src/developer/ffx/lib/pkg:empty-repo-metadata",
-      "//src/lib/fuchsia",
       "//src/lib/fuchsia-hyper",
       "//src/sys/pkg/lib/fuchsia-pkg",
       "//third_party/rust_crates:assert_matches",
@@ -67,9 +66,9 @@ if (is_host) {
       "src/lib.rs",
       "src/manager.rs",
       "src/range.rs",
+      "src/repo_builder.rs",
       "src/repo_client.rs",
       "src/repo_keys.rs",
-      "src/repo_storage.rs",
       "src/repository.rs",
       "src/repository/file_system.rs",
       "src/repository/gcs_repository.rs",

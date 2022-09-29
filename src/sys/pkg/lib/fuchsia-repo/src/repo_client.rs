@@ -113,7 +113,7 @@ where
 
     /// Returns if the repository supports watching for timestamp changes.
     pub fn supports_watch(&self) -> bool {
-        return self.tuf_client.remote_repo().supports_watch();
+        self.tuf_client.remote_repo().supports_watch()
     }
 
     /// Return a stream that yields whenever the repository's timestamp changes.

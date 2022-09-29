@@ -4,9 +4,9 @@
 
 pub mod manager;
 pub mod range;
+pub mod repo_builder;
 pub mod repo_client;
 pub mod repo_keys;
-pub mod repo_storage;
 pub mod repository;
 pub mod resolve;
 pub mod resource;

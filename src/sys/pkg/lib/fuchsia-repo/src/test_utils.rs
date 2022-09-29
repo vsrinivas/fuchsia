@@ -11,7 +11,7 @@ use {
     anyhow::{anyhow, Context, Result},
     camino::{Utf8Path, Utf8PathBuf},
     fidl_fuchsia_pkg_ext::RepositoryKey,
-    fuchsia_pkg::PackageBuilder,
+    fuchsia_pkg::{PackageBuilder, PackageManifest},
     futures::io::AllowStdIo,
     maplit::hashmap,
     std::{
@@ -46,6 +46,14 @@ pub(crate) const PKG1_BIN_HASH: &str =
 #[cfg(test)]
 pub(crate) const PKG1_LIB_HASH: &str =
     "8a8a5f07f935a4e8e1fd1a1eda39da09bb2438ec0adfb149679ddd6e7e1fbb4f";
+
+#[cfg(test)]
+pub(crate) const PKG2_BIN_HASH: &str =
+    "548981eb310ddc4098fb5c63692e19ac4ae287b13d0e911fbd9f7819ac22491c";
+
+#[cfg(test)]
+pub(crate) const PKG2_LIB_HASH: &str =
+    "ecc11f7f4b763c5a21be2b4159c9818bbe22ca7e6d8100a72f6a41d3d7b827a9";
 
 pub fn repo_key() -> RepositoryKey {
     RepositoryKey::Ed25519(
@@ -127,6 +135,47 @@ pub async fn make_writable_empty_repository(
     Ok(client)
 }
 
+pub fn make_package_manifest(name: &str, build_path: &Path) -> (PathBuf, PackageManifest) {
+    let package_path = build_path.join(name);
+
+    let mut builder = PackageBuilder::new(name);
+    builder.api_level(7).unwrap();
+
+    builder
+        .add_contents_as_blob(
+            format!("bin/{}", name),
+            format!("binary {}", name).as_bytes(),
+            &package_path,
+        )
+        .unwrap();
+    builder
+        .add_contents_as_blob(
+            format!("lib/{}", name),
+            format!("lib {}", name).as_bytes(),
+            &package_path,
+        )
+        .unwrap();
+    builder
+        .add_contents_to_far(
+            format!("meta/{}.cm", name),
+            format!("cm {}", name).as_bytes(),
+            &package_path,
+        )
+        .unwrap();
+    builder
+        .add_contents_to_far(
+            format!("meta/{}.cmx", name),
+            format!("cmx {}", name).as_bytes(),
+            &package_path,
+        )
+        .unwrap();
+
+    let meta_far_path = package_path.join("meta.far");
+    let manifest = builder.build(&package_path, &meta_far_path).unwrap();
+
+    (meta_far_path, manifest)
+}
+
 pub async fn make_repository(metadata_dir: &Path, blobs_dir: &Path) {
     create_dir_all(&metadata_dir).unwrap();
     create_dir_all(&blobs_dir).unwrap();
@@ -136,42 +185,7 @@ pub async fn make_repository(metadata_dir: &Path, blobs_dir: &Path) {
     let build_path = build_tmp.path();
 
     let packages = ["package1", "package2"].map(|name| {
-        let package_path = build_path.join(name);
-
-        let mut builder = PackageBuilder::new(name);
-        builder.api_level(7).unwrap();
-
-        builder
-            .add_contents_as_blob(
-                format!("bin/{}", name),
-                format!("binary {}", name).as_bytes(),
-                &package_path,
-            )
-            .unwrap();
-        builder
-            .add_contents_as_blob(
-                format!("lib/{}", name),
-                format!("lib {}", name).as_bytes(),
-                &package_path,
-            )
-            .unwrap();
-        builder
-            .add_contents_to_far(
-                format!("meta/{}.cm", name),
-                format!("cm {}", name).as_bytes(),
-                &package_path,
-            )
-            .unwrap();
-        builder
-            .add_contents_to_far(
-                format!("meta/{}.cmx", name),
-                format!("cmx {}", name).as_bytes(),
-                &package_path,
-            )
-            .unwrap();
-
-        let meta_far_path = package_path.join("meta.far");
-        let manifest = builder.build(&package_path, &meta_far_path).unwrap();
+        let (meta_far_path, manifest) = make_package_manifest(name, build_path);
 
         // Copy the package blobs into the blobs directory.
         let mut meta_far_merkle = None;

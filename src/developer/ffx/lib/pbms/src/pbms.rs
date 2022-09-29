@@ -23,6 +23,7 @@ use {
     fms::{find_product_bundle, Entries},
     fuchsia_hyper::new_https_client,
     fuchsia_repo::{
+        repo_builder::RepoBuilder,
         repo_client::RepoClient,
         repo_keys::RepoKeys,
         repository::{FileSystemRepository, GcsRepository, HttpRepository, RepoProvider},
@@ -629,11 +630,17 @@ where
         .context("rendering progress")?;
     };
 
-    let repo_storage = FileSystemRepository::new(metadata_dir, blobs_dir);
-    let keys_dir = local_dir.join("keys");
-    let repo_keys = RepoKeys::from_dir(keys_dir.as_std_path())?;
+    // Refresh the metadata to make sure it hasn't expired.
+    let repo_keys = RepoKeys::from_dir(local_dir.join("keys").as_std_path())?;
+    let repo = FileSystemRepository::new(metadata_dir, blobs_dir);
+    let repo_client =
+        RepoClient::from_trusted_remote(repo).await.context("fetching TUF metadata")?;
 
-    fuchsia_repo::repo_storage::refresh_repository(&repo_storage, &repo_keys).await?;
+    RepoBuilder::from_client(&repo_client, &repo_keys)
+        .refresh_metadata(true)
+        .commit()
+        .await
+        .context("committing metadata")?;
 
     Ok(())
 }

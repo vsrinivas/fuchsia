@@ -5,13 +5,14 @@
 use {
     crate::{
         range::{ContentRange, Range},
-        repo_storage::RepoStorage,
-        repository::{Error, RepoProvider, Resource},
+        repository::{Error, RepoProvider, RepoStorage, Resource},
         util::file_stream,
     },
     anyhow::Result,
+    async_fs::DirBuilder,
     camino::{Utf8Component, Utf8Path, Utf8PathBuf},
     fidl_fuchsia_developer_ffx_ext::RepositorySpec,
+    fuchsia_merkle::Hash,
     futures::{
         future::BoxFuture, io::SeekFrom, stream::BoxStream, AsyncRead, AsyncSeekExt as _,
         FutureExt as _, Stream, StreamExt as _,
@@ -24,6 +25,7 @@ use {
         task::{Context, Poll},
         time::SystemTime,
     },
+    tempfile::{NamedTempFile, TempPath},
     tracing::warn,
     tuf::{
         metadata::{MetadataPath, MetadataVersion, TargetPath},
@@ -32,7 +34,6 @@ use {
             FileSystemRepository as TufFileSystemRepository,
             FileSystemRepositoryBuilder as TufFileSystemRepositoryBuilder,
             RepositoryProvider as TufRepositoryProvider, RepositoryStorage as TufRepositoryStorage,
-            RepositoryStorageProvider,
         },
     },
 };
@@ -252,14 +253,34 @@ impl TufRepositoryStorage<Pouf1> for FileSystemRepository {
 }
 
 impl RepoStorage for FileSystemRepository {
-    fn get_tuf_repo_storage(
-        &self,
-    ) -> Result<Box<dyn RepositoryStorageProvider<Pouf1> + Send + Sync>> {
-        let repo =
-            TufFileSystemRepositoryBuilder::<Pouf1>::new(self.metadata_repo_path.clone()).build();
+    fn store_blob<'a>(&'a self, hash: &Hash, src: &Utf8Path) -> BoxFuture<'a, Result<()>> {
+        let src = src.to_path_buf();
+        let dst = sanitize_path(&self.blob_repo_path, &hash.to_string());
 
-        Ok(Box::new(repo))
+        async move {
+            let dst = dst?;
+            let temp_path = create_temp_file(&dst).await?;
+
+            async_fs::copy(src, &temp_path).await?;
+
+            temp_path.persist(dst)?;
+
+            Ok(())
+        }
+        .boxed()
     }
+}
+
+async fn create_temp_file(path: &Utf8Path) -> Result<TempPath> {
+    let temp_file = if let Some(parent) = path.parent() {
+        DirBuilder::new().recursive(true).create(parent).await?;
+
+        NamedTempFile::new_in(parent)?
+    } else {
+        NamedTempFile::new_in(".")?
+    };
+
+    Ok(temp_file.into_temp_path())
 }
 
 #[pin_project::pin_project]
