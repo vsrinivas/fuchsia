@@ -131,6 +131,12 @@ group("workstation") {
   deps += [ ":workstation_host_tests" ]
 }
 
+# This group contains tests that can only run with the enable_suspend flag set.
+group("host_suspend_tests_e2e") {
+  testonly = true
+  deps = [ "//src/tests/end_to_end/suspend:test($host_toolchain)" ]
+}
+
 # "host-tests" targets are for tests which depend on package artifacts such as
 # the FVM. They should be included using `fx set --with-host`.
 
