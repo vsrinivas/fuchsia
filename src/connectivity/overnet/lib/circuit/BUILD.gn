@@ -11,6 +11,7 @@ rustc_library("circuit") {
   sources = [
     "src/error.rs",
     "src/lib.rs",
+    "src/multi_stream.rs",
     "src/protocol.rs",
     "src/stream.rs",
     "src/test.rs",

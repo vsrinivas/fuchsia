@@ -24,6 +24,8 @@ mod stream;
 #[cfg(test)]
 mod test;
 
+pub mod multi_stream;
+
 use protocol::{EncodableString, Identify, NodeState};
 
 pub use error::{Error, Result};

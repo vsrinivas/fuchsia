@@ -8,6 +8,8 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 #[derive(Error, Debug)]
 pub enum Error {
+    #[error("Received invalid stream ID")]
+    BadStreamId,
     #[error("String `{0}` is too long to be encoded on the wire")]
     StringTooBig(String),
     #[error("Not enough data in buffer, need {0}")]
