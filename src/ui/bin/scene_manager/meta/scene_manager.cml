@@ -89,6 +89,10 @@
             ],
         },
         {
+            protocol: "fuchsia.media.sounds.Player",
+            availability: "optional",
+        },
+        {
             protocol: "fuchsia.ui.shortcut.Manager",
             availability: "optional",
         },

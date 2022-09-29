@@ -83,6 +83,7 @@
         },
         {
             protocol: [
+                "fuchsia.media.sounds.Player",
                 "fuchsia.recovery.FactoryReset",
                 "fuchsia.settings.Keyboard",
                 "fuchsia.sysmem.Allocator",

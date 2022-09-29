@@ -197,6 +197,12 @@
             from: "#text_manager",
             to: [ "#virtual_keyboard_manager" ],
         },
+        {
+            protocol: [ "fuchsia.media.sounds.Player" ],
+            from: "void",
+            to: "#scene_manager",
+            availability: "optional",
+        },
     ],
     expose: [
         {
