@@ -18,16 +18,9 @@ protocol ComponentEventProvider {
 
 /// Listener for events about the lifecycle of components.
 ///
-/// When the listener is created it will receive `OnStart` calls for all
-/// components that were already in the Realm tree. If some sub-realm has a
-/// listener attached, events for components under that realm's subtree won't be
-/// synthesized.
+/// If some sub-realm has a listener attached, events for components under that realm's subtree
+/// won't be synthesized.
 protocol ComponentEventListener {
-    /// Notifies the client that a component has started in the realm.
-    OnStart(struct {
-        component SourceIdentity;
-    });
-
     /// Notifies the client that a component has stopped.
     OnStop(struct {
         component SourceIdentity;

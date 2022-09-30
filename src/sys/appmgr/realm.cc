@@ -988,8 +988,6 @@ void Realm::InstallRuntime(
     component_info.set_instance_id(application->hub_instance_id());
     realm->RegisterExceptionChannelForCrashIntrospection(std::move(exception_channel),
                                                          std::move(component_info));
-    realm->NotifyComponentStarted(application->url(), application->label(),
-                                  application->hub_instance_id());
     realm->applications_.emplace(key, std::move(application));
   } else {
     ns->FlushAndShutdown(ns, [&]() {});
@@ -1187,15 +1185,6 @@ fpromise::result<std::string, zx_status_t> Realm::InitIsolatedPathForComponentIn
   }
 
   return fpromise::ok(path);
-}
-
-void Realm::NotifyComponentStarted(const std::string& component_url,
-                                   const std::string& component_name,
-                                   const std::string& instance_id) {
-  auto notify_data = GetEventNotificationInfo(component_url, component_name, instance_id);
-  if (notify_data.provider) {
-    notify_data.provider->NotifyComponentStarted(std::move(notify_data.component));
-  }
 }
 
 void Realm::NotifyComponentDiagnosticsDirReady(
