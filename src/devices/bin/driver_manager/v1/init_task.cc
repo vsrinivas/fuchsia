@@ -7,12 +7,17 @@
 #include <zircon/status.h>
 
 #include "src/devices/bin/driver_manager/coordinator.h"
+#include "src/devices/bin/driver_manager/device.h"
 #include "src/devices/lib/log/log.h"
 
 InitTask::InitTask(fbl::RefPtr<Device> device, Completion completion)
     : Task(device->coordinator->dispatcher(), std::move(completion)), device_(std::move(device)) {}
 
 InitTask::~InitTask() = default;
+
+fbl::String InitTask::TaskDescription() const {
+  return fbl::String::Concat({"init(", device_->name(), ")"});
+}
 
 fbl::RefPtr<InitTask> InitTask::Create(fbl::RefPtr<Device> device, Completion completion) {
   return fbl::MakeRefCounted<InitTask>(std::move(device), std::move(completion));

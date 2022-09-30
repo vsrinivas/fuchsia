@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_INIT_TASK_H_
-#define SRC_DEVICES_BIN_DRIVER_MANAGER_INIT_TASK_H_
+#ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_V1_INIT_TASK_H_
+#define SRC_DEVICES_BIN_DRIVER_MANAGER_V1_INIT_TASK_H_
 
-#include "src/devices/bin/driver_manager/device.h"
 #include "src/devices/bin/driver_manager/v1/task.h"
 
 // This is used for sending |Init| requests.
@@ -18,9 +17,7 @@ class InitTask final : public Task {
 
   ~InitTask() final;
 
-  fbl::String TaskDescription() const final {
-    return fbl::String::Concat({"init(", device_->name(), ")"});
-  }
+  fbl::String TaskDescription() const final;
 
  private:
   void Run() final;
@@ -28,4 +25,4 @@ class InitTask final : public Task {
   fbl::RefPtr<Device> device_;
 };
 
-#endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_INIT_TASK_H_
+#endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_V1_INIT_TASK_H_

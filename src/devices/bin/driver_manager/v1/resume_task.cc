@@ -16,6 +16,10 @@ ResumeTask::ResumeTask(fbl::RefPtr<Device> device, uint32_t target_system_state,
 
 ResumeTask::~ResumeTask() {}
 
+fbl::String ResumeTask::TaskDescription() const {
+  return fbl::String::Concat({"resume(", device_->name(), ")"});
+}
+
 fbl::RefPtr<ResumeTask> ResumeTask::Create(fbl::RefPtr<Device> device, uint32_t target_system_state,
                                            Completion completion) {
   return fbl::MakeRefCounted<ResumeTask>(std::move(device), target_system_state,

@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_UNBIND_TASK_H_
-#define SRC_DEVICES_BIN_DRIVER_MANAGER_UNBIND_TASK_H_
+#ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_V1_UNBIND_TASK_H_
+#define SRC_DEVICES_BIN_DRIVER_MANAGER_V1_UNBIND_TASK_H_
 
-#include "src/devices/bin/driver_manager/device.h"
 #include "src/devices/bin/driver_manager/v1/task.h"
 
 // This is not nested so we can forward declare it in device.h.
@@ -36,9 +35,7 @@ class UnbindTask final : public Task {
 
   bool driver_host_requested() const { return driver_host_requested_; }
 
-  fbl::String TaskDescription() const final {
-    return fbl::String::Concat({"unbind(", device_->name(), ")"});
-  }
+  fbl::String TaskDescription() const final;
 
  private:
   void ScheduleUnbindChildren();
@@ -64,9 +61,7 @@ class RemoveTask final : public Task {
 
   ~RemoveTask() final;
 
-  fbl::String TaskDescription() const final {
-    return fbl::String::Concat({"remove(", device_->name(), ")"});
-  }
+  fbl::String TaskDescription() const final;
 
  protected:
   friend class UnbindTask;
@@ -78,4 +73,4 @@ class RemoveTask final : public Task {
   fbl::RefPtr<Device> device_;
 };
 
-#endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_UNBIND_TASK_H_
+#endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_V1_UNBIND_TASK_H_

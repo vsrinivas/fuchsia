@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_TASK_H_
-#define SRC_DEVICES_BIN_DRIVER_MANAGER_TASK_H_
+#ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_V1_TASK_H_
+#define SRC_DEVICES_BIN_DRIVER_MANAGER_V1_TASK_H_
 
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
@@ -15,6 +15,8 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>
+
+class Device;
 
 // An outstanding operation.  This class is not thread-safe.
 class Task : public fbl::RefCounted<Task> {
@@ -111,4 +113,4 @@ class Task : public fbl::RefCounted<Task> {
   size_t finished_dependencies_count_ = 0;
 };
 
-#endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_TASK_H_
+#endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_V1_TASK_H_

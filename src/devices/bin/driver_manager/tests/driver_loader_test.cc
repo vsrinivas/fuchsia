@@ -13,10 +13,6 @@
 
 #include "fbl/ref_ptr.h"
 #include "src/devices/bin/driver_manager/driver.h"
-#include "src/devices/bin/driver_manager/v1/init_task.h"
-#include "src/devices/bin/driver_manager/v1/resume_task.h"
-#include "src/devices/bin/driver_manager/v1/suspend_task.h"
-#include "src/devices/bin/driver_manager/v1/unbind_task.h"
 
 namespace fdf {
 using namespace fuchsia_driver_framework;

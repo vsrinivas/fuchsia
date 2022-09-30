@@ -7,10 +7,6 @@
 #include "src/devices/bin/driver_manager/device.h"
 #include "src/devices/bin/driver_manager/tests/coordinator_test_utils.h"
 #include "src/devices/bin/driver_manager/tests/multiple_device_test.h"
-#include "src/devices/bin/driver_manager/v1/init_task.h"
-#include "src/devices/bin/driver_manager/v1/resume_task.h"
-#include "src/devices/bin/driver_manager/v1/suspend_task.h"
-#include "src/devices/bin/driver_manager/v1/unbind_task.h"
 
 class DeviceChildIteratorTest : public MultipleDeviceTestCase {};
 

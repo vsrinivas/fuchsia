@@ -19,9 +19,6 @@
 
 #include "src/devices/bin/driver_manager/coordinator.h"
 #include "src/devices/bin/driver_manager/devfs.h"
-#include "src/devices/bin/driver_manager/v1/init_task.h"
-#include "src/devices/bin/driver_manager/v1/resume_task.h"
-#include "src/devices/bin/driver_manager/v1/suspend_task.h"
 #include "src/devices/lib/log/log.h"
 #include "src/lib/fxl/strings/utf_codecs.h"
 

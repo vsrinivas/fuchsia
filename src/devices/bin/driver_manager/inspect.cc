@@ -12,10 +12,6 @@
 #include <driver-info/driver-info.h>
 
 #include "src/devices/bin/driver_manager/device.h"
-#include "src/devices/bin/driver_manager/v1/init_task.h"
-#include "src/devices/bin/driver_manager/v1/resume_task.h"
-#include "src/devices/bin/driver_manager/v1/suspend_task.h"
-#include "src/devices/bin/driver_manager/v1/unbind_task.h"
 #include "src/lib/storage/vfs/cpp/service.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"

@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_SUSPEND_TASK_H_
-#define SRC_DEVICES_BIN_DRIVER_MANAGER_SUSPEND_TASK_H_
+#ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_V1_SUSPEND_TASK_H_
+#define SRC_DEVICES_BIN_DRIVER_MANAGER_V1_SUSPEND_TASK_H_
 
-#include "src/devices/bin/driver_manager/device.h"
 #include "src/devices/bin/driver_manager/v1/task.h"
 
 class SuspendTask final : public Task {
@@ -22,9 +21,7 @@ class SuspendTask final : public Task {
 
   const Device& device() const { return *device_; }
 
-  fbl::String TaskDescription() const final {
-    return fbl::String::Concat({"suspend(", device_->name(), ")"});
-  }
+  fbl::String TaskDescription() const final;
 
  private:
   void Run() final;
@@ -35,4 +32,4 @@ class SuspendTask final : public Task {
   uint32_t flags_;
 };
 
-#endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_SUSPEND_TASK_H_
+#endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_V1_SUSPEND_TASK_H_

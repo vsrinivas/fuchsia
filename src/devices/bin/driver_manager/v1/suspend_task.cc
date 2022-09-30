@@ -31,6 +31,10 @@ fbl::RefPtr<SuspendTask> SuspendTask::Create(fbl::RefPtr<Device> device, uint32_
   return fbl::MakeRefCounted<SuspendTask>(std::move(device), flags, std::move(completion));
 }
 
+fbl::String SuspendTask::TaskDescription() const {
+  return fbl::String::Concat({"suspend(", device_->name(), ")"});
+}
+
 void SuspendTask::Run() {
   bool found_more_dependencies = false;
   for (auto& child : device_->children()) {

@@ -22,6 +22,10 @@ fbl::RefPtr<UnbindTask> UnbindTask::Create(fbl::RefPtr<Device> device, UnbindTas
   return fbl::MakeRefCounted<UnbindTask>(std::move(device), opts, std::move(completion));
 }
 
+fbl::String UnbindTask::TaskDescription() const {
+  return fbl::String::Concat({"unbind(", device_->name(), ")"});
+}
+
 // Schedules the unbind tasks for the device's children.
 void UnbindTask::ScheduleUnbindChildren() {
   auto remove_task = device_->GetActiveRemove();
@@ -180,6 +184,10 @@ RemoveTask::RemoveTask(fbl::RefPtr<Device> device, Completion completion)
       device_(std::move(device)) {}
 
 RemoveTask::~RemoveTask() = default;
+
+fbl::String RemoveTask::TaskDescription() const {
+  return fbl::String::Concat({"remove(", device_->name(), ")"});
+}
 
 fbl::RefPtr<RemoveTask> RemoveTask::Create(fbl::RefPtr<Device> device, Completion completion) {
   return fbl::MakeRefCounted<RemoveTask>(std::move(device), std::move(completion));

@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_RESUME_TASK_H_
-#define SRC_DEVICES_BIN_DRIVER_MANAGER_RESUME_TASK_H_
+#ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_V1_RESUME_TASK_H_
+#define SRC_DEVICES_BIN_DRIVER_MANAGER_V1_RESUME_TASK_H_
 
-#include "src/devices/bin/driver_manager/device.h"
 #include "src/devices/bin/driver_manager/v1/task.h"
 
 class ResumeTask final : public Task {
@@ -22,9 +21,7 @@ class ResumeTask final : public Task {
 
   const Device& device() const { return *device_; }
 
-  fbl::String TaskDescription() const final {
-    return fbl::String::Concat({"resume(", device_->name(), ")"});
-  }
+  fbl::String TaskDescription() const final;
 
  private:
   void Run() final;
@@ -37,4 +34,4 @@ class ResumeTask final : public Task {
   uint32_t target_system_state_;
 };
 
-#endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_RESUME_TASK_H_
+#endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_V1_RESUME_TASK_H_

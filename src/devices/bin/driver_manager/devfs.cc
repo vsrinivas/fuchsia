@@ -24,7 +24,6 @@
 #include <fbl/ref_ptr.h>
 
 #include "src/devices/bin/driver_manager/builtin_devices.h"
-#include "src/devices/bin/driver_manager/coordinator.h"
 #include "src/devices/bin/driver_manager/device.h"
 #include "src/lib/fxl/strings/split_string.h"
 
