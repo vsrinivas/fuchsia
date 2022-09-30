@@ -40,7 +40,7 @@ class Format {
   static Format CreateOrDie(fuchsia_audio::Format msg);
   static Format CreateOrDie(Args args);
 
-  // TODO(fxbug.dev/87651): remove when fuchsia.audio.effects has migrated to the new types
+  // TODO(fxbug.dev/87651): Remove when fuchsia.audio.effects has migrated to the new types.
   static fpromise::result<Format, std::string> CreateLegacy(
       fuchsia_mediastreams::wire::AudioFormat msg);
   static Format CreateLegacyOrDie(fuchsia_mediastreams::wire::AudioFormat msg);
@@ -53,6 +53,8 @@ class Format {
 
   fuchsia_audio::wire::Format ToWireFidl(fidl::AnyArena& arena) const;
   fuchsia_audio::Format ToNaturalFidl() const;
+  // TODO(fxbug.dev/87651): Remove when fuchsia.audio.effects has migrated to the new types.
+  fuchsia_mediastreams::wire::AudioFormat ToLegacyFidl() const;
 
   fuchsia_audio::SampleType sample_type() const { return sample_type_; }
   int64_t channels() const { return channels_; }

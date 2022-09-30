@@ -6,6 +6,7 @@
 
 #include <gtest/gtest.h>
 
+#include "fidl/fuchsia.mediastreams/cpp/wire_types.h"
 #include "src/media/audio/lib/format2/fixed.h"
 
 using SampleType = fuchsia_audio::SampleType;
@@ -90,6 +91,19 @@ TEST(FormatTest, ToNaturalFidl) {
   EXPECT_EQ(*msg.sample_type(), SampleType::kInt32);
   EXPECT_EQ(*msg.channel_count(), 2u);
   EXPECT_EQ(*msg.frames_per_second(), 48000u);
+}
+
+TEST(FormatTest, ToLegacyFidl) {
+  Format format = Format::CreateOrDie({
+      .sample_type = SampleType::kInt32,
+      .channels = 2,
+      .frames_per_second = 48000,
+  });
+
+  auto msg = format.ToLegacyFidl();
+  EXPECT_EQ(msg.sample_format, fuchsia_mediastreams::wire::AudioSampleFormat::kSigned24In32);
+  EXPECT_EQ(msg.channel_count, 2u);
+  EXPECT_EQ(msg.frames_per_second, 48000u);
 }
 
 TEST(FormatTest, OperatorEquals) {

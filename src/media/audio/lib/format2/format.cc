@@ -4,7 +4,14 @@
 
 #include "src/media/audio/lib/format2/format.h"
 
+#include <fidl/fuchsia.audio/cpp/natural_types.h>
+#include <fidl/fuchsia.audio/cpp/wire_types.h>
+#include <fidl/fuchsia.mediastreams/cpp/wire_types.h>
+#include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
+
+#include <ostream>
+#include <string>
 
 #include <sdk/lib/fidl/cpp/enum.h>
 
@@ -191,6 +198,33 @@ fuchsia_audio::Format Format::ToNaturalFidl() const {
   msg.channel_count() = static_cast<uint32_t>(channels_);
   msg.frames_per_second() = static_cast<uint32_t>(frames_per_second_);
   return msg;
+}
+
+fuchsia_mediastreams::wire::AudioFormat Format::ToLegacyFidl() const {
+  auto sample_format = fuchsia_mediastreams::AudioSampleFormat::kFloat;
+  switch (sample_type_) {
+    case SampleType::kUint8:
+      sample_format = fuchsia_mediastreams::wire::AudioSampleFormat::kUnsigned8;
+      break;
+    case SampleType::kInt16:
+      sample_format = fuchsia_mediastreams::wire::AudioSampleFormat::kSigned16;
+      break;
+    case SampleType::kInt32:
+      sample_format = fuchsia_mediastreams::wire::AudioSampleFormat::kSigned24In32;
+      break;
+    case SampleType::kFloat32:
+      sample_format = fuchsia_mediastreams::wire::AudioSampleFormat::kFloat;
+      break;
+    default:
+      FX_LOGS(FATAL) << "unexpected sample format " << sample_type_;
+      break;
+  }
+  return {
+      .sample_format = sample_format,
+      .channel_count = static_cast<uint32_t>(channels_),
+      .frames_per_second = static_cast<uint32_t>(frames_per_second_),
+      .channel_layout = fuchsia_mediastreams::wire::AudioChannelLayout::WithPlaceholder(0),
+  };
 }
 
 int64_t Format::integer_frames_per(zx::duration duration, TimelineRate::RoundingMode mode) const {

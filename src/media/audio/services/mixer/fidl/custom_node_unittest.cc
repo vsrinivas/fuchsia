@@ -37,7 +37,6 @@ using ::testing::ElementsAre;
 constexpr uint64_t kDefaultBufferSize = 100;
 constexpr uint32_t kFrameRate = 10;
 const Format kFormat = Format::CreateOrDie({SampleType::kFloat32, 1, kFrameRate});
-const AudioFormat kFidlFormat = {AudioSampleFormat::kFloat, 1, kFrameRate};
 
 Range MakeBuffer(uint64_t size = kDefaultBufferSize, uint64_t offset = 0) {
   zx::vmo vmo;
@@ -73,11 +72,11 @@ class CustomNodeTest : public ::testing::Test {
     builder.block_size_frames(block_size_frames);
     builder.max_frames_per_call(block_size_frames);
 
-    builder.inputs(
-        MakeInputs(MakeInputConfigBuilder().buffer(MakeBuffer()).format(kFidlFormat).Build()));
+    builder.inputs(MakeInputs(
+        MakeInputConfigBuilder().buffer(MakeBuffer()).format(kFormat.ToLegacyFidl()).Build()));
     builder.outputs(MakeOutputs(MakeOutputConfigBuilder()
                                     .buffer(MakeBuffer())
-                                    .format(kFidlFormat)
+                                    .format(kFormat.ToLegacyFidl())
                                     .latency_frames(latency_frames)
                                     .ring_out_frames(0)
                                     .Build()));
@@ -397,9 +396,10 @@ TEST_F(CustomNodeTest, CreateFailsMismatchingFrameRate) {
 TEST_F(CustomNodeTest, CreateFailsMissingInputBuffer) {
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
-      .config = MakeProcessorConfigBuilder()
-                    .inputs(MakeInputs(MakeInputConfigBuilder().format(kFidlFormat).Build()))
-                    .Build(),
+      .config =
+          MakeProcessorConfigBuilder()
+              .inputs(MakeInputs(MakeInputConfigBuilder().format(kFormat.ToLegacyFidl()).Build()))
+              .Build(),
   });
 }
 
@@ -407,7 +407,8 @@ TEST_F(CustomNodeTest, CreateFailsMissingOutputBuffer) {
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
       .config = MakeProcessorConfigBuilder()
-                    .outputs(MakeOutputs(MakeOutputConfigBuilder().format(kFidlFormat).Build()))
+                    .outputs(MakeOutputs(
+                        MakeOutputConfigBuilder().format(kFormat.ToLegacyFidl()).Build()))
                     .Build(),
   });
 }
@@ -418,7 +419,7 @@ TEST_F(CustomNodeTest, CreateFailsEmptyInputBuffer) {
       .config = MakeProcessorConfigBuilder()
                     .inputs(MakeInputs(MakeInputConfigBuilder()
                                            .buffer(MakeBuffer(/*size=*/0))
-                                           .format(kFidlFormat)
+                                           .format(kFormat.ToLegacyFidl())
                                            .Build()))
                     .Build(),
   });
@@ -430,7 +431,7 @@ TEST_F(CustomNodeTest, CreateFailsEmptyOutputBuffer) {
       .config = MakeProcessorConfigBuilder()
                     .outputs(MakeOutputs(MakeOutputConfigBuilder()
                                              .buffer(MakeBuffer(/*size=*/0))
-                                             .format(kFidlFormat)
+                                             .format(kFormat.ToLegacyFidl())
                                              .Build()))
                     .Build(),
   });
@@ -439,11 +440,12 @@ TEST_F(CustomNodeTest, CreateFailsEmptyOutputBuffer) {
 TEST_F(CustomNodeTest, CreateFailsInvalidInputBuffer) {
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
-      .config =
-          MakeProcessorConfigBuilder()
-              .inputs(MakeInputs(
-                  MakeInputConfigBuilder().buffer(Range{.size = 100}).format(kFidlFormat).Build()))
-              .Build(),
+      .config = MakeProcessorConfigBuilder()
+                    .inputs(MakeInputs(MakeInputConfigBuilder()
+                                           .buffer(Range{.size = 100})
+                                           .format(kFormat.ToLegacyFidl())
+                                           .Build()))
+                    .Build(),
   });
 }
 
@@ -452,11 +454,12 @@ TEST_F(CustomNodeTest, CreateFailsInvalidInputBufferNotMappable) {
   ASSERT_EQ(ZX_OK, buffer.vmo.replace(ZX_RIGHT_WRITE, &buffer.vmo));
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
-      .config =
-          MakeProcessorConfigBuilder()
-              .inputs(MakeInputs(
-                  MakeInputConfigBuilder().buffer(std::move(buffer)).format(kFidlFormat).Build()))
-              .Build(),
+      .config = MakeProcessorConfigBuilder()
+                    .inputs(MakeInputs(MakeInputConfigBuilder()
+                                           .buffer(std::move(buffer))
+                                           .format(kFormat.ToLegacyFidl())
+                                           .Build()))
+                    .Build(),
   });
 }
 
@@ -465,11 +468,12 @@ TEST_F(CustomNodeTest, CreateFailsInvalidInputBufferNotWritable) {
   ASSERT_EQ(ZX_OK, buffer.vmo.replace(ZX_RIGHT_MAP, &buffer.vmo));
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
-      .config =
-          MakeProcessorConfigBuilder()
-              .inputs(MakeInputs(
-                  MakeInputConfigBuilder().buffer(std::move(buffer)).format(kFidlFormat).Build()))
-              .Build(),
+      .config = MakeProcessorConfigBuilder()
+                    .inputs(MakeInputs(MakeInputConfigBuilder()
+                                           .buffer(std::move(buffer))
+                                           .format(kFormat.ToLegacyFidl())
+                                           .Build()))
+                    .Build(),
   });
 }
 
@@ -480,11 +484,12 @@ TEST_F(CustomNodeTest, CreateFailsInvalidInputBufferSizeTooSmall) {
   buffer.size = vmo_size + 1;
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
-      .config =
-          MakeProcessorConfigBuilder()
-              .inputs(MakeInputs(
-                  MakeInputConfigBuilder().buffer(std::move(buffer)).format(kFidlFormat).Build()))
-              .Build(),
+      .config = MakeProcessorConfigBuilder()
+                    .inputs(MakeInputs(MakeInputConfigBuilder()
+                                           .buffer(std::move(buffer))
+                                           .format(kFormat.ToLegacyFidl())
+                                           .Build()))
+                    .Build(),
   });
 }
 
@@ -495,22 +500,24 @@ TEST_F(CustomNodeTest, CreateFailsInvalidInputBufferOffsetTooLarge) {
   buffer.offset = vmo_size - buffer.size + 1;
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
-      .config =
-          MakeProcessorConfigBuilder()
-              .inputs(MakeInputs(
-                  MakeInputConfigBuilder().buffer(std::move(buffer)).format(kFidlFormat).Build()))
-              .Build(),
+      .config = MakeProcessorConfigBuilder()
+                    .inputs(MakeInputs(MakeInputConfigBuilder()
+                                           .buffer(std::move(buffer))
+                                           .format(kFormat.ToLegacyFidl())
+                                           .Build()))
+                    .Build(),
   });
 }
 
 TEST_F(CustomNodeTest, CreateFailsInvalidOutputBuffer) {
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
-      .config =
-          MakeProcessorConfigBuilder()
-              .outputs(MakeOutputs(
-                  MakeOutputConfigBuilder().buffer(Range{.size = 100}).format(kFidlFormat).Build()))
-              .Build(),
+      .config = MakeProcessorConfigBuilder()
+                    .outputs(MakeOutputs(MakeOutputConfigBuilder()
+                                             .buffer(Range{.size = 100})
+                                             .format(kFormat.ToLegacyFidl())
+                                             .Build()))
+                    .Build(),
   });
 }
 
@@ -519,11 +526,12 @@ TEST_F(CustomNodeTest, CreateFailsInvalidOutputBufferNotMappable) {
   ASSERT_EQ(ZX_OK, buffer.vmo.replace(ZX_RIGHT_WRITE, &buffer.vmo));
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
-      .config =
-          MakeProcessorConfigBuilder()
-              .outputs(MakeOutputs(
-                  MakeOutputConfigBuilder().buffer(std::move(buffer)).format(kFidlFormat).Build()))
-              .Build(),
+      .config = MakeProcessorConfigBuilder()
+                    .outputs(MakeOutputs(MakeOutputConfigBuilder()
+                                             .buffer(std::move(buffer))
+                                             .format(kFormat.ToLegacyFidl())
+                                             .Build()))
+                    .Build(),
   });
 }
 
@@ -532,11 +540,12 @@ TEST_F(CustomNodeTest, CreateFailsInvalidOutputBufferNotReadable) {
   ASSERT_EQ(ZX_OK, buffer.vmo.replace(ZX_RIGHT_MAP, &buffer.vmo));
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
-      .config =
-          MakeProcessorConfigBuilder()
-              .outputs(MakeOutputs(
-                  MakeOutputConfigBuilder().buffer(std::move(buffer)).format(kFidlFormat).Build()))
-              .Build(),
+      .config = MakeProcessorConfigBuilder()
+                    .outputs(MakeOutputs(MakeOutputConfigBuilder()
+                                             .buffer(std::move(buffer))
+                                             .format(kFormat.ToLegacyFidl())
+                                             .Build()))
+                    .Build(),
   });
 }
 
@@ -547,11 +556,12 @@ TEST_F(CustomNodeTest, CreateFailsInvalidOutputBufferSizeTooSmall) {
   buffer.size = vmo_size + 1;
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
-      .config =
-          MakeProcessorConfigBuilder()
-              .outputs(MakeOutputs(
-                  MakeOutputConfigBuilder().buffer(std::move(buffer)).format(kFidlFormat).Build()))
-              .Build(),
+      .config = MakeProcessorConfigBuilder()
+                    .outputs(MakeOutputs(MakeOutputConfigBuilder()
+                                             .buffer(std::move(buffer))
+                                             .format(kFormat.ToLegacyFidl())
+                                             .Build()))
+                    .Build(),
   });
 }
 
@@ -562,11 +572,12 @@ TEST_F(CustomNodeTest, CreateFailsInvalidOutputBufferOffsetTooLarge) {
   buffer.offset = vmo_size - buffer.size + 1;
   auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
-      .config =
-          MakeProcessorConfigBuilder()
-              .outputs(MakeOutputs(
-                  MakeOutputConfigBuilder().buffer(std::move(buffer)).format(kFidlFormat).Build()))
-              .Build(),
+      .config = MakeProcessorConfigBuilder()
+                    .outputs(MakeOutputs(MakeOutputConfigBuilder()
+                                             .buffer(std::move(buffer))
+                                             .format(kFormat.ToLegacyFidl())
+                                             .Build()))
+                    .Build(),
   });
 }
 
@@ -579,12 +590,12 @@ TEST_F(CustomNodeTest, CreateFailsOutputBufferPartiallyOverlapsInputBuffer) {
       .config = MakeProcessorConfigBuilder()
                     .inputs(MakeInputs(MakeInputConfigBuilder()
                                            .buffer(std::move(input_buffer))
-                                           .format(kFidlFormat)
+                                           .format(kFormat.ToLegacyFidl())
                                            .Build()))
                     .outputs(MakeOutputs(
                         MakeOutputConfigBuilder()
                             .buffer(Range{.vmo = std::move(output_vmo), .offset = 255, .size = 256})
-                            .format(kFidlFormat)
+                            .format(kFormat.ToLegacyFidl())
                             .Build()))
                     .Build(),
   });
