@@ -14,33 +14,45 @@ use packet::{BufferViewMut, PacketBuilder, ParsablePacket, ParseMetadata};
 use zerocopy::{ByteSlice, ByteSliceMut};
 
 use crate::error::{IpParseError, IpParseResult};
+use crate::icmp::IcmpIpExt;
 use crate::ipv4::{Ipv4Header, Ipv4OnlyMeta, Ipv4Packet, Ipv4PacketBuilder};
 use crate::ipv6::{Ipv6Header, Ipv6Packet, Ipv6PacketBuilder};
 use crate::private::Sealed;
 
-/// An extension trait to the `Ip` trait adding associated types relevant for
-/// packet parsing and serialization.
-pub trait IpExt: Ip {
-    /// An IP packet type for this IP version.
-    type Packet<B: ByteSlice>: IpPacket<B, Self, Builder = Self::PacketBuilder>;
-    /// An IP packet builder type for the IP version.
-    type PacketBuilder: IpPacketBuilder<Self> + Eq;
+/// An [`Ip`] extension trait adding an associated type for the IP protocol
+/// number.
+pub trait IpProtoExt: Ip {
     /// The type representing an IPv4 or IPv6 protocol number.
     ///
     /// For IPv4, this is [`Ipv4Proto`], and for IPv6, this is [`Ipv6Proto`].
     type Proto: IpProtocol + Copy + Clone + Debug + Display + PartialEq;
 }
 
+impl IpProtoExt for Ipv4 {
+    type Proto = Ipv4Proto;
+}
+
+impl IpProtoExt for Ipv6 {
+    type Proto = Ipv6Proto;
+}
+
+/// An extension trait to the `Ip` trait adding associated types relevant for
+/// packet parsing and serialization.
+pub trait IpExt: IcmpIpExt {
+    /// An IP packet type for this IP version.
+    type Packet<B: ByteSlice>: IpPacket<B, Self, Builder = Self::PacketBuilder>;
+    /// An IP packet builder type for the IP version.
+    type PacketBuilder: IpPacketBuilder<Self> + Eq;
+}
+
 impl IpExt for Ipv4 {
     type Packet<B: ByteSlice> = Ipv4Packet<B>;
     type PacketBuilder = Ipv4PacketBuilder;
-    type Proto = Ipv4Proto;
 }
 
 impl IpExt for Ipv6 {
     type Packet<B: ByteSlice> = Ipv6Packet<B>;
     type PacketBuilder = Ipv6PacketBuilder;
-    type Proto = Ipv6Proto;
 }
 
 /// An error encountered during NAT64 translation.

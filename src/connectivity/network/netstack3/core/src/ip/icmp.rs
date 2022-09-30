@@ -4013,7 +4013,7 @@ mod tests {
                     device: DummyDeviceId,
                     original_src_ip: Option<SpecifiedAddr<<$ip as Ip>::Addr>>,
                     original_dst_ip: SpecifiedAddr<<$ip as Ip>::Addr>,
-                    original_proto: <$ip as packet_formats::ip::IpExt>::Proto,
+                    original_proto: <$ip as packet_formats::ip::IpProtoExt>::Proto,
                     original_body: &[u8],
                     err: <$ip as IcmpIpExt>::ErrorCode,
                 ) {

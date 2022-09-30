@@ -234,7 +234,7 @@ pub(crate) trait DatagramStateContext<A: SocketMapAddrSpec, C, S> {
         device: Option<A::DeviceId>,
         local_ip: Option<SpecifiedAddr<A::IpAddr>>,
         remote: SpecifiedAddr<A::IpAddr>,
-        proto: <A::IpVersion as packet_formats::ip::IpExt>::Proto,
+        proto: <A::IpVersion as packet_formats::ip::IpProtoExt>::Proto,
         options: O,
     ) -> Result<IpSock<A::IpVersion, A::DeviceId, O>, (IpSockCreationError, O)>;
 }

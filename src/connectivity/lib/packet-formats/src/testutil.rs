@@ -255,7 +255,7 @@ pub fn parse_ip_packet_in_ethernet_frame<I: IpExt>(
 /// headers. Before returning, it invokes the callback `f` on the parsed packet.
 #[allow(clippy::type_complexity)]
 pub fn parse_icmp_packet_in_ip_packet_in_ethernet_frame<
-    I: IcmpIpExt,
+    I: IpExt,
     C,
     M: for<'a> IcmpMessage<I, &'a [u8], Code = C>,
     F: for<'a> FnOnce(&IcmpPacket<I, &'a [u8], M>),

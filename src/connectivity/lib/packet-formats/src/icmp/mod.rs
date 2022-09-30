@@ -29,7 +29,6 @@ pub use self::icmpv4::*;
 pub use self::icmpv6::*;
 
 use core::cmp;
-use core::convert::Infallible as Never;
 use core::convert::{TryFrom, TryInto};
 use core::fmt::Debug;
 use core::marker::PhantomData;
@@ -47,7 +46,7 @@ use zerocopy::byteorder::{ByteOrder, NetworkEndian};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{ParseError, ParseResult};
-use crate::ip::{IpExt, Ipv4Proto, Ipv6Proto};
+use crate::ip::{IpProtoExt, Ipv4Proto, Ipv6Proto};
 use crate::ipv4::{self, Ipv4PacketRaw};
 use crate::ipv6::Ipv6PacketRaw;
 use crate::U16;
@@ -90,11 +89,14 @@ pub fn peek_message_type<MessageType: TryFrom<u8>>(bytes: &[u8]) -> ParseResult<
     })
 }
 
-/// An extension trait adding ICMP-related associated types to `Ipv4` and `Ipv6`.
-///
-/// This trait is kept separate from `IcmpIpExt` to not require a type parameter
-/// that implements `ByteSlice`.
-pub trait IcmpIpTypes: Ip {
+/// An extension trait adding ICMP-related functionality to `Ipv4` and `Ipv6`.
+pub trait IcmpIpExt: IpProtoExt {
+    /// The type of ICMP messages.
+    ///
+    /// For `Ipv4`, this is `Icmpv4MessageType`, and for `Ipv6`, this is
+    /// `Icmpv6MessageType`.
+    type IcmpMessageType: IcmpMessageType;
+
     /// The type of an ICMP parameter problem code.
     ///
     /// For `Ipv4`, this is `Icmpv4ParameterProblemCode`, and for `Ipv6` this
@@ -110,47 +112,16 @@ pub trait IcmpIpTypes: Ip {
     ///
     /// For `Ipv4`, this is `usize`, and for `Ipv6` this is `()`.
     type HeaderLen: PartialEq + Send + Sync + Debug;
-}
-
-// A default implementation for any I: Ip. This is to convince the Rust compiler
-// that, given an I: Ip, it's guaranteed to implement IcmpIpTypes. We humans know
-// that Ipv4 and Ipv6 are the only types implementing Ip and so, since we
-// implement IcmpIpTypes for both of these types, this is fine. The compiler isn't
-// so smart. This implementation should never actually be used.
-impl<I: Ip> IcmpIpTypes for I {
-    default type ParameterProblemCode = Never;
-    default type ParameterProblemPointer = Never;
-    default type HeaderLen = Never;
-}
-
-impl IcmpIpTypes for Ipv4 {
-    type ParameterProblemCode = Icmpv4ParameterProblemCode;
-    type ParameterProblemPointer = u8;
-    type HeaderLen = usize;
-}
-
-impl IcmpIpTypes for Ipv6 {
-    type ParameterProblemCode = Icmpv6ParameterProblemCode;
-    type ParameterProblemPointer = u32;
-    type HeaderLen = ();
-}
-
-/// An extension trait adding ICMP-related functionality to `Ipv4` and `Ipv6`.
-pub trait IcmpIpExt: IpExt {
-    /// The type of ICMP messages.
-    ///
-    /// For `Ipv4`, this is `Icmpv4MessageType`, and for `Ipv6`, this is
-    /// `Icmpv6MessageType`.
-    type IcmpMessageType: IcmpMessageType;
 
     /// The identifier for this ICMP version.
     ///
     /// This value will be found in an IPv4 packet's Protocol field (for ICMPv4
     /// packets) or an IPv6 fixed header's or last extension header's Next
     /// Heeader field (for ICMPv6 packets).
-    const ICMP_IP_PROTO: <Self as IpExt>::Proto;
+    const ICMP_IP_PROTO: <Self as IpProtoExt>::Proto;
 
-    /// Compute the length of the header of the packet prefix stored in `bytes`.
+    /// Computes the length of the header of the packet prefix stored in
+    /// `bytes`.
     ///
     /// Given the prefix of a packet stored in `bytes`, compute the length of
     /// the header of that packet, or `bytes.len()` if `bytes` does not contain
@@ -161,6 +132,9 @@ pub trait IcmpIpExt: IpExt {
 
 impl IcmpIpExt for Ipv4 {
     type IcmpMessageType = Icmpv4MessageType;
+    type ParameterProblemCode = Icmpv4ParameterProblemCode;
+    type ParameterProblemPointer = u8;
+    type HeaderLen = usize;
 
     const ICMP_IP_PROTO: Ipv4Proto = Ipv4Proto::Icmp;
 
@@ -176,6 +150,9 @@ impl IcmpIpExt for Ipv4 {
 
 impl IcmpIpExt for Ipv6 {
     type IcmpMessageType = Icmpv6MessageType;
+    type ParameterProblemCode = Icmpv6ParameterProblemCode;
+    type ParameterProblemPointer = u32;
+    type HeaderLen = ();
 
     const ICMP_IP_PROTO: Ipv6Proto = Ipv6Proto::Icmpv6;
 

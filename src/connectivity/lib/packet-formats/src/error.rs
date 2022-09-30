@@ -4,11 +4,11 @@
 
 //! Custom error types for the packet formats.
 
-use net_types::ip::{Ip, IpAddress};
+use net_types::ip::IpAddress;
 use net_types::MulticastAddress;
 use thiserror::Error;
 
-use crate::icmp::IcmpIpTypes;
+use crate::icmp::IcmpIpExt;
 
 /// Results returned from parsing functions in the netstack.
 pub type ParseResult<T> = core::result::Result<T, ParseError>;
@@ -93,7 +93,7 @@ impl IpParseErrorAction {
 /// Error type for IP packet parsing.
 #[allow(missing_docs)]
 #[derive(Error, Debug, PartialEq)]
-pub enum IpParseError<I: IcmpIpTypes> {
+pub enum IpParseError<I: IcmpIpExt> {
     #[error("Parsing Error")]
     Parse { error: ParseError },
     /// For errors where an ICMP Parameter Problem error needs to be sent to the
@@ -139,7 +139,7 @@ pub enum IpParseError<I: IcmpIpTypes> {
     },
 }
 
-impl<I: Ip> From<ParseError> for IpParseError<I> {
+impl<I: IcmpIpExt> From<ParseError> for IpParseError<I> {
     fn from(error: ParseError) -> Self {
         IpParseError::Parse { error }
     }
