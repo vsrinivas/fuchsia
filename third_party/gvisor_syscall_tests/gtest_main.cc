@@ -9,7 +9,6 @@
 #include <string>
 #include <utility>
 
-#include "expectations.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"

@@ -2,11 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "expectations.h"
+#include "third_party/gvisor_syscall_tests/expectations.h"
+
+#include <cstdlib>
 
 namespace netstack_syscall_test {
 
-void AddNonPassingTestsCommonNetstack2(TestMap& tests) {
+constexpr char kFastUdpEnvVar[] = "FAST_UDP";
+
+void AddNonPassingTests(TestMap& tests) {
+  if (std::getenv(kFastUdpEnvVar)) {
+    // Fast UDP doesn't enforce recieve buffer limits due to the use of a zircon
+    // socket.
+    SkipTest(tests, "AllInetTests/UdpSocketTest.RecvBufLimits/*");
+  } else {
+    // TODO(https://fxbug.dev/104104): Remove sync expectations after Fast UDP
+    // rollout.
+
+    // https://fxbug.dev/45245
+    ExpectFailure(tests, "AllUDPSockets/NonStreamSocketPairTest.SendMsgTooLarge/*");
+  }
+
   // Fuchsia does not support Unix sockets.
   ExpectFailure(tests, "SocketTest.ProtocolUnix");
   // Fuchsia does not support Unix sockets.
@@ -251,6 +267,6 @@ void AddNonPassingTestsCommonNetstack2(TestMap& tests) {
   // https://fxbug.dev/74639
   ExpectFailure(tests, "AllUnixDomainSockets/AllSocketPairTest.GetSetSocketRcvlowatOption/*");
   ExpectFailure(tests, "AllUDPSockets/AllSocketPairTest.GetSetSocketRcvlowatOption/*");
-}  // NOLINT(readability/fn_size)
+}
 
 }  // namespace netstack_syscall_test

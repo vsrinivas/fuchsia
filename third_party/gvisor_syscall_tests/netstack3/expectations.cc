@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <string>
+#include "third_party/gvisor_syscall_tests/expectations.h"
 
-#include "expectations.h"
+#include <string>
 
 namespace netstack_syscall_test {
 

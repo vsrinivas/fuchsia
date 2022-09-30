@@ -89,44 +89,7 @@ static_library("gvisor_test_util") {
   public_configs = [ ":gvisor_test_util_config" ]
 }
 
-source_set("netstack2_expectations") {
-  sources = [ "netstack2_expectations.cc" ]
-  deps = [
-    ":expectations",
-    ":gvisor_test_util",
-  ]
-  testonly = true
-}
-
-source_set("netstack2_with_fast_udp_expectations") {
-  sources = [ "netstack2_with_fast_udp_expectations.cc" ]
-  deps = [
-    ":expectations",
-    ":netstack2_expectations",
-  ]
-  testonly = true
-}
-
-source_set("netstack2_with_sync_udp_expectations") {
-  sources = [ "netstack2_with_sync_udp_expectations.cc" ]
-  deps = [
-    ":expectations",
-    ":netstack2_expectations",
-  ]
-  testonly = true
-}
-
-source_set("netstack3_expectations") {
-  sources = [ "netstack3_expectations.cc" ]
-  deps = [
-    ":expectations",
-    ":gvisor_test_util",
-    "//third_party/abseil-cpp/absl/strings",
-  ]
-  testonly = true
-}
-
-source_set("gvisor_syscall_tests") {
+source_set("gvisor_socket_tests") {
   sources = [
     "gvisor/test/syscalls/linux/ip_socket_test_util.cc",
     "gvisor/test/syscalls/linux/ip_socket_test_util.h",
@@ -216,80 +179,76 @@ source_set("gtest_main") {
   testonly = true
 }
 
-test("netstack2-with-fast-udp-socket-tests") {
+source_set("netstack3_expectations") {
+  sources = [ "netstack3/expectations.cc" ]
   deps = [
-    ":gtest_main",
-    ":gvisor_syscall_tests",
-    ":netstack2_with_fast_udp_expectations",
+    ":expectations",
+    ":gvisor_test_util",
+    "//third_party/abseil-cpp/absl/strings",
   ]
-
-  # In-tree executables automatically get a logging backend dep unless we opt
-  # out.
-  disable_syslog_backend = true
+  testonly = true
 }
 
-test("netstack2-with-sync-udp-socket-tests") {
+source_set("netstack2_expectations") {
+  sources = [ "netstack2/expectations.cc" ]
   deps = [
-    ":gtest_main",
-    ":gvisor_syscall_tests",
-    ":netstack2_with_sync_udp_expectations",
+    ":expectations",
+    ":gvisor_test_util",
+    "//third_party/abseil-cpp/absl/strings",
   ]
-
-  # In-tree executables automatically get a logging backend dep unless we opt
-  # out.
-  disable_syslog_backend = true
+  testonly = true
 }
 
-test("netstack3-socket-tests") {
-  deps = [
-    ":gtest_main",
-    ":gvisor_syscall_tests",
-    ":netstack3_expectations",
-  ]
+stacks = [
+  {
+    label = "netstack2_fastudp"
+    component =
+        "//src/connectivity/network/netstack:component-with-fast-udp-debug"
+    expectations = ":netstack2_expectations"
+    manifest = "netstack2/meta/fastudp_syscall_tests.cml"
+  },
+  {
+    label = "netstack2_syncudp"
+    component = "//src/connectivity/network/netstack:component-debug"
+    expectations = ":netstack2_expectations"
+    manifest = "netstack2/meta/syncudp_syscall_tests.cml"
+  },
+  {
+    label = "netstack3"
+    component = "//src/connectivity/network/netstack3:component"
+    expectations = ":netstack3_expectations"
+    manifest = "netstack3/meta/syscall_tests.cml"
+  },
+]
 
-  # In-tree executables automatically get a logging backend dep unless we opt
-  # out.
-  disable_syslog_backend = true
-}
+test_deps = []
 
-fuchsia_unittest_package("netstack2-with-fast-udp-syscall-tests") {
-  package_name = "netstack2-with-fast-udp-syscall-tests"
-  manifest = "meta/netstack2-with-fast-udp-syscall-tests.cml"
-  deps = [
-    ":netstack2-with-fast-udp-socket-tests",
+foreach(stack, stacks) {
+  test("${stack.label}_socket_tests") {
+    deps = [
+      ":gtest_main",
+      ":gvisor_socket_tests",
+      stack.expectations,
+    ]
 
-    # To include netstack-debug.cm for fuchsia.posix.socket.Provider.
-    "//src/connectivity/network/netstack:component-with-fast-udp-debug",
-  ]
-}
+    # In-tree executables automatically get a logging backend dep unless we opt
+    # out.
+    disable_syslog_backend = true
+  }
 
-fuchsia_unittest_package("netstack2-with-sync-udp-syscall-tests") {
-  package_name = "netstack2-with-sync-udp-syscall-tests"
-  manifest = "meta/netstack2-syscall-tests.cml"
-  deps = [
-    ":netstack2-with-sync-udp-socket-tests",
+  fuchsia_unittest_package("${stack.label}_syscall_tests") {
+    package_name = "${stack.label}_syscall_tests"
+    manifest = stack.manifest
+    deps = [
+      ":${stack.label}_socket_tests",
+      stack.component,
+    ]
+  }
 
-    # To include netstack-debug.cm for fuchsia.posix.socket.Provider.
-    "//src/connectivity/network/netstack:component-debug",
-  ]
-}
-
-fuchsia_unittest_package("netstack3-syscall-tests") {
-  package_name = "netstack3-syscall-tests"
-  manifest = "meta/netstack3-syscall-tests.cml"
-  deps = [
-    ":netstack3-socket-tests",
-
-    # To include netstack-debug.cm for fuchsia.posix.socket.Provider.
-    "//src/connectivity/network/netstack3:component",
-  ]
+  test_deps += [ ":${stack.label}_syscall_tests" ]
 }
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":netstack2-with-fast-udp-syscall-tests",
-    ":netstack2-with-sync-udp-syscall-tests",
-    ":netstack3-syscall-tests",
-  ]
+  public_deps = test_deps
 }
