@@ -8,6 +8,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/synchronous_interface_ptr.h>
 #include <lib/sys/cpp/component_context.h>
 #include <stdio.h>
 
@@ -118,6 +119,125 @@ class ClosedTargetServer : public fidl::serversuite::ClosedTarget {
   fidl::Binding<fidl::serversuite::ClosedTarget>* binding_ = nullptr;
 };
 
+class AjarTargetServer : public fidl::serversuite::AjarTarget {
+ public:
+  explicit AjarTargetServer(fidl::InterfacePtr<fidl::serversuite::Reporter> reporter)
+      : reporter_(std::move(reporter)) {}
+
+ protected:
+  void handle_unknown_method(uint64_t ordinal) override {
+    reporter_->ReceivedUnknownMethod(ordinal, fidl::serversuite::UnknownMethodType::ONE_WAY);
+  }
+
+ private:
+  fidl::InterfacePtr<fidl::serversuite::Reporter> reporter_;
+};
+
+class OpenTargetServer : public fidl::serversuite::OpenTarget {
+ public:
+  explicit OpenTargetServer(fidl::InterfacePtr<fidl::serversuite::Reporter> reporter)
+      : reporter_(std::move(reporter)) {}
+
+  void set_event_sender(fidl::serversuite::OpenTarget_EventSender* event_sender) {
+    ZX_ASSERT_MSG(!event_sender_, "event sender already set");
+    event_sender_ = event_sender;
+  }
+
+  void SendEvent(::fidl::serversuite::EventType event_type) override {
+    switch (event_type) {
+      case fidl::serversuite::EventType::STRICT:
+        event_sender_->StrictEvent();
+        return;
+      case fidl::serversuite::EventType::FLEXIBLE:
+        event_sender_->FlexibleEvent();
+        return;
+      default:
+        ZX_PANIC("Unknown EventType");
+    }
+  }
+
+  void StrictOneWay() override { reporter_->ReceivedStrictOneWay(); }
+
+  void FlexibleOneWay() override { reporter_->ReceivedFlexibleOneWay(); }
+
+  void StrictTwoWay(StrictTwoWayCallback callback) override { callback(); }
+
+  void StrictTwoWayFields(int32_t reply_with, StrictTwoWayFieldsCallback callback) override {
+    callback(reply_with);
+  }
+
+  void StrictTwoWayErr(::fidl::serversuite::OpenTargetStrictTwoWayErrRequest request,
+                       StrictTwoWayErrCallback callback) override {
+    if (request.is_reply_success()) {
+      callback(fidl::serversuite::OpenTarget_StrictTwoWayErr_Result::WithResponse({}));
+    } else if (request.is_reply_error()) {
+      callback(fidl::serversuite::OpenTarget_StrictTwoWayErr_Result::WithErr(
+          std::move(request.reply_error())));
+    } else {
+      ZX_PANIC("Unrecognized StrictTwoWayErr Request Variant");
+    }
+  }
+
+  void StrictTwoWayFieldsErr(::fidl::serversuite::OpenTargetStrictTwoWayFieldsErrRequest request,
+                             StrictTwoWayFieldsErrCallback callback) override {
+    if (request.is_reply_success()) {
+      callback(fidl::serversuite::OpenTarget_StrictTwoWayFieldsErr_Result::WithResponse(
+          fidl::serversuite::OpenTarget_StrictTwoWayFieldsErr_Response(request.reply_success())));
+    } else if (request.is_reply_error()) {
+      callback(fidl::serversuite::OpenTarget_StrictTwoWayFieldsErr_Result::WithErr(
+          std::move(request.reply_error())));
+    } else {
+      ZX_PANIC("Unrecognized StrictTwoWayFieldsErr Request Variant");
+    }
+  }
+
+  void FlexibleTwoWay(FlexibleTwoWayCallback callback) override {
+    callback(fidl::serversuite::OpenTarget_FlexibleTwoWay_Result::WithResponse({}));
+  }
+
+  void FlexibleTwoWayFields(int32_t reply_with, FlexibleTwoWayFieldsCallback callback) override {
+    callback(fidl::serversuite::OpenTarget_FlexibleTwoWayFields_Result::WithResponse(
+        fidl::serversuite::OpenTarget_FlexibleTwoWayFields_Response(reply_with)));
+  }
+
+  void FlexibleTwoWayErr(::fidl::serversuite::OpenTargetFlexibleTwoWayErrRequest request,
+                         FlexibleTwoWayErrCallback callback) override {
+    if (request.is_reply_success()) {
+      callback(fidl::serversuite::OpenTarget_FlexibleTwoWayErr_Result::WithResponse({}));
+    } else if (request.is_reply_error()) {
+      callback(fidl::serversuite::OpenTarget_FlexibleTwoWayErr_Result::WithErr(
+          std::move(request.reply_error())));
+    } else {
+      ZX_PANIC("Unrecognized FlexibleTwoWayErr Request Variant");
+    }
+  }
+
+  void FlexibleTwoWayFieldsErr(
+      ::fidl::serversuite::OpenTargetFlexibleTwoWayFieldsErrRequest request,
+      FlexibleTwoWayFieldsErrCallback callback) override {
+    if (request.is_reply_success()) {
+      callback(fidl::serversuite::OpenTarget_FlexibleTwoWayFieldsErr_Result::WithResponse(
+          fidl::serversuite::OpenTarget_FlexibleTwoWayFieldsErr_Response(request.reply_success())));
+    } else if (request.is_reply_error()) {
+      callback(fidl::serversuite::OpenTarget_FlexibleTwoWayFieldsErr_Result::WithErr(
+          std::move(request.reply_error())));
+    } else {
+      ZX_PANIC("Unrecognized FlexibleTwoWayFieldsErr Request Variant");
+    }
+  }
+
+ protected:
+  void handle_unknown_method(uint64_t ordinal, bool method_has_response) override {
+    auto unknown_method_type = method_has_response ? fidl::serversuite::UnknownMethodType::TWO_WAY
+                                                   : fidl::serversuite::UnknownMethodType::ONE_WAY;
+    reporter_->ReceivedUnknownMethod(ordinal, unknown_method_type);
+  }
+
+ private:
+  fidl::InterfacePtr<fidl::serversuite::Reporter> reporter_;
+  fidl::serversuite::OpenTarget_EventSender* event_sender_ = nullptr;
+};
+
 class RunnerServer : public fidl::serversuite::Runner {
  public:
   explicit RunnerServer(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
@@ -129,40 +249,6 @@ class RunnerServer : public fidl::serversuite::Runner {
       case fidl::serversuite::Test::SERVER_SENDS_TOO_FEW_RIGHTS:
       case fidl::serversuite::Test::RESPONSE_EXCEEDS_BYTE_LIMIT:
       case fidl::serversuite::Test::RESPONSE_EXCEEDS_HANDLE_LIMIT:
-      case fidl::serversuite::Test::SEND_STRICT_EVENT:
-      case fidl::serversuite::Test::SEND_FLEXIBLE_EVENT:
-
-      case fidl::serversuite::Test::RECEIVE_STRICT_ONE_WAY:
-      case fidl::serversuite::Test::RECEIVE_STRICT_ONE_WAY_MISMATCHED_STRICTNESS:
-      case fidl::serversuite::Test::RECEIVE_FLEXIBLE_ONE_WAY:
-      case fidl::serversuite::Test::RECEIVE_FLEXIBLE_ONE_WAY_MISMATCHED_STRICTNESS:
-
-      case fidl::serversuite::Test::STRICT_TWO_WAY_RESPONSE:
-      case fidl::serversuite::Test::STRICT_TWO_WAY_RESPONSE_MISMATCHED_STRICTNESS:
-      case fidl::serversuite::Test::STRICT_TWO_WAY_ERROR_SYNTAX_RESPONSE:
-      case fidl::serversuite::Test::STRICT_TWO_WAY_ERROR_SYNTAX_RESPONSE_MISMATCHED_STRICTNESS:
-      case fidl::serversuite::Test::FLEXIBLE_TWO_WAY_RESPONSE:
-      case fidl::serversuite::Test::FLEXIBLE_TWO_WAY_RESPONSE_MISMATCHED_STRICTNESS:
-      case fidl::serversuite::Test::FLEXIBLE_TWO_WAY_NON_EMPTY_RESPONSE:
-      case fidl::serversuite::Test::FLEXIBLE_TWO_WAY_ERROR_SYNTAX_RESPONSE_SUCCESS_RESULT:
-      case fidl::serversuite::Test::FLEXIBLE_TWO_WAY_ERROR_SYNTAX_RESPONSE_ERROR_RESULT:
-      case fidl::serversuite::Test::FLEXIBLE_TWO_WAY_ERROR_SYNTAX_NON_EMPTY_RESPONSE_SUCCESS_RESULT:
-      case fidl::serversuite::Test::FLEXIBLE_TWO_WAY_ERROR_SYNTAX_NON_EMPTY_RESPONSE_ERROR_RESULT:
-
-      case fidl::serversuite::Test::UNKNOWN_STRICT_ONE_WAY_OPEN_PROTOCOL:
-      case fidl::serversuite::Test::UNKNOWN_FLEXIBLE_ONE_WAY_OPEN_PROTOCOL:
-      case fidl::serversuite::Test::UNKNOWN_FLEXIBLE_ONE_WAY_HANDLE_OPEN_PROTOCOL:
-      case fidl::serversuite::Test::UNKNOWN_STRICT_TWO_WAY_OPEN_PROTOCOL:
-      case fidl::serversuite::Test::UNKNOWN_FLEXIBLE_TWO_WAY_OPEN_PROTOCOL:
-      case fidl::serversuite::Test::UNKNOWN_FLEXIBLE_TWO_WAY_HANDLE_OPEN_PROTOCOL:
-      case fidl::serversuite::Test::UNKNOWN_STRICT_ONE_WAY_AJAR_PROTOCOL:
-      case fidl::serversuite::Test::UNKNOWN_FLEXIBLE_ONE_WAY_AJAR_PROTOCOL:
-      case fidl::serversuite::Test::UNKNOWN_STRICT_TWO_WAY_AJAR_PROTOCOL:
-      case fidl::serversuite::Test::UNKNOWN_FLEXIBLE_TWO_WAY_AJAR_PROTOCOL:
-      case fidl::serversuite::Test::UNKNOWN_STRICT_ONE_WAY_CLOSED_PROTOCOL:
-      case fidl::serversuite::Test::UNKNOWN_FLEXIBLE_ONE_WAY_CLOSED_PROTOCOL:
-      case fidl::serversuite::Test::UNKNOWN_STRICT_TWO_WAY_CLOSED_PROTOCOL:
-      case fidl::serversuite::Test::UNKNOWN_FLEXIBLE_TWO_WAY_CLOSED_PROTOCOL:
         callback(false);
         return;
       default:
@@ -174,16 +260,29 @@ class RunnerServer : public fidl::serversuite::Runner {
   void Start(fidl::InterfaceHandle<fidl::serversuite::Reporter> reporter,
              fidl::serversuite::AnyTarget target, StartCallback callback) override {
     if (target.is_closed_target()) {
-      target_server_ = std::make_unique<ClosedTargetServer>(reporter.Bind());
-      target_binding_ =
-          std::make_unique<fidl::Binding<fidl::serversuite::ClosedTarget>>(target_server_.get());
-      target_server_->set_binding(target_binding_.get());
+      closed_target_server_ = std::make_unique<ClosedTargetServer>(reporter.Bind());
+      closed_target_binding_ = std::make_unique<fidl::Binding<fidl::serversuite::ClosedTarget>>(
+          closed_target_server_.get());
+      closed_target_server_->set_binding(closed_target_binding_.get());
 
-      target_binding_->Bind(std::move(target.closed_target()), dispatcher_);
+      closed_target_binding_->Bind(std::move(target.closed_target()), dispatcher_);
+      callback();
+    } else if (target.is_ajar_target()) {
+      ajar_target_server_ = std::make_unique<AjarTargetServer>(reporter.Bind());
+      ajar_target_binding_ =
+          std::make_unique<fidl::Binding<fidl::serversuite::AjarTarget>>(ajar_target_server_.get());
+      ajar_target_binding_->Bind(std::move(target.ajar_target()), dispatcher_);
+      callback();
+    } else if (target.is_open_target()) {
+      open_target_server_ = std::make_unique<OpenTargetServer>(reporter.Bind());
+      open_target_binding_ =
+          std::make_unique<fidl::Binding<fidl::serversuite::OpenTarget>>(open_target_server_.get());
+      open_target_server_->set_event_sender(&open_target_binding_->events());
+
+      open_target_binding_->Bind(std::move(target.open_target()), dispatcher_);
       callback();
     } else {
-      // TODO(fxbug.dev/88366): cover the other target types.
-      ZX_PANIC("HLCPP does not support open or ajar protocols yet.");
+      ZX_PANIC("Unrecognized target type.");
     }
   }
 
@@ -191,8 +290,12 @@ class RunnerServer : public fidl::serversuite::Runner {
 
  private:
   async_dispatcher_t* dispatcher_;
-  std::unique_ptr<ClosedTargetServer> target_server_;
-  std::unique_ptr<fidl::Binding<fidl::serversuite::ClosedTarget>> target_binding_;
+  std::unique_ptr<ClosedTargetServer> closed_target_server_;
+  std::unique_ptr<fidl::Binding<fidl::serversuite::ClosedTarget>> closed_target_binding_;
+  std::unique_ptr<AjarTargetServer> ajar_target_server_;
+  std::unique_ptr<fidl::Binding<fidl::serversuite::AjarTarget>> ajar_target_binding_;
+  std::unique_ptr<OpenTargetServer> open_target_server_;
+  std::unique_ptr<fidl::Binding<fidl::serversuite::OpenTarget>> open_target_binding_;
 };
 
 int main(int argc, const char** argv) {
