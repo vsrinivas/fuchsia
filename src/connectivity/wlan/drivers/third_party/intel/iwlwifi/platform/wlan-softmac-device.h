@@ -6,15 +6,14 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_WLAN_SOFTMAC_DEVICE_H_
 
 #include <fidl/fuchsia.wlan.softmac/cpp/driver/wire.h>
-#include <fuchsia/hardware/wlan/softmac/cpp/banjo.h>
-#include <fuchsia/wlan/ieee80211/c/banjo.h>
-#include <fuchsia/wlan/internal/cpp/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/fdf/cpp/dispatcher.h>
 
 #include <memory>
 
 #include <ddktl/device.h>
+
+#include "banjo/ieee80211.h"
 
 struct iwl_mvm_vif;
 struct iwl_trans;

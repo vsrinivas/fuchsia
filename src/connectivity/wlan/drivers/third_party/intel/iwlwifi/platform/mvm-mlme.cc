@@ -49,9 +49,6 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/mvm-mlme.h"
 
 #include <fidl/fuchsia.wlan.ieee80211/cpp/wire.h>
-#include <fuchsia/hardware/wlan/softmac/c/banjo.h>
-#include <fuchsia/wlan/common/c/banjo.h>
-#include <fuchsia/wlan/internal/c/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <stdio.h>
@@ -62,6 +59,9 @@
 #include <iterator>
 
 #include <wlan/common/ieee80211.h>
+
+#include "banjo/common.h"
+#include "banjo/softmac.h"
 
 extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"

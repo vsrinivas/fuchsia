@@ -5,10 +5,6 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/wlan-softmac-device.h"
 
 #include <fidl/fuchsia.wlan.ieee80211/cpp/wire_types.h>
-#include <fuchsia/hardware/wlan/associnfo/cpp/banjo.h>
-#include <fuchsia/hardware/wlan/softmac/cpp/banjo.h>
-#include <fuchsia/wlan/common/c/banjo.h>
-#include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <lib/mock-function/mock-function.h>
 #include <lib/sync/cpp/completion.h>
 #include <lib/zx/channel.h>
@@ -23,6 +19,10 @@
 #include <utility>
 
 #include <zxtest/zxtest.h>
+
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/banjo/common.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/banjo/ieee80211.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/banjo/softmac.h"
 
 extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-nvm-parse.h"

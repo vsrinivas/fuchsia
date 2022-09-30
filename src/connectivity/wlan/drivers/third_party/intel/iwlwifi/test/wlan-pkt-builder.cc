@@ -4,12 +4,11 @@
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/wlan-pkt-builder.h"
 
-#include <fuchsia/wlan/common/cpp/banjo.h>
-
 #include <cstring>
 
 #include <zxtest/zxtest.h>
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/banjo/common.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/mvm-mlme.h"
 
 namespace wlan::testing {

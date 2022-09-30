@@ -38,9 +38,6 @@ source_set("sim_library") {
     "wlan-pkt-builder.h",
   ]
   deps = [
-    "//sdk/banjo/fuchsia.hardware.wlan.softmac:fuchsia.hardware.wlan.softmac_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_banjo_cpp",
-    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.wlanphyimpl:fuchsia.wlan.wlanphyimpl_cpp_driver",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw:api",
@@ -305,8 +302,6 @@ executable("wlan_softmac_device_test") {
   sources = [ "wlan-softmac-device-test.cc" ]
   deps = [
     ":sim_library",
-    "//sdk/banjo/fuchsia.hardware.wlan.associnfo:fuchsia.hardware.wlan.associnfo_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.wlan.softmac:fuchsia.hardware.wlan.softmac_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211_cpp_wire",
     "//sdk/fidl/fuchsia.wlan.wlanphyimpl:fuchsia.wlan.wlanphyimpl_cpp_driver",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
@@ -327,8 +322,6 @@ executable("wlanphy_impl_device_test") {
   sources = [ "wlanphy-impl-device-test.cc" ]
   deps = [
     ":sim_library",
-    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_cpp",
-    "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.wlanphyimpl:fuchsia.wlan.wlanphyimpl_cpp_driver",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform:fuchsia_device",

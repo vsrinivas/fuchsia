@@ -34,7 +34,6 @@
  *
  *****************************************************************************/
 
-#include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <stdbool.h>
 #include <threads.h>
 #include <zircon/compiler.h>
@@ -62,6 +61,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/rs.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/time-event.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/banjo/ieee80211.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/rcu.h"
 
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
@@ -1390,7 +1390,7 @@ static void iwl_mvm_reprobe_wk(struct work_struct* wk) {
 
 void iwl_mvm_nic_restart(struct iwl_mvm* mvm, bool fw_error) {
   IWL_WARN(mvm, "%s() needs porting\n", __func__);
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
 	iwl_abort_notification_waits(&mvm->notif_wait);
 	iwl_dbg_tlv_del_timers(mvm->trans);
 

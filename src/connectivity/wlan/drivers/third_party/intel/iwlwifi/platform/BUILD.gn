@@ -53,7 +53,6 @@ source_set("platform") {
     "//zircon/system/ulib/async:async-cpp",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
     "//sdk/fidl/fuchsia.wlan.softmac:fuchsia.wlan.softmac_cpp_driver",
     "//sdk/fidl/fuchsia.wlan.softmac:fuchsia.wlan.softmac_cpp_wire",
     "//src/connectivity/wlan/drivers/lib/log/c",
@@ -126,10 +125,8 @@ source_set("fuchsia_device") {
     ":fuchsia_bind_header",
     ":platform",
     ":rcu_manager",
-    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_cpp_wire",
     "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211_cpp_wire",
-    "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.wlanphyimpl:fuchsia.wlan.wlanphyimpl_cpp_driver",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/cfg",

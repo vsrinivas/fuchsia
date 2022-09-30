@@ -9,7 +9,6 @@
 // routines that are typically provided by the Linux kernel API.
 
 #include <fuchsia/hardware/pci/c/banjo.h>
-#include <fuchsia/wlan/common/c/banjo.h>
 #include <limits.h>
 #include <netinet/if_ether.h>
 #include <stdint.h>
@@ -17,6 +16,8 @@
 #include <string.h>
 #include <zircon/assert.h>
 #include <zircon/listnode.h>
+
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/banjo/common.h"
 
 #if defined(__cplusplus)
 extern "C" {

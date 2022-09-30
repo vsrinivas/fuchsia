@@ -18,12 +18,13 @@
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-trans.h"
 
-#include <fuchsia/hardware/wlan/softmac/c/banjo.h>
-#include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fake-bti/bti.h>
 #include <zircon/status.h>
+
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/banjo/softmac.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/banjo/wlanphyimpl.h"
 
 extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/alive.h"

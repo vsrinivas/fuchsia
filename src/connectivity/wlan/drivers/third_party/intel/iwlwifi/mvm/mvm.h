@@ -37,7 +37,6 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_MVM_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_MVM_H_
 
-#include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
 #include <threads.h>
 #include <zircon/listnode.h>
 #include <zircon/time.h>
@@ -58,6 +57,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/fw-api.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/sta.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/tof.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/banjo/wlanphyimpl.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"

@@ -7,11 +7,11 @@
 
 // This file is used by the driver C code to report and dump the current statistics.
 
-#include <fuchsia/hardware/wlan/softmac/c/banjo.h>
 #include <lib/async/dispatcher.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/banjo/softmac.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/debug.h"
 
 #if defined(__cplusplus)

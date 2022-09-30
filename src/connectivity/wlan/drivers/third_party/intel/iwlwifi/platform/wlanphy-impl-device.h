@@ -6,7 +6,6 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_WLANPHY_IMPL_DEVICE_H_
 
 #include <fidl/fuchsia.wlan.wlanphyimpl/cpp/driver/wire.h>
-#include <fuchsia/wlan/common/cpp/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/fdf/cpp/arena.h>
 #include <lib/fdf/cpp/channel.h>
@@ -16,6 +15,8 @@
 #include <lib/fidl/cpp/wire/vector_view.h>
 
 #include <ddktl/device.h>
+
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/banjo/common.h"
 
 struct iwl_trans;
 

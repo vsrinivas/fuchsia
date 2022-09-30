@@ -19,13 +19,14 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_IEEE80211_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_IEEE80211_H_
 
-#include <fuchsia/hardware/wlan/softmac/c/banjo.h>
 #include <netinet/if_ether.h>
 #include <stddef.h>
 #include <stdint.h>
 
 #include <wlan/common/ieee80211.h>
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/banjo/ieee80211.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/banjo/softmac.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
 
 #if defined(__cplusplus)

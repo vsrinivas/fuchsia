@@ -6,8 +6,6 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_MVM_STA_H_
 
 #include <fidl/fuchsia.wlan.softmac/cpp/driver/wire.h>
-#include <fuchsia/hardware/wlan/associnfo/cpp/banjo.h>
-#include <fuchsia/hardware/wlan/softmac/cpp/banjo.h>
 #include <netinet/if_ether.h>
 #include <zircon/types.h>
 
@@ -15,6 +13,9 @@
 #include <cstdlib>
 #include <memory>
 #include <type_traits>
+
+#include "banjo/associnfo.h"
+#include "banjo/softmac.h"
 
 extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"

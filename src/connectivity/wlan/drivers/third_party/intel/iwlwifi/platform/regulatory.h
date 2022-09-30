@@ -7,8 +7,9 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_REGULATORY_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_REGULATORY_H_
 
-#include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
 #include <stdint.h>
+
+#include "banjo/wlanphyimpl.h"
 
 // The preserved channel number used in the |mcc_info| data structure.
 #define MAX_MCC_INFO_CH 64

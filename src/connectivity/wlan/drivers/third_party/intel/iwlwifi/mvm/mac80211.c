@@ -34,8 +34,6 @@
  *
  *****************************************************************************/
 
-#include <fuchsia/hardware/wlan/associnfo/c/banjo.h>
-#include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <string.h>
 #include <zircon/status.h>
 
@@ -53,6 +51,8 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/time-event.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/tof.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/align.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/banjo/associnfo.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/banjo/ieee80211.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/rcu.h"
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE

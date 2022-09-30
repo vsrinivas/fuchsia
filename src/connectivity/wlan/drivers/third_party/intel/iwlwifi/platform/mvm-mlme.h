@@ -9,12 +9,12 @@
 
 #include <fidl/fuchsia.wlan.softmac/cpp/driver/wire.h>
 #include <fidl/fuchsia.wlan.wlanphyimpl/cpp/driver/wire.h>
-#include <fuchsia/hardware/wlan/softmac/cpp/banjo.h>
-#include <fuchsia/hardware/wlanphyimpl/cpp/banjo.h>
-#include <fuchsia/wlan/common/cpp/banjo.h>
-#include <fuchsia/wlan/ieee80211/c/banjo.h>
-#include <fuchsia/wlan/internal/cpp/banjo.h>
 #include <lib/ddk/device.h>
+
+#include "banjo/common.h"
+#include "banjo/ieee80211.h"
+#include "banjo/softmac.h"
+#include "banjo/wlanphyimpl.h"
 
 // IEEE Std 802.11-2016, Table 9-19
 #define WLAN_MSDU_MAX_LEN 2304UL

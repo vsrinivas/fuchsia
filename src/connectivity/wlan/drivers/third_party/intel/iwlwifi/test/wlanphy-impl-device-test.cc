@@ -4,8 +4,6 @@
 
 // To test PHY device callback functions.
 
-#include <fuchsia/wlan/common/cpp/banjo.h>
-#include <fuchsia/wlan/internal/cpp/banjo.h>
 #include <lib/sync/cpp/completion.h>
 #include <zircon/listnode.h>
 #include <zircon/syscalls.h>
@@ -15,6 +13,7 @@
 #include <zxtest/zxtest.h>
 
 #include "fidl/fuchsia.wlan.wlanphyimpl/cpp/wire_types.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/banjo/common.h"
 
 extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"

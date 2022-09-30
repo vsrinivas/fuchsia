@@ -33,10 +33,9 @@
  *
  *****************************************************************************/
 
-#include <fuchsia/hardware/wlan/associnfo/c/banjo.h>
-
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/fw-api.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/banjo/associnfo.h"
 
 // A channel setting used as default value. In some cases, we need an arbitrary value for channel.
 // For example, during initializing a PHY context in firmware, we need a (whatever) value to add
