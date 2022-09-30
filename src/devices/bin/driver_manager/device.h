@@ -522,42 +522,24 @@ class Device final
   std::shared_ptr<dfv2::Node> GetBoundNode();
   zx::status<std::shared_ptr<dfv2::Node>> CreateDFv2Device();
 
-  // TODO(teisenbe): We probably want more states.
-#define STATE_VALUES(macro)                                                                        \
-  macro(kActive)                                                                                   \
-      macro(kInitializing) /* The driver_host is in the process of running the device init hook.*/ \
-      macro(kSuspending)   /* The driver_host is in the process of suspending the device.*/        \
-      macro(kSuspended)                                                                            \
-          macro(kResuming) /* The driver_host is in the process of resuming the device.*/          \
-      macro(kResumed) /* Resume is complete. Will be marked active, after all children resume.*/   \
-      macro(                                                                                       \
-          kUnbinding) /* The driver_host is in the process of unbinding and removing the device.*/ \
-      macro(kDead)    /* The device has been remove()'d*/
+  enum class State {
+    kActive,
+    /* The driver_host is in the process of running the device init hook.*/
+    kInitializing,
+    /* The driver_host is in the process of suspending the device.*/
+    kSuspending,
+    kSuspended,
+    /* The driver_host is in the process of resuming the device.*/
+    kResuming,
+    /* Resume is complete. Will be marked active, after all children resume.*/
+    kResumed,
+    /* The driver_host is in the process of unbinding and removing the device.*/
+    kUnbinding,
+    /* The device has been remove()'d*/
+    kDead,
+  };
 
-#define MAKE_ENUM_VALUE(state) state,
-  enum class State { STATE_VALUES(MAKE_ENUM_VALUE) };
-#undef ENUM_VALUE
-#define MAKE_SWITCH_STATEMENT(state) \
-  case State::state:                 \
-    return #state;
-  static std::string StateToString(State state) {
-    switch (state) { STATE_VALUES(MAKE_SWITCH_STATEMENT) }
-  }
-#undef MAKE_SWITCH_STATEMENT
-#undef STATE_VALUES
-
-  void set_state(Device::State state) {
-    state_ = state;
-    inspect().set_state(StateToString(state));
-
-    if (state == Device::State::kDead) {
-      if (std::optional binding = std::exchange(coordinator_binding_, std::nullopt);
-          binding.has_value()) {
-        binding.value().Unbind();
-      }
-    }
-  }
-
+  void set_state(Device::State state);
   State state() const { return state_; }
 
   void inc_num_removal_attempts() { num_removal_attempts_++; }

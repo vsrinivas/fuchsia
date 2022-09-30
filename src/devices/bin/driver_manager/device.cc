@@ -31,6 +31,27 @@ bool StringHasPrefix(std::string_view prefix, std::string_view str) {
   return str.find(prefix, 0) == 0;
 }
 
+std::string StateToString(Device::State state) {
+  switch (state) {
+    case Device::State::kActive:
+      return "kActive";
+    case Device::State::kInitializing:
+      return "kInitializing";
+    case Device::State::kSuspending:
+      return "kSuspending";
+    case Device::State::kSuspended:
+      return "kSuspended";
+    case Device::State::kResuming:
+      return "kResuming";
+    case Device::State::kResumed:
+      return "kResumed";
+    case Device::State::kUnbinding:
+      return "kUnbinding";
+    case Device::State::kDead:
+      return "kDead";
+  }
+}
+
 }  // namespace
 
 Device::Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::String args,
@@ -294,6 +315,18 @@ zx_status_t Device::CreateNewProxy(fbl::RefPtr<Device>* new_proxy_out) {
   new_proxies_.push_back(std::move(dev));
   VLOGF(1, "Created new_proxy device %p '%s'", this, name_.data());
   return ZX_OK;
+}
+
+void Device::set_state(Device::State state) {
+  state_ = state;
+  inspect().set_state(StateToString(state));
+
+  if (state == Device::State::kDead) {
+    if (std::optional binding = std::exchange(coordinator_binding_, std::nullopt);
+        binding.has_value()) {
+      binding.value().Unbind();
+    }
+  }
 }
 
 void Device::InitializeInspectValues() {
