@@ -506,6 +506,16 @@ func Main() {
 			},
 		},
 	})
+	componentCtx.OutgoingService.AddDiagnostics("memstats", &component.DirectoryWrapper{
+		Directory: &inspectDirectory{
+			// asService is late-bound so that each call retrieves fresh stats.
+			asService: func() *component.Service {
+				return (&inspectImpl{
+					inner: &memstatsInspectImpl{},
+				}).asService()
+			},
+		},
+	})
 
 	// Minimal support for the inspect VMO format allows our profile protos to be
 	// picked up by bug reports.

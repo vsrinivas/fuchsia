@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net"
 	"reflect"
+	"runtime"
 	"sort"
 	"strconv"
 	"syscall/zx"
@@ -1118,5 +1119,55 @@ func (*neighborInfoInspectImpl) ListChildren() []string {
 }
 
 func (*neighborInfoInspectImpl) GetChild(string) inspectInner {
+	return nil
+}
+
+var _ inspectInner = (*memstatsInspectImpl)(nil)
+
+type memstatsInspectImpl struct {
+}
+
+func (*memstatsInspectImpl) ReadData() inspect.Object {
+	var memstats runtime.MemStats
+	runtime.ReadMemStats(&memstats)
+	return inspect.Object{
+		Name: "memstats",
+		Metrics: []inspect.Metric{
+			{Key: "Alloc", Value: inspect.MetricValueWithUintValue(memstats.Alloc)},
+			{Key: "TotalAlloc", Value: inspect.MetricValueWithUintValue(memstats.TotalAlloc)},
+			{Key: "Sys", Value: inspect.MetricValueWithUintValue(memstats.Sys)},
+			{Key: "Lookups", Value: inspect.MetricValueWithUintValue(memstats.Lookups)},
+			{Key: "Mallocs", Value: inspect.MetricValueWithUintValue(memstats.Mallocs)},
+			{Key: "Frees", Value: inspect.MetricValueWithUintValue(memstats.Frees)},
+			{Key: "HeapAlloc", Value: inspect.MetricValueWithUintValue(memstats.HeapAlloc)},
+			{Key: "HeapSys", Value: inspect.MetricValueWithUintValue(memstats.HeapSys)},
+			{Key: "HeapIdle", Value: inspect.MetricValueWithUintValue(memstats.HeapIdle)},
+			{Key: "HeapInuse", Value: inspect.MetricValueWithUintValue(memstats.HeapInuse)},
+			{Key: "HeapReleased", Value: inspect.MetricValueWithUintValue(memstats.HeapReleased)},
+			{Key: "HeapObjects", Value: inspect.MetricValueWithUintValue(memstats.HeapObjects)},
+			{Key: "StackInuse", Value: inspect.MetricValueWithUintValue(memstats.StackInuse)},
+			{Key: "StackSys", Value: inspect.MetricValueWithUintValue(memstats.StackSys)},
+			{Key: "MSpanInuse", Value: inspect.MetricValueWithUintValue(memstats.MSpanInuse)},
+			{Key: "MSpanSys", Value: inspect.MetricValueWithUintValue(memstats.MSpanSys)},
+			{Key: "MCacheInuse", Value: inspect.MetricValueWithUintValue(memstats.MCacheInuse)},
+			{Key: "MCacheSys", Value: inspect.MetricValueWithUintValue(memstats.MCacheSys)},
+			{Key: "BuckHashSys", Value: inspect.MetricValueWithUintValue(memstats.BuckHashSys)},
+			{Key: "GCSys", Value: inspect.MetricValueWithUintValue(memstats.GCSys)},
+			{Key: "OtherSys", Value: inspect.MetricValueWithUintValue(memstats.OtherSys)},
+			{Key: "NextGC", Value: inspect.MetricValueWithUintValue(memstats.NextGC)},
+			{Key: "LastGC", Value: inspect.MetricValueWithUintValue(memstats.LastGC)},
+			{Key: "PauseTotalNs", Value: inspect.MetricValueWithUintValue(memstats.PauseTotalNs)},
+			{Key: "NumGC", Value: inspect.MetricValueWithUintValue(uint64(memstats.NumGC))},
+			{Key: "NumForcedGC", Value: inspect.MetricValueWithUintValue(uint64(memstats.NumForcedGC))},
+			{Key: "GCCPUFraction", Value: inspect.MetricValueWithDoubleValue(memstats.GCCPUFraction)},
+		},
+	}
+}
+
+func (*memstatsInspectImpl) ListChildren() []string {
+	return nil
+}
+
+func (*memstatsInspectImpl) GetChild(string) inspectInner {
 	return nil
 }
