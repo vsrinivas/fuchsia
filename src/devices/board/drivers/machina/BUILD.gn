@@ -11,7 +11,7 @@ driver_bind_rules("machina_board_bind") {
   tests = "bind_tests.json"
   deps = [
     "//src/devices/bind/fuchsia.google.platform",
-    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.hardware.platform.bus",
   ]
 }
 
@@ -27,16 +27,17 @@ fuchsia_driver("machina-driver") {
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
   sources = [
-    "machina-sysmem.c",
-    "machina.c",
+    "machina-sysmem.cc",
+    "machina.cc",
   ]
   deps = [
     ":machina_board_bind",
-    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.sysmem:fuchsia.sysmem_banjo_c",
+    "//sdk/fidl/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_cpp_driver",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//src/devices/lib/driver",
+    "//src/devices/lib/driver:driver_runtime",
     "//src/lib/ddk",
   ]
 }
@@ -45,6 +46,5 @@ fuchsia_driver_component("machina") {
   component_name = "machina"
   deps = [ ":machina-driver" ]
   info = "machina-info.json"
-  colocate = true
-  root_resource = true
+  manifest = "meta/machina.cml"
 }

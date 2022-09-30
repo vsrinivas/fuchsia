@@ -3,7 +3,7 @@
         "device": {
             "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.amlogic.platform.BIND_PLATFORM_DEV_PID.AV400",
             "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC",
-            "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.BUS"
+            "fuchsia.BIND_FIDL_PROTOCOL": "fuchsia.hardware.platform.bus.BIND_FIDL_PROTOCOL.PLATFORM_BUS"
         },
         "expected": "match",
         "name": "Match"
@@ -12,7 +12,7 @@
         "device": {
             "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.khadas.platform.BIND_PLATFORM_DEV_PID.VIM3",
             "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.khadas.platform.BIND_PLATFORM_DEV_VID.KHADAS",
-            "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE"
+            "fuchsia.BIND_FIDL_PROTOCOL": "fuchsia.i2c.BIND_FIDL_PROTOCOL.DEVICE"
         },
         "expected": "abort",
         "name": "WrongProtocol"
@@ -21,7 +21,7 @@
         "device": {
             "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.khadas.platform.BIND_PLATFORM_DEV_PID.VIM3",
             "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.GENERIC",
-            "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.BUS"
+            "fuchsia.BIND_FIDL_PROTOCOL": "fuchsia.hardware.platform.bus.BIND_FIDL_PROTOCOL.PLATFORM_BUS"
         },
         "expected": "abort",
         "name": "WrongVendor"
@@ -30,7 +30,7 @@
         "device": {
             "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.khadas.platform.BIND_PLATFORM_DEV_PID.VIM2",
             "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.khadas.platform.BIND_PLATFORM_DEV_VID.KHADAS",
-            "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.BUS"
+            "fuchsia.BIND_FIDL_PROTOCOL": "fuchsia.hardware.platform.bus.BIND_FIDL_PROTOCOL.PLATFORM_BUS"
         },
         "expected": "abort",
         "name": "WrongPlatform"

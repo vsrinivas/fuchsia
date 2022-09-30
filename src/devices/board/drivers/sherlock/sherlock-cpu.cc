@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
@@ -15,15 +16,17 @@
 
 #include "sherlock.h"
 #include "src/devices/board/drivers/sherlock/sherlock-cpu-bind.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 
 namespace {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
-constexpr pbus_mmio_t cpu_mmios[]{
-    {
+static const std::vector<fpbus::Mmio> cpu_mmios{
+    {{
         // AOBUS
         .base = T931_AOBUS_BASE,
         .length = T931_AOBUS_LENGTH,
-    },
+    }},
 };
 
 constexpr amlogic_cpu::legacy_cluster_size_t cluster_sizes[] = {
@@ -31,24 +34,23 @@ constexpr amlogic_cpu::legacy_cluster_size_t cluster_sizes[] = {
     {.pd_id = fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN, .core_count = 2},
 };
 
-static const pbus_metadata_t cpu_metadata[] = {
-    {
+static const std::vector<fpbus::Metadata> cpu_metadata{
+    {{
         .type = DEVICE_METADATA_CLUSTER_SIZE_LEGACY,
-        .data_buffer = reinterpret_cast<const uint8_t*>(cluster_sizes),
-        .data_size = sizeof(cluster_sizes),
-    },
+        .data = std::vector<uint8_t>(
+            reinterpret_cast<const uint8_t*>(&cluster_sizes),
+            reinterpret_cast<const uint8_t*>(&cluster_sizes) + sizeof(cluster_sizes)),
+    }},
 };
 
-constexpr pbus_dev_t cpu_dev = []() {
-  pbus_dev_t result = {};
-  result.name = "aml-cpu";
-  result.vid = PDEV_VID_GOOGLE;
-  result.pid = PDEV_PID_SHERLOCK;
-  result.did = PDEV_DID_GOOGLE_AMLOGIC_CPU;
-  result.metadata_list = cpu_metadata;
-  result.metadata_count = std::size(cpu_metadata);
-  result.mmio_list = cpu_mmios;
-  result.mmio_count = std::size(cpu_mmios);
+static const fpbus::Node cpu_dev = []() {
+  fpbus::Node result = {};
+  result.name() = "aml-cpu";
+  result.vid() = PDEV_VID_GOOGLE;
+  result.pid() = PDEV_PID_SHERLOCK;
+  result.did() = PDEV_DID_GOOGLE_AMLOGIC_CPU;
+  result.metadata() = cpu_metadata;
+  result.mmio() = cpu_mmios;
   return result;
 }();
 
@@ -57,14 +59,25 @@ constexpr pbus_dev_t cpu_dev = []() {
 namespace sherlock {
 
 zx_status_t Sherlock::SherlockCpuInit() {
-  zx_status_t result = pbus_.AddComposite(&cpu_dev, reinterpret_cast<uint64_t>(aml_cpu_fragments),
-                                          std::size(aml_cpu_fragments), "thermal");
-
-  if (result != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to add CPU composite device, st = %d\n", __func__, result);
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('SHER');
+  auto result = pbus_.buffer(arena)->AddComposite(
+      fidl::ToWire(fidl_arena, cpu_dev),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, aml_cpu_fragments,
+                                               std::size(aml_cpu_fragments)),
+      "thermal");
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddComposite SherlockCpu(cpu_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddComposite SherlockCpu(cpu_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
-  return result;
+  return ZX_OK;
 }
 
 }  // namespace sherlock

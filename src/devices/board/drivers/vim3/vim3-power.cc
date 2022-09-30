@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -16,11 +18,13 @@
 #include <soc/aml-a311d/a311d-pwm.h>
 #include <soc/aml-common/aml-power.h>
 
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 #include "src/devices/lib/metadata/llcpp/vreg.h"
 #include "vim3-gpios.h"
 #include "vim3.h"
 
 namespace vim3 {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 namespace {
 
@@ -101,12 +105,12 @@ constexpr device_fragment_part_t power_impl_fragment[] = {
     {std::size(power_impl_driver_match), power_impl_driver_match},
 };
 
-static const pbus_dev_t power_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "aml-power-impl-composite";
-  dev.vid = PDEV_VID_AMLOGIC;
-  dev.pid = PDEV_PID_AMLOGIC_A311D;
-  dev.did = PDEV_DID_AMLOGIC_POWER;
+static const fpbus::Node power_dev = []() {
+  fpbus::Node dev = {};
+  dev.name() = "aml-power-impl-composite";
+  dev.vid() = PDEV_VID_AMLOGIC;
+  dev.pid() = PDEV_PID_AMLOGIC_A311D;
+  dev.did() = PDEV_DID_AMLOGIC_POWER;
   return dev;
 }();
 
@@ -281,11 +285,22 @@ zx_status_t Vim3::PowerInit() {
     return st;
   }
 
-  st = pbus_.CompositeDeviceAdd(&power_dev, reinterpret_cast<uint64_t>(power_impl_fragments),
-                                std::size(power_impl_fragments), nullptr);
-  if (st != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd for powerimpl failed, st = %d", __FUNCTION__, st);
-    return st;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('PWR_');
+  auto result = pbus_.buffer(arena)->AddCompositeImplicitPbusFragment(
+      fidl::ToWire(fidl_arena, power_dev),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, power_impl_fragments,
+                                               std::size(power_impl_fragments)),
+      {});
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment Power(power_dev) request failed: %s",
+           __func__, result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment Power(power_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   st = DdkAddComposite("pd-big-core", &power_domain_big_core_desc);

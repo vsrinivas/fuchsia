@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <fidl/fuchsia.hardware.thermal/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/metadata.h>
@@ -13,8 +15,10 @@
 
 #include "as370.h"
 #include "src/devices/board/drivers/as370/as370-bind.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 
 namespace board_as370 {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 using fuchsia_hardware_thermal::wire::OperatingPoint;
 using fuchsia_hardware_thermal::wire::OperatingPointEntry;
@@ -22,11 +26,11 @@ using fuchsia_hardware_thermal::wire::PowerDomain;
 using fuchsia_hardware_thermal::wire::ThermalDeviceInfo;
 
 zx_status_t As370::ThermalInit() {
-  constexpr pbus_mmio_t thermal_mmios[] = {
-      {
+  static const std::vector<fpbus::Mmio> thermal_mmios{
+      {{
           .base = as370::kThermalBase,
           .length = as370::kThermalSize,
-      },
+      }},
   };
 
   constexpr ThermalDeviceInfo kThermalDeviceInfo = {
@@ -62,12 +66,13 @@ zx_status_t As370::ThermalInit() {
           },
   };
 
-  const pbus_metadata_t thermal_metadata[] = {
-      {
+  std::vector<fpbus::Metadata> thermal_metadata{
+      {{
           .type = DEVICE_METADATA_THERMAL_CONFIG,
-          .data_buffer = reinterpret_cast<const uint8_t*>(&kThermalDeviceInfo),
-          .data_size = sizeof(kThermalDeviceInfo),
-      },
+          .data = std::vector<uint8_t>(
+              reinterpret_cast<const uint8_t*>(&kThermalDeviceInfo),
+              reinterpret_cast<const uint8_t*>(&kThermalDeviceInfo) + sizeof(kThermalDeviceInfo)),
+      }},
   };
 
   static constexpr zx_bind_inst_t cpu_clock_match[] = {
@@ -91,20 +96,27 @@ zx_status_t As370::ThermalInit() {
       {"power", std::size(cpu_power_fragment), cpu_power_fragment},
   };
 
-  pbus_dev_t thermal_dev = {};
-  thermal_dev.name = "thermal";
-  thermal_dev.vid = PDEV_VID_SYNAPTICS;
-  thermal_dev.did = PDEV_DID_AS370_THERMAL;
-  thermal_dev.mmio_list = thermal_mmios;
-  thermal_dev.mmio_count = std::size(thermal_mmios);
-  thermal_dev.metadata_list = thermal_metadata;
-  thermal_dev.metadata_count = std::size(thermal_metadata);
+  fpbus::Node thermal_dev;
+  thermal_dev.name() = "thermal";
+  thermal_dev.vid() = PDEV_VID_SYNAPTICS;
+  thermal_dev.did() = PDEV_DID_AS370_THERMAL;
+  thermal_dev.mmio() = thermal_mmios;
+  thermal_dev.metadata() = thermal_metadata;
 
-  zx_status_t status = pbus_.CompositeDeviceAdd(&thermal_dev, reinterpret_cast<uint64_t>(fragments),
-                                                std::size(fragments), nullptr);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed: %d", __func__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('THER');
+  auto result = pbus_.buffer(arena)->AddCompositeImplicitPbusFragment(
+      fidl::ToWire(fidl_arena, thermal_dev),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, fragments, std::size(fragments)), {});
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment Thermal(thermal_dev) request failed: %s",
+           __func__, result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment Thermal(thermal_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   return ZX_OK;

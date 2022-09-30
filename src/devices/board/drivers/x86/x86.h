@@ -6,9 +6,10 @@
 #define SRC_DEVICES_BOARD_DRIVERS_X86_X86_H_
 
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
-#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/fidl/cpp/channel.h>
 #include <threads.h>
 
 #include <memory>
@@ -17,11 +18,17 @@
 #include <fbl/macros.h>
 #include <fbl/vector.h>
 
+#include "lib/fdf/dispatcher.h"
 #include "src/devices/board/lib/acpi/acpi.h"
 #include "src/devices/board/lib/acpi/manager.h"
 #include "src/devices/lib/iommu/iommu-x86.h"
 
 namespace x86 {
+
+class SysSuspender : public fdf::WireServer<fuchsia_hardware_platform_bus::SysSuspend> {
+ public:
+  void Callback(CallbackRequestView request, fdf::Arena& arena, CallbackCompleter::Sync& completer);
+};
 
 class X86;
 using DeviceType = ddk::Device<X86, ddk::Messageable<fuchsia_hardware_acpi::Acpi>::Mixin>;
@@ -29,8 +36,9 @@ using DeviceType = ddk::Device<X86, ddk::Messageable<fuchsia_hardware_acpi::Acpi
 // This is the main class for the X86 platform bus driver.
 class X86 : public DeviceType {
  public:
-  explicit X86(zx_device_t* parent, pbus_protocol_t* pbus, std::unique_ptr<acpi::Acpi> acpi)
-      : DeviceType(parent), pbus_(pbus), acpi_(std::move(acpi)) {}
+  explicit X86(zx_device_t* parent, fdf::ClientEnd<fuchsia_hardware_platform_bus::PlatformBus> pbus,
+               std::unique_ptr<acpi::Acpi> acpi)
+      : DeviceType(parent), pbus_(std::move(pbus)), acpi_(std::move(acpi)) {}
   ~X86();
 
   static zx_status_t Create(void* ctx, zx_device_t* parent, std::unique_ptr<X86>* out);
@@ -77,7 +85,8 @@ class X86 : public DeviceType {
         zxlogvf_etc(severity, nullptr, file, line, msg, args);
       }};
 
-  ddk::PBusProtocolClient pbus_;
+  // TODO(fxbug.dev/108070): migrate to fdf::SyncClient when it is available.
+  fdf::WireSyncClient<fuchsia_hardware_platform_bus::PlatformBus> pbus_;
 
   thrd_t thread_;
 
@@ -85,6 +94,7 @@ class X86 : public DeviceType {
   std::unique_ptr<acpi::Acpi> acpi_;
   // Whether the global ACPICA initialization has been performed or not
   bool acpica_initialized_ = false;
+  SysSuspender suspender_;
 };
 
 }  // namespace x86

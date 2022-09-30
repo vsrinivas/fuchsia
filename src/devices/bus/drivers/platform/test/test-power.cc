@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -86,20 +87,29 @@ const composite_device_desc_t power_domain_3_desc = {
 }  // namespace
 
 namespace board_test {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 zx_status_t TestBoard::PowerInit() {
-  pbus_dev_t power_dev = {};
-  power_dev.name = "power";
-  power_dev.vid = PDEV_VID_TEST;
-  power_dev.pid = PDEV_PID_PBUS_TEST;
-  power_dev.did = PDEV_DID_TEST_POWER;
+  fpbus::Node power_dev;
+  power_dev.name() = "power";
+  power_dev.vid() = PDEV_VID_TEST;
+  power_dev.pid() = PDEV_PID_PBUS_TEST;
+  power_dev.did() = PDEV_DID_TEST_POWER;
 
-  zx_status_t status = pbus_.DeviceAdd(&power_dev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d", __FUNCTION__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('TPWR');
+  auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, power_dev));
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: DeviceAdd Power request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
   }
-  status = DdkAddComposite("composite-pd-1", &power_domain_1_desc);
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: DeviceAdd Power failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
+  }
+  zx_status_t status = DdkAddComposite("composite-pd-1", &power_domain_1_desc);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DdkAddComposite for power domain 1 failed: %d ", __FUNCTION__, status);
     return status;

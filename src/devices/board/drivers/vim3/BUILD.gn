@@ -83,8 +83,8 @@ driver_bind_rules("vim3-bind") {
   header_output = "vim3-bind.h"
   tests = "bind-tests.json"
   deps = [
+    "//src/devices/bind/fuchsia.hardware.platform.bus",
     "//src/devices/bind/fuchsia.khadas.platform",
-    "//src/devices/bind/fuchsia.platform",
   ]
 }
 
@@ -131,19 +131,21 @@ fuchsia_driver("vim3-driver") {
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.iommu:fuchsia.hardware.iommu_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.sdmmc:fuchsia.hardware.sdmmc_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.serial:fuchsia.hardware.serial_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.modeswitch:fuchsia.hardware.usb.modeswitch_banjo_cpp",
     "//sdk/banjo/fuchsia.sysmem:fuchsia.sysmem_banjo_c",
+    "//sdk/fidl/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_cpp_driver",
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
     "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_cpp_wire",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
+    "//src/devices/bus/lib/platform-bus-composites",
     "//src/devices/lib/amlogic",
     "//src/devices/lib/broadcom",
     "//src/devices/lib/driver",
+    "//src/devices/lib/driver:driver_runtime",
     "//src/devices/lib/fidl-metadata",
     "//src/devices/lib/metadata:llcpp",
     "//src/devices/lib/mmio",
@@ -173,7 +175,7 @@ fuchsia_driver_component("vim3") {
   component_name = "vim3"
   deps = [ ":vim3-driver" ]
   info = "vim3-info.json"
-  colocate = true
+  manifest = "meta/vim3.cml"
 }
 
 group("tests") {

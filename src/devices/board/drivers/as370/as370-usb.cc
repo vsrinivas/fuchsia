@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
@@ -19,28 +21,30 @@
 
 #include "as370.h"
 #include "src/devices/board/drivers/as370/as370-bind.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 
 namespace board_as370 {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
-constexpr pbus_mmio_t dwc2_mmios[] = {
-    {
+static const std::vector<fpbus::Mmio> dwc2_mmios{
+    {{
         .base = as370::kUsb0Base,
         .length = as370::kUsb0Size,
-    },
+    }},
 };
 
-constexpr pbus_irq_t dwc2_irqs[] = {
-    {
+static const std::vector<fpbus::Irq> dwc2_irqs{
+    {{
         .irq = as370::kUsb0Irq,
         .mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
-    },
+    }},
 };
 
-constexpr pbus_bti_t usb_btis[] = {
-    {
+static const std::vector<fpbus::Bti> usb_btis{
+    {{
         .iommu_index = 0,
         .bti_id = BTI_USB,
-    },
+    }},
 };
 
 constexpr char kManufacturer[] = "Zircon";
@@ -73,62 +77,25 @@ constexpr uint8_t eth_mac_address[] = {
 
 using FunctionDescriptor = fuchsia_hardware_usb_peripheral_FunctionDescriptor;
 
-static pbus_metadata_t usb_metadata[] = {
-    {
-        .type = DEVICE_METADATA_USB_CONFIG,
-        .data_buffer = nullptr,  // filled in later
-        .data_size = 0,
-    },
-    {
-        .type = DEVICE_METADATA_PRIVATE,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&dwc2_metadata),
-        .data_size = sizeof(dwc2_metadata),
-    },
-    {
-        .type = DEVICE_METADATA_MAC_ADDRESS,
-        .data_buffer = eth_mac_address,
-        .data_size = sizeof(eth_mac_address),
-    },
-};
-
-static const pbus_dev_t dwc2_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "dwc2-usb";
-  dev.vid = PDEV_VID_GENERIC;
-  dev.pid = PDEV_PID_GENERIC;
-  dev.did = PDEV_DID_USB_DWC2;
-  dev.mmio_list = dwc2_mmios;
-  dev.mmio_count = std::size(dwc2_mmios);
-  dev.irq_list = dwc2_irqs;
-  dev.irq_count = std::size(dwc2_irqs);
-  dev.bti_list = usb_btis;
-  dev.bti_count = std::size(usb_btis);
-  dev.metadata_list = usb_metadata;
-  dev.metadata_count = std::size(usb_metadata);
-  return dev;
-}();
-
-constexpr pbus_mmio_t usb_phy_mmios[] = {
-    {
+static const std::vector<fpbus::Mmio> usb_phy_mmios{
+    {{
         .base = as370::kUsbPhy0Base,
         .length = as370::kUsbPhy0Size,
-    },
-    {
+    }},
+    {{
         .base = as370::kResetBase,
         .length = as370::kResetSize,
-    },
+    }},
 };
 
-static const pbus_dev_t usb_phy_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "as370-usb-phy-v2";
-  dev.vid = PDEV_VID_SYNAPTICS;
-  dev.pid = PDEV_PID_SYNAPTICS_AS370;
-  dev.did = PDEV_DID_AS370_USB_PHY;
-  dev.mmio_list = usb_phy_mmios;
-  dev.mmio_count = std::size(usb_phy_mmios);
-  dev.bti_list = usb_btis;
-  dev.bti_count = std::size(usb_btis);
+static const fpbus::Node usb_phy_dev = []() {
+  fpbus::Node dev = {};
+  dev.name() = "as370-usb-phy-v2";
+  dev.vid() = PDEV_VID_SYNAPTICS;
+  dev.pid() = PDEV_PID_SYNAPTICS_AS370;
+  dev.did() = PDEV_DID_AS370_USB_PHY;
+  dev.mmio() = usb_phy_mmios;
+  dev.bti() = usb_btis;
   return dev;
 }();
 
@@ -146,10 +113,18 @@ static const device_fragment_t dwc2_fragments[] = {
 };
 
 zx_status_t As370::UsbInit() {
-  auto status = pbus_.DeviceAdd(&usb_phy_dev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('USB_');
+  auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, usb_phy_dev));
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: NodeAdd Usb(usb_phy_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: NodeAdd Usb(usb_phy_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   constexpr size_t alignment = alignof(UsbConfig) > __STDCPP_DEFAULT_NEW_ALIGNMENT__
@@ -169,16 +144,53 @@ zx_status_t As370::UsbInit() {
   config->functions[0].interface_class = USB_CLASS_COMM;
   config->functions[0].interface_subclass = USB_CDC_SUBCLASS_ETHERNET;
   config->functions[0].interface_protocol = 0;
-  usb_metadata[0].data_size = config_size;
-  usb_metadata[0].data_buffer = reinterpret_cast<const uint8_t*>(config);
 
-  status = pbus_.CompositeDeviceAdd(&dwc2_dev, reinterpret_cast<uint64_t>(dwc2_fragments),
-                                    std::size(dwc2_fragments), "dwc2-phy");
-  free(config);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed: %d", __func__, status);
-    return status;
+  std::vector<fpbus::Metadata> usb_metadata{
+      {{
+          .type = DEVICE_METADATA_USB_CONFIG,
+          .data = std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(&config),
+                                       reinterpret_cast<const uint8_t*>(&config) + config_size),
+      }},
+      {{
+          .type = DEVICE_METADATA_PRIVATE,
+          .data = std::vector<uint8_t>(
+              reinterpret_cast<const uint8_t*>(&dwc2_metadata),
+              reinterpret_cast<const uint8_t*>(&dwc2_metadata) + sizeof(dwc2_metadata)),
+      }},
+      {{
+          .type = DEVICE_METADATA_MAC_ADDRESS,
+          .data = std::vector<uint8_t>(eth_mac_address, eth_mac_address + sizeof(eth_mac_address)),
+      }},
+  };
+
+  fpbus::Node dwc2_dev;
+  dwc2_dev.name() = "dwc2-usb";
+  dwc2_dev.vid() = PDEV_VID_GENERIC;
+  dwc2_dev.pid() = PDEV_PID_GENERIC;
+  dwc2_dev.did() = PDEV_DID_USB_DWC2;
+  dwc2_dev.mmio() = dwc2_mmios;
+  dwc2_dev.irq() = dwc2_irqs;
+  dwc2_dev.bti() = usb_btis;
+  dwc2_dev.metadata() = std::move(usb_metadata);
+
+  {
+    auto result = pbus_.buffer(arena)->AddCompositeImplicitPbusFragment(
+        fidl::ToWire(fidl_arena, dwc2_dev),
+        platform_bus_composite::MakeFidlFragment(fidl_arena, dwc2_fragments,
+                                                 std::size(dwc2_fragments)),
+        "dwc2-phy");
+    if (!result.ok()) {
+      zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment Usb(dwc2_dev) request failed: %s",
+             __func__, result.FormatDescription().data());
+      return result.status();
+    }
+    if (result->is_error()) {
+      zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment Usb(dwc2_dev) failed: %s", __func__,
+             zx_status_get_string(result->error_value()));
+      return result->error_value();
+    }
   }
+  free(config);
 
   return ZX_OK;
 }

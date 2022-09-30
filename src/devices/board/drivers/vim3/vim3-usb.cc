@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <fuchsia/hardware/usb/modeswitch/cpp/banjo.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
@@ -23,36 +25,38 @@
 
 #include "src/devices/board/drivers/vim3/vim3-gpios.h"
 #include "src/devices/board/drivers/vim3/vim3.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 
 namespace vim3 {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
-static const pbus_mmio_t usb_phy_mmios[] = {
-    {
+static const std::vector<fpbus::Mmio> usb_phy_mmios{
+    {{
         .base = A311D_USBCTRL_BASE,
         .length = A311D_USBCTRL_LENGTH,
-    },
-    {
+    }},
+    {{
         .base = A311D_USBPHY20_BASE,
         .length = A311D_USBPHY20_LENGTH,
-    },
-    {
+    }},
+    {{
         .base = A311D_USBPHY21_BASE,
         .length = A311D_USBPHY21_LENGTH,
-    },
+    }},
 };
 
-static const pbus_irq_t usb_phy_irqs[] = {
-    {
+static const std::vector<fpbus::Irq> usb_phy_irqs{
+    {{
         .irq = A311D_USB_IDDIG_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
+    }},
 };
 
-static const pbus_bti_t usb_btis[] = {
-    {
+static const std::vector<fpbus::Bti> usb_btis{
+    {{
         .iommu_index = 0,
         .bti_id = BTI_USB,
-    },
+    }},
 };
 
 // Static PLL configuration parameters.
@@ -62,55 +66,52 @@ static const uint32_t pll_settings[] = {
 
 static const usb_mode_t dr_mode = USB_MODE_PERIPHERAL;
 
-static const pbus_metadata_t usb_phy_metadata[] = {
-    {
+static const std::vector<fpbus::Metadata> usb_phy_metadata{
+    {{
         .type = DEVICE_METADATA_PRIVATE,
-        .data_buffer = reinterpret_cast<const uint8_t*>(pll_settings),
-        .data_size = sizeof(pll_settings),
-    },
-    {
+        .data = std::vector<uint8_t>(
+            reinterpret_cast<const uint8_t*>(&pll_settings),
+            reinterpret_cast<const uint8_t*>(&pll_settings) + sizeof(pll_settings)),
+    }},
+    {{
         .type = DEVICE_METADATA_USB_MODE,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&dr_mode),
-        .data_size = sizeof(dr_mode),
-    },
+        .data = std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(&dr_mode),
+                                     reinterpret_cast<const uint8_t*>(&dr_mode) + sizeof(dr_mode)),
+    }},
 };
 
-static const pbus_dev_t usb_phy_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "vim3-usb-phy";
-  dev.pid = PDEV_PID_VIM3;
-  dev.vid = PDEV_VID_AMLOGIC;
-  dev.did = PDEV_DID_VIM3_USB_PHY;
-  dev.mmio_list = usb_phy_mmios;
-  dev.mmio_count = std::size(usb_phy_mmios);
-  dev.irq_list = usb_phy_irqs;
-  dev.irq_count = std::size(usb_phy_irqs);
-  dev.bti_list = usb_btis;
-  dev.bti_count = std::size(usb_btis);
-  dev.metadata_list = usb_phy_metadata;
-  dev.metadata_count = std::size(usb_phy_metadata);
+static const fpbus::Node usb_phy_dev = []() {
+  fpbus::Node dev = {};
+  dev.name() = "vim3-usb-phy";
+  dev.pid() = PDEV_PID_VIM3;
+  dev.vid() = PDEV_VID_AMLOGIC;
+  dev.did() = PDEV_DID_VIM3_USB_PHY;
+  dev.mmio() = usb_phy_mmios;
+  dev.irq() = usb_phy_irqs;
+  dev.bti() = usb_btis;
+  dev.metadata() = usb_phy_metadata;
   return dev;
 }();
 
-static const pbus_mmio_t dwc2_mmios[] = {
-    {
+static const std::vector<fpbus::Mmio> dwc2_mmios{
+    {{
         .base = A311D_USB1_BASE,
         .length = A311D_USB1_LENGTH,
-    },
+    }},
 };
 
-static const pbus_irq_t dwc2_irqs[] = {
-    {
+static const std::vector<fpbus::Irq> dwc2_irqs{
+    {{
         .irq = A311D_USB1_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
+    }},
 };
 
-static const pbus_bti_t dwc2_btis[] = {
-    {
+static const std::vector<fpbus::Bti> dwc2_btis{
+    {{
         .iommu_index = 0,
         .bti_id = BTI_USB,
-    },
+    }},
 };
 
 static const char kManufacturer[] = "Zircon";
@@ -131,32 +132,29 @@ static const dwc2_metadata_t dwc2_metadata = {
         },
 };
 
-static const pbus_mmio_t xhci_mmios[] = {
-    {
+static const std::vector<fpbus::Mmio> xhci_mmios{
+    {{
         .base = A311D_USB0_BASE,
         .length = A311D_USB0_LENGTH,
-    },
+    }},
 };
 
-static const pbus_irq_t xhci_irqs[] = {
-    {
+static const std::vector<fpbus::Irq> xhci_irqs{
+    {{
         .irq = A311D_USB0_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
+    }},
 };
 
-static const pbus_dev_t xhci_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "xhci";
-  dev.vid = PDEV_VID_GENERIC;
-  dev.pid = PDEV_PID_GENERIC;
-  dev.did = PDEV_DID_USB_XHCI;
-  dev.mmio_list = xhci_mmios;
-  dev.mmio_count = std::size(xhci_mmios);
-  dev.irq_list = xhci_irqs;
-  dev.irq_count = std::size(xhci_irqs);
-  dev.bti_list = usb_btis;
-  dev.bti_count = std::size(usb_btis);
+static const fpbus::Node xhci_dev = []() {
+  fpbus::Node dev = {};
+  dev.name() = "xhci";
+  dev.vid() = PDEV_VID_GENERIC;
+  dev.pid() = PDEV_PID_GENERIC;
+  dev.did() = PDEV_DID_USB_XHCI;
+  dev.mmio() = xhci_mmios;
+  dev.irq() = xhci_irqs;
+  dev.bti() = usb_btis;
   return dev;
 }();
 
@@ -175,42 +173,36 @@ static const device_fragment_t xhci_fragments[] = {
 
 using FunctionDescriptor = fuchsia_hardware_usb_peripheral_FunctionDescriptor;
 
-static pbus_metadata_t usb_metadata[] = {
-    {
+static const std::vector<fpbus::Metadata> usb_metadata{
+    {{
         .type = DEVICE_METADATA_USB_CONFIG,
-        .data_buffer = NULL,
-        .data_size = 0,
-    },
-    {
+    }},
+    {{
         .type = DEVICE_METADATA_PRIVATE,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&dwc2_metadata),
-        .data_size = sizeof(dwc2_metadata),
-    },
+        .data = std::vector<uint8_t>(
+            reinterpret_cast<const uint8_t*>(&dwc2_metadata),
+            reinterpret_cast<const uint8_t*>(&dwc2_metadata) + sizeof(dwc2_metadata)),
+    }},
 };
 
-static const pbus_boot_metadata_t usb_boot_metadata[] = {
-    {
+static const std::vector<fpbus::BootMetadata> usb_boot_metadata{
+    {{
         .zbi_type = DEVICE_METADATA_MAC_ADDRESS,
         .zbi_extra = MACADDR_WIFI,
-    },
+    }},
 };
 
-static const pbus_dev_t dwc2_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "dwc2";
-  dev.vid = PDEV_VID_GENERIC;
-  dev.pid = PDEV_PID_GENERIC;
-  dev.did = PDEV_DID_USB_DWC2;
-  dev.mmio_list = dwc2_mmios;
-  dev.mmio_count = std::size(dwc2_mmios);
-  dev.irq_list = dwc2_irqs;
-  dev.irq_count = std::size(dwc2_irqs);
-  dev.bti_list = dwc2_btis;
-  dev.bti_count = std::size(dwc2_btis);
-  dev.metadata_list = usb_metadata;
-  dev.metadata_count = std::size(usb_metadata);
-  dev.boot_metadata_list = usb_boot_metadata;
-  dev.boot_metadata_count = std::size(usb_boot_metadata);
+static fpbus::Node dwc2_dev = []() {
+  fpbus::Node dev = {};
+  dev.name() = "dwc2";
+  dev.vid() = PDEV_VID_GENERIC;
+  dev.pid() = PDEV_PID_GENERIC;
+  dev.did() = PDEV_DID_USB_DWC2;
+  dev.mmio() = dwc2_mmios;
+  dev.irq() = dwc2_irqs;
+  dev.bti() = dwc2_btis;
+  dev.metadata() = usb_metadata;
+  dev.boot_metadata() = usb_boot_metadata;
   return dev;
 }();
 
@@ -261,11 +253,22 @@ zx_status_t Vim3::UsbInit() {
   gpio_impl_.ConfigOut(VIM3_USB_PWR, 1);
 
   // Create USB Phy Device
-  status = pbus_.CompositeDeviceAdd(&usb_phy_dev, reinterpret_cast<uint64_t>(usb_phy_fragments),
-                                    std::size(usb_phy_fragments), nullptr);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "DeviceAdd(usb_phy) failed %s", zx_status_get_string(status));
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('USB_');
+  auto result = pbus_.buffer(arena)->AddCompositeImplicitPbusFragment(
+      fidl::ToWire(fidl_arena, usb_phy_dev),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, usb_phy_fragments,
+                                               std::size(usb_phy_fragments)),
+      {});
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment Usb(usb_phy_dev) request failed: %s",
+           __func__, result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment Usb(usb_phy_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   // Create DWC2 Device
@@ -302,22 +305,40 @@ zx_status_t Vim3::UsbInit() {
     config->functions[0].interface_protocol = USB_PROTOCOL_ADB;
   }
 
-  usb_metadata[0].data_size = config_size;
-  usb_metadata[0].data_buffer = reinterpret_cast<uint8_t*>(config);
+  dwc2_dev.metadata().value()[0].data().emplace(std::vector<uint8_t>(
+      reinterpret_cast<uint8_t*>(config), reinterpret_cast<uint8_t*>(config) + config_size));
 
-  status = pbus_.CompositeDeviceAdd(&dwc2_dev, reinterpret_cast<uint64_t>(dwc2_fragments),
-                                    std::size(dwc2_fragments), "dwc2-phy");
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd(dwc2) failed %d", __func__, status);
-    return status;
+  result = pbus_.buffer(arena)->AddCompositeImplicitPbusFragment(
+      fidl::ToWire(fidl_arena, dwc2_dev),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, dwc2_fragments,
+                                               std::size(dwc2_fragments)),
+      "dwc2-phy");
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment Usb(dwc2_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment Usb(dwc2_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   // Create XHCI device.
-  status = pbus_.CompositeDeviceAdd(&xhci_dev, reinterpret_cast<uint64_t>(xhci_fragments),
-                                    std::size(xhci_fragments), "xhci-phy");
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd(xhci) failed %d", __func__, status);
-    return status;
+  result = pbus_.buffer(arena)->AddCompositeImplicitPbusFragment(
+      fidl::ToWire(fidl_arena, xhci_dev),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, xhci_fragments,
+                                               std::size(xhci_fragments)),
+      "xhci-phy");
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment Usb(xhci_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment Usb(xhci_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   return ZX_OK;

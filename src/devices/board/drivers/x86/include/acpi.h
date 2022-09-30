@@ -5,7 +5,6 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_ACPI_H_
 #define SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_ACPI_H_
 
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <lib/ddk/device.h>
 #include <zircon/compiler.h>
 

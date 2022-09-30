@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
@@ -24,8 +26,10 @@
 #include "sherlock.h"
 #include "src/devices/board/drivers/sherlock/sherlock-sdio-bind.h"
 #include "src/devices/board/drivers/sherlock/sherlock-wifi-bind.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 
 namespace sherlock {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 namespace {
 
@@ -46,32 +50,32 @@ class PadDsReg2A : public hwreg::RegisterBase<PadDsReg2A, uint32_t> {
   DEF_FIELD(11, 10, gpiox_5_select);
 };
 
-constexpr pbus_boot_metadata_t wifi_boot_metadata[] = {
-    {
+static const std::vector<fpbus::BootMetadata> wifi_boot_metadata{
+    {{
         .zbi_type = DEVICE_METADATA_MAC_ADDRESS,
         .zbi_extra = MACADDR_WIFI,
-    },
+    }},
 };
 
-constexpr pbus_mmio_t sd_emmc_mmios[] = {
-    {
+static const std::vector<fpbus::Mmio> sd_emmc_mmios{
+    {{
         .base = T931_SD_EMMC_A_BASE,
         .length = T931_SD_EMMC_A_LENGTH,
-    },
+    }},
 };
 
-constexpr pbus_irq_t sd_emmc_irqs[] = {
-    {
+static const std::vector<fpbus::Irq> sd_emmc_irqs{
+    {{
         .irq = T931_SD_EMMC_A_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
+    }},
 };
 
-constexpr pbus_bti_t sd_emmc_btis[] = {
-    {
+static const std::vector<fpbus::Bti> sd_emmc_btis{
+    {{
         .iommu_index = 0,
         .bti_id = BTI_SDIO,
-    },
+    }},
 };
 
 constexpr aml_sdmmc_config_t sd_emmc_config = {
@@ -120,35 +124,32 @@ constexpr wifi_config_t wifi_config = {
 #endif
 };
 
-const pbus_metadata_t sd_emmc_metadata[] = {
-    {
+static const std::vector<fpbus::Metadata> sd_emmc_metadata{
+    {{
         .type = DEVICE_METADATA_PRIVATE,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&sd_emmc_config),
-        .data_size = sizeof(sd_emmc_config),
-    },
-    {
+        .data = std::vector<uint8_t>(
+            reinterpret_cast<const uint8_t*>(&sd_emmc_config),
+            reinterpret_cast<const uint8_t*>(&sd_emmc_config) + sizeof(sd_emmc_config)),
+    }},
+    {{
         .type = DEVICE_METADATA_WIFI_CONFIG,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&wifi_config),
-        .data_size = sizeof(wifi_config),
-    },
+        .data = std::vector<uint8_t>(
+            reinterpret_cast<const uint8_t*>(&wifi_config),
+            reinterpret_cast<const uint8_t*>(&wifi_config) + sizeof(wifi_config)),
+    }},
 };
 
-const pbus_dev_t sdio_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "sherlock-sd-emmc";
-  dev.vid = PDEV_VID_AMLOGIC;
-  dev.pid = PDEV_PID_GENERIC;
-  dev.did = PDEV_DID_AMLOGIC_SDMMC_A;
-  dev.mmio_list = sd_emmc_mmios;
-  dev.mmio_count = std::size(sd_emmc_mmios);
-  dev.bti_list = sd_emmc_btis;
-  dev.bti_count = std::size(sd_emmc_btis);
-  dev.irq_list = sd_emmc_irqs;
-  dev.irq_count = std::size(sd_emmc_irqs);
-  dev.metadata_list = sd_emmc_metadata;
-  dev.metadata_count = std::size(sd_emmc_metadata);
-  dev.boot_metadata_list = wifi_boot_metadata;
-  dev.boot_metadata_count = std::size(wifi_boot_metadata);
+static const fpbus::Node sdio_dev = []() {
+  fpbus::Node dev = {};
+  dev.name() = "sherlock-sd-emmc";
+  dev.vid() = PDEV_VID_AMLOGIC;
+  dev.pid() = PDEV_PID_GENERIC;
+  dev.did() = PDEV_DID_AMLOGIC_SDMMC_A;
+  dev.mmio() = sd_emmc_mmios;
+  dev.bti() = sd_emmc_btis;
+  dev.irq() = sd_emmc_irqs;
+  dev.metadata() = sd_emmc_metadata;
+  dev.boot_metadata() = wifi_boot_metadata;
   return dev;
 }();
 
@@ -197,11 +198,22 @@ zx_status_t Sherlock::SdioInit() {
     return status;
   }
 
-  status = pbus_.AddComposite(&sdio_dev, reinterpret_cast<uint64_t>(sherlock_sd_emmc_fragments),
-                              std::size(sherlock_sd_emmc_fragments), "pdev");
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd() error: %d", __func__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('SDIO');
+  auto result = pbus_.buffer(arena)->AddComposite(
+      fidl::ToWire(fidl_arena, sdio_dev),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, sherlock_sd_emmc_fragments,
+                                               std::size(sherlock_sd_emmc_fragments)),
+      "pdev");
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddComposite Sdio(sdio_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddComposite Sdio(sdio_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   // Add a composite device for wifi driver.

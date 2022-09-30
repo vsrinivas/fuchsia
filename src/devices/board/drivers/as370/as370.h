@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_AS370_AS370_H_
 #define SRC_DEVICES_BOARD_DRIVERS_AS370_AS370_H_
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
-#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <threads.h>
 
 #include <ddktl/device.h>
@@ -24,9 +24,9 @@ enum {
 
 class As370 : public ddk::Device<As370> {
  public:
-  As370(zx_device_t* parent, const ddk::PBusProtocolClient& pbus,
-        const pdev_board_info_t& board_info)
-      : ddk::Device<As370>(parent), pbus_(pbus), board_info_(board_info) {}
+  As370(zx_device_t* parent, fdf::ClientEnd<fuchsia_hardware_platform_bus::PlatformBus> pbus,
+        fuchsia_hardware_platform_bus::TemporaryBoardInfo board_info)
+      : ddk::Device<As370>(parent), pbus_(std::move(pbus)), board_info_(std::move(board_info)) {}
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
@@ -50,8 +50,8 @@ class As370 : public ddk::Device<As370> {
   zx_status_t ThermalInit();
   zx_status_t TouchInit();
 
-  const ddk::PBusProtocolClient pbus_;
-  const pdev_board_info_t board_info_;
+  const fdf::WireSyncClient<fuchsia_hardware_platform_bus::PlatformBus> pbus_;
+  const fuchsia_hardware_platform_bus::TemporaryBoardInfo board_info_;
   ddk::GpioImplProtocolClient gpio_impl_;
   thrd_t thread_;
 };

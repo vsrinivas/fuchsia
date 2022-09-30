@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <fuchsia/hardware/sdmmc/c/banjo.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
@@ -20,30 +22,32 @@
 #include "nelson-gpios.h"
 #include "nelson.h"
 #include "src/devices/board/drivers/nelson/nelson_emmc_bind.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 
 namespace nelson {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 namespace {
 
-constexpr pbus_mmio_t emmc_mmios[] = {
-    {
+static const std::vector<fpbus::Mmio> emmc_mmios{
+    {{
         .base = S905D3_EMMC_C_SDIO_BASE,
         .length = S905D3_EMMC_C_SDIO_LENGTH,
-    },
+    }},
 };
 
-constexpr pbus_irq_t emmc_irqs[] = {
-    {
+static const std::vector<fpbus::Irq> emmc_irqs{
+    {{
         .irq = S905D3_EMMC_C_SDIO_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
+    }},
 };
 
-constexpr pbus_bti_t emmc_btis[] = {
-    {
+static const std::vector<fpbus::Bti> emmc_btis{
+    {{
         .iommu_index = 0,
         .bti_id = BTI_EMMC,
-    },
+    }},
 };
 
 static aml_sdmmc_config_t config = {
@@ -71,42 +75,38 @@ static const guid_map_t guid_map[] = {
 
 static_assert(sizeof(guid_map) / sizeof(guid_map[0]) <= DEVICE_METADATA_GUID_MAP_MAX_ENTRIES);
 
-static const pbus_metadata_t emmc_metadata[] = {
-    {
+static const std::vector<fpbus::Metadata> emmc_metadata{
+    {{
         .type = DEVICE_METADATA_PRIVATE,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&config),
-        .data_size = sizeof(config),
-    },
-    {
+        .data = std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(&config),
+                                     reinterpret_cast<const uint8_t*>(&config) + sizeof(config)),
+    }},
+    {{
         .type = DEVICE_METADATA_GUID_MAP,
-        .data_buffer = reinterpret_cast<const uint8_t*>(guid_map),
-        .data_size = sizeof(guid_map),
-    },
+        .data =
+            std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(&guid_map),
+                                 reinterpret_cast<const uint8_t*>(&guid_map) + sizeof(guid_map)),
+    }},
 };
 
-static const pbus_boot_metadata_t emmc_boot_metadata[] = {
-    {
+static const std::vector<fpbus::BootMetadata> emmc_boot_metadata{
+    {{
         .zbi_type = DEVICE_METADATA_PARTITION_MAP,
         .zbi_extra = 0,
-    },
+    }},
 };
 
-static pbus_dev_t emmc_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "nelson-emmc";
-  dev.vid = PDEV_VID_AMLOGIC;
-  dev.pid = PDEV_PID_GENERIC;
-  dev.did = PDEV_DID_AMLOGIC_SDMMC_C;
-  dev.mmio_list = emmc_mmios;
-  dev.mmio_count = std::size(emmc_mmios);
-  dev.irq_list = emmc_irqs;
-  dev.irq_count = std::size(emmc_irqs);
-  dev.bti_list = emmc_btis;
-  dev.bti_count = std::size(emmc_btis);
-  dev.metadata_list = emmc_metadata;
-  dev.metadata_count = std::size(emmc_metadata);
-  dev.boot_metadata_list = emmc_boot_metadata;
-  dev.boot_metadata_count = std::size(emmc_boot_metadata);
+static const fpbus::Node emmc_dev = []() {
+  fpbus::Node dev = {};
+  dev.name() = "nelson-emmc";
+  dev.vid() = PDEV_VID_AMLOGIC;
+  dev.pid() = PDEV_PID_GENERIC;
+  dev.did() = PDEV_DID_AMLOGIC_SDMMC_C;
+  dev.mmio() = emmc_mmios;
+  dev.irq() = emmc_irqs;
+  dev.bti() = emmc_btis;
+  dev.metadata() = emmc_metadata;
+  dev.boot_metadata() = emmc_boot_metadata;
   return dev;
 }();
 
@@ -127,11 +127,22 @@ zx_status_t Nelson::EmmcInit() {
   gpio_impl_.SetAltFunction(S905D3_EMMC_CMD, S905D3_EMMC_CMD_FN);
   gpio_impl_.SetAltFunction(S905D3_EMMC_DS, S905D3_EMMC_DS_FN);
 
-  auto status = pbus_.AddComposite(&emmc_dev, reinterpret_cast<uint64_t>(nelson_emmc_fragments),
-                                   std::size(nelson_emmc_fragments), "pdev");
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d", __func__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('EMMC');
+  auto result = pbus_.buffer(arena)->AddComposite(
+      fidl::ToWire(fidl_arena, emmc_dev),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, nelson_emmc_fragments,
+                                               std::size(nelson_emmc_fragments)),
+      "pdev");
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddComposite Emmc(emmc_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddComposite Emmc(emmc_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   return ZX_OK;

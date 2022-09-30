@@ -11,7 +11,7 @@ driver_bind_rules("acpi-arm64-bind") {
   header_output = "acpi-arm64-bind.h"
   deps = [
     "//src/devices/bind/fuchsia.arm.platform",
-    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.hardware.platform.bus",
   ]
 }
 
@@ -24,8 +24,8 @@ fuchsia_driver("acpi-arm64-driver") {
   deps = [
     ":acpi-arm64-bind",
     "//sdk/banjo/fuchsia.hardware.pciroot:fuchsia.hardware.pciroot_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.sysmem:fuchsia.sysmem_banjo_cpp",
+    "//sdk/fidl/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_cpp_driver",
     "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//src/devices/board/lib/acpi",
     "//src/devices/board/lib/smbios",
@@ -47,6 +47,5 @@ fuchsia_driver_component("acpi-arm64") {
   component_name = "acpi-arm64"
   deps = [ ":acpi-arm64-driver" ]
   info = "acpi-arm64-info.json"
-  colocate = true
-  root_resource = true
+  manifest = "meta/acpi-arm64.cml"
 }

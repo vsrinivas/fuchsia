@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <fuchsia/hardware/gpioimpl/c/banjo.h>
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <fuchsia/hardware/serial/c/banjo.h>
 #include <fuchsia/hardware/serial/c/fidl.h>
 #include <lib/ddk/binding.h>
@@ -20,21 +21,23 @@
 
 #include "sherlock.h"
 #include "src/devices/board/drivers/sherlock/sherlock-bluetooth-bind.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 
 namespace sherlock {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
-constexpr pbus_mmio_t bt_uart_mmios[] = {
-    {
+static const std::vector<fpbus::Mmio> bt_uart_mmios{
+    {{
         .base = T931_UART_A_BASE,
         .length = T931_UART_LENGTH,
-    },
+    }},
 };
 
-constexpr pbus_irq_t bt_uart_irqs[] = {
-    {
+static const std::vector<fpbus::Irq> bt_uart_irqs{
+    {{
         .irq = T931_UART_A_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
+    }},
 };
 
 constexpr serial_port_info_t bt_uart_serial_info = {
@@ -43,35 +46,32 @@ constexpr serial_port_info_t bt_uart_serial_info = {
     .serial_pid = PDEV_PID_BCM43458,
 };
 
-const pbus_metadata_t bt_uart_metadata[] = {
-    {
+static const std::vector<fpbus::Metadata> bt_uart_metadata{
+    {{
         .type = DEVICE_METADATA_SERIAL_PORT_INFO,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&bt_uart_serial_info),
-        .data_size = sizeof(bt_uart_serial_info),
-    },
+        .data = std::vector<uint8_t>(
+            reinterpret_cast<const uint8_t*>(&bt_uart_serial_info),
+            reinterpret_cast<const uint8_t*>(&bt_uart_serial_info) + sizeof(bt_uart_serial_info)),
+    }},
 };
 
-constexpr pbus_boot_metadata_t bt_uart_boot_metadata[] = {
-    {
+static const std::vector<fpbus::BootMetadata> bt_uart_boot_metadata{
+    {{
         .zbi_type = DEVICE_METADATA_MAC_ADDRESS,
         .zbi_extra = MACADDR_BLUETOOTH,
-    },
+    }},
 };
 
-static const pbus_dev_t bt_uart_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "bt-uart";
-  dev.vid = PDEV_VID_AMLOGIC;
-  dev.pid = PDEV_PID_GENERIC;
-  dev.did = PDEV_DID_AMLOGIC_UART;
-  dev.mmio_list = bt_uart_mmios;
-  dev.mmio_count = std::size(bt_uart_mmios);
-  dev.irq_list = bt_uart_irqs;
-  dev.irq_count = std::size(bt_uart_irqs);
-  dev.metadata_list = bt_uart_metadata;
-  dev.metadata_count = std::size(bt_uart_metadata);
-  dev.boot_metadata_list = bt_uart_boot_metadata;
-  dev.boot_metadata_count = std::size(bt_uart_boot_metadata);
+static const fpbus::Node bt_uart_dev = []() {
+  fpbus::Node dev = {};
+  dev.name() = "bt-uart";
+  dev.vid() = PDEV_VID_AMLOGIC;
+  dev.pid() = PDEV_PID_GENERIC;
+  dev.did() = PDEV_DID_AMLOGIC_UART;
+  dev.mmio() = bt_uart_mmios;
+  dev.irq() = bt_uart_irqs;
+  dev.metadata() = bt_uart_metadata;
+  dev.boot_metadata() = bt_uart_boot_metadata;
   return dev;
 }();
 
@@ -100,11 +100,22 @@ zx_status_t Sherlock::BluetoothInit() {
   }
 
   // Bind UART for Bluetooth HCI
-  status = pbus_.AddComposite(&bt_uart_dev, reinterpret_cast<uint64_t>(bt_uart_fragments),
-                              std::size(bt_uart_fragments), "pdev");
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: AddComposite failed: %d", __func__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('BLUE');
+  auto result = pbus_.buffer(arena)->AddComposite(
+      fidl::ToWire(fidl_arena, bt_uart_dev),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, bt_uart_fragments,
+                                               std::size(bt_uart_fragments)),
+      "pdev");
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddComposite Bluetooth(bt_uart_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddComposite Bluetooth(bt_uart_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   return ZX_OK;

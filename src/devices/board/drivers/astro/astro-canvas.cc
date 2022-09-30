@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/platform-defs.h>
@@ -13,39 +14,46 @@
 #include "astro.h"
 
 namespace astro {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
-static const pbus_mmio_t astro_canvas_mmios[] = {
-    {
+static const std::vector<fpbus::Mmio> astro_canvas_mmios{
+    {{
         .base = S905D2_DMC_BASE,
         .length = S905D2_DMC_LENGTH,
-    },
+    }},
 };
 
-static const pbus_bti_t astro_canvas_btis[] = {
-    {
+static const std::vector<fpbus::Bti> astro_canvas_btis{
+    {{
         .iommu_index = 0,
         .bti_id = BTI_CANVAS,
-    },
+    }},
 };
 
-static const pbus_dev_t canvas_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "canvas";
-  dev.vid = PDEV_VID_AMLOGIC;
-  dev.pid = PDEV_PID_GENERIC;
-  dev.did = PDEV_DID_AMLOGIC_CANVAS;
-  dev.mmio_list = astro_canvas_mmios;
-  dev.mmio_count = std::size(astro_canvas_mmios);
-  dev.bti_list = astro_canvas_btis;
-  dev.bti_count = std::size(astro_canvas_btis);
+static const fpbus::Node canvas_dev = []() {
+  fpbus::Node dev = {};
+  dev.name() = "canvas";
+  dev.vid() = PDEV_VID_AMLOGIC;
+  dev.pid() = PDEV_PID_GENERIC;
+  dev.did() = PDEV_DID_AMLOGIC_CANVAS;
+  dev.mmio() = astro_canvas_mmios;
+  dev.bti() = astro_canvas_btis;
   return dev;
 }();
 
 zx_status_t Astro::CanvasInit() {
-  zx_status_t status = pbus_.DeviceAdd(&canvas_dev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed: %d", __func__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('CANV');
+  auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, canvas_dev));
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: NodeAdd Canvas(canvas_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: NodeAdd Canvas(canvas_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
   return ZX_OK;
 }

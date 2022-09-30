@@ -6,11 +6,17 @@
 
 #include <assert.h>
 #include <fidl/fuchsia.boot/cpp/wire.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/markers.h>
+#include <lib/async/cpp/task.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/driver2/handlers.h>
+#include <lib/fdf/dispatcher.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,11 +29,13 @@
 
 #include <algorithm>
 
+#include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 
 #include "src/devices/bus/drivers/platform/cpu-trace.h"
+#include "src/devices/bus/drivers/platform/node-util.h"
 #include "src/devices/bus/drivers/platform/platform-bus-bind.h"
 
 namespace {
@@ -36,7 +44,7 @@ namespace {
 // be applied to the new device's add_args.
 // Returns ZX_OK if the device is successfully added.
 zx_status_t AddProtocolPassthrough(const char* name, cpp20::span<const zx_device_prop_t> props,
-                                   zx_device_t* parent, zx_device_t** out_device) {
+                                   platform_bus::PlatformBus* parent, zx_device_t** out_device) {
   if (!parent || !name) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -45,9 +53,43 @@ zx_status_t AddProtocolPassthrough(const char* name, cpp20::span<const zx_device
       .version = DEVICE_OPS_VERSION,
       .get_protocol =
           [](void* ctx, uint32_t id, void* proto) {
-            return device_get_protocol(reinterpret_cast<zx_device_t*>(ctx), id, proto);
+            return device_get_protocol(reinterpret_cast<platform_bus::PlatformBus*>(ctx)->zxdev(),
+                                       id, proto);
           },
       .release = [](void* ctx) {},
+  };
+
+  driver::ServiceInstanceHandler handler;
+  fuchsia_hardware_platform_bus::Service::Handler service(&handler);
+
+  auto protocol = [parent](fdf::ServerEnd<fuchsia_hardware_platform_bus::PlatformBus> server_end) {
+    fdf::BindServer<fdf::WireServer<fuchsia_hardware_platform_bus::PlatformBus>>(
+        fdf::Dispatcher::GetCurrent()->get(), std::move(server_end), parent);
+  };
+
+  auto status = service.add_platform_bus(std::move(protocol));
+  if (status.is_error()) {
+    return status.error_value();
+  }
+
+  status =
+      parent->outgoing().AddService<fuchsia_hardware_platform_bus::Service>(std::move(handler));
+  if (status.is_error()) {
+    return status.error_value();
+  }
+
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (endpoints.is_error()) {
+    return endpoints.status_value();
+  }
+
+  auto result = parent->outgoing().Serve(std::move(endpoints->server));
+  if (result.is_error()) {
+    return result.error_value();
+  }
+
+  std::array offers = {
+      fuchsia_hardware_platform_bus::Service::Name,
   };
 
   device_add_args_t args = {
@@ -57,9 +99,12 @@ zx_status_t AddProtocolPassthrough(const char* name, cpp20::span<const zx_device
       .ops = &passthrough_proto,
       .props = props.data(),
       .prop_count = static_cast<uint32_t>(props.size()),
+      .runtime_service_offers = offers.data(),
+      .runtime_service_offer_count = offers.size(),
+      .outgoing_dir_channel = endpoints->client.TakeChannel().release(),
   };
 
-  return device_add(parent, &args, out_device);
+  return device_add(parent->zxdev(), &args, out_device);
 }
 
 }  // anonymous namespace
@@ -86,13 +131,15 @@ zx_status_t PlatformBus::IommuGetBti(uint32_t iommu_index, uint32_t bti_id, zx::
   return bti->second.duplicate(ZX_RIGHT_SAME_RIGHTS, out_bti);
 }
 
-zx_status_t PlatformBus::PBusRegisterProtocol(uint32_t proto_id, const uint8_t* protocol,
-                                              size_t protocol_size) {
-  if (!protocol || protocol_size < sizeof(ddk::AnyProtocol)) {
-    return ZX_ERR_INVALID_ARGS;
+void PlatformBus::RegisterProtocol(RegisterProtocolRequestView request, fdf::Arena& arena,
+                                   RegisterProtocolCompleter::Sync& completer) {
+  if (request->protocol.count() < sizeof(ddk::AnyProtocol)) {
+    completer.buffer(arena).ReplyError(ZX_ERR_INVALID_ARGS);
+    return;
   }
 
-  switch (proto_id) {
+  const uint8_t* protocol = request->protocol.data();
+  switch (request->proto_id) {
       // DO NOT ADD ANY MORE PROTOCOLS HERE.
       // GPIO_IMPL is needed for board driver pinmuxing. IOMMU is for potential future use.
       // CLOCK_IMPL are needed by the amlogic board drivers. Use of this mechanism for all other
@@ -111,79 +158,125 @@ zx_status_t PlatformBus::PBusRegisterProtocol(uint32_t proto_id, const uint8_t* 
       break;
     }
     default:
-      return ZX_ERR_NOT_SUPPORTED;
+      completer.buffer(arena).ReplyError(ZX_ERR_NOT_SUPPORTED);
+      return;
   }
 
   fbl::AutoLock lock(&proto_completion_mutex_);
-  sync_completion_signal(&proto_completion_);
-  return ZX_OK;
+  auto entry = proto_ready_responders_.find(request->proto_id);
+  if (entry != proto_ready_responders_.end()) {
+    auto& responder = entry->second;
+    zx_status_t status = responder.timeout_task->Cancel();
+    if (status != ZX_OK) {
+      zxlogf(WARNING, "Failed to cancel task: %s. Trying to respond anyway.",
+             zx_status_get_string(status));
+    }
+    if (responder.completer.is_reply_needed()) {
+      responder.completer.buffer(responder.arena).ReplySuccess();
+    } else {
+      zxlogf(ERROR, "Failed to register proto id 0x%x. It probably took too long.",
+             request->proto_id);
+    }
+    proto_ready_responders_.erase(entry);
+  }
+  completer.buffer(arena).ReplySuccess();
 }
 
-zx_status_t PlatformBus::PBusDeviceAdd(const pbus_dev_t* pdev) {
-  if (!pdev->name) {
-    return ZX_ERR_INVALID_ARGS;
+void PlatformBus::NodeAdd(NodeAddRequestView request, fdf::Arena& arena,
+                          NodeAddCompleter::Sync& completer) {
+  if (!request->node.has_name()) {
+    completer.buffer(arena).ReplyError(ZX_ERR_INVALID_ARGS);
+    return;
   }
 
+  auto natural = fidl::ToNatural(request->node);
+  completer.buffer(arena).Reply(NodeAddInternal(natural));
+}
+
+zx::status<> PlatformBus::NodeAddInternal(fuchsia_hardware_platform_bus::Node& node) {
+  auto result = ValidateResources(node);
+  if (result.is_error()) {
+    return result.take_error();
+  }
   std::unique_ptr<platform_bus::PlatformDevice> dev;
-  auto status = PlatformDevice::Create(pdev, zxdev(), this, PlatformDevice::Isolated, &dev);
+  auto status =
+      PlatformDevice::Create(std::move(node), zxdev(), this, PlatformDevice::Isolated, &dev);
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
 
   status = dev->Start();
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
 
   // devmgr is now in charge of the device.
   __UNUSED auto* dummy = dev.release();
-  return ZX_OK;
+  return zx::ok();
 }
 
-zx_status_t PlatformBus::PBusProtocolDeviceAdd(uint32_t proto_id, const pbus_dev_t* pdev) {
-  if (!pdev->name) {
-    return ZX_ERR_INVALID_ARGS;
+void PlatformBus::ProtocolNodeAdd(ProtocolNodeAddRequestView request, fdf::Arena& arena,
+                                  ProtocolNodeAddCompleter::Sync& completer) {
+  if (!request->node.has_name()) {
+    completer.buffer(arena).ReplyError(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+
+  auto natural = fidl::ToNatural(request->node);
+  auto result = ValidateResources(natural);
+  if (result.is_error()) {
+    completer.buffer(arena).ReplyError(result.status_value());
+    return;
   }
 
   std::unique_ptr<platform_bus::PlatformDevice> dev;
-  auto status = PlatformDevice::Create(pdev, zxdev(), this, PlatformDevice::Protocol, &dev);
+  auto status =
+      PlatformDevice::Create(std::move(natural), zxdev(), this, PlatformDevice::Protocol, &dev);
   if (status != ZX_OK) {
-    return status;
+    completer.buffer(arena).ReplyError(status);
+    return;
   }
 
   status = dev->Start();
   if (status != ZX_OK) {
-    return status;
+    completer.buffer(arena).ReplyError(status);
+    return;
   }
 
   // devmgr is now in charge of the device.
   __UNUSED auto* dummy = dev.release();
 
   // Wait for protocol implementation driver to register its protocol.
-  ddk::AnyProtocol dummy_proto;
+  fbl::AutoLock<fbl::Mutex> lock(&proto_completion_mutex_);
+  auto new_value = proto_ready_responders_.emplace(
+      request->proto_id,
+      ProtoReadyResponse{
+          .arena = std::move(arena),
+          .completer = completer.ToAsync(),
+          .timeout_task = std::make_unique<async::Task>(
+              [this, proto_id = request->proto_id](async_dispatcher_t*, async::Task*, zx_status_t) {
+                fbl::AutoLock lock(&proto_completion_mutex_);
+                auto entry = proto_ready_responders_.find(proto_id);
+                // Either the protocol was registered, and we won't find this entry, or it won't
+                // have been and we'll have to report failure.
+                if (entry != proto_ready_responders_.end()) {
+                  auto& response = entry->second;
+                  response.completer.buffer(response.arena).ReplyError(ZX_ERR_TIMED_OUT);
+                  proto_ready_responders_.erase(entry);
+                }
+              }),
+      });
 
-  proto_completion_mutex_.Acquire();
-  while (DdkGetProtocol(proto_id, &dummy_proto) == ZX_ERR_NOT_SUPPORTED) {
-    sync_completion_reset(&proto_completion_);
-    proto_completion_mutex_.Release();
-    zx_status_t status = sync_completion_wait(&proto_completion_, ZX_SEC(100));
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s sync_completion_wait(protocol %08x) failed: %d", __FUNCTION__, proto_id,
-             status);
-      return status;
-    }
-    proto_completion_mutex_.Acquire();
-  }
-  proto_completion_mutex_.Release();
-  return ZX_OK;
+  // Post the task.
+  new_value.first->second.timeout_task->PostDelayed(
+      fdf::Dispatcher::GetCurrent()->async_dispatcher(), zx::sec(100));
 }
 
 void PlatformBus::GetBoardName(GetBoardNameCompleter::Sync& completer) {
   fbl::AutoLock lock(&board_info_lock_);
   // Reply immediately if board_name is valid.
-  if (board_info_.board_name[0]) {
-    completer.Reply(ZX_OK,
-                    fidl::StringView(board_info_.board_name, strlen(board_info_.board_name)));
+  if (!board_info_.board_name().empty()) {
+    completer.Reply(ZX_OK, fidl::StringView::FromExternal(board_info_.board_name()));
     return;
   }
   // Cache the requests until board_name becomes valid.
@@ -192,15 +285,14 @@ void PlatformBus::GetBoardName(GetBoardNameCompleter::Sync& completer) {
 
 void PlatformBus::GetBoardRevision(GetBoardRevisionCompleter::Sync& completer) {
   fbl::AutoLock lock(&board_info_lock_);
-  completer.Reply(ZX_OK, board_info_.board_revision);
+  completer.Reply(ZX_OK, board_info_.board_revision());
 }
 
 void PlatformBus::GetBootloaderVendor(GetBootloaderVendorCompleter::Sync& completer) {
   fbl::AutoLock lock(&bootloader_info_lock_);
   // Reply immediately if vendor is valid.
-  if (bootloader_info_.vendor[0]) {
-    completer.Reply(ZX_OK,
-                    fidl::StringView(bootloader_info_.vendor, strlen(bootloader_info_.vendor)));
+  if (bootloader_info_.vendor() != std::nullopt) {
+    completer.Reply(ZX_OK, fidl::StringView::FromExternal(bootloader_info_.vendor().value()));
     return;
   }
   // Cache the requests until vendor becomes valid.
@@ -215,101 +307,180 @@ void PlatformBus::GetInterruptControllerInfo(GetInterruptControllerInfoCompleter
       ZX_OK, fidl::ObjectView<fuchsia_sysinfo::wire::InterruptControllerInfo>::FromExternal(&info));
 }
 
-zx_status_t PlatformBus::PBusGetBoardInfo(pdev_board_info_t* out_info) {
+void PlatformBus::GetBoardInfo(fdf::Arena& arena, GetBoardInfoCompleter::Sync& completer) {
   fbl::AutoLock lock(&board_info_lock_);
-  memcpy(out_info, &board_info_, sizeof(board_info_));
-  return ZX_OK;
+  fidl::Arena<> fidl_arena;
+  completer.buffer(arena).ReplySuccess(fidl::ToWire(fidl_arena, board_info_));
 }
 
-zx_status_t PlatformBus::PBusSetBoardInfo(const pbus_board_info_t* info) {
+void PlatformBus::SetBoardInfo(SetBoardInfoRequestView request, fdf::Arena& arena,
+                               SetBoardInfoCompleter::Sync& completer) {
   fbl::AutoLock lock(&board_info_lock_);
-  if (info->board_name[0]) {
-    strlcpy(board_info_.board_name, info->board_name, sizeof(board_info_.board_name));
-    zxlogf(INFO, "PlatformBus: set board name to \"%s\"", board_info_.board_name);
+  auto& info = request->info;
+  if (info.has_board_name()) {
+    board_info_.board_name() = info.board_name().get();
+    zxlogf(INFO, "PlatformBus: set board name to \"%s\"", board_info_.board_name().data());
 
     std::vector<GetBoardNameCompleter::Async> completer_tmp_;
     // Respond to pending boardname requests, if any.
     board_name_completer_.swap(completer_tmp_);
     while (!completer_tmp_.empty()) {
-      completer_tmp_.back().Reply(
-          ZX_OK, fidl::StringView(board_info_.board_name, strlen(board_info_.board_name)));
+      completer_tmp_.back().Reply(ZX_OK, fidl::StringView::FromExternal(board_info_.board_name()));
       completer_tmp_.pop_back();
     }
   }
-  board_info_.board_revision = info->board_revision;
-  return ZX_OK;
+  if (info.has_board_revision()) {
+    board_info_.board_revision() = info.board_revision();
+  }
+  completer.buffer(arena).ReplySuccess();
 }
 
-zx_status_t PlatformBus::PBusSetBootloaderInfo(const pbus_bootloader_info_t* info) {
+void PlatformBus::SetBootloaderInfo(SetBootloaderInfoRequestView request, fdf::Arena& arena,
+                                    SetBootloaderInfoCompleter::Sync& completer) {
   fbl::AutoLock lock(&bootloader_info_lock_);
-  if (info->vendor[0]) {
-    strlcpy(bootloader_info_.vendor, info->vendor, sizeof(bootloader_info_.vendor));
-    zxlogf(INFO, "PlatformBus: set bootloader vendor to \"%s\"", bootloader_info_.vendor);
+  auto& info = request->info;
+  if (info.has_vendor()) {
+    bootloader_info_.vendor() = info.vendor().get();
+    zxlogf(INFO, "PlatformBus: set bootloader vendor to \"%s\"", bootloader_info_.vendor()->data());
 
     std::vector<GetBootloaderVendorCompleter::Async> completer_tmp_;
     // Respond to pending boardname requests, if any.
     bootloader_vendor_completer_.swap(completer_tmp_);
     while (!completer_tmp_.empty()) {
       completer_tmp_.back().Reply(
-          ZX_OK, fidl::StringView(bootloader_info_.vendor, strlen(bootloader_info_.vendor)));
+          ZX_OK, fidl::StringView::FromExternal(bootloader_info_.vendor().value()));
       completer_tmp_.pop_back();
     }
   }
-  return ZX_OK;
+  completer.buffer(arena).ReplySuccess();
 }
 
-zx_status_t PlatformBus::PBusRegisterSysSuspendCallback(const pbus_sys_suspend_t* suspend_cbin) {
-  suspend_cb_ = *suspend_cbin;
-  return ZX_OK;
+void PlatformBus::RegisterSysSuspendCallback(RegisterSysSuspendCallbackRequestView request,
+                                             fdf::Arena& arena,
+                                             RegisterSysSuspendCallbackCompleter::Sync& completer) {
+  suspend_cb_.Bind(std::move(request->suspend_cb), fdf::Dispatcher::GetCurrent()->get());
+  completer.buffer(arena).ReplySuccess();
 }
 
-zx_status_t PlatformBus::PBusCompositeDeviceAdd(
-    const pbus_dev_t* pdev,
-    /* const device_fragment_t* */ uint64_t raw_fragments_list, size_t fragments_count,
-    const char* primary_fragment) {
-  if (!pdev || !pdev->name) {
-    return ZX_ERR_INVALID_ARGS;
+namespace {
+struct CompositeFragmentData {
+  std::vector<std::vector<zx_bind_inst_t>> match_programs;
+  std::vector<device_fragment_part_t> fragment_parts;
+  std::string name;
+};
+
+// Given |desc|, populates |fragments| with fragments. The return value contains ancillary data for
+// the fragment definitions and must live as long as the |fragments| array is used.
+zx::status<std::vector<CompositeFragmentData>> ConvertFidlFragments(
+    fidl::VectorView<fuchsia_device_manager::wire::DeviceFragment> fragments_list,
+    cpp20::span<device_fragment_t> fragments) {
+  if (fragments_list.count() > fragments.size()) {
+    zxlogf(ERROR, "Too many fragments requested.");
+    return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
-  const device_fragment_t* fragments_list =
-      reinterpret_cast<const device_fragment_t*>(raw_fragments_list);
+  std::vector<CompositeFragmentData> ret(fragments_list.count());
+  // Convert the FIDL composite definition to a C one for the driver framework.
+  for (size_t i = 0; i < fragments_list.count(); i++) {
+    CompositeFragmentData& data = ret[i];
+    // How many fragment parts (and match programs) are there?
+    const size_t num_parts = fragments_list[i].parts.count();
+    data.fragment_parts.resize(num_parts);
+    data.match_programs.resize(num_parts);
+    // Store the fragment name as a null-terminated string.
+    data.name = fragments_list[i].name.get();
+
+    auto& parts = data.fragment_parts;
+    auto& programs = data.match_programs;
+
+    // For each part...
+    for (size_t j = 0; j < num_parts; j++) {
+      // Convert the match program to the C zx_bind_inst_t.
+      auto program = fragments_list[i].parts[j].match_program;
+      std::vector<zx_bind_inst_t> dst{program.count()};
+      for (size_t k = 0; k < program.count(); k++) {
+        dst[k].arg = program[k].arg;
+        dst[k].debug = program[k].debug;
+        dst[k].op = program[k].op;
+      }
+
+      // Store the program in the vector and create a device_fragment_part_t.
+      programs[j] = std::move(dst);
+      parts[j] = device_fragment_part_t{
+          .instruction_count = static_cast<uint32_t>(programs[j].size()),
+          .match_program = programs[j].data(),
+      };
+    }
+
+    // Update the fragment info after we've converted all of the parts.
+    fragments[i].name = data.name.data();
+    fragments[i].parts_count = static_cast<uint32_t>(num_parts);
+    fragments[i].parts = data.fragment_parts.data();
+  }
+
+  return zx::ok(std::move(ret));
+}
+}  // namespace
+
+void PlatformBus::AddCompositeImplicitPbusFragment(
+    AddCompositeImplicitPbusFragmentRequestView request, fdf::Arena& arena,
+    AddCompositeImplicitPbusFragmentCompleter::Sync& completer) {
+  if (!request->node.has_name()) {
+    completer.buffer(arena).ReplyError(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+
+  auto fragments_list = request->fragments;
+  std::string primary_fragment(request->primary_fragment.get());
 
   // Do not allow adding composite devices in our driver host.
   // |primary_fragment| must be nullptr to spawn in a new driver host or equal to one of the
   // fragments names to spawn in the same driver host as it.
-  if (primary_fragment != nullptr && strcmp(primary_fragment, "pdev") == 0) {
-    zxlogf(ERROR, "%s: coresident_device_index cannot be pdev", __func__);
-    return ZX_ERR_INVALID_ARGS;
+  if (primary_fragment == "pdev") {
+    zxlogf(ERROR, "%s: primary_fragment cannot be pdev", __func__);
+    completer.buffer(arena).ReplyError(ZX_ERR_INVALID_ARGS);
+    return;
   }
 
   std::unique_ptr<platform_bus::PlatformDevice> dev;
-  auto status = PlatformDevice::Create(pdev, zxdev(), this, PlatformDevice::Fragment, &dev);
+  auto natural = fidl::ToNatural(request->node);
+  auto valid = ValidateResources(natural);
+  if (valid.is_error()) {
+    completer.buffer(arena).ReplyError(valid.status_value());
+    return;
+  }
+
+  auto status =
+      PlatformDevice::Create(std::move(natural), zxdev(), this, PlatformDevice::Fragment, &dev);
   if (status != ZX_OK) {
-    return status;
+    completer.buffer(arena).ReplyError(status);
+    return;
   }
 
   status = dev->Start();
   if (status != ZX_OK) {
-    return status;
+    completer.buffer(arena).ReplyError(status);
+    return;
   }
 
   // devmgr is now in charge of the device.
   __UNUSED auto* dummy = dev.release();
 
   constexpr size_t kMaxFragments = 100;
-  if (fragments_count + 1 > kMaxFragments) {
+  if (fragments_list.count() + 1 > kMaxFragments) {
     zxlogf(ERROR, "Too many fragments requested.");
-    return ZX_ERR_INVALID_ARGS;
+    completer.buffer(arena).ReplyError(ZX_ERR_INVALID_ARGS);
+    return;
   }
   device_fragment_t fragments[kMaxFragments];
-  memcpy(&fragments[1], fragments_list, fragments_count * sizeof(fragments[1]));
 
   const zx_bind_inst_t pdev_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-      BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, pdev->vid),
-      BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, pdev->pid),
-      BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, pdev->did),
-      BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_INSTANCE_ID, pdev->instance_id),
+      BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, request->node.has_vid() ? request->node.vid() : 0),
+      BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, request->node.has_pid() ? request->node.pid() : 0),
+      BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, request->node.has_did() ? request->node.did() : 0),
+      BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_INSTANCE_ID,
+                  request->node.has_instance_id() ? request->node.instance_id() : 0),
   };
   const device_fragment_part_t pdev_fragment[] = {
       {std::size(pdev_match), pdev_match},
@@ -320,86 +491,107 @@ zx_status_t PlatformBus::PBusCompositeDeviceAdd(
   fragments[0].parts = pdev_fragment;
 
   const zx_device_prop_t props[] = {
-      {BIND_PLATFORM_DEV_VID, 0, pdev->vid},
-      {BIND_PLATFORM_DEV_PID, 0, pdev->pid},
-      {BIND_PLATFORM_DEV_DID, 0, pdev->did},
-      {BIND_PLATFORM_DEV_INSTANCE_ID, 0, pdev->instance_id},
+      {BIND_PLATFORM_DEV_VID, 0, request->node.has_vid() ? request->node.vid() : 0},
+      {BIND_PLATFORM_DEV_PID, 0, request->node.has_pid() ? request->node.pid() : 0},
+      {BIND_PLATFORM_DEV_DID, 0, request->node.has_did() ? request->node.did() : 0},
+      {BIND_PLATFORM_DEV_INSTANCE_ID, 0,
+       request->node.has_instance_id() ? request->node.instance_id() : 0},
   };
+
+  auto ret =
+      ConvertFidlFragments(request->fragments, cpp20::span(&fragments[1], kMaxFragments - 1));
+  if (ret.is_error()) {
+    completer.buffer(arena).ReplyError(ret.error_value());
+    return;
+  }
 
   const composite_device_desc_t comp_desc = {
       .props = props,
       .props_count = std::size(props),
       .fragments = fragments,
-      .fragments_count = fragments_count + 1,
-      .primary_fragment = primary_fragment == nullptr ? "pdev" : primary_fragment,
-      .spawn_colocated = primary_fragment != nullptr,
+      .fragments_count = fragments_list.count() + 1,
+      .primary_fragment = request->primary_fragment.is_null() ? "pdev" : primary_fragment.data(),
+      .spawn_colocated = request->primary_fragment.is_null(),
       .metadata_list = nullptr,
       .metadata_count = 0,
   };
 
-  return DdkAddComposite(pdev->name, &comp_desc);
+  status = DdkAddComposite(std::string(request->node.name().get()).data(), &comp_desc);
+  completer.buffer(arena).Reply(zx::make_status(status));
 }
 
-zx_status_t PlatformBus::PBusAddComposite(const pbus_dev_t* pdev,
-                                          /* const device_fragment_t* */ uint64_t raw_fragments,
-                                          size_t fragment_count, const char* primary_fragment) {
+void PlatformBus::AddComposite(AddCompositeRequestView request, fdf::Arena& arena,
+                               AddCompositeCompleter::Sync& completer) {
+  auto pdev = request->node;
   const zx_device_prop_t props[] = {
-      {BIND_PLATFORM_DEV_VID, 0, pdev->vid},
-      {BIND_PLATFORM_DEV_PID, 0, pdev->pid},
-      {BIND_PLATFORM_DEV_DID, 0, pdev->did},
-      {BIND_PLATFORM_DEV_INSTANCE_ID, 0, pdev->instance_id},
+      {BIND_PLATFORM_DEV_VID, 0, pdev.has_vid() ? pdev.vid() : 0},
+      {BIND_PLATFORM_DEV_PID, 0, pdev.has_pid() ? pdev.pid() : 0},
+      {BIND_PLATFORM_DEV_DID, 0, pdev.has_did() ? pdev.did() : 0},
+      {BIND_PLATFORM_DEV_INSTANCE_ID, 0, pdev.has_instance_id() ? pdev.instance_id() : 0},
   };
 
-  const device_fragment_t* fragments = reinterpret_cast<const device_fragment_t*>(raw_fragments);
+  std::vector<device_fragment_t> fragments(request->fragments.count());
+  std::string primary_fragment(request->primary_fragment.get());
 
-  const bool is_primary_pdev = strcmp(primary_fragment, "pdev") == 0;
+  auto ret = ConvertFidlFragments(request->fragments, cpp20::span(fragments));
+  if (ret.is_error()) {
+    completer.buffer(arena).ReplyError(ret.error_value());
+    return;
+  }
+
+  const bool is_primary_pdev = primary_fragment == "pdev";
   const composite_device_desc_t comp_desc = {
       .props = props,
       .props_count = std::size(props),
-      .fragments = fragments,
-      .fragments_count = fragment_count,
-      .primary_fragment = primary_fragment,
+      .fragments = fragments.data(),
+      .fragments_count = fragments.size(),
+      .primary_fragment = primary_fragment.data(),
       .spawn_colocated = !is_primary_pdev,
       .metadata_list = nullptr,
       .metadata_count = 0,
   };
+  if (!request->node.has_name()) {
+    completer.buffer(arena).ReplyError(ZX_ERR_INVALID_ARGS);
+    return;
+  }
 
-  zx_status_t status = DdkAddComposite(pdev->name, &comp_desc);
+  zx_status_t status = DdkAddComposite(std::string(request->node.name().get()).data(), &comp_desc);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s DdkAddComposite failed %d", __FUNCTION__, status);
-    return status;
+    completer.buffer(arena).ReplyError(status);
+    return;
   }
 
-  if (!pdev->name) {
-    return ZX_ERR_INVALID_ARGS;
-  }
   std::unique_ptr<platform_bus::PlatformDevice> dev;
-  status = PlatformDevice::Create(pdev, zxdev(), this, PlatformDevice::Fragment, &dev);
+  auto natural = fidl::ToNatural(request->node);
+  auto valid = ValidateResources(natural);
+  if (valid.is_error()) {
+    completer.buffer(arena).ReplyError(valid.error_value());
+    return;
+  }
+  status =
+      PlatformDevice::Create(std::move(natural), zxdev(), this, PlatformDevice::Fragment, &dev);
   if (status != ZX_OK) {
-    return status;
+    completer.buffer(arena).ReplyError(status);
+    return;
   }
   status = dev->Start();
   if (status != ZX_OK) {
-    return status;
+    completer.buffer(arena).ReplyError(status);
+    return;
   }
   // devmgr is now in charge of the device.
   __UNUSED auto* dummy = dev.release();
 
-  return ZX_OK;
+  completer.buffer(arena).ReplySuccess();
 }
 
 zx_status_t PlatformBus::DdkGetProtocol(uint32_t proto_id, void* out) {
   switch (proto_id) {
-      // DO NOT ADD ANY MORE PROTOCOLS HERE.
-      // GPIO_IMPL is needed for board driver pinmuxing. IOMMU is for potential future use.
-      // CLOCK_IMPL are needed by the amlogic board drivers. Use of this mechanism for all other
-      // protocols has been deprecated.
-    case ZX_PROTOCOL_PBUS: {
-      auto proto = static_cast<pbus_protocol_t*>(out);
-      proto->ctx = this;
-      proto->ops = &pbus_protocol_ops_;
-      return ZX_OK;
-    }
+    // DO NOT ADD ANY MORE PROTOCOLS HERE.
+    // GPIO_IMPL is needed for board driver pinmuxing. IOMMU is for potential future use.
+    // CLOCK_IMPL are needed by the amlogic board drivers. Use of this mechanism for all other
+    // protocols has been deprecated.
     case ZX_PROTOCOL_CLOCK_IMPL:
       if (clock_) {
         clock_->GetProto(static_cast<clock_impl_protocol_t*>(out));
@@ -470,12 +662,22 @@ static void sys_device_suspend(void* ctx, uint8_t requested_state, bool enable_w
   auto* pbus = reinterpret_cast<class PlatformBus*>(p->pbus_instance);
 
   if (pbus != nullptr) {
-    pbus_sys_suspend_t suspend_cb = pbus->suspend_cb();
-    if (suspend_cb.callback != nullptr) {
-      uint8_t out_state = 0;
-      zx_status_t status = suspend_cb.callback(suspend_cb.ctx, requested_state, enable_wake,
-                                               suspend_reason, &out_state);
-      device_suspend_reply(p->sys_root, status, out_state);
+    auto& suspend_cb = pbus->suspend_cb();
+    if (suspend_cb.is_valid()) {
+      fdf::Arena arena('SUSP');
+
+      suspend_cb.buffer(arena)
+          ->Callback(requested_state, enable_wake, suspend_reason)
+          .ThenExactlyOnce(
+              [sys_root = p->sys_root](
+                  fdf::WireUnownedResult<fuchsia_hardware_platform_bus::SysSuspend::Callback>&
+                      status) {
+                if (!status.ok()) {
+                  device_suspend_reply(sys_root, status.status(), DEV_POWER_STATE_D0);
+                  return;
+                }
+                device_suspend_reply(sys_root, status->out_status, status->out_state);
+              });
       return;
     }
   }
@@ -551,6 +753,7 @@ zx_status_t PlatformBus::Create(zx_device_t* parent, const char* name, zx::chann
   }
 
   if (zx_status_t status = bus->Init(); status != ZX_OK) {
+    zxlogf(ERROR, "failed to init: %s", zx_status_get_string(status));
     return status;
   }
   // devmgr is now in charge of the device.
@@ -571,9 +774,8 @@ zx_status_t PlatformBus::Create(zx_device_t* parent, const char* name, zx::chann
 
 PlatformBus::PlatformBus(zx_device_t* parent, zx::channel items_svc)
     : PlatformBusType(parent),
-      items_svc_(fidl::ClientEnd<fuchsia_boot::Items>(std::move(items_svc))) {
-  sync_completion_reset(&proto_completion_);
-}
+      items_svc_(fidl::ClientEnd<fuchsia_boot::Items>(std::move(items_svc))),
+      outgoing_(driver::OutgoingDirectory::Create(fdf::Dispatcher::GetCurrent()->get())) {}
 
 zx::status<zbi_board_info_t> PlatformBus::GetBoardInfo() {
   zx::status result = GetBootItem(ZBI_TYPE_DRV_BOARD_INFO, 0);
@@ -640,8 +842,7 @@ zx_status_t PlatformBus::Init() {
   {
     // For arm64, we do not expect a board to set the bootloader info.
     fbl::AutoLock lock(&bootloader_info_lock_);
-    auto vendor = "<unknown>";
-    strlcpy(bootloader_info_.vendor, vendor, sizeof(vendor));
+    bootloader_info_.vendor() = "<unknown>";
   }
 #endif
 
@@ -657,16 +858,16 @@ zx_status_t PlatformBus::Init() {
     }
     zxlogf(INFO, "platform bus: VID: %u PID: %u board: \"%s\"", platform_id.vid, platform_id.pid,
            platform_id.board_name);
-    board_info_.vid = platform_id.vid;
-    board_info_.pid = platform_id.pid;
-    memcpy(board_info_.board_name, platform_id.board_name, sizeof(board_info_.board_name));
+    board_info_.vid() = platform_id.vid;
+    board_info_.pid() = platform_id.pid;
+    board_info_.board_name() = platform_id.board_name;
   } else {
 #if __x86_64__
     // For x64, we might not find the ZBI_TYPE_PLATFORM_ID, old bootloaders
     // won't support this, for example. If this is the case, cons up the VID/PID
     // here to allow the acpi board driver to load and bind.
-    board_info_.vid = PDEV_VID_INTEL;
-    board_info_.pid = PDEV_PID_X86;
+    board_info_.vid() = PDEV_VID_INTEL;
+    board_info_.pid() = PDEV_PID_X86;
 #else
     zxlogf(ERROR, "platform_bus: ZBI_TYPE_PLATFORM_ID not found");
     return ZX_ERR_INTERNAL;
@@ -676,7 +877,7 @@ zx_status_t PlatformBus::Init() {
   // Set default board_revision.
   zx::status zbi_board_info = GetBoardInfo();
   if (zbi_board_info.is_ok()) {
-    board_info_.board_revision = zbi_board_info->revision;
+    board_info_.board_revision() = zbi_board_info->revision;
   }
 
   // Then we attach the platform-bus device below it.
@@ -686,17 +887,73 @@ zx_status_t PlatformBus::Init() {
   }
 
   zx_device_prop_t passthrough_props[] = {
-      {BIND_PROTOCOL, 0, ZX_PROTOCOL_PBUS},
-      {BIND_PLATFORM_DEV_VID, 0, board_info_.vid},
-      {BIND_PLATFORM_DEV_PID, 0, board_info_.pid},
+      {BIND_FIDL_PROTOCOL, 0, ZX_FIDL_PROTOCOL_PLATFORM_BUS},
+      {BIND_PLATFORM_DEV_VID, 0, board_info_.vid()},
+      {BIND_PLATFORM_DEV_PID, 0, board_info_.pid()},
   };
-  status = AddProtocolPassthrough("platform-passthrough", passthrough_props, zxdev(),
+  status = AddProtocolPassthrough("platform-passthrough", passthrough_props, this,
                                   &protocol_passthrough_);
   if (status != ZX_OK) {
     // We log the error but we do nothing as we've already added the device successfully.
     zxlogf(ERROR, "Error while adding platform-passthrough: %s", zx_status_get_string(status));
   }
   return ZX_OK;
+}
+
+zx::status<> PlatformBus::ValidateResources(fuchsia_hardware_platform_bus::Node& node) {
+  if (node.name() == std::nullopt) {
+    zxlogf(ERROR, "Node has no name?");
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+  if (node.mmio() != std::nullopt) {
+    for (size_t i = 0; i < node.mmio()->size(); i++) {
+      if (!IsValid(node.mmio().value()[i])) {
+        zxlogf(ERROR, "node '%s' has invalid mmio %zu", node.name()->data(), i);
+        return zx::error(ZX_ERR_INVALID_ARGS);
+      }
+    }
+  }
+  if (node.irq() != std::nullopt) {
+    for (size_t i = 0; i < node.irq()->size(); i++) {
+      if (!IsValid(node.irq().value()[i])) {
+        zxlogf(ERROR, "node '%s' has invalid irq %zu", node.name()->data(), i);
+        return zx::error(ZX_ERR_INVALID_ARGS);
+      }
+    }
+  }
+  if (node.bti() != std::nullopt) {
+    for (size_t i = 0; i < node.bti()->size(); i++) {
+      if (!IsValid(node.bti().value()[i])) {
+        zxlogf(ERROR, "node '%s' has invalid bti %zu", node.name()->data(), i);
+        return zx::error(ZX_ERR_INVALID_ARGS);
+      }
+    }
+  }
+  if (node.smc() != std::nullopt) {
+    for (size_t i = 0; i < node.smc()->size(); i++) {
+      if (!IsValid(node.smc().value()[i])) {
+        zxlogf(ERROR, "node '%s' has invalid smc %zu", node.name()->data(), i);
+        return zx::error(ZX_ERR_INVALID_ARGS);
+      }
+    }
+  }
+  if (node.metadata() != std::nullopt) {
+    for (size_t i = 0; i < node.metadata()->size(); i++) {
+      if (!IsValid(node.metadata().value()[i])) {
+        zxlogf(ERROR, "node '%s' has invalid metadata %zu", node.name()->data(), i);
+        return zx::error(ZX_ERR_INVALID_ARGS);
+      }
+    }
+  }
+  if (node.boot_metadata() != std::nullopt) {
+    for (size_t i = 0; i < node.boot_metadata()->size(); i++) {
+      if (!IsValid(node.boot_metadata().value()[i])) {
+        zxlogf(ERROR, "node '%s' has invalid boot metadata %zu", node.name()->data(), i);
+        return zx::error(ZX_ERR_INVALID_ARGS);
+      }
+    }
+  }
+  return zx::ok();
 }
 
 void PlatformBus::DdkInit(ddk::InitTxn txn) {
@@ -711,38 +968,38 @@ void PlatformBus::DdkInit(ddk::InitTxn txn) {
       return txn.Reply(status);
     }
   }
-  pbus_dev_t device = {};
-  device.name = "ram-disk";
-  device.vid = PDEV_VID_GENERIC;
-  device.pid = PDEV_PID_GENERIC;
-  device.did = PDEV_DID_RAM_DISK;
-  zx_status_t status = PBusDeviceAdd(&device);
-  if (status != ZX_OK) {
-    return txn.Reply(status);
+  fuchsia_hardware_platform_bus::Node device = {};
+  device.name() = "ram-disk";
+  device.vid() = PDEV_VID_GENERIC;
+  device.pid() = PDEV_PID_GENERIC;
+  device.did() = PDEV_DID_RAM_DISK;
+  auto status = NodeAddInternal(device);
+  if (status.is_error()) {
+    return txn.Reply(status.error_value());
   }
-  device.name = "ram-nand";
-  device.vid = PDEV_VID_GENERIC;
-  device.pid = PDEV_PID_GENERIC;
-  device.did = PDEV_DID_RAM_NAND;
-  status = PBusDeviceAdd(&device);
-  if (status != ZX_OK) {
-    return txn.Reply(status);
+  device.name() = "ram-nand";
+  device.vid() = PDEV_VID_GENERIC;
+  device.pid() = PDEV_PID_GENERIC;
+  device.did() = PDEV_DID_RAM_NAND;
+  status = NodeAddInternal(device);
+  if (status.is_error()) {
+    return txn.Reply(status.error_value());
   }
-  device.name = "virtual-audio";
-  device.vid = PDEV_VID_GENERIC;
-  device.pid = PDEV_PID_GENERIC;
-  device.did = PDEV_DID_VIRTUAL_AUDIO;
-  status = PBusDeviceAdd(&device);
-  if (status != ZX_OK) {
-    return txn.Reply(status);
+  device.name() = "virtual-audio";
+  device.vid() = PDEV_VID_GENERIC;
+  device.pid() = PDEV_PID_GENERIC;
+  device.did() = PDEV_DID_VIRTUAL_AUDIO;
+  status = NodeAddInternal(device);
+  if (status.is_error()) {
+    return txn.Reply(status.error_value());
   }
-  device.name = "bt-hci-emulator";
-  device.vid = PDEV_VID_GENERIC;
-  device.pid = PDEV_PID_GENERIC;
-  device.did = PDEV_DID_BT_HCI_EMULATOR;
-  status = PBusDeviceAdd(&device);
-  if (status != ZX_OK) {
-    return txn.Reply(status);
+  device.name() = "bt-hci-emulator";
+  device.vid() = PDEV_VID_GENERIC;
+  device.pid() = PDEV_PID_GENERIC;
+  device.did() = PDEV_DID_BT_HCI_EMULATOR;
+  status = NodeAddInternal(device);
+  if (status.is_error()) {
+    return txn.Reply(status.error_value());
   }
 
   return txn.Reply(ZX_OK);  // This will make the device visible and able to be unbound.

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -11,67 +12,65 @@
 #include <soc/aml-a311d/a311d-gpio.h>
 #include <soc/aml-a311d/a311d-hw.h>
 
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 #include "vim3-gpios.h"
 #include "vim3.h"
 
 namespace vim3 {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
-constexpr pbus_mmio_t display_mmios[] = {
-    {
+static const std::vector<fpbus::Mmio> display_mmios{
+    {{
         // VBUS/VPU
         .base = A311D_VPU_BASE,
         .length = A311D_VPU_LENGTH,
-    },
+    }},
     {},
     {},
-    {
+    {{
         // HHI
         .base = A311D_HIU_BASE,
         .length = A311D_HIU_LENGTH,
-    },
-    {
+    }},
+    {{
         // AOBUS
         .base = A311D_AOBUS_BASE,
         .length = A311D_AOBUS_LENGTH,
-    },
-    {
+    }},
+    {{
         // CBUS
         .base = A311D_CBUS_BASE,
         .length = A311D_CBUS_LENGTH,
-    },
+    }},
 };
 
-static const pbus_irq_t display_irqs[] = {
-    {
+static const std::vector<fpbus::Irq> display_irqs{
+    {{
         .irq = A311D_VIU1_VSYNC_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
-    {
+    }},
+    {{
         .irq = A311D_RDMA_DONE_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
-
+    }},
 };
 
-static const pbus_bti_t display_btis[] = {
-    {
+static const std::vector<fpbus::Bti> display_btis{
+    {{
         .iommu_index = 0,
         .bti_id = BTI_DISPLAY,
-    },
+    }},
 };
 
-static pbus_dev_t display_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "display";
-  dev.vid = PDEV_VID_AMLOGIC;
-  dev.pid = PDEV_PID_AMLOGIC_A311D;
-  dev.did = PDEV_DID_AMLOGIC_DISPLAY;
-  dev.mmio_list = display_mmios;
-  dev.mmio_count = std::size(display_mmios);
-  dev.irq_list = display_irqs;
-  dev.irq_count = std::size(display_irqs);
-  dev.bti_list = display_btis;
-  dev.bti_count = std::size(display_btis);
+static const fpbus::Node display_dev = []() {
+  fpbus::Node dev = {};
+  dev.name() = "display";
+  dev.vid() = PDEV_VID_AMLOGIC;
+  dev.pid() = PDEV_PID_AMLOGIC_A311D;
+  dev.did() = PDEV_DID_AMLOGIC_DISPLAY;
+  dev.mmio() = display_mmios;
+  dev.irq() = display_irqs;
+  dev.bti() = display_btis;
   return dev;
 }();
 
@@ -118,11 +117,20 @@ static const device_fragment_t fragments[] = {
 };
 
 zx_status_t Vim3::DisplayInit() {
-  auto status = pbus_.CompositeDeviceAdd(&display_dev, reinterpret_cast<uint64_t>(fragments),
-                                         std::size(fragments), nullptr);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd display failed: %d", __func__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('DISP');
+  auto result = pbus_.buffer(arena)->AddCompositeImplicitPbusFragment(
+      fidl::ToWire(fidl_arena, display_dev),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, fragments, std::size(fragments)), {});
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment Display(display_dev) request failed: %s",
+           __func__, result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment Display(display_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   return ZX_OK;

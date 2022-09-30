@@ -14,6 +14,7 @@ driver_bind_rules("test-bus-bind") {
   rules = "test-bus.bind"
   header_output = "test-bus-bind.h"
   deps = [
+    "//src/devices/bind/fuchsia.hardware.platform.bus",
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/fuchsia.test.platform",
   ]
@@ -28,9 +29,10 @@ fuchsia_driver("integration-test-driver") {
   deps = [
     ":fuchsia.board.test_cpp_wire",
     ":test-bus-bind",
-    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
+    "//sdk/fidl/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_cpp_driver",
     "//src/devices/lib/driver",
+    "//src/devices/lib/driver:driver_runtime",
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",
@@ -42,5 +44,5 @@ fuchsia_driver_component("integration-test") {
   component_name = "integration-test"
   deps = [ ":integration-test-driver" ]
   info = "integration-test-info.json"
-  colocate = true
+  manifest = "meta/integration-test.cml"
 }

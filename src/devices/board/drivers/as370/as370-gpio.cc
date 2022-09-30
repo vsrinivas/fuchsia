@@ -4,6 +4,8 @@
 
 #include "as370-gpio.h"
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
@@ -15,6 +17,7 @@
 #include "as370.h"
 
 namespace board_as370 {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 zx_status_t As370::GpioInit() {
   synaptics::PinmuxMetadata pinmux_metadata = {};
@@ -380,17 +383,26 @@ zx_status_t As370::GpioInit() {
       25,
   };  // NAND_IO7
 
-  constexpr pbus_mmio_t gpio_mmios[] = {
-      {.base = as370::kPinmuxBase, .length = as370::kPinmuxSize},
-      {.base = as370::kGpio1Base, .length = as370::kGpioSize},
-      {.base = as370::kGpio2Base, .length = as370::kGpioSize},
+  static const std::vector<fpbus::Mmio> gpio_mmios{
+      {{
+          .base = as370::kPinmuxBase,
+          .length = as370::kPinmuxSize,
+      }},
+      {{
+          .base = as370::kGpio1Base,
+          .length = as370::kGpioSize,
+      }},
+      {{
+          .base = as370::kGpio2Base,
+          .length = as370::kGpioSize,
+      }},
   };
 
-  const pbus_irq_t gpio_irqs[] = {
-      {
+  static const std::vector<fpbus::Irq> gpio_irqs{
+      {{
           .irq = as370::kGpio1Irq,
           .mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
-      },
+      }},
   };
 
   const gpio_pin_t gpio_pins[] = {
@@ -400,35 +412,43 @@ zx_status_t As370::GpioInit() {
       DECL_GPIO_PIN(GPIO_WLAN_EN),
   };
 
-  const pbus_metadata_t gpio_metadata[] = {
-      {
+  std::vector<fpbus::Metadata> gpio_metadata{
+      {{
           .type = DEVICE_METADATA_GPIO_PINS,
-          .data_buffer = reinterpret_cast<const uint8_t*>(&gpio_pins),
-          .data_size = sizeof(gpio_pins),
-      },
-      {
+          .data = std::vector<uint8_t>(
+              reinterpret_cast<const uint8_t*>(&gpio_pins),
+              reinterpret_cast<const uint8_t*>(&gpio_pins) + sizeof(gpio_pins)),
+      }},
+      {{
           .type = DEVICE_METADATA_PRIVATE,
-          .data_buffer = reinterpret_cast<const uint8_t*>(&pinmux_metadata),
-          .data_size = sizeof(pinmux_metadata),
-      },
+          .data = std::vector<uint8_t>(
+              reinterpret_cast<const uint8_t*>(&pinmux_metadata),
+              reinterpret_cast<const uint8_t*>(&pinmux_metadata) + sizeof(pinmux_metadata)),
+      }},
   };
 
-  pbus_dev_t gpio_dev = {};
-  gpio_dev.name = "gpio";
-  gpio_dev.vid = PDEV_VID_SYNAPTICS;
-  gpio_dev.pid = PDEV_PID_SYNAPTICS_AS370;
-  gpio_dev.did = PDEV_DID_SYNAPTICS_GPIO;
-  gpio_dev.mmio_list = gpio_mmios;
-  gpio_dev.mmio_count = std::size(gpio_mmios);
-  gpio_dev.irq_list = gpio_irqs;
-  gpio_dev.irq_count = std::size(gpio_irqs);
-  gpio_dev.metadata_list = gpio_metadata;
-  gpio_dev.metadata_count = std::size(gpio_metadata);
+  fpbus::Node gpio_dev;
+  gpio_dev.name() = "gpio";
+  gpio_dev.vid() = PDEV_VID_SYNAPTICS;
+  gpio_dev.pid() = PDEV_PID_SYNAPTICS_AS370;
+  gpio_dev.did() = PDEV_DID_SYNAPTICS_GPIO;
+  gpio_dev.mmio() = gpio_mmios;
+  gpio_dev.irq() = gpio_irqs;
+  gpio_dev.metadata() = gpio_metadata;
 
-  auto status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed: %d", __func__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('GPIO');
+  auto result = pbus_.buffer(arena)->ProtocolNodeAdd(ZX_PROTOCOL_GPIO_IMPL,
+                                                     fidl::ToWire(fidl_arena, gpio_dev));
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: ProtocolNodeAdd Gpio(gpio_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: ProtocolNodeAdd Gpio(gpio_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
   gpio_impl_ = ddk::GpioImplProtocolClient(parent());
   if (!gpio_impl_.is_valid()) {

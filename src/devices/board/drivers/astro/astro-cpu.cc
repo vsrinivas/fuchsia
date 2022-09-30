@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -17,17 +18,19 @@
 #include "astro-gpios.h"
 #include "astro.h"
 #include "src/devices/board/drivers/astro/astro-cpu-bind.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 
 namespace {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 constexpr amlogic_cpu::PerfDomainId kPdArmA53 = 1;
 
-constexpr pbus_mmio_t cpu_mmios[]{
-    {
+const std::vector<fpbus::Mmio> cpu_mmios{
+    {{
         // AOBUS
         .base = S905D2_AOBUS_BASE,
         .length = S905D2_AOBUS_LENGTH,
-    },
+    }},
 };
 
 constexpr amlogic_cpu::operating_point_t operating_points[] = {
@@ -48,29 +51,29 @@ constexpr amlogic_cpu::perf_domain_t performance_domains[] = {
     {.id = kPdArmA53, .core_count = 4, .relative_performance = 255, .name = "s905d2-arm-a53"},
 };
 
-static const pbus_metadata_t cpu_metadata[] = {
-    {
+static const std::vector<fpbus::Metadata> cpu_metadata{
+    {{
         .type = DEVICE_METADATA_AML_OP_POINTS,
-        .data_buffer = reinterpret_cast<const uint8_t*>(operating_points),
-        .data_size = sizeof(operating_points),
-    },
-    {
+        .data = std::vector<uint8_t>(
+            reinterpret_cast<const uint8_t*>(&operating_points),
+            reinterpret_cast<const uint8_t*>(&operating_points) + sizeof(operating_points)),
+    }},
+    {{
         .type = DEVICE_METADATA_AML_PERF_DOMAINS,
-        .data_buffer = reinterpret_cast<const uint8_t*>(performance_domains),
-        .data_size = sizeof(performance_domains),
-    },
+        .data = std::vector<uint8_t>(
+            reinterpret_cast<const uint8_t*>(&performance_domains),
+            reinterpret_cast<const uint8_t*>(&performance_domains) + sizeof(performance_domains)),
+    }},
 };
 
-constexpr pbus_dev_t cpu_dev = []() {
-  pbus_dev_t result = {};
-  result.name = "aml-cpu";
-  result.vid = PDEV_VID_GOOGLE;
-  result.pid = PDEV_PID_ASTRO;
-  result.did = PDEV_DID_GOOGLE_AMLOGIC_CPU;
-  result.metadata_list = cpu_metadata;
-  result.metadata_count = std::size(cpu_metadata);
-  result.mmio_list = cpu_mmios;
-  result.mmio_count = std::size(cpu_mmios);
+static const fpbus::Node cpu_dev = []() {
+  fpbus::Node result = {};
+  result.name() = "aml-cpu";
+  result.vid() = PDEV_VID_GOOGLE;
+  result.pid() = PDEV_PID_ASTRO;
+  result.did() = PDEV_DID_GOOGLE_AMLOGIC_CPU;
+  result.metadata() = cpu_metadata;
+  result.mmio() = cpu_mmios;
   return result;
 }();
 
@@ -94,13 +97,25 @@ zx_status_t Astro::CpuInit() {
     return result;
   }
 
-  result = pbus_.AddComposite(&cpu_dev, reinterpret_cast<uint64_t>(aml_cpu_fragments),
-                              std::size(aml_cpu_fragments), "power-01");
-  if (result != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to add CPU composite device, st = %d", __func__, result);
-  }
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('CPU_');
+  auto composite_result = pbus_.buffer(arena)->AddComposite(
+      fidl::ToWire(fidl_arena, cpu_dev),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, aml_cpu_fragments,
+                                               std::size(aml_cpu_fragments)),
+      fidl::StringView::FromExternal("power-01"));
 
-  return result;
+  if (!composite_result.ok()) {
+    zxlogf(ERROR, "%s: AddComposite request failed: %s", __func__,
+           composite_result.FormatDescription().data());
+    return composite_result.status();
+  }
+  if (composite_result->is_error()) {
+    zxlogf(ERROR, "%s: AddComposite failed: %s", __func__,
+           zx_status_get_string(composite_result->error_value()));
+    return composite_result->error_value();
+  }
+  return ZX_OK;
 }
 
 }  // namespace astro

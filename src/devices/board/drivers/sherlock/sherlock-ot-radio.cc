@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -19,34 +20,47 @@
 #include "sherlock-gpios.h"
 #include "sherlock.h"
 #include "src/devices/board/drivers/sherlock/sherlock-ot-radio-bind.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 
 namespace sherlock {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 static const uint32_t device_id = kOtDeviceNrf52840;
-static const pbus_metadata_t nrf52840_radio_metadata[] = {
-    {.type = DEVICE_METADATA_PRIVATE,
-     .data_buffer = reinterpret_cast<const uint8_t*>(&device_id),
-     .data_size = sizeof(device_id)},
+static const std::vector<fpbus::Metadata> nrf52840_radio_metadata{
+    {{
+        .type = DEVICE_METADATA_PRIVATE,
+        .data =
+            std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(&device_id),
+                                 reinterpret_cast<const uint8_t*>(&device_id) + sizeof(device_id)),
+    }},
 };
 
 zx_status_t Sherlock::OtRadioInit() {
-  pbus_dev_t dev = {};
-  dev.name = "nrf52840-radio";
-  dev.vid = PDEV_VID_GENERIC;
-  dev.pid = PDEV_PID_SHERLOCK;
-  dev.did = PDEV_DID_OT_RADIO;
-  dev.metadata_list = nrf52840_radio_metadata;
-  dev.metadata_count = std::size(nrf52840_radio_metadata);
+  fpbus::Node dev;
+  dev.name() = "nrf52840-radio";
+  dev.vid() = PDEV_VID_GENERIC;
+  dev.pid() = PDEV_PID_SHERLOCK;
+  dev.did() = PDEV_DID_OT_RADIO;
+  dev.metadata() = nrf52840_radio_metadata;
 
-  zx_status_t status =
-      pbus_.AddComposite(&dev, reinterpret_cast<uint64_t>(nrf52840_radio_fragments),
-                         std::size(nrf52840_radio_fragments), "pdev");
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s(nrf52840): AddComposite failed: %d", __func__, status);
-  } else {
-    zxlogf(INFO, "%s(nrf52840): AddComposite", __func__);
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('OTRA');
+  auto result = pbus_.buffer(arena)->AddComposite(
+      fidl::ToWire(fidl_arena, dev),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, nrf52840_radio_fragments,
+                                               std::size(nrf52840_radio_fragments)),
+      "pdev");
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddComposite OtRadio(dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
   }
-  return status;
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddComposite OtRadio(dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
+  }
+  return ZX_OK;
 }
 
 }  // namespace sherlock

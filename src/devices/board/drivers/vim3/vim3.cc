@@ -5,8 +5,10 @@
 #include "src/devices/board/drivers/vim3/vim3.h"
 
 #include <assert.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/markers.h>
 #include <fuchsia/hardware/gpio/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <lib/async/cpp/task.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -25,10 +27,17 @@
 namespace vim3 {
 
 zx_status_t Vim3::Create(void* ctx, zx_device_t* parent) {
-  pbus_protocol_t pbus;
   iommu_protocol_t iommu;
 
-  auto status = device_get_protocol(parent, ZX_PROTOCOL_PBUS, &pbus);
+  auto endpoints = fdf::CreateEndpoints<fuchsia_hardware_platform_bus::PlatformBus>();
+  if (endpoints.is_error()) {
+    return endpoints.error_value();
+  }
+
+  zx_status_t status = device_connect_runtime_protocol(
+      parent, fuchsia_hardware_platform_bus::Service::PlatformBus::ServiceName,
+      fuchsia_hardware_platform_bus::Service::PlatformBus::Name,
+      endpoints->server.TakeHandle().release());
   if (status != ZX_OK) {
     return status;
   }
@@ -39,7 +48,7 @@ zx_status_t Vim3::Create(void* ctx, zx_device_t* parent) {
   }
 
   fbl::AllocChecker ac;
-  auto board = fbl::make_unique_checked<Vim3>(&ac, parent, &pbus, &iommu);
+  auto board = fbl::make_unique_checked<Vim3>(&ac, parent, std::move(endpoints->client), &iommu);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -60,7 +69,6 @@ zx_status_t Vim3::Create(void* ctx, zx_device_t* parent) {
 int Vim3::Thread() {
   // Load protocol implementation drivers first.
   zx_status_t status;
-
   if ((status = SysmemInit()) != ZX_OK) {
     zxlogf(ERROR, "SysmemInit() failed: %d", status);
     init_txn_->Reply(ZX_ERR_INTERNAL);
@@ -165,12 +173,7 @@ int Vim3::Thread() {
 
 void Vim3::DdkInit(ddk::InitTxn txn) {
   init_txn_ = std::move(txn);
-  int rc = thrd_create_with_name(
-      &thread_, [](void* arg) -> int { return reinterpret_cast<Vim3*>(arg)->Thread(); }, this,
-      "vim3-start-thread");
-  if (rc != thrd_success) {
-    init_txn_->Reply(ZX_ERR_INTERNAL);
-  }
+  async::PostTask(fdf::Dispatcher::GetCurrent()->async_dispatcher(), [this]() { Thread(); });
 }
 
 static constexpr zx_driver_ops_t vim3_driver_ops = []() {

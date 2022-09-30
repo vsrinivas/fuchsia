@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-using fuchsia.platform;
+using fuchsia.hardware.platform.bus;
 using fuchsia.arm.platform;
 
-fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.BUS;
+fuchsia.BIND_FIDL_PROTOCOL == fuchsia.hardware.platform.bus.BIND_FIDL_PROTOCOL.PLATFORM_BUS;
 fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.arm.platform.BIND_PLATFORM_DEV_VID.ARM;
 fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.arm.platform.BIND_PLATFORM_DEV_PID.ACPI_BOARD;

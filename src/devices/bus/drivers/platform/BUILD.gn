@@ -24,7 +24,6 @@ fuchsia_driver("platform-bus-driver") {
   output_name = "platform-bus"
   sources = [
     "cpu-trace.cc",
-    "device-resources.cc",
     "platform-bus.cc",
     "platform-device.cc",
   ]
@@ -34,12 +33,15 @@ fuchsia_driver("platform-bus-driver") {
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.iommu:fuchsia.hardware.iommu_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_cpp_driver",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_cpp_wire",
+    "//sdk/lib/driver2:cpp",
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp",
     "//src/devices/lib/driver",
+    "//src/devices/lib/driver:driver_runtime",
     "//src/lib/ddk",
 
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below
@@ -61,7 +63,7 @@ fuchsia_driver_component("platform-bus") {
   component_name = "platform-bus"
   deps = [ ":platform-bus-driver" ]
   info = "platform-bus-info.json"
-  root_resource = true
+  manifest = "meta/platform-bus.cml"
 }
 
 fuchsia_driver("platform-bus.proxy-driver") {
@@ -90,7 +92,6 @@ fuchsia_driver_component("platform-bus.proxy") {
 test("platform-bus-unittest") {
   sources = [
     "cpu-trace.cc",
-    "device-resources.cc",
     "platform-bus-unittest.cc",
     "platform-bus.cc",
     "platform-device.cc",
@@ -101,18 +102,22 @@ test("platform-bus-unittest") {
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.iommu:fuchsia.hardware.iommu_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.powerimpl:fuchsia.hardware.powerimpl_banjo_cpp",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_cpp_driver",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_cpp_wire",
+    "//sdk/lib/driver2:cpp",
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp",
     "//src/devices/lib/driver",
+    "//src/devices/lib/driver:driver_runtime",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/no_ddk",
     "//src/lib/ddk",
 
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/devices/testing/driver-runtime-main:zxtest",
     "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/system/ulib/fbl",

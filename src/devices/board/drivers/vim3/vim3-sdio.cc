@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <fuchsia/hardware/sdmmc/c/banjo.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
@@ -15,28 +17,30 @@
 #include "src/devices/board/drivers/vim3/vim3-gpios.h"
 #include "src/devices/board/drivers/vim3/vim3-sdio-bind.h"
 #include "src/devices/board/drivers/vim3/vim3.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 
 namespace vim3 {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
-static const pbus_mmio_t sdio_mmios[] = {
-    {
+static const std::vector<fpbus::Mmio> sdio_mmios{
+    {{
         .base = A311D_EMMC_A_BASE,
         .length = A311D_EMMC_A_LENGTH,
-    },
+    }},
 };
 
-static const pbus_irq_t sdio_irqs[] = {
-    {
+static const std::vector<fpbus::Irq> sdio_irqs{
+    {{
         .irq = A311D_SD_EMMC_A_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
+    }},
 };
 
-static const pbus_bti_t sdio_btis[] = {
-    {
+static const std::vector<fpbus::Bti> sdio_btis{
+    {{
         .iommu_index = 0,
         .bti_id = BTI_SDIO,
-    },
+    }},
 };
 
 static aml_sdmmc_config_t config = {
@@ -47,30 +51,24 @@ static aml_sdmmc_config_t config = {
     .prefs = 0,
 };
 
-static const pbus_metadata_t sdio_metadata[] = {
-    {
+static const std::vector<fpbus::Metadata> sdio_metadata{
+    {{
         .type = DEVICE_METADATA_PRIVATE,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&config),
-        .data_size = sizeof(config),
-    },
+        .data = std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(&config),
+                                     reinterpret_cast<const uint8_t*>(&config) + sizeof(config)),
+    }},
 };
 
 zx_status_t Vim3::SdioInit() {
-  zx_status_t status;
-
-  pbus_dev_t sdio_dev = {};
-  sdio_dev.name = "aml_sdio";
-  sdio_dev.vid = PDEV_VID_AMLOGIC;
-  sdio_dev.pid = PDEV_PID_GENERIC;
-  sdio_dev.did = PDEV_DID_AMLOGIC_SDMMC_A;
-  sdio_dev.mmio_list = sdio_mmios;
-  sdio_dev.mmio_count = std::size(sdio_mmios);
-  sdio_dev.irq_list = sdio_irqs;
-  sdio_dev.irq_count = std::size(sdio_irqs);
-  sdio_dev.bti_list = sdio_btis;
-  sdio_dev.bti_count = std::size(sdio_btis);
-  sdio_dev.metadata_list = sdio_metadata;
-  sdio_dev.metadata_count = std::size(sdio_metadata);
+  fpbus::Node sdio_dev;
+  sdio_dev.name() = "aml_sdio";
+  sdio_dev.vid() = PDEV_VID_AMLOGIC;
+  sdio_dev.pid() = PDEV_PID_GENERIC;
+  sdio_dev.did() = PDEV_DID_AMLOGIC_SDMMC_A;
+  sdio_dev.mmio() = sdio_mmios;
+  sdio_dev.irq() = sdio_irqs;
+  sdio_dev.bti() = sdio_btis;
+  sdio_dev.metadata() = sdio_metadata;
 
   gpio_impl_.SetAltFunction(A311D_SDIO_D0, A311D_GPIOX_0_SDIO_D0_FN);
   gpio_impl_.SetAltFunction(A311D_SDIO_D1, A311D_GPIOX_1_SDIO_D1_FN);
@@ -79,10 +77,22 @@ zx_status_t Vim3::SdioInit() {
   gpio_impl_.SetAltFunction(A311D_SDIO_CLK, A311D_GPIOX_4_SDIO_CLK_FN);
   gpio_impl_.SetAltFunction(A311D_SDIO_CMD, A311D_GPIOX_5_SDIO_CMD_FN);
 
-  if ((status = pbus_.AddComposite(&sdio_dev, reinterpret_cast<uint64_t>(vim3_sdio_fragments),
-                                   std::size(vim3_sdio_fragments), "pdev")) != ZX_OK) {
-    zxlogf(ERROR, "SdInit could not add sdio_dev: %d", status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('SDIO');
+  auto result = pbus_.buffer(arena)->AddComposite(
+      fidl::ToWire(fidl_arena, sdio_dev),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, vim3_sdio_fragments,
+                                               std::size(vim3_sdio_fragments)),
+      "pdev");
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddComposite Sdio(sdio_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddComposite Sdio(sdio_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   return ZX_OK;

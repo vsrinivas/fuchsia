@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -19,6 +20,7 @@
 #include "astro-gpios.h"
 #include "astro.h"
 #include "src/devices/board/drivers/astro/audio-codec-tas27xx-bind.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 
 // Enables BT PCM audio.
 #define ENABLE_BT
@@ -43,49 +45,53 @@ static const device_fragment_t tdm_pcm_fragments[] = {};
 #endif
 
 namespace astro {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 constexpr uint32_t kCodecVid = PDEV_VID_TI;
 constexpr uint32_t kCodecDid = PDEV_DID_TI_TAS2770;
 
-static const pbus_mmio_t audio_mmios[] = {
-    {.base = S905D2_EE_AUDIO_BASE, .length = S905D2_EE_AUDIO_LENGTH},
+static const std::vector<fpbus::Mmio> audio_mmios{
+    {{
+        .base = S905D2_EE_AUDIO_BASE,
+        .length = S905D2_EE_AUDIO_LENGTH,
+    }},
 };
 
-constexpr pbus_irq_t frddr_b_irqs[] = {
-    {
+static const std::vector<fpbus::Irq> frddr_b_irqs{
+    {{
         .irq = S905D2_AUDIO_FRDDR_B,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
+    }},
 };
-constexpr pbus_irq_t toddr_b_irqs[] = {
-    {
+static const std::vector<fpbus::Irq> toddr_b_irqs{
+    {{
         .irq = S905D2_AUDIO_TODDR_B,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
+    }},
 };
 
 #ifdef ENABLE_BT
 #ifndef ENABLE_DAI_MODE
-constexpr pbus_irq_t frddr_a_irqs[] = {
-    {
+static const std::vector<fpbus::Irq> frddr_a_irqs{
+    {{
         .irq = S905D2_AUDIO_FRDDR_A,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
+    }},
 };
-constexpr pbus_irq_t toddr_a_irqs[] = {
-    {
+static const std::vector<fpbus::Irq> toddr_a_irqs{
+    {{
         .irq = S905D2_AUDIO_TODDR_A,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
+    }},
 };
 #endif
 #endif
 
-static const pbus_bti_t tdm_btis[] = {
-    {
+static const std::vector<fpbus::Bti> tdm_btis{
+    {{
         .iommu_index = 0,
         .bti_id = BTI_AUDIO_OUT,
-    },
+    }},
 };
 
 static const zx_bind_inst_t enable_gpio_match[] = {
@@ -113,6 +119,8 @@ static const device_fragment_t tdm_i2s_fragments[] = {
 
 zx_status_t Astro::AudioInit() {
   zx_status_t status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('AUDI');
   uint8_t tdm_instance_id = 1;
 
   status = clk_impl_.Disable(g12a_clk::CLK_HIFI_PLL);
@@ -167,11 +175,11 @@ zx_status_t Astro::AudioInit() {
 #ifdef ENABLE_BT
   // Add TDM OUT for BT.
   {
-    const pbus_bti_t pcm_out_btis[] = {
-        {
+    const std::vector<fpbus::Bti> pcm_out_btis = {
+        {{
             .iommu_index = 0,
             .bti_id = BTI_AUDIO_BT_OUT,
-        },
+        }},
     };
     metadata::AmlConfig metadata = {};
     snprintf(metadata.manufacturer, sizeof(metadata.manufacturer), "Spacely Sprockets");
@@ -190,44 +198,59 @@ zx_status_t Astro::AudioInit() {
     metadata.ring_buffer.number_of_channels = 1;
     metadata.dai.number_of_channels = 1;
     metadata.lanes_enable_mask[0] = 1;
-    pbus_metadata_t tdm_metadata[] = {
-        {
+    std::vector<fpbus::Metadata> tdm_metadata{
+        {{
             .type = DEVICE_METADATA_PRIVATE,
-            .data_buffer = reinterpret_cast<uint8_t*>(&metadata),
-            .data_size = sizeof(metadata),
-        },
+            .data = std::vector<uint8_t>(
+                reinterpret_cast<const uint8_t*>(&metadata),
+                reinterpret_cast<const uint8_t*>(&metadata) + sizeof(metadata)),
+        }},
     };
 
     // Add DAI or controller driver depending on ENABLE_DAI_MODE.
-    pbus_dev_t tdm_dev = {};
-    tdm_dev.vid = PDEV_VID_AMLOGIC;
-    tdm_dev.pid = PDEV_PID_AMLOGIC_S905D2;
-    tdm_dev.mmio_list = audio_mmios;
-    tdm_dev.mmio_count = std::size(audio_mmios);
-    tdm_dev.bti_list = pcm_out_btis;
-    tdm_dev.bti_count = std::size(pcm_out_btis);
-    tdm_dev.metadata_list = tdm_metadata;
-    tdm_dev.metadata_count = std::size(tdm_metadata);
+    fpbus::Node tdm_dev;
+    tdm_dev.vid() = PDEV_VID_AMLOGIC;
+    tdm_dev.pid() = PDEV_PID_AMLOGIC_S905D2;
+    tdm_dev.mmio() = audio_mmios;
+    tdm_dev.bti() = pcm_out_btis;
+    tdm_dev.metadata() = tdm_metadata;
 #ifdef ENABLE_DAI_MODE
-    tdm_dev.name = "astro-pcm-dai-out";
-    tdm_dev.did = PDEV_DID_AMLOGIC_DAI_OUT;
-    status = pbus_.DeviceAdd(&tdm_dev);
+    tdm_dev.name() = "astro-pcm-dai-out";
+    tdm_dev.did() = PDEV_DID_AMLOGIC_DAI_OUT;
+    auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, tdm_dev));
+    if (!result.ok()) {
+      zxlogf(ERROR, "%s: NodeAdd request failed: %s", __func__, result.FormatDescription().data());
+      return result.status();
+    }
+    if (result->is_error()) {
+      zxlogf(ERROR, "%s: NodeAdd failed: %s", __func__,
+             zx_status_get_string(result->error_value()));
+      return result->error_value();
+    }
 #else
-    tdm_dev.name = "astro-pcm-audio-out";
-    tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
-    tdm_dev.instance_id = tdm_instance_id++;
-    tdm_dev.irq_list = frddr_a_irqs;
-    tdm_dev.irq_count = std::size(frddr_a_irqs);
+    tdm_dev.name() = "astro-pcm-audio-out";
+    tdm_dev.did() = PDEV_DID_AMLOGIC_TDM;
+    tdm_dev.instance_id() = tdm_instance_id++;
+    tdm_dev.irq() = frddr_a_irqs;
 
     // TODO(fxb/84194): Migrate to the composite bind rules once dynamic bind rules are
     // available.
-    status = pbus_.CompositeDeviceAdd(&tdm_dev, reinterpret_cast<uint64_t>(tdm_pcm_fragments),
-                                      std::size(tdm_pcm_fragments), nullptr);
-#endif
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: Add DAI/controller driver failed: %d", __FILE__, status);
-      return status;
+    auto result = pbus_.buffer(arena)->AddCompositeImplicitPbusFragment(
+        fidl::ToWire(fidl_arena, tdm_dev),
+        platform_bus_composite::MakeFidlFragment(fidl_arena, tdm_pcm_fragments,
+                                                 std::size(tdm_pcm_fragments)),
+        {});
+    if (!result.ok()) {
+      zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment Audio(tdm_dev) request failed: %s",
+             __func__, result.FormatDescription().data());
+      return result.status();
     }
+    if (result->is_error()) {
+      zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment Audio(tdm_dev) failed: %s", __func__,
+             zx_status_get_string(result->error_value()));
+      return result->error_value();
+    }
+#endif
 
 #ifdef ENABLE_DAI_MODE
 #ifdef ENABLE_DAI_TEST
@@ -338,33 +361,39 @@ zx_status_t Astro::AudioInit() {
     metadata.codecs.external_delays[1].nsecs = ZX_NSEC(83333);
     metadata.codecs.ring_buffer_channels_to_use_bitmask[0] = 0x1;  // Single speaker uses index 0.
     metadata.codecs.delta_gains[0] = -1.5f;
-    pbus_metadata_t tdm_metadata[] = {
-        {
+    std::vector<fpbus::Metadata> tdm_metadata{
+        {{
             .type = DEVICE_METADATA_PRIVATE,
-            .data_buffer = reinterpret_cast<uint8_t*>(&metadata),
-            .data_size = sizeof(metadata),
-        },
+            .data = std::vector<uint8_t>(
+                reinterpret_cast<const uint8_t*>(&metadata),
+                reinterpret_cast<const uint8_t*>(&metadata) + sizeof(metadata)),
+        }},
     };
 
-    pbus_dev_t tdm_dev = {};
-    tdm_dev.name = "astro-i2s-audio-out";
-    tdm_dev.vid = PDEV_VID_AMLOGIC;
-    tdm_dev.pid = PDEV_PID_AMLOGIC_S905D2;
-    tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
-    tdm_dev.instance_id = tdm_instance_id++;
-    tdm_dev.mmio_list = audio_mmios;
-    tdm_dev.mmio_count = std::size(audio_mmios);
-    tdm_dev.bti_list = tdm_btis;
-    tdm_dev.bti_count = std::size(tdm_btis);
-    tdm_dev.irq_list = frddr_b_irqs;
-    tdm_dev.irq_count = std::size(frddr_b_irqs);
-    tdm_dev.metadata_list = tdm_metadata;
-    tdm_dev.metadata_count = std::size(tdm_metadata);
-    status = pbus_.CompositeDeviceAdd(&tdm_dev, reinterpret_cast<uint64_t>(tdm_i2s_fragments),
-                                      std::size(tdm_i2s_fragments), nullptr);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: I2S CompositeDeviceAdd failed: %d", __FILE__, status);
-      return status;
+    fpbus::Node tdm_dev;
+    tdm_dev.name() = "astro-i2s-audio-out";
+    tdm_dev.vid() = PDEV_VID_AMLOGIC;
+    tdm_dev.pid() = PDEV_PID_AMLOGIC_S905D2;
+    tdm_dev.did() = PDEV_DID_AMLOGIC_TDM;
+    tdm_dev.instance_id() = tdm_instance_id++;
+    tdm_dev.mmio() = audio_mmios;
+    tdm_dev.bti() = tdm_btis;
+    tdm_dev.irq() = frddr_b_irqs;
+    tdm_dev.metadata() = tdm_metadata;
+    auto result = pbus_.buffer(arena)->AddCompositeImplicitPbusFragment(
+        fidl::ToWire(fidl_arena, tdm_dev),
+        platform_bus_composite::MakeFidlFragment(fidl_arena, tdm_i2s_fragments,
+                                                 std::size(tdm_i2s_fragments)),
+        {});
+    if (!result.ok()) {
+      zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment request failed: %s", __func__,
+             result.FormatDescription().data());
+      return result.status();
+    }
+    if (result->is_error()) {
+      zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment failed: %s", __func__,
+             zx_status_get_string(result->error_value()));
+      return result->error_value();
     }
   }
 
@@ -372,11 +401,11 @@ zx_status_t Astro::AudioInit() {
 #ifdef ENABLE_BT
   // Add TDM IN for BT.
   {
-    const pbus_bti_t pcm_in_btis[] = {
-        {
+    const std::vector<fpbus::Bti> pcm_in_btis{
+        {{
             .iommu_index = 0,
             .bti_id = BTI_AUDIO_BT_IN,
-        },
+        }},
     };
     metadata::AmlConfig metadata = {};
     snprintf(metadata.manufacturer, sizeof(metadata.manufacturer), "Spacely Sprockets");
@@ -396,45 +425,49 @@ zx_status_t Astro::AudioInit() {
     metadata.dai.number_of_channels = 1;
     metadata.swaps = 0x0200;
     metadata.lanes_enable_mask[1] = 1;
-    pbus_metadata_t tdm_metadata[] = {
-        {
+    std::vector<fpbus::Metadata> tdm_metadata{
+        {{
             .type = DEVICE_METADATA_PRIVATE,
-            .data_buffer = reinterpret_cast<uint8_t*>(&metadata),
-            .data_size = sizeof(metadata),
-        },
+            .data = std::vector<uint8_t>(
+                reinterpret_cast<const uint8_t*>(&metadata),
+                reinterpret_cast<const uint8_t*>(&metadata) + sizeof(metadata)),
+        }},
     };
     // Add DAI or controller driver depending on ENABLE_DAI_MODE.
-    pbus_dev_t tdm_dev = {};
-    tdm_dev.vid = PDEV_VID_AMLOGIC;
-    tdm_dev.pid = PDEV_PID_AMLOGIC_S905D2;
-    tdm_dev.mmio_list = audio_mmios;
-    tdm_dev.mmio_count = std::size(audio_mmios);
-    tdm_dev.bti_list = pcm_in_btis;
-    tdm_dev.bti_count = std::size(pcm_in_btis);
-    tdm_dev.metadata_list = tdm_metadata;
-    tdm_dev.metadata_count = std::size(tdm_metadata);
+    fpbus::Node tdm_dev;
+    tdm_dev.vid() = PDEV_VID_AMLOGIC;
+    tdm_dev.pid() = PDEV_PID_AMLOGIC_S905D2;
+    tdm_dev.mmio() = audio_mmios;
+    tdm_dev.bti() = pcm_in_btis;
+    tdm_dev.metadata() = tdm_metadata;
 #ifdef ENABLE_DAI_MODE
-    tdm_dev.name = "astro-pcm-dai-in";
-    tdm_dev.did = PDEV_DID_AMLOGIC_DAI_IN;
-    status = pbus_.DeviceAdd(&tdm_dev);
+    tdm_dev.name() = "astro-pcm-dai-in";
+    tdm_dev.did() = PDEV_DID_AMLOGIC_DAI_IN;
+    auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, tdm_dev));
 #else
-    tdm_dev.name = "astro-pcm-audio-in";
-    tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
-    tdm_dev.instance_id = tdm_instance_id++;
-    tdm_dev.irq_list = toddr_a_irqs;
-    tdm_dev.irq_count = std::size(toddr_a_irqs);
-    status = pbus_.CompositeDeviceAdd(&tdm_dev, reinterpret_cast<uint64_t>(tdm_pcm_fragments),
-                                      std::size(tdm_pcm_fragments), nullptr);
+    tdm_dev.name() = "astro-pcm-audio-in";
+    tdm_dev.did() = PDEV_DID_AMLOGIC_TDM;
+    tdm_dev.instance_id() = tdm_instance_id++;
+    tdm_dev.irq() = toddr_a_irqs;
+    auto result = pbus_.buffer(arena)->AddCompositeImplicitPbusFragment(
+        fidl::ToWire(fidl_arena, tdm_dev),
+        platform_bus_composite::MakeFidlFragment(fidl_arena, tdm_pcm_fragments,
+                                                 std::size(tdm_pcm_fragments)),
+        nullptr);
 #endif
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: PCM CompositeDeviceAdd failed: %d", __FILE__, status);
-      return status;
+    if (!result.ok()) {
+      zxlogf(ERROR, "%s: NodeAdd request failed: %s", __func__, result.FormatDescription().data());
+      return result.status();
+    }
+    if (result->is_error()) {
+      zxlogf(ERROR, "%s: NodeAdd failed: %s", __func__,
+             zx_status_get_string(result->error_value()));
+      return result->error_value();
     }
   }
 
 #ifdef ENABLE_DAI_MODE
-#ifdef ENABLE_DAI_TEST
-  // Add test driver.
+#ifdef ENABLE_DAI_TEST  // Add test driver.
   bool is_input = true;
   const device_metadata_t test_metadata[] = {
       {
@@ -472,44 +505,53 @@ zx_status_t Astro::AudioInit() {
     metadata.version = metadata::AmlVersion::kS905D2G;
     metadata.sysClockDivFactor = 4;
     metadata.dClockDivFactor = 250;
-    pbus_metadata_t pdm_metadata[] = {
-        {
+    std::vector<fpbus::Metadata> pdm_metadata{
+        {{
             .type = DEVICE_METADATA_PRIVATE,
-            .data_buffer = reinterpret_cast<uint8_t*>(&metadata),
-            .data_size = sizeof(metadata),
-        },
+            .data = std::vector<uint8_t>(
+                reinterpret_cast<const uint8_t*>(&metadata),
+                reinterpret_cast<const uint8_t*>(&metadata) + sizeof(metadata)),
+        }},
     };
 
-    static const pbus_mmio_t pdm_mmios[] = {
-        {.base = S905D2_EE_PDM_BASE, .length = S905D2_EE_PDM_LENGTH},
-        {.base = S905D2_EE_AUDIO_BASE, .length = S905D2_EE_AUDIO_LENGTH},
+    static const std::vector<fpbus::Mmio> pdm_mmios = {
+        {{
+            .base = S905D2_EE_PDM_BASE,
+            .length = S905D2_EE_PDM_LENGTH,
+        }},
+        {{
+            .base = S905D2_EE_AUDIO_BASE,
+            .length = S905D2_EE_AUDIO_LENGTH,
+        }},
     };
 
-    static const pbus_bti_t pdm_btis[] = {
-        {
+    static const std::vector<fpbus::Bti> pdm_btis{
+        {{
             .iommu_index = 0,
             .bti_id = BTI_AUDIO_IN,
-        },
+        }},
     };
 
-    pbus_dev_t dev_in = {};
-    dev_in.name = "astro-audio-pdm-in";
-    dev_in.vid = PDEV_VID_AMLOGIC;
-    dev_in.pid = PDEV_PID_AMLOGIC_S905D2;
-    dev_in.did = PDEV_DID_AMLOGIC_PDM;
-    dev_in.mmio_list = pdm_mmios;
-    dev_in.mmio_count = std::size(pdm_mmios);
-    dev_in.bti_list = pdm_btis;
-    dev_in.bti_count = std::size(pdm_btis);
-    dev_in.irq_list = toddr_b_irqs;
-    dev_in.irq_count = std::size(toddr_b_irqs);
-    dev_in.metadata_list = pdm_metadata;
-    dev_in.metadata_count = std::size(pdm_metadata);
+    fpbus::Node dev_in;
+    dev_in.name() = "astro-audio-pdm-in";
+    dev_in.vid() = PDEV_VID_AMLOGIC;
+    dev_in.pid() = PDEV_PID_AMLOGIC_S905D2;
+    dev_in.did() = PDEV_DID_AMLOGIC_PDM;
+    dev_in.mmio() = pdm_mmios;
+    dev_in.bti() = pdm_btis;
+    dev_in.irq() = toddr_b_irqs;
+    dev_in.metadata() = pdm_metadata;
 
-    status = pbus_.DeviceAdd(&dev_in);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s adding audio input device failed %d", __FILE__, status);
-      return status;
+    auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, dev_in));
+    if (!result.ok()) {
+      zxlogf(ERROR, "%s: NodeAdd Audio(dev_in) request failed: %s", __func__,
+             result.FormatDescription().data());
+      return result.status();
+    }
+    if (result->is_error()) {
+      zxlogf(ERROR, "%s: NodeAdd Audio(dev_in) failed: %s", __func__,
+             zx_status_get_string(result->error_value()));
+      return result->error_value();
     }
   }
   return ZX_OK;

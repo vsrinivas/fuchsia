@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -19,8 +20,10 @@
 #include "nelson.h"
 #include "src/devices/board/drivers/nelson/nelson_gpio_light_bind.h"
 #include "src/devices/board/drivers/nelson/nelson_tcs3400_light_bind.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 
 namespace nelson {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 // Composite binding rules for focaltech touch driver.
 
@@ -30,27 +33,28 @@ constexpr LightsConfig kConfigs[] = {
     {.brightness = true, .rgb = false, .init_on = true, .group_id = -1},
 };
 
-static const pbus_metadata_t light_metadata[] = {
-    {
+static const std::vector<fpbus::Metadata> light_metadata{
+    {{
         .type = DEVICE_METADATA_NAME,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&kLightNames),
-        .data_size = sizeof(kLightNames),
-    },
-    {
+        .data = std::vector<uint8_t>(
+            reinterpret_cast<const uint8_t*>(&kLightNames),
+            reinterpret_cast<const uint8_t*>(&kLightNames) + sizeof(kLightNames)),
+    }},
+    {{
         .type = DEVICE_METADATA_LIGHTS,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&kConfigs),
-        .data_size = sizeof(kConfigs),
-    },
+        .data =
+            std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(&kConfigs),
+                                 reinterpret_cast<const uint8_t*>(&kConfigs) + sizeof(kConfigs)),
+    }},
 };
 
-static const pbus_dev_t light_dev = []() {
-  pbus_dev_t result = {};
-  result.name = "gpio-light";
-  result.vid = PDEV_VID_AMLOGIC;
-  result.pid = PDEV_PID_GENERIC;
-  result.did = PDEV_DID_GPIO_LIGHT;
-  result.metadata_list = light_metadata;
-  result.metadata_count = std::size(light_metadata);
+static const fpbus::Node light_dev = []() {
+  fpbus::Node result = {};
+  result.name() = "gpio-light";
+  result.vid() = PDEV_VID_AMLOGIC;
+  result.pid() = PDEV_PID_GENERIC;
+  result.did() = PDEV_DID_GPIO_LIGHT;
+  result.metadata() = light_metadata;
   return result;
 }();
 
@@ -103,11 +107,22 @@ zx_status_t Nelson::LightInit() {
     zxlogf(ERROR, "%s: Configure mute LED GPIO on failed %d", __func__, status);
   }
 
-  status = pbus_.AddComposite(&light_dev, reinterpret_cast<uint64_t>(gpio_light_fragments),
-                              std::size(gpio_light_fragments), "pdev");
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('LIGH');
+  auto result = pbus_.buffer(arena)->AddComposite(
+      fidl::ToWire(fidl_arena, light_dev),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, gpio_light_fragments,
+                                               std::size(gpio_light_fragments)),
+      "pdev");
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddComposite Light(light_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddComposite Light(light_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   return ZX_OK;

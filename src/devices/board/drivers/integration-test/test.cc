@@ -4,7 +4,8 @@
 
 #include <assert.h>
 #include <fidl/fuchsia.board.test/cpp/wire.h>
-#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
@@ -25,9 +26,11 @@
 #include <fbl/array.h>
 #include <fbl/vector.h>
 
+#include "fidl/fuchsia.hardware.platform.bus/cpp/markers.h"
 #include "src/devices/board/drivers/integration-test/test-bus-bind.h"
 
 namespace board_test {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 class TestBoard;
 using TestBoardType = ddk::Device<TestBoard, ddk::Messageable<fuchsia_board_test::Board>::Mixin>;
@@ -35,30 +38,35 @@ using TestBoardType = ddk::Device<TestBoard, ddk::Messageable<fuchsia_board_test
 // This is the main class for the platform bus driver.
 class TestBoard : public TestBoardType {
  public:
-  explicit TestBoard(zx_device_t* parent, pbus_protocol_t* pbus)
-      : TestBoardType(parent), pbus_(pbus) {}
+  explicit TestBoard(zx_device_t* parent, fdf::ClientEnd<fpbus::PlatformBus> pbus)
+      : TestBoardType(parent), pbus_(std::move(pbus)) {}
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   void CreateDevice(CreateDeviceRequestView request,
                     CreateDeviceCompleter::Sync& completer) override {
-    pbus_dev_t device = {};
-    device.name = request->entry.name.data();
-    device.vid = request->entry.vid;
-    device.pid = request->entry.pid;
-    device.did = request->entry.did;
+    fpbus::Node device = {};
+    device.name() = request->entry.name.get();
+    device.vid() = request->entry.vid;
+    device.pid() = request->entry.pid;
+    device.did() = request->entry.did;
 
-    pbus_metadata_t metadata{
-        .type = DEVICE_METADATA_TEST,
-        .data_buffer = request->entry.metadata.data(),
-        .data_size = request->entry.metadata.count(),
-    };
-    device.metadata_list = &metadata;
-    device.metadata_count = 1;
+    std::vector<fpbus::Metadata> metadata{[&]() {
+      fpbus::Metadata ret;
+      ret.type() = DEVICE_METADATA_TEST;
+      ret.data() =
+          std::vector<uint8_t>(request->entry.metadata.begin(), request->entry.metadata.end());
+      return ret;
+    }()};
+    device.metadata() = std::move(metadata);
 
-    zx_status_t status = pbus_.DeviceAdd(&device);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "Failed to add device: %s: %d", device.name, status);
+    fidl::Arena<> fidl_arena;
+    auto result = pbus_.buffer(fdf::Arena('TEST'))->NodeAdd(fidl::ToWire(fidl_arena, device));
+    if (!result.ok()) {
+      zxlogf(ERROR, "%s: add node request failed: %s", __func__, result.FormatDescription().data());
+    } else if (result->is_error()) {
+      zxlogf(ERROR, "%s: add node failed: %s", __func__,
+             zx_status_get_string(result->error_value()));
     }
 
     completer.Reply();
@@ -79,12 +87,10 @@ class TestBoard : public TestBoardType {
   zx_status_t Start();
   int Thread();
 
-  fbl::Array<uint8_t> metadata_;
+  fbl::Vector<fpbus::Node> devices_;
 
-  fbl::Vector<pbus_metadata_t> devices_metadata_;
-  fbl::Vector<pbus_dev_t> devices_;
-
-  ddk::PBusProtocolClient pbus_;
+  // TODO(fxbug.dev/108070): Switch to fdf::SyncClient when it's available.
+  fdf::WireSyncClient<fpbus::PlatformBus> pbus_;
   thrd_t thread_;
 };
 
@@ -103,14 +109,11 @@ zx_status_t TestBoard::FetchAndDeserialize() {
   }
 
   fbl::AllocChecker ac;
-  auto metadata = new (&ac) uint8_t[metadata_size];
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  metadata_.reset(metadata, metadata_size);
+  std::vector<uint8_t> metadata_bytes(metadata_size);
 
   size_t actual;
-  status = DdkGetMetadata(DEVICE_METADATA_BOARD_PRIVATE, metadata, metadata_size, &actual);
+  status =
+      DdkGetMetadata(DEVICE_METADATA_BOARD_PRIVATE, metadata_bytes.data(), metadata_size, &actual);
   if (status != ZX_OK) {
     return status;
   }
@@ -118,7 +121,7 @@ zx_status_t TestBoard::FetchAndDeserialize() {
     return ZX_ERR_INTERNAL;
   }
 
-  const auto* device_list = reinterpret_cast<DeviceList*>(metadata);
+  const auto* device_list = reinterpret_cast<DeviceList*>(metadata_bytes.data());
   if (metadata_size < sizeof(DeviceList) + device_list->count * sizeof(DeviceEntry)) {
     return ZX_ERR_INTERNAL;
   }
@@ -132,31 +135,44 @@ zx_status_t TestBoard::FetchAndDeserialize() {
   for (size_t i = 0; i < device_list->count; i++) {
     const auto& entry = device_list->list[i];
     // Create the device.
-    pbus_dev_t device = {};
-    device.name = entry.name;
-    device.vid = entry.vid;
-    device.pid = entry.pid;
-    device.did = entry.did;
+    fpbus::Node device = {};
+    device.name() = entry.name;
+    device.vid() = entry.vid;
+    device.pid() = entry.pid;
+    device.did() = entry.did;
 
     // Create the metadata.
-    pbus_metadata_t metadata = {};
-    metadata.type = DEVICE_METADATA_TEST;
-    metadata.data_size = entry.metadata_size;
-    metadata.data_buffer = metadata_.data() + metadata_offset;
-    metadata_offset += metadata.data_size;
+    fpbus::Metadata metadata = {};
+    metadata.type() = DEVICE_METADATA_TEST;
+    metadata.data() =
+        std::vector<uint8_t>(metadata_bytes.data() + metadata_offset,
+                             metadata_bytes.data() + metadata_offset + entry.metadata_size);
+    metadata_offset += entry.metadata_size;
 
     // Store the metadata and link the device to it.
-    devices_metadata_.push_back(std::move(metadata));
-    device.metadata_count = 1;
-    device.metadata_list = &devices_metadata_[devices_metadata_.size() - 1];
+    device.metadata() = {};
+    device.metadata()->emplace_back(std::move(metadata));
 
-    devices_.push_back(device);
+    devices_.push_back(std::move(device));
   }
 
   // Inform the platform bus of our bootloader info.
   // This is set to "coreboot" specifically for CrosDevicePartitionerTests.
-  pbus_bootloader_info_t bootloader_info{.vendor = "coreboot"};
-  status = pbus_.SetBootloaderInfo(&bootloader_info);
+  fpbus::BootloaderInfo bootloader_info;
+  bootloader_info.vendor() = "coreboot";
+  fidl::Arena<> fidl_arena;
+  auto result = pbus_.buffer(fdf::Arena('BOOT'))
+                    ->SetBootloaderInfo(fidl::ToWire(fidl_arena, bootloader_info));
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: SetBootloaderInfo request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: SetBootloaderInfo failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
+  }
   if (status != ZX_OK) {
     zxlogf(ERROR, "SetBootloaderInfo failed: %d", status);
     return status;
@@ -167,9 +183,13 @@ zx_status_t TestBoard::FetchAndDeserialize() {
 
 int TestBoard::Thread() {
   for (const auto& device : devices_) {
-    zx_status_t status = pbus_.DeviceAdd(&device);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "Failed to add device.");
+    fidl::Arena<> fidl_arena;
+    auto result = pbus_.buffer(fdf::Arena('ADDN'))->NodeAdd(fidl::ToWire(fidl_arena, device));
+    if (!result.ok()) {
+      zxlogf(ERROR, "%s: NodeAdd request failed: %s", __func__, result.FormatDescription().data());
+    } else if (result->is_error()) {
+      zxlogf(ERROR, "%s: NodeAdd failed: %s", __func__,
+             zx_status_get_string(result->error_value()));
     }
   }
   return 0;
@@ -186,14 +206,22 @@ zx_status_t TestBoard::Start() {
 }
 
 zx_status_t TestBoard::Create(void* ctx, zx_device_t* parent) {
-  pbus_protocol_t pbus;
-  if (device_get_protocol(parent, ZX_PROTOCOL_PBUS, &pbus) != ZX_OK) {
-    return ZX_ERR_NOT_SUPPORTED;
+  auto endpoints = fdf::CreateEndpoints<fpbus::PlatformBus>();
+  if (endpoints.is_error()) {
+    return endpoints.error_value();
   }
 
-  auto board = std::make_unique<TestBoard>(parent, &pbus);
+  zx_status_t status = device_connect_runtime_protocol(
+      parent, fpbus::Service::PlatformBus::ServiceName, fpbus::Service::PlatformBus::Name,
+      endpoints->server.TakeHandle().release());
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to connect to platform bus: %s", zx_status_get_string(status));
+    return status;
+  }
 
-  zx_status_t status = board->FetchAndDeserialize();
+  auto board = std::make_unique<TestBoard>(parent, std::move(endpoints->client));
+
+  status = board->FetchAndDeserialize();
   if (status != ZX_OK) {
     zxlogf(ERROR, "TestBoard::Create: FetchAndDeserialize failed: %d", status);
     return status;

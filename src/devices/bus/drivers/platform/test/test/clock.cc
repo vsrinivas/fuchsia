@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
 #include <fuchsia/hardware/clockimpl/cpp/banjo.h>
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/fdf/cpp/arena.h>
 
 #include <memory>
 
@@ -51,21 +52,32 @@ class TestClockDevice : public DeviceType,
 };
 
 zx_status_t TestClockDevice::Init() {
-  pbus_protocol_t pbus;
-  auto status = device_get_protocol(parent(), ZX_PROTOCOL_PBUS, &pbus);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ZX_PROTOCOL_PBUS not available %d", __func__, status);
-    return status;
+  auto client_end =
+      DdkConnectRuntimeProtocol<fuchsia_hardware_platform_bus::Service::PlatformBus>();
+  if (client_end.is_error()) {
+    return client_end.error_value();
   }
+
   clock_impl_protocol_t clock_proto = {
       .ops = &clock_impl_protocol_ops_,
       .ctx = this,
   };
-  status = pbus_register_protocol(&pbus, ZX_PROTOCOL_CLOCK_IMPL,
-                                  reinterpret_cast<uint8_t*>(&clock_proto), sizeof(clock_proto));
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s pbus_register_protocol failed %d", __func__, status);
-    return status;
+
+  fdf::WireSyncClient<fuchsia_hardware_platform_bus::PlatformBus> pbus(std::move(*client_end));
+
+  fdf::Arena arena('PCLK');
+  auto result = pbus.buffer(arena)->RegisterProtocol(
+      ZX_PROTOCOL_CLOCK_IMPL, fidl::VectorView<uint8_t>::FromExternal(
+                                  reinterpret_cast<uint8_t*>(&clock_proto), sizeof(clock_proto)));
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s pbus RegisterProtocol request failed %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s pbus_register_protocol failed %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
   return ZX_OK;
 }

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -13,15 +15,17 @@
 
 #include "astro.h"
 #include "src/devices/board/drivers/astro/astro-backlight-bind.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 #include "src/ui/backlight/drivers/ti-lp8556/ti-lp8556Metadata.h"
 
 namespace astro {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
-constexpr pbus_mmio_t backlight_mmios[] = {
-    {
+static const std::vector<fpbus::Mmio> backlight_mmios{
+    {{
         .base = S905D2_GPIO_AO_BASE,
         .length = S905D2_GPIO_AO_LENGTH,
-    },
+    }},
 };
 
 constexpr double kMaxBrightnessInNits = 400.0;
@@ -44,41 +48,52 @@ TiLp8556Metadata kDeviceMetadata = {
     .register_count = 14,
 };
 
-const pbus_metadata_t backlight_metadata[] = {
-    {
+static const std::vector<fpbus::Metadata> backlight_metadata{
+    {{
         .type = DEVICE_METADATA_BACKLIGHT_MAX_BRIGHTNESS_NITS,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&kMaxBrightnessInNits),
-        .data_size = sizeof(kMaxBrightnessInNits),
-    },
-    {
+        .data = std::vector<uint8_t>(
+            reinterpret_cast<const uint8_t*>(&kMaxBrightnessInNits),
+            reinterpret_cast<const uint8_t*>(&kMaxBrightnessInNits) + sizeof(kMaxBrightnessInNits)),
+    }},
+    {{
         .type = DEVICE_METADATA_PRIVATE,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&kDeviceMetadata),
-        .data_size = sizeof(kDeviceMetadata),
-    },
+        .data = std::vector<uint8_t>(
+            reinterpret_cast<const uint8_t*>(&kDeviceMetadata),
+            reinterpret_cast<const uint8_t*>(&kDeviceMetadata) + sizeof(kDeviceMetadata)),
+    }},
 };
 
-constexpr pbus_dev_t backlight_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "backlight";
-  dev.vid = PDEV_VID_TI;
-  dev.pid = PDEV_PID_TI_LP8556;
-  dev.did = PDEV_DID_TI_BACKLIGHT;
-  dev.metadata_list = backlight_metadata;
-  dev.metadata_count = std::size(backlight_metadata);
-  dev.mmio_list = backlight_mmios;
-  dev.mmio_count = std::size(backlight_mmios);
+static const fpbus::Node backlight_dev = []() {
+  fpbus::Node dev = {};
+  dev.name() = "backlight";
+  dev.vid() = PDEV_VID_TI;
+  dev.pid() = PDEV_PID_TI_LP8556;
+  dev.did() = PDEV_DID_TI_BACKLIGHT;
+  dev.metadata() = backlight_metadata;
+  dev.mmio() = backlight_mmios;
   return dev;
 }();
 
 zx_status_t Astro::BacklightInit() {
-  auto status =
-      pbus_.AddComposite(&backlight_dev, reinterpret_cast<uint64_t>(astro_backlight_fragments),
-                         std::size(astro_backlight_fragments), "i2c");
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s DeviceAdd failed %d", __FUNCTION__, status);
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('BACK');
+  auto result = pbus_.buffer(arena)->AddComposite(
+      fidl::ToWire(fidl_arena, backlight_dev),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, astro_backlight_fragments,
+                                               std::size(astro_backlight_fragments)),
+      "i2c");
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddComposite Backlight(backlight_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddComposite Backlight(backlight_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
-  return status;
+  return ZX_OK;
 }
 
 }  // namespace astro

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -19,9 +21,11 @@
 #include "src/devices/board/drivers/sherlock/luis-cpu-a-buck-bind.h"
 #include "src/devices/board/drivers/sherlock/luis-power-domain-bind.h"
 #include "src/devices/board/drivers/sherlock/luis-power-impl-bind.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 #include "src/devices/lib/fidl-metadata/i2c.h"
 
 namespace sherlock {
+namespace fpbus = fuchsia_hardware_platform_bus;
 using i2c_channel_t = fidl_metadata::i2c::Channel;
 namespace {
 
@@ -38,17 +42,19 @@ constexpr aml_voltage_table_t kT931VoltageTable[] = {
 
 constexpr voltage_pwm_period_ns_t kT931PwmPeriodNs = 1250;
 
-const pbus_metadata_t power_impl_metadata[] = {
-    {
+static const std::vector<fpbus::Metadata> power_impl_metadata{
+    {{
         .type = DEVICE_METADATA_AML_VOLTAGE_TABLE,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&kT931VoltageTable),
-        .data_size = sizeof(kT931VoltageTable),
-    },
-    {
+        .data = std::vector<uint8_t>(
+            reinterpret_cast<const uint8_t*>(&kT931VoltageTable),
+            reinterpret_cast<const uint8_t*>(&kT931VoltageTable) + sizeof(kT931VoltageTable)),
+    }},
+    {{
         .type = DEVICE_METADATA_AML_PWM_PERIOD_NS,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&kT931PwmPeriodNs),
-        .data_size = sizeof(kT931PwmPeriodNs),
-    },
+        .data = std::vector<uint8_t>(
+            reinterpret_cast<const uint8_t*>(&kT931PwmPeriodNs),
+            reinterpret_cast<const uint8_t*>(&kT931PwmPeriodNs) + sizeof(kT931PwmPeriodNs)),
+    }},
 };
 
 zx_device_prop_t power_domain_arm_core_props[] = {
@@ -103,14 +109,13 @@ constexpr composite_device_desc_t power_domain_little_core_desc = {
 
 }  // namespace
 
-static const pbus_dev_t power_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "aml-power-impl-composite";
-  dev.vid = PDEV_VID_GOOGLE;
-  dev.pid = PDEV_PID_LUIS;
-  dev.did = PDEV_DID_AMLOGIC_POWER;
-  dev.metadata_list = power_impl_metadata;
-  dev.metadata_count = std::size(power_impl_metadata);
+static const fpbus::Node power_dev = []() {
+  fpbus::Node dev = {};
+  dev.name() = "aml-power-impl-composite";
+  dev.vid() = PDEV_VID_GOOGLE;
+  dev.pid() = PDEV_PID_LUIS;
+  dev.did() = PDEV_DID_AMLOGIC_POWER;
+  dev.metadata() = power_impl_metadata;
   return dev;
 }();
 
@@ -184,11 +189,22 @@ zx_status_t Sherlock::LuisPowerInit() {
     return st;
   }
 
-  st = pbus_.AddComposite(&power_dev, reinterpret_cast<uint64_t>(luis_power_impl_fragments),
-                          std::size(luis_power_impl_fragments), "pdev");
-  if (st != ZX_OK) {
-    zxlogf(ERROR, "%s: AddComposite for powerimpl failed, st = %d", __FUNCTION__, st);
-    return st;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('LUIS');
+  auto result = pbus_.buffer(arena)->AddComposite(
+      fidl::ToWire(fidl_arena, power_dev),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, luis_power_impl_fragments,
+                                               std::size(luis_power_impl_fragments)),
+      "pdev");
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddComposite LuisPower(power_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddComposite LuisPower(power_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   st = DdkAddComposite("composite-pd-big-core", &power_domain_big_core_desc);

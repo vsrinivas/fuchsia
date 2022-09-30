@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -14,35 +16,43 @@
 #include "nelson.h"
 
 namespace nelson {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 namespace {
 
-constexpr pbus_mmio_t dsi_mmios[] = {
-    {
+static const std::vector<fpbus::Mmio> dsi_mmios{
+    {{
         // DSI Host Controller
         .base = S905D2_MIPI_DSI_BASE,
         .length = S905D2_MIPI_DSI_LENGTH,
-    },
+    }},
 };
 
-pbus_dev_t dsi_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "dw-dsi";
-  dev.vid = PDEV_VID_GENERIC;
-  dev.pid = PDEV_PID_GENERIC;
-  dev.did = PDEV_DID_DW_DSI;
-  dev.mmio_list = dsi_mmios;
-  dev.mmio_count = std::size(dsi_mmios);
+static const fpbus::Node dsi_dev = []() {
+  fpbus::Node dev = {};
+  dev.name() = "dw-dsi";
+  dev.vid() = PDEV_VID_GENERIC;
+  dev.pid() = PDEV_PID_GENERIC;
+  dev.did() = PDEV_DID_DW_DSI;
+  dev.mmio() = dsi_mmios;
   return dev;
 }();
 
 }  // namespace
 
 zx_status_t Nelson::DsiInit() {
-  auto status = pbus_.DeviceAdd(&dsi_dev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('DSI_');
+  auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, dsi_dev));
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: NodeAdd Dsi(dsi_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: NodeAdd Dsi(dsi_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
   return ZX_OK;
 }

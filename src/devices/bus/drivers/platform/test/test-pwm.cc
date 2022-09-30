@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/metadata.h>
@@ -14,34 +15,45 @@
 #include "test.h"
 
 namespace board_test {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 namespace {
 static const pwm_id_t pwm_ids[] = {
     {T931_PWM_A},
 };
 
-static const pbus_metadata_t pwm_metadata[] = {
-    {
-        .type = DEVICE_METADATA_PWM_IDS,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&pwm_ids),
-        .data_size = sizeof(pwm_ids),
-    },
+static const std::vector<fpbus::Metadata> pwm_metadata{
+    []() {
+      fpbus::Metadata ret;
+      ret.type() = DEVICE_METADATA_PWM_IDS;
+      ret.data() =
+          std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(&pwm_ids),
+                               reinterpret_cast<const uint8_t*>(&pwm_ids) + sizeof(pwm_ids));
+      return ret;
+    }(),
 };
 }  // namespace
 
 zx_status_t TestBoard::PwmInit() {
-  pbus_dev_t pwm_dev = {};
-  pwm_dev.name = "pwm";
-  pwm_dev.vid = PDEV_VID_TEST;
-  pwm_dev.pid = PDEV_PID_PBUS_TEST;
-  pwm_dev.did = PDEV_DID_TEST_PWM;
-  pwm_dev.metadata_list = pwm_metadata;
-  pwm_dev.metadata_count = std::size(pwm_metadata);
+  fpbus::Node pwm_dev;
+  pwm_dev.name() = "pwm";
+  pwm_dev.vid() = PDEV_VID_TEST;
+  pwm_dev.pid() = PDEV_PID_PBUS_TEST;
+  pwm_dev.did() = PDEV_DID_TEST_PWM;
+  pwm_dev.metadata() = pwm_metadata;
 
-  zx_status_t status = pbus_.DeviceAdd(&pwm_dev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed %d", __FUNCTION__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('TPWM');
+  auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, pwm_dev));
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: DeviceAdd Pwm request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: DeviceAdd Pwm failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   return ZX_OK;

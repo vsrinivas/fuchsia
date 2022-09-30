@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <fuchsia/hardware/gpioimpl/c/banjo.h>
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -17,6 +18,7 @@
 #include "src/devices/lib/fidl-metadata/i2c.h"
 
 namespace board_as370 {
+namespace fpbus = fuchsia_hardware_platform_bus;
 using i2c_channel_t = fidl_metadata::i2c::Channel;
 
 zx_status_t As370::I2cInit() {
@@ -44,26 +46,26 @@ zx_status_t As370::I2cInit() {
     }
   }
 
-  constexpr pbus_mmio_t i2c_mmios[] = {
-      {
+  static const std::vector<fpbus::Mmio> i2c_mmios{
+      {{
           .base = as370::kI2c0Base,
           .length = as370::kI2c0Size,
-      },
-      {
+      }},
+      {{
           .base = as370::kI2c1Base,
           .length = as370::kI2c1Size,
-      },
+      }},
   };
 
-  constexpr pbus_irq_t i2c_irqs[] = {
-      {
+  static const std::vector<fpbus::Irq> i2c_irqs{
+      {{
           .irq = as370::kI2c0Irq,
           .mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
-      },
-      {
+      }},
+      {{
           .irq = as370::kI2c1Irq,
           .mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
-      },
+      }},
   };
 
   // I2C channels for as370 visalia
@@ -109,30 +111,33 @@ zx_status_t As370::I2cInit() {
     return visalia_i2c_channels_fidl.error_value();
   }
 
-  const pbus_metadata_t visalia_i2c_metadata[] = {
-      {
+  std::vector<fpbus::Metadata> visalia_i2c_metadata{
+      {{
           .type = DEVICE_METADATA_I2C_CHANNELS,
-          .data_buffer = visalia_i2c_channels_fidl->data(),
-          .data_size = visalia_i2c_channels_fidl->size(),
-      },
+      }},
   };
 
-  pbus_dev_t i2c_dev = {};
-  i2c_dev.name = "i2c";
-  i2c_dev.vid = PDEV_VID_GENERIC;
-  i2c_dev.pid = PDEV_PID_GENERIC;
-  i2c_dev.did = PDEV_DID_DW_I2C;
-  i2c_dev.mmio_list = i2c_mmios;
-  i2c_dev.mmio_count = std::size(i2c_mmios);
-  i2c_dev.irq_list = i2c_irqs;
-  i2c_dev.irq_count = std::size(i2c_irqs);
-  i2c_dev.metadata_list = visalia_i2c_metadata;
-  i2c_dev.metadata_count = std::size(visalia_i2c_metadata);
+  fpbus::Node i2c_dev;
+  i2c_dev.name() = "i2c";
+  i2c_dev.vid() = PDEV_VID_GENERIC;
+  i2c_dev.pid() = PDEV_PID_GENERIC;
+  i2c_dev.did() = PDEV_DID_DW_I2C;
+  i2c_dev.mmio() = i2c_mmios;
+  i2c_dev.irq() = i2c_irqs;
+  i2c_dev.metadata() = visalia_i2c_metadata;
 
-  status = pbus_.DeviceAdd(&i2c_dev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed %d", __FUNCTION__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('I2C_');
+  auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, i2c_dev));
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: NodeAdd I2c(i2c_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: NodeAdd I2c(i2c_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   return ZX_OK;

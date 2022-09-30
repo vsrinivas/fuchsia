@@ -1,0 +1,28 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//sdk/lib/driver_compat/compat.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "driver",
+        bind: "meta/bind/platform-bus.bindbc",
+        default_dispatcher_opts: [ "allow_sync_calls" ],
+        compat: "driver/platform-bus.so",
+    },
+    capabilities: [
+        { service: "fuchsia.hardware.platform.bus.Service" },
+    ],
+    use: [
+        { protocol: "fuchsia.boot.RootResource" },
+    ],
+    expose: [
+        {
+            service: "fuchsia.hardware.platform.bus.Service",
+            from: "self",
+        },
+    ],
+}

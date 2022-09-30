@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/platform-defs.h>
 #include <stdint.h>
@@ -14,6 +16,7 @@
 #include "qemu-virt.h"
 
 namespace board_qemu_arm64 {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 zx_status_t QemuArm64::PciInit() {
   zx_status_t status;
@@ -69,25 +72,32 @@ zx_status_t QemuArm64::PciInit() {
 }
 
 zx_status_t QemuArm64::PciAdd() {
-  constexpr pbus_bti_t kPciBtis[] = {
-      {
+  static const std::vector<fpbus::Bti> kPciBtis{
+      {{
           .iommu_index = 0,
           .bti_id = 0,
-      },
+      }},
   };
 
-  pbus_dev_t pci_dev = {};
-  pci_dev.name = "pci";
-  pci_dev.vid = PDEV_VID_GENERIC;
-  pci_dev.pid = PDEV_PID_GENERIC;
-  pci_dev.did = PDEV_DID_KPCI;
-  pci_dev.bti_list = kPciBtis;
-  pci_dev.bti_count = std::size(kPciBtis);
+  fpbus::Node pci_dev;
+  pci_dev.name() = "pci";
+  pci_dev.vid() = PDEV_VID_GENERIC;
+  pci_dev.pid() = PDEV_PID_GENERIC;
+  pci_dev.did() = PDEV_DID_KPCI;
+  pci_dev.bti() = kPciBtis;
 
-  auto status = pbus_.DeviceAdd(&pci_dev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('PCI_');
+  auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, pci_dev));
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: NodeAdd Pci(pci_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: NodeAdd Pci(pci_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   return ZX_OK;

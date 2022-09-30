@@ -5,6 +5,8 @@
 #include "src/devices/board/drivers/sherlock/sherlock.h"
 
 #include <assert.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <fuchsia/hardware/gpio/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/ddk/binding.h>
@@ -29,20 +31,35 @@
 #endif
 
 namespace sherlock {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 zx_status_t Sherlock::Create(void* ctx, zx_device_t* parent) {
-  pbus_protocol_t pbus;
   iommu_protocol_t iommu;
 
-  auto status = device_get_protocol(parent, ZX_PROTOCOL_PBUS, &pbus);
+  auto endpoints = fdf::CreateEndpoints<fpbus::PlatformBus>();
+  if (endpoints.is_error()) {
+    return endpoints.error_value();
+  }
+
+  zx_status_t status = device_connect_runtime_protocol(
+      parent, fpbus::Service::PlatformBus::ServiceName, fpbus::Service::PlatformBus::Name,
+      endpoints->server.TakeHandle().release());
   if (status != ZX_OK) {
     return status;
   }
 
-  pdev_board_info_t info;
-  status = pbus_get_board_info(&pbus, &info);
-  if (status != ZX_OK) {
-    return status;
+  fdf::WireSyncClient<fpbus::PlatformBus> pbus(std::move(endpoints->client));
+  fdf::Arena arena('SHER');
+  auto board_info = pbus.buffer(arena)->GetBoardInfo();
+  if (!board_info.ok()) {
+    zxlogf(ERROR, "%s: GetBoardInfo request failed: %s", __func__,
+           board_info.FormatDescription().data());
+    return board_info.status();
+  }
+  if (board_info->is_error()) {
+    zxlogf(ERROR, "%s: GetBoardInfo failed: %s", __func__,
+           zx_status_get_string(board_info->error_value()));
+    return board_info->error_value();
   }
 
   status = device_get_protocol(parent, ZX_PROTOCOL_IOMMU, &iommu);
@@ -51,7 +68,8 @@ zx_status_t Sherlock::Create(void* ctx, zx_device_t* parent) {
   }
 
   fbl::AllocChecker ac;
-  auto board = fbl::make_unique_checked<Sherlock>(&ac, parent, &pbus, &iommu, info.pid);
+  auto board = fbl::make_unique_checked<Sherlock>(&ac, parent, pbus.TakeClientEnd(), &iommu,
+                                                  board_info->value()->info.pid);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

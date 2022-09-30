@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -17,8 +19,10 @@
 #include "astro.h"
 #include "src/devices/board/drivers/astro/pd-armcore-bind.h"
 #include "src/devices/board/drivers/astro/pwm-ao-d-bind.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 
 namespace astro {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 namespace {
 
@@ -33,17 +37,19 @@ constexpr aml_voltage_table_t kS905D2VoltageTable[] = {
 
 constexpr voltage_pwm_period_ns_t kS905d2PwmPeriodNs = 1250;
 
-const pbus_metadata_t power_impl_metadata[] = {
-    {
+static const std::vector<fpbus::Metadata> power_impl_metadata{
+    {{
         .type = DEVICE_METADATA_AML_VOLTAGE_TABLE,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&kS905D2VoltageTable),
-        .data_size = sizeof(kS905D2VoltageTable),
-    },
-    {
+        .data = std::vector<uint8_t>(
+            reinterpret_cast<const uint8_t*>(&kS905D2VoltageTable),
+            reinterpret_cast<const uint8_t*>(&kS905D2VoltageTable) + sizeof(kS905D2VoltageTable)),
+    }},
+    {{
         .type = DEVICE_METADATA_AML_PWM_PERIOD_NS,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&kS905d2PwmPeriodNs),
-        .data_size = sizeof(kS905d2PwmPeriodNs),
-    },
+        .data = std::vector<uint8_t>(
+            reinterpret_cast<const uint8_t*>(&kS905d2PwmPeriodNs),
+            reinterpret_cast<const uint8_t*>(&kS905d2PwmPeriodNs) + sizeof(kS905d2PwmPeriodNs)),
+    }},
 };
 
 zx_device_prop_t power_domain_arm_core_props[] = {
@@ -75,25 +81,35 @@ constexpr composite_device_desc_t power_domain_arm_core_desc = {
 
 }  // namespace
 
-static const pbus_dev_t power_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "aml-power-impl-composite";
-  dev.vid = PDEV_VID_GOOGLE;
-  dev.pid = PDEV_PID_ASTRO;
-  dev.did = PDEV_DID_AMLOGIC_POWER;
-  dev.metadata_list = power_impl_metadata;
-  dev.metadata_count = std::size(power_impl_metadata);
+static const fpbus::Node power_dev = []() {
+  fpbus::Node dev = {};
+  dev.name() = "aml-power-impl-composite";
+  dev.vid() = PDEV_VID_GOOGLE;
+  dev.pid() = PDEV_PID_ASTRO;
+  dev.did() = PDEV_DID_AMLOGIC_POWER;
+  dev.metadata() = power_impl_metadata;
   return dev;
 }();
 
 zx_status_t Astro::PowerInit() {
   zx_status_t st;
 
-  st = pbus_.AddComposite(&power_dev, reinterpret_cast<uint64_t>(aml_power_impl_fragments),
-                          std::size(aml_power_impl_fragments), "pdev");
-  if (st != ZX_OK) {
-    zxlogf(ERROR, "%s: AddComposite for powerimpl failed, st = %d", __FUNCTION__, st);
-    return st;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('POWE');
+  auto result = pbus_.buffer(arena)->AddComposite(
+      fidl::ToWire(fidl_arena, power_dev),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, aml_power_impl_fragments,
+                                               std::size(aml_power_impl_fragments)),
+      "pdev");
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddComposite Power(power_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddComposite Power(power_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   st = DdkAddComposite("composite-pd-armcore", &power_domain_arm_core_desc);

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -13,28 +15,30 @@
 
 #include "nelson.h"
 #include "src/devices/board/drivers/nelson/nelson_backlight_bind.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 #include "src/ui/backlight/drivers/ti-lp8556/ti-lp8556Metadata.h"
 
 namespace nelson {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
-constexpr pbus_mmio_t backlight_mmios[] = {
-    {
+static const std::vector<fpbus::Mmio> backlight_mmios{
+    {{
         .base = S905D3_GPIO_AO_BASE,
         .length = S905D3_GPIO_AO_LENGTH,
-    },
+    }},
 };
 
-static const pbus_boot_metadata_t backlight_boot_metadata[] = {
-    {
+static const std::vector<fpbus::BootMetadata> backlight_boot_metadata{
+    {{
         .zbi_type = DEVICE_METADATA_BOARD_PRIVATE,
         .zbi_extra = 0,
-    },
+    }},
 };
 
 constexpr double kMaxBrightnessInNits = 250.0;
 
 zx_status_t Nelson::BacklightInit() {
-  TiLp8556Metadata kDeviceMetadata = {
+  TiLp8556Metadata device_metadata = {
       .allow_set_current_scale = false,
       .registers =
           {
@@ -51,38 +55,48 @@ zx_status_t Nelson::BacklightInit() {
       .register_count = 14,
   };
 
-  pbus_metadata_t backlight_metadata[] = {
-      {
+  std::vector<fpbus::Metadata> backlight_metadata{
+      {{
           .type = DEVICE_METADATA_BACKLIGHT_MAX_BRIGHTNESS_NITS,
-          .data_buffer = reinterpret_cast<const uint8_t*>(&kMaxBrightnessInNits),
-          .data_size = sizeof(kMaxBrightnessInNits),
-      },
-      {
+          .data = std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(&kMaxBrightnessInNits),
+                                       reinterpret_cast<const uint8_t*>(&kMaxBrightnessInNits) +
+                                           sizeof(kMaxBrightnessInNits)),
+      }},
+      {{
           .type = DEVICE_METADATA_PRIVATE,
-          .data_buffer = reinterpret_cast<const uint8_t*>(&kDeviceMetadata),
-          .data_size = sizeof(kDeviceMetadata),
-      },
+          .data = std::vector<uint8_t>(
+              reinterpret_cast<const uint8_t*>(&device_metadata),
+              reinterpret_cast<const uint8_t*>(&device_metadata) + sizeof(device_metadata)),
+      }},
   };
 
-  pbus_dev_t backlight_dev = {
-      .name = "backlight",
-      .vid = PDEV_VID_TI,
-      .pid = PDEV_PID_TI_LP8556,
-      .did = PDEV_DID_TI_BACKLIGHT,
-      .mmio_list = backlight_mmios,
-      .mmio_count = std::size(backlight_mmios),
-      .metadata_list = backlight_metadata,
-      .metadata_count = std::size(backlight_metadata),
-      .boot_metadata_list = backlight_boot_metadata,
-      .boot_metadata_count = std::size(backlight_boot_metadata),
-  };
+  fpbus::Node backlight_dev;
+  backlight_dev.name() = "backlight";
+  backlight_dev.vid() = PDEV_VID_TI;
+  backlight_dev.pid() = PDEV_PID_TI_LP8556;
+  backlight_dev.did() = PDEV_DID_TI_BACKLIGHT;
+  backlight_dev.mmio() = backlight_mmios;
+  backlight_dev.metadata() = backlight_metadata;
+  backlight_dev.boot_metadata() = backlight_boot_metadata;
 
-  auto status = pbus_.AddComposite(&backlight_dev, reinterpret_cast<uint64_t>(backlight_fragments),
-                                   std::size(backlight_fragments), "i2c");
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s CompositeDeviceAdd failed %d", __FUNCTION__, status);
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('BACK');
+  auto result = pbus_.buffer(arena)->AddComposite(
+      fidl::ToWire(fidl_arena, backlight_dev),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, backlight_fragments,
+                                               std::size(backlight_fragments)),
+      "i2c");
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddComposite Backlight(backlight_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
   }
-  return status;
-}  // namespace nelson
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddComposite Backlight(backlight_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
+  }
+  return ZX_OK;
+}
 
 }  // namespace nelson

@@ -6,13 +6,15 @@
 #define SRC_DEVICES_BUS_DRIVERS_PLATFORM_PLATFORM_BUS_H_
 
 #include <fidl/fuchsia.boot/cpp/wire.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
 #include <fidl/fuchsia.sysinfo/cpp/wire.h>
 #include <fuchsia/hardware/clockimpl/cpp/banjo.h>
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
 #include <fuchsia/hardware/iommu/cpp/banjo.h>
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
-#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
+#include <lib/async/cpp/task.h>
 #include <lib/ddk/device.h>
+#include <lib/driver2/outgoing_directory.h>
+#include <lib/fdf/cpp/channel.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/iommu.h>
@@ -30,8 +32,10 @@
 
 #include <ddktl/device.h>
 #include <fbl/array.h>
+#include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
+#include <sdk/lib/sys/component/cpp/outgoing_directory.h>
 
 #include "platform-device.h"
 #include "proxy-protocol.h"
@@ -44,7 +48,7 @@ using PlatformBusType = ddk::Device<PlatformBus, ddk::GetProtocolable, ddk::Init
 
 // This is the main class for the platform bus driver.
 class PlatformBus : public PlatformBusType,
-                    public ddk::PBusProtocol<PlatformBus, ddk::base_protocol>,
+                    public fdf::WireServer<fuchsia_hardware_platform_bus::PlatformBus>,
                     public ddk::IommuProtocol<PlatformBus> {
  public:
   static zx_status_t Create(zx_device_t* parent, const char* name, zx::channel items_svc);
@@ -56,22 +60,27 @@ class PlatformBus : public PlatformBusType,
   void DdkInit(ddk::InitTxn txn);
   void DdkRelease();
 
-  // Platform bus protocol implementation.
-  zx_status_t PBusDeviceAdd(const pbus_dev_t* dev);
-  zx_status_t PBusProtocolDeviceAdd(uint32_t proto_id, const pbus_dev_t* dev);
-  zx_status_t PBusRegisterProtocol(uint32_t proto_id, const uint8_t* protocol,
-                                   size_t protocol_size);
-  zx_status_t PBusGetBoardInfo(pdev_board_info_t* out_info);
-  zx_status_t PBusSetBoardInfo(const pbus_board_info_t* info);
-  zx_status_t PBusSetBootloaderInfo(const pbus_bootloader_info_t* info);
-  zx_status_t PBusCompositeDeviceAdd(const pbus_dev_t* dev,
-                                     /* const device_fragment_t* */ uint64_t fragments_list,
-                                     size_t fragments_count, const char* primary_fragment);
-  zx_status_t PBusAddComposite(const pbus_dev_t* dev,
-                               /* const device_fragment_t* */ uint64_t fragments,
-                               size_t fragment_count, const char* primary_fragment);
+  // fuchsia.hardware.platform.bus.PlatformBus implementation.
+  void NodeAdd(NodeAddRequestView request, fdf::Arena& arena,
+               NodeAddCompleter::Sync& completer) override;
+  void ProtocolNodeAdd(ProtocolNodeAddRequestView request, fdf::Arena& arena,
+                       ProtocolNodeAddCompleter::Sync& completer) override;
+  void RegisterProtocol(RegisterProtocolRequestView request, fdf::Arena& arena,
+                        RegisterProtocolCompleter::Sync& completer) override;
 
-  zx_status_t PBusRegisterSysSuspendCallback(const pbus_sys_suspend_t* suspend_cbin);
+  void GetBoardInfo(fdf::Arena& arena, GetBoardInfoCompleter::Sync& completer) override;
+  void SetBoardInfo(SetBoardInfoRequestView request, fdf::Arena& arena,
+                    SetBoardInfoCompleter::Sync& completer) override;
+  void SetBootloaderInfo(SetBootloaderInfoRequestView request, fdf::Arena& arena,
+                         SetBootloaderInfoCompleter::Sync& completer) override;
+
+  void RegisterSysSuspendCallback(RegisterSysSuspendCallbackRequestView request, fdf::Arena& arena,
+                                  RegisterSysSuspendCallbackCompleter::Sync& completer) override;
+  void AddComposite(AddCompositeRequestView request, fdf::Arena& arena,
+                    AddCompositeCompleter::Sync& completer) override;
+  void AddCompositeImplicitPbusFragment(
+      AddCompositeImplicitPbusFragmentRequestView request, fdf::Arena& arena,
+      AddCompositeImplicitPbusFragmentCompleter::Sync& completer) override;
 
   // SysInfo protocol implementation.
   void GetBoardName(GetBoardNameCompleter::Sync& completer) override;
@@ -98,26 +107,37 @@ class PlatformBus : public PlatformBusType,
 
   inline ddk::GpioImplProtocolClient* gpio() { return &*gpio_; }
 
-  pbus_sys_suspend_t suspend_cb() { return suspend_cb_; }
+  fdf::WireClient<fuchsia_hardware_platform_bus::SysSuspend>& suspend_cb() { return suspend_cb_; }
+
+  fuchsia_hardware_platform_bus::TemporaryBoardInfo board_info() {
+    fbl::AutoLock lock(&board_info_lock_);
+    return board_info_;
+  }
+
+  driver::OutgoingDirectory& outgoing() { return outgoing_; }
 
  private:
-  pbus_sys_suspend_t suspend_cb_ = {};
+  fdf::WireClient<fuchsia_hardware_platform_bus::SysSuspend> suspend_cb_;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(PlatformBus);
 
   zx::status<zbi_board_info_t> GetBoardInfo();
   zx_status_t Init();
 
+  zx::status<> NodeAddInternal(fuchsia_hardware_platform_bus::Node& node);
+  zx::status<> ValidateResources(fuchsia_hardware_platform_bus::Node& node);
+
   fidl::ClientEnd<fuchsia_boot::Items> items_svc_;
 
   // Protects board_name_completer_.
   fbl::Mutex board_info_lock_;
-  pdev_board_info_t board_info_ __TA_GUARDED(board_info_lock_) = {};
+  fuchsia_hardware_platform_bus::TemporaryBoardInfo board_info_ __TA_GUARDED(board_info_lock_) = {};
   // List to cache requests when board_name is not yet set.
   std::vector<GetBoardNameCompleter::Async> board_name_completer_ __TA_GUARDED(board_info_lock_);
 
   fbl::Mutex bootloader_info_lock_;
-  pbus_bootloader_info_t bootloader_info_ __TA_GUARDED(bootloader_info_lock_) = {};
+  fuchsia_hardware_platform_bus::BootloaderInfo bootloader_info_
+      __TA_GUARDED(bootloader_info_lock_) = {};
   // List to cache requests when vendor is not yet set.
   std::vector<GetBootloaderVendorCompleter::Async> bootloader_vendor_completer_
       __TA_GUARDED(bootloader_info_lock_);
@@ -130,9 +150,15 @@ class PlatformBus : public PlatformBusType,
   std::optional<ddk::GpioImplProtocolClient> gpio_;
   std::optional<ddk::IommuProtocolClient> iommu_;
 
-  // Completion used by WaitProtocol().
-  sync_completion_t proto_completion_ __TA_GUARDED(proto_completion_mutex_);
-  // Protects proto_completion_.
+  struct ProtoReadyResponse {
+    fdf::Arena arena;
+    ProtocolNodeAddCompleter::Async completer;
+    std::unique_ptr<async::Task> timeout_task;
+  };
+  // Key is the protocol ID (i.e. ZX_PROTOCOL_GPIO, ZX_PROTOCOL_CLOCK, etc).
+  std::unordered_map<uint32_t, ProtoReadyResponse> proto_ready_responders_
+      __TA_GUARDED(proto_completion_mutex_);
+  // Protects proto_ready_responders_.
   fbl::Mutex proto_completion_mutex_;
 
   // Dummy IOMMU.
@@ -141,6 +167,7 @@ class PlatformBus : public PlatformBusType,
   std::map<std::pair<uint32_t, uint32_t>, zx::bti> cached_btis_;
 
   zx_device_t* protocol_passthrough_ = nullptr;
+  driver::OutgoingDirectory outgoing_;
 };
 
 }  // namespace platform_bus

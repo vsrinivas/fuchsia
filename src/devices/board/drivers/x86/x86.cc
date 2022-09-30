@@ -5,11 +5,14 @@
 #include "src/devices/board/drivers/x86/x86.h"
 
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/driver-unit-test/utils.h>
+#include <lib/fdf/cpp/dispatcher.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/status.h>
@@ -30,12 +33,17 @@ using fuchsia_hardware_acpi::wire::TableInfo;
 
 zx_handle_t root_resource_handle;
 
-static zx_status_t sys_device_suspend(void* ctx, uint8_t requested_state, bool enable_wake,
-                                      uint8_t suspend_reason, uint8_t* out_state) {
-  return acpi_suspend(requested_state, enable_wake, suspend_reason, out_state);
+namespace x86 {
+
+void SysSuspender::Callback(CallbackRequestView request, fdf::Arena& arena,
+                            CallbackCompleter::Sync& completer) {
+  uint8_t out_state;
+  zx_status_t status = acpi_suspend(request->requested_state, request->enable_wake,
+                                    request->suspend_reason, &out_state);
+  completer.buffer(arena).Reply(status, out_state);
 }
 
-namespace x86 {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 X86::~X86() {
   if (acpica_initialized_) {
@@ -81,18 +89,25 @@ void X86::DdkRelease() {
 }
 
 zx_status_t X86::Create(void* ctx, zx_device_t* parent, std::unique_ptr<X86>* out) {
-  pbus_protocol_t pbus;
+  auto endpoints = fdf::CreateEndpoints<fpbus::PlatformBus>();
+  if (endpoints.is_error()) {
+    return endpoints.error_value();
+  }
+
+  zx_status_t status = device_connect_runtime_protocol(
+      parent, fpbus::Service::PlatformBus::ServiceName, fpbus::Service::PlatformBus::Name,
+      endpoints->server.TakeHandle().release());
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to connect to platform bus: %s", zx_status_get_string(status));
+    return status;
+  }
 
   // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   root_resource_handle = get_root_resource();
 
-  zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PBUS, &pbus);
-  if (status != ZX_OK) {
-    return status;
-  }
-
   fbl::AllocChecker ac;
-  *out = fbl::make_unique_checked<X86>(&ac, parent, &pbus, std::make_unique<acpi::AcpiImpl>());
+  *out = fbl::make_unique_checked<X86>(&ac, parent, std::move(endpoints->client),
+                                       std::make_unique<acpi::AcpiImpl>());
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -116,14 +131,13 @@ zx_status_t X86::CreateAndBind(void* ctx, zx_device_t* parent) {
   return status;
 }
 
-template <size_t N>
-static void SetField(const char* label, const std::string& value, char (&out)[N]) {
+static void SetField(const char* label, const std::string& value, std::optional<std::string>& out) {
   if (value.empty()) {
     zxlogf(ERROR, "acpi: smbios %s could not be read", label);
-  } else if (value.size() >= N) {
+  } else if (value.size() >= fpbus::kMaxInfoStringLength) {
     zxlogf(INFO, "acpi: smbios %s too big for sysinfo: %s", label, value.data());
   } else {
-    strlcpy(out, value.data(), N);
+    out = value;
   }
 }
 
@@ -144,27 +158,41 @@ zx_status_t X86::Bind() {
     return status;
   }
 
-  pbus_board_info_t board_info{.board_name = "x64", .board_revision = 0};
-  pbus_bootloader_info_t bootloader_info{.vendor = "<unknown>"};
+  fpbus::BoardInfo board_info;
+  board_info.board_name() = "x64";
+  board_info.board_revision() = 0;
+  fpbus::BootloaderInfo bootloader_info;
+  bootloader_info.vendor() = "<unknown>";
 
   // Load SMBIOS information.
   smbios::SmbiosInfo smbios;
   status = smbios.Load();
   if (status == ZX_OK) {
-    SetField("board name", smbios.board_name(), board_info.board_name);
-    SetField("vendor", smbios.vendor(), bootloader_info.vendor);
+    SetField("board name", smbios.board_name(), board_info.board_name());
+    SetField("vendor", smbios.vendor(), bootloader_info.vendor());
   }
 
-  // Inform the platform bus of our board info.
-  status = pbus_.SetBoardInfo(&board_info);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "SetBoardInfo failed: %d", status);
+  fdf::Arena arena('X86I');
+  {
+    // Inform the platform bus of our board info.
+    fidl::Arena fidl_arena;
+    auto result = pbus_.buffer(arena)->SetBoardInfo(fidl::ToWire(fidl_arena, board_info));
+    if (!result.ok()) {
+      zxlogf(ERROR, "SetBoardInfo request failed: %s", result.FormatDescription().data());
+    } else if (result->is_error()) {
+      zxlogf(ERROR, "SetBoardInfo failed: %s", zx_status_get_string(result->error_value()));
+    }
   }
 
-  // Inform the platform bus of our bootloader info.
-  status = pbus_.SetBootloaderInfo(&bootloader_info);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "SetBootloaderInfo failed: %d", status);
+  {
+    // Inform the platform bus of our bootloader info.
+    fidl::Arena fidl_arena;
+    auto result = pbus_.buffer(arena)->SetBootloaderInfo(fidl::ToWire(fidl_arena, bootloader_info));
+    if (!result.ok()) {
+      zxlogf(ERROR, "SetBootloaderInfo request failed: %s", result.FormatDescription().data());
+    } else if (result->is_error()) {
+      zxlogf(ERROR, "SetBootloaderInfo failed: %s", zx_status_get_string(result->error_value()));
+    }
   }
 
   // Set the "sys" suspend op in platform-bus.
@@ -173,12 +201,22 @@ zx_status_t X86::Bind() {
   // (coordinator.cpp:BuildSuspendList()). If move this suspend hook elsewhere,
   // we must make sure that the coordinator code arranges for this suspend op to be
   // called last.
-  pbus_sys_suspend_t suspend = {sys_device_suspend, NULL};
-  status = pbus_.RegisterSysSuspendCallback(&suspend);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Could not register suspend callback: %d", __func__, status);
+  auto endpoints = fdf::CreateEndpoints<fpbus::SysSuspend>();
+  if (endpoints.is_error()) {
+    zxlogf(ERROR, "%s: Could not create suspend callback endpoints: %s", __func__,
+           endpoints.status_string());
+  } else {
+    fdf::BindServer<fdf::WireServer<fpbus::SysSuspend>>(fdf::Dispatcher::GetCurrent()->get(),
+                                                        std::move(endpoints->server), &suspender_);
+    auto result = pbus_.buffer(arena)->RegisterSysSuspendCallback(std::move(endpoints->client));
+    if (!result.ok()) {
+      zxlogf(ERROR, "RegisterSysSuspendCallback request failed: %s",
+             result.FormatDescription().data());
+    } else if (result->is_error()) {
+      zxlogf(ERROR, "RegisterSysSuspendCallback failed: %s",
+             zx_status_get_string(result->error_value()));
+    }
   }
-
   // Create the ACPI manager.
   acpi_manager_ = std::make_unique<acpi::FuchsiaManager>(acpi_.get(), &iommu_manager_, zxdev());
 

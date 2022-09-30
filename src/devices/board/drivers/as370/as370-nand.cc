@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
@@ -17,18 +19,25 @@
 #include "as370.h"
 
 namespace board_as370 {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 zx_status_t As370::NandInit() {
-  constexpr pbus_mmio_t nand_mmios[] = {
-      {.base = as370::kNandBase, .length = as370::kNandSize},
-      {.base = as370::kNandFifoBase, .length = as370::kNandFifoSize},
+  static const std::vector<fpbus::Mmio> nand_mmios{
+      {{
+          .base = as370::kNandBase,
+          .length = as370::kNandSize,
+      }},
+      {{
+          .base = as370::kNandFifoBase,
+          .length = as370::kNandFifoSize,
+      }},
   };
 
-  constexpr pbus_irq_t nand_irqs[] = {
-      {
+  static const std::vector<fpbus::Irq> nand_irqs{
+      {{
           .irq = as370::kNandIrq,
           .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-      },
+      }},
   };
 
   constexpr nand_config_t nand_config = {
@@ -78,31 +87,42 @@ zx_status_t As370::NandInit() {
   memset(nand_partition_map->guid, 0, sizeof(nand_partition_map->guid));
   memcpy(nand_partition_map->partitions, kPartitions, sizeof(kPartitions));
 
-  const pbus_metadata_t nand_metadata[] = {
-      {.type = DEVICE_METADATA_PRIVATE,
-       .data_buffer = reinterpret_cast<const uint8_t*>(&nand_config),
-       .data_size = sizeof(nand_config)},
-      {.type = DEVICE_METADATA_PARTITION_MAP,
-       .data_buffer = reinterpret_cast<const uint8_t*>(nand_partition_map.get()),
-       .data_size = kPartitionMapSize},
+  std::vector<fpbus::Metadata> nand_metadata{
+      {{
+          .type = DEVICE_METADATA_PRIVATE,
+          .data = std::vector<uint8_t>(
+              reinterpret_cast<const uint8_t*>(&nand_config),
+              reinterpret_cast<const uint8_t*>(&nand_config) + sizeof(nand_config)),
+      }},
+      {{
+          .type = DEVICE_METADATA_PARTITION_MAP,
+          .data = std::vector<uint8_t>(
+              reinterpret_cast<const uint8_t*>(nand_partition_map.get()),
+              reinterpret_cast<const uint8_t*>(nand_partition_map.get()) + kPartitionMapSize),
+      }},
   };
 
-  pbus_dev_t nand_dev = {};
-  nand_dev.name = "nand";
-  nand_dev.vid = PDEV_VID_GENERIC;
-  nand_dev.pid = PDEV_PID_GENERIC;
-  nand_dev.did = PDEV_DID_CADENCE_HPNFC;
-  nand_dev.mmio_list = nand_mmios;
-  nand_dev.mmio_count = std::size(nand_mmios);
-  nand_dev.irq_list = nand_irqs;
-  nand_dev.irq_count = std::size(nand_irqs);
-  nand_dev.metadata_list = nand_metadata;
-  nand_dev.metadata_count = std::size(nand_metadata);
+  fpbus::Node nand_dev;
+  nand_dev.name() = "nand";
+  nand_dev.vid() = PDEV_VID_GENERIC;
+  nand_dev.pid() = PDEV_PID_GENERIC;
+  nand_dev.did() = PDEV_DID_CADENCE_HPNFC;
+  nand_dev.mmio() = nand_mmios;
+  nand_dev.irq() = nand_irqs;
+  nand_dev.metadata() = nand_metadata;
 
-  zx_status_t status = pbus_.DeviceAdd(&nand_dev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed: %d", __func__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('NAND');
+  auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, nand_dev));
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: NodeAdd Nand(nand_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: NodeAdd Nand(nand_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   return ZX_OK;

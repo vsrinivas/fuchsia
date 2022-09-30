@@ -35,8 +35,8 @@ driver_bind_rules("x64-bind") {
   bind_output = "platform-bus-x64.bindbc"
   tests = "bind-tests.json"
   deps = [
+    "//src/devices/bind/fuchsia.hardware.platform.bus",
     "//src/devices/bind/fuchsia.intel.platform",
-    "//src/devices/bind/fuchsia.platform",
   ]
 }
 
@@ -88,18 +88,20 @@ fuchsia_driver("platform-bus-x86-driver") {
     ":x64-bind",
     "//sdk/banjo/fuchsia.hardware.hidbus:fuchsia.hardware.hidbus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.pciroot:fuchsia.hardware.pciroot_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
     "//sdk/banjo/fuchsia.sysmem:fuchsia.sysmem_banjo_c",
     "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_cpp_driver",
     "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_c",
     "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_cpp_wire",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_c",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
+    "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//src/devices/board/lib/acpi",
     "//src/devices/board/lib/smbios",
     "//src/devices/lib/driver",
+    "//src/devices/lib/driver:driver_runtime",
     "//src/devices/lib/iommu:iommu-x86",
     "//src/devices/pci/lib/pci",
     "//src/lib/ddk",
@@ -130,8 +132,7 @@ fuchsia_driver_component("platform-bus-x86") {
   component_name = "platform-bus-x86"
   deps = [ ":platform-bus-x86-driver" ]
   info = "platform-bus-x86-info.json"
-  colocate = true
-  root_resource = true
+  manifest = "meta/platform-bus-x86.cml"
 }
 
 test("x86-ec-test-bin") {

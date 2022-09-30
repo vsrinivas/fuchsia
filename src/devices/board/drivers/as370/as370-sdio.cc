@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -17,29 +19,30 @@
 #include "src/devices/lib/nxp/include/wifi/wifi-config.h"
 
 namespace board_as370 {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 zx_status_t As370::SdioInit() {
   zx_status_t status;
 
-  constexpr pbus_mmio_t sdio_mmios[] = {
-      {
+  static const std::vector<fpbus::Mmio> sdio_mmios{
+      {{
           .base = as370::kSdio0Base,
           .length = as370::kSdio0Size,
-      },
+      }},
   };
 
-  constexpr pbus_irq_t sdio_irqs[] = {
-      {
+  static const std::vector<fpbus::Irq> sdio_irqs{
+      {{
           .irq = as370::kSdio0Irq,
           .mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
-      },
+      }},
   };
 
-  constexpr pbus_bti_t sdio_btis[] = {
-      {
+  static const std::vector<fpbus::Bti> sdio_btis{
+      {{
           .iommu_index = 0,
           .bti_id = BTI_SDIO0,
-      },
+      }},
   };
 
   static const wlan::nxpfmac::NxpSdioWifiConfig wifi_config = {
@@ -56,27 +59,24 @@ zx_status_t As370::SdioInit() {
       .indication_gpio = 0xff,
   };
 
-  static const pbus_metadata_t sd_emmc_metadata[] = {
-      {
+  static const std::vector<fpbus::Metadata> sd_emmc_metadata = {
+      {{
           .type = DEVICE_METADATA_WIFI_CONFIG,
-          .data_buffer = reinterpret_cast<const uint8_t*>(&wifi_config),
-          .data_size = sizeof(wifi_config),
-      },
+          .data = std::vector<uint8_t>(
+              reinterpret_cast<const uint8_t*>(&wifi_config),
+              reinterpret_cast<const uint8_t*>(&wifi_config) + sizeof(wifi_config)),
+      }},
   };
 
-  pbus_dev_t sdio_dev = {};
-  sdio_dev.name = "as370-sdio";
-  sdio_dev.vid = PDEV_VID_SYNAPTICS;
-  sdio_dev.pid = PDEV_PID_SYNAPTICS_AS370;
-  sdio_dev.did = PDEV_DID_AS370_SDHCI0;
-  sdio_dev.irq_list = sdio_irqs;
-  sdio_dev.irq_count = std::size(sdio_irqs);
-  sdio_dev.mmio_list = sdio_mmios;
-  sdio_dev.mmio_count = std::size(sdio_mmios);
-  sdio_dev.bti_list = sdio_btis;
-  sdio_dev.bti_count = std::size(sdio_btis);
-  sdio_dev.metadata_list = sd_emmc_metadata;
-  sdio_dev.metadata_count = std::size(sd_emmc_metadata);
+  fpbus::Node sdio_dev;
+  sdio_dev.name() = "as370-sdio";
+  sdio_dev.vid() = PDEV_VID_SYNAPTICS;
+  sdio_dev.pid() = PDEV_PID_SYNAPTICS_AS370;
+  sdio_dev.did() = PDEV_DID_AS370_SDHCI0;
+  sdio_dev.irq() = sdio_irqs;
+  sdio_dev.mmio() = sdio_mmios;
+  sdio_dev.bti() = sdio_btis;
+  sdio_dev.metadata() = sd_emmc_metadata;
 
   // Configure eMMC-SD soc pads.
   if (((status = gpio_impl_.SetAltFunction(58, 1)) != ZX_OK) ||  // SD0_CLK
@@ -95,9 +95,18 @@ zx_status_t As370::SdioInit() {
     zxlogf(ERROR, "%s: SDIO Power/WLAN Enable error: %d", __func__, status);
   }
 
-  status = pbus_.DeviceAdd(&sdio_dev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd() error: %d", __func__, status);
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('SDIO');
+  auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, sdio_dev));
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: NodeAdd Sdio(sdio_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: NodeAdd Sdio(sdio_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   constexpr zx_device_prop_t props[] = {

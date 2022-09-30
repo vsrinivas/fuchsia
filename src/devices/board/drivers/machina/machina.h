@@ -5,8 +5,10 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_MACHINA_MACHINA_H_
 #define SRC_DEVICES_BOARD_DRIVERS_MACHINA_MACHINA_H_
 
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
 #include <zircon/types.h>
+
+namespace machina {
 
 // BTI IDs for our devices
 enum {
@@ -27,10 +29,12 @@ enum {
 #define RTC_SIZE (0x1000)
 
 typedef struct {
-  pbus_protocol_t pbus;
+  fdf::WireSyncClient<fuchsia_hardware_platform_bus::PlatformBus> client;
 } machina_board_t;
 
 // machina-sysmem.c
 zx_status_t machina_sysmem_init(machina_board_t *bus);
+
+}  // namespace machina
 
 #endif  // SRC_DEVICES_BOARD_DRIVERS_MACHINA_MACHINA_H_

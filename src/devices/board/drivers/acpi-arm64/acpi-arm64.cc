@@ -4,6 +4,7 @@
 
 #include "src/devices/board/drivers/acpi-arm64/acpi-arm64.h"
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
@@ -32,25 +33,25 @@ zx_status_t pci_init(zx_device_t* platform_bus, ACPI_HANDLE object,
 #endif
 
 namespace acpi_arm64 {
-namespace {
-template <size_t N>
-static void SetField(const char* label, const std::string& value, char (&out)[N]) {
-  if (value.empty()) {
-    zxlogf(WARNING, "acpi: smbios %s could not be read", label);
-  } else if (value.size() >= N) {
-    zxlogf(INFO, "acpi: smbios %s too big for sysinfo: %s", label, value.data());
-  } else {
-    strlcpy(out, value.data(), N);
-  }
-}
-
-}  // namespace
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 zx_status_t AcpiArm64::Create(void* ctx, zx_device_t* parent) {
-  auto device = std::make_unique<AcpiArm64>(parent);
+  auto endpoints = fdf::CreateEndpoints<fpbus::PlatformBus>();
+  if (endpoints.is_error()) {
+    return endpoints.error_value();
+  }
 
-  zx_status_t status =
-      device->DdkAdd(ddk::DeviceAddArgs("acpi").set_flags(DEVICE_ADD_NON_BINDABLE));
+  zx_status_t status = device_connect_runtime_protocol(
+      parent, fpbus::Service::PlatformBus::ServiceName, fpbus::Service::PlatformBus::Name,
+      endpoints->server.TakeHandle().release());
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to connect to platform bus: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  auto device = std::make_unique<AcpiArm64>(parent, std::move(endpoints->client));
+
+  status = device->DdkAdd(ddk::DeviceAddArgs("acpi").set_flags(DEVICE_ADD_NON_BINDABLE));
   if (status == ZX_OK) {
     // The DDK now owns the device.
     __UNUSED auto unused = device.release();
@@ -110,29 +111,53 @@ void AcpiArm64::DdkInit(ddk::InitTxn txn) {
 }
 
 zx::status<> AcpiArm64::SmbiosInit() {
-  pbus_board_info_t board_info{.board_name = "arm64", .board_revision = 0};
-  pbus_bootloader_info_t bootloader_info{.vendor = "<unknown>"};
+  fpbus::BoardInfo board_info;
+  board_info.board_name() = "arm64";
+  board_info.board_revision() = 0;
+  fpbus::BootloaderInfo bootloader_info;
+  bootloader_info.vendor() = "<unknown>";
 
   // Load SMBIOS information.
   smbios::SmbiosInfo smbios;
   zx_status_t status = smbios.Load();
   if (status == ZX_OK) {
-    SetField("board name", smbios.board_name(), board_info.board_name);
-    SetField("vendor", smbios.vendor(), bootloader_info.vendor);
+    board_info.board_name() = smbios.board_name();
+    bootloader_info.vendor() = smbios.vendor();
   } else {
     zxlogf(ERROR, "Failed to load smbios: %s", zx_status_get_string(status));
   }
 
+  fidl::Arena<> fidl_arena;
   // Inform the platform bus of our board info.
-  status = pbus_.SetBoardInfo(&board_info);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "SetBoardInfo failed: %d", status);
+  {
+    auto result =
+        pbus_.buffer(fdf::Arena('INFO'))->SetBoardInfo(fidl::ToWire(fidl_arena, board_info));
+    if (!result.ok()) {
+      zxlogf(ERROR, "%s: SetBoardInfo request failed: %s", __func__,
+             result.FormatDescription().data());
+      return zx::make_status(result.status());
+    }
+    if (result->is_error()) {
+      zxlogf(ERROR, "%s: SetBoardInfo failed: %s", __func__,
+             zx_status_get_string(result->error_value()));
+      return zx::make_status(result->error_value());
+    }
   }
 
   // Inform the platform bus of our bootloader info.
-  status = pbus_.SetBootloaderInfo(&bootloader_info);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "SetBootloaderInfo failed: %d", status);
+  {
+    auto result = pbus_.buffer(fdf::Arena('INFO'))
+                      ->SetBootloaderInfo(fidl::ToWire(fidl_arena, bootloader_info));
+    if (!result.ok()) {
+      zxlogf(ERROR, "%s: SetBootloaderInfo request failed: %s", __func__,
+             result.FormatDescription().data());
+      return zx::make_status(result.status());
+    }
+    if (result->is_error()) {
+      zxlogf(ERROR, "%s: SetBootloaderInfo failed: %s", __func__,
+             zx_status_get_string(result->error_value()));
+      return zx::make_status(result->error_value());
+    }
   }
 
   return zx::ok();

@@ -25,10 +25,11 @@ fuchsia_driver("as370-gpio-driver") {
   deps = [
     ":as370-gpio-bind",
     "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
+    "//sdk/fidl/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_cpp_driver",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/as370",
     "//src/devices/lib/driver",
+    "//src/devices/lib/driver:driver_runtime",
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
     "//src/lib/ddktl",
@@ -42,7 +43,7 @@ fuchsia_driver_component("as370-gpio") {
   component_name = "as370-gpio"
   deps = [ ":as370-gpio-driver" ]
   info = "as370-gpio-info.json"
-  colocate = true
+  manifest = "meta/as370-gpio.cml"
 }
 
 test("as370-gpio-test-bin") {
@@ -55,11 +56,12 @@ test("as370-gpio-test-bin") {
   deps = [
     ":as370-gpio-bind",
     "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
+    "//sdk/fidl/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_cpp_driver",
     "//sdk/lib/fdio",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/as370",
     "//src/devices/lib/driver",
+    "//src/devices/lib/driver:driver_runtime",
     "//src/devices/lib/mmio",
     "//src/devices/testing/mock-mmio-reg",
     "//src/lib/ddk",

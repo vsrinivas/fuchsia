@@ -5,10 +5,11 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_ASTRO_ASTRO_H_
 #define SRC_DEVICES_BOARD_DRIVERS_ASTRO_ASTRO_H_
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/markers.h>
 #include <fuchsia/hardware/clockimpl/cpp/banjo.h>
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
 #include <fuchsia/hardware/iommu/cpp/banjo.h>
-#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <lib/ddk/device.h>
 #include <threads.h>
 
@@ -43,13 +44,6 @@ enum {
   MACADDR_WIFI = 0,
   MACADDR_BLUETOOTH = 1,
 };
-
-typedef struct {
-  zx_device_t* parent;
-  pbus_protocol_t pbus;
-  gpio_impl_protocol_t gpio;
-  iommu_protocol_t iommu;
-} aml_bus_t;
 
 // These should match the mmio table defined in astro-i2c.c
 enum {
@@ -88,8 +82,10 @@ using AstroType = ddk::Device<Astro>;
 // This is the main class for the Astro platform bus driver.
 class Astro : public AstroType {
  public:
-  explicit Astro(zx_device_t* parent, pbus_protocol_t* pbus, iommu_protocol_t* iommu)
-      : AstroType(parent), pbus_(pbus), iommu_(iommu) {}
+  explicit Astro(zx_device_t* parent,
+                 fdf::ClientEnd<fuchsia_hardware_platform_bus::PlatformBus> pbus,
+                 iommu_protocol_t* iommu)
+      : AstroType(parent), pbus_(std::move(pbus)), iommu_(iommu) {}
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
@@ -133,7 +129,7 @@ class Astro : public AstroType {
   zx_status_t EnableWifi32K(void);
   zx_status_t SdEmmcConfigurePortB(void);
 
-  ddk::PBusProtocolClient pbus_;
+  fdf::WireSyncClient<fuchsia_hardware_platform_bus::PlatformBus> pbus_;
   ddk::IommuProtocolClient iommu_;
   ddk::GpioImplProtocolClient gpio_impl_;
   ddk::ClockImplProtocolClient clk_impl_;

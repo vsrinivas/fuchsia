@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/metadata.h>
@@ -16,6 +18,7 @@
 #include "sherlock-gpios.h"
 #include "sherlock.h"
 #include "src/devices/board/drivers/sherlock/sherlock-spi-bind.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 #include "src/devices/lib/fidl-metadata/spi.h"
 
 #define HHI_SPICC_CLK_CNTL (0xf7 * 4)
@@ -24,20 +27,21 @@
 #define spicc_0_clk_div(x) ((x)-1)
 
 namespace sherlock {
+namespace fpbus = fuchsia_hardware_platform_bus;
 using spi_channel_t = fidl_metadata::spi::Channel;
 
-static const pbus_mmio_t spi_mmios[] = {
-    {
+static const std::vector<fpbus::Mmio> spi_mmios{
+    {{
         .base = T931_SPICC0_BASE,
         .length = 0x44,
-    },
+    }},
 };
 
-static const pbus_irq_t spi_irqs[] = {
-    {
+static const std::vector<fpbus::Irq> spi_irqs{
+    {{
         .irq = T931_SPICC0_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
+    }},
 };
 
 static const spi_channel_t spi_channels[] = {
@@ -61,19 +65,6 @@ static const amlogic_spi::amlspi_config_t spi_config = {
     .use_enhanced_clock_mode = true,
 };
 
-static pbus_dev_t spi_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "spi-0";
-  dev.vid = PDEV_VID_AMLOGIC;
-  dev.pid = PDEV_PID_GENERIC;
-  dev.did = PDEV_DID_AMLOGIC_SPI;
-  dev.mmio_list = spi_mmios;
-  dev.mmio_count = std::size(spi_mmios);
-  dev.irq_list = spi_irqs;
-  dev.irq_count = std::size(spi_irqs);
-  return dev;
-}();
-
 zx_status_t Sherlock::SpiInit() {
   // setup pinmux for the SPI bus
   // SPI_A
@@ -83,12 +74,15 @@ zx_status_t Sherlock::SpiInit() {
   gpio_impl_.ConfigIn(T931_GPIOC(3), GPIO_PULL_DOWN);  // SCLK
   gpio_impl_.SetAltFunction(T931_GPIOC(3), 5);         // SCLK
 
-  std::vector<pbus_metadata_t> spi_metadata;
-  spi_metadata.emplace_back(pbus_metadata_t{
-      .type = DEVICE_METADATA_AMLSPI_CONFIG,
-      .data_buffer = reinterpret_cast<const uint8_t*>(&spi_config),
-      .data_size = sizeof spi_config,
-  });
+  std::vector<fpbus::Metadata> spi_metadata;
+  spi_metadata.emplace_back([&]() {
+    fpbus::Metadata ret;
+    ret.type() = DEVICE_METADATA_AMLSPI_CONFIG,
+    ret.data() =
+        std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(&spi_config),
+                             reinterpret_cast<const uint8_t*>(&spi_config) + sizeof(spi_config));
+    return ret;
+  }());
 
   auto spi_status = fidl_metadata::spi::SpiChannelsToFidl(spi_channels);
   if (spi_status.is_error()) {
@@ -98,14 +92,21 @@ zx_status_t Sherlock::SpiInit() {
   }
   auto& data = spi_status.value();
 
-  spi_metadata.emplace_back(pbus_metadata_t{
-      .type = DEVICE_METADATA_SPI_CHANNELS,
-      .data_buffer = data.data(),
-      .data_size = data.size(),
-  });
+  spi_metadata.emplace_back([&]() {
+    fpbus::Metadata ret;
+    ret.type() = DEVICE_METADATA_SPI_CHANNELS, ret.data() = std::move(data);
+    return ret;
+  }());
 
-  spi_dev.metadata_list = spi_metadata.data();
-  spi_dev.metadata_count = spi_metadata.size();
+  fpbus::Node spi_dev;
+  spi_dev.name() = "spi-0";
+  spi_dev.vid() = PDEV_VID_AMLOGIC;
+  spi_dev.pid() = PDEV_PID_GENERIC;
+  spi_dev.did() = PDEV_DID_AMLOGIC_SPI;
+  spi_dev.mmio() = spi_mmios;
+  spi_dev.irq() = spi_irqs;
+
+  spi_dev.metadata() = std::move(spi_metadata);
 
   // TODO(fxbug.dev/34010): fix this clock enable block when the clock driver can handle the
   // dividers
@@ -125,11 +126,22 @@ zx_status_t Sherlock::SpiInit() {
                  HHI_SPICC_CLK_CNTL);
   }
 
-  zx_status_t status = pbus_.AddComposite(&spi_dev, reinterpret_cast<uint64_t>(spi_0_fragments),
-                                          std::size(spi_0_fragments), "pdev");
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('SPI_');
+  auto result = pbus_.buffer(arena)->AddComposite(
+      fidl::ToWire(fidl_arena, spi_dev),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, spi_0_fragments,
+                                               std::size(spi_0_fragments)),
+      "pdev");
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddComposite Spi(spi_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddComposite Spi(spi_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   return ZX_OK;

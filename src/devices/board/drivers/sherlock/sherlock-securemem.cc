@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -12,34 +13,45 @@
 
 #include "sherlock.h"
 #include "src/devices/board/drivers/sherlock/sherlock-securemem-bind.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 
 namespace sherlock {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
-static const pbus_bti_t sherlock_secure_mem_btis[] = {
-    {
+static const std::vector<fpbus::Bti> sherlock_secure_mem_btis{
+    {{
         .iommu_index = 0,
         .bti_id = BTI_AML_SECURE_MEM,
-    },
+    }},
 };
 
-static const pbus_dev_t secure_mem_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "aml-secure-mem";
-  dev.vid = PDEV_VID_AMLOGIC;
-  dev.pid = PDEV_PID_AMLOGIC_T931;
-  dev.did = PDEV_DID_AMLOGIC_SECURE_MEM;
-  dev.bti_list = sherlock_secure_mem_btis;
-  dev.bti_count = std::size(sherlock_secure_mem_btis);
+static const fpbus::Node secure_mem_dev = []() {
+  fpbus::Node dev = {};
+  dev.name() = "aml-secure-mem";
+  dev.vid() = PDEV_VID_AMLOGIC;
+  dev.pid() = PDEV_PID_AMLOGIC_T931;
+  dev.did() = PDEV_DID_AMLOGIC_SECURE_MEM;
+  dev.bti() = sherlock_secure_mem_btis;
   return dev;
 }();
 
 zx_status_t Sherlock::SecureMemInit() {
-  zx_status_t status =
-      pbus_.AddComposite(&secure_mem_dev, reinterpret_cast<uint64_t>(aml_secure_mem_fragments),
-                         std::size(aml_secure_mem_fragments), "pdev");
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: AddComposite failed: %d", __func__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('SECU');
+  auto result = pbus_.buffer(arena)->AddComposite(
+      fidl::ToWire(fidl_arena, secure_mem_dev),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, aml_secure_mem_fragments,
+                                               std::size(aml_secure_mem_fragments)),
+      "pdev");
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddComposite SecureMem(secure_mem_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddComposite SecureMem(secure_mem_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
   return ZX_OK;
 }

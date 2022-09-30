@@ -4,6 +4,8 @@
 
 #include "as370.h"
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/platform-defs.h>
 #include <zircon/status.h>
@@ -14,23 +16,38 @@
 #include "src/devices/board/drivers/as370/as370-bind.h"
 
 namespace board_as370 {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 zx_status_t As370::Create(void* ctx, zx_device_t* parent) {
-  ddk::PBusProtocolClient pbus(parent);
-  if (!pbus.is_valid()) {
-    zxlogf(ERROR, "%s: Failed to get ZX_PROTOCOL_PBUS", __func__);
-    return ZX_ERR_NO_RESOURCES;
+  auto endpoints = fdf::CreateEndpoints<fpbus::PlatformBus>();
+  if (endpoints.is_error()) {
+    return endpoints.error_value();
   }
 
-  pdev_board_info_t board_info;
-  zx_status_t status = pbus.GetBoardInfo(&board_info);
+  zx_status_t status = device_connect_runtime_protocol(
+      parent, fpbus::Service::PlatformBus::ServiceName, fpbus::Service::PlatformBus::Name,
+      endpoints->server.TakeHandle().release());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get board info: %d", __func__, status);
+    zxlogf(ERROR, "Failed to connect to platform bus: %s", zx_status_get_string(status));
     return status;
   }
 
+  fdf::WireSyncClient<fpbus::PlatformBus> pbus(std::move(endpoints->client));
+  auto result = pbus.buffer(fdf::Arena('INFO'))->GetBoardInfo();
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: GetBoardInfo request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: GetBoardInfo failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
+  }
+
   fbl::AllocChecker ac;
-  auto board = fbl::make_unique_checked<As370>(&ac, parent, pbus, board_info);
+  auto board = fbl::make_unique_checked<As370>(&ac, parent, pbus.TakeClientEnd(),
+                                               fidl::ToNatural(result->value()->info));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

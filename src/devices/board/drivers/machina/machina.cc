@@ -5,7 +5,8 @@
 #include "machina.h"
 
 #include <assert.h>
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
@@ -21,7 +22,11 @@
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>
 
+#include "lib/fit/defer.h"
 #include "src/devices/board/drivers/machina/machina_board_bind.h"
+
+namespace machina {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 static zx_status_t machina_pci_init(void) {
   zx_status_t status;
@@ -29,16 +34,17 @@ static zx_status_t machina_pci_init(void) {
   zx_pci_init_arg_t* arg;
   // Room for one addr window.
   uint32_t arg_size = sizeof(*arg) + sizeof(arg->addr_windows[0]);
-  arg = calloc(1, arg_size);
+  arg = static_cast<zx_pci_init_arg_t*>(calloc(1, arg_size));
   if (!arg) {
     return ZX_ERR_NO_MEMORY;
   }
+  auto defer = fit::defer([arg]() { free(arg); });
 
   // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   status = zx_pci_add_subtract_io_range(get_root_resource(), true /* mmio */, PCIE_MMIO_BASE_PHYS,
                                         PCIE_MMIO_SIZE, true /* add */);
   if (status != ZX_OK) {
-    goto fail;
+    return status;
   }
 
   // Initialize our swizzle table
@@ -63,95 +69,109 @@ static zx_status_t machina_pci_init(void) {
   status = zx_pci_init(get_root_resource(), arg, arg_size);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: error %d in zx_pci_init", __FUNCTION__, status);
-    goto fail;
+    return status;
   }
 
-fail:
-  free(arg);
   return status;
 }
 
-static void machina_board_release(void* ctx) {
-  machina_board_t* bus = ctx;
-  free(bus);
-}
+static void machina_board_release(void* ctx) { delete static_cast<machina_board_t*>(ctx); }
 
 static zx_protocol_device_t machina_board_device_protocol = {
     .version = DEVICE_OPS_VERSION,
     .release = machina_board_release,
 };
 
-static const pbus_mmio_t pl031_mmios[] = {
-    {
+static const std::vector<fpbus::Mmio> pl031_mmios = {
+    {{
         .base = RTC_BASE_PHYS,
         .length = RTC_SIZE,
-    },
+    }},
 };
 
-static const pbus_dev_t pl031_dev = {
-    .name = "pl031",
-    .vid = PDEV_VID_GENERIC,
-    .pid = PDEV_PID_GENERIC,
-    .did = PDEV_DID_RTC_PL031,
-    .mmio_list = pl031_mmios,
-    .mmio_count = countof(pl031_mmios),
-};
+static const fpbus::Node pl031_dev = []() {
+  fpbus::Node dev;
+  dev.name() = "pl031";
+  dev.vid() = PDEV_VID_GENERIC;
+  dev.pid() = PDEV_PID_GENERIC;
+  dev.did() = PDEV_DID_RTC_PL031;
+  dev.mmio() = pl031_mmios;
+  return dev;
+}();
 
 static int machina_start_thread(void* arg) {
-  machina_board_t* bus = arg;
+  machina_board_t* bus = static_cast<machina_board_t*>(arg);
   zx_status_t status;
 
   status = machina_sysmem_init(bus);
   if (status != ZX_OK) {
     zxlogf(ERROR, "machina_board_bind machina_sysmem_init failed: %d", status);
-    goto fail;
+    return status;
   }
 
-  pbus_bti_t pci_btis[] = {
-      {
+  std::vector<fpbus::Bti> pci_btis = {
+      {{
           .iommu_index = 0,
           .bti_id = 0,
-      },
+      }},
   };
 
-  pbus_dev_t pci_dev = {
-      .name = "pci",
-      .vid = PDEV_VID_GENERIC,
-      .pid = PDEV_PID_GENERIC,
-      .did = PDEV_DID_KPCI,
-      .bti_list = pci_btis,
-      .bti_count = countof(pci_btis),
-  };
+  fpbus::Node pci_dev;
+  pci_dev.name() = "pci";
+  pci_dev.vid() = PDEV_VID_GENERIC;
+  pci_dev.pid() = PDEV_PID_GENERIC;
+  pci_dev.did() = PDEV_DID_KPCI;
+  pci_dev.bti() = std::move(pci_btis);
 
-  status = pbus_device_add(&bus->pbus, &pci_dev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "machina_board_bind could not add pci_dev: %d", status);
+  fdf::Arena arena('MACH');
+  fidl::Arena<> fidl_arena;
+
+  auto result = bus->client.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, pci_dev));
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: NodeAdd request failed: %s", __func__, result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: NodeAdd failed: %s", __func__, zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
-  status = pbus_device_add(&bus->pbus, &pl031_dev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "machina_board_bind could not add pl031: %d", status);
+  result = bus->client.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, pl031_dev));
+
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: NodeAdd request failed: %s", __func__, result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: NodeAdd failed: %s", __func__, zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   return ZX_OK;
-
-fail:
-  zxlogf(ERROR, "machina_start_thread failed, not all devices have been initialized");
-  return status;
 }
 
 static zx_status_t machina_board_bind(void* ctx, zx_device_t* parent) {
-  machina_board_t* bus = calloc(1, sizeof(machina_board_t));
+  std::unique_ptr<machina_board_t> bus = std::make_unique<machina_board_t>();
   if (!bus) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  if (device_get_protocol(parent, ZX_PROTOCOL_PBUS, &bus->pbus) != ZX_OK) {
-    free(bus);
-    return ZX_ERR_NOT_SUPPORTED;
+  auto endpoints = fdf::CreateEndpoints<fpbus::PlatformBus>();
+  if (endpoints.is_error()) {
+    return endpoints.error_value();
   }
 
-  zx_status_t status = machina_pci_init();
+  zx_status_t status = device_connect_runtime_protocol(
+      parent, fpbus::Service::PlatformBus::ServiceName, fpbus::Service::PlatformBus::Name,
+      endpoints->server.TakeHandle().release());
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to connect to platform bus: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  bus->client.Bind(std::move(endpoints->client));
+
+  status = machina_pci_init();
   if (status != ZX_OK) {
     zxlogf(ERROR, "machina_pci_init failed: %d", status);
   }
@@ -165,27 +185,28 @@ static zx_status_t machina_board_bind(void* ctx, zx_device_t* parent) {
 
   status = device_add(parent, &args, NULL);
   if (status != ZX_OK) {
-    goto fail;
+    return status;
   }
+
+  // The DDK takes ownership of the pointer.
+  auto raw_bus = bus.release();
 
   thrd_t t;
-  int thrd_rc = thrd_create_with_name(&t, machina_start_thread, bus, "machina_start_thread");
+  int thrd_rc = thrd_create_with_name(&t, machina_start_thread, raw_bus, "machina_start_thread");
   if (thrd_rc != thrd_success) {
     status = thrd_status_to_zx_status(thrd_rc);
-    goto fail;
+    printf("machina_board_bind failed %d\n", status);
+    return status;
   }
 
-  return status;
-
-fail:
-  printf("machina_board_bind failed %d\n", status);
-  machina_board_release(bus);
   return status;
 }
 
+}  // namespace machina
+
 static zx_driver_ops_t machina_board_driver_ops = {
     .version = DRIVER_OPS_VERSION,
-    .bind = machina_board_bind,
+    .bind = machina::machina_board_bind,
 };
 
 ZIRCON_DRIVER(machina_board, machina_board_driver_ops, "zircon", "0.1");

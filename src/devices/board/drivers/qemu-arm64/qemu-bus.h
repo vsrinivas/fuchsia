@@ -4,7 +4,7 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_QEMU_ARM64_QEMU_BUS_H_
 #define SRC_DEVICES_BOARD_DRIVERS_QEMU_ARM64_QEMU_BUS_H_
 
-#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
 #include <lib/pci/root_host.h>
 #include <threads.h>
 
@@ -19,9 +19,9 @@ enum {
 
 class QemuArm64 : public ddk::Device<QemuArm64> {
  public:
-  QemuArm64(zx_device_t* parent, const ddk::PBusProtocolClient& pbus)
+  QemuArm64(zx_device_t* parent, fdf::ClientEnd<fuchsia_hardware_platform_bus::PlatformBus> pbus)
       : ddk::Device<QemuArm64>(parent),
-        pbus_(pbus),
+        pbus_(std::move(pbus)),
         pci_root_host_(zx::unowned_resource(get_root_resource()), PCI_ADDRESS_SPACE_MEMORY) {}
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
@@ -38,7 +38,8 @@ class QemuArm64 : public ddk::Device<QemuArm64> {
   zx_status_t SysmemInit();
   zx_status_t DisplayInit();
 
-  const ddk::PBusProtocolClient pbus_;
+  // TODO(fxbug.dev/108070): Switch to fdf::SyncClient once it's supported.
+  fdf::WireSyncClient<fuchsia_hardware_platform_bus::PlatformBus> pbus_;
   PciRootHost pci_root_host_;
   thrd_t thread_;
 };

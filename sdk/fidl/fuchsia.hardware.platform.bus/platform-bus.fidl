@@ -199,3 +199,7 @@ protocol PlatformBus {
         primary_fragment string:<MAX, optional>;
     }) -> (struct {}) error zx.status;
 };
+
+service Service {
+    platform_bus client_end:PlatformBus;
+};

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/metadata.h>
@@ -12,8 +13,10 @@
 
 #include "as370.h"
 #include "src/devices/board/drivers/as370/as370-bind.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 
 namespace board_as370 {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 zx_status_t As370::LightInit() {
   // setup LED/Touch reset pin
@@ -39,17 +42,19 @@ zx_status_t As370::LightInit() {
   };
   using LightName = char[ZX_MAX_NAME_LEN];
   constexpr LightName kLightGroupNames[] = {"GROUP_OF_4", "GROUP_OF_2"};
-  static const pbus_metadata_t light_metadata[] = {
-      {
+  std::vector<fpbus::Metadata> light_metadata{
+      {{
           .type = DEVICE_METADATA_LIGHTS,
-          .data_buffer = reinterpret_cast<const uint8_t*>(&kConfigs),
-          .data_size = sizeof(kConfigs),
-      },
-      {
+          .data =
+              std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(&kConfigs),
+                                   reinterpret_cast<const uint8_t*>(&kConfigs) + sizeof(kConfigs)),
+      }},
+      {{
           .type = DEVICE_METADATA_LIGHTS_GROUP_NAME,
-          .data_buffer = reinterpret_cast<const uint8_t*>(&kLightGroupNames),
-          .data_size = sizeof(kLightGroupNames),
-      },
+          .data = std::vector<uint8_t>(
+              reinterpret_cast<const uint8_t*>(&kLightGroupNames),
+              reinterpret_cast<const uint8_t*>(&kLightGroupNames) + sizeof(kLightGroupNames)),
+      }},
   };
 
   // Composite binding rules for TI LED driver.
@@ -68,19 +73,27 @@ zx_status_t As370::LightInit() {
       {"i2c", std::size(i2c_fragment), i2c_fragment},
   };
 
-  pbus_dev_t light_dev = {};
-  light_dev.name = "lp5018-light";
-  light_dev.vid = PDEV_VID_TI;
-  light_dev.pid = PDEV_PID_TI_LP5018;
-  light_dev.did = PDEV_DID_TI_LED;
-  light_dev.metadata_list = light_metadata;
-  light_dev.metadata_count = std::size(light_metadata);
+  fpbus::Node light_dev;
+  light_dev.name() = "lp5018-light";
+  light_dev.vid() = PDEV_VID_TI;
+  light_dev.pid() = PDEV_PID_TI_LP5018;
+  light_dev.did() = PDEV_DID_TI_LED;
+  light_dev.metadata() = light_metadata;
 
-  status = pbus_.CompositeDeviceAdd(&light_dev, reinterpret_cast<uint64_t>(fragments),
-                                    std::size(fragments), nullptr);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d", __FUNCTION__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('LIGH');
+  auto result = pbus_.buffer(arena)->AddCompositeImplicitPbusFragment(
+      fidl::ToWire(fidl_arena, light_dev),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, fragments, std::size(fragments)), {});
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment Light(light_dev) request failed: %s",
+           __func__, result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment Light(light_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   return ZX_OK;

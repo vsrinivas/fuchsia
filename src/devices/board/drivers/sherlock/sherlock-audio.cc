@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -24,6 +26,7 @@
 #include "src/devices/board/drivers/sherlock/sherlock-tweeter-left-bind.h"
 #include "src/devices/board/drivers/sherlock/sherlock-tweeter-right-bind.h"
 #include "src/devices/board/drivers/sherlock/sherlock-woofer-bind.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 
 // Enables BT PCM audio.
 #define ENABLE_BT
@@ -38,49 +41,58 @@
 #endif
 
 namespace sherlock {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 zx_status_t Sherlock::AudioInit() {
   uint8_t tdm_instance_id = 1;
-  static constexpr pbus_mmio_t audio_mmios[] = {
-      {
+  static const std::vector<fpbus::Mmio> audio_mmios{
+      {{
           .base = T931_EE_AUDIO_BASE,
           .length = T931_EE_AUDIO_LENGTH,
-      },
-      {
+      }},
+      {{
           .base = T931_GPIO_BASE,
           .length = T931_GPIO_LENGTH,
-      },
-      {
+      }},
+      {{
           .base = T931_GPIO_AO_BASE,
           .length = T931_GPIO_AO_LENGTH,
-      },
+      }},
   };
 
-  static constexpr pbus_bti_t tdm_btis[] = {
-      {
+  static const std::vector<fpbus::Bti> tdm_btis{
+      {{
           .iommu_index = 0,
           .bti_id = BTI_AUDIO_OUT,
-      },
+      }},
   };
-  constexpr pbus_irq_t frddr_b_irqs[] = {
-      {
+  static const std::vector<fpbus::Irq> frddr_b_irqs{
+      {{
           .irq = T931_AUDIO_FRDDR_B,
           .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-      },
+      }},
   };
-  constexpr pbus_irq_t toddr_b_irqs[] = {
-      {
+  static const std::vector<fpbus::Irq> toddr_b_irqs{
+      {{
           .irq = T931_AUDIO_TODDR_B,
           .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-      },
+      }},
   };
 
-  pdev_board_info_t board_info = {};
-  zx_status_t status = pbus_.GetBoardInfo(&board_info);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: GetBoardInfo failed %d", __FILE__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('AUDI');
+  auto result = pbus_.buffer(arena)->GetBoardInfo();
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: NodeAdd Audio(tdm_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
   }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: NodeAdd Audio(tdm_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
+  }
+  auto& board_info = result->value()->info;
 
   bool is_sherlock = board_info.pid == PDEV_PID_SHERLOCK;
   bool is_ernie = board_info.pid != PDEV_PID_SHERLOCK && (board_info.board_revision & (1 << 4));
@@ -177,7 +189,7 @@ zx_status_t Sherlock::AudioInit() {
       {"codec-02", std::size(ernie_codec_tweeter_fragment), ernie_codec_tweeter_fragment},
   };
 
-  status = clk_impl_.Disable(g12b_clk::CLK_HIFI_PLL);
+  zx_status_t status = clk_impl_.Disable(g12b_clk::CLK_HIFI_PLL);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Disable(CLK_HIFI_PLL) failed, st = %d", __func__, status);
     return status;
@@ -437,58 +449,91 @@ zx_status_t Sherlock::AudioInit() {
     metadata.codecs.channels_to_use_bitmask[0] = 0x3;              // Woofer + Tweeter in I2S DAI.
     metadata.codecs.ring_buffer_channels_to_use_bitmask[0] = 0x3;  // Woofer/Tweeter use index 0/1.
   }
-  pbus_metadata_t tdm_metadata[] = {
-      {
+  std::vector<fpbus::Metadata> tdm_metadata{
+      {{
           .type = DEVICE_METADATA_PRIVATE,
-          .data_buffer = reinterpret_cast<uint8_t*>(&metadata),
-          .data_size = sizeof(metadata),
-      },
+          .data =
+              std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(&metadata),
+                                   reinterpret_cast<const uint8_t*>(&metadata) + sizeof(metadata)),
+      }},
   };
 
-  pbus_dev_t tdm_dev = {};
+  fpbus::Node tdm_dev;
   char name[device_name_max_length];
   snprintf(name, sizeof(name), "%s-i2s-audio-out", product_name);
-  tdm_dev.name = name;
-  tdm_dev.vid = PDEV_VID_AMLOGIC;
-  tdm_dev.pid = PDEV_PID_AMLOGIC_T931;
-  tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
-  tdm_dev.instance_id = tdm_instance_id++;
-  tdm_dev.mmio_list = audio_mmios;
-  tdm_dev.mmio_count = std::size(audio_mmios);
-  tdm_dev.bti_list = tdm_btis;
-  tdm_dev.bti_count = std::size(tdm_btis);
-  tdm_dev.irq_list = frddr_b_irqs;
-  tdm_dev.irq_count = std::size(frddr_b_irqs);
-  tdm_dev.metadata_list = tdm_metadata;
-  tdm_dev.metadata_count = std::size(tdm_metadata);
+  tdm_dev.name() = name;
+  tdm_dev.vid() = PDEV_VID_AMLOGIC;
+  tdm_dev.pid() = PDEV_PID_AMLOGIC_T931;
+  tdm_dev.did() = PDEV_DID_AMLOGIC_TDM;
+  tdm_dev.instance_id() = tdm_instance_id++;
+  tdm_dev.mmio() = audio_mmios;
+  tdm_dev.bti() = tdm_btis;
+  tdm_dev.irq() = frddr_b_irqs;
+  tdm_dev.metadata() = tdm_metadata;
   if (is_sherlock) {
-    status =
-        pbus_.CompositeDeviceAdd(&tdm_dev, reinterpret_cast<uint64_t>(sherlock_tdm_i2s_fragments),
-                                 std::size(sherlock_tdm_i2s_fragments), nullptr);
+    fidl::Arena<> fidl_arena;
+    fdf::Arena arena('AUDI');
+    auto result = pbus_.buffer(arena)->AddCompositeImplicitPbusFragment(
+        fidl::ToWire(fidl_arena, tdm_dev),
+        platform_bus_composite::MakeFidlFragment(fidl_arena, sherlock_tdm_i2s_fragments,
+                                                 std::size(sherlock_tdm_i2s_fragments)),
+        {});
+    if (!result.ok()) {
+      zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment Audio(tdm_dev) request failed: %s",
+             __func__, result.FormatDescription().data());
+      return result.status();
+    }
+    if (result->is_error()) {
+      zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment Audio(tdm_dev) failed: %s", __func__,
+             zx_status_get_string(result->error_value()));
+      return result->error_value();
+    }
+
   } else {
     if (is_ernie) {
-      status =
-          pbus_.CompositeDeviceAdd(&tdm_dev, reinterpret_cast<uint64_t>(ernie_tdm_i2s_fragments),
-                                   std::size(ernie_tdm_i2s_fragments), nullptr);
+      auto result = pbus_.buffer(arena)->AddCompositeImplicitPbusFragment(
+          fidl::ToWire(fidl_arena, tdm_dev),
+          platform_bus_composite::MakeFidlFragment(fidl_arena, ernie_tdm_i2s_fragments,
+                                                   std::size(ernie_tdm_i2s_fragments)),
+          {});
+      if (!result.ok()) {
+        zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment Audio(tdm_dev) request failed: %s",
+               __func__, result.FormatDescription().data());
+        return result.status();
+      }
+      if (result->is_error()) {
+        zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment Audio(tdm_dev) failed: %s", __func__,
+               zx_status_get_string(result->error_value()));
+        return result->error_value();
+      }
+
     } else {
-      status =
-          pbus_.CompositeDeviceAdd(&tdm_dev, reinterpret_cast<uint64_t>(luis_tdm_i2s_fragments),
-                                   std::size(luis_tdm_i2s_fragments), nullptr);
+      auto result = pbus_.buffer(arena)->AddCompositeImplicitPbusFragment(
+          fidl::ToWire(fidl_arena, tdm_dev),
+          platform_bus_composite::MakeFidlFragment(fidl_arena, luis_tdm_i2s_fragments,
+                                                   std::size(luis_tdm_i2s_fragments)),
+          {});
+      if (!result.ok()) {
+        zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment Audio(tdm_dev) request failed: %s",
+               __func__, result.FormatDescription().data());
+        return result.status();
+      }
+      if (result->is_error()) {
+        zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment Audio(tdm_dev) failed: %s", __func__,
+               zx_status_get_string(result->error_value()));
+        return result->error_value();
+      }
     }
-  }
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: I2S CompositeDeviceAdd failed: %d", __FILE__, status);
-    return status;
   }
 
 #ifdef ENABLE_BT
   // Add TDM OUT for BT.
   {
-    const pbus_bti_t pcm_out_btis[] = {
-        {
+    static const std::vector<fpbus::Bti> pcm_out_btis{
+        {{
             .iommu_index = 0,
             .bti_id = BTI_AUDIO_BT_OUT,
-        },
+        }},
     };
     metadata::AmlConfig metadata = {};
     snprintf(metadata.manufacturer, sizeof(metadata.manufacturer), "Spacely Sprockets");
@@ -508,32 +553,39 @@ zx_status_t Sherlock::AudioInit() {
     metadata.ring_buffer.number_of_channels = 1;
     metadata.dai.number_of_channels = 1;
     metadata.lanes_enable_mask[0] = 1;
-    pbus_metadata_t tdm_metadata[] = {
-        {
+    std::vector<fpbus::Metadata> tdm_metadata{
+        {{
             .type = DEVICE_METADATA_PRIVATE,
-            .data_buffer = reinterpret_cast<uint8_t*>(&metadata),
-            .data_size = sizeof(metadata),
-        },
+            .data = std::vector<uint8_t>(
+                reinterpret_cast<const uint8_t*>(&metadata),
+                reinterpret_cast<const uint8_t*>(&metadata) + sizeof(metadata)),
+        }},
     };
 
-    pbus_dev_t tdm_dev = {};
+    fpbus::Node tdm_dev;
     char tdm_name[device_name_max_length];
     snprintf(tdm_name, sizeof(tdm_name), "%s-pcm-dai-out", product_name);
-    tdm_dev.name = tdm_name;
-    tdm_dev.vid = PDEV_VID_AMLOGIC;
-    tdm_dev.pid = PDEV_PID_AMLOGIC_T931;
-    tdm_dev.did = PDEV_DID_AMLOGIC_DAI_OUT;
-    tdm_dev.instance_id = tdm_instance_id++;
-    tdm_dev.mmio_list = audio_mmios;
-    tdm_dev.mmio_count = std::size(audio_mmios);
-    tdm_dev.bti_list = pcm_out_btis;
-    tdm_dev.bti_count = std::size(pcm_out_btis);
-    tdm_dev.metadata_list = tdm_metadata;
-    tdm_dev.metadata_count = std::size(tdm_metadata);
-    status = pbus_.DeviceAdd(&tdm_dev);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: PCM CompositeDeviceAdd failed: %d", __FILE__, status);
-      return status;
+    tdm_dev.name() = tdm_name;
+    tdm_dev.vid() = PDEV_VID_AMLOGIC;
+    tdm_dev.pid() = PDEV_PID_AMLOGIC_T931;
+    tdm_dev.did() = PDEV_DID_AMLOGIC_DAI_OUT;
+    tdm_dev.instance_id() = tdm_instance_id++;
+    tdm_dev.mmio() = audio_mmios;
+    tdm_dev.bti() = pcm_out_btis;
+    tdm_dev.metadata() = tdm_metadata;
+
+    {
+      auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, tdm_dev));
+      if (!result.ok()) {
+        zxlogf(ERROR, "%s: NodeAdd Audio(tdm_dev) request failed: %s", __func__,
+               result.FormatDescription().data());
+        return result.status();
+      }
+      if (result->is_error()) {
+        zxlogf(ERROR, "%s: NodeAdd Audio(tdm_dev) failed: %s", __func__,
+               zx_status_get_string(result->error_value()));
+        return result->error_value();
+      }
     }
 
 #ifdef ENABLE_DAI_TEST
@@ -575,57 +627,68 @@ zx_status_t Sherlock::AudioInit() {
     metadata.version = metadata::AmlVersion::kS905D2G;
     metadata.sysClockDivFactor = 4;
     metadata.dClockDivFactor = 250;
-    pbus_metadata_t pdm_metadata[] = {
-        {
+    std::vector<fpbus::Metadata> pdm_metadata{
+        {{
             .type = DEVICE_METADATA_PRIVATE,
-            .data_buffer = reinterpret_cast<uint8_t*>(&metadata),
-            .data_size = sizeof(metadata),
-        },
+            .data = std::vector<uint8_t>(
+                reinterpret_cast<const uint8_t*>(&metadata),
+                reinterpret_cast<const uint8_t*>(&metadata) + sizeof(metadata)),
+        }},
     };
 
-    static constexpr pbus_mmio_t pdm_mmios[] = {
-        {.base = T931_EE_PDM_BASE, .length = T931_EE_PDM_LENGTH},
-        {.base = T931_EE_AUDIO_BASE, .length = T931_EE_AUDIO_LENGTH},
+    static const std::vector<fpbus::Mmio> pdm_mmios{
+        {{
+            .base = T931_EE_PDM_BASE,
+            .length = T931_EE_PDM_LENGTH,
+        }},
+        {{
+            .base = T931_EE_AUDIO_BASE,
+            .length = T931_EE_AUDIO_LENGTH,
+        }},
     };
 
-    static constexpr pbus_bti_t pdm_btis[] = {
-        {
+    static const std::vector<fpbus::Bti> pdm_btis{
+        {{
             .iommu_index = 0,
             .bti_id = BTI_AUDIO_IN,
-        },
+        }},
     };
 
-    pbus_dev_t dev_in = {};
+    fpbus::Node dev_in;
     char pdm_name[device_name_max_length];
     snprintf(pdm_name, sizeof(pdm_name), "%s-pdm-audio-in", product_name);
-    dev_in.name = pdm_name;
-    dev_in.vid = PDEV_VID_AMLOGIC;
-    dev_in.pid = PDEV_PID_AMLOGIC_T931;
-    dev_in.did = PDEV_DID_AMLOGIC_PDM;
-    dev_in.mmio_list = pdm_mmios;
-    dev_in.mmio_count = std::size(pdm_mmios);
-    dev_in.bti_list = pdm_btis;
-    dev_in.bti_count = std::size(pdm_btis);
-    dev_in.irq_list = toddr_b_irqs;
-    dev_in.irq_count = std::size(toddr_b_irqs);
-    dev_in.metadata_list = pdm_metadata;
-    dev_in.metadata_count = std::size(pdm_metadata);
+    dev_in.name() = pdm_name;
+    dev_in.vid() = PDEV_VID_AMLOGIC;
+    dev_in.pid() = PDEV_PID_AMLOGIC_T931;
+    dev_in.did() = PDEV_DID_AMLOGIC_PDM;
+    dev_in.mmio() = pdm_mmios;
+    dev_in.bti() = pdm_btis;
+    dev_in.irq() = toddr_b_irqs;
+    dev_in.metadata() = pdm_metadata;
 
-    status = pbus_.DeviceAdd(&dev_in);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s adding audio input device failed %d", __FILE__, status);
-      return status;
+    {
+      auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, dev_in));
+      if (!result.ok()) {
+        zxlogf(ERROR, "%s: NodeAdd Audio(dev_in) request failed: %s", __func__,
+               result.FormatDescription().data());
+        return result.status();
+      }
+      if (result->is_error()) {
+        zxlogf(ERROR, "%s: NodeAdd Audio(dev_in) failed: %s", __func__,
+               zx_status_get_string(result->error_value()));
+        return result->error_value();
+      }
     }
   }
 
 #ifdef ENABLE_BT
   // Add TDM IN for BT.
   {
-    const pbus_bti_t pcm_in_btis[] = {
-        {
+    static const std::vector<fpbus::Bti> pcm_in_btis{
+        {{
             .iommu_index = 0,
             .bti_id = BTI_AUDIO_BT_IN,
-        },
+        }},
     };
     metadata::AmlConfig metadata = {};
     snprintf(metadata.manufacturer, sizeof(metadata.manufacturer), "Spacely Sprockets");
@@ -646,31 +709,38 @@ zx_status_t Sherlock::AudioInit() {
     metadata.dai.number_of_channels = 1;
     metadata.swaps = 0x0200;
     metadata.lanes_enable_mask[1] = 1;
-    pbus_metadata_t tdm_metadata[] = {
-        {
+    std::vector<fpbus::Metadata> tdm_metadata{
+        {{
             .type = DEVICE_METADATA_PRIVATE,
-            .data_buffer = reinterpret_cast<uint8_t*>(&metadata),
-            .data_size = sizeof(metadata),
-        },
+            .data = std::vector<uint8_t>(
+                reinterpret_cast<const uint8_t*>(&metadata),
+                reinterpret_cast<const uint8_t*>(&metadata) + sizeof(metadata)),
+        }},
     };
-    pbus_dev_t tdm_dev = {};
+    fpbus::Node tdm_dev;
     char name[device_name_max_length];
     snprintf(name, sizeof(name), "%s-pcm-dai-in", product_name);
-    tdm_dev.name = name;
-    tdm_dev.vid = PDEV_VID_AMLOGIC;
-    tdm_dev.pid = PDEV_PID_AMLOGIC_T931;
-    tdm_dev.did = PDEV_DID_AMLOGIC_DAI_IN;
-    tdm_dev.instance_id = tdm_instance_id++;
-    tdm_dev.mmio_list = audio_mmios;
-    tdm_dev.mmio_count = std::size(audio_mmios);
-    tdm_dev.bti_list = pcm_in_btis;
-    tdm_dev.bti_count = std::size(pcm_in_btis);
-    tdm_dev.metadata_list = tdm_metadata;
-    tdm_dev.metadata_count = std::size(tdm_metadata);
-    status = pbus_.DeviceAdd(&tdm_dev);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: PCM CompositeDeviceAdd failed: %d", __FILE__, status);
-      return status;
+    tdm_dev.name() = name;
+    tdm_dev.vid() = PDEV_VID_AMLOGIC;
+    tdm_dev.pid() = PDEV_PID_AMLOGIC_T931;
+    tdm_dev.did() = PDEV_DID_AMLOGIC_DAI_IN;
+    tdm_dev.instance_id() = tdm_instance_id++;
+    tdm_dev.mmio() = audio_mmios;
+    tdm_dev.bti() = pcm_in_btis;
+    tdm_dev.metadata() = tdm_metadata;
+
+    {
+      auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, tdm_dev));
+      if (!result.ok()) {
+        zxlogf(ERROR, "%s: NodeAdd Audio(tdm_dev) request failed: %s", __func__,
+               result.FormatDescription().data());
+        return result.status();
+      }
+      if (result->is_error()) {
+        zxlogf(ERROR, "%s: NodeAdd Audio(tdm_dev) failed: %s", __func__,
+               zx_status_get_string(result->error_value()));
+        return result->error_value();
+      }
     }
   }
 #ifdef ENABLE_DAI_TEST
@@ -694,6 +764,11 @@ zx_status_t Sherlock::AudioInit() {
   comp_desc.primary_fragment = "dai-in";
   comp_desc.metadata_list = test_metadata;
   comp_desc.metadata_count = std::size(test_metadata);
+  status = DdkAddComposite("sherlock-dai-test-in", &comp_desc);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: PCM CompositeDeviceAdd failed: %d", __FILE__, status);
+    return status;
+  }
   status = DdkAddComposite("sherlock-dai-test-in", &comp_desc);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: PCM CompositeDeviceAdd failed: %d", __FILE__, status);

@@ -5,6 +5,8 @@
 #include "src/devices/board/drivers/astro/astro.h"
 
 #include <assert.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <fuchsia/hardware/gpio/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/ddk/debug.h>
@@ -22,6 +24,7 @@
 #include "src/devices/board/drivers/astro/astro-bind.h"
 
 namespace astro {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 uint32_t Astro::GetBoardRev() {
   uint32_t board_rev;
@@ -59,16 +62,25 @@ int Astro::Thread() {
   }
 
   // Once gpio is up and running, let's populate board revision
-  pbus_board_info_t info = {};
-  info.board_revision = GetBoardRev();
-  status = pbus_.SetBoardInfo(&info);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: PBusSetBoardInfo failed: %d", __func__, status);
+  fpbus::BoardInfo info = {};
+  fidl::Arena<> fidl_arena;
+  info.board_revision() = GetBoardRev();
+  auto result = pbus_.buffer(fdf::Arena('ASTR'))->SetBoardInfo(fidl::ToWire(fidl_arena, info));
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: SetBoardInfo request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
   }
-  zxlogf(INFO, "Detected board rev 0x%x", info.board_revision);
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: SetBoardInfo failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
+  }
+  zxlogf(INFO, "Detected board rev 0x%x", info.board_revision().value());
 
-  if (info.board_revision != BOARD_REV_DVT && info.board_revision != BOARD_REV_PVT) {
-    zxlogf(ERROR, "Unsupported board revision %u. Booting will not continue", info.board_revision);
+  if (*info.board_revision() != BOARD_REV_DVT && *info.board_revision() != BOARD_REV_PVT) {
+    zxlogf(ERROR, "Unsupported board revision %u. Booting will not continue",
+           *info.board_revision());
     return -1;
   }
 
@@ -191,13 +203,19 @@ zx_status_t Astro::Start() {
 void Astro::DdkRelease() { delete this; }
 
 zx_status_t Astro::Create(void* ctx, zx_device_t* parent) {
-  pbus_protocol_t pbus;
-  iommu_protocol_t iommu;
+  auto endpoints = fdf::CreateEndpoints<fuchsia_hardware_platform_bus::PlatformBus>();
+  if (endpoints.is_error()) {
+    return endpoints.error_value();
+  }
 
-  auto status = device_get_protocol(parent, ZX_PROTOCOL_PBUS, &pbus);
+  zx_status_t status = device_connect_runtime_protocol(
+      parent, fpbus::Service::PlatformBus::ServiceName, fpbus::Service::PlatformBus::Name,
+      endpoints->server.TakeHandle().release());
   if (status != ZX_OK) {
     return status;
   }
+
+  iommu_protocol_t iommu;
 
   status = device_get_protocol(parent, ZX_PROTOCOL_IOMMU, &iommu);
   if (status != ZX_OK) {
@@ -205,7 +223,7 @@ zx_status_t Astro::Create(void* ctx, zx_device_t* parent) {
   }
 
   fbl::AllocChecker ac;
-  auto board = fbl::make_unique_checked<Astro>(&ac, parent, &pbus, &iommu);
+  auto board = fbl::make_unique_checked<Astro>(&ac, parent, std::move(endpoints->client), &iommu);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

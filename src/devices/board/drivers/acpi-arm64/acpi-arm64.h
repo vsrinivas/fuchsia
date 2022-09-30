@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_ACPI_ARM64_ACPI_ARM64_H_
 #define SRC_DEVICES_BOARD_DRIVERS_ACPI_ARM64_ACPI_ARM64_H_
 
-#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
 
 #include <ddktl/device.h>
 
@@ -20,7 +20,9 @@ using DeviceType = ddk::Device<AcpiArm64, ddk::Initializable>;
 
 class AcpiArm64 : public DeviceType {
  public:
-  explicit AcpiArm64(zx_device_t* parent) : DeviceType(parent), pbus_(parent) {}
+  explicit AcpiArm64(zx_device_t* parent,
+                     fdf::ClientEnd<fuchsia_hardware_platform_bus::PlatformBus> pbus)
+      : DeviceType(parent), pbus_(std::move(pbus)) {}
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
@@ -35,7 +37,8 @@ class AcpiArm64 : public DeviceType {
   std::optional<acpi::FuchsiaManager> manager_;
   acpi::AcpiImpl acpi_;
   iommu::ArmIommuManager iommu_manager_;
-  ddk::PBusProtocolClient pbus_;
+  // TODO(fxbug.dev/108070): Migrate to fdf::SyncClient when available.
+  fdf::WireSyncClient<fuchsia_hardware_platform_bus::PlatformBus> pbus_;
 
   std::thread init_thread_;
 };

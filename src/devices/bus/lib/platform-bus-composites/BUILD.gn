@@ -1,0 +1,12 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("platform-bus-composites") {
+  public_deps = [
+    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_cpp_wire",
+    "//src/lib/ddk",
+  ]
+
+  sources = [ "platform-bus-composite.cc" ]
+}

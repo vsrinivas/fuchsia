@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/metadata.h>
@@ -14,23 +16,24 @@
 #include "astro.h"
 
 namespace astro {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
-static const pbus_mmio_t saradc_mmios[] = {
-    {
+static const std::vector<fpbus::Mmio> saradc_mmios{
+    {{
         .base = S905D2_SARADC_BASE,
         .length = S905D2_SARADC_LENGTH,
-    },
-    {
+    }},
+    {{
         .base = S905D2_AOBUS_BASE,
         .length = S905D2_AOBUS_LENGTH,
-    },
+    }},
 };
 
-static const pbus_irq_t saradc_irqs[] = {
-    {
+static const std::vector<fpbus::Irq> saradc_irqs{
+    {{
         .irq = S905D2_SARADC_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
+    }},
 };
 
 zx_status_t Astro::ThermistorInit() {
@@ -82,35 +85,42 @@ zx_status_t Astro::ThermistorInit() {
       {.adc_channel = 3, .pullup_ohms = 47000, .profile_idx = 0, .name = "therm-ambient"},
   };
 
-  pbus_metadata_t therm_metadata[] = {
-      {
+  std::vector<fpbus::Metadata> therm_metadata{
+      {{
           .type = NTC_CHANNELS_METADATA_PRIVATE,
-          .data_buffer = reinterpret_cast<uint8_t*>(&ntc_channels),
-          .data_size = sizeof(ntc_channels),
-      },
-      {
+          .data = std::vector<uint8_t>(
+              reinterpret_cast<const uint8_t*>(&ntc_channels),
+              reinterpret_cast<const uint8_t*>(&ntc_channels) + sizeof(ntc_channels)),
+      }},
+      {{
           .type = NTC_PROFILE_METADATA_PRIVATE,
-          .data_buffer = reinterpret_cast<uint8_t*>(&ntc_info),
-          .data_size = sizeof(ntc_info),
-      },
+          .data =
+              std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(&ntc_info),
+                                   reinterpret_cast<const uint8_t*>(&ntc_info) + sizeof(ntc_info)),
+      }},
   };
 
-  pbus_dev_t thermistor = {};
-  thermistor.name = "thermistor";
-  thermistor.vid = PDEV_VID_GOOGLE;
-  thermistor.pid = PDEV_PID_ASTRO;
-  thermistor.did = PDEV_DID_AMLOGIC_THERMISTOR;
-  thermistor.mmio_list = saradc_mmios;
-  thermistor.mmio_count = std::size(saradc_mmios);
-  thermistor.irq_list = saradc_irqs;
-  thermistor.irq_count = std::size(saradc_irqs);
-  thermistor.metadata_list = therm_metadata;
-  thermistor.metadata_count = std::size(therm_metadata);
+  fpbus::Node thermistor;
+  thermistor.name() = "thermistor";
+  thermistor.vid() = PDEV_VID_GOOGLE;
+  thermistor.pid() = PDEV_PID_ASTRO;
+  thermistor.did() = PDEV_DID_AMLOGIC_THERMISTOR;
+  thermistor.mmio() = saradc_mmios;
+  thermistor.irq() = saradc_irqs;
+  thermistor.metadata() = therm_metadata;
 
-  zx_status_t status = pbus_.DeviceAdd(&thermistor);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed: %d", __func__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('THER');
+  auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, thermistor));
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: NodeAdd Thermistor(thermistor) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: NodeAdd Thermistor(thermistor) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   return ZX_OK;

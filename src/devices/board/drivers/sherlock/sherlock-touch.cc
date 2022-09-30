@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -72,7 +71,7 @@ zx_status_t Sherlock::TouchInit() {
   }
 
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed: %d", __func__, status);
+    zxlogf(ERROR, "%s: DdkAddComposite failed: %d", __func__, status);
     return status;
   }
   return ZX_OK;

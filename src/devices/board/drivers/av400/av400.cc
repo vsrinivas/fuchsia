@@ -23,23 +23,21 @@
 namespace av400 {
 
 zx_status_t Av400::Create(void* ctx, zx_device_t* parent) {
-  pbus_protocol_t pbus;
   iommu_protocol_t iommu;
 
-  auto status = device_get_protocol(parent, ZX_PROTOCOL_PBUS, &pbus);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  status = device_get_protocol(parent, ZX_PROTOCOL_IOMMU, &iommu);
+  zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_IOMMU, &iommu);
   if (status != ZX_OK) {
     return status;
   }
 
   fbl::AllocChecker ac;
-  auto board = fbl::make_unique_checked<Av400>(&ac, parent, &pbus, &iommu);
+  auto board = fbl::make_unique_checked<Av400>(&ac, parent, &iommu);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
+  }
+
+  if (!board->pbus_.is_valid()) {
+    return ZX_ERR_INTERNAL;
   }
 
   status = board->DdkAdd("av400");

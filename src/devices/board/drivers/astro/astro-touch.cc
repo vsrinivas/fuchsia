@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -22,6 +23,7 @@
 #include "src/devices/board/drivers/astro/gt92xx-touch-bind.h"
 
 namespace astro {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 static const FocaltechMetadata device_info = {
     .device_id = FOCALTECH_DEVICE_FT3X27,

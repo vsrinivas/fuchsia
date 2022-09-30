@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -18,6 +19,7 @@
 
 #include "nelson-gpios.h"
 #include "nelson.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 
 #ifdef TAS5805M_CONFIG_PATH
 #include TAS5805M_CONFIG_PATH
@@ -27,6 +29,7 @@
 #define ENABLE_BT
 
 namespace nelson {
+namespace fpbus = fuchsia_hardware_platform_bus;
 static const zx_bind_inst_t ref_out_i2c_match[] = {
     BI_ABORT_IF(NE, BIND_FIDL_PROTOCOL, ZX_FIDL_PROTOCOL_I2C),
     BI_ABORT_IF(NE, BIND_I2C_BUS_ID, NELSON_I2C_3),
@@ -115,49 +118,49 @@ zx_status_t Nelson::AudioInit() {
     return status;
   }
 
-  const pbus_mmio_t audio_mmios[] = {
-      {
+  static const std::vector<fpbus::Mmio> audio_mmios{
+      {{
           .base = S905D3_EE_AUDIO_BASE,
           .length = S905D3_EE_AUDIO_LENGTH,
-      },
+      }},
   };
 
-  const pbus_bti_t btis_out[] = {
-      {
+  static const std::vector<fpbus::Bti> btis_out{
+      {{
           .iommu_index = 0,
           .bti_id = BTI_AUDIO_OUT,
-      },
+      }},
   };
 
-  constexpr pbus_irq_t frddr_b_irqs[] = {
-      {
+  static const std::vector<fpbus::Irq> frddr_b_irqs{
+      {{
           .irq = S905D3_AUDIO_FRDDR_B,
           .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-      },
+      }},
   };
-  constexpr pbus_irq_t toddr_b_irqs[] = {
-      {
+  static const std::vector<fpbus::Irq> toddr_b_irqs{
+      {{
           .irq = S905D3_AUDIO_TODDR_B,
           .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-      },
+      }},
   };
 
-  const pbus_mmio_t pdm_mmios[] = {
-      {
+  static const std::vector<fpbus::Mmio> pdm_mmios{
+      {{
           .base = S905D3_EE_PDM_BASE,
           .length = S905D3_EE_PDM_LENGTH,
-      },
-      {
+      }},
+      {{
           .base = S905D3_EE_AUDIO_BASE,
           .length = S905D3_EE_AUDIO_LENGTH,
-      },
+      }},
   };
 
-  const pbus_bti_t btis_in[] = {
-      {
+  static const std::vector<fpbus::Bti> btis_in{
+      {{
           .iommu_index = 0,
           .bti_id = BTI_AUDIO_IN,
-      },
+      }},
   };
 
   // TDM pin assignments.
@@ -186,12 +189,20 @@ zx_status_t Nelson::AudioInit() {
   gpio_impl_.SetAltFunction(GPIO_SOC_MICLR_DIN1, S905D3_GPIOA_9_PDM_DIN1_FN);  // Third MIC.
 
   // Board info.
-  pdev_board_info_t board_info = {};
-  status = pbus_.GetBoardInfo(&board_info);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: GetBoardInfo failed %d", __FILE__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('AUDI');
+  auto result = pbus_.buffer(arena)->GetBoardInfo();
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: NodeAdd Audio(dev_in) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
   }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: NodeAdd Audio(dev_in) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
+  }
+  auto board_info = fidl::ToNatural(result->value()->info);
 
   // Output devices.
   metadata::AmlConfig metadata = {};
@@ -218,29 +229,26 @@ zx_status_t Nelson::AudioInit() {
   metadata.codecs.channels_to_use_bitmask[0] = 1;  // Codec must use the left I2S slot.
   metadata.codecs.ring_buffer_channels_to_use_bitmask[0] = 0x1;  // Single speaker uses index 0.
 
-  pbus_metadata_t tdm_metadata[] = {
-      {
+  std::vector<fpbus::Metadata> tdm_metadata{
+      {{
           .type = DEVICE_METADATA_PRIVATE,
-          .data_buffer = reinterpret_cast<uint8_t*>(&metadata),
-          .data_size = sizeof(metadata),
-      },
+          .data =
+              std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(&metadata),
+                                   reinterpret_cast<const uint8_t*>(&metadata) + sizeof(metadata)),
+      }},
   };
 
-  pbus_dev_t controller_out = {};
-  controller_out.name = "nelson-audio-i2s-out";
-  controller_out.vid = PDEV_VID_AMLOGIC;
-  controller_out.pid = PDEV_PID_AMLOGIC_S905D3;
-  controller_out.did = PDEV_DID_AMLOGIC_TDM;
-  controller_out.mmio_list = audio_mmios;
-  controller_out.mmio_count = std::size(audio_mmios);
-  controller_out.bti_list = btis_out;
-  controller_out.bti_count = std::size(btis_out);
-  controller_out.irq_list = frddr_b_irqs;
-  controller_out.irq_count = std::size(frddr_b_irqs);
-  controller_out.metadata_list = tdm_metadata;
-  controller_out.metadata_count = std::size(tdm_metadata);
+  fpbus::Node controller_out;
+  controller_out.name() = "nelson-audio-i2s-out";
+  controller_out.vid() = PDEV_VID_AMLOGIC;
+  controller_out.pid() = PDEV_PID_AMLOGIC_S905D3;
+  controller_out.did() = PDEV_DID_AMLOGIC_TDM;
+  controller_out.mmio() = audio_mmios;
+  controller_out.bti() = btis_out;
+  controller_out.irq() = frddr_b_irqs;
+  controller_out.metadata() = tdm_metadata;
 
-  if (board_info.board_revision == BOARD_REV_P2) {
+  if (board_info.board_revision() == BOARD_REV_P2) {
     // CODEC pin assignments.
     gpio_impl_.SetAltFunction(GPIO_SOC_AUDIO_EN, 0);  // GPIO
     gpio_impl_.ConfigOut(GPIO_SOC_AUDIO_EN, 0);
@@ -259,12 +267,23 @@ zx_status_t Nelson::AudioInit() {
       zxlogf(ERROR, "%s DdkAddComposite failed %d", __FILE__, status);
       return status;
     }
-    status = pbus_.CompositeDeviceAdd(&controller_out,
-                                      reinterpret_cast<uint64_t>(ref_controller_fragments),
-                                      std::size(ref_controller_fragments), nullptr);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s adding audio controller out device failed %d", __FILE__, status);
-      return status;
+    {
+      auto result = pbus_.buffer(arena)->AddCompositeImplicitPbusFragment(
+          fidl::ToWire(fidl_arena, controller_out),
+          platform_bus_composite::MakeFidlFragment(fidl_arena, ref_controller_fragments,
+                                                   std::size(ref_controller_fragments)),
+          {});
+      if (!result.ok()) {
+        zxlogf(ERROR,
+               "%s: AddCompositeImplicitPbusFragment Audio(controller_out) request failed: %s",
+               __func__, result.FormatDescription().data());
+        return result.status();
+      }
+      if (result->is_error()) {
+        zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment Audio(controller_out) failed: %s",
+               __func__, zx_status_get_string(result->error_value()));
+        return result->error_value();
+      }
     }
   } else {
     // CODEC pin assignments.
@@ -324,23 +343,34 @@ zx_status_t Nelson::AudioInit() {
       zxlogf(ERROR, "%s DdkAddComposite failed %d", __FILE__, status);
       return status;
     }
-    status = pbus_.CompositeDeviceAdd(&controller_out,
-                                      reinterpret_cast<uint64_t>(p2_controller_fragments),
-                                      std::size(p2_controller_fragments), nullptr);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s adding audio controller out device failed %d", __FILE__, status);
-      return status;
+    {
+      auto result = pbus_.buffer(arena)->AddCompositeImplicitPbusFragment(
+          fidl::ToWire(fidl_arena, controller_out),
+          platform_bus_composite::MakeFidlFragment(fidl_arena, p2_controller_fragments,
+                                                   std::size(p2_controller_fragments)),
+          {});
+      if (!result.ok()) {
+        zxlogf(ERROR,
+               "%s: AddCompositeImplicitPbusFragment Audio(controller_out) request failed: %s",
+               __func__, result.FormatDescription().data());
+        return result.status();
+      }
+      if (result->is_error()) {
+        zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment Audio(controller_out) failed: %s",
+               __func__, zx_status_get_string(result->error_value()));
+        return result->error_value();
+      }
     }
   }
 
 #ifdef ENABLE_BT
   // Add TDM OUT for BT.
   {
-    const pbus_bti_t pcm_out_btis[] = {
-        {
+    static const std::vector<fpbus::Bti> pcm_out_btis{
+        {{
             .iommu_index = 0,
             .bti_id = BTI_AUDIO_BT_OUT,
-        },
+        }},
     };
     metadata::AmlConfig metadata = {};
     snprintf(metadata.manufacturer, sizeof(metadata.manufacturer), "Spacely Sprockets");
@@ -360,29 +390,32 @@ zx_status_t Nelson::AudioInit() {
     metadata.ring_buffer.number_of_channels = 1;
     metadata.dai.number_of_channels = 1;
     metadata.lanes_enable_mask[0] = 1;
-    pbus_metadata_t tdm_metadata[] = {
-        {
+    std::vector<fpbus::Metadata> tdm_metadata{
+        {{
             .type = DEVICE_METADATA_PRIVATE,
-            .data_buffer = reinterpret_cast<uint8_t*>(&metadata),
-            .data_size = sizeof(metadata),
-        },
+            .data = std::vector<uint8_t>(
+                reinterpret_cast<const uint8_t*>(&metadata),
+                reinterpret_cast<const uint8_t*>(&metadata) + sizeof(metadata)),
+        }},
     };
 
-    pbus_dev_t tdm_dev = {};
-    tdm_dev.name = "nelson-pcm-dai-out";
-    tdm_dev.vid = PDEV_VID_AMLOGIC;
-    tdm_dev.pid = PDEV_PID_AMLOGIC_S905D3;
-    tdm_dev.did = PDEV_DID_AMLOGIC_DAI_OUT;
-    tdm_dev.mmio_list = audio_mmios;
-    tdm_dev.mmio_count = std::size(audio_mmios);
-    tdm_dev.bti_list = pcm_out_btis;
-    tdm_dev.bti_count = std::size(pcm_out_btis);
-    tdm_dev.metadata_list = tdm_metadata;
-    tdm_dev.metadata_count = std::size(tdm_metadata);
-    status = pbus_.DeviceAdd(&tdm_dev);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "PCM CompositeDeviceAdd failed %s", zx_status_get_string(status));
-      return status;
+    fpbus::Node tdm_dev;
+    tdm_dev.name() = "nelson-pcm-dai-out";
+    tdm_dev.vid() = PDEV_VID_AMLOGIC;
+    tdm_dev.pid() = PDEV_PID_AMLOGIC_S905D3;
+    tdm_dev.did() = PDEV_DID_AMLOGIC_DAI_OUT;
+    tdm_dev.mmio() = audio_mmios;
+    tdm_dev.bti() = pcm_out_btis;
+    tdm_dev.metadata() = tdm_metadata;
+    auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, tdm_dev));
+    if (!result.ok()) {
+      zxlogf(ERROR, "%s: NodeAdd request failed: %s", __func__, result.FormatDescription().data());
+      return result.status();
+    }
+    if (result->is_error()) {
+      zxlogf(ERROR, "%s: NodeAdd failed: %s", __func__,
+             zx_status_get_string(result->error_value()));
+      return result->error_value();
     }
   }
 #endif
@@ -391,11 +424,11 @@ zx_status_t Nelson::AudioInit() {
 #ifdef ENABLE_BT
   // Add TDM IN for BT.
   {
-    const pbus_bti_t pcm_in_btis[] = {
-        {
+    static const std::vector<fpbus::Bti> pcm_in_btis{
+        {{
             .iommu_index = 0,
             .bti_id = BTI_AUDIO_BT_IN,
-        },
+        }},
     };
     metadata::AmlConfig metadata = {};
     snprintf(metadata.manufacturer, sizeof(metadata.manufacturer), "Spacely Sprockets");
@@ -415,28 +448,32 @@ zx_status_t Nelson::AudioInit() {
     metadata.dai.number_of_channels = 1;
     metadata.swaps = 0x0200;
     metadata.lanes_enable_mask[1] = 1;
-    pbus_metadata_t tdm_metadata[] = {
-        {
+    std::vector<fpbus::Metadata> tdm_metadata{
+        {{
             .type = DEVICE_METADATA_PRIVATE,
-            .data_buffer = reinterpret_cast<uint8_t*>(&metadata),
-            .data_size = sizeof(metadata),
-        },
+            .data = std::vector<uint8_t>(
+                reinterpret_cast<const uint8_t*>(&metadata),
+                reinterpret_cast<const uint8_t*>(&metadata) + sizeof(metadata)),
+        }},
     };
-    pbus_dev_t tdm_dev = {};
-    tdm_dev.name = "nelson-pcm-dai-in";
-    tdm_dev.vid = PDEV_VID_AMLOGIC;
-    tdm_dev.pid = PDEV_PID_AMLOGIC_S905D3;
-    tdm_dev.did = PDEV_DID_AMLOGIC_DAI_IN;
-    tdm_dev.mmio_list = audio_mmios;
-    tdm_dev.mmio_count = std::size(audio_mmios);
-    tdm_dev.bti_list = pcm_in_btis;
-    tdm_dev.bti_count = std::size(pcm_in_btis);
-    tdm_dev.metadata_list = tdm_metadata;
-    tdm_dev.metadata_count = std::size(tdm_metadata);
-    status = pbus_.DeviceAdd(&tdm_dev);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "PCM CompositeDeviceAdd failed %s", zx_status_get_string(status));
-      return status;
+    fpbus::Node tdm_dev;
+    tdm_dev.name() = "nelson-pcm-dai-in";
+    tdm_dev.vid() = PDEV_VID_AMLOGIC;
+    tdm_dev.pid() = PDEV_PID_AMLOGIC_S905D3;
+    tdm_dev.did() = PDEV_DID_AMLOGIC_DAI_IN;
+    tdm_dev.mmio() = audio_mmios;
+    tdm_dev.bti() = pcm_in_btis;
+    tdm_dev.metadata() = tdm_metadata;
+
+    auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, tdm_dev));
+    if (!result.ok()) {
+      zxlogf(ERROR, "%s: NodeAdd request failed: %s", __func__, result.FormatDescription().data());
+      return result.status();
+    }
+    if (result->is_error()) {
+      zxlogf(ERROR, "%s: NodeAdd failed: %s", __func__,
+             zx_status_get_string(result->error_value()));
+      return result->error_value();
     }
   }
 #endif
@@ -450,32 +487,35 @@ zx_status_t Nelson::AudioInit() {
     metadata.version = metadata::AmlVersion::kS905D3G;
     metadata.sysClockDivFactor = 4;
     metadata.dClockDivFactor = 250;
-    pbus_metadata_t pdm_metadata[] = {
-        {
+    std::vector<fpbus::Metadata> pdm_metadata{
+        {{
             .type = DEVICE_METADATA_PRIVATE,
-            .data_buffer = reinterpret_cast<uint8_t*>(&metadata),
-            .data_size = sizeof(metadata),
-        },
+            .data = std::vector<uint8_t>(
+                reinterpret_cast<const uint8_t*>(&metadata),
+                reinterpret_cast<const uint8_t*>(&metadata) + sizeof(metadata)),
+        }},
     };
 
-    pbus_dev_t dev_in = {};
-    dev_in.name = "nelson-audio-pdm-in";
-    dev_in.vid = PDEV_VID_AMLOGIC;
-    dev_in.pid = PDEV_PID_AMLOGIC_S905D3;
-    dev_in.did = PDEV_DID_AMLOGIC_PDM;
-    dev_in.mmio_list = pdm_mmios;
-    dev_in.mmio_count = std::size(pdm_mmios);
-    dev_in.bti_list = btis_in;
-    dev_in.bti_count = std::size(btis_in);
-    dev_in.irq_list = toddr_b_irqs;
-    dev_in.irq_count = std::size(toddr_b_irqs);
-    dev_in.metadata_list = pdm_metadata;
-    dev_in.metadata_count = std::size(pdm_metadata);
+    fpbus::Node dev_in;
+    dev_in.name() = "nelson-audio-pdm-in";
+    dev_in.vid() = PDEV_VID_AMLOGIC;
+    dev_in.pid() = PDEV_PID_AMLOGIC_S905D3;
+    dev_in.did() = PDEV_DID_AMLOGIC_PDM;
+    dev_in.mmio() = pdm_mmios;
+    dev_in.bti() = btis_in;
+    dev_in.irq() = toddr_b_irqs;
+    dev_in.metadata() = pdm_metadata;
 
-    status = pbus_.DeviceAdd(&dev_in);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s adding audio input device failed %d", __FILE__, status);
-      return status;
+    auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, dev_in));
+    if (!result.ok()) {
+      zxlogf(ERROR, "%s: NodeAdd Audio(dev_in) request failed: %s", __func__,
+             result.FormatDescription().data());
+      return result.status();
+    }
+    if (result->is_error()) {
+      zxlogf(ERROR, "%s: NodeAdd Audio(dev_in) failed: %s", __func__,
+             zx_status_get_string(result->error_value()));
+      return result->error_value();
     }
   }
   return ZX_OK;

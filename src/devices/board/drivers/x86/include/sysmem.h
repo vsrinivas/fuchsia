@@ -5,10 +5,10 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_SYSMEM_H_
 #define SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_SYSMEM_H_
 
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/wire.h>
 #include <lib/ddk/device.h>
 #include <zircon/compiler.h>
 
-zx_status_t publish_sysmem(pbus_protocol_t* pbus);
+zx_status_t publish_sysmem(fidl::WireSyncClient<fuchsia_hardware_platform_bus::PlatformBus>& pbus);
 
 #endif  // SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_SYSMEM_H_

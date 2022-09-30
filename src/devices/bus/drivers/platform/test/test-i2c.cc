@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/metadata.h>
@@ -12,6 +13,7 @@
 #include "test.h"
 
 namespace board_test {
+namespace fpbus = fuchsia_hardware_platform_bus;
 using i2c_channel_t = fidl_metadata::i2c::Channel;
 
 namespace {
@@ -54,11 +56,11 @@ static const i2c_channel_t i2c_channels[] = {
 }  // namespace
 
 zx_status_t TestBoard::I2cInit() {
-  pbus_dev_t i2c_dev = {};
-  i2c_dev.name = "i2c";
-  i2c_dev.vid = PDEV_VID_TEST;
-  i2c_dev.pid = PDEV_PID_PBUS_TEST;
-  i2c_dev.did = PDEV_DID_TEST_I2C;
+  fuchsia_hardware_platform_bus::Node i2c_dev = {};
+  i2c_dev.name() = "i2c";
+  i2c_dev.vid() = PDEV_VID_TEST;
+  i2c_dev.pid() = PDEV_PID_PBUS_TEST;
+  i2c_dev.did() = PDEV_DID_TEST_I2C;
 
   auto i2c_status = fidl_metadata::i2c::I2CChannelsToFidl(i2c_channels);
   if (i2c_status.is_error()) {
@@ -68,20 +70,23 @@ zx_status_t TestBoard::I2cInit() {
 
   auto& data = i2c_status.value();
 
-  pbus_metadata_t i2c_metadata = {
-      .type = DEVICE_METADATA_I2C_CHANNELS,
-      .data_buffer = data.data(),
-      .data_size = data.size(),
-  };
-  i2c_dev.metadata_list = &i2c_metadata;
-  i2c_dev.metadata_count = 1;
+  fuchsia_hardware_platform_bus::Metadata i2c_metadata;
+  i2c_metadata.type() = DEVICE_METADATA_I2C_CHANNELS;
+  i2c_metadata.data() = std::move(data);
+  i2c_dev.metadata() =
+      std::vector<fuchsia_hardware_platform_bus::Metadata>{std::move(i2c_metadata)};
 
-  zx_status_t status = pbus_.DeviceAdd(&i2c_dev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed %d", __FUNCTION__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('TI2C');
+  auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, i2c_dev));
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: NodeAdd request failed: %s", __func__, result.FormatDescription().data());
+    return result.status();
   }
-
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: NodeAdd failed: %s", __func__, zx_status_get_string(result->error_value()));
+    return result->error_value();
+  }
   return ZX_OK;
 }
 

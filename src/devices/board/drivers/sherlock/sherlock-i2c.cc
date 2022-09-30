@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/metadata.h>
@@ -16,37 +17,38 @@
 #include "src/devices/lib/fidl-metadata/i2c.h"
 
 namespace sherlock {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 using i2c_channel_t = fidl_metadata::i2c::Channel;
 
-static const pbus_mmio_t i2c_mmios[] = {
-    {
+static const std::vector<fpbus::Mmio> i2c_mmios{
+    {{
         .base = T931_I2C_AOBUS_BASE,
         .length = 0x20,
-    },
-    {
+    }},
+    {{
         .base = T931_I2C2_BASE,
         .length = 0x20,
-    },
-    {
+    }},
+    {{
         .base = T931_I2C3_BASE,
         .length = 0x20,
-    },
+    }},
 };
 
-static const pbus_irq_t i2c_irqs[] = {
-    {
+static const std::vector<fpbus::Irq> i2c_irqs{
+    {{
         .irq = T931_I2C_AO_0_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
-    {
+    }},
+    {{
         .irq = T931_I2C2_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
-    {
+    }},
+    {{
         .irq = T931_I2C3_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
+    }},
 };
 
 static const i2c_channel_t luis_ernie_i2c_channels[] = {
@@ -224,19 +226,17 @@ zx_status_t Sherlock::I2cInit() {
   gpio_impl_.SetAltFunction(T931_GPIOA(14), 2);
   gpio_impl_.SetAltFunction(T931_GPIOA(15), 2);
 
-  pbus_dev_t dev = {};
-  dev.name = "gpio";
-  dev.vid = PDEV_VID_AMLOGIC;
-  dev.pid = PDEV_PID_GENERIC;
-  dev.did = PDEV_DID_AMLOGIC_I2C;
-  dev.mmio_list = i2c_mmios;
-  dev.mmio_count = std::size(i2c_mmios);
-  dev.irq_list = i2c_irqs;
-  dev.irq_count = std::size(i2c_irqs);
+  fpbus::Node dev;
+  dev.name() = "gpio";
+  dev.vid() = PDEV_VID_AMLOGIC;
+  dev.pid() = PDEV_PID_GENERIC;
+  dev.did() = PDEV_DID_AMLOGIC_I2C;
+  dev.mmio() = i2c_mmios;
+  dev.irq() = i2c_irqs;
 
   const i2c_channel_t* channels;
   size_t channel_count;
-  std::vector<pbus_metadata_t> metadata;
+  std::vector<fpbus::Metadata> metadata;
   if (pid_ == PDEV_PID_SHERLOCK) {
     channels = sherlock_i2c_channels;
     channel_count = std::size(sherlock_i2c_channels);
@@ -254,19 +254,27 @@ zx_status_t Sherlock::I2cInit() {
 
   auto& data = i2c_status.value();
 
-  metadata.emplace_back(pbus_metadata_t{
-      .type = DEVICE_METADATA_I2C_CHANNELS,
-      .data_buffer = data.data(),
-      .data_size = data.size(),
-  });
+  metadata.emplace_back([&]() {
+    fpbus::Metadata ret;
+    ret.type() = DEVICE_METADATA_I2C_CHANNELS;
+    ret.data() = std::move(data);
+    return ret;
+  }());
 
-  dev.metadata_count = metadata.size();
-  dev.metadata_list = metadata.data();
+  dev.metadata() = std::move(metadata);
 
-  zx_status_t status = pbus_.DeviceAdd(&dev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('I2C_');
+  auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, dev));
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: NodeAdd I2c(dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: NodeAdd I2c(dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   return ZX_OK;

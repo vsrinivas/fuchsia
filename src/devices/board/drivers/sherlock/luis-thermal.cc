@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/hw/reg.h>
@@ -14,49 +16,50 @@
 #include "sherlock.h"
 
 namespace sherlock {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
-static const pbus_mmio_t thermal_mmios_pll[] = {
-    {
+static const std::vector<fpbus::Mmio> thermal_mmios_pll{
+    {{
         .base = T931_TEMP_SENSOR_PLL_BASE,
         .length = T931_TEMP_SENSOR_PLL_LENGTH,
-    },
-    {
+    }},
+    {{
         .base = T931_TEMP_SENSOR_PLL_TRIM,
         .length = T931_TEMP_SENSOR_TRIM_LENGTH,
-    },
-    {
+    }},
+    {{
         .base = T931_HIU_BASE,
         .length = T931_HIU_LENGTH,
-    },
+    }},
 };
 
-static const pbus_mmio_t thermal_mmios_ddr[] = {
-    {
+static const std::vector<fpbus::Mmio> thermal_mmios_ddr{
+    {{
         .base = T931_TEMP_SENSOR_DDR_BASE,
         .length = T931_TEMP_SENSOR_DDR_LENGTH,
-    },
-    {
+    }},
+    {{
         .base = T931_TEMP_SENSOR_DDR_TRIM,
         .length = T931_TEMP_SENSOR_TRIM_LENGTH,
-    },
-    {
+    }},
+    {{
         .base = T931_HIU_BASE,
         .length = T931_HIU_LENGTH,
-    },
+    }},
 };
 
-static const pbus_irq_t thermal_irqs_pll[] = {
-    {
+static const std::vector<fpbus::Irq> thermal_irqs_pll{
+    {{
         .irq = T931_TS_PLL_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
+    }},
 };
 
-static const pbus_irq_t thermal_irqs_ddr[] = {
-    {
+static const std::vector<fpbus::Irq> thermal_irqs_ddr{
+    {{
         .irq = T931_TS_DDR_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
+    }},
 };
 
 constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c,
@@ -88,57 +91,64 @@ fuchsia_hardware_thermal_ThermalDeviceInfo aml_luis_config = {
         },
     .opps = {}};
 
-static const pbus_metadata_t thermal_metadata[] = {
-    {
+static const std::vector<fpbus::Metadata> thermal_metadata{
+    {{
         .type = DEVICE_METADATA_THERMAL_CONFIG,
-        .data_buffer = reinterpret_cast<uint8_t*>(&aml_luis_config),
-        .data_size = sizeof(aml_luis_config),
-    },
+        .data = std::vector<uint8_t>(
+            reinterpret_cast<const uint8_t*>(&aml_luis_config),
+            reinterpret_cast<const uint8_t*>(&aml_luis_config) + sizeof(aml_luis_config)),
+    }},
 };
 
-static pbus_dev_t thermal_dev_pll = []() {
-  pbus_dev_t dev = {};
-  dev.name = "aml-thermal-pll";
-  dev.vid = PDEV_VID_AMLOGIC;
-  dev.pid = PDEV_PID_AMLOGIC_T931;
-  dev.did = PDEV_DID_AMLOGIC_THERMAL_PLL;
-  dev.mmio_list = thermal_mmios_pll;
-  dev.mmio_count = std::size(thermal_mmios_pll);
-  dev.irq_list = thermal_irqs_pll;
-  dev.irq_count = std::size(thermal_irqs_pll);
-  dev.metadata_list = thermal_metadata;
-  dev.metadata_count = std::size(thermal_metadata);
+static const fpbus::Node thermal_dev_pll = []() {
+  fpbus::Node dev = {};
+  dev.name() = "aml-thermal-pll";
+  dev.vid() = PDEV_VID_AMLOGIC;
+  dev.pid() = PDEV_PID_AMLOGIC_T931;
+  dev.did() = PDEV_DID_AMLOGIC_THERMAL_PLL;
+  dev.mmio() = thermal_mmios_pll;
+  dev.irq() = thermal_irqs_pll;
+  dev.metadata() = thermal_metadata;
   return dev;
 }();
 
-static pbus_dev_t thermal_dev_ddr = []() {
-  pbus_dev_t dev = {};
-  dev.name = "aml-thermal-ddr";
-  dev.vid = PDEV_VID_AMLOGIC;
-  dev.pid = PDEV_PID_AMLOGIC_T931;
-  dev.did = PDEV_DID_AMLOGIC_THERMAL_DDR;
-  dev.mmio_list = thermal_mmios_ddr;
-  dev.mmio_count = std::size(thermal_mmios_ddr);
-  dev.irq_list = thermal_irqs_ddr;
-  dev.irq_count = std::size(thermal_irqs_ddr);
-  dev.metadata_list = thermal_metadata;
-  dev.metadata_count = std::size(thermal_metadata);
+static const fpbus::Node thermal_dev_ddr = []() {
+  fpbus::Node dev = {};
+  dev.name() = "aml-thermal-ddr";
+  dev.vid() = PDEV_VID_AMLOGIC;
+  dev.pid() = PDEV_PID_AMLOGIC_T931;
+  dev.did() = PDEV_DID_AMLOGIC_THERMAL_DDR;
+  dev.mmio() = thermal_mmios_ddr;
+  dev.irq() = thermal_irqs_ddr;
+  dev.metadata() = thermal_metadata;
   return dev;
 }();
 
 zx_status_t Sherlock::LuisThermalInit() {
-  zx_status_t status;
-
-  status = pbus_.DeviceAdd(&thermal_dev_pll);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed: %d", __func__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('LUIS');
+  auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, thermal_dev_pll));
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: NodeAdd LuisThermal(thermal_dev_pll) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: NodeAdd LuisThermal(thermal_dev_pll) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
-  status = pbus_.DeviceAdd(&thermal_dev_ddr);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed: %d", __func__, status);
-    return status;
+  result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, thermal_dev_ddr));
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: NodeAdd LuisThermal(thermal_dev_ddr) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: NodeAdd LuisThermal(thermal_dev_ddr) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   return ZX_OK;

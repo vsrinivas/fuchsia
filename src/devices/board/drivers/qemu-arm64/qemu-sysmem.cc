@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <fuchsia/sysmem/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -12,13 +13,14 @@
 #include "qemu-virt.h"
 
 namespace board_qemu_arm64 {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 zx_status_t QemuArm64::SysmemInit() {
-  constexpr pbus_bti_t kSysmemBtis[] = {
-      {
+  static const std::vector<fpbus::Bti> kSysmemBtis{
+      {{
           .iommu_index = 0,
           .bti_id = BTI_SYSMEM,
-      },
+      }},
   };
 
   constexpr sysmem_metadata_t kSysmemMetadata = {
@@ -30,26 +32,35 @@ zx_status_t QemuArm64::SysmemInit() {
       .contiguous_memory_size = -5,
   };
 
-  const pbus_metadata_t kSysmemMetadataList[] = {{
-      .type = SYSMEM_METADATA_TYPE,
-      .data_buffer = reinterpret_cast<const uint8_t*>(&kSysmemMetadata),
-      .data_size = sizeof(kSysmemMetadata),
-  }};
+  std::vector<fpbus::Metadata> kSysmemMetadataList{
+      {{
+          .type = SYSMEM_METADATA_TYPE,
+          .data = std::vector<uint8_t>(
+              reinterpret_cast<const uint8_t*>(&kSysmemMetadata),
+              reinterpret_cast<const uint8_t*>(&kSysmemMetadata) + sizeof(kSysmemMetadata)),
+      }},
+  };
 
-  pbus_dev_t sysmem_dev = {};
-  sysmem_dev.name = "sysmem";
-  sysmem_dev.vid = PDEV_VID_GENERIC;
-  sysmem_dev.pid = PDEV_PID_GENERIC;
-  sysmem_dev.did = PDEV_DID_SYSMEM;
-  sysmem_dev.bti_list = kSysmemBtis;
-  sysmem_dev.bti_count = std::size(kSysmemBtis);
-  sysmem_dev.metadata_list = kSysmemMetadataList;
-  sysmem_dev.metadata_count = std::size(kSysmemMetadataList);
+  fpbus::Node sysmem_dev;
+  sysmem_dev.name() = "sysmem";
+  sysmem_dev.vid() = PDEV_VID_GENERIC;
+  sysmem_dev.pid() = PDEV_PID_GENERIC;
+  sysmem_dev.did() = PDEV_DID_SYSMEM;
+  sysmem_dev.bti() = kSysmemBtis;
+  sysmem_dev.metadata() = kSysmemMetadataList;
 
-  zx_status_t status = pbus_.DeviceAdd(&sysmem_dev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d", __func__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('SYSM');
+  auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, sysmem_dev));
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: NodeAdd Sysmem(sysmem_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: NodeAdd Sysmem(sysmem_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   return ZX_OK;

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <fuchsia/hardware/clockimpl/cpp/banjo.h>
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
 #include <lib/ddk/binding.h>
@@ -22,217 +24,195 @@
 #include "src/devices/board/drivers/sherlock/camera-ge2d-bind.h"
 #include "src/devices/board/drivers/sherlock/camera-isp-bind.h"
 #include "src/devices/board/drivers/sherlock/imx227-sensor-bind.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 
 namespace sherlock {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 namespace {
 
 constexpr uint32_t kClk24MAltFunc = 7;
 constexpr uint32_t kClkGpioDriveStrengthUa = 4000;
 
-constexpr pbus_mmio_t ge2d_mmios[] = {
-    // GE2D Base
-    {
+static const std::vector<fpbus::Mmio> ge2d_mmios{
+    {{
         .base = T931_GE2D_BASE,
         .length = T931_GE2D_LENGTH,
-    },
+    }},
 };
 
-constexpr pbus_bti_t ge2d_btis[] = {
-    {
+static const std::vector<fpbus::Bti> ge2d_btis{
+    {{
         .iommu_index = 0,
         .bti_id = BTI_GE2D,
-    },
+    }},
 };
 
 // IRQ for GE2D
-constexpr pbus_irq_t ge2d_irqs[] = {
-    {
+static const std::vector<fpbus::Irq> ge2d_irqs{
+    {{
         .irq = T931_MALI_GE2D_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
+    }},
 };
 
-static pbus_dev_t ge2d_dev = []() {
+static const fpbus::Node ge2d_dev = []() {
   // GE2D
-  pbus_dev_t dev = {};
-  dev.name = "ge2d";
-  dev.vid = PDEV_VID_AMLOGIC;
-  dev.pid = PDEV_PID_AMLOGIC_T931;
-  dev.did = PDEV_DID_AMLOGIC_GE2D;
-  dev.mmio_list = ge2d_mmios;
-  dev.mmio_count = std::size(ge2d_mmios);
-  dev.bti_list = ge2d_btis;
-  dev.bti_count = std::size(ge2d_btis);
-  dev.irq_list = ge2d_irqs;
-  dev.irq_count = std::size(ge2d_irqs);
+  fpbus::Node dev = {};
+  dev.name() = "ge2d";
+  dev.vid() = PDEV_VID_AMLOGIC;
+  dev.pid() = PDEV_PID_AMLOGIC_T931;
+  dev.did() = PDEV_DID_AMLOGIC_GE2D;
+  dev.mmio() = ge2d_mmios;
+  dev.bti() = ge2d_btis;
+  dev.irq() = ge2d_irqs;
   return dev;
 }();
 
-constexpr pbus_mmio_t gdc_mmios[] = {
-    // HIU for clocks.
-    {
+static const std::vector<fpbus::Mmio> gdc_mmios{
+    {{
         .base = T931_HIU_BASE,
         .length = T931_HIU_LENGTH,
-    },
-    // GDC Base
-    {
+    }},
+    {{
         .base = T931_GDC_BASE,
         .length = T931_GDC_LENGTH,
-    },
+    }},
 };
 
-constexpr pbus_bti_t gdc_btis[] = {
-    {
+static const std::vector<fpbus::Bti> gdc_btis{
+    {{
         .iommu_index = 0,
         .bti_id = BTI_GDC,
-    },
+    }},
 };
 
 // IRQ for ISP
-constexpr pbus_irq_t gdc_irqs[] = {
-    {
+static const std::vector<fpbus::Irq> gdc_irqs{
+    {{
         .irq = T931_MALI_GDC_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
+    }},
 };
 
-static pbus_dev_t gdc_dev = []() {
+static const fpbus::Node gdc_dev = []() {
   // GDC
-  pbus_dev_t dev = {};
-  dev.name = "gdc";
-  dev.vid = PDEV_VID_ARM;
-  dev.pid = PDEV_PID_GDC;
-  dev.did = PDEV_DID_ARM_MALI_IV010;
-  dev.mmio_list = gdc_mmios;
-  dev.mmio_count = std::size(gdc_mmios);
-  dev.bti_list = gdc_btis;
-  dev.bti_count = std::size(gdc_btis);
-  dev.irq_list = gdc_irqs;
-  dev.irq_count = std::size(gdc_irqs);
+  fpbus::Node dev = {};
+  dev.name() = "gdc";
+  dev.vid() = PDEV_VID_ARM;
+  dev.pid() = PDEV_PID_GDC;
+  dev.did() = PDEV_DID_ARM_MALI_IV010;
+  dev.mmio() = gdc_mmios;
+  dev.bti() = gdc_btis;
+  dev.irq() = gdc_irqs;
   return dev;
 }();
 
-constexpr pbus_bti_t isp_btis[] = {
-    {
+static const std::vector<fpbus::Bti> isp_btis{
+    {{
         .iommu_index = 0,
         .bti_id = BTI_ISP,
-    },
+    }},
 };
 
-constexpr pbus_mmio_t isp_mmios[] = {
-    // HIU for clocks.
-    {
+static const std::vector<fpbus::Mmio> isp_mmios{
+    {{
         .base = T931_HIU_BASE,
         .length = T931_HIU_LENGTH,
-    },
-    // Power domain
-    {
+    }},
+    {{
         .base = T931_POWER_DOMAIN_BASE,
         .length = T931_POWER_DOMAIN_LENGTH,
-    },
-    // Memory PD
-    {
+    }},
+    {{
         .base = T931_MEMORY_PD_BASE,
         .length = T931_MEMORY_PD_LENGTH,
-    },
-    // ISP Base
-    {
+    }},
+    {{
         .base = T931_ISP_BASE,
         .length = T931_ISP_LENGTH,
-    },
+    }},
 };
 
 // IRQ for ISP
-static const pbus_irq_t isp_irqs[] = {
-    {
+static const std::vector<fpbus::Irq> isp_irqs{
+    {{
         .irq = T931_MALI_ISP_IRQ,
         .mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
-    },
+    }},
 };
 
-static pbus_dev_t isp_dev = []() {
+static const fpbus::Node isp_dev = []() {
   // ISP
-  pbus_dev_t dev = {};
-  dev.name = "isp";
-  dev.vid = PDEV_VID_ARM;
-  dev.pid = PDEV_PID_ARM_ISP;
-  dev.did = PDEV_DID_ARM_MALI_IV009;
-  dev.mmio_list = isp_mmios;
-  dev.mmio_count = std::size(isp_mmios);
-  dev.bti_list = isp_btis;
-  dev.bti_count = std::size(isp_btis);
-  dev.irq_list = isp_irqs;
-  dev.irq_count = std::size(isp_irqs);
+  fpbus::Node dev = {};
+  dev.name() = "isp";
+  dev.vid() = PDEV_VID_ARM;
+  dev.pid() = PDEV_PID_ARM_ISP;
+  dev.did() = PDEV_DID_ARM_MALI_IV009;
+  dev.mmio() = isp_mmios;
+  dev.bti() = isp_btis;
+  dev.irq() = isp_irqs;
   return dev;
 }();
 
-constexpr pbus_mmio_t mipi_mmios[] = {
-    // CSI PHY0
-    {
+static const std::vector<fpbus::Mmio> mipi_mmios{
+    {{
         .base = T931_CSI_PHY0_BASE,
         .length = T931_CSI_PHY0_LENGTH,
-    },
-    // Analog PHY
-    {
+    }},
+    {{
         .base = T931_APHY_BASE,
         .length = T931_APHY_LENGTH,
-    },
-    // CSI HOST0
-    {
+    }},
+    {{
         .base = T931_CSI_HOST0_BASE,
         .length = T931_CSI_HOST0_LENGTH,
-    },
-    // MIPI Adapter
-    {
+    }},
+    {{
         .base = T931_MIPI_ADAPTER_BASE,
         .length = T931_MIPI_ADAPTER_LENGTH,
-    },
-    // HIU for clocks.
-    {
+    }},
+    {{
         .base = T931_HIU_BASE,
         .length = T931_HIU_LENGTH,
-    },
+    }},
 };
 
-constexpr pbus_bti_t mipi_btis[] = {
-    {
+static const std::vector<fpbus::Bti> mipi_btis{
+    {{
         .iommu_index = 0,
         .bti_id = BTI_MIPI,
-    },
+    }},
 };
 
-constexpr pbus_irq_t mipi_irqs[] = {
-    {
+static const std::vector<fpbus::Irq> mipi_irqs{
+    {{
         .irq = T931_MIPI_ADAPTER_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
+    }},
 };
 
 // Binding rules for MIPI Driver
-static const pbus_dev_t mipi_dev = []() {
+static const fpbus::Node mipi_dev = []() {
   // MIPI CSI PHY ADAPTER
-  pbus_dev_t dev = {};
-  dev.name = "mipi-csi2";
-  dev.vid = PDEV_VID_AMLOGIC;
-  dev.pid = PDEV_PID_AMLOGIC_T931;
-  dev.did = PDEV_DID_AMLOGIC_MIPI_CSI;
-  dev.mmio_list = mipi_mmios;
-  dev.mmio_count = std::size(mipi_mmios);
-  dev.bti_list = mipi_btis;
-  dev.bti_count = std::size(mipi_btis);
-  dev.irq_list = mipi_irqs;
-  dev.irq_count = std::size(mipi_irqs);
+  fpbus::Node dev = {};
+  dev.name() = "mipi-csi2";
+  dev.vid() = PDEV_VID_AMLOGIC;
+  dev.pid() = PDEV_PID_AMLOGIC_T931;
+  dev.did() = PDEV_DID_AMLOGIC_MIPI_CSI;
+  dev.mmio() = mipi_mmios;
+  dev.bti() = mipi_btis;
+  dev.irq() = mipi_irqs;
   return dev;
 }();
 
 // Binding rules for Sensor Driver
-const pbus_dev_t sensor_dev_sherlock = []() {
-  pbus_dev_t dev = {};
-  dev.name = "imx227-sensor";
-  dev.vid = PDEV_VID_SONY;
-  dev.pid = PDEV_PID_SONY_IMX227;
-  dev.did = PDEV_DID_CAMERA_SENSOR;
+static const fpbus::Node sensor_dev_sherlock = []() {
+  fpbus::Node dev = {};
+  dev.name() = "imx227-sensor";
+  dev.vid() = PDEV_VID_SONY;
+  dev.pid() = PDEV_PID_SONY_IMX227;
+  dev.did() = PDEV_DID_CAMERA_SENSOR;
   return dev;
 }();
 
@@ -245,41 +225,84 @@ zx_status_t Sherlock::CameraInit() {
   gpio_impl_.SetAltFunction(T931_GPIOAO(10), kClk24MAltFunc);
   gpio_impl_.SetDriveStrength(T931_GPIOAO(10), kClkGpioDriveStrengthUa, nullptr);
 
-  zx_status_t status = pbus_.DeviceAdd(&mipi_dev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Mipi_Device DeviceAdd failed %d", __func__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('CAME');
+  {
+    auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, mipi_dev));
+    if (!result.ok()) {
+      zxlogf(ERROR, "%s: NodeAdd Camera(mipi_dev) request failed: %s", __func__,
+             result.FormatDescription().data());
+      return result.status();
+    }
+    if (result->is_error()) {
+      zxlogf(ERROR, "%s: NodeAdd Camera(mipi_dev) failed: %s", __func__,
+             zx_status_get_string(result->error_value()));
+      return result->error_value();
+    }
   }
 
-  status =
-      pbus_.AddComposite(&sensor_dev_sherlock, reinterpret_cast<uint64_t>(imx227_sensor_fragments),
-                         std::size(imx227_sensor_fragments), "mipicsi");
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Camera Sensor DeviceAdd failed %d", __func__, status);
-    return status;
+  auto result = pbus_.buffer(arena)->AddComposite(
+      fidl::ToWire(fidl_arena, sensor_dev_sherlock),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, imx227_sensor_fragments,
+                                               std::size(imx227_sensor_fragments)),
+      "mipicsi");
+
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddComposite Camera(sensor_dev_sherlock) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddComposite Camera(sensor_dev_sherlock) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
-  status = pbus_.AddComposite(&gdc_dev, reinterpret_cast<uint64_t>(gdc_fragments),
-                              std::size(gdc_fragments), "camera-sensor");
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: GDC DeviceAdd failed %d", __func__, status);
-    return status;
+  result = pbus_.buffer(arena)->AddComposite(
+      fidl::ToWire(fidl_arena, gdc_dev),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, gdc_fragments, std::size(gdc_fragments)),
+      "camera-sensor");
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddComposite Camera(gdc_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddComposite Camera(gdc_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
-  status = pbus_.AddComposite(&ge2d_dev, reinterpret_cast<uint64_t>(ge2d_fragments),
-                              std::size(ge2d_fragments), "camera-sensor");
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: GE2D DeviceAdd failed %d", __func__, status);
-    return status;
+  result =
+      pbus_.buffer(arena)->AddComposite(fidl::ToWire(fidl_arena, ge2d_dev),
+                                        platform_bus_composite::MakeFidlFragment(
+                                            fidl_arena, ge2d_fragments, std::size(ge2d_fragments)),
+                                        "camera-sensor");
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddComposite Camera(ge2d_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddComposite Camera(ge2d_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   // Add a composite device for ARM ISP
-  status = pbus_.AddComposite(&isp_dev, reinterpret_cast<uint64_t>(isp_fragments),
-                              std::size(isp_fragments), "camera-sensor");
-
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ISP DeviceAdd failed %d", __func__, status);
-    return status;
+  result = pbus_.buffer(arena)->AddComposite(
+      fidl::ToWire(fidl_arena, isp_dev),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, isp_fragments, std::size(isp_fragments)),
+      "camera-sensor");
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddComposite Camera(isp_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddComposite Camera(isp_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   constexpr zx_device_prop_t camera_controller_props[] = {
@@ -297,7 +320,7 @@ zx_status_t Sherlock::CameraInit() {
       .metadata_count = 0,
   };
 
-  status = DdkAddComposite("camera-controller", &camera_comp_desc);
+  zx_status_t status = DdkAddComposite("camera-controller", &camera_comp_desc);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Camera Controller DeviceAdd failed %d", __func__, status);
     return status;

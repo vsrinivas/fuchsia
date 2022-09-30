@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -17,6 +19,7 @@
 #include "src/devices/power/drivers/ti-ina231/ti-ina231-metadata.h"
 
 namespace nelson {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 // These values are specific to Nelson, and are only used within this board driver.
 enum : uint32_t {

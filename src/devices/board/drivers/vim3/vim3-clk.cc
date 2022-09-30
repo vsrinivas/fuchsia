@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/metadata.h>
@@ -15,19 +16,21 @@
 #include "vim3.h"
 
 namespace vim3 {
-static const pbus_mmio_t clk_mmios[] = {
-    {
+namespace fpbus = fuchsia_hardware_platform_bus;
+
+static const std::vector<fpbus::Mmio> clk_mmios{
+    {{
         .base = A311D_HIU_BASE,
         .length = A311D_HIU_LENGTH,
-    },
-    {
+    }},
+    {{
         .base = A311D_DOS_BASE,
         .length = A311D_DOS_LENGTH,
-    },
-    {
+    }},
+    {{
         .base = A311D_MSR_CLK_BASE,
         .length = A311D_MSR_CLK_LENGTH,
-    },
+    }},
 };
 
 // clang-format off
@@ -43,32 +46,40 @@ static const clock_id_t clock_ids[] = {
 };
 // clang-format on
 
-static const pbus_metadata_t clock_metadata[] = {
-    {
+static const std::vector<fpbus::Metadata> clock_metadata{
+    {{
         .type = DEVICE_METADATA_CLOCK_IDS,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&clock_ids),
-        .data_size = sizeof(clock_ids),
-    },
+        .data =
+            std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(clock_ids),
+                                 reinterpret_cast<const uint8_t*>(clock_ids) + sizeof(clock_ids)),
+    }},
 };
 
-static pbus_dev_t clk_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "vim3-clk";
-  dev.vid = PDEV_VID_AMLOGIC;
-  dev.pid = PDEV_PID_AMLOGIC_A311D;
-  dev.did = PDEV_DID_AMLOGIC_G12B_CLK;
-  dev.mmio_list = clk_mmios;
-  dev.mmio_count = std::size(clk_mmios);
-  dev.metadata_list = clock_metadata;
-  dev.metadata_count = std::size(clock_metadata);
+static fpbus::Node clk_dev = []() {
+  fpbus::Node dev = {};
+  dev.name() = "vim3-clk";
+  dev.vid() = PDEV_VID_AMLOGIC;
+  dev.pid() = PDEV_PID_AMLOGIC_A311D;
+  dev.did() = PDEV_DID_AMLOGIC_G12B_CLK;
+  dev.mmio() = clk_mmios;
+  dev.metadata() = clock_metadata;
   return dev;
 }();
 
 zx_status_t Vim3::ClkInit() {
-  zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_CLOCK_IMPL, &clk_dev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "ClkInit: DeviceAdd failed, st = %d", status);
-    return status;
+  fidl::Arena fidl_arena;
+  fdf::Arena arena('CLK_');
+  auto result = pbus_.buffer(arena)->ProtocolNodeAdd(ZX_PROTOCOL_CLOCK_IMPL,
+                                                     fidl::ToWire(fidl_arena, clk_dev));
+  if (!result.ok()) {
+    zxlogf(ERROR, "Clk(clk_dev)Init: ProtocolNodeAdd Clk(clk_dev) request failed: %s",
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "Clk(clk_dev)Init: ProtocolNodeAdd Clk(clk_dev) failed: %s",
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   clk_impl_ = ddk::ClockImplProtocolClient(parent());

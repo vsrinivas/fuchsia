@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <fuchsia/hardware/sdmmc/c/banjo.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
@@ -20,30 +22,32 @@
 
 #include "sherlock.h"
 #include "src/devices/board/drivers/sherlock/sherlock-emmc-bind.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 
 namespace sherlock {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 namespace {
 
-constexpr pbus_mmio_t emmc_mmios[] = {
-    {
+static const std::vector<fpbus::Mmio> emmc_mmios{
+    {{
         .base = T931_SD_EMMC_C_BASE,
         .length = T931_SD_EMMC_C_LENGTH,
-    },
+    }},
 };
 
-constexpr pbus_irq_t emmc_irqs[] = {
-    {
+static const std::vector<fpbus::Irq> emmc_irqs{
+    {{
         .irq = T931_SD_EMMC_C_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
+    }},
 };
 
-constexpr pbus_bti_t emmc_btis[] = {
-    {
+static const std::vector<fpbus::Bti> emmc_btis{
+    {{
         .iommu_index = 0,
         .bti_id = BTI_EMMC,
-    },
+    }},
 };
 
 static aml_sdmmc_config_t sherlock_config = {
@@ -78,42 +82,47 @@ static const guid_map_t guid_map[] = {
 
 static_assert(sizeof(guid_map) / sizeof(guid_map[0]) <= DEVICE_METADATA_GUID_MAP_MAX_ENTRIES);
 
-static const pbus_metadata_t sherlock_emmc_metadata[] = {
-    {
+static const std::vector<fpbus::Metadata> sherlock_emmc_metadata{
+    {{
         .type = DEVICE_METADATA_PRIVATE,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&sherlock_config),
-        .data_size = sizeof(sherlock_config),
-    },
-    {
+        .data = std::vector<uint8_t>(
+            reinterpret_cast<const uint8_t*>(&sherlock_config),
+            reinterpret_cast<const uint8_t*>(&sherlock_config) + sizeof(sherlock_config)),
+    }},
+    {{
         .type = DEVICE_METADATA_GUID_MAP,
-        .data_buffer = reinterpret_cast<const uint8_t*>(guid_map),
-        .data_size = sizeof(guid_map),
-    },
-    {
+        .data =
+            std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(&guid_map),
+                                 reinterpret_cast<const uint8_t*>(&guid_map) + sizeof(guid_map)),
+    }},
+    {{
         .type = DEVICE_METADATA_EMMC_CONFIG,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&sherlock_emmc_config),
-        .data_size = sizeof(sherlock_emmc_config),
-    },
+        .data = std::vector<uint8_t>(
+            reinterpret_cast<const uint8_t*>(&sherlock_emmc_config),
+            reinterpret_cast<const uint8_t*>(&sherlock_emmc_config) + sizeof(sherlock_emmc_config)),
+    }},
 };
 
-static const pbus_metadata_t luis_emmc_metadata[] = {
-    {
+static const std::vector<fpbus::Metadata> luis_emmc_metadata{
+    {{
         .type = DEVICE_METADATA_PRIVATE,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&luis_config),
-        .data_size = sizeof(luis_config),
-    },
-    {
+        .data = std::vector<uint8_t>(
+            reinterpret_cast<const uint8_t*>(&luis_config),
+            reinterpret_cast<const uint8_t*>(&luis_config) + sizeof(luis_config)),
+    }},
+    {{
         .type = DEVICE_METADATA_GUID_MAP,
-        .data_buffer = reinterpret_cast<const uint8_t*>(guid_map),
-        .data_size = sizeof(guid_map),
-    },
+        .data =
+            std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(&guid_map),
+                                 reinterpret_cast<const uint8_t*>(&guid_map) + sizeof(guid_map)),
+    }},
 };
 
-static const pbus_boot_metadata_t emmc_boot_metadata[] = {
-    {
+static const std::vector<fpbus::BootMetadata> emmc_boot_metadata{
+    {{
         .zbi_type = DEVICE_METADATA_PARTITION_MAP,
         .zbi_extra = 0,
-    },
+    }},
 };
 
 }  // namespace
@@ -159,33 +168,37 @@ zx_status_t Sherlock::EmmcInit() {
   gpio_impl_.ConfigIn(T931_EMMC_CMD, GPIO_PULL_UP);
   gpio_impl_.ConfigIn(T931_EMMC_DS, GPIO_PULL_DOWN);
 
-  pbus_dev_t emmc_dev = {};
-  emmc_dev.name = "sherlock-emmc";
-  emmc_dev.vid = PDEV_VID_AMLOGIC;
-  emmc_dev.pid = PDEV_PID_GENERIC;
-  emmc_dev.did = PDEV_DID_AMLOGIC_SDMMC_C;
-  emmc_dev.mmio_list = emmc_mmios;
-  emmc_dev.mmio_count = std::size(emmc_mmios);
-  emmc_dev.irq_list = emmc_irqs;
-  emmc_dev.irq_count = std::size(emmc_irqs);
-  emmc_dev.bti_list = emmc_btis;
-  emmc_dev.bti_count = std::size(emmc_btis);
-  emmc_dev.metadata_list = sherlock_emmc_metadata;
-  emmc_dev.metadata_count = std::size(sherlock_emmc_metadata);
-  emmc_dev.boot_metadata_list = emmc_boot_metadata;
-  emmc_dev.boot_metadata_count = std::size(emmc_boot_metadata);
+  fpbus::Node emmc_dev;
+  emmc_dev.name() = "sherlock-emmc";
+  emmc_dev.vid() = PDEV_VID_AMLOGIC;
+  emmc_dev.pid() = PDEV_PID_GENERIC;
+  emmc_dev.did() = PDEV_DID_AMLOGIC_SDMMC_C;
+  emmc_dev.mmio() = emmc_mmios;
+  emmc_dev.irq() = emmc_irqs;
+  emmc_dev.bti() = emmc_btis;
+  emmc_dev.metadata() = sherlock_emmc_metadata;
+  emmc_dev.boot_metadata() = emmc_boot_metadata;
 
   if (pid_ == PDEV_PID_LUIS) {
-    emmc_dev.metadata_list = luis_emmc_metadata;
-    emmc_dev.metadata_count = std::size(luis_emmc_metadata);
+    emmc_dev.metadata() = luis_emmc_metadata;
   }
 
-  zx_status_t status =
-      pbus_.AddComposite(&emmc_dev, reinterpret_cast<uint64_t>(sherlock_emmc_fragments),
-                         std::size(sherlock_emmc_fragments), "pdev");
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: AddComposite failed %d", __func__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('EMMC');
+  auto result = pbus_.buffer(arena)->AddComposite(
+      fidl::ToWire(fidl_arena, emmc_dev),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, sherlock_emmc_fragments,
+                                               std::size(sherlock_emmc_fragments)),
+      "pdev");
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddComposite Emmc(emmc_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddComposite Emmc(emmc_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   return ZX_OK;

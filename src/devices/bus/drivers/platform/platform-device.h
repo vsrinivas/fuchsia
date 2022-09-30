@@ -5,15 +5,16 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PLATFORM_PLATFORM_DEVICE_H_
 #define SRC_DEVICES_BUS_DRIVERS_PLATFORM_PLATFORM_DEVICE_H_
 
-#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/natural_types.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
+#include <lib/driver2/outgoing_directory.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
 
 #include <ddktl/device.h>
 #include <fbl/vector.h>
 
-#include "device-resources.h"
 #include "proxy-protocol.h"
 
 // This class, along with PlatformProxyDevice, represent a platform device.
@@ -30,6 +31,37 @@
 namespace platform_bus {
 
 class PlatformBus;
+
+// Restricted version of the platform bus protocol that does not allow devices to be added.
+class RestrictPlatformBus : public fdf::WireServer<fuchsia_hardware_platform_bus::PlatformBus> {
+ public:
+  RestrictPlatformBus(PlatformBus* upstream) : upstream_(upstream) {}
+  // fuchsia.hardware.platform.bus.PlatformBus implementation.
+  void NodeAdd(NodeAddRequestView request, fdf::Arena& arena,
+               NodeAddCompleter::Sync& completer) override;
+  void ProtocolNodeAdd(ProtocolNodeAddRequestView request, fdf::Arena& arena,
+                       ProtocolNodeAddCompleter::Sync& completer) override;
+  void RegisterProtocol(RegisterProtocolRequestView request, fdf::Arena& arena,
+                        RegisterProtocolCompleter::Sync& completer) override;
+
+  void GetBoardInfo(fdf::Arena& arena, GetBoardInfoCompleter::Sync& completer) override;
+  void SetBoardInfo(SetBoardInfoRequestView request, fdf::Arena& arena,
+                    SetBoardInfoCompleter::Sync& completer) override;
+  void SetBootloaderInfo(SetBootloaderInfoRequestView request, fdf::Arena& arena,
+                         SetBootloaderInfoCompleter::Sync& completer) override;
+
+  void RegisterSysSuspendCallback(RegisterSysSuspendCallbackRequestView request, fdf::Arena& arena,
+                                  RegisterSysSuspendCallbackCompleter::Sync& completer) override;
+  void AddComposite(AddCompositeRequestView request, fdf::Arena& arena,
+                    AddCompositeCompleter::Sync& completer) override;
+
+  void AddCompositeImplicitPbusFragment(
+      AddCompositeImplicitPbusFragmentRequestView request, fdf::Arena& arena,
+      AddCompositeImplicitPbusFragmentCompleter::Sync& completer) override;
+
+ private:
+  PlatformBus* upstream_;
+};
 
 class PlatformDevice;
 using PlatformDeviceType =
@@ -56,8 +88,9 @@ class PlatformDevice : public PlatformDeviceType,
 
   // Creates a new PlatformDevice instance.
   // *flags* contains zero or more PDEV_ADD_* flags from the platform bus protocol.
-  static zx_status_t Create(const pbus_dev_t* pdev, zx_device_t* parent, PlatformBus* bus,
-                            Type type, std::unique_ptr<platform_bus::PlatformDevice>* out);
+  static zx_status_t Create(fuchsia_hardware_platform_bus::Node node, zx_device_t* parent,
+                            PlatformBus* bus, Type type,
+                            std::unique_ptr<platform_bus::PlatformDevice>* out);
 
   inline uint32_t vid() const { return vid_; }
   inline uint32_t pid() const { return pid_; }
@@ -83,8 +116,9 @@ class PlatformDevice : public PlatformDeviceType,
 
  private:
   // *flags* contains zero or more PDEV_ADD_* flags from the platform bus protocol.
-  explicit PlatformDevice(zx_device_t* parent, PlatformBus* bus, Type type, const pbus_dev_t* pdev);
-  zx_status_t Init(const pbus_dev_t* pdev);
+  explicit PlatformDevice(zx_device_t* parent, PlatformBus* bus, Type type,
+                          fuchsia_hardware_platform_bus::Node node);
+  zx_status_t Init();
 
   // Handlers for RPCs from PlatformProxy.
   zx_status_t RpcGetMmio(uint32_t index, zx_paddr_t* out_paddr, size_t* out_length,
@@ -105,13 +139,9 @@ class PlatformDevice : public PlatformDeviceType,
   const uint32_t did_;
   const uint32_t instance_id_;
 
-  // Platform bus resources for this device
-  DeviceResources resources_;
-
-  // Restricted subset of the platform bus protocol.
-  // We do not allow protocol devices call pbus_device_add() or pbus_protocol_device_add()
-  pbus_protocol_ops_t pbus_ops_;
-  void* pbus_ctx_;
+  fuchsia_hardware_platform_bus::Node node_;
+  std::unique_ptr<RestrictPlatformBus> restricted_;
+  driver::OutgoingDirectory outgoing_;
 };
 
 }  // namespace platform_bus

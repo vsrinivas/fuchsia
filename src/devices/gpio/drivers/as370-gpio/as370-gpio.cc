@@ -4,7 +4,7 @@
 
 #include "as370-gpio.h"
 
-#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
@@ -192,26 +192,43 @@ zx_status_t As370Gpio::Init() {
 }
 
 zx_status_t As370Gpio::Bind() {
-  ddk::PBusProtocolClient pbus(parent());
-  if (!pbus.is_valid()) {
-    zxlogf(ERROR, "%s: Failed to get ZX_PROTOCOL_PLATFORM_BUS", __FILE__);
-    return ZX_ERR_NO_RESOURCES;
+  auto endpoints = fdf::CreateEndpoints<fuchsia_hardware_platform_bus::PlatformBus>();
+  if (endpoints.is_error()) {
+    zxlogf(ERROR, "Create endpoints failed: %s", endpoints.status_string());
+    return endpoints.error_value();
   }
 
-  zx_status_t status;
+  zx_status_t status = device_connect_runtime_protocol(
+      parent(), fuchsia_hardware_platform_bus::Service::PlatformBus::ServiceName,
+      fuchsia_hardware_platform_bus::Service::PlatformBus::Name,
+      endpoints->server.TakeHandle().release());
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to connect to platform bus: %s", zx_status_get_string(status));
+    return status;
+  }
+
   if ((status = DdkAdd("as370-gpio")) != ZX_OK) {
     zxlogf(ERROR, "%s: DdkAdd failed: %d", __FILE__, status);
     return status;
   }
 
+  fdf::WireSyncClient<fuchsia_hardware_platform_bus::PlatformBus> pbus(
+      std::move(endpoints->client));
   gpio_impl_protocol_t gpio_proto = {.ops = &gpio_impl_protocol_ops_, .ctx = this};
-  status = pbus.RegisterProtocol(ddk_proto_id_, reinterpret_cast<uint8_t*>(&gpio_proto),
-                                 sizeof(gpio_proto));
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to register ZX_PROTOCOL_GPIO_IMPL: %d", __FILE__, __LINE__);
-    return status;
+  auto result = pbus.buffer(fdf::Arena('GPIO'))
+                    ->RegisterProtocol(ddk_proto_id_, fidl::VectorView<uint8_t>::FromExternal(
+                                                          reinterpret_cast<uint8_t*>(&gpio_proto),
+                                                          sizeof(gpio_proto)));
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: RegisterProtocol request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
   }
-
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: RegisterProtocol failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
+  }
   return ZX_OK;
 }
 

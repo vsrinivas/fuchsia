@@ -7,19 +7,34 @@ config("include") {
 }
 
 source_set("fuchsia.hardware.platform.bus_banjo_c") {
-  sources = [ "include/fuchsia/hardware/platform.bus/c/banjo.h" ]
+  sources = [ "include/fuchsia/hardware/platform/bus/c/banjo.h" ]
   public_configs = [ ":include" ]
-  public_deps = [ "//src/lib/ddk" ]
+  public_deps = [
+    "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
+    "//src/lib/ddk",
+  ]
+
+  visibility = [ ":*" ]
 }
 
 source_set("fuchsia.hardware.platform.bus_banjo_cpp") {
   sources = [
-    "include/fuchsia/hardware/platform.bus/cpp/banjo-internal.h",
-    "include/fuchsia/hardware/platform.bus/cpp/banjo.h",
+    "include/fuchsia/hardware/platform/bus/cpp/banjo-internal.h",
+    "include/fuchsia/hardware/platform/bus/cpp/banjo.h",
   ]
   public_configs = [ ":include" ]
   public_deps = [
     ":fuchsia.hardware.platform.bus_banjo_c",
+    "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
+    "//sdk/fidl/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_cpp_driver",
+    "//src/devices/bus/lib/platform-bus-composites",
+    "//src/devices/lib/driver:driver_runtime",
     "//src/lib/ddktl",
+  ]
+
+  # TODO(fxbug.dev/107030): remove this shim and migrate users to using FIDL directly.
+  visibility = [
+    "//src/devices/board/drivers/av400:*",
+    "//vendor/*",
   ]
 }

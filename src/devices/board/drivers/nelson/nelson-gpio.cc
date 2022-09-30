@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/metadata.h>
@@ -19,55 +20,56 @@
 // #define GPIO_TEST
 
 namespace nelson {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
-static const pbus_mmio_t gpio_mmios[] = {
-    {
+static const std::vector<fpbus::Mmio> gpio_mmios{
+    {{
         .base = S905D3_GPIO_BASE,
         .length = S905D3_GPIO_LENGTH,
-    },
-    {
+    }},
+    {{
         .base = S905D3_GPIO_AO_BASE,
         .length = S905D3_GPIO_AO_LENGTH,
-    },
-    {
+    }},
+    {{
         .base = S905D3_GPIO_INTERRUPT_BASE,
         .length = S905D3_GPIO_INTERRUPT_LENGTH,
-    },
+    }},
 };
 
-static const pbus_irq_t gpio_irqs[] = {
-    {
+static const std::vector<fpbus::Irq> gpio_irqs{
+    {{
         .irq = S905D3_GPIO_IRQ_0,
         .mode = ZX_INTERRUPT_MODE_DEFAULT,
-    },
-    {
+    }},
+    {{
         .irq = S905D3_GPIO_IRQ_1,
         .mode = ZX_INTERRUPT_MODE_DEFAULT,
-    },
-    {
+    }},
+    {{
         .irq = S905D3_GPIO_IRQ_2,
         .mode = ZX_INTERRUPT_MODE_DEFAULT,
-    },
-    {
+    }},
+    {{
         .irq = S905D3_GPIO_IRQ_3,
         .mode = ZX_INTERRUPT_MODE_DEFAULT,
-    },
-    {
+    }},
+    {{
         .irq = S905D3_GPIO_IRQ_4,
         .mode = ZX_INTERRUPT_MODE_DEFAULT,
-    },
-    {
+    }},
+    {{
         .irq = S905D3_GPIO_IRQ_5,
         .mode = ZX_INTERRUPT_MODE_DEFAULT,
-    },
-    {
+    }},
+    {{
         .irq = S905D3_GPIO_IRQ_6,
         .mode = ZX_INTERRUPT_MODE_DEFAULT,
-    },
-    {
+    }},
+    {{
         .irq = S905D3_GPIO_IRQ_7,
         .mode = ZX_INTERRUPT_MODE_DEFAULT,
-    },
+    }},
 };
 
 // GPIOs to expose from generic GPIO driver. Do not expose H bank GPIOs here, as they are managed by
@@ -164,26 +166,24 @@ static const gpio_pin_t gpio_pins[] = {
     DECL_GPIO_PIN(SOC_EMMC_DS),
 };
 
-static const pbus_metadata_t gpio_metadata[] = {
-    {
+static const std::vector<fpbus::Metadata> gpio_metadata{
+    {{
         .type = DEVICE_METADATA_GPIO_PINS,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&gpio_pins),
-        .data_size = sizeof(gpio_pins),
-    },
+        .data =
+            std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(&gpio_pins),
+                                 reinterpret_cast<const uint8_t*>(&gpio_pins) + sizeof(gpio_pins)),
+    }},
 };
 
-static pbus_dev_t gpio_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "gpio";
-  dev.vid = PDEV_VID_AMLOGIC;
-  dev.pid = PDEV_PID_AMLOGIC_S905D3;
-  dev.did = PDEV_DID_AMLOGIC_GPIO;
-  dev.mmio_list = gpio_mmios;
-  dev.mmio_count = std::size(gpio_mmios);
-  dev.irq_list = gpio_irqs;
-  dev.irq_count = std::size(gpio_irqs);
-  dev.metadata_list = gpio_metadata;
-  dev.metadata_count = std::size(gpio_metadata);
+static const fpbus::Node gpio_dev = []() {
+  fpbus::Node dev = {};
+  dev.name() = "gpio";
+  dev.vid() = PDEV_VID_AMLOGIC;
+  dev.pid() = PDEV_PID_AMLOGIC_S905D3;
+  dev.did() = PDEV_DID_AMLOGIC_GPIO;
+  dev.mmio() = gpio_mmios;
+  dev.irq() = gpio_irqs;
+  dev.metadata() = gpio_metadata;
   return dev;
 }();
 
@@ -195,77 +195,98 @@ static const gpio_pin_t gpio_h_pins[] = {
     DECL_GPIO_PIN(GPIO_SOC_SPI_B_MISO), DECL_GPIO_PIN(GPIO_SOC_SPI_B_SS0),
     DECL_GPIO_PIN(GPIO_SOC_SPI_B_SCLK)};
 
-static const pbus_metadata_t gpio_h_metadata[] = {
-    {
+static const std::vector<fpbus::Metadata> gpio_h_metadata{
+    {{
         .type = DEVICE_METADATA_GPIO_PINS,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&gpio_h_pins),
-        .data_size = sizeof(gpio_h_pins),
-    },
+        .data = std::vector<uint8_t>(
+            reinterpret_cast<const uint8_t*>(&gpio_h_pins),
+            reinterpret_cast<const uint8_t*>(&gpio_h_pins) + sizeof(gpio_h_pins)),
+    }},
 };
 
-static pbus_dev_t gpio_h_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "gpio-h";
-  dev.vid = PDEV_VID_AMLOGIC;
-  dev.pid = PDEV_PID_AMLOGIC_S905D3;
-  dev.did = PDEV_DID_AMLOGIC_GPIO;
-  dev.instance_id = 1;
-  dev.mmio_list = gpio_mmios;
-  dev.mmio_count = std::size(gpio_mmios);
-  dev.metadata_list = gpio_h_metadata;
-  dev.metadata_count = std::size(gpio_h_metadata);
+static const fpbus::Node gpio_h_dev = []() {
+  fpbus::Node dev = {};
+  dev.name() = "gpio-h";
+  dev.vid() = PDEV_VID_AMLOGIC;
+  dev.pid() = PDEV_PID_AMLOGIC_S905D3;
+  dev.did() = PDEV_DID_AMLOGIC_GPIO;
+  dev.instance_id() = 1;
+  dev.mmio() = gpio_mmios;
+  dev.metadata() = gpio_h_metadata;
   return dev;
 }();
 
 zx_status_t Nelson::GpioInit() {
-  zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed: %d", __func__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('GPIO');
+  auto result = pbus_.buffer(arena)->ProtocolNodeAdd(ZX_PROTOCOL_GPIO_IMPL,
+                                                     fidl::ToWire(fidl_arena, gpio_dev));
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: ProtocolNodeAdd Gpio(gpio_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: ProtocolNodeAdd Gpio(gpio_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   gpio_impl_ = ddk::GpioImplProtocolClient(parent());
   if (!gpio_impl_.is_valid()) {
-    zxlogf(ERROR, "%s: GpioImplProtocolClient failed %d", __func__, status);
+    zxlogf(ERROR, "%s: GpioImplProtocolClient failed", __func__);
     return ZX_ERR_INTERNAL;
   }
 
   // Enable mute LED so it will be controlled by mute switch.
-  status = gpio_impl_.ConfigOut(GPIO_AMBER_LED_PWM, 1);
+  zx_status_t status = gpio_impl_.ConfigOut(GPIO_AMBER_LED_PWM, 1);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: ConfigOut failed: %d", __func__, status);
   }
 
-  status = pbus_.DeviceAdd(&gpio_h_dev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to add GPIOH device: %d", status);
-    return status;
+  {
+    auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, gpio_h_dev));
+    if (!result.ok()) {
+      zxlogf(ERROR, "%s: NodeAdd Gpio(gpio_h_dev) request failed: %s", __func__,
+             result.FormatDescription().data());
+      return result.status();
+    }
+    if (result->is_error()) {
+      zxlogf(ERROR, "%s: NodeAdd Gpio(gpio_h_dev) failed: %s", __func__,
+             zx_status_get_string(result->error_value()));
+      return result->error_value();
+    }
   }
 
 #ifdef GPIO_TEST
-  static const pbus_gpio_t gpio_test_gpios[] = {{
-                                                    // SYS_LED
-                                                    .gpio = GPIO_AMBER_LED_PWM,
-                                                },
-                                                {
-                                                    // JTAG Adapter Pin
-                                                    .gpio = GPIO_SOC_JTAG_TCK,
-                                                }};
+  static const std::vector<fpbus::Gpio> gpio_test_gpios{
+      {{
+          // SYS_LED
+          .gpio = GPIO_AMBER_LED_PWM,
+      }},
+      {{
+          // JTAG Adapter Pin
+          .gpio = GPIO_SOC_JTAG_TCK,
+      }},
+  };
 
-  const pbus_dev_t gpio_test_dev = []() {
-    pbus_dev_t dev = {};
-    dev.name = "nelson-gpio-test";
-    dev.vid = PDEV_VID_GENERIC;
-    dev.pid = PDEV_PID_GENERIC;
-    dev.did = PDEV_DID_GPIO_TEST;
-    dev.gpio_list = gpio_test_gpios;
-    dev.gpio_count = std::size(gpio_test_gpios);
-    return dev;
-  }();
+  fpbus::Node gpio_test_dev;
+  gpio_test_dev.name() = "nelson-gpio-test";
+  gpio_test_dev.vid() = PDEV_VID_GENERIC;
+  gpio_test_dev.pid() = PDEV_PID_GENERIC;
+  gpio_test_dev.did() = PDEV_DID_GPIO_TEST;
+  gpio_test_dev.gpio() = gpio_test_gpios;
 
-  if ((status = pbus_.DeviceAdd(&gpio_test_dev)) != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd gpio_test failed: %d", __func__, status);
-    return status;
+  result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, gpio_test_dev));
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: NodeAdd Gpio(gpio_test_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: NodeAdd Gpio(gpio_test_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 #endif
 

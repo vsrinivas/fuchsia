@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -14,9 +15,11 @@
 
 #include "nelson.h"
 #include "src/devices/board/drivers/nelson/nelson_tee_bind.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 #include "src/devices/lib/fidl-metadata/tee.h"
 
 namespace nelson {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 // The Nelson Secure OS memory region is defined within the bootloader image.
 // The ZBI provided to the kernel must mark this memory space as reserved.
@@ -29,26 +32,26 @@ namespace nelson {
 
 using tee_thread_config_t = fidl_metadata::tee::CustomThreadConfig;
 
-static const pbus_mmio_t nelson_tee_mmios[] = {
-    {
+static const std::vector<fpbus::Mmio> nelson_tee_mmios{
+    {{
         .base = NELSON_SECURE_OS_BASE,
         .length = NELSON_SECURE_OS_LENGTH,
-    },
+    }},
 };
 
-static const pbus_bti_t nelson_tee_btis[] = {
-    {
+static const std::vector<fpbus::Bti> nelson_tee_btis{
+    {{
         .iommu_index = 0,
         .bti_id = BTI_TEE,
-    },
+    }},
 };
 
-static const pbus_smc_t nelson_tee_smcs[] = {
-    {
+static const std::vector<fpbus::Smc> nelson_tee_smcs{
+    {{
         .service_call_num_base = ARM_SMC_SERVICE_CALL_NUM_TRUSTED_OS_BASE,
         .count = ARM_SMC_SERVICE_CALL_NUM_TRUSTED_OS_LENGTH,
         .exclusive = false,
-    },
+    }},
 };
 
 static tee_thread_config_t tee_thread_cfg[] = {
@@ -63,19 +66,16 @@ static tee_thread_config_t tee_thread_cfg[] = {
      }}};
 
 zx_status_t Nelson::TeeInit() {
-  std::vector<pbus_metadata_t> metadata;
+  std::vector<fpbus::Metadata> metadata;
 
-  pbus_dev_t dev = {};
-  dev.name = "tee";
-  dev.vid = PDEV_VID_GENERIC;
-  dev.pid = PDEV_PID_GENERIC;
-  dev.did = PDEV_DID_OPTEE;
-  dev.mmio_list = nelson_tee_mmios;
-  dev.mmio_count = std::size(nelson_tee_mmios);
-  dev.bti_list = nelson_tee_btis;
-  dev.bti_count = std::size(nelson_tee_btis);
-  dev.smc_list = nelson_tee_smcs;
-  dev.smc_count = std::size(nelson_tee_smcs);
+  fpbus::Node dev;
+  dev.name() = "tee";
+  dev.vid() = PDEV_VID_GENERIC;
+  dev.pid() = PDEV_PID_GENERIC;
+  dev.did() = PDEV_DID_OPTEE;
+  dev.mmio() = nelson_tee_mmios;
+  dev.bti() = nelson_tee_btis;
+  dev.smc() = nelson_tee_smcs;
 
   auto optee_status = fidl_metadata::tee::TeeMetadataToFidl(
       NELSON_OPTEE_DEFAULT_THREAD_COUNT,
@@ -88,20 +88,30 @@ zx_status_t Nelson::TeeInit() {
 
   auto& data = optee_status.value();
 
-  metadata.emplace_back(pbus_metadata_t{
-      .type = DEVICE_METADATA_TEE_THREAD_CONFIG,
-      .data_buffer = data.data(),
-      .data_size = data.size(),
-  });
+  metadata.emplace_back([&]() {
+    fpbus::Metadata ret;
+    ret.type() = DEVICE_METADATA_TEE_THREAD_CONFIG;
+    ret.data() = std::move(data);
+    return ret;
+  }());
 
-  dev.metadata_count = metadata.size();
-  dev.metadata_list = metadata.data();
+  dev.metadata() = std::move(metadata);
 
-  zx_status_t status = pbus_.AddComposite(&dev, reinterpret_cast<uint64_t>(tee_fragments),
-                                          std::size(tee_fragments), "pdev");
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('TEE_');
+  auto result = pbus_.buffer(arena)->AddComposite(
+      fidl::ToWire(fidl_arena, dev),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, tee_fragments, std::size(tee_fragments)),
+      "pdev");
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddComposite Tee(dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddComposite Tee(dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
   return ZX_OK;
 }

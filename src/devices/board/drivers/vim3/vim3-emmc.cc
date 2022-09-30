@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <fuchsia/hardware/sdmmc/c/banjo.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
@@ -16,29 +18,33 @@
 
 #include "src/devices/board/drivers/vim3/vim3-emmc-bind.h"
 #include "src/devices/board/drivers/vim3/vim3.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 
 namespace vim3 {
+namespace fpbus = fuchsia_hardware_platform_bus;
 #define BIT_MASK(start, count) (((1 << (count)) - 1) << (start))
 #define SET_BITS(dest, start, count, value) \
   ((dest & ~BIT_MASK(start, count)) | (((value) << (start)) & BIT_MASK(start, count)))
 
-static const pbus_mmio_t emmc_mmios[] = {{
-    .base = A311D_EMMC_C_BASE,
-    .length = A311D_EMMC_C_LENGTH,
-}};
-
-static const pbus_irq_t emmc_irqs[] = {
-    {
-        .irq = A311D_SD_EMMC_C_IRQ,
-        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
+static const std::vector<fpbus::Mmio> emmc_mmios{
+    {{
+        .base = A311D_EMMC_C_BASE,
+        .length = A311D_EMMC_C_LENGTH,
+    }},
 };
 
-static const pbus_bti_t emmc_btis[] = {
-    {
+static const std::vector<fpbus::Irq> emmc_irqs{
+    {{
+        .irq = A311D_SD_EMMC_C_IRQ,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    }},
+};
+
+static const std::vector<fpbus::Bti> emmc_btis{
+    {{
         .iommu_index = 0,
         .bti_id = BTI_EMMC,
-    },
+    }},
 };
 
 static aml_sdmmc_config_t config = {
@@ -49,39 +55,32 @@ static aml_sdmmc_config_t config = {
     .prefs = SDMMC_HOST_PREFS_DISABLE_HS400,
 };
 
-static const pbus_metadata_t emmc_metadata[] = {
-    {
+static const std::vector<fpbus::Metadata> emmc_metadata{
+    {{
         .type = DEVICE_METADATA_PRIVATE,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&config),
-        .data_size = sizeof(config),
-    },
+        .data = std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(&config),
+                                     reinterpret_cast<const uint8_t*>(&config) + sizeof(config)),
+    }},
 };
 
-static const pbus_boot_metadata_t emmc_boot_metadata[] = {
-    {
+static const std::vector<fpbus::BootMetadata> emmc_boot_metadata{
+    {{
         .zbi_type = DEVICE_METADATA_PARTITION_MAP,
         .zbi_extra = 0,
-    },
+    }},
 };
 
 zx_status_t Vim3::EmmcInit() {
-  zx_status_t status;
-
-  pbus_dev_t emmc_dev = {};
-  emmc_dev.name = "aml_emmc";
-  emmc_dev.vid = PDEV_VID_AMLOGIC;
-  emmc_dev.pid = PDEV_PID_GENERIC;
-  emmc_dev.did = PDEV_DID_AMLOGIC_SDMMC_C;
-  emmc_dev.mmio_list = emmc_mmios;
-  emmc_dev.mmio_count = std::size(emmc_mmios);
-  emmc_dev.irq_list = emmc_irqs;
-  emmc_dev.irq_count = std::size(emmc_irqs);
-  emmc_dev.bti_list = emmc_btis;
-  emmc_dev.bti_count = std::size(emmc_btis);
-  emmc_dev.metadata_list = emmc_metadata;
-  emmc_dev.metadata_count = std::size(emmc_metadata);
-  emmc_dev.boot_metadata_list = emmc_boot_metadata;
-  emmc_dev.boot_metadata_count = std::size(emmc_boot_metadata);
+  fpbus::Node emmc_dev;
+  emmc_dev.name() = "aml_emmc";
+  emmc_dev.vid() = PDEV_VID_AMLOGIC;
+  emmc_dev.pid() = PDEV_PID_GENERIC;
+  emmc_dev.did() = PDEV_DID_AMLOGIC_SDMMC_C;
+  emmc_dev.mmio() = emmc_mmios;
+  emmc_dev.irq() = emmc_irqs;
+  emmc_dev.bti() = emmc_btis;
+  emmc_dev.metadata() = emmc_metadata;
+  emmc_dev.boot_metadata() = emmc_boot_metadata;
 
   // set alternate functions to enable EMMC
   gpio_impl_.SetAltFunction(A311D_GPIOBOOT(0), A311D_GPIOBOOT_0_EMMC_D0_FN);
@@ -99,11 +98,22 @@ zx_status_t Vim3::EmmcInit() {
 
   gpio_impl_.ConfigOut(A311D_GPIOBOOT(14), 1);
 
-  status = pbus_.AddComposite(&emmc_dev, reinterpret_cast<uint64_t>(vim3_emmc_fragments),
-                              std::size(vim3_emmc_fragments), "pdev");
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "SdEmmcInit could not add emmc_dev: %d\n", status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('EMMC');
+  auto result = pbus_.buffer(arena)->AddComposite(
+      fidl::ToWire(fidl_arena, emmc_dev),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, vim3_emmc_fragments,
+                                               std::size(vim3_emmc_fragments)),
+      "pdev");
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddComposite Emmc(emmc_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddComposite Emmc(emmc_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   return ZX_OK;

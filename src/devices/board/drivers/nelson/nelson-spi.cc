@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/metadata.h>
@@ -19,6 +21,7 @@
 #include "nelson.h"
 #include "src/devices/board/drivers/nelson/spi_0_bind.h"
 #include "src/devices/board/drivers/nelson/spi_1_bind.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 #include "src/devices/lib/fidl-metadata/spi.h"
 
 #define HHI_SPICC_CLK_CNTL (0xf7 * 4)
@@ -32,6 +35,7 @@
 #define spicc1_clk_div(x) (((x)-1) << 16)
 
 namespace nelson {
+namespace fpbus = fuchsia_hardware_platform_bus;
 using spi_channel_t = fidl_metadata::spi::Channel;
 
 zx_status_t Nelson::SpiInit() {
@@ -64,18 +68,18 @@ zx_status_t Nelson::SpiInit() {
 }
 
 zx_status_t Nelson::Spi0Init() {
-  static const pbus_mmio_t spi_0_mmios[] = {
-      {
+  static const std::vector<fpbus::Mmio> spi_0_mmios{
+      {{
           .base = S905D3_SPICC0_BASE,
           .length = S905D3_SPICC0_LENGTH,
-      },
+      }},
   };
 
-  static const pbus_irq_t spi_0_irqs[] = {
-      {
+  static const std::vector<fpbus::Irq> spi_0_irqs{
+      {{
           .irq = S905D3_SPICC0_IRQ,
           .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-      },
+      }},
   };
 
   static const spi_channel_t spi_0_channels[] = {
@@ -98,19 +102,14 @@ zx_status_t Nelson::Spi0Init() {
       .use_enhanced_clock_mode = true,
   };
 
-  static pbus_dev_t spi_0_dev = []() {
-    pbus_dev_t dev = {};
-    dev.name = "spi-0";
-    dev.vid = PDEV_VID_AMLOGIC;
-    dev.pid = PDEV_PID_GENERIC;
-    dev.did = PDEV_DID_AMLOGIC_SPI;
-    dev.instance_id = 0;
-    dev.mmio_list = spi_0_mmios;
-    dev.mmio_count = std::size(spi_0_mmios);
-    dev.irq_list = spi_0_irqs;
-    dev.irq_count = std::size(spi_0_irqs);
-    return dev;
-  }();
+  fpbus::Node spi_0_dev;
+  spi_0_dev.name() = "spi-0";
+  spi_0_dev.vid() = PDEV_VID_AMLOGIC;
+  spi_0_dev.pid() = PDEV_PID_GENERIC;
+  spi_0_dev.did() = PDEV_DID_AMLOGIC_SPI;
+  spi_0_dev.instance_id() = 0;
+  spi_0_dev.mmio() = spi_0_mmios;
+  spi_0_dev.irq() = spi_0_irqs;
 
   gpio_impl_.SetAltFunction(GPIO_SOC_SPI_A_MOSI, 5);  // MOSI
   gpio_impl_.SetDriveStrength(GPIO_SOC_SPI_A_MOSI, 2500, nullptr);
@@ -126,12 +125,15 @@ zx_status_t Nelson::Spi0Init() {
   gpio_impl_.SetAltFunction(GPIO_SOC_SPI_A_SCLK, 5);  // SCLK
   gpio_impl_.SetDriveStrength(GPIO_SOC_SPI_A_SCLK, 2500, nullptr);
 
-  std::vector<pbus_metadata_t> spi_0_metadata;
-  spi_0_metadata.emplace_back(pbus_metadata_t{
-      .type = DEVICE_METADATA_AMLSPI_CONFIG,
-      .data_buffer = reinterpret_cast<const uint8_t*>(&spi_0_config),
-      .data_size = sizeof spi_0_config,
-  });
+  std::vector<fpbus::Metadata> spi_0_metadata;
+  spi_0_metadata.emplace_back([]() {
+    fpbus::Metadata ret;
+    ret.type() = DEVICE_METADATA_AMLSPI_CONFIG;
+    ret.data() = std::vector<uint8_t>(
+        reinterpret_cast<const uint8_t*>(&spi_0_config),
+        reinterpret_cast<const uint8_t*>(&spi_0_config) + sizeof(spi_0_config));
+    return ret;
+  }());
 
   auto spi_status = fidl_metadata::spi::SpiChannelsToFidl(spi_0_channels);
   if (spi_status.is_error()) {
@@ -141,45 +143,56 @@ zx_status_t Nelson::Spi0Init() {
   }
   auto& data = spi_status.value();
 
-  spi_0_metadata.emplace_back(pbus_metadata_t{
-      .type = DEVICE_METADATA_SPI_CHANNELS,
-      .data_buffer = data.data(),
-      .data_size = data.size(),
-  });
+  spi_0_metadata.emplace_back([&]() {
+    fpbus::Metadata ret;
+    ret.type() = DEVICE_METADATA_SPI_CHANNELS;
+    ret.data() = std::move(data);
+    return ret;
+  }());
 
-  spi_0_dev.metadata_list = spi_0_metadata.data();
-  spi_0_dev.metadata_count = spi_0_metadata.size();
+  spi_0_dev.metadata() = std::move(spi_0_metadata);
 
-  zx_status_t status = pbus_.AddComposite(&spi_0_dev, reinterpret_cast<uint64_t>(spi_0_fragments),
-                                          std::size(spi_0_fragments), "pdev");
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('SPI0');
+  auto result = pbus_.buffer(arena)->AddComposite(
+      fidl::ToWire(fidl_arena, spi_0_dev),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, spi_0_fragments,
+                                               std::size(spi_0_fragments)),
+      "pdev");
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddComposite Spi0(spi_0_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddComposite Spi0(spi_0_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   return ZX_OK;
 }
 
 zx_status_t Nelson::Spi1Init() {
-  static const pbus_mmio_t spi_1_mmios[] = {
-      {
+  static const std::vector<fpbus::Mmio> spi_1_mmios{
+      {{
           .base = S905D3_SPICC1_BASE,
           .length = S905D3_SPICC1_LENGTH,
-      },
+      }},
   };
 
-  static const pbus_irq_t spi_1_irqs[] = {
-      {
+  static const std::vector<fpbus::Irq> spi_1_irqs{
+      {{
           .irq = S905D3_SPICC1_IRQ,
           .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-      },
+      }},
   };
 
-  static const pbus_bti_t spi_1_btis[] = {
-      {
+  static const std::vector<fpbus::Bti> spi_1_btis{
+      {{
           .iommu_index = 0,
           .bti_id = BTI_SPI1,
-      },
+      }},
   };
 
   static const spi_channel_t spi_1_channels[] = {
@@ -209,21 +222,15 @@ zx_status_t Nelson::Spi1Init() {
       .delay_control = kMoNoDelay | kMiDelay3Cycles | kMiCapAhead2Cycles,
   };
 
-  static pbus_dev_t spi_1_dev = []() {
-    pbus_dev_t dev = {};
-    dev.name = "spi-1";
-    dev.vid = PDEV_VID_AMLOGIC;
-    dev.pid = PDEV_PID_GENERIC;
-    dev.did = PDEV_DID_AMLOGIC_SPI;
-    dev.instance_id = 1;
-    dev.mmio_list = spi_1_mmios;
-    dev.mmio_count = std::size(spi_1_mmios);
-    dev.irq_list = spi_1_irqs;
-    dev.irq_count = std::size(spi_1_irqs);
-    dev.bti_list = spi_1_btis;
-    dev.bti_count = std::size(spi_1_btis);
-    return dev;
-  }();
+  fpbus::Node spi_1_dev;
+  spi_1_dev.name() = "spi-1";
+  spi_1_dev.vid() = PDEV_VID_AMLOGIC;
+  spi_1_dev.pid() = PDEV_PID_GENERIC;
+  spi_1_dev.did() = PDEV_DID_AMLOGIC_SPI;
+  spi_1_dev.instance_id() = 1;
+  spi_1_dev.mmio() = spi_1_mmios;
+  spi_1_dev.irq() = spi_1_irqs;
+  spi_1_dev.bti() = spi_1_btis;
 
   // setup pinmux for SPICC1 bus arbiter.
   gpio_impl_.SetAltFunction(GPIO_SOC_SPI_B_MOSI, 3);  // MOSI
@@ -237,12 +244,15 @@ zx_status_t Nelson::Spi1Init() {
   gpio_impl_.SetAltFunction(GPIO_SOC_SPI_B_SCLK, 3);  // SCLK
   gpio_impl_.SetDriveStrength(GPIO_SOC_SPI_B_SCLK, 2500, nullptr);
 
-  std::vector<pbus_metadata_t> spi_1_metadata;
-  spi_1_metadata.emplace_back(pbus_metadata_t{
-      .type = DEVICE_METADATA_AMLSPI_CONFIG,
-      .data_buffer = reinterpret_cast<const uint8_t*>(&spi_1_config),
-      .data_size = sizeof spi_1_config,
-  });
+  std::vector<fpbus::Metadata> spi_1_metadata;
+  spi_1_metadata.emplace_back([]() {
+    fpbus::Metadata ret;
+    ret.type() = DEVICE_METADATA_AMLSPI_CONFIG,
+    ret.data() = std::vector<uint8_t>(
+        reinterpret_cast<const uint8_t*>(&spi_1_config),
+        reinterpret_cast<const uint8_t*>(&spi_1_config) + sizeof(spi_1_config));
+    return ret;
+  }());
 
   auto spi_status = fidl_metadata::spi::SpiChannelsToFidl(spi_1_channels);
   if (spi_status.is_error()) {
@@ -252,20 +262,31 @@ zx_status_t Nelson::Spi1Init() {
   }
   auto& data = spi_status.value();
 
-  spi_1_metadata.emplace_back(pbus_metadata_t{
-      .type = DEVICE_METADATA_SPI_CHANNELS,
-      .data_buffer = data.data(),
-      .data_size = data.size(),
-  });
+  spi_1_metadata.emplace_back([&]() {
+    fpbus::Metadata ret;
+    ret.type() = DEVICE_METADATA_SPI_CHANNELS;
+    ret.data() = std::move(data);
+    return ret;
+  }());
 
-  spi_1_dev.metadata_list = spi_1_metadata.data();
-  spi_1_dev.metadata_count = spi_1_metadata.size();
+  spi_1_dev.metadata() = std::move(spi_1_metadata);
 
-  zx_status_t status = pbus_.AddComposite(&spi_1_dev, reinterpret_cast<uint64_t>(spi_1_fragments),
-                                          std::size(spi_1_fragments), "gpio-cs-0");
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
-    return status;
+  fdf::Arena arena('SPI1');
+  fidl::Arena<> fidl_arena;
+  auto result = pbus_.buffer(arena)->AddComposite(
+      fidl::ToWire(fidl_arena, spi_1_dev),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, spi_1_fragments,
+                                               std::size(spi_1_fragments)),
+      "gpio-cs-0");
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddComposite Spi0(spi_1_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddComposite Spi0(spi_1_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   return ZX_OK;

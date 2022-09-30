@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/hw/reg.h>
@@ -12,65 +14,74 @@
 
 #include "src/devices/board/drivers/vim3/vim3-mali-bind.h"
 #include "src/devices/board/drivers/vim3/vim3.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 
 namespace vim3 {
-static const pbus_mmio_t mali_mmios[] = {
-    {
+namespace fpbus = fuchsia_hardware_platform_bus;
+static const std::vector<fpbus::Mmio> mali_mmios{
+    {{
         .base = A311D_MALI_BASE,
         .length = A311D_MALI_LENGTH,
-    },
-    {
+    }},
+    {{
         .base = A311D_HIU_BASE,
         .length = A311D_HIU_LENGTH,
-    },
+    }},
 };
 
-static const pbus_irq_t mali_irqs[] = {
-    {
+static const std::vector<fpbus::Irq> mali_irqs{
+    {{
         .irq = A311D_MALI_IRQ_PP,
         .mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
-    },
-    {
+    }},
+    {{
         .irq = A311D_MALI_IRQ_GPMMU,
         .mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
-    },
-    {
+    }},
+    {{
         .irq = A311D_MALI_IRQ_GP,
         .mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
-    },
+    }},
 };
 
-static pbus_bti_t mali_btis[] = {
-    {
+static const std::vector<fpbus::Bti> mali_btis{
+    {{
         .iommu_index = 0,
         .bti_id = BTI_MALI,
-    },
+    }},
 };
 
-static pbus_dev_t mali_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "mali";
-  dev.vid = PDEV_VID_AMLOGIC;
-  dev.pid = PDEV_PID_AMLOGIC_A311D;
-  dev.did = PDEV_DID_AMLOGIC_MALI_INIT;
-  dev.mmio_list = mali_mmios;
-  dev.mmio_count = std::size(mali_mmios);
-  dev.irq_list = mali_irqs;
-  dev.irq_count = std::size(mali_irqs);
-  dev.bti_list = mali_btis;
-  dev.bti_count = std::size(mali_btis);
+static const fpbus::Node mali_dev = []() {
+  fpbus::Node dev = {};
+  dev.name() = "mali";
+  dev.vid() = PDEV_VID_AMLOGIC;
+  dev.pid() = PDEV_PID_AMLOGIC_A311D;
+  dev.did() = PDEV_DID_AMLOGIC_MALI_INIT;
+  dev.mmio() = mali_mmios;
+  dev.irq() = mali_irqs;
+  dev.bti() = mali_btis;
   return dev;
 }();
 
 zx_status_t Vim3::MaliInit() {
-  zx_status_t status =
-      pbus_.AddComposite(&mali_dev, reinterpret_cast<uint64_t>(vim3_mali_fragments),
-                         std::size(vim3_mali_fragments), "pdev");
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Sherlock::MaliInit: CompositeDeviceAdd failed: %d", status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('MALI');
+  auto result = pbus_.buffer(arena)->AddComposite(
+      fidl::ToWire(fidl_arena, mali_dev),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, vim3_mali_fragments,
+                                               std::size(vim3_mali_fragments)),
+      "pdev");
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddComposite Mali(mali_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
   }
-  return status;
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddComposite Mali(mali_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
+  }
+  return ZX_OK;
 }
 
 }  // namespace vim3

@@ -97,7 +97,7 @@ DDK_PROTOCOL_DEF(TEST,                    80,   "test", 0)
 DDK_PROTOCOL_DEF(TEST_COMPAT_CHILD,       81,   "test-compat-child", 0)
 DDK_PROTOCOL_DEF(TEST_POWER_CHILD,        82,   "test-power-child", 0)
 DDK_PROTOCOL_DEF(TEST_PARENT,             83,   "test-parent", PF_NOPUB)
-DDK_PROTOCOL_DEF(PBUS,                    84,   "platform-bus", 0)
+// 84 was PBUS.
 DDK_PROTOCOL_DEF(PDEV,                    85,   "platform-dev", 0)
 DDK_PROTOCOL_DEF(I2C_HID,                 86,   "i2c-hid", 0)
 DDK_PROTOCOL_DEF(SERIAL,                  87,   "serial", 0)

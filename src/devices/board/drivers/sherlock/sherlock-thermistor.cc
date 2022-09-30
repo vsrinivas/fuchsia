@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/metadata.h>
@@ -14,23 +16,24 @@
 #include "sherlock.h"
 
 namespace sherlock {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
-static const pbus_mmio_t saradc_mmios[] = {
-    {
+static const std::vector<fpbus::Mmio> saradc_mmios{
+    {{
         .base = T931_SARADC_BASE,
         .length = T931_SARADC_LENGTH,
-    },
-    {
+    }},
+    {{
         .base = T931_AOBUS_BASE,
         .length = T931_AOBUS_LENGTH,
-    },
+    }},
 };
 
-static const pbus_irq_t saradc_irqs[] = {
-    {
+static const std::vector<fpbus::Irq> saradc_irqs{
+    {{
         .irq = T931_SARADC_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
+    }},
 };
 
 zx_status_t Sherlock::ThermistorInit() {
@@ -75,14 +78,12 @@ zx_status_t Sherlock::ThermistorInit() {
            }},
   };
 
-  pbus_dev_t thermistor = {};
-  thermistor.name = "thermistor";
-  thermistor.vid = PDEV_VID_GOOGLE;
-  thermistor.did = PDEV_DID_AMLOGIC_THERMISTOR;
-  thermistor.mmio_list = saradc_mmios;
-  thermistor.mmio_count = std::size(saradc_mmios);
-  thermistor.irq_list = saradc_irqs;
-  thermistor.irq_count = std::size(saradc_irqs);
+  fpbus::Node thermistor;
+  thermistor.name() = "thermistor";
+  thermistor.vid() = PDEV_VID_GOOGLE;
+  thermistor.did() = PDEV_DID_AMLOGIC_THERMISTOR;
+  thermistor.mmio() = saradc_mmios;
+  thermistor.irq() = saradc_irqs;
 
   if (pid_ == PDEV_PID_LUIS) {
     thermal::NtcChannel ntc_channels_luis[] = {
@@ -91,26 +92,35 @@ zx_status_t Sherlock::ThermistorInit() {
         {.adc_channel = 3, .pullup_ohms = 47000, .profile_idx = 0, .name = "therm-ambient"},
     };
 
-    pbus_metadata_t therm_metadata_luis[] = {
-        {
+    std::vector<fpbus::Metadata> therm_metadata_luis{
+        {{
             .type = NTC_CHANNELS_METADATA_PRIVATE,
-            .data_buffer = reinterpret_cast<uint8_t*>(&ntc_channels_luis),
-            .data_size = sizeof(ntc_channels_luis),
-        },
-        {
+            .data = std::vector<uint8_t>(
+                reinterpret_cast<const uint8_t*>(&ntc_channels_luis),
+                reinterpret_cast<const uint8_t*>(&ntc_channels_luis) + sizeof(ntc_channels_luis)),
+        }},
+        {{
             .type = NTC_PROFILE_METADATA_PRIVATE,
-            .data_buffer = reinterpret_cast<uint8_t*>(&ntc_info),
-            .data_size = sizeof(ntc_info),
-        },
+            .data = std::vector<uint8_t>(
+                reinterpret_cast<const uint8_t*>(&ntc_info),
+                reinterpret_cast<const uint8_t*>(&ntc_info) + sizeof(ntc_info)),
+        }},
     };
 
-    thermistor.pid = PDEV_PID_LUIS;
-    thermistor.metadata_list = therm_metadata_luis;
-    thermistor.metadata_count = std::size(therm_metadata_luis);
-    zx_status_t status = pbus_.DeviceAdd(&thermistor);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "DeviceAdd for Luis failed: %s", zx_status_get_string(status));
-      return status;
+    thermistor.pid() = PDEV_PID_LUIS;
+    thermistor.metadata() = std::move(therm_metadata_luis);
+    fidl::Arena<> fidl_arena;
+    fdf::Arena arena('THER');
+    auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, thermistor));
+    if (!result.ok()) {
+      zxlogf(ERROR, "%s: NodeAdd Thermistor(thermistor) request failed: %s", __func__,
+             result.FormatDescription().data());
+      return result.status();
+    }
+    if (result->is_error()) {
+      zxlogf(ERROR, "%s: NodeAdd Thermistor(thermistor) failed: %s", __func__,
+             zx_status_get_string(result->error_value()));
+      return result->error_value();
     }
   } else {
     thermal::NtcChannel ntc_channels_sherlock[] = {
@@ -119,26 +129,35 @@ zx_status_t Sherlock::ThermistorInit() {
         {.adc_channel = 3, .pullup_ohms = 47000, .profile_idx = 0, .name = "therm-ambient"},
     };
 
-    pbus_metadata_t therm_metadata_sherlock[] = {
-        {
+    std::vector<fpbus::Metadata> therm_metadata_sherlock{
+        {{
             .type = NTC_CHANNELS_METADATA_PRIVATE,
-            .data_buffer = reinterpret_cast<uint8_t*>(&ntc_channels_sherlock),
-            .data_size = sizeof(ntc_channels_sherlock),
-        },
-        {
+            .data = std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(&ntc_channels_sherlock),
+                                         reinterpret_cast<const uint8_t*>(&ntc_channels_sherlock) +
+                                             sizeof(ntc_channels_sherlock)),
+        }},
+        {{
             .type = NTC_PROFILE_METADATA_PRIVATE,
-            .data_buffer = reinterpret_cast<uint8_t*>(&ntc_info),
-            .data_size = sizeof(ntc_info),
-        },
+            .data = std::vector<uint8_t>(
+                reinterpret_cast<const uint8_t*>(&ntc_info),
+                reinterpret_cast<const uint8_t*>(&ntc_info) + sizeof(ntc_info)),
+        }},
     };
 
-    thermistor.pid = PDEV_PID_SHERLOCK;
-    thermistor.metadata_list = therm_metadata_sherlock;
-    thermistor.metadata_count = std::size(therm_metadata_sherlock);
-    zx_status_t status = pbus_.DeviceAdd(&thermistor);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "DeviceAdd for Sherlock failed: %s", zx_status_get_string(status));
-      return status;
+    thermistor.pid() = PDEV_PID_SHERLOCK;
+    thermistor.metadata() = std::move(therm_metadata_sherlock);
+    fidl::Arena<> fidl_arena;
+    fdf::Arena arena('THER');
+    auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, thermistor));
+    if (!result.ok()) {
+      zxlogf(ERROR, "%s: NodeAdd Thermistor(thermistor) request failed: %s", __func__,
+             result.FormatDescription().data());
+      return result.status();
+    }
+    if (result->is_error()) {
+      zxlogf(ERROR, "%s: NodeAdd Thermistor(thermistor) failed: %s", __func__,
+             zx_status_get_string(result->error_value()));
+      return result->error_value();
     }
   }
 

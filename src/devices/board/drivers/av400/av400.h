@@ -59,8 +59,8 @@ using Av400Type = ddk::Device<Av400, ddk::Initializable>;
 // This is the main class for the platform bus driver.
 class Av400 : public Av400Type {
  public:
-  Av400(zx_device_t* parent, pbus_protocol_t* pbus, iommu_protocol_t* iommu)
-      : Av400Type(parent), pbus_(pbus), iommu_(iommu) {}
+  Av400(zx_device_t* parent, iommu_protocol_t* iommu)
+      : Av400Type(parent), pbus_(parent), iommu_(iommu) {}
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 

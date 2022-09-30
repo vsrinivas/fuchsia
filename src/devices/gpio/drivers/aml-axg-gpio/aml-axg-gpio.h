@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_GPIO_DRIVERS_AML_AXG_GPIO_AML_AXG_GPIO_H_
 #define SRC_DEVICES_GPIO_DRIVERS_AML_AXG_GPIO_AML_AXG_GPIO_H_
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
-#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <lib/ddk/hw/reg.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
@@ -99,7 +99,7 @@ class AmlAxgGpio : public DeviceType, public ddk::GpioImplProtocol<AmlAxgGpio, d
   zx_status_t AmlPinToBlock(uint32_t pin, const AmlGpioBlock** out_block,
                             uint32_t* out_pin_index) const;
 
-  void Bind(const ddk::PBusProtocolClient& pbus);
+  void Bind(fdf::WireSyncClient<fuchsia_hardware_platform_bus::PlatformBus> pbus);
 
   ddk::PDev pdev_;
   fbl::Mutex mmio_lock_;

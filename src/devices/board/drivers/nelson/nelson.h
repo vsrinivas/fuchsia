@@ -5,10 +5,10 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_NELSON_NELSON_H_
 #define SRC_DEVICES_BOARD_DRIVERS_NELSON_NELSON_H_
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
 #include <fuchsia/hardware/clockimpl/cpp/banjo.h>
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
 #include <fuchsia/hardware/iommu/cpp/banjo.h>
-#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <threads.h>
@@ -47,13 +47,6 @@ enum {
   MACADDR_WIFI = 0,
   MACADDR_BLUETOOTH = 1,
 };
-
-typedef struct {
-  zx_device_t* parent;
-  pbus_protocol_t pbus;
-  gpio_impl_protocol_t gpio;
-  iommu_protocol_t iommu;
-} aml_bus_t;
 
 // These should match the mmio table defined in nelson-i2c.cc
 enum {
@@ -106,8 +99,10 @@ using NelsonType = ddk::Device<Nelson>;
 // This is the main class for the Nelson platform bus driver.
 class Nelson : public NelsonType {
  public:
-  explicit Nelson(zx_device_t* parent, pbus_protocol_t* pbus, iommu_protocol_t* iommu)
-      : NelsonType(parent), pbus_(pbus), iommu_(iommu) {}
+  explicit Nelson(zx_device_t* parent,
+                  fdf::ClientEnd<fuchsia_hardware_platform_bus::PlatformBus> pbus,
+                  iommu_protocol_t* iommu)
+      : NelsonType(parent), pbus_(std::move(pbus)), iommu_(iommu) {}
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
@@ -160,7 +155,8 @@ class Nelson : public NelsonType {
   zx_status_t EnableWifi32K(void);
   zx_status_t SdEmmcConfigurePortB(void);
 
-  ddk::PBusProtocolClient pbus_;
+  // TODO(fxbug.dev/108070): Switch to fdf::SyncClient when it is available.
+  fdf::WireSyncClient<fuchsia_hardware_platform_bus::PlatformBus> pbus_;
   ddk::IommuProtocolClient iommu_;
   ddk::GpioImplProtocolClient gpio_impl_;
   ddk::ClockImplProtocolClient clk_impl_;

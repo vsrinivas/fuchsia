@@ -15,6 +15,7 @@
 
 #include "a113-blocks.h"
 #include "a5-blocks.h"
+#include "fidl/fuchsia.hardware.platform.bus/cpp/markers.h"
 #include "s905d2-blocks.h"
 #include "src/devices/gpio/drivers/aml-axg-gpio/aml-axg-gpio-bind.h"
 
@@ -56,9 +57,21 @@ enum {
 zx_status_t AmlAxgGpio::Create(void* ctx, zx_device_t* parent) {
   zx_status_t status;
 
-  ddk::PBusProtocolClient pbus(parent);
-  if ((status = device_get_protocol(parent, ZX_PROTOCOL_PBUS, &pbus)) != ZX_OK) {
-    zxlogf(WARNING, "AmlAxgGpio::Create: ZX_PROTOCOL_PBUS not available");
+  auto endpoints = fdf::CreateEndpoints<fuchsia_hardware_platform_bus::PlatformBus>();
+  if (endpoints.is_error()) {
+    zxlogf(ERROR, " create endpoints failed");
+    return endpoints.error_value();
+  }
+
+  bool has_pbus = true;
+
+  status = device_connect_runtime_protocol(
+      parent, fuchsia_hardware_platform_bus::Service::PlatformBus::ServiceName,
+      fuchsia_hardware_platform_bus::Service::PlatformBus::Name,
+      endpoints->server.TakeHandle().release());
+  if (status != ZX_OK) {
+    zxlogf(WARNING, "Failed to connect to platform bus");
+    has_pbus = false;
   }
 
   ddk::PDev pdev(parent);
@@ -132,8 +145,9 @@ zx_status_t AmlAxgGpio::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  if (pbus.is_valid()) {
-    device->Bind(pbus);
+  if (has_pbus) {
+    device->Bind(fdf::WireSyncClient<fuchsia_hardware_platform_bus::PlatformBus>(
+        std::move(endpoints->client)));
   }
 
   if ((status = device->DdkAdd(
@@ -147,14 +161,16 @@ zx_status_t AmlAxgGpio::Create(void* ctx, zx_device_t* parent) {
   return ZX_OK;
 }
 
-void AmlAxgGpio::Bind(const ddk::PBusProtocolClient& pbus) {
+void AmlAxgGpio::Bind(fdf::WireSyncClient<fuchsia_hardware_platform_bus::PlatformBus> pbus) {
   gpio_impl_protocol_t gpio_proto = {
       .ops = &gpio_impl_protocol_ops_,
       .ctx = this,
   };
 
-  pbus.RegisterProtocol(ZX_PROTOCOL_GPIO_IMPL, reinterpret_cast<uint8_t*>(&gpio_proto),
-                        sizeof(gpio_proto));
+  fdf::Arena arena('GPIO');
+  __UNUSED auto unused = pbus.buffer(arena)->RegisterProtocol(
+      ZX_PROTOCOL_GPIO_IMPL, fidl::VectorView<uint8_t>::FromExternal(
+                                 reinterpret_cast<uint8_t*>(&gpio_proto), sizeof(gpio_proto)));
 }
 
 zx_status_t AmlAxgGpio::AmlPinToBlock(const uint32_t pin, const AmlGpioBlock** out_block,

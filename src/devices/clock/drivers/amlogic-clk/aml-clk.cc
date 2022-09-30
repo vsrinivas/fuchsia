@@ -5,7 +5,6 @@
 #include "aml-clk.h"
 
 #include <fidl/fuchsia.hardware.clock/cpp/wire.h>
-#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
@@ -729,10 +728,19 @@ zx_status_t AmlClock::Create(zx_device_t* parent) {
     }
   }
 
-  ddk::PBusProtocolClient pbus(parent);
-  if (!pbus.is_valid()) {
-    zxlogf(ERROR, "aml-clk: failed to get platform bus protocol");
-    return ZX_ERR_INTERNAL;
+  auto endpoints = fdf::CreateEndpoints<fuchsia_hardware_platform_bus::PlatformBus>();
+  if (endpoints.is_error()) {
+    zxlogf(ERROR, "Create endpoints failed: %s", endpoints.status_string());
+    return endpoints.error_value();
+  }
+
+  status = device_connect_runtime_protocol(
+      parent, fuchsia_hardware_platform_bus::Service::PlatformBus::ServiceName,
+      fuchsia_hardware_platform_bus::Service::PlatformBus::Name,
+      endpoints->server.TakeHandle().release());
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to connect to platform bus: %s", zx_status_get_string(status));
+    return status;
   }
 
   auto clock_device = std::make_unique<amlogic_clock::AmlClock>(
@@ -744,7 +752,8 @@ zx_status_t AmlClock::Create(zx_device_t* parent) {
     return status;
   }
 
-  clock_device->Register(pbus);
+  clock_device->Register(fdf::WireSyncClient<fuchsia_hardware_platform_bus::PlatformBus>(
+      std::move(endpoints->client)));
 
   // devmgr is now in charge of the memory for dev.
   __UNUSED auto ptr = clock_device.release();
@@ -1129,14 +1138,16 @@ void AmlClock::ShutDown() {
   }
 }
 
-void AmlClock::Register(const ddk::PBusProtocolClient& pbus) {
+void AmlClock::Register(fdf::WireSyncClient<fuchsia_hardware_platform_bus::PlatformBus> pbus) {
   clock_impl_protocol_t clk_proto = {
       .ops = &clock_impl_protocol_ops_,
       .ctx = this,
   };
 
-  pbus.RegisterProtocol(ZX_PROTOCOL_CLOCK_IMPL, reinterpret_cast<uint8_t*>(&clk_proto),
-                        sizeof(clk_proto));
+  fdf::Arena arena('CLK_');
+  __UNUSED auto unused = pbus.buffer(arena)->RegisterProtocol(
+      ZX_PROTOCOL_CLOCK_IMPL, fidl::VectorView<uint8_t>::FromExternal(
+                                  reinterpret_cast<uint8_t*>(&clk_proto), sizeof(clk_proto)));
 }
 
 zx_status_t AmlClock::GetMesonRateClock(const uint32_t clk, MesonRateClock** out) {

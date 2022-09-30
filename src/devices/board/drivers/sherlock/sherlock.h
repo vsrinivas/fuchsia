@@ -5,10 +5,10 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_SHERLOCK_SHERLOCK_H_
 #define SRC_DEVICES_BOARD_DRIVERS_SHERLOCK_SHERLOCK_H_
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
 #include <fuchsia/hardware/clockimpl/cpp/banjo.h>
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
 #include <fuchsia/hardware/iommu/cpp/banjo.h>
-#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <threads.h>
@@ -76,9 +76,10 @@ using SherlockType = ddk::Device<Sherlock>;
 // This is the main class for the platform bus driver.
 class Sherlock : public SherlockType {
  public:
-  explicit Sherlock(zx_device_t* parent, pbus_protocol_t* pbus, iommu_protocol_t* iommu,
-                    uint32_t pid)
-      : SherlockType(parent), pbus_(pbus), iommu_(iommu), pid_(pid) {}
+  explicit Sherlock(zx_device_t* parent,
+                    fdf::ClientEnd<fuchsia_hardware_platform_bus::PlatformBus> pbus,
+                    iommu_protocol_t* iommu, uint32_t pid)
+      : SherlockType(parent), pbus_(std::move(pbus)), iommu_(iommu), pid_(pid) {}
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
@@ -140,7 +141,7 @@ class Sherlock : public SherlockType {
   zx_status_t LuisPowerPublishBuck(const char* name, uint32_t bus_id, uint16_t address,
                                    const device_fragment_t* fragments, size_t fragments_count);
 
-  ddk::PBusProtocolClient pbus_;
+  fdf::WireSyncClient<fuchsia_hardware_platform_bus::PlatformBus> pbus_;
   ddk::IommuProtocolClient iommu_;
   ddk::GpioImplProtocolClient gpio_impl_;
   ddk::ClockImplProtocolClient clk_impl_;

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -17,6 +19,7 @@
 #include "src/devices/board/drivers/astro/astro-buttons-bind.h"
 
 namespace astro {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 // clang-format off
 static const buttons_button_config_t buttons[] = {

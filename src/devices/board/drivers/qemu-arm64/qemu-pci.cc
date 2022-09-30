@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <fuchsia/hardware/pciroot/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/platform-defs.h>
@@ -18,7 +20,9 @@
 #include "qemu-bus.h"
 #include "qemu-pciroot.h"
 #include "qemu-virt.h"
+
 namespace board_qemu_arm64 {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 zx_status_t QemuArm64Pciroot::Create(PciRootHost* root_host, QemuArm64Pciroot::Context ctx,
                                      zx_device_t* parent, const char* name) {
@@ -38,7 +42,6 @@ zx_status_t QemuArm64Pciroot::PcirootGetPciPlatformInfo(pci_platform_info_t* inf
 zx_status_t QemuArm64::PciInit() {
   zx_status_t status = pci_root_host_.Mmio32().AddRegion(
       {.base = PCIE_MMIO_BASE_PHYS, .size = PCIE_MMIO_SIZE}, RegionAllocator::AllowOverlap::No);
-
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to add MMIO region { %#lx - %#lx } to PCI root allocator: %s",
            PCIE_MMIO_BASE_PHYS, PCIE_MMIO_BASE_PHYS + PCIE_MMIO_SIZE, zx_status_get_string(status));

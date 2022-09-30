@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/metadata.h>
@@ -15,30 +17,31 @@
 #include "vim3.h"
 
 namespace vim3 {
+namespace fpbus = fuchsia_hardware_platform_bus;
 using i2c_channel_t = fidl_metadata::i2c::Channel;
 
 // Only the AO and EE_M3 i2c busses are used on VIM3
 
-static const pbus_mmio_t i2c_mmios[] = {
-    {
+static const std::vector<fpbus::Mmio> i2c_mmios{
+    {{
         .base = A311D_I2C_AOBUS_BASE,
         .length = A311D_I2C_AOBUS_LENGTH,
-    },
-    {
+    }},
+    {{
         .base = A311D_EE_I2C_M3_BASE,
         .length = A311D_I2C_AOBUS_LENGTH,
-    },
+    }},
 };
 
-static const pbus_irq_t i2c_irqs[] = {
-    {
+static const std::vector<fpbus::Irq> i2c_irqs{
+    {{
         .irq = A311D_I2C_AO_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
-    {
+    }},
+    {{
         .irq = A311D_I2C_M3_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
+    }},
 };
 
 static const i2c_channel_t i2c_channels[] = {
@@ -96,15 +99,13 @@ static const i2c_channel_t i2c_channels[] = {
 };
 
 zx_status_t Vim3::I2cInit() {
-  pbus_dev_t i2c_dev = {};
-  i2c_dev.name = "i2c";
-  i2c_dev.vid = PDEV_VID_AMLOGIC;
-  i2c_dev.pid = PDEV_PID_GENERIC;
-  i2c_dev.did = PDEV_DID_AMLOGIC_I2C;
-  i2c_dev.mmio_list = i2c_mmios;
-  i2c_dev.mmio_count = std::size(i2c_mmios);
-  i2c_dev.irq_list = i2c_irqs;
-  i2c_dev.irq_count = std::size(i2c_irqs);
+  fpbus::Node i2c_dev;
+  i2c_dev.name() = "i2c";
+  i2c_dev.vid() = PDEV_VID_AMLOGIC;
+  i2c_dev.pid() = PDEV_PID_GENERIC;
+  i2c_dev.did() = PDEV_DID_AMLOGIC_I2C;
+  i2c_dev.mmio() = i2c_mmios;
+  i2c_dev.irq() = i2c_irqs;
 
   auto i2c_status = fidl_metadata::i2c::I2CChannelsToFidl(i2c_channels);
   if (i2c_status.is_error()) {
@@ -114,13 +115,13 @@ zx_status_t Vim3::I2cInit() {
 
   auto& data = i2c_status.value();
 
-  pbus_metadata_t i2c_metadata = {
-      .type = DEVICE_METADATA_I2C_CHANNELS,
-      .data_buffer = data.data(),
-      .data_size = data.size(),
+  std::vector<fpbus::Metadata> i2c_metadata{
+      {{
+          .type = DEVICE_METADATA_I2C_CHANNELS,
+          .data = std::move(data),
+      }},
   };
-  i2c_dev.metadata_list = &i2c_metadata;
-  i2c_dev.metadata_count = 1;
+  i2c_dev.metadata() = std::move(i2c_metadata);
 
   // AO
   gpio_impl_.SetAltFunction(A311D_GPIOAO(2), A311D_GPIOAO_2_M0_SCL_FN);
@@ -131,10 +132,18 @@ zx_status_t Vim3::I2cInit() {
   gpio_impl_.SetAltFunction(A311D_GPIOA(15), A311D_GPIOA_15_I2C_EE_M3_SCL_FN);
   gpio_impl_.SetAltFunction(A311D_GPIOA(14), A311D_GPIOA_14_I2C_EE_M3_SDA_FN);
 
-  zx_status_t status = pbus_.DeviceAdd(&i2c_dev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "I2cInit: DeviceAdd failed: %d", status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('I2C_');
+  auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, i2c_dev));
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: NodeAdd I2c(i2c_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: NodeAdd I2c(i2c_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   return ZX_OK;

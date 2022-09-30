@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PLATFORM_TEST_TEST_H_
 #define SRC_DEVICES_BUS_DRIVERS_PLATFORM_TEST_TEST_H_
 
-#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
 #include <lib/ddk/device.h>
 #include <threads.h>
 
@@ -20,8 +20,9 @@ using TestBoardType = ddk::Device<TestBoard>;
 // This is the main class for the platform bus driver.
 class TestBoard : public TestBoardType {
  public:
-  explicit TestBoard(zx_device_t* parent, pbus_protocol_t* pbus)
-      : TestBoardType(parent), pbus_(pbus) {}
+  explicit TestBoard(zx_device_t* parent,
+                     fdf::ClientEnd<fuchsia_hardware_platform_bus::PlatformBus> pbus)
+      : TestBoardType(parent), pbus_(std::move(pbus)) {}
 
   static zx_status_t Create(zx_device_t* parent);
 
@@ -32,9 +33,6 @@ class TestBoard : public TestBoardType {
   DISALLOW_COPY_ASSIGN_AND_MOVE(TestBoard);
 
   zx_status_t Start();
-  zx_status_t GoldfishAddressSpaceInit();
-  zx_status_t GoldfishPipeInit();
-  zx_status_t GoldfishSyncInit();
   zx_status_t GpioInit();
   zx_status_t PciInit();
   zx_status_t I2cInit();
@@ -42,13 +40,13 @@ class TestBoard : public TestBoardType {
   zx_status_t PowerInit();
   zx_status_t ClockInit();
   zx_status_t PwmInit();
-  zx_status_t RpmbInit();
   zx_status_t VregInit();
   zx_status_t PowerSensorInit();
   zx_status_t TestInit();
   int Thread();
 
-  ddk::PBusProtocolClient pbus_;
+  // TODO(fxbug.dev/108070): Use `fdf::SyncClient` when it is available.
+  fdf::WireSyncClient<fuchsia_hardware_platform_bus::PlatformBus> pbus_;
   thrd_t thread_;
 };
 

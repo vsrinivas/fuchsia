@@ -5,7 +5,8 @@
 #include "qemu-bus.h"
 
 #include <assert.h>
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
@@ -21,6 +22,7 @@
 #include "src/devices/board/drivers/qemu-arm64/qemu_bus_bind.h"
 
 namespace board_qemu_arm64 {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 static bool use_fake_display() {
   char ufd[32];
@@ -77,18 +79,24 @@ zx_status_t QemuArm64::Start() {
 }
 
 zx_status_t QemuArm64::Create(void* ctx, zx_device_t* parent) {
-  ddk::PBusProtocolClient pbus(parent);
-  if (!pbus.is_valid()) {
-    zxlogf(ERROR, "%s: Failed to get ZX_PROTOCOL_PBUS", __func__);
-    return ZX_ERR_NO_RESOURCES;
+  auto endpoints = fdf::CreateEndpoints<fuchsia_hardware_platform_bus::PlatformBus>();
+  if (endpoints.is_error()) {
+    return endpoints.error_value();
+  }
+
+  zx_status_t status = device_connect_runtime_protocol(
+      parent, fpbus::Service::PlatformBus::ServiceName, fpbus::Service::PlatformBus::Name,
+      endpoints->server.TakeHandle().release());
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to connect to platform bus: %s", zx_status_get_string(status));
+    return status;
   }
 
   fbl::AllocChecker ac;
-  auto board = fbl::make_unique_checked<QemuArm64>(&ac, parent, pbus);
+  auto board = fbl::make_unique_checked<QemuArm64>(&ac, parent, std::move(endpoints->client));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  zx_status_t status;
   if ((status = board->DdkAdd("qemu-bus", DEVICE_ADD_NON_BINDABLE)) != ZX_OK) {
     zxlogf(ERROR, "%s: DdkAdd failed %d", __func__, status);
     return status;

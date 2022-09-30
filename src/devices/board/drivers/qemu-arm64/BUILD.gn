@@ -10,7 +10,10 @@ driver_bind_rules("qemu_bus_bind") {
   rules = "qemu_bus.bind"
   header_output = "qemu_bus_bind.h"
   tests = "bind_tests.json"
-  deps = [ "//src/devices/bind/fuchsia.platform" ]
+  deps = [
+    "//src/devices/bind/fuchsia.hardware.platform.bus",
+    "//src/devices/bind/fuchsia.platform",
+  ]
 }
 
 group("tests") {
@@ -33,11 +36,13 @@ fuchsia_driver("qemu-arm64-driver") {
   ]
   deps = [
     ":qemu_bus_bind",
-    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.sysmem:fuchsia.sysmem_banjo_c",
+    "//sdk/fidl/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_cpp_driver",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
+    "//src/devices/bus/lib/platform-bus-composites",
     "//src/devices/lib/driver",
+    "//src/devices/lib/driver:driver_runtime",
     "//src/devices/pci/lib/pci",
     "//src/lib/ddk",
     "//src/lib/ddktl",
@@ -62,6 +67,5 @@ fuchsia_driver_component("qemu-arm64") {
   component_name = "qemu-arm64"
   deps = [ ":qemu-arm64-driver" ]
   info = "qemu-arm64-info.json"
-  colocate = true
-  root_resource = true
+  manifest = "meta/qemu-arm64.cml"
 }

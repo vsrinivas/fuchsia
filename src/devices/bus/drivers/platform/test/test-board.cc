@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 #include <assert.h>
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
@@ -25,6 +26,7 @@
 #include "src/devices/bus/drivers/platform/test/test-metadata.h"
 #include "src/devices/bus/drivers/platform/test/test-resources.h"
 #include "src/devices/bus/drivers/platform/test/test.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 
 namespace board_test {
 
@@ -32,7 +34,6 @@ void TestBoard::DdkRelease() { delete this; }
 
 int TestBoard::Thread() {
   zx_status_t status;
-
   status = GpioInit();
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: GpioInit failed: %d", __func__, status);
@@ -97,14 +98,23 @@ zx_status_t TestBoard::Start() {
 }
 
 zx_status_t TestBoard::Create(zx_device_t* parent) {
-  pbus_protocol_t pbus;
-  if (device_get_protocol(parent, ZX_PROTOCOL_PBUS, &pbus) != ZX_OK) {
-    return ZX_ERR_NOT_SUPPORTED;
+  auto endpoints = fdf::CreateEndpoints<fuchsia_hardware_platform_bus::PlatformBus>();
+  if (endpoints.is_error()) {
+    return endpoints.error_value();
   }
 
-  auto board = std::make_unique<TestBoard>(parent, &pbus);
+  zx_status_t status = device_connect_runtime_protocol(
+      parent, fuchsia_hardware_platform_bus::Service::PlatformBus::ServiceName,
+      fuchsia_hardware_platform_bus::Service::PlatformBus::Name,
+      endpoints->server.TakeHandle().release());
+  if (status != ZX_OK) {
+    return status;
+  }
 
-  zx_status_t status = board->DdkAdd("test-board", DEVICE_ADD_NON_BINDABLE);
+  auto board = std::make_unique<TestBoard>(parent, std::move(endpoints->client));
+  auto& pbus = board->pbus_;
+
+  status = board->DdkAdd("test-board", DEVICE_ADD_NON_BINDABLE);
   if (status != ZX_OK) {
     zxlogf(ERROR, "TestBoard::Create: DdkAdd failed: %d", status);
     return status;
@@ -206,30 +216,47 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       .metadata_value = 12345,
   };
 
-  const pbus_metadata_t test_metadata_1[] = {{
-      .type = DEVICE_METADATA_PRIVATE,
-      .data_buffer = reinterpret_cast<uint8_t*>(&metadata_1),
-      .data_size = sizeof(composite_test_metadata),
-  }};
+  const std::vector<fuchsia_hardware_platform_bus::Metadata> test_metadata_1{
+      [&]() {
+        fuchsia_hardware_platform_bus::Metadata ret;
+        ret.type() = DEVICE_METADATA_PRIVATE;
+        ret.data() = std::vector(reinterpret_cast<uint8_t*>(&metadata_1),
+                                 reinterpret_cast<uint8_t*>(&metadata_1) + sizeof(metadata_1));
+        return ret;
+      }(),
+  };
 
-  const pbus_metadata_t test_metadata_2[] = {{
-      .type = DEVICE_METADATA_PRIVATE,
-      .data_buffer = reinterpret_cast<uint8_t*>(&metadata_2),
-      .data_size = sizeof(composite_test_metadata),
-  }};
+  const std::vector<fuchsia_hardware_platform_bus::Metadata> test_metadata_2{
+      [&]() {
+        fuchsia_hardware_platform_bus::Metadata ret;
+        ret.type() = DEVICE_METADATA_PRIVATE;
+        ret.data() = std::vector(reinterpret_cast<uint8_t*>(&metadata_2),
+                                 reinterpret_cast<uint8_t*>(&metadata_2) + sizeof(metadata_2));
+        return ret;
+      }(),
+  };
 
-  pbus_dev_t pdev = {};
-  pdev.name = "composite-dev";
-  pdev.vid = PDEV_VID_TEST;
-  pdev.pid = PDEV_PID_PBUS_TEST;
-  pdev.did = PDEV_DID_TEST_COMPOSITE_1;
-  pdev.metadata_list = test_metadata_1;
-  pdev.metadata_count = std::size(test_metadata_1);
+  fuchsia_hardware_platform_bus::Node pdev = {};
+  pdev.name() = "composite-dev";
+  pdev.vid() = PDEV_VID_TEST;
+  pdev.pid() = PDEV_PID_PBUS_TEST;
+  pdev.did() = PDEV_DID_TEST_COMPOSITE_1;
+  pdev.metadata() = std::move(test_metadata_1);
 
-  status = pbus_composite_device_add(&pbus, &pdev, reinterpret_cast<uint64_t>(composite),
-                                     std::size(composite), nullptr);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "TestBoard::Create: pbus_composite_device_add failed: %d", status);
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('TEST');
+  auto result = pbus.buffer(arena)->AddCompositeImplicitPbusFragment(
+      fidl::ToWire(fidl_arena, std::move(pdev)),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, composite, std::size(composite)), {});
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   device_fragment_t composite2[] = {
@@ -243,19 +270,25 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       {"power-sensor", std::size(power_sensor_fragment), power_sensor_fragment},
   };
 
-  pbus_dev_t pdev2 = {};
-  pdev2.name = "composite-dev-2";
-  pdev2.vid = PDEV_VID_TEST;
-  pdev2.pid = PDEV_PID_PBUS_TEST;
-  pdev2.did = PDEV_DID_TEST_COMPOSITE_2;
-  pdev2.metadata_list = test_metadata_2;
-  pdev2.metadata_count = std::size(test_metadata_2);
+  fuchsia_hardware_platform_bus::Node pdev2 = {};
+  pdev2.name() = "composite-dev-2";
+  pdev2.vid() = PDEV_VID_TEST;
+  pdev2.pid() = PDEV_PID_PBUS_TEST;
+  pdev2.did() = PDEV_DID_TEST_COMPOSITE_2;
+  pdev2.metadata() = std::move(test_metadata_2);
 
-  status = pbus_composite_device_add(&pbus, &pdev2, reinterpret_cast<uint64_t>(composite2),
-                                     std::size(composite2), nullptr);
-
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "TestBoard::Create: pbus_composite_device_add failed: %d", status);
+  result = pbus.buffer(arena)->AddCompositeImplicitPbusFragment(
+      fidl::ToWire(fidl_arena, std::move(pdev2)),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, composite2, std::size(composite2)), {});
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   return status;

@@ -6,6 +6,7 @@
 #define SRC_DEVICES_CLOCK_DRIVERS_AMLOGIC_CLK_AML_CLK_H_
 
 #include <fidl/fuchsia.hardware.clock/cpp/wire.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
 #include <fuchsia/hardware/clockimpl/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/ddk/device.h>
@@ -76,7 +77,7 @@ class AmlClock : public DeviceType, public ddk::ClockImplProtocol<AmlClock, ddk:
 
   void ShutDown();
 
-  void Register(const ddk::PBusProtocolClient& pbus);
+  void Register(fdf::WireSyncClient<fuchsia_hardware_platform_bus::PlatformBus> pbus);
 
  protected:
   // Debug API for forcing a clock to be disabled.

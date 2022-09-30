@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-using fuchsia.platform;
 using fuchsia.google.platform;
+using fuchsia.hardware.platform.bus;
 using fuchsia.synaptics.platform;
 
-fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.BUS;
+fuchsia.BIND_FIDL_PROTOCOL == fuchsia.hardware.platform.bus.BIND_FIDL_PROTOCOL.PLATFORM_BUS;
 
 if fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.synaptics.platform.BIND_PLATFORM_DEV_VID.SYNAPTICS {
   fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.synaptics.platform.BIND_PLATFORM_DEV_PID.AS370;

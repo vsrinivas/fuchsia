@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -14,6 +16,7 @@
 #include "src/devices/lib/metadata/llcpp/registers.h"
 
 namespace sherlock {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 namespace {
 
@@ -29,18 +32,20 @@ enum MmioMetadataIdx {
 }  // namespace
 
 zx_status_t Sherlock::RegistersInit() {
-  const pbus_mmio_t registers_mmios[] = {
-      {
+  const std::vector<fpbus::Mmio> registers_mmios = {
+      {{
           .base = T931_RESET_BASE,
           .length = T931_RESET_LENGTH,
-      },
+      }},
 #ifdef FACTORY_BUILD
-      {
-          .base = T931_USB_BASE,
-          .length = T931_USB_LENGTH,
-      },
+      []() {
+        fpbus::Mmio ret;
+        ret.base() = T931_USB_BASE;
+        ret.length() = T931_USB_LENGTH;
+        return ret;
+      }(),
 #endif  // FACTORY_BUILD
-  };
+  };    // namespace sherlock
 
   fidl::Arena<2048> allocator;
   fidl::VectorView<registers::MmioMetadataEntry> mmio_entries(allocator, MMIO_COUNT);
@@ -147,29 +152,35 @@ zx_status_t Sherlock::RegistersInit() {
   }
 
   auto encoded_metadata_bytes = encoded_metadata.GetOutgoingMessage().CopyBytes();
-  const pbus_metadata_t registers_metadata[] = {
-      {
+  std::vector<fpbus::Metadata> registers_metadata{
+      {{
           .type = DEVICE_METADATA_REGISTERS,
-          .data_buffer = encoded_metadata_bytes.data(),
-          .data_size = encoded_metadata_bytes.size(),
-      },
+          .data =
+              std::vector<uint8_t>(encoded_metadata_bytes.data(),
+                                   encoded_metadata_bytes.data() + encoded_metadata_bytes.size()),
+      }},
   };
 
-  pbus_dev_t registers_dev{
-      .name = "registers",
-      .vid = PDEV_VID_GENERIC,
-      .pid = PDEV_PID_GENERIC,
-      .did = PDEV_DID_REGISTERS,
-      .mmio_list = registers_mmios,
-      .mmio_count = std::size(registers_mmios),
-      .metadata_list = registers_metadata,
-      .metadata_count = std::size(registers_metadata),
-  };
+  fpbus::Node registers_dev;
+  registers_dev.name() = "registers";
+  registers_dev.vid() = PDEV_VID_GENERIC;
+  registers_dev.pid() = PDEV_PID_GENERIC;
+  registers_dev.did() = PDEV_DID_REGISTERS;
+  registers_dev.mmio() = registers_mmios;
+  registers_dev.metadata() = registers_metadata;
 
-  zx_status_t status = pbus_.DeviceAdd(&registers_dev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('REGI');
+  auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, registers_dev));
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: NodeAdd Registers(registers_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: NodeAdd Registers(registers_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   return ZX_OK;

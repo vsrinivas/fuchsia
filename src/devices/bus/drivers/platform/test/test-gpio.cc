@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/metadata.h>
@@ -13,6 +14,7 @@
 #include "test.h"
 
 namespace board_test {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 namespace {
 
@@ -22,27 +24,40 @@ static const gpio_pin_t gpio_pins[] = {
     DECL_GPIO_PIN(5),
 };
 
-static const pbus_metadata_t gpio_metadata[] = {{
-    .type = DEVICE_METADATA_GPIO_PINS,
-    .data_buffer = reinterpret_cast<const uint8_t*>(&gpio_pins),
-    .data_size = sizeof(gpio_pins),
-}};
+static const std::vector<fpbus::Metadata> gpio_metadata{
+    []() {
+      fpbus::Metadata ret;
+      ret.type() = DEVICE_METADATA_GPIO_PINS;
+      ret.data() =
+          std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(&gpio_pins),
+                               reinterpret_cast<const uint8_t*>(&gpio_pins) + sizeof(gpio_pins));
+      return ret;
+    }(),
+};
 
 }  // namespace
 
 zx_status_t TestBoard::GpioInit() {
-  pbus_dev_t gpio_dev = {};
-  gpio_dev.name = "gpio";
-  gpio_dev.vid = PDEV_VID_TEST;
-  gpio_dev.pid = PDEV_PID_PBUS_TEST;
-  gpio_dev.did = PDEV_DID_TEST_GPIO;
-  gpio_dev.metadata_list = gpio_metadata;
-  gpio_dev.metadata_count = std::size(gpio_metadata);
+  fpbus::Node gpio_dev;
+  gpio_dev.name() = "gpio";
+  gpio_dev.vid() = PDEV_VID_TEST;
+  gpio_dev.pid() = PDEV_PID_PBUS_TEST;
+  gpio_dev.did() = PDEV_DID_TEST_GPIO;
+  gpio_dev.metadata() = gpio_metadata;
 
-  zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d", __FUNCTION__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('TGPI');
+  auto result = pbus_.buffer(arena)->ProtocolNodeAdd(ZX_PROTOCOL_GPIO_IMPL,
+                                                     fidl::ToWire(fidl_arena, gpio_dev));
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: DeviceAdd Gpio request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: DeviceAdd Gpio failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   return ZX_OK;

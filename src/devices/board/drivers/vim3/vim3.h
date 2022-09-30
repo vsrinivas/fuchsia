@@ -5,10 +5,11 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_VIM3_VIM3_H_
 #define SRC_DEVICES_BOARD_DRIVERS_VIM3_VIM3_H_
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/markers.h>
 #include <fuchsia/hardware/clockimpl/cpp/banjo.h>
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
 #include <fuchsia/hardware/iommu/cpp/banjo.h>
-#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <lib/ddk/device.h>
 #include <threads.h>
 
@@ -49,8 +50,9 @@ using Vim3Type = ddk::Device<Vim3, ddk::Initializable>;
 // This is the main class for the platform bus driver.
 class Vim3 : public Vim3Type {
  public:
-  Vim3(zx_device_t* parent, pbus_protocol_t* pbus, iommu_protocol_t* iommu)
-      : Vim3Type(parent), pbus_(pbus), iommu_(iommu) {}
+  Vim3(zx_device_t* parent, fdf::ClientEnd<fuchsia_hardware_platform_bus::PlatformBus> pbus,
+       iommu_protocol_t* iommu)
+      : Vim3Type(parent), pbus_(std::move(pbus)), iommu_(iommu) {}
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
@@ -85,7 +87,8 @@ class Vim3 : public Vim3Type {
 
   int Thread();
 
-  ddk::PBusProtocolClient pbus_;
+  // TODO(fxbug.dev/108070): migrate to fdf::SyncClient when it is available.
+  fdf::WireSyncClient<fuchsia_hardware_platform_bus::PlatformBus> pbus_;
   std::optional<ddk::InitTxn> init_txn_;
   ddk::IommuProtocolClient iommu_;
   ddk::GpioImplProtocolClient gpio_impl_;

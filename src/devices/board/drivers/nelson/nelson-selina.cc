@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/platform-defs.h>
@@ -12,6 +14,7 @@
 #include "src/devices/board/drivers/nelson/nelson_selina_bind.h"
 
 namespace nelson {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 static constexpr zx_device_prop_t props[] = {
     {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GENERIC},
