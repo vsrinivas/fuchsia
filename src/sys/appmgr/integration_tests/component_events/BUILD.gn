@@ -17,6 +17,12 @@ fuchsia_component("test_component") {
   manifest = "meta/test_component.cmx"
 }
 
+fuchsia_component("test_component_with_subrealm") {
+  testonly = true
+  deps = [ ":test_component_with_subrealm_bin" ]
+  manifest = "meta/test_component_with_subrealm.cmx"
+}
+
 fuchsia_component("component_events_integration_test") {
   testonly = true
   deps = [ ":component_events_test_bin" ]
@@ -26,7 +32,10 @@ fuchsia_component("component_events_integration_test") {
 fuchsia_test_package("component_events_integration_tests") {
   test_components = [ ":component_events_integration_test" ]
 
-  deps = [ ":test_component" ]
+  deps = [
+    ":test_component",
+    ":test_component_with_subrealm",
+  ]
 
   test_specs = {
   }
@@ -51,6 +60,7 @@ rustc_test("component_events_test_bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:regex",
   ]
 
@@ -72,4 +82,23 @@ rustc_binary("test_component_bin") {
   ]
 
   sources = [ "test_component.rs" ]
+}
+
+rustc_binary("test_component_with_subrealm_bin") {
+  name = "test_component_with_subrealm"
+  source_root = "./test_component_with_subrealm.rs"
+  edition = "2021"
+
+  deps = [
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_rust",
+    "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal_rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:lazy_static",
+  ]
+
+  sources = [ "test_component_with_subrealm.rs" ]
 }

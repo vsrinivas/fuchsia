@@ -7,26 +7,36 @@ use {
     fidl::endpoints::DiscoverableProtocolMarker,
     fidl_fuchsia_inspect::TreeMarker,
     fidl_fuchsia_sys::{
-        EnvironmentControllerEvent, EnvironmentControllerProxy, EnvironmentMarker,
-        EnvironmentOptions, EnvironmentProxy, LauncherProxy, ServiceProviderMarker,
+        ComponentControllerEvent, EnvironmentControllerEvent, EnvironmentControllerProxy,
+        EnvironmentMarker, EnvironmentOptions, EnvironmentProxy, LauncherProxy,
+        ServiceProviderMarker,
     },
     fidl_fuchsia_sys_internal::{
         ComponentEventListenerMarker, ComponentEventListenerRequest,
         ComponentEventListenerRequestStream, ComponentEventProviderMarker, SourceIdentity,
     },
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
-    fuchsia_component::client::{connect_to_protocol, launch},
+    fuchsia_component::client::{connect_to_protocol, launch, App},
     fuchsia_inspect::{assert_data_tree, reader},
     fuchsia_zircon::DurationNum,
-    futures::stream::{StreamExt, TryStreamExt},
+    futures::{
+        future,
+        stream::{StreamExt, TryStreamExt},
+    },
     lazy_static::lazy_static,
+    maplit::hashset,
     regex::Regex,
+    std::collections::HashSet,
 };
 
 lazy_static! {
     static ref TEST_COMPONENT: String = "test_component.cmx".to_string();
+    static ref TEST_COMPONENT_WITH_REALM: String = "test_component_with_subrealm.cmx".to_string();
     static ref TEST_COMPONENT_URL: String =
         "fuchsia-pkg://fuchsia.com/component_events_integration_tests#meta/test_component.cmx"
+            .to_string();
+    static ref TEST_COMPONENT_WITH_REALM_URL: String =
+        "fuchsia-pkg://fuchsia.com/component_events_integration_tests#meta/test_component_with_subrealm.cmx"
             .to_string();
     static ref SELF_COMPONENT: String = "component_events_integration_test.cmx".to_string();
     static ref TEST_COMPONENT_REALM_PATH: Vec<String> = vec!["diagnostics_test".to_string()];
@@ -48,12 +58,48 @@ impl ComponentEventsTest {
         } else {
             None
         };
-        let test = Self {
+        let mut test = Self {
             listener_request_stream,
             diagnostics_test_env,
             _diagnostics_test_env_ctrl: ctrl,
         };
+        test.consume_self_events().await.expect("failed to consume self events");
         Ok(test)
+    }
+
+    // Asserts that we receive the expected events about this component itself.
+    async fn consume_self_events(&mut self) -> Result<(), Error> {
+        match &mut self.listener_request_stream {
+            None => {}
+            Some(listener_request_stream) => {
+                let self_realm_path = Vec::new();
+                let request =
+                    listener_request_stream.try_next().await.context("Fetch self start")?;
+                if let Some(ComponentEventListenerRequest::OnStart { component, .. }) = request {
+                    self.assert_identity(component, &SELF_COMPONENT, &self_realm_path);
+                } else {
+                    return Err(format_err!("Expected start event for self"));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Asserts a start event for the test_component.
+    async fn assert_on_start(&mut self, name: &str, realm_path: &[String]) -> Result<(), Error> {
+        match &mut self.listener_request_stream {
+            None => {}
+            Some(listener_request_stream) => {
+                let request =
+                    listener_request_stream.try_next().await.context("Fetch test start")?;
+                if let Some(ComponentEventListenerRequest::OnStart { component, .. }) = request {
+                    self.assert_identity(component, name, realm_path);
+                } else {
+                    return Err(format_err!("Expected start event. Got: {:?}", request));
+                }
+            }
+        }
+        Ok(())
     }
 
     /// Asserts a stop event for the test_component.
@@ -178,6 +224,8 @@ async fn test_with_diagnostics() -> Result<(), Error> {
     let mut app = launch(&launcher, TEST_COMPONENT_URL.to_string(), Some(arguments))
         .context("start test component")?;
 
+    test.assert_on_start(&*TEST_COMPONENT, &*TEST_COMPONENT_REALM_PATH).await?;
+
     let request = test
         .listener_request_stream
         .as_mut()
@@ -222,6 +270,7 @@ async fn test_without_diagnostics() -> Result<(), Error> {
     let mut test = ComponentEventsTest::new(&env, true).await?;
     let launcher = get_launcher(&test.diagnostics_test_env).context("get launcher")?;
     let mut app = launch(&launcher, TEST_COMPONENT_URL.to_string(), None)?;
+    test.assert_on_start(&*TEST_COMPONENT, &*TEST_COMPONENT_REALM_PATH).await?;
     let request = test
         .listener_request_stream
         .as_mut()
@@ -237,5 +286,100 @@ async fn test_without_diagnostics() -> Result<(), Error> {
     }
     app.kill().context("Kill app")?;
     test.assert_on_stop().await?;
+    Ok(())
+}
+
+async fn launch_app(
+    env: &EnvironmentProxy,
+    url: String,
+    args: Option<Vec<String>>,
+) -> Result<App, Error> {
+    let app = launch(&get_launcher(&env)?, url, args)?;
+    let event_stream = app.controller().take_event_stream();
+    event_stream
+        .try_filter_map(|event| {
+            let event = match event {
+                ComponentControllerEvent::OnDirectoryReady {} => Some(event),
+                _ => None,
+            };
+            future::ready(Ok(event))
+        })
+        .next()
+        .await;
+    Ok(app)
+}
+
+// Tests that START events for components that exist before the listener is attached are
+// propagated only to the first ancestor realm with a listener attached.
+// This test does the following:
+// 1. Create a realm hierarchy under the existing "test_env". This hierarchy looks like
+//    "test_env -> A -> sub -> comp"
+//              '-> B -> sub -> comp"
+// 2. Start a component in A (that listens for events)
+// 3. Start a component in B (no event listening)
+// 4. Listen for events
+// 5. Even though there's a component running under A, we are never notified about it given that
+//    given that there's already a listener there.
+// TODO(fxbug.dev/66572): reenable
+#[ignore]
+#[fasync::run_singlethreaded(test)]
+async fn test_register_listener_in_subrealm() -> Result<(), Error> {
+    let env = connect_to_protocol::<EnvironmentMarker>().expect("connect to current environment");
+    let mut test = ComponentEventsTest::new(&env, false).await?;
+    let (env_a, _a_ctrl) = create_nested_environment(&env, "a").await?;
+    let (env_b, _b_ctrl) = create_nested_environment(&env, "b").await?;
+
+    // start our test component in environment a
+    let arguments = vec!["with-event-listener".to_string()];
+    let _app_a = launch_app(&env_a, TEST_COMPONENT_WITH_REALM_URL.to_string(), Some(arguments))
+        .await
+        .context("launch on a")?;
+    let _app_b = launch_app(&env_b, TEST_COMPONENT_WITH_REALM_URL.to_string(), None)
+        .await
+        .context("launch on b")?;
+
+    // Listen for start events. Only events expected are for: self, the component under B,
+    // and the test component under B.
+    test.listener_request_stream =
+        Some(listen_for_component_events(&env).context("get component event provider")?);
+    let mut events = HashSet::new();
+    for _ in 0..3 {
+        let request = test
+            .listener_request_stream
+            .as_mut()
+            .unwrap()
+            .try_next()
+            .await
+            .context("Fetch self start")?;
+        if let Some(ComponentEventListenerRequest::OnStart { component, .. }) = request {
+            events.insert((component.component_name.unwrap(), component.realm_path.unwrap()));
+        } else {
+            panic!("Expected start event. Got: {:?}", request);
+        }
+    }
+
+    assert_eq!(
+        events,
+        hashset! {
+            (SELF_COMPONENT.to_string(), vec![]),
+            (TEST_COMPONENT.to_string(), vec!["b".to_string(), "sub".to_string()]),
+            (TEST_COMPONENT_WITH_REALM.to_string(), vec!["b".to_string()]),
+        }
+    );
+
+    // Verify the listener on A is not notified about anything given that B already
+    // is listening for events.
+    let request = test
+        .listener_request_stream
+        .as_mut()
+        .unwrap()
+        .try_next()
+        .on_timeout(TIMEOUT_SECONDS.seconds().after_now(), || Ok(None))
+        .await
+        .context("Fetch start event on a")?;
+    if let Some(ComponentEventListenerRequest::OnStart { .. }) = request {
+        return Err(format_err!("Unexpected start event for test component on A"));
+    }
+
     Ok(())
 }

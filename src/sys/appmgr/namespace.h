@@ -90,6 +90,10 @@ class Namespace : public fuchsia::sys::Environment,
                                           const std::string& component_id,
                                           fidl::InterfaceHandle<fuchsia::io::Directory> directory);
 
+  // Notifies a realms ComponentEventListener that a component started.
+  void NotifyComponentStarted(const std::string& component_url, const std::string& component_name,
+                              const std::string& component_id);
+
   // Notifies a realms ComponentEventListener that a component stopped.
   void NotifyComponentStopped(const std::string& component_url, const std::string& component_name,
                               const std::string& component_id);

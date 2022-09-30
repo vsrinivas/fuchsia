@@ -102,6 +102,9 @@ void RunnerHolder::StartComponent(
     impl->AddSubComponentHub(component->HubInfo());
   }
 
+  ns_copy->NotifyComponentStarted(component->url(), component->label(),
+                                  component->hub_instance_id());
+
   ComponentBridge* key = component.get();
   components_.emplace(key, std::move(component));
 
