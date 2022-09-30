@@ -278,7 +278,11 @@
 
         // Offer events to `bootstrap` for diagnostics usage.
         {
-            event: [ "stopped" ],
+            event: [
+                "running",
+                "started",
+                "stopped",
+            ],
             from: "framework",
             to: "#bootstrap",
         },

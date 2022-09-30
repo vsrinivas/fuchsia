@@ -241,7 +241,7 @@ impl Archivist {
                 self.event_router.add_producer(ProducerConfig {
                     producer: &mut event_source,
                     producer_type: ProducerType::External,
-                    events: vec![EventType::ComponentStopped],
+                    events: vec![EventType::ComponentStarted, EventType::ComponentStopped],
                     singleton_events: vec![
                         SingletonEventType::LogSinkRequested,
                         SingletonEventType::DiagnosticsReady,
@@ -268,7 +268,7 @@ impl Archivist {
         self.event_router.add_producer(ProducerConfig {
             producer: &mut component_event_provider,
             producer_type: ProducerType::External,
-            events: vec![EventType::ComponentStopped],
+            events: vec![EventType::ComponentStarted, EventType::ComponentStopped],
             singleton_events: vec![SingletonEventType::DiagnosticsReady],
         });
         self.incoming_external_event_producers.push(fasync::Task::spawn(async move {
@@ -337,7 +337,7 @@ impl Archivist {
         let archivist_state_log_sender = archivist_state.log_sender.clone();
         event_router.add_consumer(ConsumerConfig {
             consumer: &archivist_state,
-            events: vec![EventType::ComponentStopped],
+            events: vec![EventType::ComponentStarted, EventType::ComponentStopped],
             singleton_events: vec![
                 SingletonEventType::DiagnosticsReady,
                 SingletonEventType::LogSinkRequested,
@@ -482,6 +482,15 @@ impl ArchivistState {
     }
 
     /// Updates the central repository to reference the new diagnostics source.
+    async fn handle_started(&self, component: ComponentIdentity) {
+        debug!(identity = %component, "Adding new component.");
+        if let Err(e) =
+            self.diagnostics_repo.write().await.add_new_component(component.clone()).await
+        {
+            error!(identity = %component, ?e, "Failed to add new component to repository");
+        }
+    }
+
     async fn handle_stopped(&self, component: ComponentIdentity) {
         debug!(identity = %component, "Component stopped");
         self.diagnostics_repo.write().await.mark_stopped(&component.unique_key()).await;
@@ -506,6 +515,9 @@ impl ArchivistState {
 impl EventConsumer for ArchivistState {
     async fn handle(self: Arc<Self>, event: Event) {
         match event.payload {
+            EventPayload::ComponentStarted(ComponentStartedPayload { component }) => {
+                self.handle_started(component).await;
+            }
             EventPayload::ComponentStopped(ComponentStoppedPayload { component }) => {
                 self.handle_stopped(component).await;
             }
@@ -559,7 +571,7 @@ mod tests {
         archivist.event_router.add_producer(ProducerConfig {
             producer: &mut fake_producer,
             producer_type: ProducerType::External,
-            events: vec![EventType::ComponentStopped],
+            events: vec![EventType::ComponentStarted, EventType::ComponentStopped],
             singleton_events: vec![
                 SingletonEventType::LogSinkRequested,
                 SingletonEventType::DiagnosticsReady,

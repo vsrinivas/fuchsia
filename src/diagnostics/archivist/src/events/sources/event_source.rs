@@ -172,6 +172,7 @@ pub mod tests {
     #[fuchsia::test]
     async fn event_stream() {
         let events = BTreeSet::from([
+            AnyEventType::General(EventType::ComponentStarted),
             AnyEventType::General(EventType::ComponentStopped),
             AnyEventType::Singleton(SingletonEventType::DiagnosticsReady),
         ]);
@@ -180,6 +181,40 @@ pub mod tests {
         let mut source = EventSource::new_for_test(stream_server).await.unwrap();
         source.set_dispatcher(dispatcher);
         let _task = fasync::Task::spawn(async move { source.spawn().await });
+
+        // Send a `Started` event.
+        sender
+            .unbounded_send(fsys::Event {
+                header: Some(fsys::EventHeader {
+                    event_type: Some(fsys::EventType::Started),
+                    moniker: Some("./foo/bar".to_string()),
+                    component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string()),
+                    timestamp: Some(zx::Time::get_monotonic().into_nanos()),
+                    ..fsys::EventHeader::EMPTY
+                }),
+                ..fsys::Event::EMPTY
+            })
+            .expect("send started event ok");
+
+        // Send a `Running` event.
+        sender
+            .unbounded_send(fsys::Event {
+                header: Some(fsys::EventHeader {
+                    event_type: Some(fsys::EventType::Running),
+                    moniker: Some("./foo/bar".to_string()),
+                    component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string()),
+                    timestamp: Some(zx::Time::get_monotonic().into_nanos()),
+                    ..fsys::EventHeader::EMPTY
+                }),
+                event_result: Some(fsys::EventResult::Payload(fsys::EventPayload::Running(
+                    fsys::RunningPayload {
+                        started_timestamp: Some(0),
+                        ..fsys::RunningPayload::EMPTY
+                    },
+                ))),
+                ..fsys::Event::EMPTY
+            })
+            .expect("send running event ok");
 
         // Send a `DirectoryReady` event for diagnostics.
         let (node, _) = fidl::endpoints::create_request_stream::<fio::NodeMarker>().unwrap();
@@ -224,6 +259,30 @@ pub mod tests {
             "fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx",
         );
 
+        // Assert the first received event was a Start event.
+        let event = event_stream.next().await.unwrap();
+        compare_events_ignore_timestamp_and_payload(
+            event,
+            Event {
+                timestamp: zx::Time::get_monotonic(),
+                payload: EventPayload::ComponentStarted(ComponentStartedPayload {
+                    component: expected_identity.clone(),
+                }),
+            },
+        );
+
+        // Assert the second received event was a Running event.
+        let event = event_stream.next().await.unwrap();
+        compare_events_ignore_timestamp_and_payload(
+            event,
+            Event {
+                timestamp: zx::Time::from_nanos(0),
+                payload: EventPayload::ComponentStarted(ComponentStartedPayload {
+                    component: expected_identity.clone(),
+                }),
+            },
+        );
+
         // Assert the third received event was a DirectoryReady event for diagnostics.
         let event = event_stream.next().await.unwrap();
         match event.payload {
@@ -252,6 +311,12 @@ pub mod tests {
         // requires multi-case match arms to have variable bindings be the same type in every
         // case. This isn't doable in our polymorphic event enums.
         match (event1.payload, event2.payload) {
+            (
+                EventPayload::ComponentStarted(ComponentStartedPayload { component: x, .. }),
+                EventPayload::ComponentStarted(ComponentStartedPayload { component: y, .. }),
+            ) => {
+                assert_eq!(x, y);
+            }
             (
                 EventPayload::ComponentStopped(ComponentStoppedPayload { component: x, .. }),
                 EventPayload::ComponentStopped(ComponentStoppedPayload { component: y, .. }),

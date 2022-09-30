@@ -44,6 +44,16 @@
             to: "#archivist",
         },
         {
+            event_stream: "running_v2",
+            from: "parent",
+            to: "#archivist",
+        },
+        {
+            event_stream: "started_v2",
+            from: "parent",
+            to: "#archivist",
+        },
+        {
             event_stream: "stopped_v2",
             from: "parent",
             to: "#archivist",

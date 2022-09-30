@@ -273,6 +273,46 @@ impl DataRepoState {
         }
     }
 
+    pub async fn add_new_component(&mut self, identity: ComponentIdentity) -> Result<(), Error> {
+        let unique_key: Vec<_> = identity.unique_key().into();
+        let diag_repo_entry_opt = self.data_directories.get_mut(&unique_key);
+        match diag_repo_entry_opt {
+            Some(diag_repo_entry) => {
+                let diag_repo_entry_values: &mut [ComponentDiagnostics] =
+                    diag_repo_entry.get_values_mut();
+
+                match &mut *diag_repo_entry_values {
+                    [] => {
+                        // An entry with no values implies that the somehow we observed the
+                        // creation of a component lower in the topology before observing this
+                        // one. If this is the case, just instantiate as though it's our first
+                        // time encountering this moniker segment.
+                        self.data_directories.insert(
+                            unique_key,
+                            ComponentDiagnostics::empty(Arc::new(identity), &self.inspect_node),
+                        )
+                    }
+                    [existing_diagnostics_artifact_container] => {
+                        // Races may occur between seeing diagnostics ready and seeing
+                        // creation lifecycle events. Handle this here.
+                        // TODO(fxbug.dev/52047): Remove once caching handles ordering issues.
+                        existing_diagnostics_artifact_container.mark_started().await;
+                    }
+                    _ => {
+                        return Err(Error::MultipleArtifactContainers(unique_key));
+                    }
+                }
+            }
+            // This case is expected to be the most common case. We've seen a creation
+            // lifecycle event and it promotes the instantiation of a new data repository entry.
+            None => self.data_directories.insert(
+                unique_key,
+                ComponentDiagnostics::empty(Arc::new(identity), &self.inspect_node),
+            ),
+        }
+        Ok(())
+    }
+
     /// Returns a container for logs artifacts, constructing one and adding it to the trie if
     /// necessary.
     pub async fn get_log_container(
@@ -382,6 +422,7 @@ impl DataRepoState {
                         // Races may occur between synthesized and real diagnostics_ready
                         // events, so we must handle de-duplication here.
                         // TODO(fxbug.dev/52047): Remove once caching handles ordering issues.
+                        existing_diagnostics_artifact_container.mark_started().await;
                         if existing_diagnostics_artifact_container.inspect.is_none() {
                             // This is expected to be the most common case. We've encountered the
                             // diagnostics_ready event for a component that has already been
@@ -600,6 +641,9 @@ mod tests {
 
         let component_id = ComponentIdentifier::Legacy { instance_id, moniker };
         let identity = ComponentIdentity::from_identifier_and_url(component_id, TEST_URL);
+
+        data_repo.add_new_component(identity.clone()).await.expect("instantiated new component.");
+
         let (proxy, _) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
             .expect("create directory proxy");
 
@@ -621,7 +665,53 @@ mod tests {
     }
 
     #[fuchsia::test]
-    async fn diagnostics_repo_cant_have_more_than_one_diagnostics_data_container_per_component() {
+    async fn data_repo_tolerates_duplicate_new_component_insertions() {
+        let data_repo = DataRepo::default();
+        let mut data_repo = data_repo.write().await;
+        let moniker = vec!["a", "b", "foo.cmx"].into();
+        let instance_id = "1234".to_string();
+
+        let component_id = ComponentIdentifier::Legacy { instance_id, moniker };
+        let identity = ComponentIdentity::from_identifier_and_url(component_id.clone(), TEST_URL);
+
+        data_repo.add_new_component(identity.clone()).await.expect("instantiated new component.");
+
+        let duplicate_new_component_insertion = data_repo.add_new_component(identity.clone()).await;
+
+        assert!(duplicate_new_component_insertion.is_ok());
+
+        let repo_values =
+            data_repo.data_directories.get(&identity.unique_key().into()).unwrap().get_values();
+        assert_eq!(repo_values.len(), 1);
+        let entry = &repo_values[0];
+        assert_eq!(entry.identity.relative_moniker, component_id.relative_moniker_for_selectors());
+        assert_eq!(entry.identity.url, TEST_URL);
+    }
+
+    #[fuchsia::test]
+    async fn running_components_provide_start_time() {
+        let data_repo = DataRepo::default();
+        let mut data_repo = data_repo.write().await;
+        let moniker = vec!["a", "b", "foo.cmx"].into();
+        let instance_id = "1234".to_string();
+
+        let component_id = ComponentIdentifier::Legacy { instance_id, moniker };
+        let identity = ComponentIdentity::from_identifier_and_url(component_id.clone(), TEST_URL);
+
+        let component_insertion = data_repo.add_new_component(identity.clone()).await;
+
+        assert!(component_insertion.is_ok());
+
+        let repo_values =
+            data_repo.data_directories.get(&identity.unique_key().into()).unwrap().get_values();
+        assert_eq!(repo_values.len(), 1);
+        let entry = &repo_values[0];
+        assert_eq!(entry.identity.relative_moniker, component_id.relative_moniker_for_selectors());
+        assert_eq!(entry.identity.url, TEST_URL);
+    }
+
+    #[fuchsia::test]
+    async fn data_repo_tolerant_of_new_component_calls_if_diagnostics_ready_already_processed() {
         let data_repo = DataRepo::default();
         let mut data_repo = data_repo.write().await;
         let moniker = vec!["a", "b", "foo.cmx"].into();
@@ -632,7 +722,50 @@ mod tests {
 
         let (proxy, _) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
             .expect("create directory proxy");
+
         data_repo.add_inspect_artifacts(identity.clone(), proxy).await.expect("add to repo");
+
+        let false_new_component_result = data_repo.add_new_component(identity.clone()).await;
+        assert!(false_new_component_result.is_ok());
+
+        // We shouldn't have overwritten the entry. There should still be an inspect
+        // artifacts container.
+        assert_eq!(
+            data_repo
+                .data_directories
+                .get(&identity.unique_key().into())
+                .unwrap()
+                .get_values()
+                .len(),
+            1
+        );
+        let entry =
+            &data_repo.data_directories.get(&identity.unique_key().into()).unwrap().get_values()[0];
+        assert_eq!(entry.identity.url, TEST_URL);
+        assert!(entry.inspect.is_some());
+    }
+
+    #[fuchsia::test]
+    async fn diagnostics_repo_cant_have_more_than_one_diagnostics_data_container_per_component() {
+        let data_repo = DataRepo::default();
+        let mut data_repo = data_repo.write().await;
+        let moniker = vec!["a", "b", "foo.cmx"].into();
+        let instance_id = "1234".to_string();
+
+        let component_id = ComponentIdentifier::Legacy { instance_id, moniker };
+        let identity = ComponentIdentity::from_identifier_and_url(component_id, TEST_URL);
+
+        data_repo.add_new_component(identity.clone()).await.expect("insertion will succeed.");
+
+        assert_eq!(
+            data_repo
+                .data_directories
+                .get(&identity.unique_key().into())
+                .unwrap()
+                .get_values()
+                .len(),
+            1
+        );
 
         let mutable_values = data_repo
             .data_directories
@@ -663,6 +796,13 @@ mod tests {
         data_repo
             .write()
             .await
+            .add_new_component(identity.clone())
+            .await
+            .expect("insertion will succeed.");
+
+        data_repo
+            .write()
+            .await
             .add_inspect_artifacts(
                 identity,
                 fuchsia_fs::directory::open_in_namespace(
@@ -681,6 +821,13 @@ mod tests {
             moniker: moniker.into(),
         };
         let identity2 = ComponentIdentity::from_identifier_and_url(component_id2, TEST_URL);
+
+        data_repo
+            .write()
+            .await
+            .add_new_component(identity2.clone())
+            .await
+            .expect("insertion will succeed.");
 
         data_repo
             .write()

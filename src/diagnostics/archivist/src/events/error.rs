@@ -31,6 +31,9 @@ pub enum EventError {
     #[error("missing `{0}`")]
     MissingField(&'static str),
 
+    #[error("running event didn't encode start timestamp.")]
+    MissingStartTimestamp,
+
     #[error("Error converting node to directory: {0:?}")]
     NodeToDirectory(#[source] anyhow::Error),
 

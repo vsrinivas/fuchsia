@@ -759,7 +759,9 @@ async fn get_realm(
     wrapper_realm
         .add_route(
             Route::new()
+                .capability(Capability::event(Event::Started))
                 .capability(Capability::event(Event::Stopped))
+                .capability(Capability::event(Event::Running))
                 .capability(Capability::event(Event::directory_ready("diagnostics")))
                 .capability(Capability::event(Event::capability_requested(
                     "fuchsia.logger.LogSink",
@@ -772,6 +774,8 @@ async fn get_realm(
     wrapper_realm
         .add_route(
             Route::new()
+                .capability(Capability::event_stream("started_v2"))
+                .capability(Capability::event_stream("running_v2"))
                 .capability(Capability::event_stream("stopped_v2"))
                 .capability(Capability::event_stream("destroyed_v2"))
                 .capability(Capability::event_stream("capability_requested_v2"))

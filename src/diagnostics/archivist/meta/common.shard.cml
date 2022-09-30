@@ -20,7 +20,11 @@
     ],
     use: [
         {
-            event: [ "stopped" ],
+            event: [
+                "running",
+                "started",
+                "stopped",
+            ],
             from: "parent",
         },
         {
@@ -38,6 +42,8 @@
             subscriptions: [
                 { event: "diagnostics_ready" },
                 { event: "log_sink_requested" },
+                { event: "running" },
+                { event: "started" },
                 { event: "stopped" },
             ],
         },
@@ -54,7 +60,11 @@
             filter: { name: "fuchsia.logger.LogSink" },
         },
         {
-            event_stream: [ "stopped_v2" ],
+            event_stream: [
+                "running_v2",
+                "started_v2",
+                "stopped_v2",
+            ],
             from: "parent",
             path: "/events/lifecycle_event_stream",
         },

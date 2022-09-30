@@ -82,6 +82,7 @@ pub enum AnyEventType {
 /// Event types that don't contain singleton data and can be cloned directly.
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum EventType {
+    ComponentStarted,
     ComponentStopped,
 }
 
@@ -120,6 +121,7 @@ impl From<EventType> for AnyEventType {
 impl AsRef<str> for EventType {
     fn as_ref(&self) -> &str {
         match &self {
+            Self::ComponentStarted => "component_started",
             Self::ComponentStopped => "component_stopped",
         }
     }
@@ -146,6 +148,7 @@ impl Event {
 
     pub fn ty(&self) -> AnyEventType {
         match &self.payload {
+            EventPayload::ComponentStarted(_) => EventType::ComponentStarted.into(),
             EventPayload::ComponentStopped(_) => EventType::ComponentStopped.into(),
             EventPayload::DiagnosticsReady(_) => SingletonEventType::DiagnosticsReady.into(),
             EventPayload::LogSinkRequested(_) => SingletonEventType::LogSinkRequested.into(),
@@ -156,9 +159,17 @@ impl Event {
 /// The contents of the event depending on the type of event.
 #[derive(Debug, Clone)]
 pub enum EventPayload {
+    ComponentStarted(ComponentStartedPayload),
     ComponentStopped(ComponentStoppedPayload),
     DiagnosticsReady(DiagnosticsReadyPayload),
     LogSinkRequested(LogSinkRequestedPayload),
+}
+
+/// Payload for a started event.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ComponentStartedPayload {
+    /// The component that started.
+    pub component: ComponentIdentity,
 }
 
 /// Payload for a stopped event.
@@ -346,6 +357,26 @@ impl TryFrom<fsys::Event> for Event {
         );
 
         match event.header.event_type {
+            fsys::EventType::Started | fsys::EventType::Running => {
+                let timestamp = match event.event_result {
+                    Some(fsys::EventResult::Payload(fsys::EventPayload::Started(_))) | None => {
+                        event.header.timestamp
+                    }
+                    Some(fsys::EventResult::Payload(fsys::EventPayload::Running(payload))) => {
+                        match payload.started_timestamp {
+                            Some(timestamp) => timestamp,
+                            None => return Err(EventError::MissingStartTimestamp),
+                        }
+                    }
+                    Some(result) => return Err(EventError::UnknownResult(result)),
+                };
+                Ok(Event {
+                    timestamp: zx::Time::from_nanos(timestamp),
+                    payload: EventPayload::ComponentStarted(ComponentStartedPayload {
+                        component: identity,
+                    }),
+                })
+            }
             fsys::EventType::Stopped => Ok(Event {
                 timestamp: zx::Time::from_nanos(event.header.timestamp),
                 payload: EventPayload::ComponentStopped(ComponentStoppedPayload {

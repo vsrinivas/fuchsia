@@ -423,7 +423,8 @@ impl EventStreamLogger {
         }
         // TODO(fxbug.dev/92374): leverage string references for the payload.
         match &event.payload {
-            EventPayload::ComponentStopped(ComponentStoppedPayload { component })
+            EventPayload::ComponentStarted(ComponentStartedPayload { component })
+            | EventPayload::ComponentStopped(ComponentStoppedPayload { component })
             | EventPayload::DiagnosticsReady(DiagnosticsReadyPayload { component, .. })
             | EventPayload::LogSinkRequested(LogSinkRequestedPayload { component, .. }) => {
                 self.log_inspect(ty.as_ref(), component);
@@ -544,6 +545,12 @@ mod tests {
     impl TestEventProducer {
         async fn emit(&mut self, event_type: AnyEventType, identity: ComponentIdentity) {
             let event = match event_type {
+                AnyEventType::General(EventType::ComponentStarted) => Event {
+                    timestamp: zx::Time::from_nanos(FAKE_TIMESTAMP),
+                    payload: EventPayload::ComponentStarted(ComponentStartedPayload {
+                        component: identity,
+                    }),
+                },
                 AnyEventType::General(EventType::ComponentStopped) => Event {
                     timestamp: zx::Time::from_nanos(FAKE_TIMESTAMP),
                     payload: EventPayload::ComponentStopped(ComponentStoppedPayload {
@@ -601,13 +608,13 @@ mod tests {
         router.add_producer(ProducerConfig {
             producer: &mut producer,
             producer_type: ProducerType::Internal,
-            events: vec![],
-            singleton_events: vec![SingletonEventType::DiagnosticsReady],
+            events: vec![EventType::ComponentStarted],
+            singleton_events: vec![],
         });
         router.add_consumer(ConsumerConfig {
             consumer: &consumer,
             events: vec![EventType::ComponentStopped],
-            singleton_events: vec![SingletonEventType::DiagnosticsReady],
+            singleton_events: vec![],
         });
 
         // An explicit match is needed here since unwrap_err requires Debug implemented for both T
@@ -617,7 +624,9 @@ mod tests {
             Err(err) => {
                 assert_matches!(
                     err,
-                    RouterError::MissingProducer(AnyEventType::General(
+                    RouterError::MissingConsumer(AnyEventType::General(
+                        EventType::ComponentStarted
+                    )) | RouterError::MissingProducer(AnyEventType::General(
                         EventType::ComponentStopped
                     ))
                 );
@@ -727,17 +736,17 @@ mod tests {
         router.add_producer(ProducerConfig {
             producer: &mut producer,
             producer_type: ProducerType::External,
-            events: vec![EventType::ComponentStopped],
+            events: vec![EventType::ComponentStarted],
             singleton_events: vec![],
         });
         router.add_consumer(ConsumerConfig {
             consumer: &first_consumer,
-            events: vec![EventType::ComponentStopped],
+            events: vec![EventType::ComponentStarted],
             singleton_events: vec![],
         });
         router.add_consumer(ConsumerConfig {
             consumer: &second_consumer,
-            events: vec![EventType::ComponentStopped],
+            events: vec![EventType::ComponentStarted],
             singleton_events: vec![],
         });
 
@@ -750,7 +759,7 @@ mod tests {
             .dispatcher
             .emit(Event {
                 timestamp,
-                payload: EventPayload::ComponentStopped(ComponentStoppedPayload {
+                payload: EventPayload::ComponentStarted(ComponentStartedPayload {
                     component: IDENTITY.clone(),
                 }),
             })
@@ -760,16 +769,16 @@ mod tests {
         // Both consumers receive the exact same event.
         let first_event = first_receiver.next().await.unwrap();
         assert_matches!(first_event, Event {
-            payload: EventPayload::ComponentStopped(payload),
+            payload: EventPayload::ComponentStarted(payload),
             ..
         } => {
-            assert_eq!(payload, ComponentStoppedPayload { component: IDENTITY.clone() });
+            assert_eq!(payload, ComponentStartedPayload { component: IDENTITY.clone() });
         });
         let second_event = second_receiver.next().await.unwrap();
         assert_matches!(
             second_event,
-            Event { timestamp: t, payload: EventPayload::ComponentStopped(payload) } => {
-                assert_eq!(payload, ComponentStoppedPayload { component: IDENTITY.clone() });
+            Event { timestamp: t, payload: EventPayload::ComponentStarted(payload) } => {
+                assert_eq!(payload, ComponentStartedPayload { component: IDENTITY.clone() });
                 assert_eq!(timestamp, t);
             }
         );
@@ -785,22 +794,22 @@ mod tests {
         router.add_producer(ProducerConfig {
             producer: &mut producer,
             producer_type: ProducerType::Internal,
-            events: vec![EventType::ComponentStopped],
+            events: vec![EventType::ComponentStarted],
             singleton_events: vec![],
         });
         router.add_consumer(ConsumerConfig {
             consumer: &first_consumer,
-            events: vec![EventType::ComponentStopped],
+            events: vec![EventType::ComponentStarted],
             singleton_events: vec![],
         });
         router.add_consumer(ConsumerConfig {
             consumer: &second_consumer,
-            events: vec![EventType::ComponentStopped],
+            events: vec![EventType::ComponentStarted],
             singleton_events: vec![],
         });
         router.add_consumer(ConsumerConfig {
             consumer: &third_consumer,
-            events: vec![EventType::ComponentStopped],
+            events: vec![EventType::ComponentStarted],
             singleton_events: vec![],
         });
 
@@ -815,7 +824,7 @@ mod tests {
             .dispatcher
             .emit(Event {
                 timestamp: zx::Time::get_monotonic(),
-                payload: EventPayload::ComponentStopped(ComponentStoppedPayload {
+                payload: EventPayload::ComponentStarted(ComponentStartedPayload {
                     component: IDENTITY.clone(),
                 }),
             })
@@ -824,7 +833,7 @@ mod tests {
 
         // We see the event only in the receiver which consumer wasn't dropped.
         let event = second_receiver.next().await.unwrap();
-        assert_matches!(event.payload, EventPayload::ComponentStopped(_));
+        assert_matches!(event.payload, EventPayload::ComponentStarted(_));
         assert!(first_receiver.next().now_or_never().unwrap().is_none());
         assert!(third_receiver.next().now_or_never().unwrap().is_none());
 
@@ -833,14 +842,14 @@ mod tests {
             .dispatcher
             .emit(Event {
                 timestamp: zx::Time::get_monotonic(),
-                payload: EventPayload::ComponentStopped(ComponentStoppedPayload {
+                payload: EventPayload::ComponentStarted(ComponentStartedPayload {
                     component: IDENTITY.clone(),
                 }),
             })
             .await
             .unwrap();
         let event = second_receiver.next().await.unwrap();
-        assert_matches!(event.payload, EventPayload::ComponentStopped(_));
+        assert_matches!(event.payload, EventPayload::ComponentStarted(_));
         assert!(first_receiver.next().now_or_never().unwrap().is_none());
         assert!(third_receiver.next().now_or_never().unwrap().is_none());
     }
@@ -854,7 +863,7 @@ mod tests {
         let (receiver, consumer) = TestEventConsumer::new();
         router.add_consumer(ConsumerConfig {
             consumer: &consumer,
-            events: vec![EventType::ComponentStopped],
+            events: vec![EventType::ComponentStarted, EventType::ComponentStopped],
             singleton_events: vec![
                 SingletonEventType::LogSinkRequested,
                 SingletonEventType::DiagnosticsReady,
@@ -863,16 +872,19 @@ mod tests {
         router.add_producer(ProducerConfig {
             producer: &mut producer1,
             producer_type: ProducerType::Internal,
-            events: vec![EventType::ComponentStopped],
+            events: vec![EventType::ComponentStarted, EventType::ComponentStopped],
             singleton_events: vec![SingletonEventType::DiagnosticsReady],
         });
         router.add_producer(ProducerConfig {
             producer: &mut producer2,
             producer_type: ProducerType::Internal,
-            events: vec![],
+            events: vec![EventType::ComponentStarted],
             singleton_events: vec![SingletonEventType::LogSinkRequested],
         });
 
+        producer1
+            .emit(AnyEventType::General(EventType::ComponentStarted), LEGACY_IDENTITY.clone())
+            .await;
         producer1
             .emit(
                 AnyEventType::Singleton(SingletonEventType::DiagnosticsReady),
@@ -883,6 +895,7 @@ mod tests {
             .emit(AnyEventType::General(EventType::ComponentStopped), LEGACY_IDENTITY.clone())
             .await;
 
+        producer2.emit(AnyEventType::General(EventType::ComponentStarted), IDENTITY.clone()).await;
         producer2
             .emit(AnyEventType::Singleton(SingletonEventType::LogSinkRequested), IDENTITY.clone())
             .await;
@@ -890,11 +903,15 @@ mod tests {
         // Consume the events.
         let (_terminate_handle, fut) = router.start(RouterOptions::default()).unwrap();
         let _router_task = fasync::Task::spawn(fut);
-        receiver.take(3).collect::<Vec<_>>().await;
+        fasync::Task::spawn(async move {
+            receiver.take(5).collect::<Vec<_>>().await;
+        })
+        .await;
 
         assert_data_tree!(inspector, root: {
             events: {
                 event_counts: {
+                    component_started: 2u64,
                     component_stopped: 1u64,
                     diagnostics_ready: 1u64,
                     log_sink_requested: 1u64
@@ -902,15 +919,25 @@ mod tests {
                 recent_events: {
                     "0": {
                         "@time": inspect::testing::AnyProperty,
-                        event: "diagnostics_ready",
+                        event: "component_started",
                         moniker: "a/b/foo.cmx:12345"
                     },
                     "1": {
                         "@time": inspect::testing::AnyProperty,
-                        event: "component_stopped",
+                        event: "diagnostics_ready",
                         moniker: "a/b/foo.cmx:12345"
                     },
                     "2": {
+                        "@time": inspect::testing::AnyProperty,
+                        event: "component_stopped",
+                        moniker: "a/b/foo.cmx:12345"
+                    },
+                    "3": {
+                        "@time": inspect::testing::AnyProperty,
+                        event: "component_started",
+                        moniker: "a/b"
+                    },
+                    "4": {
                         "@time": inspect::testing::AnyProperty,
                         event: "log_sink_requested",
                         moniker: "a/b"
@@ -929,13 +956,13 @@ mod tests {
         let (receiver, consumer) = TestEventConsumer::new();
         router.add_consumer(ConsumerConfig {
             consumer: &consumer,
-            events: vec![EventType::ComponentStopped],
+            events: vec![EventType::ComponentStarted, EventType::ComponentStopped],
             singleton_events: vec![],
         });
         router.add_producer(ProducerConfig {
             producer: &mut producer1,
             producer_type: ProducerType::Internal,
-            events: vec![EventType::ComponentStopped],
+            events: vec![EventType::ComponentStarted],
             singleton_events: vec![],
         });
         router.add_producer(ProducerConfig {
@@ -945,17 +972,14 @@ mod tests {
             singleton_events: vec![],
         });
 
-        let identity = |moniker| {
-            ComponentIdentity::from_identifier_and_url(
-                ComponentIdentifier::parse_from_moniker(moniker).unwrap(),
-                TEST_URL,
-            )
-        };
-
-        producer1.emit(AnyEventType::General(EventType::ComponentStopped), identity("./b")).await;
-        producer1.emit(AnyEventType::General(EventType::ComponentStopped), identity("./d")).await;
-        producer2.emit(AnyEventType::General(EventType::ComponentStopped), identity("./a")).await;
-        producer2.emit(AnyEventType::General(EventType::ComponentStopped), identity("./c")).await;
+        producer1
+            .emit(AnyEventType::General(EventType::ComponentStarted), LEGACY_IDENTITY.clone())
+            .await;
+        producer1.emit(AnyEventType::General(EventType::ComponentStarted), IDENTITY.clone()).await;
+        producer2
+            .emit(AnyEventType::General(EventType::ComponentStopped), LEGACY_IDENTITY.clone())
+            .await;
+        producer2.emit(AnyEventType::General(EventType::ComponentStopped), IDENTITY.clone()).await;
 
         // We should see an event from each producer followed by an event from the other producer.
         // Also events from each producer must be in order.
@@ -964,10 +988,10 @@ mod tests {
         let events = receiver.take(4).collect::<Vec<_>>().await;
 
         let expected_events = vec![
-            stopped(identity("./a")),
-            stopped(identity("./b")),
-            stopped(identity("./c")),
-            stopped(identity("./d")),
+            stopped(LEGACY_IDENTITY.clone()),
+            started(LEGACY_IDENTITY.clone()),
+            stopped(IDENTITY.clone()),
+            started(IDENTITY.clone()),
         ];
         assert_eq!(events.len(), expected_events.len());
         for (event, expected_event) in std::iter::zip(events, expected_events) {
@@ -984,13 +1008,13 @@ mod tests {
         let (mut receiver, consumer) = TestEventConsumer::new();
         router.add_consumer(ConsumerConfig {
             consumer: &consumer,
-            events: vec![EventType::ComponentStopped],
+            events: vec![EventType::ComponentStarted, EventType::ComponentStopped],
             singleton_events: vec![],
         });
         router.add_producer(ProducerConfig {
             producer: &mut internal_producer,
             producer_type: ProducerType::Internal,
-            events: vec![EventType::ComponentStopped],
+            events: vec![EventType::ComponentStarted],
             singleton_events: vec![],
         });
         router.add_producer(ProducerConfig {
@@ -1001,7 +1025,7 @@ mod tests {
         });
 
         internal_producer
-            .emit(AnyEventType::General(EventType::ComponentStopped), LEGACY_IDENTITY.clone())
+            .emit(AnyEventType::General(EventType::ComponentStarted), IDENTITY.clone())
             .await;
         external_producer
             .emit(AnyEventType::General(EventType::ComponentStopped), IDENTITY.clone())
@@ -1013,7 +1037,7 @@ mod tests {
         let drain_finished = fasync::Task::spawn(async move { on_drained.await });
 
         assert_event(receiver.next().await.unwrap(), stopped(IDENTITY.clone()));
-        assert_event(receiver.next().await.unwrap(), stopped(LEGACY_IDENTITY.clone()));
+        assert_event(receiver.next().await.unwrap(), started(IDENTITY.clone()));
 
         // This future must be complete now.
         drain_finished.await;
@@ -1025,14 +1049,20 @@ mod tests {
             .await;
         assert!(receiver.next().now_or_never().is_none());
         internal_producer
-            .emit(AnyEventType::General(EventType::ComponentStopped), LEGACY_IDENTITY.clone())
+            .emit(AnyEventType::General(EventType::ComponentStarted), IDENTITY.clone())
             .await;
-        assert_event(receiver.next().await.unwrap(), stopped(LEGACY_IDENTITY.clone()));
+        assert_event(receiver.next().await.unwrap(), started(IDENTITY.clone()));
     }
 
     fn assert_event(event: Event, other: Event) {
         assert_eq!(event.timestamp, other.timestamp);
         match (event.payload, other.payload) {
+            (
+                EventPayload::ComponentStarted(payload),
+                EventPayload::ComponentStarted(other_payload),
+            ) => {
+                assert_eq!(payload, other_payload);
+            }
             (
                 EventPayload::ComponentStopped(payload),
                 EventPayload::ComponentStopped(other_payload),
@@ -1040,6 +1070,15 @@ mod tests {
                 assert_eq!(payload, other_payload);
             }
             _ => unimplemented!("no other combinations are expected in these tests"),
+        }
+    }
+
+    fn started(identity: ComponentIdentity) -> Event {
+        Event {
+            timestamp: zx::Time::from_nanos(FAKE_TIMESTAMP),
+            payload: EventPayload::ComponentStarted(ComponentStartedPayload {
+                component: identity,
+            }),
         }
     }
 

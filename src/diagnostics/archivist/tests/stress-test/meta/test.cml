@@ -39,7 +39,11 @@
             to: "#archivist",
         },
         {
-            event: [ "stopped" ],
+            event: [
+                "running",
+                "started",
+                "stopped",
+            ],
             from: "framework",
             to: "#archivist",
         },

@@ -32,7 +32,7 @@ use {
 /// causing `ArchiveAccessor` to ignore this component until it restarts. If `logs` is
 /// empty at that point, this struct should be removed from the DataRepo.
 ///
-/// See [`ComponentDiagnostics::mark_stopped`] and
+/// See [`ComponentDiagnostics::mark_stopped`], [`ComponentDiagnostics::mark_started`], and
 /// [`ComponentDiagnostics::should_retain`] for the implementations of this behavior.
 #[non_exhaustive]
 pub struct ComponentDiagnostics {
@@ -100,6 +100,16 @@ impl ComponentDiagnostics {
     /// Return a cursor over messages from this component with the given `mode`.
     pub fn logs_cursor(&self, mode: StreamMode) -> Option<PinStream<Arc<LogsData>>> {
         self.logs.as_ref().map(|l| l.cursor(mode))
+    }
+
+    /// Ensure this container is marked as live even if the component it represents had previously
+    /// stopped.
+    pub async fn mark_started(&mut self) {
+        debug!(%self.identity, "Marking component as started.");
+        self.is_live = true;
+        if let Some(logs) = &self.logs {
+            logs.mark_started().await;
+        }
     }
 
     /// Mark this container as stopped -- the component is no longer running and we should not

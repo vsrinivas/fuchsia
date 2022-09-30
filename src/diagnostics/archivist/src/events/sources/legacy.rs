@@ -52,8 +52,8 @@ impl ComponentEventProvider {
         self.proxy.set_listener(events_client_end)?;
         while let Some(request) = stream.next().await {
             match request {
-                Ok(ComponentEventListenerRequest::OnStart { .. }) => {
-                    // Ignore started events, we have no use for them anymore.
+                Ok(ComponentEventListenerRequest::OnStart { component, .. }) => {
+                    break_on_disconnect!(self.handle_on_start(component).await);
                 }
                 Ok(ComponentEventListenerRequest::OnDiagnosticsDirReady {
                     component,
@@ -72,6 +72,17 @@ impl ComponentEventProvider {
                 }
             }
         }
+        Ok(())
+    }
+
+    async fn handle_on_start(&mut self, component: SourceIdentity) -> Result<(), EventError> {
+        let component = ComponentIdentity::try_from(component)?;
+        self.dispatcher
+            .emit(Event {
+                timestamp: zx::Time::get_monotonic(),
+                payload: EventPayload::ComponentStarted(ComponentStartedPayload { component }),
+            })
+            .await?;
         Ok(())
     }
 
@@ -168,6 +179,7 @@ mod tests {
         let (mut provider, listener_receiver) = spawn_fake_component_event_provider();
         let events = BTreeSet::from([
             AnyEventType::Singleton(SingletonEventType::DiagnosticsReady),
+            AnyEventType::General(EventType::ComponentStarted),
             AnyEventType::General(EventType::ComponentStopped),
         ]);
 
@@ -193,6 +205,15 @@ mod tests {
             .on_diagnostics_dir_ready(identity.clone().into(), dir)
             .expect("failed to send event 2");
         listener.on_stop(identity.clone().into()).expect("failed to send event 3");
+
+        let event = event_stream.next().await.unwrap();
+        let expected_event = Event {
+            timestamp: zx::Time::get_monotonic(),
+            payload: EventPayload::ComponentStarted(ComponentStartedPayload {
+                component: identity.clone().into(),
+            }),
+        };
+        compare_events_ignore_timestamp_and_payload(event, expected_event);
 
         let event = event_stream.next().await.unwrap();
         match event.payload {
