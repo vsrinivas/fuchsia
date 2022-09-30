@@ -8,6 +8,12 @@
 
 #include <gtest/gtest.h>
 
+#include "fidl/fuchsia.audio.effects/cpp/markers.h"
+#include "fidl/fuchsia.audio.effects/cpp/wire_types.h"
+#include "fidl/fuchsia.audio.mixer/cpp/natural_types.h"
+#include "fidl/fuchsia.mediastreams/cpp/wire_types.h"
+#include "fidl/fuchsia.mem/cpp/wire_types.h"
+#include "lib/fidl/cpp/wire/arena.h"
 #include "src/media/audio/lib/clock/testing/clock_test.h"
 #include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/common/testing/test_server_and_client.h"
@@ -18,6 +24,8 @@
 
 namespace media_audio {
 namespace {
+
+using ::fuchsia_audio_mixer::CreateNodeError;
 
 const Format kFormat = Format::CreateOrDie({
     .sample_type = ::fuchsia_audio::SampleType::kFloat32,
@@ -45,7 +53,10 @@ zx::clock MakeClock() {
 }
 
 fuchsia_audio_mixer::wire::ReferenceClock MakeReferenceClock(fidl::AnyArena& arena) {
-  return fuchsia_audio_mixer::wire::ReferenceClock::Builder(arena).handle(MakeClock()).Build();
+  return fuchsia_audio_mixer::wire::ReferenceClock::Builder(arena)
+      .handle(MakeClock())
+      .domain(Clock::kMonotonicDomain)
+      .Build();
 }
 
 zx::vmo MakeVmo(size_t size = 1024) {
@@ -116,6 +127,35 @@ MakeDefaultCreateThreadRequest(fidl::AnyArena& arena) {
   return builder;
 }
 
+fidl::WireTableBuilder<fuchsia_audio_effects::wire::ProcessorConfiguration>
+MakeDefaultProcessorConfig(fidl::AnyArena& arena) {
+  auto builder = fuchsia_audio_effects::wire::ProcessorConfiguration::Builder(arena);
+  builder.block_size_frames(1);
+  builder.max_frames_per_call(1);
+
+  fidl::VectorView<fuchsia_audio_effects::wire::InputConfiguration> inputs(arena, 1);
+  inputs.at(0) = fuchsia_audio_effects::wire::InputConfiguration::Builder(arena)
+                     .buffer(fuchsia_mem::wire::Range{.vmo = MakeVmo(), .offset = 0, .size = 1024})
+                     .format(kFormat.ToLegacyFidl())
+                     .Build();
+  builder.inputs(fidl::ObjectView{arena, inputs});
+
+  fidl::VectorView<fuchsia_audio_effects::wire::OutputConfiguration> outputs(arena, 1);
+  outputs.at(0) = fuchsia_audio_effects::wire::OutputConfiguration::Builder(arena)
+                      .buffer(fuchsia_mem::wire::Range{.vmo = MakeVmo(), .offset = 0, .size = 1024})
+                      .format(kFormat.ToLegacyFidl())
+                      .latency_frames(0)
+                      .ring_out_frames(0)
+                      .Build();
+  builder.outputs(fidl::ObjectView{arena, outputs});
+
+  auto endpoints = fidl::CreateEndpoints<fuchsia_audio_effects::Processor>();
+  FX_CHECK(endpoints.is_ok());
+  builder.processor(std::move(endpoints->client));
+
+  return builder;
+}
+
 // Testing strategy: we test all error cases implemented in graph_server.cc and very high-level
 // success cases. We leave graph behavior testing (e.g. mixing) for integration tests.
 class GraphServerTest : public ::testing::Test {
@@ -157,7 +197,7 @@ TEST_F(GraphServerTest, CreateProducerFailsMissingDirection) {
 
   ASSERT_TRUE(result.ok()) << result;
   ASSERT_TRUE(result->is_error());
-  ASSERT_EQ(result->error_value(), fuchsia_audio_mixer::CreateNodeError::kMissingRequiredField);
+  ASSERT_EQ(result->error_value(), CreateNodeError::kMissingRequiredField);
 }
 
 TEST_F(GraphServerTest, CreateProducerFailsMissingDataSource) {
@@ -170,7 +210,7 @@ TEST_F(GraphServerTest, CreateProducerFailsMissingDataSource) {
 
   ASSERT_TRUE(result.ok()) << result;
   ASSERT_TRUE(result->is_error());
-  ASSERT_EQ(result->error_value(), fuchsia_audio_mixer::CreateNodeError::kMissingRequiredField);
+  ASSERT_EQ(result->error_value(), CreateNodeError::kMissingRequiredField);
 }
 
 TEST_F(GraphServerTest, CreateProducerFailsUnknownDataSource) {
@@ -199,12 +239,10 @@ TEST_F(GraphServerTest, CreateProducerFailsUnknownDataSource) {
 
   ASSERT_TRUE(result.ok()) << result;
   ASSERT_TRUE(result->is_error());
-  ASSERT_EQ(result->error_value(), fuchsia_audio_mixer::CreateNodeError::kUnsupportedOption);
+  ASSERT_EQ(result->error_value(), CreateNodeError::kUnsupportedOption);
 }
 
 TEST_F(GraphServerTest, CreateProducerStreamSinkFailsBadFields) {
-  using CreateNodeError = fuchsia_audio_mixer::CreateNodeError;
-
   struct TestCase {
     std::string name;
     std::function<void(fidl::WireTableBuilder<fuchsia_audio_mixer::wire::StreamSinkProducer>&)>
@@ -320,7 +358,7 @@ TEST_F(GraphServerTest, CreateProducerStreamSinkFailsMissingServerEnd) {
 
   ASSERT_TRUE(result.ok()) << result;
   ASSERT_TRUE(result->is_error());
-  ASSERT_EQ(result->error_value(), fuchsia_audio_mixer::CreateNodeError::kMissingRequiredField);
+  ASSERT_EQ(result->error_value(), CreateNodeError::kMissingRequiredField);
 }
 
 // TODO(fxbug.dev/109458): can be merged into CreateProducerStreamSinkFailsBadFields after fix.
@@ -343,7 +381,7 @@ TEST_F(GraphServerTest, CreateProducerStreamSinkFailsMissingPayloadBuffer) {
 
   ASSERT_TRUE(result.ok()) << result;
   ASSERT_TRUE(result->is_error());
-  ASSERT_EQ(result->error_value(), fuchsia_audio_mixer::CreateNodeError::kMissingRequiredField);
+  ASSERT_EQ(result->error_value(), CreateNodeError::kMissingRequiredField);
 }
 
 TEST_F(GraphServerTest, CreateProducerStreamSinkSuccess) {
@@ -362,8 +400,6 @@ TEST_F(GraphServerTest, CreateProducerStreamSinkSuccess) {
 }
 
 TEST_F(GraphServerTest, CreateProducerRingBufferFailsBadFields) {
-  using CreateNodeError = fuchsia_audio_mixer::CreateNodeError;
-
   struct TestCase {
     std::string name;
     std::function<void(fidl::WireTableBuilder<fuchsia_audio::wire::RingBuffer>&)> edit;
@@ -472,7 +508,7 @@ TEST_F(GraphServerTest, CreateProducerRingBufferFailsMissingVmo) {
 
   ASSERT_TRUE(result.ok()) << result;
   ASSERT_TRUE(result->is_error());
-  ASSERT_EQ(result->error_value(), fuchsia_audio_mixer::CreateNodeError::kMissingRequiredField);
+  ASSERT_EQ(result->error_value(), CreateNodeError::kMissingRequiredField);
 }
 
 // TODO(fxbug.dev/109458): can be merged into CreateProducerRingBufferFailsBadFields after fix.
@@ -493,7 +529,7 @@ TEST_F(GraphServerTest, CreateProducerRingBufferFailsMissingReferenceClock) {
 
   ASSERT_TRUE(result.ok()) << result;
   ASSERT_TRUE(result->is_error());
-  ASSERT_EQ(result->error_value(), fuchsia_audio_mixer::CreateNodeError::kMissingRequiredField);
+  ASSERT_EQ(result->error_value(), CreateNodeError::kMissingRequiredField);
 }
 
 TEST_F(GraphServerTest, CreateProducerRingBufferSuccess) {
@@ -543,7 +579,7 @@ TEST_F(GraphServerTest, CreateConsumerFailsBadFields) {
 
     ASSERT_TRUE(result.ok()) << result;
     ASSERT_TRUE(result->is_error());
-    ASSERT_EQ(result->error_value(), fuchsia_audio_mixer::CreateNodeError::kMissingRequiredField);
+    ASSERT_EQ(result->error_value(), CreateNodeError::kMissingRequiredField);
   }
 
   {
@@ -559,7 +595,7 @@ TEST_F(GraphServerTest, CreateConsumerFailsBadFields) {
 
     ASSERT_TRUE(result.ok()) << result;
     ASSERT_TRUE(result->is_error());
-    ASSERT_EQ(result->error_value(), fuchsia_audio_mixer::CreateNodeError::kMissingRequiredField);
+    ASSERT_EQ(result->error_value(), CreateNodeError::kMissingRequiredField);
   }
 
   {
@@ -583,7 +619,7 @@ TEST_F(GraphServerTest, CreateConsumerFailsBadFields) {
 
     ASSERT_TRUE(result.ok()) << result;
     ASSERT_TRUE(result->is_error());
-    ASSERT_EQ(result->error_value(), fuchsia_audio_mixer::CreateNodeError::kMissingRequiredField);
+    ASSERT_EQ(result->error_value(), CreateNodeError::kMissingRequiredField);
   }
 
   {
@@ -600,7 +636,7 @@ TEST_F(GraphServerTest, CreateConsumerFailsBadFields) {
 
     ASSERT_TRUE(result.ok()) << result;
     ASSERT_TRUE(result->is_error());
-    ASSERT_EQ(result->error_value(), fuchsia_audio_mixer::CreateNodeError::kMissingRequiredField);
+    ASSERT_EQ(result->error_value(), CreateNodeError::kMissingRequiredField);
   }
 
   {
@@ -619,7 +655,7 @@ TEST_F(GraphServerTest, CreateConsumerFailsBadFields) {
 
     ASSERT_TRUE(result.ok()) << result;
     ASSERT_TRUE(result->is_error());
-    ASSERT_EQ(result->error_value(), fuchsia_audio_mixer::CreateNodeError::kMissingRequiredField);
+    ASSERT_EQ(result->error_value(), CreateNodeError::kMissingRequiredField);
   }
 
   {
@@ -638,7 +674,7 @@ TEST_F(GraphServerTest, CreateConsumerFailsBadFields) {
 
     ASSERT_TRUE(result.ok()) << result;
     ASSERT_TRUE(result->is_error());
-    ASSERT_EQ(result->error_value(), fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
+    ASSERT_EQ(result->error_value(), CreateNodeError::kInvalidParameter);
   }
 }
 
@@ -1012,6 +1048,88 @@ TEST_F(GraphServerTest, DeleteEdgeSuccess) {
     ASSERT_TRUE(result.ok()) << result;
     ASSERT_FALSE(result->is_error()) << result->error_value();
   }
+}
+
+//
+// CreateCustom
+//
+
+TEST_F(GraphServerTest, CreateCustomFailsMissingReferenceClock) {
+  auto result = client()->CreateCustom(
+      fuchsia_audio_mixer::wire::GraphCreateCustomRequest::Builder(arena_)
+          .name(fidl::StringView::FromExternal("custom"))
+          .direction(PipelineDirection::kInput)
+          .config(MakeDefaultProcessorConfig(arena_).Build())
+          .consumer(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_).thread(1).Build())
+          // no reference_clock()
+          .Build());
+
+  ASSERT_TRUE(result.ok()) << result;
+  ASSERT_TRUE(result->is_error());
+  ASSERT_EQ(result->error_value(), CreateNodeError::kMissingRequiredField);
+}
+
+TEST_F(GraphServerTest, CreateCustomFailsMissingDirection) {
+  auto result = client()->CreateCustom(
+      fuchsia_audio_mixer::wire::GraphCreateCustomRequest::Builder(arena_)
+          .name(fidl::StringView::FromExternal("custom"))
+          // no direction()
+          .config(MakeDefaultProcessorConfig(arena_).Build())
+          .consumer(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_).thread(1).Build())
+          .reference_clock(MakeReferenceClock(arena_))
+          .Build());
+
+  ASSERT_TRUE(result.ok()) << result;
+  ASSERT_TRUE(result->is_error());
+  ASSERT_EQ(result->error_value(), CreateNodeError::kMissingRequiredField);
+}
+
+TEST_F(GraphServerTest, CreateCustomFailsMissingConfig) {
+  auto result = client()->CreateCustom(
+      fuchsia_audio_mixer::wire::GraphCreateCustomRequest::Builder(arena_)
+          .name(fidl::StringView::FromExternal("custom"))
+          .direction(PipelineDirection::kInput)
+          // no config()
+          .consumer(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_).thread(1).Build())
+          .reference_clock(MakeReferenceClock(arena_))
+          .Build());
+
+  ASSERT_TRUE(result.ok()) << result;
+  ASSERT_TRUE(result->is_error());
+  ASSERT_EQ(result->error_value(), CreateNodeError::kMissingRequiredField);
+}
+
+TEST_F(GraphServerTest, CreateCustomFailsInvalidConfig) {
+  auto result = client()->CreateCustom(
+      fuchsia_audio_mixer::wire::GraphCreateCustomRequest::Builder(arena_)
+          .name(fidl::StringView::FromExternal("custom"))
+          .direction(PipelineDirection::kInput)
+          .config(MakeDefaultProcessorConfig(arena_).block_size_frames(-1).Build())
+          .consumer(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_).thread(1).Build())
+          .reference_clock(MakeReferenceClock(arena_))
+          .Build());
+
+  ASSERT_TRUE(result.ok()) << result;
+  ASSERT_TRUE(result->is_error());
+  ASSERT_EQ(result->error_value(), CreateNodeError::kInvalidParameter);
+}
+
+TEST_F(GraphServerTest, CreateCustomSuccess) {
+  auto result = client()->CreateCustom(
+      fuchsia_audio_mixer::wire::GraphCreateCustomRequest::Builder(arena_)
+          .name(fidl::StringView::FromExternal("custom"))
+          .direction(PipelineDirection::kInput)
+          .config(MakeDefaultProcessorConfig(arena_).Build())
+          .consumer(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_).thread(1).Build())
+          .reference_clock(MakeReferenceClock(arena_))
+          .Build());
+
+  ASSERT_TRUE(result.ok()) << result;
+  ASSERT_FALSE(result->is_error()) << result->error_value();
+  EXPECT_TRUE(result->value()->has_id());
+  ASSERT_TRUE(result->value()->has_node_properties());
+  EXPECT_EQ(result->value()->node_properties().source_ids().count(), 1ul);
+  EXPECT_EQ(result->value()->node_properties().dest_ids().count(), 1ul);
 }
 
 //

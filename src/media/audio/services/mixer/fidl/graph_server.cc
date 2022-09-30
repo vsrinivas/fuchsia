@@ -14,6 +14,7 @@
 #include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/common/memory_mapped_buffer.h"
 #include "src/media/audio/services/mixer/fidl/consumer_node.h"
+#include "src/media/audio/services/mixer/fidl/custom_node.h"
 #include "src/media/audio/services/mixer/fidl/meta_producer_node.h"
 #include "src/media/audio/services/mixer/fidl_realtime/stream_sink_client.h"
 #include "src/media/audio/services/mixer/fidl_realtime/stream_sink_server.h"
@@ -414,7 +415,62 @@ void GraphServer::CreateCustom(CreateCustomRequestView request,
                                CreateCustomCompleter::Sync& completer) {
   TRACE_DURATION("audio", "Graph:::CreateCustom");
   ScopedThreadChecker checker(thread().checker());
-  FX_CHECK(false) << "not implemented";
+
+  if (!request->has_reference_clock() || !request->has_direction() || !request->has_config()) {
+    FX_LOGS(WARNING) << "CreateCustom: missing field";
+    completer.ReplyError(fuchsia_audio_mixer::CreateNodeError::kMissingRequiredField);
+    return;
+  }
+
+  // Validate reference clock.
+  const auto name = NameOrEmpty(*request);
+
+  auto& rc = request->reference_clock();
+  auto clock_result =
+      LookupClock(*clock_registry_, *clock_factory_, std::move(rc.handle()), rc.domain(),
+                  rc.has_name() ? std::string(rc.name().get()) : ClockNameFromNodeName(name));
+  if (!clock_result.is_ok()) {
+    FX_LOGS(WARNING) << "CreateCustom: invalid reference clock";
+    completer.ReplyError(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
+    return;
+  }
+
+  // Register parent node.
+  const auto id = NextNodeId();
+  const auto custom =
+      CustomNode::Create({.name = name,
+                          .reference_clock = UnreadableClock(std::move(clock_result.value())),
+                          .pipeline_direction = request->direction(),
+                          .config = request->config(),
+                          .detached_thread = detached_thread_});
+  if (!custom) {
+    FX_LOGS(WARNING) << "CreateCustom: failed to create CustomNode";
+    completer.ReplyError(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
+    return;
+  }
+  nodes_[id] = custom;
+
+  // Register built-in child nodes.
+  FX_CHECK(custom->child_sources().size() == 1);
+  FX_CHECK(custom->child_dests().size() == 1);
+  const auto child_source_id = NextNodeId();
+  nodes_[child_source_id] = custom->child_sources().front();
+  const auto child_dest_id = NextNodeId();
+  nodes_[child_dest_id] = custom->child_dests().front();
+
+  fidl::Arena arena;
+  fidl::VectorView<NodeId> source_ids(arena, 1);
+  source_ids.at(0) = child_source_id;
+  fidl::VectorView<NodeId> dest_ids(arena, 1);
+  dest_ids.at(0) = child_dest_id;
+  completer.ReplySuccess(
+      fuchsia_audio_mixer::wire::GraphCreateCustomResponse::Builder(arena)
+          .id(id)
+          .node_properties(fuchsia_audio_mixer::wire::CustomNodeProperties::Builder(arena)
+                               .source_ids(fidl::ObjectView{arena, source_ids})
+                               .dest_ids(fidl::ObjectView{arena, dest_ids})
+                               .Build())
+          .Build());
 }
 
 void GraphServer::DeleteNode(DeleteNodeRequestView request, DeleteNodeCompleter::Sync& completer) {
