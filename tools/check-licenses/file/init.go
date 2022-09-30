@@ -6,15 +6,23 @@ package file
 
 import (
 	"encoding/json"
+	"regexp"
 )
 
 var AllFiles map[string]*File
+var urlRegex *regexp.Regexp
 
 func init() {
 	AllFiles = make(map[string]*File, 0)
 }
 
 func Initialize(c *FileConfig) error {
+	var err error
+	urlRegex, err = regexp.Compile(`.*googlesource\.com\/([^\+]+\/)\+.*`)
+	if err != nil {
+		return err
+	}
+
 	// Save the config file to the out directory (if defined).
 	if b, err := json.MarshalIndent(c, "", "  "); err != nil {
 		return err

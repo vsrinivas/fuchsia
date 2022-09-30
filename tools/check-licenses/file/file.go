@@ -15,7 +15,7 @@ type File struct {
 	Name    string
 	AbsPath string `json:"absPath"`
 	RelPath string `json:"relPath"`
-	Url     string `json:"url"`
+	URL     string `json:"url"`
 	Data    []*FileData
 	Text    []byte
 }
@@ -27,11 +27,7 @@ func (a Order) Len() int           { return len(a) }
 func (a Order) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a Order) Less(i, j int) bool { return a[i].AbsPath < a[j].AbsPath }
 
-// NewFile returns a new File struct, with the file content loaded
-// in.
-//
-// TODO(jcecil): Consider making the "load" process lazy, to use
-// less memory during execution.
+// NewFile returns a new File struct, with the file content loaded in.
 func NewFile(path string, ft FileType) (*File, error) {
 	// If this file was already created, return the previous File object.
 	if f, ok := AllFiles[path]; ok {
@@ -42,6 +38,18 @@ func NewFile(path string, ft FileType) (*File, error) {
 	var content []byte
 	var err error
 	var readFile bool
+
+	relPath := path
+	if filepath.IsAbs(path) {
+		if relPath, err = filepath.Rel(Config.FuchsiaDir, path); err != nil {
+			return nil, err
+		}
+	}
+
+	absPath := path
+	if absPath, err = filepath.Abs(path); err != nil {
+		return nil, err
+	}
 
 	content = make([]byte, 0)
 	if ft == Any {
@@ -62,7 +70,7 @@ func NewFile(path string, ft FileType) (*File, error) {
 		}
 	}
 
-	data, err := NewFileData(path, content, ft)
+	data, err := NewFileData(absPath, relPath, content, ft)
 	if err != nil {
 		return nil, err
 	}
@@ -70,19 +78,6 @@ func NewFile(path string, ft FileType) (*File, error) {
 	plusVal(NumFiles, path)
 	if Config.Extensions[filepath.Ext(path)] {
 		plusVal(NumPotentialLicenseFiles, path)
-	}
-
-	relPath := path
-	if filepath.IsAbs(path) {
-		relPath, err = filepath.Rel(Config.FuchsiaDir, path)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	absPath, err := filepath.Abs(path)
-	if err != nil {
-		return nil, err
 	}
 
 	f := &File{
@@ -95,6 +90,12 @@ func NewFile(path string, ft FileType) (*File, error) {
 
 	AllFiles[path] = f
 	return f, nil
+}
+
+func (f *File) UpdateURLs(projectName string, projectURL string) {
+	for _, d := range f.Data {
+		d.UpdateURLs(projectName, projectURL)
+	}
 }
 
 func min(a, b int) int {

@@ -240,7 +240,7 @@ func NewProject(readmePath string, projectRootPath string) (*Project, error) {
 		}
 
 		if licenseFileUrls[i] != "" {
-			licenseFile.Url = licenseFileUrls[i]
+			licenseFile.URL = licenseFileUrls[i]
 		}
 
 		p.LicenseFile = append(p.LicenseFile, licenseFile)
@@ -249,6 +249,7 @@ func NewProject(readmePath string, projectRootPath string) (*Project, error) {
 	plusVal(NumProjects, p.Root)
 	AllProjects[p.Root] = p
 
+	plusVal(ProjectURLs, fmt.Sprintf("%v - %v", p.Root, p.URL))
 	return p, nil
 }
 

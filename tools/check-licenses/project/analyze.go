@@ -17,21 +17,24 @@ import (
 // in each project.
 func AnalyzeLicenses() error {
 	// Convert the projects map into a list and sort it, to make this function consistent.
-	allProjectsList := make([]*Project, 0, len(FilteredProjects))
-	for _, p := range AllProjects {
-		allProjectsList = append(allProjectsList, p)
+	filteredProjectsList := make([]*Project, 0, len(FilteredProjects))
+	for _, p := range FilteredProjects {
+		filteredProjectsList = append(filteredProjectsList, p)
 	}
-	sort.Sort(Order(allProjectsList))
+	sort.Sort(Order(filteredProjectsList))
 
-	for _, p := range allProjectsList {
+	for _, p := range filteredProjectsList {
+		plusVal(NumFilteredProjects, p.Root)
 		// Analyze the license files in each project.
 		sort.Sort(file.Order(p.LicenseFile))
 		for _, l := range p.LicenseFile {
-			if results, err := license.Search(l); err != nil {
+			if results, err := license.Search(p.Root, l); err != nil {
 				return fmt.Errorf("Issue analyzing Project defined in [%v]: %v\n", p.ReadmePath, err)
 			} else {
 				p.SearchResults = append(p.SearchResults, results...)
 			}
+			// Set the license URLs in the license file objects.
+			l.UpdateURLs(p.Name, p.URL)
 		}
 
 		// Analyze the copyright headers in the files in each project.
@@ -40,7 +43,7 @@ func AnalyzeLicenses() error {
 			if len(f.Text) == 0 {
 				continue
 			}
-			if results, err := license.SearchHeaders(f); err != nil {
+			if results, err := license.SearchHeaders(p.Root, f); err != nil {
 				return fmt.Errorf("Issue analyzing Project defined in [%v]: %v\n", p.ReadmePath, err)
 			} else {
 				p.SearchResults = append(p.SearchResults, results...)

@@ -8,6 +8,8 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"encoding/base64"
+	"fmt"
+	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/file/notice"
 )
@@ -20,10 +22,14 @@ import (
 // making it easier to find this license text again later.
 type FileData struct {
 	FilePath    string
+	RelPath     string
 	LibraryName string
 	LineNumber  int
 	Data        []byte
+
+	// ---------------
 	LicenseType string
+	PatternPath string
 	URL         string
 
 	hash string
@@ -44,7 +50,7 @@ func (a OrderFileData) Less(i, j int) bool {
 	return a[i].LineNumber < a[j].LineNumber
 }
 
-func NewFileData(path string, content []byte, filetype FileType) ([]*FileData, error) {
+func NewFileData(path string, relPath string, content []byte, filetype FileType) ([]*FileData, error) {
 	data := make([]*FileData, 0)
 
 	// The "LicenseFormat" field of each file is set at the project level
@@ -57,6 +63,7 @@ func NewFileData(path string, content []byte, filetype FileType) ([]*FileData, e
 	case Any:
 		data = append(data, &FileData{
 			FilePath:   path,
+			RelPath:    relPath,
 			LineNumber: 0,
 			Data:       bytes.TrimSpace(content),
 		})
@@ -67,6 +74,7 @@ func NewFileData(path string, content []byte, filetype FileType) ([]*FileData, e
 	case CopyrightHeader:
 		data = append(data, &FileData{
 			FilePath:   path,
+			RelPath:    relPath,
 			LineNumber: 0,
 			Data:       bytes.TrimSpace(content),
 		})
@@ -76,6 +84,7 @@ func NewFileData(path string, content []byte, filetype FileType) ([]*FileData, e
 	case SingleLicense:
 		data = append(data, &FileData{
 			FilePath:   path,
+			RelPath:    relPath,
 			LineNumber: 0,
 			Data:       bytes.TrimSpace(content),
 		})
@@ -91,6 +100,7 @@ func NewFileData(path string, content []byte, filetype FileType) ([]*FileData, e
 		for _, d := range ndata {
 			data = append(data, &FileData{
 				FilePath:    path,
+				RelPath:     relPath,
 				LineNumber:  d.LineNumber,
 				LibraryName: d.LibraryName,
 				Data:        bytes.TrimSpace(d.LicenseText),
@@ -104,6 +114,7 @@ func NewFileData(path string, content []byte, filetype FileType) ([]*FileData, e
 		for _, d := range ndata {
 			data = append(data, &FileData{
 				FilePath:    path,
+				RelPath:     relPath,
 				LineNumber:  d.LineNumber,
 				LibraryName: d.LibraryName,
 				Data:        bytes.TrimSpace(d.LicenseText),
@@ -117,6 +128,7 @@ func NewFileData(path string, content []byte, filetype FileType) ([]*FileData, e
 		for _, d := range ndata {
 			data = append(data, &FileData{
 				FilePath:    path,
+				RelPath:     relPath,
 				LineNumber:  d.LineNumber,
 				LibraryName: d.LibraryName,
 				Data:        bytes.TrimSpace(d.LicenseText),
@@ -130,6 +142,7 @@ func NewFileData(path string, content []byte, filetype FileType) ([]*FileData, e
 		for _, d := range ndata {
 			data = append(data, &FileData{
 				FilePath:    path,
+				RelPath:     relPath,
 				LineNumber:  d.LineNumber,
 				LibraryName: d.LibraryName,
 				Data:        bytes.TrimSpace(d.LicenseText),
@@ -145,10 +158,47 @@ func NewFileData(path string, content []byte, filetype FileType) ([]*FileData, e
 	return data, nil
 }
 
+// For copyright data, we want "filedata" to only contain the copyright
+// text. Not the rest of the source code in the given file.
+// This method lets us set the filedata data after detecting the copyright
+// header info.
 func (fd *FileData) SetData(data []byte) {
 	fd.Data = data
 	fd.hash = ""
 	fd.Hash()
+}
+
+// Use the config replacement / filedataurls information, along with
+// the project name and URL (if it exists) to define the actual location
+// of the license file on the internet.
+func (fd *FileData) UpdateURLs(project string, projectURL string) {
+	if strings.Contains(fd.RelPath, "prebuilt") {
+		for _, ur := range Config.FileDataURLs {
+			if _, ok := ur.Projects[project]; !ok {
+				continue
+			}
+
+			prefix := ur.Prefix
+			if url, ok := ur.Replacements[fd.LibraryName]; ok {
+				fd.URL = fmt.Sprintf("%v%v", prefix, url)
+				return
+			}
+		}
+	} else if projectURL != "" {
+		relPath := fd.RelPath
+		results := urlRegex.FindStringSubmatch(projectURL)
+		if len(results) > 1 {
+			relPath = strings.TrimPrefix(relPath, results[1])
+		}
+
+		specials := map[string]string{
+			"Alacritty": "LICENSE-APACHE",
+		}
+		if override, ok := specials[fd.LibraryName]; ok {
+			relPath = override
+		}
+		fd.URL = fmt.Sprintf("%v/%v", projectURL, relPath)
+	}
 }
 
 // Hash the content of this filedata object, to help detect duplicate texts

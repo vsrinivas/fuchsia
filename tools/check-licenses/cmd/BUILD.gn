@@ -12,7 +12,6 @@ go_library("main") {
     "config.go",
     "driver.go",
     "filter.go",
-    "gn.go",
     "include.go",
     "log.go",
     "main.go",

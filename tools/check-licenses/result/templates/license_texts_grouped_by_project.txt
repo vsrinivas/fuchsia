@@ -1,4 +1,4 @@
-{{ range $_, $project := .FilteredProjects }}
+{{ range $_, $project := .Projects }}
 ================================================================================
 {{ $project.Name }}
 
