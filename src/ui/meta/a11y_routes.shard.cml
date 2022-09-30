@@ -1,0 +1,44 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This shard includes the portion of the a11y layer that is common
+// across all production ui realms that include a11y, but differs from
+// test ui realms.
+//
+// Production ui realms should include this shard directly.
+//
+// This shard should include:
+//
+// (1) A11y manager's child declaration. Note that other shards assume the
+//     name "a11y_manager".
+// (2) Capability routes to a11y manager that are the same for all production
+//     ui realms in which a11y manager is present, but differ in test realms.
+//
+// This shard should **NOT** include:
+//
+// (1) Routes that are common to all production and test ui realms; these
+//     routes belong in a11y_base_routes.shard.cml.
+// (2) Routes to a11y manager that differ among production ui realms.
+// (3) Routes **FROM** a11y manager to other components in the ui realm;
+//     these routes belong in the target components' routing shards.
+{
+    include: [ "//src/ui/meta/a11y_base_routes.shard.cml" ],
+    children: [
+        {
+            name: "a11y_manager",
+            url: "fuchsia-pkg://fuchsia.com/a11y-manager#meta/a11y-manager.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.feedback.LastRebootInfoProvider",
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.settings.Accessibility",
+            ],
+            from: "parent",
+            to: [ "#a11y_manager" ],
+        },
+    ],
+}

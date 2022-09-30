@@ -3,15 +3,11 @@
 // found in the LICENSE file.
 {
     include: [
-        // Defines a base set of services scenic uses and exposes.
+        "//src/ui/meta/a11y_routes.shard.cml",
         "//src/ui/meta/scenic_routes.shard.cml",
         "syslog/client.shard.cml",
     ],
     children: [
-        {
-            name: "a11y_manager",
-            url: "fuchsia-pkg://fuchsia.com/a11y-manager#meta/a11y-manager.cm",
-        },
         {
             name: "input_pipeline",
             url: "fuchsia-pkg://fuchsia.com/input-pipeline#meta/input-pipeline.cm",
@@ -55,20 +51,10 @@
             ],
             from: "parent",
             to: [
-                "#a11y_manager",
                 "#input_pipeline",
                 "#root_presenter",
                 "#text_manager",
             ],
-        },
-        {
-            protocol: [
-                "fuchsia.feedback.LastRebootInfoProvider",
-                "fuchsia.intl.PropertyProvider",
-                "fuchsia.settings.Accessibility",
-            ],
-            from: "parent",
-            to: [ "#a11y_manager" ],
         },
         {
             protocol: [
@@ -112,19 +98,6 @@
         },
         {
             protocol: [
-                "fuchsia.ui.annotation.Registry",
-                "fuchsia.ui.composition.Flatland",
-                "fuchsia.ui.focus.FocusChainListenerRegistry",
-                "fuchsia.ui.input.accessibility.PointerEventRegistry",
-                "fuchsia.ui.observation.scope.Registry",
-                "fuchsia.ui.pointerinjector.Registry",
-                "fuchsia.ui.scenic.Scenic",
-            ],
-            from: "#scenic",
-            to: "#a11y_manager",
-        },
-        {
-            protocol: [
                 "fuchsia.ui.focus.FocusChainListenerRegistry",
                 "fuchsia.ui.pointerinjector.Registry",
                 "fuchsia.ui.scenic.Scenic",
@@ -137,16 +110,6 @@
         },
     ],
     expose: [
-        {
-            protocol: [
-                "fuchsia.accessibility.gesture.ListenerRegistry",
-                "fuchsia.accessibility.semantics.SemanticsManager",
-                "fuchsia.accessibility.tts.EngineRegistry",
-                "fuchsia.accessibility.tts.TtsManager",
-                "fuchsia.accessibility.virtualkeyboard.Registry",
-            ],
-            from: "#a11y_manager",
-        },
         {
             protocol: [
                 "fuchsia.input.injection.InputDeviceRegistry", // test-only

@@ -1,0 +1,58 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This shard is shared across all production and test UI realms that
+// contain a11y.
+//
+// It contains any capabilities that:
+//
+// (1) A11y manager exposes from every production or test UI realm in which
+//     it's present.
+// (2) A11y manager always consumes from the same source in every production
+//     or test UI realm in which it's present.
+//
+// This shard should **NOT** include:
+//
+// (1) Routes that have different sources in different ui realms.
+// (2) A11y manager's child definition, as we may use a differnt url for
+//     a11y manager in test vs. production ui realms.
+// (3) Capabilities that other components consume from a11y manager. Those
+//     routes belong in those components' routing shards.
+{
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [ "#a11y_manager" ],
+        },
+        {
+            protocol: [
+                "fuchsia.ui.annotation.Registry",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.focus.FocusChainListenerRegistry",
+                "fuchsia.ui.input.accessibility.PointerEventRegistry",
+                "fuchsia.ui.observation.scope.Registry",
+                "fuchsia.ui.pointerinjector.Registry",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+            from: "#scenic",
+            to: [ "#a11y_manager" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.accessibility.gesture.ListenerRegistry",
+                "fuchsia.accessibility.semantics.SemanticsManager",
+                "fuchsia.accessibility.tts.EngineRegistry",
+                "fuchsia.accessibility.tts.TtsManager",
+                "fuchsia.accessibility.virtualkeyboard.Registry",
+            ],
+            from: "#a11y_manager",
+        },
+    ],
+}
