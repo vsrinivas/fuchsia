@@ -61,7 +61,7 @@ class Dispatcher {
   // Creates a dispatcher for performing asynchronous operations.
   //
   // |options| provides the dispatcher configuration. The following options are supported:
-  //   * `FDF_DISPATHER_OPTION_SYNCHRONIZED` or `FDF_DISPATCHER_OPTION_UNSYNCHRONIZED` - sets
+  //   * `FDF_DISPATCHER_OPTION_SYNCHRONIZED` or `FDF_DISPATCHER_OPTION_UNSYNCHRONIZED` - sets
   //     whether parallel callbacks in the callbacks set in the dispatcher are allowed.
   //   * `FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS` - the dispatcher may not share zircon threads with
   //     other drivers. This may not be set with `FDF_DISPATCHER_OPTION_UNSYNCHRONIZED`.
