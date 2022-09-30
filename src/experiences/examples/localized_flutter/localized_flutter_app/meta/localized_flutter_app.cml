@@ -20,7 +20,6 @@
     use: [
         {
             protocol: [
-                "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.fonts.Provider",
                 "fuchsia.intl.PropertyProvider",
                 "fuchsia.sysmem.Allocator",

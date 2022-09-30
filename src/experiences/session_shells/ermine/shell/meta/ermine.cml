@@ -42,7 +42,6 @@
             protocol: [
                 "fuchsia.accessibility.semantics.SemanticsManager",
                 "fuchsia.buildinfo.Provider",
-                "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.fonts.Provider",
                 "fuchsia.hardware.power.statecontrol.Admin",
@@ -51,6 +50,7 @@
                 "fuchsia.media.Audio",
                 "fuchsia.media.AudioCore",
                 "fuchsia.memory.Monitor",
+                "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.net.interfaces.State",
                 "fuchsia.power.battery.BatteryManager",
                 "fuchsia.power.button.Monitor",
