@@ -25,5 +25,5 @@ group("dart_unittests") {
 group("rust_unittests") {
   testonly = true
 
-  deps = [ "gazelle/appkit:appkit-tests" ]
+  deps = [ "gazelle:tests" ]
 }

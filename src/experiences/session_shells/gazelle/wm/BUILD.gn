@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/lib/vulkan/vulkan.gni")
 
 rustc_binary("bin") {
   output_name = "wm"
@@ -50,6 +51,9 @@ fuchsia_unittest_package("wm-tests") {
     log_settings = {
       max_severity = "ERROR"
     }
+
+    # Ensure the device has Vulkan.
+    environments = vulkan_envs
   }
 }
 

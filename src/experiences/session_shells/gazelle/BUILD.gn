@@ -13,5 +13,8 @@ group("gazelle") {
 
 group("tests") {
   testonly = true
-  deps = [ "wm:tests" ]
+  deps = [
+    "appkit:tests",
+    "wm:tests",
+  ]
 }
