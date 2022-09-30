@@ -46,17 +46,21 @@ void OpenAt(FuchsiaVfs* vfs, const fbl::RefPtr<Vnode>& parent,
     if constexpr (std::is_same_v<ResultT, OpenResult::Error>) {
       if (describe) {
         // Ignore errors since there is nothing we can do if this fails.
-        [[maybe_unused]] auto unused_result =
+        [[maybe_unused]] const fidl::Status unused_result =
             fidl::WireSendEvent(server_end)->OnOpen(result, fio::wire::NodeInfoDeprecated());
         server_end.reset();
       }
     } else if constexpr (std::is_same_v<ResultT, OpenResult::Remote>) {
-      // Remote handoff to a remote filesystem node.
-      vfs->ForwardOpenRemote(std::move(result.vnode), std::move(server_end), result.path, options,
-                             mode);
-    } else if constexpr (std::is_same_v<ResultT, OpenResult::RemoteRoot>) {
-      // Remote handoff to a remote filesystem node.
-      vfs->ForwardOpenRemote(std::move(result.vnode), std::move(server_end), ".", options, mode);
+      const fbl::RefPtr<Vnode>& vn = result.vnode;
+      const std::string_view path = result.path;
+      const fidl::UnownedClientEnd h = vn->GetRemote();
+      if (!h.is_valid()) {
+        return;
+      }
+
+      // Ignore errors since there is nothing we can do if this fails.
+      [[maybe_unused]] const fidl::WireResult unused_result = fidl::WireCall(h)->Open(
+          options.ToIoV1Flags(), mode, fidl::StringView::FromExternal(path), std::move(server_end));
     } else if constexpr (std::is_same_v<ResultT, OpenResult::Ok>) {
       // |Vfs::Open| already performs option validation for us.
       vfs->Serve(result.vnode, server_end.TakeChannel(), result.validated_options);
@@ -75,10 +79,6 @@ void AddInotifyFilterAt(FuchsiaVfs* vfs, const fbl::RefPtr<Vnode>& parent, std::
     if constexpr (std::is_same_v<ResultT, TraversePathResult::Error>) {
       return;
     } else if constexpr (std::is_same_v<ResultT, TraversePathResult::Remote>) {
-      // Remote handoff to a remote filesystem node.
-      // TODO remote handoffs not supported for inotify currently.
-      return;
-    } else if constexpr (std::is_same_v<ResultT, TraversePathResult::RemoteRoot>) {
       // Remote handoff to a remote filesystem node.
       // TODO remote handoffs not supported for inotify currently.
       return;

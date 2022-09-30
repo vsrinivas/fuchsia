@@ -164,14 +164,6 @@ class Vfs::OpenResult {
     std::string_view path;
   };
 
-  // When this variant is active, the path being opened is a remote node itself. The caller should
-  // clone the connection associated with this vnode.
-  //
-  // Used only on Fuchsia.
-  struct RemoteRoot {
-    fbl::RefPtr<Vnode> vnode;
-  };
-
   // When this variant is active, |Open| has successfully reached a vnode under this filesystem.
   // |validated_options| contains options to be used on the new connection, potentially adjusted for
   // posix-flag rights expansion.
@@ -205,11 +197,8 @@ class Vfs::OpenResult {
   Remote& remote() { return std::get<Remote>(variants_); }
   bool is_remote() const { return std::holds_alternative<Remote>(variants_); }
 
-  RemoteRoot& remote_root() { return std::get<RemoteRoot>(variants_); }
-  bool is_remote_root() const { return std::holds_alternative<RemoteRoot>(variants_); }
-
  private:
-  using Variants = std::variant<Error, Remote, RemoteRoot, Ok>;
+  using Variants = std::variant<Error, Remote, Ok>;
 
   Variants variants_;
 };
@@ -227,13 +216,6 @@ class Vfs::TraversePathResult {
   struct Remote {
     fbl::RefPtr<Vnode> vnode;
     std::string_view path;
-  };
-
-  // When this variant is active, the path being traversed is a remote node itself.
-  //
-  // Used only on Fuchsia.
-  struct RemoteRoot {
-    fbl::RefPtr<Vnode> vnode;
   };
 
   // When this variant is active, we have successfully traversed and reached a vnode under this
@@ -266,11 +248,8 @@ class Vfs::TraversePathResult {
   Remote& remote() { return std::get<Remote>(variants_); }
   bool is_remote() const { return std::holds_alternative<Remote>(variants_); }
 
-  RemoteRoot& remote_root() { return std::get<RemoteRoot>(variants_); }
-  bool is_remote_root() const { return std::holds_alternative<RemoteRoot>(variants_); }
-
  private:
-  using Variants = std::variant<Error, Remote, RemoteRoot, Ok>;
+  using Variants = std::variant<Error, Remote, Ok>;
 
   Variants variants_;
 };

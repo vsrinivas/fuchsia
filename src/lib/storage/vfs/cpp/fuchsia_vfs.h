@@ -137,12 +137,6 @@ class FuchsiaVfs : public Vfs {
   virtual void CloseAllConnectionsForVnode(const Vnode& node,
                                            CloseAllConnectionsForVnodeCallback callback) = 0;
 
-  // Forwards an open request to a remote handle. If the remote handle is closed (handing off
-  // returns ZX_ERR_PEER_CLOSED), it is automatically unmounted.
-  zx_status_t ForwardOpenRemote(fbl::RefPtr<Vnode> vn, fidl::ServerEnd<fuchsia_io::Node> channel,
-                                std::string_view path, VnodeConnectionOptions options,
-                                uint32_t mode) __TA_EXCLUDES(vfs_lock_);
-
   bool IsTokenAssociatedWithVnode(zx::event token) __TA_EXCLUDES(vfs_lock_);
 
  protected:

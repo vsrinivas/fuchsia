@@ -419,17 +419,4 @@ zx_status_t FuchsiaVfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn,
   return Serve(std::move(vn), server_end.TakeChannel(), validated_options.value());
 }
 
-zx_status_t FuchsiaVfs::ForwardOpenRemote(fbl::RefPtr<Vnode> vn, fidl::ServerEnd<fio::Node> channel,
-                                          std::string_view path, VnodeConnectionOptions options,
-                                          uint32_t mode) {
-  auto h = vn->GetRemote();
-  if (!h.is_valid()) {
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  return fidl::WireCall(h)
-      ->Open(options.ToIoV1Flags(), mode, fidl::StringView::FromExternal(path), std::move(channel))
-      .status();
-}
-
 }  // namespace fs
