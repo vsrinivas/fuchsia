@@ -2,7 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("dsputil") {
+import("//build/components.gni")
+
+executable("bin") {
+  output_name = "dsputil"
   sources = [ "dsputil.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.dsp:fuchsia.hardware.dsp_cpp_wire",
@@ -11,4 +14,8 @@ executable("dsputil") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zxc",
   ]
+}
+
+fuchsia_shell_package("dsputil") {
+  deps = [ ":bin" ]
 }

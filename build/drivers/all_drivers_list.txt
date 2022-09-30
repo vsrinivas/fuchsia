@@ -130,7 +130,6 @@
 //src/devices/clock/drivers/clock:clock-driver
 //src/devices/cpu/drivers/aml-cpu-legacy:aml-cpu-legacy-driver
 //src/devices/cpu/drivers/aml-cpu:aml-cpu-driver
-//src/devices/dsp/drivers/aml-dsp:aml-dsp-driver
 //src/devices/gpio/drivers/aml-axg-gpio:aml-axg-gpio-driver
 //src/devices/gpio/drivers/as370-gpio:as370-gpio-driver
 //src/devices/gpio/drivers/gpio-test:gpio-test-driver
@@ -324,6 +323,7 @@
 //src/graphics/drivers/msd-vsi-vip:msd_vsi-driver
 //src/graphics/drivers/msd-vsi-vip:msd_vsi_test-driver
 //src/graphics/drivers/virtio:virtio_gpu-driver
+//src/media/audio/drivers/aml-dsp:aml-dsp-driver
 //src/media/audio/drivers/aml-g12-pdm:aml-g12-pdm-driver
 //src/media/audio/drivers/aml-g12-tdm:aml-g12-tdm-dai-driver
 //src/media/audio/drivers/aml-g12-tdm:aml-g12-tdm-driver

@@ -33,16 +33,16 @@ class DspClientHelper {
 void showUsage(char* arg) {
   fprintf(stderr, "Usage: %s <options>*\n", arg);
   fprintf(stderr,
-          " dsputil DEVICE --load = FILE_NAME        load firmware to sram \n"
-          " dsputil DEVICE --start                   set dsp clk enable and power on \n"
-          " dsputil DEVICE --stop                    set dsp clk disable and power off \n"
-          " FILE_NAME                                the file name for downloaded file. \n");
+          " dsputil DEVICE --load = FILE_NAME        load firmware to sram\n"
+          " dsputil DEVICE --start                   set dsp clk enable and power on\n"
+          " dsputil DEVICE --stop                    set dsp clk disable and power off\n"
+          " FILE_NAME                                the file name for downloaded file.\n");
 }
 
 zx_status_t DspClientHelper::Load(fidl::StringView fw_name) {
   auto dsp_load_result = client_->LoadFirmware(fw_name);
   if (!dsp_load_result.ok()) {
-    fprintf(stderr, "Failed to dsp load firmware: %s \n",
+    fprintf(stderr, "Failed to dsp load firmware: %s\n",
             zx_status_get_string(dsp_load_result.status()));
     return dsp_load_result.status();
   }
@@ -52,7 +52,7 @@ zx_status_t DspClientHelper::Load(fidl::StringView fw_name) {
 zx_status_t DspClientHelper::Start() {
   auto dsp_start_result = client_->Start();
   if (!dsp_start_result.ok()) {
-    fprintf(stderr, "Failed to dsp start: %s \n", zx_status_get_string(dsp_start_result.status()));
+    fprintf(stderr, "Failed to dsp start: %s\n", zx_status_get_string(dsp_start_result.status()));
     return dsp_start_result.status();
   }
   return ZX_OK;
@@ -61,7 +61,7 @@ zx_status_t DspClientHelper::Start() {
 zx_status_t DspClientHelper::Stop() {
   auto dsp_stop_result = client_->Stop();
   if (!dsp_stop_result.ok()) {
-    fprintf(stderr, "Failed to dsp stop: %s \n", zx_status_get_string(dsp_stop_result.status()));
+    fprintf(stderr, "Failed to dsp stop: %s\n", zx_status_get_string(dsp_stop_result.status()));
     return dsp_stop_result.status();
   }
   return ZX_OK;
@@ -82,7 +82,7 @@ int main(int argc, char** argv) {
 
   fbl::unique_fd device(fd);
   if (!device.is_valid()) {
-    fprintf(stderr, "Failed to open mailbox device: %s \n", strerror(errno));
+    fprintf(stderr, "Failed to open mailbox device: %s\n", strerror(errno));
     return ZX_ERR_NOT_FOUND;
   }
 
@@ -90,7 +90,7 @@ int main(int argc, char** argv) {
   zx_status_t st =
       fdio_get_service_handle(device.release(), client_end.channel().reset_and_get_address());
   if (st != ZX_OK) {
-    fprintf(stderr, "Failed to get service handle: %s \n", zx_status_get_string(st));
+    fprintf(stderr, "Failed to get service handle: %s\n", zx_status_get_string(st));
     return ZX_ERR_BAD_HANDLE;
   }
   DspClient client(std::move(client_end));
@@ -109,14 +109,14 @@ int main(int argc, char** argv) {
       case 's':
         status = dsp_client->Start();
         if (status != ZX_OK) {
-          fprintf(stderr, "DSP start failed: %s \n", zx_status_get_string(status));
+          fprintf(stderr, "DSP start failed: %s\n", zx_status_get_string(status));
         }
         break;
 
       case 'q':
         status = dsp_client->Stop();
         if (status != ZX_OK) {
-          fprintf(stderr, "DSP stop failed: %s \n", zx_status_get_string(status));
+          fprintf(stderr, "DSP stop failed: %s\n", zx_status_get_string(status));
         }
         break;
 
@@ -125,10 +125,10 @@ int main(int argc, char** argv) {
         if (fw_name) {
           status = dsp_client->Load(fidl::StringView::FromExternal(fw_name, strlen(fw_name)));
           if (status != ZX_OK) {
-            fprintf(stderr, "DSP load firmware failed: %s \n", zx_status_get_string(status));
+            fprintf(stderr, "DSP load firmware failed: %s\n", zx_status_get_string(status));
           }
         } else {
-          fprintf(stderr, "The firmware name is empty \n");
+          fprintf(stderr, "The firmware name is empty\n");
           status = ZX_ERR_INVALID_ARGS;
         }
         break;

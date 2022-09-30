@@ -180,7 +180,7 @@ driver_bind_rules("av400-buttons-bind") {
 }
 
 driver_bind_rules("av400-dsp-bind") {
-  rules = "av400-dsp.bind"
+  rules = "bind/av400-dsp.bind"
   header_output = "av400-dsp-bind.h"
   bind_output = "av400-dsp-bind.bc"
   deps = [

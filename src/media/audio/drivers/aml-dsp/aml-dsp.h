@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_DSP_DRIVERS_AML_DSP_AML_DSP_H_
-#define SRC_DEVICES_DSP_DRIVERS_AML_DSP_AML_DSP_H_
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_AML_DSP_AML_DSP_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_AML_DSP_AML_DSP_H_
 
 #include <fidl/fuchsia.hardware.dsp/cpp/wire.h>
 #include <fidl/fuchsia.hardware.mailbox/cpp/wire.h>
@@ -90,4 +90,4 @@ class AmlDsp : public DeviceType {
 
 }  // namespace aml_dsp
 
-#endif  // SRC_DEVICES_DSP_DRIVERS_AML_DSP_AML_DSP_H_
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_AML_DSP_AML_DSP_H_

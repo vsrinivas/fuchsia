@@ -4,6 +4,7 @@
 group("drivers") {
   testonly = true
   deps = [
+    "aml-dsp",
     "aml-g12-pdm:aml-g12-pdm",
     "aml-g12-tdm",
     "aml-g12-tdm:aml-g12-tdm-dai",
