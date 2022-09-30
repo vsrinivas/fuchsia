@@ -7,8 +7,6 @@ import("//build/go/go_test.gni")
 
 go_library("ffxutil") {
   sources = [
-    "config.go",
-    "config_test.go",
     "ffx.go",
     "ffx_test.go",
     "mock.go",
@@ -16,7 +14,7 @@ go_library("ffxutil") {
   ]
   deps = [
     ":constants",
-    "//third_party/golibs:github.com/xeipuuv/gojsonpointer",
+    "//tools/botanist:constants",
     "//tools/build",
     "//tools/lib/jsonutil",
     "//tools/lib/subprocess",

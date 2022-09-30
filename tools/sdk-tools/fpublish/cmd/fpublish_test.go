@@ -164,6 +164,7 @@ func clearEnvVars() {
 	os.Unsetenv("_FAKE_FFX_TARGET_DEFAULT")
 	os.Unsetenv("_FAKE_FFX_TARGET_LIST")
 	os.Unsetenv("_FAKE_FFX_GET_SSH_ADDRESS")
+	os.Unsetenv("FFX_ISOLATE_DIR")
 }
 
 func TestMain(t *testing.T) {
@@ -286,6 +287,7 @@ func TestMain(t *testing.T) {
 			os.Setenv("_FAKE_FFX_TARGET_DEFAULT", test.ffxTargetDefault)
 			os.Setenv("_FAKE_FFX_TARGET_LIST", test.ffxTargetList)
 			os.Setenv("_FAKE_FFX_GET_SSH_ADDRESS", test.ffxTargetGetSSHAddress)
+			os.Setenv("FFX_ISOLATE_DIR", t.TempDir())
 			flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 			osExit = func(code int) {
 				if code != 0 {

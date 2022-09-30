@@ -261,6 +261,7 @@ func TestListDevicesFfx(t *testing.T) {
 		clearTestEnv()
 		ExecCommand = helperCommandForSDKCommon
 		os.Setenv("TEST_FFX_TARGET_LIST_OUTPUT", test.ffxTargetListOutput)
+		os.Setenv("FFX_ISOLATE_DIR", t.TempDir())
 		output, err := testSDK.listDevices()
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
@@ -553,6 +554,7 @@ func TestGetFuchsiaProperty(t *testing.T) {
 	for i, data := range testData {
 		t.Run(fmt.Sprintf("TestGetFuchsiaProperty.%d", i), func(t *testing.T) {
 			os.Setenv("TEST_FFX_TARGET_DEFAULT_GET", "fake-target-device-name")
+			os.Setenv("FFX_ISOLATE_DIR", t.TempDir())
 			val, err := sdk.GetFuchsiaProperty(data.device, data.property)
 			if err != nil {
 				if data.errString == "" {
@@ -593,6 +595,7 @@ func TestGetDeviceConfigurations(t *testing.T) {
 
 	for _, test := range tests {
 		os.Setenv("TEST_FFX_TARGET_LIST_OUTPUT", test.ffxTargetListOutput)
+		os.Setenv("FFX_ISOLATE_DIR", t.TempDir())
 		val, err := sdk.GetDeviceConfigurations()
 		if err != nil {
 			t.Errorf("unexpected err %v", err)
@@ -635,6 +638,7 @@ func TestMigrateGlobalData(t *testing.T) {
 			}
 			os.Setenv("TEST_EXPECTED_SET_DATA", string(expectedData))
 			os.Setenv("FFX_HAS_NEW_DEVICE", test.newDeviceAlreadyExists)
+			os.Setenv("FFX_ISOLATE_DIR", t.TempDir())
 			if err = sdk.MigrateGlobalData(); err != nil {
 				t.Errorf("MigrateGlobalData(): unexpected err %s", err)
 			}
@@ -675,6 +679,7 @@ func TestGetDeviceConfiguration(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
+		os.Setenv("FFX_ISOLATE_DIR", t.TempDir())
 		deviceConfig, err := sdk.GetDeviceConfiguration(test.deviceName)
 		if err != nil {
 			t.Fatalf("unexpected err %v", err)
@@ -784,6 +789,7 @@ func TestSaveDeviceConfiguration(t *testing.T) {
 			}
 			os.Setenv("TEST_EXPECTED_SET_DATA", string(expectedData))
 			os.Setenv("TEST_CURRENT_DEVICE_DATA", string(currentData))
+			os.Setenv("FFX_ISOLATE_DIR", t.TempDir())
 			err = sdk.SaveDeviceConfiguration(test.newDevice)
 			if err != nil {
 				t.Fatalf("unexpected err %v", err)
@@ -1012,6 +1018,7 @@ func TestResolveTargetAddress(t *testing.T) {
 			os.Setenv("TEST_FFX_TARGET_LIST_OUTPUT", test.ffxTargetListOutput)
 			os.Setenv("TEST_FFX_TARGET_DEFAULT_GET", test.ffxTargetDefaultGetOutput)
 			os.Setenv("TEST_GET_SSH_ADDRESS_OUTPUT", test.ffxTargetGetSSHAddressOutput)
+			os.Setenv("FFX_ISOLATE_DIR", t.TempDir())
 			ExecCommand = test.execHelper
 
 			config, err := sdk.ResolveTargetAddress(test.deviceIP, test.deviceName)
@@ -1030,11 +1037,67 @@ func TestResolveTargetAddress(t *testing.T) {
 	}
 }
 
+func TestRunFFX(t *testing.T) {
+	defer clearTestEnv()
+
+	oldTestOutDir := os.Getenv("FUCHSIA_TEST_OUTDIR")
+	defer os.Setenv("FUCHSIA_TEST_OUTDIR", oldTestOutDir)
+
+	tests := []struct {
+		name                   string
+		setTestOutDirEnvKey    bool
+		setFFXIsolateDirEnvKey bool
+		wantError              bool
+	}{
+		{
+			name: "no environment variables set",
+		},
+		{
+			name:                "only FUCHSIA_TEST_OUTDIR set",
+			setTestOutDirEnvKey: true,
+			wantError:           true,
+		},
+		{
+			name:                   "only FFX_ISOLATE_DIR set",
+			setFFXIsolateDirEnvKey: true,
+		},
+		{
+			name:                   "both environment variables set",
+			setTestOutDirEnvKey:    true,
+			setFFXIsolateDirEnvKey: true,
+		},
+	}
+	testSDK := SDKProperties{}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			clearTestEnv()
+			if test.setTestOutDirEnvKey {
+				os.Setenv("FUCHSIA_TEST_OUTDIR", t.TempDir())
+			} else {
+				os.Unsetenv("FUCHSIA_TEST_OUTDIR")
+			}
+			if test.setFFXIsolateDirEnvKey {
+				os.Setenv("FFX_ISOLATE_DIR", t.TempDir())
+			} else {
+				os.Unsetenv("FFX_ISOLATE_DIR")
+			}
+			ExecCommand = helperCommandForSetTesting
+			_, err := testSDK.RunFFX([]string{}, false)
+			if test.wantError && err == nil {
+				t.Fatalf("expected error but got nil")
+			} else if !test.wantError && err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+		})
+	}
+}
+
 func TestRunFFXDoctor(t *testing.T) {
 	sdk := SDKProperties{}
 
 	ExecCommand = helperCommandForSetTesting
 	defer clearTestEnv()
+	os.Setenv("FFX_ISOLATE_DIR", t.TempDir())
 
 	output, err := sdk.RunFFXDoctor()
 	if err != nil {
@@ -1750,6 +1813,7 @@ func clearTestEnv() {
 	os.Unsetenv("TEST_FFX_TARGET_DEFAULT_GET")
 	os.Unsetenv("TEST_GET_SSH_ADDRESS_OUTPUT")
 	os.Unsetenv("FFX_HAS_NEW_DEVICE")
+	os.Unsetenv("FFX_ISOLATE_DIR")
 
 	GetUserHomeDir = DefaultGetUserHomeDir
 	GetUsername = DefaultGetUsername

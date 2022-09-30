@@ -103,14 +103,6 @@ func (t *target) UseFFXExperimental(level int) bool {
 	return t.UseFFX() && t.ffx.ExperimentLevel >= level
 }
 
-// FFXConfigPath returns the path to the ffx config.
-func (t *target) FFXConfigPath() string {
-	if t.ffx != nil {
-		return t.ffx.ConfigPath
-	}
-	return ""
-}
-
 // FFXEnv returns the environment to run ffx with.
 func (t *target) FFXEnv() []string {
 	return t.ffxEnv

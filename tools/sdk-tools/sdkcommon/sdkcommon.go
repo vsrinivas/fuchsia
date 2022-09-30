@@ -18,7 +18,9 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
+	"go.fuchsia.dev/fuchsia/tools/lib/ffxutil"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/testing/testrunner/constants"
 )
 
 var (
@@ -72,8 +74,6 @@ const (
 	globalDeviceConfigurationKey string = "DeviceConfiguration"
 	// Deprecated - key used to identify the default device in global level.
 	defaultDeviceKey string = "_DEFAULT_DEVICE_"
-
-	FFXIsolatedEnvKey = "FFX_ISOLATED_CONFIG"
 
 	sleepTimeInSeconds = 5
 	UnknownTargetName  = "unknown"
@@ -1250,8 +1250,9 @@ func (sdk SDKProperties) RunFFX(args []string, interactive bool) (string, error)
 	}
 	cmd := filepath.Join(toolsDir, "ffx")
 
-	if ffxConfigPath, present := os.LookupEnv(FFXIsolatedEnvKey); present {
-		args = append([]string{"--config", ffxConfigPath}, args...)
+	// If run in infra, check that ffx is isolated.
+	if os.Getenv(constants.TestOutDirEnvKey) != "" && os.Getenv(ffxutil.FFXIsolateDirEnvKey) == "" {
+		return "", fmt.Errorf("ffx must be isolated when run in infra")
 	}
 
 	ffx := ExecCommand(cmd, args...)

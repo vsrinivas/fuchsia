@@ -90,9 +90,6 @@ type target interface {
 	// UseFFX returns whether to enable using ffx.
 	UseFFX() bool
 
-	// FFXConfigPath returns the path to the ffx config.
-	FFXConfigPath() string
-
 	// FFXEnv returns the env vars that the ffx instance should run with.
 	FFXEnv() []string
 
@@ -243,7 +240,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	t0 := targetSlice[0]
 	ffxOutputsDir := filepath.Join(os.Getenv(testrunnerconstants.TestOutDirEnvKey), "ffx_outputs")
 	removeFFXOutputsDir := false
-	ffx, err := ffxutil.NewFFXInstance(r.ffxPath, "", []string{}, t0.Nodename(), t0.SSHKey(), ffxOutputsDir)
+	ffx, err := ffxutil.NewFFXInstance(ctx, r.ffxPath, "", []string{}, t0.Nodename(), t0.SSHKey(), ffxOutputsDir)
 	if err != nil {
 		return err
 	}
@@ -257,10 +254,10 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 				os.RemoveAll(ffxOutputsDir)
 			}
 		}()
-		if err := ffx.SetLogLevel(ffxutil.Trace); err != nil {
+		if err := ffx.SetLogLevel(ctx, ffxutil.Trace); err != nil {
 			return err
 		}
-		if err := ffx.SetConfigJsonPointer("/discovery/mdns/enabled", false); err != nil {
+		if err := ffx.Run(ctx, "config", "env"); err != nil {
 			return err
 		}
 	}
@@ -274,8 +271,11 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		// Attach an ffx instance for all targets. All ffx instances will use the same
 		// config and daemon, but run commands against its own specified target.
 		if ffx != nil {
-			ffxForTarget := ffxutil.FFXInstanceWithConfig(r.ffxPath, "", ffx.Config.Env(), t.Nodename(), ffx.ConfigPath)
-			t.SetFFX(&targets.FFXInstance{ffxForTarget, r.ffxExperimentLevel}, ffx.Config.Env())
+			ffxForTarget, err := ffxutil.NewFFXInstance(ctx, r.ffxPath, "", []string{}, t.Nodename(), t.SSHKey(), ffxOutputsDir)
+			if err != nil {
+				return err
+			}
+			t.SetFFX(&targets.FFXInstance{ffxForTarget, r.ffxExperimentLevel}, ffx.Env())
 		}
 		if r.imageOverrides != nil {
 			t.SetImageOverrides(build.ImageOverrides(r.imageOverrides))
@@ -580,7 +580,6 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t target, args []stri
 	if t.UseFFX() {
 		subprocessEnv[constants.FFXPathEnvKey] = r.ffxPath
 		subprocessEnv[constants.FFXExperimentLevelEnvKey] = strconv.Itoa(r.ffxExperimentLevel)
-		subprocessEnv[constants.FFXConfigPathEnvKey] = t.FFXConfigPath()
 	}
 
 	// If |netboot| is true, then we assume that fuchsia is not provisioned

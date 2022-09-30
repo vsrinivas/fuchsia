@@ -274,10 +274,10 @@ var ffxInstance = func(
 	ffx, err := func() (testrunner.FFXInstance, error) {
 		var ffx *ffxutil.FFXInstance
 		var err error
-		if configPath, ok := os.LookupEnv(botanistconstants.FFXConfigPathEnvKey); ok {
-			ffx = ffxutil.FFXInstanceWithConfig(ffxPath, dir, env, target, configPath)
+		if isolateDir, ok := os.LookupEnv(ffxutil.FFXIsolateDirEnvKey); ok {
+			ffx, err = ffxutil.NewFFXInstance(ctx, ffxPath, dir, env, target, sshKey, isolateDir)
 		} else {
-			ffx, err = ffxutil.NewFFXInstance(ffxPath, dir, env, target, sshKey, outputDir)
+			ffx, err = ffxutil.NewFFXInstance(ctx, ffxPath, dir, env, target, sshKey, outputDir)
 		}
 		if ffx == nil {
 			// Return nil instead of ffx so that the returned FFXTester
@@ -290,7 +290,7 @@ var ffxInstance = func(
 			return ffx, err
 		}
 		if ffxExperimentalLevel == 3 {
-			if err := ffx.SetConfigJsonPointer("/test/enable_experimental_parallel_execution", true); err != nil {
+			if err := ffx.ConfigSet(ctx, "test.enable_experimental_parallel_execution", "true"); err != nil {
 				return ffx, err
 			}
 		}

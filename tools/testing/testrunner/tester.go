@@ -245,6 +245,16 @@ func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 			},
 		}
 
+		if isolateDir, ok := os.LookupEnv(ffxutil.FFXIsolateDirEnvKey); ok {
+			testCmdBuilder.MountPoints = append(
+				testCmdBuilder.MountPoints,
+				&MountPt{
+					Src:      isolateDir,
+					Writable: true,
+				},
+			)
+		}
+
 		// Mount the QEMU tun_flags if the qemu interface exists. This is used
 		// by VDL to ascertain that the interface exists.
 		if t.sProps.mountQEMU {

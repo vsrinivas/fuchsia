@@ -132,11 +132,10 @@ func runVDLWithArgs(ctx context.Context, t *testing.T, args []string, intree boo
 		t.Fatal(err)
 	}
 	// Create a new isolated ffx instance.
-	ffxInstance, err := ffxutil.NewFFXInstance(ffx, "", os.Environ(), os.Getenv(constants.NodenameEnvKey), os.Getenv(constants.SSHKeyEnvKey), testOut)
+	ffxInstance, err := ffxutil.NewFFXInstance(ctx, ffx, "", os.Environ(), os.Getenv(constants.NodenameEnvKey), os.Getenv(constants.SSHKeyEnvKey), testOut)
 	if err != nil {
 		t.Fatal(err)
 	}
-	ffxConfigPath := filepath.Join(testOut, "ffx_config.json")
 	vdlOut := filepath.Join(testOut, t.Name(), "vdl_out")
 	t.Logf("[test info] writing vdl output to %s", vdlOut)
 	td := t.TempDir()
@@ -161,12 +160,12 @@ func runVDLWithArgs(ctx context.Context, t *testing.T, args []string, intree boo
 				"--vdl-output", vdlOut,
 				"--emulator-log", filepath.Join(testOut, t.Name(), "emu_log"),
 				"--amber-unpack-root", filepath.Join(td, "packages"),
-				"--isolated-ffx-config-path", ffxConfigPath,
 			)...,
 		)
+		cmd.Env = append(os.Environ(), ffxInstance.Env()...)
 		if intree {
 			cmd.Env = append(
-				os.Environ(),
+				cmd.Env,
 				"FUCHSIA_BUILD_DIR="+fuchsiaBuildDir,
 				"FUCHSIA_ZBI_COMPRESSION=zstd",
 				"HOST_OUT_DIR="+hostToolsDir,
@@ -179,7 +178,7 @@ func runVDLWithArgs(ctx context.Context, t *testing.T, args []string, intree boo
 			t.Logf("[test info] setting HOME to: %s", runtimeDir)
 			// Set $HOME to runtimeDir so that fvdl can find the ssh key files, which are
 			// expected in $HOME/.ssh/...
-			cmd.Env = append(os.Environ(), "HOME="+runtimeDir, "FVDL_INVOKER=fvdl_e2e_test")
+			cmd.Env = append(cmd.Env, "HOME="+runtimeDir, "FVDL_INVOKER=fvdl_e2e_test")
 		}
 		cmd.Dir = td
 		cmd.Stdout = os.Stdout

@@ -11,7 +11,6 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
-	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -20,9 +19,7 @@ import (
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/ffxutil"
-	"go.fuchsia.dev/fuchsia/tools/lib/jsonutil"
 	fvdpb "go.fuchsia.dev/fuchsia/tools/virtual_device/proto"
-	"go.uber.org/multierr"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/net/context"
 )
@@ -148,6 +145,7 @@ func TestEmulatorWorksWithFfx(t *testing.T) {
 
 	ffxPath := filepath.Join(sourceRootRelativeDir, "ffx")
 	ffx, err := ffxutil.NewFFXInstance(
+		ctx,
 		ffxPath,
 		"",
 		os.Environ(),
@@ -167,40 +165,21 @@ func TestEmulatorWorksWithFfx(t *testing.T) {
 		}
 	}()
 
-	if err := ffx.SetLogLevel(ffxutil.Warn); err != nil {
+	if err := ffx.SetLogLevel(ctx, ffxutil.Warn); err != nil {
 		t.Fatal(err)
 	}
 
-	// It seems that this is necessary in order to get ffx to obey the config
-	// when running the daemon, and that the --config flag passed by ffxutil
-	// is not enough.
-	// TODO(https://fxbug.dev/94420): migrate to http://go/ffx-isolate when
-	// available.
-	ffxEnvPath := filepath.Join(tempDir, "env.json")
-	ffxConfigPath := ffx.ConfigPath
-	if err := jsonutil.WriteToFile(ffxEnvPath, map[string]interface{}{
-		"user":   ffxConfigPath,
-		"build":  nil,
-		"global": nil,
-	}); err != nil {
-		t.Fatal(multierr.Append(ffx.Stop(), fmt.Errorf(
-			"error while writing ffx env file %s: %w",
-			ffxEnvPath,
-			err,
-		)))
-	}
-
-	netTestRealmExperimentalFlagPointer := "/net/test/realm"
-	if err := ffx.SetConfigJsonPointer(netTestRealmExperimentalFlagPointer, true); err != nil {
+	netTestRealmExperimentalFlagPointer := "net.test.realm"
+	if err := ffx.ConfigSet(ctx, netTestRealmExperimentalFlagPointer, "true"); err != nil {
 		t.Fatalf(
-			"ffx.SetConfigJsonPointer(%q, true) = %s",
+			"ffx.ConfigSet(%q, true) = %s",
 			netTestRealmExperimentalFlagPointer,
 			err,
 		)
 	}
 
 	runFfx := func(args ...string) error {
-		return ffx.RunWithTarget(ctx, append([]string{"--env", ffxEnvPath}, args...)...)
+		return ffx.RunWithTarget(ctx, args...)
 	}
 
 	if err := runFfx("target", "wait"); err != nil {

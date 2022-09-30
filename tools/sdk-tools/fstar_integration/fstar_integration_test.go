@@ -18,7 +18,6 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	"go.fuchsia.dev/fuchsia/tools/botanist/constants"
 	"go.fuchsia.dev/fuchsia/tools/lib/ffxutil"
 	"go.fuchsia.dev/fuchsia/tools/sdk-tools/sdkcommon"
@@ -42,10 +41,9 @@ const (
 )
 
 type toolsPath struct {
-	ffxPath       string
-	ffxInstance   *ffxutil.FFXInstance
-	ffxConfigPath string // Used to make ffx isolated.
-	fsshPath      string
+	ffxPath     string
+	ffxInstance *ffxutil.FFXInstance
+	fsshPath    string
 }
 
 func verifyFFXTargetShowOutputWithDeviceName(output []byte, expectedDeviceName string) (bool, error) {
@@ -115,14 +113,9 @@ func setUp(t *testing.T) (toolsPath, error) {
 	testOutDir := filepath.Join(t.TempDir(), "fssh_test")
 
 	// Create a new isolated ffx instance.
-	tools.ffxInstance, err = ffxutil.NewFFXInstance(tools.ffxPath, "", os.Environ(), os.Getenv(constants.NodenameEnvKey), os.Getenv(constants.SSHKeyEnvKey), testOutDir)
+	tools.ffxInstance, err = ffxutil.NewFFXInstance(context.Background(), tools.ffxPath, "", os.Environ(), os.Getenv(constants.NodenameEnvKey), os.Getenv(constants.SSHKeyEnvKey), testOutDir)
 	if err != nil {
 		return tools, fmt.Errorf("unable to create new ffx instance %w", err)
-	}
-
-	tools.ffxConfigPath = filepath.Join(testOutDir, "ffx_config.json")
-	if _, err := os.Stat(tools.ffxConfigPath); os.IsNotExist(err) {
-		return tools, fmt.Errorf("ffx config path does not exist: %v", err)
 	}
 
 	return tools, nil
@@ -142,7 +135,6 @@ func TestFSSH(t *testing.T) {
 
 	tools, err := setUp(t)
 	t.Cleanup(func() {
-		os.Unsetenv(sdkcommon.FFXIsolatedEnvKey)
 		if tools.ffxInstance != nil {
 			if err := tools.ffxInstance.Stop(); err != nil {
 				t.Logf("FFX didn't stop the running daemon %s", err)
@@ -172,10 +164,10 @@ func TestFSSH(t *testing.T) {
 	ffxTargetListStderr := strings.TrimSpace(stderr.String())
 	deviceIP := strings.TrimSpace(stdout.String())
 
-	// sdkcommon.go runs ffx with this configuration (using the --config flag) to ensure
-	// that we are using the isolated ffx instance.
-	// TODO(fxbug.dev/88287): Migrate to use flag when sdkcommon.go supports it.
-	os.Setenv(sdkcommon.FFXIsolatedEnvKey, tools.ffxConfigPath)
+	for _, envVar := range tools.ffxInstance.Env() {
+		parts := strings.Split(envVar, "=")
+		os.Setenv(parts[0], parts[1])
+	}
 
 	if ffxTargetListStderr != "" {
 		t.Fatalf("ffx target list returned unexpected output to stderr: %s", ffxTargetListStderr)

@@ -178,6 +178,7 @@ func clearEnvVars() {
 	os.Unsetenv("_FAKE_FFX_TARGET_DEFAULT")
 	os.Unsetenv("_FAKE_FFX_TARGET_LIST")
 	os.Unsetenv("_FAKE_FFX_GET_SSH_ADDRESS")
+	os.Unsetenv("FFX_ISOLATE_DIR")
 }
 
 func clearTestEnv() {
@@ -1182,6 +1183,7 @@ func TestMain(t *testing.T) {
 			os.Setenv("_FAKE_FFX_DEVICE_CONFIG_DATA", test.deviceConfiguration)
 			os.Setenv("_FAKE_FFX_TARGET_DEFAULT", test.ffxTargetDefault)
 			os.Setenv("_FAKE_FFX_TARGET_LIST", test.ffxTargetList)
+			os.Setenv("FFX_ISOLATE_DIR", t.TempDir())
 			if test.ffxConfigServerEnabled {
 				os.Setenv("_FAKE_FFX_CONFIG_GET_SERVER_ENABLED", "true")
 			} else {

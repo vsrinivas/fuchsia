@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"time"
 
+	botanistconstants "go.fuchsia.dev/fuchsia/tools/botanist/constants"
 	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/lib/ffxutil/constants"
 	"go.fuchsia.dev/fuchsia/tools/lib/jsonutil"
@@ -25,8 +26,9 @@ const (
 	// The name of the snapshot zip file that gets outputted by `ffx target snapshot`.
 	// Keep in sync with //src/developer/ffx/plugins/target/snapshot/src/lib.rs.
 	snapshotZipName = "snapshot.zip"
-	// The JSON Pointer (https://tools.ietf.org/html/rfc6901) to log level in the config.
-	logLevelJsonPointer = "/log/level"
+
+	// The environment variable that ffx uses to create an isolated instance.
+	FFXIsolateDirEnvKey = "FFX_ISOLATE_DIR"
 )
 
 type LogLevel string
@@ -53,19 +55,16 @@ func runCommand(
 type FFXInstance struct {
 	ffxPath string
 
-	// Config represents the config associated with this ffx instance.
-	Config *FFXConfig
-	// ConfigPath is the path to the ffx config.
-	ConfigPath string
-
 	runner *subprocess.Runner
 	stdout io.Writer
 	stderr io.Writer
 	target string
+	env    []string
 }
 
 // NewFFXInstance creates an isolated FFXInstance.
 func NewFFXInstance(
+	ctx context.Context,
 	ffxPath string,
 	dir string,
 	env []string,
@@ -75,46 +74,60 @@ func NewFFXInstance(
 	if ffxPath == "" {
 		return nil, nil
 	}
-	config := newIsolatedFFXConfig(outputDir)
-	config.SetJsonPointer("/target/default", target)
+	if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
+		return nil, err
+	}
+	env = append(os.Environ(), env...)
+	env = append(env, fmt.Sprintf("%s=%s", FFXIsolateDirEnvKey, outputDir))
 	sshKey, err := filepath.Abs(sshKey)
 	if err != nil {
-		config.Close()
 		return nil, err
 	}
-	config.SetJsonPointer("/ssh/priv", []string{sshKey})
-	config.Set("test", map[string]bool{
-		"experimental_json_input": true,
-	})
-	configPath := filepath.Join(outputDir, "ffx_config.json")
-	if err := config.ToFile(configPath); err != nil {
-		config.Close()
-		return nil, err
+	ffx := &FFXInstance{
+		ffxPath: ffxPath,
+		runner:  &subprocess.Runner{Dir: dir, Env: env},
+		stdout:  os.Stdout,
+		stderr:  os.Stderr,
+		target:  target,
+		env:     env,
 	}
-	env = append(env, config.Env()...)
-	ffx := FFXInstanceWithConfig(ffxPath, dir, env, target, configPath)
-	if ffx != nil {
-		ffx.Config = config
+	ffxCmds := [][]string{
+		{"config", "set", "target.default", target},
+		{"config", "set", "ssh.priv", fmt.Sprintf("[\"%s\"]", sshKey)},
+		{"config", "set", "test.experimental_json_input", "true"},
+		// Set these fields in the global config for tests that don't use this library
+		// and don't set their own isolated env config.
+		{"config", "env", "set", filepath.Join(outputDir, "global_config.json"), "-l", "global"},
+		{"config", "set", "fastboot.usb.disabled", "true", "-l", "global"},
+		{"config", "set", "ffx.analytics.disabled", "true", "-l", "global"},
+	}
+	for _, args := range ffxCmds {
+		if err := ffx.Run(ctx, args...); err != nil {
+			if stopErr := ffx.Stop(); stopErr != nil {
+				logger.Debugf(ctx, "failed to stop daemon: %s", stopErr)
+			}
+			return nil, err
+		}
+	}
+	if deviceAddr := os.Getenv(botanistconstants.DeviceAddrEnvKey); deviceAddr != "" {
+		if err := ffx.Run(ctx, "config", "set", "discovery.mdns.enabled", "false", "-l", "global"); err != nil {
+			if stopErr := ffx.Stop(); stopErr != nil {
+				logger.Debugf(ctx, "failed to stop daemon: %s", stopErr)
+			}
+			return nil, err
+		}
+		if err := ffx.Run(ctx, "target", "add", deviceAddr); err != nil {
+			if stopErr := ffx.Stop(); stopErr != nil {
+				logger.Debugf(ctx, "failed to stop daemon: %s", stopErr)
+			}
+			return nil, err
+		}
 	}
 	return ffx, nil
 }
 
-func FFXInstanceWithConfig(
-	ffxPath, dir string,
-	env []string,
-	target, configPath string,
-) *FFXInstance {
-	if ffxPath == "" {
-		return nil
-	}
-	return &FFXInstance{
-		ffxPath:    ffxPath,
-		ConfigPath: configPath,
-		runner:     &subprocess.Runner{Dir: dir, Env: append(os.Environ(), env...)},
-		stdout:     os.Stdout,
-		stderr:     os.Stderr,
-		target:     target,
-	}
+func (f *FFXInstance) Env() []string {
+	return f.env
 }
 
 func (f *FFXInstance) SetTarget(target string) {
@@ -128,27 +141,18 @@ func (f *FFXInstance) SetStdoutStderr(stdout, stderr io.Writer) {
 }
 
 // SetLogLevel sets the log-level in the ffx instance's associated config.
-func (f *FFXInstance) SetLogLevel(level LogLevel) error {
-	return f.SetConfigJsonPointer(logLevelJsonPointer, string(level))
+func (f *FFXInstance) SetLogLevel(ctx context.Context, level LogLevel) error {
+	return f.ConfigSet(ctx, "log.level", string(level))
 }
 
-// SetConfigJsonPointer sets a field in the ffx instance's associated config and
-// rewrites the config file.
-func (f *FFXInstance) SetConfigJsonPointer(pointer string, value interface{}) error {
-	if f.Config == nil {
-		config, err := configFromFile(f.ConfigPath)
-		if err != nil {
-			return err
-		}
-		f.Config = config
-	}
-	f.Config.SetJsonPointer(pointer, value)
-	return f.Config.ToFile(f.ConfigPath)
+// ConfigSet sets a field in the ffx instance's associated config.
+func (f *FFXInstance) ConfigSet(ctx context.Context, key, value string) error {
+	return f.Run(ctx, "config", "set", key, value)
 }
 
 // Run runs ffx with the associated config and provided args.
 func (f *FFXInstance) Run(ctx context.Context, args ...string) error {
-	args = append([]string{f.ffxPath, "--config", f.ConfigPath}, args...)
+	args = append([]string{f.ffxPath}, args...)
 	if err := runCommand(ctx, f.runner, f.stdout, f.stderr, args...); err != nil {
 		return fmt.Errorf("%s: %w", constants.CommandFailedMsg, err)
 	}
@@ -167,11 +171,6 @@ func (f *FFXInstance) Stop() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	err := f.Run(ctx, "daemon", "stop")
-	if f.Config != nil {
-		if configErr := f.Config.Close(); err == nil {
-			err = configErr
-		}
-	}
 	// Wait to see that the daemon is stopped before exiting this function
 	// because the ffx command returns after it has initiated the shutdown,
 	// but there may be some delay where the daemon can continue to output
