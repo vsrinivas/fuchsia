@@ -95,9 +95,10 @@ impl EagerPackage {
             }
         };
 
-        let pkg_dir = resolve_pinned_from_cache(&pkg_cache, pinned_url)
+        let pkg_dir = pkg_cache
+            .get_already_cached(BlobInfo { blob_id: pinned_url.hash().into(), length: 0 })
             .await
-            .map_err(LoadError::ResolvePinnedFromCache)?;
+            .map_err(LoadError::GetAlreadyCached)?;
         self.package_directory = Some(pkg_dir);
         Ok(package_source)
     }
@@ -124,23 +125,6 @@ fn verify_cup_signature(
             &cup.nonce.into(),
         )
         .map_err(ParseCupResponseError::VerificationError)
-}
-
-async fn resolve_pinned_from_cache(
-    pkg_cache: &cache::Client,
-    url: &PinnedAbsolutePackageUrl,
-) -> Result<PackageDirectory, Error> {
-    let mut get = pkg_cache
-        .get(BlobInfo { blob_id: url.hash().into(), length: 0 })
-        .context("pkg cache get")?;
-    if let Some(_needed_blob) = get.open_meta_blob().await.context("open_meta_blob")? {
-        return Err(anyhow!("meta blob missing"));
-    }
-    let missing_blobs = get.get_missing_blobs().await.context("get_missing_blobs")?;
-    if !missing_blobs.is_empty() {
-        return Err(anyhow!("at least one blob missing: {:?}", missing_blobs));
-    }
-    Ok(get.finish().await.context("finish")?)
 }
 
 fn find_app_with_matching_url<'a>(
@@ -507,8 +491,8 @@ enum LoadError {
     ParseCupResponse(#[from] ParseCupResponseError),
     #[error("URL not found in CUP omaha response: {0}")]
     CupResponseURLNotFound(UnpinnedAbsolutePackageUrl),
-    #[error("while resolving from cache")]
-    ResolvePinnedFromCache(#[source] anyhow::Error),
+    #[error("while getting an already cached package")]
+    GetAlreadyCached(#[source] cache::GetAlreadyCachedError),
     #[error("the persisted eager package is not available")]
     NotAvailable,
     #[error("while checking minimum required version")]
@@ -681,7 +665,7 @@ fn load_result_to_event_code(
         Err(LoadError::CupResponseURLNotFound(_)) => EventCodes::Verification,
         Err(LoadError::VersionTooOldError(_)) => EventCodes::Verification,
         Err(LoadError::RequestedVersionTooLow) => EventCodes::Verification,
-        Err(LoadError::ResolvePinnedFromCache(_)) => EventCodes::Resolve,
+        Err(LoadError::GetAlreadyCached(_)) => EventCodes::Resolve,
     }
 }
 

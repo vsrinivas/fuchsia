@@ -69,6 +69,49 @@ impl Client {
 
         Ok(Get { get_fut, pkg_dir, needed_blobs, pkg_present: SharedBoolEvent::new() })
     }
+
+    /// Uses PackageCache.Get to obtain the package directory of a package that is already cached
+    /// (all blobs are already in blobfs).
+    /// Like `self.open` except it works for packages that are neither in base nor active in the
+    /// dynamic index.
+    /// Errors if the package is not already cached.
+    pub async fn get_already_cached(
+        &self,
+        meta_far_blob: BlobInfo,
+    ) -> Result<PackageDirectory, GetAlreadyCachedError> {
+        let mut get = self.get(meta_far_blob).map_err(GetAlreadyCachedError::Get)?;
+        if let Some(_) = get.open_meta_blob().await.map_err(GetAlreadyCachedError::OpenMetaBlob)? {
+            return Err(GetAlreadyCachedError::MissingMetaFar);
+        }
+        let missing_blobs =
+            get.get_missing_blobs().await.map_err(GetAlreadyCachedError::GetMissingBlobs)?;
+        if !missing_blobs.is_empty() {
+            return Err(GetAlreadyCachedError::MissingContentBlobs(missing_blobs));
+        }
+        get.finish().await.map_err(GetAlreadyCachedError::FinishGet)
+    }
+}
+
+#[derive(thiserror::Error, Debug)]
+#[allow(missing_docs)]
+pub enum GetAlreadyCachedError {
+    #[error("calling get")]
+    Get(#[source] fidl::Error),
+
+    #[error("opening meta blob")]
+    OpenMetaBlob(#[source] OpenBlobError),
+
+    #[error("meta.far blob not cached")]
+    MissingMetaFar,
+
+    #[error("getting missing blobs")]
+    GetMissingBlobs(#[source] ListMissingBlobsError),
+
+    #[error("content blobs not cached {0:?}")]
+    MissingContentBlobs(Vec<BlobInfo>),
+
+    #[error("finishing get")]
+    FinishGet(#[source] GetError),
 }
 
 #[derive(Debug, Clone)]
@@ -1199,6 +1242,72 @@ mod tests {
                 let blob = blob.truncate(3 * CHUNK_SIZE as u64).await.unwrap();
                 assert_matches!(blob.write(&payload).await.unwrap(), BlobWriteSuccess::Done);
                 closer.close().await;
+            },
+        )
+        .await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn get_already_cached_success() {
+        let (client, mut server) = MockPackageCache::new();
+
+        let ((), ()) = future::join(
+            async {
+                server.expect_get(blob_info(2)).await.finish().close_pkg_dir();
+                server.expect_closed().await;
+            },
+            async move {
+                let pkg_dir = client.get_already_cached(blob_info(2)).await.unwrap();
+
+                assert_matches!(
+                    pkg_dir.into_proxy().take_event_stream().next().await,
+                    Some(Err(fidl::Error::ClientChannelClosed { status: Status::NOT_EMPTY, .. }))
+                );
+            },
+        )
+        .await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn get_already_cached_missing_meta_far() {
+        let (client, mut server) = MockPackageCache::new();
+
+        let ((), ()) = future::join(
+            async {
+                server.expect_get(blob_info(2)).await.expect_open_meta_blob(Ok(true)).await;
+            },
+            async move {
+                assert_matches!(
+                    client.get_already_cached(blob_info(2)).await,
+                    Err(GetAlreadyCachedError::MissingMetaFar)
+                );
+            },
+        )
+        .await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn get_already_cached_missing_content_blob() {
+        let (client, mut server) = MockPackageCache::new();
+
+        let ((), ()) = future::join(
+            async {
+                server
+                    .expect_get(blob_info(2))
+                    .await
+                    .expect_open_meta_blob(Ok(false))
+                    .await
+                    .expect_get_missing_blobs(vec![vec![BlobInfo {
+                        blob_id: [0; 32].into(),
+                        length: 0,
+                    }]])
+                    .await;
+            },
+            async move {
+                assert_matches!(
+                    client.get_already_cached(blob_info(2)).await,
+                    Err(GetAlreadyCachedError::MissingContentBlobs(_))
+                );
             },
         )
         .await;
