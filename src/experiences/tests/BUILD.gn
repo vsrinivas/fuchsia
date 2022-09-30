@@ -14,9 +14,9 @@ dart_library("ermine_driver") {
   sources = [ "ermine_driver.dart" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.input",
-    "//sdk/fidl/fuchsia.ui.input",
-    "//sdk/fidl/fuchsia.ui.input3",
+    "//sdk/fidl/fuchsia.input:fuchsia.input_dart",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_dart",
+    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3_dart",
     "//sdk/testing/sl4f/client",
     "//sdk/testing/sl4f/flutter_driver_sl4f",
     "//third_party/dart-pkg/git/flutter/packages/flutter_driver",

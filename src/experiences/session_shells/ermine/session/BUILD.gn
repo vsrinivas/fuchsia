@@ -18,13 +18,13 @@ dart_library("lib") {
     "//sdk/dart/fuchsia_services",
     "//sdk/dart/fuchsia_vfs",
     "//sdk/dart/zircon",
-    "//sdk/fidl/fuchsia.component",
-    "//sdk/fidl/fuchsia.component.decl",
-    "//sdk/fidl/fuchsia.io",
-    "//sdk/fidl/fuchsia.session.scene",
-    "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.ui.input",
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_dart",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_dart",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_dart",
+    "//sdk/fidl/fuchsia.session.scene:fuchsia.session.scene_dart",
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_dart",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_dart",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_dart",
   ]
 }
 

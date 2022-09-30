@@ -20,7 +20,7 @@ dart_test("workstation_chrome_smoke_test") {
 
   deps = [
     "//sdk/dart/fuchsia_logger",
-    "//sdk/fidl/fuchsia.input",
+    "//sdk/fidl/fuchsia.input:fuchsia.input_dart",
     "//sdk/testing/sl4f/client",
     "//sdk/testing/sl4f/flutter_driver_sl4f",
     "//src/experiences/tests:ermine_driver",
@@ -52,7 +52,7 @@ dart_test("workstation_chrome_advanced_smoke_test") {
 
   deps = [
     "//sdk/dart/fuchsia_logger",
-    "//sdk/fidl/fuchsia.input",
+    "//sdk/fidl/fuchsia.input:fuchsia.input_dart",
     "//sdk/testing/sl4f/client",
     "//sdk/testing/sl4f/flutter_driver_sl4f",
     "//src/experiences/tests:ermine_driver",

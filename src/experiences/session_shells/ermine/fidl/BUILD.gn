@@ -4,7 +4,7 @@
 import("//build/fidl/fidl.gni")
 
 group("fidl") {
-  public_deps = [ ":ermine.tools" ]
+  public_deps = [ ":ermine.tools_dart($dart_toolchain)" ]
 }
 
 fidl("ermine.tools") {
