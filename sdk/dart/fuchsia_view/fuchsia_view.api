@@ -1,0 +1,70 @@
+{
+  "files": {
+    "tokens.dart": {
+      "ExportDirectiveImpl": {
+        "src/view_creation_token_pair.dart": {
+          "name": "src/view_creation_token_pair.dart",
+          "type": "ExportDirectiveImpl"
+        }
+      },
+      "name": "tokens.dart",
+      "type": "file"
+    },
+    "view_creation_token_pair.dart": {
+      "ClassDeclarationImpl": {
+        "ViewCreationTokenPair": {
+          "ConstructorDeclarationImpl": {
+            "ViewCreationTokenPair": {
+              "name": "ViewCreationTokenPair",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "ViewCreationTokenPair._fromChannels": {
+              "SimpleFormalParameterImpl": {
+                "channels": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "channels",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "ChannelPair"
+                }
+              },
+              "name": "ViewCreationTokenPair._fromChannels",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "viewToken": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "viewToken",
+              "type": "VariableDeclarationImpl",
+              "varType": "ViewCreationToken"
+            },
+            "viewportToken": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "viewportToken",
+              "type": "VariableDeclarationImpl",
+              "varType": "ViewportCreationToken"
+            }
+          },
+          "name": "ViewCreationTokenPair",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "view_creation_token_pair.dart",
+      "type": "file"
+    }
+  },
+  "name": "//sdk/dart/fuchsia_view:fuchsia_view_detect_action",
+  "type": "package"
+}

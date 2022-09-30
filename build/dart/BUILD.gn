@@ -70,6 +70,7 @@ group("dart_allowlist") {
     "//sdk/dart/fuchsia_services:*",
     "//sdk/dart/fuchsia_services/test_support:*",
     "//sdk/dart/fuchsia_vfs:*",
+    "//sdk/dart/fuchsia_view:*",
     "//sdk/dart/zircon:*",
     "//sdk/testing/fidl/protocols_tests:*",
     "//sdk/testing/sl4f/client:*",
