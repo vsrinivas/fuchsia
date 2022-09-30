@@ -184,11 +184,6 @@
             to: [ "#scenic" ],
         },
         {
-            protocol: [ "fuchsia.cobalt.LoggerFactory" ],
-            from: "#mock_cobalt",
-            to: [ "#scenic" ],
-        },
-        {
             protocol: [
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",

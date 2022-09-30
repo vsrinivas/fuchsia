@@ -221,7 +221,6 @@
         },
         {
             protocol: [
-                "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.cobalt.SystemDataUpdater",
                 "fuchsia.metrics.MetricEventLoggerFactory",
             ],

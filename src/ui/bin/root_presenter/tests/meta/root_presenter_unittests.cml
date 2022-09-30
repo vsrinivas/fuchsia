@@ -95,10 +95,5 @@
             from: "#fake_display_provider",
             to: [ "#scenic" ],
         },
-        {
-            protocol: [ "fuchsia.cobalt.LoggerFactory" ],
-            from: "#mock_cobalt",
-            to: [ "#scenic" ],
-        },
     ],
 }

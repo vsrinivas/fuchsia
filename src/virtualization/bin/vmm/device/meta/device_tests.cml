@@ -55,7 +55,7 @@
             to: [ "#scenic" ],
         },
         {
-            protocol: [ "fuchsia.cobalt.LoggerFactory" ],
+            protocol: [ "fuchsia.metrics.MetricEventLoggerFactory" ],
             from: "#mock_cobalt",
             to: "#scenic",
         },

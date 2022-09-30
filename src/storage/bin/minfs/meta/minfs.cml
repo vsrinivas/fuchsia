@@ -27,7 +27,6 @@
     use: [
         {
             protocol: [
-                "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.scheduler.ProfileProvider",
             ],
         },

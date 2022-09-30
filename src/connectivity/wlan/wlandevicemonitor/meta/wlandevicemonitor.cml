@@ -27,10 +27,7 @@
             path: "/dev/class/wlanif",
         },
         {
-            protocol: [
-                "fuchsia.cobalt.LoggerFactory",
-                "fuchsia.wlan.device.service.DeviceService",
-            ],
+            protocol: [ "fuchsia.wlan.device.service.DeviceService" ],
         },
     ],
     expose: [

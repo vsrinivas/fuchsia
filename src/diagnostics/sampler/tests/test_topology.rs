@@ -71,7 +71,6 @@ pub async fn create() -> Result<RealmInstance, Error> {
     wrapper_realm
         .add_route(
             Route::new()
-                .capability(Capability::protocol_by_name("fuchsia.cobalt.LoggerFactory"))
                 .capability(Capability::protocol_by_name(
                     "fuchsia.metrics.MetricEventLoggerFactory",
                 ))

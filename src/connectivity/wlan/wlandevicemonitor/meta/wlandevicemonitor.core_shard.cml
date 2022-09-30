@@ -36,10 +36,5 @@
             from: "parent",
             to: "#wlandevicemonitor",
         },
-        {
-            protocol: [ "fuchsia.cobalt.LoggerFactory" ],
-            from: "#cobalt",
-            to: "#wlandevicemonitor",
-        },
     ],
 }

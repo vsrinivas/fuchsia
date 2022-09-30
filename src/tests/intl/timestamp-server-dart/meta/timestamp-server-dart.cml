@@ -16,10 +16,7 @@
     ],
     use: [
         {
-            protocol: [
-                "fuchsia.cobalt.LoggerFactory",
-                "fuchsia.intl.PropertyProvider",
-            ],
+            protocol: [ "fuchsia.intl.PropertyProvider" ],
         },
     ],
     expose: [

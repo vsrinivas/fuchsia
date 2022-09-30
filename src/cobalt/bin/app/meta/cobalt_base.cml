@@ -15,7 +15,6 @@
         {
             protocol: [
                 "fuchsia.cobalt.Controller",
-                "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.cobalt.SystemDataUpdater",
                 "fuchsia.metrics.MetricEventLoggerFactory",
             ],
@@ -57,7 +56,6 @@
         {
             protocol: [
                 "fuchsia.cobalt.Controller",
-                "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.cobalt.SystemDataUpdater",
                 "fuchsia.metrics.MetricEventLoggerFactory",
             ],

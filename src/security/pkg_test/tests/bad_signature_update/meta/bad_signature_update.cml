@@ -284,15 +284,6 @@
             subdir: "packages/build-info/0/data",
         },
         {
-            protocol: "fuchsia.cobalt.LoggerFactory",
-            from: "#cobalt",
-            to: [
-                "#pkg-cache",
-                "#pkg-resolver",
-                "#system-updater",
-            ],
-        },
-        {
             protocol: "fuchsia.update.CommitStatusProvider",
             from: "#system-update-committer",
             to: "#pkg-cache",

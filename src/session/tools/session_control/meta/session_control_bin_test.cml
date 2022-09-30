@@ -15,11 +15,6 @@
             durability: "transient",
         },
     ],
-    use: [
-        {
-            protocol: [ "fuchsia.cobalt.LoggerFactory" ],
-        },
-    ],
     offer: [
         {
             protocol: "fuchsia.session.Launcher",

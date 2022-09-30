@@ -78,7 +78,6 @@ services in its sandbox, as seen below.
             "hub"
         ],
         "services": [
-            "fuchsia.cobalt.LoggerFactory",
             "fuchsia.fonts.Provider",
             "fuchsia.intl.PropertyProvider",
             "fuchsia.logger.LogSink",

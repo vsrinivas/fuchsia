@@ -179,7 +179,6 @@
         // Non-zircon services for archivist and svchost
         {
             protocol: [
-                "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.component.DetectBinder",
                 "fuchsia.component.KcounterBinder",
                 "fuchsia.component.LogStatsBinder",

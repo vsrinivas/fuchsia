@@ -875,11 +875,6 @@
             subdir: "class/rtc",
         },
         {
-            protocol: "fuchsia.cobalt.LoggerFactory",
-            from: "#cobalt",
-            to: [ "#sampler" ],
-        },
-        {
             protocol: "fuchsia.metrics.MetricEventLoggerFactory",
             from: "#cobalt",
             to: [
@@ -987,10 +982,7 @@
             from: "framework",
         },
         {
-            protocol: [
-                "fuchsia.cobalt.LoggerFactory",
-                "fuchsia.metrics.MetricEventLoggerFactory",
-            ],
+            protocol: [ "fuchsia.metrics.MetricEventLoggerFactory" ],
             from: "#cobalt",
         },
         {

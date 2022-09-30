@@ -24,10 +24,6 @@
             protocol: [ "fuchsia.metrics.MetricEventLoggerFactory" ],
         },
         {
-            protocol: "fuchsia.cobalt.LoggerFactory",
-            from: "parent",
-        },
-        {
             protocol: "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
             from: "parent",
         },

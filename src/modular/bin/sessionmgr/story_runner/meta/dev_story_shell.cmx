@@ -7,7 +7,6 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.cobalt.LoggerFactory",
             "fuchsia.sys.Launcher",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.scenic.Scenic"

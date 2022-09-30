@@ -277,7 +277,7 @@ HermeticAudioRealm::CtorArgs HermeticAudioRealm::BuildRealm(Options options,
   // Include a mock cobalt to silence warnings that we can't connect to cobalt.
   builder.AddChild(kMockCobalt, "#meta/mock_cobalt.cm");
   builder.AddRoute({
-      .capabilities = {Protocol{"fuchsia.cobalt.LoggerFactory"}},
+      .capabilities = {Protocol{"fuchsia.metrics.MetricEventLoggerFactory"}},
       .source = ChildRef{kMockCobalt},
       .targets = {ChildRef{kAudioCore}},
   });

@@ -52,7 +52,7 @@
     ],
     expose: [
         {
-            protocol: [ "fuchsia.cobalt.LoggerFactory" ],
+            protocol: [ "fuchsia.metrics.MetricEventLoggerFactory" ],
             from: "#mock_cobalt",
         },
 

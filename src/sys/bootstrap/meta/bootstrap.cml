@@ -191,7 +191,6 @@
                 "fuchsia.boot.ReadOnlyLog",
                 "fuchsia.boot.RootResource",
                 "fuchsia.boot.WriteOnlyLog",
-                "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.exception.Handler",
                 "fuchsia.kernel.RootJob",
                 "fuchsia.kernel.RootJobForInspect",
@@ -421,7 +420,6 @@
         },
         {
             protocol: [
-                "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.metrics.MetricEventLoggerFactory",
             ],
             from: "parent",

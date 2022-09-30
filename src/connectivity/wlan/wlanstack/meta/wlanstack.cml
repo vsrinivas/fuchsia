@@ -18,7 +18,6 @@
     use: [
         {
             protocol: [
-                "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.diagnostics.persist.DataPersistence-wlan",
                 "fuchsia.metrics.MetricEventLoggerFactory",
             ],
