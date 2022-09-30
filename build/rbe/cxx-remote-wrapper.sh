@@ -200,10 +200,12 @@ do
          cc_command+=( "$opt" )
          # Change C-preprocessing output to produce .ii for C++, .i for C
          case "$cc" in
+           # shell pattern substitution unable to match and replace
+           # at end-of-string, so we resort to using sed.
            *clang++ | *g++ )
-             cpreprocess_output="${opt/.o/.ii}" ;;
+             cpreprocess_output="$(echo "$opt" | sed -e 's|.o$|.ii|')" ;;
            *)
-             cpreprocess_output="${opt/.o/.i}" ;;
+             cpreprocess_output="$(echo "$opt" | sed -e 's|.o$|.i|')" ;;
          esac
          cpreprocess_command+=( "$cpreprocess_output" )
          ;;
