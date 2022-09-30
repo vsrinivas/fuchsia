@@ -2148,6 +2148,16 @@
         "type": "uint32"
     },
     {
+        "kind": "protocol/member",
+        "name": "fuchsia.io/Openable.Open",
+        "ordinal": "3193127272456937152",
+        "type": "(fuchsia.io/OpenFlags flags,uint32 mode,string:4096 path,server_end:fuchsia.io/Node object)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.io/Openable"
+    },
+    {
         "kind": "bits/member",
         "name": "fuchsia.io/Operations.CONNECT",
         "value": "1"

@@ -130,6 +130,8 @@ type DeviceGroupDescriptor = struct {
 
 /// Protocol for controlling devices in a devhost process from the devcoordinator
 protocol DeviceController {
+    compose fuchsia.io.Openable;
+
     /// Bind the requested driver to this device.  `driver_path` is informational,
     /// but all calls to BindDriver/CreateDevice should use the same `driver_path`
     /// each time they use a `driver` VMO with the same contents. Returns a `status`
@@ -176,14 +178,6 @@ protocol DeviceController {
         target_system_state uint32;
     }) -> (struct {
         status zx.status;
-    });
-
-    /// See fuchsia.io.Directory/Open for information.
-    Open(resource struct {
-        flags fuchsia.io.OpenFlags;
-        mode uint32;
-        path string:fuchsia.io.MAX_PATH;
-        object server_end:fuchsia.io.Node;
     });
 };
 

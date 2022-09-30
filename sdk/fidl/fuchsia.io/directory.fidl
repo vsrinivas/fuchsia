@@ -190,10 +190,8 @@ protocol Directory {
     compose Directory2;
 };
 
-/// Directory defines a node which is capable of containing other Objects.
-protocol Directory1 {
-    compose Node1;
-
+// Extracted from Directory1 for composition with protocols in other libraries.
+protocol Openable {
     /// Opens a new object relative to this directory object.
     ///
     /// `path` may contain multiple segments, separated by "/" characters, and should never be
@@ -226,6 +224,12 @@ protocol Directory1 {
         path string:MAX_PATH;
         object server_end:Node;
     });
+};
+
+/// Directory defines a node which is capable of containing other Objects.
+protocol Directory1 {
+    compose Node1;
+    compose Openable;
 
     /// Reads a collection of variably sized dirents into a buffer.
     /// The number of dirents in a directory may be very large: akin to
