@@ -33,7 +33,6 @@ core_tests = [
   "object-child",
   "object-wait",
   "page-size",
-  "pager",
   "property",
   "pthread",
   "pthread-barrier",
@@ -79,6 +78,16 @@ bootfs_only = [
   # Some tests new ZX_POL_NEW_PROCESS, and the DebugRegisterState tests on
   # x86_64 fail when run as a component due to DR6 containing unexpected values.
   "threads",
+
+  # The pager tests rely on being able to check for test threads blocking on user pagers created
+  # by the test. They do this by verifying that the thread state is ZX_THREAD_STATE_BLOCKED_PAGER
+  # which only captures that the thread is blocked against *some* user pager, not any specific one.
+  # So they cannot run in an environment where test threads can block on pagers created outside of
+  # the test, e.g. when the test is run as a component.
+  #
+  # TODO(fxbug.dev/89597): pager-writeback should be moved here too once standalone bootfs tests
+  # can access the next vDSO.
+  "pager",
 ]
 
 # These tests need to run in the unified core-tests binary because
