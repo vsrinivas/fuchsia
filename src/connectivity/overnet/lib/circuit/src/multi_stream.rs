@@ -4,12 +4,14 @@
 
 use crate::error::{Error, Result};
 use crate::stream;
+use crate::{Node, Quality};
 
 use futures::channel::mpsc::{unbounded, UnboundedReceiver, UnboundedSender};
 use futures::channel::oneshot;
 use futures::future::Either;
 use futures::StreamExt;
 use std::collections::HashMap;
+use std::future::Future;
 use std::sync::{Arc, Mutex as SyncMutex};
 
 /// Status of an individual stream.
@@ -318,6 +320,56 @@ async fn write_as_chunks(id: u32, reader: stream::Reader, writer: Arc<SyncMutex<
     }
 }
 
+/// Creates a new connection to a circuit node, and merges all streams produced and consumed by that
+/// connection into a multi-stream. In this way you can service a connection between nodes with a
+/// single stream of bytes.
+///
+/// The `is_server` boolean should be `true` at one end of the connection and `false` at the other.
+/// Usually it will be `true` for the node receiving a connection and `false` for the node
+/// initiating one.
+///
+/// Traffic will be written to, and read from, the given `reader` and `writer`.
+///
+/// The `quality` will be used to make routing decisions when establishing streams across multiple
+/// nodes.
+pub fn multi_stream_node_connection(
+    node: &Node,
+    reader: stream::Reader,
+    writer: stream::Writer,
+    is_server: bool,
+    quality: Quality,
+) -> impl Future<Output = Result<()>> + Send {
+    let (new_stream_sender, streams_in) = unbounded();
+    let (streams_out, new_stream_receiver) = unbounded();
+
+    let control_stream = if is_server {
+        let (control_reader, control_writer_remote) = stream::stream();
+        let (control_reader_remote, control_writer) = stream::stream();
+
+        new_stream_sender
+            .unbounded_send((control_reader_remote, control_writer_remote))
+            .expect("We just created this channel!");
+        Some((control_reader, control_writer))
+    } else {
+        None
+    };
+
+    let stream_fut = multi_stream(reader, writer, is_server, streams_out, streams_in);
+    let node_fut = node.link_node(control_stream, new_stream_sender, new_stream_receiver, quality);
+
+    async move {
+        futures::pin_mut!(node_fut);
+        futures::pin_mut!(stream_fut);
+
+        // If either the node connection or the multi stream dies we assume the other will also die
+        // shortly after, so we always await both futures to completion.
+        match futures::future::select(node_fut, stream_fut).await {
+            Either::Left((res, stream_fut)) => res.and(stream_fut.await),
+            Either::Right((res, node_fut)) => res.and(node_fut.await),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -549,6 +601,57 @@ mod test {
         ba_reader_a
             .read(8, |buf| {
                 assert_eq!(&buf[..8], &[25, 26, 27, 28, 29, 30, 31, 32]);
+                Ok(((), 8))
+            })
+            .await
+            .unwrap();
+    }
+
+    #[fuchsia::test]
+    async fn node_connect() {
+        let (new_peer_sender_a, mut new_peers) = unbounded();
+        let (new_peer_sender_b, _new_peers_b) = unbounded();
+        let (incoming_streams_sender_a, _streams_a) = unbounded();
+        let (incoming_streams_sender_b, mut streams) = unbounded();
+        let a = Node::new("a", "test", new_peer_sender_a, incoming_streams_sender_a).unwrap();
+        let b = Node::new("b", "test", new_peer_sender_b, incoming_streams_sender_b).unwrap();
+
+        let (ab_reader, ab_writer) = stream::stream();
+        let (ba_reader, ba_writer) = stream::stream();
+
+        let _a_conn = fasync::Task::spawn(multi_stream_node_connection(
+            &a,
+            ba_reader,
+            ab_writer,
+            true,
+            Quality::IN_PROCESS,
+        ));
+        let b_conn =
+            multi_stream_node_connection(&b, ab_reader, ba_writer, false, Quality::IN_PROCESS);
+        let _b_conn = fasync::Task::spawn(async move {
+            let _ = b_conn.await.unwrap();
+        });
+
+        let new_peer = new_peers.next().await.unwrap();
+        assert_eq!("b", &new_peer);
+
+        let (_reader, peer_writer) = stream::stream();
+        let (peer_reader, writer) = stream::stream();
+        a.connect_to_peer(peer_reader, peer_writer, "b").await.unwrap();
+
+        writer
+            .write(8, |buf| {
+                buf[..8].copy_from_slice(&[1, 2, 3, 4, 5, 6, 7, 8]);
+                Ok(8)
+            })
+            .unwrap();
+
+        let (reader, _writer, from) = streams.next().await.unwrap();
+        assert_eq!("a", &from);
+
+        reader
+            .read(8, |buf| {
+                assert_eq!(&[1, 2, 3, 4, 5, 6, 7, 8], &buf);
                 Ok(((), 8))
             })
             .await
