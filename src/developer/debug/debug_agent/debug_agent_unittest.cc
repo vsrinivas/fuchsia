@@ -16,7 +16,9 @@
 #include "src/developer/debug/debug_agent/mock_thread_handle.h"
 #include "src/developer/debug/debug_agent/test_utils.h"
 #include "src/developer/debug/ipc/message_writer.h"
+#include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/shared/logging/debug.h"
+#include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/shared/test_with_loop.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -145,22 +147,17 @@ TEST_F(DebugAgentTests, OnGlobalStatus) {
 }
 
 TEST_F(DebugAgentTests, OnAttachNotFound) {
-  uint32_t transaction_id = 1u;
-
   MockDebugAgentHarness harness;
   RemoteAPI* remote_api = harness.debug_agent();
 
   debug_ipc::AttachRequest attach_request;
   attach_request.koid = -1;
 
-  remote_api->OnAttach(transaction_id++, attach_request);
+  // Invalid koid should fail.
+  debug_ipc::AttachReply attach_reply;
+  remote_api->OnAttach(attach_request, &attach_reply);
 
-  {
-    // Should've gotten an attach reply.
-    auto& attach_replies = harness.stream_backend()->attach_replies();
-    ASSERT_EQ(attach_replies.size(), 1u);
-    EXPECT_TRUE(attach_replies[0].status.has_error());
-  }
+  EXPECT_TRUE(attach_reply.status.has_error());
 
   constexpr zx_koid_t kProcKoid1 = 100;
   constexpr zx_koid_t kThreadKoid1 = 101;
@@ -169,19 +166,12 @@ TEST_F(DebugAgentTests, OnAttachNotFound) {
       MockExceptionHandle(kThreadKoid1));
 
   // Even with limbo it should fail.
-  remote_api->OnAttach(transaction_id++, attach_request);
-
-  {
-    // Should've gotten an attach reply.
-    auto& attach_replies = harness.stream_backend()->attach_replies();
-    ASSERT_EQ(attach_replies.size(), 2u);
-    EXPECT_TRUE(attach_replies[1].status.has_error());
-  }
+  remote_api->OnAttach(attach_request, &attach_reply);
+  EXPECT_TRUE(attach_reply.status.has_error());
 }
 
 TEST_F(DebugAgentTests, OnAttach) {
   constexpr zx_koid_t kProcess1Koid = 11u;  // Koid for job1-p2 from the GetMockJobTree() hierarchy.
-  uint32_t transaction_id = 1u;
 
   MockDebugAgentHarness harness;
   RemoteAPI* remote_api = harness.debug_agent();
@@ -189,50 +179,41 @@ TEST_F(DebugAgentTests, OnAttach) {
   debug_ipc::AttachRequest attach_request;
   attach_request.koid = kProcess1Koid;
 
-  remote_api->OnAttach(transaction_id++, attach_request);
+  debug_ipc::AttachReply attach_reply;
+  remote_api->OnAttach(attach_request, &attach_reply);
 
   // We should've received a watch command (which does the low level exception watching).
   EXPECT_TRUE(HasAttachedProcessWithKoid(harness.debug_agent(), kProcess1Koid));
 
   // We should've gotten an attach reply.
-  auto& attach_replies = harness.stream_backend()->attach_replies();
-  auto reply = attach_replies.back();
-  ASSERT_EQ(attach_replies.size(), 1u);
-  EXPECT_TRUE(reply.status.ok());
-  EXPECT_EQ(reply.koid, kProcess1Koid);
-  EXPECT_EQ(reply.name, "job1-p2");
+  EXPECT_TRUE(attach_reply.status.ok());
+  EXPECT_EQ(attach_reply.koid, kProcess1Koid);
+  EXPECT_EQ(attach_reply.name, "job1-p2");
 
   // Asking for some invalid process should fail.
   attach_request.koid = 0x231315;  // Some invalid value.
-  remote_api->OnAttach(transaction_id++, attach_request);
+  remote_api->OnAttach(attach_request, &attach_reply);
 
   // We should've gotten an error reply.
-  ASSERT_EQ(attach_replies.size(), 2u);
-  reply = attach_replies.back();
-  EXPECT_TRUE(reply.status.has_error());
+  EXPECT_TRUE(attach_reply.status.has_error());
 
   // Attaching to a third process should work.
   attach_request.koid = 21u;
-  remote_api->OnAttach(transaction_id++, attach_request);
+  remote_api->OnAttach(attach_request, &attach_reply);
 
-  ASSERT_EQ(attach_replies.size(), 3u);
-  reply = attach_replies.back();
-  EXPECT_TRUE(reply.status.ok());
-  EXPECT_EQ(reply.koid, 21u);
-  EXPECT_EQ(reply.name, "job121-p2");
+  EXPECT_TRUE(attach_reply.status.ok());
+  EXPECT_EQ(attach_reply.koid, 21u);
+  EXPECT_EQ(attach_reply.name, "job121-p2");
 
   // Attaching again to a process should fail.
-  remote_api->OnAttach(transaction_id++, attach_request);
+  remote_api->OnAttach(attach_request, &attach_reply);
 
-  ASSERT_EQ(attach_replies.size(), 4u);
-  reply = attach_replies.back();
-  EXPECT_TRUE(reply.status.has_error());
+  EXPECT_TRUE(attach_reply.status.has_error());
 }
 
 TEST_F(DebugAgentTests, AttachToLimbo) {
   // debug::SetDebugMode(true);
   // debug::SetLogCategories({debug::LogCategory::kAll});
-  uint32_t transaction_id = 1u;
 
   MockDebugAgentHarness harness;
   RemoteAPI* remote_api = harness.debug_agent();
@@ -248,18 +229,19 @@ TEST_F(DebugAgentTests, AttachToLimbo) {
 
   debug_ipc::AttachRequest attach_request = {};
   attach_request.koid = kProcKoid;
-  remote_api->OnAttach(transaction_id++, attach_request);
+
+  debug_ipc::AttachReply attach_reply;
+  remote_api->OnAttach(attach_request, &attach_reply);
+  // The threads are only populated on the next tick.
+  debug::MessageLoop::Current()->RunUntilNoTasks();
 
   // Process should be watching.
   EXPECT_TRUE(HasAttachedProcessWithKoid(harness.debug_agent(), kProcKoid));
 
   // We should've gotten an attach reply.
-  auto& attach_replies = harness.stream_backend()->attach_replies();
-  ASSERT_EQ(attach_replies.size(), 1u);
-  auto reply = attach_replies.back();
-  EXPECT_TRUE(reply.status.ok());
-  EXPECT_EQ(reply.koid, kProcKoid);
-  EXPECT_EQ(reply.name, "proc");
+  EXPECT_TRUE(attach_reply.status.ok());
+  EXPECT_EQ(attach_reply.koid, kProcKoid);
+  EXPECT_EQ(attach_reply.name, "proc");
 
   {
     DebuggedProcess* process = harness.debug_agent()->GetDebuggedProcess(kProcKoid);
@@ -356,8 +338,6 @@ TEST_F(DebugAgentTests, DetachFromLimbo) {
 }
 
 TEST_F(DebugAgentTests, Kill) {
-  uint32_t transaction_id = 1u;
-
   MockDebugAgentHarness harness;
   RemoteAPI* remote_api = harness.debug_agent();
 
@@ -377,7 +357,9 @@ TEST_F(DebugAgentTests, Kill) {
   {
     debug_ipc::AttachRequest attach_request = {};
     attach_request.koid = kProcKoid;
-    remote_api->OnAttach(transaction_id++, attach_request);
+
+    debug_ipc::AttachReply attach_reply;
+    remote_api->OnAttach(attach_request, &attach_reply);
 
     // There should be a process.
     ASSERT_EQ(harness.debug_agent()->procs_.size(), 1u);
@@ -438,7 +420,9 @@ TEST_F(DebugAgentTests, Kill) {
 
   debug_ipc::AttachRequest attach_request = {};
   attach_request.koid = kLimboProcKoid;
-  remote_api->OnAttach(transaction_id++, attach_request);
+
+  debug_ipc::AttachReply attach_reply;
+  remote_api->OnAttach(attach_request, &attach_reply);
 
   // There should be a process.
   ASSERT_EQ(harness.debug_agent()->procs_.size(), 1u);

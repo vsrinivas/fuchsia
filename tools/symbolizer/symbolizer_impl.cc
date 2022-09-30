@@ -395,7 +395,7 @@ void SymbolizerImpl::InitProcess() {
 
   analytics_builder_.TotalTimerStart();
 
-  session_.DispatchProcessStarting({});
+  session_.DispatchNotifyProcessStarting({});
   session_.DispatchNotifyThreadStarting({});
 
   std::vector<debug_ipc::Module> modules;

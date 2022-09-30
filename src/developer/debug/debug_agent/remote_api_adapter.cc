@@ -62,6 +62,7 @@ void RemoteAPIAdapter::OnStreamReadable() {
       return;
     }
 
+    switch (header.type) {
 // Dispatches a message type assuming the handler function name, request
 // struct type, and reply struct type are all based on the message type name.
 // For example, MsgHeader::Type::kFoo will call:
@@ -70,57 +71,14 @@ void RemoteAPIAdapter::OnStreamReadable() {
   case debug_ipc::MsgHeader::Type::k##msg_type:                                \
     DispatchMessage<debug_ipc::msg_type##Request, debug_ipc::msg_type##Reply>( \
         this, &RemoteAPI::On##msg_type, std::move(buffer), #msg_type);         \
-    break
+    break;
 
-    switch (header.type) {
-      DISPATCH(AddOrChangeBreakpoint);
-      DISPATCH(AddressSpace);
-      DISPATCH(Detach);
-      DISPATCH(UpdateFilter);
-      DISPATCH(Hello);
-      DISPATCH(Kill);
-      DISPATCH(Launch);
-      DISPATCH(Modules);
-      DISPATCH(Pause);
-      DISPATCH(ProcessTree);
-      DISPATCH(ReadMemory);
-      DISPATCH(ReadRegisters);
-      DISPATCH(WriteRegisters);
-      DISPATCH(RemoveBreakpoint);
-      DISPATCH(Resume);
-      DISPATCH(Status);
-      DISPATCH(SysInfo);
-      DISPATCH(ThreadStatus);
-      DISPATCH(Threads);
-      DISPATCH(WriteMemory);
-      DISPATCH(LoadInfoHandleTable);
-      DISPATCH(UpdateGlobalSettings);
-      DISPATCH(SaveMinidump);
-
-      // Attach is special (see remote_api.h): forward the raw data instead of
-      // a deserialized version.
-      case debug_ipc::MsgHeader::Type::kAttach:
-        api_->OnAttach(std::move(buffer));
-        break;
-
-      // Explicitly no "default" to get warnings about unhandled message types,
-      // but need to handle these "not a message" types to avoid this warning.
-      case debug_ipc::MsgHeader::Type::kNone:
-      case debug_ipc::MsgHeader::Type::kNumMessages:
-      case debug_ipc::MsgHeader::Type::kNotifyException:
-      case debug_ipc::MsgHeader::Type::kNotifyIO:
-      case debug_ipc::MsgHeader::Type::kNotifyModules:
-      case debug_ipc::MsgHeader::Type::kNotifyProcessExiting:
-      case debug_ipc::MsgHeader::Type::kNotifyProcessStarting:
-      case debug_ipc::MsgHeader::Type::kNotifyThreadStarting:
-      case debug_ipc::MsgHeader::Type::kNotifyThreadExiting:
-      case debug_ipc::MsgHeader::Type::kNotifyLog:
-      case debug_ipc::MsgHeader::Type::kNotifyComponentExiting:
-      case debug_ipc::MsgHeader::Type::kNotifyComponentStarting:
-        break;  // Avoid warning
-    }
-
+      FOR_EACH_REQUEST_TYPE(DISPATCH)
 #undef DISPATCH
+
+      default:
+        break;
+    }
   }
 }
 

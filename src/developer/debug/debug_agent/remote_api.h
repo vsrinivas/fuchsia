@@ -13,78 +13,11 @@ namespace debug_agent {
 // client->agent IPC requests.
 class RemoteAPI {
  public:
-  RemoteAPI() {}
-  virtual ~RemoteAPI() {}
+#define FN(type) \
+  virtual void On##type(const debug_ipc::type##Request& request, debug_ipc::type##Reply* reply) = 0;
 
-  virtual void OnHello(const debug_ipc::HelloRequest& request, debug_ipc::HelloReply* reply) = 0;
-
-  virtual void OnStatus(const debug_ipc::StatusRequest& request, debug_ipc::StatusReply* reply) = 0;
-
-  virtual void OnLaunch(const debug_ipc::LaunchRequest& request, debug_ipc::LaunchReply* reply) = 0;
-  virtual void OnKill(const debug_ipc::KillRequest& request, debug_ipc::KillReply* reply) = 0;
-
-  // Attach is special because it needs to follow the reply immediately with
-  // a series of notifications about the current threads. This means it
-  // can't use the automatic reply sending. It must manually deserialize and
-  // send the reply.
-  virtual void OnAttach(std::vector<char> serialized) = 0;
-  // This is an overload with the result of reading |serialized|.
-  // We have this so it's easier to call a MockRemoteAPI.
-  virtual void OnAttach(uint32_t transaction_id, const debug_ipc::AttachRequest&) = 0;
-
-  virtual void OnDetach(const debug_ipc::DetachRequest& request, debug_ipc::DetachReply* reply) = 0;
-
-  virtual void OnModules(const debug_ipc::ModulesRequest& request,
-                         debug_ipc::ModulesReply* reply) = 0;
-
-  virtual void OnPause(const debug_ipc::PauseRequest& request, debug_ipc::PauseReply* reply) = 0;
-
-  virtual void OnResume(const debug_ipc::ResumeRequest& request, debug_ipc::ResumeReply* reply) = 0;
-
-  virtual void OnProcessTree(const debug_ipc::ProcessTreeRequest& request,
-                             debug_ipc::ProcessTreeReply* reply) = 0;
-
-  virtual void OnThreads(const debug_ipc::ThreadsRequest& request,
-                         debug_ipc::ThreadsReply* reply) = 0;
-
-  virtual void OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
-                            debug_ipc::ReadMemoryReply* reply) = 0;
-
-  virtual void OnReadRegisters(const debug_ipc::ReadRegistersRequest& request,
-                               debug_ipc::ReadRegistersReply* reply) = 0;
-
-  virtual void OnWriteRegisters(const debug_ipc::WriteRegistersRequest& request,
-                                debug_ipc::WriteRegistersReply* reply) = 0;
-
-  virtual void OnAddOrChangeBreakpoint(const debug_ipc::AddOrChangeBreakpointRequest& request,
-                                       debug_ipc::AddOrChangeBreakpointReply* reply) = 0;
-
-  virtual void OnRemoveBreakpoint(const debug_ipc::RemoveBreakpointRequest& request,
-                                  debug_ipc::RemoveBreakpointReply* reply) = 0;
-
-  virtual void OnSysInfo(const debug_ipc::SysInfoRequest& request,
-                         debug_ipc::SysInfoReply* reply) = 0;
-
-  virtual void OnThreadStatus(const debug_ipc::ThreadStatusRequest& request,
-                              debug_ipc::ThreadStatusReply* reply) = 0;
-
-  virtual void OnAddressSpace(const debug_ipc::AddressSpaceRequest& request,
-                              debug_ipc::AddressSpaceReply* reply) = 0;
-
-  virtual void OnUpdateFilter(const debug_ipc::UpdateFilterRequest& request,
-                              debug_ipc::UpdateFilterReply* reply) = 0;
-
-  virtual void OnWriteMemory(const debug_ipc::WriteMemoryRequest& request,
-                             debug_ipc::WriteMemoryReply* reply) = 0;
-
-  virtual void OnLoadInfoHandleTable(const debug_ipc::LoadInfoHandleTableRequest& request,
-                                     debug_ipc::LoadInfoHandleTableReply* reply) = 0;
-
-  virtual void OnUpdateGlobalSettings(const debug_ipc::UpdateGlobalSettingsRequest& request,
-                                      debug_ipc::UpdateGlobalSettingsReply* reply) = 0;
-
-  virtual void OnSaveMinidump(const debug_ipc::SaveMinidumpRequest& request,
-                              debug_ipc::SaveMinidumpReply* reply) = 0;
+  FOR_EACH_REQUEST_TYPE(FN)
+#undef FN
 };
 
 }  // namespace debug_agent

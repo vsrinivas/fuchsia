@@ -164,7 +164,8 @@ class Session : public SettingStoreObserver {
   void DispatchNotifyThreadExiting(const debug_ipc::NotifyThread& notify);
   void DispatchNotifyException(const debug_ipc::NotifyException& notify, bool set_metadata = true);
   void DispatchNotifyModules(const debug_ipc::NotifyModules& notify);
-  void DispatchProcessStarting(const debug_ipc::NotifyProcessStarting&);
+  void DispatchNotifyProcessStarting(const debug_ipc::NotifyProcessStarting& notify);
+  void DispatchNotifyProcessExiting(const debug_ipc::NotifyProcessExiting& notify);
   void DispatchNotifyIO(const debug_ipc::NotifyIO& notify);
   void DispatchNotifyLog(const debug_ipc::NotifyLog& notify);
   void DispatchNotifyComponentStarting(const debug_ipc::NotifyComponent& notify);

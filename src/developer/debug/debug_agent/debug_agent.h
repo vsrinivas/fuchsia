@@ -82,9 +82,7 @@ class DebugAgent : public RemoteAPI, public Breakpoint::ProcessDelegate, public 
   void OnStatus(const debug_ipc::StatusRequest& request, debug_ipc::StatusReply* reply) override;
   void OnLaunch(const debug_ipc::LaunchRequest& request, debug_ipc::LaunchReply* reply) override;
   void OnKill(const debug_ipc::KillRequest& request, debug_ipc::KillReply* reply) override;
-  void OnAttach(std::vector<char> serialized) override;
-  // |transaction_id| is the id of the IPC message.
-  void OnAttach(uint32_t transaction_id, const debug_ipc::AttachRequest&) override;
+  void OnAttach(const debug_ipc::AttachRequest& request, debug_ipc::AttachReply* reply) override;
   void OnDetach(const debug_ipc::DetachRequest& request, debug_ipc::DetachReply* reply) override;
   void OnPause(const debug_ipc::PauseRequest& request, debug_ipc::PauseReply* reply) override;
   void OnResume(const debug_ipc::ResumeRequest& request, debug_ipc::ResumeReply* reply) override;
@@ -144,8 +142,8 @@ class DebugAgent : public RemoteAPI, public Breakpoint::ProcessDelegate, public 
 
   // Attempts to attach to the given process and sends a AttachReply message
   // to the client with the result.
-  debug::Status AttachToLimboProcess(zx_koid_t process_koid, uint32_t transaction_id);
-  debug::Status AttachToExistingProcess(zx_koid_t process_koid, uint32_t transaction_id);
+  debug::Status AttachToLimboProcess(zx_koid_t process_koid, debug_ipc::AttachReply* reply);
+  debug::Status AttachToExistingProcess(zx_koid_t process_koid, debug_ipc::AttachReply* reply);
 
   void LaunchProcess(const debug_ipc::LaunchRequest&, debug_ipc::LaunchReply*);
 

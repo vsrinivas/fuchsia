@@ -606,7 +606,7 @@ void Session::DispatchNotifyModules(const debug_ipc::NotifyModules& notify) {
   }
 }
 
-void Session::DispatchProcessStarting(const debug_ipc::NotifyProcessStarting& notify) {
+void Session::DispatchNotifyProcessStarting(const debug_ipc::NotifyProcessStarting& notify) {
   if (notify.type == debug_ipc::NotifyProcessStarting::Type::kLimbo) {
     if (auto_attach_limbo_) {
       AttachToLimboProcessAndNotify(notify.koid, notify.name);
@@ -638,6 +638,11 @@ void Session::DispatchProcessStarting(const debug_ipc::NotifyProcessStarting& no
                         : Process::StartType::kLaunch;
   found_target->CreateProcess(start_type, notify.koid, notify.name, notify.timestamp,
                               notify.component);
+}
+
+void Session::DispatchNotifyProcessExiting(const debug_ipc::NotifyProcessExiting& notify) {
+  if (Process* process = system_.ProcessFromKoid(notify.process_koid))
+    process->GetTarget()->OnProcessExiting(notify.return_code, notify.timestamp);
 }
 
 void Session::DispatchNotifyIO(const debug_ipc::NotifyIO& notify) {
@@ -688,70 +693,15 @@ void Session::DispatchNotifyComponentExiting(const debug_ipc::NotifyComponent& n
 void Session::DispatchNotification(const debug_ipc::MsgHeader& header, std::vector<char> data) {
   DEBUG_LOG(Session) << "Got notification: " << debug_ipc::MsgHeader::TypeToString(header.type);
   switch (header.type) {
-    case debug_ipc::MsgHeader::Type::kNotifyProcessExiting: {
-      debug_ipc::NotifyProcessExiting notify;
-      if (!debug_ipc::DeserializeNotifyProcessExiting(std::move(data), &notify))
-        return;
-
-      Process* process = system_.ProcessFromKoid(notify.process_koid);
-      if (process)
-        process->GetTarget()->OnProcessExiting(notify.return_code, notify.timestamp);
-      break;
-    }
-    case debug_ipc::MsgHeader::Type::kNotifyProcessStarting: {
-      debug_ipc::NotifyProcessStarting notify;
-      if (debug_ipc::DeserializeNotifyProcessStarting(std::move(data), &notify))
-        DispatchProcessStarting(notify);
-      break;
-    }
-    case debug_ipc::MsgHeader::Type::kNotifyThreadStarting: {
-      debug_ipc::NotifyThread thread;
-      if (debug_ipc::DeserializeNotifyThreadStarting(std::move(data), &thread))
-        DispatchNotifyThreadStarting(thread);
-      break;
-    }
-    case debug_ipc::MsgHeader::Type::kNotifyThreadExiting: {
-      debug_ipc::NotifyThread thread;
-      if (debug_ipc::DeserializeNotifyThreadExiting(std::move(data), &thread))
-        DispatchNotifyThreadExiting(thread);
-      break;
-    }
-    case debug_ipc::MsgHeader::Type::kNotifyException: {
-      debug_ipc::NotifyException notify;
-      if (debug_ipc::DeserializeNotifyException(std::move(data), &notify))
-        DispatchNotifyException(notify);
-      break;
-    }
-    case debug_ipc::MsgHeader::Type::kNotifyModules: {
-      debug_ipc::NotifyModules notify;
-      if (debug_ipc::DeserializeNotifyModules(std::move(data), &notify))
-        DispatchNotifyModules(notify);
-      break;
-    }
-    case debug_ipc::MsgHeader::Type::kNotifyIO: {
-      debug_ipc::NotifyIO notify;
-      if (debug_ipc::DeserializeNotifyIO(std::move(data), &notify))
-        DispatchNotifyIO(notify);
-      break;
-    }
-    case debug_ipc::MsgHeader::Type::kNotifyLog: {
-      debug_ipc::NotifyLog notify;
-      if (debug_ipc::DeserializeNotifyLog(std::move(data), &notify))
-        DispatchNotifyLog(notify);
-      break;
-    }
-    case debug_ipc::MsgHeader::Type::kNotifyComponentStarting: {
-      debug_ipc::NotifyComponent notify;
-      if (debug_ipc::DeserializeNotifyComponentStarting(std::move(data), &notify))
-        DispatchNotifyComponentStarting(notify);
-      break;
-    }
-    case debug_ipc::MsgHeader::Type::kNotifyComponentExiting: {
-      debug_ipc::NotifyComponent notify;
-      if (debug_ipc::DeserializeNotifyComponentExiting(std::move(data), &notify))
-        DispatchNotifyComponentExiting(notify);
-      break;
-    }
+#define FN(msg_name, msg_type)                                      \
+  case debug_ipc::MsgHeader::Type::k##msg_name: {                   \
+    debug_ipc::msg_type notify;                                     \
+    if (debug_ipc::Deserialize##msg_name(std::move(data), &notify)) \
+      Dispatch##msg_name(notify);                                   \
+    break;                                                          \
+  }
+    FOR_EACH_NOTIFICATION_TYPE(FN)
+#undef define
     default:
       FX_NOTREACHED();  // Unexpected notification.
   }

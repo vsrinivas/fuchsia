@@ -428,7 +428,7 @@ TEST_F(SessionTest, StatusRequest) {
 }
 
 // When a process crashes *after* zxdb is already launched and connected, we should automatically
-// attach to it via |DispatchProcessStarting|.
+// attach to it via |DispatchNotifyProcessStarting|.
 TEST_F(SessionTest, AutoAttachToLimboProcess) {
   constexpr uint64_t kProcessKoid = 0xc001cafe;
   const std::string kProcessName = "process-1";
@@ -444,7 +444,7 @@ TEST_F(SessionTest, AutoAttachToLimboProcess) {
   notify.koid = kProcessKoid;
   notify.name = kProcessName;
 
-  session().DispatchProcessStarting(notify);
+  session().DispatchNotifyProcessStarting(notify);
 
   debug_ipc::StatusReply status;
   sink()->Status(
@@ -467,7 +467,7 @@ TEST_F(SessionTest, AutoAttachToLimboProcess) {
   targets.clear();
 
   // Re-register process.
-  session().DispatchProcessStarting(notify);
+  session().DispatchNotifyProcessStarting(notify);
   sink()->Status(
       {}, [&status](const Err& err, debug_ipc::StatusReply reply) { status = std::move(reply); });
 
@@ -498,7 +498,7 @@ TEST_F(SessionTest, DisableAutoAttachToLimbo) {
   notify.koid = kProcessKoid;
   notify.name = kProcessName;
 
-  session().DispatchProcessStarting(notify);
+  session().DispatchNotifyProcessStarting(notify);
 
   debug_ipc::StatusReply status;
   sink()->Status(

@@ -579,71 +579,40 @@ debug_ipc::ExceptionStrategy DebugAgent::GetExceptionStrategy(debug_ipc::Excepti
 
 // Attaching ---------------------------------------------------------------------------------------
 
-namespace {
-
-void SendAttachReply(DebugAgent* debug_agent, uint32_t transaction_id, const debug::Status& status,
-                     const ProcessHandle* process = nullptr) {
-  debug_ipc::AttachReply reply;
-  reply.status = status;
-  reply.timestamp = GetNowTimestamp();
-  if (process) {
-    reply.koid = process->GetKoid();
-    reply.name = process->GetName();
-    reply.component =
-        debug_agent->system_interface().GetComponentManager().FindComponentInfo(*process);
-  }
-
-  debug_agent->stream()->Write(debug_ipc::Serialize(reply, transaction_id));
-}
-
-}  // namespace
-
-void DebugAgent::OnAttach(std::vector<char> serialized) {
-  debug_ipc::AttachRequest request;
-  uint32_t transaction_id = 0;
-  if (!debug_ipc::Deserialize(std::move(serialized), &request, &transaction_id)) {
-    LOGS(Warn) << "Got bad debugger attach request, ignoring.";
-    return;
-  }
-
-  OnAttach(transaction_id, request);
-}
-
-void DebugAgent::OnAttach(uint32_t transaction_id, const debug_ipc::AttachRequest& request) {
+void DebugAgent::OnAttach(const debug_ipc::AttachRequest& request, debug_ipc::AttachReply* reply) {
   DEBUG_LOG(Agent) << "Attemping to attach to process " << request.koid;
+  reply->timestamp = GetNowTimestamp();
 
   // See if we're already attached to this process.
   for (auto& [koid, proc] : procs_) {
     if (koid == request.koid) {
-      debug::Status error(debug::Status::kAlreadyExists,
-                          "Already attached to process " + std::to_string(proc->koid()));
-      DEBUG_LOG(Agent) << error.message();
-      SendAttachReply(this, transaction_id, error);
+      reply->status = debug::Status(debug::Status::kAlreadyExists,
+                                    "Already attached to process " + std::to_string(proc->koid()));
+      DEBUG_LOG(Agent) << reply->status.message();
       return;
     }
   }
 
   // First check if the process is in limbo. Sends the appropiate replies/notifications.
   if (system_interface_->GetLimboProvider().Valid()) {
-    auto status = AttachToLimboProcess(request.koid, transaction_id);
-    if (status.ok())
+    reply->status = AttachToLimboProcess(request.koid, reply);
+    if (reply->status.ok())
       return;
 
-    DEBUG_LOG(Agent) << "Could not attach to process in limbo: " << status.message();
+    DEBUG_LOG(Agent) << "Could not attach to process in limbo: " << reply->status.message();
   }
 
   // Attempt to attach to an existing process. Sends the appropriate replies/notifications.
-  auto status = AttachToExistingProcess(request.koid, transaction_id);
-  if (status.ok())
+  reply->status = AttachToExistingProcess(request.koid, reply);
+  if (reply->status.ok())
     return;
 
-  DEBUG_LOG(Agent) << "Could not attach to existing process: " << status.message();
-
   // We didn't find a process.
-  SendAttachReply(this, transaction_id, status);
+  DEBUG_LOG(Agent) << "Could not attach to existing process: " << reply->status.message();
 }
 
-debug::Status DebugAgent::AttachToLimboProcess(zx_koid_t process_koid, uint32_t transaction_id) {
+debug::Status DebugAgent::AttachToLimboProcess(zx_koid_t process_koid,
+                                               debug_ipc::AttachReply* reply) {
   LimboProvider& limbo = system_interface_->GetLimboProvider();
   FX_DCHECK(limbo.Valid());
 
@@ -660,38 +629,46 @@ debug::Status DebugAgent::AttachToLimboProcess(zx_koid_t process_koid, uint32_t 
   DebuggedProcessCreateInfo create_info(std::move(exception.process));
   create_info.from_limbo = true;
 
-  DebuggedProcess* debugged_process = nullptr;
-  debug::Status status = AddDebuggedProcess(std::move(create_info), &debugged_process);
+  DebuggedProcess* process = nullptr;
+  debug::Status status = AddDebuggedProcess(std::move(create_info), &process);
   if (status.has_error())
     return status;
 
-  // Send the response, then the notifications about the process and threads.
-  //
-  // DO NOT RETURN FAILURE AFTER THIS POINT or the attach reply will be duplicated (the caller will
-  // fall back on non-limbo processes if this function fails and will send another reply).
-  SendAttachReply(this, transaction_id, debug::Status(), &debugged_process->process_handle());
+  reply->koid = process->koid();
+  reply->name = process->process_handle().GetName();
+  reply->component =
+      system_interface_->GetComponentManager().FindComponentInfo(process->process_handle());
 
-  debugged_process->PopulateCurrentThreads();
-  debugged_process->SuspendAndSendModulesIfKnown();
+  // Send the reply first, then the notifications about the process and threads.
+  debug::MessageLoop::Current()->PostTask(FROM_HERE, [weak_this = GetWeakPtr(), koid = reply->koid,
+                                                      exception = std::move(exception)]() mutable {
+    if (!weak_this)
+      return;
+    if (DebuggedProcess* process = weak_this->GetDebuggedProcess(koid)) {
+      process->PopulateCurrentThreads();
+      process->SuspendAndSendModulesIfKnown();
 
-  zx_koid_t thread_koid = exception.thread->GetKoid();
+      zx_koid_t thread_koid = exception.thread->GetKoid();
 
-  // Pass in the exception handle to the corresponding thread.
-  DebuggedThread* exception_thread = nullptr;
-  for (DebuggedThread* thread : debugged_process->GetThreads()) {
-    if (thread->koid() == thread_koid) {
-      exception_thread = thread;
-      break;
+      // Pass in the exception handle to the corresponding thread.
+      DebuggedThread* exception_thread = nullptr;
+      for (DebuggedThread* thread : process->GetThreads()) {
+        if (thread->koid() == thread_koid) {
+          exception_thread = thread;
+          break;
+        }
+      }
+
+      if (exception_thread)
+        exception_thread->set_exception_handle(std::move(exception.exception));
     }
-  }
-
-  if (exception_thread)
-    exception_thread->set_exception_handle(std::move(exception.exception));
+  });
 
   return debug::Status();
 }
 
-debug::Status DebugAgent::AttachToExistingProcess(zx_koid_t process_koid, uint32_t transaction_id) {
+debug::Status DebugAgent::AttachToExistingProcess(zx_koid_t process_koid,
+                                                  debug_ipc::AttachReply* reply) {
   std::unique_ptr<ProcessHandle> process_handle = system_interface_->GetProcess(process_koid);
   if (!process_handle)
     return debug::Status("Can't find process " + std::to_string(process_koid) + " to attach to.");
@@ -702,11 +679,21 @@ debug::Status DebugAgent::AttachToExistingProcess(zx_koid_t process_koid, uint32
       status.has_error())
     return status;
 
-  // Send the response, then the notifications about the process and threads.
-  SendAttachReply(this, transaction_id, debug::Status(), &process->process_handle());
+  reply->koid = process->koid();
+  reply->name = process->process_handle().GetName();
+  reply->component =
+      system_interface_->GetComponentManager().FindComponentInfo(process->process_handle());
 
-  process->PopulateCurrentThreads();
-  process->SuspendAndSendModulesIfKnown();
+  // Send the reply first, then the notifications about the process and threads.
+  debug::MessageLoop::Current()->PostTask(
+      FROM_HERE, [weak_this = GetWeakPtr(), koid = reply->koid]() mutable {
+        if (!weak_this)
+          return;
+        if (DebuggedProcess* process = weak_this->GetDebuggedProcess(koid)) {
+          process->PopulateCurrentThreads();
+          process->SuspendAndSendModulesIfKnown();
+        }
+      });
 
   return debug::Status();
 }

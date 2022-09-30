@@ -17,134 +17,14 @@
 
 namespace zxdb {
 
-RemoteAPIImpl::RemoteAPIImpl(Session* session) : session_(session) {}
-RemoteAPIImpl::~RemoteAPIImpl() = default;
+#define FN(msg_type)                                                                             \
+  void RemoteAPIImpl::msg_type(const debug_ipc::msg_type##Request& request,                      \
+                               fit::callback<void(const Err&, debug_ipc::msg_type##Reply)> cb) { \
+    Send(request, std::move(cb));                                                                \
+  }
 
-void RemoteAPIImpl::Hello(const debug_ipc::HelloRequest& request,
-                          fit::callback<void(const Err&, debug_ipc::HelloReply)> cb) {
-  Send(request, std::move(cb));
-}
-
-void RemoteAPIImpl::Launch(const debug_ipc::LaunchRequest& request,
-                           fit::callback<void(const Err&, debug_ipc::LaunchReply)> cb) {
-  Send(request, std::move(cb));
-}
-
-void RemoteAPIImpl::Kill(const debug_ipc::KillRequest& request,
-                         fit::callback<void(const Err&, debug_ipc::KillReply)> cb) {
-  Send(request, std::move(cb));
-}
-
-void RemoteAPIImpl::Attach(const debug_ipc::AttachRequest& request,
-                           fit::callback<void(const Err&, debug_ipc::AttachReply)> cb) {
-  Send(request, std::move(cb));
-}
-
-void RemoteAPIImpl::Detach(const debug_ipc::DetachRequest& request,
-                           fit::callback<void(const Err&, debug_ipc::DetachReply)> cb) {
-  Send(request, std::move(cb));
-}
-
-void RemoteAPIImpl::Modules(const debug_ipc::ModulesRequest& request,
-                            fit::callback<void(const Err&, debug_ipc::ModulesReply)> cb) {
-  Send(request, std::move(cb));
-}
-
-void RemoteAPIImpl::Pause(const debug_ipc::PauseRequest& request,
-                          fit::callback<void(const Err&, debug_ipc::PauseReply)> cb) {
-  Send(request, std::move(cb));
-}
-
-void RemoteAPIImpl::Resume(const debug_ipc::ResumeRequest& request,
-                           fit::callback<void(const Err&, debug_ipc::ResumeReply)> cb) {
-  Send(request, std::move(cb));
-}
-
-void RemoteAPIImpl::ProcessTree(const debug_ipc::ProcessTreeRequest& request,
-                                fit::callback<void(const Err&, debug_ipc::ProcessTreeReply)> cb) {
-  Send(request, std::move(cb));
-}
-
-void RemoteAPIImpl::Threads(const debug_ipc::ThreadsRequest& request,
-                            fit::callback<void(const Err&, debug_ipc::ThreadsReply)> cb) {
-  Send(request, std::move(cb));
-}
-
-void RemoteAPIImpl::ReadMemory(const debug_ipc::ReadMemoryRequest& request,
-                               fit::callback<void(const Err&, debug_ipc::ReadMemoryReply)> cb) {
-  Send(request, std::move(cb));
-}
-
-void RemoteAPIImpl::ReadRegisters(
-    const debug_ipc::ReadRegistersRequest& request,
-    fit::callback<void(const Err&, debug_ipc::ReadRegistersReply)> cb) {
-  Send(request, std::move(cb));
-}
-
-void RemoteAPIImpl::WriteRegisters(
-    const debug_ipc::WriteRegistersRequest& request,
-    fit::callback<void(const Err&, debug_ipc::WriteRegistersReply)> cb) {
-  Send(request, std::move(cb));
-}
-
-void RemoteAPIImpl::AddOrChangeBreakpoint(
-    const debug_ipc::AddOrChangeBreakpointRequest& request,
-    fit::callback<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)> cb) {
-  Send(request, std::move(cb));
-}
-
-void RemoteAPIImpl::RemoveBreakpoint(
-    const debug_ipc::RemoveBreakpointRequest& request,
-    fit::callback<void(const Err&, debug_ipc::RemoveBreakpointReply)> cb) {
-  Send(request, std::move(cb));
-}
-
-void RemoteAPIImpl::SysInfo(const debug_ipc::SysInfoRequest& request,
-                            fit::callback<void(const Err&, debug_ipc::SysInfoReply)> cb) {
-  Send(request, std::move(cb));
-}
-
-void RemoteAPIImpl::Status(const debug_ipc::StatusRequest& request,
-                           fit::callback<void(const Err&, debug_ipc::StatusReply)> cb) {
-  Send(request, std::move(cb));
-}
-
-void RemoteAPIImpl::ThreadStatus(const debug_ipc::ThreadStatusRequest& request,
-                                 fit::callback<void(const Err&, debug_ipc::ThreadStatusReply)> cb) {
-  Send(request, std::move(cb));
-}
-
-void RemoteAPIImpl::AddressSpace(const debug_ipc::AddressSpaceRequest& request,
-                                 fit::callback<void(const Err&, debug_ipc::AddressSpaceReply)> cb) {
-  Send(request, std::move(cb));
-}
-
-void RemoteAPIImpl::UpdateFilter(const debug_ipc::UpdateFilterRequest& request,
-                                 fit::callback<void(const Err&, debug_ipc::UpdateFilterReply)> cb) {
-  Send(request, std::move(cb));
-}
-
-void RemoteAPIImpl::WriteMemory(const debug_ipc::WriteMemoryRequest& request,
-                                fit::callback<void(const Err&, debug_ipc::WriteMemoryReply)> cb) {
-  Send(request, std::move(cb));
-}
-
-void RemoteAPIImpl::LoadInfoHandleTable(
-    const debug_ipc::LoadInfoHandleTableRequest& request,
-    fit::callback<void(const Err&, debug_ipc::LoadInfoHandleTableReply)> cb) {
-  Send(request, std::move(cb));
-}
-
-void RemoteAPIImpl::UpdateGlobalSettings(
-    const debug_ipc::UpdateGlobalSettingsRequest& request,
-    fit::callback<void(const Err&, debug_ipc::UpdateGlobalSettingsReply)> cb) {
-  Send(request, std::move(cb));
-}
-
-void RemoteAPIImpl::SaveMinidump(const debug_ipc::SaveMinidumpRequest& request,
-                                 fit::callback<void(const Err&, debug_ipc::SaveMinidumpReply)> cb) {
-  Send(request, std::move(cb));
-}
+FOR_EACH_REQUEST_TYPE(FN)
+#undef FN
 
 template <typename SendMsgType, typename RecvMsgType>
 void RemoteAPIImpl::Send(const SendMsgType& send_msg,
