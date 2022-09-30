@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <zircon/errors.h>
 
+#include "src/devices/bin/driver_manager/coordinator.h"
 #include "src/devices/lib/log/log.h"
 
 SuspendResumeManager::SuspendResumeManager(Coordinator* coordinator, zx::duration suspend_timeout)

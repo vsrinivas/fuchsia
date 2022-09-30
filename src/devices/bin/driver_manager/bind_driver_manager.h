@@ -9,13 +9,9 @@
 
 #include <memory>
 
-#include "src/devices/bin/driver_manager/coordinator.h"
 #include "src/devices/bin/driver_manager/driver_loader.h"
-#include "src/devices/bin/driver_manager/v1/init_task.h"
-#include "src/devices/bin/driver_manager/v1/resume_task.h"
-#include "src/devices/bin/driver_manager/v1/suspend_task.h"
-#include "src/devices/bin/driver_manager/v1/unbind_task.h"
 
+class Coordinator;
 class CompositeDevice;
 
 // Function that is invoked to request a driver try to bind to a device

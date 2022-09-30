@@ -6,6 +6,8 @@
 
 #include <fcntl.h>
 
+#include "src/devices/bin/driver_manager/coordinator.h"
+
 namespace {
 
 constexpr char kBootFirmwarePath[] = "lib/firmware";

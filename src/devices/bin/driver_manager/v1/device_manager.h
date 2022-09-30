@@ -8,15 +8,11 @@
 #include <fidl/fuchsia.device.manager/cpp/wire.h>
 
 #include "src/devices/bin/driver_manager/composite_device.h"
-#include "src/devices/bin/driver_manager/coordinator.h"
 #include "src/devices/bin/driver_manager/device.h"
 #include "src/devices/bin/driver_manager/driver_host.h"
-#include "src/devices/bin/driver_manager/v1/init_task.h"
-#include "src/devices/bin/driver_manager/v1/resume_task.h"
-#include "src/devices/bin/driver_manager/v1/suspend_task.h"
-#include "src/devices/bin/driver_manager/v1/unbind_task.h"
 
 enum class DriverHostCrashPolicy;
+class Coordinator;
 
 // In charge of creating, adding, and removing devices. Doesn't include root device
 // or sys device.

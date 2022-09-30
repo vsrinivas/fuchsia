@@ -7,11 +7,11 @@
 
 #include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
 
-#include "src/devices/bin/driver_manager/coordinator.h"
 #include "src/devices/bin/driver_manager/v1/resume_context.h"
 #include "src/devices/bin/driver_manager/v1/resume_task.h"
 #include "src/devices/bin/driver_manager/v1/suspend_handler.h"
 
+class Coordinator;
 using ResumeCallback = std::function<void(zx_status_t)>;
 
 class SuspendResumeManager {
