@@ -20,7 +20,7 @@ use {
 
 mod mdns;
 
-pub(crate) const MDNS_BROADCAST_INTERVAL_SECS: u64 = 20;
+pub(crate) const MDNS_BROADCAST_INTERVAL_SECS: u64 = 10;
 pub(crate) const MDNS_INTERFACE_DISCOVERY_INTERVAL_SECS: u64 = 1;
 pub(crate) const MDNS_TTL: u32 = 255;
 
