@@ -589,8 +589,7 @@ impl FuchsiaUpdateCanStartPolicyData {
             {
                 Ok(status) => Some(status),
                 Err(e) => {
-                    let e = anyhow!(e);
-                    error!("got error with query_commit_status: {:#}", e);
+                    error!("got error with query_commit_status: {:#}", anyhow!(e));
                     None
                 }
             };

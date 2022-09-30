@@ -617,13 +617,11 @@ where
                     match single_monitor_queue.try_flush(Duration::from_secs(5)).await {
                         Ok(flush_future) => {
                             if let Err(e) = flush_future.await {
-                                let e = anyhow!(e);
-                                warn!("Timed out flushing single_monitor_queue: {:#}", e);
+                                warn!("Timed out flushing single_monitor_queue: {:#}", anyhow!(e));
                             }
                         }
                         Err(e) => {
-                            let e = anyhow!(e);
-                            warn!("error trying to flush single_monitor_queue: {:#}", e);
+                            warn!("error trying to flush single_monitor_queue: {:#}", anyhow!(e))
                         }
                     }
                 }

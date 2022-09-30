@@ -45,15 +45,16 @@ async fn handle_request(req: IncomingRequest, storage: &mut dyn Bridge) {
             let res = match storage.get_opt_out().await {
                 Ok(value) => value.into(),
                 Err(e) => {
-                    let e = anyhow!(e);
-                    warn!("Could not determine opt-out status, closing the request channel: {e:#}");
+                    warn!(
+                        "Could not determine opt-out status, closing the request channel: {:#}",
+                        anyhow!(e)
+                    );
                     return;
                 }
             };
 
             if let Err(e) = responder.send(res) {
-                let e = anyhow!(e);
-                warn!("Could not respond to OptOut::Get request: {e:#}");
+                warn!("Could not respond to OptOut::Get request: {:#}", anyhow!(e));
             }
         }
         IncomingRequest::OptOutAdmin(OptOutAdminRequest::Set { value, responder }) => {
@@ -63,8 +64,7 @@ async fn handle_request(req: IncomingRequest, storage: &mut dyn Bridge) {
             };
 
             if let Err(e) = responder.send(&mut res) {
-                let e = anyhow!(e);
-                warn!("Could not respond to OptOut::Set request: {e:#}");
+                warn!("Could not respond to OptOut::Set request: {:#}", anyhow!(e));
             }
         }
     }
@@ -99,8 +99,7 @@ async fn serve_connections(
                 match res {
                     Ok(()) => {}
                     Err(e @ SinkError::Read(_)) => {
-                        let e = anyhow!(e);
-                        warn!("Closing request channel: {e:#}");
+                        warn!("Closing request channel: {:#}", anyhow!(e))
                     }
                     Err(SinkError::Forward(_)) => {
                         // unreachable. The receive side is only closed after this task finishes.

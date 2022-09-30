@@ -148,13 +148,12 @@ impl ClientConfiguration {
             Err(e) => {
                 match e.downcast_ref::<std::io::Error>() {
                     Some(io_err) if io_err.kind() == std::io::ErrorKind::NotFound => {
-                        let e = anyhow!(e);
-                        warn!("eager package config not found: {:#}", e);
+                        warn!("eager package config not found: {:#}", anyhow!(e))
                     }
-                    _ => {
-                        let e = anyhow!(e);
-                        error!("Failed to load eager package config from namespace: {:#}", e)
-                    }
+                    _ => error!(
+                        "Failed to load eager package config from namespace: {:#}",
+                        anyhow!(e)
+                    ),
                 };
             }
         }
@@ -241,10 +240,7 @@ impl ClientConfiguration {
                         package.url, e
                     );
                 }
-                Err(e) => {
-                    let e = anyhow!(e);
-                    error!("Failed to send request to fuchsia.pkg.Cup: {:#}", e);
-                }
+                Err(e) => error!("Failed to send request to fuchsia.pkg.Cup: {:#}", anyhow!(e)),
             }
         }
 

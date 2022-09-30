@@ -111,8 +111,7 @@ async fn file_report(proxy: &CrashReporterProxy, signature: &str) {
         })
         .await
     {
-        let e = anyhow!(e);
-        error!("Error filing crash report: {:#}", e);
+        error!("Error filing crash report: {:#}", anyhow!(e));
     };
 }
 

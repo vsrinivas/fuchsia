@@ -1203,8 +1203,7 @@ where
             match self.do_omaha_request_and_update_context(&request_builder, co).await {
                 Ok(res) => res,
                 Err(e) => {
-                    let e = anyhow!(e);
-                    error!("Ping Omaha failed: {:#}", e);
+                    error!("Ping Omaha failed: {:#}", anyhow!(e));
                     self.context.state.consecutive_failed_update_checks += 1;
                     self.persist_data().await;
                     return;
@@ -1214,8 +1213,7 @@ where
         let response = match Self::parse_omaha_response(&data) {
             Ok(res) => res,
             Err(e) => {
-                let e = anyhow!(e);
-                error!("Unable to parse Omaha response: {:#}", e);
+                error!("Unable to parse Omaha response: {:#}", anyhow!(e));
                 self.context.state.consecutive_failed_update_checks += 1;
                 self.persist_data().await;
                 return;
