@@ -20,6 +20,7 @@ use {
     fuchsia_component_test::{DirectoryContents, RealmBuilder, RealmInstance},
     futures::StreamExt,
     input_synthesis::{modern_backend, synthesizer},
+    test_case::test_case,
 };
 
 /// Creates a test realm with
@@ -27,6 +28,7 @@ use {
 /// b) all other capabilities routed from hermetically instantiated packages where possible, and
 /// c) non-hermetic capabilities routed in from above the test realm.
 async fn assemble_realm(
+    input_owner_url: &str,
     sound_player_mock: SoundPlayerMock,
     pointer_injector_mock: PointerInjectorMock,
     factory_reset_mock: FactoryResetMock,
@@ -36,12 +38,11 @@ async fn assemble_realm(
     // Declare packaged components.
     let scenic_test_realm =
         PackagedComponent::new_from_modern_url("scenic-test-realm", "#meta/scenic_only.cm");
-    let input_pipeline =
-        PackagedComponent::new_from_modern_url("input_pipeline", "#meta/input-pipeline.cm");
+    let input_owner = PackagedComponent::new_from_modern_url("input-owner", input_owner_url);
 
     // Add packaged components and mocks to the test realm.
     b.add(&scenic_test_realm).await;
-    b.add(&input_pipeline).await;
+    b.add(&input_owner).await;
     b.add(&sound_player_mock).await;
     b.add(&pointer_injector_mock).await;
     b.add(&factory_reset_mock).await;
@@ -56,34 +57,30 @@ async fn assemble_realm(
 
     // Allow the input pipeline to access the capabilities it needs. All of these
     // capabilities are run hermetically, so they are all routed from peers.
-    b.route_to_peer::<fidl_fuchsia_ui_scenic::ScenicMarker>(&scenic_test_realm, &input_pipeline)
-        .await;
+    b.route_to_peer::<fidl_fuchsia_ui_scenic::ScenicMarker>(&scenic_test_realm, &input_owner).await;
     b.route_to_peer::<fidl_fuchsia_ui_pointerinjector::RegistryMarker>(
         &scenic_test_realm,
-        &input_pipeline,
+        &input_owner,
     )
     .await;
-    b.route_to_peer::<fidl_fuchsia_media_sounds::PlayerMarker>(&sound_player_mock, &input_pipeline)
+    b.route_to_peer::<fidl_fuchsia_media_sounds::PlayerMarker>(&sound_player_mock, &input_owner)
         .await;
     b.route_to_peer::<fidl_fuchsia_ui_pointerinjector_configuration::SetupMarker>(
         &pointer_injector_mock,
-        &input_pipeline,
+        &input_owner,
     )
     .await;
-    b.route_to_peer::<fidl_fuchsia_recovery::FactoryResetMarker>(
-        &factory_reset_mock,
-        &input_pipeline,
-    )
-    .await;
+    b.route_to_peer::<fidl_fuchsia_recovery::FactoryResetMarker>(&factory_reset_mock, &input_owner)
+        .await;
 
     // Allow tests to inject input reports into the input pipeline.
-    b.route_to_parent::<fidl_fuchsia_input_injection::InputDeviceRegistryMarker>(&input_pipeline)
+    b.route_to_parent::<fidl_fuchsia_input_injection::InputDeviceRegistryMarker>(&input_owner)
         .await;
 
     // Route required config files to input pipeline.
     b.route_read_only_directory(
         String::from("config-data"),
-        &input_pipeline,
+        &input_owner,
         DirectoryContents::new()
             .add_file("chirp-start-tone.wav", "")
             .add_file("ignore_real_devices", ""),
@@ -113,9 +110,13 @@ const DEFAULT_VIEWPORT: pointerinjector::Viewport = pointerinjector::Viewport {
 const SOUND_PLAYER_NAME: &'static str = "mock_sound_player";
 const POINTER_INJECTOR_NAME: &'static str = "mock_pointer_injector";
 const FACTORY_RESET_NAME: &'static str = "mock_factory_reset";
+const INPUT_PIPELINE_URL: &'static str = "#meta/input-pipeline.cm";
+const SCENE_MANAGER_URL: &'static str = "#meta/scene_manager.cm";
 
+#[test_case(INPUT_PIPELINE_URL; "Input Pipeline variant")]
+#[test_case(SCENE_MANAGER_URL; "Scene Manager variant")]
 #[fuchsia::test]
-async fn sound_is_played_during_factory_reset() {
+async fn sound_is_played_during_factory_reset(input_owner_url: &str) {
     let (sound_request_relay_write_end, mut sound_request_relay_read_end) =
         futures::channel::mpsc::unbounded();
     let (reset_request_relay_write_end, mut reset_request_relay_read_end) =
@@ -128,7 +129,13 @@ async fn sound_is_played_during_factory_reset() {
     let pointer_injector_mock = PointerInjectorMock::new(POINTER_INJECTOR_NAME, DEFAULT_VIEWPORT);
     let factory_reset_mock =
         FactoryResetMock::new(FACTORY_RESET_NAME, reset_request_relay_write_end);
-    let realm = assemble_realm(sound_player_mock, pointer_injector_mock, factory_reset_mock).await;
+    let realm = assemble_realm(
+        input_owner_url,
+        sound_player_mock,
+        pointer_injector_mock,
+        factory_reset_mock,
+    )
+    .await;
 
     // Press buttons for factory reset, and verify that `factory_reset_mock`
     // received the reset request.
@@ -150,8 +157,10 @@ async fn sound_is_played_during_factory_reset() {
     realm.destroy().await.unwrap();
 }
 
+#[test_case(INPUT_PIPELINE_URL; "Input Pipeline variant")]
+#[test_case(SCENE_MANAGER_URL; "Scene Manager variant")]
 #[fuchsia::test]
-async fn failure_to_load_sound_doesnt_block_factory_reset() {
+async fn failure_to_load_sound_doesnt_block_factory_reset(input_owner_url: &str) {
     let (reset_request_relay_write_end, mut reset_request_relay_read_end) =
         futures::channel::mpsc::unbounded();
     let sound_player_mock =
@@ -159,7 +168,13 @@ async fn failure_to_load_sound_doesnt_block_factory_reset() {
     let pointer_injector_mock = PointerInjectorMock::new(POINTER_INJECTOR_NAME, DEFAULT_VIEWPORT);
     let factory_reset_mock =
         FactoryResetMock::new(FACTORY_RESET_NAME, reset_request_relay_write_end);
-    let realm = assemble_realm(sound_player_mock, pointer_injector_mock, factory_reset_mock).await;
+    let realm = assemble_realm(
+        input_owner_url,
+        sound_player_mock,
+        pointer_injector_mock,
+        factory_reset_mock,
+    )
+    .await;
 
     // Press buttons for factory reset, and verify that `factory_reset_mock`
     // received the reset request.
@@ -171,8 +186,10 @@ async fn failure_to_load_sound_doesnt_block_factory_reset() {
     realm.destroy().await.unwrap();
 }
 
+#[test_case(INPUT_PIPELINE_URL; "Input Pipeline variant")]
+#[test_case(SCENE_MANAGER_URL; "Scene Manager variant")]
 #[fuchsia::test]
-async fn failure_to_play_sound_doesnt_block_factory_reset() {
+async fn failure_to_play_sound_doesnt_block_factory_reset(input_owner_url: &str) {
     let (reset_request_relay_write_end, mut reset_request_relay_read_end) =
         futures::channel::mpsc::unbounded();
     let sound_player_mock =
@@ -180,7 +197,13 @@ async fn failure_to_play_sound_doesnt_block_factory_reset() {
     let pointer_injector_mock = PointerInjectorMock::new(POINTER_INJECTOR_NAME, DEFAULT_VIEWPORT);
     let factory_reset_mock =
         FactoryResetMock::new(FACTORY_RESET_NAME, reset_request_relay_write_end);
-    let realm = assemble_realm(sound_player_mock, pointer_injector_mock, factory_reset_mock).await;
+    let realm = assemble_realm(
+        input_owner_url,
+        sound_player_mock,
+        pointer_injector_mock,
+        factory_reset_mock,
+    )
+    .await;
 
     // Press buttons for factory reset, and verify that `factory_reset_mock`
     // received the reset request.
