@@ -17,7 +17,7 @@ import("//build/go/toolchain.gni")
 #       (Bindings: rust, hlcpp, llcpp, banjo_{c,cpp,rust}, bindlib)
 #       Invokes fidlgen_${binding_name} on IR from ${target_name}($fidl_toolchain).
 #   go_toolchain, dart_toolchain
-#     ${target_name}
+#     ${target_name}_${binding_name}
 #       Invokes fidlgen_{go,dart} on IR from ${target_name}($fidl_toolchain),
 #       and compiles the result as a library.
 #   all other toolchains
@@ -35,7 +35,7 @@ import("//build/go/toolchain.gni")
 #
 # Users of the bindings should depend on:
 #
-#   ${target_name}($dart_toolchain) for Dart bindings
+#   ${target_name}_dart($dart_toolchain) for Dart bindings
 #   ${target_name}($go_toolchain) for Go bindings
 #   ${target_name}_${binding_name} for all other bindings
 #

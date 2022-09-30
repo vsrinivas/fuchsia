@@ -16,7 +16,7 @@ dart_library("lib") {
 
   # [START deps]
   deps = [
-    "//examples/fidl/fuchsia.examples",
+    "//examples/fidl/fuchsia.examples:fuchsia.examples_dart",
     "//sdk/dart/fidl",
     "//sdk/dart/fuchsia",
     "//sdk/dart/fuchsia_logger",

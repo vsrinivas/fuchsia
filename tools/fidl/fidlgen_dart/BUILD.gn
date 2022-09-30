@@ -87,7 +87,7 @@ if (current_toolchain == dart_toolchain) {
     foreach(info, fidl_testdata_info) {
       if (info.build_denylist + [ "fidlgen_dart" ] - [ "fidlgen_dart" ] ==
           info.build_denylist) {
-        deps += [ info.target ]
+        deps += [ info.target + "_dart" ]
       }
     }
   }

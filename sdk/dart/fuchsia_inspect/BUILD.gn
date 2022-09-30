@@ -42,8 +42,8 @@ dart_library("fuchsia_inspect") {
     "//sdk/dart/fuchsia_services",
     "//sdk/dart/fuchsia_vfs",
     "//sdk/dart/zircon",
-    "//sdk/fidl/fuchsia.diagnostics",
-    "//sdk/fidl/fuchsia.mem",
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_dart",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem_dart",
     "//third_party/dart-pkg/pub/collection",
     "//third_party/dart-pkg/pub/matcher",
     "//third_party/dart-pkg/pub/meta",
@@ -84,8 +84,8 @@ dart_test_component("dart-archive-reader-test-component") {
   deps = [
     ":fuchsia_inspect",
     "//sdk/dart/fuchsia_component_test:dart_realm_builder_deps",
-    "//sdk/fidl/fuchsia.component",
-    "//sdk/fidl/fuchsia.diagnostics",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_dart",
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_dart",
     "//third_party/dart-pkg/pub/pedantic",
     "//third_party/dart-pkg/pub/test",
   ]

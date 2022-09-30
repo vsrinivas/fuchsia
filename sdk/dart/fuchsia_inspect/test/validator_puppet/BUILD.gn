@@ -19,7 +19,7 @@ dart_library("lib") {
     "//sdk/dart/fuchsia_inspect",
     "//sdk/dart/fuchsia_logger",
     "//sdk/dart/fuchsia_services",
-    "//src/diagnostics/validator/inspect/fidl:validate",
+    "//src/diagnostics/validator/inspect/fidl:validate_dart",
     "//third_party/dart-pkg/pub/meta",  # Do we need this?
   ]
 }

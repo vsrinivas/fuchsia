@@ -23,7 +23,7 @@ dart_library("lib") {
     "//sdk/dart/fuchsia_logger",
     "//sdk/dart/fuchsia_services",
     "//sdk/dart/zircon",
-    "//src/testing/fidl:placeholders",
+    "//src/testing/fidl:placeholders_dart",
     "//third_party/dart-pkg/pub/intl",
   ]
 }
@@ -50,7 +50,7 @@ dart_library("lib-flutter") {
     "//sdk/dart/fuchsia_logger",
     "//sdk/dart/fuchsia_services",
     "//sdk/dart/zircon",
-    "//src/testing/fidl:placeholders",
+    "//src/testing/fidl:placeholders_dart",
     "//third_party/dart-pkg/pub/intl",
   ]
 }

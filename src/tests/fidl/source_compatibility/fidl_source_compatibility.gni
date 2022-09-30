@@ -87,7 +87,7 @@ template("_dart_compat") {
     infer_package_name = true
     package_root = dest_dir
     sources = [ invoker.source ]
-    deps = [ ":${invoker.fidl}(${dart_toolchain})" ]
+    deps = [ ":${invoker.fidl}_dart(${dart_toolchain})" ]
     non_dart_deps = [ ":${copy_target_name}" ]
     pubspec = "//src/tests/fidl/source_compatibility/pubspec.yaml"
   }

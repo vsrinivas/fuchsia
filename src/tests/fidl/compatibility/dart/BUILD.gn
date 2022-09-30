@@ -13,9 +13,9 @@ dart_library("bin") {
   deps = [
     "//sdk/dart/fidl",
     "//sdk/dart/fuchsia_services",
-    "//sdk/fidl/fuchsia.sys",
-    "//src/tests/fidl/compatibility/fidl:fidl_import",
-    "//src/tests/fidl/compatibility/fidl:fidl_service",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_dart",
+    "//src/tests/fidl/compatibility/fidl:fidl_import_dart",
+    "//src/tests/fidl/compatibility/fidl:fidl_service_dart",
   ]
 }
 

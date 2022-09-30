@@ -32,7 +32,7 @@ dart_library("fuchsia_vfs") {
   deps = [
     "//sdk/dart/fidl",
     "//sdk/dart/zircon",
-    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_dart",
     "//third_party/dart-pkg/pub/meta",
     "//third_party/dart-pkg/pub/quiver",
   ]
@@ -55,8 +55,8 @@ dart_test_component("unittests-component") {
     ":fuchsia_vfs",
     "//sdk/dart/fidl",
     "//sdk/dart/zircon",
-    "//sdk/fidl/fuchsia.io",
-    "//src/testing/fidl:placeholders",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_dart",
+    "//src/testing/fidl:placeholders_dart",
     "//third_party/dart-pkg/pub/test",
   ]
 }

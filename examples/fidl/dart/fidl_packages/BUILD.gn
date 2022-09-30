@@ -12,7 +12,7 @@ dart_test("fidl-example-dart-test") {
   null_safe = true
   sources = [ "types_test.dart" ]
   deps = [
-    "//examples/fidl/fuchsia.examples",
+    "//examples/fidl/fuchsia.examples:fuchsia.examples_dart",
     "//third_party/dart-pkg/pub/test",
   ]
 }

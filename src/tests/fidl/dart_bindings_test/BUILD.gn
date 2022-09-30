@@ -18,7 +18,7 @@ dart_library("server_lib") {
   package_root = "server"
   sources = [ "main.dart" ]
   deps = [
-    "fidl:bindings_test",
+    "fidl:bindings_test_dart",
     "//sdk/dart/fidl",
     "//sdk/dart/fuchsia_services",
     "//sdk/dart/zircon",
@@ -55,7 +55,7 @@ dart_test_component("conformance-component") {
     "//sdk/dart/zircon",
     "//src/lib/fidl/dart/gidl",
     "//third_party/dart-pkg/pub/test",
-    conformance_suite_fidl_target,
+    conformance_suite_fidl_target + "_dart",
   ]
 
   non_dart_deps = [ ":conformance_suite" ]
@@ -72,8 +72,8 @@ dart_library("server_test_lib") {
   sources = [ "server.dart" ]
   deps = [
     "//sdk/dart/fuchsia_component_test",
-    "//sdk/fidl/fuchsia.logger",
-    "//src/tests/fidl/dart_bindings_test/fidl:bindings_test",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_dart",
+    "//src/tests/fidl/dart_bindings_test/fidl:bindings_test_dart",
   ]
 }
 
@@ -108,8 +108,8 @@ dart_test_component("bindings-test-component") {
     "//sdk/dart/fidl",
     "//sdk/dart/fuchsia_services",
     "//sdk/dart/zircon",
-    "//sdk/testing/fidl/protocols_tests:test.unknown.interactions",
-    "//src/tests/fidl/dart_bindings_test/fidl:bindings_test",
+    "//sdk/testing/fidl/protocols_tests:test.unknown.interactions_dart",
+    "//src/tests/fidl/dart_bindings_test/fidl:bindings_test_dart",
     "//third_party/dart-pkg/pub/collection",
     "//third_party/dart-pkg/pub/pedantic",
     "//third_party/dart-pkg/pub/test",

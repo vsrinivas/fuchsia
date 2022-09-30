@@ -18,7 +18,7 @@ dart_library("fuchsia_internationalization_flutter") {
   deps = [
     "//sdk/dart/fidl",
     "//sdk/dart/fuchsia_logger",
-    "//sdk/fidl/fuchsia.intl",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl_dart",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/git/flutter/packages/flutter_localizations",
     "//third_party/dart-pkg/pub/intl",
@@ -40,7 +40,7 @@ flutter_test("fuchsia_internationalization_flutter_unittests") {
     ":fuchsia_internationalization_flutter",
     "//sdk/dart/fidl",
     "//sdk/dart/fuchsia_logger",
-    "//sdk/fidl/fuchsia.intl",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl_dart",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/git/flutter/packages/flutter_test",
     "//third_party/dart-pkg/pub/mockito",

@@ -43,7 +43,9 @@ template("fidl_dart") {
   assert(defined(invoker.fidl_ir_target),
          "fidl_dart(\"$target_name\") must define `fidl_ir_target`")
 
-  generation_target_name = "${target_name}_dart_generate"
+  main_target = "${target_name}_dart"
+  generation_target = "${target_name}_dart_generate"
+  copy_pubspec_target = "${target_name}_dart_pubspec"
 
   forward_variables_from(invoker,
                          [
@@ -64,7 +66,7 @@ template("fidl_dart") {
   async_bindings_file = "$bindings_dir/fidl_async.dart"
   test_bindings_file = "$bindings_dir/fidl_test.dart"
 
-  compiled_action(generation_target_name) {
+  compiled_action(generation_target) {
     forward_variables_from(invoker,
                            [
                              "testonly",
@@ -102,15 +104,13 @@ template("fidl_dart") {
     }
   }
 
-  copy_pubspec_target_name = "${target_name}_dart_pubspec"
-
-  copy(copy_pubspec_target_name) {
+  copy(copy_pubspec_target) {
     sources = [ "//build/dart/empty_pubspec.yaml" ]
 
     outputs = [ "$root_dir/pubspec.yaml" ]
   }
 
-  dart_library(target_name) {
+  dart_library(main_target) {
     forward_variables_from(invoker,
                            [
                              "testonly",
@@ -133,24 +133,42 @@ template("fidl_dart") {
     ]
 
     deps = [
-      ":$copy_pubspec_target_name",
-      ":$generation_target_name",
+      ":$copy_pubspec_target",
+      ":$generation_target",
       "//sdk/dart/fidl",
       "//sdk/dart/zircon",
       "//third_party/dart-pkg/pub/meta",
     ]
 
     if (defined(invoker.public_deps)) {
-      deps += invoker.public_deps
+      foreach(dep, invoker.public_deps) {
+        deps += [ get_label_info(dep, "label_no_toolchain") + "_dart" ]
+      }
     }
+  }
+
+  # TODO(joshuaseaton): Remove once //src/experiences targets have been
+  # migrated over to depending on $main_target directly.
+  group(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    if (!defined(visibility)) {
+      visibility = []
+    }
+    visibility += [ "//src/experiences/*" ]
+
+    public_deps = [ ":$main_target" ]
   }
 
   if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {
     # Instead of depending on the generated bindings, set up a dependency on the
     # original library.
-    sdk_target_name = "${target_name}_sdk"
+    sdk_target_name = "${main_target}_sdk"
     sdk_atom_alias(sdk_target_name) {
-      atom = ":$sdk_target_name($fidl_toolchain)"
+      atom = ":${fidl_target_name}_sdk($fidl_toolchain)"
     }
   }
 }

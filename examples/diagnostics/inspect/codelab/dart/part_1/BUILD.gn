@@ -17,7 +17,7 @@ dart_library("lib") {
   source_dir = "lib"
 
   deps = [
-    "//examples/diagnostics/inspect/codelab/fidl:fuchsia.examples.inspect",
+    "//examples/diagnostics/inspect/codelab/fidl:fuchsia.examples.inspect_dart",
     "//sdk/dart/fidl",
     "//sdk/dart/fuchsia_logger",
     "//sdk/dart/fuchsia_services",

@@ -10,13 +10,13 @@ dart_library("lib") {
   sources = [ "main.dart" ]
   source_dir = "lib"
   deps = [
-    "//examples/diagnostics/inspect/codelab/fidl:fuchsia.examples.inspect",
+    "//examples/diagnostics/inspect/codelab/fidl:fuchsia.examples.inspect_dart",
     "//sdk/dart/fuchsia",
     "//sdk/dart/fuchsia_logger",
     "//sdk/dart/fuchsia_services",
-    "//sdk/fidl/fuchsia.component",
-    "//sdk/fidl/fuchsia.component.decl",
-    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_dart",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_dart",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_dart",
   ]
 }
 

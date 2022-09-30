@@ -41,7 +41,7 @@ dart_test_component("benchmark-component") {
     "//src/lib/fidl/dart/gidl",
     "//third_party/dart-pkg/pub/args",
     "//third_party/dart-pkg/pub/test",
-    benchmark_suite_fidl_target,
+    benchmark_suite_fidl_target + "_dart",
   ]
   non_dart_deps = [ ":benchmark_suite" ]
 

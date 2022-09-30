@@ -25,7 +25,7 @@ dart_library("lib") {
   package_name = "fuchsia-services-foo-test-server"
   sources = [ "main.dart" ]
   deps = [
-    ":test-foo-fidl",
+    ":test-foo-fidl_dart",
     "//sdk/dart/fidl",
     "//sdk/dart/fuchsia_logger",
     "//sdk/dart/fuchsia_services",

@@ -11,7 +11,7 @@ dart_library("testing") {
   sources = [ "integration_test.dart" ]
 
   deps = [
-    "//examples/diagnostics/inspect/codelab/fidl:fuchsia.examples.inspect",
+    "//examples/diagnostics/inspect/codelab/fidl:fuchsia.examples.inspect_dart",
     "//sdk/dart/fidl",
     "//sdk/dart/fuchsia_component_test:dart_realm_builder_deps",
     "//sdk/dart/fuchsia_inspect",

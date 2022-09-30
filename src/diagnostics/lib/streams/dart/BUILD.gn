@@ -22,7 +22,9 @@ dart_library("fuchsia_diagnostic_streams") {
     "streams.dart",
   ]
 
-  deps = [ "//sdk/fidl/fuchsia.diagnostics.stream" ]
+  deps = [
+    "//sdk/fidl/fuchsia.diagnostics.stream:fuchsia.diagnostics.stream_dart",
+  ]
 }
 
 dart_test("fuchsia-diagnostic-streams-unittests") {
@@ -33,8 +35,8 @@ dart_test("fuchsia-diagnostic-streams-unittests") {
 
   deps = [
     ":fuchsia_diagnostic_streams",
-    "//sdk/fidl/fuchsia.diagnostics",
-    "//sdk/fidl/fuchsia.diagnostics.stream",
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_dart",
+    "//sdk/fidl/fuchsia.diagnostics.stream:fuchsia.diagnostics.stream_dart",
     "//third_party/dart-pkg/pub/test",
   ]
 }

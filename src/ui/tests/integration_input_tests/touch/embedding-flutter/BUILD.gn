@@ -14,9 +14,9 @@ dart_library("lib") {
     "//sdk/dart/fuchsia_scenic_flutter",
     "//sdk/dart/fuchsia_services",
     "//sdk/dart/zircon",
-    "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.ui.test.input",
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_dart",
+    "//sdk/fidl/fuchsia.ui.test.input:fuchsia.ui.test.input_dart",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_dart",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/pub/args",
   ]

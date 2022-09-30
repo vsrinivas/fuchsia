@@ -11,13 +11,13 @@ dart_library("lib") {
   source_dir = "lib"
 
   deps = [
-    "../../fidl:validate",
+    "../../fidl:validate_dart",
     "//sdk/dart/fidl",
     "//sdk/dart/fuchsia_logger",
     "//sdk/dart/fuchsia_services",
     "//sdk/dart/zircon",
-    "//sdk/fidl/fuchsia.diagnostics.stream",
-    "//sdk/fidl/fuchsia.mem",
+    "//sdk/fidl/fuchsia.diagnostics.stream:fuchsia.diagnostics.stream_dart",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem_dart",
     "//src/diagnostics/lib/streams/dart:fuchsia_diagnostic_streams",
   ]
 }

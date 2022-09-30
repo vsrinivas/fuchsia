@@ -172,7 +172,7 @@ foreach(test, dangerous_tests) {
 dart_targets = []
 foreach(test, dangerous_tests) {
   group(test.dart_target) {
-    deps = [ ":${test.fidl_target}($dart_toolchain)" ]
+    deps = [ ":${test.fidl_target}_dart($dart_toolchain)" ]
   }
   dart_targets += [ ":${test.dart_target}" ]
 }

@@ -32,10 +32,10 @@ dart_test_component("dart_inspect_vmo_test_component") {
   deps = [
     "//sdk/dart/fuchsia_inspect",
     "//sdk/dart/fuchsia_services",
-    "//sdk/fidl/fuchsia.component",
-    "//sdk/fidl/fuchsia.component.decl",
-    "//sdk/fidl/fuchsia.diagnostics",
-    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_dart",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_dart",
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_dart",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_dart",
     "//third_party/dart-pkg/pub/test",
   ]
 }

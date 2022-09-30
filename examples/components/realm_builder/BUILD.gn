@@ -43,12 +43,12 @@ dart_test_component("dart-component") {
     "//sdk/dart/fuchsia_component_test",
 
     # [START_EXCLUDE]
-    "//examples/components/routing/fidl:echo",
+    "//examples/components/routing/fidl:echo_dart",
     "//sdk/dart/fidl",
     "//sdk/dart/fuchsia_logger",
     "//sdk/dart/fuchsia_services",
-    "//sdk/fidl/fuchsia.io",
-    "//sdk/fidl/fuchsia.logger",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_dart",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_dart",
     "//third_party/dart-pkg/pub/test",
 
     # [END_EXCLUDE]

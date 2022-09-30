@@ -22,7 +22,7 @@ dart_library("lib") {
     "//sdk/dart/fuchsia_logger",
     "//sdk/dart/fuchsia_services",
     "//sdk/dart/zircon",
-    "//sdk/fidl/fuchsia.ui.test.input",
+    "//sdk/fidl/fuchsia.ui.test.input:fuchsia.ui.test.input_dart",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
   ]
 }

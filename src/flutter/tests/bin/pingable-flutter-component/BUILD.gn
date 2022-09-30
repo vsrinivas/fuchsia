@@ -15,7 +15,7 @@ dart_library("lib") {
     "//sdk/dart/fidl",
     "//sdk/dart/fuchsia_logger",
     "//sdk/dart/fuchsia_services",
-    "//src/flutter/tests/fidl",
+    "//src/flutter/tests/fidl:fidl_dart",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
   ]
 }
