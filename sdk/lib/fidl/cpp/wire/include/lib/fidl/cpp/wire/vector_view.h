@@ -128,9 +128,6 @@ class VectorView {
 
   T* data() const { return data_; }
 
-  // TODO(yifeit): Remove this after the single non-fuchsia.git usage is migrated.
-  T* mutable_data() const { return data_; }
-
   // Returns if the vector view is empty.
   bool empty() const { return count() == 0; }
 
