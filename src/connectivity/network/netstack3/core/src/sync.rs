@@ -4,6 +4,9 @@
 
 //! Useful synchronization primitives.
 
+// TODO(https://fxbug.dev/110884): Support single-threaded variants of types
+// exported from this module.
+
 #[cfg(feature = "instrumented")]
 pub use netstack3_sync_instrumented::{Mutex, RwLock};
 
@@ -11,3 +14,5 @@ pub use netstack3_sync_instrumented::{Mutex, RwLock};
 // results are not affected by the extra bookkeeping.
 #[cfg(not(feature = "instrumented"))]
 pub use netstack3_sync_not_instrumented::{Mutex, RwLock};
+
+pub use alloc::sync::Arc as ReferenceCounted;

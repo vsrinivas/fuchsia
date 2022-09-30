@@ -46,7 +46,7 @@ use crate::{
         nud::{BufferNudContext, BufferNudHandler, NudContext, NudState, NudTimerId},
         state::AddrConfig,
     },
-    sync::{Mutex, RwLock},
+    sync::{Mutex, ReferenceCounted, RwLock},
     BufferNonSyncContext, NonSyncContext, SyncCtx,
 };
 
@@ -148,9 +148,11 @@ impl<NonSyncCtx: NonSyncContext> EthernetIpLinkDeviceContext<NonSyncCtx>
         EthernetDeviceId(id): EthernetDeviceId,
         cb: F,
     ) -> O {
-        let devices = self.state.device.devices.read();
-        let state = &devices.ethernet.get(id).unwrap().link;
-        cb(&state.static_state)
+        let eth = {
+            let devices = self.state.device.devices.read();
+            ReferenceCounted::clone(devices.ethernet.get(id).unwrap())
+        };
+        cb(&eth.link.static_state)
     }
 
     fn with_ethernet_device_state<
@@ -161,8 +163,12 @@ impl<NonSyncCtx: NonSyncContext> EthernetIpLinkDeviceContext<NonSyncCtx>
         EthernetDeviceId(id): EthernetDeviceId,
         cb: F,
     ) -> O {
-        let devices = self.state.device.devices.read();
-        let state = &devices.ethernet.get(id).unwrap().link;
+        let eth = {
+            let devices = self.state.device.devices.read();
+            ReferenceCounted::clone(devices.ethernet.get(id).unwrap())
+        };
+
+        let state = &eth.link;
         let dynamic_state = state.dynamic_state.read();
         cb(&state.static_state, &dynamic_state)
     }
@@ -175,8 +181,11 @@ impl<NonSyncCtx: NonSyncContext> EthernetIpLinkDeviceContext<NonSyncCtx>
         EthernetDeviceId(id): EthernetDeviceId,
         cb: F,
     ) -> O {
-        let devices = self.state.device.devices.read();
-        let state = &devices.ethernet.get(id).unwrap().link;
+        let eth = {
+            let devices = self.state.device.devices.read();
+            ReferenceCounted::clone(devices.ethernet.get(id).unwrap())
+        };
+        let state = &eth.link;
         let mut dynamic_state = state.dynamic_state.write();
         cb(&state.static_state, &mut dynamic_state)
     }
@@ -248,8 +257,12 @@ impl<NonSyncCtx: NonSyncContext> NudContext<Ipv6, EthernetLinkDevice, NonSyncCtx
     for &'_ SyncCtx<NonSyncCtx>
 {
     fn retrans_timer(&self, EthernetDeviceId(id): EthernetDeviceId) -> NonZeroDuration {
-        let devices = self.state.device.devices.read();
-        let ipv6 = devices.ethernet.get(id).unwrap().ip.ipv6.read();
+        let eth = {
+            let devices = self.state.device.devices.read();
+            ReferenceCounted::clone(devices.ethernet.get(id).unwrap())
+        };
+
+        let ipv6 = eth.ip.ipv6.read();
         ipv6.retrans_timer
     }
 
@@ -258,8 +271,11 @@ impl<NonSyncCtx: NonSyncContext> NudContext<Ipv6, EthernetLinkDevice, NonSyncCtx
         EthernetDeviceId(id): EthernetDeviceId,
         cb: F,
     ) -> O {
-        let devices = self.state.device.devices.read();
-        let mut nud = devices.ethernet.get(id).unwrap().link.ipv6_nud.lock();
+        let eth = {
+            let devices = self.state.device.devices.read();
+            ReferenceCounted::clone(devices.ethernet.get(id).unwrap())
+        };
+        let mut nud = eth.link.ipv6_nud.lock();
         cb(&mut nud)
     }
 
@@ -811,8 +827,11 @@ impl<C: NonSyncContext> ArpContext<EthernetLinkDevice, C> for &'_ SyncCtx<C> {
         _ctx: &mut C,
         EthernetDeviceId(id): EthernetDeviceId,
     ) -> Option<Ipv4Addr> {
-        let devices = self.state.device.devices.read();
-        let ipv4 = devices.ethernet.get(id).unwrap().ip.ipv4.read();
+        let eth = {
+            let devices = self.state.device.devices.read();
+            ReferenceCounted::clone(devices.ethernet.get(id).unwrap())
+        };
+        let ipv4 = eth.ip.ipv4.read();
         let ret = ipv4.ip_state.iter_addrs().next().cloned().map(|addr| addr.addr().get());
         ret
     }
@@ -826,8 +845,11 @@ impl<C: NonSyncContext> ArpContext<EthernetLinkDevice, C> for &'_ SyncCtx<C> {
         EthernetDeviceId(id): EthernetDeviceId,
         cb: F,
     ) -> O {
-        let devices = self.state.device.devices.read();
-        let mut arp = devices.ethernet.get(id).unwrap().link.ipv4_arp.lock();
+        let eth = {
+            let devices = self.state.device.devices.read();
+            ReferenceCounted::clone(devices.ethernet.get(id).unwrap())
+        };
+        let mut arp = eth.link.ipv4_arp.lock();
         cb(&mut arp)
     }
 }

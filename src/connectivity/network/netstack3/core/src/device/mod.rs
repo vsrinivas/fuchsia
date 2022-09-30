@@ -53,7 +53,7 @@ use crate::{
         types::AddableEntry,
         DualStackDeviceIdContext, IpDeviceId, IpDeviceIdContext,
     },
-    sync::RwLock,
+    sync::{ReferenceCounted, RwLock},
     BufferNonSyncContext, Instant, NonSyncContext, SyncCtx,
 };
 
@@ -130,11 +130,24 @@ fn with_ip_device_state<
     device: DeviceId,
     cb: F,
 ) -> O {
-    let devices = ctx.state.device.devices.read();
-    cb(match device.inner() {
-        DeviceIdInner::Ethernet(EthernetDeviceId(id)) => &devices.ethernet.get(id).unwrap().ip,
-        DeviceIdInner::Loopback(LoopbackDeviceId) => &devices.loopback.as_ref().unwrap().ip,
-    })
+    match device.inner() {
+        DeviceIdInner::Ethernet(EthernetDeviceId(id)) => {
+            let eth = {
+                let devices = ctx.state.device.devices.read();
+                ReferenceCounted::clone(devices.ethernet.get(id).unwrap())
+            };
+
+            cb(&eth.ip)
+        }
+        DeviceIdInner::Loopback(LoopbackDeviceId) => {
+            let loopback = {
+                let devices = ctx.state.device.devices.read();
+                ReferenceCounted::clone(devices.loopback.as_ref().unwrap())
+            };
+
+            cb(&loopback.ip)
+        }
+    }
 }
 
 fn with_devices<
@@ -668,8 +681,8 @@ impl FrameDestination {
 #[derive(Derivative)]
 #[derivative(Default(bound = ""))]
 struct Devices<I: Instant> {
-    ethernet: IdMap<IpLinkDeviceState<I, EthernetDeviceState>>,
-    loopback: Option<IpLinkDeviceState<I, LoopbackDeviceState>>,
+    ethernet: IdMap<ReferenceCounted<IpLinkDeviceState<I, EthernetDeviceState>>>,
+    loopback: Option<ReferenceCounted<IpLinkDeviceState<I, LoopbackDeviceState>>>,
 }
 
 /// The state associated with the device layer.
@@ -689,7 +702,7 @@ impl<I: Instant> DeviceLayerState<I> {
         let Devices { ethernet, loopback: _ } = &mut *self.devices.write();
 
         let id = ethernet
-            .push(IpLinkDeviceState::new(EthernetDeviceStateBuilder::new(mac, mtu).build()));
+            .push(IpLinkDeviceState::new(EthernetDeviceStateBuilder::new(mac, mtu).build()).into());
         debug!("adding Ethernet device with ID {} and MTU {}", id, mtu);
         DeviceId::new_ethernet(id)
     }
@@ -698,11 +711,11 @@ impl<I: Instant> DeviceLayerState<I> {
     pub(crate) fn add_loopback_device(&self, mtu: u32) -> Result<DeviceId, ExistsError> {
         let Devices { ethernet: _, loopback } = &mut *self.devices.write();
 
-        if let Some(IpLinkDeviceState { .. }) = loopback {
+        if let Some(_) = loopback {
             return Err(ExistsError);
         }
 
-        *loopback = Some(IpLinkDeviceState::new(LoopbackDeviceState::new(mtu)));
+        *loopback = Some(IpLinkDeviceState::new(LoopbackDeviceState::new(mtu)).into());
 
         debug!("added loopback device");
 
@@ -746,14 +759,14 @@ pub fn remove_device<NonSyncCtx: NonSyncContext>(
     match device.inner() {
         DeviceIdInner::Ethernet(id) => {
             let EthernetDeviceId(id) = id;
-            let _: IpLinkDeviceState<_, _> = devices
+            let _: ReferenceCounted<IpLinkDeviceState<_, _>> = devices
                 .ethernet
                 .remove(id)
                 .unwrap_or_else(|| panic!("no such Ethernet device: {}", id));
             debug!("removing Ethernet device with ID {}", id);
         }
         DeviceIdInner::Loopback(LoopbackDeviceId) => {
-            let _: IpLinkDeviceState<_, _> =
+            let _: ReferenceCounted<IpLinkDeviceState<_, _>> =
                 devices.loopback.take().expect("loopback device does not exist");
             debug!("removing Loopback device");
         }

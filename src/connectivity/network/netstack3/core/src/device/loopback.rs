@@ -14,6 +14,7 @@ use packet::{Buf, BufferMut, SerializeError, Serializer};
 
 use crate::{
     device::{Device, DeviceIdContext, FrameDestination},
+    sync::ReferenceCounted,
     DeviceId, NonSyncContext, SyncCtx,
 };
 
@@ -86,7 +87,12 @@ pub(super) fn get_mtu<NonSyncCtx: NonSyncContext>(
     ctx: &SyncCtx<NonSyncCtx>,
     LoopbackDeviceId: LoopbackDeviceId,
 ) -> u32 {
-    ctx.state.device.devices.read().loopback.as_ref().unwrap().link.mtu
+    let loopback = {
+        let devices = ctx.state.device.devices.read();
+        ReferenceCounted::clone(devices.loopback.as_ref().unwrap())
+    };
+
+    loopback.link.mtu
 }
 
 #[cfg(test)]
