@@ -226,7 +226,7 @@ async fn destroyed_storage_user() {
         }
     );
 
-    let mut event_stream = EventStream::open_pipelined().unwrap();
+    let mut event_stream = EventStream::open().await.unwrap();
     instance.destroy().await.unwrap();
 
     EventMatcher::ok()

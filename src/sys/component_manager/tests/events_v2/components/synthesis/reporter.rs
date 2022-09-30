@@ -10,7 +10,7 @@ use {
 #[fuchsia::main]
 async fn main() {
     // Validate that RUNNING and DirectoryReady is synthesized for root
-    let mut event_stream = EventStream::open_pipelined().unwrap();
+    let mut event_stream = EventStream::open().await.unwrap();
     let mut found_directory_ready = false;
     let mut found_running = false;
     loop {

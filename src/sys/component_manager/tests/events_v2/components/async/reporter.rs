@@ -12,9 +12,9 @@ use {
 
 #[fuchsia::main(logging_tags = ["async_reporter"])]
 async fn main() {
-    let _ = EventStream::open_pipelined().unwrap();
+    let _ = EventStream::open().await.unwrap();
     // Validate that subscribing a second time works.
-    let mut event_stream = EventStream::open_pipelined().unwrap();
+    let mut event_stream = EventStream::open().await.unwrap();
     let mut instances = vec![];
     let url = "#meta/stub_component_v2.cm".to_string();
     for _ in 1..=3 {

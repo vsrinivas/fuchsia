@@ -11,7 +11,7 @@ use {
 #[fuchsia::test]
 async fn launch_realm_components() -> Result<(), Error> {
     // Subscribe to started events for child components
-    let mut event_stream = EventStream::open_pipelined().unwrap();
+    let mut event_stream = EventStream::open().await.unwrap();
 
     // Create a new empty test realm
     let builder = RealmBuilder::new().await?;

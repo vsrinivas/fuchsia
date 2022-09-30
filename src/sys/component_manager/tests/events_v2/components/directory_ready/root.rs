@@ -43,7 +43,7 @@ async fn call_trigger(directory: &fio::DirectoryProxy, paths: &Vec<String>) {
 /// It sends "Saw: /path/to/dir on /some_moniker" for each successful read.
 #[fuchsia::main]
 async fn main() {
-    let mut event_stream = EventStream::open_pipelined().unwrap();
+    let mut event_stream = EventStream::open().await.unwrap();
     // For successful CapabilityRead events, this is a map of the directory to expected contents
     let mut all_expected_entries = hashmap! {
         "normal".to_string() => vec![ftest::TriggerMarker::PROTOCOL_NAME.to_string()],

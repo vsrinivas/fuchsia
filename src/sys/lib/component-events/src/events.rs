@@ -152,12 +152,18 @@ impl EventStream {
         Ok(Self::new_v2(connect_to_protocol_at_path::<fsys::EventStream2Marker>(&path.into())?))
     }
 
-    // Deprecated -- please Use open_pipelined instead.
-    // TODO(https://fxbug.dev/110405): Change to async.
-    pub fn open() -> Result<Self, Error> {
-        Ok(Self::new_v2(connect_to_protocol_at_path::<fsys::EventStream2Marker>(
+    pub async fn open_at_path(path: impl Into<String>) -> Result<Self, Error> {
+        let event_stream = connect_to_protocol_at_path::<fsys::EventStream2Marker>(&path.into())?;
+        event_stream.wait_for_ready().await?;
+        Ok(Self::new_v2(event_stream))
+    }
+
+    pub async fn open() -> Result<Self, Error> {
+        let event_stream = connect_to_protocol_at_path::<fsys::EventStream2Marker>(
             "/svc/fuchsia.component.EventStream",
-        )?))
+        )?;
+        event_stream.wait_for_ready().await?;
+        Ok(Self::new_v2(event_stream))
     }
 
     pub fn open_pipelined() -> Result<Self, Error> {
