@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_diagnostics::{ComponentSelector, Selector, StringSelector, TreeSelector},
+    fidl_fuchsia_diagnostics::{Selector, StringSelector, TreeSelector},
     lazy_static::lazy_static,
     proc_macro2::{Punct, Span, TokenStream},
     quote::{quote, ToTokens},
-    selectors::{self, VerboseError},
+    selectors::{self, TreeSelector as _, VerboseError},
     std::collections::HashMap,
     syn::{
         parse::{Parse, ParseStream},
@@ -739,16 +739,6 @@ fn cmp_string_selector(selector: &StringSelector, expected: &str) -> bool {
     }
 }
 
-fn is_v1_moniker(span: Span, selector: ComponentSelector) -> Result<bool, Error> {
-    let segments = selector
-        .moniker_segments
-        .as_ref()
-        .ok_or(Error::new(span, format!("Got an invalid component selector. {:?}", selector)))?;
-    return Ok(segments.len() == 2
-        && cmp_string_selector(segments.get(0).unwrap(), "core")
-        && cmp_string_selector(segments.get(1).unwrap(), "appmgr"));
-}
-
 fn is_namespace(span: Span, selector: &TreeSelector, namespace: &str) -> Result<bool, Error> {
     match selector {
         TreeSelector::SubtreeSelector(ref subtree) => {
@@ -851,13 +841,14 @@ impl Parse for ProxyMap {
                             if has_wildcards(selection.span(), &parsed_selector)? {
                                 return Err(Error::new(selection.span(), format!("Component selectors in plugin definitions cannot use wildcards ('*').")));
                             }
-                            let moniker = parsed_selector.component_selector.unwrap();
                             let subdir = parsed_selector.tree_selector.unwrap();
-                            if !is_v1_moniker(selection.span(), moniker)?
-                                && !is_namespace(selection.span(), &subdir, "expose")?
-                                && !is_namespace(selection.span(), &subdir, "in")?
-                            {
-                                return Err(Error::new(selection.span(), format!("Selectors for V2 components in plugin definitions must use `expose` or `in`. `out` is unsupported. See fxbug.dev/60910.")));
+
+                            if subdir.property().is_none() {
+                                return Err(Error::new(selection.span(), format!("Selectors in plugin definitions must specify a protocol name")));
+                            }
+
+                            if !is_namespace(selection.span(), &subdir, "expose")? {
+                                return Err(Error::new(selection.span(), format!("Selectors in plugin definitions must use `expose`. `out` and `in` are unsupported. See fxbug.dev/60910.")));
                             }
                             selection.value()
                         };
@@ -907,7 +898,7 @@ mod test {
         },
     };
 
-    const V1_SELECTOR: &str = "core/appmgr";
+    const TEST_SELECTOR: &str = "core/my_test_component:expose";
 
     struct WrappedCommand {
         original: ItemStruct,
@@ -1096,27 +1087,12 @@ mod test {
     }
 
     #[test]
-    fn test_v2_proxy_map_succeeds() {
-        let _proxy_map: ProxyMap = parse_quote! {test = "test:expose"};
-    }
-
-    #[test]
-    fn test_v2_proxy_map_expose_with_service_succeeds() {
+    fn test_map_expose_with_service_succeeds() {
         let _proxy_map: ProxyMap = parse_quote! {test = "test:expose:anything"};
     }
 
-    #[test]
-    fn test_v1_proxy_map_using_out_succeeds() {
-        let _proxy_map: ProxyMap = parse_quote! {test = "core/appmgr:out"};
-    }
-
-    #[test]
-    fn test_v1_proxy_map_using_out_and_service_succeeds() {
-        let _proxy_map: ProxyMap = parse_quote! {test = "core/appmgr:out:anything"};
-    }
-
     fn proxy_map_test_value(test: String) -> (String, String, TokenStream) {
-        let test_value = format!("{}:{}", V1_SELECTOR, test);
+        let test_value = format!("{}:{}", TEST_SELECTOR, test);
         let test_ident = Ident::new(&test, Span::call_site());
         let mapping_lit = LitStr::new(&test_value, Span::call_site());
         (test.to_string(), test_value.clone(), quote! {#test_ident = #mapping_lit})
@@ -1170,7 +1146,7 @@ mod test {
     }
 
     #[test]
-    fn test_v2_proxy_map_using_out_fails() {
+    fn test_map_using_out_fails() {
         let result: Result<ProxyMap, Error> = parse2(quote! {
             test = "test:out"
         });
@@ -1178,7 +1154,7 @@ mod test {
     }
 
     #[test]
-    fn test_v2_proxy_map_not_using_expose_and_service_fails() {
+    fn test_map_not_using_expose_and_service_fails() {
         let result: Result<ProxyMap, Error> = parse2(quote! {
             test = "test:anything:anything"
         });
@@ -1186,15 +1162,15 @@ mod test {
     }
 
     #[test]
-    fn test_v2_proxy_map_using_in_ok() {
+    fn test_map_using_in_fails() {
         let result: Result<ProxyMap, Error> = parse2(quote! {
             test = "test:in:anything"
         });
-        assert!(result.is_ok());
+        assert!(result.is_err());
     }
 
     #[test]
-    fn test_v2_proxy_map_using_expose_ok() {
+    fn test_map_using_expose_ok() {
         let result: Result<ProxyMap, Error> = parse2(quote! {
             test = "test:expose:anything"
         });
