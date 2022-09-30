@@ -186,7 +186,6 @@ impl JsonString {
     pub fn serialize(source: &impl Serialize, data_type: DataType) -> Result<Self, AccessorError> {
         let writer = VmoWriter::new(match data_type {
             DataType::Inspect => inspect_format::constants::DEFAULT_VMO_SIZE_BYTES as u64,
-            DataType::Lifecycle => 4096, // page size
             // Logs won't go through this codepath anyway, but in case we ever want to serialize a
             // single log instance it makes sense to start at the page size.
             DataType::Logs => 4096, // page size

@@ -4,7 +4,7 @@
 
 //! # Diagnostics data
 //!
-//! This library contians the Diagnostics data schema used for inspect, logs and lifecycle. This is
+//! This library contains the Diagnostics data schema used for inspect and logs . This is
 //! the data that the Archive returns on `fuchsia.diagnostics.ArchiveAccessor` reads.
 
 use anyhow::format_err;
@@ -43,7 +43,6 @@ const MICROS_IN_SEC: u128 = 1000000;
 pub enum DataSource {
     Unknown,
     Inspect,
-    LifecycleEvent,
     Logs,
 }
 
@@ -53,22 +52,12 @@ impl Default for DataSource {
     }
 }
 
-/// The type of a lifecycle event exposed by the `fuchsia.diagnostics.ArchiveAccessor`
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
-pub enum LifecycleType {
-    Started,
-    Stopped,
-    DiagnosticsReady,
-    LogSinkConnected,
-}
-
 /// Metadata contained in a `DiagnosticsData` object.
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum Metadata {
     Empty,
     Inspect(InspectMetadata),
-    LifecycleEvent(LifecycleEventMetadata),
     Logs(LogsMetadata),
 }
 
@@ -108,38 +97,6 @@ pub trait DiagnosticsData {
     /// Transforms a Metdata string into a errorful metadata, overriding any other
     /// errors.
     fn override_error(metadata: Self::Metadata, error: String) -> Self::Metadata;
-}
-
-/// Lifecycle events track the start, stop, and diagnostics directory readiness of components.
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
-pub struct Lifecycle;
-
-impl DiagnosticsData for Lifecycle {
-    type Metadata = LifecycleEventMetadata;
-    type Key = String;
-    type Error = LifecycleError;
-    const DATA_TYPE: DataType = DataType::Lifecycle;
-
-    fn component_url(metadata: &Self::Metadata) -> Option<&str> {
-        metadata.component_url.as_ref().map(|s| s.as_str())
-    }
-
-    fn timestamp(metadata: &Self::Metadata) -> Timestamp {
-        Timestamp(metadata.timestamp)
-    }
-
-    fn errors(metadata: &Self::Metadata) -> &Option<Vec<Self::Error>> {
-        &metadata.errors
-    }
-
-    fn override_error(metadata: Self::Metadata, error: String) -> Self::Metadata {
-        LifecycleEventMetadata {
-            lifecycle_event_type: metadata.lifecycle_event_type,
-            component_url: metadata.component_url,
-            timestamp: metadata.timestamp,
-            errors: Some(vec![LifecycleError { message: error.into() }]),
-        }
-    }
 }
 
 /// Inspect carries snapshots of data trees hosted by components.
@@ -278,25 +235,6 @@ impl DerefMut for Timestamp {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
-}
-
-/// The metadata contained in a `DiagnosticsData` object where the data source is
-/// `DataSource::LifecycleEvent`.
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
-pub struct LifecycleEventMetadata {
-    /// Optional vector of errors encountered by platform.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub errors: Option<Vec<LifecycleError>>,
-
-    /// Type of lifecycle event being encoded in the payload.
-    pub lifecycle_event_type: LifecycleType,
-
-    /// The url with which the component was launched.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub component_url: Option<String>,
-
-    /// Monotonic time in nanos.
-    pub timestamp: i64,
 }
 
 /// The metadata contained in a `DiagnosticsData` object where the data source is
@@ -499,9 +437,6 @@ where
 /// A diagnostics data object containing inspect data.
 pub type InspectData = Data<Inspect>;
 
-/// A diagnostics data object containing lifecycle event data.
-pub type LifecycleData = Data<Lifecycle>;
-
 /// A diagnostics data object containing logs data.
 pub type LogsData = Data<Logs>;
 
@@ -510,33 +445,6 @@ pub type LogsHierarchy = DiagnosticsHierarchy<LogsField>;
 
 /// A diagnostics hierarchy property keyed by `LogsField`.
 pub type LogsProperty = Property<LogsField>;
-
-impl Data<Lifecycle> {
-    /// Creates a new data instance for a lifecycle event.
-    pub fn for_lifecycle_event(
-        moniker: impl Into<String>,
-        lifecycle_event_type: LifecycleType,
-        payload: Option<DiagnosticsHierarchy>,
-        component_url: impl Into<String>,
-        timestamp: impl Into<Timestamp>,
-        errors: Vec<LifecycleError>,
-    ) -> LifecycleData {
-        let errors_opt = if errors.is_empty() { None } else { Some(errors) };
-
-        Data {
-            moniker: moniker.into(),
-            version: SCHEMA_VERSION,
-            data_source: DataSource::LifecycleEvent,
-            payload,
-            metadata: LifecycleEventMetadata {
-                timestamp: *(timestamp.into()),
-                component_url: Some(component_url.into()),
-                lifecycle_event_type,
-                errors: errors_opt,
-            },
-        }
-    }
-}
 
 impl Data<Inspect> {
     /// Creates a new data instance for inspect.
@@ -1268,19 +1176,6 @@ pub struct InspectError {
     pub message: String,
 }
 
-/// Possible error that can come in a `DiagnosticsData` object where the data source is
-/// `DataSource::LifecycleEvent`.
-#[derive(Debug, PartialEq, Clone, Eq)]
-pub struct LifecycleError {
-    pub message: String,
-}
-
-impl fmt::Display for LifecycleError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.message)
-    }
-}
-
 impl fmt::Display for InspectError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.message)
@@ -1288,18 +1183,6 @@ impl fmt::Display for InspectError {
 }
 
 impl Borrow<str> for InspectError {
-    fn borrow(&self) -> &str {
-        &self.message
-    }
-}
-
-impl Serialize for LifecycleError {
-    fn serialize<S: Serializer>(&self, ser: S) -> Result<S::Ok, S::Error> {
-        self.message.serialize(ser)
-    }
-}
-
-impl Borrow<str> for LifecycleError {
     fn borrow(&self) -> &str {
         &self.message
     }
@@ -1321,30 +1204,11 @@ impl<'de> Deserialize<'de> for InspectError {
     }
 }
 
-impl<'de> Deserialize<'de> for LifecycleError {
-    fn deserialize<D>(de: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let message = String::deserialize(de)?;
-        Ok(Self { message })
-    }
-}
-
 impl Metadata {
     /// Returns the inspect metadata or None if the metadata contained is not for inspect.
     pub fn inspect(&self) -> Option<&InspectMetadata> {
         match self {
             Metadata::Inspect(m) => Some(m),
-            _ => None,
-        }
-    }
-
-    /// Returns the lifecycle event metadata or None if the metadata contained is not for a
-    /// lifecycle event.
-    pub fn lifecycle_event(&self) -> Option<&LifecycleEventMetadata> {
-        match self {
-            Metadata::LifecycleEvent(m) => Some(m),
             _ => None,
         }
     }
@@ -1563,65 +1427,6 @@ mod tests {
         });
         let result_json =
             serde_json::to_value(&builder.build()).expect("serialization should succeed.");
-        pretty_assertions::assert_eq!(result_json, expected_json, "golden diff failed.");
-    }
-
-    #[fuchsia::test]
-    fn test_canonical_json_lifecycle_event_formatting() {
-        let json_schema = Data::for_lifecycle_event(
-            "a/b/c/d",
-            LifecycleType::DiagnosticsReady,
-            None,
-            TEST_URL,
-            123456i64,
-            Vec::new(),
-        );
-
-        let result_json =
-            serde_json::to_value(&json_schema).expect("serialization should succeed.");
-
-        let expected_json = json!({
-          "moniker": "a/b/c/d",
-          "version": 1,
-          "data_source": "LifecycleEvent",
-          "payload": null,
-          "metadata": {
-            "component_url": TEST_URL,
-            "lifecycle_event_type": "DiagnosticsReady",
-            "timestamp": 123456,
-          }
-        });
-
-        pretty_assertions::assert_eq!(result_json, expected_json, "golden diff failed.");
-    }
-
-    #[fuchsia::test]
-    fn test_errorful_json_lifecycle_event_formatting() {
-        let json_schema = Data::for_lifecycle_event(
-            "a/b/c/d",
-            LifecycleType::DiagnosticsReady,
-            None,
-            TEST_URL,
-            123456i64,
-            vec![LifecycleError { message: "too much fun being had.".to_string() }],
-        );
-
-        let result_json =
-            serde_json::to_value(&json_schema).expect("serialization should succeed.");
-
-        let expected_json = json!({
-          "moniker": "a/b/c/d",
-          "version": 1,
-          "data_source": "LifecycleEvent",
-          "payload": null,
-          "metadata": {
-            "errors": ["too much fun being had."],
-            "lifecycle_event_type": "DiagnosticsReady",
-            "component_url": TEST_URL,
-            "timestamp": 123456,
-          }
-        });
-
         pretty_assertions::assert_eq!(result_json, expected_json, "golden diff failed.");
     }
 

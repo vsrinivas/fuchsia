@@ -1,8 +1,7 @@
 # Lifecycle events
 
-The [Archivist][archivist] consumes lifecycle events to ingest diagnostics data. Additionally, it provides an
-interface to read those lifecycle events for diagnostics purposes. This document explains what
-these events are and through which interface they can be accessed for diagnostics.
+The [Archivist][archivist] consumes lifecycle events to ingest diagnostics data. This document
+explains what these events are.
 
 ## Archivist consumption of lifecycle events {#archivist-consumption}
 
@@ -26,80 +25,6 @@ The archivist consumes the following lifecycle events under component manager th
   directory. When the component starts serving this directory, the component manager sends this
   event to the Archivist.
 
-
-## Reading lifecycle events
-
-Lifecycle events can be read through the ArchiveAccessor. Only the `snapshot` mode is supported.
-
-<!-- TODO(fxbug.dev/60763): link to ArchiveAccessor documentation where each mode is explained -->
-
-Results are returned as a `vector<FormattedContent>` with each entry's variant matching the
-requested `Format`, although JSON is the only supported format.
-
-
-### JSON object contents
-
-Each JSON object in the array is one event entry. Like other data types in ArchiveAccessor,
-each object consists of several fields, although the contents of metadata and payload differ
-from other sources. The following is an example of a JSON object entry:
-
-```
-{
-    "version": 1,
-    "moniker": "core/network/netstack",
-    "data_source": "LifecycleEvent",
-    "metadata": {
-        "timestamp": 1234567890,
-        "lifecycle_event_type": "Started",
-        "component_url": "fuchsia-pkg://fuchsia.com/network#meta/netstack.cm",
-        “errors”: []
-    },
-    "payload": null,
-}
-
-```
-
-#### Monikers
-
-Monikers identify the component related to the triggered event.
-
-As explained in [Archivist consumption of lifecycle events](#archivist-consumption), component
-manager provdes archivist with events. Components running under component manager have a `.cm`
-extension.
-
-#### Timestamp
-
-The time is recorded using the kernel's monotonic clock (nanoseconds) and conveyed without
-modification as an unsigned integer. The time is when the event was created by the component
-manager, which also provide the time.
-
-#### Lifecycle event type
-
-These are the valid values for lifecycle event types:
-
-- DiagnosticsReady (diagnostics data for the component
-is ready).
-- Started (the component has started)
-- Stopped (the component has stopped)
-- LogSinkConnected (a client at some point connected to the LogSink protocol).
-
-#### Component URL
-
-The URL with which the component related to this event was launched.
-
-#### Errors
-
-Optional vector of errors encountered by the platform when handling this event.
-Usually, no errors are expected for lifecycle events, so in most cases this is empty.
-
-
-#### Payload
-
-The payload is always be empty for lifecycle events. Other types of data sources, like logs and
-inspect, contain a payload. For more information, refer to the
-[ArchiveAccessor documentation].
-
-
 ## Related docs
 
 - [Event capabilities][event_capabilities]
@@ -111,6 +36,4 @@ inspect, contain a payload. For more information, refer to the
 [component_event_provider]: https://fuchsia.dev/reference/fidl/fuchsia.sys.internal#ComponentEventProvider
 [event_capabilities]: /docs/concepts/components/v2/capabilities/event.md
 [inspect_discovery_hosting]: /docs/reference/diagnostics/inspect/tree.md#archivist
-[component_runner]: /docs/glossary#runner
 [runner]: /docs/glossary#runner
-[ArchiveAccessor documentation]: https://fuchsia.dev/reference/fidl/fuchsia.diagnostics#ArchiveAccessor

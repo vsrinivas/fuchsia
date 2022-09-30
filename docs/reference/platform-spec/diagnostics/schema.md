@@ -89,38 +89,6 @@ This would look as follows in JSON:
 }
 ```
 
-#### Lifecycle event
-
-Metadata for lifecycle responses contains the following fields:
-
-- Errors: Errors that happened while fetching the components Inspect data (optional).
-  The error is an object with a single `message` string field.
-
-- Component URL: The URL with which the component was launched.
-
-- Timestamp: The monotonic time when the event happened in the framework.
-
-- Lifecycle event type: The name of the lifecycle event being encoded in the payload. This can be
-  one of: `Started`, `Stopped`, `DiagnosticsReady`, `LogSinkConnected`.
-
-This would look as follows in JSON:
-
-```json
-{
-    ...,
-    "metadata": {
-        "errors": [
-            {
-                "message": "...",
-            }
-        ],
-        "component_url": "fuchsia-pkg://...",
-        "timestamp": 12345,
-        "lifecycle_event_type": "Started"
-    },
-}
-```
-
 #### Logs
 
 Metadata for logs responses contains the following fields:
@@ -198,19 +166,6 @@ This would look as follows in JSON:
             ...
         }
     },
-}
-```
-
-#### Lifecycle event
-
-The payload is empty for lifecycle events.
-
-This would look as follows in JSON:
-
-```json
-{
-    ...,
-    "payload": null,
 }
 ```
 

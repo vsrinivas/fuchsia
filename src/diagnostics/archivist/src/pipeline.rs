@@ -4,8 +4,7 @@
 use {
     crate::{
         accessor::ArchiveAccessor, configs, constants, diagnostics::AccessorStats, error::Error,
-        inspect::container::UnpopulatedInspectDataContainer,
-        lifecycle::container::LifecycleDataContainer, moniker_rewriter::MonikerRewriter,
+        inspect::container::UnpopulatedInspectDataContainer, moniker_rewriter::MonikerRewriter,
         repository::DataRepo, ImmutableString,
     },
     async_lock::RwLock,
@@ -235,10 +234,6 @@ impl Pipeline {
             }
         }
         Ok(())
-    }
-
-    pub async fn fetch_lifecycle_event_data(&self) -> Vec<LifecycleDataContainer> {
-        self.data_repo.read().await.fetch_lifecycle_event_data()
     }
 
     /// Return all of the DirectoryProxies that contain Inspect hierarchies

@@ -614,18 +614,12 @@ mod tests {
         let (proxy, _) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
             .expect("create directory proxy");
 
-        inspect_repo
-            .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))
-            .await
-            .expect("add to repo");
+        inspect_repo.add_inspect_artifacts(identity.clone(), proxy).await.expect("add to repo");
 
         let (proxy, _) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
             .expect("create directory proxy");
 
-        inspect_repo
-            .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))
-            .await
-            .expect("add to repo");
+        inspect_repo.add_inspect_artifacts(identity.clone(), proxy).await.expect("add to repo");
 
         assert_eq!(
             inspect_repo
@@ -738,7 +732,7 @@ mod tests {
                     inspect_repo
                         .write()
                         .await
-                        .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))
+                        .add_inspect_artifacts(identity.clone(), proxy)
                         .await
                         .unwrap();
 
@@ -913,7 +907,7 @@ mod tests {
         inspect_repo
             .write()
             .await
-            .add_inspect_artifacts(identity.clone(), out_dir_proxy, zx::Time::from_nanos(0))
+            .add_inspect_artifacts(identity.clone(), out_dir_proxy)
             .await
             .unwrap();
 

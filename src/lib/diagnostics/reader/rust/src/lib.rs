@@ -24,7 +24,7 @@ use thiserror::Error;
 
 use parking_lot::Mutex;
 
-pub use diagnostics_data::{Data, Inspect, Lifecycle, Logs, Severity};
+pub use diagnostics_data::{Data, Inspect, Logs, Severity};
 pub use diagnostics_hierarchy::{
     assert_data_tree, assert_json_diff, hierarchy, testing::*, tree_assertion,
     DiagnosticsHierarchy, Property,
@@ -457,7 +457,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use diagnostics_data::{Data, LifecycleType};
+    use diagnostics_data::Data;
     use diagnostics_hierarchy::assert_data_tree;
     use fidl_fuchsia_diagnostics as fdiagnostics;
     use fuchsia_component_test::{
@@ -484,41 +484,6 @@ mod tests {
             .await?;
         let instance = builder.build().await?;
         Ok(instance)
-    }
-
-    #[fuchsia::test]
-    async fn lifecycle_events_for_component() {
-        let instance = start_component().await.expect("start component");
-
-        // TODO(fxbug.dev/51165): use selectors for this filtering and remove the delayed retry
-        // which would be taken care of by the ArchiveReader itself.
-        let moniker = format!("realm_builder\\:{}/test_component", instance.root.child_name());
-        loop {
-            let results = ArchiveReader::new()
-                .snapshot::<Lifecycle>()
-                .await
-                .unwrap()
-                .into_iter()
-                .filter(|e| e.moniker.starts_with(&moniker))
-                .collect::<Vec<_>>();
-            // Note: the ArchiveReader retries when the response is empty. However, here the
-            // response might not be empty (it can contain the archivist itself) but when we filter
-            // looking for the moniker we are interested on, that one might not be available.
-            // Metadata selectors would solve this as the archivist response would be empty and we
-            // wouldn't need to filter and retry here.
-            // Additionally the response could include LogSinkConnect events until we have metadata
-            // selectors to filter directly in the request.
-            if let Some(started) = results
-                .into_iter()
-                .find(|result| result.metadata.lifecycle_event_type == LifecycleType::Started)
-            {
-                assert_eq!(started.metadata.component_url, Some(TEST_COMPONENT_URL.to_string()));
-                assert_eq!(started.moniker, moniker);
-                assert_eq!(started.payload, None);
-                break;
-            }
-            fasync::Timer::new(fasync::Time::after(RETRY_DELAY_MS.millis())).await;
-        }
     }
 
     #[fuchsia::test]

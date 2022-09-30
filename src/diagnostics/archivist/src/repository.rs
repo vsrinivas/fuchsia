@@ -9,7 +9,6 @@ use {
         events::types::UniqueKey,
         identity::ComponentIdentity,
         inspect::container::{InspectArtifactsContainer, UnpopulatedInspectDataContainer},
-        lifecycle::container::{LifecycleArtifactsContainer, LifecycleDataContainer},
         logs::{
             budget::BudgetManager,
             container::LogsArtifactsContainer,
@@ -33,7 +32,7 @@ use {
     },
     fidl_fuchsia_io as fio,
     fidl_fuchsia_logger::{LogMarker, LogRequest, LogRequestStream},
-    fuchsia_async as fasync, fuchsia_fs, fuchsia_inspect as inspect, fuchsia_zircon as zx,
+    fuchsia_async as fasync, fuchsia_fs, fuchsia_inspect as inspect,
     futures::channel::mpsc,
     futures::prelude::*,
     lazy_static::lazy_static,
@@ -274,13 +273,7 @@ impl DataRepoState {
         }
     }
 
-    pub async fn add_new_component(
-        &mut self,
-        identity: ComponentIdentity,
-        event_timestamp: zx::Time,
-    ) -> Result<(), Error> {
-        let lifecycle_artifact_container = LifecycleArtifactsContainer { event_timestamp };
-
+    pub async fn add_new_component(&mut self, identity: ComponentIdentity) -> Result<(), Error> {
         let unique_key: Vec<_> = identity.unique_key().into();
         let diag_repo_entry_opt = self.data_directories.get_mut(&unique_key);
         match diag_repo_entry_opt {
@@ -296,11 +289,7 @@ impl DataRepoState {
                         // time encountering this moniker segment.
                         self.data_directories.insert(
                             unique_key,
-                            ComponentDiagnostics::new_with_lifecycle(
-                                Arc::new(identity),
-                                lifecycle_artifact_container,
-                                &self.inspect_node,
-                            ),
+                            ComponentDiagnostics::empty(Arc::new(identity), &self.inspect_node),
                         )
                     }
                     [existing_diagnostics_artifact_container] => {
@@ -308,10 +297,6 @@ impl DataRepoState {
                         // creation lifecycle events. Handle this here.
                         // TODO(fxbug.dev/52047): Remove once caching handles ordering issues.
                         existing_diagnostics_artifact_container.mark_started().await;
-                        if existing_diagnostics_artifact_container.lifecycle.is_none() {
-                            existing_diagnostics_artifact_container.lifecycle =
-                                Some(lifecycle_artifact_container);
-                        }
                     }
                     _ => {
                         return Err(Error::MultipleArtifactContainers(unique_key));
@@ -322,11 +307,7 @@ impl DataRepoState {
             // lifecycle event and it promotes the instantiation of a new data repository entry.
             None => self.data_directories.insert(
                 unique_key,
-                ComponentDiagnostics::new_with_lifecycle(
-                    Arc::new(identity),
-                    lifecycle_artifact_container,
-                    &self.inspect_node,
-                ),
+                ComponentDiagnostics::empty(Arc::new(identity), &self.inspect_node),
             ),
         }
         Ok(())
@@ -402,13 +383,9 @@ impl DataRepoState {
         &mut self,
         identity: ComponentIdentity,
         directory_proxy: fio::DirectoryProxy,
-        event_timestamp: zx::Time,
     ) -> Result<(), Error> {
-        let inspect_container = InspectArtifactsContainer {
-            component_diagnostics_proxy: directory_proxy,
-            event_timestamp,
-        };
-
+        let inspect_container =
+            InspectArtifactsContainer { component_diagnostics_proxy: directory_proxy };
         self.insert_inspect_artifact_container(inspect_container, identity).await
     }
 
@@ -473,43 +450,6 @@ impl DataRepoState {
             ),
         }
         Ok(())
-    }
-
-    pub fn fetch_lifecycle_event_data(&self) -> Vec<LifecycleDataContainer> {
-        self.data_directories.iter().fold(
-            Vec::new(),
-            |mut acc, (_, diagnostics_artifacts_container_opt)| {
-                match diagnostics_artifacts_container_opt {
-                    None => acc,
-                    Some(diagnostics_artifacts_container) => {
-                        if let Some(lifecycle_artifacts) =
-                            &diagnostics_artifacts_container.lifecycle
-                        {
-                            acc.push(LifecycleDataContainer::from_lifecycle_artifact(
-                                lifecycle_artifacts,
-                                diagnostics_artifacts_container.identity.clone(),
-                            ));
-                        }
-
-                        if let Some(inspect_artifacts) = &diagnostics_artifacts_container.inspect {
-                            acc.push(LifecycleDataContainer::from_inspect_artifact(
-                                inspect_artifacts,
-                                diagnostics_artifacts_container.identity.clone(),
-                            ));
-                        }
-
-                        if let Some(log_artifacts) = &diagnostics_artifacts_container.logs {
-                            acc.push(LifecycleDataContainer::from_logs_sink_connected_artifact(
-                                log_artifacts,
-                                diagnostics_artifacts_container.identity.clone(),
-                            ));
-                        }
-
-                        acc
-                    }
-                }
-            },
-        )
     }
 
     /// Return all of the DirectoryProxies that contain Inspect hierarchies
@@ -655,7 +595,6 @@ mod tests {
         diagnostics_log_encoding::{
             encode::Encoder, Argument, Record, Severity as StreamSeverity, Value,
         },
-        fuchsia_zircon as zx,
         selectors::{self, FastError},
         std::{io::Cursor, time::Duration},
     };
@@ -675,18 +614,12 @@ mod tests {
         let (proxy, _) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
             .expect("create directory proxy");
 
-        inspect_repo
-            .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))
-            .await
-            .expect("add to repo");
+        inspect_repo.add_inspect_artifacts(identity.clone(), proxy).await.expect("add to repo");
 
         let (proxy, _) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
             .expect("create directory proxy");
 
-        inspect_repo
-            .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))
-            .await
-            .expect("add to repo");
+        inspect_repo.add_inspect_artifacts(identity.clone(), proxy).await.expect("add to repo");
 
         assert_eq!(
             inspect_repo
@@ -709,18 +642,12 @@ mod tests {
         let component_id = ComponentIdentifier::Legacy { instance_id, moniker };
         let identity = ComponentIdentity::from_identifier_and_url(component_id, TEST_URL);
 
-        data_repo
-            .add_new_component(identity.clone(), zx::Time::from_nanos(0))
-            .await
-            .expect("instantiated new component.");
+        data_repo.add_new_component(identity.clone()).await.expect("instantiated new component.");
 
         let (proxy, _) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
             .expect("create directory proxy");
 
-        data_repo
-            .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))
-            .await
-            .expect("add to repo");
+        data_repo.add_inspect_artifacts(identity.clone(), proxy).await.expect("add to repo");
 
         assert_eq!(
             data_repo
@@ -747,13 +674,9 @@ mod tests {
         let component_id = ComponentIdentifier::Legacy { instance_id, moniker };
         let identity = ComponentIdentity::from_identifier_and_url(component_id.clone(), TEST_URL);
 
-        data_repo
-            .add_new_component(identity.clone(), zx::Time::from_nanos(0))
-            .await
-            .expect("instantiated new component.");
+        data_repo.add_new_component(identity.clone()).await.expect("instantiated new component.");
 
-        let duplicate_new_component_insertion =
-            data_repo.add_new_component(identity.clone(), zx::Time::from_nanos(1)).await;
+        let duplicate_new_component_insertion = data_repo.add_new_component(identity.clone()).await;
 
         assert!(duplicate_new_component_insertion.is_ok());
 
@@ -761,7 +684,6 @@ mod tests {
             data_repo.data_directories.get(&identity.unique_key().into()).unwrap().get_values();
         assert_eq!(repo_values.len(), 1);
         let entry = &repo_values[0];
-        assert!(entry.lifecycle.is_some());
         assert_eq!(entry.identity.relative_moniker, component_id.relative_moniker_for_selectors());
         assert_eq!(entry.identity.url, TEST_URL);
     }
@@ -776,8 +698,7 @@ mod tests {
         let component_id = ComponentIdentifier::Legacy { instance_id, moniker };
         let identity = ComponentIdentity::from_identifier_and_url(component_id.clone(), TEST_URL);
 
-        let component_insertion =
-            data_repo.add_new_component(identity.clone(), zx::Time::from_nanos(1)).await;
+        let component_insertion = data_repo.add_new_component(identity.clone()).await;
 
         assert!(component_insertion.is_ok());
 
@@ -785,7 +706,6 @@ mod tests {
             data_repo.data_directories.get(&identity.unique_key().into()).unwrap().get_values();
         assert_eq!(repo_values.len(), 1);
         let entry = &repo_values[0];
-        assert!(entry.lifecycle.is_some());
         assert_eq!(entry.identity.relative_moniker, component_id.relative_moniker_for_selectors());
         assert_eq!(entry.identity.url, TEST_URL);
     }
@@ -803,13 +723,9 @@ mod tests {
         let (proxy, _) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
             .expect("create directory proxy");
 
-        data_repo
-            .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))
-            .await
-            .expect("add to repo");
+        data_repo.add_inspect_artifacts(identity.clone(), proxy).await.expect("add to repo");
 
-        let false_new_component_result =
-            data_repo.add_new_component(identity.clone(), zx::Time::from_nanos(0)).await;
+        let false_new_component_result = data_repo.add_new_component(identity.clone()).await;
         assert!(false_new_component_result.is_ok());
 
         // We shouldn't have overwritten the entry. There should still be an inspect
@@ -827,7 +743,6 @@ mod tests {
             &data_repo.data_directories.get(&identity.unique_key().into()).unwrap().get_values()[0];
         assert_eq!(entry.identity.url, TEST_URL);
         assert!(entry.inspect.is_some());
-        assert!(entry.lifecycle.is_some());
     }
 
     #[fuchsia::test]
@@ -840,10 +755,7 @@ mod tests {
         let component_id = ComponentIdentifier::Legacy { instance_id, moniker };
         let identity = ComponentIdentity::from_identifier_and_url(component_id, TEST_URL);
 
-        data_repo
-            .add_new_component(identity.clone(), zx::Time::from_nanos(0))
-            .await
-            .expect("insertion will succeed.");
+        data_repo.add_new_component(identity.clone()).await.expect("insertion will succeed.");
 
         assert_eq!(
             data_repo
@@ -867,10 +779,7 @@ mod tests {
         let (proxy, _) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
             .expect("create directory proxy");
 
-        assert!(data_repo
-            .add_inspect_artifacts(identity, proxy, zx::Time::from_nanos(0))
-            .await
-            .is_err());
+        assert!(data_repo.add_inspect_artifacts(identity, proxy).await.is_err());
     }
 
     #[fuchsia::test]
@@ -887,7 +796,7 @@ mod tests {
         data_repo
             .write()
             .await
-            .add_new_component(identity.clone(), zx::Time::from_nanos(0))
+            .add_new_component(identity.clone())
             .await
             .expect("insertion will succeed.");
 
@@ -901,7 +810,6 @@ mod tests {
                     fuchsia_fs::OpenFlags::RIGHT_READABLE,
                 )
                 .expect("open root"),
-                zx::Time::from_nanos(0),
             )
             .await
             .expect("add inspect artifacts");
@@ -917,7 +825,7 @@ mod tests {
         data_repo
             .write()
             .await
-            .add_new_component(identity2.clone(), zx::Time::from_nanos(0))
+            .add_new_component(identity2.clone())
             .await
             .expect("insertion will succeed.");
 
@@ -931,7 +839,6 @@ mod tests {
                     fuchsia_fs::OpenFlags::RIGHT_READABLE,
                 )
                 .expect("open root"),
-                zx::Time::from_nanos(0),
             )
             .await
             .expect("add inspect artifacts");

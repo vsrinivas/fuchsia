@@ -33,7 +33,6 @@ use {
         server::{ServiceFs, ServiceObj},
     },
     fuchsia_inspect::{component, health::Reporter},
-    fuchsia_zircon as zx,
     futures::{
         channel::mpsc,
         future::{self, abortable},
@@ -452,7 +451,6 @@ impl ArchivistState {
         &self,
         component: ComponentIdentity,
         directory: Option<fio::DirectoryProxy>,
-        timestamp: zx::Time,
     ) {
         debug!(identity = %component, "Diagnostics directory is ready.");
         if let Some(directory) = directory {
@@ -460,7 +458,7 @@ impl ArchivistState {
             self.diagnostics_repo
                 .write()
                 .await
-                .add_inspect_artifacts(component.clone(), directory, timestamp)
+                .add_inspect_artifacts(component.clone(), directory)
                 .await
                 .unwrap_or_else(|err| {
                     warn!(identity = %component, ?err, "Failed to add inspect artifacts to repository");
@@ -484,14 +482,10 @@ impl ArchivistState {
     }
 
     /// Updates the central repository to reference the new diagnostics source.
-    async fn handle_started(&self, component: ComponentIdentity, timestamp: zx::Time) {
+    async fn handle_started(&self, component: ComponentIdentity) {
         debug!(identity = %component, "Adding new component.");
-        if let Err(e) = self
-            .diagnostics_repo
-            .write()
-            .await
-            .add_new_component(component.clone(), timestamp)
-            .await
+        if let Err(e) =
+            self.diagnostics_repo.write().await.add_new_component(component.clone()).await
         {
             error!(identity = %component, ?e, "Failed to add new component to repository");
         }
@@ -522,13 +516,13 @@ impl EventConsumer for ArchivistState {
     async fn handle(self: Arc<Self>, event: Event) {
         match event.payload {
             EventPayload::ComponentStarted(ComponentStartedPayload { component }) => {
-                self.handle_started(component, event.timestamp).await;
+                self.handle_started(component).await;
             }
             EventPayload::ComponentStopped(ComponentStoppedPayload { component }) => {
                 self.handle_stopped(component).await;
             }
             EventPayload::DiagnosticsReady(DiagnosticsReadyPayload { component, directory }) => {
-                self.handle_diagnostics_ready(component, directory, event.timestamp).await;
+                self.handle_diagnostics_ready(component, directory).await;
             }
             EventPayload::LogSinkRequested(LogSinkRequestedPayload {
                 component,

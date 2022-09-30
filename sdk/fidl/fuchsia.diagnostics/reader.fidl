@@ -71,6 +71,7 @@ type DataType = strict enum : uint8 {
     /// Complete inspect hierarchies on the system.
     INSPECT = 1;
     /// Start|Stop|Running|DiagnosticsReady events on the system.
+    @available(removed=10)
     LIFECYCLE = 2;
     /// Log streams on the system.
     LOGS = 3;

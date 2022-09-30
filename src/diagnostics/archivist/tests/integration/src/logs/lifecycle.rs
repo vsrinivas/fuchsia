@@ -8,7 +8,6 @@ use crate::{
     utils,
 };
 use component_events::{events::*, matcher::*};
-use diagnostics_data::Lifecycle;
 use diagnostics_reader::{assert_data_tree, ArchiveReader, Data, Logs};
 use fasync::Task;
 use fidl::endpoints::ServerEnd;
@@ -25,7 +24,6 @@ use fuchsia_component_test::{Capability, ChildOptions, LocalComponentHandles, Re
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc, lock::Mutex, SinkExt, StreamExt};
 use std::sync::Arc;
-use zx::DurationNum;
 
 async fn serve_mocks(
     handles: LocalComponentHandles,
@@ -112,45 +110,6 @@ async fn test_logs_with_hanging_log_connector() {
     // in the realm builder server component.
     before_response_snd.send(()).await.unwrap();
     after_response_recv.next().await.unwrap();
-}
-
-const RETRY_DELAY_MS: i64 = 300;
-
-async fn wait_for_log_sink_connected_event(reader: &mut ArchiveReader) {
-    loop {
-        let results = reader.snapshot::<Lifecycle>().await.unwrap();
-        let result_contains_component = results.into_iter().any(|result| {
-            result.metadata.lifecycle_event_type
-                == diagnostics_data::LifecycleType::LogSinkConnected
-                && result.moniker.contains(LOG_AND_EXIT_COMPONENT)
-        });
-        if result_contains_component {
-            break;
-        }
-        fasync::Timer::new(fasync::Time::after(RETRY_DELAY_MS.millis())).await;
-    }
-}
-
-#[fuchsia::test]
-async fn log_sink_connected_event_test() {
-    let (builder, test_realm) = test_topology::create(test_topology::Options::default())
-        .await
-        .expect("create base topology");
-    test_topology::add_eager_child(&test_realm, LOG_AND_EXIT_COMPONENT, LOG_AND_EXIT_COMPONENT_URL)
-        .await
-        .expect("add log_and_exit");
-
-    let instance = builder.build().await.expect("create instance");
-    let accessor =
-        instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();
-
-    let mut reader = ArchiveReader::new();
-    reader
-        .with_archive(accessor)
-        .with_minimum_schema_count(0) // we want this to return even when no log messages
-        .retry_if_empty(false);
-
-    wait_for_log_sink_connected_event(&mut reader).await;
 }
 
 #[fuchsia::test]

@@ -26,9 +26,6 @@ pub struct InspectArtifactsContainer {
     /// DirectoryProxy for the out directory that this
     /// data packet is configured for.
     pub component_diagnostics_proxy: fio::DirectoryProxy,
-    /// The time when the DiagnosticsReady event that caused the creation of
-    /// the inspect artifact container was created.
-    pub event_timestamp: zx::Time,
 }
 
 lazy_static! {

@@ -292,9 +292,6 @@ where
                                 .snapshot::<Inspect>()
                                 .await
                                 .map(|data| reader.run_snapshot_server(data, iterator).boxed()),
-                            DataType::Lifecycle => {
-                                unreachable!("Lifecycle data is being deprecated")
-                            }
                         },
                         _ => {
                             responder.send(&mut Err(StreamError::UnsupportedParameter))?;
@@ -428,9 +425,6 @@ mod test {
                     let data_str = serde_json::to_string(&data).unwrap();
                     let result = serde_json::from_str(&data_str).unwrap();
                     Ok(result)
-                }
-                DataType::Lifecycle => {
-                    unreachable!("Lifecycle data is being deprecated")
                 }
             }
         }

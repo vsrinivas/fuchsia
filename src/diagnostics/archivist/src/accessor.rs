@@ -9,7 +9,6 @@ use {
         error::AccessorError,
         formatter::{new_batcher, FormattedStream, JsonPacketSerializer, JsonString},
         inspect,
-        lifecycle::LifecycleServer,
         moniker_rewriter::MonikerRewriter,
         pipeline::Pipeline,
         ImmutableString,
@@ -189,25 +188,6 @@ impl ArchiveAccessor {
                 )?
                 .run()
                 .await
-            }
-            DataType::Lifecycle => {
-                // TODO(fxbug.dev/61350) support other modes
-                if !matches!(mode, StreamMode::Snapshot) {
-                    return Err(AccessorError::UnsupportedMode);
-                }
-                let stats = Arc::new(accessor_stats.new_lifecycle_batch_iterator());
-
-                let selectors =
-                    params.client_selector_configuration.ok_or(AccessorError::MissingSelectors)?;
-                if !matches!(selectors, ClientSelectorConfiguration::SelectAll(_)) {
-                    return Err(AccessorError::InvalidSelectors(
-                        "lifecycle only supports SelectAll at the moment",
-                    ));
-                }
-
-                let events = LifecycleServer::new(pipeline).await;
-
-                BatchIterator::new(events, requests, mode, stats, None)?.run().await
             }
             DataType::Logs => {
                 let stats = Arc::new(accessor_stats.new_logs_batch_iterator());

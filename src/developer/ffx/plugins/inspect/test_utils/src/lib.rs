@@ -5,9 +5,7 @@
 use {
     anyhow::Result,
     byteorder::{LittleEndian, WriteBytesExt},
-    diagnostics_data::{
-        Data, DiagnosticsHierarchy, InspectData, LifecycleData, LifecycleType, Property,
-    },
+    diagnostics_data::{Data, DiagnosticsHierarchy, InspectData, Property},
     errors as _, ffx_inspect_common as _, ffx_writer as _,
     fidl::endpoints::ServerEnd,
     fidl::prelude::*,
@@ -130,17 +128,6 @@ pub fn setup_fake_diagnostics_bridge(
     })
     .detach();
     proxy
-}
-
-pub fn make_short_lifecycle(moniker: String, timestamp: i64, typ: LifecycleType) -> LifecycleData {
-    Data::for_lifecycle_event(
-        moniker.clone(),
-        typ,
-        None,
-        format!("fake-url://{}", moniker),
-        timestamp,
-        vec![],
-    )
 }
 
 pub fn make_inspects_for_lifecycle() -> Vec<InspectData> {

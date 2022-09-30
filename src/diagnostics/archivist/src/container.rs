@@ -5,7 +5,6 @@ use {
     crate::{
         identity::ComponentIdentity,
         inspect::container::InspectArtifactsContainer,
-        lifecycle::container::LifecycleArtifactsContainer,
         logs::{
             budget::BudgetManager, container::LogsArtifactsContainer, multiplex::PinStream,
             stats::LogStreamStats,
@@ -29,8 +28,8 @@ use {
 /// Each instance is held by the DataRepo as long as the corresponding component is running or this
 /// struct has `logs` that are non-empty.
 ///
-/// When we receive a stop event for the corresponding component, we set `inspect` and `lifecycle`
-/// to `None`, causing `ArchiveAccessor` to ignore this component until it restarts. If `logs` is
+/// When we receive a stop event for the corresponding component, we set `inspect` to `None`,
+/// causing `ArchiveAccessor` to ignore this component until it restarts. If `logs` is
 /// empty at that point, this struct should be removed from the DataRepo.
 ///
 /// See [`ComponentDiagnostics::mark_stopped`], [`ComponentDiagnostics::mark_started`], and
@@ -44,8 +43,6 @@ pub struct ComponentDiagnostics {
     /// If absent, this is interpereted as a component existing, but not
     /// hosting diagnostics data.
     pub inspect: Option<InspectArtifactsContainer>,
-    /// Container holding the artifacts needed to serve lifecycle data.
-    pub lifecycle: Option<LifecycleArtifactsContainer>,
     /// Container holding cached log messages and interest dispatchers.
     pub logs: Option<Arc<LogsArtifactsContainer>>,
     /// Holds the state for `root/sources/MONIKER/*` in Archivist's inspect.
@@ -59,17 +56,7 @@ impl ComponentDiagnostics {
     pub fn empty(identity: Arc<ComponentIdentity>, parent: &fuchsia_inspect::Node) -> Self {
         let source_node = parent.create_child(identity.relative_moniker.join("/"));
         source_node.record_string("url", &identity.url);
-        Self { identity, inspect: None, lifecycle: None, logs: None, source_node, is_live: true }
-    }
-
-    pub fn new_with_lifecycle(
-        identity: Arc<ComponentIdentity>,
-        lifecycle: LifecycleArtifactsContainer,
-        parent: &fuchsia_inspect::Node,
-    ) -> Self {
-        let mut new = Self::empty(identity, parent);
-        new.lifecycle = Some(lifecycle);
-        new
+        Self { identity, inspect: None, logs: None, source_node, is_live: true }
     }
 
     pub fn new_with_inspect(
@@ -126,14 +113,13 @@ impl ComponentDiagnostics {
     }
 
     /// Mark this container as stopped -- the component is no longer running and we should not
-    /// serve lifecycle or inspect results.
+    /// serve inspect results.
     ///
-    /// Sets `inspect` and `lifecycle` to `None` so that this component will be excluded from
+    /// Sets `inspect` to `None` so that this component will be excluded from
     /// accessors for those data types.
     pub async fn mark_stopped(&mut self) {
         debug!(%self.identity, "Marking stopped.");
         self.inspect = None;
-        self.lifecycle = None;
         self.is_live = false;
         if let Some(logs) = &self.logs {
             logs.mark_stopped().await;
