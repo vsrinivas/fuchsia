@@ -390,7 +390,9 @@ func TestExecute(t *testing.T) {
 				tc.flags.modifiersPath = writeTempJSONFile(t, tc.modifiers)
 			}
 			if len(tc.affectedTests) > 0 {
-				tc.flags.affectedTestsPath = writeTempFile(t, strings.Join(tc.affectedTests, "\n"))
+				// Add a newline to the end of the file to test that it still calculates the
+				// correct number of affected tests even with extra whitespace.
+				tc.flags.affectedTestsPath = writeTempFile(t, strings.Join(tc.affectedTests, "\n")+"\n")
 			}
 			// Write test-list.json.
 			if err := jsonutil.WriteToFile(

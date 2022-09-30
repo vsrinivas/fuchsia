@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"sort"
-	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -104,13 +103,9 @@ func TestAffectedModifiers(t *testing.T) {
 	affectedTests := []string{
 		"affected-arm64", "affected-linux", "affected-mac", "affected-host+target", "affected-AEMU", "affected-other-device",
 	}
-	// Add a newline to the end of the file to test that it still calculates the
-	// correct number of affected tests even with extra whitespace.
-	affectedTestsFileContents := strings.Join(affectedTests, "\n") + "\n"
-	name := mkTempFile(t, affectedTestsFileContents)
 	const maxAttempts = 2
 	t.Run("not multiplied if over threshold", func(t *testing.T) {
-		mods, err := AffectedModifiers(nil, name, maxAttempts, len(affectedTests)-1)
+		mods, err := AffectedModifiers(nil, affectedTests, maxAttempts, len(affectedTests)-1)
 		if err != nil {
 			t.Errorf("AffectedModifiers() returned failed: %v", err)
 		}
@@ -164,7 +159,7 @@ func TestAffectedModifiers(t *testing.T) {
 			"affected-AEMU-and-other-device-AEMU":         true,
 			"affected-AEMU-and-other-device-other-device": false,
 		}
-		mods, err := AffectedModifiers(specs, name, maxAttempts, len(affectedTests))
+		mods, err := AffectedModifiers(specs, affectedTests, maxAttempts, len(affectedTests))
 		if err != nil {
 			t.Errorf("AffectedModifiers() returned failed: %v", err)
 		}

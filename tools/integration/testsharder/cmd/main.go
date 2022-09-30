@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -174,15 +175,20 @@ func execute(ctx context.Context, flags testsharderFlags, m buildModules) error 
 	multipliedShards, nonMultipliedShards := testsharder.PartitionShards(shards, multiplied, "")
 
 	if flags.affectedTestsPath != "" {
-		affectedModifiers, err := testsharder.AffectedModifiers(m.TestSpecs(), flags.affectedTestsPath, flags.affectedTestsMaxAttempts, flags.affectedTestsMultiplyThreshold)
+		affectedTestBytes, err := os.ReadFile(flags.affectedTestsPath)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to read affectedTestsPath (%s): %w", flags.affectedTestsPath, err)
 		}
-		if len(affectedModifiers) == 0 {
+		affectedTestNames := strings.Split(strings.TrimSpace(string(affectedTestBytes)), "\n")
+		if len(affectedTestNames) == 0 {
 			// If there are no affected tests, that means we weren't
 			// able to determine which tests were affected so we should
 			// run all tests.
 			flags.skipUnaffected = false
+		}
+		affectedModifiers, err := testsharder.AffectedModifiers(m.TestSpecs(), affectedTestNames, flags.affectedTestsMaxAttempts, flags.affectedTestsMultiplyThreshold)
+		if err != nil {
+			return err
 		}
 		// Apply affected modifiers to both multiplied and non-multiplied shards
 		// so that tests in all shards are correctly labeled as affected.

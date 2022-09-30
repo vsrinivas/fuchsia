@@ -86,17 +86,10 @@ func LoadTestModifiers(ctx context.Context, testSpecs []build.TestSpec, manifest
 }
 
 // AffectedModifiers returns modifiers for tests that are in both testSpecs and
-// affectedTestsPath.
-// affectedTestsPath is the path to a file containing test names separated by `\n`.
+// affectedTestNames.
 // maxAttempts will be applied to any test that is not multiplied.
 // Tests will be considered for multiplication only if num affected tests <= multiplyThreshold.
-func AffectedModifiers(testSpecs []build.TestSpec, affectedTestsPath string, maxAttempts, multiplyThreshold int) ([]ModifierMatch, error) {
-	affectedTestBytes, err := os.ReadFile(affectedTestsPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read affectedTestsPath (%s): %w", affectedTestsPath, err)
-	}
-	affectedTestNames := strings.Split(strings.TrimSpace(string(affectedTestBytes)), "\n")
-
+func AffectedModifiers(testSpecs []build.TestSpec, affectedTestNames []string, maxAttempts, multiplyThreshold int) ([]ModifierMatch, error) {
 	var ret []ModifierMatch
 	if len(affectedTestNames) > multiplyThreshold {
 		for _, name := range affectedTestNames {
