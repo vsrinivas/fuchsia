@@ -134,10 +134,6 @@ if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
     inputs = [ fdio_version_script ]
     ldflags = [ "-Wl,--version-script=" +
                 rebase_path(fdio_version_script, root_build_dir) ]
-
-    # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
-    # rather than builders.
-    configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
   }
 } else {
   source_set("fdio") {

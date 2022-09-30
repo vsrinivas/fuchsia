@@ -276,27 +276,27 @@ int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const c
   }
 
   fidl::WireTableFrame<fnet_name::wire::LookupIpOptions> frame;
-  fnet_name::wire::LookupIpOptions options(
+  fidl::WireTableExternalBuilder options = fnet_name::wire::LookupIpOptions::ExternalBuilder(
       fidl::ObjectView<fidl::WireTableFrame<fnet_name::wire::LookupIpOptions>>::FromExternal(
           &frame));
   // TODO(https://fxbug.dev/76522): Use address sorting from the DNS service.
   switch (family) {
     case AF_UNSPEC:
-      options.set_ipv4_lookup(true);
-      options.set_ipv6_lookup(true);
+      options.ipv4_lookup(true);
+      options.ipv6_lookup(true);
       break;
     case AF_INET:
-      options.set_ipv4_lookup(true);
+      options.ipv4_lookup(true);
       break;
     case AF_INET6:
-      options.set_ipv6_lookup(true);
+      options.ipv6_lookup(true);
       break;
     default:
       return EAI_FAMILY;
   }
 
   const fidl::WireResult fidl_result =
-      name_lookup.value()->LookupIp(fidl::StringView::FromExternal(name), options);
+      name_lookup.value()->LookupIp(fidl::StringView::FromExternal(name), options.Build());
   if (!fidl_result.ok()) {
     errno = fdio_status_to_errno(fidl_result.status());
     return EAI_SYSTEM;

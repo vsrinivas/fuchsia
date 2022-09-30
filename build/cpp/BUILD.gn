@@ -258,7 +258,6 @@ config("fidl-wire-deprecated-mutable-tables") {
     "//sdk/lib/driver_test_realm:bin",
     "//sdk/lib/driver_test_realm/platform:bin",
     "//sdk/lib/driver_test_realm/simple:bin",
-    "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp/tests:component_cpp_unittests_bin",
     "//src/connectivity/lib/network-device/cpp",
     "//src/connectivity/lib/network-device/cpp:cpp-test",
