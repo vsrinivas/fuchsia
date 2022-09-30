@@ -4,15 +4,44 @@
 
 //! The loopback device.
 
-use core::convert::Infallible as Never;
+use core::{
+    convert::Infallible as Never,
+    fmt::{self, Debug, Display, Formatter},
+};
 
 use net_types::{ip::IpAddress, SpecifiedAddr};
 use packet::{Buf, BufferMut, SerializeError, Serializer};
 
 use crate::{
-    device::{DeviceIdInner, FrameDestination},
-    NonSyncContext, SyncCtx,
+    device::{Device, DeviceIdContext, FrameDestination},
+    DeviceId, NonSyncContext, SyncCtx,
 };
+
+#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+pub(crate) struct LoopbackDeviceId;
+
+impl Debug for LoopbackDeviceId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let device: DeviceId = self.clone().into();
+        write!(f, "{:?}", device)
+    }
+}
+
+impl Display for LoopbackDeviceId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let device: DeviceId = self.clone().into();
+        write!(f, "{}", device)
+    }
+}
+
+#[derive(Copy, Clone)]
+enum LoopbackDevice {}
+
+impl Device for LoopbackDevice {}
+
+impl<NonSyncCtx: NonSyncContext> DeviceIdContext<LoopbackDevice> for &'_ SyncCtx<NonSyncCtx> {
+    type DeviceId = LoopbackDeviceId;
+}
 
 pub(super) struct LoopbackDeviceState {
     mtu: u32,
@@ -32,6 +61,7 @@ pub(super) fn send_ip_frame<
 >(
     sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
+    device_id: LoopbackDeviceId,
     _local_addr: SpecifiedAddr<A>,
     body: S,
 ) -> Result<(), S> {
@@ -44,7 +74,7 @@ pub(super) fn send_ip_frame<
     crate::ip::receive_ip_packet::<_, _, A::Version>(
         sync_ctx,
         ctx,
-        DeviceIdInner::Loopback.into(),
+        device_id.into(),
         FrameDestination::Unicast,
         frame,
     );
@@ -52,7 +82,10 @@ pub(super) fn send_ip_frame<
 }
 
 /// Gets the MTU associated with this device.
-pub(super) fn get_mtu<NonSyncCtx: NonSyncContext>(ctx: &SyncCtx<NonSyncCtx>) -> u32 {
+pub(super) fn get_mtu<NonSyncCtx: NonSyncContext>(
+    ctx: &SyncCtx<NonSyncCtx>,
+    LoopbackDeviceId: LoopbackDeviceId,
+) -> u32 {
     ctx.state.device.devices.read().loopback.as_ref().unwrap().link.mtu
 }
 

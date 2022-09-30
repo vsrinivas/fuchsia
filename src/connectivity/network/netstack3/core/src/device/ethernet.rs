@@ -39,7 +39,7 @@ use crate::{
             ArpContext, ArpFrameMetadata, ArpPacketHandler, ArpState, ArpTimerId, BufferArpContext,
         },
         link::LinkDevice,
-        DeviceIdContext, EthernetDeviceId, FrameDestination, RecvIpFrameMeta,
+        Device, DeviceIdContext, EthernetDeviceId, FrameDestination, RecvIpFrameMeta,
     },
     error::ExistsError,
     ip::device::{
@@ -883,7 +883,9 @@ pub(super) fn set_mtu<
 
 /// An implementation of the [`LinkDevice`] trait for Ethernet devices.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub(crate) struct EthernetLinkDevice;
+pub(crate) enum EthernetLinkDevice {}
+
+impl Device for EthernetLinkDevice {}
 
 impl LinkDevice for EthernetLinkDevice {
     type Address = Mac;

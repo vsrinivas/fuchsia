@@ -147,7 +147,7 @@ mod tests {
         fn try_from(id: DeviceId) -> Result<EthernetDeviceId, DeviceId> {
             match id.inner() {
                 DeviceIdInner::Ethernet(id) => Ok(id),
-                DeviceIdInner::Loopback => Err(id),
+                DeviceIdInner::Loopback(_) => Err(id),
             }
         }
     }

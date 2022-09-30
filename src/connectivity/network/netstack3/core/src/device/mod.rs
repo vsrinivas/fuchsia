@@ -36,8 +36,7 @@ use crate::{
         ethernet::{
             EthernetDeviceState, EthernetDeviceStateBuilder, EthernetLinkDevice, EthernetTimerId,
         },
-        link::LinkDevice,
-        loopback::LoopbackDeviceState,
+        loopback::{LoopbackDeviceId, LoopbackDeviceState},
         state::IpLinkDeviceState,
     },
     error::{ExistsError, NotFoundError, NotSupportedError},
@@ -58,9 +57,15 @@ use crate::{
     BufferNonSyncContext, Instant, NonSyncContext, SyncCtx,
 };
 
+/// A device.
+///
+/// `Device` is used to identify a particular device implementation. It
+/// is only intended to exist at the type level, never instantiated at runtime.
+pub(crate) trait Device: 'static {}
+
 /// An execution context which provides a `DeviceId` type for various device
 /// layer internals to share.
-pub(crate) trait DeviceIdContext<D: LinkDevice> {
+pub(crate) trait DeviceIdContext<D: Device> {
     type DeviceId: Copy + Display + Debug + Eq + Send + Sync + 'static;
 }
 
@@ -128,7 +133,7 @@ fn with_ip_device_state<
     let devices = ctx.state.device.devices.read();
     cb(match device.inner() {
         DeviceIdInner::Ethernet(EthernetDeviceId(id)) => &devices.ethernet.get(id).unwrap().ip,
-        DeviceIdInner::Loopback => &devices.loopback.as_ref().unwrap().ip,
+        DeviceIdInner::Loopback(LoopbackDeviceId) => &devices.loopback.as_ref().unwrap().ip,
     })
 }
 
@@ -146,14 +151,14 @@ fn with_devices<
         ethernet
             .iter()
             .map(|(id, _state)| DeviceId::new_ethernet(id))
-            .chain(loopback.iter().map(|_state| DeviceIdInner::Loopback.into())),
+            .chain(loopback.iter().map(|_state| DeviceIdInner::Loopback(LoopbackDeviceId).into())),
     ))
 }
 
 fn get_mtu<NonSyncCtx: NonSyncContext>(mut ctx: &SyncCtx<NonSyncCtx>, device: DeviceId) -> u32 {
     match device.inner() {
         DeviceIdInner::Ethernet(id) => self::ethernet::get_mtu(&mut ctx, id),
-        DeviceIdInner::Loopback => self::loopback::get_mtu(ctx),
+        DeviceIdInner::Loopback(id) => self::loopback::get_mtu(ctx, id),
     }
 }
 
@@ -170,7 +175,7 @@ fn join_link_multicast_group<NonSyncCtx: NonSyncContext, A: IpAddress>(
             id,
             MulticastAddr::from(&multicast_addr),
         ),
-        DeviceIdInner::Loopback => {}
+        DeviceIdInner::Loopback(LoopbackDeviceId) => {}
     }
 }
 
@@ -187,7 +192,7 @@ fn leave_link_multicast_group<NonSyncCtx: NonSyncContext, A: IpAddress>(
             id,
             MulticastAddr::from(&multicast_addr),
         ),
-        DeviceIdInner::Loopback => {}
+        DeviceIdInner::Loopback(LoopbackDeviceId) => {}
     }
 }
 
@@ -268,7 +273,9 @@ fn send_ip_frame<
         DeviceIdInner::Ethernet(id) => {
             self::ethernet::send_ip_frame(&mut sync_ctx, ctx, id, local_addr, body)
         }
-        DeviceIdInner::Loopback => self::loopback::send_ip_frame(sync_ctx, ctx, local_addr, body),
+        DeviceIdInner::Loopback(id) => {
+            self::loopback::send_ip_frame(sync_ctx, ctx, id, local_addr, body)
+        }
     }
 }
 
@@ -307,7 +314,7 @@ where
                     )
                 }
             }
-            DeviceIdInner::Loopback => {}
+            DeviceIdInner::Loopback(LoopbackDeviceId) => {}
         }
     }
 
@@ -331,7 +338,7 @@ where
                     )
                 }
             }
-            DeviceIdInner::Loopback => {}
+            DeviceIdInner::Loopback(LoopbackDeviceId) => {}
         }
     }
 
@@ -340,7 +347,7 @@ where
             DeviceIdInner::Ethernet(id) => {
                 NudHandler::<I, EthernetLinkDevice, _>::flush(self, ctx, id)
             }
-            DeviceIdInner::Loopback => {}
+            DeviceIdInner::Loopback(LoopbackDeviceId) => {}
         }
     }
 }
@@ -427,7 +434,7 @@ impl<NonSyncCtx: NonSyncContext> Ipv6DeviceContext<NonSyncCtx> for &'_ SyncCtx<N
             DeviceIdInner::Ethernet(id) => {
                 Some(Ipv6DeviceLinkLayerAddr::Mac(ethernet::get_mac(self, id).get()))
             }
-            DeviceIdInner::Loopback => None,
+            DeviceIdInner::Loopback(LoopbackDeviceId) => None,
         }
     }
 
@@ -436,7 +443,7 @@ impl<NonSyncCtx: NonSyncContext> Ipv6DeviceContext<NonSyncCtx> for &'_ SyncCtx<N
             DeviceIdInner::Ethernet(id) => {
                 Some(ethernet::get_mac(self, id).to_eui64_with_magic(Mac::DEFAULT_EUI_MAGIC))
             }
-            DeviceIdInner::Loopback => None,
+            DeviceIdInner::Loopback(LoopbackDeviceId) => None,
         }
     }
 
@@ -447,7 +454,7 @@ impl<NonSyncCtx: NonSyncContext> Ipv6DeviceContext<NonSyncCtx> for &'_ SyncCtx<N
 
         match device_id.inner() {
             DeviceIdInner::Ethernet(id) => ethernet::set_mtu(self, id, mtu),
-            DeviceIdInner::Loopback => {}
+            DeviceIdInner::Loopback(LoopbackDeviceId) => {}
         }
     }
 }
@@ -544,7 +551,7 @@ pub(crate) fn handle_timer<NonSyncCtx: NonSyncContext>(
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub(crate) enum DeviceIdInner {
     Ethernet(EthernetDeviceId),
-    Loopback,
+    Loopback(LoopbackDeviceId),
 }
 
 /// An ID identifying a device.
@@ -563,6 +570,12 @@ impl From<EthernetDeviceId> for DeviceId {
     }
 }
 
+impl From<LoopbackDeviceId> for DeviceId {
+    fn from(id: LoopbackDeviceId) -> DeviceId {
+        DeviceIdInner::Loopback(id).into()
+    }
+}
+
 impl DeviceId {
     /// Construct a new `DeviceId` for an Ethernet device.
     pub(crate) const fn new_ethernet(id: usize) -> DeviceId {
@@ -578,7 +591,7 @@ impl DeviceId {
 impl IpDeviceId for DeviceId {
     fn is_loopback(&self) -> bool {
         match self.inner() {
-            DeviceIdInner::Loopback => true,
+            DeviceIdInner::Loopback(LoopbackDeviceId) => true,
             DeviceIdInner::Ethernet(_) => false,
         }
     }
@@ -588,7 +601,7 @@ impl Display for DeviceId {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         match self.inner() {
             DeviceIdInner::Ethernet(EthernetDeviceId(id)) => write!(f, "Ethernet({})", id),
-            DeviceIdInner::Loopback => write!(f, "Loopback"),
+            DeviceIdInner::Loopback(LoopbackDeviceId) => write!(f, "Loopback"),
         }
     }
 }
@@ -605,14 +618,14 @@ impl IdMapCollectionKey for DeviceId {
     fn get_id(&self) -> usize {
         match self.inner() {
             DeviceIdInner::Ethernet(EthernetDeviceId(id)) => id,
-            DeviceIdInner::Loopback => 0,
+            DeviceIdInner::Loopback(LoopbackDeviceId) => 0,
         }
     }
 
     fn get_variant(&self) -> usize {
         match self.inner() {
             DeviceIdInner::Ethernet(_) => 0,
-            DeviceIdInner::Loopback => 1,
+            DeviceIdInner::Loopback(LoopbackDeviceId) => 1,
         }
     }
 }
@@ -693,7 +706,7 @@ impl<I: Instant> DeviceLayerState<I> {
 
         debug!("added loopback device");
 
-        Ok(DeviceIdInner::Loopback.into())
+        Ok(DeviceIdInner::Loopback(LoopbackDeviceId).into())
     }
 }
 
@@ -739,7 +752,7 @@ pub fn remove_device<NonSyncCtx: NonSyncContext>(
                 .unwrap_or_else(|| panic!("no such Ethernet device: {}", id));
             debug!("removing Ethernet device with ID {}", id);
         }
-        DeviceIdInner::Loopback => {
+        DeviceIdInner::Loopback(LoopbackDeviceId) => {
             let _: IpLinkDeviceState<_, _> =
                 devices.loopback.take().expect("loopback device does not exist");
             debug!("removing Loopback device");
@@ -829,7 +842,7 @@ pub fn receive_frame<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>(
         DeviceIdInner::Ethernet(id) => {
             Ok(self::ethernet::receive_frame(&mut sync_ctx, ctx, id, buffer))
         }
-        DeviceIdInner::Loopback => Err(NotSupportedError),
+        DeviceIdInner::Loopback(LoopbackDeviceId) => Err(NotSupportedError),
     }
 }
 
@@ -846,7 +859,7 @@ pub(crate) fn set_promiscuous_mode<NonSyncCtx: NonSyncContext>(
         DeviceIdInner::Ethernet(id) => {
             Ok(self::ethernet::set_promiscuous_mode(&mut sync_ctx, ctx, id, enabled))
         }
-        DeviceIdInner::Loopback => Err(NotSupportedError),
+        DeviceIdInner::Loopback(LoopbackDeviceId) => Err(NotSupportedError),
     }
 }
 
@@ -910,7 +923,7 @@ impl<NonSyncCtx: NonSyncContext, I: Ip> IpDeviceIdContext<I> for &'_ SyncCtx<Non
 
     fn loopback_id(&self) -> Option<DeviceId> {
         let devices = self.state.device.devices.read();
-        devices.loopback.as_ref().map(|_state| DeviceIdInner::Loopback.into())
+        devices.loopback.as_ref().map(|_state| DeviceIdInner::Loopback(LoopbackDeviceId).into())
     }
 }
 
@@ -936,7 +949,7 @@ pub(super) fn insert_static_arp_table_entry<NonSyncCtx: NonSyncContext>(
             addr,
             mac.into(),
         )),
-        DeviceIdInner::Loopback => Err(NotSupportedError),
+        DeviceIdInner::Loopback(LoopbackDeviceId) => Err(NotSupportedError),
     }
 }
 
@@ -958,7 +971,7 @@ pub(crate) fn insert_ndp_table_entry<NonSyncCtx: NonSyncContext>(
         DeviceIdInner::Ethernet(id) => {
             Ok(self::ethernet::insert_ndp_table_entry(&mut sync_ctx, ctx, id, addr, mac))
         }
-        DeviceIdInner::Loopback => Err(NotSupportedError),
+        DeviceIdInner::Loopback(LoopbackDeviceId) => Err(NotSupportedError),
     }
 }
 
