@@ -312,7 +312,7 @@ impl Backlight {
                                 &pending_change
                             );
                             if let Err(e) = pending_change.future_handle.send(result) {
-                                fx_log_err!("Failed to send result for pending change: {:#?}", e);
+                                fx_log_warn!("Failed to send result for pending change: {:#?}", e);
                             } else if !turned_on {
                                 turned_on = true;
                                 fx_log_info!("Turned backlight on");
