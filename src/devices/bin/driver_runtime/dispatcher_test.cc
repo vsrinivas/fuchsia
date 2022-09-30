@@ -2768,8 +2768,14 @@ TEST_F(DispatcherTest, GetSequenceIdSynchronizedDispatcher) {
   // Get the sequence id for the first dispatcher.
   libsync::Completion task_completion;
   ASSERT_OK(async::PostTask(async_dispatcher, [&] {
-    ASSERT_EQ(ZX_ERR_INVALID_ARGS, async_get_sequence_id(async_dispatcher2, &dispatcher_id));
-    ASSERT_OK(async_get_sequence_id(async_dispatcher, &dispatcher_id));
+    const char* error = nullptr;
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+              async_get_sequence_id(async_dispatcher2, &dispatcher_id, &error));
+    ASSERT_NOT_NULL(error);
+    ASSERT_SUBSTR(error, "multiple driver dispatchers detected");
+    error = nullptr;
+    ASSERT_OK(async_get_sequence_id(async_dispatcher, &dispatcher_id, &error));
+    ASSERT_NULL(error);
     task_completion.Signal();
   }));
   ASSERT_OK(task_completion.Wait());
@@ -2777,8 +2783,14 @@ TEST_F(DispatcherTest, GetSequenceIdSynchronizedDispatcher) {
   // Get the sequence id for the second dispatcher.
   task_completion.Reset();
   ASSERT_OK(async::PostTask(async_dispatcher2, [&] {
-    ASSERT_EQ(ZX_ERR_INVALID_ARGS, async_get_sequence_id(async_dispatcher, &dispatcher2_id));
-    ASSERT_OK(async_get_sequence_id(async_dispatcher2, &dispatcher2_id));
+    const char* error = nullptr;
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+              async_get_sequence_id(async_dispatcher, &dispatcher2_id, &error));
+    ASSERT_NOT_NULL(error);
+    ASSERT_SUBSTR(error, "multiple driver dispatchers detected");
+    error = nullptr;
+    ASSERT_OK(async_get_sequence_id(async_dispatcher2, &dispatcher2_id, &error));
+    ASSERT_NULL(error);
     task_completion.Signal();
   }));
   ASSERT_OK(task_completion.Wait());
@@ -2789,8 +2801,13 @@ TEST_F(DispatcherTest, GetSequenceIdSynchronizedDispatcher) {
   task_completion.Reset();
   ASSERT_OK(async::PostTask(async_dispatcher, [&] {
     async_sequence_id_t id;
-    ASSERT_EQ(ZX_ERR_INVALID_ARGS, async_get_sequence_id(async_dispatcher2, &id));
-    ASSERT_OK(async_get_sequence_id(async_dispatcher, &id));
+    const char* error = nullptr;
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, async_get_sequence_id(async_dispatcher2, &id, &error));
+    ASSERT_NOT_NULL(error);
+    ASSERT_SUBSTR(error, "multiple driver dispatchers detected");
+    error = nullptr;
+    ASSERT_OK(async_get_sequence_id(async_dispatcher, &id, &error));
+    ASSERT_NULL(error);
     ASSERT_EQ(id.value, dispatcher_id.value);
     task_completion.Signal();
   }));
@@ -2798,8 +2815,14 @@ TEST_F(DispatcherTest, GetSequenceIdSynchronizedDispatcher) {
 
   // Get the sequence id from a non-managed thread.
   async_sequence_id_t id;
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, async_get_sequence_id(async_dispatcher, &id));
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, async_get_sequence_id(async_dispatcher2, &id));
+  const char* error = nullptr;
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, async_get_sequence_id(async_dispatcher, &id, &error));
+  ASSERT_NOT_NULL(error);
+  ASSERT_SUBSTR(error, "not managed");
+  error = nullptr;
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, async_get_sequence_id(async_dispatcher2, &id, &error));
+  ASSERT_NOT_NULL(error);
+  ASSERT_SUBSTR(error, "not managed");
 }
 
 TEST_F(DispatcherTest, GetSequenceIdUnsynchronizedDispatcher) {
@@ -2812,14 +2835,20 @@ TEST_F(DispatcherTest, GetSequenceIdUnsynchronizedDispatcher) {
   libsync::Completion task_completion;
   ASSERT_OK(async::PostTask(async_dispatcher, [&] {
     async_sequence_id_t id;
-    ASSERT_EQ(ZX_ERR_WRONG_TYPE, async_get_sequence_id(async_dispatcher, &id));
+    const char* error = nullptr;
+    ASSERT_EQ(ZX_ERR_WRONG_TYPE, async_get_sequence_id(async_dispatcher, &id, &error));
+    ASSERT_NOT_NULL(error);
+    ASSERT_SUBSTR(error, "UNSYNCHRONIZED");
     task_completion.Signal();
   }));
   ASSERT_OK(task_completion.Wait());
 
   // Get the sequence id from a non-managed thread.
   async_sequence_id_t id;
-  ASSERT_EQ(ZX_ERR_WRONG_TYPE, async_get_sequence_id(async_dispatcher, &id));
+  const char* error = nullptr;
+  ASSERT_EQ(ZX_ERR_WRONG_TYPE, async_get_sequence_id(async_dispatcher, &id, &error));
+  ASSERT_NOT_NULL(error);
+  ASSERT_SUBSTR(error, "UNSYNCHRONIZED");
 }
 
 //

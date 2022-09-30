@@ -85,13 +85,19 @@ const async_ops_t g_dispatcher_ops = {
         .detach_paged_vmo = [](async_dispatcher_t* dispatcher,
                                async_paged_vmo_t* paged_vmo) { return ZX_ERR_NOT_SUPPORTED; },
     },
-    .v3 =
-        {
-            .get_sequence_id =
-                [](async_dispatcher_t* dispatcher, async_sequence_id_t* out_thread_id) {
-                  return static_cast<Dispatcher*>(dispatcher)->GetSequenceId(out_thread_id);
-                },
-        },
+    .v3 = {
+        .get_sequence_id =
+            [](async_dispatcher_t* dispatcher, async_sequence_id_t* out_sequence_id,
+               const char** out_error) {
+              return static_cast<Dispatcher*>(dispatcher)
+                  ->GetSequenceId(out_sequence_id, out_error);
+            },
+        .check_sequence_id =
+            [](async_dispatcher_t* dispatcher, async_sequence_id_t sequence_id,
+               const char** out_error) {
+              return static_cast<Dispatcher*>(dispatcher)->CheckSequenceId(sequence_id, out_error);
+            },
+    },
 };
 
 }  // namespace
@@ -770,14 +776,51 @@ zx_status_t Dispatcher::UnbindIrq(async_irq_t* irq) {
   return ZX_OK;
 }
 
-zx_status_t Dispatcher::GetSequenceId(async_sequence_id_t* out_sequence_id) {
+namespace {
+
+const char kSequenceIdWrongDispatcherType[] =
+    "A synchronized fdf_dispatcher_t is required. "
+    "Ensure the fdf_dispatcher_t does not have the |FDF_DISPATCHER_OPTION_UNSYNCHRONIZED| option.";
+
+const char kSequenceIdUnknownThread[] =
+    "The current thread is not managed by a driver dispatcher. "
+    "Ensure the object is always used from a dispatcher managed thread.";
+
+const char kSequenceIdWrongDispatcherInstance[] =
+    "Access from multiple driver dispatchers detected. "
+    "This is not allowed. Ensure the object is used from the same |fdf_dispatcher_t|.";
+
+}  // namespace
+
+zx_status_t Dispatcher::GetSequenceId(async_sequence_id_t* out_sequence_id,
+                                      const char** out_error) {
   if (unsynchronized()) {
+    *out_error = kSequenceIdWrongDispatcherType;
     return ZX_ERR_WRONG_TYPE;
   }
-  if (driver_context::GetCurrentDispatcher() != this) {
+  auto* current_dispatcher = driver_context::GetCurrentDispatcher();
+  if (current_dispatcher == nullptr) {
+    *out_error = kSequenceIdUnknownThread;
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (current_dispatcher != this) {
+    *out_error = kSequenceIdWrongDispatcherInstance;
     return ZX_ERR_INVALID_ARGS;
   }
   out_sequence_id->value = reinterpret_cast<uint64_t>(this);
+  return ZX_OK;
+}
+
+zx_status_t Dispatcher::CheckSequenceId(async_sequence_id_t sequence_id, const char** out_error) {
+  async_sequence_id_t current_sequence_id;
+  zx_status_t status = GetSequenceId(&current_sequence_id, out_error);
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (current_sequence_id.value != sequence_id.value) {
+    *out_error = kSequenceIdWrongDispatcherInstance;
+    return ZX_ERR_OUT_OF_RANGE;
+  }
   return ZX_OK;
 }
 

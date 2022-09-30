@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async/receiver.h>
+#include <lib/async/sequence_id.h>
 #include <lib/async/task.h>
 #include <lib/async/time.h>
 #include <lib/async/trap.h>
@@ -67,10 +68,22 @@ zx_status_t async_detach_paged_vmo(async_dispatcher_t* dispatcher, async_paged_v
   return dispatcher->ops->v2.detach_paged_vmo(dispatcher, paged_vmo);
 }
 
+static const char sequences_not_supported[] = "This dispatcher does not support sequences.";
+
 zx_status_t async_get_sequence_id(async_dispatcher_t* dispatcher,
-                                  async_sequence_id_t* out_sequence_id) {
+                                  async_sequence_id_t* out_sequence_id, const char** out_error) {
   if (dispatcher->ops->version < ASYNC_OPS_V3) {
+    *out_error = sequences_not_supported;
     return ZX_ERR_NOT_SUPPORTED;
   }
-  return dispatcher->ops->v3.get_sequence_id(dispatcher, out_sequence_id);
+  return dispatcher->ops->v3.get_sequence_id(dispatcher, out_sequence_id, out_error);
+}
+
+zx_status_t async_check_sequence_id(async_dispatcher_t* dispatcher, async_sequence_id_t sequence_id,
+                                    const char** out_error) {
+  if (dispatcher->ops->version < ASYNC_OPS_V3) {
+    *out_error = sequences_not_supported;
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  return dispatcher->ops->v3.check_sequence_id(dispatcher, sequence_id, out_error);
 }

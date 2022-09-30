@@ -13,14 +13,29 @@ class FakeSequenceIdAsync : public async::DispatcherStub {
  public:
   struct SequenceIdAnswer {
     zx_status_t status;
+    const char* error;
     async_sequence_id_t sequence_id;
   };
 
-  zx_status_t GetSequenceId(async_sequence_id_t* out_sequence_id) override {
+  zx_status_t GetSequenceId(async_sequence_id_t* out_sequence_id, const char** out_error) override {
     if (answer_.status != ZX_OK) {
+      *out_error = answer_.error;
       return answer_.status;
     }
     *out_sequence_id = answer_.sequence_id;
+    return ZX_OK;
+  }
+
+  zx_status_t CheckSequenceId(async_sequence_id_t sequence_id, const char** out_error) override {
+    async_sequence_id_t current_sequence_id;
+    zx_status_t status = GetSequenceId(&current_sequence_id, out_error);
+    if (status != ZX_OK) {
+      return status;
+    }
+    if (current_sequence_id.value != sequence_id.value) {
+      *out_error = "test sequence id mismatch";
+      return ZX_ERR_OUT_OF_RANGE;
+    }
     return ZX_OK;
   }
 
@@ -28,7 +43,9 @@ class FakeSequenceIdAsync : public async::DispatcherStub {
     answer_ = {.status = ZX_OK, .sequence_id = id};
   }
 
-  void SetSequenceIdAnswer(zx_status_t status) { answer_ = {.status = status, .sequence_id = {}}; }
+  void SetSequenceIdAnswer(zx_status_t status, const char* error) {
+    answer_ = {.status = status, .error = error, .sequence_id = {}};
+  }
 
  private:
   SequenceIdAnswer answer_ = {};
@@ -38,7 +55,7 @@ TEST(SequenceChecker, SameSequenceId) {
   FakeSequenceIdAsync dispatcher;
   dispatcher.SetSequenceIdAnswer({.value = 1});
   async::sequence_checker checker{&dispatcher};
-  EXPECT_TRUE(checker.is_sequence_valid());
+  EXPECT_TRUE(cpp17::holds_alternative<cpp17::monostate>(checker.is_sequence_valid()));
 }
 
 TEST(SequenceChecker, LockUnlock) {
@@ -55,24 +72,35 @@ TEST(SequenceChecker, DifferentSequenceId) {
   dispatcher.SetSequenceIdAnswer({.value = 1});
   async::sequence_checker checker{&dispatcher};
   dispatcher.SetSequenceIdAnswer({.value = 2});
-  EXPECT_FALSE(checker.is_sequence_valid());
+  EXPECT_TRUE(cpp17::holds_alternative<std::string>(checker.is_sequence_valid()));
+  EXPECT_SUBSTR(cpp17::get<std::string>(checker.is_sequence_valid()), "test sequence id mismatch");
 }
 
 TEST(SequenceChecker, NoSequenceId) {
   FakeSequenceIdAsync dispatcher;
-  dispatcher.SetSequenceIdAnswer(ZX_ERR_INVALID_ARGS);
+  dispatcher.SetSequenceIdAnswer(ZX_ERR_INVALID_ARGS, "");
   ASSERT_DEATH([&] { async::sequence_checker checker{&dispatcher}; });
-  dispatcher.SetSequenceIdAnswer(ZX_ERR_WRONG_TYPE);
+  dispatcher.SetSequenceIdAnswer(ZX_ERR_WRONG_TYPE, "");
   ASSERT_DEATH([&] { async::sequence_checker checker{&dispatcher}; });
-  dispatcher.SetSequenceIdAnswer(ZX_ERR_NOT_SUPPORTED);
+  dispatcher.SetSequenceIdAnswer(ZX_ERR_NOT_SUPPORTED, "");
   ASSERT_DEATH([&] { async::sequence_checker checker{&dispatcher}; });
+}
+
+TEST(SequenceChecker, ConcatError) {
+  FakeSequenceIdAsync dispatcher;
+  dispatcher.SetSequenceIdAnswer({.value = 1});
+  async::sequence_checker checker{&dispatcher, "|Foo| is thread unsafe."};
+  dispatcher.SetSequenceIdAnswer(ZX_ERR_INVALID_ARGS, "Switch to another dispatcher.");
+  EXPECT_TRUE(cpp17::holds_alternative<std::string>(checker.is_sequence_valid()));
+  EXPECT_SUBSTR(cpp17::get<std::string>(checker.is_sequence_valid()),
+                "|Foo| is thread unsafe. Switch to another dispatcher.");
 }
 
 TEST(SynchronizationChecker, SameSequenceId) {
   FakeSequenceIdAsync dispatcher;
   dispatcher.SetSequenceIdAnswer({.value = 1});
   async::synchronization_checker checker{&dispatcher};
-  EXPECT_TRUE(checker.is_synchronized());
+  EXPECT_TRUE(cpp17::holds_alternative<cpp17::monostate>(checker.is_synchronized()));
 }
 
 TEST(SynchronizationChecker, LockUnlock) {
@@ -89,22 +117,27 @@ TEST(SynchronizationChecker, DifferentSequenceId) {
   dispatcher.SetSequenceIdAnswer({.value = 1});
   async::synchronization_checker checker{&dispatcher};
   dispatcher.SetSequenceIdAnswer({.value = 2});
-  EXPECT_FALSE(checker.is_synchronized());
+  EXPECT_TRUE(cpp17::holds_alternative<std::string>(checker.is_synchronized()));
+  EXPECT_SUBSTR(cpp17::get<std::string>(checker.is_synchronized()), "test sequence id mismatch");
 }
 
 TEST(SynchronizationChecker, SameThreadId) {
   FakeSequenceIdAsync dispatcher;
-  dispatcher.SetSequenceIdAnswer(ZX_ERR_NOT_SUPPORTED);
+  dispatcher.SetSequenceIdAnswer(ZX_ERR_NOT_SUPPORTED, "");
   async::synchronization_checker checker{&dispatcher};
-  EXPECT_TRUE(checker.is_synchronized());
+  EXPECT_TRUE(cpp17::holds_alternative<cpp17::monostate>(checker.is_synchronized()));
 }
 
 TEST(SynchronizationChecker, DifferentThreadId) {
   FakeSequenceIdAsync dispatcher;
-  dispatcher.SetSequenceIdAnswer(ZX_ERR_NOT_SUPPORTED);
+  dispatcher.SetSequenceIdAnswer(ZX_ERR_NOT_SUPPORTED, "");
   async::synchronization_checker checker{&dispatcher};
-  EXPECT_TRUE(checker.is_synchronized());
-  std::thread t([&] { EXPECT_FALSE(checker.is_synchronized()); });
+  EXPECT_TRUE(cpp17::holds_alternative<cpp17::monostate>(checker.is_synchronized()));
+  std::thread t([&] {
+    EXPECT_TRUE(cpp17::holds_alternative<std::string>(checker.is_synchronized()));
+    EXPECT_SUBSTR(cpp17::get<std::string>(checker.is_synchronized()),
+                  "Access from multiple threads detected");
+  });
   t.join();
 }
 
@@ -112,19 +145,50 @@ TEST(SynchronizationChecker, SequenceIdThenThreadId) {
   FakeSequenceIdAsync dispatcher;
   dispatcher.SetSequenceIdAnswer({.value = 1});
   async::synchronization_checker checker{&dispatcher};
-  EXPECT_TRUE(checker.is_synchronized());
+  EXPECT_TRUE(cpp17::holds_alternative<cpp17::monostate>(checker.is_synchronized()));
+  dispatcher.SetSequenceIdAnswer(ZX_ERR_INVALID_ARGS, "");
+  EXPECT_TRUE(cpp17::holds_alternative<std::string>(checker.is_synchronized()));
   ASSERT_DEATH([&] {
-    dispatcher.SetSequenceIdAnswer(ZX_ERR_INVALID_ARGS);
-    (void)checker.is_synchronized();
+    dispatcher.SetSequenceIdAnswer(ZX_ERR_INVALID_ARGS, "");
+    checker.lock();
+    checker.unlock();
   });
+  dispatcher.SetSequenceIdAnswer(ZX_ERR_WRONG_TYPE, "");
+  EXPECT_TRUE(cpp17::holds_alternative<std::string>(checker.is_synchronized()));
   ASSERT_DEATH([&] {
-    dispatcher.SetSequenceIdAnswer(ZX_ERR_WRONG_TYPE);
-    (void)checker.is_synchronized();
+    dispatcher.SetSequenceIdAnswer(ZX_ERR_WRONG_TYPE, "");
+    checker.lock();
+    checker.unlock();
   });
+  dispatcher.SetSequenceIdAnswer(ZX_ERR_NOT_SUPPORTED, "");
+  EXPECT_TRUE(cpp17::holds_alternative<std::string>(checker.is_synchronized()));
   ASSERT_DEATH([&] {
-    dispatcher.SetSequenceIdAnswer(ZX_ERR_NOT_SUPPORTED);
-    (void)checker.is_synchronized();
+    dispatcher.SetSequenceIdAnswer(ZX_ERR_NOT_SUPPORTED, "");
+    checker.lock();
+    checker.unlock();
   });
+}
+
+TEST(SynchronizationChecker, SequenceConcatError) {
+  FakeSequenceIdAsync dispatcher;
+  dispatcher.SetSequenceIdAnswer({.value = 1});
+  async::synchronization_checker checker{&dispatcher, "|Foo| is thread unsafe."};
+  dispatcher.SetSequenceIdAnswer(ZX_ERR_INVALID_ARGS, "Switch to another dispatcher.");
+  EXPECT_TRUE(cpp17::holds_alternative<std::string>(checker.is_synchronized()));
+  EXPECT_SUBSTR(cpp17::get<std::string>(checker.is_synchronized()),
+                "|Foo| is thread unsafe. Switch to another dispatcher.");
+}
+
+TEST(SynchronizationChecker, ThreadConcatError) {
+  FakeSequenceIdAsync dispatcher;
+  dispatcher.SetSequenceIdAnswer(ZX_ERR_NOT_SUPPORTED, "");
+  async::synchronization_checker checker{&dispatcher, "|Foo| is thread unsafe."};
+  std::thread([&] {
+    EXPECT_TRUE(cpp17::holds_alternative<std::string>(checker.is_synchronized()));
+    EXPECT_SUBSTR(cpp17::get<std::string>(checker.is_synchronized()),
+                  "|Foo| is thread unsafe. Access from multiple threads detected. "
+                  "This is not allowed. Ensure the object is used from the same thread.");
+  }).join();
 }
 
 }  // namespace

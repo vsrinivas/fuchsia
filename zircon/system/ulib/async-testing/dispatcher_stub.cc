@@ -59,8 +59,13 @@ zx_status_t stub_detach_paged_vmo(async_dispatcher_t* dispatcher, async_paged_vm
 }
 
 zx_status_t stub_get_sequence_id(async_dispatcher_t* dispatcher,
-                                 async_sequence_id_t* out_sequence_id) {
-  return static_cast<DispatcherStub*>(dispatcher)->GetSequenceId(out_sequence_id);
+                                 async_sequence_id_t* out_sequence_id, const char** out_error) {
+  return static_cast<DispatcherStub*>(dispatcher)->GetSequenceId(out_sequence_id, out_error);
+}
+
+zx_status_t stub_check_sequence_id(async_dispatcher_t* dispatcher, async_sequence_id_t sequence_id,
+                                   const char** out_error) {
+  return static_cast<DispatcherStub*>(dispatcher)->CheckSequenceId(sequence_id, out_error);
 }
 
 const async_ops_t g_stub_ops = {
@@ -87,6 +92,7 @@ const async_ops_t g_stub_ops = {
     .v3 =
         {
             .get_sequence_id = stub_get_sequence_id,
+            .check_sequence_id = stub_check_sequence_id,
         },
 };
 
@@ -129,7 +135,15 @@ zx_status_t DispatcherStub::DetachPagedVmo(async_paged_vmo_t* paged_vmo) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t DispatcherStub::GetSequenceId(async_sequence_id_t* out_sequence_id) {
+zx_status_t DispatcherStub::GetSequenceId(async_sequence_id_t* out_sequence_id,
+                                          const char** out_error) {
+  *out_error = "Unimplemented dispatcher stub";
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t DispatcherStub::CheckSequenceId(async_sequence_id_t sequence_id,
+                                            const char** out_error) {
+  *out_error = "Unimplemented dispatcher stub";
   return ZX_ERR_NOT_SUPPORTED;
 }
 

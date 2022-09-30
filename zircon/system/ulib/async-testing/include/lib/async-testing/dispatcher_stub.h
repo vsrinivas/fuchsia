@@ -6,6 +6,7 @@
 #define LIB_ASYNC_TESTING_DISPATCHER_STUB_H_
 
 #include <lib/async/dispatcher.h>
+#include <lib/async/sequence_id.h>
 #include <lib/zx/guest.h>
 #include <lib/zx/time.h>
 
@@ -35,7 +36,8 @@ struct DispatcherStub : public async_dispatcher_t {
   virtual zx_status_t CreatePagedVmo(async_paged_vmo_t* paged_vmo, zx_handle_t pager,
                                      uint32_t options, uint64_t vmo_size, zx_handle_t* vmo_out);
   virtual zx_status_t DetachPagedVmo(async_paged_vmo_t* paged_vmo);
-  virtual zx_status_t GetSequenceId(async_sequence_id_t* out_sequence_id);
+  virtual zx_status_t GetSequenceId(async_sequence_id_t* out_sequence_id, const char** out_error);
+  virtual zx_status_t CheckSequenceId(async_sequence_id_t sequence_id, const char** out_error);
 };
 
 }  // namespace async

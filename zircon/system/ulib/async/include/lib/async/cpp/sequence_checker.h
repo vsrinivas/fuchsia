@@ -10,6 +10,7 @@
 #include <lib/stdcompat/variant.h>
 #include <zircon/compiler.h>
 
+#include <string>
 #include <thread>
 
 namespace async {
@@ -36,29 +37,34 @@ namespace async {
 //     int resource_ __TA_GUARDED(sequence_checker_);
 //   };
 //
-// Note: |lock| checks the sequence in debug builds only.
-//
 // This class is useful for code that works exclusively with asynchronous
 // runtimes that support sequences.
 class __TA_CAPABILITY("mutex") sequence_checker final {
  public:
   // Constructs a sequence checker bound to the currently running sequence.
   // Panics if the current thread is not associated with a sequence.
-  explicit sequence_checker(async_dispatcher_t* dispatcher);
+  //
+  // If |application_description| is not null, it will be prepended in front of
+  // synchronization check failure panic messages. For example, one may specify
+  // "|Foo| is thread unsafe." so that users understand whose threading
+  // invariants did they violate.
+  explicit sequence_checker(async_dispatcher_t* dispatcher,
+                            const char* application_description = nullptr);
 
   ~sequence_checker() = default;
 
-  // Returns true if the current sequence is the sequence this object was
-  // created on and false otherwise.
-  bool is_sequence_valid() const;
+  // Returns |monostate| if the current sequence is the sequence this object was
+  // created on and a |string| describing the error otherwise.
+  cpp17::variant<cpp17::monostate, std::string> is_sequence_valid() const;
 
   // Implementation of the BaseLockable requirement
-  void lock() const __TA_ACQUIRE() { assert(is_sequence_valid()); }
+  void lock() const __TA_ACQUIRE();
 
   void unlock() const __TA_RELEASE() {}
 
  private:
   async_dispatcher_t* dispatcher_ = nullptr;
+  const char* application_description_ = nullptr;
   async_sequence_id_t self_ = {};
 };
 
@@ -75,21 +81,28 @@ class __TA_CAPABILITY("mutex") synchronization_checker final {
   // Constructs a synchronization checker bound to the currently running
   // sequence. If |dispatcher| does not support sequences, fallback to thread
   // ID.
-  explicit synchronization_checker(async_dispatcher_t* dispatcher);
+  //
+  // If |application_description| is not null, it will be prepended in front of
+  // synchronization check failure panic messages. For example, one may specify
+  // "|Foo| is thread unsafe." so that users understand whose threading
+  // invariants did they violate.
+  explicit synchronization_checker(async_dispatcher_t* dispatcher,
+                                   const char* application_description = nullptr);
 
   ~synchronization_checker() = default;
 
-  // Returns true if the caller has synchronized access to the objects guarded
-  // by this synchronization checker.
-  bool is_synchronized() const;
+  // Returns |monostate| if synchronized access is guaranteed and a |string|
+  // describing the error otherwise.
+  cpp17::variant<cpp17::monostate, std::string> is_synchronized() const;
 
   // Implementation of the BaseLockable requirement
-  void lock() const __TA_ACQUIRE() { assert(is_synchronized()); }
+  void lock() const __TA_ACQUIRE();
 
   void unlock() const __TA_RELEASE() {}
 
  private:
   async_dispatcher_t* dispatcher_ = nullptr;
+  const char* application_description_ = nullptr;
   cpp17::variant<std::thread::id, async_sequence_id_t> self_;
 };
 

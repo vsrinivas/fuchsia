@@ -113,7 +113,10 @@ typedef struct async_ops {
   struct v3 {
     // See |async_get_sequence_id()| for details.
     zx_status_t (*get_sequence_id)(async_dispatcher_t* dispatcher,
-                                   async_sequence_id_t* out_thread_id);
+                                   async_sequence_id_t* out_sequence_id, const char** out_error);
+    // See |async_check_sequence_id()| for details.
+    zx_status_t (*check_sequence_id)(async_dispatcher_t* dispatcher,
+                                     async_sequence_id_t sequence_id, const char** out_error);
   } v3;
 } async_ops_t;
 

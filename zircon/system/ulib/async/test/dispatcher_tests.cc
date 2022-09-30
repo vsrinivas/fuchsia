@@ -10,7 +10,7 @@
 namespace {
 
 namespace change_detector_test {
-static_assert(sizeof(async_ops_t) == 104);
+static_assert(sizeof(async_ops_t) == 112);
 static_assert(offsetof(async_ops_t, version) == 0);
 static_assert(offsetof(async_ops_t, reserved) == 4);
 static_assert(offsetof(async_ops_t, v1) == 8);
