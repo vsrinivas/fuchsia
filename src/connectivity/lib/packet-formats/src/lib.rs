@@ -23,7 +23,7 @@
 
 extern crate alloc;
 
-// TODO(https://github.com/rust-lang/rust/issues/62502): remove this module.
+// TODO(https://github.com/rust-lang/rust/issues/62502): Remove this crate.
 #[cfg(not(test))]
 extern crate fakestd as std;
 

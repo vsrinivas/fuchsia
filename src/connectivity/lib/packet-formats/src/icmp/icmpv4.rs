@@ -287,8 +287,8 @@ impl_icmp_message!(
 
 #[cfg(test)]
 mod tests {
+    use core::fmt::Debug;
     use packet::{InnerPacketBuilder, ParseBuffer, Serializer};
-    use std::fmt::Debug;
 
     use super::*;
     use crate::icmp::{IcmpMessage, MessageBody};

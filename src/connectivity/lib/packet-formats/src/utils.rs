@@ -157,7 +157,7 @@ mod tests {
 
     #[test]
     fn test_next_multiple_of_four() {
-        for x in 0usize..=(std::u16::MAX - 3) as usize {
+        for x in 0usize..=(core::u16::MAX - 3) as usize {
             let y = round_to_next_multiple_of_four(x);
             assert_eq!(y % 4, 0);
             assert!(y >= x);

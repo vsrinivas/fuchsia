@@ -361,7 +361,7 @@ pub fn peek_message_type<MessageType: TryFrom<u8>>(
 
 #[cfg(test)]
 mod tests {
-    use std::fmt::Debug;
+    use core::fmt::Debug;
 
     use packet::{ParseBuffer, Serializer};
 

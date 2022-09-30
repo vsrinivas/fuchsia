@@ -1403,7 +1403,7 @@ mod tests {
 
     #[test]
     fn test_partial_parsing() {
-        use std::ops::Deref as _;
+        use core::ops::Deref as _;
 
         // Try something with only the header, but that would have a larger
         // body:
@@ -1471,7 +1471,7 @@ mod tests {
     fn create_tcp_ipv4_and_ipv6_pkt(
     ) -> (packet::Either<EmptyBuf, Buf<Vec<u8>>>, packet::Either<EmptyBuf, Buf<Vec<u8>>>) {
         use crate::tcp::TcpSegmentBuilder;
-        use std::num::NonZeroU16;
+        use core::num::NonZeroU16;
 
         let tcp_src_port: NonZeroU16 = NonZeroU16::new(20).unwrap();
         let tcp_dst_port: NonZeroU16 = NonZeroU16::new(30).unwrap();
@@ -1559,7 +1559,7 @@ mod tests {
     fn create_udp_ipv4_and_ipv6_pkt(
     ) -> (packet::Either<EmptyBuf, Buf<Vec<u8>>>, packet::Either<EmptyBuf, Buf<Vec<u8>>>) {
         use crate::udp::UdpPacketBuilder;
-        use std::num::NonZeroU16;
+        use core::num::NonZeroU16;
 
         let udp_src_port: NonZeroU16 = NonZeroU16::new(35000).unwrap();
         let udp_dst_port: NonZeroU16 = NonZeroU16::new(53).unwrap();

@@ -505,7 +505,7 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for IgmpPacket<B> {
 
 #[cfg(test)]
 mod tests {
-    use std::fmt::Debug;
+    use core::fmt::Debug;
 
     use packet::{InnerPacketBuilder, ParseBuffer, Serializer};
 
@@ -692,7 +692,7 @@ mod tests {
         let mut buff = buff.as_mut_slice();
         let packet = buff.parse_with::<_, IgmpPacket<_>>(());
         // we don't use expect_err here because IgmpPacket does not implement
-        // std::fmt::Debug
+        // core::fmt::Debug
         assert_eq!(packet.is_err(), true);
     }
 

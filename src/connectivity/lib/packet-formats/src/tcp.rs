@@ -1026,9 +1026,9 @@ impl<B> Debug for TcpSegment<B> {
 
 #[cfg(test)]
 mod tests {
+    use core::num::NonZeroU16;
     use net_types::ip::{Ipv4, Ipv4Addr, Ipv6Addr};
     use packet::{Buf, InnerPacketBuilder, ParseBuffer, Serializer};
-    use std::num::NonZeroU16;
     use zerocopy::byteorder::{ByteOrder, NetworkEndian};
 
     use super::*;
@@ -1385,7 +1385,7 @@ mod tests {
 
     #[test]
     fn test_partial_parse() {
-        use std::ops::Deref as _;
+        use core::ops::Deref as _;
 
         // Parse options partially:
         let make_hdr_prefix = || {

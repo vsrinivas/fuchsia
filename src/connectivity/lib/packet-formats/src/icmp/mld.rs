@@ -241,8 +241,8 @@ impl<M: Mldv1MessageType> InnerPacketBuilder for Mldv1MessageBuilder<M> {
 
 #[cfg(test)]
 mod tests {
-    use std::convert::TryInto;
-    use std::fmt::Debug;
+    use core::convert::TryInto;
+    use core::fmt::Debug;
 
     use packet::{InnerPacketBuilder, ParseBuffer, Serializer};
 

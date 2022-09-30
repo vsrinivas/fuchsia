@@ -55,7 +55,7 @@ rustc_library("packet-formats") {
   edition = "2021"
 
   deps = _common_deps + [
-           # TODO(https://github.com/rust-lang/rust/issues/62502): remove this module.
+           # TODO(https://github.com/rust-lang/rust/issues/62502): Remove this crate.
            "//src/connectivity/network/netstack3/core/fakestd",
          ]
 
