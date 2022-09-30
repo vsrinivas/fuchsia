@@ -203,7 +203,6 @@ mod tests {
     use super::*;
     use fuchsia_pkg::{BlobInfo, MetaPackage, PackageManifest, PackageManifestBuilder};
     use std::path::Path;
-    use tempfile::{NamedTempFile, TempDir};
 
     #[test]
     fn package_list() {
@@ -246,9 +245,9 @@ mod tests {
         let update = generate_test_manifest("update", None);
         let valid = generate_test_manifest("valid", None);
         let mut packages = PackageList::default();
-        assert!(add_package_to(&mut packages, system_image).is_err());
-        assert!(add_package_to(&mut packages, update).is_err());
-        assert!(add_package_to(&mut packages, valid).is_ok());
+        assert!(WritablePackageList::add_package(&mut packages, system_image).is_err());
+        assert!(WritablePackageList::add_package(&mut packages, update).is_err());
+        assert!(WritablePackageList::add_package(&mut packages, valid).is_ok());
     }
 
     #[test]
@@ -257,9 +256,9 @@ mod tests {
         let update = generate_test_manifest("update", None);
         let valid = generate_test_manifest("valid", None);
         let mut packages = PackageUrlList::default();
-        assert!(add_package_to(&mut packages, system_image).is_err());
-        assert!(add_package_to(&mut packages, update).is_err());
-        assert!(add_package_to(&mut packages, valid).is_ok());
+        assert!(WritablePackageList::add_package(&mut packages, system_image).is_err());
+        assert!(WritablePackageList::add_package(&mut packages, update).is_err());
+        assert!(WritablePackageList::add_package(&mut packages, valid).is_ok());
     }
 
     // Generates a package manifest to be used for testing. The `name` is used in the blob file

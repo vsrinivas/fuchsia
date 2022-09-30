@@ -22,11 +22,7 @@ if (is_host) {
       "src/lib.rs",
       "src/package_list.rs",
     ]
-    test_deps = [
-      "//src/sys/pkg/lib/far/rust:fuchsia-archive",
-      "//third_party/rust_crates:serde_json",
-      "//third_party/rust_crates:tempfile",
-    ]
+    test_deps = [ "//third_party/rust_crates:serde_json" ]
   }
 
   group("host_tests") {

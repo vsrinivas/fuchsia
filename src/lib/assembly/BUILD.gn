@@ -15,6 +15,7 @@ if (is_host) {
       "fvm:host_tests",
       "images_config:host_tests",
       "minfs:host_tests",
+      "package_list:host_tests",
       "package_utils:host_tests",
       "partitions_config:host_tests",
       "shell_commands:host_tests",
