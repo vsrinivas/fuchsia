@@ -6,6 +6,8 @@ library fuchsia.developer.remotecontrol;
 using fuchsia.diagnostics as diagnostics;
 using fuchsia.net as net;
 using fuchsia.sys2 as sys2;
+using fuchsia.kernel as kernel;
+using fuchsia.boot as boot;
 using zx;
 
 const MAX_NUM_MATCHES uint16 = 250;
@@ -56,6 +58,16 @@ protocol RemoteControl {
     /// Connects to the root [`fuchsia.sys2/RouteValidator`] protocol.
     RootRouteValidator(resource struct {
         server server_end:sys2.RouteValidator;
+    }) -> (struct {}) error zx.status;
+
+    // Connects to the [`fuchsia.kernel/Stats`] protocol
+    KernelStats(resource struct {
+        server server_end:kernel.Stats;
+    }) -> (struct {}) error zx.status;
+
+    // Connects to the [`fuchsia.boot/Arguments`] protocol
+    BootArguments(resource struct {
+        server server_end:boot.Arguments;
     }) -> (struct {}) error zx.status;
 
     IdentifyHost() -> (struct {

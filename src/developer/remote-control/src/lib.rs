@@ -151,6 +151,26 @@ impl RemoteControlService {
                 )?;
                 Ok(())
             }
+            rcs::RemoteControlRequest::KernelStats { server, responder } => {
+                responder.send(
+                    &mut fdio::service_connect(
+                        &format!("/svc/{}", fidl_fuchsia_kernel::StatsMarker::PROTOCOL_NAME),
+                        server.into_channel(),
+                    )
+                    .map_err(|i| i.into_raw()),
+                )?;
+                Ok(())
+            }
+            rcs::RemoteControlRequest::BootArguments { server, responder } => {
+                responder.send(
+                    &mut fdio::service_connect(
+                        &format!("/svc/{}", fidl_fuchsia_boot::ArgumentsMarker::PROTOCOL_NAME),
+                        server.into_channel(),
+                    )
+                    .map_err(|i| i.into_raw()),
+                )?;
+                Ok(())
+            }
             rcs::RemoteControlRequest::ForwardTcp { addr, socket, responder } => {
                 let addr: SocketAddressExt = addr.into();
                 let addr = addr.0;

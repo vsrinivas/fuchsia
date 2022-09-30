@@ -13,10 +13,12 @@ fidl("fuchsia.developer.remotecontrol") {
     "service-discovery.fidl",
   ]
   public_deps = [
+    "//sdk/fidl/fuchsia.boot",
     "//sdk/fidl/fuchsia.buildinfo",
     "//sdk/fidl/fuchsia.device",
     "//sdk/fidl/fuchsia.diagnostics",
     "//sdk/fidl/fuchsia.hwinfo",
+    "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.logger",
     "//sdk/fidl/fuchsia.net",
     "//sdk/fidl/fuchsia.sys2",

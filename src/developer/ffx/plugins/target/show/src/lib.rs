@@ -11,10 +11,12 @@ use {
     fidl_fuchsia_boot::ArgumentsProxy,
     fidl_fuchsia_buildinfo::ProviderProxy,
     fidl_fuchsia_developer_ffx::{TargetAddrInfo, TargetProxy},
+    fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
     fidl_fuchsia_feedback::{DeviceIdProviderProxy, LastRebootInfoProviderProxy},
     fidl_fuchsia_hwinfo::{Architecture, BoardProxy, DeviceProxy, ProductProxy},
     fidl_fuchsia_intl::RegulatoryDomain,
     fidl_fuchsia_update_channelcontrol::ChannelControlProxy,
+    fuchsia_zircon_status::Status,
     std::io::{stdout, Write},
     std::time::Duration,
     timeout::timeout,
@@ -25,7 +27,6 @@ mod show;
 /// Main entry point for the `show` subcommand.
 #[ffx_plugin(
     ChannelControlProxy = "core/system-update-checker:expose:fuchsia.update.channelcontrol.ChannelControl",
-    ArgumentsProxy = "core/appmgr:out:fuchsia.boot.Arguments",
     BoardProxy = "core/hwinfo:expose:fuchsia.hwinfo.Board",
     DeviceProxy = "core/hwinfo:expose:fuchsia.hwinfo.Device",
     ProductProxy = "core/hwinfo:expose:fuchsia.hwinfo.Product",
@@ -34,8 +35,8 @@ mod show;
     LastRebootInfoProviderProxy = "core/feedback:expose:fuchsia.feedback.LastRebootInfoProvider"
 )]
 pub async fn show_cmd(
+    rcs_proxy: RemoteControlProxy,
     channel_control_proxy: ChannelControlProxy,
-    arguments_proxy: ArgumentsProxy,
     board_proxy: BoardProxy,
     device_proxy: DeviceProxy,
     product_proxy: ProductProxy,
@@ -45,6 +46,11 @@ pub async fn show_cmd(
     target_proxy: TargetProxy,
     target_show_args: args::TargetShow,
 ) -> Result<()> {
+    let (arguments_proxy, arguments_server_end) = fidl::endpoints::create_proxy().unwrap();
+    if let Err(i) = rcs_proxy.boot_arguments(arguments_server_end).await? {
+        bail!("Could not open fuchsia.boot.Arguments: {}", Status::from_raw(i));
+    }
+
     show_cmd_impl(
         channel_control_proxy,
         arguments_proxy,
@@ -548,14 +554,17 @@ mod tests {
     }
 
     fn setup_fake_arguments_server() -> ArgumentsProxy {
-        setup_fake_arguments_proxy(move |req| match req {
-            ArgumentsRequest::Collect { responder, .. } => {
-                let x = vec!["fake_boot_key=fake_boot_value", "fake_valueless_boot_key"];
+        fidl::endpoints::spawn_stream_handler(move |req| async move {
+            match req {
+                ArgumentsRequest::Collect { responder, .. } => {
+                    let x = vec!["fake_boot_key=fake_boot_value", "fake_valueless_boot_key"];
 
-                responder.send(&mut x.into_iter()).unwrap();
+                    responder.send(&mut x.into_iter()).unwrap();
+                }
+                _ => {}
             }
-            _ => {}
         })
+        .unwrap()
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

@@ -5,14 +5,20 @@
 use {
     anyhow::{bail, Result},
     ffx_core::ffx_plugin,
-    fidl_fuchsia_kernel as fstats,
+    fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_kernel as fstats,
+    fuchsia_zircon_status::Status,
 };
 
-#[ffx_plugin(fstats::StatsProxy = "core/appmgr:out:fuchsia.kernel.Stats")]
+#[ffx_plugin()]
 pub async fn load(
-    stats_proxy: fstats::StatsProxy,
+    rcs_proxy: rc::RemoteControlProxy,
     cmd: ffx_cpu_load_args::CpuLoadCommand,
 ) -> Result<()> {
+    let (stats_proxy, stats_server_end) = fidl::endpoints::create_proxy().unwrap();
+    if let Err(i) = rcs_proxy.kernel_stats(stats_server_end).await? {
+        bail!("Could not open fuchsia.kernel.Stats: {}", Status::from_raw(i));
+    }
+
     load_impl(stats_proxy, cmd, &mut std::io::stdout()).await
 }
 
@@ -53,9 +59,11 @@ mod tests {
     /// Tests that invalid arguments are rejected.
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_invalid_args() {
-        assert!(load(
-            setup_fake_stats_proxy(|_| {}),
-            ffx_cpu_load_args::CpuLoadCommand { duration: Duration::from_secs(0) }
+        let (proxy, _) = fidl::endpoints::create_proxy::<fstats::StatsMarker>().unwrap();
+        assert!(load_impl(
+            proxy,
+            ffx_cpu_load_args::CpuLoadCommand { duration: Duration::from_secs(0) },
+            &mut std::io::stdout()
         )
         .await
         .is_err());
@@ -65,22 +73,29 @@ mod tests {
     /// nanoseconds. The test uses a duration parameter of one second.
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_cpu_load_duration() {
-        let (mut duration_request_sender, mut duration_request_receiver) = mpsc::channel(1);
+        let (duration_request_sender, mut duration_request_receiver) = mpsc::channel(1);
 
-        // Gets a request from the stream and sends the duration parameter back via the mpsc channel
-        let proxy = setup_fake_stats_proxy(move |req| {
-            match req {
-                fstats::StatsRequest::GetCpuLoad { duration, responder } => {
-                    duration_request_sender.try_send(duration).unwrap();
-                    let _ = responder.send(&vec![]); // returned values don't matter for this test
+        let proxy = fidl::endpoints::spawn_stream_handler(move |req| {
+            let mut duration_request_sender = duration_request_sender.clone();
+            async move {
+                match req {
+                    fstats::StatsRequest::GetCpuLoad { duration, responder } => {
+                        duration_request_sender.try_send(duration).unwrap();
+                        let _ = responder.send(&vec![]); // returned values don't matter for this test
+                    }
+                    request => panic!("Unexpected request: {:?}", request),
                 }
-                request => panic!("Unexpected request: {:?}", request),
             }
-        });
+        })
+        .unwrap();
 
-        let _ = load(proxy, ffx_cpu_load_args::CpuLoadCommand { duration: Duration::from_secs(1) })
-            .await
-            .unwrap();
+        let _ = load_impl(
+            proxy,
+            ffx_cpu_load_args::CpuLoadCommand { duration: Duration::from_secs(1) },
+            &mut std::io::stdout(),
+        )
+        .await
+        .unwrap();
 
         match duration_request_receiver.try_next() {
             Ok(Some(duration_request)) => {
@@ -92,14 +107,16 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_cpu_load_output() {
-        let data = vec![0.66f32, 1.56, 0.83, 0.71];
-
-        let proxy = setup_fake_stats_proxy(move |req| match req {
-            fstats::StatsRequest::GetCpuLoad { responder, .. } => {
-                let _ = responder.send(&data.clone());
+        let proxy = fidl::endpoints::spawn_stream_handler(move |req| async move {
+            let data = vec![0.66f32, 1.56, 0.83, 0.71];
+            match req {
+                fstats::StatsRequest::GetCpuLoad { responder, .. } => {
+                    let _ = responder.send(&data.clone());
+                }
+                request => panic!("Unexpected request: {:?}", request),
             }
-            request => panic!("Unexpected request: {:?}", request),
-        });
+        })
+        .unwrap();
 
         let mut writer = Vec::new();
         let _ = load_impl(

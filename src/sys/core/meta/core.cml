@@ -562,8 +562,14 @@
             from: "parent",
             to: [
                 "#cobalt_system_metrics",
+                "#remote-control",
                 "#system-metrics-logger",
             ],
+        },
+        {
+            protocol: "fuchsia.boot.Arguments",
+            from: "parent",
+            to: "#remote-control",
         },
         {
             protocol: "fuchsia.process.Launcher",
