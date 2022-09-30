@@ -88,7 +88,7 @@ void ManagedVfs::FinishShutdown(async_dispatcher_t*, async::TaskBase*,
     handler = std::move(shutdown_handler_);
   }
 
-  handler(UninstallAll(zx::time::infinite()));
+  handler(ZX_OK);
   // |this| can be deleted at this point!
 }
 

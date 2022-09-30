@@ -31,8 +31,6 @@ zx_status_t RemoteDir::GetAttributes(VnodeAttributes* attr) {
   return ZX_OK;
 }
 
-bool RemoteDir::IsRemote() const { return true; }
-
 fidl::UnownedClientEnd<fuchsia_io::Directory> RemoteDir::GetRemote() const {
   return remote_dir_client_.borrow();
 }

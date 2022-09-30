@@ -34,14 +34,6 @@ zx_status_t VnodeDir::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo)
   return ZX_ERR_ACCESS_DENIED;
 }
 
-bool VnodeDir::IsRemote() const { return remoter_.IsRemote(); }
-
-fidl::ClientEnd<fuchsia_io::Directory> VnodeDir::DetachRemote() { return remoter_.DetachRemote(); }
-
-fidl::UnownedClientEnd<fuchsia_io::Directory> VnodeDir::GetRemote() const {
-  return remoter_.GetRemote();
-}
-
 zx_status_t VnodeDir::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out) {
   if (!IsDirectory()) {
     return ZX_ERR_NOT_FOUND;

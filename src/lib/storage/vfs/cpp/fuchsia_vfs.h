@@ -143,10 +143,6 @@ class FuchsiaVfs : public Vfs {
                                 std::string_view path, VnodeConnectionOptions options,
                                 uint32_t mode) __TA_EXCLUDES(vfs_lock_);
 
-  // Unpins all remote filesystems in the current filesystem. The caller is responsible for shutting
-  // down remote filesystems.
-  zx_status_t UninstallAll(zx::time deadline) __TA_EXCLUDES(vfs_lock_);
-
   bool IsTokenAssociatedWithVnode(zx::event token) __TA_EXCLUDES(vfs_lock_);
 
  protected:
@@ -171,26 +167,6 @@ class FuchsiaVfs : public Vfs {
   zx_status_t TokenToVnode(zx::event token, fbl::RefPtr<Vnode>* out) __TA_REQUIRES(vfs_lock_);
 
   fbl::HashTable<zx_koid_t, std::unique_ptr<VnodeToken>> vnode_tokens_;
-
-  // Non-intrusive node in linked list of vnodes acting as mount points
-  class MountNode final : public fbl::DoublyLinkedListable<std::unique_ptr<MountNode>> {
-   public:
-    using ListType = fbl::DoublyLinkedList<std::unique_ptr<MountNode>>;
-    constexpr MountNode();
-    ~MountNode();
-
-    void SetNode(fbl::RefPtr<Vnode> vn);
-    fidl::ClientEnd<fuchsia_io::Directory> ReleaseRemote();
-    bool VnodeMatch(fbl::RefPtr<Vnode> vn) const;
-
-   private:
-    fbl::RefPtr<Vnode> vn_;
-  };
-
-  // The mount list is a global static variable, but it only uses constexpr constructors during
-  // initialization. As a consequence, the .init_array section of the compiled vfs-mount object file
-  // is empty; "remote_list" is a member of the bss section.
-  MountNode::ListType remote_list_ __TA_GUARDED(vfs_lock_){};
 
   async_dispatcher_t* dispatcher_ = nullptr;
 };

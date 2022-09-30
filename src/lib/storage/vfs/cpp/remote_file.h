@@ -30,7 +30,6 @@ class RemoteFile : public Vnode {
   // |Vnode| implementation:
   VnodeProtocolSet GetProtocols() const final;
   zx_status_t GetAttributes(VnodeAttributes* a) final;
-  bool IsRemote() const final;
   fidl::UnownedClientEnd<fuchsia_io::Directory> GetRemote() const final;
   zx_status_t GetNodeInfoForProtocol(VnodeProtocol protocol, Rights rights,
                                      VnodeRepresentation* info) final;

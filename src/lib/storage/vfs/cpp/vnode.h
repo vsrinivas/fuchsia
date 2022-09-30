@@ -366,7 +366,7 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // Returns true if this is a remote filesystem mount point. This is only relevant on Fuchsia
   // builds (the remote handling below is all Fuchsia-only) but this can exist and just return false
   // on host builds to simplify platform handling.
-  virtual bool IsRemote() const;
+  bool IsRemote() const;
 
   // Returns true if this node is a service.  One implication of this is that read/write connections
   // will be allowed (services are typically connected in this way using fdio_connect_service) to
@@ -381,12 +381,7 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // Returns the name of the device backing the filesystem, if one exists.
   virtual zx::status<std::string> GetDevicePath() const;
 
-  // The following methods are required to mount sub-filesystems. The logic (and storage) necessary
-  // to implement these functions exists within the "RemoteContainer" class, which may be composed
-  // inside Vnodes that wish to act as mount points.
-
   // The vnode is acting as a mount point for a remote filesystem or device.
-  virtual fidl::ClientEnd<fuchsia_io::Directory> DetachRemote();
   virtual fidl::UnownedClientEnd<fuchsia_io::Directory> GetRemote() const;
 
   // Check existing inotify watches and issue inotify events.

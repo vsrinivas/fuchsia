@@ -19,7 +19,6 @@
 
 #include <fbl/auto_lock.h>
 
-#include "src/lib/storage/vfs/cpp/remote_container.h"
 #include "src/lib/storage/vfs/cpp/watcher.h"
 #include "src/storage/minfs/vnode_allocation.h"
 #endif

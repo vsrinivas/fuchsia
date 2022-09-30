@@ -89,26 +89,6 @@ fuchsia_io::wire::FilesystemInfo FilesystemInfo::ToFidl() const {
   return out;
 }
 
-constexpr FuchsiaVfs::MountNode::MountNode() = default;
-FuchsiaVfs::MountNode::~MountNode() { ZX_DEBUG_ASSERT(vn_ == nullptr); }
-
-void FuchsiaVfs::MountNode::SetNode(fbl::RefPtr<Vnode> vn) {
-  ZX_DEBUG_ASSERT(vn_ == nullptr);
-  vn_ = std::move(vn);
-}
-
-fidl::ClientEnd<fio::Directory> FuchsiaVfs::MountNode::ReleaseRemote() {
-  ZX_DEBUG_ASSERT(vn_ != nullptr);
-  fidl::ClientEnd<fio::Directory> h = vn_->DetachRemote();
-  vn_ = nullptr;
-  return h;
-}
-
-bool FuchsiaVfs::MountNode::VnodeMatch(fbl::RefPtr<Vnode> vn) const {
-  ZX_DEBUG_ASSERT(vn_ != nullptr);
-  return vn == vn_;
-}
-
 FuchsiaVfs::FuchsiaVfs(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
 FuchsiaVfs::~FuchsiaVfs() = default;
@@ -447,34 +427,9 @@ zx_status_t FuchsiaVfs::ForwardOpenRemote(fbl::RefPtr<Vnode> vn, fidl::ServerEnd
     return ZX_ERR_NOT_FOUND;
   }
 
-  const fidl::WireResult result = fidl::WireCall(h)->Open(
-      options.ToIoV1Flags(), mode, fidl::StringView::FromExternal(path), std::move(channel));
-  if (result.is_peer_closed()) {
-    std::unique_ptr<MountNode> mount_point;
-    {
-      const std::lock_guard lock(vfs_lock_);
-      mount_point =
-          remote_list_.erase_if([&vn](const MountNode& node) { return node.VnodeMatch(vn); });
-    }
-    if (mount_point != nullptr) {
-      mount_point->ReleaseRemote();
-    }
-  }
-  return result.status();
-}
-
-// Uninstall all remote filesystems.
-zx_status_t FuchsiaVfs::UninstallAll(zx::time deadline) {
-  MountNode::ListType remote_list;
-  {
-    std::lock_guard lock(vfs_lock_);
-    std::swap(remote_list, remote_list_);
-  }
-  std::unique_ptr<MountNode> mount_point;
-  while ((mount_point = remote_list.pop_front())) {
-    mount_point->ReleaseRemote();
-  }
-  return ZX_OK;
+  return fidl::WireCall(h)
+      ->Open(options.ToIoV1Flags(), mode, fidl::StringView::FromExternal(path), std::move(channel))
+      .status();
 }
 
 }  // namespace fs

@@ -5,7 +5,6 @@
 #ifndef SRC_STORAGE_MEMFS_VNODE_DIR_H_
 #define SRC_STORAGE_MEMFS_VNODE_DIR_H_
 
-#include "src/lib/storage/vfs/cpp/remote_container.h"
 #include "src/lib/storage/vfs/cpp/watcher.h"
 #include "src/storage/memfs/vnode.h"
 
@@ -31,13 +30,6 @@ class VnodeDir final : public Vnode {
   zx_status_t WatchDir(fs::Vfs* vfs, fuchsia_io::wire::WatchMask mask, uint32_t options,
                        fidl::ServerEnd<fuchsia_io::DirectoryWatcher> watcher) final;
 
-  // Vnode overrides.
-  //
-  // The vnode is acting as a mount point for a remote filesystem or device.
-  bool IsRemote() const final;
-  fidl::ClientEnd<fuchsia_io::Directory> DetachRemote() final;
-  fidl::UnownedClientEnd<fuchsia_io::Directory> GetRemote() const final;
-
  private:
   zx_status_t Readdir(fs::VdirCookie* cookie, void* dirents, size_t len, size_t* out_actual) final;
 
@@ -59,7 +51,6 @@ class VnodeDir final : public Vnode {
   zx_status_t GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo) final;
 
   const uint64_t max_file_size_;
-  fs::RemoteContainer remoter_;
   fs::WatcherContainer watcher_;
 };
 

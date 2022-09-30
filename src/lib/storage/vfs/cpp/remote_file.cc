@@ -31,8 +31,6 @@ zx_status_t RemoteFile::GetAttributes(VnodeAttributes* attr) {
   return ZX_OK;
 }
 
-bool RemoteFile::IsRemote() const { return true; }
-
 fidl::UnownedClientEnd<fio::Directory> RemoteFile::GetRemote() const {
   return remote_client_.borrow();
 }

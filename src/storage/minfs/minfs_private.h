@@ -25,7 +25,6 @@
 
 #include "src/lib/storage/vfs/cpp/journal/journal.h"
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
-#include "src/lib/storage/vfs/cpp/remote_container.h"
 #include "src/lib/storage/vfs/cpp/watcher.h"
 #include "src/storage/minfs/minfs_inspect_tree.h"
 #endif

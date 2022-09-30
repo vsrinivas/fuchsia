@@ -26,9 +26,6 @@ TEST(RemoteFile, ApiTest) {
   // get remote properties
   EXPECT_TRUE(file->IsRemote());
   EXPECT_EQ(unowned_client, file->GetRemote());
-
-  // detaching the remote mount isn't allowed
-  EXPECT_TRUE(!file->DetachRemote());
 }
 
 }  // namespace
