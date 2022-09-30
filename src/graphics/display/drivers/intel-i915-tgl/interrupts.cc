@@ -221,6 +221,12 @@ void Interrupts::Destroy() {
 }
 
 int Interrupts::IrqLoop() {
+  // We implement the steps in the section "Shared Functions" > "Interrupts" >
+  // "Interrupt Service Routine" section of Intel's display engine docs.
+  //
+  // Tiger Lake: IHD-OS-TGL-Vol 12-1.22-Rev2.0 pages 199-200
+  // Kaby Lake: IHD-OS-KBL-Vol 12-1.17 pages 142-143
+  // Skylake: IHD-OS-SKL-Vol 12-05.16 pages 139-140
   for (;;) {
     zx_time_t timestamp;
     if (zx_interrupt_wait(irq_.get(), &timestamp) != ZX_OK) {
@@ -228,19 +234,22 @@ int Interrupts::IrqLoop() {
       return -1;
     }
 
-    auto master = tgl_registers::GfxMasterInterrupt::Get().FromValue(0);
+    auto graphics_primary_interrupts = tgl_registers::GraphicsPrimaryInterrupt::Get().FromValue(0);
     if (is_tgl(device_id_)) {
-      master.ReadFrom(mmio_space_).set_primary_interrupt(0).WriteTo(mmio_space_);
+      graphics_primary_interrupts.ReadFrom(mmio_space_)
+          .set_interrupts_enabled(false)
+          .WriteTo(mmio_space_);
     }
 
-    auto interrupt_ctrl = tgl_registers::DisplayInterruptControl::Get().ReadFrom(mmio_space_);
-    interrupt_ctrl.set_enable_mask(0);
-    interrupt_ctrl.WriteTo(mmio_space_);
+    auto display_interrupts = tgl_registers::DisplayInterruptControl::Get().ReadFrom(mmio_space_);
+    display_interrupts.set_interrupts_enabled(false);
+    display_interrupts.WriteTo(mmio_space_);
 
-    bool has_hot_plug_interrupt = interrupt_ctrl.sde_int_pending() ||
-                                  (is_tgl(device_id_) && interrupt_ctrl.de_hpd_int_pending());
+    const bool pch_display_hotplug_pending = display_interrupts.pch_engine_pending();
+    const bool display_hotplug_pending =
+        is_tgl(device_id_) && display_interrupts.display_hot_plug_pending_tiger_lake();
 
-    if (has_hot_plug_interrupt) {
+    if (pch_display_hotplug_pending || display_hotplug_pending) {
       auto detect_result = is_tgl(device_id_) ? DetectHotplugTigerLake(mmio_space_)
                                               : DetectHotplugSkylake(mmio_space_);
       for (auto ddi : GetDdis(device_id_)) {
@@ -251,36 +260,42 @@ int Interrupts::IrqLoop() {
       }
     }
 
-    if (interrupt_ctrl.de_pipe_c_int_pending()) {
+    // TODO(fxbug.dev/109278): Check for Pipe D interrupts here when we support
+    //                         pipe and transcoder D.
+
+    if (display_interrupts.pipe_c_pending()) {
       HandlePipeInterrupt(tgl_registers::PIPE_C, timestamp);
-    } else if (interrupt_ctrl.de_pipe_b_int_pending()) {
+    }
+    if (display_interrupts.pipe_b_pending()) {
       HandlePipeInterrupt(tgl_registers::PIPE_B, timestamp);
-    } else if (interrupt_ctrl.de_pipe_a_int_pending()) {
+    }
+    if (display_interrupts.pipe_a_pending()) {
       HandlePipeInterrupt(tgl_registers::PIPE_A, timestamp);
     }
 
     {
-      // Handle GT interrupts via callback.
+      // Dispatch GT interrupts to the GPU driver.
       fbl::AutoLock lock(&lock_);
-      if (interrupt_cb_.callback) {
+      if (gpu_interrupt_callback_.callback) {
         if (is_tgl(device_id_)) {
-          if (master.gt1() || master.gt0()) {
+          if (graphics_primary_interrupts.gt1_interrupt_pending() ||
+              graphics_primary_interrupts.gt0_interrupt_pending()) {
             // Mask isn't used
-            interrupt_cb_.callback(interrupt_cb_.ctx, 0, timestamp);
+            gpu_interrupt_callback_.callback(gpu_interrupt_callback_.ctx, 0, timestamp);
           }
         } else {
-          if (interrupt_ctrl.reg_value() & interrupt_mask_) {
-            interrupt_cb_.callback(interrupt_cb_.ctx, interrupt_ctrl.reg_value(), timestamp);
+          if (display_interrupts.reg_value() & gpu_interrupt_mask_) {
+            gpu_interrupt_callback_.callback(gpu_interrupt_callback_.ctx,
+                                             display_interrupts.reg_value(), timestamp);
           }
         }
       }
     }
 
-    interrupt_ctrl.set_enable_mask(1);
-    interrupt_ctrl.WriteTo(mmio_space_);
+    display_interrupts.set_interrupts_enabled(true).WriteTo(mmio_space_);
 
     if (is_tgl(device_id_)) {
-      master.set_primary_interrupt(1).WriteTo(mmio_space_);
+      graphics_primary_interrupts.set_interrupts_enabled(true).WriteTo(mmio_space_);
     }
   }
 }
@@ -306,14 +321,14 @@ void Interrupts::EnablePipeVsync(tgl_registers::Pipe pipe, bool enable) {
   enable_reg.WriteTo(mmio_space_);
 }
 
-zx_status_t Interrupts::SetInterruptCallback(const intel_gpu_core_interrupt_t* callback,
-                                             uint32_t interrupt_mask) {
+zx_status_t Interrupts::SetGpuInterruptCallback(
+    const intel_gpu_core_interrupt_t& gpu_interrupt_callback, uint32_t gpu_interrupt_mask) {
   fbl::AutoLock lock(&lock_);
-  if (callback->callback != nullptr && interrupt_cb_.callback != nullptr) {
+  if (gpu_interrupt_callback.callback != nullptr && gpu_interrupt_callback_.callback != nullptr) {
     return ZX_ERR_ALREADY_BOUND;
   }
-  interrupt_cb_ = *callback;
-  interrupt_mask_ = interrupt_mask;
+  gpu_interrupt_callback_ = gpu_interrupt_callback;
+  gpu_interrupt_mask_ = gpu_interrupt_mask;
   return ZX_OK;
 }
 
@@ -336,18 +351,17 @@ zx_status_t Interrupts::Init(PipeVsyncCallback pipe_vsync_callback,
   mmio_space_ = mmio_space;
   device_id_ = device_id;
 
-  // Disable interrupts here, re-enable them in ::FinishInit()
-  zxlogf(TRACE, "Interrupts disabled");
+  // Interrupt propagation will be re-enabled in ::FinishInit()
+  zxlogf(TRACE, "Disabling graphics and display interrupt propagation");
 
   if (is_tgl(device_id_)) {
-    auto master = tgl_registers::GfxMasterInterrupt::Get().ReadFrom(mmio_space_);
-    master.set_primary_interrupt(0);
-    master.WriteTo(mmio_space_);
+    auto graphics_primary_interrupts =
+        tgl_registers::GraphicsPrimaryInterrupt::Get().ReadFrom(mmio_space);
+    graphics_primary_interrupts.set_interrupts_enabled(false).WriteTo(mmio_space_);
   }
 
   auto interrupt_ctrl = tgl_registers::DisplayInterruptControl::Get().ReadFrom(mmio_space);
-  interrupt_ctrl.set_enable_mask(0);
-  interrupt_ctrl.WriteTo(mmio_space);
+  interrupt_ctrl.set_interrupts_enabled(false).WriteTo(mmio_space);
 
   // Assume that PCI will enable bus mastering as required for MSI interrupts.
   zx_status_t status = pci.ConfigureInterruptMode(1, &irq_mode_);
@@ -356,7 +370,8 @@ zx_status_t Interrupts::Init(PipeVsyncCallback pipe_vsync_callback,
     return ZX_ERR_INTERNAL;
   }
 
-  if ((status = pci.MapInterrupt(0, &irq_)) != ZX_OK) {
+  status = pci.MapInterrupt(0, &irq_);
+  if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to map interrupt (%d)", status);
     return status;
   }
@@ -398,15 +413,15 @@ zx_status_t Interrupts::Init(PipeVsyncCallback pipe_vsync_callback,
 void Interrupts::FinishInit() {
   zxlogf(TRACE, "Interrupts re-enabled");
 
-  auto ctrl = tgl_registers::DisplayInterruptControl::Get().ReadFrom(mmio_space_);
-  ctrl.set_enable_mask(1);
-  ctrl.WriteTo(mmio_space_);
+  auto display_interrupts = tgl_registers::DisplayInterruptControl::Get().ReadFrom(mmio_space_);
+  display_interrupts.set_interrupts_enabled(true).WriteTo(mmio_space_);
 
   if (is_tgl(device_id_)) {
-    auto master = tgl_registers::GfxMasterInterrupt::Get().ReadFrom(mmio_space_);
-    master.set_primary_interrupt(1);
-    master.WriteTo(mmio_space_);
-    master.ReadFrom(mmio_space_);  // posting read
+    auto graphics_primary_interrupts =
+        tgl_registers::GraphicsPrimaryInterrupt::Get().ReadFrom(mmio_space_);
+    graphics_primary_interrupts.set_interrupts_enabled(true).WriteTo(mmio_space_);
+
+    graphics_primary_interrupts.ReadFrom(mmio_space_);  // posting read
   }
 }
 

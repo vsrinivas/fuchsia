@@ -128,28 +128,149 @@ class Dssm : public hwreg::RegisterBase<Dssm, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<Dssm>(0x51004); }
 };
 
-// DISPLAY_INT_CTL (ICL+), a.k.a. MASTER_INT_CTL (SKL)
+// DISPLAY_INT_CTL (Display Interrupt Control)
+//
+// Controls whether display interrupts propagate to the PCI device interrupt,
+// and summarizes the pending display interrupts.
+//
+// This register is referred to as MASTER_INT_CTL (Master Interrupt Control) in
+// the documentation for Kaby Lake and Skylake.
+//
+// Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1 pages 1054-1055
+// Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 2 pages 9-11
+// Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 2 pages 10-12
 class DisplayInterruptControl : public hwreg::RegisterBase<DisplayInterruptControl, uint32_t> {
  public:
-  DEF_BIT(31, enable_mask);
-  DEF_BIT(23, sde_int_pending);
-  DEF_BIT(21, de_hpd_int_pending);
-  DEF_BIT(18, de_pipe_c_int_pending);
-  DEF_BIT(17, de_pipe_b_int_pending);
-  DEF_BIT(16, de_pipe_a_int_pending);
+  // If true, display engine interrupts propagate to the next level.
+  //
+  // On Tiger Lake and DG1, display engine interrupts propagate to the graphics
+  // interrupt dispatcher, which is controlled by the GraphicsPrimaryInterrupt
+  // register.
+  //
+  // On Kaby Lake and Skylake, display engine interrupts propagate directly to
+  // the PCI device interrupt.
+  //
+  // The driver sets this bit when it is ready to process display interrupts.
+  DEF_BIT(31, interrupts_enabled);
+
+  // True if there are pending interrupts from the PCU (Power Control Unit).
+  //
+  // This is not documented on Tiger Lake. However, it has good read semantics.
+  // The underlying bit is reserved and documented as MBZ (must be zero), so
+  // reading it will always report that no interrupts are pending.
+  DEF_BIT(30, pcu_pending_kaby_lake);
+
+  // True if there are pending interrupts from the audio codec.
+  DEF_BIT(24, audio_codec_pending);
+
+  // True if there are pending interrupts from the PCH display engine.
+  //
+  // If this bit is set, the {{PCH interrupts register}} must be checked.
+  DEF_BIT(23, pch_engine_pending);
+
+  // True if there are pending miscellaneous display engine interrupts.
+  DEF_BIT(22, misc_display_pending);
+
+  // True if there are pending hotplug interrupts from the main display engine.
+  //
+  // This field only reflects hotplug events from the main / north display
+  // engine. Hotplug interrupts from the PCH / south display engine are recorded
+  // in the `pch_engine_pending` bit.
+  //
+  // This bit is not documented on Kaby Lake and Skylake, where the display
+  // engine does not handle hot plug for any port.
+  DEF_BIT(21, display_hot_plug_pending_tiger_lake);
+
+  // True if there are pending port interrupts.
+  DEF_BIT(20, port_pending);
+
+  // True if there are pending Pipe D interrupts.
+  //
+  // This field is not documented on Kaby Lake and Skylake. The underlying bit
+  // is reserved but not documented as MBZ (Must Be Zero).
+  DEF_BIT(19, pipe_d_pending_tiger_lake);
+
+  // True if there are pending Pipe C interrupts.
+  DEF_BIT(18, pipe_c_pending);
+
+  // True if there are pending Pipe B interrupts.
+  DEF_BIT(17, pipe_b_pending);
+
+  // True if there are pending Pipe A interrupts.
+  DEF_BIT(16, pipe_a_pending);
+
+  // True if there are pending VEBox (video encoding box) interrupts.
+  //
+  // This is not documented on Tiger Lake. However, it has good read semantics.
+  // The underlying bit is reserved and documented as MBZ (must be zero), so
+  // reading it will always report that no interrupts are pending.
+  DEF_BIT(6, video_encoding_box_pending_kaby_lake);
+
+  // True if there are pending GTPM (GPU power management) interrupts.
+  //
+  // This is not documented on Tiger Lake. However, it has good read semantics.
+  // The underlying bit is reserved and documented as MBZ (must be zero), so
+  // reading it will always report that no interrupts are pending.
+  DEF_BIT(4, gpu_power_pending_kaby_lake);
+
+  // True if there are pending VCS (Video Command Streamer) 2 interrupts.
+  //
+  // This is not documented on Tiger Lake. However, it has good read semantics.
+  // The underlying bit is reserved and documented as MBZ (must be zero), so
+  // reading it will always report that no interrupts are pending.
+  DEF_BIT(3, video_command_streamer_2_pending_kaby_lake);
+
+  // True if there are pending VCS (Video Command Streamer) 1 interrupts.
+  //
+  // This is not documented on Tiger Lake. However, it has good read semantics.
+  // The underlying bit is reserved and documented as MBZ (must be zero), so
+  // reading it will always report that no interrupts are pending.
+  DEF_BIT(2, video_command_streamer_1_pending_kaby_lake);
+
+  // True if there are pending blitter interrupts.
+  //
+  // This is not documented on Tiger Lake. However, it has good read semantics.
+  // The underlying bit is reserved and documented as MBZ (must be zero), so
+  // reading it will always report that no interrupts are pending.
+  DEF_BIT(1, blitter_pending_kaby_lake);
+
+  // True if there are pending render interrupts.
+  //
+  // This is not documented on Tiger Lake. However, it has good read semantics.
+  // The underlying bit is reserved and documented as MBZ (must be zero), so
+  // reading it will always report that no interrupts are pending.
+  DEF_BIT(0, render_pending_kaby_lake);
 
   static auto Get() { return hwreg::RegisterAddr<DisplayInterruptControl>(0x44200); }
 };
 
-// GFX_MSTR_INTR (gen11)
-class GfxMasterInterrupt : public hwreg::RegisterBase<GfxMasterInterrupt, uint32_t> {
+// GFX_MSTR_INTR (Graphics Primary Interrupt)
+//
+// Controls whether top-level graphics interrupts propagate to the PCI device
+// interrupt, and summarizes the pending graphics-level interrupts.
+//
+// This register is not documented on Kaby Lake or Skylake. On those platforms,
+// the display engine interrupts covered by DisplayInterruptControl propagate
+// directly to the PCI device interrupt.
+//
+// Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1 pages 1054-1055
+class GraphicsPrimaryInterrupt : public hwreg::RegisterBase<GraphicsPrimaryInterrupt, uint32_t> {
  public:
-  DEF_BIT(31, primary_interrupt);
-  DEF_BIT(16, display);
-  DEF_BIT(1, gt1);
-  DEF_BIT(0, gt0);
+  // If true, graphics interrupts propagate to the PCI device interrupt.
+  //
+  // The driver sets this bit when it is ready to process graphics interrupts.
+  DEF_BIT(31, interrupts_enabled);
 
-  static auto Get() { return hwreg::RegisterAddr<GfxMasterInterrupt>(0x190010); }
+  // True if an interrupt from the display engine is pending.
+  DEF_BIT(16, display_interrupt_pending);
+
+  // True if a GPU interrupt is pending.
+  DEF_BIT(1, gt1_interrupt_pending);
+
+  // True if a GPU interrupt is pending.
+  DEF_BIT(0, gt0_interrupt_pending);
+
+  static auto Get() { return hwreg::RegisterAddr<GraphicsPrimaryInterrupt>(0x190010); }
 };
 
 // GMBUS0

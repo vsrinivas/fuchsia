@@ -1784,12 +1784,13 @@ zx_status_t Controller::IntelGpuCoreGetPciBti(uint32_t index, zx::bti* bti_out) 
 
 zx_status_t Controller::IntelGpuCoreRegisterInterruptCallback(
     const intel_gpu_core_interrupt_t* callback, uint32_t interrupt_mask) {
-  return interrupts_.SetInterruptCallback(callback, interrupt_mask);
+  ZX_DEBUG_ASSERT(callback);
+  return interrupts_.SetGpuInterruptCallback(*callback, interrupt_mask);
 }
 
 zx_status_t Controller::IntelGpuCoreUnregisterInterruptCallback() {
   constexpr intel_gpu_core_interrupt_t kNoCallback = {nullptr, nullptr};
-  interrupts_.SetInterruptCallback(&kNoCallback, 0);
+  interrupts_.SetGpuInterruptCallback(kNoCallback, 0);
   return ZX_OK;
 }
 

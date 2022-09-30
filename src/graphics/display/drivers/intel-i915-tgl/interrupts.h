@@ -46,8 +46,17 @@ class Interrupts {
   // be notified on the internal irq thread via the PipeVsyncCallback that was provided in Init.
   void EnablePipeVsync(tgl_registers::Pipe pipe, bool enable);
 
-  zx_status_t SetInterruptCallback(const intel_gpu_core_interrupt_t* callback,
-                                   uint32_t interrupt_mask);
+  // The GPU driver uses this to plug into the interrupt stream.
+  //
+  // On Tiger Lake, `gpu_callback` will be called during an interrupt
+  // from the graphics hardware if the Graphics Primary Interrupt register
+  // indicates there are GT interrupts pending.
+  //
+  // On Skylake and Kaby Lake, `gpu_callback` will be called during an interrupt
+  // from the graphics hardware if the Display Interrupt Control register has
+  // any bits in `gpu_interrupt_mask` set.
+  zx_status_t SetGpuInterruptCallback(const intel_gpu_core_interrupt_t& gpu_interrupt_callback,
+                                      uint32_t gpu_interrupt_mask);
 
  private:
   int IrqLoop();
@@ -66,8 +75,8 @@ class Interrupts {
   std::optional<thrd_t> irq_thread_;  // Valid while irq_ is valid.
   uint16_t device_id_;
 
-  intel_gpu_core_interrupt_t interrupt_cb_ __TA_GUARDED(lock_) = {};
-  uint32_t interrupt_mask_ __TA_GUARDED(lock_) = 0;
+  intel_gpu_core_interrupt_t gpu_interrupt_callback_ __TA_GUARDED(lock_) = {};
+  uint32_t gpu_interrupt_mask_ __TA_GUARDED(lock_) = 0;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(Interrupts);
 };

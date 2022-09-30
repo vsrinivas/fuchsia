@@ -81,19 +81,19 @@ TEST_F(InterruptTest, Init) {
 TEST_F(InterruptTest, SetInterruptCallback) {
   i915_tgl::Interrupts interrupts;
 
-  intel_gpu_core_interrupt_t callback = {.callback = NopIrqCb, .ctx = nullptr};
-  EXPECT_EQ(ZX_OK, interrupts.SetInterruptCallback(&callback, 0 /* interrupt_mask */));
+  constexpr intel_gpu_core_interrupt_t callback = {.callback = NopIrqCb, .ctx = nullptr};
+  const uint32_t gpu_interrupt_mask = 0;
+  EXPECT_EQ(ZX_OK, interrupts.SetGpuInterruptCallback(callback, gpu_interrupt_mask));
 
   // Setting a callback when one is already assigned should fail.
-  EXPECT_EQ(ZX_ERR_ALREADY_BOUND,
-            interrupts.SetInterruptCallback(&callback, 0 /* interrupt_mask */));
+  EXPECT_EQ(ZX_ERR_ALREADY_BOUND, interrupts.SetGpuInterruptCallback(callback, gpu_interrupt_mask));
 
   // Clearing the existing callback with a null callback should fail.
-  intel_gpu_core_interrupt_t null_callback = {.callback = nullptr, .ctx = nullptr};
-  EXPECT_EQ(ZX_OK, interrupts.SetInterruptCallback(&null_callback, 0 /* interrupt_mask */));
+  constexpr intel_gpu_core_interrupt_t null_callback = {.callback = nullptr, .ctx = nullptr};
+  EXPECT_EQ(ZX_OK, interrupts.SetGpuInterruptCallback(null_callback, gpu_interrupt_mask));
 
   // It should be possible to set a new callback after clearing the old one.
-  EXPECT_EQ(ZX_OK, interrupts.SetInterruptCallback(&callback, 0 /* interrupt_mask */));
+  EXPECT_EQ(ZX_OK, interrupts.SetGpuInterruptCallback(callback, gpu_interrupt_mask));
 }
 
 }  // namespace
