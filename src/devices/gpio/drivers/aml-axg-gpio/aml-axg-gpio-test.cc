@@ -15,7 +15,9 @@
 
 namespace {
 
-constexpr size_t kGpioRegSize = 0x00300000 / sizeof(uint32_t);  // in 32 bits chunks.
+constexpr size_t kGpioRegSize = 0x100;
+constexpr size_t kInterruptRegSize = 0x30;
+constexpr size_t kInterruptRegOffset = 0x3c00;
 
 // Fake functions
 zx_status_t mmio_fn(void *ctx, uint32_t index, pdev_mmio_t *out_mmio) { return ZX_OK; }
@@ -129,13 +131,14 @@ class A113AmlAxgGpioTest : public zxtest::Test {
       zxlogf(ERROR, "AmlAxgGpioTest::SetUp: mock_mmio_gpio_a0_ alloc failed");
       return;
     }
-    interrupt_regs_ = fbl::Array(new (&ac) ddk_mock::MockMmioReg[kGpioRegSize], kGpioRegSize);
+    interrupt_regs_ =
+        fbl::Array(new (&ac) ddk_mock::MockMmioReg[kInterruptRegSize], kInterruptRegSize);
     if (!ac.check()) {
       zxlogf(ERROR, "AmlAxgGpioTest::SetUp: interrupt_regs_ alloc failed");
       return;
     }
-    mock_mmio_interrupt_ = new (&ac)
-        ddk_mock::MockMmioRegRegion(interrupt_regs_.get(), sizeof(uint32_t), kGpioRegSize);
+    mock_mmio_interrupt_ = new (&ac) ddk_mock::MockMmioRegRegion(
+        interrupt_regs_.get(), sizeof(uint32_t), kInterruptRegSize, kInterruptRegOffset);
     if (!ac.check()) {
       zxlogf(ERROR, "AmlAxgGpioTest::SetUp: mock_mmio_interrupt_ alloc failed");
       return;
@@ -191,13 +194,14 @@ class S905d2AmlAxgGpioTest : public zxtest::Test {
       zxlogf(ERROR, "AmlAxgGpioTest::SetUp: mock_mmio_gpio_a0_ alloc failed");
       return;
     }
-    interrupt_regs_ = fbl::Array(new (&ac) ddk_mock::MockMmioReg[kGpioRegSize], kGpioRegSize);
+    interrupt_regs_ =
+        fbl::Array(new (&ac) ddk_mock::MockMmioReg[kInterruptRegSize], kInterruptRegSize);
     if (!ac.check()) {
       zxlogf(ERROR, "AmlAxgGpioTest::SetUp: interrupt_regs_ alloc failed");
       return;
     }
-    mock_mmio_interrupt_ = new (&ac)
-        ddk_mock::MockMmioRegRegion(interrupt_regs_.get(), sizeof(uint32_t), kGpioRegSize);
+    mock_mmio_interrupt_ = new (&ac) ddk_mock::MockMmioRegRegion(
+        interrupt_regs_.get(), sizeof(uint32_t), kInterruptRegSize, kInterruptRegOffset);
     if (!ac.check()) {
       zxlogf(ERROR, "AmlAxgGpioTest::SetUp: mock_mmio_interrupt_ alloc failed");
       return;
