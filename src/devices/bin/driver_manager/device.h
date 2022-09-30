@@ -103,22 +103,33 @@ class Device final
   using DriverHostListTag = internal::DeviceDriverHostListTag;
   using AllDevicesListTag = internal::DeviceAllDevicesListTag;
 
-  void AddDevice(AddDeviceRequestView request, AddDeviceCompleter::Sync& _completer) override;
-  void ScheduleRemove(ScheduleRemoveRequestView request,
-                      ScheduleRemoveCompleter::Sync& _completer) override;
-  void AddCompositeDevice(AddCompositeDeviceRequestView request,
-                          AddCompositeDeviceCompleter::Sync& _completer) override;
-  void AddDeviceGroup(AddDeviceGroupRequestView request,
-                      AddDeviceGroupCompleter::Sync& _completer) override;
-  void BindDevice(BindDeviceRequestView request, BindDeviceCompleter::Sync& _completer) override;
-  void GetTopologicalPath(GetTopologicalPathCompleter::Sync& _completer) override;
-  void LoadFirmware(LoadFirmwareRequestView request,
-                    LoadFirmwareCompleter::Sync& _completer) override;
-  void GetMetadata(GetMetadataRequestView request, GetMetadataCompleter::Sync& _completer) override;
-  void GetMetadataSize(GetMetadataSizeRequestView request,
-                       GetMetadataSizeCompleter::Sync& _completer) override;
-  void AddMetadata(AddMetadataRequestView request, AddMetadataCompleter::Sync& _completer) override;
-  void ScheduleUnbindChildren(ScheduleUnbindChildrenCompleter::Sync& _completer) override;
+  Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::String args,
+         fbl::RefPtr<Device> parent, uint32_t protocol_id, zx::vmo inspect,
+         zx::channel client_remote, fidl::ClientEnd<fio::Directory> outgoing_dir);
+  ~Device() override;
+
+  // Create a new device with the given parameters.  This sets up its
+  // relationship with its parent and driver_host and adds its RPC channel to the
+  // coordinator's async loop.  This does not add the device to the
+  // coordinator's devices_ list, or trigger publishing
+  static zx_status_t Create(
+      Coordinator* coordinator, const fbl::RefPtr<Device>& parent, fbl::String name,
+      fbl::String driver_path, fbl::String args, uint32_t protocol_id,
+      fbl::Array<zx_device_prop_t> props, fbl::Array<StrProperty> str_props,
+      fidl::ServerEnd<fuchsia_device_manager::Coordinator> coordinator_request,
+      fidl::ClientEnd<fuchsia_device_manager::DeviceController> device_controller,
+      bool want_init_task, bool skip_autobind, zx::vmo inspect, zx::channel client_remote,
+      fidl::ClientEnd<fio::Directory> outgoing_dir, fbl::RefPtr<Device>* device);
+
+  // Create a new composite device.
+  static zx_status_t CreateComposite(
+      Coordinator* coordinator, fbl::RefPtr<DriverHost> driver_host,
+      const CompositeDevice& composite,
+      fidl::ServerEnd<fuchsia_device_manager::Coordinator> coordinator_request,
+      fidl::ClientEnd<fuchsia_device_manager::DeviceController> device_controller,
+      fbl::RefPtr<Device>* device);
+  zx_status_t CreateProxy();
+  zx_status_t CreateNewProxy(fbl::RefPtr<Device>* new_proxy_out);
 
   // This iterator provides access to a list of devices that does not provide
   // mechanisms for mutating that list.  With this, a user can get mutable
@@ -281,32 +292,6 @@ class Device final
    private:
     DeviceType* device_;
   };
-
-  Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::String args,
-         fbl::RefPtr<Device> parent, uint32_t protocol_id, zx::vmo inspect,
-         zx::channel client_remote, fidl::ClientEnd<fio::Directory> outgoing_dir);
-  ~Device() override;
-
-  // Create a new device with the given parameters.  This sets up its
-  // relationship with its parent and driver_host and adds its RPC channel to the
-  // coordinator's async loop.  This does not add the device to the
-  // coordinator's devices_ list, or trigger publishing
-  static zx_status_t Create(
-      Coordinator* coordinator, const fbl::RefPtr<Device>& parent, fbl::String name,
-      fbl::String driver_path, fbl::String args, uint32_t protocol_id,
-      fbl::Array<zx_device_prop_t> props, fbl::Array<StrProperty> str_props,
-      fidl::ServerEnd<fuchsia_device_manager::Coordinator> coordinator_request,
-      fidl::ClientEnd<fuchsia_device_manager::DeviceController> device_controller,
-      bool want_init_task, bool skip_autobind, zx::vmo inspect, zx::channel client_remote,
-      fidl::ClientEnd<fio::Directory> outgoing_dir, fbl::RefPtr<Device>* device);
-  static zx_status_t CreateComposite(
-      Coordinator* coordinator, fbl::RefPtr<DriverHost> driver_host,
-      const CompositeDevice& composite,
-      fidl::ServerEnd<fuchsia_device_manager::Coordinator> coordinator_request,
-      fidl::ClientEnd<fuchsia_device_manager::DeviceController> device_controller,
-      fbl::RefPtr<Device>* device);
-  zx_status_t CreateProxy();
-  zx_status_t CreateNewProxy(fbl::RefPtr<Device>* new_proxy_out);
 
   static void Bind(fbl::RefPtr<Device> dev, async_dispatcher_t*,
                    fidl::ServerEnd<fuchsia_device_manager::Coordinator>);
@@ -578,6 +563,24 @@ class Device final
   void UnpublishDevfs();
 
  private:
+  // fuchsia_device_manager::Coordinator methods.
+  void AddDevice(AddDeviceRequestView request, AddDeviceCompleter::Sync& _completer) override;
+  void ScheduleRemove(ScheduleRemoveRequestView request,
+                      ScheduleRemoveCompleter::Sync& _completer) override;
+  void AddCompositeDevice(AddCompositeDeviceRequestView request,
+                          AddCompositeDeviceCompleter::Sync& _completer) override;
+  void AddDeviceGroup(AddDeviceGroupRequestView request,
+                      AddDeviceGroupCompleter::Sync& _completer) override;
+  void BindDevice(BindDeviceRequestView request, BindDeviceCompleter::Sync& _completer) override;
+  void GetTopologicalPath(GetTopologicalPathCompleter::Sync& _completer) override;
+  void LoadFirmware(LoadFirmwareRequestView request,
+                    LoadFirmwareCompleter::Sync& _completer) override;
+  void GetMetadata(GetMetadataRequestView request, GetMetadataCompleter::Sync& _completer) override;
+  void GetMetadataSize(GetMetadataSizeRequestView request,
+                       GetMetadataSizeCompleter::Sync& _completer) override;
+  void AddMetadata(AddMetadataRequestView request, AddMetadataCompleter::Sync& _completer) override;
+  void ScheduleUnbindChildren(ScheduleUnbindChildrenCompleter::Sync& _completer) override;
+
   // dfv2::NodeManager
   void Bind(dfv2::Node& node, std::shared_ptr<dfv2::BindResultTracker> result_tracker) override {}
 
