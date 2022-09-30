@@ -108,6 +108,10 @@
         },
         {
             protocol: "fuchsia.tracing.provider.Registry",
+            protocol: [
+                "fuchsia.tracing.controller.Controller",
+                "fuchsia.tracing.provider.Registry",
+            ],
             from: "#trace_manager",
             to: "#test_manager",
             source_availability: "unknown",
@@ -184,8 +188,10 @@
         },
         {
             protocol: [
+                "fuchsia.session.scene.Manager",
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.composition.Screenshot",
                 "fuchsia.ui.scenic.Scenic",
             ],
             from: "#ui",

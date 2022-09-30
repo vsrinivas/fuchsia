@@ -1,0 +1,99 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// Definition for the system-validation test realm. This is the root of system validation tests
+// To use add to your test component's .cml file:
+//
+// facets: {
+//     "fuchsia.test": { type: "system-validation" },
+// },
+{
+    collections: [
+        {
+            name: "system-validation-tests",
+            environment: "#legacy-test-env",
+            durability: "transient",
+        },
+    ],
+    offer: [
+        {
+            // These are hermetic protocols offered to be used by tests.
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.media.Audio",
+                "fuchsia.media.AudioDeviceEnumerator",
+                "fuchsia.media.ProfileProvider",
+                "fuchsia.mediacodec.CodecFactory",
+                "fuchsia.process.Launcher",
+                "fuchsia.session.scene.Manager",
+                "fuchsia.sys2.EventSource",
+                "fuchsia.sysinfo.SysInfo",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.controller.Controller",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: "#system-validation-tests",
+        },
+        {
+            // These are non-hermetic protocols offered to be used by tests.
+            protocol: [
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.composition.Screenshot",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: "#system-validation-tests",
+        },
+
+        // Test realms may offer subdirectories of config-data to test
+        // components. See:
+        // https://fuchsia.dev/fuchsia-src/development/components/data#product-specific_configuration_with_config_data
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#system-validation-tests",
+        },
+
+        // NOTE:: spinning_square uses this capability, however if offered it'll switch to create views that
+        // directly runs on the display controller. For system validation testing, we want to run the app
+        // using views created by scenic.
+        // https://cs.opensource.google/fuchsia/fuchsia/+/main:src/lib/ui/carnelian/src/app/strategies/base.rs;l=133
+        //
+        // TODO: Find a better way to force carnelian apps to use scenic.
+        // {
+        //     directory: "dev-display-controller",
+        //     from: "parent",
+        //     to: "#system-validation-tests",
+        //     rights: [ "r*" ],
+        // },
+        {
+            directory: [
+                "dev-goldfish-address-space",
+                "dev-goldfish-control",
+                "dev-goldfish-pipe",
+                "dev-goldfish-sync",
+                "dev-gpu",
+                "dev-input-report",
+                "dev-mediacodec",
+            ],
+            from: "parent",
+            to: "#system-validation-tests",
+            rights: [ "rw*" ],
+        },
+        {
+            storage: [
+                "cache",
+                "custom_artifacts",
+                "data",
+                "tmp",
+            ],
+            from: "self",
+            to: "#system-validation-tests",
+        },
+    ],
+}

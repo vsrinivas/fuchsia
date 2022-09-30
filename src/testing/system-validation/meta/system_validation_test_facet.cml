@@ -1,0 +1,13 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    // https://cs.opensource.google/fuchsia/fuchsia/+/main:src/sys/test_manager/meta/system_validation_test_realm.shard.cml
+    // The system-validation facet offers up all the capabilities needed to run a system validation test. And should be seen
+    // as the root of system_validation test components.
+    //
+    // This facet is registered to the test_manager see: //src/sys/test_manager/src/constants.rs
+    facets: {
+        "fuchsia.test": { type: "system-validation" },
+    },
+}

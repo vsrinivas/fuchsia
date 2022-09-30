@@ -11,6 +11,7 @@
         "//src/sys/component_manager/tests/capability_provider_vfs_compliance/vfs_compliance_test_realm.shard.cml",
         "//src/sys/test_manager/meta/chromium_test_realm.shard.cml",
         "//src/sys/test_manager/meta/google_test_realm.shard.cml",
+        "//src/testing/system-validation/meta/system_validation_test_realm.shard.cml",
         "inspect/client.shard.cml",
         "sys/component/realm_builder.shard.cml",
         "syslog/client.shard.cml",

@@ -1,0 +1,80 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+# Create a test wrapper that connects to ViewProvider implemented by example apps
+rustc_binary("bin") {
+  name = "ui_app_controller"
+  testonly = true
+  edition = "2018"
+  source_root = "src/ui_app_controller.rs"
+  sources = [
+    "src/screencapture.rs",
+    "src/single_session_trace.rs",
+    "src/ui_app_controller.rs",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.session.scene:fuchsia.session.scene_rust",
+    "//sdk/fidl/fuchsia.tracing.controller:fuchsia.tracing.controller_rust",
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_rust",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_rust",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/mapped-vmo",
+    "//src/lib/ui/fuchsia-scenic",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/performance/trace2json:bin",  # trace2json is a tool that'll be
+                                         # available in "/pkg/bin/trace2json"
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:png",
+    "//third_party/rust_crates:tracing",
+  ]
+}
+
+fuchsia_component("flatland_view_provider_system_validation_component") {
+  testonly = true
+  component_name = "flatland_view_provider_system_validation"
+  manifest = "tests/meta/flatland_view_provider_system_validation.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_component("simplest_sysmem_system_validation_component") {
+  testonly = true
+  component_name = "simplest_sysmem_system_validation"
+  manifest = "tests/meta/simplest_sysmem_system_validation.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_component("spinning_square_system_validation_component") {
+  testonly = true
+  component_name = "spinning_square_system_validation"
+  manifest = "tests/meta/spinning_square_system_validation.cml"
+  deps = [ ":bin" ]
+}
+
+# To run tests:
+# fx test simplest_sysmem_system_validation
+# fx test spinning_square_system_validation
+# fx test flatland_view_provider_system_validation --ffx-output-directory /path/to/output/dir
+fuchsia_test_package("system_validation_test_pkg") {
+  package_name = "system_validation"
+  test_components = [
+    ":simplest_sysmem_system_validation_component",
+    ":flatland_view_provider_system_validation_component",
+    ":spinning_square_system_validation_component",
+  ]
+  deps = [
+    "//src/lib/ui/carnelian:spinning-square-rs_v2",
+
+    # TODO: use the copy in //src/ui/benchmark once https://fxrev.dev/728308 is submitted.
+    "//src/ui/examples/flatland-view-provider:flatland-view-provider",
+    "//src/ui/examples/simplest_sysmem:simplest_sysmem_component",
+  ]
+}

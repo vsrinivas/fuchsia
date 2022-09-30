@@ -1,0 +1,15 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// Declares that test component uses `custom_artifacts`.
+// https://fuchsia.dev/fuchsia-src/reference/platform-spec/testing/test-output-format?hl=en#artifacts
+{
+    use: [
+        {
+            storage: "custom_artifacts",
+            rights: [ "rw*" ],
+            path: "/custom_artifacts",
+        },
+    ],
+}

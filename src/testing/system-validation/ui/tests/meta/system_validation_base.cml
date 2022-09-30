@@ -1,0 +1,37 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This is the shared manifest to creating a system validation test component.
+{
+    include: [
+        "//src/testing/system-validation/meta/system_validation_test_facet.cml",
+        "//src/testing/system-validation/meta/use_custom_artifact.cml",
+        "sys/testing/elf_test_runner.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/ui_app_controller",
+    },
+
+    // Defines API used by bin/ui_app_controller
+    // Note: All UI example apps manifests must also include
+    // use: [
+    // ...
+    //     {
+    //         protocol: [ "fuchsia.ui.app.ViewProvider" ],
+    //         from: "#sample-app", // where "sample-app" is the name given the child component
+    //     },
+    // ]
+    use: [
+        {
+            protocol: [
+                "fuchsia.process.Launcher",
+                "fuchsia.session.scene.Manager",
+                "fuchsia.tracing.controller.Controller",
+                "fuchsia.ui.composition.Screenshot",
+            ],
+            from: "parent",
+        },
+    ],
+}

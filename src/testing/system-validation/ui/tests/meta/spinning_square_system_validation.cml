@@ -1,0 +1,52 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "//src/testing/system-validation/ui/tests/meta/system_validation_base.cml" ],
+    children: [
+        {
+            name: "sample-app",
+            url: "#meta/spinning-square-rs.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.ui.app.ViewProvider" ],
+            from: "#sample-app",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.policy.Presenter",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: [ "#sample-app" ],
+        },
+
+        // extras from src/lib/ui/carnelian/meta/example.shard.cml
+        {
+            storage: "cache",
+            from: "parent",
+            to: [ "#sample-app" ],
+        },
+        {
+            directory: [
+                "dev-display-controller",
+                "dev-input",
+                "dev-input-report",
+            ],
+            from: "parent",
+            to: [ "#sample-app" ],
+            rights: [ "r*" ],
+        },
+    ],
+}

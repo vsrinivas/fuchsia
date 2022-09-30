@@ -705,6 +705,7 @@
                     "/core/test_manager/google-tests:**",
                     "/core/test_manager/starnix-tests:**",
                     "/core/test_manager/system-tests:**",
+                    "/core/test_manager/system-validation-tests:**",
                     "/core/timekeeper",
                     "/core/trace_manager/cpuperf_provider",
                     "/core/ui/input_pipeline",

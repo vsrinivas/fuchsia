@@ -1,0 +1,46 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "//src/testing/system-validation/ui/tests/meta/system_validation_base.cml" ],
+    program: {
+        // Args for ui_app_controller
+        args: [
+            "--trace-config",
+            "input",
+            "--trace-config",
+            "gfx",
+            "--trace-config",
+            "magma",
+            "--trace-config",
+            "system_metrics",
+            "--trace-config",
+            "system_metrics_logger",
+        ],
+    },
+    children: [
+        {
+            name: "sample-app",
+            url: "#meta/flatland-view-provider.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.ui.app.ViewProvider" ],
+            from: "#sample-app",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+            ],
+            from: "parent",
+            to: [ "#sample-app" ],
+        },
+    ],
+}

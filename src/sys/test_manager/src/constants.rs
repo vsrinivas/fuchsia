@@ -21,6 +21,7 @@ pub const MEDIA_TESTS_COLLECTION: &'static str = "media-tests";
 pub const GOOGLE_TESTS_COLLECTION: &'static str = "google-tests";
 pub const DEVICES_TESTS_COLLECTION: &'static str = "devices-tests";
 pub const VFS_COMPLIANCE_COLLECTION: &'static str = "vfs-compliance-tests";
+pub const SYSTEM_VALIDATION_COLLECTION: &'static str = "system-validation-tests";
 
 lazy_static! {
     pub static ref TEST_TYPE_REALM_MAP: HashMap<&'static str, &'static str> = [
@@ -36,6 +37,7 @@ lazy_static! {
         ("google", GOOGLE_TESTS_COLLECTION),
         ("starnix", STARNIX_TESTS_COLLECTION),
         ("vfs-compliance", VFS_COMPLIANCE_COLLECTION),
+        ("system-validation", SYSTEM_VALIDATION_COLLECTION),
     ]
     .iter()
     .copied()
