@@ -85,10 +85,30 @@ async fn verify_audio_requests(
     }
     for request in expected_requests.iter() {
         if !received_requests.contains(request) {
-            return Err(format_err!("Request {:?} not found", request));
+            return Err(format_err!("Request {:?} not found in {:?}", request, received_requests));
         }
     }
     Ok(())
+}
+
+/// Waits for the set of initial audio requests to be processed and clears them out of the receiver
+/// queue.
+async fn wait_for_initial_audio_requests(
+    audio_core_request_receiver: &mut Receiver<AudioCoreRequest>,
+    audio_renderer_usages: &[AudioRenderUsage],
+) -> Result<(), anyhow::Error> {
+    let expected_requests = audio_renderer_usages
+        .iter()
+        .map(|&usage| {
+            [
+                AudioCoreRequest::SetVolume(usage, DEFAULT_VOLUME_LEVEL),
+                AudioCoreRequest::SetMute(usage, DEFAULT_VOLUME_MUTED),
+            ]
+        })
+        .flatten()
+        .collect();
+
+    verify_audio_requests(audio_core_request_receiver, expected_requests).await
 }
 
 // Verifies that basic get and set functionality works.
@@ -406,21 +426,43 @@ async fn test_volume_rounding() {
 } ; "missing source")]
 #[fuchsia::test]
 async fn invalid_missing_input_tests(setting: AudioStreamSettings) {
+    let usages = vec![AudioRenderUsage::Media];
     let audio_test = AudioTest::create();
 
-    // We don't care about verifying calls to audio core for this test, don't request any events
-    // from the audio core mock.
-    let (audio_request_sender, _) = futures::channel::mpsc::channel::<AudioCoreRequest>(0);
-    let instance =
-        audio_test.create_realm(audio_request_sender, vec![]).await.expect("setting up test realm");
+    let (audio_request_sender, mut audio_request_receiver) =
+        futures::channel::mpsc::channel::<AudioCoreRequest>(0);
+    let instance = audio_test
+        .create_realm(audio_request_sender, usages.clone())
+        .await
+        .expect("setting up test realm");
 
     let audio_proxy = AudioTest::connect_to_audio_marker(&instance);
+
+    // Verify that audio core receives the initial volume settings on start.
+    wait_for_initial_audio_requests(&mut audio_request_receiver, &usages)
+        .await
+        .expect("initial audio requests received");
 
     let result = audio_proxy
         .set(AudioSettings { streams: Some(vec![setting]), ..AudioSettings::EMPTY })
         .await
         .expect("set completed");
     assert_eq!(result, Err(Error::Failed));
+
+    // The best way to test that audio core *didn't* receive an event is to
+    // trigger another request and verify that it shows up next.
+    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS]).await;
+
+    // Verify that audio core received the changed audio settings.
+    verify_audio_requests(
+        &mut audio_request_receiver,
+        vec![
+            AudioCoreRequest::SetVolume(AudioRenderUsage::Media, CHANGED_VOLUME_LEVEL),
+            AudioCoreRequest::SetMute(AudioRenderUsage::Media, CHANGED_VOLUME_MUTED),
+        ],
+    )
+    .await
+    .expect("changed audio requests received");
 }
 
 // Verifies that the input to Set calls can be missing certain parts and still be valid.
@@ -433,7 +475,8 @@ async fn invalid_missing_input_tests(setting: AudioStreamSettings) {
         ..Volume::EMPTY
     }),
     ..AudioStreamSettings::EMPTY
-} ; "missing user volume")]
+},  AudioCoreRequest::SetMute(AudioRenderUsage::Media, CHANGED_VOLUME_MUTED)
+; "missing user volume")]
 #[test_case(AudioStreamSettings {
     stream: Some(AudioRenderUsage::Media),
     source: Some(AudioStreamSettingSource::User),
@@ -443,22 +486,40 @@ async fn invalid_missing_input_tests(setting: AudioStreamSettings) {
         ..Volume::EMPTY
     }),
     ..AudioStreamSettings::EMPTY
-} ; "missing muted")]
+}, AudioCoreRequest::SetVolume(AudioRenderUsage::Media, CHANGED_VOLUME_LEVEL)
+; "missing muted")]
 #[fuchsia::test]
-async fn valid_missing_input_tests(setting: AudioStreamSettings) {
+async fn valid_missing_input_tests(
+    setting: AudioStreamSettings,
+    expected_request: AudioCoreRequest,
+) {
+    let usages = vec![AudioRenderUsage::Media];
+
     let audio_test = AudioTest::create();
 
-    // We don't care about verifying calls to audio core for this test, don't request any events
-    // from the audio core mock.
-    let (audio_request_sender, _) = futures::channel::mpsc::channel::<AudioCoreRequest>(0);
-    let instance =
-        audio_test.create_realm(audio_request_sender, vec![]).await.expect("setting up test realm");
+    let (audio_request_sender, mut audio_request_receiver) =
+        futures::channel::mpsc::channel::<AudioCoreRequest>(0);
+    let instance = audio_test
+        .create_realm(audio_request_sender, usages.clone())
+        .await
+        .expect("setting up test realm");
 
     let audio_proxy = AudioTest::connect_to_audio_marker(&instance);
+
+    // Verify that audio core receives the initial volume settings on start.
+    wait_for_initial_audio_requests(&mut audio_request_receiver, &usages)
+        .await
+        .expect("initial audio requests received");
 
     let result = audio_proxy
         .set(AudioSettings { streams: Some(vec![setting]), ..AudioSettings::EMPTY })
         .await
         .expect("set completed");
+
+    // Verify that the valid request comes through.
+    verify_audio_requests(&mut audio_request_receiver, vec![expected_request])
+        .await
+        .expect("changed audio requests received");
+
     assert_eq!(result, Ok(()));
 }
