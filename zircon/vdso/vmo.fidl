@@ -695,16 +695,17 @@ protocol vmo {
     /// For information on VMO syscall interactions with children, see [Notes](#notes).
     ///
     /// - **ZX_VMO_CHILD_SLICE** - Create a slice that has direct read/write access into
-    /// a section of the parent. All operations on the slice vmo behave as if they were
-    /// done on the parent. A slice differs from a duplicate handle to the parent by allowing
-    /// access to only a subrange of the parent vmo, and allowing for the
-    /// **ZX_VMO_ZERO_CHILDREN** signal to be used. This flag may be used with vmos created with
-    /// [`zx_vmo_create_physical()`] or [`zx_vmo_create_contiguous()`] and their descendants.
+    /// a section of the parent. All operations on the slice VMO behave as if they were done on the parent.
+    /// A slice differs from a duplicate handle to the parent by allowing access to only a subrange of the
+    /// parent VMO, and allowing for the **ZX_VMO_ZERO_CHILDREN** signal to be used. This flag may be used
+    /// with VMOs created with [`zx_vmo_create_physical()`] or [`zx_vmo_create_contiguous()`] and their
+    /// descendants. This flag may not be used with VMOs created with the **ZX_VMO_RESIZABLE** option.
     ///
     /// In addition, *options* can contain zero or more of the following flags to
     /// further specify the child's behavior:
     ///
-    /// - **ZX_VMO_CHILD_RESIZABLE** - Create a resizable child VMO.
+    /// - **ZX_VMO_CHILD_RESIZABLE** - Create a resizable child VMO. This is incompatible with
+    ///                                **ZX_VMO_CHILD_SLICE**.
     ///
     /// - **ZX_VMO_CHILD_NO_WRITE** - Create a child that cannot be written to. This is incompatible with
     ///                               **ZX_VMO_CHILD_RESIZABLE**.
@@ -745,7 +746,7 @@ protocol vmo {
     /// - The COMMIT mode of [`zx_vmo_op_range()`] on a child will commit pages into the child that
     ///   have the same content as its parent's corresponding pages. If those pages are supplied by a
     ///   pager, this operation will also commit those pages in the parent. Otherwise, if those pages
-    ///   are not comitted in the parent, zero-filled pages will be comitted directly into
+    ///   are not committed in the parent, zero-filled pages will be committed directly into
     ///   child, without affecting the parent.
     /// - The DECOMMIT mode of [`zx_vmo_op_range()`] is not supported.
     ///
@@ -776,7 +777,8 @@ protocol vmo {
     /// **ZX_ERR_BAD_STATE**  A COW child could not be created because the vmo has some
     /// pinned pages.
     ///
-    /// **ZX_ERR_NOT_SUPPORTED**  Input handle is a discardable VMO.
+    /// **ZX_ERR_NOT_SUPPORTED**  Input handle is a discardable VMO, or input handle is
+    /// a resizable VMO and *options* contains **ZX_VMO_CHILD_SLICE**.
     ///
     /// ## See also
     ///

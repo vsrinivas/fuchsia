@@ -13,7 +13,7 @@ Read data from a fifo.
 zx_status_t zx_fifo_read(zx_handle_t handle,
                          size_t elem_size,
                          void* data,
-                         size_t data_size,
+                         size_t count,
                          size_t* actual_count);
 ```
 

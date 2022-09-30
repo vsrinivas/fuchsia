@@ -143,7 +143,6 @@ to reboot.
 
 ## Errors
 
-
 Returns **ZX_ERR_INVALID_ARGS** when an unrecognized `cmd` value is supplied.
 
 ## See also
