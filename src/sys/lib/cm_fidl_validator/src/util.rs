@@ -267,14 +267,13 @@ mod tests {
 
     const PATH_REGEX_STR: &str = r"(/[^/]+)+";
     const NAME_REGEX_STR: &str = r"[0-9a-zA-Z_][0-9a-zA-Z_\-\.]*";
-    const URL_REGEX_STR: &str = r"((([a-z][0-9a-z\+\-\.]*://[0-9a-z\+\-\._!$&,;]*/)?[0-9a-z\+\-\._/=!@$%&,;]+)?#[0-9a-z\+\-\._/?=!@$%&,;:]+)";
+    const URL_REGEX_STR: &str = r"((([a-z][0-9a-z\+\-\.]*://[0-9a-z\+\-\._!$&,;]*/)?[0-9a-z\+\-\._/=!@$&,;]+)?#[0-9a-z\+\-\._/?=!@$&,;:]+)";
 
     lazy_static! {
         static ref PATH_REGEX: Regex =
             Regex::new(&("^".to_string() + PATH_REGEX_STR + "$")).unwrap();
         static ref NAME_REGEX: Regex =
             Regex::new(&("^".to_string() + NAME_REGEX_STR + "$")).unwrap();
-        static ref URL_REGEX: Regex = Regex::new(&("^".to_string() + URL_REGEX_STR + "$")).unwrap();
         static ref A_BASE_URL: Url = Url::parse("relative:///").unwrap();
     }
 
