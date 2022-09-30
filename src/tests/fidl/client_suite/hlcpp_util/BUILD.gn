@@ -1,0 +1,12 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("hlcpp_util") {
+  sources = [ "error_util.h" ]
+  public_deps = [
+    "//sdk/lib/fidl",
+    "//src/lib/fidl/cpp",
+    "//src/tests/fidl/client_suite/fidl:fidl.clientsuite",
+  ]
+}

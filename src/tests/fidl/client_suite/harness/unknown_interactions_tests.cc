@@ -826,24 +826,6 @@ CLIENT_TEST(UnknownFlexibleServerInitiatedTwoWay) {
 
   ASSERT_EQ(1u, reporter->NumReceivedEvents());
   auto event = reporter->TakeNextEvent();
-  std::cout << "UnknownFlexibleServerInitiatedTwoWay Reported Event: ";
-  switch (event.Which()) {
-    case fidl_clientsuite::OpenTargetEventReport::Tag::kFlexibleEvent:
-      std::cout << "FlexibleEvent" << std::endl;
-      break;
-    case fidl_clientsuite::OpenTargetEventReport::Tag::kStrictEvent:
-      std::cout << "StrictEvent" << std::endl;
-      break;
-    case fidl_clientsuite::OpenTargetEventReport::Tag::kUnknownEvent:
-      std::cout << "UnknownEvent " << event.unknown_event().value().ordinal() << std::endl;
-      break;
-    case fidl_clientsuite::OpenTargetEventReport::Tag::kFidlError:
-      std::cout << "FidlError " << static_cast<int>(event.fidl_error().value()) << std::endl;
-      break;
-    case fidl_clientsuite::OpenTargetEventReport::Tag::kUnknown:
-      std::cout << "Unknown union variant" << std::endl;
-      break;
-  }
   ASSERT_TRUE(event.fidl_error().has_value());
   ASSERT_EQ(fidl_clientsuite::FidlErrorKind::kUnexpectedMessage, event.fidl_error().value());
 
