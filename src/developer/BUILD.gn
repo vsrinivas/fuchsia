@@ -20,6 +20,7 @@ group("tests") {
   testonly = true
 
   deps = [
+    "adb:tests",
     "build_info:tests",
     "debug:tests",
     "ffx:tests",
