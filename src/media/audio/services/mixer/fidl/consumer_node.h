@@ -46,6 +46,7 @@ class ConsumerNode : public Node {
   void Stop(ConsumerStage::StopCommand cmd) const;
 
   // Implements `Node`.
+  bool is_consumer() const final { return true; }
   zx::duration GetSelfPresentationDelayForSource(const Node* source) const final;
 
  private:

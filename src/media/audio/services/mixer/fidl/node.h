@@ -118,7 +118,8 @@ class Node {
   //
   // Returns an error if the edge is not allowed.
   static fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> CreateEdge(
-      GlobalTaskQueue& global_queue, NodePtr source, NodePtr dest);
+      GlobalTaskQueue& global_queue, GraphDetachedThreadPtr detached_thread, NodePtr source,
+      NodePtr dest);
 
   // Deletes the edge from `source` -> `dest`. This is the inverse of `CreateEdge`.
   //
@@ -175,8 +176,18 @@ class Node {
   // REQUIRED: !is_meta()
   [[nodiscard]] std::shared_ptr<GraphThread> thread() const;
 
-  // Kind of pipeline this node participates in.
+  // Set the Thread which controls our PipelineStage. Caller is responsible for asynchronously
+  // updating `PipelineStage::thread()` as described in ../docs/execution_model.md.
+  // REQUIRED: !is_meta()
+  void set_thread(std::shared_ptr<GraphThread> t);
+
+  // Reports the kind of pipeline this node participates in.
   [[nodiscard]] PipelineDirection pipeline_direction() const { return pipeline_direction_; }
+
+  // Reports whether this node is a consumer, making it special in two ways: it never has any
+  // outgoing edges, and it runs on a fixed thread (meaning `thread()` never changes).
+  // REQUIRED: !is_meta()
+  [[nodiscard]] virtual bool is_consumer() const = 0;
 
   // Returns total "self" presentation delay contribution for this node if reached through `source`.
   // This typically consists of the internal processing delay contribution of this node with respect
@@ -196,12 +207,6 @@ class Node {
 
   Node(Node&&) = delete;
   Node& operator=(Node&&) = delete;
-
-  // Set the Thread which controls our PipelineStage. Caller is responsible for asynchronously
-  // updating `PipelineStage::thread()` as described in ../docs/execution_model.md.
-  //
-  // REQUIRED: !is_meta()
-  void set_thread(std::shared_ptr<GraphThread> t);
 
   //
   // The following methods are implementation details of CreateEdge.

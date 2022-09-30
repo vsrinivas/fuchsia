@@ -6,11 +6,14 @@
 
 #include <set>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "src/media/audio/services/mixer/fidl/testing/fake_graph.h"
 
 namespace media_audio {
+
+using ::testing::UnorderedElementsAre;
 
 TEST(ReachabilityTest, ComputeDelayOrdinaryNodesOnly) {
   // Node graph is structured as follows:
@@ -361,6 +364,53 @@ TEST(ReachabilityTest, ExistsPathMetaAndOrdinaryNodes) {
           << "source=" << source << ", dest=" << dest;
     }
   }
+}
+
+TEST(ReachabilityTest, MoveNodeToThread) {
+  FakeGraph graph({
+      // This is the example from the comments at MoveNodeToThread in reachability.h
+      .meta_nodes =
+          {
+              {
+                  3,
+                  {.source_children = {2}, .dest_children = {4, 5, 6}},
+              },
+          },
+      .edges =
+          {
+              {1, 2},    // A -> C
+              {4, 7},    // P1 -> D
+              {5, 8},    // P2 -> E
+              {6, 9},    // P3 -> F
+              {9, 12},   // F -> N
+              {10, 11},  // H -> G
+              {11, 12},  // G -> N
+          },
+  });
+
+  graph.node(2)->SetIsConsumer(true);
+  auto old_thread = graph.detached_thread();
+  auto new_thread = graph.CreateThread(1);
+
+  EXPECT_THAT(MoveNodeToThread(*graph.node(12), new_thread, old_thread),
+              UnorderedElementsAre(graph.node(6)->pipeline_stage(),     // P3
+                                   graph.node(9)->pipeline_stage(),     // F
+                                   graph.node(10)->pipeline_stage(),    // H
+                                   graph.node(11)->pipeline_stage(),    // G
+                                   graph.node(12)->pipeline_stage()));  // N
+
+  EXPECT_EQ(graph.node(1)->thread(), old_thread);
+  EXPECT_EQ(graph.node(2)->thread(), old_thread);
+  EXPECT_EQ(graph.node(4)->thread(), old_thread);
+  EXPECT_EQ(graph.node(5)->thread(), old_thread);
+  EXPECT_EQ(graph.node(7)->thread(), old_thread);
+  EXPECT_EQ(graph.node(8)->thread(), old_thread);
+
+  EXPECT_EQ(graph.node(6)->thread(), new_thread);
+  EXPECT_EQ(graph.node(9)->thread(), new_thread);
+  EXPECT_EQ(graph.node(10)->thread(), new_thread);
+  EXPECT_EQ(graph.node(11)->thread(), new_thread);
+  EXPECT_EQ(graph.node(12)->thread(), new_thread);
 }
 
 }  // namespace media_audio

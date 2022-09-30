@@ -532,7 +532,7 @@ void GraphServer::CreateEdge(CreateEdgeRequestView request, CreateEdgeCompleter:
 
   auto& source = source_it->second;
   auto& dest = dest_it->second;
-  auto result = Node::CreateEdge(*global_task_queue_, source, dest);
+  auto result = Node::CreateEdge(*global_task_queue_, detached_thread_, source, dest);
   if (!result.is_ok()) {
     completer.ReplyError(result.error());
     return;

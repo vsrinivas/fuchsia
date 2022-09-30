@@ -93,7 +93,7 @@ TEST_F(ConsumerNodeTest, CreateEdgeSourceBadFormat) {
   auto& q = *graph.global_task_queue();
 
   // Cannot create an edge where a the source has a different format than the consumer.
-  auto result = Node::CreateEdge(q, graph.node(1), h.consumer_node);
+  auto result = Node::CreateEdge(q, graph.detached_thread(), graph.node(1), h.consumer_node);
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
 }
@@ -109,13 +109,13 @@ TEST_F(ConsumerNodeTest, CreateEdgeTooManySources) {
 
   // First edge is OK.
   {
-    auto result = Node::CreateEdge(q, graph.node(1), h.consumer_node);
+    auto result = Node::CreateEdge(q, graph.detached_thread(), graph.node(1), h.consumer_node);
     ASSERT_TRUE(result.is_ok());
   }
 
   // Cannot create a second incoming edge.
   {
-    auto result = Node::CreateEdge(q, graph.node(2), h.consumer_node);
+    auto result = Node::CreateEdge(q, graph.detached_thread(), graph.node(2), h.consumer_node);
     ASSERT_FALSE(result.is_ok());
     EXPECT_EQ(result.error(),
               fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
@@ -132,7 +132,7 @@ TEST_F(ConsumerNodeTest, CreateEdgeDestNotAllowed) {
   auto& q = *graph.global_task_queue();
 
   // Cannot use consumers as a source.
-  auto result = Node::CreateEdge(q, h.consumer_node, graph.node(1));
+  auto result = Node::CreateEdge(q, graph.detached_thread(), h.consumer_node, graph.node(1));
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(),
             fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
@@ -149,7 +149,7 @@ TEST_F(ConsumerNodeTest, CreateEdgeSuccess) {
   // Connect source -> consumer.
   auto source = graph.node(1);
   {
-    auto result = Node::CreateEdge(q, source, h.consumer_node);
+    auto result = Node::CreateEdge(q, graph.detached_thread(), source, h.consumer_node);
     ASSERT_TRUE(result.is_ok());
   }
 

@@ -199,4 +199,30 @@ bool ExistsPath(const Node& source, const Node& dest) {
   }
 }
 
+std::vector<PipelineStagePtr> MoveNodeToThread(Node& node, std::shared_ptr<GraphThread> new_thread,
+                                               std::shared_ptr<GraphThread> expected_thread) {
+  std::vector<PipelineStagePtr> out;
+  std::vector<Node*> stack = {&node};
+
+  while (!stack.empty()) {
+    auto node = stack.back();
+    stack.pop_back();
+
+    FX_CHECK(node->thread() == expected_thread)
+        << "Node " << node->name() << " expected on thread " << expected_thread->name()
+        << ", found on thread " << node->thread()->name();
+
+    node->set_thread(new_thread);
+    out.push_back(node->pipeline_stage());
+
+    ForEachUpstreamEdge(*node, [&stack](Node& source) {
+      if (!source.is_consumer()) {
+        stack.push_back(&source);
+      }
+    });
+  }
+
+  return out;
+}
+
 }  // namespace media_audio

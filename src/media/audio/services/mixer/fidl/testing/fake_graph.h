@@ -104,6 +104,10 @@ class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
   // The default value is true.
   void SetAllowsDest(bool b) { allows_dest_ = b; }
 
+  // Sets the return value if `is_consumer`.
+  // The default value is false.
+  void SetIsConsumer(bool b) { is_consumer_ = b; }
+
   // Allow anyone to set the thread.
   using Node::set_thread;
 
@@ -113,6 +117,7 @@ class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
   }
 
   // Implements `Node`.
+  bool is_consumer() const final { return is_consumer_; }
   zx::duration GetSelfPresentationDelayForSource(const Node* source) const final;
 
  protected:
@@ -143,6 +148,7 @@ class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
 
   std::optional<size_t> max_sources_ = std::nullopt;
   bool allows_dest_ = true;
+  bool is_consumer_ = false;
 };
 
 // This class makes it easy to create graphs of FakeNodes during tests. For example, the following

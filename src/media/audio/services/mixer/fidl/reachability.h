@@ -55,6 +55,42 @@ zx::duration ComputeUpstreamDelay(const Node& node);
 // ```
 bool ExistsPath(const Node& source, const Node& dest);
 
+// Moves `node` and its source tree to `thread`, where `node` is assumed to be currently attached to
+// `expected_thread`. A node's "source tree" is the set of upstream nodes n ∈ N such that there
+// exists a path from n to `node` that does not go through a consumer node.
+//
+// For example, in the following diagram:
+//
+// ```
+//        A
+//        |
+//        V
+//  +------------+
+//  |     C      |
+//  |  splitter  |
+//  | P1  P2  P3 |
+//  +------------+        H
+//    |   |   |           |
+//    V   V   V           V
+//    D   E   F           G
+//            |           |
+//            +-----+-----+
+//                  |
+//                  V
+//                  N
+// ```
+//
+// If C is a consumer node, then `MoveNodetoThread(N, new_thread, old_thread)` will move the
+// following nodes to new_thread: {N, F, G, P3, H}. This must be a tree: by construction, all
+// fan-out must happen below a consumer node, as in the splitter example above.
+//
+// Before a node is moved to `new_thread`, we check that the node is currently attached to
+// `expected_thread`. We will crash if this expectation is not satisfied.
+//
+// Returns the set of PipelineStages that must move to `new_thread->pipeline_thread()`.
+std::vector<PipelineStagePtr> MoveNodeToThread(Node& node, std::shared_ptr<GraphThread> new_thread,
+                                               std::shared_ptr<GraphThread> expected_thread);
+
 }  // namespace media_audio
 
 #endif  // SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_REACHABILITY_H_

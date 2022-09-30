@@ -67,7 +67,8 @@ Node::Node(std::string_view name, bool is_meta, UnreadableClock reference_clock,
 }
 
 fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdge(
-    GlobalTaskQueue& global_queue, NodePtr source, NodePtr dest) {
+    GlobalTaskQueue& global_queue, GraphDetachedThreadPtr detached_thread, NodePtr source,
+    NodePtr dest) {
   FX_CHECK(source);
   FX_CHECK(dest);
 
@@ -144,26 +145,31 @@ fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdge(
 
   // Since the source was not previously connected, it must be owned by the detached thread.
   // This means we can move source to dest's thread.
-  FX_CHECK(source->thread()->id() == GraphDetachedThread::kId);
-  source->set_thread(dest->thread());
+  auto stages_to_move =
+      MoveNodeToThread(*source, /*new_thread=*/dest->thread(), /*expected_thread=*/detached_thread);
 
   // TODO(fxbug.dev/87651): update topological order of consumer stages
 
-  // Save this now since we can't read Nodes from the mix threads.
-  const auto dest_stage_thread_id = dest->thread()->id();
-
   // Update the PipelineStages asynchronously, on dest's thread.
-  global_queue.Push(dest_stage_thread_id,
-                    [dest_stage = dest->pipeline_stage(),      //
-                     source_stage = source->pipeline_stage(),  //
-                     dest_stage_thread_id]() {
-                      FX_CHECK(dest_stage->thread()->id() == dest_stage_thread_id)
-                          << dest_stage->thread()->id() << " != " << dest_stage_thread_id;
-                      FX_CHECK(source_stage->thread()->id() == GraphDetachedThread::kId)
-                          << source_stage->thread()->id() << " != " << GraphDetachedThread::kId;
+  global_queue.Push(dest->thread()->id(),
+                    [dest_stage = dest->pipeline_stage(),             //
+                     source_stage = source->pipeline_stage(),         //
+                     stages_to_move = std::move(stages_to_move),      //
+                     new_thread = dest->thread()->pipeline_thread(),  //
+                     old_thread = detached_thread->pipeline_thread()]() {
+                      // Before we acquire a checker, verify the dest_stage has the expected thread.
+                      FX_CHECK(dest_stage->thread() == new_thread)
+                          << dest_stage->thread()->name() << " != " << new_thread->name();
 
                       ScopedThreadChecker checker(dest_stage->thread()->checker());
-                      source_stage->set_thread(dest_stage->thread());
+
+                      // Move all stages to `new_thread` before creating the source -> dest link.
+                      for (auto& stage : stages_to_move) {
+                        FX_CHECK(stage->thread() == old_thread)
+                            << stage->thread()->name() << " != " << old_thread->name();
+                        stage->set_thread(new_thread);
+                      }
+
                       // TODO(fxbug.dev/87651): Pass in `gain_ids`.
                       dest_stage->AddSource(source_stage, /*options=*/{});
                     });
@@ -235,27 +241,31 @@ fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
 
   // Since the source was previously connected to dest, it must be owned by the same thread as dest.
   // Since the source is now disconnected, it moves to the detached thread.
-  FX_CHECK(source->thread() == dest->thread());
-  source->set_thread(detached_thread);
+  auto stages_to_move =
+      MoveNodeToThread(*source, /*new_thread=*/detached_thread, /*expected_thread=*/dest->thread());
 
   // TODO(fxbug.dev/87651): update topological order of consumer stages
 
-  // Save this for the closure since we can't read Nodes from the mix threads.
-  const auto dest_stage_thread_id = dest->thread()->id();
-
   // The PipelineStages are updated asynchronously.
-  global_queue.Push(dest_stage_thread_id,
-                    [dest_stage = dest->pipeline_stage(),      //
-                     source_stage = source->pipeline_stage(),  //
-                     dest_stage_thread_id, detached_thread = detached_thread->pipeline_thread()]() {
-                      FX_CHECK(dest_stage->thread()->id() == dest_stage_thread_id)
-                          << dest_stage->thread()->id() << " != " << dest_stage_thread_id;
-                      FX_CHECK(source_stage->thread()->id() == dest_stage_thread_id)
-                          << source_stage->thread()->id() << " != " << dest_stage_thread_id;
+  global_queue.Push(dest->thread()->id(),
+                    [dest_stage = dest->pipeline_stage(),              //
+                     source_stage = source->pipeline_stage(),          //
+                     stages_to_move = std::move(stages_to_move),       //
+                     new_thread = detached_thread->pipeline_thread(),  //
+                     old_thread = dest->thread()->pipeline_thread()]() {
+                      // Before we acquire a checker, verify the dest_stage has the expected thread.
+                      FX_CHECK(dest_stage->thread() == old_thread)
+                          << dest_stage->thread()->name() << " != " << new_thread->name();
 
                       ScopedThreadChecker checker(dest_stage->thread()->checker());
-                      source_stage->set_thread(detached_thread);
                       dest_stage->RemoveSource(source_stage);
+
+                      // Move all disconnected stages to the detached thread.
+                      for (auto& stage : stages_to_move) {
+                        FX_CHECK(stage->thread() == old_thread)
+                            << stage->thread()->name() << " != " << old_thread->name();
+                        stage->set_thread(new_thread);
+                      }
                     });
 
   return fpromise::ok();

@@ -59,7 +59,7 @@ TEST_F(MetaProducerNodeTestStreamSink, CreateEdgeCannotAcceptSource) {
   });
 
   // Cannot create an edge where a Producer node is the destination.
-  auto result = Node::CreateEdge(*q, graph.node(1), producer);
+  auto result = Node::CreateEdge(*q, graph.detached_thread(), graph.node(1), producer);
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
 }
@@ -82,7 +82,7 @@ TEST_F(MetaProducerNodeTestStreamSink, CreateEdgeSuccess) {
   // Connect producer -> dest.
   auto dest = graph.node(1);
   {
-    auto result = Node::CreateEdge(*q, producer, dest);
+    auto result = Node::CreateEdge(*q, graph.detached_thread(), producer, dest);
     ASSERT_TRUE(result.is_ok());
   }
 
@@ -180,7 +180,7 @@ TEST(MetaProducerNodeTestRingBuffer, CreateEdgeSuccess) {
   // Connect producer -> dest.
   auto dest = graph.node(1);
   {
-    auto result = Node::CreateEdge(*q, producer, dest);
+    auto result = Node::CreateEdge(*q, graph.detached_thread(), producer, dest);
     ASSERT_TRUE(result.is_ok());
   }
 
