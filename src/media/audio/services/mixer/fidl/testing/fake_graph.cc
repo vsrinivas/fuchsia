@@ -33,7 +33,7 @@ FakeNode::FakeNode(FakeGraph& graph, NodeId id, bool is_meta, PipelineDirection 
            std::move(parent)),
       graph_(graph) {}
 
-zx::duration FakeNode::GetSelfPresentationDelayForSource(const NodePtr& source) const {
+zx::duration FakeNode::GetSelfPresentationDelayForSource(const Node* source) const {
   if (on_get_self_presentation_delay_for_source_) {
     return on_get_self_presentation_delay_for_source_(source);
   }
@@ -75,20 +75,6 @@ void FakeNode::DestroySelf() {
 bool FakeNode::CanAcceptSourceFormat(const Format& format) const {
   if (on_can_accept_source_format_) {
     return on_can_accept_source_format_(format);
-  }
-  return true;
-}
-
-std::optional<size_t> FakeNode::MaxSources() const {
-  if (on_max_sources_) {
-    return on_max_sources_();
-  }
-  return std::nullopt;
-}
-
-bool FakeNode::AllowsDest() const {
-  if (on_allows_dest_) {
-    return on_allows_dest_();
   }
   return true;
 }
@@ -177,8 +163,6 @@ FakeGraph::~FakeGraph() {
     node->on_destroy_child_dest_ = nullptr;
     node->on_destroy_self_ = nullptr;
     node->on_can_accept_source_format_ = nullptr;
-    node->on_max_sources_ = nullptr;
-    node->on_allows_dest_ = nullptr;
     // Remove all circular references so that every FakeNode and FakePipelineStage can be deleted.
     // Do this after clearing closures so the closures don't run.
     Node::Destroy(*global_task_queue_, detached_thread_, node);

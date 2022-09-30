@@ -57,7 +57,7 @@ ConsumerNode::ConsumerNode(std::string_view name, PipelineDirection pipeline_dir
 void ConsumerNode::Start(ConsumerStage::StartCommand cmd) const { command_queue_->push(cmd); }
 void ConsumerNode::Stop(ConsumerStage::StopCommand cmd) const { command_queue_->push(cmd); }
 
-zx::duration ConsumerNode::GetSelfPresentationDelayForSource(const NodePtr& source) const {
+zx::duration ConsumerNode::GetSelfPresentationDelayForSource(const Node* source) const {
   // TODO(fxbug.dev/87651): Implement this.
   return zx::duration(0);
 }

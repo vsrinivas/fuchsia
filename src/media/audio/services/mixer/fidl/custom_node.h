@@ -44,7 +44,7 @@ class CustomNode : public Node {
   static std::shared_ptr<CustomNode> Create(Args args);
 
   // Implements `Node`.
-  zx::duration GetSelfPresentationDelayForSource(const NodePtr& source) const final {
+  zx::duration GetSelfPresentationDelayForSource(const Node* source) const final {
     UNREACHABLE << "GetSelfPresentationDelayForSource should not be called on meta nodes";
   }
 
@@ -58,7 +58,7 @@ class CustomNode : public Node {
                     zx::duration presentation_delay);
 
     // Implements `Node`.
-    zx::duration GetSelfPresentationDelayForSource(const NodePtr& source) const final;
+    zx::duration GetSelfPresentationDelayForSource(const Node* source) const final;
 
    private:
     NodePtr CreateNewChildSource() final {
@@ -83,7 +83,7 @@ class CustomNode : public Node {
                   GraphDetachedThreadPtr detached_thread);
 
     // Implements `Node`.
-    zx::duration GetSelfPresentationDelayForSource(const NodePtr& source) const final;
+    zx::duration GetSelfPresentationDelayForSource(const Node* source) const final;
 
    private:
     NodePtr CreateNewChildSource() final {

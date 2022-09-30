@@ -58,7 +58,7 @@ class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
  public:
   // Registers a handler for `GetSelfPresentationDelayForSource`.
   // If a handler is not registered, a default handler is used.
-  void SetOnGetSelfPresentationDelayForSource(std::function<zx::duration(const NodePtr&)> handler) {
+  void SetOnGetSelfPresentationDelayForSource(std::function<zx::duration(const Node*)> handler) {
     on_get_self_presentation_delay_for_source_ = std::move(handler);
   }
 
@@ -96,15 +96,13 @@ class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
     on_can_accept_source_format_ = std::move(handler);
   }
 
-  // Registers a handler for `MaxSources`.
-  // The default handler returns infinity.
-  void SetOnMaxSources(std::function<std::optional<size_t>()> handler) {
-    on_max_sources_ = std::move(handler);
-  }
+  // Sets the return value for `MaxSources`.
+  // The default value is infinity.
+  void SetMaxSources(std::optional<size_t> max_sources) { max_sources_ = max_sources; }
 
-  // Registers a handler for `AllowsDest`.
-  // The default handler returns true.
-  void SetOnAllowsDest(std::function<bool()> handler) { on_allows_dest_ = std::move(handler); }
+  // Sets the return value for `AllowsDest`.
+  // The default value is true.
+  void SetAllowsDest(bool b) { allows_dest_ = b; }
 
   // Allow anyone to set the thread.
   using Node::set_thread;
@@ -115,7 +113,7 @@ class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
   }
 
   // Implements `Node`.
-  zx::duration GetSelfPresentationDelayForSource(const NodePtr& source) const final;
+  zx::duration GetSelfPresentationDelayForSource(const Node* source) const final;
 
  protected:
   NodePtr CreateNewChildSource() final;
@@ -124,8 +122,8 @@ class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
   void DestroyChildDest(NodePtr child_dest) final;
   void DestroySelf() final;
   bool CanAcceptSourceFormat(const Format& format) const final;
-  std::optional<size_t> MaxSources() const final;
-  bool AllowsDest() const final;
+  std::optional<size_t> MaxSources() const final { return max_sources_; }
+  bool AllowsDest() const final { return allows_dest_; }
 
  private:
   // All FakeNodes belong to a FakeGraph. The constructor is private to ensure that it's impossible
@@ -135,15 +133,16 @@ class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
            FakeNodePtr parent, const Format* format);
 
   FakeGraph& graph_;
-  std::function<zx::duration(const NodePtr&)> on_get_self_presentation_delay_for_source_;
+  std::function<zx::duration(const Node*)> on_get_self_presentation_delay_for_source_;
   std::function<NodePtr()> on_create_new_child_source_;
   std::function<NodePtr()> on_create_new_child_dest_;
   std::function<void(NodePtr)> on_destroy_child_source_;
   std::function<void(NodePtr)> on_destroy_child_dest_;
   std::function<void()> on_destroy_self_;
   std::function<bool(const Format&)> on_can_accept_source_format_;
-  std::function<std::optional<size_t>()> on_max_sources_;
-  std::function<bool()> on_allows_dest_;
+
+  std::optional<size_t> max_sources_ = std::nullopt;
+  bool allows_dest_ = true;
 };
 
 // This class makes it easy to create graphs of FakeNodes during tests. For example, the following

@@ -136,7 +136,7 @@ TEST_F(CustomNodeTest, CreateDeleteEdge) {
 
   // Connect graph node `1` to `child_source_node`.
   ASSERT_TRUE(Node::CreateEdge(*q, graph.node(1), child_source_node).is_ok());
-  EXPECT_EQ(child_source_node->GetSelfPresentationDelayForSource(graph.node(1)),
+  EXPECT_EQ(child_source_node->GetSelfPresentationDelayForSource(graph.node(1).get()),
             zx::nsec(1'500'000'000));
   EXPECT_THAT(child_source_node->sources(), ElementsAre(graph.node(1)));
   EXPECT_EQ(child_source_node->dest(), nullptr);

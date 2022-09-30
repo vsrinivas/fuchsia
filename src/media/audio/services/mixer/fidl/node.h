@@ -182,8 +182,9 @@ class Node {
   // This typically consists of the internal processing delay contribution of this node with respect
   // to `source` edge.
   //
-  // REQUIRED: !is_meta() and an edge exists from `source` to this node (unless source == nullptr).
-  virtual zx::duration GetSelfPresentationDelayForSource(const NodePtr& source) const = 0;
+  // REQUIRED: !is_meta()
+  // REQUIRED: source == nullptr or source in `sources()`
+  virtual zx::duration GetSelfPresentationDelayForSource(const Node* source) const = 0;
 
  protected:
   Node(std::string_view name, bool is_meta, UnreadableClock reference_clock,

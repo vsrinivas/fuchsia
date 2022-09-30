@@ -54,7 +54,7 @@ class MetaProducerNode : public Node, public std::enable_shared_from_this<MetaPr
   void Stop(ProducerStage::StopCommand cmd) const;
 
   // Implements `Node`.
-  zx::duration GetSelfPresentationDelayForSource(const NodePtr& source) const final {
+  zx::duration GetSelfPresentationDelayForSource(const Node* source) const final {
     UNREACHABLE << "GetSelfPresentationDelayForSource should not be called on meta nodes";
   }
 

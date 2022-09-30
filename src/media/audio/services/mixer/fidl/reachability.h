@@ -12,15 +12,19 @@
 
 namespace media_audio {
 
-// Computes the total downstream delay contribution of a given `node` from `source` in a mix graph.
-// If `source` is nullptr, this typically implies that `node` is a producer node where the
-// downstream delay does not depend on an incoming source node.
+// Computes the total downstream delay starting from the edge `source` -> `node`. If `source` is
+// nullptr, this typically implies that `node` is a producer node where the downstream delay does
+// not depend on an incoming source node.
+//
 // REQUIRED: !node.is_meta()
-zx::duration ComputeDownstreamDelay(const NodePtr& node, const NodePtr& source);
+// REQUIRED: if source != nullptr, then source is in node->sources()
+zx::duration ComputeDownstreamDelay(const Node& node, const Node* source);
 
-// Computes the total upstream delay contribution of a given `node` in a mix graph.
+// Computes the total upstream delay starting from a given `node` in a mix graph. This includes the
+// delay added by `node`, plus the delay from all incoming paths.
+//
 // REQUIRED: !node.is_meta()
-zx::duration ComputeUpstreamDelay(const NodePtr& node);
+zx::duration ComputeUpstreamDelay(const Node& node);
 
 // Reports whether there exists a path from `source` to `dest`. The nodes may be ordinary nodes
 // and/or meta nodes. For any given meta node M, there are implicit paths from M's child source
@@ -42,7 +46,13 @@ zx::duration ComputeUpstreamDelay(const NodePtr& node);
 //         B      C      D
 // ```
 //
-// There exists paths `A -> M`, `M -> B`, and `A -> B`.
+// There exists paths:
+//
+// ```
+// A -> I -> M -> O1 -> B
+// A -> I -> M -> O2 -> C
+// A -> I -> M -> O3 -> D
+// ```
 bool ExistsPath(const Node& source, const Node& dest);
 
 }  // namespace media_audio

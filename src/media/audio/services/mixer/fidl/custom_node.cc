@@ -273,7 +273,7 @@ CustomNode::ChildSourceNode::ChildSourceNode(std::string_view name,
 }
 
 zx::duration CustomNode::ChildSourceNode::GetSelfPresentationDelayForSource(
-    const NodePtr& source) const {
+    const Node* source) const {
   // Report the underlying `CustomStage` delay.
   return presentation_delay_;
 }
@@ -296,7 +296,7 @@ CustomNode::ChildDestNode::ChildDestNode(std::string_view name,
 }
 
 zx::duration CustomNode::ChildDestNode::GetSelfPresentationDelayForSource(
-    const NodePtr& source) const {
+    const Node* source) const {
   // Child destination node does not contribute in any presentation delay, since the underlying
   // `CustomStage` delay is already incorparated by the corresponding `ChildSourceNode`.
   return zx::nsec(0);

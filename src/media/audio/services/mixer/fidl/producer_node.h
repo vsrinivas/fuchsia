@@ -43,7 +43,7 @@ class ProducerNode : public Node {
   static std::shared_ptr<ProducerNode> Create(Args args);
 
   // Implements `Node`.
-  zx::duration GetSelfPresentationDelayForSource(const NodePtr& source) const final;
+  zx::duration GetSelfPresentationDelayForSource(const Node* source) const final;
 
  private:
   ProducerNode(std::string_view name, PipelineDirection pipeline_direction,

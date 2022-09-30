@@ -89,7 +89,7 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinarySourceDisallowsOutgoingEdges) {
   });
 
   auto source = graph.node(1);
-  source->SetOnAllowsDest([]() { return false; });
+  source->SetAllowsDest(false);
 
   auto q = graph.global_task_queue();
   auto result = Node::CreateEdge(*q, source, /*dest=*/graph.node(2));
@@ -118,7 +118,7 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinaryDestNodeTooManyIncomingEdges) {
   });
 
   auto dest = graph.node(3);
-  dest->SetOnMaxSources([]() { return 1; });
+  dest->SetMaxSources(1);
 
   auto q = graph.global_task_queue();
   auto result = Node::CreateEdge(*q, /*source=*/graph.node(2), dest);
@@ -212,7 +212,7 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToMetaSourceDisallowsOutgoingEdges) {
   });
 
   auto source = graph.node(1);
-  source->SetOnAllowsDest([]() { return false; });
+  source->SetAllowsDest(false);
 
   auto q = graph.global_task_queue();
   auto result = Node::CreateEdge(*q, source, /*dest=*/graph.node(2));
@@ -360,7 +360,7 @@ TEST_F(NodeCreateEdgeTest, MetaToOrdinaryDestNodeTooManyIncomingEdges) {
   });
 
   auto dest = graph.node(4);
-  dest->SetOnMaxSources([]() { return 1; });
+  dest->SetMaxSources(1);
 
   auto q = graph.global_task_queue();
   auto result = Node::CreateEdge(*q, /*source=*/graph.node(3), dest);

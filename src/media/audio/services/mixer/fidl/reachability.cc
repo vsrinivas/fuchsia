@@ -42,61 +42,109 @@ const Node* ParentOfChildSourceNode(const Node& n) {
   return nullptr;
 }
 
-}  // namespace
+// Runs `fn` for all ordinary nodes immediately downstream of `node`, which must be an ordinary
+// node. The `fn` must have type `void(const Node&)` or `void(Node&)`. If `node` is a child_source
+// of a meta node, the meta node's child_dest nodes are "immediately downstream".
+template <typename Fn>
+void ForEachDownstreamEdge(const Node& node, Fn fn) {
+  FX_CHECK(!node.is_meta());
 
-zx::duration ComputeDownstreamDelay(const NodePtr& node, const NodePtr& source) {
-  FX_CHECK(node);
-  FX_CHECK(!node->is_meta());
-  FX_CHECK(!source || !source->is_meta());
+  // Three cases:
+  //
+  // 1. node does not have a parent follow the direct edge.
+  // 2. node is a child_dest of a meta node: follow the direct edge.
+  // 3. node is a child_source of a meta node: follow implicit edges to the child_dests.
 
-  const auto self_delay = node->GetSelfPresentationDelayForSource(source);
-
-  if (const auto& parent = node->parent(); parent) {
-    // Child of a meta node.
-    const auto& child_sources = parent->child_sources();
-    if (std::find(child_sources.begin(), child_sources.end(), node) != child_sources.end()) {
-      // Use child destinations to compute the total downstream delay of the child source `node`.
-      auto max_dest_downstream_delay = zx::nsec(0);
-      for (const auto& dest : parent->child_dests()) {
-        max_dest_downstream_delay =
-            std::max(max_dest_downstream_delay, ComputeDownstreamDelay(dest, /*source=*/nullptr));
-      }
-      return self_delay + max_dest_downstream_delay;
-    }
+  // Cases 1 & 2.
+  if (node.dest()) {
+    fn(*node.dest());
+    return;
   }
 
-  // Total downstream delay of the ordinary `node`.
-  return self_delay + (node->dest() ? ComputeDownstreamDelay(node->dest(), node) : zx::nsec(0));
+  // Case 3.
+  const auto& parent = node.parent();
+  if (!parent) {
+    return;
+  }
+  const auto& child_sources = parent->child_sources();
+  if (std::find_if(child_sources.begin(), child_sources.end(),
+                   [&node](auto x) { return x.get() == &node; }) == child_sources.end()) {
+    return;
+  }
+  for (const auto& dest : parent->child_dests()) {
+    fn(*dest);
+  }
 }
 
-zx::duration ComputeUpstreamDelay(const NodePtr& node) {
-  FX_CHECK(node);
-  FX_CHECK(!node->is_meta());
+// Runs `fn` for all ordinary nodess immediately upstream of `node`, which must be an ordinary node.
+// The `fn` must have type `void(const Node&)` or `void(Node&)`. If `node` is a child_dest of a meta
+// node, the meta node's child_source nodes are "immediate upstream".
+template <typename Fn>
+void ForEachUpstreamEdge(const Node& node, Fn fn) {
+  FX_CHECK(!node.is_meta());
 
-  const auto* sources = &node->sources();
-  if (const auto& parent = node->parent(); parent) {
-    // Child of a meta node.
-    const auto& child_dests = parent->child_dests();
-    if (std::find(child_dests.begin(), child_dests.end(), node) != child_dests.end()) {
-      // Use child sources to compute the total upstream delay of the child destination `node`.
-      sources = &parent->child_sources();
+  // Three cases:
+  //
+  // 1. node does not have a parent follow the direct edges.
+  // 2. node is a child_source of a meta node: follow the direct edges.
+  // 3. node is a child_dest of a meta node: follow implicit edges to the child_sources.
+
+  // Case 1 & 2.
+  const auto* sources = &node.sources();
+
+  // Case 3.
+  if (sources->empty()) {
+    if (const auto& parent = node.parent(); parent) {
+      const auto& child_dests = parent->child_dests();
+      if (std::find_if(child_dests.begin(), child_dests.end(),
+                       [&node](auto x) { return x.get() == &node; }) != child_dests.end()) {
+        sources = &parent->child_sources();
+      }
     }
   }
 
-  if (sources->empty()) {
-    // No additional sources contribute to the upstream delay, return self delay directly.
-    return node->GetSelfPresentationDelayForSource(nullptr);
+  for (const auto& source : *sources) {
+    fn(*source);
   }
+}
+
+}  // namespace
+
+zx::duration ComputeDownstreamDelay(const Node& node, const Node* source) {
+  FX_CHECK(!node.is_meta());
+  FX_CHECK(!source || !source->is_meta());
+
+  const auto self_delay = node.GetSelfPresentationDelayForSource(source);
+  auto max_downstream_delay = zx::nsec(0);
+
+  ForEachDownstreamEdge(node, [&max_downstream_delay, &node](const Node& dest) {
+    max_downstream_delay =
+        std::max(max_downstream_delay,
+                 ComputeDownstreamDelay(dest, (node.dest().get() == &dest) ? &node : nullptr));
+  });
+
+  return self_delay + max_downstream_delay;
+}
+
+zx::duration ComputeUpstreamDelay(const Node& node) {
+  FX_CHECK(!node.is_meta());
 
   auto max_upstream_delay = zx::nsec(0);
-  for (const auto& source : *sources) {
-    // Pass in `source` to compute self delay contribution iff it is part of `node->sources()`, i.e.
-    // `node` is an ordinary node.
+  int64_t num_sources = 0;
+
+  ForEachUpstreamEdge(node, [&max_upstream_delay, &num_sources, &node](const Node& source) {
+    num_sources++;
+    // Pass in `source` to compute self delay contribution iff it is part of `node.sources()`.
     const auto self_delay =
-        node->GetSelfPresentationDelayForSource(sources == &node->sources() ? source : nullptr);
+        node.GetSelfPresentationDelayForSource(!node.sources().empty() ? &source : nullptr);
     max_upstream_delay = std::max(max_upstream_delay, self_delay + ComputeUpstreamDelay(source));
+  });
+
+  if (num_sources > 0) {
+    return max_upstream_delay;
   }
-  return max_upstream_delay;
+
+  return node.GetSelfPresentationDelayForSource(nullptr);
 }
 
 bool ExistsPath(const Node& source, const Node& dest) {

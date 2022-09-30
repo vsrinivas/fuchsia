@@ -36,7 +36,7 @@ std::shared_ptr<ProducerNode> ProducerNode::Create(Args args) {
   return node;
 }
 
-zx::duration ProducerNode::GetSelfPresentationDelayForSource(const NodePtr& source) const {
+zx::duration ProducerNode::GetSelfPresentationDelayForSource(const Node* source) const {
   // Producers do not have internal delay contribution.
   // TODO(fxbug.dev/87651): Add a method to introduce external delay.
   return zx::duration(0);
