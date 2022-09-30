@@ -41,7 +41,7 @@ template("_go_compat") {
     source_dir = get_path_info(invoker.source, "dir")
     sources = [ get_path_info(invoker.source, "file") ]
     deps = [
-      ":${invoker.fidl}($go_toolchain)",
+      ":${invoker.fidl}_go($go_toolchain)",
       "//src/lib/component",
     ]
   }

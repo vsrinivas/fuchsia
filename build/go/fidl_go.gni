@@ -37,7 +37,8 @@ template("fidl_go") {
   assert(defined(invoker.fidl_ir_target),
          "fidl_go(\"$target_name\") must define `fidl_ir_target`")
 
-  generation_target_name = "${target_name}_go_generate"
+  main_target = "${target_name}_go"
+  generation_target = "${target_name}_go_generate"
 
   forward_variables_from(invoker, [ "library_name" ])
   fidl_target_gen_dir =
@@ -46,7 +47,7 @@ template("fidl_go") {
   impl_filename = "$library_dir/impl.go"
   pkg_name_filename = "$library_dir/pkg_name"
 
-  compiled_action(generation_target_name) {
+  compiled_action(generation_target) {
     forward_variables_from(invoker,
                            [
                              "testonly",
@@ -86,7 +87,7 @@ template("fidl_go") {
     }
   }
 
-  go_library(target_name) {
+  go_library(main_target) {
     forward_variables_from(invoker,
                            [
                              "testonly",
@@ -99,10 +100,13 @@ template("fidl_go") {
 
     sources = [ "impl.go" ]
 
-    non_go_deps = [ ":$generation_target_name" ]
+    non_go_deps = [ ":$generation_target" ]
 
     if (defined(invoker.public_deps)) {
-      deps = invoker.public_deps
+      deps = []
+      foreach(dep, invoker.public_deps) {
+        deps += [ get_label_info(dep, "label_no_toolchain") + "_go" ]
+      }
     }
   }
 }

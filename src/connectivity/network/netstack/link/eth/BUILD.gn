@@ -12,8 +12,8 @@ go_library("eth") {
 
   deps = [
     "testutil",
-    "//sdk/fidl/fuchsia.hardware.ethernet($go_toolchain)",
-    "//sdk/fidl/fuchsia.hardware.network($go_toolchain)",
+    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_go($go_toolchain)",
+    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_go($go_toolchain)",
     "//src/connectivity/network/netstack:gen/netstack/link/eth",
     "//src/connectivity/network/netstack/link",
     "//src/connectivity/network/netstack/link/fifo",

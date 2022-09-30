@@ -26,7 +26,7 @@ go_library("benchmark_suite_go_lib") {
   source_dir = gidl_go_out_dir
   non_go_deps = [ ":benchmark_suite_go" ]
   deps = [
-    "${benchmark_suite_fidl_target}(${go_toolchain})",
+    "${benchmark_suite_fidl_target}_go(${go_toolchain})",
     "//src/lib/component",
   ]
   sources = [ "benchmark_suite.go" ]

@@ -11,7 +11,7 @@ go_library("battery_manager_lib") {
   name = "battery_manager"
 
   deps = [
-    "//sdk/fidl/fuchsia.power.battery($go_toolchain)",
+    "//sdk/fidl/fuchsia.power.battery:fuchsia.power.battery_go($go_toolchain)",
     "//src/lib/component",
     "//src/lib/syslog/go",
   ]

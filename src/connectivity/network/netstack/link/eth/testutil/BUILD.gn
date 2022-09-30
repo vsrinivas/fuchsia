@@ -9,7 +9,7 @@ go_library("testutil") {
   name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth/testutil"
 
   deps = [
-    "//sdk/fidl/fuchsia.hardware.ethernet($go_toolchain)",
+    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_go($go_toolchain)",
     "//src/connectivity/network/netstack/fidlext/fuchsia/hardware/ethernet",
   ]
 

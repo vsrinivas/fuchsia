@@ -14,7 +14,8 @@ go_test("fidl-example-go-test") {
 }
 
 go_library("fidl-example-go") {
-  deps = [ "//examples/fidl/fuchsia.examples:fuchsia.examples($go_toolchain)" ]
+  deps =
+      [ "//examples/fidl/fuchsia.examples:fuchsia.examples_go($go_toolchain)" ]
   sources = [ "fidl_test.go" ]
 }
 

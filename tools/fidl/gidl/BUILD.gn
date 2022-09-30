@@ -276,7 +276,7 @@ go_library("go_empty_gidl_tests_library") {
     ":go_empty_gidl",
   ]
 
-  deps = [ "${conformance_suite_fidl_target}(${go_toolchain})" ]
+  deps = [ "${conformance_suite_fidl_target}_go(${go_toolchain})" ]
 }
 
 go_test("go_empty_gidl_test_bin") {

@@ -10,8 +10,8 @@ import("//build/testing/environments.gni")
 
 go_library("go") {
   deps = [
-    "//sdk/fidl/fuchsia.diagnostics($go_toolchain)",
-    "//sdk/fidl/fuchsia.logger($go_toolchain)",
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_go($go_toolchain)",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_go($go_toolchain)",
   ]
   sources = [
     "logger.go",

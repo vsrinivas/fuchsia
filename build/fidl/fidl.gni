@@ -36,7 +36,7 @@ import("//build/go/toolchain.gni")
 # Users of the bindings should depend on:
 #
 #   ${target_name}_dart($dart_toolchain) for Dart bindings
-#   ${target_name}($go_toolchain) for Go bindings
+#   ${target_name}_go($go_toolchain) for Go bindings
 #   ${target_name}_${binding_name} for all other bindings
 #
 # Parameters

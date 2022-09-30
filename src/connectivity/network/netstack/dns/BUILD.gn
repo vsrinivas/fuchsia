@@ -11,7 +11,7 @@ go_library("dns") {
   name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
 
   deps = [
-    "//sdk/fidl/fuchsia.net.name($go_toolchain)",
+    "//sdk/fidl/fuchsia.net.name:fuchsia.net.name_go($go_toolchain)",
     "//src/connectivity/network/netstack/sync",
     "//src/lib/syslog/go",
     "//third_party/golibs:github.com/google/go-cmp",

@@ -10,7 +10,7 @@ import("//build/go/toolchain.gni")
 go_library("echo_go_test_lib") {
   name = "go.fuchsia.dev/fuchsia/src/sys/test_runners/gotests/test_data/echo_go_client"
   deps = [
-    "//examples/components/routing/fidl:echo($go_toolchain)",
+    "//examples/components/routing/fidl:echo_go($go_toolchain)",
     "//src/lib/component",
   ]
   sources = [ "echo_go_test.go" ]

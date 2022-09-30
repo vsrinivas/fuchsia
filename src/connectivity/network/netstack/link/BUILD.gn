@@ -8,7 +8,7 @@ import("//build/go/toolchain.gni")
 go_library("link") {
   name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
 
-  deps = [ "//sdk/fidl/fuchsia.hardware.network($go_toolchain)" ]
+  deps = [ "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_go($go_toolchain)" ]
 
   sources = [ "controller.go" ]
 }

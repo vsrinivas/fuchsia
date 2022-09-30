@@ -11,7 +11,7 @@ go_library("bridge") {
   name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/bridge"
 
   deps = [
-    "//sdk/fidl/fuchsia.hardware.network($go_toolchain)",
+    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_go($go_toolchain)",
     "//src/connectivity/network/netstack/link",
     "//src/connectivity/network/netstack/sync",
     "//src/connectivity/network/netstack/util",

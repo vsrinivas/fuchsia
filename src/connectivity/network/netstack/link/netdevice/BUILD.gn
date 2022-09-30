@@ -12,9 +12,9 @@ go_library("netdevice") {
       "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/netdevice"
 
   deps = [
-    "//sdk/fidl/fuchsia.hardware.ethernet($go_toolchain)",
-    "//sdk/fidl/fuchsia.net($go_toolchain)",
-    "//sdk/fidl/fuchsia.net.tun($go_toolchain)",
+    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_go($go_toolchain)",
+    "//sdk/fidl/fuchsia.net:fuchsia.net_go($go_toolchain)",
+    "//sdk/fidl/fuchsia.net.tun:fuchsia.net.tun_go($go_toolchain)",
     "//src/connectivity/network/netstack:gen/netstack/link/netdevice",
     "//src/connectivity/network/netstack/link",
     "//src/connectivity/network/netstack/link/fifo",

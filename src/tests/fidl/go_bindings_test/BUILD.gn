@@ -11,7 +11,7 @@ import("//build/go/toolchain.gni")
 go_library("gopkg") {
   name = "go.fuchsia.dev/fuchsia/src/tests/fidl/go_bindings_test"
   deps = [
-    ":fidl.go.types($go_toolchain)",
+    ":fidl.go.types_go($go_toolchain)",
     "//third_party/golibs:github.com/google/go-cmp",
   ]
   sources = [

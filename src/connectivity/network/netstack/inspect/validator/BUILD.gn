@@ -23,7 +23,7 @@ go_binary("puppet_bin") {
 
   deps = [
     ":validator",
-    "//src/diagnostics/validator/inspect/fidl:validate($go_toolchain)",
+    "//src/diagnostics/validator/inspect/fidl:validate_go($go_toolchain)",
     "//src/lib/component",
   ]
 }

@@ -11,7 +11,7 @@ go_library("filter") {
   name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/filter"
 
   deps = [
-    "//sdk/fidl/fuchsia.net.filter($go_toolchain)",
+    "//sdk/fidl/fuchsia.net.filter:fuchsia.net.filter_go($go_toolchain)",
     "//src/connectivity/network/netstack/fidlconv",
     "//src/connectivity/network/netstack/sync",
     "//src/lib/component",

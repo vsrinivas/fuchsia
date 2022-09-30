@@ -13,7 +13,7 @@ go_library("lib") {
   name = "compatibility_test"
   deps = [
     "//src/lib/component",
-    "//src/tests/fidl/compatibility/fidl:fidl_service($go_toolchain)",
+    "//src/tests/fidl/compatibility/fidl:fidl_service_go($go_toolchain)",
   ]
   sources = [ "main.go" ]
 }

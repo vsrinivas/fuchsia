@@ -27,8 +27,8 @@ go_library("tracing") {
     "trace/notracing.go",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.io($go_toolchain)",
-    "//sdk/fidl/fuchsia.tracing.provider($go_toolchain)",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_go($go_toolchain)",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_go($go_toolchain)",
     "//src/connectivity/network/netstack/sync",
     "//src/lib/syslog/go",
   ]

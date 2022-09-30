@@ -16,7 +16,7 @@ go_binary("bin") {
 go_library("lib") {
   name = "echo_client_go"
   deps = [
-    "//examples/fidl/fuchsia.examples:fuchsia.examples($go_toolchain)",
+    "//examples/fidl/fuchsia.examples:fuchsia.examples_go($go_toolchain)",
     "//src/lib/component",
   ]
   sources = [ "main.go" ]

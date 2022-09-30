@@ -44,7 +44,7 @@ go_library("conformance_tests_library") {
     ":copy_test_utils",
   ]
 
-  deps = [ "${conformance_suite_fidl_target}(${go_toolchain})" ]
+  deps = [ "${conformance_suite_fidl_target}_go(${go_toolchain})" ]
 }
 
 go_test("fidl_go_conformance_tests") {

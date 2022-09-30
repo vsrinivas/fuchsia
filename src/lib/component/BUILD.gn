@@ -15,8 +15,8 @@ fidl("bindingstest") {
 
 go_library("component") {
   deps = [
-    "//sdk/fidl/fuchsia.io($go_toolchain)",
-    "//sdk/fidl/fuchsia.sys($go_toolchain)",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_go($go_toolchain)",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_go($go_toolchain)",
     "//third_party/golibs:github.com/google/go-cmp",
     "//third_party/golibs:golang.org/x/sync",
   ]
@@ -34,7 +34,7 @@ go_library("component") {
 go_test("component_test") {
   gopackages = [ "go.fuchsia.dev/fuchsia/src/lib/component" ]
   deps = [
-    ":bindingstest($go_toolchain)",
+    ":bindingstest_go($go_toolchain)",
     ":component",
   ]
 }

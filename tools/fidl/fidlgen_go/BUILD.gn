@@ -78,7 +78,7 @@ if (current_toolchain == go_toolchain) {
     foreach(info, fidl_testdata_info) {
       if (info.build_denylist + [ "fidlgen_go" ] - [ "fidlgen_go" ] ==
           info.build_denylist) {
-        deps += [ info.target ]
+        deps += [ info.target + "_go" ]
       }
     }
   }
