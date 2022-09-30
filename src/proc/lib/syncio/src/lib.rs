@@ -10,7 +10,7 @@ use fidl::encoding::const_assert_eq;
 use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_io as fio;
 use fuchsia_zircon::{self as zx, HandleBased};
-use linux_uapi::x86_64::sockaddr_storage;
+use linux_uapi::x86_64::__kernel_sockaddr_storage as sockaddr_storage;
 use zxio::{sockaddr, socklen_t, ZXIO_SHUTDOWN_OPTIONS_READ, ZXIO_SHUTDOWN_OPTIONS_WRITE};
 
 pub mod zxio;

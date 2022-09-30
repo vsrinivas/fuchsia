@@ -121,7 +121,7 @@ fn dispatch_signal_handler(
                 .map(|stack| sigaltstack {
                     ss_sp: stack.ss_sp.ptr() as *mut c_void,
                     ss_flags: stack.ss_flags as i32,
-                    ss_size: stack.ss_size,
+                    ss_size: stack.ss_size as u64,
                     ..Default::default()
                 })
                 .unwrap_or_default(),
