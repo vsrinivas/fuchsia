@@ -37,10 +37,6 @@ pub trait EthernetIpExt: Ip {
     const ETHER_TYPE: EtherType;
 }
 
-impl<I: Ip> EthernetIpExt for I {
-    default const ETHER_TYPE: EtherType = EtherType::Ipv4;
-}
-
 impl EthernetIpExt for Ipv4 {
     const ETHER_TYPE: EtherType = EtherType::Ipv4;
 }

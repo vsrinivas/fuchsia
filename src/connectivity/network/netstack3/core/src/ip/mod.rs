@@ -2594,7 +2594,7 @@ mod tests {
     };
     use packet::{Buf, ParseBuffer};
     use packet_formats::{
-        ethernet::{EthernetFrame, EthernetFrameBuilder, EthernetFrameLengthCheck, EthernetIpExt},
+        ethernet::{EthernetFrame, EthernetFrameBuilder, EthernetFrameLengthCheck},
         icmp::{
             IcmpDestUnreachable, IcmpEchoRequest, IcmpPacketBuilder, IcmpParseArgs, IcmpUnusedCode,
             Icmpv4DestUnreachableCode, Icmpv6Packet, Icmpv6PacketTooBig,

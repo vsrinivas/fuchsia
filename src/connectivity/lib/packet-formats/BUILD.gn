@@ -54,9 +54,6 @@ rustc_library("packet-formats") {
   version = "0.1.0"
   edition = "2021"
 
-  configs -= [ "//build/config/rust:no_features" ]
-  configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
-
   deps = _common_deps + [
            # TODO(https://github.com/rust-lang/rust/issues/62502): remove this module.
            "//src/connectivity/network/netstack3/core/fakestd",
@@ -70,9 +67,6 @@ rustc_library("packet-formats") {
 rustc_test("packet-formats_test") {
   name = "packet_formats_lib_test"
   edition = "2021"
-
-  configs -= [ "//build/config/rust:no_features" ]
-  configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
 
   deps = _common_deps + [
            "//third_party/rust_crates:assert_matches",
@@ -109,8 +103,6 @@ rustc_fuzzer("fuzz-parse-packet") {
     "//third_party/rust_crates:log",
   ]
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
-  configs -= [ "//build/config/rust:no_features" ]
-  configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
 }
 
 fuzzer_package("packet-formats-fuzzers") {

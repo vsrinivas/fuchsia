@@ -27,7 +27,7 @@ use netstack_testing_macros::variants_test;
 use packet::{serialize::Serializer as _, ParsablePacket as _};
 use packet_formats::{
     error::ParseError,
-    ethernet::{EthernetFrame, EthernetFrameBuilder, EthernetFrameLengthCheck, EthernetIpExt as _},
+    ethernet::{EthernetFrame, EthernetFrameBuilder, EthernetFrameLengthCheck},
     icmp::{
         IcmpEchoRequest, IcmpIpExt, IcmpMessage, IcmpPacket, IcmpPacketBuilder, IcmpParseArgs,
         IcmpUnusedCode, MessageBody as _, OriginalPacket,

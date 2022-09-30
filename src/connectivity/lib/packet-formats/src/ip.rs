@@ -14,6 +14,7 @@ use packet::{BufferViewMut, PacketBuilder, ParsablePacket, ParseMetadata};
 use zerocopy::{ByteSlice, ByteSliceMut};
 
 use crate::error::{IpParseError, IpParseResult};
+use crate::ethernet::EthernetIpExt;
 use crate::icmp::IcmpIpExt;
 use crate::ipv4::{Ipv4Header, Ipv4OnlyMeta, Ipv4Packet, Ipv4PacketBuilder};
 use crate::ipv6::{Ipv6Header, Ipv6Packet, Ipv6PacketBuilder};
@@ -38,7 +39,7 @@ impl IpProtoExt for Ipv6 {
 
 /// An extension trait to the `Ip` trait adding associated types relevant for
 /// packet parsing and serialization.
-pub trait IpExt: IcmpIpExt {
+pub trait IpExt: EthernetIpExt + IcmpIpExt {
     /// An IP packet type for this IP version.
     type Packet<B: ByteSlice>: IpPacket<B, Self, Builder = Self::PacketBuilder>;
     /// An IP packet builder type for the IP version.

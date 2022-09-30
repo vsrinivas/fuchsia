@@ -14,7 +14,6 @@
 //! caller does not need to worry about it. Any necessary conversions are
 //! performed under the hood.
 
-#![feature(specialization)]
 #![cfg_attr(not(test), no_std)]
 // TODO(joshlf): Move into debug_err! and debug_err_fn! definitions once
 // attributes are allowed on expressions

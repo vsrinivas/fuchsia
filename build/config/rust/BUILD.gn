@@ -182,14 +182,6 @@ config("output_dir_sensitive") {
 # When adding a new config, make sure to add a TODO with a link to the tracking
 # issue.
 
-# TODO(fxbug.dev/98399)
-config("netstack3_only_specialization_feature") {
-  rustflags = [
-    "-Zallow-features=min_specialization,specialization",
-    "-Aincomplete-features",
-  ]
-}
-
 # TODO(fxbug.dev/94237)
 config("allow_simd") {
   rustflags = [ "-Zallow-features=stdsimd,aarch64_target_feature" ]

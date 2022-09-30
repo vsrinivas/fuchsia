@@ -236,7 +236,6 @@ where
 pub fn parse_ip_packet_in_ethernet_frame<I: IpExt>(
     buf: &[u8],
 ) -> IpParseResult<I, (&[u8], Mac, Mac, I::Addr, I::Addr, I::Proto, u8)> {
-    use crate::ethernet::EthernetIpExt;
     let (body, src_mac, dst_mac, ethertype) = parse_ethernet_frame(buf)?;
     if ethertype != Some(I::ETHER_TYPE) {
         debug!("unexpected ethertype: {:?}", ethertype);

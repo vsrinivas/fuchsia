@@ -28,6 +28,7 @@ use net_types::{
     MulticastAddr, SpecifiedAddr, UnicastAddr, Witness as _,
 };
 use packet::{BufferMut, Serializer};
+use packet_formats::ethernet::EthernetIpExt;
 
 use crate::{
     context::{FrameContext, RecvFrameContext},
@@ -281,7 +282,10 @@ fn send_ip_frame<
     device: DeviceId,
     local_addr: SpecifiedAddr<A>,
     body: S,
-) -> Result<(), S> {
+) -> Result<(), S>
+where
+    A::Version: EthernetIpExt,
+{
     match device.inner() {
         DeviceIdInner::Ethernet(id) => {
             self::ethernet::send_ip_frame(&mut sync_ctx, ctx, id, local_addr, body)
