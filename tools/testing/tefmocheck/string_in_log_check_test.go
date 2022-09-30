@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 )
 
 func TestCheck(t *testing.T) {
@@ -25,12 +26,11 @@ func TestCheck(t *testing.T) {
 		endString:   "block_end",
 	}
 	c := stringInLogCheck{
-		String:         killerString,
-		OnlyOnStates:   []string{},
-		ExceptString:   exceptString,
-		ExceptBlocks:   []*logBlock{exceptBlock, exceptBlock2},
-		SkipPassedTask: true,
-		Type:           swarmingOutputType,
+		String:       killerString,
+		OnlyOnStates: []string{},
+		ExceptString: exceptString,
+		ExceptBlocks: []*logBlock{exceptBlock, exceptBlock2},
+		Type:         swarmingOutputType,
 	}
 	gotName := c.Name()
 	wantName := "string_in_log/infra_and_test_std_and_klog.txt/KILLER_STRING"
@@ -43,6 +43,8 @@ func TestCheck(t *testing.T) {
 		attributeToTest     bool
 		testingOutputs      TestingOutputs
 		typeToCheck         logType
+		skipPassedTask      bool
+		skipAllPassedTests  bool
 		states              []string
 		swarmingResultState string
 		shouldMatch         bool
@@ -60,6 +62,7 @@ func TestCheck(t *testing.T) {
 			testingOutputs: TestingOutputs{
 				SwarmingOutput: []byte(fmt.Sprintf("PREFIX %s SUFFIX", killerString)),
 			},
+			skipPassedTask:      true,
 			swarmingResultState: "COMPLETED",
 		},
 		{
@@ -187,10 +190,64 @@ func TestCheck(t *testing.T) {
 			typeToCheck: syslogType,
 			wantName:    "string_in_log/syslog.txt/KILLER_STRING",
 		},
+		{
+			name: "should skip if all tests passed",
+			testingOutputs: TestingOutputs{
+				TestSummary: &runtests.TestSummary{
+					Tests: []runtests.TestDetails{
+						{
+							Name:   "test1",
+							Result: runtests.TestSuccess,
+						},
+					},
+				},
+				SerialLogs: [][]byte{[]byte("gentle string"), []byte(killerString)},
+			},
+			skipAllPassedTests:  true,
+			swarmingResultState: "COMPLETED",
+			typeToCheck:         serialLogType,
+		},
+		{
+			name: "should not skip is a test failed",
+			testingOutputs: TestingOutputs{
+				TestSummary: &runtests.TestSummary{
+					Tests: []runtests.TestDetails{
+						{
+							Name:   "test1",
+							Result: runtests.TestFailure,
+						},
+					},
+				},
+				SerialLogs: [][]byte{[]byte("gentle string"), []byte(killerString)},
+			},
+			shouldMatch:         true,
+			skipAllPassedTests:  true,
+			swarmingResultState: "COMPLETED",
+			typeToCheck:         serialLogType,
+		},
+		{
+			name: "should skip if skipPassedTask and a test failed",
+			testingOutputs: TestingOutputs{
+				TestSummary: &runtests.TestSummary{
+					Tests: []runtests.TestDetails{
+						{
+							Name:   "test1",
+							Result: runtests.TestFailure,
+						},
+					},
+				},
+				SerialLogs: [][]byte{[]byte("gentle string"), []byte(killerString)},
+			},
+			skipPassedTask:      true,
+			swarmingResultState: "COMPLETED",
+			typeToCheck:         serialLogType,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			c := c // Make a copy to avoid modifying shared state.
 			c.AttributeToTest = tc.attributeToTest
+			c.SkipPassedTask = tc.skipPassedTask
+			c.SkipAllPassedTests = tc.skipAllPassedTests
 			// It accesses this field for DebugText().
 			tc.testingOutputs.SwarmingSummary = &SwarmingTaskSummary{
 				Results: &SwarmingRpcsTaskResult{

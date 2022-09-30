@@ -18,6 +18,7 @@ import (
 	syslogconstants "go.fuchsia.dev/fuchsia/tools/lib/syslog/constants"
 	netutilconstants "go.fuchsia.dev/fuchsia/tools/net/netutil/constants"
 	sshutilconstants "go.fuchsia.dev/fuchsia/tools/net/sshutil/constants"
+	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	testrunnerconstants "go.fuchsia.dev/fuchsia/tools/testing/testrunner/constants"
 )
 
@@ -39,6 +40,9 @@ type stringInLogCheck struct {
 	// SkipPassedTask will cause Check() to return false if the
 	// Swarming task succeeded.
 	SkipPassedTask bool
+	// SkipAllPassedTests will cause Check() to return false if all tests
+	// in the Swarming task passed.
+	SkipAllPassedTests bool
 	// Type of log that will be checked.
 	Type logType
 	// Whether to check the per-test Swarming output for this log and emit a
@@ -52,8 +56,22 @@ type stringInLogCheck struct {
 
 func (c *stringInLogCheck) Check(to *TestingOutputs) bool {
 	c.swarmingResult = to.SwarmingSummary.Results
-	if c.SkipPassedTask && !c.swarmingResult.Failure && c.swarmingResult.State == "COMPLETED" {
-		return false
+	if !c.swarmingResult.Failure && c.swarmingResult.State == "COMPLETED" {
+		if c.SkipPassedTask {
+			return false
+		}
+		if c.SkipAllPassedTests {
+			hasTestFailure := false
+			for _, test := range to.TestSummary.Tests {
+				if test.Result != runtests.TestSuccess {
+					hasTestFailure = true
+					break
+				}
+			}
+			if !hasTestFailure {
+				return false
+			}
+		}
 	}
 	matchedState := false
 	for _, state := range c.OnlyOnStates {
@@ -235,7 +253,7 @@ func fuchsiaLogChecks() []FailureModeCheck {
 		&stringInLogCheck{String: "intel-i915: No displays detected.", Type: serialLogType},
 		&stringInLogCheck{String: "intel-i915: No displays detected.", Type: syslogType},
 		// For fxbug.dev/105382 dwc2 bug that breaks usb cdc networking
-		&stringInLogCheck{String: "diepint.timeout", Type: serialLogType, SkipPassedTask: true},
+		&stringInLogCheck{String: "diepint.timeout", Type: serialLogType, SkipAllPassedTests: true},
 		// For devices which, typically as a result of wear, fail to read any copy of the
 		// sys_config partition, give up on booting the intended slot, boot the R slot, and
 		// severely confuse anyone who was expecting that to be something else.
