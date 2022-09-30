@@ -7,7 +7,7 @@ use component_events::{events::EventStream, matcher::EventMatcher, sequence::*};
 #[fuchsia::main(logging_tags = ["nested_reporter"])]
 async fn main() {
     // Track all the starting child components.
-    let event_stream = EventStream::open().unwrap();
+    let event_stream = EventStream::open_pipelined().unwrap();
 
     EventSequence::new()
         .has_subset(

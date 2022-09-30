@@ -148,11 +148,19 @@ impl EventStream {
         Self { stream: InternalStream::New(stream), buffer: VecDeque::new() }
     }
 
-    pub fn open_at_path(path: impl Into<String>) -> Result<Self, Error> {
+    pub fn open_at_path_pipelined(path: impl Into<String>) -> Result<Self, Error> {
         Ok(Self::new_v2(connect_to_protocol_at_path::<fsys::EventStream2Marker>(&path.into())?))
     }
 
+    // Deprecated -- please Use open_pipelined instead.
+    // TODO(https://fxbug.dev/110405): Change to async.
     pub fn open() -> Result<Self, Error> {
+        Ok(Self::new_v2(connect_to_protocol_at_path::<fsys::EventStream2Marker>(
+            "/svc/fuchsia.component.EventStream",
+        )?))
+    }
+
+    pub fn open_pipelined() -> Result<Self, Error> {
         Ok(Self::new_v2(connect_to_protocol_at_path::<fsys::EventStream2Marker>(
             "/svc/fuchsia.component.EventStream",
         )?))

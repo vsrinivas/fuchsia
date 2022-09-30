@@ -375,6 +375,9 @@ pub async fn serve_event_stream_v2_as_stream(
                     return;
                 }
             }
+            fsys::EventStream2Request::WaitForReady { responder } => {
+                let _ = responder.send();
+            }
         }
     }
 }

@@ -9,7 +9,7 @@ use {
 
 #[fuchsia::main]
 async fn main() {
-    let mut event_stream = EventStream::open().unwrap();
+    let mut event_stream = EventStream::open_pipelined().unwrap();
     loop {
         // For component start events, we can get the event as either Started
         // or Running. This is inherently prone to race conditions so we check for

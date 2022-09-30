@@ -11,7 +11,7 @@ use {
 #[fuchsia::main]
 async fn main() {
     // Track all the starting components.
-    let event_stream = EventStream::open().unwrap();
+    let event_stream = EventStream::open_pipelined().unwrap();
     // Connect to the parent offered Trigger. The parent will start the lazy child components and
     // this component should know about their started events given that it was offered those
     // events.

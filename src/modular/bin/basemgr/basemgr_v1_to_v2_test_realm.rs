@@ -42,7 +42,8 @@ async fn basemgr_v1_to_v2_test() -> Result<(), Error> {
     };
 
     // Subscribe to stopped events for child components
-    let mut event_stream = EventStream::open_at_path("/svc/fuchsia.component.EventStream").unwrap();
+    let mut event_stream =
+        EventStream::open_at_path_pipelined("/svc/fuchsia.component.EventStream").unwrap();
 
     let builder = RealmBuilder::new().await?;
 

@@ -15,7 +15,7 @@ use {
 #[fuchsia::main(logging_tags = ["resolved_error_reporter"])]
 async fn main() {
     // Track all the starting child components.
-    let mut event_stream = EventStream::open().unwrap();
+    let mut event_stream = EventStream::open_pipelined().unwrap();
 
     // This will trigger the resolution of the child.
     let realm = connect_to_protocol::<fcomponent::RealmMarker>().unwrap();

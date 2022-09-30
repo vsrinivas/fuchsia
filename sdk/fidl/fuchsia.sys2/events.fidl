@@ -366,6 +366,11 @@ protocol EventStream2 {
     GetNext() -> (resource struct {
         events vector<Event>:MAX;
     });
+
+    /// Returns immediately. Used to indicate that the FIDL connection
+    /// completed. This is needed for non-static streams to verify
+    /// that subscribe has completed before components are started.
+    WaitForReady() -> ();
 };
 
 /// Listener for events on the component hierarchy. The server won't wait for the client

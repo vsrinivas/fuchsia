@@ -1014,6 +1014,9 @@ mod test {
                                 break;
                             }
                         }
+                        Ok(fsys::EventStream2Request::WaitForReady { responder }) => {
+                            responder.send().unwrap();
+                        }
                         Err(e) => {
                             panic!("Error in event stream: {:?}", e);
                         }

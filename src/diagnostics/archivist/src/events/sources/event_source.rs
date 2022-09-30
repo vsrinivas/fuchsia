@@ -344,6 +344,9 @@ pub mod tests {
                                 break;
                             }
                         }
+                        fsys::EventStream2Request::WaitForReady { responder } => {
+                            responder.send().unwrap();
+                        }
                     }
                 }
             }

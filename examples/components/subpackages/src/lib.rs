@@ -59,7 +59,7 @@ async fn routes_from_echo() {
         .unwrap();
 
     // Subscribe to stopped events for child components
-    let mut event_stream = EventStream::open_at_path("/events/stopped").unwrap();
+    let mut event_stream = EventStream::open_at_path_pipelined("/events/stopped").unwrap();
 
     let realm = builder.build().await.unwrap();
 

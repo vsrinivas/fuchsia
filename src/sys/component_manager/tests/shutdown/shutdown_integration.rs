@@ -28,7 +28,7 @@ async fn shutdown_test() {
     let _instance =
         builder.build_in_nested_component_manager("#meta/component_manager.cm").await.unwrap();
 
-    let mut event_stream = EventStream::open().unwrap();
+    let mut event_stream = EventStream::open_pipelined().unwrap();
 
     // Expect component manager to stop cleanly
     EventMatcher::ok()
