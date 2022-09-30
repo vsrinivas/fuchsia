@@ -28,15 +28,15 @@ template("_fidl_banjo_c") {
       tool = "//src/devices/tools/fidlgen_banjo:bin"
       tool_output_name = "fidlgen_banjo"
 
-      inputs = [ invoker.ir_file ]
+      inputs = [ invoker.fidl_ir_json ]
 
       outputs = [ c_header_file ]
 
-      deps = [ invoker.ir_target ]
+      deps = [ invoker.fidl_ir_target ]
 
       args = [
         "--ir",
-        rebase_path(invoker.ir_file, root_build_dir),
+        rebase_path(invoker.fidl_ir_json, root_build_dir),
         "--output",
         rebase_path(c_header_file, root_build_dir),
         "--backend",
@@ -111,15 +111,15 @@ template("_fidl_banjo_cpp") {
       tool = "//src/devices/tools/fidlgen_banjo:bin"
       tool_output_name = "fidlgen_banjo"
 
-      inputs = [ invoker.ir_file ]
+      inputs = [ invoker.fidl_ir_json ]
 
       outputs = [ cpp_public_file ]
 
-      deps = [ invoker.ir_target ]
+      deps = [ invoker.fidl_ir_target ]
 
       args = [
         "--ir",
-        rebase_path(invoker.ir_file, root_build_dir),
+        rebase_path(invoker.fidl_ir_json, root_build_dir),
         "--output",
         rebase_path(cpp_public_file, root_build_dir),
         "--backend",
@@ -134,15 +134,15 @@ template("_fidl_banjo_cpp") {
       tool = "//src/devices/tools/fidlgen_banjo:bin"
       tool_output_name = "fidlgen_banjo"
 
-      inputs = [ invoker.ir_file ]
+      inputs = [ invoker.fidl_ir_json ]
 
       outputs = [ cpp_private_file ]
 
-      deps = [ invoker.ir_target ]
+      deps = [ invoker.fidl_ir_target ]
 
       args = [
         "--ir",
-        rebase_path(invoker.ir_file, root_build_dir),
+        rebase_path(invoker.fidl_ir_json, root_build_dir),
         "--output",
         rebase_path(cpp_private_file, root_build_dir),
         "--backend",
@@ -157,15 +157,15 @@ template("_fidl_banjo_cpp") {
       tool = "//src/devices/tools/fidlgen_banjo:bin"
       tool_output_name = "fidlgen_banjo"
 
-      inputs = [ invoker.ir_file ]
+      inputs = [ invoker.fidl_ir_json ]
 
       outputs = [ cpp_mock_file ]
 
-      deps = [ invoker.ir_target ]
+      deps = [ invoker.fidl_ir_target ]
 
       args = [
         "--ir",
-        rebase_path(invoker.ir_file, root_build_dir),
+        rebase_path(invoker.fidl_ir_json, root_build_dir),
         "--output",
         rebase_path(cpp_mock_file, root_build_dir),
         "--backend",
@@ -269,15 +269,15 @@ template("_fidl_banjo_rust") {
       tool = "//src/devices/tools/fidlgen_banjo:bin"
       tool_output_name = "fidlgen_banjo"
 
-      inputs = [ invoker.ir_file ]
+      inputs = [ invoker.fidl_ir_json ]
 
       outputs = [ rust_source_file ]
 
-      deps = [ invoker.ir_target ]
+      deps = [ invoker.fidl_ir_target ]
 
       args = [
         "--ir",
-        rebase_path(invoker.ir_file, root_build_dir),
+        rebase_path(invoker.fidl_ir_json, root_build_dir),
         "--output",
         rebase_path(rust_source_file, root_build_dir),
         "--backend",
@@ -326,35 +326,43 @@ template("_fidl_banjo_rust") {
 
 # Generates Banjo bindings for a FIDL library.
 #
-# Parameters (see //build/fidl/fidl.gni for descriptions):
+# Parameters
 #
-#   name
-#   public_deps
-#   sdk_category
-#   testonly
-#   visibility
+#  * library_name
+#    - Required: The name of the FIDL library.
+#    - Type: string
+#
+#  * fidl_ir_json
+#    - Required: The path to the associated FIDL IR JSON file.
+#    - Type: path
+#
+#  * fidl_ir_target
+#    - Required: The label of the target that generates the FIDL IR JSON file.
+#    - Type: label
+#
+#  * sdk_cateogry
+#    - Optional: See //build/fidl/fidl.gni for a description.
+#    - Type: string
+#
+#  * testonly, visibility, public_deps
+#    - Optional: Usual GN meanings.
 #
 template("fidl_banjo") {
-  not_needed(invoker,
-             [
-               "sdk_category",
-               "public_deps",
-               "visibility",
-             ])
-
   params = {
-    forward_variables_from(invoker, [ "testonly" ])
-
-    library_name = target_name
-    if (defined(invoker.name)) {
-      library_name = invoker.name
-    }
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "library_name",
+                           ])
 
     gen_dir = get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
 
     if (current_toolchain == fidl_toolchain) {
-      ir_file = "${gen_dir}/$target_name.fidl.json"
-      ir_target = ":${target_name}($fidl_toolchain)"
+      forward_variables_from(invoker,
+                             [
+                               "fidl_ir_json",
+                               "fidl_ir_target",
+                             ])
     } else {
       forward_variables_from(invoker,
                              [

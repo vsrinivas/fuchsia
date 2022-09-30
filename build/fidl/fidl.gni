@@ -121,9 +121,20 @@ template("fidl") {
          "All FIDL dependencies are inherently " +
              "public, use 'public_deps' instead of 'deps'.")
 
+  extra_parameters = {
+    library_name = target_name
+    if (defined(invoker.name)) {
+      library_name = invoker.name
+    }
+
+    # The FIDL IR target, to be forwarded to each backend as a dependency.
+    fidl_ir_target = ":${target_name}_compile_fidlc($fidl_toolchain)"
+    fidl_ir_json = get_label_info(fidl_ir_target, "target_gen_dir") +
+                   "/${target_name}.fidl.json"
+  }
+
   # Parameters forwarded to nearly every internal template.
   common_parameters = [
-    "name",
     "public_deps",
     "sdk_category",
     "testonly",
@@ -145,9 +156,6 @@ template("fidl") {
   # Parameters forwarded only to fidl_dart.
   dart_only_parameters = [ "dart_analysis" ]
 
-  # Parameters forwarded only to fidl_go.
-  go_only_parameters = []
-
   # Parameters forwarded only to fidl_cpp_family.
   cpp_only_parameters = [
     "contains_drivers",
@@ -155,9 +163,8 @@ template("fidl") {
     "golden_fuzzer",
   ]
 
-  all_parameters =
-      common_parameters + fidl_only_parameters + dart_only_parameters +
-      go_only_parameters + cpp_only_parameters
+  all_parameters = common_parameters + fidl_only_parameters +
+                   dart_only_parameters + cpp_only_parameters
 
   # Allow generated targets visibility to their dependant generated targets
   if (defined(invoker.visibility)) {
@@ -172,31 +179,48 @@ template("fidl") {
     # FIDL toolchain: run fidlc to generate the JSON IR.
     import("//build/fidl/fidl_library.gni")
     fidl_library(target_name) {
-      forward_variables_from(invoker, common_parameters + fidl_only_parameters)
+      forward_variables_from(invoker, fidl_only_parameters + common_parameters)
+      forward_variables_from(extra_parameters,
+                             [
+                               "library_name",
+                               "fidl_ir_json",
+                             ])
     }
 
     # The targets below generate bindings from the JSON IR, but they do not
     # build them. That is done in the target toolchain (when current_toolchain
     # is anything other than {fidl,go,dart}_toolchain).
-
     import("//build/cpp/fidl_cpp.gni")
     fidl_cpp_family(target_name) {
-      forward_variables_from(invoker, common_parameters + cpp_only_parameters)
+      forward_variables_from(invoker, cpp_only_parameters + common_parameters)
+      forward_variables_from(extra_parameters, "*")
     }
 
     import("//build/banjo/fidl_banjo.gni")
     fidl_banjo(target_name) {
-      forward_variables_from(invoker, common_parameters)
+      forward_variables_from(invoker, [ "testonly" ])
+      forward_variables_from(extra_parameters, "*")
     }
 
     import("//build/rust/fidl_rust.gni")
     fidl_rust(target_name) {
-      forward_variables_from(invoker, common_parameters)
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                               "public_deps",
+                             ])
+      forward_variables_from(extra_parameters, "*")
     }
 
     import("//build/bind/fidl_bind_library.gni")
     fidl_bind_library(target_name) {
-      forward_variables_from(invoker, common_parameters)
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      forward_variables_from(extra_parameters, "*")
     }
   } else if (current_toolchain == dart_toolchain) {
     # Dart toolchain: generate Dart bindings and build/analyze them.
@@ -205,14 +229,20 @@ template("fidl") {
     not_needed(invoker, all_parameters - dart_parameters)
     fidl_dart(target_name) {
       forward_variables_from(invoker, dart_parameters)
+      forward_variables_from(extra_parameters, "*")
     }
   } else if (current_toolchain == go_toolchain) {
     # Go toolchain: generate Go bindings and build them.
     import("//build/go/fidl_go.gni")
-    go_parameters = common_parameters + go_only_parameters
+    go_parameters = [
+      "testonly",
+      "visibility",
+      "public_deps",
+    ]
     not_needed(invoker, all_parameters - go_parameters)
     fidl_go(target_name) {
       forward_variables_from(invoker, go_parameters)
+      forward_variables_from(extra_parameters, "*")
     }
   } else {
     needed_parameters = common_parameters + cpp_only_parameters
@@ -222,33 +252,61 @@ template("fidl") {
 
     import("//build/cpp/fidl_cpp.gni")
     fidl_cpp_family(target_name) {
-      forward_variables_from(invoker, common_parameters + cpp_only_parameters)
+      forward_variables_from(invoker, cpp_only_parameters + common_parameters)
+      forward_variables_from(extra_parameters, "*")
     }
 
     import("//build/banjo/fidl_banjo.gni")
     fidl_banjo(target_name) {
-      forward_variables_from(invoker, common_parameters)
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                               "public_deps",
+                             ])
+      forward_variables_from(extra_parameters, [ "library_name" ])
     }
 
     import("//build/rust/fidl_rust.gni")
     fidl_rust(target_name) {
-      forward_variables_from(invoker, common_parameters)
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                               "public_deps",
+                             ])
+      forward_variables_from(extra_parameters, "*")
     }
 
     import("//build/bind/fidl_bind_library.gni")
     fidl_bind_library(target_name) {
-      forward_variables_from(invoker, common_parameters)
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      forward_variables_from(extra_parameters, "*")
     }
 
     import("//build/c/fidl_c.gni")
     fidl_tables(target_name) {
-      forward_variables_from(invoker, common_parameters)
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
     }
 
     # The C client/server are only provided on Fuchsia, not host.
     if (is_fuchsia) {
       fidl_c(target_name) {
-        forward_variables_from(invoker, common_parameters)
+        forward_variables_from(invoker,
+                               [
+                                 "testonly",
+                                 "visibility",
+                                 "public_deps",
+                               ])
+        forward_variables_from(extra_parameters, [ "library_name" ])
       }
     }
   }

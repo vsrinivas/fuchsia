@@ -30,20 +30,30 @@ declare_args() {
 # - Generates API summaries (if applicable).
 # - Runs API compatibility tests (if applicable).
 #
-# Parameters (see //build/fidl/fidl.gni for descriptions):
+# Parameters
 #
-#   sources (required)
-#   api
-#   excluded_checks
-#   experimental_flags
-#   goldens_dir
-#   name
-#   non_fidl_deps
-#   public_deps
-#   sdk_category
-#   should_lint
-#   testonly
-#   visibility
+#  * library_name
+#    - Required: The name of the FIDL library.
+#    - Type: string
+#
+#  * fidl_ir_json
+#    - Required: The path to the associated FIDL IR JSON file.
+#    - Type: path
+#
+#  * fidl_ir_target
+#    - Required: The label of the target that generates the FIDL IR JSON file.
+#    - Type: label
+#
+#  * sources
+#    - Required: See //build/fidl/fidl.gni for a description.
+#    - Type: list(path)
+#
+#  * api, excluded_checks, experimental_flags, goldens_dir, non_fidl_deps,
+#    sdk_category, should_lint
+#    - Optional: See //build/fidl/fidl.gni for a description.
+#
+#  * testonly, visibility, public_deps
+#    - Optional: Usual GN meanings.
 #
 template("fidl_library") {
   assert(
@@ -51,12 +61,10 @@ template("fidl_library") {
       "This template can only be used in the FIDL toolchain $fidl_toolchain.")
 
   assert(defined(invoker.sources), "sources is required")
+  assert(defined(invoker.library_name), "library_name is required")
+  assert(defined(invoker.fidl_ir_json), "fidl_ir_json is required")
 
   main_target_name = target_name
-  library_name = target_name
-  if (defined(invoker.name)) {
-    library_name = invoker.name
-  }
 
   is_sdk_included =
       defined(invoker.sdk_category) && invoker.sdk_category != "excluded"
@@ -84,18 +92,21 @@ template("fidl_library") {
     not_needed(invoker, [ "api" ])
   }
 
-  json_representation = "$target_gen_dir/$target_name.fidl.json"
   lint_stamp_file = "$target_gen_dir/$target_name.linted"
 
   compilation_target_name = "${target_name}_compile"
   verification_target_name = "${target_name}_verify"
   lint_target_name = "${target_name}_lint"
 
+  forward_variables_from(invoker,
+                         [
+                           "library_name",
+                           "fidl_ir_json",
+                         ])
   fidl_ir(compilation_target_name) {
     forward_variables_from(invoker,
                            [
                              "experimental_flags",
-                             "json_representation",
                              "non_fidl_deps",
                              "public_deps",
                              "sources",
@@ -105,7 +116,7 @@ template("fidl_library") {
     fidl_target_name = main_target_name
     fidl_library_name = library_name
     gen_dir = target_gen_dir
-    json_representation = json_representation
+    json_representation = fidl_ir_json
   }
 
   summary_file_json = "$target_gen_dir/$target_name.api_summary.json"
@@ -123,7 +134,7 @@ template("fidl_library") {
       ":*",
       "//sdk/fidl:plasa",
     ]
-    fidl_ir = json_representation
+    fidl_ir = fidl_ir_json
     output_fragment_file = plasa_fragment_file
     dest = "fidl"
     deps = [ ":$compilation_target_name" ]
@@ -298,7 +309,7 @@ template("fidl_library") {
   validate_json(verification_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
     visibility = [ ":*" ]
-    data = json_representation
+    data = fidl_ir_json
     schema = "//tools/fidl/fidlc/schema.json"
     deps = [ ":$compilation_target_name" ]
   }
@@ -312,7 +323,7 @@ template("fidl_library") {
 
     # Metadata to allow us to query all FIDL IR files.
     metadata = {
-      fidl_json = [ rebase_path(json_representation, root_build_dir) ]
+      fidl_json = [ rebase_path(fidl_ir_json, root_build_dir) ]
       generated_sources = fidl_json
     }
 
@@ -418,7 +429,7 @@ template("fidl_library") {
 
       # Metadata to allow us to query all FIDL IR and source files.
       metadata = {
-        fidl_json = [ rebase_path(json_representation, root_build_dir) ]
+        fidl_json = [ rebase_path(fidl_ir_json, root_build_dir) ]
         generated_sources = fidl_json
 
         # Metadata for FIDL SDK files.
@@ -426,7 +437,7 @@ template("fidl_library") {
           sdk_fidl_json_data = [
             {
               name = library_name
-              ir = rebase_path(json_representation, root_build_dir)
+              ir = rebase_path(fidl_ir_json, root_build_dir)
               category = invoker.sdk_category
             },
           ]

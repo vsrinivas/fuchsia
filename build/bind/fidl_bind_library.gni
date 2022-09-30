@@ -6,29 +6,37 @@ import("//build/bind/bind.gni")
 
 # Generates a driver bind library for a FIDL library.
 #
-# Parameters (see //build/fidl/fidl.gni for descriptions):
+# Parameters
 #
-#   name
-#   testonly
-#   visibility
+#  * library_name
+#    - Required: The name of the FIDL library.
+#    - Type: string
+#
+#  * fidl_ir_json
+#    - Required: The path to the associated FIDL IR JSON file.
+#    - Type: path
+#
+#  * fidl_ir_target
+#    - Required: The label of the target that generates the FIDL IR JSON file.
+#    - Type: label
+#
+#  * testonly, visibility
+#    - Optional: Usual GN meanings.
 #
 template("fidl_bind_library") {
-  not_needed(invoker,
-             [
-               "public_deps",
-               "sdk_category",
-             ])
+  assert(defined(invoker.library_name),
+         "fidl_bind_library(\"$target_name\") must define `library_name`")
+  assert(defined(invoker.fidl_ir_json),
+         "fidl_bind_library(\"$target_name\") must define `fidl_ir_json`")
+  assert(defined(invoker.fidl_ir_target),
+         "fidl_bind_library(\"$target_name\") must define `fidl_ir_target`")
 
   generation_target_name = "${target_name}_bindlib_generate"
-
-  library_name = target_name
-  if (defined(invoker.name)) {
-    library_name = invoker.name
-  }
 
   fidl_target_gen_dir =
       get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
 
+  forward_variables_from(invoker, [ "library_name" ])
   bind_library_file_name = "${library_name}.bind"
   generated_bind_library =
       "$fidl_target_gen_dir/$target_name/fidl_bindlibs/$bind_library_file_name"
@@ -36,26 +44,29 @@ template("fidl_bind_library") {
   if (current_toolchain == fidl_toolchain) {
     not_needed(invoker, [ "visibility" ])
 
-    main_target_name = target_name
-    ir_file = "$fidl_target_gen_dir/$target_name.fidl.json"
     compiled_action(generation_target_name) {
-      forward_variables_from(invoker, [ "testonly" ])
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "fidl_ir_json",
+                               "fidl_ir_target",
+                             ])
       visibility = [ ":*" ]
 
       tool = "//tools/bindc:bin"
       tool_output_name = "bindc"
 
-      inputs = [ ir_file ]
+      inputs = [ fidl_ir_json ]
 
       outputs = [ generated_bind_library ]
 
-      deps = [ ":${main_target_name}($fidl_toolchain)" ]
+      deps = [ fidl_ir_target ]
 
       args = [
         "generate-bind",
         "--output",
         rebase_path("${generated_bind_library}", root_build_dir),
-        rebase_path("${ir_file}", root_build_dir),
+        rebase_path(fidl_ir_json, root_build_dir),
       ]
 
       metadata = {

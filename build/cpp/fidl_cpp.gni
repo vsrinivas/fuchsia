@@ -59,8 +59,6 @@ template("_fidl_cpp_codegen_impl") {
       get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
   root = "$fidl_target_gen_dir/$fidl_target_name/${invoker.bindings_flavor}"
 
-  json_representation = "$fidl_target_gen_dir/$fidl_target_name.fidl.json"
-
   generation_visibility = [
     ":$target_name",
     "${invoker.fidlgen_tool}:*",
@@ -92,14 +90,19 @@ template("_fidl_cpp_codegen_impl") {
 
   compiled_action(generation_target_name) {
     # supply defaults for various options
-    forward_variables_from(invoker, [ "testonly" ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "fidl_ir_json",
+                             "fidl_ir_target",
+                           ])
 
     visibility = generation_visibility
 
     tool = invoker.fidlgen_tool
 
     inputs = [
-      json_representation,
+      fidl_ir_json,
       "${clang_prefix}/clang-format",
     ]
 
@@ -117,7 +120,7 @@ template("_fidl_cpp_codegen_impl") {
 
     args = [
       "--json",
-      rebase_path(json_representation, root_build_dir),
+      rebase_path(fidl_ir_json, root_build_dir),
       "--clang-format-path",
       "${rebased_clang_prefix}/clang-format",
       "--root",
@@ -133,7 +136,7 @@ template("_fidl_cpp_codegen_impl") {
       }
     }
 
-    deps = [ ":$fidl_target_name($fidl_toolchain)" ]
+    deps = [ fidl_ir_target ]
 
     metadata = {
       generated_sources = rebase_path(outputs, root_build_dir)
@@ -351,6 +354,26 @@ template("fidl_cpp_library") {
 
 # Generates various C++ FIDL bindings: New C++ bindings, HLCPP, and fuzzers.
 #
+# Parameters
+#
+#  * library_name
+#    - Required: The name of the FIDL library.
+#    - Type: string
+#
+#  * fidl_ir_json
+#    - Required: The path to the associated FIDL IR JSON file.
+#    - Type: path
+#
+#  * fidl_ir_target
+#    - Required: The label of the target that generates the FIDL IR JSON file.
+#    - Type: label
+#
+#  * sdk_cateogry
+#    - Optional: See //build/fidl/fidl.gni for a description.
+#    - Type: string
+#
+#  * testonly, visibility, public_deps
+#    - Optional: Usual GN meanings.
 # Note:
 # - Under the FIDL toolchain, we would create action targets that
 #   generate the C++ bindings.
@@ -358,16 +381,14 @@ template("fidl_cpp_library") {
 #   reference the generated code.
 #
 template("fidl_cpp_family") {
-  # Allow users to override the library name by specifying a
-  # "name" variable in the `fidl("my_lib")` template invocation.
-  # Otherwise, default to the `target_name` of the FIDL library.
-  #
-  # Note that library names will have implication on the generated
-  # include paths, hence should be separate from `target_name`.
-  library_name = target_name
-  if (defined(invoker.name)) {
-    library_name = invoker.name
-  }
+  assert(defined(invoker.library_name),
+         "fidl_cpp_family(\"$target_name\") must define `library_name`")
+  assert(defined(invoker.fidl_ir_json),
+         "fidl_cpp_family(\"$target_name\") must define `fidl_ir_json`")
+  assert(defined(invoker.fidl_ir_target),
+         "fidl_cpp_family(\"$target_name\") must define `fidl_ir_target`")
+
+  forward_variables_from(invoker, [ "library_name" ])
   library_name_slashes = string_replace(library_name, ".", "/")
 
   # `target_name` becomes clobbered in template invocation scopes;
@@ -417,6 +438,11 @@ template("fidl_cpp_family") {
   }
 
   fidl_cpp_codegen("${target_name}_hlcpp") {
+    forward_variables_from(invoker,
+                           [
+                             "fidl_ir_json",
+                             "fidl_ir_target",
+                           ])
     forward_variables_from(common_options, "*")
     forward_variables_from(hlcpp_options, "*")
     fidlgen_tool = "//tools/fidl/fidlgen_hlcpp"
@@ -648,6 +674,11 @@ template("fidl_cpp_family") {
   }
 
   fidl_cpp_codegen("${target_name}_cpp") {
+    forward_variables_from(invoker,
+                           [
+                             "fidl_ir_json",
+                             "fidl_ir_target",
+                           ])
     forward_variables_from(common_options, "*")
     bindings_flavor = "cpp"
     fidlgen_tool = "//tools/fidl/fidlgen_cpp"
@@ -688,6 +719,8 @@ template("fidl_cpp_family") {
                            [
                              "fuzzers",
                              "golden_fuzzer",
+                             "fidl_ir_json",
+                             "fidl_ir_target",
                            ])
     forward_variables_from(common_options, "*")
     forward_variables_from(libfuzzer_options, "*")
@@ -757,7 +790,6 @@ template("fidl_cpp_family") {
                                [
                                  "visibility",
                                  "public_deps",
-                                 "library_name",
                                ])
         forward_variables_from(common_options, "*")
         forward_variables_from(libfuzzer_options, "*")
@@ -778,7 +810,6 @@ template("fidl_cpp_family") {
                              [
                                "visibility",
                                "public_deps",
-                               "library_name",
                              ])
       forward_variables_from(common_options, "*")
       forward_variables_from(libfuzzer_options, "*")

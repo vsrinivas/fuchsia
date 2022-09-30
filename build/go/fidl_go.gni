@@ -9,36 +9,50 @@ import("//build/go/toolchain.gni")
 
 # Generates Go bindings for a FIDL library.
 #
-# Parameters (see //build/fidl/fidl.gni for descriptions):
+# Parameters
 #
-#   name
-#   public_deps
-#   testonly
-#   visibility
+#  * library_name
+#    - Required: The name of the FIDL library.
+#    - Type: string
+#
+#  * fidl_ir_json
+#    - Required: The path to the associated FIDL IR JSON file.
+#    - Type: path
+#
+#  * fidl_ir_target
+#    - Required: The label of the target that generates the FIDL IR JSON file.
+#    - Type: label
+#
+#  * testonly, visibility, public_deps
+#    - Optional: Usual GN meanings.
 #
 template("fidl_go") {
   assert(current_toolchain == go_toolchain,
          "This template can only be used in the Go toolchain $go_toolchain.")
-  not_needed(invoker, [ "sdk_category" ])
+
+  assert(defined(invoker.library_name),
+         "fidl_go(\"$target_name\") must define `library_name`")
+  assert(defined(invoker.fidl_ir_json),
+         "fidl_go(\"$target_name\") must define `fidl_ir_json`")
+  assert(defined(invoker.fidl_ir_target),
+         "fidl_go(\"$target_name\") must define `fidl_ir_target`")
 
   generation_target_name = "${target_name}_go_generate"
 
-  library_name = target_name
-  if (defined(invoker.name)) {
-    library_name = invoker.name
-  }
-
+  forward_variables_from(invoker, [ "library_name" ])
   fidl_target_gen_dir =
       get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
-  json_representation = "$fidl_target_gen_dir/$target_name.fidl.json"
-  json_representation_target = ":${target_name}($fidl_toolchain)"
-
   library_dir = "$fidl_target_gen_dir/$target_name/$library_name.fidl"
   impl_filename = "$library_dir/impl.go"
   pkg_name_filename = "$library_dir/pkg_name"
 
   compiled_action(generation_target_name) {
-    forward_variables_from(invoker, [ "testonly" ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "fidl_ir_json",
+                             "fidl_ir_target",
+                           ])
 
     visibility = [
       ":*",
@@ -47,7 +61,7 @@ template("fidl_go") {
 
     tool = "//tools/fidl/fidlgen_go"
 
-    inputs = [ json_representation ]
+    inputs = [ fidl_ir_json ]
 
     outputs = [
       impl_filename,
@@ -56,7 +70,7 @@ template("fidl_go") {
 
     args = [
       "--json",
-      rebase_path(json_representation, root_build_dir),
+      rebase_path(fidl_ir_json, root_build_dir),
       "--output-impl",
       rebase_path(impl_filename, root_build_dir),
       "--output-pkg-name",
@@ -65,7 +79,7 @@ template("fidl_go") {
       rebase_path("$root_gen_dir/fidl_for_ide", root_build_dir),
     ]
 
-    deps = [ json_representation_target ]
+    deps = [ fidl_ir_target ]
 
     metadata = {
       generated_sources = rebase_path(outputs, root_build_dir)

@@ -9,25 +9,35 @@ import("//build/rust/rustc_library.gni")
 
 # Generates Rust bindings for a FIDL library.
 #
-# Parameters (see //build/fidl/fidl.gni for descriptions):
+# Parameters
 #
-#   name
-#   public_deps
-#   testonly
-#   visibility
+#  * library_name
+#    - Required: The name of the FIDL library.
+#    - Type: string
+#
+#  * fidl_ir_json
+#    - Required: The path to the associated FIDL IR JSON file.
+#    - Type: path
+#
+#  * fidl_ir_target
+#    - Required: The label of the target that generates the FIDL IR JSON file.
+#    - Type: label
+#
+#  * testonly, visibility, public_deps
+#    - Optional: Usual GN meanings.
 #
 template("fidl_rust") {
-  not_needed(invoker, [ "sdk_category" ])
+  assert(defined(invoker.library_name),
+         "fidl_rust(\"$target_name\") must define `library_name`")
+  assert(defined(invoker.fidl_ir_json),
+         "fidl_rust(\"$target_name\") must define `fidl_ir_json`")
+  assert(defined(invoker.fidl_ir_target),
+         "fidl_rust(\"$target_name\") must define `fidl_ir_target`")
 
   rust_target_name = "${target_name}_rust"
   generation_target_name = "${rust_target_name}_generate"
 
-  library_name = target_name
-  if (defined(invoker.name)) {
-    library_name = invoker.name
-  }
-
-  crate_name = "fidl_" + string_replace(library_name, ".", "_")
+  crate_name = "fidl_" + string_replace(invoker.library_name, ".", "_")
 
   fidl_target_gen_dir =
       get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
@@ -41,11 +51,13 @@ template("fidl_rust") {
                ])
 
     filename = "$file_stem.rs"
-    json_representation = "$fidl_target_gen_dir/$target_name.fidl.json"
-    json_representation_target = ":${target_name}"
-
     compiled_action(generation_target_name) {
-      forward_variables_from(invoker, [ "testonly" ])
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "fidl_ir_json",
+                               "fidl_ir_target",
+                             ])
 
       visibility = [
         ":*",
@@ -55,7 +67,7 @@ template("fidl_rust") {
       tool = "//tools/fidl/fidlgen_rust"
 
       inputs = [
-        json_representation,
+        fidl_ir_json,
         "//rustfmt.toml",
         "$rustc_prefix/bin/rustfmt",
         rustc_version_file,
@@ -65,7 +77,7 @@ template("fidl_rust") {
 
       args = [
         "--json",
-        rebase_path(json_representation, root_build_dir),
+        rebase_path(fidl_ir_json, root_build_dir),
         "--output-filename",
         rebase_path(filename, root_build_dir),
         "--rustfmt",
@@ -74,7 +86,7 @@ template("fidl_rust") {
         rebase_path("//rustfmt.toml", root_build_dir),
       ]
 
-      deps = [ json_representation_target ]
+      deps = [ fidl_ir_target ]
 
       metadata = {
         generated_sources = rebase_path(outputs, root_build_dir)

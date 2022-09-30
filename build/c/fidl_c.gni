@@ -13,13 +13,6 @@ import("//build/fidl/toolchain.gni")
 #   visibility
 #
 template("fidl_tables") {
-  not_needed(invoker,
-             [
-               "name",
-               "public_deps",
-               "sdk_category",
-             ])
-
   fidl_target_gen_dir =
       get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
   generated_binding_dir = "$fidl_target_gen_dir/$target_name/c"
@@ -57,11 +50,8 @@ template("_fidl_c_target") {
   c_target_name = "${target_name}_c_${type}"
   config_target_name = "${c_target_name}_config"
 
-  library_name = target_name
-  if (defined(invoker.name)) {
-    library_name = invoker.name
-  }
-
+  assert(defined(invoker.library_name))
+  forward_variables_from(invoker, [ "library_name" ])
   c_stem = string_replace(library_name, ".", "/") + "/c/fidl"
   fidl_target_gen_dir =
       get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
@@ -118,29 +108,50 @@ template("_fidl_c_target") {
 
 # C simple client and server bindings for a FIDL library.
 #
-# Parameters (see //build/fidl/fidl.gni for descriptions):
+# Parameters
 #
-#   name
-#   public_deps
-#   testonly
-#   visibility
+#  * library_name
+#    - Required: The name of the FIDL library.
+#    - Type: string
+#
+#  * testonly, visibility, public_deps
+#    - Optional: Usual GN meanings.
 #
 template("fidl_c") {
-  not_needed(invoker, [ "sdk_category" ])
+  assert(defined(invoker.library_name),
+         "fidl_c(\"$target_name\") requires `library_name`")
 
   # TODO(fxbug.dev/99732): Evaluate whether we really need this.
   _fidl_c_target(target_name) {
-    forward_variables_from(invoker, "*")
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                             "public_deps",
+                             "library_name",
+                           ])
     type = "header"
   }
 
   _fidl_c_target(target_name) {
-    forward_variables_from(invoker, "*")
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                             "public_deps",
+                             "library_name",
+                           ])
     type = "client"
   }
 
   _fidl_c_target(target_name) {
-    forward_variables_from(invoker, "*")
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                             "public_deps",
+                             "library_name",
+                           ])
     type = "server"
   }
 
