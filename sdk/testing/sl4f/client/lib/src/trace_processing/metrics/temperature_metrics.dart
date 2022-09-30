@@ -25,8 +25,8 @@ List<TestCaseResults> temperatureMetricsProcessor(
     Model model, Map<String, dynamic> extraArgs) {
   List<double> temperatureReadings = getArgValuesFromEvents<num>(
           filterEventsTyped<CounterEvent>(getAllEvents(model),
-              category: 'temperature_logger', name: 'temperature'),
-          'soc_pll')
+              category: 'metrics_logger', name: 'temperature'),
+          'soc_pll(/dev/aml-thermal-pll/thermal)')
       .map((t) => t.toDouble())
       .toList();
   if (temperatureReadings.isEmpty) {

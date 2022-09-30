@@ -1,0 +1,51 @@
+{
+    "displayTimeUnit": "ns",
+    "systemTraceEvents": {
+        "events": [
+            {
+                "name": "root_presenter",
+                "ph": "p",
+                "pid": 7009
+            },
+            {
+                "name": "initial-thread",
+                "ph": "t",
+                "pid": 7009,
+                "tid": 7022
+            }
+        ],
+        "type": "fuchsia"
+    },
+    "traceEvents": [
+        {
+            "cat": "metrics_logger",
+            "name": "temperature",
+            "ts": 45769981.875,
+            "pid": 97986,
+            "tid": 97988,
+            "ph": "C",
+            "args": {
+                "soc_pll(/dev/aml-thermal-pll/thermal)": 48.90000076293945,
+                "therm_audio(/dev/sys/platform/03:0a:27/thermistor-device/therm-audio)": 40.577613830566406,
+                "therm_thread(/dev/sys/platform/03:0a:27/thermistor-device/therm-thread)": 38.40912628173828,
+                "top_board(/dev/sys/platform/05:00:2/aml-i2c/i2c/i2c-0-112/shtv3)": 28.705291748046875,
+                "client_id": "sl4f_temperature"
+            }
+        },
+        {
+            "cat": "metrics_logger",
+            "name": "temperature",
+            "ts": 45769981.875,
+            "pid": 97986,
+            "tid": 97988,
+            "ph": "C",
+            "args": {
+                "soc_pll(/dev/aml-thermal-pll/thermal)": 47.900001525878906,
+                "therm_audio(/dev/sys/platform/03:0a:27/thermistor-device/therm-audio)": 40.577613830566406,
+                "therm_thread(/dev/sys/platform/03:0a:27/thermistor-device/therm-thread)": 38.40912628173828,
+                "top_board(/dev/sys/platform/05:00:2/aml-i2c/i2c/i2c-0-112/shtv3)": 28.705291748046875,
+                "client_id": "sl4f_temperature"
+            }
+        }
+    ]
+}

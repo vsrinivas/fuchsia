@@ -140,7 +140,7 @@ if (is_host) {
       "test/trace_processing_test_data/model.json",
       "test/trace_processing_test_data/power_metric.json",
       "test/trace_processing_test_data/scenic.json",
-      "test/trace_processing_test_data/temperature_metric_temperature_logger.json",
+      "test/trace_processing_test_data/temperature_metric.json",
     ]
 
     outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]

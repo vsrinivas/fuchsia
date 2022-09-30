@@ -6,11 +6,15 @@ use crate::common_utils::common::macros::{fx_err_and_bail, with_line};
 use crate::temperature::types;
 use anyhow::Error;
 use fidl_fuchsia_hardware_temperature::{DeviceMarker, DeviceProxy};
-use fidl_fuchsia_thermal_test::{TemperatureLoggerMarker, TemperatureLoggerProxy};
+use fidl_fuchsia_metricslogger_test::{
+    Metric, MetricsLoggerMarker, MetricsLoggerProxy, Temperature,
+};
 use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon as zx;
 use serde_json::Value;
 use std::path::Path;
+
+const CLIENT_ID: &'static str = "sl4f_temperature";
 
 /// Perform Temperature operations.
 ///
@@ -23,7 +27,7 @@ pub struct TemperatureFacade {
     device_proxy: Option<DeviceProxy>,
 
     /// Optional logger proxy for testing, similar to `device_proxy`.
-    logger_proxy: Option<TemperatureLoggerProxy>,
+    logger_proxy: Option<MetricsLoggerProxy>,
 }
 
 impl TemperatureFacade {
@@ -62,14 +66,14 @@ impl TemperatureFacade {
         }
     }
 
-    /// Connect to the discoverable TemperatureLogger service and return the proxy.
-    fn get_logger_proxy(&self) -> Result<TemperatureLoggerProxy, Error> {
+    /// Connect to the discoverable MetricsLogger service and return the proxy.
+    fn get_logger_proxy(&self) -> Result<MetricsLoggerProxy, Error> {
         let tag = "TemperatureFacade::get_logger_proxy";
 
         if let Some(proxy) = &self.logger_proxy {
             Ok(proxy.clone())
         } else {
-            match connect_to_protocol::<TemperatureLoggerMarker>() {
+            match connect_to_protocol::<MetricsLoggerMarker>() {
                 Ok(proxy) => Ok(proxy),
                 Err(e) => fx_err_and_bail!(
                     &with_line!(tag),
@@ -92,7 +96,7 @@ impl TemperatureFacade {
         Ok(temperature)
     }
 
-    /// Initiates fixed-duration logging with the TemperatureLogger service.
+    /// Initiates fixed-duration logging with the MetricsLogger service.
     ///
     /// # Arguments
     /// * `args`: JSON value containing the StartLoggingRequest information. Key "interval_ms"
@@ -105,7 +109,17 @@ impl TemperatureFacade {
         let proxy = self.get_logger_proxy()?;
 
         proxy
-            .start_logging(req.interval_ms, req.duration_ms)
+            .start_logging(
+                CLIENT_ID,
+                &mut vec![&mut Metric::Temperature(Temperature {
+                    sampling_interval_ms: req.interval_ms,
+                    statistics_args: None,
+                })]
+                .into_iter(),
+                req.duration_ms,
+                /* output_samples_to_syslog */ false,
+                /* output_stats_to_syslog */ false,
+            )
             .await?
             .map_err(|e| format_err!("Received TemperatureLoggerError: {:?}", e))?;
         Ok(types::TemperatureLoggerResult::Success)
@@ -124,7 +138,16 @@ impl TemperatureFacade {
         let proxy = self.get_logger_proxy()?;
 
         proxy
-            .start_logging_forever(req.interval_ms)
+            .start_logging_forever(
+                CLIENT_ID,
+                &mut vec![&mut Metric::Temperature(Temperature {
+                    sampling_interval_ms: req.interval_ms,
+                    statistics_args: None,
+                })]
+                .into_iter(),
+                /* output_samples_to_syslog */ false,
+                /* output_stats_to_syslog */ false,
+            )
             .await?
             .map_err(|e| format_err!("Received TemperatureLoggerError: {:?}", e))?;
         Ok(types::TemperatureLoggerResult::Success)
@@ -132,7 +155,7 @@ impl TemperatureFacade {
 
     /// Terminates logging by the TemperatureLogger service.
     pub async fn stop_logging(&self) -> Result<types::TemperatureLoggerResult, Error> {
-        self.get_logger_proxy()?.stop_logging().await?;
+        self.get_logger_proxy()?.stop_logging(CLIENT_ID).await?;
         Ok(types::TemperatureLoggerResult::Success)
     }
 }
@@ -143,7 +166,7 @@ mod tests {
     use assert_matches::assert_matches;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_hardware_temperature::DeviceRequest;
-    use fidl_fuchsia_thermal_test::TemperatureLoggerRequest;
+    use fidl_fuchsia_metricslogger_test::MetricsLoggerRequest;
     use fuchsia_async as fasync;
     use futures::prelude::*;
     use serde_json::json;
@@ -182,17 +205,31 @@ mod tests {
         let query_interval_ms = 500;
         let query_duration_ms = 10_000;
 
-        let (proxy, mut stream) = create_proxy_and_stream::<TemperatureLoggerMarker>().unwrap();
+        let (proxy, mut stream) = create_proxy_and_stream::<MetricsLoggerMarker>().unwrap();
 
         let _stream_task = fasync::Task::local(async move {
             match stream.try_next().await {
-                Ok(Some(TemperatureLoggerRequest::StartLogging {
-                    interval_ms,
+                Ok(Some(MetricsLoggerRequest::StartLogging {
+                    client_id,
+                    metrics,
                     duration_ms,
+                    output_samples_to_syslog,
+                    output_stats_to_syslog,
                     responder,
                 })) => {
-                    assert_eq!(query_interval_ms, interval_ms);
-                    assert_eq!(query_duration_ms, duration_ms);
+                    assert_eq!(String::from("sl4f_temperature"), client_id);
+                    assert_eq!(metrics.len(), 1);
+                    assert_eq!(
+                        metrics[0],
+                        Metric::Temperature(Temperature {
+                            sampling_interval_ms: query_interval_ms,
+                            statistics_args: None,
+                        }),
+                    );
+                    assert_eq!(output_samples_to_syslog, false);
+                    assert_eq!(output_stats_to_syslog, false);
+                    assert_eq!(duration_ms, query_duration_ms);
+
                     responder.send(&mut Ok(())).unwrap();
                 }
                 other => panic!("Unexpected stream item: {:?}", other),
@@ -217,15 +254,29 @@ mod tests {
     async fn test_start_logging_forever() {
         let query_interval_ms = 500;
 
-        let (proxy, mut stream) = create_proxy_and_stream::<TemperatureLoggerMarker>().unwrap();
+        let (proxy, mut stream) = create_proxy_and_stream::<MetricsLoggerMarker>().unwrap();
 
         let _stream_task = fasync::Task::local(async move {
             match stream.try_next().await {
-                Ok(Some(TemperatureLoggerRequest::StartLoggingForever {
-                    interval_ms,
+                Ok(Some(MetricsLoggerRequest::StartLoggingForever {
+                    client_id,
+                    metrics,
+                    output_samples_to_syslog,
+                    output_stats_to_syslog,
                     responder,
                 })) => {
-                    assert_eq!(query_interval_ms, interval_ms);
+                    assert_eq!(String::from("sl4f_temperature"), client_id);
+                    assert_eq!(metrics.len(), 1);
+                    assert_eq!(
+                        metrics[0],
+                        Metric::Temperature(Temperature {
+                            sampling_interval_ms: query_interval_ms,
+                            statistics_args: None,
+                        }),
+                    );
+                    assert_eq!(output_samples_to_syslog, false);
+                    assert_eq!(output_stats_to_syslog, false);
+
                     responder.send(&mut Ok(())).unwrap();
                 }
                 other => panic!("Unexpected stream item: {:?}", other),
@@ -243,12 +294,13 @@ mod tests {
     /// Tests that the `stop_logging` method correctly queries the logger.
     #[fasync::run_singlethreaded(test)]
     async fn test_stop_logging() {
-        let (proxy, mut stream) = create_proxy_and_stream::<TemperatureLoggerMarker>().unwrap();
+        let (proxy, mut stream) = create_proxy_and_stream::<MetricsLoggerMarker>().unwrap();
 
         let _stream_task = fasync::Task::local(async move {
             match stream.try_next().await {
-                Ok(Some(TemperatureLoggerRequest::StopLogging { responder })) => {
-                    responder.send().unwrap()
+                Ok(Some(MetricsLoggerRequest::StopLogging { client_id, responder })) => {
+                    assert_eq!(String::from("sl4f_temperature"), client_id);
+                    responder.send(true).unwrap()
                 }
                 other => panic!("Unexpected stream item: {:?}", other),
             }

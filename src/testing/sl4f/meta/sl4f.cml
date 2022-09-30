@@ -94,7 +94,6 @@
                 "fuchsia.systemmetrics.test.SystemMetricsLogger",
                 "fuchsia.test.audio.recording.AudioRecordingControl",
                 "fuchsia.testing.proxy.TcpProxyControl",
-                "fuchsia.thermal.test.TemperatureLogger",
                 "fuchsia.tracing.controller.Controller",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.composition.Allocator",

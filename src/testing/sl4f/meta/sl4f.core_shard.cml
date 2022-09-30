@@ -116,11 +116,6 @@
             to: "#sl4f",
         },
         {
-            protocol: "fuchsia.thermal.test.TemperatureLogger",
-            from: "#temperature-logger",
-            to: "#sl4f",
-        },
-        {
             protocol: "fuchsia.media.sounds.Player",
             from: "#soundplayer",
             to: "#sl4f",
