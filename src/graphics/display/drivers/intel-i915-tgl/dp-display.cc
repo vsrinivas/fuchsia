@@ -8,6 +8,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
 #include <lib/fit/defer.h>
+#include <lib/mmio/mmio.h>
 #include <lib/stdcompat/span.h>
 #include <lib/zx/status.h>
 #include <lib/zx/time.h>
@@ -31,6 +32,7 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/poll-until.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-ddi.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-dpll.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/registers-gt-mailbox.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-pipe.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-transcoder.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-typec.h"
@@ -1347,21 +1349,23 @@ bool DpDisplay::TypeCConnectTigerLake() {
 
   int count = 0;
   for (;;) {
-    // display software uses gt driver mailbox to block tccold
-    constexpr uint32_t kGtDriverMailboxInterface = 0x138124;
-    constexpr uint32_t kGtDriverMailboxData0 = 0x138128;
-    constexpr uint32_t kGtDriverMailboxData1 = 0x13812c;
-    mmio_space()->Write32(0x00000000, kGtDriverMailboxData0);
-    mmio_space()->Write32(0x00000000, kGtDriverMailboxData1);
-    mmio_space()->Write32(0x80000026, kGtDriverMailboxInterface);
+    // IHD-OS-TGL-Vol 12-1.22-Rev2.0 section "GT Driver Mailbox to Block
+    // TCCOLD", page 404.
+    auto mailbox_data0 = tgl_registers::PowerMailboxData0::Get().FromValue(0);
+    mailbox_data0.WriteTo(mmio_space());
+
+    tgl_registers::PowerMailboxData1::Get().FromValue(0).WriteTo(mmio_space());
+
+    auto mailbox_interface = tgl_registers::PowerMailboxInterface::Get().FromValue(0);
+    mailbox_interface.set_command_code(0x26).set_has_active_transaction(1).WriteTo(mmio_space());
 
     if (!PollUntil(
-            [&] { return (mmio_space()->Read32(kGtDriverMailboxInterface) & 0x80000000) == 0; },
+            [&] { return !mailbox_interface.ReadFrom(mmio_space()).has_active_transaction(); },
             zx::usec(1), 200)) {
-      zxlogf(ERROR, "GT Driver Mailbox driver busy");
+      zxlogf(ERROR, "Failed to block TypeC cold state: GT Driver Mailbox  busy");
       return false;
     }
-    if ((mmio_space()->Read32(kGtDriverMailboxData0) & 0x1) == 0) {
+    if ((mailbox_data0.ReadFrom(mmio_space()).reg_value() & 0x1) == 0) {
       break;
     }
     if (count++ == 12) {
@@ -1381,17 +1385,17 @@ bool DpDisplay::TypeCConnectTigerLake() {
     dp_csss.set_safe_mode_disabled_for_ddi(ddi, /*disabled=*/false);
     dp_csss.WriteTo(mmio_space);
 
-    constexpr uint32_t kGtDriverMailboxInterface = 0x138124;
-    constexpr uint32_t kGtDriverMailboxData0 = 0x138128;
-    constexpr uint32_t kGtDriverMailboxData1 = 0x13812c;
-    mmio_space->Write32(0x00000001, kGtDriverMailboxData0);
-    mmio_space->Write32(0x00000000, kGtDriverMailboxData1);
-    mmio_space->Write32(0x80000026, kGtDriverMailboxInterface);
+    // IHD-OS-TGL-Vol 12-1.22-Rev2.0 section "GT Driver Mailbox to Unblock
+    // TCCOLD", page 404.
+    tgl_registers::PowerMailboxData0::Get().FromValue(1).WriteTo(mmio_space);
+    tgl_registers::PowerMailboxData1::Get().FromValue(0).WriteTo(mmio_space);
 
-    if (!PollUntil(
-            [&] { return (mmio_space->Read32(kGtDriverMailboxInterface) & 0x80000000) == 0; },
-            zx::usec(1), 200)) {
-      zxlogf(ERROR, "unblock_tccold: GT Driver Mailbox driver busy");
+    auto mailbox_interface = tgl_registers::PowerMailboxInterface::Get().FromValue(0);
+    mailbox_interface.set_command_code(0x26).set_has_active_transaction(1).WriteTo(mmio_space);
+
+    if (!PollUntil([&] { return !mailbox_interface.ReadFrom(mmio_space).has_active_transaction(); },
+                   zx::usec(1), 200)) {
+      zxlogf(ERROR, "Failed to unblock TypeC cold state: GT Driver Mailbox busy");
     }
   });
 
@@ -1527,17 +1531,17 @@ bool DpDisplay::TypeCDisconnectTigerLake() {
   dp_csss.set_safe_mode_disabled_for_ddi(ddi(), /*disabled=*/false);
   dp_csss.WriteTo(mmio_space());
 
-  constexpr uint32_t kGtDriverMailboxInterface = 0x138124;
-  constexpr uint32_t kGtDriverMailboxData0 = 0x138128;
-  constexpr uint32_t kGtDriverMailboxData1 = 0x13812c;
-  mmio_space()->Write32(0x00000001, kGtDriverMailboxData0);
-  mmio_space()->Write32(0x00000000, kGtDriverMailboxData1);
-  mmio_space()->Write32(0x80000026, kGtDriverMailboxInterface);
+  // IHD-OS-TGL-Vol 12-1.22-Rev2.0 section "GT Driver Mailbox to Unblock
+  // TCCOLD", page 404.
+  tgl_registers::PowerMailboxData0::Get().FromValue(1).WriteTo(mmio_space());
+  tgl_registers::PowerMailboxData1::Get().FromValue(0).WriteTo(mmio_space());
 
-  if (!PollUntil(
-          [&] { return (mmio_space()->Read32(kGtDriverMailboxInterface) & 0x80000000) == 0; },
-          zx::usec(1), 200)) {
-    zxlogf(ERROR, "unblock_tccold: GT Driver Mailbox driver busy");
+  auto mailbox_interface = tgl_registers::PowerMailboxInterface::Get().FromValue(0);
+  mailbox_interface.set_command_code(0x26).set_has_active_transaction(1).WriteTo(mmio_space());
+
+  if (!PollUntil([&] { return !mailbox_interface.ReadFrom(mmio_space()).has_active_transaction(); },
+                 zx::usec(1), 200)) {
+    zxlogf(ERROR, "Failed to unblock TypeC cold state: GT Driver Mailbox busy");
   }
   return true;
 }

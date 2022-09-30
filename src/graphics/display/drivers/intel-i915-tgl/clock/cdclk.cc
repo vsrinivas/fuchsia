@@ -12,6 +12,7 @@
 
 #include "src/graphics/display/drivers/intel-i915-tgl/poll-until.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-dpll.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/registers-gt-mailbox.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers.h"
 
 namespace i915_tgl {
@@ -19,35 +20,36 @@ namespace i915_tgl {
 namespace {
 
 struct GtDriverMailboxOp {
-  uint32_t addr;
-  uint64_t val;
+  uint32_t command;
+  uint64_t data;
   uint32_t poll_busy_timeout_us = 150;
   uint32_t poll_freq_us = 0;
   uint32_t total_timeout_us = 0;
 };
 
 bool WriteToGtMailbox(fdf::MmioBuffer* mmio_space, GtDriverMailboxOp op) {
-  constexpr uint32_t kGtDriverMailboxInterface = 0x138124;
-  constexpr uint32_t kGtDriverMailboxData0 = 0x138128;
-  constexpr uint32_t kGtDriverMailboxData1 = 0x13812c;
+  auto mailbox_data0 = tgl_registers::PowerMailboxData0::Get().FromValue(0);
+  auto mailbox_data1 = tgl_registers::PowerMailboxData1::Get().FromValue(0);
+  auto mailbox_interface = tgl_registers::PowerMailboxInterface::Get().FromValue(0);
 
   for (uint32_t total_wait_us = 0;;) {
-    mmio_space->Write32(static_cast<uint32_t>(op.val & 0xffffffff), kGtDriverMailboxData0);
-    mmio_space->Write32(static_cast<uint32_t>(op.val >> 32), kGtDriverMailboxData1);
-    mmio_space->Write32(op.addr, kGtDriverMailboxInterface);
+    mailbox_data0.set_reg_value(static_cast<uint32_t>(op.data)).WriteTo(mmio_space);
+    mailbox_data1.set_reg_value(static_cast<uint32_t>(op.data >> 32)).WriteTo(mmio_space);
+    mailbox_interface.set_command_code(op.command)
+        .set_has_active_transaction(true)
+        .WriteTo(mmio_space);
 
     if (op.total_timeout_us == 0 || op.poll_freq_us == 0) {
       return true;
     }
 
-    if (!PollUntil(
-            [&] { return (mmio_space->Read32(kGtDriverMailboxInterface) & 0x80000000) == 0; },
-            zx::usec(1), static_cast<int32_t>(op.poll_busy_timeout_us))) {
+    if (!PollUntil([&] { return !mailbox_interface.ReadFrom(mmio_space).has_active_transaction(); },
+                   zx::usec(1), static_cast<int32_t>(op.poll_busy_timeout_us))) {
       zxlogf(ERROR, "GT Driver Mailbox driver busy");
       return false;
     }
 
-    if (PollUntil([&] { return (mmio_space->Read32(kGtDriverMailboxData0) & 0x1) != 0; },
+    if (PollUntil([&] { return (mailbox_data0.ReadFrom(mmio_space).reg_value() & 0x1) != 0; },
                   zx::usec(1), static_cast<int32_t>(op.poll_freq_us))) {
       break;
     }
@@ -108,8 +110,8 @@ bool CoreDisplayClockSkylake::LoadState() {
 
 bool CoreDisplayClockSkylake::PreChangeFreq() {
   bool raise_voltage_result = WriteToGtMailbox(mmio_space_, {
-                                                                .addr = 0x80000007,
-                                                                .val = 0x3,
+                                                                .command = 0x07,
+                                                                .data = 0x3,
                                                                 .poll_busy_timeout_us = 150,
                                                                 .poll_freq_us = 150,
                                                                 .total_timeout_us = 3000,
@@ -123,8 +125,8 @@ bool CoreDisplayClockSkylake::PreChangeFreq() {
 
 bool CoreDisplayClockSkylake::PostChangeFreq(uint32_t freq_khz) {
   bool set_voltage_result = WriteToGtMailbox(mmio_space_, {
-                                                              .addr = 0x80000007,
-                                                              .val = FreqToVoltageLevel(freq_khz),
+                                                              .command = 0x07,
+                                                              .data = FreqToVoltageLevel(freq_khz),
                                                               .poll_busy_timeout_us = 0,
                                                               .poll_freq_us = 0,
                                                               .total_timeout_us = 0,
@@ -361,8 +363,8 @@ bool CoreDisplayClockTigerLake::SetFrequency(uint32_t freq_khz) {
 
 bool CoreDisplayClockTigerLake::PreChangeFreq() {
   bool raise_voltage_result = WriteToGtMailbox(mmio_space_, {
-                                                                .addr = 0x80000007,
-                                                                .val = 0x3,
+                                                                .command = 0x07,
+                                                                .data = 0x3,
                                                                 .poll_busy_timeout_us = 150,
                                                                 .poll_freq_us = 150,
                                                                 .total_timeout_us = 3000,
@@ -376,8 +378,8 @@ bool CoreDisplayClockTigerLake::PreChangeFreq() {
 
 bool CoreDisplayClockTigerLake::PostChangeFreq(uint32_t freq_khz) {
   bool set_voltage_result = WriteToGtMailbox(mmio_space_, {
-                                                              .addr = 0x80000007,
-                                                              .val = FreqToVoltageLevel(freq_khz),
+                                                              .command = 0x07,
+                                                              .data = FreqToVoltageLevel(freq_khz),
                                                               .poll_busy_timeout_us = 0,
                                                               .poll_freq_us = 0,
                                                               .total_timeout_us = 0,

@@ -146,17 +146,20 @@ TEST(TranscoderDdiControlTest, PortSyncPrimaryTranscoderKabyLake) {
   transcoder_ddi_control_a.set_reg_value(0);
   transcoder_ddi_control_a.set_port_sync_primary_kaby_lake(tgl_registers::Trans::TRANS_A);
   EXPECT_EQ(0b00000000'0000'01'00'00000000'00000000u, transcoder_ddi_control_a.reg_value());
-  EXPECT_EQ(tgl_registers::Trans::TRANS_A, transcoder_ddi_control_a.port_sync_primary_transcoder_kaby_lake());
+  EXPECT_EQ(tgl_registers::Trans::TRANS_A,
+            transcoder_ddi_control_a.port_sync_primary_transcoder_kaby_lake());
 
   transcoder_ddi_control_a.set_reg_value(0);
   transcoder_ddi_control_a.set_port_sync_primary_kaby_lake(tgl_registers::Trans::TRANS_B);
   EXPECT_EQ(0b00000000'0000'10'00'00000000'00000000u, transcoder_ddi_control_a.reg_value());
-  EXPECT_EQ(tgl_registers::Trans::TRANS_B, transcoder_ddi_control_a.port_sync_primary_transcoder_kaby_lake());
+  EXPECT_EQ(tgl_registers::Trans::TRANS_B,
+            transcoder_ddi_control_a.port_sync_primary_transcoder_kaby_lake());
 
   transcoder_ddi_control_a.set_reg_value(0);
   transcoder_ddi_control_a.set_port_sync_primary_kaby_lake(tgl_registers::Trans::TRANS_C);
   EXPECT_EQ(0b00000000'0000'11'00'00000000'00000000u, transcoder_ddi_control_a.reg_value());
-  EXPECT_EQ(tgl_registers::Trans::TRANS_C, transcoder_ddi_control_a.port_sync_primary_transcoder_kaby_lake());
+  EXPECT_EQ(tgl_registers::Trans::TRANS_C,
+            transcoder_ddi_control_a.port_sync_primary_transcoder_kaby_lake());
 }
 
 TEST(TranscoderDdiControlTest, InputPipe) {
