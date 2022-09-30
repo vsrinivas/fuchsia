@@ -112,9 +112,7 @@ void PipelineMixThread::NotifyConsumerStarting(ConsumerStagePtr consumer) {
 
 void PipelineMixThread::ReSortConsumers() {
   std::sort(consumers_.begin(), consumers_.end(), [](const ConsumerInfo& a, const ConsumerInfo& b) {
-    // We want a topological sort with sources ordered before sinks, so `a` goes first if it's
-    // "higher" in the graph.
-    return a.consumer->downstream_consumers() > b.consumer->downstream_consumers();
+    return a.consumer->topological_order() < b.consumer->topological_order();
   });
 }
 

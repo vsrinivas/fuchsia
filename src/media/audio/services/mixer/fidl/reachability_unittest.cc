@@ -13,6 +13,7 @@
 
 namespace media_audio {
 
+using ::testing::Pair;
 using ::testing::UnorderedElementsAre;
 
 TEST(ReachabilityTest, ComputeDelayOrdinaryNodesOnly) {
@@ -411,6 +412,224 @@ TEST(ReachabilityTest, MoveNodeToThread) {
   EXPECT_EQ(graph.node(10)->thread(), new_thread);
   EXPECT_EQ(graph.node(11)->thread(), new_thread);
   EXPECT_EQ(graph.node(12)->thread(), new_thread);
+}
+
+TEST(ReachabilityTest, RecomputeMaxDownstreamConsumersOrdinaryNodes) {
+  FakeGraph graph({
+      .edges =
+          {
+              // First inverted tree: does not have any consumers
+              {1, 3},
+              {2, 3},
+              {3, 4},
+              // Second inverted tree: node 9 is a consumer
+              {5, 7},
+              {6, 7},
+              {7, 8},
+              {8, 9},
+          },
+  });
+
+  graph.node(9)->SetIsConsumer(true);
+
+  // Recompute the node above the consumer.
+  EXPECT_THAT(
+      RecomputeMaxDownstreamConsumers(*graph.node(8)),
+      UnorderedElementsAre(Pair(GraphDetachedThread::kId,
+                                UnorderedElementsAre(Pair(graph.node(5)->pipeline_stage(), 1),
+                                                     Pair(graph.node(6)->pipeline_stage(), 1),
+                                                     Pair(graph.node(7)->pipeline_stage(), 1),
+                                                     Pair(graph.node(8)->pipeline_stage(), 1)))));
+
+  // The consumer itself has zero downstream consumers.
+  EXPECT_THAT(RecomputeMaxDownstreamConsumers(*graph.node(9)), UnorderedElementsAre());
+
+  // These nodes are not connected to any consumers.
+  EXPECT_THAT(RecomputeMaxDownstreamConsumers(*graph.node(1)), UnorderedElementsAre());
+  EXPECT_THAT(RecomputeMaxDownstreamConsumers(*graph.node(2)), UnorderedElementsAre());
+  EXPECT_THAT(RecomputeMaxDownstreamConsumers(*graph.node(3)), UnorderedElementsAre());
+  EXPECT_THAT(RecomputeMaxDownstreamConsumers(*graph.node(4)), UnorderedElementsAre());
+
+  EXPECT_EQ(graph.node(1)->max_downstream_consumers(), 0);
+  EXPECT_EQ(graph.node(2)->max_downstream_consumers(), 0);
+  EXPECT_EQ(graph.node(3)->max_downstream_consumers(), 0);
+  EXPECT_EQ(graph.node(4)->max_downstream_consumers(), 0);
+
+  EXPECT_EQ(graph.node(5)->max_downstream_consumers(), 1);
+  EXPECT_EQ(graph.node(6)->max_downstream_consumers(), 1);
+  EXPECT_EQ(graph.node(7)->max_downstream_consumers(), 1);
+  EXPECT_EQ(graph.node(8)->max_downstream_consumers(), 1);
+  EXPECT_EQ(graph.node(9)->max_downstream_consumers(), 0);
+}
+
+TEST(ReachabilityTest, RecomputeMaxDownstreamConsumersOrdinaryNodesIncremental) {
+  FakeGraph graph({
+      .edges =
+          {
+              {1, 3},
+              {2, 3},
+              {3, 5},
+              {4, 5},
+              {5, 6},
+          },
+  });
+
+  // Pretend we've precomputed a count for 6, then just created the edge 5->6.
+  graph.node(6)->set_max_downstream_consumers(3);
+  EXPECT_THAT(
+      RecomputeMaxDownstreamConsumers(*graph.node(5)),
+      UnorderedElementsAre(Pair(GraphDetachedThread::kId,
+                                UnorderedElementsAre(Pair(graph.node(1)->pipeline_stage(), 3),
+                                                     Pair(graph.node(2)->pipeline_stage(), 3),
+                                                     Pair(graph.node(3)->pipeline_stage(), 3),
+                                                     Pair(graph.node(4)->pipeline_stage(), 3),
+                                                     Pair(graph.node(5)->pipeline_stage(), 3)))));
+
+  EXPECT_EQ(graph.node(1)->max_downstream_consumers(), 3);
+  EXPECT_EQ(graph.node(2)->max_downstream_consumers(), 3);
+  EXPECT_EQ(graph.node(3)->max_downstream_consumers(), 3);
+  EXPECT_EQ(graph.node(4)->max_downstream_consumers(), 3);
+  EXPECT_EQ(graph.node(5)->max_downstream_consumers(), 3);
+  EXPECT_EQ(graph.node(6)->max_downstream_consumers(), 3);
+}
+
+TEST(ReachabilityTest, RecomputeMaxDownstreamConsumersMetaNodes) {
+  FakeGraph graph({
+      //
+      //  1     2 3
+      //         4
+      //  10    20 <-- splitter with a consumer
+      //     30
+      //     40    <-- splitter with a consumer
+      //    100    <-- ordinary consumer
+      //
+      .meta_nodes =
+          {
+              {
+                  10,
+                  {.source_children = {11}, .dest_children = {15, 16}},
+              },
+              {
+                  20,
+                  {.source_children = {21}, .dest_children = {25, 26}},
+              },
+              {
+                  30,
+                  {.source_children = {31, 32}, .dest_children = {35, 36}},
+              },
+              {
+                  40,
+                  {.source_children = {41}, .dest_children = {45, 46}},
+              },
+          },
+      .edges =
+          {
+              // Paths to consumer 21
+              {2, 4},
+              {3, 4},
+              {4, 21},
+
+              // Paths to consumer 41
+              {1, 11},
+              {15, 31},
+              {26, 32},
+              {36, 41},
+
+              // Paths to consumer 100
+              {46, 100},
+
+              // Paths that don't reach a consumer.
+              {16, 5},
+              {25, 6},
+              {35, 7},
+              {45, 8},
+          },
+  });
+
+  graph.node(21)->SetIsConsumer(true);
+  graph.node(41)->SetIsConsumer(true);
+  graph.node(100)->SetIsConsumer(true);
+
+  RecomputeMaxDownstreamConsumers(*graph.node(46));
+  RecomputeMaxDownstreamConsumers(*graph.node(16));
+  RecomputeMaxDownstreamConsumers(*graph.node(25));
+  RecomputeMaxDownstreamConsumers(*graph.node(35));
+  RecomputeMaxDownstreamConsumers(*graph.node(45));
+
+  EXPECT_EQ(graph.node(2)->max_downstream_consumers(), 3);
+  EXPECT_EQ(graph.node(3)->max_downstream_consumers(), 3);
+  EXPECT_EQ(graph.node(4)->max_downstream_consumers(), 3);
+
+  EXPECT_EQ(graph.node(1)->max_downstream_consumers(), 2);
+  EXPECT_EQ(graph.node(11)->max_downstream_consumers(), 2);
+  EXPECT_EQ(graph.node(15)->max_downstream_consumers(), 2);
+  EXPECT_EQ(graph.node(21)->max_downstream_consumers(), 2);
+  EXPECT_EQ(graph.node(26)->max_downstream_consumers(), 2);
+  EXPECT_EQ(graph.node(31)->max_downstream_consumers(), 2);
+  EXPECT_EQ(graph.node(32)->max_downstream_consumers(), 2);
+  EXPECT_EQ(graph.node(36)->max_downstream_consumers(), 2);
+
+  EXPECT_EQ(graph.node(41)->max_downstream_consumers(), 1);
+  EXPECT_EQ(graph.node(46)->max_downstream_consumers(), 1);
+
+  EXPECT_EQ(graph.node(100)->max_downstream_consumers(), 0);
+  EXPECT_EQ(graph.node(5)->max_downstream_consumers(), 0);
+  EXPECT_EQ(graph.node(6)->max_downstream_consumers(), 0);
+  EXPECT_EQ(graph.node(7)->max_downstream_consumers(), 0);
+  EXPECT_EQ(graph.node(8)->max_downstream_consumers(), 0);
+  EXPECT_EQ(graph.node(16)->max_downstream_consumers(), 0);
+  EXPECT_EQ(graph.node(25)->max_downstream_consumers(), 0);
+  EXPECT_EQ(graph.node(35)->max_downstream_consumers(), 0);
+  EXPECT_EQ(graph.node(45)->max_downstream_consumers(), 0);
+}
+
+TEST(ReachabilityTest, RecomputeMaxDownstreamConsumersMultipleThreads) {
+  FakeGraph graph({
+      //
+      //         1
+      // meta+-->2     <-- consumer  thread 1
+      // --------------------------------------
+      //     +-->4   5               thread 2
+      //           6
+      //           7   <-- consumer
+      .meta_nodes =
+          {
+              {
+                  3,
+                  {.source_children = {2}, .dest_children = {4}},
+              },
+          },
+      .edges =
+          {
+              {1, 2},
+              {4, 6},
+              {5, 6},
+              {6, 7},
+          },
+      .threads =
+          {
+              {1, {1, 2}},
+              {2, {4, 5, 6, 7}},
+          },
+  });
+
+  graph.node(2)->SetIsConsumer(true);
+  graph.node(7)->SetIsConsumer(true);
+
+  // Recompute all nodes above the consumer
+  EXPECT_THAT(RecomputeMaxDownstreamConsumers(*graph.node(6)),
+              UnorderedElementsAre(
+                  Pair(1, UnorderedElementsAre(Pair(graph.node(1)->pipeline_stage(), 2),
+                                               Pair(graph.node(2)->pipeline_stage(), 1))),
+                  Pair(2, UnorderedElementsAre(Pair(graph.node(4)->pipeline_stage(), 1),
+                                               Pair(graph.node(5)->pipeline_stage(), 1),
+                                               Pair(graph.node(6)->pipeline_stage(), 1)))));
+
+  EXPECT_EQ(graph.node(1)->max_downstream_consumers(), 2);
+  EXPECT_EQ(graph.node(2)->max_downstream_consumers(), 1);
+  EXPECT_EQ(graph.node(4)->max_downstream_consumers(), 1);
+  EXPECT_EQ(graph.node(5)->max_downstream_consumers(), 1);
+  EXPECT_EQ(graph.node(6)->max_downstream_consumers(), 1);
 }
 
 }  // namespace media_audio

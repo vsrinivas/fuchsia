@@ -267,11 +267,11 @@ TEST_F(PipelineMixThreadRunMixJobsTest, MultipleConsumers) {
   c1.writer->SetOnWriteSilence([&write_order](auto, auto) { write_order.push_back(1); });
   c2.writer->SetOnWriteSilence([&write_order](auto, auto) { write_order.push_back(2); });
 
-  c0.consumer->set_downstream_consumers(2);
-  c1.consumer->set_downstream_consumers(1);
-  c2.consumer->set_downstream_consumers(0);
+  c0.consumer->set_max_downstream_consumers(2);
+  c1.consumer->set_max_downstream_consumers(1);
+  c2.consumer->set_max_downstream_consumers(0);
 
-  // Push in opposite unsorted order to verify sorting.
+  // Push in unsorted order to verify sorting.
   thread().AddConsumer(c1.consumer);
   thread().AddConsumer(c0.consumer);
   thread().AddConsumer(c2.consumer);

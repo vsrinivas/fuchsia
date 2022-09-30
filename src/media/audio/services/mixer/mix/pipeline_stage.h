@@ -191,6 +191,10 @@ class PipelineStage {
     return std::atomic_load(&thread_);
   }
 
+  // Sets the stage's thread. This must be called from `thread()`, unless `thread()` is a detached
+  // thread, in which case this may be called from any thread.
+  void set_thread(std::shared_ptr<PipelineThread> new_thread);
+
   // Returns the clock used by the stage's destination stream.
   // The source streams may use different clocks.
   [[nodiscard]] UnreadableClock reference_clock() const { return reference_clock_; }
@@ -205,9 +209,11 @@ class PipelineStage {
   // If `f` is not `std::nullopt`, it must be an invertible function.
   virtual void UpdatePresentationTimeToFracFrame(std::optional<TimelineFunction> f) = 0;
 
-  // Sets the stage's thread. This must be called from `thread()`, unless `thread()` is a detached
-  // thread, in which case this may be called from any thread.
-  void set_thread(std::shared_ptr<PipelineThread> new_thread);
+  // Sets the maximum number of consumers downstream from this stage (where "downstream" means "on
+  // any path through outgoing destination edges). This property is meaningful for ConsumerStages
+  // only. We put this property here (rather than ConsumerStage) so that external code can update
+  // this generically without needing a way to downcast to ConsumerStage.
+  virtual void set_max_downstream_consumers(int64_t n) TA_REQ(thread()->checker()) {}
 
  protected:
   PipelineStage(std::string_view name, Format format, UnreadableClock reference_clock)

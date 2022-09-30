@@ -225,4 +225,42 @@ std::vector<PipelineStagePtr> MoveNodeToThread(Node& node, std::shared_ptr<Graph
   return out;
 }
 
+std::unordered_map<ThreadId, std::unordered_map<PipelineStagePtr, int64_t>>
+RecomputeMaxDownstreamConsumers(Node& node) {
+  FX_CHECK(!node.is_meta());
+
+  // TODO(fxbug.dev/87651): This implements "longest path in a DAG". This implementation is
+  // worst-case exponential in pathological cases, such as graphs with repeated fan in/out from a
+  // sequence of splitter and mixer nodes. This can be worst-case linear if the nodes a pre-sorted
+  // with a topological sort. Pathological graphs are not realistic, so this is not high priority.
+  std::vector<Node*> stack = {&node};
+  std::unordered_map<ThreadId, std::unordered_map<PipelineStagePtr, int64_t>> changed;
+
+  while (!stack.empty()) {
+    auto node = stack.back();
+    stack.pop_back();
+
+    // Compute the maximum count on any path starting after `node`.
+    int64_t max_count = 0;
+    ForEachDownstreamEdge(*node, [&max_count](const Node& dest) {
+      int64_t count = dest.max_downstream_consumers();
+      if (dest.is_consumer()) {
+        count++;
+      }
+      max_count = std::max(max_count, count);
+    });
+
+    if (max_count == node->max_downstream_consumers()) {
+      continue;
+    }
+
+    // The count change at `node`, so recompute on all upstream paths.
+    node->set_max_downstream_consumers(max_count);
+    changed[node->thread()->id()][node->pipeline_stage()] = max_count;
+    ForEachUpstreamEdge(*node, [&stack](Node& source) { stack.push_back(&source); });
+  }
+
+  return changed;
+}
+
 }  // namespace media_audio

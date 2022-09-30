@@ -189,6 +189,16 @@ class Node {
   // REQUIRED: !is_meta()
   [[nodiscard]] virtual bool is_consumer() const = 0;
 
+  // Reports the maximum number of consumer nodes on any downstream path from this node, where a
+  // "downstream path" is a path starting from any outgoing (destination) edge from this node. If
+  // `is_consumer()`, this is always zero.
+  //
+  // REQUIRED: !is_meta()
+  [[nodiscard]] int64_t max_downstream_consumers() const;
+
+  // Sets max_downstream_consumers.
+  void set_max_downstream_consumers(int64_t max);
+
   // Returns total "self" presentation delay contribution for this node if reached through `source`.
   // This typically consists of the internal processing delay contribution of this node with respect
   // to `source` edge.
@@ -300,6 +310,7 @@ class Node {
   std::vector<NodePtr> sources_;
   NodePtr dest_;
   std::shared_ptr<GraphThread> thread_;
+  int64_t max_downstream_consumers_ = 0;
 
   // If is_meta_.
   std::vector<NodePtr> child_sources_;

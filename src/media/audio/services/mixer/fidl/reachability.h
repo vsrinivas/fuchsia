@@ -7,6 +7,9 @@
 
 #include <lib/zx/time.h>
 
+#include <unordered_map>
+#include <unordered_set>
+
 #include "src/media/audio/services/mixer/fidl/node.h"
 #include "src/media/audio/services/mixer/fidl/ptr_decls.h"
 
@@ -88,8 +91,22 @@ bool ExistsPath(const Node& source, const Node& dest);
 // `expected_thread`. We will crash if this expectation is not satisfied.
 //
 // Returns the set of PipelineStages that must move to `new_thread->pipeline_thread()`.
+//
+// REQUIRED: !node->is_meta()
 std::vector<PipelineStagePtr> MoveNodeToThread(Node& node, std::shared_ptr<GraphThread> new_thread,
                                                std::shared_ptr<GraphThread> expected_thread);
+
+// Recomputes the maximum number of downstream consumers at `node`. This is recomputed
+// incrementally, assuming the count is already correct for all of the node's outgoing edges. If the
+// count has changed at `node`, we recompute the count for all nodes on all paths incoming to
+// `node`.
+//
+// The return value is the set of PipelineStages whose count has changed. PipelineStages are grouped
+// by thread ID to simplify how this result is used in node.cc.
+//
+// REQUIRED: !node->is_meta()
+std::unordered_map<ThreadId, std::unordered_map<PipelineStagePtr, int64_t>>
+RecomputeMaxDownstreamConsumers(Node& node);
 
 }  // namespace media_audio
 
