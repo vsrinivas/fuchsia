@@ -205,8 +205,8 @@ zx_status_t CallEcho() {
 ## Generated bind libraries {:#generated-bind-libraries}
 
 All FIDL libraries get an auto-generated bind library created from them. This is to help driver
-authors create bind rules based on FIDL protocols provided by the parent, and the
-transport method the parent uses to provide each protocol.
+authors create bind rules based on FIDL protocols and services provided by the parent, and the
+transport method the parent uses to provide each one.
 
 ### The bind library
 
@@ -215,8 +215,8 @@ and `DriverTransport`. Currently it is safe to assume the value is `ZirconTransp
 (which is just regular FIDL over Zircon channels). The bind library contains constants for
 protocols and these transport methods.
 
-Each discoverable protocol defined in the FIDL library gets an enum in the bind library with
-the values of the enum being the three transport methods.
+Each service and discoverable protocol defined in the FIDL library gets an enum in the
+bind library with the values of the enum being the three transport methods.
 
 Here is an example of one where the FIDL library contains a single discoverable protocol:
 

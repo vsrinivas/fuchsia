@@ -13,6 +13,12 @@ enum EchoLauncher {
   DriverTransport,
 };
 
+enum EchoService {
+  Banjo,
+  ZirconTransport,
+  DriverTransport,
+};
+
 enum EchoTwo {
   Banjo,
   ZirconTransport,
