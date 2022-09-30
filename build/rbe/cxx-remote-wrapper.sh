@@ -27,6 +27,9 @@ default_project_root="$(readlink -f "$script_dir"/../..)"
 # in this script.
 readonly remote_project_root="/b/f/w"
 
+# C-preprocessing strategy.  See option help below for description.
+cpreprocess_strategy=auto
+
 function usage() {
 cat <<EOF
 $script [options] -- C++-command...
@@ -39,6 +42,11 @@ Options:
   --verbose|-v: print debug information, including details about uploads.
   --dry-run: print remote execution command without executing (remote only).
   --save-temps: preserve temporary files
+  --cpp-strategy:
+      integrated: preprocess and compile in a single step
+      local: preprocess locally, compile remotely
+      auto: one of the above, chosen by the script automatically
+      [default: $cpreprocess_strategy]
 
   --project-root: location of source tree which also encompasses outputs
       and prebuilt tools, forwarded to --exec-root in the reclient tools.
@@ -61,10 +69,6 @@ dry_run=0
 local_only=0
 verbose=0
 save_temps=0
-# C-preprocessing strategy is determined automatically.
-#   integrated: built into the command (common case)
-#   local: done separately to produce a .ii intermediate file.
-cpreprocess_strategy=integrated
 project_root="$default_project_root"
 canonicalize_working_dir=true
 rewrapper_options=()
@@ -96,6 +100,8 @@ do
     # --check-determinism) check_determinism=1 ;;
     --project-root=*) project_root="$optarg" ;;
     --project-root) prev_opt=project_root ;;
+    --cpp-strategy=*) cpreprocess_strategy="$optarg" ;;
+    --cpp-strategy) prev_opt=cpreprocess_strategy ;;
     # stop option processing
     --) shift; break ;;
     # Forward all other options to rewrapper
@@ -104,6 +110,13 @@ do
   shift
 done
 test -z "$prev_out" || { echo "Option is missing argument to set $prev_opt." ; exit 1;}
+
+case "$cpreprocess_strategy" in
+  integrated | local | auto ) ;;
+  *) msg "*** Invalid --cpp-strategy: $cpreprocess_strategy.  Valid values: {integrated, local, auto}"
+    exit 1
+    ;;
+esac
 
 # realpath doesn't ship with Mac OS X (provided by coreutils package).
 # We only want it for calculating relative paths.
@@ -396,7 +409,9 @@ esac
 
 # When compilation depends on the Mac OS SDK, C-preprocess locally,
 # and remote compile using the intermediate .ii file.
-test "$uses_macos_sdk" = 0 || cpreprocess_strategy=local
+test "$cpreprocess_strategy" != "auto" || \
+  test "$uses_macos_sdk" = 0 || \
+  cpreprocess_strategy="local"
 
 if test "$local_only" = 1
 then
@@ -515,6 +530,9 @@ exec_root_flag=()
 [[ "$project_root" == "$default_project_root" ]] || \
   exec_root_flag=( "--exec_root=$project_root" )
 
+# The default cpp strategy is integrated (single-step).
+test "$cpreprocess_strategy" != "auto" || cpreprocess_strategy="integrated"
+
 dump_vars() {
   debug_var "build subdir" "$build_subdir"
   debug_var "compiler" "$cc"
@@ -563,6 +581,7 @@ case "$cpreprocess_strategy" in
     }
     remote_cc_command+=( "${cc_using_ii_command[@]}" )
     ;;
+  # By here, 'auto' should have been replaced with one of the other options.
   *) msg "*** Invalid C-preprocessing strategy: $cpreprocess_strategy"
     exit 1
     ;;
