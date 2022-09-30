@@ -22,7 +22,7 @@ class SdmmcBlockDevice;
 
 class RpmbDevice;
 using RpmbDeviceType =
-    ddk::Device<RpmbDevice, ddk::Messageable<fuchsia_hardware_rpmb::Rpmb>::Mixin>;
+    ddk::Device<RpmbDevice, ddk::Messageable<fuchsia_hardware_rpmb::Rpmb>::Mixin, ddk::Unbindable>;
 
 class RpmbDevice : public RpmbDeviceType {
  public:
@@ -42,7 +42,8 @@ class RpmbDevice : public RpmbDeviceType {
         reliable_write_sector_count_(ext_csd[MMC_EXT_CSD_REL_WR_SEC_C]),
         loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
-  void DdkRelease() { delete this; }
+  void DdkRelease();
+  void DdkUnbind(ddk::UnbindTxn txn);
 
   void GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) override;
   void Request(RequestRequestView request, RequestCompleter::Sync& completer) override;

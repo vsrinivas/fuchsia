@@ -72,6 +72,20 @@ zx_status_t RpmbDevice::Create(zx_device_t* parent, SdmmcBlockDevice* sdmmc,
   return ZX_OK;
 }
 
+void RpmbDevice::DdkRelease() {
+  loop_.Shutdown();
+  delete this;
+}
+
+void RpmbDevice::DdkUnbind(ddk::UnbindTxn txn) {
+  auto result = outgoing_->RemoveService<fuchsia_hardware_rpmb::Service>();
+  if (result.is_error()) {
+    zxlogf(ERROR, "Failed to remove service from the outgoing directory");
+  }
+  loop_.Quit();
+  txn.Reply();
+}
+
 void RpmbDevice::GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) {
   using DeviceInfo = fuchsia_hardware_rpmb::wire::DeviceInfo;
   using EmmcDeviceInfo = fuchsia_hardware_rpmb::wire::EmmcDeviceInfo;
