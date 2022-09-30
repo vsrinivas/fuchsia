@@ -889,21 +889,7 @@
 
         // Required events
         {
-            event: [
-                "running",
-                "started",
-                "stopped",
-            ],
-            from: "parent",
-            to: "#archivist",
-        },
-        {
-            event_stream: "running_v2",
-            from: "parent",
-            to: "#archivist",
-        },
-        {
-            event_stream: "started_v2",
+            event: [ "stopped" ],
             from: "parent",
             to: "#archivist",
         },

@@ -54,15 +54,5 @@
             from: "framework",
             to: "#realm_builder",
         },
-        {
-            event: "started",
-            from: "framework",
-            to: "#realm_builder",
-        },
-        {
-            event: "running",
-            from: "framework",
-            to: "#realm_builder",
-        },
     ],
 }

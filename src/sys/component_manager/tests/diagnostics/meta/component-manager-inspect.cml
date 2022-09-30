@@ -52,11 +52,7 @@
         // These events are not needed for the test to pass, but including them
         // reduces log noise.
         {
-            event: [
-                "running",
-                "started",
-                "stopped",
-            ],
+            event: [ "stopped" ],
             from: "framework",
             to: "#archivist",
         },
