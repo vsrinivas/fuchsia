@@ -92,12 +92,32 @@ impl PeerConn {
         PeerConn { conn, node_id }
     }
 
+    pub fn quic_conn(&self) -> Arc<AsyncConnection> {
+        Arc::clone(&self.conn)
+    }
+
     pub fn as_ref(&self) -> PeerConnRef<'_> {
         PeerConnRef { conn: &self.conn, node_id: self.node_id }
     }
 
-    pub fn trace_id(&self) -> &str {
-        self.conn.trace_id()
+    pub async fn stats(&self) -> quiche::Stats {
+        self.conn.stats().await
+    }
+
+    pub async fn is_established(&self) -> bool {
+        self.conn.is_established().await
+    }
+
+    pub async fn close(&self) {
+        self.conn.close().await
+    }
+
+    pub async fn recv(&self, packet: &mut [u8]) -> Result<(), Error> {
+        self.conn.recv(packet).await
+    }
+
+    pub fn node_id(&self) -> NodeId {
+        self.node_id
     }
 }
 
@@ -120,10 +140,6 @@ impl<'a> PeerConnRef<'a> {
 
     pub fn into_peer_conn(&self) -> PeerConn {
         PeerConn { conn: self.conn.clone(), node_id: self.node_id }
-    }
-
-    pub fn trace_id(&self) -> &str {
-        self.conn.trace_id()
     }
 
     pub fn endpoint(&self) -> Endpoint {
@@ -160,11 +176,10 @@ impl<'a> PeerConnRef<'a> {
 }
 
 pub(crate) struct Peer {
-    node_id: NodeId,
     endpoint: Endpoint,
     conn_id: ConnectionId,
     /// The QUIC connection itself
-    conn: Arc<AsyncConnection>,
+    conn: PeerConn,
     commands: Option<mpsc::Sender<ClientPeerCommand>>,
     conn_stats: Arc<PeerConnStats>,
     channel_proxy_stats: Arc<MessageStats>,
@@ -183,7 +198,9 @@ struct OneSend<'a> {
     /// Link upon which to send.
     link: &'a LinkRouting,
     /// QUIC connection that is forming frames to send.
-    conn: PeerConnRef<'a>,
+    conn: &'a Arc<AsyncConnection>,
+    /// Node this peer communicates with.
+    node_id: NodeId,
     /// Current lock state.
     state: OneSendState<'a>,
 }
@@ -240,7 +257,7 @@ impl<'a> OneSend<'a> {
                 Poll::Pending
             }
             Poll::Ready(cutex_guard) => {
-                self.poll_locking_conn(ctx, cutex_guard, self.conn.conn.poll_lock_state())
+                self.poll_locking_conn(ctx, cutex_guard, self.conn.poll_lock_state())
             }
         }
     }
@@ -280,16 +297,17 @@ impl<'a> OneSend<'a> {
     fn routing_target(&self) -> RoutingTarget {
         RoutingTarget {
             src: self.link.own_node_id(),
-            dst: RoutingDestination::Message(self.conn.node_id),
+            dst: RoutingDestination::Message(self.node_id),
         }
     }
 }
 
 /// Task to send frames produced by a peer to a designated link.
 /// Effectively an infinite loop around `OneSend`.
-async fn peer_to_link(conn: PeerConn, link: Arc<LinkRouting>) {
+async fn peer_to_link(conn: Arc<AsyncConnection>, node_id: NodeId, link: Arc<LinkRouting>) {
     loop {
-        let mut one_send = OneSend { link: &*link, conn: conn.as_ref(), state: OneSendState::Idle };
+        let mut one_send =
+            OneSend { link: &*link, conn: &conn, node_id, state: OneSendState::Idle };
         if let Err(e) = future::poll_fn(move |ctx| one_send.poll(ctx)).await {
             tracing::warn!(
                 "Sender for {:?} on link {:?} failed: {:?}",
@@ -361,7 +379,7 @@ async fn check_connectivity(router: Weak<Router>, conn: PeerConn) -> Result<(), 
         .ok_or_else(|| RunnerError::RouterGone)?
         .new_forwarding_table_observer();
     loop {
-        let new_link = next_link(&router, conn.node_id, &mut observer).await?;
+        let new_link = next_link(&router, conn.node_id(), &mut observer).await?;
         if sender_and_current_link
             .as_ref()
             .map(|sender_and_current_link| !Arc::ptr_eq(&sender_and_current_link.1, &new_link))
@@ -373,15 +391,17 @@ async fn check_connectivity(router: Weak<Router>, conn: PeerConn) -> Result<(), 
                 new_link.debug_id(),
                 sender_and_current_link.as_ref().map(|s_and_l| s_and_l.1.debug_id())
             );
-            sender_and_current_link =
-                Some((Task::spawn(peer_to_link(conn.clone(), new_link.clone())), new_link));
+            sender_and_current_link = Some((
+                Task::spawn(peer_to_link(conn.quic_conn(), conn.node_id(), new_link.clone())),
+                new_link,
+            ));
         }
     }
 }
 
 impl Peer {
     pub(crate) fn node_id(&self) -> NodeId {
-        self.node_id
+        self.conn.node_id()
     }
 
     pub(crate) fn endpoint(&self) -> Endpoint {
@@ -389,7 +409,7 @@ impl Peer {
     }
 
     pub(crate) fn debug_id(&self) -> impl std::fmt::Debug + std::cmp::PartialEq {
-        (self.node_id, self.endpoint, self.conn_id)
+        (self.node_id(), self.endpoint, self.conn_id)
     }
 
     /// Construct a new client peer - spawns tasks to handle making control stream requests, and
@@ -415,7 +435,6 @@ impl Peer {
         assert_eq!(conn_stream_writer.id(), 0);
         Ok(Arc::new(Self {
             endpoint: Endpoint::Client,
-            node_id,
             conn_id,
             commands: Some(command_sender.clone()),
             conn_stats: conn_stats.clone(),
@@ -442,7 +461,7 @@ impl Peer {
                 )
                 .map_ok(drop),
             )),
-            conn,
+            conn: PeerConn::from_quic(conn, node_id),
         }))
     }
 
@@ -465,7 +484,6 @@ impl Peer {
         let channel_proxy_stats = Arc::new(MessageStats::default());
         Ok(Arc::new(Self {
             endpoint: Endpoint::Server,
-            node_id,
             conn_id,
             commands: None,
             conn_stats: conn_stats.clone(),
@@ -491,7 +509,7 @@ impl Peer {
                 )
                 .map_ok(drop),
             )),
-            conn,
+            conn: PeerConn::from_quic(conn, node_id),
         }))
     }
 
@@ -591,14 +609,14 @@ impl Peer {
     }
 
     fn peer_conn_ref(&self) -> PeerConnRef<'_> {
-        PeerConnRef::from_quic(&self.conn, self.node_id)
+        self.conn.as_ref()
     }
 
     pub async fn diagnostics(&self, source_node_id: NodeId) -> PeerConnectionDiagnosticInfo {
         let stats = self.conn.stats().await;
         PeerConnectionDiagnosticInfo {
             source: Some(source_node_id.into()),
-            destination: Some(self.node_id.into()),
+            destination: Some(self.node_id().into()),
             is_client: Some(self.endpoint == Endpoint::Client),
             is_established: Some(self.conn.is_established().await),
             received_packets: Some(stats.recv as u64),
