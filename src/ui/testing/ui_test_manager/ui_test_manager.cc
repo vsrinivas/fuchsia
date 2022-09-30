@@ -47,6 +47,9 @@ UITestManager::UITestManager(UITestRealm::Config config)
   // TODO(fxbug.dev/103985): Remove once web-semantics-test runs reliably with
   // scene provider.
   scene_owner_ = config.scene_owner;
+
+  FX_CHECK(config.display_rotation % 90 == 0);
+  display_rotation_ = config.display_rotation;
 }
 
 component_testing::Realm UITestManager::AddSubrealm() { return realm_.AddSubrealm(); }
@@ -112,7 +115,36 @@ void UITestManager::InitializeScene(bool use_scene_provider) {
     }
   }
 
+  screenshotter_ = realm_.realm_root()->ConnectSync<fuchsia::ui::composition::Screenshot>();
+
+  // Get the display information using the |fuchsia.ui.display.singleton.Info|.
+  fuchsia::ui::display::singleton::Metrics info;
+  fuchsia::ui::display::singleton::InfoSyncPtr display_info =
+      realm_.realm_root()->ConnectSync<fuchsia::ui::display::singleton::Info>();
+  auto status = display_info->GetMetrics(&info);
+
+  FX_DCHECK(status == ZX_OK);
+
+  display_width_ = info.extent_in_px().width;
+  display_height_ = info.extent_in_px().height;
+
   Watch();
+}
+
+std::pair<uint64_t, uint64_t> UITestManager::GetDisplayDimensions() const {
+  return std::make_pair(display_width_, display_height_);
+}
+
+Screenshot UITestManager::TakeScreenshot() const {
+  fuchsia::ui::composition::ScreenshotTakeRequest request;
+  request.set_format(fuchsia::ui::composition::ScreenshotFormat::BGRA_RAW);
+
+  fuchsia::ui::composition::ScreenshotTakeResponse response;
+  auto status = screenshotter_->Take(std::move(request), &response);
+
+  FX_DCHECK(status == ZX_OK);
+
+  return Screenshot(response.vmo(), display_width_, display_height_, display_rotation_);
 }
 
 void UITestManager::Watch() {

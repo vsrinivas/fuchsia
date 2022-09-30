@@ -154,7 +154,7 @@ class UITestRealm {
     // *** This optoin will NOT be available to OOT clients.
     std::vector<std::string> client_to_ui_services;
 
-    // Clockwise display rotation, in degrees.
+    // Clockwise display rotation, in degrees. Display rotation MUST be a multiple of 90 degrees.
     int display_rotation = 0;
 
     // Pixel density for the display.

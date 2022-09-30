@@ -14,7 +14,6 @@ executable("display_rotation_pixel_test_bin") {
   testonly = true
   sources = [ "display_rotation_pixel_test.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.ui.display.singleton",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/ui/testing/ui_test_manager",

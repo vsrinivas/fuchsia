@@ -6,6 +6,8 @@
 #define SRC_UI_TESTING_UI_TEST_MANAGER_UI_TEST_MANAGER_H_
 
 #include <fuchsia/session/scene/cpp/fidl.h>
+#include <fuchsia/ui/composition/cpp/fidl.h>
+#include <fuchsia/ui/display/singleton/cpp/fidl.h>
 #include <fuchsia/ui/focus/cpp/fidl.h>
 #include <fuchsia/ui/observation/test/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
@@ -19,6 +21,7 @@
 
 #include "src/lib/fxl/macros.h"
 #include "src/ui/testing/ui_test_realm/ui_test_realm.h"
+#include "src/ui/testing/util/screenshot_helper.h"
 
 namespace ui_testing {
 
@@ -157,6 +160,15 @@ class UITestManager : public fuchsia::ui::focus::FocusChainListener {
   std::optional<fuchsia::ui::observation::geometry::ViewDescriptor> FindViewFromSnapshotByKoid(
       zx_koid_t view_ref_koid);
 
+  // Returns the width and height of the display in pixels as returned by
+  // |fuchsia.ui.display.singleton| protocol.
+  std::pair<uint64_t, uint64_t> GetDisplayDimensions() const;
+
+  // Takes a screenshot using the |fuchsia.ui.composition.Screenshot| protocol, converts it into
+  // |ui_testing::Screenshot| and returns it. Note that this is a blocking call i.e the client has
+  // to wait until |fuchsia.ui.composition.Screenshot.Take| finishes execution.
+  Screenshot TakeScreenshot() const;
+
  private:
   // Helper method to monitor the state of the view tree continuously.
   void Watch();
@@ -173,6 +185,7 @@ class UITestManager : public fuchsia::ui::focus::FocusChainListener {
   fuchsia::ui::observation::geometry::ViewTreeWatcherPtr view_tree_watcher_;
   fidl::Binding<fuchsia::ui::focus::FocusChainListener> focus_chain_listener_binding_;
   fuchsia::ui::test::scene::ControllerPtr scene_controller_;
+  fuchsia::ui::composition::ScreenshotSyncPtr screenshotter_;
 
   // Connection to scene owner service. At most one will be active for a given
   // UITestManager instance.
@@ -201,6 +214,13 @@ class UITestManager : public fuchsia::ui::focus::FocusChainListener {
   // TODO(fxbug.dev/103985): Remove once web-semantics-test runs reliably with
   // scene provider.
   std::optional<UITestRealm::SceneOwnerType> scene_owner_;
+
+  uint64_t display_width_ = 0;
+
+  uint64_t display_height_ = 0;
+
+  // |UITestRealm::Config::display_rotation|.
+  int display_rotation_ = 0;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(UITestManager);
 };

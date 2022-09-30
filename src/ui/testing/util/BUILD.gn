@@ -6,6 +6,7 @@ group("util") {
   testonly = true
   public_deps = [
     ":portable_ui_test",
+    ":screenshot_helper",
     ":test_view",
   ]
 }
@@ -51,6 +52,19 @@ source_set("portable_ui_test") {
     "//src/lib/testing/loop_fixture",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+source_set("screenshot_helper") {
+  testonly = true
+  sources = [
+    "screenshot_helper.cc",
+    "screenshot_helper.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/syslog/cpp:cpp-macros",
     "//zircon/system/ulib/zx",
   ]
 }
