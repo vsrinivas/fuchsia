@@ -20,7 +20,7 @@ mod meta_subdir;
 mod non_meta_subdir;
 mod root_dir;
 
-pub use root_dir::{PathError, ReadFileError, RootDir};
+pub use root_dir::{PathError, ReadFileError, RootDir, SubpackagesError};
 pub use vfs::execution_scope::ExecutionScope;
 
 #[derive(thiserror::Error, Debug)]

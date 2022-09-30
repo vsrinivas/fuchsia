@@ -99,9 +99,15 @@ type OpenBlobError = strict enum {
 /// Normal operation sequence:
 /// 1. Clients should start by requesting to `OpenMetaBlob()`, and fetch and write
 /// the metadata blob if needed.
-/// 2. `GetMissingBlobs()` should be used to determine which content blobs need
+/// 2. `GetMissingBlobs()` should be used to determine which blobs need to be
 /// fetched and written.
-/// 3. Each of the missing content blobs needs to be written using `OpenBlob()`.
+/// 3. Each of the missing blobs needs to be written using `OpenBlob()`.
+///
+/// Clients must not make multiple `Open[Meta]Blob()` calls for the same `BlobId`
+/// at the same time, even across different `NeededBlobs` connections. I.e.
+/// there should be at most one outstanding `Open[Meta]Blob()` call per `BlobId`
+/// per `PackageCache` server. Violating this may result in errors in later uses
+/// of the protocol.
 ///
 /// Once all needed blobs are written by the client, the package cache will
 /// complete the pending [`PackageCache.Get`] request and close this channel
@@ -143,13 +149,17 @@ protocol NeededBlobs {
     /// connection. Once all blobs yielded by this iterator are written, the
     /// package open request will complete.
     ///
+    /// New items may be added to the obtained `BlobInfoIterator` as the client
+    /// calls `OpenBlob`, so, to guaranatee termination of the iterator, clients
+    /// should call `OpenBlob` concurrently with reading the iterator.
+    ///
     /// + request `iterator` a request for an iterator of [`BlobInfo`] of blobs
     ///   that the client should try to write.
     GetMissingBlobs(resource struct {
         iterator server_end:BlobInfoIterator;
     });
 
-    /// Opens a content blob for writing.
+    /// Opens a blob for writing.
     ///
     /// + request `blob_id` the blob id describing this blob.
     /// + request `file` resolves to an opened writable file which must be

@@ -78,6 +78,7 @@ fuchsia_test_component("isolated-swd-tests-component") {
 
 isolated_swd_components = [
   "//src/sys/pkg/bin/pkg-cache:component-ignore-system-image",
+  "//src/sys/pkg/bin/pkg-cache:config_values_from_gn-ignore-system-image",
   "//src/sys/pkg/bin/pkg-resolver:isolated",
   "//src/sys/pkg/bin/system-updater:isolated",
 ]

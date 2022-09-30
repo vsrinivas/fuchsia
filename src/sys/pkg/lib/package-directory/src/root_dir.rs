@@ -453,8 +453,8 @@ mod tests {
             let (metafar_blob, content_blobs) = pkg.contents();
             let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
             blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
-            for content in content_blobs {
-                blobfs_fake.add_blob(content.merkle, content.contents);
+            for (hash, bytes) in content_blobs {
+                blobfs_fake.add_blob(hash, bytes);
             }
 
             let root_dir = RootDir::new(blobfs_client, metafar_blob.merkle).await.unwrap();

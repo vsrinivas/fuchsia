@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        get_missing_blobs, replace_retained_packages, verify_fetches_succeed, write_blob,
+        get_and_verify_packages, get_missing_blobs, replace_retained_packages, write_blob,
         write_meta_far, write_needed_blobs, TestEnv,
     },
     assert_matches::assert_matches,
@@ -402,7 +402,7 @@ async fn dynamic_index_package_hash_update() {
     let updated_hash = updated_pkg.meta_far_merkle_root().to_string();
     assert_ne!(pkg.meta_far_merkle_root().to_string(), updated_hash);
 
-    let () = verify_fetches_succeed(&env.proxies.package_cache, &[updated_pkg]).await;
+    let () = get_and_verify_packages(&env.proxies.package_cache, &[updated_pkg]).await;
     let hierarchy = env.inspect_hierarchy().await;
 
     assert_data_tree!(
@@ -473,7 +473,7 @@ async fn package_cache_get() {
                 "fuchsia.pkg.PackageCache": {
                     "get": {
                         "0" : contains {
-                            "remaining": remaining,
+                            "known_remaining": remaining,
                             "writing": writing,
                             "written": written,
                         }
@@ -525,7 +525,7 @@ async fn package_cache_get() {
 
     let mut contents = contents
         .into_iter()
-        .map(|blob| (BlobId::from(blob.merkle), blob.contents))
+        .map(|(hash, bytes)| (BlobId::from(hash), bytes))
         .collect::<HashMap<_, Vec<u8>>>();
 
     let mut missing_blobs_iter = missing_blobs.into_iter();
@@ -535,15 +535,16 @@ async fn package_cache_get() {
     let (content_blob, content_blob_server_end) =
         fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
 
-    assert_eq!(
-        true,
-        needed_blobs.open_blob(&mut blob.blob_id, content_blob_server_end).await.unwrap().unwrap()
-    );
+    assert!(needed_blobs
+        .open_blob(&mut blob.blob_id, content_blob_server_end)
+        .await
+        .unwrap()
+        .unwrap());
 
     // Content blob open for writing.
 
     let hierarchy = expect_and_return_inspect(&env, "need-content-blobs").await;
-    contains_missing_blob_stats(&hierarchy, 1, 1, 0);
+    contains_missing_blob_stats(&hierarchy, 2, 1, 0);
 
     let () = write_blob(&buf, content_blob).await.unwrap();
 
@@ -566,7 +567,7 @@ async fn package_cache_get() {
     // Last content blob open for writing.
 
     let hierarchy = expect_and_return_inspect(&env, "need-content-blobs").await;
-    contains_missing_blob_stats(&hierarchy, 0, 1, 1);
+    contains_missing_blob_stats(&hierarchy, 1, 1, 1);
 
     let () = write_blob(&buf, content_blob).await.unwrap();
 

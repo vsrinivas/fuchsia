@@ -15,11 +15,13 @@ use {
     fidl_fuchsia_io as fio,
     fidl_fuchsia_metrics::MetricEvent,
     fidl_fuchsia_pkg::{
-        self as fpkg, BlobInfoIteratorRequestStream, NeededBlobsMarker, NeededBlobsRequest,
-        NeededBlobsRequestStream, PackageCacheRequest, PackageCacheRequestStream,
-        PackageIndexEntry, PackageIndexIteratorRequestStream,
+        self as fpkg, NeededBlobsMarker, NeededBlobsRequest, NeededBlobsRequestStream,
+        PackageCacheRequest, PackageCacheRequestStream, PackageIndexEntry,
+        PackageIndexIteratorRequestStream,
     },
-    fidl_fuchsia_pkg_ext::{serve_fidl_iterator_from_slice, BlobId, BlobInfo},
+    fidl_fuchsia_pkg_ext::{
+        serve_fidl_iterator_from_slice, serve_fidl_iterator_from_stream, BlobId, BlobInfo,
+    },
     fuchsia_async::Task,
     fuchsia_cobalt_builders::MetricEventExt,
     fuchsia_hash::Hash,
@@ -28,26 +30,26 @@ use {
     fuchsia_trace as ftrace, fuchsia_zircon as zx,
     fuchsia_zircon::Status,
     futures::{prelude::*, select_biased, stream::FuturesUnordered},
-    std::{
-        collections::HashSet,
-        sync::{
-            atomic::{AtomicU32, Ordering},
-            Arc,
-        },
+    std::sync::{
+        atomic::{AtomicU32, Ordering},
+        Arc,
     },
     vfs::directory::entry::DirectoryEntry as _,
 };
 
+mod missing_blobs;
+
 // This encodes a host to interpolate when responding to BasePackageIndex requests.
 const BASE_PACKAGE_HOST: &str = "fuchsia.com";
 
-pub async fn serve(
+pub(crate) async fn serve(
     package_index: Arc<async_lock::RwLock<PackageIndex>>,
     blobfs: blobfs::Client,
     base_packages: Arc<BasePackages>,
     cache_packages: Arc<Option<system_image::CachePackages>>,
     executability_restrictions: system_image::ExecutabilityRestrictions,
     non_static_allow_list: Arc<system_image::NonStaticAllowList>,
+    subpackages_config: crate::SubpackagesConfig,
     scope: package_directory::ExecutionScope,
     stream: PackageCacheRequestStream,
     cobalt_sender: ProtocolSender<MetricEvent>,
@@ -83,6 +85,7 @@ pub async fn serve(
                         meta_far_blob,
                         needed_blobs,
                         dir.map(|dir| (dir, scope.clone())),
+                        subpackages_config,
                         cobalt_sender,
                         &node,
                         trace_id,
@@ -209,6 +212,7 @@ async fn get(
     meta_far_blob: BlobInfo,
     needed_blobs: ServerEnd<NeededBlobsMarker>,
     dir_and_scope: Option<(ServerEnd<fio::DirectoryMarker>, package_directory::ExecutionScope)>,
+    subpackages_config: crate::SubpackagesConfig,
     mut cobalt_sender: ProtocolSender<MetricEvent>,
     node: &finspect::Node,
     trace_id: ftrace::Id,
@@ -233,6 +237,7 @@ async fn get(
                     meta_far_blob,
                     package_index,
                     blobfs,
+                    subpackages_config,
                     node,
                     trace_id,
                 )
@@ -397,6 +402,24 @@ enum ServeNeededBlobsError {
 
     #[error("while updating package index with meta far info")]
     FulfillMetaFar(#[from] FulfillMetaFarError),
+
+    #[error("while adding needed content blobs to the iterator")]
+    SendNeededContentBlobs(#[source] futures::channel::mpsc::SendError),
+
+    #[error("while adding needed subpackage meta.fars to the iterator")]
+    SendNeededSubpackageBlobs(#[source] futures::channel::mpsc::SendError),
+
+    #[error("while creating a RootDir for a subpackage")]
+    CreateSubpackageRootDir(#[source] package_directory::Error),
+
+    #[error("while reading the subpackages of a package")]
+    ReadSubpackages(#[source] package_directory::SubpackagesError),
+
+    #[error(
+        "handle_open_blobs finished writing all the needed blobs but still had {count} \
+             outstanding blob write futures. This should be impossible"
+    )]
+    OutstandingBlobWritesWhenHandleOpenBlobsFinished { count: usize },
 }
 
 #[derive(Debug)]
@@ -444,6 +467,7 @@ async fn serve_needed_blobs(
     meta_far_info: BlobInfo,
     package_index: &async_lock::RwLock<PackageIndex>,
     blobfs: &blobfs::Client,
+    subpackages_config: crate::SubpackagesConfig,
     node: &finspect::Node,
     trace_id: ftrace::Id,
 ) -> Result<
@@ -463,20 +487,18 @@ async fn serve_needed_blobs(
         )
         .await?;
 
+        let (missing_blobs, missing_blobs_recv) =
+            missing_blobs::MissingBlobs::new(blobfs.clone(), subpackages_config, &root_dir).await?;
+
         // Step 2: Determine which data blobs are needed and report them to the client.
-        let (serve_iterator, needs) = handle_get_missing_blobs(
-            &mut stream,
-            blobfs,
-            &root_dir.external_file_hashes().copied().collect::<HashSet<_>>(),
-        )
-        .await?;
+        let serve_iterator = handle_get_missing_blobs(&mut stream, missing_blobs_recv).await?;
 
         state.set("need-content-blobs");
 
         // Step 3: Open and write all needed data blobs.
-        let () = handle_open_blobs(&mut stream, needs, blobfs, &node, trace_id).await?;
+        let () = handle_open_blobs(&mut stream, missing_blobs, blobfs, &node, trace_id).await?;
 
-        serve_iterator.await;
+        let () = serve_iterator.await;
         Ok(root_dir)
     }
     .await;
@@ -551,9 +573,8 @@ async fn handle_open_meta_blob(
 
 async fn handle_get_missing_blobs(
     stream: &mut NeededBlobsRequestStream,
-    blobfs: &blobfs::Client,
-    content_blobs: &HashSet<Hash>,
-) -> Result<(Task<()>, HashSet<Hash>), ServeNeededBlobsError> {
+    missing_blobs: futures::channel::mpsc::UnboundedReceiver<Vec<fidl_fuchsia_pkg::BlobInfo>>,
+) -> Result<Task<()>, ServeNeededBlobsError> {
     let iterator = match stream.try_next().await.map_err(ServeNeededBlobsError::ReceiveRequest)? {
         Some(NeededBlobsRequest::GetMissingBlobs { iterator, control_handle: _ }) => Ok(iterator),
         Some(NeededBlobsRequest::Abort { responder: _ }) => Err(ServeNeededBlobsError::Aborted),
@@ -566,56 +587,39 @@ async fn handle_get_missing_blobs(
 
     let iter_stream = iterator.into_stream().map_err(ServeNeededBlobsError::ReceiveRequest)?;
 
-    let needs = {
-        let mut needs = blobfs
-            .filter_to_missing_blobs(&content_blobs)
-            .await
-            .into_iter()
-            .map(|hash| BlobInfo { blob_id: hash.into(), length: 0 })
-            .collect::<Vec<_>>();
-
-        // The needs provided by filter_to_missing_blobs are stored in a HashSet, so needs are in
-        // an unspecified order here. Provide a deterministic ordering to test/callers by sorting
-        // on merkle root.
-        needs.sort_unstable();
-        needs
-    };
-
     // Start serving the iterator in the background and internally move on to the next state. If
     // this foreground task decides to bail out, this spawned task will be dropped which will abort
     // the iterator serving task.
-    let serve_iterator = Task::spawn(serve_blob_info_iterator(
-        needs.iter().cloned().map(Into::into).collect::<Vec<fidl_fuchsia_pkg::BlobInfo>>(),
-        iter_stream,
-    ));
-    let needs = needs.into_iter().map(|need| need.blob_id.into()).collect::<HashSet<Hash>>();
-
-    Ok((serve_iterator, needs))
+    Ok(Task::spawn(
+        serve_fidl_iterator_from_stream(
+            iter_stream,
+            missing_blobs,
+            // Unlikely that more than 10 Vec<BlobInfo> (e.g. 5 RootDirs with subpackages)
+            // will be written to missing_blobs between calls to Iterator::Next by the FIDL client,
+            // so no need to increase this which would use (a tiny amount) more memory.
+            10,
+        )
+        .unwrap_or_else(|e| {
+            fx_log_err!("error serving BlobInfoIteratorRequestStream: {:#}", anyhow!(e))
+        }),
+    ))
 }
 
 async fn handle_open_blobs(
     stream: &mut NeededBlobsRequestStream,
-    mut needs: HashSet<Hash>,
+    mut missing_blobs: missing_blobs::MissingBlobs,
     blobfs: &blobfs::Client,
     node: &finspect::Node,
     trace_id: ftrace::Id,
 ) -> Result<(), ServeNeededBlobsError> {
     let mut writing = FuturesUnordered::new();
 
-    let remaining_counter = node.create_uint("remaining", 0);
+    let known_remaining_counter =
+        node.create_uint("known_remaining", missing_blobs.count_not_cached() as u64);
     let writing_counter = node.create_uint("writing", 0);
     let written_counter = node.create_uint("written", 0);
 
-    // `needs` represents needed blobs that aren't currently being written
-    // `writing` represents needed blobs currently being written
-    // A blob write that fails with a retryable error can allow a blob to transition back from
-    // `writing` to `needs`.
-    // Once both needs and writing are empty, all needed blobs are now present.
-
-    while !(writing.is_empty() && needs.is_empty()) {
-        remaining_counter.set(needs.len() as u64);
-        writing_counter.set(writing.len() as u64);
-
+    while missing_blobs.count_not_cached() != 0 {
         #[derive(Debug)]
         enum Event {
             WriteBlobDone((Hash, Result<(), OpenWriteBlobError>)),
@@ -625,7 +629,10 @@ async fn handle_open_blobs(
         // Wait for the next request/event to happen, giving priority to handling blob write
         // completion events to new incoming requests.
         let event = select_biased! {
-            res = writing.select_next_some() => Event::WriteBlobDone(res),
+            res = writing.select_next_some() => {
+                writing_counter.set(writing.len() as u64);
+                Event::WriteBlobDone(res)
+            }
             req = stream.try_next() =>
                 Event::Request(req.map_err(ServeNeededBlobsError::ReceiveRequest)?),
         };
@@ -634,8 +641,7 @@ async fn handle_open_blobs(
             Event::Request(Some(NeededBlobsRequest::OpenBlob { blob_id, file, responder })) => {
                 let blob_id = Hash::from(BlobId::from(blob_id));
 
-                // Make sure the blob is still needed/isn't being written already.
-                if !needs.remove(&blob_id) {
+                if !missing_blobs.should_cache(&blob_id) {
                     return Err(ServeNeededBlobsError::BlobNotNeeded(blob_id));
                 }
 
@@ -654,13 +660,14 @@ async fn handle_open_blobs(
                     trace_id,
                 );
                 writing.push(async move { (blob_id, task.await) });
+                writing_counter.set(writing.len() as u64);
                 continue;
             }
-
             Event::Request(Some(NeededBlobsRequest::Abort { responder })) => {
                 // Finish all currently open blobs before aborting.
                 while !writing.is_empty() {
                     writing.next().await;
+                    writing_counter.set(writing.len() as u64);
                 }
                 drop(responder);
                 return Err(ServeNeededBlobsError::Aborted);
@@ -674,7 +681,9 @@ async fn handle_open_blobs(
             Event::Request(None) => {
                 return Err(ServeNeededBlobsError::UnexpectedClose("handle_open_blobs"));
             }
-            Event::WriteBlobDone((_, Ok(()))) => {
+            Event::WriteBlobDone((hash, Ok(()))) => {
+                let () = missing_blobs.cache(&hash).await?;
+                known_remaining_counter.set(missing_blobs.count_not_cached() as u64);
                 written_counter.add(1);
                 continue;
             }
@@ -682,18 +691,23 @@ async fn handle_open_blobs(
                 return Err(e);
             }
             Event::WriteBlobDone((hash, Err(OpenWriteBlobError::NonFatalWrite(e)))) => {
-                // TODO serve_write_blob will notify the client of the error before this task
-                // finishes, so it is possible for a client to retry a blob fetch before this task
-                // re-registers the blob as needed, which would be a race condition if the
-                // pkg-resolver didn't just abort package fetches on any error.
-                fx_log_warn!("Non-fatal error while writing content blob: {:#}", anyhow!(e));
-                needs.insert(hash);
+                fx_log_warn!(
+                    "Non-fatal error while writing content blob: {} {:#}",
+                    hash,
+                    anyhow!(e)
+                );
                 continue;
             }
         }
     }
 
-    Ok(())
+    if !writing.is_empty() {
+        Err(ServeNeededBlobsError::OutstandingBlobWritesWhenHandleOpenBlobsFinished {
+            count: writing.len(),
+        })
+    } else {
+        Ok(())
+    }
 }
 
 #[derive(Debug)]
@@ -1061,17 +1075,6 @@ async fn serve_cache_package_index(
     })
 }
 
-/// Serves the `BlobInfoIteratorRequestStream` with as many entries per request as will fit in a
-/// fidl message.
-async fn serve_blob_info_iterator(
-    items: impl AsMut<[fidl_fuchsia_pkg::BlobInfo]>,
-    stream: BlobInfoIteratorRequestStream,
-) {
-    serve_fidl_iterator_from_slice(stream, items).await.unwrap_or_else(|e| {
-        fx_log_err!("error serving BlobInfoIteratorRequestStream protocol: {:#}", anyhow!(e))
-    })
-}
-
 #[cfg(test)]
 mod serve_needed_blobs_tests {
     use {
@@ -1103,6 +1106,7 @@ mod serve_needed_blobs_tests {
                 meta_blob_info,
                 &package_index,
                 &blobfs,
+                crate::SubpackagesConfig::Disable,
                 &inspector.root().create_child("test-node-name"),
                 0.into()
             )
@@ -1130,6 +1134,7 @@ mod serve_needed_blobs_tests {
                     meta_blob_info,
                     &package_index,
                     &blobfs,
+                    crate::SubpackagesConfig::Disable,
                     &inspector.root().create_child("test-node-name"),
                     0.into(),
                 )
@@ -1834,54 +1839,6 @@ mod serve_needed_blobs_tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn expects_open_blob_per_blob_once() {
-        let meta_blob_info = BlobInfo { blob_id: [1; 32].into(), length: 0 };
-        let (serve_needed_task, proxy, mut blobfs) =
-            spawn_serve_needed_blobs_with_mocks(meta_blob_info);
-
-        let serve_meta_task =
-            write_meta_blob(&proxy, &mut blobfs, meta_blob_info, vec![[2; 32].into()]).await;
-        enumerate_readable_missing_blobs(
-            &proxy,
-            &mut blobfs,
-            std::iter::empty(),
-            vec![[2; 32].into()].into_iter(),
-        )
-        .await;
-
-        let ((), ()) = future::join(
-            async {
-                blobfs.expect_create_blob([2; 32].into()).await.expect_close().await;
-            },
-            async {
-                let (_blob, blob_server_end) =
-                    fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
-
-                assert_matches!(
-                    proxy.open_blob(&mut BlobId::from([2; 32]).into(), blob_server_end).await,
-                    Ok(Ok(true))
-                );
-
-                let (_blob, blob_server_end) =
-                    fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
-                assert_matches!(
-                    proxy.open_blob(&mut BlobId::from([2; 32]).into(), blob_server_end).await,
-                    Err(fidl::Error::ClientChannelClosed { status: Status::PEER_CLOSED, .. })
-                );
-            },
-        )
-        .await;
-
-        assert_matches!(
-            serve_needed_task.await,
-            Err(ServeNeededBlobsError::BlobNotNeeded(hash)) if hash == [2; 32].into()
-        );
-        assert_matches!(proxy.take_event_stream().next().await, None);
-        let () = serve_meta_task.await;
-        blobfs.expect_done().await;
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
     async fn handles_many_content_blobs_that_need_written() {
         let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
         let (serve_needed_task, proxy, mut blobfs) =
@@ -2290,8 +2247,11 @@ mod serve_needed_blobs_tests {
 
 #[cfg(test)]
 mod get_handler_tests {
-    use super::*;
-    use crate::{CobaltConnectedService, ProtocolConnector, COBALT_CONNECTOR_BUFFER_SIZE};
+    use {
+        super::*,
+        crate::{CobaltConnectedService, ProtocolConnector, COBALT_CONNECTOR_BUFFER_SIZE},
+        std::collections::HashSet,
+    };
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn everything_closed() {
@@ -2313,6 +2273,7 @@ mod get_handler_tests {
                 meta_blob_info,
                 stream,
                 None,
+                crate::SubpackagesConfig::Disable,
                 ProtocolConnector::new_with_buffer_size(
                     CobaltConnectedService,
                     COBALT_CONNECTOR_BUFFER_SIZE,
@@ -2831,7 +2792,10 @@ mod serve_write_blob_tests {
 
 #[cfg(test)]
 mod serve_base_package_index_tests {
-    use {super::*, fidl_fuchsia_pkg::PackageIndexIteratorMarker, fuchsia_pkg::PackagePath};
+    use {
+        super::*, fidl_fuchsia_pkg::PackageIndexIteratorMarker, fuchsia_pkg::PackagePath,
+        std::collections::HashSet,
+    };
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn base_packages_entries_converted_correctly() {

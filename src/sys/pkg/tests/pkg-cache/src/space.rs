@@ -35,7 +35,7 @@ async fn do_fetch(package_cache: &PackageCacheProxy, pkg: &Package) {
     let (meta_far, contents) = pkg.contents();
     let mut contents = contents
         .into_iter()
-        .map(|blob| (BlobId::from(blob.merkle), blob.contents))
+        .map(|(hash, bytes)| (BlobId::from(hash), bytes))
         .collect::<HashMap<_, Vec<u8>>>();
 
     let (meta_blob, meta_blob_server_end) =
@@ -189,7 +189,7 @@ async fn gc_dynamic_index_protected() {
     let (meta_far, contents) = pkgprime.contents();
     let mut contents = contents
         .into_iter()
-        .map(|blob| (BlobId::from(blob.merkle), blob.contents))
+        .map(|(hash, bytes)| (BlobId::from(hash), bytes))
         .collect::<HashMap<_, Vec<u8>>>();
 
     let (meta_blob, meta_blob_server_end) =
@@ -320,7 +320,7 @@ async fn gc_updated_static_package() {
     let (meta_far, contents) = pkgprime.contents();
     let mut contents = contents
         .into_iter()
-        .map(|blob| (BlobId::from(blob.merkle), blob.contents))
+        .map(|(hash, bytes)| (BlobId::from(hash), bytes))
         .collect::<HashMap<_, Vec<u8>>>();
 
     let (meta_blob, meta_blob_server_end) =

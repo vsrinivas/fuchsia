@@ -3,13 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::{do_fetch, get_missing_blobs, verify_fetches_succeed, write_blob, TestEnv},
+    crate::{
+        get_and_verify_package, get_and_verify_packages, get_missing_blobs, write_blob, TestEnv,
+    },
     assert_matches::assert_matches,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{BlobInfo, BlobInfoIteratorMarker, NeededBlobsMarker},
     fidl_fuchsia_pkg_ext::BlobId,
     fuchsia_merkle::MerkleTree,
-    fuchsia_pkg_testing::{PackageBuilder, SystemImageBuilder},
+    fuchsia_pkg_testing::{Package, PackageBuilder, SystemImageBuilder},
     fuchsia_zircon::Status,
     futures::prelude::*,
 };
@@ -33,7 +35,7 @@ async fn get_multiple_packages_with_no_content_blobs() {
         );
     }
 
-    let () = verify_fetches_succeed(&env.proxies.package_cache, &packages).await;
+    let () = get_and_verify_packages(&env.proxies.package_cache, &packages).await;
 
     let () = env.stop().await;
 }
@@ -113,7 +115,7 @@ async fn get_multiple_packages_with_content_blobs() {
             .unwrap(),
     ];
 
-    let () = verify_fetches_succeed(&env.proxies.package_cache, &packages).await;
+    let () = get_and_verify_packages(&env.proxies.package_cache, &packages).await;
 
     let () = env.stop().await;
 }
@@ -125,7 +127,7 @@ async fn get_and_hold_directory() {
     let package = PackageBuilder::new("pkg-a").build().await.unwrap();
 
     // Request and write a package, hold the package directory.
-    let dir = do_fetch(&env.proxies.package_cache, &package).await;
+    let dir = get_and_verify_package(&env.proxies.package_cache, &package).await;
 
     let mut meta_blob_info =
         BlobInfo { blob_id: BlobId::from(*package.meta_far_merkle_root()).into(), length: 0 };
@@ -355,4 +357,217 @@ async fn get_package_already_present_on_fs_with_pre_closed_needed_blobs() {
     let () = pkg.verify_contents(&pkgdir).await.unwrap();
 
     let () = env.stop().await;
+}
+
+// Does a PackageCache.Get of `superpackage`, then verifies that all the transitive subpackages:
+//   1. are not available via PackageCache.Open
+//   2. are available via PackageCache.Get without needing to write any more blobs
+async fn verify_superpackage_get(superpackage: &Package, subpackages: &[Package]) {
+    let env = TestEnv::builder().enable_subpackages().build().await;
+    let _: fio::DirectoryProxy =
+        get_and_verify_package(&env.proxies.package_cache, superpackage).await;
+
+    for subpackage in subpackages {
+        assert_eq!(
+            env.open_package(&subpackage.meta_far_merkle_root().to_string()).await.unwrap_err(),
+            Status::NOT_FOUND
+        );
+    }
+
+    for subpackage in subpackages {
+        let _: fio::DirectoryProxy =
+            crate::verify_package_cached(&env.proxies.package_cache, subpackage).await;
+    }
+
+    let () = env.stop().await;
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn get_package_with_subpackage() {
+    let subpackage = PackageBuilder::new("subpackage").build().await.unwrap();
+
+    let superpackage = PackageBuilder::new("superpackage")
+        .add_subpackage("my-subpackage", &subpackage)
+        .build()
+        .await
+        .unwrap();
+
+    let () = verify_superpackage_get(&superpackage, &[subpackage]).await;
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn get_package_with_subpackage_with_content_blobs() {
+    let subpackage = PackageBuilder::new("subpackage")
+        .add_resource_at("subpackage-blob", "subpackage-blob-contents".as_bytes())
+        .build()
+        .await
+        .unwrap();
+
+    let superpackage = PackageBuilder::new("superpackage")
+        .add_subpackage("my-subpackage", &subpackage)
+        .add_resource_at("superpackage-blob", "superpackage-blob-contents".as_bytes())
+        .build()
+        .await
+        .unwrap();
+
+    let () = verify_superpackage_get(&superpackage, &[subpackage]).await;
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn get_package_with_two_subpackages() {
+    let subpackage0 = PackageBuilder::new("subpackage0").build().await.unwrap();
+    let subpackage1 = PackageBuilder::new("subpackage1").build().await.unwrap();
+
+    let superpackage = PackageBuilder::new("superpackage")
+        .add_subpackage("subpackage-0", &subpackage0)
+        .add_subpackage("subpackage-1", &subpackage1)
+        .build()
+        .await
+        .unwrap();
+
+    let () = verify_superpackage_get(&superpackage, &[subpackage0, subpackage1]).await;
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn get_package_with_two_subpackages_with_content_blobs() {
+    let subpackage0 = PackageBuilder::new("subpackage0")
+        .add_resource_at("subpackage0-blob", "subpackage0-blob-contents".as_bytes())
+        .build()
+        .await
+        .unwrap();
+    let subpackage1 = PackageBuilder::new("subpackage1")
+        .add_resource_at("subpackage1-blob", "subpackage1-blob-contents".as_bytes())
+        .build()
+        .await
+        .unwrap();
+
+    let superpackage = PackageBuilder::new("superpackage")
+        .add_subpackage("subpackage-0", &subpackage0)
+        .add_subpackage("subpackage-1", &subpackage1)
+        .add_resource_at("superpackage-blob", "superpackage-blob-contents".as_bytes())
+        .build()
+        .await
+        .unwrap();
+
+    let () = verify_superpackage_get(&superpackage, &[subpackage0, subpackage1]).await;
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn get_package_with_duplicate_subpackages() {
+    let subpackage = PackageBuilder::new("subpackage").build().await.unwrap();
+
+    let superpackage = PackageBuilder::new("superpackage")
+        .add_subpackage("subpackage", &subpackage)
+        .add_subpackage("duplicate", &subpackage)
+        .build()
+        .await
+        .unwrap();
+
+    let () = verify_superpackage_get(&superpackage, &[subpackage]).await;
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn get_package_with_duplicate_subpackages_with_content_blobs() {
+    let subpackage = PackageBuilder::new("subpackage")
+        .add_resource_at("subpackage-blob", "subpackage-blob-contents".as_bytes())
+        .build()
+        .await
+        .unwrap();
+
+    let superpackage = PackageBuilder::new("superpackage")
+        .add_subpackage("subpackage", &subpackage)
+        .add_subpackage("duplicate", &subpackage)
+        .add_resource_at("superpackage-blob", "superpackage-blob-contents".as_bytes())
+        .build()
+        .await
+        .unwrap();
+
+    let () = verify_superpackage_get(&superpackage, &[subpackage]).await;
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn get_package_with_subpackage_meta_far_as_content_blob() {
+    let subpackage = PackageBuilder::new("subpackage").build().await.unwrap();
+
+    let superpackage = PackageBuilder::new("superpackage")
+        .add_subpackage("my-subpackage", &subpackage)
+        .add_resource_at("content-blob-meta-far", subpackage.contents().0.contents.as_slice())
+        .build()
+        .await
+        .unwrap();
+
+    let () = verify_superpackage_get(&superpackage, &[subpackage]).await;
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn get_package_with_two_subpackages_that_share_a_content_blob() {
+    let subpackage0 = PackageBuilder::new("subpackage0")
+        .add_resource_at("blob", "shared-contents".as_bytes())
+        .build()
+        .await
+        .unwrap();
+
+    let subpackage1 = PackageBuilder::new("subpackage1")
+        .add_resource_at("blob", "shared-contents".as_bytes())
+        .build()
+        .await
+        .unwrap();
+
+    let superpackage = PackageBuilder::new("superpackage")
+        .add_subpackage("subpackage-0", &subpackage0)
+        .add_subpackage("subpackage-1", &subpackage1)
+        .build()
+        .await
+        .unwrap();
+
+    let () = verify_superpackage_get(&superpackage, &[subpackage0, subpackage1]).await;
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn get_package_with_transitive_subpackage() {
+    let subpackage1 = PackageBuilder::new("subpackage1")
+        .add_resource_at("some-blob", "blob-contents".as_bytes())
+        .build()
+        .await
+        .unwrap();
+
+    let subpackage0 = PackageBuilder::new("subpackage0")
+        .add_resource_at("other-blob", "different-contents".as_bytes())
+        .add_subpackage("depth", &subpackage1)
+        .build()
+        .await
+        .unwrap();
+
+    let superpackage = PackageBuilder::new("superpackage")
+        .add_subpackage("subpackage-0", &subpackage0)
+        .build()
+        .await
+        .unwrap();
+
+    let () = verify_superpackage_get(&superpackage, &[subpackage0, subpackage1]).await;
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn get_package_with_transitive_subpackage_as_content_blob() {
+    let subpackage1 = PackageBuilder::new("subpackage1")
+        .add_resource_at("some-blob", "blob-contents".as_bytes())
+        .build()
+        .await
+        .unwrap();
+
+    let subpackage0 = PackageBuilder::new("subpackage0")
+        .add_resource_at("other-blob", "different-contents".as_bytes())
+        .add_subpackage("depth", &subpackage1)
+        .build()
+        .await
+        .unwrap();
+
+    let superpackage = PackageBuilder::new("superpackage")
+        .add_subpackage("subpackage-0", &subpackage0)
+        .add_resource_at("content-blob-meta-far", subpackage1.contents().0.contents.as_slice())
+        .build()
+        .await
+        .unwrap();
+
+    let () = verify_superpackage_get(&superpackage, &[subpackage0, subpackage1]).await;
 }

@@ -202,7 +202,7 @@ impl Package {
     }
 
     /// Returns a tuple of the contents of the meta far and the contents of all content blobs in the package.
-    pub fn contents(&self) -> (BlobContents, Vec<BlobContents>) {
+    pub fn contents(&self) -> (BlobContents, HashMap<Hash, Vec<u8>>) {
         (
             BlobContents {
                 merkle: self.meta_far_merkle,
@@ -212,15 +212,36 @@ impl Package {
                     .unwrap(),
             },
             self.content_blob_files()
-                .map(|blob_file| BlobContents {
-                    merkle: blob_file.merkle,
-                    contents: io::BufReader::new(blob_file.file)
-                        .bytes()
-                        .collect::<Result<Vec<u8>, _>>()
-                        .unwrap(),
+                .map(|blob_file| {
+                    (
+                        blob_file.merkle,
+                        io::BufReader::new(blob_file.file)
+                            .bytes()
+                            .collect::<Result<Vec<u8>, _>>()
+                            .unwrap(),
+                    )
                 })
                 .collect(),
         )
+    }
+
+    /// Returns None if this `Package` has subpackages but doesn't have the blobs.
+    pub fn content_and_subpackage_blobs(&self) -> Option<HashMap<Hash, Vec<u8>>> {
+        if let Some(subpackage_blobs) = &self.subpackage_blobs {
+            let mut subpackage_blobs = subpackage_blobs.clone();
+            subpackage_blobs.extend(self.content_blob_files().map(|blob_file| {
+                (
+                    blob_file.merkle,
+                    io::BufReader::new(blob_file.file)
+                        .bytes()
+                        .collect::<Result<Vec<u8>, _>>()
+                        .unwrap(),
+                )
+            }));
+            Some(subpackage_blobs)
+        } else {
+            None
+        }
     }
 
     /// Writes the meta.far and all content blobs to blobfs.
@@ -606,7 +627,7 @@ impl PackageBuilder {
             (Some(current_blobs), Some(new_blobs)) => {
                 let (meta_far, content_blobs) = subpackage.contents();
                 current_blobs.insert(meta_far.merkle, meta_far.contents);
-                current_blobs.extend(content_blobs.into_iter().map(|bc| (bc.merkle, bc.contents)));
+                current_blobs.extend(content_blobs);
                 current_blobs.extend(new_blobs.iter().map(|(k, v)| (*k, v.clone())));
             }
             (Some(_), None) => self.subpackage_blobs = None,
@@ -1110,7 +1131,8 @@ mod tests {
         let (sub_sub_pkg_meta_far, content_blobs) = sub_sub_pkg.contents();
         expected_subpackage_blobs
             .insert(sub_sub_pkg_meta_far.merkle, sub_sub_pkg_meta_far.contents);
-        expected_subpackage_blobs.insert(content_blobs[0].merkle, b"c-blob-contents".to_vec());
+        expected_subpackage_blobs
+            .insert(content_blobs.into_keys().next().unwrap(), b"c-blob-contents".to_vec());
 
         assert_eq!(*sub_pkg.subpackage_blobs().unwrap(), expected_subpackage_blobs);
         assert_eq!(
@@ -1130,7 +1152,8 @@ mod tests {
 
         let (sub_pkg_meta_far, content_blobs) = sub_pkg.contents();
         expected_subpackage_blobs.insert(sub_pkg_meta_far.merkle, sub_pkg_meta_far.contents);
-        expected_subpackage_blobs.insert(content_blobs[0].merkle, b"b-blob-contents".to_vec());
+        expected_subpackage_blobs
+            .insert(content_blobs.into_keys().next().unwrap(), b"b-blob-contents".to_vec());
 
         assert_eq!(*pkg.subpackage_blobs().unwrap(), expected_subpackage_blobs);
         assert_eq!(

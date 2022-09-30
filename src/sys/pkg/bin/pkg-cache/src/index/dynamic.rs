@@ -707,8 +707,8 @@ mod tests {
         missing_meta_far.write_to_blobfs_dir(&blobfs_dir);
         present_package1.write_to_blobfs_dir(&blobfs_dir);
 
-        for blob in missing_content_blob.contents().1 {
-            blobfs_dir.remove_file(blob.merkle.to_string()).unwrap();
+        for (hash, _) in missing_content_blob.contents().1 {
+            blobfs_dir.remove_file(hash.to_string()).unwrap();
         }
         blobfs_dir.remove_file(missing_meta_far.contents().0.merkle.to_string()).unwrap();
 
@@ -746,11 +746,11 @@ mod tests {
 
         let present0 = Package::Active {
             path: "present0/0".parse().unwrap(),
-            required_blobs: present_package0.contents().1.into_iter().map(|bc| bc.merkle).collect(),
+            required_blobs: present_package0.contents().1.into_keys().collect(),
         };
         let present1 = Package::Active {
             path: "present1/0".parse().unwrap(),
-            required_blobs: present_package1.contents().1.into_iter().map(|bc| bc.merkle).collect(),
+            required_blobs: present_package1.contents().1.into_keys().collect(),
         };
 
         assert_eq!(

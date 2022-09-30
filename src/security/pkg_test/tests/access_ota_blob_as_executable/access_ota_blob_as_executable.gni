@@ -122,7 +122,7 @@ template("access_ota_blob_as_executable") {
       "//src/security/pkg_test/reboot:security_pkg_reboot-component",
 
       # Production SWD components.
-      "//src/sys/pkg/bin/pkg-cache:component",
+      "//src/sys/pkg/bin/pkg-cache:production-component-and-config",
       "//src/sys/pkg/bin/pkg-resolver:component",
       "//src/sys/pkg/bin/system-update-committer:component",
       "//src/sys/pkg/bin/system-updater:component",

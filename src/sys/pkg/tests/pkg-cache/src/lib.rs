@@ -9,16 +9,8 @@ use {
     assert_matches::assert_matches,
     blobfs_ramdisk::BlobfsRamdisk,
     fidl::endpoints::DiscoverableProtocolMarker as _,
-    fidl_fuchsia_io as fio,
-    fidl_fuchsia_pkg::{
-        BlobIdIteratorMarker, BlobInfo, BlobInfoIteratorMarker, NeededBlobsMarker,
-        NeededBlobsProxy, PackageCacheMarker, PackageCacheProxy, RetainedPackagesMarker,
-        RetainedPackagesProxy,
-    },
-    fidl_fuchsia_pkg_ext::{serve_fidl_iterator_from_slice, BlobId},
-    fidl_fuchsia_space::{ManagerMarker as SpaceManagerMarker, ManagerProxy as SpaceManagerProxy},
-    fidl_fuchsia_update::{CommitStatusProviderMarker, CommitStatusProviderProxy},
-    fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fidl_fuchsia_pkg as fpkg, fidl_fuchsia_pkg_ext as fpkg_ext,
+    fidl_fuchsia_space as fspace, fidl_fuchsia_update as fupdate, fuchsia_async as fasync,
     fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
     fuchsia_inspect::{reader::DiagnosticsHierarchy, testing::TreeAssertion},
     fuchsia_merkle::Hash,
@@ -59,9 +51,14 @@ async fn write_blob(contents: &[u8], file: fio::FileProxy) -> Result<(), zx::Sta
     Ok(())
 }
 
-async fn get_missing_blobs(proxy: &NeededBlobsProxy) -> Vec<BlobInfo> {
+// Calls fuchsia.pkg/NeededBlobs.GetMissingBlobs and reads from the iterator until it ends.
+// Will block unless the package being cached does not have any uncached subpackage meta.fars (or
+// another process is writing the subpackage meta.fars via NeededBlobs.OpenBlob), since pkg-cache
+// can't determine which blobs are required to cache a package without reading the meta.fars of all
+// the subpackages.
+async fn get_missing_blobs(proxy: &fpkg::NeededBlobsProxy) -> Vec<fpkg::BlobInfo> {
     let (blob_iterator, blob_iterator_server_end) =
-        fidl::endpoints::create_proxy::<BlobInfoIteratorMarker>().unwrap();
+        fidl::endpoints::create_proxy::<fpkg::BlobInfoIteratorMarker>().unwrap();
     let () = proxy.get_missing_blobs(blob_iterator_server_end).unwrap();
 
     let mut res = vec![];
@@ -75,69 +72,107 @@ async fn get_missing_blobs(proxy: &NeededBlobsProxy) -> Vec<BlobInfo> {
     res
 }
 
-async fn do_fetch(package_cache: &PackageCacheProxy, pkg: &Package) -> fio::DirectoryProxy {
-    let mut meta_blob_info =
-        BlobInfo { blob_id: BlobId::from(*pkg.meta_far_merkle_root()).into(), length: 0 };
+// Verifies that:
+//   1. all requested blobs are actually needed by the package
+//   2. no blob is requested more than once
+async fn get_and_verify_package(
+    package_cache: &fpkg::PackageCacheProxy,
+    pkg: &Package,
+) -> fio::DirectoryProxy {
+    let mut meta_blob_info = fpkg::BlobInfo {
+        blob_id: fpkg_ext::BlobId::from(*pkg.meta_far_merkle_root()).into(),
+        length: 0,
+    };
 
     let (needed_blobs, needed_blobs_server_end) =
-        fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
+        fidl::endpoints::create_proxy::<fpkg::NeededBlobsMarker>().unwrap();
     let (dir, dir_server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
     let get_fut = package_cache
         .get(&mut meta_blob_info, needed_blobs_server_end, Some(dir_server_end))
         .map_ok(|res| res.map_err(zx::Status::from_raw));
 
-    let (meta_far, contents) = pkg.contents();
+    let (meta_far, _) = pkg.contents();
+    let available_blobs = pkg.content_and_subpackage_blobs().unwrap();
 
-    write_meta_far(&needed_blobs, meta_far).await;
-    write_needed_blobs(&needed_blobs, contents).await;
+    let () = write_meta_far(&needed_blobs, meta_far).await;
+    let () = write_needed_blobs(&needed_blobs, available_blobs).await;
 
     let () = get_fut.await.unwrap().unwrap();
     let () = pkg.verify_contents(&dir).await.unwrap();
     dir
 }
 
-pub async fn write_meta_far(needed_blobs: &NeededBlobsProxy, meta_far: BlobContents) {
+pub async fn write_meta_far(needed_blobs: &fpkg::NeededBlobsProxy, meta_far: BlobContents) {
     let (meta_blob, meta_blob_server_end) =
         fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
     assert!(needed_blobs.open_meta_blob(meta_blob_server_end).await.unwrap().unwrap());
     write_blob(&meta_far.contents, meta_blob).await.unwrap();
 }
 
-pub async fn write_needed_blobs(needed_blobs: &NeededBlobsProxy, contents: Vec<BlobContents>) {
-    let missing_blobs = get_missing_blobs(&needed_blobs).await;
-    let mut contents = contents
-        .into_iter()
-        .map(|blob| (BlobId::from(blob.merkle), blob.contents))
-        .collect::<HashMap<_, Vec<u8>>>();
-    for mut blob in missing_blobs {
-        let buf = contents.remove(&blob.blob_id.into()).unwrap();
+pub async fn write_needed_blobs(
+    needed_blobs: &fpkg::NeededBlobsProxy,
+    mut available_blobs: HashMap<Hash, Vec<u8>>,
+) {
+    let (blob_iterator, blob_iterator_server_end) =
+        fidl::endpoints::create_proxy::<fpkg::BlobInfoIteratorMarker>().unwrap();
+    let () = needed_blobs.get_missing_blobs(blob_iterator_server_end).unwrap();
 
-        let (content_blob, content_blob_server_end) =
-            fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
-        assert!(needed_blobs
-            .open_blob(&mut blob.blob_id, content_blob_server_end)
+    loop {
+        let chunk = blob_iterator.next().await.unwrap();
+        if chunk.is_empty() {
+            break;
+        }
+        for mut blob_info in chunk {
+            let (blob_proxy, blob_server_end) =
+                fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
+            assert!(needed_blobs
+                .open_blob(&mut blob_info.blob_id, blob_server_end)
+                .await
+                .unwrap()
+                .unwrap());
+            let () = write_blob(
+                available_blobs
+                    .remove(&fpkg_ext::BlobId::from(blob_info.blob_id).into())
+                    .unwrap()
+                    .as_slice(),
+                blob_proxy,
+            )
             .await
-            .unwrap()
-            .unwrap());
-
-        let () = write_blob(&buf, content_blob).await.unwrap();
+            .unwrap();
+        }
     }
-    assert_eq!(contents, Default::default());
 }
 
-async fn verify_fetches_succeed(proxy: &PackageCacheProxy, packages: &[Package]) {
+// Calls PackageCache.Get and verifies the package directory for each element of `packages`
+// concurrently.
+// PackageCache.Get requires that the caller not write the same blob concurrently across
+// separate calls and this fn does not enforce that, so this fn should not be called with
+// packages that share blobs.
+async fn get_and_verify_packages(proxy: &fpkg::PackageCacheProxy, packages: &[Package]) {
     let () = futures::stream::iter(packages)
-        .for_each_concurrent(None, move |pkg| do_fetch(proxy, pkg).map(|_| {}))
+        .for_each_concurrent(None, move |pkg| get_and_verify_package(proxy, pkg).map(|_| {}))
         .await;
 }
 
-// Returns the package directory obtained from PackageCache.Get
-async fn verify_package_cached(proxy: &PackageCacheProxy, pkg: &Package) -> fio::DirectoryProxy {
-    let mut meta_blob_info =
-        BlobInfo { blob_id: BlobId::from(*pkg.meta_far_merkle_root()).into(), length: 0 };
+// Verifies that:
+//   1. `pkg` can be opened via PackageCache.Get without needing to write any blobs.
+//   2. `pkg` matches the package directory obtained from PackageCache.Get.
+//
+// Does *not* verify that `pkg`'s subpackages were cached, as this would requiring using
+// PackageCache.Get on them which would activate them in the dynamic index.
+//
+// Returns the package directory obtained from PackageCache.Get.
+async fn verify_package_cached(
+    proxy: &fpkg::PackageCacheProxy,
+    pkg: &Package,
+) -> fio::DirectoryProxy {
+    let mut meta_blob_info = fpkg::BlobInfo {
+        blob_id: fpkg_ext::BlobId::from(*pkg.meta_far_merkle_root()).into(),
+        length: 0,
+    };
 
     let (needed_blobs, needed_blobs_server_end) =
-        fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
+        fidl::endpoints::create_proxy::<fpkg::NeededBlobsMarker>().unwrap();
 
     let (dir, dir_server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
 
@@ -148,10 +183,12 @@ async fn verify_package_cached(proxy: &PackageCacheProxy, pkg: &Package) -> fio:
     let (_meta_blob, meta_blob_server_end) =
         fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
 
-    // If the package is fully cached, server will close the channel with a `ZX_OK` epitaph.
-    // In some cases, server will reply with `Ok(false)`, meaning that the metadata
-    // blob is cached, and the content blobs need to be validated.
-    let channel_closed = match needed_blobs.open_meta_blob(meta_blob_server_end).await {
+    // If the package is active in the dynamic index, the server will send a `ZX_OK` epitaph then
+    // close the channel.
+    // If all the blobs are cached but the package is not active in the dynamic index the server
+    // will reply with `Ok(false)`, meaning that the metadata blob is cached and GetMissingBlobs
+    // needs to be performed (but the iterator obtained with GetMissingBlobs should be empty).
+    let epitaph_received = match needed_blobs.open_meta_blob(meta_blob_server_end).await {
         Err(fidl::Error::ClientChannelClosed { status: Status::OK, .. }) => true,
         Ok(Ok(false)) => false,
         Ok(r) => {
@@ -163,22 +200,28 @@ async fn verify_package_cached(proxy: &PackageCacheProxy, pkg: &Package) -> fio:
     };
 
     let (blob_iterator, blob_iterator_server_end) =
-        fidl::endpoints::create_proxy::<BlobInfoIteratorMarker>().unwrap();
+        fidl::endpoints::create_proxy::<fpkg::BlobInfoIteratorMarker>().unwrap();
     let missing_blobs_response = needed_blobs.get_missing_blobs(blob_iterator_server_end);
 
-    if channel_closed {
-        // Since `get_missing_blobs()` FIDL protocol method has no return value, on
-        // the call the client writes to the channel and doesn't wait for a response.
-        // As a result, it's possible for server reply to race with channel closure,
-        // and client can receive a reply containing a channel after the channel was closed.
-        // Sending a channel through a closed channel closes the end of the channel sent
-        // through the channel.
+    if epitaph_received {
+        // The rust FIDL bindings that send an epitaph do not immediately close the channel
+        // (see fxbug.dev/81036).
+        // Since NeededBlobs.GetMissingBlobs has no return value, the rust bindings just write a
+        // message to the channel and do not wait for a response.
+        // Therefore, it's possible for the client's GetMissingBlobs message to race with the
+        // server's closing of the channel after writing the epitaph.
+        // If the client does manage to send the GetMissingBlobs message before the server closes
+        // the channel, the blob iterator server end will be closed (by the kernel as part of
+        // cleaning up the zircon channel).
+        // pkg-cache does not immediately drop the NeededBlobs request stream after writing the
+        // epitaph, so this race condition is perhaps slightly more likely to occur than normal.
+        // https://cs.opensource.google/fuchsia/fuchsia/+/main:src/sys/pkg/bin/pkg-cache/src/cache_service.rs;l=226;drc=74e6e2b5ca618c0d9caa8ab07f64eba96f4ce922
         match missing_blobs_response {
-            // The package is already cached and server closed the channel with with a `ZX_OK`
-            // epitaph.
+            // Channel closed before GetMissingBlob request was sent.
             Err(fidl::Error::ClientChannelClosed { status: Status::OK, .. }) => {}
+            // GetMissingBlob request sent before channel was closed, the iterator channel
+            // should be closed.
             Ok(()) => {
-                // As a result of race condition, iterator channel is closed.
                 assert_matches!(
                     blob_iterator.next().await,
                     Err(fidl::Error::ClientChannelClosed { status: Status::PEER_CLOSED, .. })
@@ -189,8 +232,8 @@ async fn verify_package_cached(proxy: &PackageCacheProxy, pkg: &Package) -> fio:
             }
         }
     } else {
-        // Expect empty iterator returned to ensure content blobs are cached.
-        assert!(blob_iterator.next().await.unwrap().is_empty());
+        // All subpackage meta.fars and content blobs should be cached, so iterator should be empty.
+        assert_eq!(blob_iterator.next().await.unwrap(), vec![]);
     }
 
     let () = get_fut.await.unwrap().unwrap();
@@ -202,21 +245,21 @@ async fn verify_package_cached(proxy: &PackageCacheProxy, pkg: &Package) -> fio:
 }
 
 pub async fn replace_retained_packages(
-    proxy: &RetainedPackagesProxy,
-    packages: &[fidl_fuchsia_pkg_ext::BlobId],
+    proxy: &fpkg::RetainedPackagesProxy,
+    packages: &[fpkg_ext::BlobId],
 ) {
     let packages = packages.iter().cloned().map(Into::into).collect::<Vec<_>>();
     let (iterator_client_end, iterator_stream) =
-        fidl::endpoints::create_request_stream::<BlobIdIteratorMarker>().unwrap();
+        fidl::endpoints::create_request_stream::<fpkg::BlobIdIteratorMarker>().unwrap();
     let serve_iterator_fut = async {
-        serve_fidl_iterator_from_slice(iterator_stream, packages).await.unwrap();
+        fpkg_ext::serve_fidl_iterator_from_slice(iterator_stream, packages).await.unwrap();
     };
     let (replace_retained_result, ()) =
         futures::join!(proxy.replace(iterator_client_end), serve_iterator_fut);
     assert_matches!(replace_retained_result, Ok(()));
 }
 
-async fn verify_packages_cached(proxy: &PackageCacheProxy, packages: &[Package]) {
+async fn verify_packages_cached(proxy: &fpkg::PackageCacheProxy, packages: &[Package]) {
     let () = futures::stream::iter(packages)
         .for_each_concurrent(None, move |pkg| verify_package_cached(proxy, pkg).map(|_| ()))
         .await;
@@ -236,6 +279,7 @@ struct TestEnvBuilder<BlobfsAndSystemImageFut> {
     paver_service_builder: Option<MockPaverServiceBuilder>,
     blobfs_and_system_image: BlobfsAndSystemImageFut,
     ignore_system_image: bool,
+    enable_subpackages: bool,
 }
 
 impl TestEnvBuilder<BoxFuture<'static, (BlobfsRamdisk, Option<Hash>)>> {
@@ -251,6 +295,7 @@ impl TestEnvBuilder<BoxFuture<'static, (BlobfsRamdisk, Option<Hash>)>> {
             .boxed(),
             paver_service_builder: None,
             ignore_system_image: false,
+            enable_subpackages: false,
         }
     }
 }
@@ -276,6 +321,7 @@ where
             blobfs_and_system_image: future::ready((blobfs, system_image)),
             paver_service_builder: self.paver_service_builder,
             ignore_system_image: self.ignore_system_image,
+            enable_subpackages: self.enable_subpackages,
         }
     }
 
@@ -309,12 +355,18 @@ where
             )),
             paver_service_builder: self.paver_service_builder,
             ignore_system_image: self.ignore_system_image,
+            enable_subpackages: self.enable_subpackages,
         }
     }
 
     fn ignore_system_image(self) -> Self {
         assert_eq!(self.ignore_system_image, false);
         Self { ignore_system_image: true, ..self }
+    }
+
+    fn enable_subpackages(self) -> Self {
+        assert_eq!(self.enable_subpackages, false);
+        Self { enable_subpackages: true, ..self }
     }
 
     async fn build(self) -> TestEnv<ConcreteBlobfs> {
@@ -393,14 +445,18 @@ where
         let local_child_out_dir = Mutex::new(Some(local_child_out_dir));
 
         let pkg_cache_manifest = if self.ignore_system_image {
-            "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/pkg-cache-ignore-system-image.cm"
+            "#meta/pkg-cache-ignore-system-image.cm"
         } else {
-            "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/pkg-cache.cm"
+            "#meta/pkg-cache.cm"
         };
 
         let builder = RealmBuilder::new().await.unwrap();
         let pkg_cache =
             builder.add_child("pkg_cache", pkg_cache_manifest, ChildOptions::new()).await.unwrap();
+        if self.enable_subpackages {
+            builder.init_mutable_config_from_package(&pkg_cache).await.unwrap();
+            builder.set_config_value_bool(&pkg_cache, "enable_subpackages", true).await.unwrap();
+        }
         let system_update_committer = builder
             .add_child("system_update_committer", "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/system-update-committer.cm", ChildOptions::new()).await.unwrap();
         let service_reflector = builder
@@ -500,19 +556,19 @@ where
         let proxies = Proxies {
             commit_status_provider: realm_instance
                 .root
-                .connect_to_protocol_at_exposed_dir::<CommitStatusProviderMarker>()
+                .connect_to_protocol_at_exposed_dir::<fupdate::CommitStatusProviderMarker>()
                 .expect("connect to commit status provider"),
             space_manager: realm_instance
                 .root
-                .connect_to_protocol_at_exposed_dir::<SpaceManagerMarker>()
+                .connect_to_protocol_at_exposed_dir::<fspace::ManagerMarker>()
                 .expect("connect to space manager"),
             package_cache: realm_instance
                 .root
-                .connect_to_protocol_at_exposed_dir::<PackageCacheMarker>()
+                .connect_to_protocol_at_exposed_dir::<fpkg::PackageCacheMarker>()
                 .expect("connect to package cache"),
             retained_packages: realm_instance
                 .root
-                .connect_to_protocol_at_exposed_dir::<RetainedPackagesMarker>()
+                .connect_to_protocol_at_exposed_dir::<fpkg::RetainedPackagesMarker>()
                 .expect("connect to retained packages"),
             pkgfs_packages: fuchsia_fs::directory::open_directory_no_describe(
                 realm_instance.root.get_exposed_dir(),
@@ -551,10 +607,10 @@ where
 }
 
 struct Proxies {
-    commit_status_provider: CommitStatusProviderProxy,
-    space_manager: SpaceManagerProxy,
-    package_cache: PackageCacheProxy,
-    retained_packages: RetainedPackagesProxy,
+    commit_status_provider: fupdate::CommitStatusProviderProxy,
+    space_manager: fspace::ManagerProxy,
+    package_cache: fpkg::PackageCacheProxy,
+    retained_packages: fpkg::RetainedPackagesProxy,
     pkgfs_packages: fio::DirectoryProxy,
     pkgfs_versions: fio::DirectoryProxy,
     pkgfs: fio::DirectoryProxy,
@@ -609,7 +665,7 @@ impl<B: Blobfs> TestEnv<B> {
         let status_fut = self
             .proxies
             .package_cache
-            .open(&mut merkle.parse::<BlobId>().unwrap().into(), server_end);
+            .open(&mut merkle.parse::<fpkg_ext::BlobId>().unwrap().into(), server_end);
 
         let () = status_fut.await.unwrap().map_err(zx::Status::from_raw)?;
         Ok(package)
@@ -623,7 +679,7 @@ impl<B: Blobfs> TestEnv<B> {
             .package_cache
             .open(
                 &mut "0000000000000000000000000000000000000000000000000000000000000000"
-                    .parse::<BlobId>()
+                    .parse::<fpkg_ext::BlobId>()
                     .unwrap()
                     .into(),
                 server_end,

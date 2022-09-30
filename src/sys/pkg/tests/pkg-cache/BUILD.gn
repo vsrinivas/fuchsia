@@ -90,6 +90,8 @@ fuchsia_test_package("pkg-cache-integration-tests") {
     "//src/storage/testing:storage_drivers",
     "//src/sys/pkg/bin/pkg-cache:component",
     "//src/sys/pkg/bin/pkg-cache:component-ignore-system-image",
+    "//src/sys/pkg/bin/pkg-cache:config_values_from_gn",
+    "//src/sys/pkg/bin/pkg-cache:config_values_from_gn-ignore-system-image",
     "//src/sys/pkg/bin/system-update-committer:component",
   ]
 }

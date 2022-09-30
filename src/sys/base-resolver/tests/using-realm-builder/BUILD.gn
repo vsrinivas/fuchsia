@@ -34,7 +34,7 @@ fuchsia_component("component") {
     "//src/storage/bin/blobfs",
     "//src/storage/testing:storage_driver_test_realm",
     "//src/sys/base-resolver:pkg-cache-resolver-component",
-    "//src/sys/pkg/bin/pkg-cache:component",
+    "//src/sys/pkg/bin/pkg-cache:production-component-and-config",
     "//src/sys/pkg/bin/pm:pm_bin",
   ]
 }

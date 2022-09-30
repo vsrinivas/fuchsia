@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        replace_retained_packages, verify_fetches_succeed, verify_packages_cached, write_meta_far,
+        get_and_verify_packages, replace_retained_packages, verify_packages_cached, write_meta_far,
         write_needed_blobs, TestEnv,
     },
     assert_matches::assert_matches,
@@ -135,7 +135,7 @@ async fn cached_and_released_packages_are_removed() {
     replace_retained_packages(&env.proxies.retained_packages, &blob_ids.as_slice()).await;
 
     // Cache the packages.
-    let () = verify_fetches_succeed(&env.proxies.package_cache, &packages).await;
+    let () = get_and_verify_packages(&env.proxies.package_cache, &packages).await;
 
     assert_matches!(env.proxies.space_manager.gc().await, Ok(Ok(())));
 

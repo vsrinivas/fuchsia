@@ -103,4 +103,7 @@
             from: "self",
         },
     ],
+    config: {
+        enable_subpackages: { type: "bool" },
+    },
 }

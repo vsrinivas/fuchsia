@@ -13,6 +13,7 @@ rustc_library("lib") {
   edition = "2021"
 
   deps = [
+    ":config_lib",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_rust",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_rust",
@@ -65,6 +66,7 @@ rustc_library("lib") {
   sources = [
     "src/base_packages.rs",
     "src/cache_service.rs",
+    "src/cache_service/missing_blobs.rs",
     "src/compat.rs",
     "src/compat/pkgfs.rs",
     "src/compat/pkgfs/packages.rs",
@@ -87,24 +89,59 @@ rustc_library("lib") {
   ]
 }
 
+fuchsia_component_manifest("manifest") {
+  component_name = "pkg-cache"
+  manifest = "meta/pkg-cache.cml"
+}
+
+fuchsia_structured_config_rust_lib("config_lib") {
+  cm_label = ":manifest"
+  name = "pkg_cache_config"
+  visibility = [ ":*" ]
+}
+
+fuchsia_structured_config_values("config_values_from_gn") {
+  cm_label = ":manifest"
+  values = {
+    enable_subpackages = false
+  }
+}
+
 grand_swd_binary("bin") {
   output_name = "pkg_cache"
 }
 
 fuchsia_component("component") {
-  component_name = "pkg-cache"
-  manifest = "meta/pkg-cache.cml"
+  cm_label = ":manifest"
   deps = [ ":bin" ]
+}
+
+fuchsia_component_manifest("manifest-ignore-system-image") {
+  component_name = "pkg-cache-ignore-system-image"
+  manifest = "meta/pkg-cache-ignore-system-image.cml"
 }
 
 fuchsia_component("component-ignore-system-image") {
-  component_name = "pkg-cache-ignore-system-image"
-  manifest = "meta/pkg-cache-ignore-system-image.cml"
+  cm_label = ":manifest-ignore-system-image"
   deps = [ ":bin" ]
 }
 
+fuchsia_structured_config_values("config_values_from_gn-ignore-system-image") {
+  cm_label = ":manifest-ignore-system-image"
+  values = {
+    enable_subpackages = false
+  }
+}
+
+group("production-component-and-config") {
+  public_deps = [
+    ":component",
+    ":config_values_from_gn",
+  ]
+}
+
 fuchsia_package("pkg-cache") {
-  deps = [ ":component" ]
+  deps = [ ":production-component-and-config" ]
 }
 
 fuchsia_component("pkg-cache-test") {

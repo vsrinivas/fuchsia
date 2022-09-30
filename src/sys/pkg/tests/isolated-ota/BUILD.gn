@@ -56,6 +56,7 @@ fuchsia_test_package("isolated-ota-integration-tests") {
     "//src/storage/testing:storage_driver_test_realm",
     "//src/sys/pkg/bin/fake-system-update-committer",
     "//src/sys/pkg/bin/pkg-cache:component-ignore-system-image",
+    "//src/sys/pkg/bin/pkg-cache:config_values_from_gn-ignore-system-image",
     "//src/sys/pkg/bin/pm:pm_bin",
     "//src/sys/pkg/lib/fuchsia-pkg-testing/certs",
     "//src/sys/pkg/lib/isolated-swd:pkg-component",

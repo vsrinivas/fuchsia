@@ -88,6 +88,12 @@ impl ConnectedProtocol for CobaltConnectedService {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum SubpackagesConfig {
+    Enable,
+    Disable,
+}
+
 // pkg-cache is conceptually a binary, but is linked together as a library with other SWD binaries
 // to save space via blob deduplication.
 pub fn main() -> Result<(), Error> {
@@ -105,6 +111,11 @@ pub fn main() -> Result<(), Error> {
 async fn main_inner() -> Result<(), Error> {
     fx_log_info!("starting package cache service");
 
+    let subpackages_config =
+        match pkg_cache_config::Config::take_from_startup_handle().enable_subpackages {
+            true => SubpackagesConfig::Enable,
+            false => SubpackagesConfig::Disable,
+        };
     let Args { ignore_system_image } = argh::from_env();
 
     let inspector = finspect::Inspector::new();
@@ -213,6 +224,7 @@ async fn main_inner() -> Result<(), Error> {
                         Arc::clone(&cache_packages),
                         executability_restrictions,
                         Arc::clone(&non_static_allow_list),
+                        subpackages_config,
                         scope.clone(),
                         stream,
                         cobalt_sender.clone(),
