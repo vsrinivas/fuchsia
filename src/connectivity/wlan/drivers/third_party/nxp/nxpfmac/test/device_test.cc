@@ -157,6 +157,8 @@ struct DeviceTest : public zxtest::Test {
   fdf::WireSharedClient<fuchsia_wlan_wlanphyimpl::WlanphyImpl> wlanphy_client_;
 };
 
+// Since we use a zero byte vmo for the files, none of the power file related ioctls will be
+// issued during this test.
 TEST_F(DeviceTest, SetCountry) {
   fdf::Arena arena(kArenaTag);
 
@@ -219,4 +221,55 @@ TEST_F(DeviceTest, GetCountry) {
                   set_request.alpha2().size());
 }
 
+TEST_F(DeviceTest, ClearCountry) {
+  std::array<uint8_t, 3> country_code_set_by_ioctl;
+
+  auto set_request = ::fuchsia_wlan_wlanphyimpl::wire::WlanphyCountry::WithAlpha2({'U', 'S'});
+
+  mlan_mocks_.SetOnMlanIoctl([&](t_void*, pmlan_ioctl_req req) -> mlan_status {
+    EXPECT_EQ(MLAN_IOCTL_MISC_CFG, req->req_id);
+    auto cfg = reinterpret_cast<mlan_ds_misc_cfg*>(req->pbuf);
+    EXPECT_EQ(MLAN_OID_MISC_COUNTRY_CODE, cfg->sub_command);
+    if (req->action == MLAN_ACT_SET) {
+      // Store the country code from the set operation.
+      memcpy(country_code_set_by_ioctl.data(), cfg->param.country_code.country_code,
+             std::min(sizeof(country_code_set_by_ioctl),
+                      sizeof(cfg->param.country_code.country_code)));
+      return MLAN_STATUS_SUCCESS;
+    }
+    if (req->action == MLAN_ACT_GET) {
+      // Return the country code that was previously set.
+      memcpy(cfg->param.country_code.country_code, country_code_set_by_ioctl.data(),
+             std::min(sizeof(country_code_set_by_ioctl),
+                      sizeof(cfg->param.country_code.country_code)));
+      return MLAN_STATUS_SUCCESS;
+    }
+    ADD_FAILURE("Unexpected ioctl");
+    return MLAN_STATUS_FAILURE;
+  });
+
+  // Set country code to US
+  fdf::Arena arena_for_set(kArenaTag);
+  auto set_result = wlanphy_client_.sync().buffer(arena_for_set)->SetCountry(set_request);
+  ASSERT_OK(set_result.status());
+
+  // Get country should return US
+  fdf::Arena arena_for_get(kArenaTag + 1);
+  auto get_result = wlanphy_client_.sync().buffer(arena_for_get)->GetCountry();
+  ASSERT_OK(get_result.status());
+
+  ASSERT_TRUE(get_result->value()->country.is_alpha2());
+  EXPECT_BYTES_EQ(set_request.alpha2().data(), get_result->value()->country.alpha2().data(),
+                  set_request.alpha2().size());
+  // Clear country should reset it to WW
+  fdf::Arena arena_for_clear(kArenaTag + 2);
+  auto clear_result = wlanphy_client_.sync().buffer(arena_for_clear)->ClearCountry();
+  ASSERT_OK(clear_result.status());
+
+  // Get should return WW
+  get_result = wlanphy_client_.sync().buffer(arena_for_get)->GetCountry();
+  ASSERT_OK(get_result.status());
+  ASSERT_TRUE(get_result->value()->country.is_alpha2());
+  EXPECT_BYTES_EQ("WW", get_result->value()->country.alpha2().data(), 2);
+}
 }  // namespace

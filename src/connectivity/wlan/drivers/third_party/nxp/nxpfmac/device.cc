@@ -26,6 +26,7 @@
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/device_context.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/moal_shim.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/moal_utils.h"
 
 namespace wlan::nxpfmac {
 
@@ -318,20 +319,83 @@ void Device::DestroyIface(DestroyIfaceRequestView request, fdf::Arena &arena,
   }
 }
 
-void Device::SetCountry(SetCountryRequestView request, fdf::Arena &arena,
-                        SetCountryCompleter::Sync &completer) {
-  const uint8_t(&country)[2] = request->country.alpha2().data_;
+// This function attempts to load the power file, rgpowerxx.bin for the given country and if not
+// found, attempts to load the file, txpowerxx.bin.
+zx_status_t Device::LoadPowerFile(char country_code[3], std::vector<uint8_t> *pwr_data_out) {
+  constexpr char kRgPwrXXPath[] = "nxpfmac/rgpower_";
+  constexpr char kTxPwrXXPath[] = "nxpfmac/txpower_";
+  // Attempt to load the corresponding rgpower file first
+  std::string tx_pwr_file_name = std::string(kRgPwrXXPath) + country_code + ".bin";
+  zxlogf(INFO, "Attempting to load Power file:%s", tx_pwr_file_name.c_str());
+  zx_status_t status = LoadFirmwareData(tx_pwr_file_name.c_str(), pwr_data_out);
+  if (status != ZX_OK) {
+    NXPF_INFO("Failed to load Power file:%s err: %s", tx_pwr_file_name.c_str(),
+              zx_status_get_string(status));
+    // rgpowerxx.bin is not found. Attempt to load the corresponding txpowerxx.bin file next
+    tx_pwr_file_name = std::string(kTxPwrXXPath) + country_code + ".bin";
 
+    zxlogf(INFO, "Attempting to load Power file:%s", tx_pwr_file_name.c_str());
+    status = LoadFirmwareData(tx_pwr_file_name.c_str(), pwr_data_out);
+    if (status != ZX_OK) {
+      NXPF_ERR("Failed to load Tx Power file:%s err: %s", tx_pwr_file_name.c_str(),
+               zx_status_get_string(status));
+    }
+  }
+  return status;
+}
+
+// This function attempts to load the given country code's power file and if that
+// fails it reverts the country code to WW. Once the power file download succeeds,
+// MLAN_OID_MISC_COUNTRY_CODE ioctl to FW to set the country code.
+zx_status_t Device::SetCountryCodeInFw(char country[3]) {
+  std::vector<uint8_t> txpwr_data;
+
+  // Attempt to load the power file for the given country
+  zx_status_t status = LoadPowerFile(country, &txpwr_data);
+  if (status != ZX_OK) {
+    NXPF_ERR("Failed to load Tx Power file for country: %s err: %s", country,
+             zx_status_get_string(status));
+    // If unable to find the power file for the given country, load the file for WW
+    strcpy(country, "WW");
+    status = LoadPowerFile(country, &txpwr_data);
+    if (status != ZX_OK) {
+      NXPF_ERR("Failed to load Tx Power file for country: %s err: %s", country,
+               zx_status_get_string(status));
+      return status;
+    }
+  }
+
+  // Send the power file data to FW.
+  status = process_hostcmd_cfg(context_->ioctl_adapter_, (char *)txpwr_data.data(),
+                               (t_size)txpwr_data.size());
+  if (status != ZX_OK) {
+    NXPF_ERR("%s process hostcmd failed", __func__);
+    return status;
+  }
+
+  // Once the power file has been downloaded, send the country code ioctl to FW.
   // Bss index shouldn't matter here, set it to zero.
   IoctlRequest<mlan_ds_misc_cfg> ioctl_request(
       MLAN_IOCTL_MISC_CFG, MLAN_ACT_SET, 0,
       mlan_ds_misc_cfg{.sub_command = MLAN_OID_MISC_COUNTRY_CODE,
-                       .param{.country_code{.country_code{country[0], country[1], '\0'}}}});
+                       .param{.country_code{.country_code{(uint8_t)country[0], (uint8_t)country[1], '\0'}}}});
 
   IoctlStatus io_status = ioctl_adapter_->IssueIoctlSync(&ioctl_request);
   if (io_status != IoctlStatus::Success) {
-    NXPF_ERR("Failed to set country '%c%c': %d", country[0], country[1], io_status);
-    completer.buffer(arena).ReplyError(ZX_ERR_INTERNAL);
+    NXPF_ERR("Failed to set country %s: status %d", country, io_status);
+  }
+  return status;
+}
+
+void Device::SetCountry(SetCountryRequestView request, fdf::Arena &arena,
+                        SetCountryCompleter::Sync &completer) {
+  char country[3] = {};
+
+  memcpy(country, request->country.alpha2().data_, 2);
+  zx_status_t status = SetCountryCodeInFw(country);
+  if (status != ZX_OK) {
+    NXPF_ERR("Failed to set country: %s in FW err: %s", country, zx_status_get_string(status));
+    completer.buffer(arena).ReplyError(status);
     return;
   }
   completer.buffer(arena).ReplySuccess();
@@ -359,8 +423,15 @@ void Device::GetCountry(fdf::Arena &arena, GetCountryCompleter::Sync &completer)
 }
 
 void Device::ClearCountry(fdf::Arena &arena, ClearCountryCompleter::Sync &completer) {
-  NXPF_ERR("Not supported");
-  completer.buffer(arena).ReplyError(ZX_ERR_NOT_SUPPORTED);
+  // Set country code to WW.
+  char country[3] = {'W', 'W', 0};
+  zx_status_t status = SetCountryCodeInFw(country);
+  if (status != ZX_OK) {
+    NXPF_ERR("Failed to set country: %s in FW err: %s", country, zx_status_get_string(status));
+    completer.buffer(arena).ReplyError(status);
+    return;
+  }
+  completer.buffer(arena).ReplySuccess();
 }
 
 void Device::SetPsMode(SetPsModeRequestView request, fdf::Arena &arena,

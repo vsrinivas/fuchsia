@@ -50,6 +50,7 @@ source_set("core") {
     "ioctl_adapter.cc",
     "key_ring.cc",
     "moal_shim.cc",
+    "moal_utils.cc",
     "scanner.cc",
     "softap.cc",
     "wlan_interface.cc",

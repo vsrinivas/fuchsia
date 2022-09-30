@@ -98,6 +98,8 @@ class Device : public DeviceType,
   void PerformShutdown();
   zx_status_t InitFirmware(bool* out_is_pending);
   zx_status_t LoadFirmwareData(const char* path, std::vector<uint8_t>* data_out);
+  zx_status_t LoadPowerFile(char country_code[3], std::vector<uint8_t>* pwr_data_out);
+  zx_status_t SetCountryCodeInFw(char country_code[3]);
 
   mlan_device mlan_device_ = {};
   void* mlan_adapter_ = nullptr;
