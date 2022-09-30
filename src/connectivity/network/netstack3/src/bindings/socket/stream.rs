@@ -46,8 +46,8 @@ use netstack3_core::{
         socket::{
             accept, bind, connect_bound, connect_unbound, create_socket, get_bound_info,
             get_connection_info, get_listener_info, listen, AcceptError, BindError, BoundId,
-            BoundInfo, ConnectError, ConnectionId, ListenerId, SocketAddr, TcpNonSyncContext,
-            UnboundId,
+            BoundInfo, ConnectError, ConnectionId, ConnectionInfo, ListenerId, SocketAddr,
+            TcpNonSyncContext, UnboundId,
         },
         state::Takeable,
     },
@@ -642,15 +642,23 @@ where
         let fidl = match self.id {
             SocketId::Unbound(_, _) => return Err(fposix::Errno::Einval),
             SocketId::Bound(id, _) => {
-                let BoundInfo { addr, port } = get_bound_info::<I, _>(sync_ctx, id);
+                let BoundInfo { addr, port, device } = get_bound_info::<I, _>(sync_ctx, id);
+                // TODO(https://fxbug.dev/102103): Support setting device.
+                assert_eq!(device, None);
                 (addr, port).into_fidl()
             }
             SocketId::Listener(id) => {
-                let BoundInfo { addr, port } = get_listener_info::<I, _>(sync_ctx, id);
+                let BoundInfo { addr, port, device } = get_listener_info::<I, _>(sync_ctx, id);
+                // TODO(https://fxbug.dev/102103): Support setting device.
+                assert_eq!(device, None);
                 (addr, port).into_fidl()
             }
             SocketId::Connection(id) => {
-                get_connection_info::<I, _>(sync_ctx, id).local_addr.into_fidl()
+                let ConnectionInfo { local_addr, remote_addr: _, device } =
+                    get_connection_info::<I, _>(sync_ctx, id);
+                // TODO(https://fxbug.dev/102103): Support setting device.
+                assert_eq!(device, None);
+                local_addr.into_fidl()
             }
         };
         Ok(fidl.into_sock_addr())

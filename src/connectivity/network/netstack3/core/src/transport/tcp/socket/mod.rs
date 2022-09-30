@@ -32,6 +32,7 @@ use core::{
 use nonzero_ext::nonzero;
 
 use assert_matches::assert_matches;
+use derivative::Derivative;
 use log::warn;
 use net_types::{
     ip::{
@@ -66,7 +67,7 @@ use crate::{
         socket::{demux::tcp_serialize_segment, isn::IsnGenerator},
         state::{Closed, Initial, State, Takeable},
     },
-    Instant, NonSyncContext, SyncCtx,
+    DeviceId, Instant, NonSyncContext, SyncCtx,
 };
 
 /// Per RFC 879 section 1 (https://tools.ietf.org/html/rfc879#section-1):
@@ -256,15 +257,16 @@ impl<A: IpAddress, D, LI, RI> Tagged<ConnAddr<A, D, LI, RI>> for ConnectionId {
     }
 }
 
-/// Inactive sockets which are created but do not participate in demultiplexing
-/// incoming segments.
-#[derive(Debug, Clone, PartialEq)]
-struct Inactive;
+#[derive(Debug, Derivative, Clone, PartialEq)]
+#[derivative(Default(bound = ""))]
+struct Unbound<D> {
+    bound_device: Option<D>,
+}
 
 /// Holds all the TCP socket states.
 pub struct TcpSockets<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext> {
     port_alloc: PortAlloc<BoundSocketMap<IpPortSpec<I, D>, TcpSocketSpec<I, D, C>>>,
-    inactive: IdMap<Inactive>,
+    inactive: IdMap<Unbound<D>>,
     socketmap: BoundSocketMap<IpPortSpec<I, D>, TcpSocketSpec<I, D, C>>,
 }
 
@@ -302,7 +304,7 @@ impl<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext> TcpSockets<I, D, C> {
     ) -> Option<&mut Listener<C::ReturnedBuffers>> {
         self.socketmap.listeners_mut().get_by_id_mut(&MaybeListenerId::from(id)).map(
             |(maybe_listener, _sharing, _local_addr)| match maybe_listener {
-                MaybeListener::Bound(_) => {
+                MaybeListener::Bound => {
                     unreachable!("contract violated: ListenerId points to an inactive entry")
                 }
                 MaybeListener::Listener(l) => l,
@@ -367,7 +369,7 @@ impl<PassiveOpen> Listener<PassiveOpen> {
 /// Represents either a bound socket or a listener socket.
 #[derive(Debug)]
 enum MaybeListener<PassiveOpen> {
-    Bound(Inactive),
+    Bound,
     Listener(Listener<PassiveOpen>),
 }
 
@@ -383,11 +385,12 @@ pub struct BoundId(usize);
 /// The ID to a listener socket.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ListenerId(usize);
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-struct MaybeListenerId(usize);
 /// The ID to a connection socket.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct ConnectionId(usize);
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct MaybeListenerId(usize);
 
 impl SocketMapAddrStateSpec for MaybeListenerId {
     type Id = MaybeListenerId;
@@ -431,7 +434,9 @@ impl SocketMapAddrStateSpec for ConnectionId {
     }
 }
 
-pub(crate) trait TcpSocketHandler<I: Ip, C: TcpNonSyncContext> {
+pub(crate) trait TcpSocketHandler<I: Ip, C: TcpNonSyncContext>:
+    IpDeviceIdContext<I>
+{
     fn create_socket(&mut self, ctx: &mut C) -> UnboundId;
 
     fn bind(
@@ -466,9 +471,10 @@ pub(crate) trait TcpSocketHandler<I: Ip, C: TcpNonSyncContext> {
         netstack_buffers: C::ProvidedBuffers,
     ) -> Result<ConnectionId, ConnectError>;
 
-    fn get_bound_info(&self, id: BoundId) -> BoundInfo<I::Addr>;
-    fn get_listener_info(&self, id: ListenerId) -> BoundInfo<I::Addr>;
-    fn get_connection_info(&self, id: ConnectionId) -> ConnectionInfo<I::Addr>;
+    fn get_unbound_info(&self, id: UnboundId) -> UnboundInfo<Self::DeviceId>;
+    fn get_bound_info(&self, id: BoundId) -> BoundInfo<I::Addr, Self::DeviceId>;
+    fn get_listener_info(&self, id: ListenerId) -> BoundInfo<I::Addr, Self::DeviceId>;
+    fn get_connection_info(&self, id: ConnectionId) -> ConnectionInfo<I::Addr, Self::DeviceId>;
     fn do_send(&mut self, ctx: &mut C, conn_id: ConnectionId);
 }
 
@@ -481,7 +487,7 @@ impl<
     > TcpSocketHandler<I, C> for SC
 {
     fn create_socket(&mut self, ctx: &mut C) -> UnboundId {
-        UnboundId(self.with_tcp_sockets_mut(|sockets| sockets.inactive.push(Inactive)))
+        UnboundId(self.with_tcp_sockets_mut(|sockets| sockets.inactive.push(Unbound::default())))
     }
 
     fn bind(
@@ -515,7 +521,7 @@ impl<
                 sockets.socketmap.listeners_mut().get_by_id_mut(&id).expect("invalid listener id");
 
             match listener {
-                MaybeListener::Bound(_) => {
+                MaybeListener::Bound => {
                     *listener = MaybeListener::Listener(Listener::new(backlog));
                 }
                 MaybeListener::Listener(_) => {
@@ -559,7 +565,7 @@ impl<
             self.with_tcp_sockets_mut(|sockets| {
                 let (bound, (), bound_addr) =
                     sockets.socketmap.listeners().get_by_id(&bound_id).expect("invalid socket id");
-                assert_matches!(bound, MaybeListener::Bound(_));
+                assert_matches!(bound, MaybeListener::Bound);
                 *bound_addr
             });
         let ip_sock = self
@@ -606,17 +612,25 @@ impl<
         Ok(conn_id)
     }
 
-    fn get_bound_info(&self, id: BoundId) -> BoundInfo<I::Addr> {
+    fn get_unbound_info(&self, id: UnboundId) -> UnboundInfo<SC::DeviceId> {
+        self.with_tcp_sockets(|sockets| {
+            let TcpSockets { socketmap: _, inactive, port_alloc: _ } = sockets;
+            inactive.get(id.into()).expect("invalid unbound ID").clone()
+        })
+        .into()
+    }
+
+    fn get_bound_info(&self, id: BoundId) -> BoundInfo<I::Addr, SC::DeviceId> {
         self.with_tcp_sockets(|sockets| {
             let (bound, (), bound_addr) =
                 sockets.socketmap.listeners().get_by_id(&id.into()).expect("invalid bound ID");
-            assert_matches!(bound, MaybeListener::Bound(_));
+            assert_matches!(bound, MaybeListener::Bound);
             *bound_addr
         })
         .into()
     }
 
-    fn get_listener_info(&self, id: ListenerId) -> BoundInfo<I::Addr> {
+    fn get_listener_info(&self, id: ListenerId) -> BoundInfo<I::Addr, SC::DeviceId> {
         self.with_tcp_sockets(|sockets| {
             let (listener, (), addr) =
                 sockets.socketmap.listeners().get_by_id(&id.into()).expect("invalid listener ID");
@@ -626,7 +640,7 @@ impl<
         .into()
     }
 
-    fn get_connection_info(&self, id: ConnectionId) -> ConnectionInfo<I::Addr> {
+    fn get_connection_info(&self, id: ConnectionId) -> ConnectionInfo<I::Addr, SC::DeviceId> {
         self.with_tcp_sockets(|sockets| {
             let (_, (), addr): &(Connection<_, _, _, _, _, _>, _, _) =
                 sockets.socketmap.conns().get_by_id(&id.into()).expect("invalid conn ID");
@@ -747,7 +761,7 @@ where
                     ip: ListenerIpAddr { addr: local_ip, identifier: port },
                     device: None,
                 },
-                MaybeListener::Bound(inactive.clone()),
+                MaybeListener::Bound,
                 // TODO(https://fxbug.dev/101596): Support sharing for TCP sockets.
                 (),
             )
@@ -917,52 +931,86 @@ where
     Ok(conn_id)
 }
 
+/// Information about an unbound socket.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct UnboundInfo<D> {
+    /// The device the socket will be bound to.
+    pub device: Option<D>,
+}
+
+impl<D> GenericOverIp for UnboundInfo<D> {
+    type Type<I: Ip> = Self;
+}
+
 /// Information about a bound socket's address.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct BoundInfo<A: IpAddress> {
+pub struct BoundInfo<A: IpAddress, D> {
     /// The IP address the socket is bound to, or `None` for all local IPs.
     pub addr: Option<SpecifiedAddr<A>>,
     /// The port number the socket is bound to.
     pub port: NonZeroU16,
+    /// The device the socket is bound to.
+    pub device: Option<D>,
 }
 
-impl<A: IpAddress> GenericOverIp for BoundInfo<A> {
-    type Type<I: Ip> = BoundInfo<I::Addr>;
+impl<A: IpAddress, D> GenericOverIp for BoundInfo<A, D> {
+    type Type<I: Ip> = BoundInfo<I::Addr, D>;
 }
 
 /// Information about a connected socket's address.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ConnectionInfo<A: IpAddress> {
+pub struct ConnectionInfo<A: IpAddress, D> {
     /// The local address the socket is bound to.
     pub local_addr: SocketAddr<A>,
     /// The remote address the socket is connected to.
     pub remote_addr: SocketAddr<A>,
+    /// The device the socket is bound to.
+    pub device: Option<D>,
 }
 
-impl<A: IpAddress> GenericOverIp for ConnectionInfo<A> {
-    type Type<I: Ip> = ConnectionInfo<I::Addr>;
+impl<A: IpAddress, D> GenericOverIp for ConnectionInfo<A, D> {
+    type Type<I: Ip> = ConnectionInfo<I::Addr, D>;
 }
 
-impl<A: IpAddress, D> From<ListenerAddr<A, D, NonZeroU16>> for BoundInfo<A> {
+impl<D> From<Unbound<D>> for UnboundInfo<D> {
+    fn from(unbound: Unbound<D>) -> Self {
+        let Unbound { bound_device: device } = unbound;
+        Self { device }
+    }
+}
+
+impl<A: IpAddress, D> From<ListenerAddr<A, D, NonZeroU16>> for BoundInfo<A, D> {
     fn from(addr: ListenerAddr<A, D, NonZeroU16>) -> Self {
-        let ListenerAddr { ip: ListenerIpAddr { addr, identifier }, device: _ } = addr;
-        BoundInfo { addr, port: identifier }
+        let ListenerAddr { ip: ListenerIpAddr { addr, identifier }, device } = addr;
+        BoundInfo { addr, port: identifier, device }
     }
 }
 
-impl<A: IpAddress, D> From<ConnAddr<A, D, NonZeroU16, NonZeroU16>> for ConnectionInfo<A> {
+impl<A: IpAddress, D> From<ConnAddr<A, D, NonZeroU16, NonZeroU16>> for ConnectionInfo<A, D> {
     fn from(addr: ConnAddr<A, D, NonZeroU16, NonZeroU16>) -> Self {
-        let ConnAddr { ip: ConnIpAddr { local, remote }, device: _ } = addr;
+        let ConnAddr { ip: ConnIpAddr { local, remote }, device } = addr;
         let convert = |(ip, port)| SocketAddr { ip, port };
-        Self { local_addr: convert(local), remote_addr: convert(remote) }
+        Self { local_addr: convert(local), remote_addr: convert(remote), device }
     }
+}
+
+/// Get information for unbound TCP socket.
+pub fn get_unbound_info<I: Ip, C: NonSyncContext>(
+    mut sync_ctx: &SyncCtx<C>,
+    id: UnboundId,
+) -> UnboundInfo<DeviceId> {
+    I::map_ip(
+        IpInv((&mut sync_ctx, id)),
+        |IpInv((sync_ctx, id))| TcpSocketHandler::<Ipv4, _>::get_unbound_info(sync_ctx, id),
+        |IpInv((sync_ctx, id))| TcpSocketHandler::<Ipv6, _>::get_unbound_info(sync_ctx, id),
+    )
 }
 
 /// Get information for bound TCP socket.
 pub fn get_bound_info<I: Ip, C: NonSyncContext>(
     mut sync_ctx: &SyncCtx<C>,
     id: BoundId,
-) -> BoundInfo<I::Addr> {
+) -> BoundInfo<I::Addr, DeviceId> {
     I::map_ip(
         IpInv((&mut sync_ctx, id)),
         |IpInv((sync_ctx, id))| TcpSocketHandler::<Ipv4, _>::get_bound_info(sync_ctx, id),
@@ -974,7 +1022,7 @@ pub fn get_bound_info<I: Ip, C: NonSyncContext>(
 pub fn get_listener_info<I: Ip, C: NonSyncContext>(
     mut sync_ctx: &SyncCtx<C>,
     id: ListenerId,
-) -> BoundInfo<I::Addr> {
+) -> BoundInfo<I::Addr, DeviceId> {
     I::map_ip(
         IpInv((&mut sync_ctx, id)),
         |IpInv((mut sync_ctx, id))| TcpSocketHandler::<Ipv4, _>::get_listener_info(sync_ctx, id),
@@ -986,7 +1034,7 @@ pub fn get_listener_info<I: Ip, C: NonSyncContext>(
 pub fn get_connection_info<I: Ip, C: NonSyncContext>(
     mut sync_ctx: &SyncCtx<C>,
     id: ConnectionId,
-) -> ConnectionInfo<I::Addr> {
+) -> ConnectionInfo<I::Addr, DeviceId> {
     I::map_ip(
         IpInv((&mut sync_ctx, id)),
         |IpInv((sync_ctx, id))| TcpSocketHandler::<Ipv4, _>::get_connection_info(sync_ctx, id),
@@ -1711,7 +1759,7 @@ mod tests {
                 .expect("bind should succeed");
 
         let info = TcpSocketHandler::get_bound_info(&sync_ctx, bound);
-        assert_eq!(info, BoundInfo { addr: Some(addr), port });
+        assert_eq!(info, BoundInfo { addr: Some(addr), port, device: None });
     }
 
     #[ip_test]
@@ -1735,7 +1783,7 @@ mod tests {
             TcpSocketHandler::listen(&mut sync_ctx, &mut non_sync_ctx, bound, nonzero!(25usize));
 
         let info = TcpSocketHandler::get_listener_info(&sync_ctx, listener);
-        assert_eq!(info, BoundInfo { addr: Some(addr), port });
+        assert_eq!(info, BoundInfo { addr: Some(addr), port, device: None });
     }
 
     #[ip_test]
@@ -1773,7 +1821,7 @@ mod tests {
 
         assert_eq!(
             TcpSocketHandler::get_connection_info(&sync_ctx, connected),
-            ConnectionInfo { local_addr: local, remote_addr: remote }
+            ConnectionInfo { local_addr: local, remote_addr: remote, device: None }
         );
     }
 }

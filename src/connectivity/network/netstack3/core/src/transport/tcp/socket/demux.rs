@@ -167,7 +167,7 @@ where
                             .expect("invalid listener_id");
 
                         let listener = match maybe_listener {
-                            MaybeListener::Bound(_) => {
+                            MaybeListener::Bound => {
                                 // If the socket is only bound, but not listening.
                                 return false;
                             }
@@ -262,7 +262,7 @@ where
                                             .expect("the listener must still be active");
 
                                     match maybe_listener {
-                                        MaybeListener::Bound(_) => {
+                                        MaybeListener::Bound => {
                                             unreachable!(
                                                 "the listener must be active because we got here"
                                             );
