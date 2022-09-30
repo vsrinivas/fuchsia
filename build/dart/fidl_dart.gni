@@ -147,22 +147,6 @@ template("fidl_dart") {
     }
   }
 
-  # TODO(joshuaseaton): Remove once //src/experiences targets have been
-  # migrated over to depending on $main_target directly.
-  group(target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visibility",
-                           ])
-    if (!defined(visibility)) {
-      visibility = []
-    }
-    visibility += [ "//src/experiences/*" ]
-
-    public_deps = [ ":$main_target" ]
-  }
-
   if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {
     # Instead of depending on the generated bindings, set up a dependency on the
     # original library.
