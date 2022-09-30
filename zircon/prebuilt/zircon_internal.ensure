@@ -16,10 +16,6 @@ $ParanoidMode CheckPresence
 # `cipd ensure-file-resolve` fails if this isn't present, though it's useless.
 $VerifiedPlatform linux-amd64
 
-# ADSP SST Firmware
-@Subdir firmware/intel-adsp-sst
-fuchsia_internal/firmware/intel-adsp-sst NC0gy5Ej51GElpWUQXzO6Q1d5hPLV4Z4c1mbhDLuhfcC
-
 # Mediatek MT7668 Firmware
 @Subdir firmware/bluetooth/mt7668
 fuchsia_internal/firmware/bluetooth/mt7668 git_revision:ed8b2eb6b877e93afb8a9f9281b93a7b91df0f09

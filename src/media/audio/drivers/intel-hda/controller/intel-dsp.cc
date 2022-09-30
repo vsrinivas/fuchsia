@@ -32,8 +32,6 @@ namespace intel_hda {
 
 namespace {
 
-constexpr const char* ADSP_FIRMWARE_PATH = "dsp_fw_kbl_v3420.bin";
-
 constexpr uint32_t EXT_MANIFEST_HDR_MAGIC = 0x31454124;
 
 constexpr zx_duration_t INTEL_ADSP_TIMEOUT_NSEC = ZX_MSEC(50);             // 50mS Arbitrary

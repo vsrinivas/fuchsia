@@ -8,7 +8,6 @@ import("//build/drivers.gni")
 import("//build/fuzzing/fuzzer.gni")
 import("//build/fuzzing/fuzzer_package.gni")
 import("//build/test.gni")
-import("//zircon/prebuilt/firmware.gni")
 
 driver_bind_rules("ihda_controller_bind") {
   rules = "intel_hda.bind"
@@ -16,6 +15,8 @@ driver_bind_rules("ihda_controller_bind") {
   deps = [ "//src/devices/bind/fuchsia.pci" ]
   tests = "bind_test.json"
 }
+
+firmware_path = "dsp_fw_kbl_v3420.bin"
 
 # All non-test targets.
 group("controller") {
@@ -30,6 +31,7 @@ group("test") {
 
 source_set("src") {
   visibility = [ ":*" ]
+  defines = [ "ADSP_FIRMWARE_PATH=\"$firmware_path\"" ]
   sources = [
     "binary_decoder.h",
     "codec-cmd-job.cc",
@@ -102,18 +104,22 @@ source_set("src") {
   configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
-firmware("firmware") {
-  sources = [ "intel-adsp-sst/dsp_fw_kbl_v3420.bin" ]
+resource("firmware") {
+  sources = [ "//prebuilt/firmware/media/intel-adsp-sst/$firmware_path" ]
+  outputs = [ "lib/firmware/$firmware_path" ]
 }
 
 fuchsia_driver("intel-hda-driver") {
   output_name = "intel-hda"
+  defines = [ "ADSP_FIRMWARE_PATH=\"$firmware_path\"" ]
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  deps = [ ":src" ]
-  data_deps = [ ":firmware" ]
+  deps = [
+    ":firmware",
+    ":src",
+  ]
 }
 
 fuchsia_driver_component("intel-hda") {
