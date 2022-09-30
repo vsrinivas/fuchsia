@@ -190,7 +190,8 @@ gvisor_tests = [
   # "socket_blocking_ip_test",
   # "socket_blocking_local_test",
   # "socket_capability_test",
-  # "socket_domain_non_blocking_test",
+  "socket_domain_non_blocking_test",
+
   # "socket_domain_test",
   # "socket_filesystem_non_blocking_test",
   # "socket_filesystem_test",
