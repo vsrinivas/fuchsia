@@ -462,8 +462,13 @@ template("assembled_system") {
   }
 
   # Defaults to true if the invoker doesn't pass "include_shell_commands"
-  include_shell_commands = true
+  include_shell_commands = generate_fvm
   if (defined(invoker.include_shell_commands)) {
+    if (invoker.include_shell_commands) {
+      assert(
+          generate_fvm,
+          "Shell command package generation is only valid if the fvm is being created.")
+    }
     include_shell_commands = invoker.include_shell_commands
   }
 
@@ -668,7 +673,7 @@ template("assembled_system") {
                              invoker.create_legacy_aib_archive
 
     base_driver_packages = _base_driver_packages
-    if (include_shell_commands) {
+    if (include_shell_commands && generate_fvm) {
       shell_command_packages =
           _base_packages + _universe_packages + _cache_packages
     }
