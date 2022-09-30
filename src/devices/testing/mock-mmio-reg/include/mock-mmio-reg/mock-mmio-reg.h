@@ -151,11 +151,14 @@ class MockMmioReg {
 // Represents an array of MockMmioReg objects.
 class MockMmioRegRegion {
  public:
-  // Constructs a MockMmioRegRegion backed by the given array. reg_size is the size of each
-  // register in bytes, reg_count is the total size of the region in bytes. Ownership of mock_regs
-  // is not transferred.
-  MockMmioRegRegion(MockMmioReg* mock_regs, size_t reg_size, size_t reg_count)
-      : mock_regs_(mock_regs), reg_size_(reg_size), reg_count_(reg_count) {
+  // Constructs a MockMmioRegRegion backed by the given array. reg_size is the size of each register
+  // in bytes, and reg_count is the total number of registers. If all accesses will be to registers
+  // past a certain address, reg_offset can be set to this value (in number of registers) to reduce
+  // the required reg_count. Accesses to registers lower than this offset are not permitted.
+  // Ownership of mock_regs is not transferred.
+  MockMmioRegRegion(MockMmioReg* mock_regs, size_t reg_size, size_t reg_count,
+                    size_t reg_offset = 0)
+      : mock_regs_(mock_regs), reg_size_(reg_size), reg_count_(reg_count), reg_offset_(reg_offset) {
     ASSERT_GT(reg_size_, 0);
   }
 
@@ -163,7 +166,7 @@ class MockMmioRegRegion {
   // _index_.
   MockMmioReg& operator[](size_t offset) const {
     CheckOffset(offset);
-    return mock_regs_[offset / reg_size_];
+    return mock_regs_[(offset / reg_size_) - reg_offset_];
   }
 
   // Calls VerifyAndClear() on all MockMmioReg objects.
@@ -178,7 +181,7 @@ class MockMmioRegRegion {
         mmio_buffer_t{
             .vaddr = FakeMmioPtr(this),
             .offset = 0,
-            .size = reg_size_ * reg_count_,
+            .size = (reg_offset_ + reg_size_) * reg_count_,
             .vmo = ZX_HANDLE_INVALID,
         },
         &kMockMmioOps, this);
@@ -233,11 +236,15 @@ class MockMmioRegRegion {
       .Write64 = Write64,
   };
 
-  void CheckOffset(zx_off_t offs) const { ASSERT_LT(offs / reg_size_, reg_count_); }
+  void CheckOffset(zx_off_t offs) const {
+    ASSERT_GE(offs / reg_size_, reg_offset_);
+    ASSERT_LT((offs / reg_size_) - reg_offset_, reg_count_);
+  }
 
   MockMmioReg* const mock_regs_;
   const size_t reg_size_;
   const size_t reg_count_;
+  const size_t reg_offset_;
 };
 
 }  // namespace ddk_mock

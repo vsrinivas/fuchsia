@@ -56,4 +56,27 @@ TEST(MockMmioReg, View) {
   ASSERT_NO_FATAL_FAILURE(reg_region.VerifyAll());
 }
 
+TEST(MockMmioReg, Offset) {
+  ddk_mock::MockMmioReg reg_array[0x100];
+
+  ddk_mock::MockMmioRegRegion reg_region(reg_array, sizeof(uint32_t), std::size(reg_array),
+                                         0x1'0000 / sizeof(uint32_t));
+
+  fdf::MmioBuffer dut = reg_region.GetMmioBuffer();
+
+  reg_region[0x1'0020].ExpectRead(0x8ed43ca9).ExpectWrite(0x7a5da8d8);
+  reg_region[0x1'0080].ExpectRead(0x5be3254c).ExpectWrite(0x6ba7d0af);
+  reg_region[0x1'0060].ExpectRead(0xa1026dfe).ExpectWrite(0x0164bff2);
+
+  EXPECT_EQ(dut.Read32(0x1'0020), 0x8ed43ca9);
+  EXPECT_EQ(dut.Read32(0x1'0080), 0x5be3254c);
+  EXPECT_EQ(dut.Read32(0x1'0060), 0xa1026dfe);
+
+  dut.Write32(0x7a5da8d8, 0x1'0020);
+  dut.Write32(0x6ba7d0af, 0x1'0080);
+  dut.Write32(0x0164bff2, 0x1'0060);
+
+  ASSERT_NO_FATAL_FAILURE(reg_region.VerifyAll());
+}
+
 }  // namespace ddk_mock_test
