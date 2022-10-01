@@ -47,7 +47,7 @@ test("svc_unittests") {
 
   deps = [
     ":svc",
-    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/vfs/cpp",
     "//src/lib/fxl/test:gtest_main",

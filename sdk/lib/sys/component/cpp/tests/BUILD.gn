@@ -25,9 +25,9 @@ source_set("test_utils") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.component.decl",
-    "//sdk/fidl/fuchsia.component.test",
-    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_hlcpp",
+    "//sdk/fidl/fuchsia.component.test:fuchsia.component.test_hlcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
     "//sdk/lib/sys/component/cpp/testing:cpp",
   ]
 }
@@ -41,7 +41,7 @@ executable("echo_server_bin") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
-    "//src/testing/fidl:placeholders",
+    "//src/testing/fidl:placeholders_hlcpp",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -58,7 +58,7 @@ executable("echo_server_sc_bin") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
-    "//src/testing/fidl:placeholders",
+    "//src/testing/fidl:placeholders_hlcpp",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -87,18 +87,18 @@ executable("realm_builder_test_bin") {
 
   deps = [
     ":test_utils",
-    "//examples/fidl/fuchsia.examples:fuchsia.examples",
-    "//sdk/fidl/fuchsia.component",
-    "//sdk/fidl/fuchsia.component.decl",
-    "//sdk/fidl/fuchsia.io",
-    "//sdk/fidl/fuchsia.logger",
+    "//examples/fidl/fuchsia.examples:fuchsia.examples_hlcpp",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_hlcpp",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_hlcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fostr/fidl/fuchsia.component.decl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
-    "//src/testing/fidl:placeholders",
+    "//src/testing/fidl:placeholders_hlcpp",
   ]
 }
 
@@ -109,16 +109,16 @@ executable("internal_test_bin") {
 
   deps = [
     ":test_utils",
-    "//sdk/fidl/fuchsia.component",
-    "//sdk/fidl/fuchsia.component.decl",
-    "//sdk/fidl/fuchsia.component.test",
-    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_hlcpp",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_hlcpp",
+    "//sdk/fidl/fuchsia.component.test:fuchsia.component.test_hlcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
-    "//src/testing/fidl:placeholders",
+    "//src/testing/fidl:placeholders_hlcpp",
   ]
 }
 
@@ -260,9 +260,9 @@ executable("cpp_outgoing_directory_integration_test_bin") {
   sources = [ "outgoing_directory_integration_test.cc" ]
 
   deps = [
-    "//examples/fidl/fuchsia.examples:fuchsia.examples",
-    "//sdk/fidl/fuchsia.component",
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger",
+    "//examples/fidl/fuchsia.examples:fuchsia.examples_hlcpp",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_hlcpp",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp",

@@ -8,7 +8,7 @@ executable("bin") {
   output_name = "example_hlcpp_protocol_test"
   sources = [ "main.cc" ]
   deps = [
-    "//examples/fidl/fuchsia.examples",
+    "//examples/fidl/fuchsia.examples:fuchsia.examples_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",

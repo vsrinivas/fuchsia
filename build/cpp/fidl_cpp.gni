@@ -38,13 +38,9 @@ _implicit_hlcpp_bindings_visibility = [
   #
   # TODO(fxbug.dev/108354): Remove all entries.
   "//:please_add_hlcpp_suffix_see_fxb_108354",
-  "//examples/*",
-  "//sdk/*",
   "//src/*",
   "//third_party/*",
-  "//tools/*",
   "//vendor/*",
-  "//zircon/*",
 ]
 
 # Define the include patterns for various binding flavors.
@@ -477,7 +473,7 @@ template("fidl_cpp_family") {
       # Instead of depending on the generated bindings, set up a dependency on
       # the original library.
       sdk_target_name = "${target_name}_sdk"
-      sdk_atom_alias(sdk_target_name) {
+      sdk_atom_alias("${target_name}_hlcpp_sdk") {
         atom = ":$sdk_target_name($fidl_toolchain)"
       }
     }

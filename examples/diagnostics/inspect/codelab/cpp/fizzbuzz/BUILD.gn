@@ -9,7 +9,7 @@ executable("bin") {
   sources = [ "main.cc" ]
 
   deps = [
-    "//examples/diagnostics/inspect/codelab/fidl:fuchsia.examples.inspect",
+    "//examples/diagnostics/inspect/codelab/fidl:fuchsia.examples.inspect_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",

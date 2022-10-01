@@ -31,7 +31,7 @@ sdk_source_set("cpp") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/vfs/cpp",
@@ -77,7 +77,7 @@ source_set("enclosing_environment") {
 
   public_deps = [
     ":cpp",
-    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/vfs/cpp",

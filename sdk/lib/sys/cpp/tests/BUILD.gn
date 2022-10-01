@@ -26,7 +26,7 @@ test("component_cpp_unittests_bin") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
-    "//src/testing/fidl:placeholders",
+    "//src/testing/fidl:placeholders_hlcpp",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -50,13 +50,13 @@ test("component_cpp_testing_unittests_bin") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
     "//sdk/lib/fidl",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
-    "//src/testing/fidl:placeholders",
+    "//src/testing/fidl:placeholders_hlcpp",
   ]
 }
 
@@ -75,7 +75,7 @@ executable("constructor_helper_proc") {
     "//sdk/lib/sys/cpp",
     "//src/lib/files",
     "//src/lib/fxl",
-    "//src/testing/fidl:placeholders",
+    "//src/testing/fidl:placeholders_hlcpp",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

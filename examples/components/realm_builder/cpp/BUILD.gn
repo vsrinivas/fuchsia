@@ -12,7 +12,7 @@ test("bin") {
     "//sdk/lib/sys/component/cpp/testing:cpp",
 
     # [START_EXCLUDE]
-    "//examples/components/routing/fidl:echo",
+    "//examples/components/routing/fidl:echo_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture:gtest",

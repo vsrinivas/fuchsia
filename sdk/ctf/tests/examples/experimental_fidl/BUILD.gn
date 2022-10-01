@@ -18,7 +18,7 @@ ctf_executable("experimental-bin") {
   output_name = "experimental-fidl"
   sources = [ "experimental.cc" ]
   deps = [
-    ":fuchsia.cts.experimental",
+    ":fuchsia.cts.experimental_hlcpp",
     "//zircon/system/ulib/zxtest",
   ]
 }

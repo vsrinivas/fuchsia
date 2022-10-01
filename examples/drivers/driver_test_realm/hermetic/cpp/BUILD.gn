@@ -15,8 +15,8 @@ test("driver_test_realm_example_hermetic_cpp") {
   sources = [ "test.cc" ]
   deps = [
     "//examples/drivers/driver_test_realm/sample-driver:fuchsia.hardware.sample_cpp_wire",
-    "//sdk/fidl/fuchsia.driver.test",
-    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_hlcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
     "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/driver_test_realm/realm_builder/cpp",
     "//sdk/lib/sys/component/cpp",

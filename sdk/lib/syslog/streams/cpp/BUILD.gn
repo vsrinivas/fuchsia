@@ -26,7 +26,7 @@ sdk_source_set("streams-encoder") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.diagnostics.stream:fuchsia.diagnostics.stream",
+    "//sdk/fidl/fuchsia.diagnostics.stream:fuchsia.diagnostics.stream_hlcpp",
     "//zircon/system/ulib/zx",
   ]
 

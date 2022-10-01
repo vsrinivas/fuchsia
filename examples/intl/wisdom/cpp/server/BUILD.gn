@@ -34,7 +34,7 @@ source_set("lib") {
 
   public_deps = [
     "${icu_root}:icu",
-    "//examples/intl/wisdom/fidl:wisdom",
+    "//examples/intl/wisdom/fidl:wisdom_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/icu_data/cpp",

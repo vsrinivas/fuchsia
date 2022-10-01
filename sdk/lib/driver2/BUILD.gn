@@ -136,9 +136,9 @@ executable("cpp_test") {
   deps = [
     ":cpp",
     ":devfs_exporter",
-    "//sdk/fidl/fuchsia.device.fs",
-    "//sdk/fidl/fuchsia.io",
-    "//sdk/fidl/fuchsia.logger",
+    "//sdk/fidl/fuchsia.device.fs:fuchsia.device.fs_hlcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
     "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/component/cpp",

@@ -128,8 +128,8 @@ sdk_source_set("backend_fuchsia_lib") {
   deps = [
     ":backend_fuchsia_globals",
     ":cpp",
-    "//sdk/fidl/fuchsia.diagnostics.stream",
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger",
+    "//sdk/fidl/fuchsia.diagnostics.stream:fuchsia.diagnostics.stream_hlcpp",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/stdcompat",
     "//sdk/lib/syslog/streams/cpp:streams-encoder",
@@ -164,8 +164,8 @@ sdk_source_set("backend_fuchsia_compat") {
   deps = [
     ":backend_fuchsia_globals",
     ":cpp-macros",
-    "//sdk/fidl/fuchsia.diagnostics.stream",
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger",
+    "//sdk/fidl/fuchsia.diagnostics.stream:fuchsia.diagnostics.stream_hlcpp",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fit-promise",
     "//sdk/lib/stdcompat",
@@ -216,8 +216,8 @@ test("logging_cpp_unittests") {
   ]
   if (is_fuchsia) {
     deps += [
-      "//sdk/fidl/fuchsia.diagnostics",
-      "//sdk/fidl/fuchsia.logger:fuchsia.logger",
+      "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_hlcpp",
+      "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
       "//src/diagnostics/lib/cpp-log-decoder:lib",
       "//src/lib/diagnostics/accessor2logger",
       "//src/lib/fsl",

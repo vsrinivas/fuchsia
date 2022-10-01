@@ -36,11 +36,11 @@ ALLOWED_RUST_DEPS = [
   "//third_party/rust_crates:tracing",
 
   # Needed by collections_integration_test.
-  "//examples/components/routing/fidl:echo_rust",
+  "//examples/components/routing/fidl:echo",
   "//src/lib/fuchsia-fs:fuchsia-fs",
   "//src/lib/fuchsia-runtime:fuchsia-runtime",
   "//src/sys/component_manager/testing/echo_server:echo_server",
-  "//src/sys/component_manager/tests/fidl:components_rust",
+  "//src/sys/component_manager/tests/fidl:components",
 
   "//src/developer/ffx:ffx_bin",
 ]

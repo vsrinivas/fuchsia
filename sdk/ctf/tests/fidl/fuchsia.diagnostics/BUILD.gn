@@ -11,7 +11,7 @@ ctf_executable("diagnostics-test-bin") {
 
   sources = [ "accessor_test.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.diagnostics",
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_hlcpp",
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -20,7 +20,7 @@ ctf_executable("diagnostics-test-bin") {
   ]
 
   non_cts_deps = [
-    "//sdk/fidl/fuchsia.sys2",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_hlcpp",
     "//sdk/lib/inspect/contrib/cpp:archive_reader",
 
     # TODO(81398): Include this in the SDK.
@@ -36,7 +36,7 @@ ctf_fuchsia_component("diagnostics-test") {
 
   deps = [
     ":diagnostics-test-bin",
-    "//sdk/fidl/fuchsia.component",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_hlcpp",
   ]
 }
 

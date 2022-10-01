@@ -31,7 +31,7 @@ ctf_source_set("test") {
     "frobinator_impl.cc",
   ]
 
-  public_deps = [ ":frobinator" ]
+  public_deps = [ ":frobinator_hlcpp" ]
 
   deps = [ "//sdk/lib/fidl/cpp" ]
 

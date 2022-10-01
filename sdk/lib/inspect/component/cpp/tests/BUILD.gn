@@ -12,7 +12,7 @@ executable("inspect_service_llcpp_unittests_bin") {
   deps = [
     "//sdk/fidl/fuchsia.component:fuchsia.component_cpp_wire",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_cpp_wire",
-    "//sdk/fidl/fuchsia.diagnostics",
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_hlcpp",
     "//sdk/fidl/fuchsia.inspect:fuchsia.inspect_cpp_wire",
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/inspect/component/cpp:inspect_component_cpp",

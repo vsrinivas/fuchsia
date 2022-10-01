@@ -47,7 +47,7 @@ sdk_source_set("cpp") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl/cpp",
     "//zircon/system/ulib/async",
@@ -79,7 +79,7 @@ test("vfs_cpp_unittests") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
-    "//src/testing/fidl:placeholders",
+    "//src/testing/fidl:placeholders_hlcpp",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

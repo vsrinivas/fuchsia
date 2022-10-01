@@ -10,7 +10,7 @@ executable("lifecycle_example") {
   sources = [ "lifecycle.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.process.lifecycle",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_hlcpp",
     "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/async",
     "//zircon/system/ulib/async:async-cpp",
@@ -25,9 +25,9 @@ executable("lifecycle_manager") {
   sources = [ "manager.cc" ]
 
   deps = [
-    "//examples/components/routing/fidl:echo",
-    "//sdk/fidl/fuchsia.component",
-    "//sdk/fidl/fuchsia.component.decl",
+    "//examples/components/routing/fidl:echo_hlcpp",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_hlcpp",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/async",

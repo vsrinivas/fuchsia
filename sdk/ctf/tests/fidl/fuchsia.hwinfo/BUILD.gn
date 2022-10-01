@@ -12,9 +12,9 @@ ctf_executable("hwinfo-test-bin") {
   sources = [ "hwinfo_test.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.hwinfo",
+    "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo_hlcpp",
     "//sdk/lib/sys/cpp",
-    "//sdk/testing/fidl:fidl_test",
+    "//sdk/testing/fidl:fidl_test_hlcpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/zxtest",

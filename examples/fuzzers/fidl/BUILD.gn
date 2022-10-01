@@ -10,7 +10,7 @@ source_set("echo_server_provider") {
   sources = [ "echo_server_provider.cc" ]
 
   public_deps = [
-    "//examples/fidl/fuchsia.examples",
+    "//examples/fidl/fuchsia.examples:fuchsia.examples_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/fidl/cpp/fuzzing",
     "//sdk/lib/sys/cpp",

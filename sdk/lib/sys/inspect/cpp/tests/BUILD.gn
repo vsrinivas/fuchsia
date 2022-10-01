@@ -24,7 +24,7 @@ executable("sys_inspect_cpp_tests_bin") {
   testonly = true
   sources = [ "test.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.inspect",
+    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect_hlcpp",
     "//sdk/lib/inspect/service/cpp",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/component/cpp/testing:cpp",

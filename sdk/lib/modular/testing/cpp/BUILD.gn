@@ -25,8 +25,8 @@ sdk_source_set("cpp") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular_hlcpp",
+    "//sdk/fidl/fuchsia.modular.testing:fuchsia.modular.testing_hlcpp",
     "//sdk/lib/fit",
     "//sdk/lib/modular/cpp",
     "//sdk/lib/stdcompat",

@@ -19,7 +19,7 @@ sdk_source_set("cpp") {
 
   public_deps = [
     ":no_converters",
-    "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
   ]
 
   public_configs = [ "//sdk/config" ]

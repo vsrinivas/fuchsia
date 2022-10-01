@@ -22,7 +22,7 @@ sdk_source_set("cpp") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/vfs/cpp",
@@ -49,7 +49,7 @@ executable("sys_service_unittests") {
 
   deps = [
     ":cpp",
-    "//examples/fidl/fuchsia.examples",
+    "//examples/fidl/fuchsia.examples:fuchsia.examples_hlcpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",

@@ -489,16 +489,16 @@ sdk("fuchsia_dart") {
 
     # TODO(leetodd): remove, needed to soft transition
     # https://fuchsia-review.googlesource.com/c/fuchsia/+/399537
-    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_sdk",
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_sdk($fidl_toolchain)",
 
     # TODO(viktard): remove, needed to soft transition
     # https://fuchsia-review.googlesource.com/c/fuchsia/+/295264
-    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_sdk",
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_sdk($fidl_toolchain)",
 
     # TODO(fxbug.dev/24537): Remove this temporary dependency.
     # Temporarily added as a direct dependency so that it can be removed from
     # //sdk/fidl/fuchsia.ui.views.
-    "//sdk/fidl/fuchsia.intl:fuchsia.intl_sdk",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl_sdk($fidl_toolchain)",
 
     # Direct FIDL deps.
     # If a FIDL deps is part of the SDK, it should be explicitly listed here.
@@ -511,13 +511,13 @@ sdk("fuchsia_dart") {
     "//sdk/dart/fuchsia_scenic_flutter:fuchsia_scenic_flutter_sdk($dart_toolchain)",
     "//sdk/dart/fuchsia_services:fuchsia_services_sdk($dart_toolchain)",
     "//sdk/dart/fuchsia_vfs:fuchsia_vfs_sdk($dart_toolchain)",
-    "//sdk/fidl/fuchsia.auth:fuchsia.auth_sdk",
-    "//sdk/fidl/fuchsia.element:fuchsia.element_sdk",
-    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_sdk",
-    "//sdk/fidl/fuchsia.modular:fuchsia.modular_sdk",
-    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_sdk",
-    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3_sdk",
-    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy_sdk",
+    "//sdk/fidl/fuchsia.auth:fuchsia.auth_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.element:fuchsia.element_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy_sdk($fidl_toolchain)",
     "//tools/fidl/fidlgen_dart:fidlgen_dart_sdk($host_toolchain)",
   ]
 

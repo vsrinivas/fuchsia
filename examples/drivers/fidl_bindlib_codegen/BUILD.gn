@@ -11,10 +11,10 @@ group("fidl_bindlib_codegen") {
     ":bind",
     ":bindlib_usage_cpp",
     ":bindlib_usage_rust",
-    ":my_fidl_target",
     ":my_fidl_target_bindlib",
     ":my_fidl_target_bindlib_cpp",
     ":my_fidl_target_bindlib_rust",
+    ":my_fidl_target_hlcpp",
   ]
 }
 

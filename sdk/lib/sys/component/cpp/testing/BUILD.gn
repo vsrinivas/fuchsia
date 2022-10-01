@@ -49,12 +49,12 @@ sdk_source_set("cpp_library") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.component",
-    "//sdk/fidl/fuchsia.component.decl",
-    "//sdk/fidl/fuchsia.component.test",
-    "//sdk/fidl/fuchsia.data",
-    "//sdk/fidl/fuchsia.io",
-    "//sdk/fidl/fuchsia.mem",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_hlcpp",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_hlcpp",
+    "//sdk/fidl/fuchsia.component.test:fuchsia.component.test_hlcpp",
+    "//sdk/fidl/fuchsia.data:fuchsia.data_hlcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",

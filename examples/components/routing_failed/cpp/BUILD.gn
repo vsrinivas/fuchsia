@@ -9,7 +9,7 @@ executable("bin") {
   sources = [ "main.cc" ]
 
   deps = [
-    "//examples/components/routing/fidl:echo",
+    "//examples/components/routing/fidl:echo_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/async",

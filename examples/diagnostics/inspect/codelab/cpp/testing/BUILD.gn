@@ -9,7 +9,7 @@ source_set("inspect-cpp-codelab-testing") {
   public = [ "integration_test.h" ]
 
   public_deps = [
-    "//examples/diagnostics/inspect/codelab/fidl:fuchsia.examples.inspect",
+    "//examples/diagnostics/inspect/codelab/fidl:fuchsia.examples.inspect_hlcpp",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//src/lib/testing/loop_fixture",
   ]

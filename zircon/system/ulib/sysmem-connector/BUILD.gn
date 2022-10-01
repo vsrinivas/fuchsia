@@ -20,5 +20,5 @@ zx_library("sysmem-connector") {
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zx",
   ]
-  public_deps = [ "//sdk/fidl/fuchsia.cobalt" ]
+  public_deps = [ "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_hlcpp" ]
 }

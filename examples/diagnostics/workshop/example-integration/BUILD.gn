@@ -12,7 +12,7 @@ executable("test_bin") {
   sources = [ "example_integration_test.cc" ]
 
   deps = [
-    "//examples/diagnostics/workshop/fidl:fuchsia.examples.diagnostics",
+    "//examples/diagnostics/workshop/fidl:fuchsia.examples.diagnostics_hlcpp",
     "//sdk/lib/sys/cpp:cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",

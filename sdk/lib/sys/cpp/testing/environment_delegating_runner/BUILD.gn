@@ -17,7 +17,7 @@ executable("bin") {
   sources = [ "environment_delegating_runner.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

@@ -49,7 +49,7 @@ ctf_source_set("host_test_sources") {
     ":test_util",
     "//sdk/lib/fidl/cpp:cpp_base",
     "//sdk/lib/stdcompat",
-    "//sdk/testing/fidl:fidl_test",
+    "//sdk/testing/fidl:fidl_test_hlcpp",
     "//zircon/system/ulib/zxtest",
   ]
 }
@@ -83,15 +83,15 @@ ctf_source_set("test_sources") {
 
   deps = [
     ":test_util",
-    ":union_migration_test_fidl",
+    ":union_migration_test_fidl_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/fit-promise",
-    "//sdk/testing/fidl:collision_test",
-    "//sdk/testing/fidl:fidl_test",
-    "//sdk/testing/fidl:fidl_test_handles",
+    "//sdk/testing/fidl:collision_test_hlcpp",
+    "//sdk/testing/fidl:fidl_test_handles_hlcpp",
+    "//sdk/testing/fidl:fidl_test_hlcpp",
     "//sdk/testing/fidl:test",
     "//sdk/testing/fidl:test_support",
-    "//sdk/testing/fidl/protocols_tests:test.unknown.interactions",
+    "//sdk/testing/fidl/protocols_tests:test.unknown.interactions_hlcpp",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

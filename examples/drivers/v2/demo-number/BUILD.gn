@@ -42,8 +42,8 @@ test("demo_number_test") {
   sources = [ "test.cc" ]
   deps = [
     ":fuchsia.hardware.demo_cpp",
-    "//sdk/fidl/fuchsia.driver.test",
-    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_hlcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
     "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/driver_test_realm/realm_builder/cpp",
     "//sdk/lib/sys/cpp",

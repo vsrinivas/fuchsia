@@ -15,8 +15,8 @@ ctf_executable("bin") {
   testonly = true
   sources = [ "test.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.driver.test",
-    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_hlcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
     "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",

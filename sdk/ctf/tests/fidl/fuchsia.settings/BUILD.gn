@@ -10,9 +10,9 @@ ctf_executable("settings_test_bin") {
   sources = [ "privacy_test.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.settings",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_hlcpp",
     "//sdk/lib/sys/cpp",
-    "//sdk/testing/fidl:fidl_test",
+    "//sdk/testing/fidl:fidl_test_hlcpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/zxtest",

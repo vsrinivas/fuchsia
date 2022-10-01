@@ -10,7 +10,7 @@ executable("bin") {
   output_name = "fostr_example_test"
   sources = [ "main.cc" ]
   deps = [
-    "//examples/fidl/fuchsia.examples",
+    "//examples/fidl/fuchsia.examples:fuchsia.examples_hlcpp",
     "//src/lib/fostr/fidl/fuchsia.examples",
     "//src/lib/fxl/test:gtest_main",
   ]

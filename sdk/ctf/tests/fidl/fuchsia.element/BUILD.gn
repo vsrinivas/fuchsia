@@ -12,9 +12,9 @@ ctf_executable("element-manager-test-bin") {
   sources = [ "element_manager_test.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.element",
+    "//sdk/fidl/fuchsia.element:fuchsia.element_hlcpp",
     "//sdk/lib/sys/cpp",
-    "//sdk/testing/fidl:fidl_test",
+    "//sdk/testing/fidl:fidl_test_hlcpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/zxtest",
@@ -54,8 +54,8 @@ ctf_executable("reference-element-bin") {
   sources = [ "reference_element.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_hlcpp",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
     "//sdk/lib/sys/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -75,7 +75,7 @@ ctf_executable("reference-graphical-presenter-bin") {
   sources = [ "reference_graphical_presenter.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.element",
+    "//sdk/fidl/fuchsia.element:fuchsia.element_hlcpp",
     "//sdk/lib/sys/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -95,7 +95,7 @@ ctf_executable("reference-scenic-bin") {
   sources = [ "reference_scenic.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
     "//sdk/lib/sys/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

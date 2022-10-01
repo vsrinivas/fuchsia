@@ -9,10 +9,10 @@ executable("bin") {
   sources = [ "main.cc" ]
 
   deps = [
-    "//examples/diagnostics/inspect/codelab/fidl:fuchsia.examples.inspect",
-    "//sdk/fidl/fuchsia.component",
-    "//sdk/fidl/fuchsia.component.decl",
-    "//sdk/fidl/fuchsia.io",
+    "//examples/diagnostics/inspect/codelab/fidl:fuchsia.examples.inspect_hlcpp",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_hlcpp",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_hlcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp:cpp-macros",
     "//zircon/system/ulib/zxc",

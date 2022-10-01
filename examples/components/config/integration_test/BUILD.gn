@@ -27,7 +27,7 @@ executable("cpp_bin") {
 
   public_deps = [
     "//examples/diagnostics/inspect/codelab/cpp/testing:inspect-cpp-codelab-testing",
-    "//sdk/fidl/fuchsia.diagnostics",
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_hlcpp",
     "//sdk/lib/inspect/contrib/cpp:archive_reader",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",

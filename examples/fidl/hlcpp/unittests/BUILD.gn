@@ -15,7 +15,7 @@ group("unittests") {
 test("example-cpp-host-test") {
   sources = [ "main.cc" ]
   deps = [
-    "//examples/fidl/fuchsia.examples",
+    "//examples/fidl/fuchsia.examples:fuchsia.examples_hlcpp",
     "//src/lib/fxl/test:gtest_main",
   ]
 }

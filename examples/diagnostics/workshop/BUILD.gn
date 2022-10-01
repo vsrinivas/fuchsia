@@ -16,7 +16,7 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "fidl:fuchsia.examples.diagnostics",
+    "fidl:fuchsia.examples.diagnostics_hlcpp",
     "//src/lib/files",
     "//src/lib/json_parser",
     "//zircon/system/ulib/async:async-cpp",
@@ -41,7 +41,7 @@ executable("example_profile_writer") {
   sources = [ "profile_writer.cc" ]
 
   deps = [
-    "fidl:fuchsia.examples.diagnostics",
+    "fidl:fuchsia.examples.diagnostics_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
@@ -56,7 +56,7 @@ executable("example_profile_reader") {
   sources = [ "profile_reader.cc" ]
 
   deps = [
-    "fidl:fuchsia.examples.diagnostics",
+    "fidl:fuchsia.examples.diagnostics_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
@@ -143,7 +143,7 @@ fuchsia_unittest_package("profile_store_example_unittests") {
 group("workshop") {
   deps = [
     ":profile_store_example",
-    "fidl:fuchsia.examples.diagnostics",
+    "fidl:fuchsia.examples.diagnostics_hlcpp",
   ]
 }
 

@@ -20,7 +20,7 @@ test("ktrace-test") {
   }
   sources = [ "ktrace_test.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.tracing.kernel",
+    "//sdk/fidl/fuchsia.tracing.kernel:fuchsia.tracing.kernel_hlcpp",
     "//zircon/system/ulib/async",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

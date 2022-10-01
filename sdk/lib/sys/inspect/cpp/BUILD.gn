@@ -16,7 +16,7 @@ sdk_source_set("cpp") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.inspect",
+    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect_hlcpp",
     "//sdk/lib/inspect/service/cpp",
     "//sdk/lib/sys/cpp",
     "//zircon/system/ulib/inspect",

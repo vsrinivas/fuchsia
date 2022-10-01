@@ -116,8 +116,14 @@ class VerifyDepsInSDK:
         unaccepted_deps = []
         unverified_deps = []
         for dep in self.deps_to_verify:
-            dep_found = False
+            # Removes FIDL binding suffixes because the SDK manifests will only
+            # contain the FIDL name.
+            for suffix in ["_hlcpp", "_rust"]:
+                if dep.endswith(suffix):
+                    dep = dep[:-len(suffix)]
+                    break
 
+            dep_found = False
             if dep in self.allowed_deps or os.path.exists(
                     self.get_ctf_file_path(dep)):
                 dep_found = True
@@ -163,11 +169,6 @@ class VerifyDepsInSDK:
 
         unaccepted_deps = []
         for dep in deps:
-            # Removes the Rust binding suffix because the SDK manifests will only
-            # contain the FIDL name.
-            if dep.endswith('_rust'):
-                dep = dep[:-5]
-
             if dep not in sdk_atom_label_to_category or sdk_atom_label_to_category[
                     dep] not in ['partner', 'public']:
                 unaccepted_deps.append(dep)

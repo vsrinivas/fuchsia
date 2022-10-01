@@ -8,9 +8,9 @@ import("//build/test.gni")
 test("branch-bin") {
   output_name = "branch_bin_cpp"
   deps = [
-    "//examples/components/services/fidl:fuchsia.examples.services",
-    "//sdk/fidl/fuchsia.component",
-    "//sdk/fidl/fuchsia.component.decl",
+    "//examples/components/services/fidl:fuchsia.examples.services_hlcpp",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_hlcpp",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
@@ -24,7 +24,7 @@ test("branch-bin") {
 executable("provider-bin") {
   output_name = "provider_bin_cpp"
   deps = [
-    "//examples/components/services/fidl:fuchsia.examples.services",
+    "//examples/components/services/fidl:fuchsia.examples.services_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

@@ -18,5 +18,5 @@ sdk_source_set("cpp") {
     "images.h",
   ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.images" ]
+  public_deps = [ "//sdk/fidl/fuchsia.images:fuchsia.images_hlcpp" ]
 }

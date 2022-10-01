@@ -9,7 +9,7 @@ executable("bin") {
   output_name = "echo_integration_test_cpp"
   sources = [ "echo_integration_test.cc" ]
   deps = [
-    "//examples/components/routing/fidl:echo",
+    "//examples/components/routing/fidl:echo_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",

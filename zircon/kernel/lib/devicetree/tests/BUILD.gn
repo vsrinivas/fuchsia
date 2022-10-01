@@ -41,7 +41,7 @@ test("devicetree-tests") {
     # Only arm64 emulation uses a devicetree-based boot shim.
     sources += [ "zbi-item-test.cc" ]
     deps += [
-      "//sdk/fidl/fuchsia.boot",
+      "//sdk/fidl/fuchsia.boot:fuchsia.boot_hlcpp",
       "//sdk/lib/sys/cpp",
       "//zircon/system/ulib/zx",
       "//zircon/system/ulib/zxc",
@@ -87,7 +87,7 @@ executable("devicetree-extract") {
   testonly = true
   sources = [ "zbi-item-tool.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.boot",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",

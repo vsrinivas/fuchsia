@@ -19,7 +19,7 @@ source_set("test_suite_lib") {
 
   public_deps = [
     ":measure_tape_for_case",
-    "//sdk/fidl/fuchsia.test",
+    "//sdk/fidl/fuchsia.test:fuchsia.test_hlcpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

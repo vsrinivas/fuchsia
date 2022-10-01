@@ -25,7 +25,7 @@ source_set("lib") {
 
   public_deps = [
     ":icu_headers",
-    "//examples/intl/wisdom/fidl:wisdom",
+    "//examples/intl/wisdom/fidl:wisdom_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
   ]
@@ -41,7 +41,7 @@ executable("intl_wisdom_client") {
   deps = [
     ":lib",
     "${icu_root}:icu",
-    "//examples/intl/wisdom/fidl:wisdom",
+    "//examples/intl/wisdom/fidl:wisdom_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",

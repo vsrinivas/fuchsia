@@ -9,7 +9,7 @@ zx_library("ktrace") {
   sdk_headers = [ "lib/ktrace/ktrace.h" ]
   sources = [ "ktrace.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.tracing.kernel",
+    "//sdk/fidl/fuchsia.tracing.kernel:fuchsia.tracing.kernel_hlcpp",
     "//sdk/lib/fidl",
     "//zircon/system/ulib/async",
     "//zircon/system/ulib/fidl-async",

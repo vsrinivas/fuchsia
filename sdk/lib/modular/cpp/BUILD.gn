@@ -21,8 +21,8 @@ sdk_source_set("cpp") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular_hlcpp",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
   ]
@@ -38,7 +38,7 @@ executable("modular_cpp_tests_bin") {
 
   deps = [
     ":cpp",
-    ":test.modular.agent",
+    ":test.modular.agent_hlcpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",

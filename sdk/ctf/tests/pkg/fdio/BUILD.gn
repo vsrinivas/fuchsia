@@ -24,7 +24,7 @@ ctf_executable("fdio-spawn-tests-bin") {
 
   deps = [
     ":fake-launcher-util-bin",
-    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
     "//sdk/lib/fdio",
     "//zircon/system/ulib/zxtest",
   ]
