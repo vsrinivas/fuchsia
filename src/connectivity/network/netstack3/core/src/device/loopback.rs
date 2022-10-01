@@ -4,16 +4,27 @@
 
 //! The loopback device.
 
+use alloc::vec::Vec;
 use core::{
     convert::Infallible as Never,
     fmt::{self, Debug, Display, Formatter},
 };
 
-use net_types::{ip::IpAddress, SpecifiedAddr};
+use net_types::{
+    ip::{Ip as _, IpAddress, IpVersion, Ipv4, Ipv6},
+    SpecifiedAddr,
+};
 use packet::{Buf, BufferMut, SerializeError, Serializer};
 
 use crate::{
-    device::{Device, DeviceIdContext, FrameDestination},
+    device::{
+        queue::{
+            BufferReceiveQueueHandler, ReceiveDequeContext, ReceiveDequeueState, ReceiveQueue,
+            ReceiveQueueContext, ReceiveQueueFullError, ReceiveQueueNonSyncContext,
+            ReceiveQueueState,
+        },
+        Device, DeviceIdContext, DeviceLayerEventDispatcher, FrameDestination,
+    },
     sync::ReferenceCounted,
     DeviceId, NonSyncContext, SyncCtx,
 };
@@ -36,7 +47,7 @@ impl Display for LoopbackDeviceId {
 }
 
 #[derive(Copy, Clone)]
-enum LoopbackDevice {}
+pub(super) enum LoopbackDevice {}
 
 impl Device for LoopbackDevice {}
 
@@ -46,11 +57,12 @@ impl<NonSyncCtx: NonSyncContext> DeviceIdContext<LoopbackDevice> for &'_ SyncCtx
 
 pub(super) struct LoopbackDeviceState {
     mtu: u32,
+    rx_queue: ReceiveQueue<IpVersion, Buf<Vec<u8>>>,
 }
 
 impl LoopbackDeviceState {
     pub(super) fn new(mtu: u32) -> LoopbackDeviceState {
-        LoopbackDeviceState { mtu }
+        LoopbackDeviceState { mtu, rx_queue: Default::default() }
     }
 }
 
@@ -60,7 +72,7 @@ pub(super) fn send_ip_frame<
     A: IpAddress,
     S: Serializer<Buffer = B>,
 >(
-    sync_ctx: &SyncCtx<NonSyncCtx>,
+    mut sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     device_id: LoopbackDeviceId,
     _local_addr: SpecifiedAddr<A>,
@@ -72,13 +84,28 @@ pub(super) fn send_ip_frame<
         .map_a(|b| Buf::new(b.as_ref().to_vec(), ..))
         .into_inner();
 
-    crate::ip::receive_ip_packet::<_, _, A::Version>(
-        sync_ctx,
+    // Never handle packets synchronously with the send path - always queue
+    // the packet to be received by the loopback device into a queue which
+    // a dedicated RX task will kick to handle the queued packet.
+    //
+    // This is done so that a socket lock may be held while sending a packet
+    // which may need to be delivered to the sending socket itself. Without
+    // this decoupling of RX/TX paths, sending a packet while holding onto
+    // the socket lock will result in a deadlock.
+    match BufferReceiveQueueHandler::queue_rx_packet(
+        &mut sync_ctx,
         ctx,
-        device_id.into(),
-        FrameDestination::Unicast,
+        device_id,
+        A::Version::VERSION,
         frame,
-    );
+    ) {
+        Ok(()) => {}
+        Err(ReceiveQueueFullError((_ip_version, _frame))) => {
+            // RX queue is full - there is nothing further we can do here.
+            log::error!("dropped RX frame on loopback device due to full RX queue")
+        }
+    }
+
     Ok(())
 }
 
@@ -93,6 +120,81 @@ pub(super) fn get_mtu<NonSyncCtx: NonSyncContext>(
     };
 
     loopback.link.mtu
+}
+
+impl<C: NonSyncContext> ReceiveQueueNonSyncContext<LoopbackDevice, LoopbackDeviceId> for C {
+    fn wake_rx_task(&mut self, device_id: LoopbackDeviceId) {
+        DeviceLayerEventDispatcher::wake_rx_task(self, device_id.into())
+    }
+}
+
+impl<C: NonSyncContext> ReceiveQueueContext<LoopbackDevice, C> for &'_ SyncCtx<C> {
+    type Meta = IpVersion;
+    type Buffer = Buf<Vec<u8>>;
+
+    fn with_receive_queue_mut<
+        O,
+        F: FnOnce(&mut ReceiveQueueState<Self::Meta, Self::Buffer>) -> O,
+    >(
+        &mut self,
+        LoopbackDeviceId: LoopbackDeviceId,
+        cb: F,
+    ) -> O {
+        let loopback = {
+            let devices = self.state.device.devices.read();
+            ReferenceCounted::clone(devices.loopback.as_ref().unwrap())
+        };
+
+        let x = cb(&mut loopback.link.rx_queue.queue.lock());
+        x
+    }
+
+    fn handle_packet(
+        &mut self,
+        ctx: &mut C,
+        device_id: LoopbackDeviceId,
+        meta: IpVersion,
+        buf: Buf<Vec<u8>>,
+    ) {
+        match meta {
+            IpVersion::V4 => crate::ip::receive_ip_packet::<_, _, Ipv4>(
+                self,
+                ctx,
+                device_id.into(),
+                FrameDestination::Unicast,
+                buf,
+            ),
+            IpVersion::V6 => crate::ip::receive_ip_packet::<_, _, Ipv6>(
+                self,
+                ctx,
+                device_id.into(),
+                FrameDestination::Unicast,
+                buf,
+            ),
+        }
+    }
+}
+
+impl<C: NonSyncContext> ReceiveDequeContext<LoopbackDevice, C> for &'_ SyncCtx<C> {
+    type ReceiveQueueCtx = Self;
+
+    fn with_dequed_packets_and_rx_queue_ctx<
+        O,
+        F: FnOnce(&mut ReceiveDequeueState<IpVersion, Buf<Vec<u8>>>, &mut Self::ReceiveQueueCtx) -> O,
+    >(
+        &mut self,
+        LoopbackDeviceId: LoopbackDeviceId,
+        cb: F,
+    ) -> O {
+        let mut me = *self;
+        let loopback = {
+            let devices = me.state.device.devices.read();
+            ReferenceCounted::clone(devices.loopback.as_ref().unwrap())
+        };
+
+        let x = cb(&mut loopback.link.rx_queue.deque.lock(), &mut me);
+        x
+    }
 }
 
 #[cfg(test)]

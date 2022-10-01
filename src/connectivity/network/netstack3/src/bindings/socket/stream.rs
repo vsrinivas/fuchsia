@@ -8,10 +8,7 @@ use std::{
     convert::Infallible as Never,
     num::{NonZeroU16, NonZeroUsize},
     ops::{ControlFlow, DerefMut as _},
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc, Weak,
-    },
+    sync::Arc,
 };
 
 use assert_matches::assert_matches;
@@ -26,7 +23,7 @@ use fidl_fuchsia_posix as fposix;
 use fidl_fuchsia_posix_socket as fposix_socket;
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, Peered as _};
-use futures::{stream::FusedStream, task::AtomicWaker, Stream, StreamExt as _};
+use futures::StreamExt as _;
 use net_types::{
     ip::{IpAddress, IpVersionMarker, Ipv4, Ipv6},
     SpecifiedAddr, ZonedAddr,
@@ -34,7 +31,7 @@ use net_types::{
 
 use crate::bindings::{
     socket::{IntoErrno, IpSockAddrExt, SockAddr, ZXSIO_SIGNAL_CONNECTED, ZXSIO_SIGNAL_INCOMING},
-    util::{IntoFidl, TryIntoFidl},
+    util::{IntoFidl, NeedsDataNotifier, NeedsDataWatcher, TryIntoFidl},
     LockableContext,
 };
 
@@ -146,7 +143,7 @@ impl TcpNonSyncContext for crate::bindings::BindingsNonSyncCtxImpl {
         let (local, peer) =
             zx::Socket::create(zx::SocketOpts::STREAM).expect("failed to create sockets");
         let socket = Arc::new(local);
-        let notifier = NeedsDataNotifier::new();
+        let notifier = NeedsDataNotifier::default();
         let watcher = notifier.watcher();
         let (rbuf, sbuf) =
             LocalZirconSocketAndNotifier(Arc::clone(&socket), notifier).into_buffers();
@@ -296,88 +293,6 @@ impl SendBufferWithZirconSocket {
     }
 }
 
-/// A signal used between Core and Bindings, whenever Bindings receive a
-/// notification by the protocol (Core), it should start monitoring the readable
-/// signal on the zircon socket and call into Core to send data.
-#[derive(Debug)]
-struct NeedsData {
-    ready: AtomicBool,
-    waker: AtomicWaker,
-}
-
-impl NeedsData {
-    fn new() -> Self {
-        Self { ready: AtomicBool::new(false), waker: AtomicWaker::new() }
-    }
-
-    fn poll_ready(&self, cx: &mut std::task::Context<'_>) -> std::task::Poll<()> {
-        self.waker.register(cx.waker());
-        match self.ready.compare_exchange(true, false, Ordering::AcqRel, Ordering::Relaxed) {
-            Ok(_) => std::task::Poll::Ready(()),
-            Err(_) => std::task::Poll::Pending,
-        }
-    }
-
-    fn schedule(&self) {
-        self.ready.store(true, Ordering::Release);
-        self.waker.wake();
-    }
-}
-
-/// The notifier side of the underlying signal struct, it is meant to be held
-/// by the Core side and schedule signals to be received by the Bindings.
-#[derive(Debug, Clone)]
-struct NeedsDataNotifier {
-    inner: Arc<NeedsData>,
-}
-
-impl NeedsDataNotifier {
-    fn schedule(&self) {
-        self.inner.schedule()
-    }
-
-    fn new() -> NeedsDataNotifier {
-        Self { inner: Arc::new(NeedsData::new()) }
-    }
-
-    fn watcher(&self) -> NeedsDataWatcher {
-        NeedsDataWatcher { inner: Arc::downgrade(&self.inner) }
-    }
-}
-
-/// The receiver side of the underlying signal struct, it is meant to be held
-/// by the Bindings side. It is a [`Stream`] of wakeups scheduled by the Core
-/// and upon receiving those wakeups, Bindings should poll for available data
-/// that has been written by the user.
-#[derive(Debug)]
-struct NeedsDataWatcher {
-    inner: Weak<NeedsData>,
-}
-
-impl Stream for NeedsDataWatcher {
-    type Item = ();
-
-    fn poll_next(
-        self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Option<Self::Item>> {
-        let this = self.get_mut();
-        match this.inner.upgrade() {
-            None => std::task::Poll::Ready(None),
-            Some(needs_data) => {
-                std::task::Poll::Ready(Some(std::task::ready!(needs_data.poll_ready(cx))))
-            }
-        }
-    }
-}
-
-/// The watcher terminates when the underlying has been dropped by Core.
-impl FusedStream for NeedsDataWatcher {
-    fn is_terminated(&self) -> bool {
-        self.inner.strong_count() == 0
-    }
-}
-
 impl SendBuffer for SendBufferWithZirconSocket {
     fn mark_read(&mut self, count: usize) {
         self.ready_to_send.mark_read(count);
@@ -427,7 +342,7 @@ where
                 let Ctx { sync_ctx, non_sync_ctx } = guard.deref_mut();
                 SocketId::Unbound(
                     create_socket::<Ipv4, _>(sync_ctx, non_sync_ctx),
-                    LocalZirconSocketAndNotifier(Arc::clone(&socket), NeedsDataNotifier::new()),
+                    LocalZirconSocketAndNotifier(Arc::clone(&socket), NeedsDataNotifier::default()),
                 )
             };
             let worker = SocketWorker::<Ipv4, C>::new(id, ctx.clone(), peer);
@@ -439,7 +354,7 @@ where
                 let Ctx { sync_ctx, non_sync_ctx } = guard.deref_mut();
                 SocketId::Unbound(
                     create_socket::<Ipv6, _>(sync_ctx, non_sync_ctx),
-                    LocalZirconSocketAndNotifier(Arc::clone(&socket), NeedsDataNotifier::new()),
+                    LocalZirconSocketAndNotifier(Arc::clone(&socket), NeedsDataNotifier::default()),
                 )
             };
             let worker = SocketWorker::<Ipv6, C>::new(id, ctx.clone(), peer);
@@ -1190,7 +1105,7 @@ mod tests {
     fn send_buffer() {
         let (local, peer) =
             zx::Socket::create(zx::SocketOpts::STREAM).expect("failed to create zircon socket");
-        let notifier = NeedsDataNotifier::new();
+        let notifier = NeedsDataNotifier::default();
         let mut sbuf = SendBufferWithZirconSocket::new(Arc::new(local), notifier);
         assert_eq!(peer.write(TEST_BYTES), Ok(TEST_BYTES.len()));
         assert_eq!(sbuf.len(), TEST_BYTES.len());

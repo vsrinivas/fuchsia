@@ -26,6 +26,8 @@ lib_sources = [
   "src/device/loopback.rs",
   "src/device/mod.rs",
   "src/device/ndp.rs",
+  "src/device/queue/fifo.rs",
+  "src/device/queue/mod.rs",
   "src/device/state.rs",
   "src/error.rs",
   "src/fuzz.rs",

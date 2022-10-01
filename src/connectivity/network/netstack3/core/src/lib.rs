@@ -184,7 +184,7 @@ impl<C: NonSyncContext + Default> Default for StackState<C> {
 
 /// The non synchronized context for the stack with a buffer.
 pub trait BufferNonSyncContextInner<B: BufferMut>:
-    device::DeviceLayerEventDispatcher<B>
+    device::BufferDeviceLayerEventDispatcher<B>
     + transport::udp::BufferUdpContext<Ipv4, B>
     + transport::udp::BufferUdpContext<Ipv6, B>
     + BufferIcmpContext<Ipv4, B>
@@ -193,7 +193,7 @@ pub trait BufferNonSyncContextInner<B: BufferMut>:
 }
 impl<
         B: BufferMut,
-        C: device::DeviceLayerEventDispatcher<B>
+        C: device::BufferDeviceLayerEventDispatcher<B>
             + transport::udp::BufferUdpContext<Ipv4, B>
             + transport::udp::BufferUdpContext<Ipv6, B>
             + BufferIcmpContext<Ipv4, B>
@@ -227,6 +227,7 @@ pub trait NonSyncContext:
     + IcmpContext<Ipv4>
     + IcmpContext<Ipv6>
     + transport::tcp::socket::TcpNonSyncContext
+    + device::DeviceLayerEventDispatcher
     + 'static
 {
 }
@@ -247,6 +248,7 @@ impl<
             + IcmpContext<Ipv4>
             + IcmpContext<Ipv6>
             + transport::tcp::socket::TcpNonSyncContext
+            + device::DeviceLayerEventDispatcher
             + 'static,
     > NonSyncContext for C
 {

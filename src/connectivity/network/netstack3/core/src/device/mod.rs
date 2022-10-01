@@ -9,6 +9,7 @@ pub(crate) mod ethernet;
 pub(crate) mod link;
 pub(crate) mod loopback;
 pub(crate) mod ndp;
+pub mod queue;
 mod state;
 
 use alloc::boxed::Box;
@@ -37,7 +38,8 @@ use crate::{
         ethernet::{
             EthernetDeviceState, EthernetDeviceStateBuilder, EthernetLinkDevice, EthernetTimerId,
         },
-        loopback::{LoopbackDeviceId, LoopbackDeviceState},
+        loopback::{LoopbackDevice, LoopbackDeviceId, LoopbackDeviceState},
+        queue::ReceiveQueueHandler,
         state::IpLinkDeviceState,
     },
     error::{ExistsError, NotFoundError, NotSupportedError},
@@ -499,7 +501,7 @@ impl<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>
         device: EthernetDeviceId,
         frame: S,
     ) -> Result<(), S> {
-        DeviceLayerEventDispatcher::send_frame(ctx, device.into(), frame)
+        BufferDeviceLayerEventDispatcher::send_frame(ctx, device.into(), frame)
     }
 }
 
@@ -730,7 +732,18 @@ impl<I: Instant> DeviceLayerState<I> {
 /// An event dispatcher for the device layer.
 ///
 /// See the `EventDispatcher` trait in the crate root for more details.
-pub trait DeviceLayerEventDispatcher<B: BufferMut> {
+pub trait DeviceLayerEventDispatcher {
+    /// Signals to the dispatcher that RX frames are available and ready to be
+    /// handled by [`handle_queued_rx_packets`].
+    ///
+    /// Implementations must make sure that [`handle_queued_rx_packets`] is
+    /// scheduled to be called as soon as possible so that enqueued RX frames
+    /// are promptly handled.
+    fn wake_rx_task(&mut self, device: DeviceId);
+}
+
+/// A [`DeviceLayerEventDispatcher`] with a buffer.
+pub trait BufferDeviceLayerEventDispatcher<B: BufferMut>: DeviceLayerEventDispatcher {
     /// Send a frame to a device driver.
     ///
     /// If there was an MTU error while attempting to serialize the frame, the
@@ -742,6 +755,31 @@ pub trait DeviceLayerEventDispatcher<B: BufferMut> {
         device: DeviceId,
         frame: S,
     ) -> Result<(), S>;
+}
+
+/// Handle a batch of queued RX packets for the device.
+///
+/// If packets remain in the RX queue after a batch of RX packets has been
+/// handled, the RX task will be scheduled to run again so the next batch of
+/// RX packets may be handled. See [`DeviceLayerEventDispatcher::wake_rx_task`]
+/// for more details.
+pub fn handle_queued_rx_packets<NonSyncCtx: NonSyncContext>(
+    mut sync_ctx: &SyncCtx<NonSyncCtx>,
+    ctx: &mut NonSyncCtx,
+    device: DeviceId,
+) {
+    match device.inner() {
+        DeviceIdInner::Ethernet(id) => {
+            panic!("ethernet device {} does not support RX queues", id)
+        }
+        DeviceIdInner::Loopback(id) => {
+            ReceiveQueueHandler::<LoopbackDevice, _>::handle_queued_rx_packets(
+                &mut sync_ctx,
+                ctx,
+                id,
+            )
+        }
+    }
 }
 
 /// Remove a device from the device layer.

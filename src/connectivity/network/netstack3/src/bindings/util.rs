@@ -6,12 +6,20 @@ use core::{
     convert::Infallible as Never,
     num::{NonZeroU16, NonZeroU64},
 };
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Weak,
+};
 
 use fidl_fuchsia_net as fidl_net;
 use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
 use fidl_fuchsia_net_stack as fidl_net_stack;
 use fidl_fuchsia_posix as fposix;
 use fidl_fuchsia_posix_socket as fposix_socket;
+use futures::{
+    stream::{FusedStream, Stream},
+    task::AtomicWaker,
+};
 use net_types::{
     ethernet::Mac,
     ip::{
@@ -32,6 +40,86 @@ use netstack3_core::{
 };
 
 use crate::bindings::socket::{IntoErrno, IpSockAddrExt, SockAddr};
+
+/// A signal used between Core and Bindings, whenever Bindings receive a
+/// notification by the protocol (Core), it should kick the associated task
+/// to do work.
+#[derive(Debug)]
+struct NeedsData {
+    ready: AtomicBool,
+    waker: AtomicWaker,
+}
+
+impl Default for NeedsData {
+    fn default() -> NeedsData {
+        NeedsData { ready: AtomicBool::new(false), waker: AtomicWaker::new() }
+    }
+}
+
+impl NeedsData {
+    fn poll_ready(&self, cx: &mut std::task::Context<'_>) -> std::task::Poll<()> {
+        self.waker.register(cx.waker());
+        match self.ready.compare_exchange(true, false, Ordering::AcqRel, Ordering::Relaxed) {
+            Ok(_) => std::task::Poll::Ready(()),
+            Err(_) => std::task::Poll::Pending,
+        }
+    }
+
+    fn schedule(&self) {
+        self.ready.store(true, Ordering::Release);
+        self.waker.wake();
+    }
+}
+
+/// The notifier side of the underlying signal struct, it is meant to be held
+/// by the Core side and schedule signals to be received by the Bindings.
+#[derive(Default, Debug, Clone)]
+pub struct NeedsDataNotifier {
+    inner: Arc<NeedsData>,
+}
+
+impl NeedsDataNotifier {
+    pub(crate) fn schedule(&self) {
+        self.inner.schedule()
+    }
+
+    pub(crate) fn watcher(&self) -> NeedsDataWatcher {
+        NeedsDataWatcher { inner: Arc::downgrade(&self.inner) }
+    }
+}
+
+/// The receiver side of the underlying signal struct, it is meant to be held
+/// by the Bindings side. It is a [`Stream`] of wakeups scheduled by the Core
+/// and upon receiving those wakeups, Bindings should perform any blocked
+/// work.
+#[derive(Debug)]
+pub(crate) struct NeedsDataWatcher {
+    inner: Weak<NeedsData>,
+}
+
+impl Stream for NeedsDataWatcher {
+    type Item = ();
+
+    fn poll_next(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let this = self.get_mut();
+        match this.inner.upgrade() {
+            None => std::task::Poll::Ready(None),
+            Some(needs_data) => {
+                std::task::Poll::Ready(Some(std::task::ready!(needs_data.poll_ready(cx))))
+            }
+        }
+    }
+}
+
+/// The watcher terminates when the underlying has been dropped by Core.
+impl FusedStream for NeedsDataWatcher {
+    fn is_terminated(&self) -> bool {
+        self.inner.strong_count() == 0
+    }
+}
 
 /// A core type which can be fallibly converted from the FIDL type `F`.
 ///

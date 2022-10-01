@@ -2,19 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::collections::HashMap;
+use std::collections::hash_map::HashMap;
 
 use derivative::Derivative;
 use ethernet as eth;
 use fidl_fuchsia_hardware_ethernet::Features;
 use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
+use futures::stream::StreamExt as _;
 use net_types::{ethernet::Mac, ip::IpAddr, SpecifiedAddr, UnicastAddr};
 use netstack3_core::{
     data_structures::id_map_collection::{Entry, IdMapCollection, IdMapCollectionKey},
-    device::DeviceId,
+    device::{handle_queued_rx_packets, DeviceId},
+    Ctx,
 };
 
-use crate::bindings::interfaces_admin;
+use crate::bindings::{interfaces_admin, util::NeedsDataNotifier, LockableContext};
 
 pub const LOOPBACK_MAC: Mac = Mac::new([0, 0, 0, 0, 0, 0]);
 
@@ -158,6 +160,24 @@ impl DeviceSpecificInfo {
     }
 }
 
+pub(crate) fn spawn_rx_task<C: LockableContext + Send + Sync + 'static>(
+    notifier: &NeedsDataNotifier,
+    ns: C,
+    device_id: DeviceId,
+) {
+    let mut watcher = notifier.watcher();
+
+    fuchsia_async::Task::spawn(async move {
+        // Loop while we are woken up to handle enqueued RX packets.
+        while let Some(()) = watcher.next().await {
+            let mut ctx = ns.lock().await;
+            let Ctx { sync_ctx, non_sync_ctx } = &mut *ctx;
+            handle_queued_rx_packets(sync_ctx, non_sync_ctx, device_id)
+        }
+    })
+    .detach()
+}
+
 /// Information common to all devices.
 #[derive(Derivative)]
 #[derivative(Debug)]
@@ -186,9 +206,12 @@ pub(crate) struct AddressInfo {
 }
 
 /// Loopback device information.
-#[derive(Debug)]
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct LoopbackInfo {
     pub common_info: CommonInfo,
+    #[derivative(Debug = "ignore")]
+    pub rx_notifier: NeedsDataNotifier,
 }
 
 /// Ethernet device information.

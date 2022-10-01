@@ -24,7 +24,7 @@ use net_types::{
 };
 use netstack3_core::{
     context::{CounterContext, EventContext, InstantContext, RngContext, TimerContext},
-    device::{DeviceId, DeviceLayerEventDispatcher},
+    device::{BufferDeviceLayerEventDispatcher, DeviceId, DeviceLayerEventDispatcher},
     get_all_ip_addr_subnets,
     ip::{
         icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
@@ -53,8 +53,9 @@ use crate::bindings::{
         stream,
     },
     util::{ConversionContext as _, IntoFidl as _, TryFromFidlWithContext as _, TryIntoFidl as _},
-    BindingsNonSyncCtxImpl, DeviceStatusNotifier, InterfaceControlRunner, LockableContext,
-    RequestStreamExt as _, StackTime, DEFAULT_LOOPBACK_MTU,
+    BindingsNonSyncCtxImpl, DeviceStatusNotifier, InterfaceControlRunner,
+    InterfaceEventProducerFactory as _, InterfaceProperties, InterfaceUpdate, LockableContext,
+    RequestStreamExt as _, StackTime, DEFAULT_LOOPBACK_MTU, LOOPBACK_NAME,
 };
 
 /// log::Log implementation that uses stdout.
@@ -217,7 +218,13 @@ impl TimerContext<TimerId> for TestNonSyncCtx {
     }
 }
 
-impl<B: BufferMut> DeviceLayerEventDispatcher<B> for TestNonSyncCtx {
+impl DeviceLayerEventDispatcher for TestNonSyncCtx {
+    fn wake_rx_task(&mut self, device: DeviceId) {
+        self.ctx.wake_rx_task(device)
+    }
+}
+
+impl<B: BufferMut> BufferDeviceLayerEventDispatcher<B> for TestNonSyncCtx {
     fn send_frame<S: Serializer<Buffer = B>>(
         &mut self,
         device: DeviceId,
@@ -403,7 +410,7 @@ impl TestStack {
                 mac: _,
                 phy_up,
             }) => *phy_up,
-            DeviceSpecificInfo::Loopback(LoopbackInfo { common_info: _ }) => true,
+            DeviceSpecificInfo::Loopback(LoopbackInfo { common_info: _, rx_notifier: _ }) => true,
         }
     }
 
@@ -662,7 +669,8 @@ impl TestSetupBuilder {
         for stack_cfg in self.stacks.into_iter() {
             println!("Adding stack: {:?}", stack_cfg);
             let mut stack = TestStack::new();
-            stack
+            let netstack = stack.ctx.clone();
+            let binding_id = stack
                 .with_ctx(|Ctx { sync_ctx, non_sync_ctx }| {
                     let loopback = netstack3_core::device::add_loopback_device(
                         sync_ctx,
@@ -689,8 +697,48 @@ impl TestSetupBuilder {
                             config.ip_config.ip_enabled = true;
                         },
                     );
+
+                    let devices: &mut Devices = non_sync_ctx.as_mut();
+                    let (control_sender, _control_receiver) =
+                        interfaces_admin::OwnedControlHandle::new_channel();
+                    let loopback_rx_notifier = Default::default();
+                    crate::bindings::devices::spawn_rx_task(
+                        &loopback_rx_notifier,
+                        netstack.clone(),
+                        loopback,
+                    );
+                    devices
+                        .add_device(loopback, |id| {
+                            let events = netstack.create_interface_event_producer(
+                                id,
+                                InterfaceProperties {
+                                    name: LOOPBACK_NAME.to_string(),
+                                    device_class:
+                                        fidl_fuchsia_net_interfaces::DeviceClass::Loopback(
+                                            fidl_fuchsia_net_interfaces::Empty {},
+                                        ),
+                                },
+                            );
+                            events
+                                .notify(InterfaceUpdate::OnlineChanged(true))
+                                .expect("interfaces worker not running");
+                            DeviceSpecificInfo::Loopback(LoopbackInfo {
+                                common_info: CommonInfo {
+                                    mtu: DEFAULT_LOOPBACK_MTU,
+                                    admin_enabled: true,
+                                    events,
+                                    name: LOOPBACK_NAME.to_string(),
+                                    control_hook: control_sender,
+                                    addresses: HashMap::new(),
+                                },
+                                rx_notifier: loopback_rx_notifier,
+                            })
+                        })
+                        .expect("error adding loopback device")
                 })
                 .await;
+
+            assert_eq!(stack.endpoint_ids.insert(LOOPBACK_NAME.to_string(), binding_id), None);
 
             for (ep_name, addr) in stack_cfg.endpoints.into_iter() {
                 // get the endpoint from the sandbox config:
@@ -1090,17 +1138,22 @@ async fn test_add_device_routes() {
 async fn test_list_del_routes() {
     // create a stack and add a single endpoint to it so we have the interface
     // id:
+    const EP_NAME: &str = "testep";
     let mut t = TestSetupBuilder::new()
-        .add_endpoint()
-        .add_stack(StackSetupBuilder::new().add_endpoint(1, None))
+        .add_named_endpoint(EP_NAME)
+        .add_stack(StackSetupBuilder::new().add_named_endpoint(EP_NAME, None))
         .build()
         .await
         .unwrap();
 
     let test_stack = t.get(0);
     let stack = test_stack.connect_stack().unwrap();
-    let if_id = test_stack.get_endpoint_id(1);
+    let if_id = test_stack.get_named_endpoint_id(EP_NAME);
+    let loopback_id = test_stack.get_named_endpoint_id(LOOPBACK_NAME);
+    assert_ne!(loopback_id, if_id);
     let device = test_stack.ctx().await.non_sync_ctx.get_core_id(if_id).expect("device exists");
+    let loopback =
+        test_stack.ctx().await.non_sync_ctx.get_core_id(loopback_id).expect("device exists");
     let route1_subnet_bytes = [192, 168, 0, 0];
     let route1_subnet_prefix = 24;
     let route1: AddableEntryEither<_> = AddableEntry::without_gateway(
@@ -1130,23 +1183,26 @@ async fn test_list_del_routes() {
         // Link local route is added automatically by core.
         AddableEntry::without_gateway(net_declare::net_subnet_v6!("fe80::/64").into(), device)
             .into(),
+        // Loopback routes are added on netstack creation.
+        AddableEntry::without_gateway(Ipv4::LOOPBACK_SUBNET, loopback).into(),
+        AddableEntry::without_gateway(Ipv6::LOOPBACK_SUBNET, loopback).into(),
         // Multicast routes are added automatically by core.
+        AddableEntry::without_gateway(Ipv4::MULTICAST_SUBNET, loopback).into(),
+        AddableEntry::without_gateway(Ipv6::MULTICAST_SUBNET, loopback).into(),
         AddableEntry::without_gateway(Ipv4::MULTICAST_SUBNET, device).into(),
         AddableEntry::without_gateway(Ipv6::MULTICAST_SUBNET, device).into(),
     ];
-    assert_eq!(
-        test_stack
-            .with_ctx(|ctx| {
-                routes
-                    .into_iter()
-                    .map(|e| {
-                        AddableEntryEither::try_from_fidl_with_ctx(&ctx.non_sync_ctx, e).unwrap()
-                    })
-                    .collect::<HashSet<_>>()
-            })
-            .await,
-        HashSet::from_iter([route1, route2, route3_with_device].into_iter().chain(auto_routes))
-    );
+    let got = test_stack
+        .with_ctx(|ctx| {
+            routes
+                .into_iter()
+                .map(|e| AddableEntryEither::try_from_fidl_with_ctx(&ctx.non_sync_ctx, e).unwrap())
+                .collect::<HashSet<_>>()
+        })
+        .await;
+    let want =
+        HashSet::from_iter([route1, route2, route3_with_device].into_iter().chain(auto_routes));
+    assert_eq!(got, want, "got - want = {:?}", got.symmetric_difference(&want));
 
     // delete route1:
     let mut fwd_entry = fidl_net_stack::ForwardingEntry {

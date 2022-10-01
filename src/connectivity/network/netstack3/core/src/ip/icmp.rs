@@ -3022,7 +3022,10 @@ mod tests {
             testutil::DummyDeviceId,
             SendIpPacketMeta,
         },
-        testutil::{assert_empty, get_counter_val, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6},
+        testutil::{
+            assert_empty, get_counter_val, handle_queued_rx_packets, DUMMY_CONFIG_V4,
+            DUMMY_CONFIG_V6,
+        },
         transport::udp::UdpStateBuilder,
         Ctx, StackStateBuilder,
     };
@@ -3770,13 +3773,16 @@ mod tests {
             )
             .unwrap();
 
+            handle_queued_rx_packets(sync_ctx, non_sync_ctx);
+
             conn
         });
 
         net.run_until_idle(
             crate::device::testutil::receive_frame_or_panic,
             |Ctx { sync_ctx, non_sync_ctx }, _, id| {
-                crate::handle_timer(&mut &*sync_ctx, non_sync_ctx, id)
+                crate::handle_timer(&mut &*sync_ctx, non_sync_ctx, id);
+                handle_queued_rx_packets(sync_ctx, non_sync_ctx);
             },
         );
 

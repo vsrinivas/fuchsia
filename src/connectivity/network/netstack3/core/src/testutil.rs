@@ -22,7 +22,7 @@ use crate::{
         testutil::{DummyFrameCtx, DummyNetworkContext, DummyTimerCtx, InstantAndData},
         EventContext, FrameContext as _, InstantContext, TimerContext,
     },
-    device::{DeviceId, DeviceLayerEventDispatcher},
+    device::{BufferDeviceLayerEventDispatcher, DeviceId, DeviceLayerEventDispatcher},
     ip::{
         device::{dad::DadEvent, route_discovery::Ipv6RouteDiscoveryEvent, IpDeviceEvent},
         icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
@@ -101,6 +101,7 @@ pub(crate) mod benchmarks {
 pub(crate) struct DummyNonSyncCtxState {
     icmpv4_replies: HashMap<IcmpConnId<Ipv4>, Vec<(u16, Vec<u8>)>>,
     icmpv6_replies: HashMap<IcmpConnId<Ipv6>, Vec<(u16, Vec<u8>)>>,
+    rx_available: Vec<DeviceId>,
 }
 
 // Use the `Never` type for the `crate::context::testutil::DummyCtx`'s frame
@@ -698,13 +699,32 @@ impl<B: BufferMut> BufferIcmpContext<Ipv6, B> for DummyNonSyncCtx {
     }
 }
 
-impl<B: BufferMut> DeviceLayerEventDispatcher<B> for DummyNonSyncCtx {
+impl DeviceLayerEventDispatcher for DummyNonSyncCtx {
+    fn wake_rx_task(&mut self, device: DeviceId) {
+        self.state_mut().rx_available.push(device);
+    }
+}
+
+impl<B: BufferMut> BufferDeviceLayerEventDispatcher<B> for DummyNonSyncCtx {
     fn send_frame<S: Serializer<Buffer = B>>(
         &mut self,
         device: DeviceId,
         frame: S,
     ) -> Result<(), S> {
         self.frame_ctx_mut().send_frame(&mut (), device, frame)
+    }
+}
+
+pub(crate) fn handle_queued_rx_packets(sync_ctx: &DummySyncCtx, ctx: &mut DummyNonSyncCtx) {
+    loop {
+        let rx_available = core::mem::take(&mut ctx.state_mut().rx_available);
+        if rx_available.len() == 0 {
+            break;
+        }
+
+        for id in rx_available.into_iter() {
+            crate::device::handle_queued_rx_packets(sync_ctx, ctx, id);
+        }
     }
 }
 

@@ -1464,6 +1464,8 @@ mod tests {
         )
         .unwrap();
 
+        handle_queued_rx_packets(&sync_ctx, &mut non_sync_ctx);
+
         assert_eq!(non_sync_ctx.frames_sent().len(), 0);
 
         assert_eq!(get_counter_val(&non_sync_ctx, I::DISPATCH_RECEIVE_COUNTER), 1);

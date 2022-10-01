@@ -64,7 +64,7 @@ use netstack3_core::{
     add_ip_addr_subnet,
     context::{CounterContext, EventContext, InstantContext, RngContext, TimerContext},
     data_structures::id_map::IdMap,
-    device::{DeviceId, DeviceLayerEventDispatcher},
+    device::{BufferDeviceLayerEventDispatcher, DeviceId, DeviceLayerEventDispatcher},
     error::NetstackError,
     handle_timer,
     ip::{
@@ -78,6 +78,8 @@ use netstack3_core::{
     transport::udp::{BufferUdpContext, UdpBoundId, UdpConnId, UdpContext, UdpListenerId},
     Ctx, NonSyncContext, SyncCtx, TimerId,
 };
+
+const LOOPBACK_NAME: &'static str = "lo";
 
 /// Default MTU for loopback.
 ///
@@ -294,7 +296,25 @@ impl TimerContext<TimerId> for BindingsNonSyncCtxImpl {
     }
 }
 
-impl<B> DeviceLayerEventDispatcher<B> for BindingsNonSyncCtxImpl
+impl DeviceLayerEventDispatcher for BindingsNonSyncCtxImpl {
+    fn wake_rx_task(&mut self, device: DeviceId) {
+        match self.devices.get_core_device_mut(device) {
+            Some(dev) => match dev.info_mut() {
+                DeviceSpecificInfo::Ethernet(_) | DeviceSpecificInfo::Netdevice(_) => {
+                    unreachable!("only loopback supports RX queues")
+                }
+                DeviceSpecificInfo::Loopback(LoopbackInfo { common_info: _, rx_notifier }) => {
+                    rx_notifier.schedule()
+                }
+            },
+            None => {
+                panic!("Tried to receive frame on device that is not listed: {:?}", device);
+            }
+        }
+    }
+}
+
+impl<B> BufferDeviceLayerEventDispatcher<B> for BindingsNonSyncCtxImpl
 where
     B: BufferMut,
 {
@@ -605,6 +625,7 @@ fn set_interface_enabled<NonSyncCtx: NonSyncContext + AsRef<Devices> + AsMut<Dev
         DeviceSpecificInfo::Loopback(LoopbackInfo {
             common_info:
                 CommonInfo { admin_enabled, mtu: _, events: _, name: _, control_hook: _, addresses: _ },
+            rx_notifier: _,
         }) => *admin_enabled,
     };
 
@@ -804,9 +825,14 @@ impl NetstackSeed {
             let devices: &mut Devices = non_sync_ctx.as_mut();
             let (control_sender, control_receiver) =
                 interfaces_admin::OwnedControlHandle::new_channel();
+            let loopback_rx_notifier = Default::default();
+            crate::bindings::devices::spawn_rx_task(
+                &loopback_rx_notifier,
+                netstack.clone(),
+                loopback,
+            );
             let binding_id = devices
                 .add_device(loopback, |id| {
-                    const LOOPBACK_NAME: &'static str = "lo";
                     let events = netstack.create_interface_event_producer(
                         id,
                         InterfaceProperties {
@@ -828,6 +854,7 @@ impl NetstackSeed {
                             control_hook: control_sender,
                             addresses: HashMap::new(),
                         },
+                        rx_notifier: loopback_rx_notifier,
                     })
                 })
                 .expect("error adding loopback device");

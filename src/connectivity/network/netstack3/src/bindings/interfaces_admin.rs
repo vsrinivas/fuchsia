@@ -622,9 +622,10 @@ async fn set_interface_enabled(ctx: &NetstackContext, enabled: bool, id: Binding
                 phy_up: _,
                 interface_control: _,
             })
-            | devices::DeviceSpecificInfo::Loopback(devices::LoopbackInfo { common_info }) => {
-                (common_info, None)
-            }
+            | devices::DeviceSpecificInfo::Loopback(devices::LoopbackInfo {
+                common_info,
+                rx_notifier: _,
+            }) => (common_info, None),
             devices::DeviceSpecificInfo::Netdevice(devices::NetdeviceInfo {
                 common_info,
                 handler,
@@ -1200,6 +1201,7 @@ mod tests {
                     control_hook: control_sender,
                     addresses: HashMap::new(),
                 },
+                rx_notifier: Default::default(),
             })
         };
         let binding_id = {
