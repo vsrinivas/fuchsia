@@ -150,6 +150,12 @@ impl PartialEq for WantRxChainResult {
     }
 }
 
+impl Drop for VsockConnection {
+    fn drop(&mut self) {
+        tracing::debug!(connection_key = ?self.key, "Destroyed connection");
+    }
+}
+
 impl VsockConnection {
     // Creates a new guest initiated connection. Requires a listening client, and for the client
     // to respond with a valid zx::socket.
@@ -189,6 +195,7 @@ impl VsockConnection {
     }
 
     fn new(key: VsockConnectionKey, state: VsockConnectionState) -> Self {
+        tracing::debug!(connection_key = ?key, "Created connection");
         VsockConnection {
             key,
             state: RwLock::new(state),
