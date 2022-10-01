@@ -4,7 +4,7 @@
 
 import("//build/components.gni")
 import("//src/graphics/examples/vkproto/common/common.gni")
-import("//src/graphics/lib/magma/gnbuild/magma.gni")
+import("//src/lib/vulkan/vulkan.gni")
 
 fuchsia_component("vkproto_test") {
   testonly = true
@@ -106,7 +106,7 @@ fuchsia_test_package("vkproto-test") {
   package_name = "vkproto-test"
   test_components = [ ":vkproto_test" ]
   test_specs = {
-    environments = magma_libvulkan_hardware_envs
+    environments = vulkan_envs
   }
 }
 
