@@ -491,6 +491,15 @@ bool Controller::ResetDdi(tgl_registers::Ddi ddi, std::optional<tgl_registers::T
   ZX_DEBUG_ASSERT(power_);
   power_->SetDdiIoPowerState(ddi, /* enable */ false);
 
+  // Wait for DDI IO power to be fully disabled.
+  // This step is not documented in Intel Display PRM, but this step occurs
+  // in the drm/i915 driver and experiments on NUC11 hardware indicate that
+  // display hotplug may fail without this step.
+  if (!PollUntil([&] { return !power_->GetDdiIoPowerState(ddi); }, zx::usec(1), 1000)) {
+    zxlogf(ERROR, "Disable IO power timeout");
+    return false;
+  }
+
   if (!dpll_manager_->Unmap(ddi)) {
     zxlogf(ERROR, "Failed to unmap DPLL for DDI %d", ddi);
     return false;

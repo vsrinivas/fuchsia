@@ -1526,7 +1526,7 @@ bool DpDisplay::TypeCDisconnectTigerLake() {
   // Disables Aux power and waits for Aux power state to disable.
   controller()->power()->SetAuxIoPowerState(ddi(), /* enable */ false);
 
-  if (!PollUntil([&] { return controller()->power()->GetAuxIoPowerState(ddi()); }, zx::usec(1),
+  if (!PollUntil([&] { return !controller()->power()->GetAuxIoPowerState(ddi()); }, zx::usec(1),
                  1500)) {
     zxlogf(ERROR, "DDI %d: failed to disable AUX power for ddi", ddi());
     return false;
