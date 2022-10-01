@@ -19,11 +19,11 @@ func expandTemplates() (string, error) {
 		return "", nil
 	}
 
-	expansionOutDir := filepath.Join(Config.OutDir, "out")
-	if _, err := os.Stat(expansionOutDir); os.IsNotExist(err) {
-		err := os.Mkdir(expansionOutDir, 0755)
+	outDir := filepath.Join(Config.OutDir, "out")
+	if _, err := os.Stat(outDir); os.IsNotExist(err) {
+		err := os.Mkdir(outDir, 0755)
 		if err != nil {
-			return "", fmt.Errorf("Failed to make directory %v: %v", expansionOutDir, err)
+			return "", err
 		}
 	}
 
@@ -41,17 +41,17 @@ func expandTemplates() (string, error) {
 		if t, ok := AllTemplates[o]; !ok {
 			return "", fmt.Errorf("Couldn't find template %v\n", o)
 		} else {
-			name := filepath.Join(expansionOutDir, o)
+			name := filepath.Join(outDir, o)
 			f, err := os.Create(name)
 			if err != nil {
-				return "", fmt.Errorf("Failed to create template file %v: %v", name, err)
+				return "", err
 			}
 			if err := t.Execute(f, w); err != nil {
-				return "", fmt.Errorf("Failed to expand template %v: %v", name, err)
+				return "", err
 			}
 			if Config.Zip {
 				if err := compressGZ(name); err != nil {
-					return "", fmt.Errorf("Failed to compress template %v: %v", name, err)
+					return "", err
 				}
 			}
 			b.WriteString(fmt.Sprintf(" ⦿ Executed template -> %v", name))

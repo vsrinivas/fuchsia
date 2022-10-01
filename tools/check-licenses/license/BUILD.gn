@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/go/go_library.gni")
-import("//build/go/go_test.gni")
 
 go_library("license") {
   sources = [
@@ -18,16 +17,4 @@ go_library("license") {
     "//tools/check-licenses/file",
     "//tools/lib/logger",
   ]
-}
-
-group("tests") {
-  testonly = true
-  deps = []
-}
-
-if (is_host) {
-  go_test("check-licenses_license_tests") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/check-licenses/license" ]
-    deps = [ ":license" ]
-  }
 }

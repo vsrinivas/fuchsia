@@ -6,10 +6,8 @@ package result
 
 import (
 	"fmt"
-	"net/http"
 	"regexp"
 	"strings"
-	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/directory"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/license"
@@ -24,12 +22,9 @@ func RunChecks() error {
 		return err
 	}
 	if err := AllLicensePatternUsagesMustBeApproved(); err != nil {
-		return err
+		// TODO: Enable this check after license pattern review.
+		return nil
 	}
-	// TODO: Enable this when running outside of CQ
-	//if err := AllComplianceWorksheetLinksAreGood(); err != nil {
-	//	return err
-	//}
 	if err := AllProjectsMustHaveALicense(); err != nil {
 		// TODO: Enable this check after all projects have been addressed.
 		return nil
@@ -53,7 +48,7 @@ func AllFuchsiaAuthorSourceFilesMustHaveCopyrightHeaders() error {
 	b.WriteString("The following files have missing or incorrectly worded copyright header information:\n\n")
 
 	var fuchsia *project.Project
-	for _, p := range project.FilteredProjects {
+	for _, p := range project.AllProjects {
 		if p.Root == "." {
 			fuchsia = p
 			break
@@ -103,15 +98,6 @@ func AllLicensePatternUsagesMustBeApproved() error {
 	var b strings.Builder
 OUTER:
 	for _, sr := range license.AllSearchResults {
-		if sr.Pattern.Category == "approved_production" {
-			continue
-		}
-		if sr.Pattern.Category == "approved_development" {
-			if !(strings.Contains(Config.BuildInfoProduct, "user") || strings.Contains(Config.BuildInfoBoard, "user")) {
-				continue
-			}
-		}
-
 		filepath := sr.LicenseData.FilePath
 		allowlist := sr.Pattern.AllowList
 		for _, entry := range allowlist {
@@ -123,16 +109,7 @@ OUTER:
 				continue OUTER
 			}
 		}
-		for _, exceptions := range sr.Pattern.Exceptions {
-			for _, entry := range exceptions.Entries {
-				for _, project := range entry.Projects {
-					if sr.ProjectRoot == project {
-						continue OUTER
-					}
-				}
-			}
-		}
-		b.WriteString(fmt.Sprintf("File %v was not approved to use license pattern %v\n", filepath, sr.Pattern.RelPath))
+		b.WriteString(fmt.Sprintf("File %v was not approved to use license pattern %v\n", filepath, sr.Pattern.Name))
 	}
 
 	result := b.String()
@@ -142,32 +119,12 @@ OUTER:
 	return nil
 }
 
-func AllComplianceWorksheetLinksAreGood() error {
-	for _, sr := range license.AllSearchResults {
-		if strings.HasPrefix(sr.Pattern.Name, "_") {
-			continue
-		}
-		url := sr.LicenseData.URL
-		if url != "" {
-			resp, err := http.Get(url)
-			if err != nil {
-				fmt.Printf("%v-%v %v: %v \n", sr.ProjectRoot, sr.Pattern.Name, url, err)
-			} else if resp.Status != "200 OK" {
-				fmt.Printf("%v-%v %v: %v\n", sr.ProjectRoot, sr.Pattern.Name, url, resp.Status)
-			}
-			time.Sleep(200 * time.Millisecond)
-		}
-	}
-	return nil
-
-}
-
 func AllProjectsMustHaveALicense() error {
 	var b strings.Builder
 	b.WriteString("All projects should include relevant license information, and a README.fuchsia file pointing to the file.\n")
 	b.WriteString("The following projects were found without any license information:\n\n")
 	count := 0
-	for _, p := range project.FilteredProjects {
+	for _, p := range project.AllProjects {
 		if len(p.LicenseFile) == 0 {
 			count = count + 1
 			b.WriteString(fmt.Sprintf("-> %v (README.fuchsia file: %v)\n", p.Root, p.ReadmePath))

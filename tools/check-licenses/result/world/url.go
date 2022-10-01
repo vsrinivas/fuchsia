@@ -6,34 +6,33 @@ package world
 
 import (
 	"fmt"
+	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 func (w *World) AddLicenseUrls() error {
-	for _, p := range w.Projects {
-		url := "https://fuchsia-license.teams.x20web.corp.google.com/check-licenses"
-		version := Config.BuildInfoVersion
-		target := fmt.Sprintf("%v.%v", Config.BuildInfoProduct, Config.BuildInfoBoard)
+	for _, p := range w.FilteredProjects {
+		url := "https://fuchsia-license.teams.x20web.corp.google.com/notices"
+		plus := "%2B"
 
 		for _, l := range p.LicenseFile {
-			path := fmt.Sprintf("%v/%v/license/matches/%v", version, target, l.RelPath)
+			path := l.AbsPath
+			if strings.Contains(path, Config.FuchsiaDir) {
+				path, _ = filepath.Rel(Config.FuchsiaDir, path)
+			}
 
 			// Segmented licenses
 			for i, fd := range l.Data {
-				if fd.URL != "" {
-					continue
-				}
-
 				strIndex := strconv.Itoa(i)
-				suffix := fmt.Sprintf("segments/%v", strIndex)
-				fd.URL = fmt.Sprintf("%v/%v/%v", url, path, suffix)
+				fd.URL = fmt.Sprintf("%v/%v/%v/segments/%v", url, plus, path, strIndex)
 			}
 
-			if l.URL != "" {
+			if l.Url != "" {
 				continue
 			}
 
-			l.URL = fmt.Sprintf("%v/%v/%v", url, version, path)
+			l.Url = fmt.Sprintf("%v/%v/%v", url, plus, path)
 		}
 	}
 	return nil

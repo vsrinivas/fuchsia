@@ -14,7 +14,6 @@ import (
 )
 
 type SearchResult struct {
-	ProjectRoot string
 	LicenseData *file.FileData
 	Pattern     *Pattern
 }
@@ -22,20 +21,20 @@ type SearchResult struct {
 // Search each data slice in the given file for license texts.
 // f (file) is assumed to be a single or multi license file, where all content
 // in the file is license information.
-func Search(projectRoot string, f *file.File) ([]*SearchResult, error) {
-	return search(projectRoot, f, AllPatterns)
+func Search(f *file.File) ([]*SearchResult, error) {
+	return search(f, AllPatterns)
 }
 
 // SearchHeaders searches the beginning portion of the given file for
 // copyright text.
 // f (file) is assumed to be some source artifact, which may contain
 // a small section of licensing or copyright information at the top of the file.
-func SearchHeaders(projectRoot string, f *file.File) ([]*SearchResult, error) {
-	return search(projectRoot, f, AllCopyrightPatterns)
+func SearchHeaders(f *file.File) ([]*SearchResult, error) {
+	return search(f, AllCopyrightPatterns)
 }
 
 // search the file using the given list of patterns.
-func search(projectRoot string, f *file.File, patterns []*Pattern) ([]*SearchResult, error) {
+func search(f *file.File, patterns []*Pattern) ([]*SearchResult, error) {
 	searchResults := make([]*SearchResult, 0)
 
 	// Run the license patterns on the parsed license texts.
@@ -44,7 +43,6 @@ func search(projectRoot string, f *file.File, patterns []*Pattern) ([]*SearchRes
 		for _, p := range patterns {
 			if p.Search(d) {
 				result := &SearchResult{
-					ProjectRoot: projectRoot,
 					LicenseData: d,
 					Pattern:     p,
 				}
@@ -65,22 +63,12 @@ func search(projectRoot string, f *file.File, patterns []*Pattern) ([]*SearchRes
 	if len(searchResults) > 0 {
 		base := filepath.Base(f.RelPath)
 		path := filepath.Join("matches", f.RelPath, base)
-		allHeaders := true
+		plusFile(path, f.Text)
 		for iter, r := range searchResults {
-			allHeaders = allHeaders && r.Pattern.isHeader
-			data := append([]byte(r.LicenseData.RelPath), []byte("\n\n")...)
-			data = append(data, r.LicenseData.Data...)
-			plusFile(filepath.Join("patterns", r.Pattern.RelPath, "example"), data)
-			if !r.Pattern.isHeader {
-				dir := filepath.Dir(path)
-				segPath := filepath.Join(dir, "segments", strconv.Itoa(iter))
-				plusFile(segPath, r.LicenseData.Data)
-			}
+			dir := filepath.Dir(path)
+			segPath := filepath.Join(dir, "segments", strconv.Itoa(iter))
+			plusFile(segPath, r.LicenseData.Data)
 		}
-		if !allHeaders {
-			plusFile(path, f.Text)
-		}
-
 	}
 	return searchResults, nil
 }

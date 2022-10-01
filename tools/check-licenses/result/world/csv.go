@@ -7,6 +7,7 @@ package world
 import (
 	"bytes"
 	"fmt"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -31,7 +32,6 @@ type CSVEntry struct {
 	Package     string
 	Left        string
 	Right       string
-	PatternPath string
 
 	// For compliance worksheet
 	BeingSurfaced      string
@@ -115,8 +115,7 @@ func (w *World) GetCSVEntries() *CSVData {
 				numLicenses += 1
 				e := &CSVEntry{
 					Project:            p.Name,
-					Path:               d.RelPath,
-					Url:                d.URL,
+					Path:               l.AbsPath,
 					Package:            d.LibraryName,
 					LicenseType:        d.LicenseType,
 					BeingSurfaced:      "Yes",
@@ -127,12 +126,20 @@ func (w *World) GetCSVEntries() *CSVData {
 					e.Package = e.Project
 				}
 
+				if strings.Contains(e.Path, Config.FuchsiaDir) {
+					e.Path, _ = filepath.Rel(Config.FuchsiaDir, e.Path)
+				}
+
 				if !p.ShouldBeDisplayed {
 					e.BeingSurfaced = "No"
 				}
 
 				if p.SourceCodeIncluded {
 					e.SourceCodeIncluded = "Yes"
+				}
+
+				if l.Url != "" {
+					e.Url = fmt.Sprintf(`=HYPERLINK("%v", "%v")`, l.Url, e.Path)
 				}
 
 				e.Left = fmt.Sprintf("line %v", d.LineNumber)
