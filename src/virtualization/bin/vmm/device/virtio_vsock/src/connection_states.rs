@@ -785,7 +785,7 @@ impl ClientInitiatedShutdown {
                 // A guest sending the device shutdown after itself being sent shutdown makes this
                 // difficult to ensure a clean disconnect, so simply force shutdown and briefly
                 // quarantine the ports.
-                tracing::error!("Guest sent shutdown while being asked to shutdown");
+                tracing::info!("Guest sent shutdown while being asked to shutdown");
                 VsockConnectionState::ShutdownForced(ShutdownForced::new(
                     self.key,
                     self.control_packets.clone(),
@@ -891,7 +891,7 @@ impl ShutdownForced {
     }
 
     fn next(self, op: OpType) -> VsockConnectionState {
-        tracing::error!("Connection is in ShutdownForced, disregarding operation {:?}", op);
+        tracing::info!("Connection is in ShutdownForced, disregarding operation {:?}", op);
         VsockConnectionState::ShutdownForced(self)
     }
 
