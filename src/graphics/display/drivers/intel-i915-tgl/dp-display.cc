@@ -838,9 +838,16 @@ bool DpDisplay::LinkTrainingSetupTigerLake() {
 
   // Transcoder must be disabled while doing link training.
   tgl_registers::TranscoderRegs transcoder_regs(pipe()->connected_transcoder_id());
+
+  // Our experiments on NUC 11 indicate that the display engine may crash the
+  // whole system if the driver sets `enabled_target` to false and writes the
+  // transcoder configuration register when the transcoder is already disabled,
+  // so we avoid crashing the system by only writing the register when the
+  // transcoder is currently enabled.
   auto transcoder_config = transcoder_regs.Config().ReadFrom(mmio_space());
-  transcoder_config.set_enabled(false).WriteTo(mmio_space());
-  transcoder_config.ReadFrom(mmio_space());
+  if (transcoder_config.enabled()) {
+    transcoder_config.set_enabled_target(false).WriteTo(mmio_space());
+  }
 
   // Configure "Transcoder Clock Select" to direct the Port clock to the
   // transcoder.

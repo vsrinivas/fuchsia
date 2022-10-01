@@ -122,7 +122,16 @@ void Pipe::ResetTranscoder(tgl_registers::Trans transcoder, fdf::MmioBuffer* mmi
   // The transcoder should be turned off only after the associated backlight,
   // audio, and image planes are disabled.
   auto transcoder_config = transcoder_regs.Config().ReadFrom(mmio_space);
-  transcoder_config.set_enabled_target(false).WriteTo(mmio_space);
+
+  // Our experiments on NUC 11 indicate that the display engine may crash the
+  // whole system if the driver sets `enabled_target` to false and writes the
+  // transcoder configuration register when the transcoder is already disabled,
+  // so we avoid crashing the system by only writing the register when the
+  // transcoder is currently enabled. To be on the safe side, we use the same
+  // caution on Kaby Lake and Skylake display engines as well.
+  if (transcoder_config.enabled()) {
+    transcoder_config.set_enabled_target(false).WriteTo(mmio_space);
+  }
 
   // Wait for off status in TRANS_CONF, timeout after two frames.
   // Here we wait for 60 msecs, which is enough to guarantee to include two
