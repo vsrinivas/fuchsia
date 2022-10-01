@@ -153,7 +153,7 @@ void Pipe::ResetTranscoder(tgl_registers::Trans transcoder, fdf::MmioBuffer* mmi
     // the field's bits, and on Kaby Lake the highest bit of
     // "ddi_clock_tiger_lake" is reserved to be zero, so it is safe to set the
     // whole field to zero.
-    transcoder_clock_select.set_ddi_clock_kaby_lake(std::nullopt).WriteTo(mmio_space);
+    transcoder_clock_select.set_ddi_clock_tiger_lake(std::nullopt).WriteTo(mmio_space);
   }
 }
 
