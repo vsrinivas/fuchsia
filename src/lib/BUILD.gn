@@ -136,6 +136,7 @@ group("tests") {
     "network:tests",
     "process_builder:tests",
     "pty:tests",
+    "rust_url:tests",
     "scoped_task:tests",
     "security:tests",
     "shared-buffer:tests",

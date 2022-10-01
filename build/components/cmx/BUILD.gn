@@ -129,6 +129,7 @@ group("cmx_allowlist") {
     "//src/lib/isolated_devmgr:virtual-audio-devmgr_manifest_compile",
     "//src/lib/pkg_url:fuchsia_pkg_url_fuzzer_component_manifest_compile",
     "//src/lib/pkg_url:url_resolver_fuzzer_component_manifest_compile",
+    "//src/lib/rust_url:rust_url_fuzzer_component_manifest_compile",
     "//src/lib/storage/vfs/cpp:vmo_file-fuzzer_component_manifest_compile",
     "//src/lib/storage/vfs/cpp/journal:journal-entry-fuzzer_component_manifest_compile",
     "//src/lib/storage/vfs/cpp/journal:journal-fuzzer_component_manifest_compile",
