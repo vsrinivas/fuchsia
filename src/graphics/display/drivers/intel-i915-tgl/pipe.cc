@@ -81,26 +81,6 @@ Pipe::Pipe(fdf::MmioBuffer* mmio_space, tgl_registers::Platform platform, tgl_re
       pipe_power_(std::move(pipe_power)) {}
 
 // static
-void Pipe::ResetPipe(tgl_registers::Pipe pipe, fdf::MmioBuffer* mmio_space) {
-  tgl_registers::PipeRegs pipe_regs(pipe);
-
-  // Disable planes, bottom color, and cursor
-  // TODO(fxbug.dev/109368): Add support for Skylake/Kaby Lake (num of panels'
-  // = 3).
-  constexpr size_t kNumPanelsTigerLake = 7;
-
-  for (size_t i = 0; i < kNumPanelsTigerLake; i++) {
-    pipe_regs.PlaneControl(i).FromValue(0).WriteTo(mmio_space);
-    pipe_regs.PlaneSurface(i).FromValue(0).WriteTo(mmio_space);
-  }
-  auto cursor_ctrl = pipe_regs.CursorCtrl().ReadFrom(mmio_space);
-  cursor_ctrl.set_mode_select(tgl_registers::CursorCtrl::kDisabled);
-  cursor_ctrl.WriteTo(mmio_space);
-  pipe_regs.CursorBase().FromValue(0).WriteTo(mmio_space);
-  pipe_regs.PipeBottomColor().FromValue(0).WriteTo(mmio_space);
-}
-
-// static
 void Pipe::ResetTranscoder(tgl_registers::Trans transcoder, fdf::MmioBuffer* mmio_space) {
   tgl_registers::TranscoderRegs transcoder_regs(transcoder);
 
@@ -167,14 +147,72 @@ void Pipe::ResetTranscoder(tgl_registers::Trans transcoder, fdf::MmioBuffer* mmi
 }
 
 void Pipe::Reset() {
-  ResetPipe(pipe_, mmio_space_);
-  zxlogf(DEBUG, "Reset pipe %d", pipe_id());
+  // Follow the steps in "DisplayPort disable sequence" / "HDMI/DVI disable
+  // sequence" to disable planes, connected transcoder and scalers (i.e. panel
+  // fitter).
+  //
+  // TODO(fxbug.dev/110411): Currently the procedure is the same for DisplayPort
+  // and HDMI/DVI. This may change once DisplayPort Multistream (MST) is
+  // supported.
+  //
+  // Skylake: IHD-OS-SKL-Vol 12-05.16,
+  //          DisplayPort: Pages 113-114, "Disable Sequence", Step 2.
+  //                       "Disable Planes, Pipe and Transcoder".
+  //          HDMI/DVI : Pages 115-116, "Disable Sequence", Step 2.
+  //                     "Disable Planes, Pipe and Transcoder".
+  //
+  // Kaby Lake: IHD-OS-KBL-Vol 12-1.17,
+  //            DisplayPort: Pages 115-116, "Disable Sequence",
+  //                         Step 2. "Disable Planes, Pipe and Transcoder".
+  //            HDMI/DVI : Pages 118, "Disable Sequence", Step 2.
+  //                       "Disable Planes, Pipe and Transcoder".
+  //
+  // Tiger Lake: IHD-OS-TGL-Vol 12-1.22-Rev 2.0,
+  //             DisplayPort: Pages 147-148, "Disable Sequence",
+  //                          Step 2. "If not in compliance mode: Disable
+  //                          Planes, Pipe and Transcoder".
+  //             HDMI/DVI: Pages 150, "Disable Sequence",
+  //                       Step 2. "Disable Planes, Pipe and Transcoder".
+
+  ResetPlanes();
+  ResetActiveTranscoder();
+  ResetScaler();
+}
+
+void Pipe::ResetPlanes() {
+  tgl_registers::PipeRegs pipe_regs(pipe_id());
+
+  // Disable planes, bottom color, and cursor
+  const size_t plane_count = platform_ == tgl_registers::Platform::kTigerLake ? 7 : 3;
+  for (size_t i = 0; i < plane_count; i++) {
+    pipe_regs.PlaneControl(i).FromValue(0).WriteTo(mmio_space_);
+    pipe_regs.PlaneSurface(i).FromValue(0).WriteTo(mmio_space_);
+  }
+  auto cursor_ctrl = pipe_regs.CursorCtrl().ReadFrom(mmio_space_);
+  cursor_ctrl.set_mode_select(tgl_registers::CursorCtrl::kDisabled);
+  cursor_ctrl.WriteTo(mmio_space_);
+  pipe_regs.CursorBase().FromValue(0).WriteTo(mmio_space_);
+  pipe_regs.PipeBottomColor().FromValue(0).WriteTo(mmio_space_);
 }
 
 void Pipe::ResetActiveTranscoder() {
   if (in_use()) {
     ResetTranscoder(connected_transcoder_id(), mmio_space_);
     zxlogf(DEBUG, "Reset active transcoder %d for pipe %d", connected_transcoder_id(), pipe_id());
+  }
+}
+
+void Pipe::ResetScaler() {
+  tgl_registers::PipeRegs pipe_regs(pipe_id());
+
+  // This works for Skylake / Kaby Lake and Tiger Lake.
+  // Note that Skylake / Kaby Lake doesn't have PS_CTRL_2_C documented in the
+  // PRM, but experiments on Atlas (using Kaby Lake) shows that it does have
+  // this scaler, so we use the same value across all generations.
+  const int kScalerCount = 2;
+
+  for (int scaler_id = 0; scaler_id < kScalerCount; scaler_id++) {
+    pipe_regs.PipeScalerCtrl(scaler_id).ReadFrom(mmio_space_).set_enable(0).WriteTo(mmio_space_);
   }
 }
 

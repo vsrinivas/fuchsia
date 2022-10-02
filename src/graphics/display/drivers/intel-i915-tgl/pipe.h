@@ -54,11 +54,6 @@ class Pipe {
   // Reset pipe registers.
   void Reset();
 
-  // Reset pipe transcoder registers associated with the transcoder.
-  void ResetActiveTranscoder();
-
-  // A helper method to reset |pipe| given its pipe number.
-  static void ResetPipe(tgl_registers::Pipe pipe, fdf::MmioBuffer* mmio_space);
   // A helper method to reset |transcoder| given its transcoder number.
   static void ResetTranscoder(tgl_registers::Trans transcoder, fdf::MmioBuffer* mmio_space);
 
@@ -105,15 +100,18 @@ class Pipe {
   tgl_registers::Platform platform() const { return platform_; }
 
  private:
-  // Borrowed reference to Controller instance
-  fdf::MmioBuffer* mmio_space_ = nullptr;
-
   void ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* primary, bool enable_csc,
                              bool* scaler_1_claimed, tgl_registers::pipe_arming_regs* regs,
                              uint64_t config_stamp_seqno, const SetupGttImageFunc& setup_gtt_image);
   void ConfigureCursorPlane(const cursor_layer_t* cursor, bool enable_csc,
                             tgl_registers::pipe_arming_regs* regs, uint64_t config_stamp_seqno);
   void SetColorConversionOffsets(bool preoffsets, const float vals[3]);
+  void ResetActiveTranscoder();
+  void ResetScaler();
+  void ResetPlanes();
+
+  // Borrowed reference to Controller instance
+  fdf::MmioBuffer* mmio_space_ = nullptr;
 
   uint64_t attached_display_ = INVALID_DISPLAY_ID;
   bool attached_edp_ = false;

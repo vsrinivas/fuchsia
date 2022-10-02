@@ -47,7 +47,6 @@ void PipeManager::ReturnPipe(Pipe* pipe) {
   ZX_DEBUG_ASSERT(has_pipe && pipe->in_use());
 
   pipe->Reset();
-  pipe->ResetActiveTranscoder();
   pipe->Detach();
   pipes_reallocated_ = true;
 }

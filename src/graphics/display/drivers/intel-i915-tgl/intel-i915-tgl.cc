@@ -418,7 +418,6 @@ bool Controller::BringUpDisplayEngine(bool resume) {
 
   for (Pipe* pipe : *pipe_manager_) {
     pipe->Reset();
-    pipe->ResetActiveTranscoder();
     ResetPipePlaneBuffers(pipe->pipe_id());
 
     tgl_registers::PipeRegs pipe_regs(pipe->pipe_id());
