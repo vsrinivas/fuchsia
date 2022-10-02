@@ -15,7 +15,7 @@ executable("configuration_tests") {
   sources = [ "color_transform_manager_test.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.accessibility",
+    "//sdk/fidl/fuchsia.accessibility:fuchsia.accessibility_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",

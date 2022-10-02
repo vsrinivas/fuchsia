@@ -59,8 +59,8 @@ source_set("mlme") {
     "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlan.softmac:fuchsia.hardware.wlan.softmac_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
-    "//sdk/fidl/fuchsia.wlan.mlme",
-    "//sdk/fidl/fuchsia.wlan.stats",
+    "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme_hlcpp",
+    "//sdk/fidl/fuchsia.wlan.stats:fuchsia.wlan.stats_hlcpp",
     "//sdk/lib/fdio",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/connectivity/wlan/lib/mlme/rust/c-binding:wlan-mlme-c",
@@ -79,7 +79,7 @@ source_set("mlme") {
 
   deps = [
     "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_banjo_c",
-    "//sdk/fidl/fuchsia.wlan.minstrel",
+    "//sdk/fidl/fuchsia.wlan.minstrel:fuchsia.wlan.minstrel_hlcpp",
   ]
 
   if (fidl_trace_level != 0) {

@@ -21,9 +21,9 @@ source_set("ethertap") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.hardware.ethernet",
-    "//sdk/fidl/fuchsia.hardware.ethertap",
-    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_hlcpp",
+    "//sdk/fidl/fuchsia.hardware.ethertap:fuchsia.hardware.ethertap_hlcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
   ]
 }
 
@@ -65,11 +65,11 @@ source_set("network_service") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.net.tun",
+    "//sdk/fidl/fuchsia.net.tun:fuchsia.net.tun_hlcpp",
     "//sdk/lib/stdcompat",
     "//src/connectivity/lib/network-device/cpp",
-    "//src/connectivity/network/testing/netemul/network-context/fidl:internal",
-    "//src/connectivity/network/testing/netemul/network-context/fidl:network",
+    "//src/connectivity/network/testing/netemul/network-context/fidl:internal_hlcpp",
+    "//src/connectivity/network/testing/netemul/network-context/fidl:network_hlcpp",
   ]
 
   # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
@@ -84,9 +84,7 @@ source_set("netdump") {
     "netdump_types.h",
   ]
   deps = [ "//src/lib/fxl" ]
-  public_deps = [
-    "//src/connectivity/network/testing/netemul/network-context/fidl:network",
-  ]
+  public_deps = [ "//src/connectivity/network/testing/netemul/network-context/fidl:network_hlcpp" ]
 }
 
 executable("network_test_bin") {
@@ -110,7 +108,7 @@ executable("network_test_bin") {
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_cpp_hlcpp_conversion",
     "//sdk/lib/sys/cpp",
     "//src/connectivity/lib/network-device/cpp",
-    "//src/connectivity/network/testing/netemul/network-context/fidl:devmgr",
+    "//src/connectivity/network/testing/netemul/network-context/fidl:devmgr_hlcpp",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
@@ -119,5 +117,6 @@ executable("network_test_bin") {
     "//zircon/system/ulib/fzl",
   ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.hardware.ethertap" ]
+  public_deps =
+      [ "//sdk/fidl/fuchsia.hardware.ethertap:fuchsia.hardware.ethertap_hlcpp" ]
 }

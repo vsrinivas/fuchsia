@@ -24,10 +24,10 @@ test("tests") {
   ]
 
   deps = [
-    ":mock-device",
-    "//sdk/fidl/fuchsia.device",
-    "//sdk/fidl/fuchsia.device.test",
-    "//sdk/fidl/fuchsia.io:fuchsia.io",
+    ":mock-device_hlcpp",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_hlcpp",
+    "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_hlcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fit-promise",
     "//src/devices/testing/devmgr-integration-test-shim",

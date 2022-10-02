@@ -60,8 +60,8 @@ source_set("session_shell_impl") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular_hlcpp",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
@@ -79,7 +79,7 @@ source_set("test_story_command_executor") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular_hlcpp",
     "//src/modular/bin/sessionmgr/puppet_master:story_command_executor",
     "//src/modular/lib/fidl:clone",
   ]
@@ -96,7 +96,7 @@ source_set("test_with_session_storage") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular_hlcpp",
     "//src/lib/testing/loop_fixture",
     "//src/modular/bin/sessionmgr/storage",
     "//third_party/googletest:gtest",

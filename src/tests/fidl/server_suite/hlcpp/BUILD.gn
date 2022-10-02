@@ -10,7 +10,7 @@ executable("bin") {
   deps = [
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
-    "//src/tests/fidl/server_suite/fidl:fidl.serversuite",
+    "//src/tests/fidl/server_suite/fidl:fidl.serversuite_hlcpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

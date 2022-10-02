@@ -10,7 +10,7 @@ executable("sessionmgr_bin") {
 
   deps = [
     ":sessionmgr_lib",
-    "//sdk/fidl/fuchsia.modular.internal",
+    "//sdk/fidl/fuchsia.modular.internal:fuchsia.modular.internal_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
@@ -56,16 +56,16 @@ source_set("sessionmgr_lib") {
 
   public_deps = [
     ":startup_agent_launcher",
-    "//sdk/fidl/fuchsia.element",
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.modular.internal",
-    "//sdk/fidl/fuchsia.modular.session",
-    "//sdk/fidl/fuchsia.session",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.ui.policy",
-    "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.element:fuchsia.element_hlcpp",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular_hlcpp",
+    "//sdk/fidl/fuchsia.modular.internal:fuchsia.modular.internal_hlcpp",
+    "//sdk/fidl/fuchsia.modular.session:fuchsia.modular.session_hlcpp",
+    "//sdk/fidl/fuchsia.session:fuchsia.session_hlcpp",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_hlcpp",
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_hlcpp",
+    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy_hlcpp",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/modular/bin/sessionmgr/agent_runner",
     "//src/modular/lib/deprecated_service_provider",
@@ -129,7 +129,7 @@ source_set("component_context") {
     "component_context_impl.h",
   ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.modular" ]
+  public_deps = [ "//sdk/fidl/fuchsia.modular:fuchsia.modular_hlcpp" ]
 
   deps = [
     "//src/lib/fsl",
@@ -143,7 +143,7 @@ source_set("component_context") {
 source_set("agent_services_factory") {
   sources = [ "agent_services_factory.h" ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.sys" ]
+  public_deps = [ "//sdk/fidl/fuchsia.sys:fuchsia.sys_hlcpp" ]
 }
 
 source_set("startup_agent_launcher") {
@@ -161,9 +161,9 @@ source_set("startup_agent_launcher") {
     ":agent_services_factory",
     ":rate_limited_retry",
     "agent_runner",
-    "//sdk/fidl/fuchsia.element",
-    "//sdk/fidl/fuchsia.intl",
-    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.element:fuchsia.element_hlcpp",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl_hlcpp",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular_hlcpp",
     "//sdk/lib/syslog/cpp",
     "//src/modular/lib/connect",
     "//src/modular/lib/modular_config:modular_config_accessor",
@@ -192,8 +192,8 @@ source_set("annotations") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.element",
-    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.element:fuchsia.element_hlcpp",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular_hlcpp",
   ]
 }
 

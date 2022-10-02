@@ -16,7 +16,7 @@ group("tests") {
 source_set("lib") {
   sources = [ "image_io_util.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/files",
     "//zircon/system/ulib/fzl",
@@ -30,8 +30,8 @@ source_set("stream_configs") {
     "stream_constraints.h",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.camera2",
-    "//sdk/fidl/fuchsia.camera2.hal",
+    "//sdk/fidl/fuchsia.camera2:fuchsia.camera2_hlcpp",
+    "//sdk/fidl/fuchsia.camera2.hal:fuchsia.camera2.hal_hlcpp",
     "//src/camera/lib/format_conversion",
     "//zircon/system/ulib/affine",
     "//zircon/system/ulib/fbl",
@@ -48,7 +48,7 @@ executable("image_io_util_unittest_bin") {
   sources = [ "image_io_util_unittest.cc" ]
   deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/files",
     "//src/lib/fxl/test:gtest_main",

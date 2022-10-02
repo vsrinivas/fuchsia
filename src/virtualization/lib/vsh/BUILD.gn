@@ -41,7 +41,7 @@ source_set("client") {
   ]
   deps = [
     ":util",
-    "//sdk/fidl/fuchsia.virtualization",
+    "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization_hlcpp",
     "//sdk/lib/fit-promise",
     "//src/lib/fxl",
     "//src/virtualization/third_party/vm_tools:vsh_cc_proto",
@@ -61,7 +61,7 @@ executable("vsh_unittest") {
   deps = [
     ":client",
     ":util",
-    "//sdk/fidl/fuchsia.virtualization",
+    "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization_hlcpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/virtualization/testing",
     "//src/lib/fxl/test:gtest_main",

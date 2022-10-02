@@ -39,7 +39,7 @@ test("disk_extractor_unit_test") {
     "minfs_extractor_test.cc",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.fs",
+    "//sdk/fidl/fuchsia.fs:fuchsia.fs_hlcpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/blobfs/test/integration:blobfs_integration_fixtures",
     "//src/storage/extractor/c:disk_extractor",

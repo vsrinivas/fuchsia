@@ -8,7 +8,7 @@ executable("display-pixel-ratio-test-bin") {
   testonly = true
   sources = [ "display_pixel_ratio_test.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.ui.display.singleton",
+    "//sdk/fidl/fuchsia.ui.display.singleton:fuchsia.ui.display.singleton_hlcpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/ui/testing/ui_test_manager",

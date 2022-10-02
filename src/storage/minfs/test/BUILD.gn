@@ -88,7 +88,7 @@ test("minfs-integration") {
 test("minfs_dirty_cache_integration") {
   sources = [ "integration/dirty_cache_test.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.fs",
+    "//sdk/fidl/fuchsia.fs:fuchsia.fs_hlcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/fs_test",

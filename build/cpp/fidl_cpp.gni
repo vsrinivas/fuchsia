@@ -38,7 +38,6 @@ _implicit_hlcpp_bindings_visibility = [
   #
   # TODO(fxbug.dev/108354): Remove all entries.
   "//:please_add_hlcpp_suffix_see_fxb_108354",
-  "//src/*",
   "//third_party/*",
   "//vendor/*",
 ]

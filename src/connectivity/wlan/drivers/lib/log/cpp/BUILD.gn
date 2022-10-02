@@ -25,7 +25,7 @@ source_set("cpp") {
     "internal/hexdump.cc",
     "internal/throttle_counter.cc",
   ]
-  deps = [ "//sdk/fidl/fuchsia.wlan.ieee80211" ]
+  deps = [ "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211_hlcpp" ]
   public_deps = [ "//src/lib/ddk" ]
 }
 
@@ -41,7 +41,7 @@ source_set("dfv2") {
     "internal/hexdump.cc",
     "internal/throttle_counter.cc",
   ]
-  deps = [ "//sdk/fidl/fuchsia.wlan.ieee80211" ]
+  deps = [ "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211_hlcpp" ]
   public_deps = [
     "//sdk/lib/driver2:cpp",
     "//sdk/lib/driver_compat",

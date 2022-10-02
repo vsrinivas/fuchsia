@@ -10,8 +10,8 @@ executable("puppet") {
   sources = [ "puppet.cc" ]
 
   deps = [
-    "../../fidl:validate",
-    "//sdk/fidl/fuchsia.diagnostics.stream:fuchsia.diagnostics.stream",
+    "../../fidl:validate_hlcpp",
+    "//sdk/fidl/fuchsia.diagnostics.stream:fuchsia.diagnostics.stream_hlcpp",
     "//sdk/lib/fidl",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp:backend",

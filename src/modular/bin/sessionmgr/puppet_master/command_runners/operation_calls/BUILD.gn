@@ -18,7 +18,7 @@ source_set("add_mod_call") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular_hlcpp",
     "//src/modular/bin/sessionmgr/storage:story_storage",
     "//src/modular/lib/async/cpp:operation",
     "//src/modular/lib/fidl:clone",

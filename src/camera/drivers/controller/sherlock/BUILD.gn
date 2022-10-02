@@ -31,8 +31,8 @@ source_set("config") {
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.ge2d:fuchsia.hardware.ge2d_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
-    "//sdk/fidl/fuchsia.camera2",
-    "//sdk/fidl/fuchsia.camera2.hal",
+    "//sdk/fidl/fuchsia.camera2:fuchsia.camera2_hlcpp",
+    "//sdk/fidl/fuchsia.camera2.hal:fuchsia.camera2.hal_hlcpp",
     "//src/camera/drivers/controller/configs",
     "//src/camera/lib/formatting",
     "//src/camera/lib/stream_utils:stream_configs",

@@ -24,13 +24,13 @@ source_set("fidl") {
     "simple_stream_sink_impl.h",
   ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.mediacodec" ]
+  public_deps = [ "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec_hlcpp" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.media",
-    "//sdk/fidl/fuchsia.media.playback",
-    "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
+    "//sdk/fidl/fuchsia.media.playback:fuchsia.media.playback_hlcpp",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
     "//sdk/lib/media/cpp",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/ui/scenic/cpp",

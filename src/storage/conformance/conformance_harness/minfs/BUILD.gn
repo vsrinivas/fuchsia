@@ -9,8 +9,8 @@ executable("bin") {
   output_name = "io_conformance_harness_minfs"
   sources = [ "harness.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.io",
-    "//sdk/fidl/fuchsia.io.test",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
+    "//sdk/fidl/fuchsia.io.test:fuchsia.io.test_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",

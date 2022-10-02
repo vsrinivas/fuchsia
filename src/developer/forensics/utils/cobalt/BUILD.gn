@@ -20,7 +20,7 @@ source_set("cobalt") {
 
   public_deps = [
     ":metrics_registry",
-    "//sdk/fidl/fuchsia.metrics",
+    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_hlcpp",
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
     "//src/cobalt/bin/utils:error_utils",

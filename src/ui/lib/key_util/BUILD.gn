@@ -11,7 +11,7 @@ source_set("key_util") {
     "key_util.h",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_hlcpp",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid-parser",
   ]

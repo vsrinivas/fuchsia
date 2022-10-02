@@ -25,7 +25,7 @@ source_set("view_tree_snapshot") {
   ]
   deps = [ "//src/ui/scenic/lib/utils" ]
   public_deps = [
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
     "//src/lib/fxl",
     "//src/ui/scenic/lib/scheduling:frame_scheduler_interface",
     "//src/ui/scenic/lib/utils",
@@ -43,7 +43,7 @@ source_set("observer_registry") {
   ]
   deps = [ ":geometry_provider" ]
   public_deps = [
-    "//sdk/fidl/fuchsia.ui.observation.test",
+    "//sdk/fidl/fuchsia.ui.observation.test:fuchsia.ui.observation.test_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/ui/scenic/lib/utils",
@@ -57,7 +57,7 @@ source_set("scoped_observer_registry") {
   ]
   deps = [ ":geometry_provider" ]
   public_deps = [
-    "//sdk/fidl/fuchsia.ui.observation.scope",
+    "//sdk/fidl/fuchsia.ui.observation.scope:fuchsia.ui.observation.scope_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/ui/scenic/lib/utils",
@@ -71,9 +71,9 @@ source_set("geometry_provider") {
   ]
   deps = [ ":view_tree_snapshot" ]
   public_deps = [
-    "//sdk/fidl/fuchsia.ui.observation.geometry",
+    "//sdk/fidl/fuchsia.ui.observation.geometry:fuchsia.ui.observation.geometry_hlcpp",
     "//sdk/fidl/fuchsia.ui.observation.geometry:measure_tape_for_geometry",
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
     "//sdk/lib/sys/cpp",
     "//src/ui/scenic/lib/gfx:util",
   ]

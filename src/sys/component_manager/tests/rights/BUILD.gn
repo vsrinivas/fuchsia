@@ -33,7 +33,7 @@ executable("expose_dir_rights_bin") {
   sources = [ "expose_dir_rights.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
     "//src/lib/storage/vfs/cpp",
     "//src/storage/memfs:cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

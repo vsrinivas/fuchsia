@@ -16,7 +16,7 @@ source_set("guest_config") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
@@ -24,7 +24,7 @@ source_set("guest_config") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.virtualization",
+    "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization_hlcpp",
     "//zircon/system/ulib/zxc",
   ]
 }

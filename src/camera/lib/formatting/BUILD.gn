@@ -21,10 +21,10 @@ source_set("lib") {
   ]
   public = [ "formatting.h" ]
   deps = [
-    "//sdk/fidl/fuchsia.camera2",
-    "//sdk/fidl/fuchsia.camera2.hal",
-    "//sdk/fidl/fuchsia.camera3",
-    "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/fidl/fuchsia.camera2:fuchsia.camera2_hlcpp",
+    "//sdk/fidl/fuchsia.camera2.hal:fuchsia.camera2.hal_hlcpp",
+    "//sdk/fidl/fuchsia.camera3:fuchsia.camera3_hlcpp",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
     "//src/lib/fsl",
   ]
 }
@@ -34,7 +34,7 @@ executable("formatting-unittest-bin") {
   testonly = true
   sources = [ "formatting-unittest.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.camera2",
+    "//sdk/fidl/fuchsia.camera2:fuchsia.camera2_hlcpp",
     "//src/camera/lib/formatting",
     "//src/lib/fxl/test:gtest_main",
   ]

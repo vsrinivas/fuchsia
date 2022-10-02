@@ -81,7 +81,7 @@ executable("bin") {
   ]
   if (is_fuchsia) {
     deps += [
-      ":fuchsia.zircon.benchmarks",
+      ":fuchsia.zircon.benchmarks_hlcpp",
       "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_cpp_wire",
       "//sdk/lib/fdio",
       "//src/lib/fsl",
@@ -112,7 +112,7 @@ executable("context_switch_overhead_helper") {
   testonly = true
   sources = [ "context_switch_overhead_helper.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.scheduler",
+    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",

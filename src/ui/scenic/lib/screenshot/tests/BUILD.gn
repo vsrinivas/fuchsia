@@ -19,7 +19,7 @@ executable("unittests") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fsl:fsl",
     "//src/lib/fxl/test:gtest_main",

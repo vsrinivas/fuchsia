@@ -9,7 +9,7 @@ executable("test-bin") {
   output_name = "agis_test"
   sources = [ "test.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.gpu.agis",
+    "//sdk/fidl/fuchsia.gpu.agis:fuchsia.gpu.agis_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/zxio",
@@ -24,7 +24,7 @@ executable("vtc-test-bin") {
   output_name = "vtc_test"
   sources = [ "vtc_test.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.gpu.agis",
+    "//sdk/fidl/fuchsia.gpu.agis:fuchsia.gpu.agis_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/zxio",
@@ -45,7 +45,7 @@ executable("agis-bin") {
   output_name = "agis"
   sources = [ "agis.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.gpu.agis",
+    "//sdk/fidl/fuchsia.gpu.agis:fuchsia.gpu.agis_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",

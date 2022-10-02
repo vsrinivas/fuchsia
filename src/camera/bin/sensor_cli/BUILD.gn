@@ -26,9 +26,9 @@ executable("camera_sensor_cli_bin") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.camera2.debug",
-    "//sdk/fidl/fuchsia.camera2.hal",
-    "//sdk/fidl/fuchsia.hardware.camera",
+    "//sdk/fidl/fuchsia.camera2.debug:fuchsia.camera2.debug_hlcpp",
+    "//sdk/fidl/fuchsia.camera2.hal:fuchsia.camera2.hal_hlcpp",
+    "//sdk/fidl/fuchsia.hardware.camera:fuchsia.hardware.camera_hlcpp",
   ]
 }
 

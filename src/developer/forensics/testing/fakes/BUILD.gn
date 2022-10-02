@@ -26,8 +26,8 @@ executable("fake_data_provider_exe") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/fidl/fuchsia.mem",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
@@ -51,7 +51,7 @@ source_set("privacy_settings") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.settings",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
   ]

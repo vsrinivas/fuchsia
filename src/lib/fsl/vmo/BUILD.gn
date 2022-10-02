@@ -20,7 +20,7 @@ source_set("vmo") {
   deps = [ "//sdk/lib/fdio" ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.mem",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem_hlcpp",
     "//src/lib/files",
     "//src/lib/fxl:memory",
     "//zircon/system/ulib/fbl",

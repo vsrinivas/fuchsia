@@ -24,7 +24,7 @@ executable("echo_gtest_client") {
   sources = [ "echo_test.cc" ]
 
   deps = [
-    "//examples/components/routing/fidl:echo",
+    "//examples/components/routing/fidl:echo_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
@@ -162,7 +162,7 @@ executable("concurrency_test_driver_gtest") {
   sources = [ "concurrency_test_driver.cc" ]
 
   deps = [
-    "//examples/components/routing/fidl:echo",
+    "//examples/components/routing/fidl:echo_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",

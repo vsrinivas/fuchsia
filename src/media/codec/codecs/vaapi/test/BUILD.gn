@@ -81,9 +81,9 @@ source_set("decoder_fuzzer") {
     ":vaapi_stubs",
     "..:codec_runner_vaapi",
     "../../test:test_codec_packets",
-    "//sdk/fidl/fuchsia.mediacodec",
+    "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec_hlcpp",
   ]
-  deps = [ "//sdk/fidl/fuchsia.sysmem" ]
+  deps = [ "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp" ]
 }
 
 cpp_fuzzer("vaapi_h264_decode_fuzzer") {

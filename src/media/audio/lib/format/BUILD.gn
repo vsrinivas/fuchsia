@@ -16,8 +16,8 @@ source_set("format") {
 
   public_deps = [
     ":constants",
-    "//sdk/fidl/fuchsia.hardware.audio",
-    "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_hlcpp",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
     "//sdk/lib/stdcompat",
     "//sdk/lib/syslog/cpp",
     "//src/media/audio/lib/format2",

@@ -21,7 +21,7 @@ source_set("constants") {
 
   sources = [ "constants.h" ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.media" ]
+  public_deps = [ "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp" ]
 }
 
 source_set("comparators") {
@@ -33,7 +33,7 @@ source_set("comparators") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",

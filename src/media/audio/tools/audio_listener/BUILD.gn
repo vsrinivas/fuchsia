@@ -12,7 +12,7 @@ executable("bin") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",

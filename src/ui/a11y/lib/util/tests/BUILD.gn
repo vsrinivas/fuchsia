@@ -13,7 +13,7 @@ executable("util_tests") {
   sources = [ "boot_info_manager_test.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",

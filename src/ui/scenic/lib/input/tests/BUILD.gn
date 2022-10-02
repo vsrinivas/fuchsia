@@ -24,7 +24,7 @@ executable("unittests") {
   ]
   deps = [
     ":util",
-    "//sdk/fidl/fuchsia.ui.input.accessibility",
+    "//sdk/fidl/fuchsia.ui.input.accessibility:fuchsia.ui.input.accessibility_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fostr/fidl/fuchsia.ui.input",

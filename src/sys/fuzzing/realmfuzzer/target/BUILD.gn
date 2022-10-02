@@ -26,10 +26,10 @@ source_set("no_hooks") {
     "weak-symbols.h",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.debugdata",
+    "//sdk/fidl/fuchsia.debugdata:fuchsia.debugdata_hlcpp",
     "//src/lib/fxl",
     "//src/sys/fuzzing/common",
-    "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
+    "//src/sys/fuzzing/fidl:fuchsia.fuzzer_hlcpp",
   ]
   deps = [
     "//sdk/lib/sys/cpp",

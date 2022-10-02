@@ -36,10 +36,10 @@ source_set("platform") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.lowpan.bootstrap:fuchsia.lowpan.bootstrap_cpp_wire",
-    "//sdk/fidl/fuchsia.net",
-    "//sdk/fidl/fuchsia.net.interfaces",
-    "//sdk/fidl/fuchsia.net.routes",
-    "//sdk/fidl/fuchsia.netstack",
+    "//sdk/fidl/fuchsia.net:fuchsia.net_hlcpp",
+    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces_hlcpp",
+    "//sdk/fidl/fuchsia.net.routes:fuchsia.net.routes_hlcpp",
+    "//sdk/fidl/fuchsia.netstack:fuchsia.netstack_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//src/connectivity/openthread/lib/ot-stack:ot-stack-callback",

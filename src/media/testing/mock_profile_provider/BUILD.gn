@@ -9,7 +9,7 @@ executable("bin") {
   sources = [ "main.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//zircon/system/ulib/async-default",

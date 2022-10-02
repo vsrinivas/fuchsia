@@ -59,7 +59,7 @@ source_set("profiler_lib") {
 
   deps = [
     ":profiler_headers",
-    "//sdk/fidl/fuchsia.logger",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",

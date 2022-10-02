@@ -10,7 +10,7 @@ executable("bin") {
   sources = [ "main.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",

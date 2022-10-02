@@ -35,13 +35,13 @@ executable("realm_tests") {
   ]
 
   deps = [
-    "fidl:echo",
-    "fidl:test.component.mockrunner",
-    "fidl/fuchsia.testing.appmgr",
-    "util:data_file_reader_writer",
+    "fidl:echo_hlcpp",
+    "fidl:test.component.mockrunner_hlcpp",
+    "fidl/fuchsia.testing.appmgr:fuchsia.testing.appmgr_hlcpp",
+    "util:data_file_reader_writer_hlcpp",
     "util:data_file_reader_writer_util",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.sys.internal",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_hlcpp",
+    "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl",
@@ -66,7 +66,7 @@ executable("echo_server_bin") {
   ]
 
   deps = [
-    "fidl:echo",
+    "fidl:echo_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -87,7 +87,7 @@ executable("crashing_component_bin") {
   output_name = "crashing_component"
   sources = [ "crashing_component.cc" ]
   deps = [
-    "fidl/fuchsia.testing.appmgr",
+    "fidl/fuchsia.testing.appmgr:fuchsia.testing.appmgr_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -100,7 +100,7 @@ executable("failing_appmgr_bin") {
   output_name = "failing_appmgr"
   sources = [ "failing_appmgr.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/sys/appmgr:appmgr_for_test",

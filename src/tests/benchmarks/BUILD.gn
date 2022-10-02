@@ -16,7 +16,7 @@ executable("kernel-boot-stats") {
   testonly = true
   sources = [ "kernel_boot_stats.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.kernel",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//zircon/system/ulib/perftest",

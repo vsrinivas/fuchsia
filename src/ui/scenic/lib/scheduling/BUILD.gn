@@ -80,7 +80,7 @@ source_set("present_helpers") {
   public_deps = [
     ":frame_scheduler_interface",
     ":id",
-    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
   ]
 }
 

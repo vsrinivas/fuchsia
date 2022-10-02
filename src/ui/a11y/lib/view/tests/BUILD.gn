@@ -30,9 +30,9 @@ executable("view_tests") {
     "view_coordinate_converter_test.cc",
     "view_manager_test.cc",
   ]
-  public_deps = [ "//sdk/fidl/fuchsia.accessibility.semantics" ]
+  public_deps = [ "//sdk/fidl/fuchsia.accessibility.semantics:fuchsia.accessibility.semantics_hlcpp" ]
   deps = [
-    "//sdk/fidl/fuchsia.accessibility",
+    "//sdk/fidl/fuchsia.accessibility:fuchsia.accessibility_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
@@ -61,11 +61,11 @@ executable("gfx-a11y-view-test-bin") {
   sources = [ "gfx_a11y_view_test.cc" ]
   output_name = "gfx-a11y-view-test"
   deps = [
-    "//sdk/fidl/fuchsia.accessibility.semantics",
-    "//sdk/fidl/fuchsia.logger",
-    "//sdk/fidl/fuchsia.tracing.provider",
-    "//sdk/fidl/fuchsia.ui.accessibility.view",
-    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.accessibility.semantics:fuchsia.accessibility.semantics_hlcpp",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_hlcpp",
+    "//sdk/fidl/fuchsia.ui.accessibility.view:fuchsia.ui.accessibility.view_hlcpp",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/ui/scenic/cpp",
@@ -107,13 +107,13 @@ executable("gfx-scene-integration-test-bin") {
   sources = [ "gfx_scene_integration_test.cc" ]
   output_name = "gfx-scene-integration-test"
   deps = [
-    "//sdk/fidl/fuchsia.accessibility.semantics",
-    "//sdk/fidl/fuchsia.logger",
-    "//sdk/fidl/fuchsia.tracing.provider",
-    "//sdk/fidl/fuchsia.ui.accessibility.view",
-    "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.ui.composition",
-    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.accessibility.semantics:fuchsia.accessibility.semantics_hlcpp",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_hlcpp",
+    "//sdk/fidl/fuchsia.ui.accessibility.view:fuchsia.ui.accessibility.view_hlcpp",
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_hlcpp",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/ui/scenic/cpp",
@@ -157,10 +157,10 @@ executable("flatland-a11y-view-test-bin") {
   sources = [ "flatland_a11y_view_test.cc" ]
   output_name = "flatland-a11y-view-test"
   deps = [
-    "//sdk/fidl/fuchsia.accessibility.scene",
-    "//sdk/fidl/fuchsia.logger",
-    "//sdk/fidl/fuchsia.tracing.provider",
-    "//sdk/fidl/fuchsia.ui.composition",
+    "//sdk/fidl/fuchsia.accessibility.scene:fuchsia.accessibility.scene_hlcpp",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_hlcpp",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/ui/scenic/cpp",
@@ -203,12 +203,12 @@ executable("flatland-scene-integration-test-bin") {
   sources = [ "flatland_scene_integration_test.cc" ]
   output_name = "flatland-scene-integration-test"
   deps = [
-    "//sdk/fidl/fuchsia.accessibility.scene",
-    "//sdk/fidl/fuchsia.logger",
-    "//sdk/fidl/fuchsia.tracing.provider",
-    "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.ui.composition",
-    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.accessibility.scene:fuchsia.accessibility.scene_hlcpp",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_hlcpp",
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_hlcpp",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/ui/scenic/cpp",

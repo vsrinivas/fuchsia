@@ -16,9 +16,9 @@ source_set("lib") {
     "//sdk/lib/syslog/cpp",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.camera3",
-    "//sdk/fidl/fuchsia.hardware.ram.metrics",
-    "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/fidl/fuchsia.camera3:fuchsia.camera3_hlcpp",
+    "//sdk/fidl/fuchsia.hardware.ram.metrics:fuchsia.hardware.ram.metrics_hlcpp",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//src/devices/lib/amlogic",

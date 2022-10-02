@@ -48,7 +48,7 @@ executable("magma_conformance_tests") {
     deps += [
       "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_cpp_wire",
       "//sdk/fidl/fuchsia.logger:fuchsia.logger_cpp_wire",
-      "//sdk/fidl/fuchsia.sysmem",
+      "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
       "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_cpp_wire",
       "//sdk/lib/fdio",
       "//src/graphics/lib/magma/src/magma_util/platform:logger",
@@ -85,7 +85,7 @@ executable("magma_conformance_tests_hermetic") {
     deps += [
       "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_cpp_wire",
       "//sdk/fidl/fuchsia.logger:fuchsia.logger_cpp_wire",
-      "//sdk/fidl/fuchsia.sysmem",
+      "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
       "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_cpp_wire",
       "//sdk/lib/fdio",
       "//src/graphics/lib/magma/src/magma_util/platform:logger",

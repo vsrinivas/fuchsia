@@ -26,7 +26,7 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.virtualization",
+    "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization_hlcpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/virtualization/lib/guest_config",
@@ -81,7 +81,7 @@ executable("guest_manager_test_bin") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
-    "//src/testing/fidl:placeholders",
+    "//src/testing/fidl:placeholders_hlcpp",
   ]
 }
 

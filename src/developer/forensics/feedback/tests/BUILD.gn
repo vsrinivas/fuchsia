@@ -30,8 +30,8 @@ executable("attachment_manager_unittest_exe") {
   sources = [ "attachment_manager_unittest.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.hwinfo",
-    "//sdk/fidl/fuchsia.intl",
+    "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo_hlcpp",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl_hlcpp",
     "//sdk/lib/fit-promise",
     "//src/developer/forensics/feedback/attachments",
     "//src/developer/forensics/feedback_data:constants",
@@ -101,7 +101,7 @@ executable("board_info_provider_unittest_exe") {
   sources = [ "board_info_provider_unittest.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.hwinfo",
+    "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo_hlcpp",
     "//src/developer/forensics/feedback/annotations:board_info_provider",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//third_party/googletest:gmock",
@@ -129,7 +129,7 @@ executable("current_channel_provider_unittest_exe") {
   sources = [ "current_channel_provider_unittest.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.hwinfo",
+    "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo_hlcpp",
     "//src/developer/forensics/feedback/annotations:current_channel_provider",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//third_party/googletest:gmock",
@@ -143,7 +143,7 @@ executable("data_register_unittest_exe") {
   sources = [ "data_register_unittest.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
     "//src/developer/forensics/feedback/annotations:data_register",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
@@ -211,7 +211,7 @@ executable("fidl_provider_unittest_exe") {
   sources = [ "fidl_provider_unittest.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.update.channelcontrol",
+    "//sdk/fidl/fuchsia.update.channelcontrol:fuchsia.update.channelcontrol_hlcpp",
     "//src/developer/forensics/feedback/annotations:fidl_provider",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
@@ -272,8 +272,8 @@ executable("last_reboot_unittest_exe") {
   sources = [ "last_reboot_unittest.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/fidl/fuchsia.hardware.power.statecontrol",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_hlcpp",
     "//src/developer/forensics/feedback:main_service",
     "//src/developer/forensics/feedback/reboot_log",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
@@ -297,7 +297,7 @@ executable("main_service_unittest_exe") {
   sources = [ "main_service_unittest.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
     "//src/developer/forensics/feedback:main_service",
     "//src/developer/forensics/feedback/reboot_log",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
@@ -342,7 +342,7 @@ executable("product_info_provider_unittest_exe") {
   sources = [ "product_info_provider_unittest.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.hwinfo",
+    "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo_hlcpp",
     "//src/developer/forensics/feedback/annotations:product_info_provider",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//third_party/googletest:gmock",

@@ -9,8 +9,8 @@ source_set("accessor2logger") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.diagnostics",
-    "//sdk/fidl/fuchsia.logger",
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_hlcpp",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
     "//sdk/lib/fit-promise",
   ]
   deps = [

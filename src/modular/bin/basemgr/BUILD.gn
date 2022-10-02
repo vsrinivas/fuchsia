@@ -16,10 +16,10 @@ executable("basemgr_bin") {
   deps = [
     ":basemgr_impl",
     ":lib",
-    "//sdk/fidl/fuchsia.hardware.power.statecontrol",
-    "//sdk/fidl/fuchsia.modular.internal",
-    "//sdk/fidl/fuchsia.session",
-    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_hlcpp",
+    "//sdk/fidl/fuchsia.modular.internal:fuchsia.modular.internal_hlcpp",
+    "//sdk/fidl/fuchsia.session:fuchsia.session_hlcpp",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
@@ -41,15 +41,15 @@ source_set("basemgr_impl") {
 
   public_deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.hardware.power.statecontrol",
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.modular.internal",
-    "//sdk/fidl/fuchsia.modular.session",
-    "//sdk/fidl/fuchsia.process.lifecycle",
-    "//sdk/fidl/fuchsia.session",
-    "//sdk/fidl/fuchsia.session.scene",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_hlcpp",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular_hlcpp",
+    "//sdk/fidl/fuchsia.modular.internal:fuchsia.modular.internal_hlcpp",
+    "//sdk/fidl/fuchsia.modular.session:fuchsia.modular.session_hlcpp",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_hlcpp",
+    "//sdk/fidl/fuchsia.session:fuchsia.session_hlcpp",
+    "//sdk/fidl/fuchsia.session.scene:fuchsia.session.scene_hlcpp",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_hlcpp",
+    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy_hlcpp",
     "//sdk/lib/fit",
     "//sdk/lib/fit-promise",
     "//src/modular/lib/async/cpp:future",
@@ -119,8 +119,8 @@ source_set("lib") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.hardware.power.statecontrol",
-    "//sdk/fidl/fuchsia.session",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_hlcpp",
+    "//sdk/fidl/fuchsia.session:fuchsia.session_hlcpp",
     "//src/lib/files",
     "//src/lib/fsl",
     "//src/modular/bin/basemgr/cobalt",
@@ -134,14 +134,14 @@ source_set("lib") {
 
   public_deps = [
     ":bounded_inspect_list_node",
-    "//sdk/fidl/fuchsia.component",
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.modular.internal",
-    "//sdk/fidl/fuchsia.modular.session",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.ui.input",
-    "//sdk/fidl/fuchsia.ui.policy",
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_hlcpp",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular_hlcpp",
+    "//sdk/fidl/fuchsia.modular.internal:fuchsia.modular.internal_hlcpp",
+    "//sdk/fidl/fuchsia.modular.session:fuchsia.modular.session_hlcpp",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_hlcpp",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_hlcpp",
+    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy_hlcpp",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/ui/scenic/cpp",
@@ -186,7 +186,7 @@ source_set("basemgr_impl_test_fixture") {
   ]
   public_deps = [
     ":basemgr_impl",
-    "//sdk/fidl/fuchsia.modular.internal",
+    "//sdk/fidl/fuchsia.modular.internal:fuchsia.modular.internal_hlcpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
@@ -194,7 +194,7 @@ source_set("basemgr_impl_test_fixture") {
     "//src/modular/lib/modular_config",
     "//src/modular/lib/modular_config:modular_config_accessor",
     "//src/modular/lib/pseudo_dir:pseudo_dir",
-    "//src/modular/tests:fuchsia.testing.modular",
+    "//src/modular/tests:fuchsia.testing.modular_hlcpp",
   ]
 }
 
@@ -212,7 +212,7 @@ executable("basemgr_v2_to_v1_unittest") {
   sources = [ "basemgr_v2_to_v1_unittest.cc" ]
   deps = [
     ":basemgr_impl_test_fixture",
-    "//examples/fidl/fuchsia.examples",
+    "//examples/fidl/fuchsia.examples:fuchsia.examples_hlcpp",
   ]
 }
 
@@ -231,7 +231,7 @@ executable("session_provider_unittest") {
   sources = [ "session_provider_unittest.cc" ]
   deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.hardware.power.statecontrol",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_hlcpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/files",
     "//src/lib/fxl/test:gtest_main",
@@ -301,11 +301,11 @@ executable("basemgr_non_hermetic_test") {
 
   deps = [
     ":basemgr_bin",
-    "//sdk/fidl/fuchsia.metrics",
-    "//sdk/fidl/fuchsia.modular.session",
-    "//sdk/fidl/fuchsia.process.lifecycle",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_hlcpp",
+    "//sdk/fidl/fuchsia.modular.session:fuchsia.modular.session_hlcpp",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_hlcpp",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_hlcpp",
+    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy_hlcpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/cobalt/bin/testing/mock_cobalt",
     "//src/lib/fxl/test:gtest_main",

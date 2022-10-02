@@ -15,7 +15,7 @@ source_set("lifecycle_impl") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",

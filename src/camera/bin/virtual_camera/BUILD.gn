@@ -25,7 +25,7 @@ source_set("virtual_camera_hal_controller") {
   ]
   public_deps = [
     ":stream_storage",
-    "//sdk/fidl/fuchsia.camera2.hal",
+    "//sdk/fidl/fuchsia.camera2.hal:fuchsia.camera2.hal_hlcpp",
     "//sdk/lib/fidl/cpp",
   ]
   deps = [ "//sdk/lib/syslog/cpp" ]
@@ -37,7 +37,7 @@ source_set("stream_storage") {
     "stream_storage.h",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.camera2.hal",
+    "//sdk/fidl/fuchsia.camera2.hal:fuchsia.camera2.hal_hlcpp",
     "//zircon/system/ulib/fbl",
   ]
 }
@@ -52,12 +52,12 @@ source_set("virtual_camera_agent") {
     "//src/camera/lib/stream_utils:stream_configs",
   ]
   public_deps = [
-    ":fuchsia.camera.test.virtualcamera",
+    ":fuchsia.camera.test.virtualcamera_hlcpp",
     ":stream_storage",
     ":virtual_camera_hal_controller",
-    "//sdk/fidl/fuchsia.hardware.camera",
+    "//sdk/fidl/fuchsia.hardware.camera:fuchsia.hardware.camera_hlcpp",
     "//sdk/lib/sys/cpp",
-    "//src/camera/bin/device_watcher:fuchsia.camera.test",
+    "//src/camera/bin/device_watcher:fuchsia.camera.test_hlcpp",
   ]
 }
 

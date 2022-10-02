@@ -11,8 +11,8 @@ source_set("mocks") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.accessibility.tts",
-    "//sdk/fidl/fuchsia.logger",
+    "//sdk/fidl/fuchsia.accessibility.tts:fuchsia.accessibility.tts_hlcpp",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",

@@ -13,9 +13,9 @@ sandbox_test_package("some_services") {
   sources = [ "some_services.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.debugdata",
-    "//sdk/fidl/fuchsia.process",
-    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.debugdata:fuchsia.debugdata_hlcpp",
+    "//sdk/fidl/fuchsia.process:fuchsia.process_hlcpp",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_hlcpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
     "//third_party/googletest:gmock",

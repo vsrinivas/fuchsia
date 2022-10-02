@@ -3,10 +3,11 @@
 # found in the LICENSE file.
 
 import("//build/fidl/fidl.gni")
+import("//build/fidl/toolchain.gni")
 
 group("service") {
   testonly = true
-  deps = [ ":event_pair" ]
+  deps = [ ":event_pair($fidl_toolchain)" ]
 }
 
 fidl("event_pair") {

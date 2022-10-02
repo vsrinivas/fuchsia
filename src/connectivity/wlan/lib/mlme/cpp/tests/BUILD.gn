@@ -27,15 +27,15 @@ source_set("test_main") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
-    "//sdk/fidl/fuchsia.wlan.ieee80211",
-    "//sdk/fidl/fuchsia.wlan.mlme",
+    "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211_hlcpp",
+    "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme_hlcpp",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//src/lib/timekeeper:testing",
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.wlan.internal",
     "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_banjo_c",
+    "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_hlcpp",
     "//third_party/googletest:gtest",
   ]
 
@@ -52,8 +52,8 @@ test("ap_mlme_tests") {
 
   deps = [
     ":test_main",
-    "//sdk/fidl/fuchsia.wlan.ieee80211",
-    "//sdk/fidl/fuchsia.wlan.mlme",
+    "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211_hlcpp",
+    "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme_hlcpp",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//third_party/googletest:gtest",
@@ -76,8 +76,8 @@ test("client_mlme_tests") {
   deps = [
     ":test_main",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
-    "//sdk/fidl/fuchsia.wlan.ieee80211",
-    "//sdk/fidl/fuchsia.wlan.mlme",
+    "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211_hlcpp",
+    "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme_hlcpp",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//third_party/googletest:gtest",
@@ -157,9 +157,9 @@ test("common_tests") {
 
   deps = [
     ":test_main",
-    "//sdk/fidl/fuchsia.wlan.common",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
-    "//sdk/fidl/fuchsia.wlan.stats",
+    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_hlcpp",
+    "//sdk/fidl/fuchsia.wlan.stats:fuchsia.wlan.stats_hlcpp",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//third_party/googletest:gtest",
   ]

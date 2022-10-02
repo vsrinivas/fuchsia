@@ -12,11 +12,11 @@ source_set("tiles_lib") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.developer.tiles",
-    "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.ui.gfx",
-    "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.developer.tiles:fuchsia.developer.tiles_hlcpp",
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_hlcpp",
+    "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx_hlcpp",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/ui/base_view",
     "//zircon/system/ulib/async:async-cpp",
@@ -24,7 +24,7 @@ source_set("tiles_lib") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_hlcpp",
     "//src/lib/fxl",
   ]
 }
@@ -36,8 +36,8 @@ executable("bin") {
 
   deps = [
     ":tiles_lib",
-    "//sdk/fidl/fuchsia.ui.policy",
-    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy_hlcpp",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
     "//src/lib/fxl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

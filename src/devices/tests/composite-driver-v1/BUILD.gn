@@ -74,8 +74,8 @@ fuchsia_driver_component("composite-device-component") {
 test("composite-driver-v1-test") {
   sources = [ "test.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.driver.test",
-    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_hlcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
     "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/driver_test_realm/realm_builder/cpp",
     "//sdk/lib/sys/component/cpp",

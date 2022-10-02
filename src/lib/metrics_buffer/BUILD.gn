@@ -43,8 +43,8 @@ executable("metrics_buffer_unittests") {
 
   deps = [
     ":metrics_buffer",
-    "//sdk/fidl/fuchsia.metrics",
     "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_cpp_wire",
+    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_hlcpp",
     "//sdk/lib/fdio:fdio",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",

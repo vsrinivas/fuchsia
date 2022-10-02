@@ -22,8 +22,8 @@ source_set("test_view") {
     "test_view.h",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_hlcpp",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/syslog/cpp:cpp-macros",
@@ -40,14 +40,14 @@ source_set("portable_ui_test") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.logger",
-    "//sdk/fidl/fuchsia.scheduler",
-    "//sdk/fidl/fuchsia.sysmem",
-    "//sdk/fidl/fuchsia.tracing.provider",
-    "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.ui.test.input",
-    "//sdk/fidl/fuchsia.ui.test.scene",
-    "//sdk/fidl/fuchsia.vulkan.loader",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
+    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_hlcpp",
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_hlcpp",
+    "//sdk/fidl/fuchsia.ui.test.input:fuchsia.ui.test.input_hlcpp",
+    "//sdk/fidl/fuchsia.ui.test.scene:fuchsia.ui.test.scene_hlcpp",
+    "//sdk/fidl/fuchsia.vulkan.loader:fuchsia.vulkan.loader_hlcpp",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//src/lib/testing/loop_fixture",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

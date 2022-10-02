@@ -44,8 +44,8 @@ test("f2fs_unit") {
   public = [ "unit/unit_lib.h" ]
   deps = [
     "//sdk/fidl/fuchsia.fs:fuchsia.fs_cpp_wire",
-    "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",

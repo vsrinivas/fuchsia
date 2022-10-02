@@ -34,7 +34,7 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.hardware.display",
+    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_hlcpp",
     "//sdk/lib/sys/cpp",
     "//src/graphics/display/drivers/fake:fake-display-device-tree",
     "//src/graphics/display/drivers/fake:sysmem-proxy-device",

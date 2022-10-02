@@ -18,7 +18,7 @@ source_set("sshd_constants") {
 source_set("lib") {
   sources = [ "service.cc" ]
   public_deps = [
-    "//sdk/fidl/fuchsia.boot",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
@@ -72,7 +72,7 @@ executable("test") {
   sources = [ "test.cc" ]
   deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.boot",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",

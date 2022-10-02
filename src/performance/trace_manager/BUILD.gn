@@ -31,8 +31,8 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.tracing.controller",
-    "//sdk/fidl/fuchsia.tracing.provider",
+    "//sdk/fidl/fuchsia.tracing.controller:fuchsia.tracing.controller_hlcpp",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",

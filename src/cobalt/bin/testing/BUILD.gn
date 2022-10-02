@@ -19,7 +19,7 @@ source_set("stub_metric_event_logger_lib") {
 
   public_deps = [
     ":log_metric_method",
-    "//sdk/fidl/fuchsia.metrics",
+    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_hlcpp",
   ]
 }
 

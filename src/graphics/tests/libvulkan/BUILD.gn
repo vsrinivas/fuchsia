@@ -10,7 +10,7 @@ source_set("src") {
 
   sources = [ "libvulkan_test.cc" ]
   public_deps = [
-    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:test_settings",
@@ -35,7 +35,7 @@ executable("fake_vulkan_loader_bin") {
   sources = [ "fake_vulkan_loader.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.vulkan.loader",
+    "//sdk/fidl/fuchsia.vulkan.loader:fuchsia.vulkan.loader_hlcpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

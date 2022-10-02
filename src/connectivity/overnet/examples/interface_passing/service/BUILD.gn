@@ -3,10 +3,11 @@
 # found in the LICENSE file.
 
 import("//build/fidl/fidl.gni")
+import("//build/fidl/toolchain.gni")
 
 group("service") {
   testonly = true
-  deps = [ ":interface_passing" ]
+  deps = [ ":interface_passing($fidl_toolchain)" ]
 }
 
 fidl("interface_passing") {

@@ -17,7 +17,7 @@ source_set("last_reboot_info_provider") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
     "//src/developer/forensics/feedback/reboot_log",
   ]
 
@@ -31,7 +31,7 @@ source_set("reboot_watcher") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.hardware.power.statecontrol",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//src/developer/forensics/utils/cobalt",
   ]
@@ -50,8 +50,8 @@ source_set("reporter") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/fidl/fuchsia.metrics",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
+    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_hlcpp",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/feedback/reboot_log",

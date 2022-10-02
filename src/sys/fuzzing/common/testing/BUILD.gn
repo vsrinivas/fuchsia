@@ -67,7 +67,7 @@ executable("fuzzer-bin") {
   deps = [
     ":testing",
     "//src/lib/fxl",
-    "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
+    "//src/sys/fuzzing/fidl:fuchsia.fuzzer_hlcpp",
   ]
 }
 

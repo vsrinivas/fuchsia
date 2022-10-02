@@ -38,7 +38,7 @@ source_set("tests_not_requiring_hardware") {
 
   deps = [
     ":test_deps",
-    "//sdk/fidl/fuchsia.scheduler",
+    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
     "//sdk/lib/fdio",
     "//src/graphics/lib/magma/tests/mock:bus_mapper",
   ]

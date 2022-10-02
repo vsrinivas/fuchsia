@@ -35,8 +35,8 @@ template("engine_library") {
     ]
 
     public_deps = [
-      "//sdk/fidl/fuchsia.hardware.display",
-      "//sdk/fidl/fuchsia.ui.display.color",
+      "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_hlcpp",
+      "//sdk/fidl/fuchsia.ui.display.color:fuchsia.ui.display.color_hlcpp",
       "//sdk/lib/sys/inspect/cpp",
       "//src/lib/fxl",
       "//src/ui/scenic/lib/display",

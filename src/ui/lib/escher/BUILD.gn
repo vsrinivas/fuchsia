@@ -427,8 +427,8 @@ template("escher_library") {
         "util/fuchsia_utils.h",
       ]
       public_deps += [
-        "//sdk/fidl/fuchsia.images",
-        "//sdk/fidl/fuchsia.sysmem",
+        "//sdk/fidl/fuchsia.images:fuchsia.images_hlcpp",
+        "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
         "//sdk/lib/fidl/cpp",
         "//sdk/lib/fit",
         "//sdk/lib/vfs/cpp",

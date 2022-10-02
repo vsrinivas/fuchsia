@@ -35,7 +35,7 @@ source_set("dummy_system") {
     "dummy_system.h",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
     "//src/ui/scenic/lib/scenic",
     "//zircon/system/ulib/inspect",
   ]

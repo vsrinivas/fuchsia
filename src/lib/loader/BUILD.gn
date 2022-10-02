@@ -16,7 +16,7 @@ source_set("loader") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_hlcpp",
     "//src/lib/fxl",
   ]
 }

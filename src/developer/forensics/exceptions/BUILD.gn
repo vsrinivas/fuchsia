@@ -30,11 +30,11 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.exception",
+    "//sdk/fidl/fuchsia.exception:fuchsia.exception_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/exceptions/fidl:fuchsia.exception.internal",
+    "//src/developer/forensics/exceptions/fidl:fuchsia.exception.internal_hlcpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//third_party/rapidjson",

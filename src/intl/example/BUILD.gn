@@ -31,7 +31,7 @@ executable("src_intl_example_bin") {
     # This is the underlying generated FIDL code, must be included so that
     # its settings make it to the -I flag for compiler invocation.
     # Generate all needed intermediate resources.
-    ":fuchsia.intl.l10n",
+    ":fuchsia.intl.l10n_hlcpp",
     ":l10n",
   ]
 

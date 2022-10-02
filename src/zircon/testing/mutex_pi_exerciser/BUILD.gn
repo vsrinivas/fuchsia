@@ -19,7 +19,7 @@ executable("bin") {
     "tracer.cc",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.scheduler",
+    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/stdcompat",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

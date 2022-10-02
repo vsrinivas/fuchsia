@@ -6,7 +6,7 @@ source_set("connect") {
   sources = [ "connect.h" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_hlcpp",
     "//sdk/lib/fidl/cpp",
   ]
 }

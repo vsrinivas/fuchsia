@@ -10,7 +10,7 @@ executable("modular_test_harness_bin") {
   sources = [ "modular_test_harness.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/fidl/fuchsia.modular.testing:fuchsia.modular.testing_hlcpp",
     "//sdk/lib/sys/cpp",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_impl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -30,9 +30,9 @@ executable("test_session_shell_bin") {
   sources = [ "test_session_shell.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular_hlcpp",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//src/modular/lib/app_driver/cpp",
     "//src/modular/lib/fidl:single_service_app",
@@ -53,8 +53,8 @@ executable("test_story_shell_bin") {
   sources = [ "test_story_shell.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular_hlcpp",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
     "//src/lib/fsl",
     "//src/modular/lib/app_driver/cpp",
     "//src/modular/lib/fidl:single_service_app",
@@ -82,8 +82,8 @@ executable("modular_test_harness_test") {
   testonly = true
   sources = [ "modular_test_harness_test.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.modular.testing:fuchsia.modular.testing_hlcpp",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl/test:gtest_main",

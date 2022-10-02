@@ -11,7 +11,7 @@ source_set("focus_chain") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.ui.focus",
+    "//sdk/fidl/fuchsia.ui.focus:fuchsia.ui.focus_hlcpp",
     "//src/ui/a11y/lib/view",
   ]
 

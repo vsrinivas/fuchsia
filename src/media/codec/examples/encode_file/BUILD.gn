@@ -14,7 +14,7 @@ executable("encode_file") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.mediacodec",
+    "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec_hlcpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/media/lib/test:codec_buffer",

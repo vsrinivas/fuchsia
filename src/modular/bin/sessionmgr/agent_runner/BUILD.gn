@@ -13,8 +13,8 @@ source_set("agent_runner") {
 
   public_deps = [
     ":public",
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular_hlcpp",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
@@ -22,8 +22,8 @@ source_set("agent_runner") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.intl",
-    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl_hlcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
     "//sdk/lib/fdio",
     "//src/lib/fsl",
     "//src/lib/json_parser",
@@ -43,8 +43,8 @@ executable("agent_runner_unittest") {
   deps = [
     ":agent_runner",
     ":public",
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular_hlcpp",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fsl",
@@ -56,7 +56,7 @@ executable("agent_runner_unittest") {
     "//src/modular/lib/fidl:array_to_string",
     "//src/modular/lib/modular_config:modular_config",
     "//src/modular/lib/pseudo_dir",
-    "//src/modular/tests:fuchsia.testing.modular",
+    "//src/modular/tests:fuchsia.testing.modular_hlcpp",
     "//zircon/system/ulib/trace",
   ]
 }
@@ -76,8 +76,8 @@ source_set("public") {
   sources = [ "agent_runner.h" ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular_hlcpp",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//src/modular/bin/sessionmgr:agent_services_factory",

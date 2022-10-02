@@ -2,11 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fidl/toolchain.gni")
+
 group("codelab") {
   testonly = true
   deps = [
     "//build/validate:non_production_tag",
-    "//src/security/codelab/services:codelab",
+    "//src/security/codelab/services:codelab($fidl_toolchain)",
     "//src/security/codelab/smart_door:smart-door",
     "//src/security/codelab/smart_door_memory:smart-door-memory",
   ]

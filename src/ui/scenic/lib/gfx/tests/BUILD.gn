@@ -37,10 +37,10 @@ source_set("testing_deps") {
     "vk_util.h",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.ui.gfx",
-    "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/fidl/fuchsia.ui.scenic.internal",
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx_hlcpp",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
+    "//sdk/fidl/fuchsia.ui.scenic.internal:fuchsia.ui.scenic.internal_hlcpp",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/ui/scenic/cpp",

@@ -221,14 +221,14 @@ source_set("gfx") {
     "//src/lib/fostr/fidl/fuchsia.ui.gfx",
 
     # TODO(fxbug.dev/44143): Gfx should not depend on Input.
-    "//sdk/fidl/fuchsia.math",
-    "//sdk/fidl/fuchsia.ui.annotation",
-    "//sdk/fidl/fuchsia.ui.display.color",
-    "//sdk/fidl/fuchsia.ui.focus",
-    "//sdk/fidl/fuchsia.ui.gfx",
-    "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/fidl/fuchsia.ui.scenic.internal",
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.math:fuchsia.math_hlcpp",
+    "//sdk/fidl/fuchsia.ui.annotation:fuchsia.ui.annotation_hlcpp",
+    "//sdk/fidl/fuchsia.ui.display.color:fuchsia.ui.display.color_hlcpp",
+    "//sdk/fidl/fuchsia.ui.focus:fuchsia.ui.focus_hlcpp",
+    "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx_hlcpp",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
+    "//sdk/fidl/fuchsia.ui.scenic.internal:fuchsia.ui.scenic.internal_hlcpp",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
@@ -253,7 +253,7 @@ source_set("gfx") {
   deps = [
     ":ids",
     ":object_linker",
-    "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/graphics/display/drivers/display:preferred-scanout-image-type",
     "//src/lib/fsl",
@@ -321,7 +321,7 @@ source_set("validate_eventpair") {
     "util/validate_eventpair.h",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
     "//sdk/lib/syslog/cpp",
     "//zircon/system/public",
     "//zircon/system/ulib/zx",

@@ -70,13 +70,13 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.hardware.power.statecontrol",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_hlcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
-    "//sdk/fidl/fuchsia.process",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.sys.internal",
-    "//sdk/fidl/fuchsia.sys.test",
-    "//sdk/fidl/fuchsia.sys2",
+    "//sdk/fidl/fuchsia.process:fuchsia.process_hlcpp",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_hlcpp",
+    "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal_hlcpp",
+    "//sdk/fidl/fuchsia.sys.test:fuchsia.sys.test_hlcpp",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_hlcpp",
     "//sdk/lib/fit-promise",
     "//sdk/lib/stdcompat",
     "//sdk/lib/sys/cpp",
@@ -128,11 +128,11 @@ source_set("appmgr_for_test") {
 
   public_deps = [
     ":lib",
-    "fidl/fuchsia.appmgr",
-    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle",
+    "fidl/fuchsia.appmgr:fuchsia.appmgr_hlcpp",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_cpp_wire",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.sys.test",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_hlcpp",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_hlcpp",
+    "//sdk/fidl/fuchsia.sys.test:fuchsia.sys.test_hlcpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/lib/storage/vfs/cpp",
@@ -165,9 +165,9 @@ executable("bin") {
 
   deps = [
     ":lib",
-    "fidl/fuchsia.appmgr",
-    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle",
+    "fidl/fuchsia.appmgr:fuchsia.appmgr_hlcpp",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_cpp_wire",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_hlcpp",
     "//sdk/lib/sys/cpp",
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
@@ -217,7 +217,7 @@ executable("unittest_bin") {
   deps = [
     ":appmgr_for_test",
     ":lib",
-    "//sdk/fidl/fuchsia.sys.internal",
+    "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal_hlcpp",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
@@ -225,7 +225,7 @@ executable("unittest_bin") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/storage/memfs:cpp",
-    "//src/testing/fidl:placeholders",
+    "//src/testing/fidl:placeholders_hlcpp",
     "//third_party/googletest:gmock",
     "//zircon/system/public",
     "//zircon/system/ulib/zx",

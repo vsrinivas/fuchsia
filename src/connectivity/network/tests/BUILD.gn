@@ -9,7 +9,7 @@ test("name_provider_service_not_present_test") {
   sources = [ "name_provider_service_not_present_test.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.device",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_hlcpp",
     "//src/lib/fxl/test:gtest_main",
   ]
 }

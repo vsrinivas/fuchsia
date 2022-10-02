@@ -28,8 +28,8 @@ executable("fake_crash_reporter_exe") {
   ]
 
   deps = [
-    ":fuchsia.feedback.testing",
-    "//sdk/fidl/fuchsia.feedback",
+    ":fuchsia.feedback.testing_hlcpp",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",

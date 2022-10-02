@@ -12,7 +12,7 @@ source_set("screen_capture") {
     "screen_capture_manager.h",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.ui.composition",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
     "//sdk/lib/fit",
     "//src/lib/fsl:fsl",
     "//src/ui/lib/escher",

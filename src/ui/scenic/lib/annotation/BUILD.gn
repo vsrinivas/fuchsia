@@ -11,8 +11,8 @@ source_set("annotation_registry") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.ui.annotation",
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.ui.annotation:fuchsia.ui.annotation_hlcpp",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
     "//sdk/lib/fit",
     "//src/lib/fxl",
   ]

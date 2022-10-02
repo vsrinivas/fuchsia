@@ -17,8 +17,8 @@ executable("vkext_bin") {
 
   deps = [
     "../vkreadback:helper",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
     "//sdk/lib/fdio",
     "//src/graphics/lib/magma/src/magma_util/platform:logger_impl",
     "//src/graphics/lib/magma/src/magma_util/platform:semaphore",

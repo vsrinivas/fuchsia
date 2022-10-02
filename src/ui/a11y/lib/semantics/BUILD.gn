@@ -18,16 +18,16 @@ source_set("semantics") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.accessibility.semantics",
-    "//sdk/fidl/fuchsia.math",
+    "//sdk/fidl/fuchsia.accessibility.semantics:fuchsia.accessibility.semantics_hlcpp",
+    "//sdk/fidl/fuchsia.math:fuchsia.math_hlcpp",
     "//src/ui/a11y/lib/util",
     "//src/ui/scenic/lib/gfx",
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.ui.gfx",
-    "//sdk/fidl/fuchsia.ui.input",
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx_hlcpp",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_hlcpp",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",

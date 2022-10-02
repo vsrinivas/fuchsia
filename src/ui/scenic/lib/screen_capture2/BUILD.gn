@@ -9,7 +9,7 @@ source_set("screen_capture2") {
     "screen_capture2_manager.cc",
     "screen_capture2_manager.h",
   ]
-  public_deps = [ "//sdk/fidl/fuchsia.ui.composition.internal" ]
+  public_deps = [ "//sdk/fidl/fuchsia.ui.composition.internal:fuchsia.ui.composition.internal_hlcpp" ]
 
   deps = [
     "//sdk/lib/sys/cpp",

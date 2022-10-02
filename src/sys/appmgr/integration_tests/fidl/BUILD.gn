@@ -3,13 +3,14 @@
 # found in the LICENSE file.
 
 import("//build/fidl/fidl.gni")
+import("//build/fidl/toolchain.gni")
 
 group("fidl") {
   testonly = true
   deps = [
-    ":echo",
-    ":test.component.mockrunner",
-    "fuchsia.testing.appmgr",
+    ":echo($fidl_toolchain)",
+    ":test.component.mockrunner($fidl_toolchain)",
+    "fuchsia.testing.appmgr($fidl_toolchain)",
   ]
 }
 

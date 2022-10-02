@@ -14,7 +14,7 @@ executable("snapshotter_integration_test_exe") {
   sources = [ "snapshotter_integration_test.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.mem",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem_hlcpp",
     "//src/developer/forensics/snapshot:snapshotter",
     "//src/developer/forensics/utils:archive",
     "//src/lib/files",
@@ -30,7 +30,7 @@ executable("snapshotter_unittest_exe") {
   sources = [ "snapshotter_unittest.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/snapshot:snapshotter",

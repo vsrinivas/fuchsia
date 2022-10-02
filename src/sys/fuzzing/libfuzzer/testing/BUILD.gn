@@ -47,7 +47,7 @@ executable("fuzzer") {
     "fuzzer.h",
   ]
   public_deps = [
-    ":test.fuzzer",
+    ":test.fuzzer_hlcpp",
     "//src/sys/fuzzing/common/testing",
   ]
   deps = [
@@ -70,7 +70,7 @@ executable("relay") {
     "relay.h",
   ]
   public_deps = [
-    ":test.fuzzer",
+    ":test.fuzzer_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/syslog/cpp",
     "//sdk/testing/fidl:test_support",

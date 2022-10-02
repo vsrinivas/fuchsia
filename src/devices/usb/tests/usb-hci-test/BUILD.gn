@@ -52,7 +52,7 @@ test("usb-hci-test") {
     "EXPECTED_ISOCH_PACKETS=119000",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.usb.hcitest",
+    "//sdk/fidl/fuchsia.hardware.usb.hcitest:fuchsia.hardware.usb.hcitest_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",

@@ -29,7 +29,7 @@ source_set("mixer") {
 
   public_deps = [
     ":constants",
-    "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
     "//src/media/audio/lib/format2",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/ffl",

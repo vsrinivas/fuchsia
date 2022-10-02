@@ -28,8 +28,8 @@ source_set("utils") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_cpp",
-    "//sdk/fidl/fuchsia.sysmem",
-    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
     "//sdk/lib/sys/component/cpp",
     "//src/lib/fidl/cpp/contrib/connection:service_hub_connector",
     "//src/ui/scenic/lib/scheduling:frame_metrics_registry_cc",

@@ -15,7 +15,7 @@ source_set("sync_service") {
 
   public_deps = [
     "//sdk/lib/fdio",
-    "//src/connectivity/network/testing/netemul/sync-manager/fidl:sync",
+    "//src/connectivity/network/testing/netemul/sync-manager/fidl:sync_hlcpp",
     "//src/lib/fxl",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-default",

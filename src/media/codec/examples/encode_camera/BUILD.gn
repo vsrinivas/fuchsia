@@ -16,8 +16,8 @@ executable("encode_camera") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.camera3",
-    "//sdk/fidl/fuchsia.mediacodec",
+    "//sdk/fidl/fuchsia.camera3:fuchsia.camera3_hlcpp",
+    "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec_hlcpp",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",

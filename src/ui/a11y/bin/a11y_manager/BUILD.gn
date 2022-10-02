@@ -162,22 +162,22 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.accessibility",
-    "//sdk/fidl/fuchsia.accessibility.gesture",
-    "//sdk/fidl/fuchsia.accessibility.semantics",
-    "//sdk/fidl/fuchsia.accessibility.tts",
-    "//sdk/fidl/fuchsia.intl",
-    "//sdk/fidl/fuchsia.math",
-    "//sdk/fidl/fuchsia.settings",
-    "//sdk/fidl/fuchsia.ui.input.accessibility",
+    "//sdk/fidl/fuchsia.accessibility:fuchsia.accessibility_hlcpp",
+    "//sdk/fidl/fuchsia.accessibility.gesture:fuchsia.accessibility.gesture_hlcpp",
+    "//sdk/fidl/fuchsia.accessibility.semantics:fuchsia.accessibility.semantics_hlcpp",
+    "//sdk/fidl/fuchsia.accessibility.tts:fuchsia.accessibility.tts_hlcpp",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl_hlcpp",
+    "//sdk/fidl/fuchsia.math:fuchsia.math_hlcpp",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_hlcpp",
+    "//sdk/fidl/fuchsia.ui.input.accessibility:fuchsia.ui.input.accessibility_hlcpp",
     "//src/ui/a11y/lib",
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.ui.gfx",
-    "//sdk/fidl/fuchsia.ui.input",
-    "//sdk/fidl/fuchsia.ui.policy",
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx_hlcpp",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_hlcpp",
+    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy_hlcpp",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",

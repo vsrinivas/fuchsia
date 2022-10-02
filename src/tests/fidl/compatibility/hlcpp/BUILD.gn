@@ -17,7 +17,7 @@ executable("bin") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/tests/fidl/compatibility:hlcpp_client_app",
-    "//src/tests/fidl/compatibility/fidl:fidl_service",
+    "//src/tests/fidl/compatibility/fidl:fidl_service_hlcpp",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

@@ -16,8 +16,8 @@ source_set("render") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.math",
-    "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.math:fuchsia.math_hlcpp",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
     "//sdk/lib/media/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/media/playback/mediaplayer/graph",

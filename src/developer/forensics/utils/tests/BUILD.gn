@@ -16,8 +16,8 @@ executable("archive_unittest_exe") {
   sources = [ "archive_unittest.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/fidl/fuchsia.mem",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem_hlcpp",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/testing:gmatchers",
     "//src/developer/forensics/testing:gpretty_printers",
@@ -54,7 +54,7 @@ executable("component_unittest_exe") {
   sources = [ "component_unittest.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.process.lifecycle",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
@@ -118,7 +118,7 @@ executable("log_format_unittest_exe") {
   sources = [ "log_format_unittest.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.logger",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/utils:logs",
     "//src/lib/fxl/test:gtest_main",

@@ -64,17 +64,17 @@ source_set("lib") {
 
   public_deps = [
     ":focus_dispatcher",
-    "//sdk/fidl/fuchsia.accessibility",
-    "//sdk/fidl/fuchsia.input.virtualkeyboard",
-    "//sdk/fidl/fuchsia.ui.accessibility.view",
-    "//sdk/fidl/fuchsia.ui.brightness",
-    "//sdk/fidl/fuchsia.ui.gfx",
-    "//sdk/fidl/fuchsia.ui.input.accessibility",
-    "//sdk/fidl/fuchsia.ui.keyboard.focus",
-    "//sdk/fidl/fuchsia.ui.pointerinjector.configuration",
-    "//sdk/fidl/fuchsia.ui.policy",
-    "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.accessibility:fuchsia.accessibility_hlcpp",
+    "//sdk/fidl/fuchsia.input.virtualkeyboard:fuchsia.input.virtualkeyboard_hlcpp",
+    "//sdk/fidl/fuchsia.ui.accessibility.view:fuchsia.ui.accessibility.view_hlcpp",
+    "//sdk/fidl/fuchsia.ui.brightness:fuchsia.ui.brightness_hlcpp",
+    "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx_hlcpp",
+    "//sdk/fidl/fuchsia.ui.input.accessibility:fuchsia.ui.input.accessibility_hlcpp",
+    "//sdk/fidl/fuchsia.ui.keyboard.focus:fuchsia.ui.keyboard.focus_hlcpp",
+    "//sdk/fidl/fuchsia.ui.pointerinjector.configuration:fuchsia.ui.pointerinjector.configuration_hlcpp",
+    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy_hlcpp",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/ui/scenic/cpp",
@@ -89,10 +89,10 @@ source_set("lib") {
     ":displays",
     ":safe_presenter",
     ":virtual_keyboard",
-    "//sdk/fidl/fuchsia.accessibility",
-    "//sdk/fidl/fuchsia.ui.gfx",
-    "//sdk/fidl/fuchsia.ui.pointerinjector.configuration",
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.accessibility:fuchsia.accessibility_hlcpp",
+    "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx_hlcpp",
+    "//sdk/fidl/fuchsia.ui.pointerinjector.configuration:fuchsia.ui.pointerinjector.configuration_hlcpp",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
@@ -114,7 +114,7 @@ source_set("displays") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy_hlcpp",
     "//src/lib/fxl",
   ]
 
@@ -130,8 +130,8 @@ source_set("focus_dispatcher") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.ui.focus",
-    "//sdk/fidl/fuchsia.ui.keyboard.focus",
+    "//sdk/fidl/fuchsia.ui.focus:fuchsia.ui.focus_hlcpp",
+    "//sdk/fidl/fuchsia.ui.keyboard.focus:fuchsia.ui.keyboard.focus_hlcpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
   ]
@@ -147,11 +147,11 @@ source_set("color_transform") {
 
   deps = [
     ":safe_presenter",
-    "//sdk/fidl/fuchsia.accessibility",
-    "//sdk/fidl/fuchsia.ui.brightness",
-    "//sdk/fidl/fuchsia.ui.gfx",
-    "//sdk/fidl/fuchsia.ui.policy",
-    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.accessibility:fuchsia.accessibility_hlcpp",
+    "//sdk/fidl/fuchsia.ui.brightness:fuchsia.ui.brightness_hlcpp",
+    "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx_hlcpp",
+    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy_hlcpp",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/ui/scenic/cpp",
   ]
@@ -191,7 +191,7 @@ source_set("virtual_keyboard") {
 
   deps = [
     ":focus_dispatcher",
-    "//sdk/fidl/fuchsia.input.virtualkeyboard",
+    "//sdk/fidl/fuchsia.input.virtualkeyboard:fuchsia.input.virtualkeyboard_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",

@@ -37,7 +37,7 @@ sandbox_test_package("has_isolated_cache_storage") {
   sources = [ "has_isolated_cache_storage.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.sys.test",
+    "//sdk/fidl/fuchsia.sys.test:fuchsia.sys.test_hlcpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
     "//third_party/googletest:gmock",
@@ -54,7 +54,7 @@ executable("isolated_persistent_storage_bin") {
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
-    "//src/sys/appmgr/integration_tests/util:data_file_reader_writer",
+    "//src/sys/appmgr/integration_tests/util:data_file_reader_writer_hlcpp",
     "//src/sys/appmgr/integration_tests/util:data_file_reader_writer_util",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

@@ -20,9 +20,9 @@ source_set("effects_loader") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.audio.effects",
     "//sdk/fidl/fuchsia.audio.effects:fuchsia.audio.effects_cpp_wire",
-    "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.audio.effects:fuchsia.audio.effects_hlcpp",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
     "//sdk/lib/media/audio/effects",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",

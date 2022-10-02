@@ -31,18 +31,18 @@ source_set("app") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.component",
-    "//sdk/fidl/fuchsia.component.decl",
-    "//sdk/fidl/fuchsia.component.runner",
-    "//sdk/fidl/fuchsia.gpu.magma",
-    "//sdk/fidl/fuchsia.hardware.goldfish",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_hlcpp",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_hlcpp",
+    "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner_hlcpp",
+    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_hlcpp",
+    "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_hlcpp",
     "//sdk/lib/sys/inspect/cpp",
     "//src/lib/json_parser",
     "//src/lib/storage/vfs/cpp",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.io",
-    "//sdk/fidl/fuchsia.vulkan.loader",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
+    "//sdk/fidl/fuchsia.vulkan.loader:fuchsia.vulkan.loader_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
@@ -61,10 +61,10 @@ executable("bin") {
 
   deps = [
     ":app",
-    "//sdk/fidl/fuchsia.gpu.magma",
-    "//sdk/fidl/fuchsia.io",
-    "//sdk/fidl/fuchsia.process.lifecycle",
-    "//sdk/fidl/fuchsia.vulkan.loader",
+    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_hlcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_hlcpp",
+    "//sdk/fidl/fuchsia.vulkan.loader:fuchsia.vulkan.loader_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",

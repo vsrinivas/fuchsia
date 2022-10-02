@@ -47,7 +47,7 @@ executable("test_bin") {
   deps = [
     ":lib",
     "//sdk/lib/sys/cpp",
-    "//src/lib/fake-clock/fidl",
+    "//src/lib/fake-clock/fidl:fidl_hlcpp",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",

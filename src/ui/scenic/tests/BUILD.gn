@@ -55,13 +55,13 @@ source_set("scenic_realm_builder") {
     "utils/scenic_realm_builder.h",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.logger",
-    "//sdk/fidl/fuchsia.scheduler",
-    "//sdk/fidl/fuchsia.sysmem",
-    "//sdk/fidl/fuchsia.tracing.provider",
-    "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/fidl/fuchsia.vulkan.loader",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
+    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_hlcpp",
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_hlcpp",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
+    "//sdk/fidl/fuchsia.vulkan.loader:fuchsia.vulkan.loader_hlcpp",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/syslog/cpp",
     "//src/ui/testing/ui_test_realm:test_realms",
@@ -76,7 +76,7 @@ source_set("screen_capture_utils") {
   ]
   public_deps = [
     ":common_deps",
-    "//sdk/fidl/fuchsia.ui.composition",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
     "//src/ui/scenic/lib/allocation:allocation",
     "//src/ui/scenic/lib/flatland/engine",
     "//zircon/system/ulib/fbl",
@@ -91,8 +91,8 @@ source_set("gfx_pixel_test") {
   ]
   public_deps = [
     ":scenic_realm_builder",
-    "//sdk/fidl/fuchsia.ui.annotation",
-    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.annotation:fuchsia.ui.annotation_hlcpp",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/testing/loop_fixture",
@@ -106,7 +106,7 @@ executable("gfx_focus_integration_test_bin") {
   sources = [ "gfx_integration_tests/gfx_focus_integration_test.cc" ]
   deps = [
     ":common_deps_cts",
-    "//sdk/fidl/fuchsia.ui.focus",
+    "//sdk/fidl/fuchsia.ui.focus:fuchsia.ui.focus_hlcpp",
   ]
 }
 
@@ -121,7 +121,7 @@ executable("gfx_legacy_coordinate_transform_test2_bin") {
   sources = [ "gfx_integration_tests/gfx_legacy_coordinate_transform_test2.cc" ]
   deps = [
     ":common_deps_cts",
-    "//sdk/fidl/fuchsia.ui.pointerinjector",
+    "//sdk/fidl/fuchsia.ui.pointerinjector:fuchsia.ui.pointerinjector_hlcpp",
   ]
 }
 
@@ -139,9 +139,9 @@ executable("gfx_touch_integration_test_bin") {
   ]
   deps = [
     ":common_deps_cts",
-    "//sdk/fidl/fuchsia.ui.pointer",
-    "//sdk/fidl/fuchsia.ui.pointer.augment",
-    "//sdk/fidl/fuchsia.ui.pointerinjector",
+    "//sdk/fidl/fuchsia.ui.pointer:fuchsia.ui.pointer_hlcpp",
+    "//sdk/fidl/fuchsia.ui.pointer.augment:fuchsia.ui.pointer.augment_hlcpp",
+    "//sdk/fidl/fuchsia.ui.pointerinjector:fuchsia.ui.pointerinjector_hlcpp",
   ]
 }
 
@@ -156,8 +156,8 @@ executable("gfx_mouse_integration_test_bin") {
   sources = [ "gfx_integration_tests/gfx_mouse_integration_test.cc" ]
   deps = [
     ":common_deps_cts",
-    "//sdk/fidl/fuchsia.ui.pointer",
-    "//sdk/fidl/fuchsia.ui.pointerinjector",
+    "//sdk/fidl/fuchsia.ui.pointer:fuchsia.ui.pointer_hlcpp",
+    "//sdk/fidl/fuchsia.ui.pointerinjector:fuchsia.ui.pointerinjector_hlcpp",
   ]
 }
 
@@ -173,7 +173,7 @@ executable("gfx_view_ref_installed_integration_test_bin") {
       [ "gfx_integration_tests/gfx_view_ref_installed_integration_test.cc" ]
   deps = [
     ":common_deps_cts",
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
   ]
 }
 
@@ -209,7 +209,7 @@ executable("scenic_pixeltest_bin") {
   deps = [
     ":gfx_pixel_test",
     ":scenic_realm_builder",
-    "//sdk/fidl/fuchsia.images",
+    "//sdk/fidl/fuchsia.images:fuchsia.images_hlcpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/ui/lib/yuv",
     "//src/ui/scenic/lib/gfx/tests:gfx_tests_main",
@@ -231,9 +231,9 @@ executable("flatland_touch_integration_test_bin") {
   sources = [ "flatland_integration_tests/flatland_touch_integration_test.cc" ]
   deps = [
     ":common_deps_cts",
-    "//sdk/fidl/fuchsia.ui.composition",
-    "//sdk/fidl/fuchsia.ui.pointer",
-    "//sdk/fidl/fuchsia.ui.pointerinjector",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
+    "//sdk/fidl/fuchsia.ui.pointer:fuchsia.ui.pointer_hlcpp",
+    "//sdk/fidl/fuchsia.ui.pointerinjector:fuchsia.ui.pointerinjector_hlcpp",
   ]
 }
 
@@ -248,8 +248,8 @@ executable("flatland_focus_integration_test_bin") {
   sources = [ "flatland_integration_tests/flatland_focus_integration_test.cc" ]
   deps = [
     ":common_deps_cts",
-    "//sdk/fidl/fuchsia.ui.composition",
-    "//sdk/fidl/fuchsia.ui.focus",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
+    "//sdk/fidl/fuchsia.ui.focus:fuchsia.ui.focus_hlcpp",
   ]
 }
 
@@ -265,10 +265,10 @@ executable("observer_registry_integration_test_bin") {
       [ "observer_integration_tests/observer_registry_integration_test.cc" ]
   deps = [
     ":common_deps_cts",
-    "//sdk/fidl/fuchsia.ui.composition",
-    "//sdk/fidl/fuchsia.ui.focus",
-    "//sdk/fidl/fuchsia.ui.observation.geometry",
-    "//sdk/fidl/fuchsia.ui.observation.test",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
+    "//sdk/fidl/fuchsia.ui.focus:fuchsia.ui.focus_hlcpp",
+    "//sdk/fidl/fuchsia.ui.observation.geometry:fuchsia.ui.observation.geometry_hlcpp",
+    "//sdk/fidl/fuchsia.ui.observation.test:fuchsia.ui.observation.test_hlcpp",
   ]
 }
 
@@ -285,10 +285,10 @@ executable("scoped_observer_registry_integration_test_bin") {
   ]
   deps = [
     ":common_deps_cts",
-    "//sdk/fidl/fuchsia.ui.composition",
-    "//sdk/fidl/fuchsia.ui.focus",
-    "//sdk/fidl/fuchsia.ui.observation.geometry",
-    "//sdk/fidl/fuchsia.ui.observation.scope",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
+    "//sdk/fidl/fuchsia.ui.focus:fuchsia.ui.focus_hlcpp",
+    "//sdk/fidl/fuchsia.ui.observation.geometry:fuchsia.ui.observation.geometry_hlcpp",
+    "//sdk/fidl/fuchsia.ui.observation.scope:fuchsia.ui.observation.scope_hlcpp",
   ]
 }
 
@@ -304,7 +304,7 @@ executable("screen_capture_integration_test_bin") {
   deps = [
     ":common_deps",
     ":screen_capture_utils",
-    "//sdk/fidl/fuchsia.ui.composition",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
     "//src/ui/scenic/lib/allocation:allocation",
     "//src/ui/scenic/lib/screen_capture:screen_capture",
     "//src/ui/scenic/lib/utils:utils",
@@ -324,9 +324,9 @@ executable("screen_capture2_integration_test_bin") {
   deps = [
     ":common_deps",
     ":screen_capture_utils",
-    "//sdk/fidl/fuchsia.ui.composition",
-    "//sdk/fidl/fuchsia.ui.composition.internal",
-    "//sdk/fidl/fuchsia.vulkan.loader",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
+    "//sdk/fidl/fuchsia.ui.composition.internal:fuchsia.ui.composition.internal_hlcpp",
+    "//sdk/fidl/fuchsia.vulkan.loader:fuchsia.vulkan.loader_hlcpp",
     "//src/ui/lib/escher",
     "//src/ui/scenic/lib/allocation:allocation",
     "//src/ui/scenic/lib/flatland/engine",
@@ -348,8 +348,8 @@ executable("singleton_display_integration_test_bin") {
   deps = [
     ":common_deps_cts",
     ":scenic_realm_builder",
-    "//sdk/fidl/fuchsia.ui.composition",
-    "//sdk/fidl/fuchsia.ui.display.singleton",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
+    "//sdk/fidl/fuchsia.ui.display.singleton:fuchsia.ui.display.singleton_hlcpp",
     "//src/ui/scenic/lib/utils:utils",
     "//zircon/system/ulib/fbl",
   ]
@@ -366,10 +366,10 @@ executable("flatland_mouse_integration_test_bin") {
   sources = [ "flatland_integration_tests/flatland_mouse_integration_test.cc" ]
   deps = [
     ":common_deps_cts",
-    "//sdk/fidl/fuchsia.input.report",
-    "//sdk/fidl/fuchsia.ui.composition",
-    "//sdk/fidl/fuchsia.ui.pointer",
-    "//sdk/fidl/fuchsia.ui.pointerinjector",
+    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_hlcpp",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
+    "//sdk/fidl/fuchsia.ui.pointer:fuchsia.ui.pointer_hlcpp",
+    "//sdk/fidl/fuchsia.ui.pointerinjector:fuchsia.ui.pointerinjector_hlcpp",
     "//src/ui/scenic/lib/utils",
   ]
 }

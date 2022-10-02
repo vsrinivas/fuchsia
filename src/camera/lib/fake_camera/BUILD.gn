@@ -29,7 +29,7 @@ source_set("lib") {
     "//zircon/system/ulib/fzl",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.camera3",
+    "//sdk/fidl/fuchsia.camera3:fuchsia.camera3_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/fit-promise",
     "//src/camera/lib/fake_stream",
@@ -41,7 +41,7 @@ executable("fake_camera_unittest_bin") {
   sources = [ "fake_camera_unittest.cc" ]
   deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",

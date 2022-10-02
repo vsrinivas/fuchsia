@@ -5,7 +5,7 @@
 executable("ktrace") {
   sources = [ "ktrace.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.tracing.kernel",
+    "//sdk/fidl/fuchsia.tracing.kernel:fuchsia.tracing.kernel_hlcpp",
     "//sdk/lib/fdio",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",

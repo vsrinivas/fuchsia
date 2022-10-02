@@ -16,8 +16,8 @@ executable("bin") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.media",
-    "//sdk/fidl/fuchsia.media.playback",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
+    "//sdk/fidl/fuchsia.media.playback:fuchsia.media.playback_hlcpp",
     "//sdk/lib/fit",
     "//sdk/lib/media/cpp",
     "//sdk/lib/sys/cpp",

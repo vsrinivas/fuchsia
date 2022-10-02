@@ -8,7 +8,7 @@ source_set("internal_buffer") {
     "internal_buffer.h",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
     "//sdk/lib/fit",
     "//sdk/lib/syslog/cpp",
     "//src/media/lib/memory_barriers",

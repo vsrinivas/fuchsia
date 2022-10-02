@@ -223,7 +223,7 @@ executable("limbo_caller") {
   sources = [ "limbo_caller.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.exception",
+    "//sdk/fidl/fuchsia.exception:fuchsia.exception_hlcpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",

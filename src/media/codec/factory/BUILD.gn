@@ -22,14 +22,14 @@ source_set("factory_source") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.component",
-    "//sdk/fidl/fuchsia.component.decl",
-    "//sdk/fidl/fuchsia.gpu.magma",
-    "//sdk/fidl/fuchsia.hardware.mediacodec",
-    "//sdk/fidl/fuchsia.mediacodec",
-    "//sdk/fidl/fuchsia.metrics",
-    "//sdk/fidl/fuchsia.sys2",
-    "//sdk/fidl/fuchsia.sysinfo",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_hlcpp",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_hlcpp",
+    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_hlcpp",
+    "//sdk/fidl/fuchsia.hardware.mediacodec:fuchsia.hardware.mediacodec_hlcpp",
+    "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec_hlcpp",
+    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_hlcpp",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_hlcpp",
+    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_hlcpp",
     "//sdk/lib/svc",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp",
@@ -122,9 +122,9 @@ executable("codec_factory_integration_test_exe") {
   sources = [ "test/codec_factory_integration_test.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.gpu.magma",
-    "//sdk/fidl/fuchsia.mediacodec",
-    "//sdk/fidl/fuchsia.sysinfo",
+    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_hlcpp",
+    "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec_hlcpp",
+    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_hlcpp",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/vfs/cpp",
@@ -141,9 +141,9 @@ executable("fake_codec_factory_bin") {
   sources = [ "test/fake_codec_factory.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.gpu.magma",
-    "//sdk/fidl/fuchsia.media",
-    "//sdk/fidl/fuchsia.mediacodec",
+    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_hlcpp",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
+    "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec_hlcpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

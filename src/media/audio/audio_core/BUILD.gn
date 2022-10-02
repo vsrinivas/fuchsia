@@ -177,12 +177,12 @@ source_set("audio_core_lib") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.audio.effects:fuchsia.audio.effects_cpp_wire",
-    "//sdk/fidl/fuchsia.hardware.audio",
-    "//sdk/fidl/fuchsia.media",
-    "//sdk/fidl/fuchsia.media.tuning",
-    "//sdk/fidl/fuchsia.mediastreams",
-    "//sdk/fidl/fuchsia.thermal",
-    "//sdk/fidl/fuchsia.ultrasound",
+    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_hlcpp",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
+    "//sdk/fidl/fuchsia.media.tuning:fuchsia.media.tuning_hlcpp",
+    "//sdk/fidl/fuchsia.mediastreams:fuchsia.mediastreams_hlcpp",
+    "//sdk/fidl/fuchsia.thermal:fuchsia.thermal_hlcpp",
+    "//sdk/fidl/fuchsia.ultrasound:fuchsia.ultrasound_hlcpp",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/component/cpp",
     "//sdk/lib/sys/inspect/cpp",
@@ -208,7 +208,7 @@ source_set("audio_core_lib") {
   deps = [
     ":json_schema_headers",
     ":media_metrics_registry",
-    "//sdk/fidl/fuchsia.scheduler",
+    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//sdk/lib/media/audio/cpp",
@@ -234,7 +234,7 @@ source_set("audio_core_main") {
 
   deps = [
     ":audio_core_lib",
-    "//sdk/fidl/fuchsia.scheduler",
+    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fidl/cpp",
     "//src/lib/fsl",
@@ -324,9 +324,9 @@ executable("unittest_bin") {
   deps = [
     ":audio_core_lib",
     "testing",
-    "//sdk/fidl/fuchsia.audio.effects",
-    "//sdk/fidl/fuchsia.hardware.audio",
-    "//sdk/fidl/fuchsia.scheduler",
+    "//sdk/fidl/fuchsia.audio.effects:fuchsia.audio.effects_hlcpp",
+    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_hlcpp",
+    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
     "//sdk/lib/fit-promise",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp/testing:unit",

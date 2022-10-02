@@ -10,8 +10,8 @@ executable("bin") {
   sources = [ "fx.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.media",
-    "//sdk/fidl/fuchsia.scheduler",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
+    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
     "//sdk/lib/fit",
     "//sdk/lib/media/cpp",
     "//sdk/lib/sys/cpp",

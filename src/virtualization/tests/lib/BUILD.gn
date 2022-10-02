@@ -71,7 +71,7 @@ source_set("guest_console") {
     "socket.h",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.virtualization",
+    "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization_hlcpp",
     "//src/lib/fxl",
   ]
   public_deps = [
@@ -97,10 +97,10 @@ source_set("fake_netstack") {
   public = [ "fake_netstack.h" ]
   sources = [ "fake_netstack.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.network",
-    "//sdk/fidl/fuchsia.net.interfaces",
-    "//sdk/fidl/fuchsia.net.virtualization",
-    "//sdk/fidl/fuchsia.netstack",
+    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_hlcpp",
+    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces_hlcpp",
+    "//sdk/fidl/fuchsia.net.virtualization:fuchsia.net.virtualization_hlcpp",
+    "//sdk/fidl/fuchsia.netstack:fuchsia.netstack_hlcpp",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//src/connectivity/lib/network-device/cpp",
     "//src/lib/inet",
@@ -110,7 +110,7 @@ source_set("fake_netstack") {
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.netstack",
+    "//sdk/fidl/fuchsia.netstack:fuchsia.netstack_hlcpp",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp/testing:cpp",
   ]
@@ -157,14 +157,14 @@ source_set("lib") {
     ":guest_constants",
     ":periodic_logger",
     ":socket_logger",
-    "//sdk/fidl/fuchsia.element",
-    "//sdk/fidl/fuchsia.kernel",
-    "//sdk/fidl/fuchsia.logger",
-    "//sdk/fidl/fuchsia.net.virtualization",
-    "//sdk/fidl/fuchsia.scheduler",
-    "//sdk/fidl/fuchsia.sysinfo",
-    "//sdk/fidl/fuchsia.sysmem",
-    "//sdk/fidl/fuchsia.tracing.provider",
+    "//sdk/fidl/fuchsia.element:fuchsia.element_hlcpp",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_hlcpp",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
+    "//sdk/fidl/fuchsia.net.virtualization:fuchsia.net.virtualization_hlcpp",
+    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
+    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_hlcpp",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_hlcpp",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//src/lib/testing/loop_fixture",

@@ -9,7 +9,7 @@ import("//src/media/audio/hardware.gni")
 executable("audio-core-stress-tests-bin") {
   sources = [ "loopback_stress_test.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
     "//sdk/lib/media/audio/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",

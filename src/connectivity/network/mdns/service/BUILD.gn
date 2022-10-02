@@ -116,10 +116,10 @@ source_set("source_set") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.device",
-    "//sdk/fidl/fuchsia.net",
-    "//sdk/fidl/fuchsia.net.interfaces",
-    "//sdk/fidl/fuchsia.net.mdns",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_hlcpp",
+    "//sdk/fidl/fuchsia.net:fuchsia.net_hlcpp",
+    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces_hlcpp",
+    "//sdk/fidl/fuchsia.net.mdns:fuchsia.net.mdns_hlcpp",
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
@@ -240,7 +240,7 @@ executable("mdns_netemul_test_agent") {
   sources = [ "test/mdns_netemul_test_agent.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.net.mdns",
+    "//sdk/fidl/fuchsia.net.mdns:fuchsia.net.mdns_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fostr/fidl/fuchsia.net",
@@ -303,9 +303,9 @@ executable("mdns_netemul_multi_network_test_agent") {
 
   deps = [
     ":source_set",
-    "//sdk/fidl/fuchsia.net",
+    "//sdk/fidl/fuchsia.net:fuchsia.net_hlcpp",
     "//sdk/lib/sys/cpp",
-    "//src/connectivity/network/testing/netemul/sync-manager/fidl:sync",
+    "//src/connectivity/network/testing/netemul/sync-manager/fidl:sync_hlcpp",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

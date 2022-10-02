@@ -25,8 +25,8 @@ source_set("encode_module_path") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.modular.internal",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular_hlcpp",
+    "//sdk/fidl/fuchsia.modular.internal:fuchsia.modular.internal_hlcpp",
   ]
 }
 
@@ -61,8 +61,8 @@ source_set("session_storage") {
 
   public_deps = [
     ":story_storage",
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.modular.internal",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular_hlcpp",
+    "//sdk/fidl/fuchsia.modular.internal:fuchsia.modular.internal_hlcpp",
     "//src/modular/bin/sessionmgr:annotations",
     "//src/modular/lib/async/cpp:future",
   ]
@@ -103,7 +103,7 @@ source_set("story_storage") {
 
   deps = [
     ":watcher_list",
-    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fit-promise",
     "//src/lib/fsl",
@@ -111,7 +111,8 @@ source_set("story_storage") {
     "//src/modular/lib/async/cpp:future",
     "//src/modular/lib/fidl:clone",
   ]
-  public_deps = [ "//sdk/fidl/fuchsia.modular.internal" ]
+  public_deps =
+      [ "//sdk/fidl/fuchsia.modular.internal:fuchsia.modular.internal_hlcpp" ]
 }
 
 source_set("watcher_list") {

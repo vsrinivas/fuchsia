@@ -20,5 +20,5 @@ source_set("amendments") {
     "amendments.h",
   ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.math" ]
+  public_deps = [ "//sdk/fidl/fuchsia.math:fuchsia.math_hlcpp" ]
 }

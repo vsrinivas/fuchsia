@@ -3,9 +3,10 @@
 # found in the LICENSE file.
 
 import("//build/fidl/fidl.gni")
+import("//build/fidl/toolchain.gni")
 
 group("testing") {
-  deps = [ ":test.thermal" ]
+  deps = [ ":test.thermal($fidl_toolchain)" ]
 }
 
 fidl("test.thermal") {

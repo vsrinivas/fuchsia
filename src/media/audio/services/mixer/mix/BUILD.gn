@@ -105,7 +105,7 @@ executable("mix_unittests") {
 
   deps = [
     ":mix",
-    "//sdk/fidl/fuchsia.audio.effects",
+    "//sdk/fidl/fuchsia.audio.effects:fuchsia.audio.effects_hlcpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/media/audio/lib/clock/testing",

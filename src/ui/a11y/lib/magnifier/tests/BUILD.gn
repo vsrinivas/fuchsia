@@ -44,7 +44,7 @@ executable("magnification_pixeltest_bin") {
   testonly = true
   sources = [ "magnification_pixeltest.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.ui.accessibility.view",
+    "//sdk/fidl/fuchsia.ui.accessibility.view:fuchsia.ui.accessibility.view_hlcpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/ui/testing/ui_test_manager",

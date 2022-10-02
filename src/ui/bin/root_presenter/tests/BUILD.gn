@@ -56,15 +56,15 @@ executable("root_presenter_unittests_bin") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.accessibility",
-    "//sdk/fidl/fuchsia.recovery",
-    "//sdk/fidl/fuchsia.recovery.policy",
-    "//sdk/fidl/fuchsia.ui.brightness",
-    "//sdk/fidl/fuchsia.ui.focus",
-    "//sdk/fidl/fuchsia.ui.input",
-    "//sdk/fidl/fuchsia.ui.pointerinjector",
-    "//sdk/fidl/fuchsia.ui.policy",
-    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.accessibility:fuchsia.accessibility_hlcpp",
+    "//sdk/fidl/fuchsia.recovery:fuchsia.recovery_hlcpp",
+    "//sdk/fidl/fuchsia.recovery.policy:fuchsia.recovery.policy_hlcpp",
+    "//sdk/fidl/fuchsia.ui.brightness:fuchsia.ui.brightness_hlcpp",
+    "//sdk/fidl/fuchsia.ui.focus:fuchsia.ui.focus_hlcpp",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_hlcpp",
+    "//sdk/fidl/fuchsia.ui.pointerinjector:fuchsia.ui.pointerinjector_hlcpp",
+    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy_hlcpp",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/ui/scenic/cpp",
@@ -96,7 +96,7 @@ executable("focus_dispatcher_unittests_bin") {
   sources = [ "focus_dispatcher_unittest.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.ui.input.accessibility",
+    "//sdk/fidl/fuchsia.ui.input.accessibility:fuchsia.ui.input.accessibility_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",

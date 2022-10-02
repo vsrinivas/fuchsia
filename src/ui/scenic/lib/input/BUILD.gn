@@ -98,8 +98,8 @@ source_set("legacy") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.ui.policy",
-    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy_hlcpp",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
     "//src/lib/fostr/fidl/fuchsia.ui.input",
     "//src/lib/fostr/fidl/fuchsia.ui.input.accessibility",
   ]
@@ -125,7 +125,7 @@ source_set("injection") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.ui.pointerinjector",
+    "//sdk/fidl/fuchsia.ui.pointerinjector:fuchsia.ui.pointerinjector_hlcpp",
     "//sdk/lib/sys/cpp:cpp",
     "//src/lib/fostr/fidl/fuchsia.ui.pointerinjector",
   ]
@@ -153,8 +153,8 @@ source_set("mouse") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.ui.pointer",
-    "//sdk/fidl/fuchsia.ui.pointer.augment",
+    "//sdk/fidl/fuchsia.ui.pointer:fuchsia.ui.pointer_hlcpp",
+    "//sdk/fidl/fuchsia.ui.pointer.augment:fuchsia.ui.pointer.augment_hlcpp",
   ]
 }
 
@@ -184,7 +184,7 @@ source_set("touch") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.ui.pointer",
-    "//sdk/fidl/fuchsia.ui.pointer.augment",
+    "//sdk/fidl/fuchsia.ui.pointer:fuchsia.ui.pointer_hlcpp",
+    "//sdk/fidl/fuchsia.ui.pointer.augment:fuchsia.ui.pointer.augment_hlcpp",
   ]
 }

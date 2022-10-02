@@ -25,11 +25,11 @@ source_set("lib") {
     "pressure_observer.h",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/fidl/fuchsia.hardware.ram.metrics",
-    "//sdk/fidl/fuchsia.memory",
-    "//sdk/fidl/fuchsia.memorypressure",
-    "//sdk/fidl/fuchsia.metrics",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
+    "//sdk/fidl/fuchsia.hardware.ram.metrics:fuchsia.hardware.ram.metrics_hlcpp",
+    "//sdk/fidl/fuchsia.memory:fuchsia.memory_hlcpp",
+    "//sdk/fidl/fuchsia.memorypressure:fuchsia.memorypressure_hlcpp",
+    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
@@ -66,7 +66,7 @@ executable("bin") {
   sources = [ "main.cc" ]
   deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.scheduler",
+    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",

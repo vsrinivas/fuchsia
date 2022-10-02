@@ -20,8 +20,8 @@ source_set("reboot_log") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/fidl/fuchsia.hardware.power.statecontrol",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/utils:errors",

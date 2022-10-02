@@ -52,7 +52,7 @@ source_set("lib") {
   ]
   configs += [ "//build/config:all_source" ]
   public_deps = [
-    "//sdk/fidl/fuchsia.virtualization.hardware",
+    "//sdk/fidl/fuchsia.virtualization.hardware:fuchsia.virtualization.hardware_hlcpp",
     "//sdk/lib/fit",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
@@ -71,7 +71,7 @@ source_set("virtio") {
   ]
   public_deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.virtualization.hardware",
+    "//sdk/fidl/fuchsia.virtualization.hardware:fuchsia.virtualization.hardware_hlcpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -102,7 +102,7 @@ source_set("magma_image") {
     "magma_image.h",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
     "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_cpp_wire",
     "//sdk/lib/sys/component/cpp",
     "//src/graphics/lib/magma/include:magma",
@@ -199,8 +199,8 @@ executable("virtio_wl_bin") {
 
   deps = [
     ":virtio",
-    "//sdk/fidl/fuchsia.sysmem",
-    "//sdk/fidl/fuchsia.ui.composition",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
     "//src/lib/fsl",
     "//zircon/system/ulib/fbl",
   ]
@@ -238,22 +238,22 @@ executable("device_tests") {
   deps = [
     ":lib",
     ":magma_image",
-    "//sdk/fidl/fuchsia.element",
-    "//sdk/fidl/fuchsia.hardware.network",
-    "//sdk/fidl/fuchsia.input",
-    "//sdk/fidl/fuchsia.logger",
-    "//sdk/fidl/fuchsia.media",
-    "//sdk/fidl/fuchsia.net.interfaces",
-    "//sdk/fidl/fuchsia.net.virtualization",
-    "//sdk/fidl/fuchsia.netstack",
-    "//sdk/fidl/fuchsia.scheduler",
-    "//sdk/fidl/fuchsia.sysmem",
-    "//sdk/fidl/fuchsia.tracing.provider",
-    "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.ui.composition",
-    "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/fidl/fuchsia.virtualization.hardware",
-    "//sdk/fidl/fuchsia.vulkan.loader",
+    "//sdk/fidl/fuchsia.element:fuchsia.element_hlcpp",
+    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_hlcpp",
+    "//sdk/fidl/fuchsia.input:fuchsia.input_hlcpp",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
+    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces_hlcpp",
+    "//sdk/fidl/fuchsia.net.virtualization:fuchsia.net.virtualization_hlcpp",
+    "//sdk/fidl/fuchsia.netstack:fuchsia.netstack_hlcpp",
+    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_hlcpp",
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_hlcpp",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
+    "//sdk/fidl/fuchsia.virtualization.hardware:fuchsia.virtualization.hardware_hlcpp",
+    "//sdk/fidl/fuchsia.vulkan.loader:fuchsia.vulkan.loader_hlcpp",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/connectivity/lib/network-device/cpp",

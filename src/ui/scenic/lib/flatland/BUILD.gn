@@ -34,10 +34,10 @@ source_set("flatland") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.ui.composition",
     "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_cpp",
     "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_cpp_hlcpp_conversion",
-    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
     "//src/lib/fxl",
 
     # TODO(fxbug.dev/56879): this dependency should be broken down into smaller libraries,

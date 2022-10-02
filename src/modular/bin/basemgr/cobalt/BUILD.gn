@@ -36,7 +36,7 @@ source_set("cobalt") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.cobalt",
+    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_hlcpp",
     "//sdk/lib/fdio",
     "//src/lib/callback",
   ]

@@ -58,9 +58,9 @@ source_set("common") {
     "//sdk/banjo/fuchsia.hardware.wlan.softmac:fuchsia.hardware.wlan.softmac_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_cpp_wire",
-    "//sdk/fidl/fuchsia.wlan.ieee80211",
-    "//sdk/fidl/fuchsia.wlan.mlme",
-    "//sdk/fidl/fuchsia.wlan.stats",
+    "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211_hlcpp",
+    "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme_hlcpp",
+    "//sdk/fidl/fuchsia.wlan.stats:fuchsia.wlan.stats_hlcpp",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -109,7 +109,7 @@ executable("ieee80211_codes_test") {
   sources = [ "ieee80211_codes_test.cc" ]
   deps = [
     ":common",
-    "//sdk/fidl/fuchsia.wlan.common",
+    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_hlcpp",
     "//src/lib/fxl/test:gtest_main",
   ]
 }
@@ -125,8 +125,8 @@ executable("mcs_rate_lookup_test") {
   sources = [ "mcs_rate_lookup_test.cc" ]
   deps = [
     ":common",
-    "//sdk/fidl/fuchsia.wlan.common",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
+    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_hlcpp",
     "//src/lib/fxl/test:gtest_main",
   ]
 }

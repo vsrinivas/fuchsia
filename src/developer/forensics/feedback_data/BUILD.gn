@@ -31,7 +31,7 @@ source_set("constants") {
   sources = [ "constants.h" ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
     "//src/developer/forensics/feedback/annotations",
     "//src/developer/forensics/utils:storage_size",
     "//src/developer/forensics/utils/cobalt",
@@ -51,7 +51,7 @@ source_set("data_provider") {
   public_deps = [
     ":inspect_budget",
     ":metadata",
-    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/feedback/annotations",
     "//src/developer/forensics/feedback/attachments",
@@ -67,9 +67,9 @@ source_set("data_provider") {
   deps = [
     ":constants",
     ":screenshot",
-    "//sdk/fidl/fuchsia.images",
-    "//sdk/fidl/fuchsia.mem",
-    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.images:fuchsia.images_hlcpp",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem_hlcpp",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/feedback/attachments",
     "//src/developer/forensics/utils:archive",
@@ -88,7 +88,7 @@ source_set("data_provider_controller") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
     "//sdk/lib/syslog/cpp",
   ]
 
@@ -134,7 +134,7 @@ source_set("log_source") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.diagnostics",
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_hlcpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/diagnostics/accessor2logger",
     "//src/lib/fxl",
@@ -178,7 +178,7 @@ source_set("screenshot") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",

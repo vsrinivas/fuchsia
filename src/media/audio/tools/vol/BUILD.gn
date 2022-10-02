@@ -9,7 +9,7 @@ executable("bin") {
   sources = [ "vol_app.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
     "//sdk/lib/media/audio/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",

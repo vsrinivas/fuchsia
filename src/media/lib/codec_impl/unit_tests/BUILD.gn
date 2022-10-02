@@ -63,7 +63,7 @@ executable("decryptor_adapter_tests_bin") {
   sources = [ "test_decryptor_adapter.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
     "//sdk/lib/fit",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp",

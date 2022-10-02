@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/dist/distribution_manifest.gni")
+import("//build/fidl/toolchain.gni")
 import("//build/test.gni")
 
 # Generate a manifest providing all of the .fidl.json files exported by the
@@ -18,10 +19,10 @@ action("generate_fidl_json") {
   deps = [
     "//sdk:core",
     "//sdk:core_fidl_json",
-    "//sdk/fidl/fuchsia.boot",
-    "//sdk/fidl/fuchsia.device.manager",
-    "//sdk/fidl/fuchsia.kernel",
-    "//sdk/fidl/fuchsia.power.battery",
+    "//sdk/fidl/fuchsia.boot($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.device.manager($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.kernel($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.power.battery($fidl_toolchain)",
     "//third_party/quickjs:qjs($host_toolchain)",
   ]
   args = [

@@ -24,7 +24,7 @@ group("lib") {
 }
 
 group("services") {
-  deps = [ "//sdk/fidl/fuchsia.modular" ]
+  deps = [ "//sdk/fidl/fuchsia.modular($fidl_toolchain)" ]
 }
 
 group("just_fidl") {

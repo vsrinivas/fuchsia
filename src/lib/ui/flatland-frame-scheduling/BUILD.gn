@@ -33,7 +33,7 @@ source_set("simple_present") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.ui.composition",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp:cpp",
     "//sdk/lib/syslog/cpp:cpp",

@@ -58,9 +58,9 @@ test("ctaphid-test-bin") {
   sources = [ "test.cc" ]
   deps = [
     ":driver-internals",
-    "//sdk/fidl/fuchsia.fido.report",
+    "//sdk/fidl/fuchsia.fido.report:fuchsia.fido.report_hlcpp",
     "//sdk/lib/sys/cpp",
-    "//sdk/testing/fidl:fidl_test",
+    "//sdk/testing/fidl:fidl_test_hlcpp",
     "//src/devices/testing/mock-ddk",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

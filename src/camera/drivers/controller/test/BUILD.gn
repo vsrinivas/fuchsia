@@ -14,8 +14,8 @@ source_set("constants") {
   testonly = true
   sources = [ "constants.h" ]
   public_deps = [
-    "//sdk/fidl/fuchsia.camera2",
-    "//sdk/fidl/fuchsia.camera2.hal",
+    "//sdk/fidl/fuchsia.camera2:fuchsia.camera2_hlcpp",
+    "//sdk/fidl/fuchsia.camera2.hal:fuchsia.camera2.hal_hlcpp",
   ]
 }
 
@@ -31,7 +31,7 @@ executable("controller_unittest_bin") {
   ]
   deps = [
     ":constants",
-    "//sdk/fidl/fuchsia.hardware.camera",
+    "//sdk/fidl/fuchsia.hardware.camera:fuchsia.hardware.camera_hlcpp",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//src/camera/drivers/controller:source",

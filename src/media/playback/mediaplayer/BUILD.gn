@@ -42,9 +42,9 @@ source_set("mediaplayer_lib") {
   deps = [
     # Some deps will have to be kept for the library, others will only
     # be needed for the executable. For now, we'll just copy all of them.
-    "//sdk/fidl/fuchsia.media",
-    "//sdk/fidl/fuchsia.media.playback",
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
+    "//sdk/fidl/fuchsia.media.playback:fuchsia.media.playback_hlcpp",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
     "//sdk/lib/media/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
@@ -72,10 +72,10 @@ executable("mediaplayer_bin") {
   sources = [ "main.cc" ]
   deps = [
     ":mediaplayer_lib",
-    "//sdk/fidl/fuchsia.component",
-    "//sdk/fidl/fuchsia.media",
-    "//sdk/fidl/fuchsia.media.playback",
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_hlcpp",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
+    "//sdk/fidl/fuchsia.media.playback:fuchsia.media.playback_hlcpp",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
     "//sdk/lib/media/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
@@ -110,8 +110,8 @@ executable("mediaplayer_test_util_bin") {
     "test/test_util_main.cc",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.media.playback",
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.media.playback:fuchsia.media.playback_hlcpp",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fsl",
@@ -160,9 +160,9 @@ executable("mediaplayer_tests_bin") {
     "test/sink_feeder.h",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.media.playback",
-    "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.media.playback:fuchsia.media.playback_hlcpp",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/ui/scenic/cpp",

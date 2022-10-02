@@ -83,7 +83,7 @@ static_library("blobfs") {
   ]
   public_deps = [
     # format.h includes digest.h.
-    "//sdk/fidl/fuchsia.fs",
+    "//sdk/fidl/fuchsia.fs:fuchsia.fs_hlcpp",
     "//sdk/lib/fit",
     "//sdk/lib/fit-promise",
     "//src/lib/digest",
@@ -169,8 +169,8 @@ static_library("blobfs") {
       "transfer_buffer.h",
     ]
     public_deps += [
-      ":fuchsia.blobfs.internal",
       ":fuchsia.blobfs.internal_cpp_wire",
+      ":fuchsia.blobfs.internal_hlcpp",
       "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_cpp_wire",
       "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_cpp_wire",
       "//sdk/fidl/fuchsia.fs:fuchsia.fs_cpp_wire",
@@ -184,7 +184,7 @@ static_library("blobfs") {
     deps += [
       "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_cpp_wire",
       "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
-      "//sdk/fidl/fuchsia.scheduler",
+      "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
       "//sdk/lib/fdio",
       "//sdk/lib/sys/component/cpp",
       "//sdk/lib/sys/inspect/cpp",
@@ -255,8 +255,8 @@ source_set("decompressor_impl") {
   ]
   deps = [
     ":blobfs",
-    ":fuchsia.blobfs.internal",
-    "//sdk/fidl/fuchsia.scheduler",
+    ":fuchsia.blobfs.internal_hlcpp",
+    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
     "//sdk/lib/fidl/cpp:cpp",
     "//sdk/lib/sys/cpp:cpp",
     "//sdk/lib/syslog/cpp:cpp",
@@ -273,7 +273,7 @@ executable("decompressor") {
   sources = [ "compression/decompressor_sandbox/main.cc" ]
   deps = [
     ":decompressor_impl",
-    ":fuchsia.blobfs.internal",
+    ":fuchsia.blobfs.internal_hlcpp",
     "//sdk/lib/fidl/cpp:cpp",
     "//sdk/lib/sys/cpp:cpp",
     "//sdk/lib/syslog/cpp:cpp",

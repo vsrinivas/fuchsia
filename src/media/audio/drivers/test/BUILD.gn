@@ -48,10 +48,10 @@ executable("audio_driver_tests_bin") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.component",
-    "//sdk/fidl/fuchsia.hardware.audio",
-    "//sdk/fidl/fuchsia.logger",
-    "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_hlcpp",
+    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_hlcpp",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
     "//sdk/lib/media/cpp:no_converters",
     "//sdk/lib/sys/component/cpp/testing:cpp_library",
     "//sdk/lib/sys/cpp",

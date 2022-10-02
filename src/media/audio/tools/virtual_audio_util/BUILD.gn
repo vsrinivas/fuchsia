@@ -17,7 +17,7 @@ executable("bin") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.virtualaudio",
+    "//sdk/fidl/fuchsia.virtualaudio:fuchsia.virtualaudio_hlcpp",
     "//sdk/lib/media/cpp:no_converters",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",

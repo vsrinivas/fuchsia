@@ -56,7 +56,7 @@ source_set("client_lib") {
   ]
   public_deps = [
     ":common",
-    ":fuchsia.netemul.guest",
+    ":fuchsia.netemul.guest_hlcpp",
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
@@ -93,22 +93,22 @@ source_set("integration_test_lib") {
     "test/integration_test_lib.h",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.logger",
-    "//sdk/fidl/fuchsia.net.virtualization",
-    "//sdk/fidl/fuchsia.scheduler",
-    "//sdk/fidl/fuchsia.sysmem",
-    "//sdk/fidl/fuchsia.tracing.provider",
-    "//sdk/fidl/fuchsia.virtualization",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
+    "//sdk/fidl/fuchsia.net.virtualization:fuchsia.net.virtualization_hlcpp",
+    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_hlcpp",
+    "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization_hlcpp",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/virtualization/tests/lib:fake_netstack",
   ]
   deps = [
-    ":fuchsia.netemul.guest",
-    "//sdk/fidl/fuchsia.kernel",
-    "//sdk/fidl/fuchsia.net.stack",
-    "//sdk/fidl/fuchsia.netstack",
-    "//sdk/fidl/fuchsia.sysinfo",
+    ":fuchsia.netemul.guest_hlcpp",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_hlcpp",
+    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack_hlcpp",
+    "//sdk/fidl/fuchsia.netstack:fuchsia.netstack_hlcpp",
+    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_hlcpp",
     "//src/lib/testing/predicates",
     "//src/virtualization/tests/lib:guest_console",
   ]
@@ -119,7 +119,7 @@ executable("client_operation_test") {
   sources = [ "test/client_operation_test.cc" ]
   deps = [
     ":client_lib",
-    ":fuchsia.netemul.guest",
+    ":fuchsia.netemul.guest_hlcpp",
     ":operation_test_lib",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
@@ -210,7 +210,7 @@ executable("server_daemon_test") {
 
   deps = [
     ":common",
-    ":fuchsia.netemul.guest",
+    ":fuchsia.netemul.guest_hlcpp",
     ":integration_test_lib",
     ":platform_interface_posix",
     "//sdk/lib/fdio",

@@ -22,9 +22,9 @@ source_set("display") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.hardware.display",
-    "//sdk/fidl/fuchsia.ui.display",
-    "//sdk/fidl/fuchsia.ui.display.internal",
+    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_hlcpp",
+    "//sdk/fidl/fuchsia.ui.display:fuchsia.ui.display_hlcpp",
+    "//sdk/fidl/fuchsia.ui.display.internal:fuchsia.ui.display.internal_hlcpp",
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
@@ -39,7 +39,7 @@ source_set("display") {
 
     # TODO(fxbug.dev/24590): For displayOwned/NotOwnedSignal.
     # TODO(fxbug.dev/23686): Remove this when we externalize Displays.
-    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
     "//src/ui/scenic/lib/allocation",
     "//src/ui/scenic/lib/scheduling:vsync_timing",
     "//zircon/system/public",
@@ -61,7 +61,7 @@ source_set("singleton_display_service") {
 
   public_deps = [
     ":display",
-    "//sdk/fidl/fuchsia.ui.display.singleton",
+    "//sdk/fidl/fuchsia.ui.display.singleton:fuchsia.ui.display.singleton_hlcpp",
     "//sdk/lib/sys/cpp",
   ]
 }

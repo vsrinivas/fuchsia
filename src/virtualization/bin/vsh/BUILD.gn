@@ -14,7 +14,7 @@ executable("bin") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.virtualization",
+    "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization_hlcpp",
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",

@@ -27,7 +27,7 @@ executable("bin") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.net.mdns",
+    "//sdk/fidl/fuchsia.net.mdns:fuchsia.net.mdns_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fostr",

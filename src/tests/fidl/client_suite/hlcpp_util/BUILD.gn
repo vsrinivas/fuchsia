@@ -7,6 +7,6 @@ source_set("hlcpp_util") {
   public_deps = [
     "//sdk/lib/fidl",
     "//src/lib/fidl/cpp",
-    "//src/tests/fidl/client_suite/fidl:fidl.clientsuite",
+    "//src/tests/fidl/client_suite/fidl:fidl.clientsuite_hlcpp",
   ]
 }

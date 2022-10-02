@@ -12,7 +12,7 @@ executable("bt-beacon-reader") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.bluetooth.le",
+    "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le_hlcpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",

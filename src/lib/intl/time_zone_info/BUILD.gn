@@ -44,7 +44,7 @@ source_set("time-zone-info-service-lib") {
 
   public_deps = [
     "${icu_root}:icu",
-    "//sdk/fidl/fuchsia.intl",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl_hlcpp",
   ]
 }
 
@@ -54,7 +54,7 @@ executable("time-zone-info-service-lib-test-bin") {
   sources = [ "time_zone_info_service_test.cc" ]
   deps = [
     ":time-zone-info-service-lib",
-    "//sdk/fidl/fuchsia.intl",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/sys/service/cpp",

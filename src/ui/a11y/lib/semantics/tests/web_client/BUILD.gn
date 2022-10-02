@@ -10,8 +10,8 @@ executable("bin") {
   sources = [ "web_client.cc" ]
   deps = [
     ":web_client_config_lib",
-    "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.web",
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_hlcpp",
+    "//sdk/fidl/fuchsia.web:fuchsia.web_hlcpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/chromium/web_engine/meta/shards:web_engine_feature_network",
     "//src/chromium/web_engine/meta/shards:web_engine_view",

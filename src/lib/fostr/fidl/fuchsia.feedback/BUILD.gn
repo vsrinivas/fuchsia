@@ -27,7 +27,7 @@ source_set("amendments") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
     "//src/lib/fostr",
   ]
 }

@@ -41,7 +41,7 @@ source_set("clock") {
   deps = [ "//sdk/lib/syslog/cpp" ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.hardware.audio",
+    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_hlcpp",
     "//sdk/lib/fit-promise",
     "//src/lib/fxl",
     "//src/media/audio/lib/timeline",

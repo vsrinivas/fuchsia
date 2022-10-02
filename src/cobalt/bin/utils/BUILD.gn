@@ -20,7 +20,7 @@ source_set("fuchsia_http_client") {
   deps = [ "//src/lib/fsl" ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.net.http",
+    "//sdk/fidl/fuchsia.net.http:fuchsia.net.http_hlcpp",
     "//src/lib/callback",
     "//third_party/cobalt/src/public/lib:http_client",
     "//third_party/cobalt/src/public/lib/statusor",
@@ -50,13 +50,13 @@ source_set("base64") {
 source_set("error_utils") {
   sources = [ "error_utils.h" ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.metrics" ]
+  public_deps = [ "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_hlcpp" ]
 }
 
 source_set("status_utils") {
   sources = [ "status_utils.h" ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.cobalt" ]
+  public_deps = [ "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_hlcpp" ]
 }
 
 executable("cobalt_utils_unittests") {

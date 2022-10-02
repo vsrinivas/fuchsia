@@ -27,7 +27,7 @@ executable("memory_monitor_unittests") {
 
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
-    "//sdk/fidl/fuchsia.hardware.ram.metrics:fuchsia.hardware.ram.metrics",
+    "//sdk/fidl/fuchsia.hardware.ram.metrics:fuchsia.hardware.ram.metrics_hlcpp",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/cobalt/bin/testing:stub_metric_event_logger_lib",
@@ -68,7 +68,7 @@ executable("test-inspect") {
   sources = [ "monitor_inspect_test.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.component",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_hlcpp",
     "//sdk/lib/inspect/contrib/cpp:archive_reader",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",

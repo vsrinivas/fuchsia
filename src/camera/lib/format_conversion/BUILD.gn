@@ -10,7 +10,7 @@ source_set("format_conversion") {
 
   deps = [
     "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
-    "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
     "//zircon/system/ulib/image-format",
   ]
 

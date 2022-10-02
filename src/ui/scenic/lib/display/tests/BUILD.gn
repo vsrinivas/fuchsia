@@ -35,7 +35,7 @@ source_set("mocks") {
     "mock_display_controller.h",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.hardware.display",
+    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_hlcpp",
     "//src/lib/fsl",
     "//src/ui/scenic/lib/display",
   ]

@@ -31,7 +31,7 @@ executable("unittests") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
     "//src/lib/testing/loop_fixture:gtest",
     "//src/ui/lib/display:hdcp_client",
     "//src/ui/lib/escher/test/common:gtest_escher",

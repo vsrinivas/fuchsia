@@ -10,11 +10,11 @@ executable("sdk-puppet") {
   sources = [ "puppet.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
     "//sdk/lib/fidl",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/structured_backend",
-    "//src/diagnostics/validator/logs/sink/fidl:sink-puppet",
+    "//src/diagnostics/validator/logs/sink/fidl:sink-puppet_hlcpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

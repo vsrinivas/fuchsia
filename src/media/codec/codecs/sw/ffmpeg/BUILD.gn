@@ -28,7 +28,7 @@ executable("codec_runner_sw_ffmpeg") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.mediacodec",
+    "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec_hlcpp",
     "//src/media/codec/codecs/sw:codec_adapter_sw",
     "//src/media/codec/codecs/sw:codec_runner_sw",
     "//src/media/lib/codec_impl",

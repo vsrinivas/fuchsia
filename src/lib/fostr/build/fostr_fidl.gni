@@ -4,6 +4,7 @@
 
 import("//build/compiled_action.gni")
 import("//build/cpp/fidlmerge_cpp.gni")
+import("//build/fidl/toolchain.gni")
 
 # Declares a fostr library that contains C++ ostream formatting for a FIDL
 # library.
@@ -67,7 +68,7 @@ template("fostr_fidl") {
     }
 
     public_deps = [
-      "$fidl_target",
+      get_label_info(fidl_target, "label_no_toolchain") + "_hlcpp",
       "//src/lib/fostr",
     ]
 

@@ -13,8 +13,8 @@ executable("bin") {
   output_name = "web-virtual-keyboard-client"
   sources = [ "web-virtual-keyboard-client.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.web",
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_hlcpp",
+    "//sdk/fidl/fuchsia.web:fuchsia.web_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/chromium/web_engine/meta/shards:web_engine_feature_network",
@@ -22,7 +22,7 @@ executable("bin") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/json_parser",
-    "//src/ui/tests/integration_input_tests/virtual-keyboard:test.virtualkeyboard",
+    "//src/ui/tests/integration_input_tests/virtual-keyboard:test.virtualkeyboard_hlcpp",
     "//third_party/rapidjson",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

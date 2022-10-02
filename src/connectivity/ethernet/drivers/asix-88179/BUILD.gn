@@ -72,8 +72,8 @@ fuchsia_driver("fake-asix-88179-driver") {
   ]
   sources = [ "asix-88179-function.cc" ]
   deps = [
-    ":asix-88179-test-helper",
     ":asix-88179-test-helper_cpp_wire",
+    ":asix-88179-test-helper_hlcpp",
     ":fake_usb_ax88179_bind",
     "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",

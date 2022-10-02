@@ -12,7 +12,7 @@ source_set("annotation_map") {
 
   public_deps = [
     ":errors",
-    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/utils:errors",
     "//src/lib/fxl",
@@ -53,7 +53,7 @@ source_set("crash_register") {
   public_deps = [
     ":annotation_map",
     ":product",
-    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
     "//src/developer/forensics/crash_reports/info",
     "//src/developer/forensics/feedback:constants",
     "//src/developer/forensics/feedback/annotations",
@@ -87,7 +87,7 @@ source_set("crash_reporter") {
     ":report_util",
     ":reporting_policy_watcher",
     ":snapshot_collector",
-    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/crash_reports/info",
@@ -119,8 +119,8 @@ source_set("crash_server") {
     ":report",
     ":sized_data_reader",
     ":snapshot_collector",
-    "//sdk/fidl/fuchsia.mem",
-    "//sdk/fidl/fuchsia.net.http",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem_hlcpp",
+    "//sdk/fidl/fuchsia.net.http:fuchsia.net.http_hlcpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
     "//third_party/crashpad/util:net",
@@ -164,7 +164,7 @@ source_set("network_watcher") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.net.interfaces",
+    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces_hlcpp",
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
     "//src/connectivity/network/lib/net_interfaces/cpp",
@@ -221,7 +221,7 @@ source_set("report") {
     ":annotation_map",
     ":report_id",
     ":snapshot",
-    "//sdk/fidl/fuchsia.mem",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem_hlcpp",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/utils:sized_data",
   ]
@@ -234,7 +234,7 @@ source_set("reporting_policy_watcher") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.settings",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_hlcpp",
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
     "//src/lib/backoff",
@@ -261,7 +261,7 @@ source_set("report_util") {
     ":crash_register",
     ":product",
     ":report",
-    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
     "//sdk/lib/fit-promise",
     "//src/developer/forensics/utils:errors",
   ]
@@ -270,7 +270,7 @@ source_set("report_util") {
     ":annotation_map",
     ":constants",
     ":errors",
-    "//sdk/fidl/fuchsia.mem",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem_hlcpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/files",
     "//src/lib/fsl",

@@ -226,7 +226,7 @@ executable("virtualization_input_tests") {
     "lib:test_main",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
-    "//src/lib/ui/input-synthesis:test.inputsynthesis",
+    "//src/lib/ui/input-synthesis:test.inputsynthesis_hlcpp",
   ]
 }
 

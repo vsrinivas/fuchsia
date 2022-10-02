@@ -66,11 +66,11 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.buildinfo",
-    "//sdk/fidl/fuchsia.cobalt",
-    "//sdk/fidl/fuchsia.metrics",
-    "//sdk/fidl/fuchsia.process.lifecycle",
-    "//sdk/fidl/fuchsia.ui.activity",
+    "//sdk/fidl/fuchsia.buildinfo:fuchsia.buildinfo_hlcpp",
+    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_hlcpp",
+    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_hlcpp",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_hlcpp",
+    "//sdk/fidl/fuchsia.ui.activity:fuchsia.ui.activity_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
@@ -109,8 +109,8 @@ executable("app") {
 
   deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.scheduler",
-    "//sdk/fidl/fuchsia.sysinfo",
+    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
+    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_hlcpp",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider",
   ]
@@ -231,7 +231,7 @@ executable("cobalt_app_unittests") {
   deps = [
     ":lib",
     ":testapp_metrics_registry_cc",
-    "//sdk/fidl/fuchsia.cobalt",
+    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_hlcpp",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/sys/inspect/cpp",

@@ -20,12 +20,12 @@ source_set("hermetic_audio_test") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.audio.effects",
-    "//sdk/fidl/fuchsia.media",
-    "//sdk/fidl/fuchsia.media",
-    "//sdk/fidl/fuchsia.media.audio",
-    "//sdk/fidl/fuchsia.ultrasound",
-    "//sdk/fidl/fuchsia.virtualaudio",
+    "//sdk/fidl/fuchsia.audio.effects:fuchsia.audio.effects_hlcpp",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
+    "//sdk/fidl/fuchsia.media.audio:fuchsia.media.audio_hlcpp",
+    "//sdk/fidl/fuchsia.ultrasound:fuchsia.ultrasound_hlcpp",
+    "//sdk/fidl/fuchsia.virtualaudio:fuchsia.virtualaudio_hlcpp",
     "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp",
@@ -44,16 +44,16 @@ source_set("hermetic_audio_test") {
     "//src/media/audio/lib/test:constants",
     "//src/media/audio/lib/test:test_fixture",
     "//src/media/audio/lib/wav",
-    "//src/power/fidl/testing:test.thermal",
+    "//src/power/fidl/testing:test.thermal_hlcpp",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspect",
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.driver.test",
-    "//sdk/fidl/fuchsia.media.tuning",
-    "//sdk/fidl/fuchsia.scheduler",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_hlcpp",
+    "//sdk/fidl/fuchsia.media.tuning:fuchsia.media.tuning_hlcpp",
+    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
     "//sdk/lib/driver_test_realm/realm_builder/cpp",
     "//src/cobalt/bin/testing/mock_cobalt:component_v2",
     "//src/devices/bus/drivers/platform",
@@ -79,7 +79,7 @@ source_set("hermetic_pipeline_test") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",
   ]
@@ -94,7 +94,7 @@ source_set("hermetic_pipeline_test_main") {
   sources = [ "hermetic_pipeline_test_main.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",

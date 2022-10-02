@@ -34,11 +34,11 @@ executable("data_provider_unittest_exe") {
   sources = [ "data_provider_unittest.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.boot",
-    "//sdk/fidl/fuchsia.diagnostics",
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/fidl/fuchsia.logger",
-    "//sdk/fidl/fuchsia.math",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_hlcpp",
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_hlcpp",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
+    "//sdk/fidl/fuchsia.math:fuchsia.math_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//src/developer/forensics/feedback/attachments",
     "//src/developer/forensics/feedback_data:constants",
@@ -71,7 +71,7 @@ executable("data_provider_controller_unittest_exe") {
   sources = [ "data_provider_controller_unittest.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data:data_provider_controller",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
@@ -149,7 +149,7 @@ executable("screenshot_unittest_exe") {
   sources = [ "screenshot_unittest.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
     "//src/developer/forensics/feedback_data:screenshot",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",

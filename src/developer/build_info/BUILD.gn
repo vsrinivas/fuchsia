@@ -15,7 +15,7 @@ executable("bin") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.buildinfo",
+    "//sdk/fidl/fuchsia.buildinfo:fuchsia.buildinfo_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
@@ -79,7 +79,7 @@ executable("test-bin") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.buildinfo",
+    "//sdk/fidl/fuchsia.buildinfo:fuchsia.buildinfo_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",

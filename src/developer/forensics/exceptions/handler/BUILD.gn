@@ -20,14 +20,14 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.exception",
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/fidl/fuchsia.sys.internal",
-    "//sdk/fidl/fuchsia.sys2",
+    "//sdk/fidl/fuchsia.exception:fuchsia.exception_hlcpp",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
+    "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal_hlcpp",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_hlcpp",
     "//sdk/lib/fit",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
-    "//src/developer/forensics/exceptions/fidl:fuchsia.exception.internal",
+    "//src/developer/forensics/exceptions/fidl:fuchsia.exception.internal_hlcpp",
     "//src/developer/forensics/utils:fidl_oneshot",
     "//src/lib/fsl",
     "//src/lib/fxl",

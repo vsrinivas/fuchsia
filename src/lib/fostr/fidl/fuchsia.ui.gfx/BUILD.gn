@@ -28,5 +28,5 @@ source_set("amendments") {
     "amendments.h",
   ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.ui.gfx" ]
+  public_deps = [ "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx_hlcpp" ]
 }

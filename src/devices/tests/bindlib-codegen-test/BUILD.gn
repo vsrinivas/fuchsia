@@ -26,7 +26,7 @@ test("test") {
     ":bindlibparent.codegen.testlib_cpp",
     "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
     "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_cpp_wire",
-    "//sdk/fidl/fuchsia.driver.development",
+    "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development_hlcpp",
     "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/driver_test_realm/simple",
     "//sdk/lib/fdio",

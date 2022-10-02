@@ -10,10 +10,10 @@ source_set("util") {
     "util.h",
   ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.feedback" ]
+  public_deps = [ "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",

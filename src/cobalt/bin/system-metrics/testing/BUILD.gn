@@ -12,6 +12,6 @@ source_set("fake_fetchers") {
 
   deps = [
     "..:system_metrics_daemon_lib",
-    "//sdk/fidl/fuchsia.cobalt",
+    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_hlcpp",
   ]
 }

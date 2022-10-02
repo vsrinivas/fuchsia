@@ -8,7 +8,7 @@ library_headers("driver-integration-test-shim-headers") {
   testonly = true
   headers = [ "lib/driver-integration-test/fixture.h" ]
   public_deps = [
-    "//sdk/fidl/fuchsia.driver.test",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_hlcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_cpp_wire",
     "//sdk/lib/device-watcher/cpp",
@@ -37,7 +37,7 @@ source_set("driver-integration-test-shim") {
   deps = [
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_cpp",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_cpp_wire",
-    "//sdk/fidl/fuchsia.driver.test",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_hlcpp",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_cpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",

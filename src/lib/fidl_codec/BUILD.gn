@@ -54,7 +54,7 @@ static_library("fidl_codec") {
   public_deps = [ "//src/lib/fxl" ]
   deps = [
     ":value_proto",
-    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
     "//sdk/lib/fidl_base",
     "//third_party/rapidjson",
     "//zircon/system/public",
@@ -87,8 +87,8 @@ executable("fidl_codec_test_bin") {
   ]
 
   deps = [
-    ":fidl",
     ":fidl_codec",
+    ":fidl_hlcpp",
     ":json_for_test",
     ":list_for_test",
     ":value_proto",

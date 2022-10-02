@@ -18,7 +18,7 @@ source_set("mocks") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
   ]

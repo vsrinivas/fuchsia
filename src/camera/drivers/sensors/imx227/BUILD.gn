@@ -61,7 +61,7 @@ fuchsia_driver("fuchsia_driver") {
 
   deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.driver.test",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_hlcpp",
     "//sdk/lib/syslog/cpp:backend",
   ]
 

@@ -13,8 +13,8 @@ source_set("util") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.scheduler",
-    "//sdk/fidl/fuchsia.ui.gfx",
+    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
+    "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx_hlcpp",
     "//sdk/lib/fdio",
     "//zircon/system/ulib/zx",
   ]

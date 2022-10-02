@@ -16,9 +16,9 @@ source_set("magnifier") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.accessibility",
-    "//sdk/fidl/fuchsia.ui.input.accessibility",
-    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.accessibility:fuchsia.accessibility_hlcpp",
+    "//sdk/fidl/fuchsia.ui.input.accessibility:fuchsia.ui.input.accessibility_hlcpp",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//src/lib/callback",
     "//src/lib/fxl",

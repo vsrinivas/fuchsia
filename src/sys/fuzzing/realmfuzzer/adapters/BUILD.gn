@@ -7,7 +7,7 @@ source_set("llvm") {
   sources = [ "llvm-main.cc" ]
   public_deps = [
     "//src/sys/fuzzing/common",
-    "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
+    "//src/sys/fuzzing/fidl:fuchsia.fuzzer_hlcpp",
   ]
   deps = [ ":llvm-no-main" ]
 }
@@ -22,7 +22,7 @@ source_set("llvm-no-main") {
   ]
   public_deps = [
     "//src/sys/fuzzing/common",
-    "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
+    "//src/sys/fuzzing/fidl:fuchsia.fuzzer_hlcpp",
     "//zircon/system/ulib/sync",
   ]
   deps = [ "//sdk/lib/syslog/cpp" ]

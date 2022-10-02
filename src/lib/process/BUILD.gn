@@ -11,7 +11,7 @@ source_set("process") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.process",
+    "//sdk/fidl/fuchsia.process:fuchsia.process_hlcpp",
     "//sdk/lib/sys/cpp",
     "//zircon/system/ulib/zx",
   ]

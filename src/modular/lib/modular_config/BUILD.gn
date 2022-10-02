@@ -14,7 +14,7 @@ source_set("modular_config") {
 
   public_deps = [
     ":modular_config_constants",
-    "//sdk/fidl/fuchsia.modular.session",
+    "//sdk/fidl/fuchsia.modular.session:fuchsia.modular.session_hlcpp",
     "//sdk/lib/fit-promise",
     "//zircon/system/ulib/fbl",
   ]
@@ -36,7 +36,7 @@ source_set("modular_config_accessor") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.modular.session",
+    "//sdk/fidl/fuchsia.modular.session:fuchsia.modular.session_hlcpp",
     "//sdk/lib/syslog/cpp",
     "//src/modular/lib/fidl:clone",
     "//zircon/system/ulib/fbl",
@@ -54,9 +54,9 @@ source_set("json_xdr") {
   public_deps = [ ":modular_config_constants" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.modular.internal",
-    "//sdk/fidl/fuchsia.modular.session",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular_hlcpp",
+    "//sdk/fidl/fuchsia.modular.internal:fuchsia.modular.internal_hlcpp",
+    "//sdk/fidl/fuchsia.modular.session:fuchsia.modular.session_hlcpp",
     "//src/modular/lib/fidl:json_xdr",
   ]
 
@@ -78,8 +78,8 @@ source_set("unittests") {
     ":modular_config",
     ":modular_config_accessor",
     ":modular_config_constants",
-    "//sdk/fidl/fuchsia.modular.internal",
-    "//sdk/fidl/fuchsia.modular.session",
+    "//sdk/fidl/fuchsia.modular.internal:fuchsia.modular.internal_hlcpp",
+    "//sdk/fidl/fuchsia.modular.session:fuchsia.modular.session_hlcpp",
     "//src/lib/testing/loop_fixture",
     "//src/modular/lib/pseudo_dir:pseudo_dir_server",
     "//src/modular/lib/pseudo_dir:pseudo_dir_utils",

@@ -10,8 +10,8 @@ executable("sessionctl_bin") {
 
   deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.modular.internal",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular_hlcpp",
+    "//sdk/fidl/fuchsia.modular.internal:fuchsia.modular.internal_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//src/modular/lib/async/cpp:future",
@@ -36,7 +36,7 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular_hlcpp",
     "//sdk/lib/fit-promise",
     "//sdk/lib/syslog/cpp",
     "//src/modular/lib/async/cpp:future",
@@ -46,7 +46,7 @@ source_set("lib") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.modular.internal",
+    "//sdk/fidl/fuchsia.modular.internal:fuchsia.modular.internal_hlcpp",
     "//src/lib/json_parser",
     "//third_party/re2",
   ]
@@ -62,7 +62,7 @@ executable("sessionctl_unittest") {
 
   deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular_hlcpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/modular/bin/sessionmgr/puppet_master:puppet_master_impl",

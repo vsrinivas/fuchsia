@@ -36,7 +36,7 @@ source_set("testing") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.hardware.audio",
+    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_hlcpp",
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/testing/loop_fixture",

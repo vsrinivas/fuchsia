@@ -67,7 +67,7 @@ test("fostr-test-bin") {
     # using the fuchsia.example.fostr library to avoid changes in unrelated code
     # to break tests here.
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
-    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

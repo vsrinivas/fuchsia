@@ -19,13 +19,13 @@ test("convert_unittest") {
   sources = [ "convert_unittest.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.wlan.common",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
-    "//sdk/fidl/fuchsia.wlan.ieee80211",
-    "//sdk/fidl/fuchsia.wlan.internal",
+    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_hlcpp",
+    "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211_hlcpp",
     "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_banjo_c",
-    "//sdk/fidl/fuchsia.wlan.mlme",
-    "//sdk/fidl/fuchsia.wlan.stats",
+    "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_hlcpp",
+    "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme_hlcpp",
+    "//sdk/fidl/fuchsia.wlan.stats:fuchsia.wlan.stats_hlcpp",
     "//src/connectivity/wlan/drivers/lib/fuzzing/cpp",
     "//src/connectivity/wlan/drivers/lib/log/cpp",
     "//src/connectivity/wlan/drivers/wlanif:lib_source",
@@ -49,9 +49,9 @@ test("device_unittest") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.wlan.common",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
-    "//sdk/fidl/fuchsia.wlan.mlme",
+    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_hlcpp",
+    "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme_hlcpp",
     "//sdk/lib/sys/cpp/testing:cpp",
     "//src/connectivity/wlan/drivers/wlanif:lib_source",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",

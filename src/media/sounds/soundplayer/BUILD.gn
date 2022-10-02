@@ -17,7 +17,7 @@ executable("bin") {
 
   deps = [
     ":source",
-    "//sdk/fidl/fuchsia.media.sounds",
+    "//sdk/fidl/fuchsia.media.sounds:fuchsia.media.sounds_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -47,8 +47,8 @@ source_set("source") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.media",
-    "//sdk/fidl/fuchsia.media.sounds",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
+    "//sdk/fidl/fuchsia.media.sounds:fuchsia.media.sounds_hlcpp",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
@@ -84,8 +84,8 @@ executable("soundplayer-tests-bin") {
 
   deps = [
     ":source",
-    "//sdk/fidl/fuchsia.media",
-    "//sdk/fidl/fuchsia.media.sounds",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
+    "//sdk/fidl/fuchsia.media.sounds:fuchsia.media.sounds_hlcpp",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",

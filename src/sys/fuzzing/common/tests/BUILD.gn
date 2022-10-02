@@ -16,7 +16,7 @@ source_set("integration-tests-lib") {
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/fuzzing/common",
     "//src/sys/fuzzing/common/testing",
-    "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
+    "//src/sys/fuzzing/fidl:fuchsia.fuzzer_hlcpp",
     "//third_party/googletest:gtest",
   ]
 }

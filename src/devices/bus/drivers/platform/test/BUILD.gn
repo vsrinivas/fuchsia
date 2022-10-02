@@ -557,7 +557,7 @@ test("platform-bus-bti") {
   sources = [ "bti-test.cc" ]
   deps = [
     ":fuchsia.hardware.btitest_cpp_wire",
-    "//sdk/fidl/fuchsia.driver.test",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_hlcpp",
     "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/driver_test_realm/realm_builder/cpp",
     "//sdk/lib/fdio",

@@ -12,8 +12,8 @@ source_set("screenshot") {
     "screenshot_manager.h",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.sysmem",
-    "//sdk/fidl/fuchsia.ui.composition",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
     "//src/lib/fsl:fsl",
     "//src/ui/scenic/lib/allocation",
     "//src/ui/scenic/lib/flatland/engine",

@@ -36,7 +36,7 @@ test("disk_extract_unit_test") {
     "parse_test.cc",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.fs",
+    "//sdk/fidl/fuchsia.fs:fuchsia.fs_hlcpp",
     "//sdk/lib/fdio",
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/extractor/cpp:disk_extractor",

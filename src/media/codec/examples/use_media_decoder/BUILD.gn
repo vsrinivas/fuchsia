@@ -26,8 +26,8 @@ source_set("use_media_decoder_source_set") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.mediacodec",
-    "//sdk/fidl/fuchsia.net.http",
+    "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec_hlcpp",
+    "//sdk/fidl/fuchsia.net.http:fuchsia.net.http_hlcpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/media/lib/codec_impl:fourcc",
@@ -38,7 +38,7 @@ source_set("use_media_decoder_source_set") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.hardware.securemem",
+    "//sdk/fidl/fuchsia.hardware.securemem:fuchsia.hardware.securemem_hlcpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/ui/base_view",
     "//src/media/audio/lib/wav",

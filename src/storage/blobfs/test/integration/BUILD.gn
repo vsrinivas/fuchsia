@@ -61,7 +61,7 @@ test("external_decompressor_integration") {
     "//src/lib/storage/block_client/cpp:fake_device",
     "//src/lib/storage/fs_management",
     "//src/storage/blobfs",
-    "//src/storage/blobfs:fuchsia.blobfs.internal",
+    "//src/storage/blobfs:fuchsia.blobfs.internal_hlcpp",
     "//src/storage/blobfs/test:test_utils",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async-loop",
@@ -98,7 +98,7 @@ test("blobfs_integration") {
   ]
   deps = [
     ":blobfs_integration_fixtures",
-    "//sdk/fidl/fuchsia.blobfs",
+    "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_hlcpp",
     "//sdk/fidl/fuchsia.fs:fuchsia.fs_cpp_wire",
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/fdio",

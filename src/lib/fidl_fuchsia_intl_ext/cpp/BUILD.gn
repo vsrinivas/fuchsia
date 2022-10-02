@@ -6,7 +6,7 @@ source_set("cpp") {
   sources = [ "fidl_ext.h" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.intl",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl_hlcpp",
     "//sdk/lib/fidl/cpp",
   ]
 }

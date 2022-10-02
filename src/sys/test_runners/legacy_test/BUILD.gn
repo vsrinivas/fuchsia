@@ -18,10 +18,10 @@ executable("bin") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.component.runner",
-    "//sdk/fidl/fuchsia.debugdata",
-    "//sdk/fidl/fuchsia.sys2",
-    "//sdk/fidl/fuchsia.test",
+    "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner_hlcpp",
+    "//sdk/fidl/fuchsia.debugdata:fuchsia.debugdata_hlcpp",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_hlcpp",
+    "//sdk/fidl/fuchsia.test:fuchsia.test_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:enclosing_environment",
     "//sdk/lib/syslog/cpp",

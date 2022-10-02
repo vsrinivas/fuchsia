@@ -15,8 +15,8 @@ executable("bin") {
 
   deps = [
     ":base_deps",
-    "//sdk/fidl/fuchsia.stash",
-    "//sdk/fidl/fuchsia.vulkan.loader",
+    "//sdk/fidl/fuchsia.stash:fuchsia.stash_hlcpp",
+    "//sdk/fidl/fuchsia.vulkan.loader:fuchsia.vulkan.loader_hlcpp",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/inspect/cpp",
     "//src/lib/async-watchdog",

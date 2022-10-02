@@ -122,12 +122,13 @@ audio_core_api_test_component("audio-renderer-pipeline-test") {
 
 audio_core_api_test_component("audio-test") {
   source = "audio_test.cc"
-  executable_deps = [ "//sdk/fidl/fuchsia.media" ]
+  executable_deps = [ "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp" ]
 }
 
 audio_core_api_test_component("audio-tuner-test") {
   source = "audio_tuner_test.cc"
-  executable_deps = [ "//sdk/fidl/fuchsia.media.tuning" ]
+  executable_deps =
+      [ "//sdk/fidl/fuchsia.media.tuning:fuchsia.media.tuning_hlcpp" ]
 }
 
 audio_core_api_test_component("gain-control-test") {
@@ -145,7 +146,8 @@ audio_core_api_test_component("ultrasound-test") {
 
 audio_core_api_test_component("usage-gain-reporter-test") {
   source = "usage_gain_reporter_test.cc"
-  executable_deps = [ "//sdk/fidl/fuchsia.media.audio" ]
+  executable_deps =
+      [ "//sdk/fidl/fuchsia.media.audio:fuchsia.media.audio_hlcpp" ]
 }
 
 audio_core_api_test_component("usage-reporter-test") {

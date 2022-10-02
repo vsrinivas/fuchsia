@@ -48,8 +48,8 @@ source_set("src") {
 
   public_deps = [
     "encoding:encoder",
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/fidl/fuchsia.process.lifecycle",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_hlcpp",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/feedback_data:log_source",
@@ -60,7 +60,7 @@ source_set("src") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.diagnostics",
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_hlcpp",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/feedback_data:constants",
     "//src/lib/diagnostics/accessor2logger",

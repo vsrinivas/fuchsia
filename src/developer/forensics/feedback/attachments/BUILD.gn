@@ -45,7 +45,7 @@ source_set("inspect") {
 
   public_deps = [
     ":attachments",
-    "//sdk/fidl/fuchsia.diagnostics",
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_hlcpp",
     "//sdk/lib/fit",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
@@ -73,7 +73,7 @@ source_set("kernel_log") {
 
   public_deps = [
     ":attachments",
-    "//sdk/fidl/fuchsia.boot",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_hlcpp",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/utils/redact",
@@ -109,7 +109,7 @@ source_set("system_log") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.logger",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/utils:errors",

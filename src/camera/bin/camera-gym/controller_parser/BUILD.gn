@@ -28,7 +28,7 @@ source_set("lib") {
   ]
   public_deps = [
     "//sdk/lib/fit-promise",
-    "//src/camera/bin/camera-gym/fidl:controller",
+    "//src/camera/bin/camera-gym/fidl:controller_hlcpp",
   ]
 }
 

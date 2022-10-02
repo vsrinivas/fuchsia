@@ -114,7 +114,7 @@ if (is_host) {
       "//sdk/fidl/fuchsia.sys($fidl_toolchain)",
       "//src/developer/debug/debug_agent($target_toolchain)",
       "//src/developer/ffx:ffx_bin",
-      "//src/testing/fidl:placeholders",
+      "//src/testing/fidl:placeholders($fidl_toolchain)",
       "//tools/fidlcat",
       "//tools/fidlcat:fidlcat_sdk_meta_generated_file",
     ]

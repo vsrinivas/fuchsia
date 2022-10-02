@@ -10,7 +10,7 @@ source_set("logger_factory_server_provider") {
   sources = [ "logger_factory_server_provider.cc" ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.metrics",
+    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/fidl/cpp/fuzzing",
     "//sdk/lib/sys/cpp",
@@ -25,7 +25,7 @@ source_set("logger_server_provider") {
   sources = [ "logger_server_provider.cc" ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.metrics",
+    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/fidl/cpp/fuzzing",
     "//sdk/lib/sys/cpp",
@@ -40,7 +40,7 @@ source_set("system_data_updater_server_provider") {
   sources = [ "system_data_updater_server_provider.cc" ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.cobalt",
+    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/fidl/cpp/fuzzing",
     "//sdk/lib/sys/cpp",

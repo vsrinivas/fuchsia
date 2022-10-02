@@ -22,7 +22,7 @@ executable("integration_tests") {
   deps = [
     ":mock_device_watcher",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_cpp_wire",
-    "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_hlcpp",
     "//src/lib/ddk",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",

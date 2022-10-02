@@ -54,7 +54,7 @@ source_set("common") {
     "status.h",
   ]
   public_deps = [
-    "../fidl:fuchsia.fuzzer",
+    "../fidl:fuchsia.fuzzer_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",

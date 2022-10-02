@@ -68,7 +68,7 @@ template("audio_core_api_test_component") {
       deps = []
     }
     deps += [
-      "//sdk/fidl/fuchsia.media",
+      "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
       "//sdk/lib/syslog/cpp",
       "//src/media/audio/audio_core/testing/integration:hermetic_audio_test",
       "//src/media/audio/audio_core/testing/integration:hermetic_pipeline_test_main",

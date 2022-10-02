@@ -14,7 +14,7 @@ executable("cpp-puppet") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp:backend",
     "//sdk/lib/syslog/cpp:cpp",
-    "//src/diagnostics/validator/logs/sink/fidl:sink-puppet",
+    "//src/diagnostics/validator/logs/sink/fidl:sink-puppet_hlcpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

@@ -79,12 +79,12 @@ _LIB_SOURCES = [
 
 _LIB_PUBLIC_DEPS = [
   ":termina_config",
-  "//sdk/fidl/fuchsia.device",
-  "//sdk/fidl/fuchsia.hardware.block.volume",
-  "//sdk/fidl/fuchsia.ui.app",
-  "//sdk/fidl/fuchsia.ui.scenic",
-  "//sdk/fidl/fuchsia.virtualization",
-  "//sdk/fidl/fuchsia.wayland",
+  "//sdk/fidl/fuchsia.device:fuchsia.device_hlcpp",
+  "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_hlcpp",
+  "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_hlcpp",
+  "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
+  "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization_hlcpp",
+  "//sdk/fidl/fuchsia.wayland:fuchsia.wayland_hlcpp",
   "//sdk/lib/fit-promise",
   "//sdk/lib/sys/cpp",
   "//src/lib/fsl",
@@ -205,7 +205,7 @@ executable("termina_guest_manager_unittests") {
 
   deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.hardware.block.partition",
+    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/virtualization/testing",

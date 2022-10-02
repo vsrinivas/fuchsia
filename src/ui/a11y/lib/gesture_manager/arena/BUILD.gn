@@ -12,7 +12,7 @@ source_set("arena") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.ui.input.accessibility",
+    "//sdk/fidl/fuchsia.ui.input.accessibility:fuchsia.ui.input.accessibility_hlcpp",
     "//sdk/lib/fit",
     "//src/lib/fxl",
   ]

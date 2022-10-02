@@ -17,7 +17,7 @@ executable("gesture_manager_tests") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.accessibility.tts",
+    "//sdk/fidl/fuchsia.accessibility.tts:fuchsia.accessibility.tts_hlcpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/ui/a11y/lib/gesture_manager",

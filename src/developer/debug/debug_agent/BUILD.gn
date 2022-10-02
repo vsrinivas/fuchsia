@@ -110,11 +110,11 @@ static_library("lib") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.exception",
-    "//sdk/fidl/fuchsia.io",
-    "//sdk/fidl/fuchsia.kernel",
-    "//sdk/fidl/fuchsia.sys2",
-    "//sdk/fidl/fuchsia.test.manager",
+    "//sdk/fidl/fuchsia.exception:fuchsia.exception_hlcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_hlcpp",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_hlcpp",
+    "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager_hlcpp",
     "//sdk/lib/fit",
     "//sdk/lib/syslog/cpp",
     "//src/developer/debug/ipc:agent",
@@ -151,7 +151,7 @@ executable("launcher") {
   sources = [ "main_launcher.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.debugger",
+    "//sdk/fidl/fuchsia.debugger:fuchsia.debugger_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

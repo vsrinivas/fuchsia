@@ -113,7 +113,7 @@ test("blobfs_unittest") {
     "//src/lib/testing/predicates",
     "//src/storage/blobfs",
     "//src/storage/blobfs:decompressor_impl",
-    "//src/storage/blobfs:fuchsia.blobfs.internal",
+    "//src/storage/blobfs:fuchsia.blobfs.internal_hlcpp",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/fidl-utils",

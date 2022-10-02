@@ -17,13 +17,13 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.debugdata",
-    "//sdk/fidl/fuchsia.sys2",
+    "//sdk/fidl/fuchsia.debugdata:fuchsia.debugdata_hlcpp",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
     "//src/lib/json_parser",
-    "//src/sys/test_manager/fidl/fuchsia.test.debug",
+    "//src/sys/test_manager/fidl/fuchsia.test.debug:fuchsia.test.debug_hlcpp",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -38,10 +38,10 @@ executable("debug_data_processor_bin") {
 
   deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.sys2",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//src/sys/test_manager/fidl/fuchsia.test.debug",
+    "//src/sys/test_manager/fidl/fuchsia.test.debug:fuchsia.test.debug_hlcpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

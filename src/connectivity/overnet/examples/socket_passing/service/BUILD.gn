@@ -3,10 +3,11 @@
 # found in the LICENSE file.
 
 import("//build/fidl/fidl.gni")
+import("//build/fidl/toolchain.gni")
 
 group("service") {
   testonly = true
-  deps = [ ":socket_passing" ]
+  deps = [ ":socket_passing($fidl_toolchain)" ]
 }
 
 fidl("socket_passing") {

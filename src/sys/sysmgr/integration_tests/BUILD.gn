@@ -23,7 +23,7 @@ executable("test_sysmgr_service_bin") {
   sources = [ "test_sysmgr_service.cc" ]
 
   deps = [
-    ":interface",
+    ":interface_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
@@ -47,7 +47,7 @@ executable("mock_resolver_bin") {
   sources = [ "mock_resolver.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.pkg",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
@@ -70,13 +70,13 @@ executable("service_startup_test_bin") {
   sources = [ "service_startup_test.cc" ]
 
   deps = [
-    ":interface",
-    "//sdk/fidl/fuchsia.logger",
+    ":interface_hlcpp",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
-    "//src/sys/appmgr/integration_tests/fidl:echo",
+    "//src/sys/appmgr/integration_tests/fidl:echo_hlcpp",
     "//third_party/googletest:gmock",
   ]
 }

@@ -62,7 +62,7 @@ executable("exception_broker_integration_test_exe") {
   deps = [
     ":test_lib",
     "//src/developer/forensics/exceptions:lib",
-    "//src/developer/forensics/public/fakes:fuchsia.feedback.testing",
+    "//src/developer/forensics/public/fakes:fuchsia.feedback.testing_hlcpp",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/lib/fsl",
     "//src/lib/fxl",
@@ -132,7 +132,7 @@ executable("stub_exception_handler_exe") {
 
   deps = [
     "//sdk/lib/fit",
-    "//src/developer/forensics/exceptions/fidl:fuchsia.exception.internal",
+    "//src/developer/forensics/exceptions/fidl:fuchsia.exception.internal_hlcpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

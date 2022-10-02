@@ -16,7 +16,7 @@ source_set("grpc") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.virtualization",
+    "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization_hlcpp",
     "//third_party/grpc:grpc++",
     "//zircon/system/ulib/zxc",
   ]

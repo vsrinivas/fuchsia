@@ -18,11 +18,11 @@ executable("thermal_test_control_bin") {
     "thermal_test_control.cc",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.thermal",
+    "//sdk/fidl/fuchsia.thermal:fuchsia.thermal_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//src/power/fidl/testing:test.thermal",
+    "//src/power/fidl/testing:test.thermal_hlcpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
@@ -36,13 +36,13 @@ executable("thermal-test-control-test-bin") {
     "thermal_test_control_unittest.cc",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.thermal",
+    "//sdk/fidl/fuchsia.thermal:fuchsia.thermal_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
-    "//src/power/fidl/testing:test.thermal",
+    "//src/power/fidl/testing:test.thermal_hlcpp",
     "//third_party/googletest:gtest",
   ]
 }

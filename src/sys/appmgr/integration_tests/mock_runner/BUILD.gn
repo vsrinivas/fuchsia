@@ -24,10 +24,10 @@ executable("bin") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_hlcpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
-    "//src/sys/appmgr/integration_tests/fidl:test.component.mockrunner",
+    "//src/sys/appmgr/integration_tests/fidl:test.component.mockrunner_hlcpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

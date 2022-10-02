@@ -65,7 +65,7 @@ if (is_fuchsia) {
     sources = [ "test_magma_dependency_injection.cc" ]
     deps = [
       "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_cpp_wire",
-      "//sdk/fidl/fuchsia.memorypressure",
+      "//sdk/fidl/fuchsia.memorypressure:fuchsia.memorypressure_hlcpp",
       "//src/devices/testing/fake_ddk",
       "//src/graphics/lib/magma/src/magma_util/platform/zircon:dependency_injection_device",
       "//third_party/googletest:gtest",

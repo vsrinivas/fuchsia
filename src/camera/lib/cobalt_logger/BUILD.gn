@@ -19,13 +19,13 @@ source_set("cobalt_logger") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.camera2",
+    "//sdk/fidl/fuchsia.camera2:fuchsia.camera2_hlcpp",
     "//src/lib/fxl",
   ]
 
   public_deps = [
     ":camera_metrics_cc",
-    "//sdk/fidl/fuchsia.metrics",
+    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_hlcpp",
     "//sdk/lib/sys/cpp",
     "//src/cobalt/bin/utils:error_utils",
     "//src/lib/backoff:backoff",

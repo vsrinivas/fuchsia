@@ -9,8 +9,8 @@ source_set("util") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.accessibility",
-    "//sdk/fidl/fuchsia.accessibility.semantics",
+    "//sdk/fidl/fuchsia.accessibility:fuchsia.accessibility_hlcpp",
+    "//sdk/fidl/fuchsia.accessibility.semantics:fuchsia.accessibility.semantics_hlcpp",
   ]
 
   deps = [

@@ -51,7 +51,7 @@ source_set("snapshotter") {
   public_deps = [ "//sdk/lib/sys/cpp" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
     "//zircon/system/ulib/zx",
   ]
 }

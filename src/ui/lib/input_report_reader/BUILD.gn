@@ -11,8 +11,8 @@ source_set("input_report_reader") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.input.report",
-    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_hlcpp",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
     "//sdk/lib/fdio",
     "//src/lib/fostr/fidl/fuchsia.ui.input",
     "//zircon/system/ulib/async-default",
@@ -21,7 +21,7 @@ source_set("input_report_reader") {
 
   public_deps = [
     ":fdio",
-    "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_hlcpp",
     "//sdk/lib/fdio",
     "//src/lib/fostr/fidl/fuchsia.ui.input",
     "//src/lib/fxl",
@@ -45,7 +45,7 @@ source_set("fdio") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_hlcpp",
     "//sdk/lib/fdio",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",

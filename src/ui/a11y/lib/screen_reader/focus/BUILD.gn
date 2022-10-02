@@ -10,7 +10,7 @@ source_set("focus") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//src/ui/a11y/lib/semantics",
     "//src/ui/a11y/lib/util",

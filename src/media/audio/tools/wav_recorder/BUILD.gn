@@ -13,8 +13,8 @@ executable("bin") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.media",
-    "//sdk/fidl/fuchsia.ultrasound",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
+    "//sdk/fidl/fuchsia.ultrasound:fuchsia.ultrasound_hlcpp",
     "//sdk/lib/media/audio/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",

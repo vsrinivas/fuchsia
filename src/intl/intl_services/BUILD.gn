@@ -36,7 +36,7 @@ source_set("lib") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.settings",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl:fxl",

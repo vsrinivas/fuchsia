@@ -18,7 +18,7 @@ source_set("codec_buffer") {
 
   public = [ "include/lib/media/test/codec_buffer.h" ]
   deps = [
-    "//sdk/fidl/fuchsia.mediacodec",
+    "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec_hlcpp",
     "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/zx",
   ]
@@ -42,7 +42,7 @@ source_set("codec_client") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.mediacodec",
+    "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec_hlcpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",

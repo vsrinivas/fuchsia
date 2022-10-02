@@ -47,7 +47,7 @@ executable("reboot_reason_unittest_exe") {
   sources = [ "reboot_reason_unittest.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
     "//src/developer/forensics/feedback/reboot_log",
     "//src/developer/forensics/utils/cobalt",
     "//src/lib/fxl/test:gtest_main",

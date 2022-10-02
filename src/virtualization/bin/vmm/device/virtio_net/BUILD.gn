@@ -14,9 +14,9 @@ executable("virtio_net_bin") {
     "virtio_net.cc",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.ethernet",
-    "//sdk/fidl/fuchsia.hardware.network",
-    "//sdk/fidl/fuchsia.net.virtualization",
+    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_hlcpp",
+    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_hlcpp",
+    "//sdk/fidl/fuchsia.net.virtualization:fuchsia.net.virtualization_hlcpp",
     "//sdk/lib/fit-promise",
     "//src/connectivity/network/drivers/network-device/device",
     "//src/connectivity/network/lib/net_interfaces/cpp",

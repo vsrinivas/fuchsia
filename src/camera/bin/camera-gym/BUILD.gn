@@ -4,6 +4,7 @@
 
 import("//build/cipd.gni")
 import("//build/components.gni")
+import("//build/fidl/toolchain.gni")
 import("//src/camera/bin/camera-gym/assets/convert_image.gni")
 import("//src/camera/debug.gni")
 
@@ -16,7 +17,7 @@ group("camera-gym") {
   public_deps = [
     ":camera_gym_pkg",
     "controller_client:camera-gym-ctl",
-    "fidl:controller",
+    "fidl:controller($fidl_toolchain)",
   ]
   deps = [
     # Camera-gym is for testing and shouldn't be in production builds.
@@ -51,15 +52,15 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "fidl:controller",
-    "//sdk/fidl/fuchsia.camera3",
-    "//sdk/fidl/fuchsia.math",
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.sysmem",
-    "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.ui.policy",
-    "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/fidl/fuchsia.ui.views",
+    "fidl:controller_hlcpp",
+    "//sdk/fidl/fuchsia.camera3:fuchsia.camera3_hlcpp",
+    "//sdk/fidl/fuchsia.math:fuchsia.math_hlcpp",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular_hlcpp",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_hlcpp",
+    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy_hlcpp",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
     "//sdk/lib/fit",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",

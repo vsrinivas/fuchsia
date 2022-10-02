@@ -50,7 +50,7 @@ test("integration-test-bin") {
   deps = [
     "//src/sys/fuzzing/common/testing",
     "//src/sys/fuzzing/common/tests:integration-tests-lib",
-    "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
+    "//src/sys/fuzzing/fidl:fuchsia.fuzzer_hlcpp",
   ]
 }
 

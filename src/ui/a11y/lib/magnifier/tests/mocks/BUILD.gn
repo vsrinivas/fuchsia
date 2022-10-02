@@ -18,7 +18,8 @@ source_set("mock_magnifier") {
 
   sources = [ "mock_magnifier.cc" ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.accessibility" ]
+  public_deps =
+      [ "//sdk/fidl/fuchsia.accessibility:fuchsia.accessibility_hlcpp" ]
 
   deps = [ "//third_party/googletest:gtest" ]
 }
@@ -32,7 +33,7 @@ source_set("mock_magnification_handler") {
 
   public_deps = [
     ":clip_space_transform",
-    "//sdk/fidl/fuchsia.accessibility",
+    "//sdk/fidl/fuchsia.accessibility:fuchsia.accessibility_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//src/lib/callback",
     "//zircon/system/ulib/zx",

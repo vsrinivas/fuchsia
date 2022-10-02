@@ -79,7 +79,7 @@ if (!is_coverage) {
     sources = [ "coverage-main.cc" ]
     deps = [
       ":testing",
-      "//sdk/fidl/fuchsia.debugdata",
+      "//sdk/fidl/fuchsia.debugdata:fuchsia.debugdata_hlcpp",
       "//src/sys/fuzzing/common",
     ]
   }

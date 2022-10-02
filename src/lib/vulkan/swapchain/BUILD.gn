@@ -31,8 +31,8 @@ loadable_module("swapchain") {
   deps = [
     ":surface_header",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp_wire",
-    "//sdk/fidl/fuchsia.ui.composition",
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fsl",
@@ -69,7 +69,7 @@ source_set("display") {
   deps = [
     ":surface_header",
     "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_c",
-    "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
     "//sdk/lib/fdio",
     "//src/lib/fsl",
     "//third_party/Vulkan-ValidationLayers:micro_layer_common",
@@ -79,7 +79,7 @@ source_set("display") {
     "//zircon/system/ulib/fzl",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.hardware.display",
+    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_hlcpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

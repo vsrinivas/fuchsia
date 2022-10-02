@@ -17,7 +17,7 @@ source_set("board_info_provider") {
 
   public_deps = [
     ":fidl_server",
-    "//sdk/fidl/fuchsia.hwinfo",
+    "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo_hlcpp",
   ]
 
   deps = [ "//sdk/lib/syslog/cpp" ]
@@ -33,7 +33,7 @@ source_set("channel_control") {
 
   public_deps = [
     ":fidl_server",
-    "//sdk/fidl/fuchsia.update.channelcontrol",
+    "//sdk/fidl/fuchsia.update.channelcontrol:fuchsia.update.channelcontrol_hlcpp",
   ]
 
   deps = [ "//zircon/system/ulib/zx" ]
@@ -51,7 +51,7 @@ source_set("cobalt") {
 
   public_deps = [
     ":fidl_server",
-    "//sdk/fidl/fuchsia.metrics",
+    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_hlcpp",
     "//src/developer/forensics/utils/cobalt",
   ]
 
@@ -72,7 +72,7 @@ source_set("crash_reporter") {
 
   public_deps = [
     ":fidl_server",
-    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
     "//zircon/system/ulib/zx",
   ]
 
@@ -93,7 +93,7 @@ source_set("data_provider") {
 
   public_deps = [
     ":fidl_server",
-    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//src/developer/forensics/feedback_data:data_provider",
     "//src/lib/fxl",
@@ -117,7 +117,7 @@ source_set("device_id_provider") {
 
   public_deps = [
     ":fidl_server",
-    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
   ]
 
   deps = [
@@ -138,7 +138,7 @@ source_set("diagnostics") {
 
   public_deps = [
     ":fidl_server",
-    "//sdk/fidl/fuchsia.diagnostics",
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_hlcpp",
   ]
 
   deps = [
@@ -169,7 +169,7 @@ source_set("last_reboot_info_provider") {
 
   public_deps = [
     ":fidl_server",
-    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
   ]
 
   deps = [ "//sdk/lib/syslog/cpp" ]
@@ -185,7 +185,7 @@ source_set("loader") {
 
   public_deps = [
     ":fidl_server",
-    "//sdk/fidl/fuchsia.net.http",
+    "//sdk/fidl/fuchsia.net.http:fuchsia.net.http_hlcpp",
   ]
 
   deps = [
@@ -205,7 +205,7 @@ source_set("product_info_provider") {
 
   public_deps = [
     ":fidl_server",
-    "//sdk/fidl/fuchsia.hwinfo",
+    "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo_hlcpp",
   ]
 
   deps = [ "//sdk/lib/syslog/cpp" ]
@@ -221,7 +221,7 @@ source_set("network_reachability_provider") {
 
   public_deps = [
     ":fidl_server",
-    "//sdk/fidl/fuchsia.net.interfaces",
+    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces_hlcpp",
   ]
 
   deps = [
@@ -241,7 +241,7 @@ source_set("reboot_methods_watcher_register") {
 
   public_deps = [
     ":fidl_server",
-    "//sdk/fidl/fuchsia.hardware.power.statecontrol",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_hlcpp",
   ]
 }
 
@@ -255,11 +255,11 @@ source_set("scenic") {
 
   public_deps = [
     ":fidl_server",
-    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.images",
+    "//sdk/fidl/fuchsia.images:fuchsia.images_hlcpp",
     "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/zx",
   ]
@@ -275,7 +275,7 @@ source_set("timezone_provider") {
 
   public_deps = [
     ":fidl_server",
-    "//sdk/fidl/fuchsia.intl",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl_hlcpp",
   ]
 
   deps = [
@@ -294,7 +294,7 @@ source_set("ui_state_provider") {
 
   public_deps = [
     ":fidl_server",
-    "//sdk/fidl/fuchsia.ui.activity",
+    "//sdk/fidl/fuchsia.ui.activity:fuchsia.ui.activity_hlcpp",
   ]
 }
 

@@ -9,7 +9,7 @@ import("//build/test.gni")
 driver_compat_test("hid-driver-test") {
   sources = [ "hid-driver.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.driver.test",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_hlcpp",
     "//sdk/fidl/fuchsia.hardware.hidctl:fuchsia.hardware.hidctl_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_cpp_wire",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_cpp_wire",

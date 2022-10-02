@@ -27,7 +27,7 @@ source_set("i18n") {
   ]
 
   public_deps = [
-    ":fuchsia.intl.l10n",
+    ":fuchsia.intl.l10n_hlcpp",
     "${icu_root}:icu",
     "//src/lib/intl/lookup/cpp:lib",
   ]

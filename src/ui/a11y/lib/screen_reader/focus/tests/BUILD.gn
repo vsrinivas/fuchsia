@@ -14,7 +14,7 @@ executable("focus_manager_tests") {
   sources = [ "a11y_focus_manager_tests.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp",

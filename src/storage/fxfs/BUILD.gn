@@ -264,7 +264,7 @@ fs_test_config("fxfs") {
 test("fxfs-interop-fs") {
   sources = [ "test/fs_test.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/block_client/cpp",
     "//src/storage/fs_test",

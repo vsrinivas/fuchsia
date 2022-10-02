@@ -36,7 +36,7 @@ source_set("raw12_writer") {
     "raw12_writer.h",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
     "//sdk/lib/fit-promise",
     "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/fzl",
@@ -63,7 +63,7 @@ source_set("image_format_rgba") {
   sources = [ "image_format_rgba.cc" ]
   public = [ "image_format_rgba.h" ]
   public_deps = [
-    "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
     "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",

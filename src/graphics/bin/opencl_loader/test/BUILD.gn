@@ -14,10 +14,10 @@ executable("test_bin") {
   output_name = "opencl_loader_test"
   sources = [ "test.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.gpu.magma",
-    "//sdk/fidl/fuchsia.io",
-    "//sdk/fidl/fuchsia.opencl.loader",
-    "//sdk/fidl/fuchsia.sys2",
+    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_hlcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
+    "//sdk/fidl/fuchsia.opencl.loader:fuchsia.opencl.loader_hlcpp",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_hlcpp",
     "//sdk/lib/fdio",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
@@ -32,8 +32,8 @@ executable("unittest_bin") {
   sources = [ "unittest.cc" ]
   deps = [
     "..:app",
-    "//sdk/fidl/fuchsia.io",
-    "//sdk/fidl/fuchsia.opencl.loader",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
+    "//sdk/fidl/fuchsia.opencl.loader:fuchsia.opencl.loader_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
@@ -55,9 +55,9 @@ executable("opencl-server-bin") {
   sources = [ "opencl-server-main.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.gpu.magma",
-    "//sdk/fidl/fuchsia.io",
-    "//sdk/fidl/fuchsia.process.lifecycle",
+    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_hlcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",

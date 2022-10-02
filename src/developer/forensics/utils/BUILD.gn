@@ -14,7 +14,7 @@ source_set("archive") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.mem",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem_hlcpp",
     "//src/lib/fsl",
   ]
 
@@ -77,7 +77,7 @@ source_set("logs") {
     "log_format.h",
   ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.logger" ]
+  public_deps = [ "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp" ]
 
   deps = [
     "//sdk/lib/syslog/cpp",

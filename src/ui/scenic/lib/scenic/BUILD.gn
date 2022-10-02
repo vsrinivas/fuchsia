@@ -16,12 +16,12 @@ source_set("scenic") {
     ":event_reporter",
     ":system",
     ":take_screenshot_delegate_deprecated",
-    "//sdk/fidl/fuchsia.ui.annotation",
-    "//sdk/fidl/fuchsia.ui.focus",
-    "//sdk/fidl/fuchsia.ui.gfx",
-    "//sdk/fidl/fuchsia.ui.input.accessibility",
-    "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/fidl/fuchsia.ui.scenic.internal",
+    "//sdk/fidl/fuchsia.ui.annotation:fuchsia.ui.annotation_hlcpp",
+    "//sdk/fidl/fuchsia.ui.focus:fuchsia.ui.focus_hlcpp",
+    "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx_hlcpp",
+    "//sdk/fidl/fuchsia.ui.input.accessibility:fuchsia.ui.input.accessibility_hlcpp",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
+    "//sdk/fidl/fuchsia.ui.scenic.internal:fuchsia.ui.scenic.internal_hlcpp",
     "//sdk/lib/fit",
     "//src/lib/fxl",
     "//src/ui/lib/escher",
@@ -50,7 +50,7 @@ source_set("event_reporter") {
     "event_reporter.h",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
     "//src/lib/fostr/fidl/fuchsia.ui.input",
     "//src/lib/fostr/fidl/fuchsia.ui.scenic",
     "//src/lib/fxl",
@@ -76,7 +76,7 @@ source_set("system") {
   ]
   deps = [
     ":event_reporter",
-    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
     "//src/lib/fxl",
     "//src/ui/scenic/lib/scenic/util:util",
     "//src/ui/scenic/lib/scheduling:frame_scheduler",
@@ -86,5 +86,5 @@ source_set("system") {
 
 source_set("take_screenshot_delegate_deprecated") {
   sources = [ "take_screenshot_delegate_deprecated.h" ]
-  public_deps = [ "//sdk/fidl/fuchsia.ui.scenic" ]
+  public_deps = [ "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp" ]
 }

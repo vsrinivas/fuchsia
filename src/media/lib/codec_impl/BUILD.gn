@@ -46,8 +46,8 @@ source_set("codec_impl") {
   ]
   public_deps = [
     ":fourcc",
-    "//sdk/fidl/fuchsia.media.drm",
-    "//sdk/fidl/fuchsia.mediacodec",
+    "//sdk/fidl/fuchsia.media.drm:fuchsia.media.drm_hlcpp",
+    "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec_hlcpp",
     "//sdk/lib/fit",
     "//sdk/lib/stdcompat",
     "//sdk/lib/sys/inspect/cpp",
@@ -69,7 +69,7 @@ source_set("codec_impl") {
   ]
   public_configs = [ ":codec_impl_include_config" ]
   deps = [
-    "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp:cpp",
     "//sdk/lib/syslog/cpp",

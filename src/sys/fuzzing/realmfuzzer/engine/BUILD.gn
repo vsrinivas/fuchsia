@@ -20,7 +20,7 @@ source_set("adapter-client") {
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
     "//src/sys/fuzzing/common",
-    "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
+    "//src/sys/fuzzing/fidl:fuchsia.fuzzer_hlcpp",
     "//zircon/system/ulib/sync",
   ]
   deps = [
@@ -58,7 +58,7 @@ source_set("engine-lib") {
     "//sdk/lib/fit",
     "//src/lib/fxl",
     "//src/sys/fuzzing/common",
-    "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
+    "//src/sys/fuzzing/fidl:fuchsia.fuzzer_hlcpp",
     "//src/sys/fuzzing/realmfuzzer/target:no_hooks",
     "//zircon/system/ulib/sync",
   ]
@@ -98,7 +98,7 @@ source_set("testing") {
     ":engine-lib",
     "//src/sys/fuzzing/common:runner-unittests",
     "//src/sys/fuzzing/common/testing",
-    "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
+    "//src/sys/fuzzing/fidl:fuchsia.fuzzer_hlcpp",
     "//src/sys/fuzzing/realmfuzzer/target:no_hooks",
     "//src/sys/fuzzing/realmfuzzer/testing",
     "//third_party/googletest:gtest",

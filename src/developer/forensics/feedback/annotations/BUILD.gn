@@ -34,7 +34,7 @@ source_set("annotations") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
     "//src/developer/forensics/feedback/reboot_log",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils/cobalt",
@@ -43,7 +43,7 @@ source_set("annotations") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.sysinfo",
+    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/feedback:constants",
@@ -60,7 +60,7 @@ source_set("board_info_provider") {
 
   public_deps = [
     ":fidl_provider",
-    "//sdk/fidl/fuchsia.hwinfo",
+    "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo_hlcpp",
     "//src/developer/forensics/feedback/annotations",
   ]
 }
@@ -73,7 +73,7 @@ source_set("current_channel_provider") {
 
   public_deps = [
     ":fidl_provider",
-    "//sdk/fidl/fuchsia.update.channelcontrol",
+    "//sdk/fidl/fuchsia.update.channelcontrol:fuchsia.update.channelcontrol_hlcpp",
     "//src/developer/forensics/feedback/annotations",
   ]
 }
@@ -85,7 +85,7 @@ source_set("data_register") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
     "//src/developer/forensics/feedback/annotations",
     "//src/lib/fxl",
     "//third_party/rapidjson",
@@ -101,7 +101,7 @@ source_set("device_id_provider") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/feedback/annotations",
@@ -139,7 +139,7 @@ source_set("product_info_provider") {
 
   public_deps = [
     ":fidl_provider",
-    "//sdk/fidl/fuchsia.hwinfo",
+    "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo_hlcpp",
     "//src/developer/forensics/feedback/annotations",
   ]
 }
@@ -152,7 +152,7 @@ source_set("target_channel_provider") {
 
   public_deps = [
     ":fidl_provider",
-    "//sdk/fidl/fuchsia.update.channelcontrol",
+    "//sdk/fidl/fuchsia.update.channelcontrol:fuchsia.update.channelcontrol_hlcpp",
     "//src/developer/forensics/feedback/annotations",
   ]
 }
@@ -176,7 +176,7 @@ source_set("timezone_provider") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.intl",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl_hlcpp",
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/feedback/annotations",
@@ -194,7 +194,7 @@ source_set("ui_state_provider") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.ui.activity",
+    "//sdk/fidl/fuchsia.ui.activity:fuchsia.ui.activity_hlcpp",
     "//src/developer/forensics/feedback/annotations",
   ]
 }

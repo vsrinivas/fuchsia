@@ -16,7 +16,7 @@ executable("bin") {
     "//sdk/lib/stdcompat",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
-    "//src/diagnostics/validator/inspect/fidl:validate",
+    "//src/diagnostics/validator/inspect/fidl:validate_hlcpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

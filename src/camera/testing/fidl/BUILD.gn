@@ -3,10 +3,11 @@
 # found in the LICENSE file.
 
 import("//build/fidl/fidl.gni")
+import("//build/fidl/toolchain.gni")
 
 group("fidl") {
   testonly = true
-  deps = [ ":fuchsia.camera.debug" ]
+  deps = [ ":fuchsia.camera.debug($fidl_toolchain)" ]
 }
 
 fidl("fuchsia.camera.debug") {

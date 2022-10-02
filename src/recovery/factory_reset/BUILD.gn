@@ -16,18 +16,18 @@ source_set("lib") {
 
   public_deps = [
     # <factory_reset.h> has #include <fuchsia/recovery/cpp/fidl.h>
-    "//sdk/fidl/fuchsia.fs",
-    "//sdk/fidl/fuchsia.hardware.power.statecontrol",
+    "//sdk/fidl/fuchsia.fs:fuchsia.fs_hlcpp",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_hlcpp",
 
     # <factory_reset.h> has #include <fuchsia/hardware/power/statecontrol/cpp/fidl.h>
-    "//sdk/fidl/fuchsia.recovery",
+    "//sdk/fidl/fuchsia.recovery:fuchsia.recovery_hlcpp",
 
     # <factory_reset.h> has #include <fbl/unique_fd.h>
     "//zircon/system/ulib/fbl",
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.hardware.block",
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
     "//src/lib/storage/fs_management",
@@ -58,7 +58,7 @@ executable("fdr") {
   sources = [ "cli_main.cc" ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.recovery",
+    "//sdk/fidl/fuchsia.recovery:fuchsia.recovery_hlcpp",
     "//sdk/lib/sys/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -100,7 +100,7 @@ test("factory_reset_unittests") {
     ":lib",
     "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_cpp_wire",
-    "//sdk/fidl/fuchsia.hardware.power.statecontrol",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_hlcpp",
     "//src/devices/testing/driver-integration-test-shim",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/fs_management",

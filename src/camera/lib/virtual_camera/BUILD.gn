@@ -30,8 +30,8 @@ source_set("lib") {
     "//zircon/third_party/ulib/safemath",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.camera3",
-    "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/fidl/fuchsia.camera3:fuchsia.camera3_hlcpp",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
     "//sdk/lib/fit-promise",
     "//src/lib/fsl",
     "//zircon/system/ulib/fzl",

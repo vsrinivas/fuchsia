@@ -33,8 +33,8 @@ source_set("input") {
   sources = [ "input.cc" ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.ui.input",
-    "//sdk/fidl/fuchsia.ui.input.accessibility",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_hlcpp",
+    "//sdk/fidl/fuchsia.ui.input.accessibility:fuchsia.ui.input.accessibility_hlcpp",
     "//third_party/glm",
   ]
 }
@@ -47,7 +47,7 @@ source_set("view_ref_helper") {
   sources = [ "view_ref_helper.cc" ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",

@@ -21,7 +21,7 @@ source_set("lib") {
     "//sdk/lib/syslog/cpp:backend",
     "//src/lib/fxl",
   ]
-  public_deps = [ "//src/camera/bin/camera-gym/fidl:controller" ]
+  public_deps = [ "//src/camera/bin/camera-gym/fidl:controller_hlcpp" ]
 }
 
 executable("camera_gym_controller_error_unittest_bin") {

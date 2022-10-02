@@ -123,10 +123,10 @@ source_set("lib") {
   public_configs += [ "//src/virtualization/bin:args" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.component",
-    "//sdk/fidl/fuchsia.component.decl",
-    "//sdk/fidl/fuchsia.virtualization",
-    "//sdk/fidl/fuchsia.virtualization.hardware",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_hlcpp",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_hlcpp",
+    "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization_hlcpp",
+    "//sdk/fidl/fuchsia.virtualization.hardware:fuchsia.virtualization.hardware_hlcpp",
     "//sdk/lib/fdio",
     "//src/graphics/lib/magma/include/virtio",
     "//src/lib/fsl",
@@ -139,8 +139,8 @@ source_set("lib") {
   public_deps = [
     ":bits",
     "//sdk/fidl/fuchsia.hardware.pci:fuchsia.hardware.pci_cpp_wire",
-    "//sdk/fidl/fuchsia.kernel",
-    "//sdk/fidl/fuchsia.sysinfo",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_hlcpp",
+    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_hlcpp",
     "//sdk/fidl/fuchsia.virtualization.hardware:fuchsia.virtualization.hardware_cpp_wire",
     "//sdk/lib/stdcompat",
     "//sdk/lib/sys/cpp",
@@ -168,8 +168,8 @@ executable("bin") {
 
   deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.component",
-    "//sdk/fidl/fuchsia.component.decl",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_hlcpp",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_hlcpp",
     "//src/virtualization/lib/guest_config",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -226,8 +226,8 @@ executable("vmm_unittests") {
 
   deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.component",
-    "//sdk/fidl/fuchsia.component.decl",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_hlcpp",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_hlcpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",

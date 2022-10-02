@@ -6,7 +6,7 @@ executable("driver-registrar") {
   sources = [ "driver-registrar.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.driver.registrar:fuchsia.driver.registrar_cpp_wire",
-    "//sdk/fidl/fuchsia.pkg",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl/cpp",
     "//zircon/system/ulib/fbl",

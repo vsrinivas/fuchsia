@@ -45,8 +45,8 @@ source_set("intl_property_provider_impl") {
   deps = [
     ":icu_headers",
     ":locale_util",
-    "//sdk/fidl/fuchsia.intl",
-    "//sdk/fidl/fuchsia.settings",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl_hlcpp",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/service/cpp",
@@ -58,9 +58,9 @@ source_set("intl_property_provider_impl") {
   ]
 
   public_deps = [
-    ":fidl",
-    "//sdk/fidl/fuchsia.intl",
-    "//sdk/fidl/fuchsia.settings",
+    ":fidl_hlcpp",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl_hlcpp",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_hlcpp",
     "//sdk/lib/fit-promise",
   ]
 }
@@ -102,7 +102,7 @@ source_set("locale_util") {
 
   public_deps = [
     "${icu_root}:icu",
-    "//sdk/fidl/fuchsia.intl",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl_hlcpp",
     "//sdk/lib/fit-promise",
   ]
 }
@@ -116,7 +116,7 @@ executable("locale_util_unit_test_bin") {
   deps = [
     ":icu_headers",
     ":locale_util",
-    "//sdk/fidl/fuchsia.intl",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl_hlcpp",
     "//src/lib/fidl_fuchsia_intl_ext/cpp",
     "//src/lib/fostr/fidl/fuchsia.intl",
     "//src/lib/fxl/test:gtest_main",

@@ -28,7 +28,7 @@ source_set("lib") {
     "//zircon/system/ulib/async",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.camera2",
+    "//sdk/fidl/fuchsia.camera2:fuchsia.camera2_hlcpp",
     "//sdk/lib/fit-promise",
   ]
 }

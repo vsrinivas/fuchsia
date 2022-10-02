@@ -29,9 +29,9 @@ executable("integration_test") {
 
   deps = [
     "..:lib",
-    "//sdk/fidl/fuchsia.kernel",
-    "//sdk/fidl/fuchsia.logger",
-    "//sdk/fidl/fuchsia.process.explorer",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_hlcpp",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
+    "//sdk/fidl/fuchsia.process.explorer:fuchsia.process.explorer_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//src/lib/fsl",

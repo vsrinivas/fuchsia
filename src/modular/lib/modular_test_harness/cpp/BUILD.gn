@@ -40,11 +40,11 @@ source_set("test_harness_fixture") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.element",
-    "//sdk/fidl/fuchsia.intl",
-    "//sdk/fidl/fuchsia.modular.internal",
-    "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/fidl/fuchsia.settings",
+    "//sdk/fidl/fuchsia.element:fuchsia.element_hlcpp",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl_hlcpp",
+    "//sdk/fidl/fuchsia.modular.internal:fuchsia.modular.internal_hlcpp",
+    "//sdk/fidl/fuchsia.modular.testing:fuchsia.modular.testing_hlcpp",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_hlcpp",
     "//sdk/lib/modular/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
@@ -63,8 +63,8 @@ executable("test_harness_fixture_test_bin") {
 
   deps = [
     ":test_harness_fixture",
-    "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.modular.testing:fuchsia.modular.testing_hlcpp",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/sys/cpp/testing:unit",
@@ -88,14 +88,14 @@ source_set("test_harness_impl") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.cobalt",
-    "//sdk/fidl/fuchsia.devicesettings",
-    "//sdk/fidl/fuchsia.identity.account",
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/fidl/fuchsia.settings",
-    "//sdk/fidl/fuchsia.stash",
-    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_hlcpp",
+    "//sdk/fidl/fuchsia.devicesettings:fuchsia.devicesettings_hlcpp",
+    "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account_hlcpp",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular_hlcpp",
+    "//sdk/fidl/fuchsia.modular.testing:fuchsia.modular.testing_hlcpp",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_hlcpp",
+    "//sdk/fidl/fuchsia.stash:fuchsia.stash_hlcpp",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_hlcpp",
     "//sdk/lib/modular/cpp",
     "//sdk/lib/sys/cpp/testing:enclosing_environment",
     "//src/lib/fsl",
@@ -119,8 +119,8 @@ source_set("test_harness_impl_unittest") {
 
   deps = [
     ":test_harness_impl",
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular_hlcpp",
+    "//sdk/fidl/fuchsia.modular.testing:fuchsia.modular.testing_hlcpp",
     "//sdk/lib/fidl",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/sys/cpp/testing:unit",

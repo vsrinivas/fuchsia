@@ -8,7 +8,7 @@ executable("bin") {
   output_name = "audio-effects-ctl"
   sources = [ "main.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.media.audio",
+    "//sdk/fidl/fuchsia.media.audio:fuchsia.media.audio_hlcpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
   ]
