@@ -1,4 +1,4 @@
-# Component storage index
+# Component ID index
 
 ## Terminology
 
@@ -8,7 +8,8 @@
 ## Scope
 
 This document describes how to define an index that maps instance ids to
-monikers, for components that use isolated-persistent-storage.
+monikers. This mapping matters for components that use isolated storage
+capabilities.
 
 ## Overview
 

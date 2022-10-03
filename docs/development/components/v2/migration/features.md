@@ -77,7 +77,7 @@ Note: If the appropriate storage capability is not currently provided by your
 component's parent realm, reach out to [component-framework-dev][cf-dev-list]
 for assistance.
 
-### Update component storage index
+### Update component ID index
 
 Components that use storage use a [component ID index][component-id-index] to
 preserve access to persistent storage contents across the migration, such as

@@ -23,9 +23,9 @@ isolated storage directories it contains.
 The framework allocates storage subdirectories based on either the component
 instance's [moniker][glossary.moniker] or a static
 [instance ID][glossary.component-instance-identifier]. Each instance ID is a
-256-bit globally unique identifier listed in a component storage index file.
+256-bit globally unique identifier listed in a component ID index file.
 
-The following is an example entry in a component storage index file containing a
+The following is an example entry in a component ID index file containing a
 stable instance ID:
 
 ```json5
@@ -41,10 +41,10 @@ stable instance ID:
 
 Instance IDs allow a component's storage to persist across changes to the
 component's moniker, such as moving the component instance to a different realm.
-Storage IDs based on moniker are a good secondary option for tests or other use
+Using a moniker is a good secondary option for tests or other use
 cases where storage does not need to be durable.
 
-For more details on instance IDs, see [Component storage index][storage-index].
+For more details on instance IDs, see [Component ID index][component-id-index].
 
 ## Providing storage capabilities {#provide}
 
@@ -177,4 +177,4 @@ For more details on implementing directories, see
 [capability-routing]: /docs/concepts/components/v2/capabilities/README.md#routing
 [component-reference]: https://fuchsia.dev/reference/cml#references
 [directory-capabilities]: /docs/concepts/components/v2/capabilities/directory.md
-[storage-index]: /docs/development/components/component_id_index.md
+[component-id-index]: /docs/development/components/component_id_index.md

@@ -17,7 +17,7 @@ toc:
 - title: "Configure components"
   section:
   - include: /docs/development/components/configuration/_toc.yaml
-- title: "Component storage index"
+- title: "Component ID index"
   path: /docs/development/components/component_id_index.md
 - title: "Migrating legacy components"
   section:
