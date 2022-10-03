@@ -77,6 +77,23 @@ TEST_F(ProcessUpdateActionTest, ChangeInDescribableContentOfFocusedNodeCausesNod
   EXPECT_EQ(mock_speaker()->node_ids()[0], 0u);
 }
 
+TEST_F(ProcessUpdateActionTest, TtsShouldBeNonInterrupting) {
+  mock_screen_reader_context()->set_last_interaction(async::Now(async_get_default_dispatcher()));
+  mock_a11y_focus_manager()->SetA11yFocus(mock_semantic_provider()->koid(), 0,
+                                          [](bool result) { EXPECT_TRUE(result); });
+  mock_screen_reader_context()->set_describable_content_changed(true);
+  a11y::ProcessUpdateAction action(action_context(), mock_screen_reader_context());
+  action.Run({});
+  RunLoopUntilIdle();
+  EXPECT_TRUE(mock_speaker()->ReceivedSpeak());
+
+  ASSERT_EQ(mock_speaker()->node_ids().size(), 1u);
+  ASSERT_EQ(mock_speaker()->speak_node_options().size(), 1u);
+  // Most screen reader TTSes are interrupting, but the TTSes from this action
+  // should be noninterrupting.
+  EXPECT_EQ(mock_speaker()->speak_node_options()[0].interrupt, false);
+}
+
 TEST_F(ProcessUpdateActionTest, NoChangeInDescribableContentOfFocusedNodeCausesNoOutput) {
   mock_screen_reader_context()->set_last_interaction(async::Now(async_get_default_dispatcher()));
   mock_a11y_focus_manager()->SetA11yFocus(mock_semantic_provider()->koid(), 0,

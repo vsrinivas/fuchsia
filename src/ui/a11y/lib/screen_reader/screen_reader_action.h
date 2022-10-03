@@ -12,6 +12,7 @@
 #include "src/ui/a11y/lib/gesture_manager/gesture_util/util.h"
 #include "src/ui/a11y/lib/input_injection/injector_manager.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
+#include "src/ui/a11y/lib/screen_reader/speaker.h"
 #include "src/ui/a11y/lib/semantics/semantics_source.h"
 #include "src/ui/a11y/lib/view/view_manager.h"
 
@@ -64,7 +65,9 @@ class ScreenReaderAction {
   // Returns a promise that from a node_id and view_koid, builds a speech task to speak the node
   // description. An error is thrown if the semantic tree or the semantic node are missing data
   // necessary to build an utterance.
-  fpromise::promise<> BuildSpeechTaskFromNodePromise(zx_koid_t view_koid, uint32_t node_id);
+  fpromise::promise<> BuildSpeechTaskFromNodePromise(zx_koid_t view_koid, uint32_t node_id,
+                                                     Speaker::Options options = {
+                                                         .interrupt = true});
 
   // Returns a promise that from a node_id and view_koid, builds a speech task to speak the range
   // control's |range_value|. An error is thrown if the semantic tree or the semantic node are

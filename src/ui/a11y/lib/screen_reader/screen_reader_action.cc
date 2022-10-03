@@ -72,24 +72,26 @@ fpromise::promise<> ScreenReaderAction::SetA11yFocusPromise(const uint32_t node_
 }
 
 fpromise::promise<> ScreenReaderAction::BuildSpeechTaskFromNodePromise(zx_koid_t view_koid,
-                                                                       uint32_t node_id) {
-  return fpromise::make_promise([this, node_id, view_koid]() mutable -> fpromise::promise<> {
-    const auto* node = action_context_->semantics_source->GetSemanticNode(view_koid, node_id);
-    if (!node) {
-      FX_LOGS(INFO) << "ScreenReaderAction: No node found for node id:" << node_id;
-      return fpromise::make_error_promise();
-    }
+                                                                       uint32_t node_id,
+                                                                       Speaker::Options options) {
+  return fpromise::make_promise(
+      [this, node_id, view_koid, options]() mutable -> fpromise::promise<> {
+        const auto* node = action_context_->semantics_source->GetSemanticNode(view_koid, node_id);
+        if (!node) {
+          FX_LOGS(INFO) << "ScreenReaderAction: No node found for node id:" << node_id;
+          return fpromise::make_error_promise();
+        }
 
-    auto* speaker = screen_reader_context_->speaker();
-    FX_DCHECK(speaker);
-    if (screen_reader_context_->IsVirtualKeyboardFocused()) {
-      // Read the key in the virtual keyboard.
-      return speaker->SpeakNodeCanonicalizedLabelPromise(node, {.interrupt = true});
-    }
+        auto* speaker = screen_reader_context_->speaker();
+        FX_DCHECK(speaker);
+        if (screen_reader_context_->IsVirtualKeyboardFocused()) {
+          // Read the key in the virtual keyboard.
+          return speaker->SpeakNodeCanonicalizedLabelPromise(node, {.interrupt = true});
+        }
 
-    // When not focusing a virtual keyboard node, just describe the node.
-    return speaker->SpeakNodePromise(node, {.interrupt = true}, GetMessageContext());
-  });
+        // When not focusing a virtual keyboard node, just describe the node.
+        return speaker->SpeakNodePromise(node, options, GetMessageContext());
+      });
 }
 
 fpromise::promise<> ScreenReaderAction::BuildSpeechTaskForRangeValuePromise(zx_koid_t view_koid,

@@ -67,9 +67,14 @@ void ProcessUpdateAction::Run(GestureContext gesture_context) {
   }
 
   last_spoken_feedback_ = now;
-  auto promise = BuildSpeechTaskFromNodePromise(a11y_focus->view_ref_koid, a11y_focus->node_id)
-                     // Cancel any promises if this class goes out of scope.
-                     .wrap_with(scope_);
+
+  // We don't want automatic focus updates to cut off any other messages (which
+  // might have been user-initiated), so we mark the TTS as non-interrupting.
+  auto options = Speaker::Options{.interrupt = false};
+  auto promise =
+      BuildSpeechTaskFromNodePromise(a11y_focus->view_ref_koid, a11y_focus->node_id, options)
+          // Cancel any promises if this class goes out of scope.
+          .wrap_with(scope_);
   auto* executor = screen_reader_context_->executor();
   executor->schedule_task(std::move(promise));
 }
