@@ -462,6 +462,7 @@
             protocol: [ "fuchsia.sysmem.Allocator" ],
             from: "#sysmem_connector",
             to: [
+                "#agis",
                 "#session-manager",
                 "#starnix_manager",
             ],
@@ -809,6 +810,13 @@
                 "#session-manager",
                 "#starnix_manager",
             ],
+        },
+        {
+            directory: "dev-class",
+            from: "parent",
+            as: "dev-display-controller",
+            to: [ "#agis" ],
+            subdir: "display-controller",
         },
         {
             protocol: "fuchsia.memorypressure.Provider",

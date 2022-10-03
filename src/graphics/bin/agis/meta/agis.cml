@@ -27,9 +27,15 @@
         {
             protocol: [
                 "fuchsia.logger.LogSink",
+                "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.vulkan.loader.Loader",
             ],
+            from: "parent",
+            to: "#vulkan-trace",
+        },
+        {
+            directory: "dev-display-controller",
             from: "parent",
             to: "#vulkan-trace",
         },

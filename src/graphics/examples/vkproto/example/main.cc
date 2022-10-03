@@ -51,7 +51,9 @@ int main(int argc, char* argv[]) {
 
   // INSTANCE
   const bool kEnableValidation = true;
-  vkp::Instance vkp_instance(kEnableValidation);
+  const vk::InstanceCreateInfo instance_info;
+  vkp::Instance vkp_instance(instance_info, kEnableValidation, {} /* extensions */, {"GraphicsSpy"},
+                             nullptr /* pAllocator */);
   RTN_IF_MSG(1, !vkp_instance.Init(), "Instance Initialization Failed.\n");
   std::shared_ptr<vk::Instance> instance = vkp_instance.shared();
 
@@ -90,9 +92,9 @@ int main(int argc, char* argv[]) {
   vk::Extent2D extent;
   std::shared_ptr<vkp::Swapchain> vkp_swap_chain;
 
-  // The number of image views added in either the offscreen or onscreen logic blocks
-  // below controls the number of framebuffers, command buffers, fences and signalling
-  // semaphores created subsequently.
+  // The number of image views added in either the offscreen or onscreen logic
+  // blocks below controls the number of framebuffers, command buffers, fences
+  // and signaling semaphores created subsequently.
   std::vector<vk::ImageView> image_views;
   std::shared_ptr<vkp::ImageView> vkp_offscreen_image_view;
   if (offscreen) {
@@ -145,7 +147,8 @@ int main(int argc, char* argv[]) {
   RTN_IF_VKH_ERR(1, r_offscren_fence, "Offscreen submission fence.\n");
 
   // Onscreen drawing submission fences.
-  // There is a 1/1/1 mapping between swapchain image view / command buffer / fence.
+  // There is a 1/1/1 mapping between swapchain image view / command buffer /
+  // fence.
   std::vector<vk::UniqueFence> fences;
   for (size_t i = 0; i < image_views.size(); i++) {
     auto [r_fence, fence] = device->createFenceUnique(fence_info);
@@ -207,9 +210,9 @@ bool DrawFrame(const vkp::Device& vkp_device, const vkp::Swapchain& vkp_swap_cha
   RTN_IF_VKH_ERR(false, r_render_finished_semaphore, "Render finished semaphore.\n");
 
   // Obtain next swap chain image in which to draw.
-  // The timeout makes this a blocking call if no swapchain images, and therefore
-  // command buffers, are available so there is no need to wait for a submission fence
-  // before calling acquireNextImageKHR().
+  // The timeout makes this a blocking call if no swapchain images, and
+  // therefore command buffers, are available so there is no need to wait for a
+  // submission fence before calling acquireNextImageKHR().
   auto [r_acquire, swapchain_image_index] =
       device.acquireNextImageKHR(vkp_swap_chain.get(), std::numeric_limits<uint64_t>::max(),
                                  image_available_semaphore, nullptr);
@@ -231,8 +234,9 @@ bool DrawFrame(const vkp::Device& vkp_device, const vkp::Swapchain& vkp_swap_cha
   submit_info.signalSemaphoreCount = 1;
   submit_info.pSignalSemaphores = &render_finished_semaphore;
 
-  // No guarantees that we're done with the acquired swap chain image and therefore
-  // the command buffer we're about to use so wait on the command buffer's fence.
+  // No guarantees that we're done with the acquired swap chain image and
+  // therefore the command buffer we're about to use so wait on the command
+  // buffer's fence.
   const vk::Fence& fence = fences[swapchain_image_index].get();
   device.waitForFences(1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
   device.resetFences(1, &fence);

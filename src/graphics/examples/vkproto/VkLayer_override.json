@@ -7,14 +7,16 @@
         "app_keys": [],
         "blacklisted_layers": [],
         "component_layers": [
-            "GraphicsSpyLayer"
+            "GraphicsSpy",
+            "VK_LAYER_LUNARG_override"
         ],
         "description": "LunarG Override Layer",
         "disable_environment": {
             "DISABLE_VK_LAYER_LUNARG_override": "1"
         },
         "override_paths": [
-            "/gapii_pkg/data/vulkan/explicit_layer.d"
+            "/gapii_pkg/data/vulkan/explicit_layer.d",
+            "/pkg/data/vulkan/explicit_layer.d"
         ],
         "type": "GLOBAL"
     }

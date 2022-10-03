@@ -15,4 +15,14 @@
         forward_stderr_to: "log",
         forward_stdout_to: "log",
     },
+    use: [
+        {
+            protocol: [ "fuchsia.sysmem.Allocator" ],
+        },
+        {
+            directory: "dev-display-controller",
+            rights: [ "r*" ],
+            path: "/dev/class/display-controller",
+        },
+    ],
 }
