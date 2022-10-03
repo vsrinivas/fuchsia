@@ -6,6 +6,7 @@
 #include <fuchsia/element/cpp/fidl.h>
 #include <fuchsia/input/interaction/cpp/fidl.h>
 #include <fuchsia/ui/composition/cpp/fidl.h>
+#include <fuchsia/ui/display/singleton/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/input3/cpp/fidl.h>
 #include <fuchsia/ui/pointerinjector/cpp/fidl.h>
@@ -86,6 +87,10 @@ int run_test_ui_stack(int argc, const char** argv) {
   AddPublicService<fuchsia::ui::shortcut::Registry>(context.get(), realm_exposed_services.get());
   AddPublicService<fuchsia::ui::pointerinjector::Registry>(context.get(),
                                                            realm_exposed_services.get());
+  AddPublicService<fuchsia::ui::composition::Screenshot>(context.get(),
+                                                         realm_exposed_services.get());
+  AddPublicService<fuchsia::ui::display::singleton::Info>(context.get(),
+                                                          realm_exposed_services.get());
 
   // Helper services.
   AddPublicService<fuchsia::ui::test::input::Registry>(context.get(), realm_exposed_services.get());

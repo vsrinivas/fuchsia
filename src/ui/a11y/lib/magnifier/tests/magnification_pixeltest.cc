@@ -18,7 +18,6 @@
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/ui/testing/ui_test_manager/ui_test_manager.h"
 #include "src/ui/testing/util/gfx_test_view.h"
-#include "src/ui/testing/views/color.h"
 
 namespace integration_tests {
 
@@ -31,13 +30,6 @@ using component_testing::Realm;
 using component_testing::Route;
 
 constexpr auto kViewProvider = "view-provider";
-
-// Colors at specified locations in the test view.
-constexpr scenic::Color kUpperLeftColor = {0, 0, 0, 255};
-constexpr scenic::Color kUpperRightColor = {0, 0, 255, 255};
-constexpr scenic::Color kLowerLeftColor = {255, 0, 0, 255};
-constexpr scenic::Color kLowerRightColor = {255, 0, 255, 255};
-constexpr scenic::Color kCenterColor = {0, 255, 0, 255};
 
 // These tests leverage the coordinate test view to ensure that RootPresenter magnification APIs are
 // working properly.
@@ -87,22 +79,7 @@ class MagnificationPixelTest
     ui_test_manager_->InitializeScene();
     RunLoopUntil([this]() { return ui_test_manager_->ClientViewIsRendering(); });
 
-    scenic_ = realm_exposed_services_->Connect<fuchsia::ui::scenic::Scenic>();
     fake_magnifier_ = realm_exposed_services_->Connect<test::accessibility::Magnifier>();
-  }
-
-  scenic::Screenshot TakeScreenshot() {
-    fuchsia::ui::scenic::ScreenshotData screenshot_out;
-    scenic_->TakeScreenshot(
-        [this, &screenshot_out](fuchsia::ui::scenic::ScreenshotData screenshot, bool status) {
-          EXPECT_TRUE(status) << "Failed to take screenshot";
-          screenshot_out = std::move(screenshot);
-          QuitLoop();
-        });
-
-    FX_LOGS(INFO) << "Waiting for screenshot";
-    RunLoop();
-    return scenic::Screenshot(screenshot_out);
   }
 
   void SetClipSpaceTransform(float scale, float x, float y) {
@@ -111,13 +88,14 @@ class MagnificationPixelTest
     RunLoop();
   }
 
+  ui_testing::Screenshot TakeScreenshot() { return ui_test_manager_->TakeScreenshot(); }
+
  private:
   std::unique_ptr<ui_testing::UITestManager> ui_test_manager_;
   std::unique_ptr<sys::ServiceDirectory> realm_exposed_services_;
   std::unique_ptr<Realm> realm_;
 
   std::unique_ptr<ui_testing::TestView> test_view_;
-  fuchsia::ui::scenic::ScenicPtr scenic_;
   test::accessibility::MagnifierPtr fake_magnifier_;
 };
 
@@ -129,13 +107,16 @@ TEST_P(MagnificationPixelTest, Identity) {
   SetClipSpaceTransform(/* scale = */ 1, /* translation_x = */ 0, /* translation_y = */ 0);
 
   RunLoopUntil([this]() {
-    scenic::Screenshot screenshot = TakeScreenshot();
+    auto data = TakeScreenshot();
 
-    return screenshot.ColorAt(.25f, .25f) == kUpperLeftColor &&
-           screenshot.ColorAt(.25f, .75f) == kUpperRightColor &&
-           screenshot.ColorAt(.75f, .25f) == kLowerLeftColor &&
-           screenshot.ColorAt(.75f, .75f) == kLowerRightColor &&
-           screenshot.ColorAt(.5f, .5f) == kCenterColor;
+    return data.GetPixelAt(data.width() / 4, data.height() / 4) == ui_testing::Screenshot::kBlack &&
+           data.GetPixelAt(data.width() / 4, 3 * data.height() / 4) ==
+               ui_testing::Screenshot::kBlue &&
+           data.GetPixelAt(3 * data.width() / 4, data.height() / 4) ==
+               ui_testing::Screenshot::kRed &&
+           data.GetPixelAt(3 * data.width() / 4, 3 * data.height() / 4) ==
+               ui_testing::Screenshot::kMagenta &&
+           data.GetPixelAt(data.width() / 2, data.height() / 2) == ui_testing::Screenshot::kGreen;
   });
 }
 
@@ -143,12 +124,16 @@ TEST_P(MagnificationPixelTest, Center) {
   SetClipSpaceTransform(/* scale = */ 4, /* translation_x = */ 0, /* translation_y = */ 0);
 
   RunLoopUntil([this]() {
-    scenic::Screenshot screenshot = TakeScreenshot();
+    auto data = TakeScreenshot();
 
-    return screenshot.ColorAt(.25f, .25f) == kCenterColor &&
-           screenshot.ColorAt(.25f, .75f) == kCenterColor &&
-           screenshot.ColorAt(.75f, .25f) == kCenterColor &&
-           screenshot.ColorAt(.75f, .75f) == kCenterColor;
+    return data.GetPixelAt(data.width() / 4, data.height() / 4) == ui_testing::Screenshot::kGreen &&
+           data.GetPixelAt(data.width() / 4, 3 * data.height() / 4) ==
+               ui_testing::Screenshot::kGreen &&
+           data.GetPixelAt(3 * data.width() / 4, data.height() / 4) ==
+               ui_testing::Screenshot::kGreen &&
+           data.GetPixelAt(3 * data.width() / 4, 3 * data.height() / 4) ==
+               ui_testing::Screenshot::kGreen &&
+           data.GetPixelAt(data.width() / 2, data.height() / 2) == ui_testing::Screenshot::kGreen;
   });
 }
 
@@ -156,12 +141,15 @@ TEST_P(MagnificationPixelTest, RotatedUpperLeft) {
   SetClipSpaceTransform(/* scale = */ 2, /* translation_x = */ 1, /* translation_y = */ 1);
 
   RunLoopUntil([this]() {
-    scenic::Screenshot screenshot = TakeScreenshot();
+    auto data = TakeScreenshot();
 
-    return screenshot.ColorAt(.25f, .25f) == kUpperLeftColor &&
-           screenshot.ColorAt(.25f, .75f) == kUpperLeftColor &&
-           screenshot.ColorAt(.75f, .25f) == kUpperLeftColor &&
-           screenshot.ColorAt(.75f, .75f) == kCenterColor;
+    return data.GetPixelAt(data.width() / 4, data.height() / 4) == ui_testing::Screenshot::kBlack &&
+           data.GetPixelAt(data.width() / 4, 3 * data.height() / 4) ==
+               ui_testing::Screenshot::kBlack &&
+           data.GetPixelAt(3 * data.width() / 4, data.height() / 4) ==
+               ui_testing::Screenshot::kBlack &&
+           data.GetPixelAt(3 * data.width() / 4, 3 * data.height() / 4) ==
+               ui_testing::Screenshot::kGreen;
   });
 }
 

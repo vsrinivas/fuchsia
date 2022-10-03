@@ -162,15 +162,12 @@ class VirtualKeyboardBase
     realm_ = std::make_unique<Realm>(ui_test_manager_->AddSubrealm());
     BuildRealm(this->GetTestComponents(), this->GetTestRoutes(), this->GetTestV2Components());
 
-    // Get the display dimensions
-    scenic_ = realm_exposed_services()->Connect<fuchsia::ui::scenic::Scenic>();
-    scenic_->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo display_info) {
-      display_width_ = display_info.width_in_px;
-      display_height_ = display_info.height_in_px;
-      FX_LOGS(INFO) << "Got display_width = " << *display_width_
-                    << " and display_height = " << *display_height_;
-    });
-    RunLoopUntil([this] { return display_width_.has_value() && display_height_.has_value(); });
+    // Get display dimensions.
+    auto [width, height] = ui_test_manager_->GetDisplayDimensions();
+    display_width_ = static_cast<uint32_t>(width);
+    display_height_ = static_cast<uint32_t>(height);
+    FX_LOGS(INFO) << "Got display_width = " << *display_width_
+                  << " and display_height = " << *display_height_;
 
     RegisterInjectionDevice();
   }
@@ -308,8 +305,6 @@ class VirtualKeyboardBase
   std::unique_ptr<InputPositionListenerServer> response_listener_;
 
   int injection_count_ = 0;
-
-  fuchsia::ui::scenic::ScenicPtr scenic_;
 
   std::optional<uint32_t> display_width_;
   std::optional<uint32_t> display_height_;

@@ -21,7 +21,7 @@
 #include <vector>
 
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
-#include "src/ui/testing/views/color.h"
+#include "src/ui/testing/util/screenshot_helper.h"
 
 namespace flutter_embedder_test_ip {
 
@@ -50,28 +50,34 @@ class FlutterEmbedderTestIp : public ::loop_fixture::RealLoop,
       std::optional<fuchsia::ui::observation::geometry::WatchResponse>& watch_response,
       zx_koid_t view_ref_koid);
 
-  scenic::Screenshot TakeScreenshot() {
+  ui_testing::Screenshot TakeScreenshot() {
     FX_LOGS(INFO) << "Taking screenshot... ";
-    fuchsia::ui::scenic::ScreenshotData screenshot_out;
-    scenic_->TakeScreenshot(
-        [this, &screenshot_out](fuchsia::ui::scenic::ScreenshotData screenshot, bool status) {
-          EXPECT_TRUE(status) << "Failed to take screenshot";
-          screenshot_out = std::move(screenshot);
-          QuitLoop();
-        });
-    EXPECT_FALSE(RunLoopWithTimeout(kScreenshotTimeout)) << "Timed out waiting for screenshot.";
+
+    fuchsia::ui::composition::ScreenshotTakeRequest request;
+    request.set_format(fuchsia::ui::composition::ScreenshotFormat::BGRA_RAW);
+
+    std::optional<fuchsia::ui::composition::ScreenshotTakeResponse> response;
+    screenshotter_->Take(std::move(request), [this, &response](auto screenshot) {
+      response = std::move(screenshot);
+      QuitLoop();
+    });
+
     FX_LOGS(INFO) << "Screenshot captured.";
 
-    return scenic::Screenshot(screenshot_out);
+    EXPECT_FALSE(RunLoopWithTimeout(kScreenshotTimeout)) << "Timed out waiting for screenshot.";
+
+    return ui_testing::Screenshot(response->vmo(), display_width_, display_height_,
+                                  0 /*display_rotation*/);
   }
 
   void BuildRealmAndLaunchApp(const std::string& component_url,
                               const std::vector<std::string>& component_args = {},
                               bool usePointerInjection2 = false);
 
-  bool TakeScreenshotUntil(scenic::Color color,
-                           fit::function<void(std::map<scenic::Color, size_t>)> callback = nullptr,
-                           zx::duration timeout = kTestTimeout) {
+  bool TakeScreenshotUntil(
+      ui_testing::Pixel color,
+      fit::function<void(std::map<ui_testing::Pixel, uint32_t>)> callback = nullptr,
+      zx::duration timeout = kTestTimeout) {
     return RunLoopWithTimeoutOrUntil(
         [this, &callback, &color] {
           auto screenshot = TakeScreenshot();
@@ -123,6 +129,7 @@ class FlutterEmbedderTestIp : public ::loop_fixture::RealLoop,
   fuchsia::ui::test::input::TouchScreenPtr fake_touchscreen_;
   fuchsia::ui::test::scene::ControllerPtr scene_provider_;
   fuchsia::ui::observation::geometry::ViewTreeWatcherPtr view_tree_watcher_;
+  fuchsia::ui::composition::ScreenshotPtr screenshotter_;
 
   // Wrapped in optional since the view is not created until the middle of SetUp
   component_testing::RealmBuilder realm_builder_;
@@ -137,6 +144,9 @@ class FlutterEmbedderTestIp : public ::loop_fixture::RealLoop,
   // The first property is important to avoid skewing the latency metrics that we collect.
   // For an explanation of why a tap might be lost, see the documentation for TryInject().
   static constexpr auto kTapRetryInterval = zx::sec(1);
+
+  uint64_t display_width_ = 0;
+  uint64_t display_height_ = 0;
 };
 
 }  // namespace flutter_embedder_test_ip

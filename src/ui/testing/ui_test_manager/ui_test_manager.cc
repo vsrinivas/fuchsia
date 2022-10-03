@@ -54,7 +54,20 @@ UITestManager::UITestManager(UITestRealm::Config config)
 
 component_testing::Realm UITestManager::AddSubrealm() { return realm_.AddSubrealm(); }
 
-void UITestManager::BuildRealm() { realm_.Build(); }
+void UITestManager::BuildRealm() {
+  realm_.Build();
+
+  // Get the display information using the |fuchsia.ui.display.singleton.Info|.
+  fuchsia::ui::display::singleton::Metrics info;
+  fuchsia::ui::display::singleton::InfoSyncPtr display_info =
+      realm_.realm_root()->ConnectSync<fuchsia::ui::display::singleton::Info>();
+  auto status = display_info->GetMetrics(&info);
+
+  FX_DCHECK(status == ZX_OK);
+
+  display_width_ = info.extent_in_px().width;
+  display_height_ = info.extent_in_px().height;
+}
 
 std::unique_ptr<sys::ServiceDirectory> UITestManager::CloneExposedServicesDirectory() {
   return realm_.CloneExposedServicesDirectory();
@@ -116,17 +129,6 @@ void UITestManager::InitializeScene(bool use_scene_provider) {
   }
 
   screenshotter_ = realm_.realm_root()->ConnectSync<fuchsia::ui::composition::Screenshot>();
-
-  // Get the display information using the |fuchsia.ui.display.singleton.Info|.
-  fuchsia::ui::display::singleton::Metrics info;
-  fuchsia::ui::display::singleton::InfoSyncPtr display_info =
-      realm_.realm_root()->ConnectSync<fuchsia::ui::display::singleton::Info>();
-  auto status = display_info->GetMetrics(&info);
-
-  FX_DCHECK(status == ZX_OK);
-
-  display_width_ = info.extent_in_px().width;
-  display_height_ = info.extent_in_px().height;
 
   Watch();
 }
