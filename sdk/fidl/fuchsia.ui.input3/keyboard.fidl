@@ -25,14 +25,18 @@ protocol Keyboard {
 /// Client should implement this protocol to get notified of key events.
 protocol KeyboardListener {
     /// Called when a key event takes place, such as key press or release.
+    ///
     /// Protocol implementers must respond to acknowledge the event by returning Status
     /// in a timely manner, i.e. not introducing significant delays to the
     /// input pipeline (typically 10s of milliseconds).
-    /// Returning `NOT_HANDLED` means the event will propagate to another client or listener.
+    ///
+    /// Returning `NOT_HANDLED` means the event may be offered to other
+    /// clients of other related APIs.
+    ///
     /// Clients that do not acknowledge their events will eventually be disconnected.
-    /// Notification is only dispatched when the View is focused (ViewRef is on FocusChain).
-    /// Parent Views receive the notification first, child Views last.
-    /// Returning `HANDLED` will stop event propagation to other clients and listeners.
+    ///
+    /// Notification is only dispatched to a view that has focus. No other views,
+    /// including parents or children, will get notified specifically via `OnKeyEvent`.
     OnKeyEvent(struct {
         event KeyEvent;
     }) -> (struct {
