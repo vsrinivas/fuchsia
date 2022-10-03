@@ -45,6 +45,25 @@ bitflags! {
     }
 }
 
+/// Write disposition to set on a zircon socket with
+/// [zx_socket_set_disposition](https://fuchsia.dev/fuchsia-src/reference/syscalls/socket_set_disposition.md).
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum SocketWriteDisposition {
+    /// Corresponds to `ZX_SOCKET_DISPOSITION_WRITE_ENABLED`.
+    Enabled,
+    /// Corresponds to `ZX_SOCKET_DISPOSITION_WRITE_DISABLED`.
+    Disabled,
+}
+
+impl From<SocketWriteDisposition> for u32 {
+    fn from(disposition: SocketWriteDisposition) -> Self {
+        match disposition {
+            SocketWriteDisposition::Enabled => sys::ZX_SOCKET_DISPOSITION_WRITE_ENABLED,
+            SocketWriteDisposition::Disabled => sys::ZX_SOCKET_DISPOSITION_WRITE_DISABLED,
+        }
+    }
+}
+
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct SocketInfo {
@@ -166,11 +185,23 @@ impl Socket {
     /// Implements the `ZX_SOCKET_DISPOSITION_WRITE_DISABLED` option of
     /// [zx_socket_set_disposition](https://fuchsia.dev/fuchsia-src/reference/syscalls/socket_set_disposition.md).
     pub fn half_close(&self) -> Result<(), Status> {
+        self.set_disposition(None, Some(SocketWriteDisposition::Disabled))
+    }
+
+    /// Sets the disposition of write calls for a socket handle and its peer.
+    ///
+    /// Wraps
+    /// [zx_socket_set_disposition](https://fuchsia.dev/fuchsia-src/reference/syscalls/socket_set_disposition.md).
+    pub fn set_disposition(
+        &self,
+        disposition: Option<SocketWriteDisposition>,
+        disposition_peer: Option<SocketWriteDisposition>,
+    ) -> Result<(), Status> {
         let status = unsafe {
             sys::zx_socket_set_disposition(
                 self.raw_handle(),
-                0,
-                sys::ZX_SOCKET_DISPOSITION_WRITE_DISABLED,
+                disposition.map(u32::from).unwrap_or(0),
+                disposition_peer.map(u32::from).unwrap_or(0),
             )
         };
         ok(status)
@@ -264,5 +295,28 @@ mod tests {
         assert_eq!(s2info.rx_buf_size, 5);
         assert_eq!(s2info.rx_buf_available, 5);
         assert_eq!(s2info.tx_buf_size, 0);
+    }
+
+    #[test]
+    fn socket_disposition() {
+        const PAYLOAD: &'static [u8] = b"Hello";
+        let (s1, s2) = Socket::create(SocketOpts::STREAM).unwrap();
+        // Disable write on s1 but enable on s2.
+        assert_eq!(
+            s1.set_disposition(
+                Some(SocketWriteDisposition::Disabled),
+                Some(SocketWriteDisposition::Enabled)
+            ),
+            Ok(())
+        );
+        assert_eq!(s2.write(PAYLOAD), Ok(PAYLOAD.len()));
+        assert_eq!(s1.write(PAYLOAD), Err(Status::BAD_STATE));
+        let mut buf = [0u8; PAYLOAD.len() + 1];
+        assert_eq!(s1.read(&mut buf[..]), Ok(PAYLOAD.len()));
+        assert_eq!(&buf[..PAYLOAD.len()], PAYLOAD);
+        // Setting disposition to None changes nothing.
+        assert_eq!(s1.set_disposition(None, None), Ok(()));
+        assert_eq!(s2.write(PAYLOAD), Ok(PAYLOAD.len()));
+        assert_eq!(s1.write(PAYLOAD), Err(Status::BAD_STATE));
     }
 }
