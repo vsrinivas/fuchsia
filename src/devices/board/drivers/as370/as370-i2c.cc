@@ -114,6 +114,7 @@ zx_status_t As370::I2cInit() {
   std::vector<fpbus::Metadata> visalia_i2c_metadata{
       {{
           .type = DEVICE_METADATA_I2C_CHANNELS,
+          .data = visalia_i2c_channels_fidl.value(),
       }},
   };
 

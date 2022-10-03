@@ -99,6 +99,16 @@ static const fpbus::Node usb_phy_dev = []() {
   return dev;
 }();
 
+static const zx_bind_inst_t dwc2_pdev_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_USB_DWC2),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_INSTANCE_ID, 0),
+};
+constexpr device_fragment_part_t dwc2_pdev_fragment_part[] = {
+    {std::size(dwc2_pdev_match), dwc2_pdev_match},
+};
 static const zx_bind_inst_t dwc2_phy_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_PHY),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
@@ -109,6 +119,7 @@ static const device_fragment_part_t dwc2_phy_fragment[] = {
     {std::size(dwc2_phy_match), dwc2_phy_match},
 };
 static const device_fragment_t dwc2_fragments[] = {
+    {"pdev", std::size(dwc2_pdev_fragment_part), dwc2_pdev_fragment_part},
     {"dwc2-phy", std::size(dwc2_phy_fragment), dwc2_phy_fragment},
 };
 
@@ -148,8 +159,8 @@ zx_status_t As370::UsbInit() {
   std::vector<fpbus::Metadata> usb_metadata{
       {{
           .type = DEVICE_METADATA_USB_CONFIG,
-          .data = std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(&config),
-                                       reinterpret_cast<const uint8_t*>(&config) + config_size),
+          .data = std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(config),
+                                       reinterpret_cast<const uint8_t*>(config) + config_size),
       }},
       {{
           .type = DEVICE_METADATA_PRIVATE,
@@ -174,7 +185,7 @@ zx_status_t As370::UsbInit() {
   dwc2_dev.metadata() = std::move(usb_metadata);
 
   {
-    auto result = pbus_.buffer(arena)->AddCompositeImplicitPbusFragment(
+    auto result = pbus_.buffer(arena)->AddComposite(
         fidl::ToWire(fidl_arena, dwc2_dev),
         platform_bus_composite::MakeFidlFragment(fidl_arena, dwc2_fragments,
                                                  std::size(dwc2_fragments)),

@@ -65,16 +65,40 @@ static const device_fragment_part_t ref_out_clk0_fragment[] = {
     {std::size(ref_out_clk0_match), ref_out_clk0_match},
 };
 
+static const zx_bind_inst_t controller_pdev_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SYNAPTICS),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_SYNAPTICS_AS370),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AS370_AUDIO_OUT),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_INSTANCE_ID, 0),
+};
+constexpr device_fragment_part_t controller_pdev_fragment[] = {
+    {std::size(controller_pdev_match), controller_pdev_match},
+};
+
+static const zx_bind_inst_t in_pdev_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SYNAPTICS),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_SYNAPTICS_AS370),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AS370_AUDIO_IN),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_INSTANCE_ID, 0),
+};
+constexpr device_fragment_part_t in_pdev_fragment[] = {
+    {std::size(in_pdev_match), in_pdev_match},
+};
+
 static const device_fragment_t codec_fragments[] = {
     {"i2c", std::size(ref_out_i2c_fragment), ref_out_i2c_fragment},
     {"gpio-enable", std::size(ref_out_enable_gpio_fragment), ref_out_enable_gpio_fragment},
 };
 static const device_fragment_t controller_fragments[] = {
+    {"pdev", std::size(controller_pdev_fragment), controller_pdev_fragment},
     {"dma", std::size(dma_fragment), dma_fragment},
     {"codec", std::size(ref_out_codec_fragment), ref_out_codec_fragment},
     {"clock", std::size(ref_out_clk0_fragment), ref_out_clk0_fragment},
 };
 static const device_fragment_t in_fragments[] = {
+    {"pdev", std::size(in_pdev_fragment), in_pdev_fragment},
     {"dma", std::size(dma_fragment), dma_fragment},
     {"clock", std::size(ref_out_clk0_fragment), ref_out_clk0_fragment},
 };
@@ -200,7 +224,7 @@ zx_status_t As370::AudioInit() {
 
   // Share devhost with DHub.
   {
-    auto result = pbus_.buffer(arena)->AddCompositeImplicitPbusFragment(
+    auto result = pbus_.buffer(arena)->AddComposite(
         fidl::ToWire(fidl_arena, controller_out),
         platform_bus_composite::MakeFidlFragment(fidl_arena, controller_fragments,
                                                  std::size(controller_fragments)),
@@ -218,7 +242,7 @@ zx_status_t As370::AudioInit() {
 
     // Input device.
     // Share devhost with DHub.
-    result = pbus_.buffer(arena)->AddCompositeImplicitPbusFragment(
+    result = pbus_.buffer(arena)->AddComposite(
         fidl::ToWire(fidl_arena, dev_in),
         platform_bus_composite::MakeFidlFragment(fidl_arena, in_fragments, std::size(in_fragments)),
         "dma");
