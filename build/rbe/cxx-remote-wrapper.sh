@@ -196,6 +196,8 @@ cpreprocess_command=()
 # Conventionally, C-preprocessing is written to a .i or .ii file.
 cpreprocess_output=
 
+target=
+
 prev_opt=
 for opt in "$@"
 do
@@ -321,6 +323,9 @@ EOF
 
     --sysroot=/Library/Developer/* ) uses_macos_sdk=1 ;;
 
+    --target) prev_opt=target ;;
+    --target=*) target="$optarg" ;;
+
     --*=* ) ;;  # forward
 
     # Forward other environment variables (or similar looking).
@@ -352,6 +357,11 @@ case "$cc" in
   *clang* ) is_clang=1 ;;
   *gcc* | *g++* ) is_gcc=1 ;;
 esac
+
+test -n "$target" || {
+  msg "For remote compiling, an explicit --target is required, but is missing."
+  exit 1
+}
 
 # -E tells the compiler to stop after C-preprocessing
 cpreprocess_command+=( -E )

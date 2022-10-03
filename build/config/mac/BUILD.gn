@@ -30,6 +30,7 @@ config("compiler") {
   ]
   configs = [
     ":sysroot",
+    ":target",
     ":clang_defaults",
   ]
 
@@ -47,6 +48,17 @@ config("sysroot") {
   cflags = [ "--sysroot=$sysroot" ]
   ldflags = cflags
   asmflags = cflags
+
+  rustflags = []
+  foreach(flag, ldflags) {
+    rustflags += [ "-Clink-arg=$flag" ]
+  }
+}
+
+config("target") {
+  cflags = [ "--target=$current_target_tuple" ]
+  asmflags = cflags
+  ldflags = cflags
 
   rustflags = []
   foreach(flag, ldflags) {
