@@ -195,7 +195,7 @@ fuchsia_mediastreams::wire::AudioFormat DefaultFormatWithChannels(uint32_t chann
 PipelineStagePtr MakeCustomStage(ProcessorConfiguration config, PipelineStagePtr source_stage) {
   PipelineStagePtr custom_stage = std::make_shared<CustomStage>(CustomStage::Args{
       .name = "CustomStage",
-      .reference_clock = DefaultClock(),
+      .reference_clock = DefaultUnreadableClock(),
       .source_format = Format::CreateLegacyOrDie(config.inputs()[0].format()),
       .source_buffer = std::move(config.inputs()[0].buffer()),
       .dest_format = Format::CreateLegacyOrDie(config.outputs()[0].format()),

@@ -32,7 +32,7 @@ TEST(SimpleRingBufferProducerStageTest, Read) {
       MemoryMappedBuffer::CreateOrDie(kRingBufferFrames * kFormat.bytes_per_frame(), true);
   auto ring_buffer = RingBuffer::Create({
       .format = kFormat,
-      .reference_clock = DefaultClock(),
+      .reference_clock = DefaultUnreadableClock(),
       .buffer = buffer,
       .producer_frames = kRingBufferFrames / 2,
       .consumer_frames = kRingBufferFrames / 2,

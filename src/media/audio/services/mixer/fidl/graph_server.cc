@@ -60,7 +60,7 @@ zx::status<std::shared_ptr<Clock>> LookupClock(ClockRegistry& registry, ClockFac
 struct StreamSinkInfo {
   std::shared_ptr<MemoryMappedBuffer> payload_buffer;
   Format format;
-  UnreadableClock reference_clock;
+  std::shared_ptr<Clock> reference_clock;
 };
 template <typename ProducerConsumerT>
 fpromise::result<StreamSinkInfo, fuchsia_audio_mixer::CreateNodeError>  //
@@ -119,7 +119,7 @@ ValidateStreamSink(std::string_view debug_description, std::string_view node_nam
   return fpromise::ok(StreamSinkInfo{
       .payload_buffer = std::move(payload_buffer_result.value()),
       .format = format_result.value(),
-      .reference_clock = UnreadableClock(clock_result.value()),
+      .reference_clock = clock_result.value(),
   });
 }
 
@@ -127,7 +127,7 @@ ValidateStreamSink(std::string_view debug_description, std::string_view node_nam
 struct RingBufferInfo {
   std::shared_ptr<RingBuffer> ring_buffer;
   Format format;
-  UnreadableClock reference_clock;
+  std::shared_ptr<Clock> reference_clock;
 };
 fpromise::result<RingBufferInfo, fuchsia_audio_mixer::CreateNodeError>  //
 ValidateRingBuffer(std::string_view debug_description, std::string_view node_name,
@@ -198,7 +198,7 @@ ValidateRingBuffer(std::string_view debug_description, std::string_view node_nam
               static_cast<int64_t>(ring_buffer.consumer_bytes()) / format.bytes_per_frame(),
       }),
       .format = format,
-      .reference_clock = UnreadableClock(clock_result.value()),
+      .reference_clock = clock_result.value(),
   });
 }
 
@@ -232,7 +232,7 @@ void GraphServer::CreateProducer(CreateProducerRequestView request,
   const auto name = NameOrEmpty(*request);
   std::optional<MetaProducerNode::DataSource> source;
   std::optional<Format> format;
-  std::optional<UnreadableClock> reference_clock;
+  std::shared_ptr<Clock> reference_clock;
 
   if (request->data_source().is_stream_sink()) {
     auto& stream_sink = request->data_source().stream_sink();
@@ -266,7 +266,7 @@ void GraphServer::CreateProducer(CreateProducerRequestView request,
       return;
     }
 
-    reference_clock = result.value().reference_clock;
+    reference_clock = std::move(result.value().reference_clock);
     format = result.value().format;
     source = std::move(result.value().ring_buffer);
 
@@ -282,7 +282,7 @@ void GraphServer::CreateProducer(CreateProducerRequestView request,
       .name = name,
       .pipeline_direction = request->direction(),
       .format = *format,
-      .reference_clock = *reference_clock,
+      .reference_clock = std::move(reference_clock),
       .data_source = std::move(*source),
       .detached_thread = detached_thread_,
   });
@@ -315,7 +315,7 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
   const auto name = NameOrEmpty(*request);
   std::shared_ptr<ConsumerStage::Writer> writer;
   std::optional<Format> format;
-  std::optional<UnreadableClock> reference_clock;
+  std::shared_ptr<Clock> reference_clock;
 
   if (request->data_source().is_stream_sink()) {
     auto& stream_sink = request->data_source().stream_sink();
@@ -326,7 +326,7 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
       return;
     }
 
-    reference_clock = result.value().reference_clock;
+    reference_clock = std::move(result.value().reference_clock);
     format = result.value().format;
 
     // Packet size defaults to the mix period or the buffer size, whichever is smaller.
@@ -370,7 +370,7 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
       return;
     }
 
-    reference_clock = result.value().reference_clock;
+    reference_clock = std::move(result.value().reference_clock);
     format = result.value().format;
     writer = std::make_shared<RingBufferConsumerWriter>(result.value().ring_buffer);
 
@@ -386,7 +386,7 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
       .name = name,
       .pipeline_direction = request->direction(),
       .format = *format,
-      .reference_clock = *reference_clock,
+      .reference_clock = std::move(reference_clock),
       .writer = std::move(writer),
       .thread = mix_thread,
   });
@@ -437,12 +437,11 @@ void GraphServer::CreateCustom(CreateCustomRequestView request,
 
   // Register parent node.
   const auto id = NextNodeId();
-  const auto custom =
-      CustomNode::Create({.name = name,
-                          .reference_clock = UnreadableClock(std::move(clock_result.value())),
-                          .pipeline_direction = request->direction(),
-                          .config = request->config(),
-                          .detached_thread = detached_thread_});
+  const auto custom = CustomNode::Create({.name = name,
+                                          .reference_clock = std::move(clock_result.value()),
+                                          .pipeline_direction = request->direction(),
+                                          .config = request->config(),
+                                          .detached_thread = detached_thread_});
   if (!custom) {
     FX_LOGS(WARNING) << "CreateCustom: failed to create CustomNode";
     completer.ReplyError(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);

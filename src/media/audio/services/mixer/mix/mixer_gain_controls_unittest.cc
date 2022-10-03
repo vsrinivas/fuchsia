@@ -31,7 +31,7 @@ TEST(MixerGainControlsTest, AddWithInitialState) {
   EXPECT_FALSE(mixer_gain_controls.NextScheduledStateChange(DefaultClockSnapshots()).has_value());
 
   // Create a gain control with an initial state.
-  GainControl gain_control(DefaultClock());
+  GainControl gain_control(DefaultUnreadableClock());
   gain_control.SetGain(-1.0f);
   gain_control.ScheduleGain(zx::time(5), 5.0f);
   gain_control.Advance(zx::time(1));

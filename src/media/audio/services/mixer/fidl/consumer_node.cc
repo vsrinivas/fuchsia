@@ -14,12 +14,13 @@ namespace media_audio {
 std::shared_ptr<ConsumerNode> ConsumerNode::Create(Args args) {
   struct WithPublicCtor : public ConsumerNode {
    public:
-    explicit WithPublicCtor(std::string_view name, PipelineDirection pipeline_direction,
-                            ConsumerStagePtr pipeline_stage, const Format& format,
-                            std::shared_ptr<CommandQueue> command_queue,
+    explicit WithPublicCtor(std::string_view name, std::shared_ptr<Clock> reference_clock,
+                            PipelineDirection pipeline_direction, ConsumerStagePtr pipeline_stage,
+                            const Format& format, std::shared_ptr<CommandQueue> command_queue,
                             std::shared_ptr<GraphMixThread> mix_thread)
-        : ConsumerNode(name, pipeline_direction, std::move(pipeline_stage), format,
-                       std::move(command_queue), std::move(mix_thread)) {}
+        : ConsumerNode(name, std::move(reference_clock), pipeline_direction,
+                       std::move(pipeline_stage), format, std::move(command_queue),
+                       std::move(mix_thread)) {}
   };
 
   auto command_queue = std::make_shared<CommandQueue>();
@@ -28,25 +29,25 @@ std::shared_ptr<ConsumerNode> ConsumerNode::Create(Args args) {
       .pipeline_direction = args.pipeline_direction,
       // TODO(fxbug.dev/87651): also presentation_delay
       .format = args.format,
-      .reference_clock = std::move(args.reference_clock),
+      .reference_clock = UnreadableClock(args.reference_clock),
       .command_queue = command_queue,
       .writer = std::move(args.writer),
   });
   pipeline_stage->set_thread(args.thread->pipeline_thread());
   args.thread->AddConsumer(pipeline_stage);
 
-  auto node = std::make_shared<WithPublicCtor>(args.name, args.pipeline_direction,
-                                               std::move(pipeline_stage), args.format,
-                                               std::move(command_queue), std::move(args.thread));
+  auto node = std::make_shared<WithPublicCtor>(
+      args.name, std::move(args.reference_clock), args.pipeline_direction,
+      std::move(pipeline_stage), args.format, std::move(command_queue), std::move(args.thread));
   return node;
 }
 
-ConsumerNode::ConsumerNode(std::string_view name, PipelineDirection pipeline_direction,
-                           ConsumerStagePtr pipeline_stage, const Format& format,
-                           std::shared_ptr<CommandQueue> command_queue,
+ConsumerNode::ConsumerNode(std::string_view name, std::shared_ptr<Clock> reference_clock,
+                           PipelineDirection pipeline_direction, ConsumerStagePtr pipeline_stage,
+                           const Format& format, std::shared_ptr<CommandQueue> command_queue,
                            std::shared_ptr<GraphMixThread> mix_thread)
-    : Node(name, /*is_meta=*/false, pipeline_stage->reference_clock(), pipeline_direction,
-           pipeline_stage, /*parent=*/nullptr),
+    : Node(name, /*is_meta=*/false, std::move(reference_clock), pipeline_direction, pipeline_stage,
+           /*parent=*/nullptr),
       format_(format),
       command_queue_(std::move(command_queue)),
       mix_thread_(std::move(mix_thread)),

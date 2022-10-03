@@ -188,9 +188,9 @@ TEST(MixerSourceTest, MixWithStepSize) { TestMix(/*step_size=*/2); }
 
 TEST(MixerSourceTest, PrepareSourceGainForNextMix) {
   MixerGainControls mixer_gain_controls;
-  mixer_gain_controls.Add(GainControlId{1}, GainControl(DefaultClock()));
-  mixer_gain_controls.Add(GainControlId{2}, GainControl(DefaultClock()));
-  mixer_gain_controls.Add(GainControlId{3}, GainControl(DefaultClock()));
+  mixer_gain_controls.Add(GainControlId{1}, GainControl(DefaultUnreadableClock()));
+  mixer_gain_controls.Add(GainControlId{2}, GainControl(DefaultUnreadableClock()));
+  mixer_gain_controls.Add(GainControlId{3}, GainControl(DefaultUnreadableClock()));
   mixer_gain_controls.Advance(DefaultClockSnapshots(), zx::time(0));
 
   const auto source = MakeDefaultPacketQueue(kDefaultFormat);

@@ -39,12 +39,12 @@ class ProducerStageTestWithPacketQueue : public ::testing::Test {
         packet_command_queue_(std::make_shared<SimplePacketQueueProducerStage::CommandQueue>()),
         producer_stage_({
             .format = kFormat,
-            .reference_clock = DefaultClock(),
+            .reference_clock = DefaultUnreadableClock(),
             .command_queue = start_stop_command_queue_,
             .internal_source = std::make_shared<SimplePacketQueueProducerStage>(
                 SimplePacketQueueProducerStage::Args{
                     .format = kFormat,
-                    .reference_clock = DefaultClock(),
+                    .reference_clock = DefaultUnreadableClock(),
                     .command_queue = packet_command_queue_,
                 }),
         }) {
@@ -544,14 +544,14 @@ class ProducerStageTestWithRingBuffer : public ::testing::Test {
             MemoryMappedBuffer::CreateOrDie(kRingBufferFrames * kFormat.bytes_per_frame(), true)),
         ring_buffer_(RingBuffer::Create({
             .format = kFormat,
-            .reference_clock = DefaultClock(),
+            .reference_clock = DefaultUnreadableClock(),
             .buffer = buffer_,
             .producer_frames = kRingBufferFrames / 2,
             .consumer_frames = kRingBufferFrames / 2,
         })),
         producer_stage_({
             .format = kFormat,
-            .reference_clock = DefaultClock(),
+            .reference_clock = DefaultUnreadableClock(),
             .command_queue = start_stop_command_queue_,
             .internal_source =
                 std::make_shared<SimpleRingBufferProducerStage>("InternalSource", ring_buffer_),

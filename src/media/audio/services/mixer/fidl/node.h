@@ -15,6 +15,7 @@
 #include <string_view>
 #include <vector>
 
+#include "src/media/audio/lib/clock/clock.h"
 #include "src/media/audio/lib/clock/unreadable_clock.h"
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
@@ -145,7 +146,7 @@ class Node {
 
   // Returns the reference clock used by this node. For ordinary nodes, this corresponds
   // to the same clock used by the underlying `pipeline_stage()`.
-  [[nodiscard]] UnreadableClock reference_clock() const { return reference_clock_; }
+  [[nodiscard]] std::shared_ptr<Clock> reference_clock() const { return reference_clock_; }
 
   // Returns this ordinary node's source edges.
   // REQUIRED: !is_meta()
@@ -208,7 +209,7 @@ class Node {
   virtual zx::duration GetSelfPresentationDelayForSource(const Node* source) const = 0;
 
  protected:
-  Node(std::string_view name, bool is_meta, UnreadableClock reference_clock,
+  Node(std::string_view name, bool is_meta, std::shared_ptr<Clock> reference_clock,
        PipelineDirection pipeline_direction, PipelineStagePtr pipeline_stage, NodePtr parent);
   virtual ~Node() = default;
 
@@ -296,7 +297,7 @@ class Node {
 
   const std::string name_;
   const bool is_meta_;
-  const UnreadableClock reference_clock_;
+  const std::shared_ptr<Clock> reference_clock_;
   const PipelineDirection pipeline_direction_;
   const PipelineStagePtr pipeline_stage_;
 

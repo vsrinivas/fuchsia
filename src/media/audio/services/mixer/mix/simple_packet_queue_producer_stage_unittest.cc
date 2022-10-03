@@ -33,7 +33,7 @@ class SimplePacketQueueProducerStageTest : public ::testing::Test {
   SimplePacketQueueProducerStageTest()
       : packet_queue_producer_stage_({
             .format = kFormat,
-            .reference_clock = DefaultClock(),
+            .reference_clock = DefaultUnreadableClock(),
             .underflow_reporter = [this](auto duration) { ReportUnderflow(duration); },
         }) {
     packet_queue_producer_stage_.UpdatePresentationTimeToFracFrame(

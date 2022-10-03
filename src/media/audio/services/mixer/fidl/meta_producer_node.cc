@@ -72,7 +72,7 @@ NodePtr MetaProducerNode::CreateNewChildDest() {
         std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
             .name = child_name,
             .format = format_,
-            .reference_clock = reference_clock(),
+            .reference_clock = UnreadableClock(reference_clock()),
             .command_queue = queues.packet,
         });
   } else {
@@ -82,6 +82,7 @@ NodePtr MetaProducerNode::CreateNewChildDest() {
 
   auto child = ProducerNode::Create({
       .name = child_name,
+      .reference_clock = reference_clock(),
       .pipeline_direction = pipeline_direction(),
       .parent = shared_from_this(),
       .start_stop_command_queue = queues.start_stop,

@@ -7,6 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
+#include "src/media/audio/lib/clock/unreadable_clock.h"
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/fidl/ptr_decls.h"
@@ -28,7 +29,7 @@ FakeNode::FakeNode(FakeGraph& graph, NodeId id, bool is_meta, PipelineDirection 
                    : FakePipelineStage::Create({
                          .name = "PipelineStage" + std::to_string(id),
                          .format = *format,
-                         .reference_clock = DefaultClock(),
+                         .reference_clock = DefaultUnreadableClock(),
                      }),
            std::move(parent)),
       graph_(graph) {}

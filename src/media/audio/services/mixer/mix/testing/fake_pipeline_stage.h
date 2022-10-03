@@ -34,7 +34,7 @@ class FakePipelineStage : public PipelineStage {
       args.format = Format::CreateOrDie({::fuchsia_audio::SampleType::kFloat32, 2, 48000});
     }
     if (!args.reference_clock) {
-      args.reference_clock = DefaultClock();
+      args.reference_clock = DefaultUnreadableClock();
     }
     return FakePipelineStagePtr(
         new FakePipelineStage(args.name, *args.format, std::move(*args.reference_clock)));

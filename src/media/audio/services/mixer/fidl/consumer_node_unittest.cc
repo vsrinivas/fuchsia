@@ -68,7 +68,7 @@ ConsumerNodeTest::TestHarness ConsumerNodeTest::MakeTestHarness(FakeGraph::Args 
   h.consumer_node = ConsumerNode::Create({
       .pipeline_direction = kPipelineDirection,
       .format = kFormat,
-      .reference_clock = UnreadableClock(h.clock),
+      .reference_clock = h.clock,
       .writer = h.consumer_writer,
       .thread = h.mix_thread,
   });

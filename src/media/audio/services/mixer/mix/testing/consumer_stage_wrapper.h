@@ -21,7 +21,7 @@ namespace media_audio {
 struct ConsumerStageWrapper {
   ConsumerStageWrapper(Format f, zx::duration presentation_delay,
                        PipelineDirection pipeline_direction = PipelineDirection::kOutput,
-                       UnreadableClock reference_clock = DefaultClock())
+                       UnreadableClock reference_clock = DefaultUnreadableClock())
       : format(f) {
     packet_queue = MakeDefaultPacketQueue(format),
     command_queue = std::make_shared<ConsumerStage::CommandQueue>();

@@ -10,6 +10,7 @@
 #include "src/media/audio/lib/clock/clock.h"
 #include "src/media/audio/lib/clock/clock_snapshot.h"
 #include "src/media/audio/lib/clock/clock_synchronizer.h"
+#include "src/media/audio/lib/clock/unreadable_clock.h"
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/mix/mix_job_context.h"
@@ -25,7 +26,8 @@ const ClockSnapshots& DefaultClockSnapshots();
 
 // A reference clock to use when any clock will do.
 // This clock is guaranteed to exist in `MixJobContext.clocks()` and `DefaultClockSnapshots()`.
-UnreadableClock DefaultClock();
+std::shared_ptr<Clock> DefaultClock();
+UnreadableClock DefaultUnreadableClock();
 
 // A noop clock synchronizer to use when any will do.
 std::shared_ptr<ClockSynchronizer> DefaultClockSync();

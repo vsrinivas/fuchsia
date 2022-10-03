@@ -29,7 +29,7 @@ class CustomNode : public Node {
     std::string_view name;
 
     // Reference clock of this nodes's destination stream.
-    UnreadableClock reference_clock;
+    std::shared_ptr<Clock> reference_clock;
 
     // Whether this node participates in an input pipeline or an output pipeline.
     PipelineDirection pipeline_direction;
@@ -100,7 +100,7 @@ class CustomNode : public Node {
     bool AllowsDest() const final;
   };
 
-  CustomNode(std::string_view name, UnreadableClock reference_clock,
+  CustomNode(std::string_view name, std::shared_ptr<Clock> reference_clock,
              PipelineDirection pipeline_direction);
 
   void InitializeChildNodes(PipelineStagePtr pipeline_stage, NodePtr parent,

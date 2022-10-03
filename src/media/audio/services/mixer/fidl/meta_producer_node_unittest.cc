@@ -74,7 +74,7 @@ TEST_F(MetaProducerNodeTestStreamSink, CreateEdgeSuccess) {
   const auto clock = RealClock::CreateFromMonotonic("ReferenceClock", Clock::kExternalDomain, true);
   auto producer = MetaProducerNode::Create({
       .format = kFormat,
-      .reference_clock = UnreadableClock(clock),
+      .reference_clock = clock,
       .data_source = stream_sink().server_ptr(),
       .detached_thread = graph.detached_thread(),
   });
@@ -172,7 +172,7 @@ TEST(MetaProducerNodeTestRingBuffer, CreateEdgeSuccess) {
   auto producer = MetaProducerNode::Create({
       .pipeline_direction = PipelineDirection::kInput,
       .format = kFormat,
-      .reference_clock = UnreadableClock(clock),
+      .reference_clock = clock,
       .data_source = ring_buffer,
       .detached_thread = graph.detached_thread(),
   });

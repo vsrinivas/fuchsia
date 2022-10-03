@@ -16,11 +16,14 @@ namespace media_audio {
 std::shared_ptr<ProducerNode> ProducerNode::Create(Args args) {
   struct WithPublicCtor : public ProducerNode {
    public:
-    explicit WithPublicCtor(std::string_view name, PipelineDirection pipeline_direction,
-                            PipelineStagePtr pipeline_stage, NodePtr parent)
-        : ProducerNode(name, pipeline_direction, std::move(pipeline_stage), std::move(parent)) {}
+    explicit WithPublicCtor(std::string_view name, std::shared_ptr<Clock> reference_clock,
+                            PipelineDirection pipeline_direction, PipelineStagePtr pipeline_stage,
+                            NodePtr parent)
+        : ProducerNode(name, std::move(reference_clock), pipeline_direction,
+                       std::move(pipeline_stage), std::move(parent)) {}
   };
 
+  FX_CHECK(args.reference_clock == args.internal_source->reference_clock());
   auto pipeline_stage = std::make_shared<ProducerStage>(ProducerStage::Args{
       .name = args.name,
       .format = args.internal_source->format(),
@@ -30,8 +33,9 @@ std::shared_ptr<ProducerNode> ProducerNode::Create(Args args) {
   });
   pipeline_stage->set_thread(args.detached_thread->pipeline_thread());
 
-  auto node = std::make_shared<WithPublicCtor>(args.name, args.pipeline_direction,
-                                               std::move(pipeline_stage), std::move(args.parent));
+  auto node = std::make_shared<WithPublicCtor>(args.name, std::move(args.reference_clock),
+                                               args.pipeline_direction, std::move(pipeline_stage),
+                                               std::move(args.parent));
   node->set_thread(args.detached_thread);
   return node;
 }

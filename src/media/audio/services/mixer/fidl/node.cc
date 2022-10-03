@@ -7,10 +7,12 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
+#include <memory>
 #include <string_view>
 #include <utility>
 #include <vector>
 
+#include "src/media/audio/lib/clock/clock.h"
 #include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/fidl/reachability.h"
 #include "src/media/audio/services/mixer/mix/pipeline_stage.h"
@@ -46,7 +48,7 @@ bool HasDestInChildren(const std::vector<NodePtr>& children, const NodePtr& dest
 
 }  // namespace
 
-Node::Node(std::string_view name, bool is_meta, UnreadableClock reference_clock,
+Node::Node(std::string_view name, bool is_meta, std::shared_ptr<Clock> reference_clock,
            PipelineDirection pipeline_direction, PipelineStagePtr pipeline_stage, NodePtr parent)
     : name_(name),
       is_meta_(is_meta),

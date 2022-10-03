@@ -43,7 +43,7 @@ class RingBufferConsumerWriterTest : public ::testing::Test {
       MemoryMappedBuffer::CreateOrDie(kRingBufferFrames * kFormat.bytes_per_frame(), true);
   std::shared_ptr<RingBuffer> ring_buffer_ = RingBuffer::Create({
       .format = kFormat,
-      .reference_clock = DefaultClock(),
+      .reference_clock = DefaultUnreadableClock(),
       .buffer = buffer_,
       .producer_frames = kRingBufferFrames / 2,
       .consumer_frames = kRingBufferFrames / 2,

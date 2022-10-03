@@ -44,7 +44,7 @@ class FakeStage : public PipelineStage {
   };
 
   FakeStage(bool use_cache, std::vector<QueuedPacket>&& packets)
-      : PipelineStage("FakeStage", kFormat, DefaultClock()),
+      : PipelineStage("FakeStage", kFormat, DefaultUnreadableClock()),
         use_cache_(use_cache),
         packets_(std::move(packets)) {}
 
@@ -121,7 +121,8 @@ class FakeStage : public PipelineStage {
 class PassthroughStage : public PipelineStage {
  public:
   explicit PassthroughStage(std::shared_ptr<FakeStage> source)
-      : PipelineStage("PassthroughStage", source->format(), DefaultClock()), source_(source) {}
+      : PipelineStage("PassthroughStage", source->format(), DefaultUnreadableClock()),
+        source_(source) {}
 
   // TODO(fxbug.dev/87651): Use this instead of the constructor.
   void AddSource(PipelineStagePtr source, AddSourceOptions options) override {}

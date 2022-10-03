@@ -28,7 +28,6 @@ namespace media_audio {
 
 namespace {
 
-using ::fuchsia_audio_effects::wire::ProcessorConfiguration;
 using ::fuchsia_mediastreams::wire::AudioSampleFormat;
 using ::fuchsia_mem::wire::Range;
 
@@ -214,7 +213,7 @@ std::optional<CustomStage::Args> ValidateAndParseArgs(CustomNode::Args args) {
 
   return CustomStage::Args{
       .name = args.name,
-      .reference_clock = std::move(args.reference_clock),
+      .reference_clock = UnreadableClock(std::move(args.reference_clock)),
       .source_format = source_format.value(),
       .source_buffer = std::move(input.buffer()),
       .dest_format = dest_format.value(),
@@ -232,7 +231,7 @@ std::optional<CustomStage::Args> ValidateAndParseArgs(CustomNode::Args args) {
 std::shared_ptr<CustomNode> CustomNode::Create(Args args) {
   struct WithPublicCtor : public CustomNode {
    public:
-    explicit WithPublicCtor(std::string_view name, UnreadableClock reference_clock,
+    explicit WithPublicCtor(std::string_view name, std::shared_ptr<Clock> reference_clock,
                             PipelineDirection pipeline_direction)
         : CustomNode(name, std::move(reference_clock), pipeline_direction) {}
   };
@@ -265,7 +264,7 @@ CustomNode::ChildSourceNode::ChildSourceNode(std::string_view name,
                                              PipelineStagePtr pipeline_stage, NodePtr parent,
                                              GraphDetachedThreadPtr detached_thread,
                                              const Format& format, zx::duration presentation_delay)
-    : Node(name, /*is_meta=*/false, pipeline_stage->reference_clock(), pipeline_direction,
+    : Node(name, /*is_meta=*/false, parent->reference_clock(), pipeline_direction,
            std::move(pipeline_stage), std::move(parent)),
       format_(format),
       presentation_delay_(presentation_delay) {
@@ -290,7 +289,7 @@ CustomNode::ChildDestNode::ChildDestNode(std::string_view name,
                                          PipelineDirection pipeline_direction,
                                          PipelineStagePtr pipeline_stage, NodePtr parent,
                                          GraphDetachedThreadPtr detached_thread)
-    : Node(name, /*is_meta=*/false, pipeline_stage->reference_clock(), pipeline_direction,
+    : Node(name, /*is_meta=*/false, parent->reference_clock(), pipeline_direction,
            std::move(pipeline_stage), std::move(parent)) {
   set_thread(std::move(detached_thread));
 }
@@ -308,7 +307,7 @@ std::optional<size_t> CustomNode::ChildDestNode::MaxSources() const { return 0; 
 
 bool CustomNode::ChildDestNode::AllowsDest() const { return true; }
 
-CustomNode::CustomNode(std::string_view name, UnreadableClock reference_clock,
+CustomNode::CustomNode(std::string_view name, std::shared_ptr<Clock> reference_clock,
                        PipelineDirection pipeline_direction)
     : Node(name, /*is_meta=*/true, std::move(reference_clock), pipeline_direction,
            /*pipeline_stage=*/nullptr, /*parent=*/nullptr) {}

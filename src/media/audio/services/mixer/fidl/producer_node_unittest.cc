@@ -8,6 +8,7 @@
 #include <gtest/gtest.h>
 
 #include "src/media/audio/lib/clock/real_clock.h"
+#include "src/media/audio/lib/clock/unreadable_clock.h"
 #include "src/media/audio/services/mixer/fidl/testing/fake_graph.h"
 #include "src/media/audio/services/mixer/mix/simple_packet_queue_producer_stage.h"
 #include "src/media/audio/services/mixer/mix/testing/defaults.h"
@@ -25,11 +26,12 @@ TEST(ProducerNodeTest, CreateEdgeCannotAcceptSource) {
   auto q = graph.global_task_queue();
 
   auto producer = ProducerNode::Create({
+      .reference_clock = DefaultClock(),
       .start_stop_command_queue = std::make_shared<ProducerStage::CommandQueue>(),
       .internal_source =
           std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
               .format = kFormat,
-              .reference_clock = DefaultClock(),
+              .reference_clock = DefaultUnreadableClock(),
               .command_queue = std::make_shared<SimplePacketQueueProducerStage::CommandQueue>(),
           }),
       .detached_thread = graph.detached_thread(),
@@ -55,6 +57,7 @@ TEST(ProducerNodeTest, CreateEdgeSuccess) {
   auto packet_command_queue = std::make_shared<SimplePacketQueueProducerStage::CommandQueue>();
 
   auto producer = ProducerNode::Create({
+      .reference_clock = clock,
       .pipeline_direction = PipelineDirection::kInput,
       .start_stop_command_queue = start_stop_command_queue,
       .internal_source =

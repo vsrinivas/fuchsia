@@ -7,9 +7,11 @@
 
 #include <lib/zx/time.h>
 
+#include <memory>
 #include <unordered_map>
 #include <variant>
 
+#include "src/media/audio/lib/clock/clock.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/fidl/node.h"
 #include "src/media/audio/services/mixer/fidl/ptr_decls.h"
@@ -36,7 +38,7 @@ class MetaProducerNode : public Node, public std::enable_shared_from_this<MetaPr
     Format format;
 
     // Reference clock of this nodes's destination streams.
-    UnreadableClock reference_clock;
+    std::shared_ptr<Clock> reference_clock;
 
     // Object from which to produce data.
     DataSource data_source;

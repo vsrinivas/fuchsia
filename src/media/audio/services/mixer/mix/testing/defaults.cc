@@ -11,6 +11,7 @@
 #include "src/media/audio/lib/clock/clock.h"
 #include "src/media/audio/lib/clock/clock_synchronizer.h"
 #include "src/media/audio/lib/clock/synthetic_clock_realm.h"
+#include "src/media/audio/lib/clock/unreadable_clock.h"
 #include "src/media/audio/services/mixer/mix/mix_job_context.h"
 
 namespace media_audio {
@@ -38,7 +39,9 @@ MixJobContext& DefaultCtx() { return *global_defaults.mix_job_ctx; }
 
 const ClockSnapshots& DefaultClockSnapshots() { return global_defaults.clock_snapshots; }
 
-UnreadableClock DefaultClock() { return UnreadableClock(global_defaults.clock); }
+std::shared_ptr<Clock> DefaultClock() { return global_defaults.clock; }
+
+UnreadableClock DefaultUnreadableClock() { return UnreadableClock(global_defaults.clock); }
 
 std::shared_ptr<ClockSynchronizer> DefaultClockSync() {
   return ClockSynchronizer::Create(global_defaults.clock, global_defaults.clock,
@@ -54,7 +57,7 @@ std::shared_ptr<SimplePacketQueueProducerStage> MakeDefaultPacketQueue(const For
   return std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
       .name = name,
       .format = format,
-      .reference_clock = DefaultClock(),
+      .reference_clock = DefaultUnreadableClock(),
   });
 }
 

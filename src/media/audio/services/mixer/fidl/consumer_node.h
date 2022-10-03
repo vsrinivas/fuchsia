@@ -28,7 +28,7 @@ class ConsumerNode : public Node {
     Format format;
 
     // Reference clock used by this consumer.
-    UnreadableClock reference_clock;
+    std::shared_ptr<Clock> reference_clock;
 
     // How to write all consumed packets.
     std::shared_ptr<ConsumerStage::Writer> writer;
@@ -52,9 +52,9 @@ class ConsumerNode : public Node {
  private:
   using CommandQueue = ConsumerStage::CommandQueue;
 
-  ConsumerNode(std::string_view name, PipelineDirection pipeline_direction,
-               ConsumerStagePtr pipeline_stage, const Format& format,
-               std::shared_ptr<CommandQueue> command_queue,
+  ConsumerNode(std::string_view name, std::shared_ptr<Clock> reference_clock,
+               PipelineDirection pipeline_direction, ConsumerStagePtr pipeline_stage,
+               const Format& format, std::shared_ptr<CommandQueue> command_queue,
                std::shared_ptr<GraphMixThread> mix_thread);
 
   // Implementation of Node.
