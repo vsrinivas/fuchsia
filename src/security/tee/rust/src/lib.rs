@@ -43,7 +43,7 @@ pub fn get_memref_output_parameter(data: &mut [u8]) -> TeecParameter {
     TeecParameter {
         tmpref: TeecTempMemoryReference {
             buffer: data.as_mut_ptr() as *mut std::ffi::c_void,
-            size: data.len(),
+            size: data.len() as u64,
         },
     }
 }
@@ -53,7 +53,7 @@ pub fn get_memref_input_parameter(data: &[u8]) -> TeecParameter {
     TeecParameter {
         tmpref: TeecTempMemoryReference {
             buffer: data.as_ptr() as *mut std::ffi::c_void,
-            size: data.len(),
+            size: data.len() as u64,
         },
     }
 }

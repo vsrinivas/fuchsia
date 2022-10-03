@@ -18,9 +18,9 @@ fi
 
 readonly FUCHSIA_HOME=$1
 
-bindgen ${FUCHSIA_HOME}/zircon/system/ulib/tee-client-api/include/tee-client-api/tee_client_api.h \
+bindgen ${FUCHSIA_HOME}/src/security/tee/tee-client-api/include/tee-client-api/tee_client_api.h \
   -o src/tee_client_api.rs --no-layout-tests -- \
-  -I${FUCHSIA_HOME}/zircon/system/public -I${FUCHSIA_HOME}/zircon/system/ulib/tee-client-api/include
+  -I${FUCHSIA_HOME}/zircon/system/public -I${FUCHSIA_HOME}/src/security/tee/tee-client-api/include
 
 TMP="$(mktemp)"
 

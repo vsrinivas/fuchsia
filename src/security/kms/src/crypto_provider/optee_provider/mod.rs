@@ -227,7 +227,7 @@ fn optee_generate_key(ta_algorithm: u32, key_name: &str) -> Result<Vec<u8>, Cryp
     ];
     let mut op = create_operation(param_type, params);
     call_command(&mut op, TA_KEYSAFE_CMD_GENERATE_KEY).map_err(map_command_error)?;
-    let output_size = unsafe { op.params[3].tmpref.size };
+    let output_size = unsafe { op.params[3].tmpref.size } as usize;
     if output_size > OUTPUT_BUFFER_SIZE {
         return Err(CryptoProviderError::new("invalid returned output buffer size"));
     }
@@ -297,7 +297,7 @@ fn optee_import_key(
 
     call_command(&mut op, TA_KEYSAFE_CMD_IMPORT_KEY).map_err(map_command_error)?;
 
-    let output_size = unsafe { op.params[3].tmpref.size };
+    let output_size = unsafe { op.params[3].tmpref.size } as usize;
     if output_size > OUTPUT_BUFFER_SIZE {
         return Err(CryptoProviderError::new("invalid returned output buffer size"));
     }
@@ -360,7 +360,7 @@ impl AsymmetricProviderKey for OpteeAsymmetricPrivateKey {
 
         call_command(&mut op, TA_KEYSAFE_CMD_SIGN).map_err(map_command_error)?;
 
-        let output_size = unsafe { op.params[3].tmpref.size };
+        let output_size = unsafe { op.params[3].tmpref.size } as usize;
         if output_size > OUTPUT_BUFFER_SIZE {
             return Err(CryptoProviderError::new("invalid returned output buffer size"));
         }
@@ -400,11 +400,11 @@ impl AsymmetricProviderKey for OpteeAsymmetricPrivateKey {
             || self.key_algorithm == AsymmetricKeyAlgorithm::EcdsaSha512P521
         {
             let (public_x_size, public_y_size) = unsafe {
-                let public_x_size = op.params[2].tmpref.size;
+                let public_x_size = op.params[2].tmpref.size as usize;
                 if public_x_size > OUTPUT_BUFFER_SIZE {
                     return Err(CryptoProviderError::new("invalid returned output buffer size"));
                 }
-                let public_y_size = op.params[3].tmpref.size;
+                let public_y_size = op.params[3].tmpref.size as usize;
                 if public_y_size > OUTPUT_BUFFER_SIZE {
                     return Err(CryptoProviderError::new("invalid returned output buffer size"));
                 }
@@ -419,11 +419,11 @@ impl AsymmetricProviderKey for OpteeAsymmetricPrivateKey {
             Ok(ec_key.marshal_public_key().map_err(map_openssl_error)?)
         } else {
             let (modulus_size, public_exponent_size) = unsafe {
-                let modulus_size = op.params[2].tmpref.size;
+                let modulus_size = op.params[2].tmpref.size as usize;
                 if modulus_size > OUTPUT_BUFFER_SIZE {
                     return Err(CryptoProviderError::new("invalid returned output buffer size"));
                 }
-                let public_exponent_size = op.params[3].tmpref.size;
+                let public_exponent_size = op.params[3].tmpref.size as usize;
                 if public_exponent_size > OUTPUT_BUFFER_SIZE {
                     return Err(CryptoProviderError::new("invalid returned output buffer size"));
                 }
@@ -482,7 +482,7 @@ impl OpteeSealingKey {
 
         call_command(&mut op, command_id).map_err(map_command_error)?;
 
-        let output_size = unsafe { op.params[3].tmpref.size };
+        let output_size = unsafe { op.params[3].tmpref.size } as usize;
         if output_size > output_buffer_size {
             return Err(CryptoProviderError::new("invalid returned output buffer size"));
         }
