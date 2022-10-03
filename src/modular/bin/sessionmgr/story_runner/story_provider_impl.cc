@@ -12,6 +12,7 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/ui/scenic/cpp/view_creation_tokens.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/time.h>
@@ -198,7 +199,7 @@ StoryProviderImpl::StoryProviderImpl(
     Environment* const session_environment, SessionStorage* const session_storage,
     std::optional<fuchsia::modular::session::AppConfig> story_shell_config,
     fuchsia::modular::StoryShellFactoryPtr story_shell_factory,
-    PresentationProtocolPtr presentation_protocol, bool present_mods_as_stories,
+    PresentationProtocolPtr presentation_protocol, bool present_mods_as_stories, bool use_flatland,
     ComponentContextInfo component_context_info, AgentServicesFactory* const agent_services_factory,
     inspect::Node* root_node)
     : session_environment_(session_environment),
@@ -207,6 +208,7 @@ StoryProviderImpl::StoryProviderImpl(
       story_shell_factory_(std::move(story_shell_factory)),
       presentation_protocol_(std::move(presentation_protocol)),
       present_mods_as_stories_(present_mods_as_stories),
+      use_flatland_(use_flatland),
       component_context_info_(std::move(component_context_info)),
       agent_services_factory_(agent_services_factory),
       session_inspect_node_(root_node),
@@ -363,20 +365,32 @@ void StoryProviderImpl::MaybeLoadStoryShell() {
 void StoryProviderImpl::AttachOrPresentStoryShellView(std::string story_id) {
   FX_DCHECK(preloaded_story_shell_app_);
 
-  // Create the view and present it to the session shell.
-  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
-  scenic::ViewRefPair view_ref_pair = scenic::ViewRefPair::New();
+  AttachOrPresentViewParams present_view_params;
+  present_view_params.story_id = std::move(story_id);
 
-  AttachOrPresentViewParams present_view_params = {
-      .story_id = std::move(story_id),
-      .view_holder_token = std::move(view_holder_token),
-      .view_ref = fidl::Clone(view_ref_pair.view_ref)};
+  // Create the flatland or gfx view.
+  if (use_flatland_) {
+    auto [view_creation_token, viewport_creation_token] = scenic::ViewCreationTokenPair::New();
+    present_view_params.viewport_creation_token =
+        std::make_optional(std::move(viewport_creation_token));
+    fuchsia::ui::app::ViewProviderPtr view_provider;
+    preloaded_story_shell_app_->services().ConnectToService(view_provider.NewRequest());
+    fuchsia::ui::app::CreateView2Args args;
+    args.set_view_creation_token(std::move(view_creation_token));
+    view_provider->CreateView2(std::move(args));
+  } else {
+    auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+    scenic::ViewRefPair view_ref_pair = scenic::ViewRefPair::New();
 
-  fuchsia::ui::app::ViewProviderPtr view_provider;
-  preloaded_story_shell_app_->services().ConnectToService(view_provider.NewRequest());
-  view_provider->CreateViewWithViewRef(std::move(view_token.value),
-                                       std::move(view_ref_pair.control_ref),
-                                       std::move(view_ref_pair.view_ref));
+    present_view_params.view_holder_token = std::move(view_holder_token),
+    present_view_params.view_ref = fidl::Clone(view_ref_pair.view_ref);
+
+    fuchsia::ui::app::ViewProviderPtr view_provider;
+    preloaded_story_shell_app_->services().ConnectToService(view_provider.NewRequest());
+    view_provider->CreateViewWithViewRef(std::move(view_token.value),
+                                         std::move(view_ref_pair.control_ref),
+                                         std::move(view_ref_pair.view_ref));
+  }
 
   AttachOrPresentView(std::move(present_view_params));
 }
@@ -440,7 +454,8 @@ void StoryProviderImpl::DetachOrDismissView(std::string story_id, fit::function<
 }
 
 void StoryProviderImpl::AttachView(AttachOrPresentViewParams params) {
-  FX_DCHECK(params.view_holder_token.has_value());
+  FX_DCHECK(params.view_holder_token.has_value() || params.viewport_creation_token.has_value())
+      << "AttachView expects either a ViewHolder or ViewportCreation token";
   FX_DCHECK(is_session_shell_presentation())
       << "AttachView expects a SessionShellPtr PresentationProtocolPtr";
   auto& session_shell = std::get<fuchsia::modular::SessionShellPtr>(presentation_protocol_);
@@ -449,7 +464,12 @@ void StoryProviderImpl::AttachView(AttachOrPresentViewParams params) {
          "fuchsia.modular.SessionShell service for sessionmgr to function.";
   fuchsia::modular::ViewIdentifier view_id;
   view_id.story_id = std::move(params.story_id);
-  session_shell->AttachView2(std::move(view_id), std::move(params.view_holder_token.value()));
+  if (params.view_holder_token.has_value()) {
+    session_shell->AttachView2(std::move(view_id), std::move(params.view_holder_token.value()));
+  } else {
+    session_shell->AttachView3(std::move(view_id),
+                               std::move(params.viewport_creation_token.value()));
+  }
 }
 
 void StoryProviderImpl::DetachView(std::string story_id, fit::function<void()> done) {
@@ -465,7 +485,7 @@ void StoryProviderImpl::DetachView(std::string story_id, fit::function<void()> d
 }
 
 void StoryProviderImpl::PresentView(AttachOrPresentViewParams params) {
-  FX_DCHECK(params.view_holder_token.has_value());
+  FX_DCHECK(params.view_holder_token.has_value() || params.viewport_creation_token.has_value());
   FX_DCHECK(is_graphical_presenter_presentation())
       << "PresentView expects a GraphicalPresenter PresentationProtocolPtr";
   auto& graphical_presenter =
@@ -475,9 +495,13 @@ void StoryProviderImpl::PresentView(AttachOrPresentViewParams params) {
          "for sessionmgr to function.";
 
   fuchsia::element::ViewSpec view_spec;
-  view_spec.set_view_holder_token(std::move(params.view_holder_token.value()));
-  if (params.view_ref.has_value()) {
-    view_spec.set_view_ref(std::move(params.view_ref.value()));
+  if (params.viewport_creation_token.has_value()) {
+    view_spec.set_viewport_creation_token(std::move(params.viewport_creation_token.value()));
+  } else {
+    view_spec.set_view_holder_token(std::move(params.view_holder_token.value()));
+    if (params.view_ref.has_value()) {
+      view_spec.set_view_ref(std::move(params.view_ref.value()));
+    }
   }
 
   fuchsia::modular::internal::StoryDataPtr story_data =

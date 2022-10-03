@@ -658,6 +658,12 @@
     },
     {
         "kind": "protocol/member",
+        "name": "fuchsia.modular/SessionShell.AttachView3",
+        "ordinal": "6514652179718762923",
+        "type": "(fuchsia.modular/ViewIdentifier view_id,fuchsia.ui.views/ViewportCreationToken viewport_creation_token)"
+    },
+    {
+        "kind": "protocol/member",
         "name": "fuchsia.modular/SessionShell.DetachView",
         "ordinal": "4351418387231325551",
         "type": "(fuchsia.modular/ViewIdentifier view_id) -> ()"

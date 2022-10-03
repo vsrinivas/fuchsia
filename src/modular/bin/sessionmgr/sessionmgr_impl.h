@@ -95,7 +95,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   void InitializeStoryProvider(
       std::optional<fuchsia::modular::session::AppConfig> story_shell_config,
       PresentationProtocolPtr presentation_protocol, bool use_session_shell_for_story_shell_factory,
-      bool present_mods_as_stories);
+      bool present_mods_as_stories, bool use_flatland);
   void InitializeSessionShell(
       std::optional<fuchsia::modular::session::AppConfig> session_shell_config,
       std::optional<ViewParams> view_params);

@@ -56,6 +56,10 @@ class SessionShellImpl : fuchsia::modular::SessionShell {
                    fuchsia::ui::views::ViewHolderToken view_holder_token) override;
 
   // |SessionShell|
+  void AttachView3(fuchsia::modular::ViewIdentifier view_id,
+                   fuchsia::ui::views::ViewportCreationToken viewport_creation_token) override;
+
+  // |SessionShell|
   void DetachView(fuchsia::modular::ViewIdentifier view_id, fit::function<void()> done) override;
 
   fidl::BindingSet<fuchsia::modular::SessionShell> bindings_;

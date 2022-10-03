@@ -127,6 +127,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
     // the module is connected to the story shell, or pended to be connected.
     // Only set for non-embedded modules.
     std::optional<fuchsia::ui::views::ViewHolderToken> pending_view_holder_token;
+    std::optional<fuchsia::ui::views::ViewportCreationToken> pending_viewport_creation_token;
 
     // The module's view (surface ID and view token) that was connected to the story shell.
     // Only set for non-embedded, non-pending modules.
@@ -160,7 +161,10 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // to pass it off to the story shell.
   struct ModViewInfo {
     std::vector<std::string> module_path;
-    fuchsia::modular::ViewConnection view_connection;
+    // |ViewConnection| will  be specified if using gfx. |ViewportCreationToken| will be specified
+    // if using flatland.
+    std::variant<fuchsia::modular::ViewConnection, fuchsia::ui::views::ViewportCreationToken>
+        view_variant;
     fuchsia::modular::SurfaceInfo2 surface_info;
   };
 

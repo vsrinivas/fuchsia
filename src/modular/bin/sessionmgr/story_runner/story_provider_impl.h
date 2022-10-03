@@ -43,6 +43,7 @@ using PresentationProtocolPtr = std::variant<std::monostate, fuchsia::modular::S
 
 struct AttachOrPresentViewParams {
   std::string story_id;
+  std::optional<fuchsia::ui::views::ViewportCreationToken> viewport_creation_token;
   std::optional<fuchsia::ui::views::ViewHolderToken> view_holder_token;
   std::optional<fuchsia::ui::views::ViewRef> view_ref;
 };
@@ -56,7 +57,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
                     std::optional<fuchsia::modular::session::AppConfig> story_shell_config,
                     fuchsia::modular::StoryShellFactoryPtr story_shell_factory,
                     PresentationProtocolPtr presentation_protocol, bool present_mods_as_stories,
-                    ComponentContextInfo component_context_info,
+                    bool use_flatland, ComponentContextInfo component_context_info,
                     AgentServicesFactory* agent_services_factory, inspect::Node* root_node);
 
   ~StoryProviderImpl() override;
@@ -121,6 +122,8 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
   bool is_graphical_presenter_presentation() const {
     return std::holds_alternative<fuchsia::element::GraphicalPresenterPtr>(presentation_protocol_);
   }
+
+  bool use_flatland() const { return use_flatland_; }
 
  private:
   // |fuchsia::modular::StoryProvider|
@@ -189,6 +192,9 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
 
   // When set, mod views are presented as story views.
   bool present_mods_as_stories_;
+
+  // When set, views use flatland.
+  bool use_flatland_;
 
   // The story controllers of the currently active stories, indexed by their
   // story IDs.

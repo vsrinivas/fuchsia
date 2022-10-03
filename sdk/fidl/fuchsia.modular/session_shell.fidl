@@ -24,6 +24,12 @@ protocol SessionShell {
         view_id ViewIdentifier;
         view_holder_token fuchsia.ui.views.ViewHolderToken;
     });
+    @transitional
+    @available(added=9)
+    AttachView3(resource struct {
+        view_id ViewIdentifier;
+        viewport_creation_token fuchsia.ui.views.ViewportCreationToken;
+    });
 
     /// Instructs the session shell to detach the view identified by `view_id`
     /// that was previously provided by AttachView() from the UI of the session

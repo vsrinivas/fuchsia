@@ -168,6 +168,9 @@ void SessionmgrImpl::InitializeInternal(
                            ? std::make_optional(session_shell_app_config->url())
                            : std::nullopt;
 
+  auto use_flatland = view_params.has_value() &&
+                      std::holds_alternative<fuchsia::ui::views::ViewCreationToken>(*view_params);
+
   InitializeSessionEnvironment(std::move(session_id), std::move(v2_services_for_sessionmgr));
 
   // Create |puppet_master_| before |agent_runner_| to ensure agents can use it when terminating.
@@ -183,17 +186,17 @@ void SessionmgrImpl::InitializeInternal(
 
   executor_.schedule_task(
       GetPresentationProtocol()
-          .and_then([this, svc_from_v1_sessionmgr = std::move(svc_from_v1_sessionmgr)](
-                        PresentationProtocolPtr& presentation_protocol) mutable {
+          .and_then([this, svc_from_v1_sessionmgr = std::move(svc_from_v1_sessionmgr),
+                     use_flatland](PresentationProtocolPtr& presentation_protocol) mutable {
             // We create |story_provider_impl_| after |agent_runner_| so
             // story_provider_impl_ is terminated before agent_runner_, which will cause
             // all modules to be terminated before agents are terminated. Agents must
             // outlive the stories which contain modules that are connected to those
             // agents.
-            InitializeStoryProvider(config_accessor_.story_shell_app_config(),
-                                    std::move(presentation_protocol),
-                                    config_accessor_.use_session_shell_for_story_shell_factory(),
-                                    config_accessor_.sessionmgr_config().present_mods_as_stories());
+            InitializeStoryProvider(
+                config_accessor_.story_shell_app_config(), std::move(presentation_protocol),
+                config_accessor_.use_session_shell_for_story_shell_factory(),
+                config_accessor_.sessionmgr_config().present_mods_as_stories(), use_flatland);
 
             InitializeSessionCtl();
 
@@ -436,7 +439,7 @@ void SessionmgrImpl::InitializeStartupAgents() {
 void SessionmgrImpl::InitializeStoryProvider(
     std::optional<fuchsia::modular::session::AppConfig> story_shell_config,
     PresentationProtocolPtr presentation_protocol, bool use_session_shell_for_story_shell_factory,
-    bool present_mods_as_stories) {
+    bool present_mods_as_stories, bool use_flatland) {
   FX_DCHECK(agent_runner_.get());
   FX_DCHECK(session_environment_);
   FX_DCHECK(session_storage_);
@@ -455,7 +458,7 @@ void SessionmgrImpl::InitializeStoryProvider(
   story_provider_impl_.reset(new StoryProviderImpl(
       session_environment_.get(), session_storage_.get(), std::move(story_shell_config),
       std::move(story_shell_factory_ptr), std::move(presentation_protocol), present_mods_as_stories,
-      component_context_info, startup_agent_launcher_.get(), &inspect_root_node_));
+      use_flatland, component_context_info, startup_agent_launcher_.get(), &inspect_root_node_));
   OnTerminate(Teardown(kStoryProviderTimeout, "StoryProvider", &story_provider_impl_));
 
   for (auto& request : pending_story_provider_requests_) {

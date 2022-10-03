@@ -22,6 +22,10 @@
 
 namespace modular {
 
+using ModuleControllerImplViewParams =
+    std::variant<fuchsia::ui::views::ViewCreationToken,
+                 std::pair<fuchsia::ui::views::ViewToken, scenic::ViewRefPair>>;
+
 class StoryControllerImpl;
 
 // Manages the lifecycle of a single Module.
@@ -31,7 +35,7 @@ class ModuleControllerImpl {
                        fuchsia::modular::session::AppConfig module_config,
                        const fuchsia::modular::ModuleData* module_data,
                        fuchsia::sys::ServiceListPtr service_list,
-                       fuchsia::ui::views::ViewToken view_token, scenic::ViewRefPair view_ref_pair);
+                       ModuleControllerImplViewParams view_params);
   ~ModuleControllerImpl();
 
   // Calls Teardown() on the AppClient of the module component instance,

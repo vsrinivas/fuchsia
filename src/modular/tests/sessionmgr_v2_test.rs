@@ -8,9 +8,7 @@ use {
     fidl::endpoints::{create_endpoints, create_proxy, ServerEnd},
     fidl_fuchsia_element as felement, fidl_fuchsia_examples as fexamples, fidl_fuchsia_io as fio,
     fidl_fuchsia_modular as fmodular, fidl_fuchsia_modular_internal as fmodular_internal,
-    fidl_fuchsia_sys as fsys, fidl_fuchsia_ui_app as fapp,
-    fidl_fuchsia_ui_views_ext::ViewRefExt,
-    fuchsia_async as fasync,
+    fidl_fuchsia_sys as fsys, fidl_fuchsia_ui_app as fapp, fuchsia_async as fasync,
     fuchsia_component::{
         client::connect_to_protocol_at_dir_root,
         server::{ServiceFs, ServiceObj},
@@ -18,7 +16,8 @@ use {
     fuchsia_component_test::{
         Capability, ChildOptions, ChildRef, LocalComponentHandles, RealmBuilder, Ref, Route,
     },
-    fuchsia_scenic as scenic,
+    fuchsia_scenic as scenic, fuchsia_zircon as zx,
+    fuchsia_zircon::Peered,
     futures::{channel::mpsc, prelude::*},
     std::collections::HashMap,
     std::sync::Arc,
@@ -397,25 +396,23 @@ async fn test_v2_session_shell() -> Result<(), Error> {
         )
         .await?;
 
-    let (mod_view_ref_sender, mod_view_ref_receiver) = mpsc::channel(1);
-
-    // The mock module, TEST_MOD_URL, serves fuchsia.ui.app.ViewProvider and sends its ViewRef
-    // over the channel when sessionmgr creates a view.
+    // The mock module, TEST_MOD_URL, serves fuchsia.ui.app.ViewProvider and signals the received
+    // ViewCreationToken channel.
     let mock_mod: CreateComponentFn = Box::new(move |launch_info: fsys::LaunchInfo| {
-        let mod_view_ref_sender = mod_view_ref_sender.clone();
         fasync::Task::local(async move {
             let mut outgoing_fs = ServiceFs::new();
             outgoing_fs.add_fidl_service(move |stream: fapp::ViewProviderRequestStream| {
-                let mut mod_view_ref_sender = mod_view_ref_sender.clone();
                 fasync::Task::local(
                     stream
                         .try_for_each(move |req| {
                             match req {
-                                fapp::ViewProviderRequest::CreateViewWithViewRef {
-                                    view_ref,
+                                fapp::ViewProviderRequest::CreateView2 {
+                                    args,
                                     ..
                                 } => {
-                                    mod_view_ref_sender.try_send(view_ref).expect("failed to send ViewRef");
+                                    args.view_creation_token.unwrap().value
+                                            .signal_peer(zx::Signals::NONE, zx::Signals::USER_0)
+                                            .expect("Signalling viewport_creation_token");
                                 }
                                 _ => panic!("expected sessionmgr to get mod view through CreateViewWithViewRef")
                             };
@@ -509,23 +506,17 @@ async fn test_v2_session_shell() -> Result<(), Error> {
     let execute_result = story_puppet_master.execute().await?;
     assert_eq!(fmodular::ExecuteStatus::Ok, execute_result.status);
 
-    let mod_view_ref = mod_view_ref_receiver
-        .take(1)
-        .next()
-        .await
-        .ok_or_else(|| anyhow!("expected to receive ViewRef from mod"))?;
-
     let view_spec = view_spec_receiver
         .take(1)
         .next()
         .await
         .ok_or_else(|| anyhow!("expected to receive ViewSpec"))?;
 
-    // GraphicalPresenter should have received the same ViewRef as the mod.
-    assert_eq!(
-        mod_view_ref.get_koid()?,
-        view_spec.view_ref.expect("ViewSpec missing ViewRef").get_koid()?
-    );
+    // The viewport creation token from graphical presenter should be signalled by the mock module,
+    // ensuring that both have endpoints for the view creation channel pair.
+    fasync::OnSignals::new(&view_spec.viewport_creation_token.unwrap().value, zx::Signals::USER_0)
+        .await
+        .unwrap();
 
     instance.destroy().await?;
 

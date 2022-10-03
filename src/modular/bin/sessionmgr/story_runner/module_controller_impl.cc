@@ -11,6 +11,7 @@
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fidl/cpp/interface_request.h>
 
+#include "lib/ui/scenic/cpp/view_ref_pair.h"
 #include "src/modular/bin/sessionmgr/storage/encode_module_path.h"
 #include "src/modular/lib/common/teardown.h"
 #include "src/modular/lib/fidl/clone.h"
@@ -21,8 +22,7 @@ ModuleControllerImpl::ModuleControllerImpl(fuchsia::sys::Launcher* const launche
                                            fuchsia::modular::session::AppConfig module_config,
                                            const fuchsia::modular::ModuleData* const module_data,
                                            fuchsia::sys::ServiceListPtr service_list,
-                                           fuchsia::ui::views::ViewToken view_token,
-                                           scenic::ViewRefPair view_ref_pair)
+                                           ModuleControllerImplViewParams view_params)
     : app_client_(launcher, CloneStruct(module_config),
                   /*data_origin=*/"", std::move(service_list)),
       module_data_(module_data) {
@@ -31,9 +31,18 @@ ModuleControllerImpl::ModuleControllerImpl(fuchsia::sys::Launcher* const launche
   fuchsia::ui::app::ViewProviderPtr view_provider;
   app_client_.services().ConnectToService(view_provider.NewRequest());
 
-  view_provider->CreateViewWithViewRef(std::move(view_token.value),
-                                       std::move(view_ref_pair.control_ref),
-                                       std::move(view_ref_pair.view_ref));
+  if (std::holds_alternative<fuchsia::ui::views::ViewCreationToken>(view_params)) {
+    fuchsia::ui::app::CreateView2Args args;
+    args.set_view_creation_token(
+        std::move(std::get<fuchsia::ui::views::ViewCreationToken>(view_params)));
+    view_provider->CreateView2(std::move(args));
+  } else {
+    auto& view_pair =
+        std::get<std::pair<fuchsia::ui::views::ViewToken, scenic::ViewRefPair>>(view_params);
+    view_provider->CreateViewWithViewRef(std::move(view_pair.first.value),
+                                         std::move(view_pair.second.control_ref),
+                                         std::move(view_pair.second.view_ref));
+  }
 }
 
 ModuleControllerImpl::~ModuleControllerImpl() = default;

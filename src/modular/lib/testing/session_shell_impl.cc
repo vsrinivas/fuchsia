@@ -28,6 +28,12 @@ void SessionShellImpl::AttachView2(fuchsia::modular::ViewIdentifier view_id,
   AttachView(std::move(view_id), std::move(view_holder_token));
 }
 
+void SessionShellImpl::AttachView3(
+    fuchsia::modular::ViewIdentifier view_id,
+    fuchsia::ui::views::ViewportCreationToken viewport_creation_token) {
+  on_attach_view_(std::move(view_id));
+}
+
 // |SessionShell|
 void SessionShellImpl::DetachView(fuchsia::modular::ViewIdentifier view_id,
                                   fit::function<void()> done) {

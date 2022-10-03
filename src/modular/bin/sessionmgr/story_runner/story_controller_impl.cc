@@ -15,6 +15,7 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/ui/scenic/cpp/view_creation_tokens.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/eventpair.h>
@@ -26,6 +27,7 @@
 #include <utility>
 #include <vector>
 
+#include "fuchsia/ui/views/cpp/fidl.h"
 #include "src/lib/fsl/types/type_converters.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/join_strings.h"
@@ -47,6 +49,9 @@
 namespace modular {
 
 namespace {
+
+using ::fuchsia::modular::ViewConnection;
+using ::fuchsia::ui::views::ViewportCreationToken;
 
 constexpr char kSurfaceIDSeparator[] = ":";
 
@@ -309,18 +314,33 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
     running_mod_info->module_data =
         std::make_unique<fuchsia::modular::ModuleData>(CloneModuleData(module_data_));
 
-    auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
-    scenic::ViewRefPair view_ref_pair = scenic::ViewRefPair::New();
-    auto view_ref_clone = fidl::Clone(view_ref_pair.view_ref);
+    if (story_controller_impl_->story_provider_impl_->use_flatland()) {
+      auto [view_creation_token, viewport_creation_token] = scenic::ViewCreationTokenPair::New();
 
-    // ModuleControllerImpl's constructor launches the child application.
-    running_mod_info->module_controller_impl = std::make_unique<ModuleControllerImpl>(
-        story_controller_impl_->story_provider_impl_->session_environment()->GetLauncher(),
-        std::move(module_config), running_mod_info->module_data.get(), std::move(service_list),
-        std::move(view_token), std::move(view_ref_pair));
+      // ModuleControllerImpl's constructor launches the child application.
+      running_mod_info->module_controller_impl = std::make_unique<ModuleControllerImpl>(
+          story_controller_impl_->story_provider_impl_->session_environment()->GetLauncher(),
+          std::move(module_config), running_mod_info->module_data.get(), std::move(service_list),
+          std::move(view_creation_token));
 
-    running_mod_info->pending_view_holder_token = std::move(view_holder_token);
-    running_mod_info->view_ref = std::move(view_ref_clone);
+      running_mod_info->pending_viewport_creation_token = std::move(viewport_creation_token);
+      running_mod_info->pending_view_holder_token = std::nullopt;
+      running_mod_info->view_ref = std::nullopt;
+    } else {
+      auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+      scenic::ViewRefPair view_ref_pair = scenic::ViewRefPair::New();
+      auto view_ref_clone = fidl::Clone(view_ref_pair.view_ref);
+
+      // ModuleControllerImpl's constructor launches the child application.
+      running_mod_info->module_controller_impl = std::make_unique<ModuleControllerImpl>(
+          story_controller_impl_->story_provider_impl_->session_environment()->GetLauncher(),
+          std::move(module_config), running_mod_info->module_data.get(), std::move(service_list),
+          std::make_pair(std::move(view_token), std::move(view_ref_pair)));
+
+      running_mod_info->pending_view_holder_token = std::move(view_holder_token);
+      running_mod_info->view_ref = std::move(view_ref_clone);
+      running_mod_info->pending_viewport_creation_token = std::nullopt;
+    }
 
     ModuleContextInfo module_context_info = {
         story_controller_impl_->story_provider_impl_->component_context_info(),
@@ -391,9 +411,17 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
 
     const auto surface_id = ModulePathToSurfaceID(module_data_.module_path());
 
-    fuchsia::modular::ViewConnection view_connection;
-    view_connection.surface_id = surface_id;
-    view_connection.view_holder_token = std::move(*running_mod_info->pending_view_holder_token);
+    ModViewInfo mod_view;
+    mod_view.module_path = module_data_.module_path();
+
+    ViewConnection view_connection;
+    if (running_mod_info->pending_viewport_creation_token.has_value()) {
+      mod_view.view_variant = std::move(running_mod_info->pending_viewport_creation_token.value());
+    } else if (running_mod_info->pending_view_holder_token.has_value()) {
+      view_connection.surface_id = surface_id;
+      view_connection.view_holder_token = std::move(*running_mod_info->pending_view_holder_token);
+      mod_view.view_variant = std::move(view_connection);
+    }
 
     fuchsia::modular::SurfaceInfo2 surface_info;
     surface_info.set_parent_id(anchor_surface_id);
@@ -402,13 +430,11 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
     }
     surface_info.set_module_source(module_data_.module_source());
     surface_info.set_view_ref(fidl::Clone(*running_mod_info->view_ref));
+    mod_view.surface_info = std::move(surface_info);
 
     // If this is a root module, or the anchor module is connected to the story shell,
     // connect this module to the story shell. Otherwise, pend it to connect once the anchor
     // module is ready.
-    ModViewInfo mod_view = {.module_path = module_data_.module_path(),
-                            .view_connection = std::move(view_connection),
-                            .surface_info = std::move(surface_info)};
     if (module_data_.module_path().size() == 1 ||
         story_controller_impl_->connected_views_.count(anchor_surface_id)) {
       ConnectViewToStoryShell(flow, std::move(mod_view));
@@ -419,8 +445,11 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
   }
 
   void ConnectViewToStoryShell(FlowToken flow, ModViewInfo mod_view) {
-    if (!mod_view.view_connection.view_holder_token.value) {
-      FX_LOGS(WARNING) << "The module ViewHolder token is not valid, so it "
+    if ((!std::holds_alternative<ViewConnection>(mod_view.view_variant) ||
+         !std::get<ViewConnection>(mod_view.view_variant).view_holder_token.value) &&
+        (!std::holds_alternative<ViewportCreationToken>(mod_view.view_variant) ||
+         !std::get<ViewportCreationToken>(mod_view.view_variant).value)) {
+      FX_LOGS(WARNING) << "The module ViewHolder or ViewportCreation token is not valid, so it "
                           "can't be sent to the story shell.";
       return;
     }
@@ -843,7 +872,16 @@ void StoryControllerImpl::ProcessPendingModViews() {
       continue;
     }
 
-    if (!kv.second.view_connection.view_holder_token.value) {
+    if (std::holds_alternative<ViewportCreationToken>(kv.second.view_variant) &&
+        !std::get<ViewportCreationToken>(kv.second.view_variant).value) {
+      FX_LOGS(WARNING) << "The module ViewportCreation token is not valid, so it "
+                          "can't be sent to the story shell.";
+      // Erase the pending view in this case, as it will never become valid.
+      added_keys.push_back(kv.first);
+      continue;
+    }
+    if (std::holds_alternative<ViewConnection>(kv.second.view_variant) &&
+        !std::get<ViewConnection>(kv.second.view_variant).view_holder_token.value) {
       FX_LOGS(WARNING) << "The module ViewHolder token is not valid, so it "
                           "can't be sent to the story shell.";
       // Erase the pending view in this case, as it will never become valid.
@@ -943,14 +981,25 @@ void StoryControllerImpl::PresentModView(ModViewInfo mod_view) {
     }
     AttachOrPresentViewParams params = {
         .story_id = story_id_,
-        .view_holder_token = std::move(mod_view.view_connection.view_holder_token),
+        .viewport_creation_token =
+            std::holds_alternative<ViewportCreationToken>(mod_view.view_variant)
+                ? std::make_optional(
+                      std::move(std::get<ViewportCreationToken>(mod_view.view_variant)))
+                : std::nullopt,
+        .view_holder_token =
+            std::holds_alternative<ViewConnection>(mod_view.view_variant)
+                ? std::make_optional(
+                      std::move(std::get<ViewConnection>(mod_view.view_variant).view_holder_token))
+                : std::nullopt,
         .view_ref = mod_view.surface_info.has_view_ref()
                         ? std::make_optional(std::move(*mod_view.surface_info.mutable_view_ref()))
                         : std::nullopt};
     story_provider_impl_->AttachOrPresentView(std::move(params));
   } else {
     FX_DCHECK(story_shell_);
-    story_shell_->AddSurface3(std::move(mod_view.view_connection),
+    // We should not be attempting to use a |ViewportCreationToken| here.
+    FX_DCHECK(std::holds_alternative<ViewConnection>(mod_view.view_variant));
+    story_shell_->AddSurface3(std::move(std::get<ViewConnection>(mod_view.view_variant)),
                               std::move(mod_view.surface_info));
   }
 }
