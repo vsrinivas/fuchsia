@@ -72,13 +72,25 @@ class BlockDevice : public Device {
 class Tcg2Device : public Device {
  public:
   Tcg2Device();
-  efi_tcg2_protocol* GetTcg2Protocol() override { return &tcg2_protocol_; }
+  efi_tcg2_protocol* GetTcg2Protocol() override { return &tcg2_protocol_.protocol_; }
+  const std::vector<uint8_t>& last_command() { return tcg2_protocol_.last_command_; }
 
  private:
-  efi_tcg2_protocol tcg2_protocol_;
-
   static efi_status GetCapability(struct efi_tcg2_protocol*,
                                   efi_tcg2_boot_service_capability*) EFIAPI;
+  static efi_status SubmitCommand(struct efi_tcg2_protocol*, uint32_t block_size,
+                                  uint8_t* block_data, uint32_t output_size,
+                                  uint8_t* output_data) EFIAPI;
+
+  struct Protocol {
+    // This must be the first field so that we can convert a efi_tcg2_protocol* to
+    // a Tcg2Device::Protocol* to access associated fields.
+    efi_tcg2_protocol protocol_;
+    std::vector<uint8_t> last_command_;
+  } tcg2_protocol_;
+
+  static_assert(std::is_standard_layout<Protocol>::value,
+                "Protocol struct must use standard layout");
 };
 
 // Check if the given guid correspond to the protocol of a efi protocol structure.

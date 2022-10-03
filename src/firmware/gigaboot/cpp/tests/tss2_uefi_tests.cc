@@ -34,6 +34,13 @@ TEST(TssUefiTest, Transmit) {
 }
 
 TEST(TssUefiTest, Receive) {
+  MockStubService stub_service;
+  Device image_device({"path", "image"});  // dont care
+  Tcg2Device tcg2_device;
+  stub_service.AddDevice(&image_device);
+  stub_service.AddDevice(&tcg2_device);
+  auto cleanup = SetupEfiGlobalState(stub_service, image_device);
+
   auto sys_context = Tss2UefiSysContext::Create();
   ASSERT_NE(sys_context, nullptr);
   Tss2UefiTctiContext *tcti_context = sys_context->tcti_context();
@@ -50,6 +57,9 @@ TEST(TssUefiTest, Receive) {
 
   // Command size should be cleared.
   ASSERT_EQ(tcti_context->current_command_size, 0ULL);
+
+  // Some command was sent.
+  ASSERT_EQ(tcg2_device.last_command(), command);
 }
 
 TEST(TssUefiTest, ReceiveReturnsMaxResponseSizeOnNullBuffer) {

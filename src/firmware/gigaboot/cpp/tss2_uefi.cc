@@ -69,7 +69,19 @@ TSS2_RC TcTiUefiReceive(TSS2_TCTI_CONTEXT *context, size_t *size, uint8_t *respo
     return TSS2_RC_SUCCESS;
   }
 
-  // TODO(b/241153982): Call into SubmitCommand() TCG EFI service to send the command to TPM.
+  auto tpm2_protocol = gigaboot::EfiLocateProtocol<efi_tcg2_protocol>();
+  if (tpm2_protocol.is_error()) {
+    return TSS2_TCTI_RC_GENERAL_FAILURE;
+  }
+
+  ZX_ASSERT(uefi_context->current_command_size <= TPM2_MAX_COMMAND_SIZE);
+  efi_status status = tpm2_protocol->SubmitCommand(
+      tpm2_protocol.value().get(), static_cast<uint32_t>(uefi_context->current_command_size),
+      uefi_context->command_buffer.data(), static_cast<uint32_t>(*size), response);
+  if (status != EFI_SUCCESS) {
+    printf("Failed to submit command: %s\n", EfiStatusToString(status));
+    return TSS2_TCTI_RC_GENERAL_FAILURE;
+  }
 
   uefi_context->current_command_size = 0;
   return TSS2_RC_SUCCESS;

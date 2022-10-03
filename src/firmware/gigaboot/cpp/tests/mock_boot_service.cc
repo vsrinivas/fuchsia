@@ -153,12 +153,21 @@ void BlockDevice::AddGptPartition(const gpt_entry_t& new_entry) {
 
 Tcg2Device::Tcg2Device() : Device({}) {
   memset(&tcg2_protocol_, 0, sizeof(tcg2_protocol_));
-  tcg2_protocol_.GetCapability = Tcg2Device::GetCapability;
+  tcg2_protocol_.protocol_.GetCapability = Tcg2Device::GetCapability;
+  tcg2_protocol_.protocol_.SubmitCommand = Tcg2Device::SubmitCommand;
 }
 
 efi_status Tcg2Device::GetCapability(struct efi_tcg2_protocol*,
                                      efi_tcg2_boot_service_capability* out) {
   *out = {};
+  return EFI_SUCCESS;
+}
+
+efi_status Tcg2Device::SubmitCommand(struct efi_tcg2_protocol* protocol, uint32_t block_size,
+                                     uint8_t* block_data, uint32_t output_size,
+                                     uint8_t* output_data) {
+  Tcg2Device::Protocol* protocol_data_ = reinterpret_cast<Tcg2Device::Protocol*>(protocol);
+  protocol_data_->last_command_ = std::vector<uint8_t>(block_data, block_data + block_size);
   return EFI_SUCCESS;
 }
 
