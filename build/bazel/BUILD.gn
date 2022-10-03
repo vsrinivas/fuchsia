@@ -143,6 +143,14 @@ action("generate_fuchsia_sdk_repository") {
     "--output-symlink",
     rebase_path(outputs[0], root_build_dir),
   ]
+  metadata = {
+    # Used by the //:bazel_sdk_info build API module target.
+    bazel_sdk_info = [
+      {
+        location = rebase_path(outputs[0], root_build_dir)
+      },
+    ]
+  }
 }
 
 # Generate a build_args.bzl file that contains Bazel-specific constant

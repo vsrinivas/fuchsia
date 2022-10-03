@@ -242,6 +242,24 @@ build_api_module("args") {
   contents = read_file("$root_build_dir/args.gn", "scope")
 }
 
+# Describes the location where the Bazel SDK is generated.
+#
+# See //build/bazel:generate_fuchsia_sdk_repository for more details.
+#
+#
+# Type: list(scope)
+#
+#  location
+#    Required: Directory where the Bazel SDK is generated
+#    Type: string
+#
+#
+build_api_module("bazel_sdk_info") {
+  testonly = true
+  data_keys = [ "bazel_sdk_info" ]
+  deps = [ "//build/bazel:generate_fuchsia_sdk_repository" ]
+}
+
 # This describes all the binaries linked by the build.
 #
 # This enumerates each linked binary (executable, shared library, or
