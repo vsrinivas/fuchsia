@@ -239,6 +239,16 @@ inline fpromise::result<LogMessage, std::string> JsonToHostLogMessage(rapidjson:
   return fpromise::ok(std::move(ret));
 }
 
+std::string GetComponentName(const std::string& moniker) {
+  size_t pos = moniker.rfind('/');
+  if (pos == std::string::npos) {
+    return moniker;
+  }
+  // Monikers should never end in / since / is a special
+  // character indicating a component in the topology.
+  return moniker.substr(pos + 1);
+}
+
 inline fpromise::result<LogMessage, std::string> JsonToLogMessage(rapidjson::Value& value) {
   LogMessage ret = {};
   std::stringstream kv_mapping;
@@ -374,9 +384,9 @@ inline fpromise::result<LogMessage, std::string> JsonToLogMessage(rapidjson::Val
   ret.msg += msg;
   ret.msg += kv_mapping.str();
 
-  // If there are no tags, automatically tag with the component moniker.
+  // If there are no tags, automatically tag with the component name derived from the moniker.
   if (ret.tags.size() == 0 && !moniker_string.empty()) {
-    ret.tags.emplace_back(std::move(moniker_string));
+    ret.tags.emplace_back(GetComponentName(moniker_string));
   }
 
   if (dropped_logs > 0) {

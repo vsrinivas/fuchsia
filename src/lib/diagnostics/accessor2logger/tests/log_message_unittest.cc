@@ -57,6 +57,60 @@ std::string SeverityToString(const int32_t severity) {
   return "INVALID";
 }
 
+TEST(LogMessage, MonikerStringification) {
+  constexpr char kSampleLogPayload[] =
+      R"JSON([
+      {
+        "data_source": "Logs",
+        "metadata": {
+          "errors": null,
+          "component_url": "",
+          "timestamp": 8331458424750,
+          "severity": "INFO",
+          "size_bytes": 2048,
+          "tags": [],
+          "pid": 1102869,
+          "tid": 1102871,
+          "file": "src/diagnostics/lib/cpp-log-decoder/test.cc",
+          "line": 24,
+          "dropped": 0
+        },
+        "moniker": "test/path/<test_moniker>",
+        "payload": {
+          "root": {
+            "keys": {
+              "user property": 5.2
+            },
+            "message": {
+              "value": "test message"
+            }
+          }
+        },
+        "version": 1
+      }
+    ])JSON";
+  fsl::SizedVmo vmo;
+  fsl::VmoFromString(kSampleLogPayload, &vmo);
+  fuchsia::diagnostics::FormattedContent content;
+  fuchsia::mem::Buffer buffer;
+  buffer.vmo = std::move(vmo.vmo());
+  buffer.size = sizeof(kSampleLogPayload);
+  content.set_json(std::move(buffer));
+  auto messages =
+      diagnostics::accessor2logger::ConvertFormattedContentToLogMessages(std::move(content))
+          .take_value();
+  auto message = messages[0].value();
+  auto encoded_message =
+      fxl::StringPrintf("[%05d.%03d][%05" PRIu64 "][%05" PRIu64 "][%s] %s: %s\n",
+                        static_cast<int>(message.time / 1000000000ULL),
+                        static_cast<int>((message.time / 1000000ULL) % 1000ULL), message.pid,
+                        message.tid, fxl::JoinStrings(message.tags, ", ").c_str(),
+                        SeverityToString(message.severity).c_str(), message.msg.c_str());
+  ASSERT_TRUE(encoded_message.find("[<test_moniker>] INFO: "
+                                   "[src/diagnostics/lib/cpp-log-decoder/test.cc(24)] test "
+                                   "message user property=5.2") != std::string::npos);
+}
+
 TEST(LogMessage, LegacyHostEncoding) {
   constexpr char kSampleLogPayload[] =
       R"JSON([
