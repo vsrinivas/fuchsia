@@ -25,6 +25,8 @@
 
 #include "src/devices/bin/driver_manager/builtin_devices.h"
 #include "src/devices/bin/driver_manager/device.h"
+#include "src/devices/lib/log/log.h"
+#include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/split_string.h"
 
 namespace fio = fuchsia_io;
@@ -524,7 +526,42 @@ Devnode::Devnode(Devfs& devfs, Devnode& parent, Target target, fbl::String name)
       target_(std::move(target)),
       name_(std::move(name)),
       ino_(devfs.next_ino++) {
-  ZX_ASSERT_MSG(parent.lookup(name) == nullptr, "name=%s already exists", name.c_str());
+  if (Devnode* other = parent.lookup(this->name()); other != nullptr) {
+    // As of this writing, composite devices all attach at the root node in devfs, including
+    // duplicates. Because this is load-bearing, we cannot easily change it.
+    //
+    // Normally we'd assert that such duplicates are composite devices to prevent regressions, but
+    // composite devices are late-bound; a device's membership in a composite is recorded only when
+    // `CompositeDevice::TryAssemble()` is called, which is apparently *after* the device is added
+    // to devfs.
+    //
+    // This apparently also happens with non-composite devices. During zxcrypt-test these paths
+    // appear more than once:
+    //
+    // - sys/platform/00:00:2d/ramctl/ramdisk-0/block/zxcrypt/unsealed
+    // - sys/platform/00:00:2d/ramctl/ramdisk-0/block/fvm/data-p-1/block/zxcrypt/unsealed
+    //
+    // To preserve the invariant that directory entries do not contain duplicates, we do not add
+    // this to the parent. Hopefully the first device to arrive is sufficient. Unhook the parent to
+    // prevent double cleanup.
+    //
+    // TODO(https://fxbug.dev/110922): Remove this logic when composite devices no longer surface
+    // this way in devfs.
+    std::vector<std::string_view> segments;
+    for (Devnode* node = this; node != nullptr; node = node->parent_) {
+      segments.emplace_back(node->name());
+    }
+    // Normally we'd assert here that the root node is unnamed, but because we might've unhooked our
+    // parent node from its parent, we may not end on the real root node.
+    if (segments.back().empty()) {
+      segments.pop_back();
+    }
+    std::reverse(segments.begin(), segments.end());
+    parent_ = nullptr;
+    LOGF(WARNING, "skipping duplicate devfs path '%s': this=%p other=%p",
+         fxl::JoinStrings(segments, "/").c_str(), this, other);
+    return;
+  }
   parent.children.push_back(this);
 }
 
@@ -603,9 +640,15 @@ void Devfs::advertise(Device& device) {
     auto& dn_opt = *ptr;
     if (dn_opt.has_value()) {
       const Devnode& dn = dn_opt.value();
-      ZX_ASSERT(dn.parent_ != nullptr);
-      Devnode& parent = *dn.parent_;
-      parent.notify(dn.name(), fio::wire::WatchEvent::kAdded);
+      // parent is nullptr if this node's name collides with another node. Hopefully that node is
+      // also being advertised.
+      //
+      // TODO(https://fxbug.dev/110922): Remove this condition when composite devices no longer
+      // surface this way in devfs.
+      if (dn.parent_ != nullptr) {
+        Devnode& parent = *dn.parent_;
+        parent.notify(dn.name(), fio::wire::WatchEvent::kAdded);
+      }
     }
   }
 }
@@ -615,10 +658,16 @@ void Devfs::advertise_modified(Device& device) {
     auto& dn_opt = *ptr;
     if (dn_opt.has_value()) {
       const Devnode& dn = dn_opt.value();
-      ZX_ASSERT(dn.parent_ != nullptr);
-      Devnode& parent = *dn.parent_;
-      parent.notify(dn.name(), fio::wire::WatchEvent::kRemoved);
-      parent.notify(dn.name(), fio::wire::WatchEvent::kAdded);
+      // parent is nullptr if this node's name collides with another node. Hopefully that node is
+      // also being advertised.
+      //
+      // TODO(https://fxbug.dev/110922): Remove this condition when composite devices no longer
+      // surface this way in devfs.
+      if (dn.parent_ != nullptr) {
+        Devnode& parent = *dn.parent_;
+        parent.notify(dn.name(), fio::wire::WatchEvent::kRemoved);
+        parent.notify(dn.name(), fio::wire::WatchEvent::kAdded);
+      }
     }
   }
 }
