@@ -86,6 +86,9 @@ void usb_request_release(usb_request_t* req);
 void usb_request_complete(usb_request_t* req, zx_status_t status, zx_off_t actual,
                           const usb_request_complete_callback_t* complete_cb);
 
+// Starts or adds a step in a trace flow for the passed in request
+void usb_request_trace_flow(usb_request_t* req);
+
 // Same as usb_request_complete() but also allows specifying the number of
 // silently completed requests.
 void usb_request_complete_base(usb_request_t* req, zx_status_t status, zx_off_t actual,

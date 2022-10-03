@@ -21,6 +21,17 @@ type UsbHeader = struct {
     send_zlp bool;
 };
 
+/// Usb flow tracing parameters.
+type UsbFlowTrace = struct {
+    /// A flow trace id.
+    /// This is initialized the first time usb_request_trace_flow() is called.
+    id uint64;
+
+    /// True if flow tracing has started for this request.
+    /// Flow tracing will be terminated after invoking the completion callback.
+    started bool;
+};
+
 /// Response data.
 /// (Filled in by processor before |UsbRequestComplete()| is called)
 type UsbResponse = struct {
@@ -89,6 +100,12 @@ type UsbRequest = resource struct {
     reset bool;
     /// The address of the endpoint to reset.
     reset_address uint8;
+
+    /// Fields needed to track a trace flow for this request
+    /// In order to add tracing, use usb_request_trace_flow(), which will
+    /// set and use these fields, adding your trace to the flow for the
+    /// overall usb_request. Lifetime extends through the end of the completion callback
+    flow_trace UsbFlowTrace;
 };
 
 @transport("Banjo")

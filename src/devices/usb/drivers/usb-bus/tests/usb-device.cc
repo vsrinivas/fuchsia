@@ -39,7 +39,7 @@ constexpr uint32_t kHubId = 32;
 constexpr uint32_t kMaxTransferSize = 9001;
 constexpr uint8_t kTransferSizeEndpoint = 5;
 constexpr uint64_t kCurrentFrame = MakeConstant<uint64_t, 7>("fuchsia");
-constexpr size_t kRequestSize = 256;
+constexpr size_t kRequestSize = 272;
 const char16_t* kStringDescriptors[][2] = {{u"Fuchsia", u"Fucsia"}, {u"Device", u"Dispositivo"}};
 
 constexpr usb_speed_t kDeviceSpeed = MakeConstant<usb_speed_t, 4>("slow");

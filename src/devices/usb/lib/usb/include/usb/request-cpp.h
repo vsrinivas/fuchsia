@@ -181,6 +181,9 @@ class RequestBase {
   // Looks up the physical pages backing this request's vm object.
   zx_status_t PhysMap(const zx::bti& bti) { return usb_request_physmap(request(), bti.get()); }
 
+  // Starts or adds a step in a trace flow for the passed in request
+  void TraceFlow() { usb_request_trace_flow(request()); }
+
   // Initializes a ddk::PhysIter for a usb request.
   // |max_length| is the maximum length of a range returned the iterator.
   // |max_length| must be either a positive multiple of the system page size, or zero for no limit.

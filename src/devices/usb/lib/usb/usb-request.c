@@ -5,14 +5,18 @@
 #include <fuchsia/hardware/usb/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/phys-iter.h>
+#include <lib/trace/event.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
 #include <ddk/hw/physiter/c/banjo.h>
 #include <usb/usb-request.h>
+#include <usb/usb.h>
 
 #include "align.h"
 
@@ -29,6 +33,36 @@ static inline size_t req_buffer_size(usb_request_t* req, size_t offset) {
 
 static inline void* req_buffer_virt(usb_request_t* req) {
   return (void*)(((uintptr_t)req->virt) + req->offset);
+}
+
+static inline void usb_request_trace_flow_init(usb_request_t* req) {
+  // A flow trace id.
+  // Structure for a trace flow id:
+  // MSB
+  // 32 bits of device_id
+  // 8 bits of endpoint address
+  // 24 bits of nonce
+  // LSB
+  uint64_t trace_flow_id = 0;
+  trace_flow_id ^= (((uint64_t)req->header.device_id) << 32);
+  trace_flow_id ^= (((uint64_t)req->header.ep_address) << 24);
+
+  uint64_t nonce_mask = (((uint64_t)1) << 24) - 1;
+  uint64_t nonce = req->flow_trace.id;
+  nonce &= nonce_mask;
+  trace_flow_id ^= nonce;
+  req->flow_trace.id = trace_flow_id;
+}
+
+static inline void usb_request_trace_flow_end(usb_request_t* req, zx_status_t status) {
+  if (req->flow_trace.started) {
+    {
+      TRACE_DURATION("USB Request", "Trace End");
+
+      TRACE_FLOW_END("USB Request", "USB Trace", req->flow_trace.id, "status", TA_INT32(status));
+    }
+    req->flow_trace.started = false;
+  }
 }
 
 __EXPORT zx_status_t usb_request_alloc(usb_request_t** out, uint64_t data_size, uint8_t ep_address,
@@ -303,6 +337,39 @@ __EXPORT void usb_request_release(usb_request_t* req) {
   }
 }
 
+// Records a step in the current trace flow for this request.
+// The following parameters of the USB Request are included:
+// device id, endpoint address, pipe direction, header length, frame, direct
+__EXPORT void usb_request_trace_flow(usb_request_t* req) {
+  if (TRACE_ENABLED()) {
+    const char* direction = "IN";
+    unsigned int len = 2;
+    if (usb_ep_direction2(req->header.ep_address) == USB_ENDPOINT_OUT) {
+      direction = "OUT";
+      len = 3;
+    }
+    if (!req->flow_trace.started) {
+      if (req->flow_trace.id == 0) {
+        usb_request_trace_flow_init(req);
+      }
+      req->flow_trace.started = true;
+      TRACE_DURATION("USB Request", "Trace Begin");
+      TRACE_FLOW_BEGIN("USB Request", "USB Trace", req->flow_trace.id, "ep_num",
+                       TA_UINT32(usb_ep_num2(req->header.ep_address)), "pipe direction",
+                       TA_CHAR_ARRAY(direction, len), "device_id", TA_UINT32(req->header.device_id),
+                       "len", TA_UINT64(req->header.length), "frame", TA_UINT64(req->header.frame),
+                       "direct", TA_BOOL(req->direct));
+    } else {
+      TRACE_DURATION("USB Request", "Trace Step");
+      TRACE_FLOW_STEP("USB Request", "USB Trace", req->flow_trace.id, "ep_num",
+                      TA_UINT32(usb_ep_num2(req->header.ep_address)), "pipe direction",
+                      TA_CHAR_ARRAY(direction, len), "device_id", TA_UINT32(req->header.device_id),
+                      "len", TA_UINT64(req->header.length), "frame", TA_UINT64(req->header.frame),
+                      "direct", TA_BOOL(req->direct));
+    }
+  }
+}
+
 __EXPORT void usb_request_complete(usb_request_t* req, zx_status_t status, zx_off_t actual,
                                    const usb_request_complete_callback_t* complete_cb) {
   usb_request_complete_base(req, status, actual, 0, complete_cb);
@@ -317,6 +384,9 @@ __EXPORT void usb_request_complete_base(usb_request_t* req, zx_status_t status, 
 
   if (complete_cb) {
     complete_cb->callback(complete_cb->ctx, req);
+  }
+  if (TRACE_ENABLED()) {
+    usb_request_trace_flow_end(req, status);
   }
 }
 

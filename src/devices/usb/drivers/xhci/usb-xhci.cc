@@ -12,6 +12,7 @@
 #include <lib/device-protocol/pci.h>
 #include <lib/fit/defer.h>
 #include <lib/fpromise/promise.h>
+#include <lib/trace/event.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/interrupt.h>
 #include <stdio.h>
@@ -29,6 +30,7 @@
 #include <string>
 
 #include <fbl/alloc_checker.h>
+#include <usb/usb-request.h>
 
 #include "src/devices/usb/drivers/xhci/usb_xhci_bind.h"
 
@@ -644,6 +646,8 @@ void UsbXhci::DdkRelease() {
 void UsbXhci::UsbHciRequestQueue(usb_request_t* usb_request,
                                  const usb_request_complete_callback_t* complete_cb) {
   Request request(usb_request, *complete_cb, sizeof(usb_request_t));
+
+  request.TraceFlow();
 
   if (!running_) {
     request.Complete(ZX_ERR_IO_NOT_PRESENT, 0);

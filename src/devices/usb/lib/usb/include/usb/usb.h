@@ -104,6 +104,8 @@ static inline zx_status_t usb_clear_feature(const usb_protocol_t* usb, uint8_t r
 // usb_ep_num2() useful with you have b_endpoint_address outside of a descriptor.
 #define usb_ep_num2(addr) ((addr)&USB_ENDPOINT_NUM_MASK)
 #define usb_ep_direction(ep) ((ep)->b_endpoint_address & USB_ENDPOINT_DIR_MASK)
+// usb_ep_direction2() useful with you have b_endpoint_address outside of a descriptor.
+#define usb_ep_direction2(addr) ((addr)&USB_ENDPOINT_DIR_MASK)
 #define usb_ep_type(ep) ((ep)->bm_attributes & USB_ENDPOINT_TYPE_MASK)
 #define usb_ep_sync_type(ep) ((ep)->bm_attributes & USB_ENDPOINT_SYNCHRONIZATION_MASK)
 // Max packet size is in bits 10..0
