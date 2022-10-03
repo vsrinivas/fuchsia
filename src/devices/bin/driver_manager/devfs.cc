@@ -28,6 +28,7 @@
 #include "src/devices/lib/log/log.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/split_string.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace fio = fuchsia_io;
 
@@ -672,14 +673,16 @@ void Devfs::advertise_modified(Device& device) {
   }
 }
 
-zx_status_t Devnode::seq_name(char* data, size_t size) {
-  for (unsigned n = 0; n < 1000; n++) {
-    snprintf(data, size, "%03u", (seqcount_++) % 1000);
-    if (lookup(data) == nullptr) {
-      return ZX_OK;
+zx::status<fbl::String> Devnode::seq_name() {
+  std::string dest;
+  for (uint32_t i = 0; i < 1000; ++i) {
+    dest.clear();
+    fxl::StringAppendf(&dest, "%03u", (seqcount_++) % 1000);
+    if (lookup(dest) == nullptr) {
+      return zx::ok(dest);
     }
   }
-  return ZX_ERR_ALREADY_EXISTS;
+  return zx::error(ZX_ERR_ALREADY_EXISTS);
 }
 
 zx_status_t Devfs::publish(Device& parent, Device& device) {
@@ -702,12 +705,11 @@ zx_status_t Devfs::publish(Device& parent, Device& device) {
         Devnode& dir = *dir_ptr;
         fbl::String name = device.name();
         if (id != ZX_PROTOCOL_CONSOLE) {
-          char buf[4] = {};
-          const zx_status_t status = dir.seq_name(buf, sizeof(buf));
-          if (status != ZX_OK) {
-            return status;
+          zx::status seq_name = dir.seq_name();
+          if (seq_name.is_error()) {
+            return seq_name.status_value();
           }
-          name = buf;
+          name = seq_name.value();
         }
 
         device.link.emplace(*this, dir, device, name);
@@ -894,11 +896,11 @@ zx_status_t Devnode::export_dir(fidl::ClientEnd<fio::Directory> service_dir,
     // under the protocol directory too.
     if (Devnode* dir_ptr = devfs_.proto_node(protocol_id); dir_ptr != nullptr) {
       Devnode& dn = *dir_ptr;
-      char name[4] = {};
-      const zx_status_t status = dn.seq_name(name, sizeof(name));
-      if (status != ZX_OK) {
-        return status;
+      zx::status seq_name = dn.seq_name();
+      if (seq_name.is_error()) {
+        return seq_name.status_value();
       }
+      const fbl::String name = seq_name.value();
 
       // Clone the service node for the entry in the protocol directory.
       zx::status endpoints = fidl::CreateEndpoints<fio::Directory>();

@@ -96,7 +96,7 @@ struct Devnode : public fbl::DoublyLinkedListable<Devnode*> {
 
   zx_status_t readdir(uint64_t* ino_inout, void* data, size_t len);
 
-  zx_status_t seq_name(char* data, size_t size);
+  zx::status<fbl::String> seq_name();
 
   Devfs& devfs_;
 
