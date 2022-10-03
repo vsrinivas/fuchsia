@@ -14,11 +14,14 @@ rustc_test("stressor-bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_rust",
     "//src/lib/diagnostics/log/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
     "//src/lib/storage/fs_management/rust:fs_management",
+    "//src/lib/storage/key-bag",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/storage/fxfs:fuchsia.fxfs_rust",
     "//src/storage/stress-tests/utils",

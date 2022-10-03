@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "//src/storage/fs_test/meta/fxfs_crypt_test.shard.cml" ],
+    include: [
+        "//src/storage/fs_test/meta/fxfs_crypt_test.shard.cml",
+        "sys/component/realm_builder.shard.cml",
+    ],
     children: [
         {
             name: "fxfs",

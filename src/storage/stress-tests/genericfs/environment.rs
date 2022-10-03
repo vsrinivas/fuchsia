@@ -8,12 +8,17 @@ use {
     },
     async_trait::async_trait,
     either::Either,
-    fidl_fuchsia_io as fio,
+    fidl::endpoints::Proxy,
+    fidl_fuchsia_fxfs::{CryptManagementMarker, CryptMarker, KeyPurpose},
+    fidl_fuchsia_io as fio, fidl_fuchsia_logger as flogger,
     fs_management::{filesystem::Filesystem, FSConfig},
     fuchsia_component::client::connect_to_protocol_at_path,
+    fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
     fuchsia_zircon::Vmo,
     futures::lock::Mutex,
+    key_bag::Aes256Key,
     rand::{rngs::SmallRng, Rng, SeedableRng},
+    std::ops::Deref,
     std::path::PathBuf,
     std::sync::Arc,
     std::time::Duration,
@@ -34,6 +39,68 @@ const FOUR_MIB: u64 = 4 * ONE_MIB;
 
 const MOUNT_PATH: &str = "/fs";
 
+const DATA_KEY: Aes256Key = Aes256Key::create([
+    0xcf, 0x9e, 0x45, 0x2a, 0x22, 0xa5, 0x70, 0x31, 0x33, 0x3b, 0x4d, 0x6b, 0x6f, 0x78, 0x58, 0x29,
+    0x04, 0x79, 0xc7, 0xd6, 0xa9, 0x4b, 0xce, 0x82, 0x04, 0x56, 0x5e, 0x82, 0xfc, 0xe7, 0x37, 0xa8,
+]);
+
+const METADATA_KEY: Aes256Key = Aes256Key::create([
+    0x0f, 0x4d, 0xca, 0x6b, 0x35, 0x0e, 0x85, 0x6a, 0xb3, 0x8c, 0xdd, 0xe9, 0xda, 0x0e, 0xc8, 0x22,
+    0x8e, 0xea, 0xd8, 0x05, 0xc4, 0xc9, 0x0b, 0xa8, 0xd8, 0x85, 0x87, 0x50, 0x75, 0x40, 0x1c, 0x4c,
+]);
+
+pub async fn create_hermetic_crypt_service(
+    data_key: Aes256Key,
+    metadata_key: Aes256Key,
+) -> RealmInstance {
+    let builder = RealmBuilder::new().await.unwrap();
+    let url = "#meta/fxfs-crypt.cm";
+    let crypt = builder.add_child("fxfs-crypt", url, ChildOptions::new().eager()).await.unwrap();
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol::<CryptMarker>())
+                .capability(Capability::protocol::<CryptManagementMarker>())
+                .from(&crypt)
+                .to(Ref::parent()),
+        )
+        .await
+        .unwrap();
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol::<flogger::LogSinkMarker>())
+                .from(Ref::parent())
+                .to(&crypt),
+        )
+        .await
+        .unwrap();
+    let realm = builder.build().await.expect("realm build failed");
+    let crypt_management =
+        realm.root.connect_to_protocol_at_exposed_dir::<CryptManagementMarker>().unwrap();
+    crypt_management
+        .add_wrapping_key(0, data_key.deref())
+        .await
+        .unwrap()
+        .expect("add_wrapping_key failed");
+    crypt_management
+        .add_wrapping_key(1, metadata_key.deref())
+        .await
+        .unwrap()
+        .expect("add_wrapping_key failed");
+    crypt_management
+        .set_active_key(KeyPurpose::Data, 0)
+        .await
+        .unwrap()
+        .expect("set_active_key failed");
+    crypt_management
+        .set_active_key(KeyPurpose::Metadata, 1)
+        .await
+        .unwrap()
+        .expect("set_active_key failed");
+    realm
+}
+
 pub fn open_dir_at_root(subdir: &str) -> Directory {
     let path = PathBuf::from(MOUNT_PATH).join(subdir);
     Directory::from_namespace(path, fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::RIGHT_READABLE)
@@ -47,6 +114,7 @@ pub struct FsEnvironment<FSC: FSConfig> {
     vmo: Vmo,
     volume_guid: Guid,
     config: FSC,
+    crypt_realm: Option<RealmInstance>,
     instance_actor: Arc<Mutex<InstanceActor>>,
     file_actor: Arc<Mutex<FileActor>>,
     deletion_actor: Arc<Mutex<DeletionActor>>,
@@ -54,6 +122,11 @@ pub struct FsEnvironment<FSC: FSConfig> {
 
 impl<FSC: Clone + FSConfig> FsEnvironment<FSC> {
     pub async fn new(config: FSC, args: Args) -> Self {
+        let crypt_realm = if config.is_multi_volume() {
+            Some(create_hermetic_crypt_service(DATA_KEY, METADATA_KEY).await)
+        } else {
+            None
+        };
         // Create the VMO that the ramdisk is backed by
         let vmo_size = args.ramdisk_block_count * args.ramdisk_block_size;
         let vmo = Vmo::create(vmo_size).unwrap();
@@ -73,8 +146,20 @@ impl<FSC: Clone + FSConfig> FsEnvironment<FSC> {
         fs.format().await.unwrap();
 
         let instance = if fs.config().is_multi_volume() {
+            let crypt = Some(
+                crypt_realm
+                    .as_ref()
+                    .unwrap()
+                    .root
+                    .connect_to_protocol_at_exposed_dir::<CryptMarker>()
+                    .unwrap()
+                    .into_channel()
+                    .unwrap()
+                    .into_zx_channel()
+                    .into(),
+            );
             let mut instance = fs.serve_multi_volume().await.unwrap();
-            let vol = instance.create_volume("default", None).await.unwrap();
+            let vol = instance.create_volume("default", crypt).await.unwrap();
             vol.bind_to_path(MOUNT_PATH).unwrap();
             Either::Right(instance)
         } else {
@@ -120,7 +205,17 @@ impl<FSC: Clone + FSConfig> FsEnvironment<FSC> {
 
         let instance_actor = Arc::new(Mutex::new(InstanceActor::new(fvm, instance)));
 
-        Self { seed, args, vmo, volume_guid, file_actor, deletion_actor, instance_actor, config }
+        Self {
+            seed,
+            args,
+            vmo,
+            volume_guid,
+            crypt_realm,
+            file_actor,
+            deletion_actor,
+            instance_actor,
+            config,
+        }
     }
 }
 
@@ -189,7 +284,32 @@ impl<FSC: 'static + FSConfig + Clone + Send + Sync> Environment for FsEnvironmen
             fs.fsck().await.unwrap();
             let instance = if fs.config().is_multi_volume() {
                 let mut instance = fs.serve_multi_volume().await.unwrap();
-                let vol = instance.open_volume("default", None).await.unwrap();
+                let crypt = Some(
+                    self.crypt_realm
+                        .as_ref()
+                        .unwrap()
+                        .root
+                        .connect_to_protocol_at_exposed_dir::<CryptMarker>()
+                        .unwrap()
+                        .into_channel()
+                        .unwrap()
+                        .into_zx_channel()
+                        .into(),
+                );
+                instance.check_volume("default", crypt).await.unwrap();
+                let crypt = Some(
+                    self.crypt_realm
+                        .as_ref()
+                        .unwrap()
+                        .root
+                        .connect_to_protocol_at_exposed_dir::<CryptMarker>()
+                        .unwrap()
+                        .into_channel()
+                        .unwrap()
+                        .into_zx_channel()
+                        .into(),
+                );
+                let vol = instance.open_volume("default", crypt).await.unwrap();
                 vol.bind_to_path(MOUNT_PATH).unwrap();
                 Either::Right(instance)
             } else {

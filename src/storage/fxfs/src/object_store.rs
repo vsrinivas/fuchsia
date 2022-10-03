@@ -322,11 +322,11 @@ pub enum LockState {
     Unencrypted,
     Unlocked(Arc<dyn Crypt>),
     // The store is unlocked, but in a read-only state, and no flushes or other operations will be
-    // performed on the store.  We have to retain the journaled encrypted mutations (see
-    // LockState::Locked), which normally get written out during unlock when we flush the object
-    // store, which we skip in the read-only mode.  This way, when the store is re-locked, we don't
-    // lose these journaled encrypted mutations.
-    UnlockedReadOnly(Arc<dyn Crypt>, EncryptedMutations),
+    // performed on the store.  We have to retain the old store info and journaled encrypted
+    // mutations (see LockState::Locked), which normally get written out during unlock when we flush
+    // the object store, which we skip in the read-only mode.  This way, when the store is
+    // re-locked, we don't lose these journaled encrypted mutations.
+    UnlockedReadOnly(Arc<dyn Crypt>, StoreInfo, EncryptedMutations),
 
     // The store is encrypted but is now in an unusable state (either due to a failure to unlock, or
     // a failure to lock).
@@ -350,7 +350,7 @@ impl LockState {
     fn encrypted_mutations(&self) -> Option<&EncryptedMutations> {
         if let LockState::Locked(m) = self {
             Some(m)
-        } else if let LockState::UnlockedReadOnly(_, m) = self {
+        } else if let LockState::UnlockedReadOnly(_, _, m) = self {
             Some(m)
         } else {
             None
@@ -360,7 +360,7 @@ impl LockState {
     fn encrypted_mutations_mut(&mut self) -> Option<&mut EncryptedMutations> {
         if let LockState::Locked(m) = self {
             Some(m)
-        } else if let LockState::UnlockedReadOnly(_, m) = self {
+        } else if let LockState::UnlockedReadOnly(_, _, m) = self {
             Some(m)
         } else {
             None
@@ -421,6 +421,7 @@ pub struct ObjectStore {
     device: Arc<dyn Device>,
     block_size: u64,
     filesystem: Weak<dyn Filesystem>,
+    // Lock ordering: This must be taken before `lock_state`.
     store_info: Mutex<StoreOrReplayInfo>,
     tree: LSMTree<ObjectKey, ObjectValue>,
 
@@ -434,6 +435,7 @@ pub struct ObjectStore {
     mutations_cipher: Mutex<Option<StreamCipher>>,
 
     // Current lock state of the store.
+    // Lock ordering: This must be taken after `store_info`.
     lock_state: Mutex<LockState>,
 
     // Enable/disable tracing.
@@ -705,7 +707,7 @@ impl ObjectStore {
             LockState::Locked(_) => panic!("Store is locked"),
             LockState::Invalid | LockState::Unencrypted | LockState::Unlocking => None,
             LockState::Unlocked(crypt) => Some(crypt.clone()),
-            LockState::UnlockedReadOnly(crypt, _) => Some(crypt.clone()),
+            LockState::UnlockedReadOnly(crypt, _, _) => Some(crypt.clone()),
             LockState::Locking(crypt) => Some(crypt.clone()),
             LockState::Unknown => {
                 panic!("Store is of unknown lock state; has the journal been replayed yet?")
@@ -1298,7 +1300,7 @@ impl ObjectStore {
         }
 
         *self.lock_state.lock().unwrap() = if read_only {
-            LockState::UnlockedReadOnly(crypt, journaled_encrypted_mutations)
+            LockState::UnlockedReadOnly(crypt, store_info, journaled_encrypted_mutations)
         } else {
             LockState::Unlocked(crypt)
         };
@@ -1360,15 +1362,18 @@ impl ObjectStore {
     // Whilst this can return an error, the store will be placed into an unusable but safe state
     // (i.e. no lingering unencrypted data) if an error is encountered.
     pub fn lock_read_only(&self) -> Result<(), Error> {
+        let mut store_info = self.store_info.lock().unwrap();
         let mut lock_state = self.lock_state.lock().unwrap();
-        let journaled_encrypted_mutations = if let LockState::UnlockedReadOnly(_, mutations) =
-            std::mem::replace(&mut *lock_state, LockState::Invalid)
-        {
-            mutations
-        } else {
-            panic!("Unexpected lock state: {:?}", &*lock_state);
-        };
+        let (old_store_info, journaled_encrypted_mutations) =
+            if let LockState::UnlockedReadOnly(_, store_info, mutations) =
+                std::mem::replace(&mut *lock_state, LockState::Invalid)
+            {
+                (store_info, mutations)
+            } else {
+                panic!("Unexpected lock state: {:?}", &*lock_state);
+            };
         *lock_state = LockState::Locked(journaled_encrypted_mutations);
+        *store_info = StoreOrReplayInfo::Info(old_store_info);
         self.tree.reset();
         Ok(())
     }
@@ -1546,7 +1551,8 @@ impl JournalingObject for ObjectStore {
                 LockState::Locked(_) | LockState::Locking(_) => {
                     assert_matches!(mutation, Mutation::BeginFlush | Mutation::EndFlush)
                 }
-                LockState::Unlocking
+                LockState::Invalid
+                | LockState::Unlocking
                 | LockState::Unencrypted
                 | LockState::Unlocked(_)
                 | LockState::UnlockedReadOnly(..) => {}

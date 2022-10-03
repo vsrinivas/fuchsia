@@ -616,7 +616,7 @@ impl ServingMultiVolumeFilesystem {
     ) -> Result<&mut ServingVolume, Error> {
         ensure!(!self.volumes.contains_key(volume), "Already bound");
         let (exposed_dir, server) = create_proxy::<fio::DirectoryMarker>()?;
-        let path = "volumes/".to_owned() + volume;
+        let path = format!("volumes/{}", volume);
         connect_to_named_protocol_at_dir_root::<fidl_fuchsia_fxfs::VolumeMarker>(
             &self.exposed_dir,
             &path,
@@ -626,6 +626,23 @@ impl ServingMultiVolumeFilesystem {
         .map_err(|e| anyhow!(zx::Status::from_raw(e)))?;
 
         self.insert_volume(volume.to_string(), exposed_dir).await
+    }
+
+    pub async fn check_volume(
+        &mut self,
+        volume: &str,
+        crypt: Option<ClientEnd<fidl_fuchsia_fxfs::CryptMarker>>,
+    ) -> Result<(), Error> {
+        ensure!(!self.volumes.contains_key(volume), "Already bound");
+        let path = format!("volumes/{}", volume);
+        connect_to_named_protocol_at_dir_root::<fidl_fuchsia_fxfs::VolumeMarker>(
+            &self.exposed_dir,
+            &path,
+        )?
+        .check(&mut fidl_fuchsia_fxfs::CheckOptions { crypt })
+        .await?
+        .map_err(|e| anyhow!(zx::Status::from_raw(e)))?;
+        Ok(())
     }
 
     async fn insert_volume(

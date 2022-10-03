@@ -143,6 +143,19 @@ zx::status<fs_management::MountedVolume*> UnwrapOrInitDataVolume(
         status.is_error())
       return status.take_error();
 
+    if (!create && config.check_filesystems()) {
+      FX_LOGS(INFO) << "Checking default volume integrity...";
+      auto crypt = component::Connect<fuchsia_fxfs::Crypt>();
+      if (crypt.is_error()) {
+        FX_PLOGS(ERROR, crypt.error_value()) << "Failed to connect to Crypt service.";
+        return crypt.take_error();
+      }
+      auto status = fs.CheckVolume("default", std::move(crypt)->TakeChannel());
+      if (status.is_error()) {
+        FX_PLOGS(ERROR, status.error_value()) << "Volume is corrupt!";
+        return status.take_error();
+      }
+    }
     auto crypt = component::Connect<fuchsia_fxfs::Crypt>();
     if (crypt.is_error()) {
       FX_PLOGS(ERROR, crypt.error_value()) << "Failed to connect to Crypt service.";
@@ -152,6 +165,14 @@ zx::status<fs_management::MountedVolume*> UnwrapOrInitDataVolume(
   }
 
   // Open up the unencrypted volume so that we can access the key-bag for data.
+  if (!create && config.check_filesystems()) {
+    FX_LOGS(INFO) << "Checking " << kFxfsUnencryptedVolumeName << " volume integrity...";
+    auto status = fs.CheckVolume(kFxfsUnencryptedVolumeName, {});
+    if (status.is_error()) {
+      FX_PLOGS(ERROR, status.error_value()) << "Volume is corrupt!";
+      return status.take_error();
+    }
+  }
   auto root_volume = volume_fn(kFxfsUnencryptedVolumeName, {});
   if (root_volume.is_error())
     return root_volume.take_error();
@@ -260,6 +281,19 @@ zx::status<fs_management::MountedVolume*> UnwrapOrInitDataVolume(
     return status.take_error();
 
   // OK, crypt is seeded with the stored keys, so we can finally open the data volume.
+  if (!create && config.check_filesystems()) {
+    FX_LOGS(INFO) << "Checking " << kFxfsDataVolumeName << " volume integrity...";
+    auto crypt = component::Connect<fuchsia_fxfs::Crypt>();
+    if (crypt.is_error()) {
+      FX_PLOGS(ERROR, crypt.error_value()) << "Failed to connect to Crypt service.";
+      return crypt.take_error();
+    }
+    auto status = fs.CheckVolume(kFxfsDataVolumeName, std::move(crypt)->TakeChannel());
+    if (status.is_error()) {
+      FX_PLOGS(ERROR, status.error_value()) << "Volume is corrupt!";
+      return status.take_error();
+    }
+  }
   auto crypt = component::Connect<fuchsia_fxfs::Crypt>();
   if (crypt.is_error()) {
     FX_PLOGS(ERROR, crypt.error_value()) << "Failed to connect to Crypt service.";
