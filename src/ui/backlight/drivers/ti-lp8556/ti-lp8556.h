@@ -109,8 +109,10 @@ class Lp8556Device : public DeviceType,
   zx::vmo InspectVmo() { return inspector_.DuplicateVmo(); }
   enum class PanelType {
     kBoe = 0,
-    kKd = 1,
-    kNumTypes = 2,
+    kInx = 1,
+    kKd = 2,
+    kUnknown = 3,
+    kNumTypes = 4,
   };
 
   double GetBacklightPower(double backlight_brightness);
@@ -176,7 +178,13 @@ class Lp8556Device : public DeviceType,
   inspect::UintProperty calibrated_scale_property_;
   inspect::BoolProperty power_property_;
   inspect::DoubleProperty max_absolute_brightness_nits_property_;
+  inspect::DoubleProperty power_watts_property_;
+  inspect::UintProperty board_pid_property_;
+  inspect::UintProperty panel_id_property_;
+  inspect::UintProperty panel_type_property_;
   TiLp8556Metadata metadata_ = {.allow_set_current_scale = false};
+  uint32_t panel_type_id_ = 0;
+  uint32_t board_pid_ = 0;
   double backlight_power_ = 0;
   double max_current_ = 0.0;
 };

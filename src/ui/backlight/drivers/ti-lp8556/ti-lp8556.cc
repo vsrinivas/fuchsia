@@ -23,6 +23,17 @@
 
 namespace ti {
 
+enum {
+  // These values are shared with the Nelson bootloader, and must be kept in sync.
+  kPanelTypeUnknown = 0,
+  kPanelTypeKdFiti9364 = 1,
+  kPanelTypeBoeFiti9364 = 2,
+  kPanelTypeInxFiti9364 = 3,
+  kPanelTypeKdFiti9365 = 4,
+  kPanelTypeBoeFiti9365 = 5,
+  kPanelTypeBoeSit7703 = 6,
+};
+
 // Refer to <internal>/vendor/amlogic/video-common/ambient_temp/lp8556.cc
 // Lookup tables containing the slope and y-intercept for a linear equation used
 // to fit the (power / |brightness_to_current_scalar_|) per vendor for
@@ -33,13 +44,17 @@ constexpr std::array<double,
                      static_cast<std::size_t>(Lp8556Device::PanelType::kNumTypes)>
     kLowBrightnessSlopeTable = {
         22.4,  // PanelType::kBoe
+        22.1,  // PanelType::kInx
         22.2,  // PanelType::kKd
+        22.2,  // PanelType::kUnknown
 };
 constexpr std::array<double,
                      static_cast<std::size_t>(Lp8556Device::PanelType::kNumTypes)>
     kLowBrightnessInterceptTable = {
         1236.0,  // PanelType::kBoe
+        1431.0,  // PanelType::kInx
         1319.0,  // PanelType::kKd
+        1329.0,  // PanelType::kUnknown
 };
 
 // Lookup tables for backlight driver voltage as a function of the backlight
@@ -54,9 +69,15 @@ constexpr std::array<std::array<double, kTableSize>,
         // PanelType::kBoe
         {19.80, 19.80, 19.80, 19.80, 19.90, 20.00, 20.10, 20.20, 20.30, 20.40, 20.50, 20.53, 20.53,
          20.53, 20.53, 20.53},
+        // PanelType::kInx
+        {19.70, 19.70, 19.70, 19.70, 19.80, 19.90, 20.00, 20.10, 20.20, 20.27, 20.30, 20.30, 20.30,
+         20.30, 20.30, 20.30},
         // PanelType::kKd
         {19.67, 19.67, 19.67, 19.67, 19.77, 19.93, 20.03, 20.13, 20.20, 20.27, 20.37, 20.37, 20.37,
          20.37, 20.37, 20.37},
+        // PanelType:kUnknown
+        {19.72, 19.72, 19.72, 19.72, 19.82, 19.94, 20.04, 20.14, 20.23, 20.31, 20.39, 20.40, 20.40,
+         20.40, 20.40, 20.40},
     }};
 
 // Lookup table for backlight driver efficiency as a function of the backlight
@@ -156,6 +177,7 @@ zx_status_t Lp8556Device::SetBacklightState(bool power, double brightness) {
   power_property_.Set(power_);
   brightness_property_.Set(brightness_);
   backlight_power_ = GetBacklightPower(brightness_reg_value);
+  power_watts_property_.Set(backlight_power_);
   return ZX_OK;
 }
 
@@ -265,7 +287,12 @@ void Lp8556Device::GetNormalizedBrightnessScale(
 
 void Lp8556Device::GetPowerWatts(GetPowerWattsRequestView request,
                                  GetPowerWattsCompleter::Sync& completer) {
-  completer.ReplySuccess(backlight_power_);
+  // Only supported on Nelson for now.
+  if (board_pid_ == PDEV_PID_NELSON) {
+    completer.ReplySuccess(backlight_power_);
+  } else {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
 }
 
 void Lp8556Device::GetVoltageVolts(GetVoltageVoltsRequestView request,
@@ -327,6 +354,23 @@ zx_status_t Lp8556Device::Init() {
     }
   }
 
+  status = device_get_fragment_metadata(parent(), "pdev", DEVICE_METADATA_BOARD_PRIVATE,
+                                        &panel_type_id_, sizeof(panel_type_id_), &actual);
+  if (status != ZX_OK) {
+    panel_type_id_ = kPanelTypeUnknown;
+  } else if (actual != sizeof(panel_type_id_)) {
+    LOG_ERROR("Unexpected panel ID size: %zu", actual);
+    return ZX_ERR_BAD_STATE;
+  }
+
+  ddk::PDevProtocolClient pdev(parent(), "pdev");
+  if (pdev.is_valid()) {
+    pdev_board_info_t board_info{};
+    if ((status = pdev.GetBoardInfo(&board_info)) == ZX_OK) {
+      board_pid_ = board_info.pid;
+    }
+  }
+
   auto persistent_brightness = BrightnessStickyReg::Get().ReadFrom(&mmio_);
   if (persistent_brightness.is_valid()) {
     persistent_brightness_property_ =
@@ -341,6 +385,11 @@ zx_status_t Lp8556Device::Init() {
   scale_property_ = root_.CreateUint("scale", scale_);
   calibrated_scale_property_ = root_.CreateUint("calibrated_scale", calibrated_scale_);
   power_property_ = root_.CreateBool("power", power_);
+  power_watts_property_ = root_.CreateDouble("power_watts", backlight_power_);
+
+  board_pid_property_ = root_.CreateUint("board_pid", board_pid_);
+  panel_id_property_ = root_.CreateUint("panel_id", panel_type_id_);
+  panel_type_property_ = root_.CreateUint("panel_type", static_cast<uint32_t>(GetPanelType()));
 
   return ZX_OK;
 }
@@ -376,6 +425,10 @@ zx_status_t Lp8556Device::SetCurrentScale(uint16_t scale) {
 }
 
 double Lp8556Device::GetBacklightPower(double backlight_brightness) {
+  if (board_pid_ != PDEV_PID_NELSON) {
+    return 0;
+  }
+
   // For brightness values less than |kMinTableBrightness|, estimate the power
   // on a per-vendor basis from a linear equation derived from validation data.
   if (backlight_brightness < kMinTableBrightness) {
@@ -454,10 +507,20 @@ double Lp8556Device::GetDriverEfficiency(double backlight_brightness) {
 }
 
 Lp8556Device::PanelType Lp8556Device::GetPanelType() {
-  if (metadata_.panel_id == 0 || metadata_.panel_id == 1) {
-    return Lp8556Device::PanelType::kKd;
+  switch (panel_type_id_) {
+    case kPanelTypeBoeFiti9364:
+    case kPanelTypeBoeFiti9365:
+    case kPanelTypeBoeSit7703:
+      return Lp8556Device::PanelType::kBoe;
+    case kPanelTypeInxFiti9364:
+      return Lp8556Device::PanelType::kInx;
+    case kPanelTypeKdFiti9364:
+    case kPanelTypeKdFiti9365:
+      return Lp8556Device::PanelType::kKd;
+    case kPanelTypeUnknown:
+    default:
+      return Lp8556Device::PanelType::kUnknown;
   }
-  return Lp8556Device::PanelType::kBoe;
 }
 
 zx_status_t Lp8556Device::ReadInitialState() {
@@ -482,6 +545,7 @@ zx_status_t Lp8556Device::ReadInitialState() {
   } else {
     LOG_ERROR("Could not read backlight brightness: %d\n", status);
     brightness_ = 1.0;
+    backlight_power_ = 0;
   }
 
   uint8_t device_control;
@@ -498,6 +562,8 @@ zx_status_t Lp8556Device::ReadInitialState() {
   i2c_.ReadSync(kCfgReg, &max_current_idx, sizeof(max_current_idx));
   max_current_idx = (max_current_idx >> 4) & 0b111;
   max_current_ = kMaxCurrentTable[max_current_idx];
+
+  backlight_power_ = GetBacklightPower(brightness_);
 
   return ZX_OK;
 }
