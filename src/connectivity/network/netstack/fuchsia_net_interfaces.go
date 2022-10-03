@@ -448,6 +448,7 @@ func interfaceWatcherEventLoop(
 			fidlInterfaceWatcherStats.count.Add(1)
 
 			go func() {
+				defer cancel()
 				component.Serve(ctx, &interfaces.WatcherWithCtxStub{Impl: &impl}, watcher.Channel, component.ServeOptions{
 					Concurrent: true,
 					OnError: func(err error) {
