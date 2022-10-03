@@ -14,16 +14,15 @@
 class DriverDevelopmentTest : public MultipleDeviceTestCase {};
 
 TEST_F(DriverDevelopmentTest, DeviceInfo) {
-  std::vector<fbl::RefPtr<Device>> devices;
   size_t parent_index;
   ASSERT_NO_FATAL_FAILURE(
       AddDevice(platform_bus()->device, "parent-device", 0 /* protocol id */, "", &parent_index));
 
-  devices.push_back(device(parent_index)->device);
+  const fbl::RefPtr dev = device(parent_index)->device;
+  dev->flags = DEV_CTX_BOUND;
 
-  devices[0]->flags = DEV_CTX_BOUND;
   auto arena = std::make_unique<fidl::Arena<512>>();
-  auto result = GetDeviceInfo(*arena, devices);
+  auto result = GetDeviceInfo(*arena, {dev});
   ASSERT_EQ(ZX_OK, result.status_value());
 
   auto endpoints = fidl::CreateEndpoints<fuchsia_driver_development::DeviceInfoIterator>();
@@ -91,17 +90,16 @@ TEST_F(DriverDevelopmentTest, DriverInfo) {
 }
 
 TEST_F(DriverDevelopmentTest, UnknownFlagsWork) {
-  std::vector<fbl::RefPtr<Device>> devices;
   size_t parent_index;
   ASSERT_NO_FATAL_FAILURE(
       AddDevice(platform_bus()->device, "parent-device", 0 /* protocol id */, "", &parent_index));
 
-  devices.push_back(device(parent_index)->device);
+  const fbl::RefPtr dev = device(parent_index)->device;
 
   // Give our device some unknown flags.
-  devices[0]->flags = 0xF000;
+  dev->flags = 0xF000;
   auto arena = std::make_unique<fidl::Arena<512>>();
-  auto result = GetDeviceInfo(*arena, devices);
+  auto result = GetDeviceInfo(*arena, {dev});
   ASSERT_EQ(ZX_OK, result.status_value());
 
   auto endpoints = fidl::CreateEndpoints<fuchsia_driver_development::DeviceInfoIterator>();

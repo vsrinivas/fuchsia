@@ -70,7 +70,7 @@ zx::status<std::vector<fuchsia_driver_development::wire::DriverInfo>> GetDriverI
 }
 
 zx::status<std::vector<fdd::wire::DeviceInfo>> GetDeviceInfo(
-    fidl::AnyArena& allocator, const std::vector<fbl::RefPtr<Device>>& devices) {
+    fidl::AnyArena& allocator, const std::vector<fbl::RefPtr<const Device>>& devices) {
   std::vector<fdd::wire::DeviceInfo> device_info_vec;
   for (const auto& device : devices) {
     if (device->props().size() > fdm::wire::kPropertiesMax) {

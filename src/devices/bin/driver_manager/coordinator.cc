@@ -996,7 +996,7 @@ void Coordinator::GetDriverInfo(GetDriverInfoRequestView request,
 
 void Coordinator::GetDeviceInfo(GetDeviceInfoRequestView request,
                                 GetDeviceInfoCompleter::Sync& completer) {
-  std::vector<fbl::RefPtr<Device>> device_list;
+  std::vector<fbl::RefPtr<const Device>> device_list;
   if (request->device_filter.empty()) {
     for (auto& device : device_manager_->devices()) {
       device_list.emplace_back(&device);

@@ -59,6 +59,6 @@ zx::status<std::vector<fuchsia_driver_development::wire::DriverInfo>> GetDriverI
     fidl::AnyArena& allocator, const std::vector<const Driver*>& drivers);
 
 zx::status<std::vector<fuchsia_driver_development::wire::DeviceInfo>> GetDeviceInfo(
-    fidl::AnyArena& allocator, const std::vector<fbl::RefPtr<Device>>& devices);
+    fidl::AnyArena& allocator, const std::vector<fbl::RefPtr<const Device>>& devices);
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_V1_DRIVER_DEVELOPMENT_H_

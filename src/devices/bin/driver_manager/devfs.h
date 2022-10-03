@@ -33,21 +33,13 @@ struct Devnode : public fbl::DoublyLinkedListable<Devnode*> {
     mutable ExportOptions export_options;
   };
 
-  using Target = std::variant<NoRemote, Service, Device*>;
+  using Target = std::variant<NoRemote, Service, std::reference_wrapper<Device>>;
 
   // Constructs a root node.
   Devnode(Devfs& devfs, Device* device);
 
-  // Constructs a directory node.
-  //
   // `parent` must outlive `this`.
-  Devnode(Devfs& devfs, Devnode& parent, NoRemote no_remote, fbl::String name);
-
-  // `parent` must outlive `this`.
-  Devnode(Devfs& devfs, Devnode& parent, Service service, fbl::String name);
-
-  // `parent` and `device` must outlive `this`.
-  Devnode(Devfs& devfs, Devnode& parent, Device& device, fbl::String name);
+  Devnode(Devfs& devfs, Devnode& parent, Target target, fbl::String name);
 
   ~Devnode();
 
@@ -84,7 +76,7 @@ struct Devnode : public fbl::DoublyLinkedListable<Devnode*> {
   Devnode* lookup(std::string_view name);
   const Devnode* lookup(std::string_view name) const;
 
-  Device* device() const;
+  const Device* device() const;
   Devnode* parent() const;
   std::string_view name() const;
   ExportOptions export_options() const;

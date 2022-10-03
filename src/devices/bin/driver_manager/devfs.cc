@@ -47,15 +47,14 @@ overloaded(Ts...) -> overloaded<Ts...>;
 
 bool Devnode::is_invisible() const {
   return std::visit(
-      overloaded{[](const NoRemote& no_remote) {
-                   return static_cast<bool>(no_remote.export_options & ExportOptions::kInvisible);
-                 },
-                 [](const Service& service) {
-                   return static_cast<bool>(service.export_options & ExportOptions::kInvisible);
-                 },
-                 [](const Device* device) {
-                   return static_cast<bool>(device->flags & DEV_CTX_INVISIBLE);
-                 }},
+      overloaded{
+          [](const NoRemote& no_remote) {
+            return static_cast<bool>(no_remote.export_options & ExportOptions::kInvisible);
+          },
+          [](const Service& service) {
+            return static_cast<bool>(service.export_options & ExportOptions::kInvisible);
+          },
+          [](const Device& device) { return static_cast<bool>(device.flags & DEV_CTX_INVISIBLE); }},
       target_);
 }
 
@@ -156,9 +155,9 @@ bool Devnode::is_dir() const {
   }
   return std::visit(
       overloaded{[](const NoRemote&) { return true; }, [](const Service& service) { return false; },
-                 [](const Device* device) {
-                   return !(device->device_controller().is_valid() &&
-                            device->coordinator_binding().has_value());
+                 [](const Device& device) {
+                   return !(device.device_controller().is_valid() &&
+                            device.coordinator_binding().has_value());
                  }},
       target_);
 }
@@ -280,10 +279,10 @@ zx_status_t Devnode::watch(async_dispatcher_t* dispatcher,
 
 bool Devnode::has_watchers() const { return !watchers.is_empty(); }
 
-Device* Devnode::device() const {
-  return std::visit(overloaded{[](const NoRemote&) -> Device* { return nullptr; },
-                               [](const Service& service) -> Device* { return nullptr; },
-                               [](Device* device) { return device; }},
+const Device* Devnode::device() const {
+  return std::visit(overloaded{[](const NoRemote&) -> const Device* { return nullptr; },
+                               [](const Service&) -> const Device* { return nullptr; },
+                               [](const Device& device) { return &device; }},
                     target_);
 }
 
@@ -299,14 +298,14 @@ std::string_view Devnode::name() const {
 Devnode::ExportOptions Devnode::export_options() const {
   return std::visit(overloaded{[](const NoRemote& no_remote) { return no_remote.export_options; },
                                [](const Service& service) { return service.export_options; },
-                               [](const Device*) { return ExportOptions{}; }},
+                               [](const Device&) { return ExportOptions{}; }},
                     target_);
 }
 
 Devnode::ExportOptions* Devnode::export_options() {
   return std::visit(overloaded{[](const NoRemote& no_remote) { return &no_remote.export_options; },
                                [](const Service& service) { return &service.export_options; },
-                               [](const Device*) -> ExportOptions* { return nullptr; }},
+                               [](const Device&) -> ExportOptions* { return nullptr; }},
                     target_);
 }
 
@@ -357,29 +356,29 @@ zx_status_t Devnode::readdir(uint64_t* ino_inout, void* data, size_t len) {
     }
     const bool show =
         !child.is_invisible() &&
-        std::visit(overloaded{[&child](const NoRemote&) {
-                                // "pure" directories (like /dev/class/$NAME) do
-                                // not show up if they have no children, to
-                                // avoid clutter and confusion.  They remain
-                                // openable, so they can be watched.
-                                //
-                                // An exception being /dev/diagnostics which is
-                                // served by different VFS and should be listed
-                                // even though it has no devnode children.
-                                if (child.ino_ == child.devfs_.diagnostics_devnode.ino_) {
-                                  return true;
-                                }
-                                if (child.ino_ == child.devfs_.null_devnode.ino_) {
-                                  return true;
-                                }
-                                if (child.ino_ == child.devfs_.zero_devnode.ino_) {
-                                  return true;
-                                }
-                                return !child.children.is_empty();
-                              },
-                              [](const Service& service) { return true; },
-                              [](const Device* device) { return true; }},
-                   child.target_);
+        std::visit(
+            overloaded{[&child](const NoRemote&) {
+                         // "pure" directories (like /dev/class/$NAME) do
+                         // not show up if they have no children, to
+                         // avoid clutter and confusion.  They remain
+                         // openable, so they can be watched.
+                         //
+                         // An exception being /dev/diagnostics which is
+                         // served by different VFS and should be listed
+                         // even though it has no devnode children.
+                         if (child.ino_ == child.devfs_.diagnostics_devnode.ino_) {
+                           return true;
+                         }
+                         if (child.ino_ == child.devfs_.null_devnode.ino_) {
+                           return true;
+                         }
+                         if (child.ino_ == child.devfs_.zero_devnode.ino_) {
+                           return true;
+                         }
+                         return !child.children.is_empty();
+                       },
+                       [](const Service&) { return true; }, [](const Device&) { return true; }},
+            child.target_);
     if (!show) {
       continue;
     }
@@ -497,10 +496,10 @@ void Devnode::open(async_dispatcher_t* dispatcher, fidl::ServerEnd<fio::Node> ip
                            ->Open(flags, 0, fidl::StringView::FromExternal(service.path),
                                   std::move(ipc));
                  },
-                 [&](const Device* device) {
-                   if (device->device_controller().is_valid()) {
+                 [&](const Device& device) {
+                   if (device.device_controller().is_valid()) {
                      __UNUSED const fidl::Status result =
-                         device->device_controller()->Open(flags, 0, ".", std::move(ipc));
+                         device.device_controller()->Open(flags, 0, ".", std::move(ipc));
                    } else {
                      open_locally();
                    }
@@ -510,38 +509,19 @@ void Devnode::open(async_dispatcher_t* dispatcher, fidl::ServerEnd<fio::Node> ip
 
 Devnode::Devnode(Devfs& devfs, Device* device)
     : devfs_(devfs),
+      parent_(nullptr),
       target_([device]() -> Target {
         if (device != nullptr) {
-          return device;
+          return *device;
         }
         return NoRemote{};
       }()),
       ino_(devfs.next_ino++) {}
 
-Devnode::Devnode(Devfs& devfs, Devnode& parent, NoRemote no_remote, fbl::String name)
+Devnode::Devnode(Devfs& devfs, Devnode& parent, Target target, fbl::String name)
     : devfs_(devfs),
       parent_(&parent),
-      target_(no_remote),
-      name_(std::move(name)),
-      ino_(devfs.next_ino++) {
-  ZX_ASSERT_MSG(parent.lookup(name) == nullptr, "name=%s already exists", name.c_str());
-  parent.children.push_back(this);
-}
-
-Devnode::Devnode(Devfs& devfs, Devnode& parent, Service service, fbl::String name)
-    : devfs_(devfs),
-      parent_(&parent),
-      target_(std::move(service)),
-      name_(std::move(name)),
-      ino_(devfs.next_ino++) {
-  ZX_ASSERT_MSG(parent.lookup(name) == nullptr, "name=%s already exists", name.c_str());
-  parent.children.push_back(this);
-}
-
-Devnode::Devnode(Devfs& devfs, Devnode& parent, Device& device, fbl::String name)
-    : devfs_(devfs),
-      parent_(&parent),
-      target_(&device),
+      target_(std::move(target)),
       name_(std::move(name)),
       ino_(devfs.next_ino++) {
   ZX_ASSERT_MSG(parent.lookup(name) == nullptr, "name=%s already exists", name.c_str());
@@ -568,16 +548,16 @@ Devnode::~Devnode() {
   // disconnect from device and notify parent/link directory watchers
   if (!is_invisible()) {
     std::visit(overloaded{[](const NoRemote&) {}, [](const Service&) {},
-                          [this](Device* device) {
-                            if (device->parent() == nullptr) {
+                          [this](Device& device) {
+                            if (device.parent() == nullptr) {
                               return;
                             }
-                            Device& parent = *device->parent();
+                            Device& parent = *device.parent();
                             std::optional<Devnode>& parent_node = parent.self;
                             if (parent_node.has_value()) {
                               parent_node.value().notify(name(), fio::wire::WatchEvent::kRemoved);
                             }
-                            Devnode* dir = devfs_.proto_node(device->protocol_id());
+                            Devnode* dir = devfs_.proto_node(device.protocol_id());
                             if (dir != nullptr) {
                               dir->notify(name(), fio::wire::WatchEvent::kRemoved);
                             }

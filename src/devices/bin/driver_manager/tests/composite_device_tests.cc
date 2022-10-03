@@ -905,7 +905,7 @@ TEST_F(CompositeTestCase, Topology) {
   ASSERT_TRUE(dn.has_value());
   zx::status composite_dev_result = dn.value().walk("composite-dev");
   ASSERT_OK(composite_dev_result.status_value());
-  fbl::RefPtr<Device> composite_dev(composite_dev_result.value()->device());
+  const fbl::RefPtr<const Device> composite_dev(composite_dev_result.value()->device());
 
   char path_buf[PATH_MAX];
   ASSERT_OK(coordinator().GetTopologicalPath(composite_dev, path_buf, sizeof(path_buf)));
