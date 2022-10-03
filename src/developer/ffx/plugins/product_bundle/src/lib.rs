@@ -84,9 +84,14 @@ where
         }
     } else {
         // We use the default matching functionality.
-        let url = select_product_bundle(&cmd.product_bundle_name, ListingMode::ReadyBundlesOnly)
-            .await
-            .context("Problem retrieving product bundle information.")?;
+        let should_print = true;
+        let url = select_product_bundle(
+            &cmd.product_bundle_name,
+            ListingMode::ReadyBundlesOnly,
+            should_print,
+        )
+        .await
+        .context("Problem retrieving product bundle information.")?;
         if url.scheme() != "file" && is_pb_ready(&url).await? {
             pbs_to_remove.push(url);
         }
@@ -283,7 +288,8 @@ where
         let base_dir = pbms::get_storage_dir().await?;
         update_metadata_all(&base_dir, ui).await?;
     }
-    pbms::select_product_bundle(&cmd.product_bundle_name, ListingMode::AllBundles).await
+    let should_print = true;
+    select_product_bundle(&cmd.product_bundle_name, ListingMode::AllBundles, should_print).await
 }
 
 /// `ffx product-bundle create` sub-command.

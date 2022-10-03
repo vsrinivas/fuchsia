@@ -19,14 +19,19 @@ pub async fn convert_bundle_to_configs(
     device_name: Option<String>,
     verbose: bool,
 ) -> Result<EmulatorConfiguration> {
-    let product_url = select_product_bundle(&product_bundle_name, ListingMode::ReadyBundlesOnly)
-        .await
-        .context("Selecting product bundle")?;
     let product_bundle =
-        load_product_bundle(&Some(product_url.to_string()), ListingMode::ReadyBundlesOnly).await?;
+        load_product_bundle(&product_bundle_name, ListingMode::ReadyBundlesOnly).await?;
     match &product_bundle {
         ProductBundle::V1(product_bundle) => {
             // Get the virtual devices.
+            let should_print = false;
+            let product_url = select_product_bundle(
+                &Some(product_bundle.name.clone()),
+                ListingMode::ReadyBundlesOnly,
+                should_print,
+            )
+            .await
+            .context("Selecting product bundle")?;
             let fms_entries = fms_entries_from(&product_url).await.context("get fms entries")?;
             let virtual_devices =
                 fms::find_virtual_devices(&fms_entries, &product_bundle.device_refs)

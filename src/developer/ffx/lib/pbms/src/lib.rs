@@ -66,8 +66,10 @@ pub async fn load_product_bundle(
     }
 
     // Otherwise, use the `fms` crate to fetch and parse the product bundle by name or uri.
-    let product_url =
-        select_product_bundle(product_bundle, mode).await.context("Selecting product bundle")?;
+    let should_print = true;
+    let product_url = select_product_bundle(product_bundle, mode, should_print)
+        .await
+        .context("Selecting product bundle")?;
     let name = product_url.fragment().expect("Product name is required.");
 
     let fms_entries = fms_entries_from(&product_url).await.context("get fms entries")?;
@@ -187,6 +189,7 @@ fn default_pbm_of_many<I>(
     mut urls: I,
     sdk_version: &sdk::SdkVersion,
     looking_for: Option<String>,
+    should_print: bool,
 ) -> Result<url::Url>
 where
     I: Iterator<Item = url::Url> + Clone,
@@ -198,12 +201,14 @@ where
     };
     let formatted =
         urls.clone().map(|url| format!("`{}`", url)).collect::<Vec<String>>().join("\n");
-    println!(
-        "Multiple product bundles found{extra_message}. To choose a specific product, pass \
-    in a full URL from the following:\n{formatted}",
-        extra_message = extra_message,
-        formatted = formatted
-    );
+    if should_print {
+        println!(
+            "Multiple product bundles found{extra_message}. To choose a specific product, pass \
+            in a full URL from the following:\n{formatted}",
+            extra_message = extra_message,
+            formatted = formatted
+        );
+    }
     tracing::info!("Product bundles: {}", formatted);
     let first = match sdk_version {
         sdk::SdkVersion::Version(version) => {
@@ -226,10 +231,12 @@ where
             }
         },
     };
-    println!(
-        "Defaulting to the first valid product-bundle in sorted order: `{first}`",
-        first = first.to_string()
-    );
+    if should_print {
+        println!(
+            "Defaulting to the first valid product-bundle in sorted order: `{first}`",
+            first = first.to_string()
+        );
+    }
     Ok(first)
 }
 
@@ -247,6 +254,7 @@ where
 pub async fn select_product_bundle(
     looking_for: &Option<String>,
     mode: ListingMode,
+    should_print: bool,
 ) -> Result<url::Url> {
     tracing::debug!("select_product_bundle");
     let mut urls = product_bundle_urls().await.context("getting product bundle URLs")?;
@@ -277,13 +285,13 @@ pub async fn select_product_bundle(
             Ok(None) => bail!(
                 "A product bundle with that name was not found, please check the spelling and try again."
             ),
-            Err(matches) => default_pbm_of_many(matches, sdk_version, Some(looking_for.to_string())),
+            Err(matches) => default_pbm_of_many(matches, sdk_version, Some(looking_for.to_string()), should_print),
         }
     } else {
         match iter.at_most_one() {
             Ok(Some(url)) => Ok(url),
             Ok(None) => bail!("There are no product bundles available."),
-            Err(urls) => default_pbm_of_many(urls, sdk_version, None),
+            Err(urls) => default_pbm_of_many(urls, sdk_version, None, should_print),
         }
     }
 }
