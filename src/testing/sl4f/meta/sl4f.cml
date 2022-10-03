@@ -97,7 +97,7 @@
                 "fuchsia.tracing.controller.Controller",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.composition.Allocator",
-                "fuchsia.ui.composition.ScreenCapture",
+                "fuchsia.ui.composition.Screenshot",
                 "fuchsia.ui.scenic.Scenic",
                 "fuchsia.weave.Stack",
                 "fuchsia.web.ContextProvider",

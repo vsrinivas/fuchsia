@@ -129,7 +129,7 @@
             protocol: [
                 "fuchsia.input.injection.InputDeviceRegistry", // test-only
                 "fuchsia.ui.composition.Allocator",
-                "fuchsia.ui.composition.ScreenCapture",
+                "fuchsia.ui.composition.Screenshot",
                 "fuchsia.ui.scenic.Scenic",
             ],
             from: "#ui",
