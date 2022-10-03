@@ -18,21 +18,14 @@
         },
     ],
     use: [
+        { protocol: "fuchsia.diagnostics.ArchiveAccessor" },
         {
-            protocol: [
-                "fuchsia.diagnostics.ArchiveAccessor",
-                "fuchsia.sys2.EventSource",
-            ],
+            protocol: "fuchsia.sys2.RealmQuery",
+            from: "framework",
         },
         {
-            directory: "hub",
-            from: "framework",
-            rights: [ "connect" ],
-            path: "/hub",
-        },
-        {
-            event: [ "started" ],
-            from: "framework",
+            event_stream: [ "started_v2" ],
+            from: "parent",
         },
     ],
     offer: [

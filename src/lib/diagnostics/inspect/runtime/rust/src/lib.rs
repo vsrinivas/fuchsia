@@ -90,16 +90,15 @@ pub fn create_diagnostics_dir(inspector: Inspector) -> Arc<dyn DirectoryEntry> {
 mod tests {
     use super::*;
     use component_events::{
-        events::{Event, EventSource, EventSubscription, Started},
+        events::{EventStream, Started},
         matcher::EventMatcher,
     };
-    use fdio;
-    use fuchsia_component::server::ServiceObj;
+    use fidl_fuchsia_sys2 as fsys;
+    use fuchsia_component::{client, server::ServiceObj};
     use fuchsia_component_test::ScopedInstance;
     use fuchsia_inspect::{reader, testing::assert_data_tree, Inspector};
 
-    const TEST_COMPONENT_URL: &str =
-        "fuchsia-pkg://fuchsia.com/inspect-runtime-tests#meta/inspect_test_component.cm";
+    const TEST_COMPONENT_URL: &str = "#meta/inspect_test_component.cm";
 
     #[fuchsia::test]
     async fn new_no_op() -> Result<(), Error> {
@@ -114,35 +113,41 @@ mod tests {
 
     #[fuchsia::test]
     async fn connect_to_service() -> Result<(), anyhow::Error> {
-        // TODO(https://fxbug.dev/81400): Change code below to
-        // app.start_with_binder_sync during post-migration cleanup.
-        let event_source = EventSource::new().expect("failed to create EventSource");
-        let mut event_stream = event_source
-            .subscribe(vec![EventSubscription::new(vec![Started::NAME])])
-            .await
-            .expect("failed to subscribe to EventSource");
+        let mut event_stream = EventStream::open().await.unwrap();
 
         let app = ScopedInstance::new("coll".to_string(), TEST_COMPONENT_URL.to_string())
             .await
             .expect("failed to create test component");
 
+        let started_stream = EventMatcher::ok()
+            .moniker_regex(app.child_name().to_owned())
+            .wait::<Started>(&mut event_stream);
+
         app.connect_to_binder().expect("failed to connect to Binder protocol");
 
-        let _ = EventMatcher::ok()
-            .moniker_regex(app.child_name().to_owned())
-            .wait::<Started>(&mut event_stream)
-            .await
-            .expect("failed to observe Started event");
+        started_stream.await.expect("failed to observe Started event");
 
-        let path = format!(
-            "/hub/children/coll:{}/exec/out/diagnostics/{}",
-            app.child_name(),
-            TreeMarker::PROTOCOL_NAME
-        );
-        let (tree, server_end) =
-            fidl::endpoints::create_proxy::<TreeMarker>().expect("failed to create proxy");
-        fdio::service_connect(&path, server_end.into_channel())
-            .expect("failed to connect to service");
+        let realm_query = client::connect_to_protocol::<fsys::RealmQueryMarker>().unwrap();
+        let (_, maybe_resolved) = realm_query
+            .get_instance_info(&format!("./coll:{}", app.child_name()))
+            .await
+            .expect("fidl call succeeds")
+            .expect("the component exists");
+        let resolved = maybe_resolved.expect("the instance is resolved");
+        let execution = resolved.execution.expect("the instance has an execution state");
+
+        let out_dir = execution.out_dir.expect("out dir exists");
+        let out_dir = out_dir.into_proxy().expect("dir into proxy");
+        let diagnostics_dir = fuchsia_fs::directory::open_directory(
+            &out_dir,
+            "diagnostics",
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+        )
+        .await
+        .expect("opened diagnostics");
+
+        let tree = client::connect_to_protocol_at_dir_root::<TreeMarker>(&diagnostics_dir)
+            .expect("connected to tree");
 
         let hierarchy = reader::read(&tree).await?;
         assert_data_tree!(hierarchy, root: {
