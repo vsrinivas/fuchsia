@@ -2,7 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "//tools/blackout/fs-tree/meta/fs_tree.shard.cml" ],
+    include: [
+        "//src/lib/storage/fs_management/client.shard.cml",
+        "//tools/blackout/blackout-target/meta/blackout.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
     program: {
         runner: "elf",
         binary: "bin/blackout_minfs_tree_target_bin",

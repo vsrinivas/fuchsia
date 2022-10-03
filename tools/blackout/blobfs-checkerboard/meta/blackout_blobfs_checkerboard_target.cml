@@ -4,6 +4,7 @@
 {
     include: [
         "//src/lib/storage/fs_management/client.shard.cml",
+        "//tools/blackout/blackout-target/meta/blackout.shard.cml",
         "inspect/client.shard.cml",
         "syslog/client.shard.cml",
     ],
@@ -12,22 +13,4 @@
         binary: "bin/blackout_blobfs_checkerboard_target_bin",
         lifecycle: { stop_event: "notify" },
     },
-    capabilities: [
-        { protocol: "fuchsia.blackout.test.Controller" },
-    ],
-    use: [
-        {
-            directory: "dev",
-            from: "parent",
-            rights: [ "rw*" ],
-            path: "/dev",
-        },
-        { protocol: "fuchsia.process.Launcher" },
-    ],
-    expose: [
-        {
-            protocol: "fuchsia.blackout.test.Controller",
-            from: "self",
-        },
-    ],
 }

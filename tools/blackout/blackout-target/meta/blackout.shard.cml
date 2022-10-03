@@ -2,17 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [
-        "//src/lib/storage/fs_management/client.shard.cml",
-        "inspect/client.shard.cml",
-        "syslog/client.shard.cml",
-    ],
     capabilities: [
         { protocol: "fuchsia.blackout.test.Controller" },
     ],
     use: [
         {
-            directory: "dev",
+            directory: "dev-topological",
             from: "parent",
             rights: [ "rw*" ],
             path: "/dev",
