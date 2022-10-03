@@ -12,6 +12,7 @@
 use alloc::collections::{hash_map, HashMap};
 use core::fmt::Debug;
 use core::{hash::Hash, num::NonZeroUsize};
+use either::Either;
 
 use const_unwrap::const_unwrap_option;
 use derivative::Derivative;
@@ -188,10 +189,11 @@ where
         key: &A,
     ) -> impl ExactSizeIterator<Item = &'_ (V::Tag, NonZeroUsize)> {
         let Self { map, len: _ } = self;
-        OptionalIterator(
-            map.get(key)
-                .map(|MapValue { value: _, descendant_counts }| descendant_counts.into_iter()),
-        )
+        map.get(key)
+            .map(|MapValue { value: _, descendant_counts }| {
+                Either::Left(descendant_counts.into_iter())
+            })
+            .unwrap_or(Either::Right(core::iter::empty()))
     }
 
     /// Returns an iterator over the keys and values in the map.
@@ -406,25 +408,6 @@ impl<'d, T, const INLINE_SIZE: usize> IntoIterator for &'d DescendantCounts<T, I
         counts.into_iter()
     }
 }
-
-/// Wrapper for an optional iterator.
-struct OptionalIterator<I>(Option<I>);
-
-impl<I: Iterator> Iterator for OptionalIterator<I> {
-    type Item = I::Item;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let Self(it) = self;
-        it.as_mut().and_then(Iterator::next)
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let Self(it) = self;
-        it.as_ref().map(Iterator::size_hint).unwrap_or((0, Some(0)))
-    }
-}
-
-impl<I: ExactSizeIterator> ExactSizeIterator for OptionalIterator<I> {}
 
 #[cfg(test)]
 mod tests {
