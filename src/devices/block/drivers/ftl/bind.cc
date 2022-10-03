@@ -25,7 +25,7 @@ zx_status_t FtlDriverBind(void* ctx, zx_device_t* parent) {
   zx_status_t status = device->Bind();
   if (status == ZX_OK) {
     // devmgr is now in charge of the device.
-    __UNUSED ftl::BlockDevice* dummy = device.release();
+    __UNUSED ftl::BlockDevice* placeholder = device.release();
   }
   return status;
 }

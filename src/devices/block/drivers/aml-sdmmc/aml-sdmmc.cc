@@ -1605,7 +1605,7 @@ zx_status_t AmlSdmmc::Create(void* ctx, zx_device_t* parent) {
   }
 
   // devmgr is now in charge of the device.
-  __UNUSED auto* dummy = dev.release();
+  __UNUSED auto* placeholder = dev.release();
   return ZX_OK;
 }
 

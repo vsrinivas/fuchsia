@@ -104,7 +104,7 @@ zx_status_t SdmmcBlockDevice::AddDevice() {
     return st;
   }
 
-  __UNUSED auto* dummy = user_partition.release();
+  __UNUSED auto* placeholder = user_partition.release();
 
   const uint32_t boot_size = raw_ext_csd_[MMC_EXT_CSD_BOOT_SIZE_MULT] * kBootSizeMultiplier;
   const bool boot_enabled =
@@ -139,14 +139,14 @@ zx_status_t SdmmcBlockDevice::AddDevice() {
       return st;
     }
 
-    dummy = boot_partition_1.release();
+    placeholder = boot_partition_1.release();
 
     if ((st = boot_partition_2->AddDevice()) != ZX_OK) {
       zxlogf(ERROR, "failed to add boot partition device: %d", st);
       return st;
     }
 
-    dummy = boot_partition_2.release();
+    placeholder = boot_partition_2.release();
   }
 
   if (!is_sd_ && raw_ext_csd_[MMC_EXT_CSD_RPMB_SIZE_MULT] > 0) {

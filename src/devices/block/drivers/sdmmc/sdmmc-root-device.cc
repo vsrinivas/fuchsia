@@ -38,7 +38,7 @@ zx_status_t SdmmcRootDevice::Bind(void* ctx, zx_device_t* parent) {
 
   st = dev->Init();
 
-  __UNUSED auto* dummy = dev.release();
+  __UNUSED auto* placeholder = dev.release();
   return st;
 }
 
@@ -94,7 +94,7 @@ int SdmmcRootDevice::WorkerThread() {
   // Probe for SDIO, SD and then MMC
   if ((st = sdio_dev->ProbeSdio()) == ZX_OK) {
     if ((st = sdio_dev->AddDevice()) == ZX_OK) {
-      __UNUSED auto* dummy = sdio_dev.release();
+      __UNUSED auto* placeholder = sdio_dev.release();
       remove_device_on_error.cancel();
       return thrd_success;
     }
@@ -109,7 +109,7 @@ int SdmmcRootDevice::WorkerThread() {
     return thrd_error;
   }
 
-  __UNUSED auto* dummy = block_dev.release();
+  __UNUSED auto* placeholder = block_dev.release();
   remove_device_on_error.cancel();
   return thrd_success;
 }

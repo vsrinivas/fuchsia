@@ -64,12 +64,12 @@ void apply_guid_map(const guid_map_t* guid_map, size_t entries, const char* name
   }
 }
 
-class DummyDevice;
-using DummyDeviceType = ddk::Device<DummyDevice>;
+class PlaceholderDevice;
+using PlaceholderDeviceType = ddk::Device<PlaceholderDevice>;
 
-class DummyDevice : public DummyDeviceType {
+class PlaceholderDevice : public PlaceholderDeviceType {
  public:
-  explicit DummyDevice(zx_device_t* parent) : DummyDeviceType(parent) {}
+  explicit PlaceholderDevice(zx_device_t* parent) : PlaceholderDeviceType(parent) {}
   void DdkRelease() { delete this; }
 };
 
@@ -348,14 +348,14 @@ zx_status_t Bind(void* ctx, zx_device_t* parent) {
   }
 
   if (!has_partition) {
-    auto dummy = std::make_unique<DummyDevice>(parent);
-    status = dummy->DdkAdd("dummy", DEVICE_ADD_NON_BINDABLE);
+    auto placeholder = std::make_unique<PlaceholderDevice>(parent);
+    status = placeholder->DdkAdd("placeholder", DEVICE_ADD_NON_BINDABLE);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "gpt: failed to add dummy %s", zx_status_get_string(status));
+      zxlogf(ERROR, "gpt: failed to add placeholder %s", zx_status_get_string(status));
       return status;
     }
-    // Dummy is managed by ddk.
-    __UNUSED auto p = dummy.release();
+    // Placeholder is managed by ddk.
+    __UNUSED auto p = placeholder.release();
     return ZX_OK;
   }
 

@@ -167,7 +167,7 @@ zx_status_t As370Sdhci::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  __UNUSED auto* dummy = device.release();
+  __UNUSED auto* placeholder = device.release();
 
   return ZX_OK;
 }

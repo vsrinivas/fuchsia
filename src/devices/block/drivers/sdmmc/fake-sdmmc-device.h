@@ -34,7 +34,7 @@ class FakeSdmmcDevice : public ddk::SdmmcProtocol<FakeSdmmcDevice> {
   static constexpr size_t kBlockSize = 512;
   static constexpr size_t kBlockMask = ~static_cast<size_t>(kBlockSize - 1);
 
-  // This is a dummy value, not currently enforced.
+  // This is a placeholder value, not currently enforced.
   static constexpr size_t kBlockCount = 0x10000;
 
   FakeSdmmcDevice() : proto_{.ops = &sdmmc_protocol_ops_, .ctx = this}, host_info_({}) {

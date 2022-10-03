@@ -68,7 +68,7 @@ zx_status_t RpmbDevice::Create(zx_device_t* parent, SdmmcBlockDevice* sdmmc,
     return status;
   }
 
-  __UNUSED auto* dummy1 = device.release();
+  __UNUSED auto* placeholder1 = device.release();
   return ZX_OK;
 }
 

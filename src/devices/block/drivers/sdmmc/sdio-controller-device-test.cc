@@ -1151,7 +1151,7 @@ TEST_F(SdioControllerDeviceTest, UpdateBlockSizeNoMultiBlock) {
 
   dut_->Init();
 
-  // Dummy value that should not get written or returned.
+  // Placeholder value that should not get written or returned.
   sdmmc_.Write(0x210, std::vector<uint8_t>{0xa5, 0xa5}, 0);
 
   EXPECT_OK(dut_->ProbeSdio());
