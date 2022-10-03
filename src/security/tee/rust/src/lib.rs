@@ -10,13 +10,14 @@ use std::ptr;
 use tracing::error;
 
 use self::tee_client_api::{
-    teec_operation_impl, TEEC_Operation as TeecOperation,
-    TEEC_TempMemoryReference as TeecTempMemoryReference, TEEC_Value as TeecValue,
+    teec_operation_impl, TEEC_TempMemoryReference as TeecTempMemoryReference,
+    TEEC_Value as TeecValue,
 };
 
 pub use self::tee_client_api::{
-    TEEC_Parameter as TeecParameter, TEEC_MEMREF_TEMP_INPUT, TEEC_MEMREF_TEMP_OUTPUT, TEEC_NONE,
-    TEEC_VALUE_INPUT,
+    TEEC_Operation as TeecOperation, TEEC_Parameter as TeecParameter, TEEC_ERROR_NOT_SUPPORTED,
+    TEEC_ERROR_SHORT_BUFFER, TEEC_MEMREF_TEMP_INPUT, TEEC_MEMREF_TEMP_OUTPUT, TEEC_NONE,
+    TEEC_SUCCESS, TEEC_VALUE_INPUT,
 };
 
 /// The TA UUID for keysafe: the trust side app for KMS.
@@ -26,6 +27,19 @@ pub static KEYSAFE_TA_UUID: TEEC_UUID = TEEC_UUID {
     timeHiAndVersion: 0x4e6f,
     clockSeqAndNode: [0x88, 0x96, 0x54, 0x47, 0x35, 0xc9, 0x84, 0x80],
 };
+
+/// This is the same macro definition as TEEC_PARAM_TYPES in tee-client-types.h
+pub fn teec_param_types(
+    param0_type: u32,
+    param1_type: u32,
+    param2_type: u32,
+    param3_type: u32,
+) -> u32 {
+    ((param0_type & 0xF) << 0)
+        | ((param1_type & 0xF) << 4)
+        | ((param2_type & 0xF) << 8)
+        | ((param3_type & 0xF) << 12)
+}
 
 /// Gets a None parameter.
 pub fn get_zero_parameter() -> TeecParameter {
@@ -78,14 +92,36 @@ pub fn call_command(op: &mut TeecOperation, command_id: u32) -> Result<(), u32> 
     tee_session.invoke_command(command_id, op, &mut return_origin)
 }
 
+/// Creates a temporary session using the provided device and call a command.
+///
+/// Returns error code on failure.
+pub fn call_command_on_device(
+    dev: &std::ffi::CStr,
+    op: &mut TeecOperation,
+    command_id: u32,
+) -> Result<(), u32> {
+    let mut tee_context = TeeContext::new_with_device(dev)?;
+    let mut tee_session = tee_context.new_session()?;
+    let mut return_origin: u32 = 0;
+    tee_session.invoke_command(command_id, op, &mut return_origin)
+}
+
 struct TeeContext {
     context: TEEC_Context,
 }
 
 impl TeeContext {
     pub fn new() -> Result<Self, u32> {
+        Self::new_with_ptr(ptr::null())
+    }
+
+    pub fn new_with_device(dev: &std::ffi::CStr) -> Result<Self, u32> {
+        Self::new_with_ptr(dev.as_ptr())
+    }
+
+    fn new_with_ptr(dev: *const std::os::raw::c_char) -> Result<Self, u32> {
         let mut context: TEEC_Context = unsafe { mem::zeroed() };
-        let result = unsafe { TEEC_InitializeContext(ptr::null(), &mut context) };
+        let result = unsafe { TEEC_InitializeContext(dev, &mut context) };
         if result != TEEC_SUCCESS {
             error!("Failed to initialize context: {:?}", result);
             return Err(result);

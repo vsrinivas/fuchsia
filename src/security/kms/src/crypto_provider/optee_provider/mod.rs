@@ -170,14 +170,6 @@ fn get_ec_curve_nid(key_algorithm: AsymmetricKeyAlgorithm) -> i32 {
     }
 }
 
-/// This is the same macro definition as TEEC_PARAM_TYPES in tee-client-types.h
-fn teec_param_types(param0_type: u32, param1_type: u32, param2_type: u32, param3_type: u32) -> u32 {
-    ((param0_type & 0xF) << 0)
-        | ((param1_type & 0xF) << 4)
-        | ((param2_type & 0xF) << 8)
-        | ((param3_type & 0xF) << 12)
-}
-
 /// Uses Keysafe TA in OPTEE to parse a key blob previously returned by Keysafe.
 ///
 /// Issues TA_KEYSAFE_CMD_PARSE_KEY command.CryptoProviderError
