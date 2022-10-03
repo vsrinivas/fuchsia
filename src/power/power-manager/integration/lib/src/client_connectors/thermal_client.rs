@@ -18,7 +18,7 @@ impl ThermalClient {
         Self { watcher_proxy }
     }
 
-    pub async fn get_thermal_state(&mut self) -> Result<u64, anyhow::Error> {
-        Ok(self.watcher_proxy.watch().await?)
+    pub async fn get_thermal_state(&self) -> Result<u64, anyhow::Error> {
+        self.watcher_proxy.watch().await.map_err(|e| e.into())
     }
 }

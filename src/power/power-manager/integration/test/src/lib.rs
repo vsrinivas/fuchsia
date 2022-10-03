@@ -21,7 +21,7 @@ async fn thermal_client_service_test() {
 
     // The client name here ('client0') must match the name of the client from the thermal
     // configuration file (../config_files/thermal_config.json5)
-    let mut client0 = ThermalClient::new(&env, "client0");
+    let client0 = ThermalClient::new(&env, "client0");
 
     // Verify initial thermal state is 0
     assert_eq!(client0.get_thermal_state().await.unwrap(), 0);
