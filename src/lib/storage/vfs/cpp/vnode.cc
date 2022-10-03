@@ -271,13 +271,9 @@ zx_status_t Vnode::Link(std::string_view name, fbl::RefPtr<Vnode> target) {
 
 void Vnode::Sync(SyncCallback closure) { closure(ZX_ERR_NOT_SUPPORTED); }
 
-#ifndef __Fuchsia__
-
 bool Vnode::IsRemote() const { return false; }
 
-#else
-
-bool Vnode::IsRemote() const { return GetRemote().is_valid(); }
+#ifdef __Fuchsia__
 
 zx_status_t Vnode::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo) {
   return ZX_ERR_NOT_SUPPORTED;
@@ -301,8 +297,9 @@ zx_status_t Vnode::QueryFilesystem(fuchsia_io::wire::FilesystemInfo* out) {
 
 zx::status<std::string> Vnode::GetDevicePath() const { return zx::error(ZX_ERR_NOT_SUPPORTED); }
 
-fidl::UnownedClientEnd<fuchsia_io::Directory> Vnode::GetRemote() const {
-  return fidl::UnownedClientEnd<fuchsia_io::Directory>(ZX_HANDLE_INVALID);
+zx_status_t Vnode::OpenRemote(fuchsia_io::OpenFlags, uint32_t, fidl::StringView,
+                              fidl::ServerEnd<fuchsia_io::Node>) const {
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 std::shared_ptr<file_lock::FileLock> Vnode::GetVnodeFileLock() {

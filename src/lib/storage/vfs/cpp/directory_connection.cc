@@ -39,33 +39,30 @@ namespace {
 void OpenAt(FuchsiaVfs* vfs, const fbl::RefPtr<Vnode>& parent,
             fidl::ServerEnd<fio::Node> server_end, std::string_view path,
             VnodeConnectionOptions options, Rights parent_rights, uint32_t mode) {
-  bool describe = options.flags.describe;
-  vfs->Open(parent, path, options, parent_rights, mode).visit([&](auto&& result) {
-    using ResultT = std::decay_t<decltype(result)>;
-    using OpenResult = fs::Vfs::OpenResult;
-    if constexpr (std::is_same_v<ResultT, OpenResult::Error>) {
-      if (describe) {
-        // Ignore errors since there is nothing we can do if this fails.
-        [[maybe_unused]] const fidl::Status unused_result =
-            fidl::WireSendEvent(server_end)->OnOpen(result, fio::wire::NodeInfoDeprecated());
-        server_end.reset();
-      }
-    } else if constexpr (std::is_same_v<ResultT, OpenResult::Remote>) {
-      const fbl::RefPtr<Vnode>& vn = result.vnode;
-      const std::string_view path = result.path;
-      const fidl::UnownedClientEnd h = vn->GetRemote();
-      if (!h.is_valid()) {
-        return;
-      }
+  vfs->Open(parent, path, options, parent_rights, mode)
+      .visit([vfs, &server_end, options, mode](auto&& result) {
+        using ResultT = std::decay_t<decltype(result)>;
+        using OpenResult = fs::Vfs::OpenResult;
+        if constexpr (std::is_same_v<ResultT, OpenResult::Error>) {
+          if (options.flags.describe) {
+            // Ignore errors since there is nothing we can do if this fails.
+            [[maybe_unused]] const fidl::Status unused_result =
+                fidl::WireSendEvent(server_end)->OnOpen(result, fio::wire::NodeInfoDeprecated());
+            server_end.reset();
+          }
+        } else if constexpr (std::is_same_v<ResultT, OpenResult::Remote>) {
+          const fbl::RefPtr<const Vnode> vn = result.vnode;
+          const std::string_view path = result.path;
 
-      // Ignore errors since there is nothing we can do if this fails.
-      [[maybe_unused]] const fidl::WireResult unused_result = fidl::WireCall(h)->Open(
-          options.ToIoV1Flags(), mode, fidl::StringView::FromExternal(path), std::move(server_end));
-    } else if constexpr (std::is_same_v<ResultT, OpenResult::Ok>) {
-      // |Vfs::Open| already performs option validation for us.
-      vfs->Serve(result.vnode, server_end.TakeChannel(), result.validated_options);
-    }
-  });
+          // Ignore errors since there is nothing we can do if this fails.
+          [[maybe_unused]] const zx_status_t status =
+              vn->OpenRemote(options.ToIoV1Flags(), mode, fidl::StringView::FromExternal(path),
+                             std::move(server_end));
+        } else if constexpr (std::is_same_v<ResultT, OpenResult::Ok>) {
+          // |Vfs::Open| already performs option validation for us.
+          vfs->Serve(result.vnode, server_end.TakeChannel(), result.validated_options);
+        }
+      });
 }
 
 // Performs a path walk and adds inotify filter to the obtained vnode.

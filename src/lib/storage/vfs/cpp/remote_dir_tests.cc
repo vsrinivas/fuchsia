@@ -11,11 +11,11 @@
 namespace {
 
 TEST(RemoteDir, ApiTest) {
-  auto dir_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
-  ASSERT_EQ(ZX_OK, dir_endpoints.status_value());
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  ASSERT_EQ(ZX_OK, endpoints.status_value());
 
-  fidl::UnownedClientEnd<fuchsia_io::Directory> unowned_client = dir_endpoints->client.borrow();
-  auto dir = fbl::MakeRefCounted<fs::RemoteDir>(std::move(dir_endpoints->client));
+  const fidl::UnownedClientEnd unowned_client = endpoints->client.borrow();
+  auto dir = fbl::MakeRefCounted<fs::RemoteDir>(std::move(endpoints->client));
 
   // get attributes
   fs::VnodeAttributes attr;
@@ -24,8 +24,8 @@ TEST(RemoteDir, ApiTest) {
   EXPECT_EQ(1, attr.link_count);
 
   // get remote properties
-  EXPECT_TRUE(dir->IsRemote());
-  EXPECT_EQ(unowned_client, dir->GetRemote());
+  ASSERT_TRUE(dir->IsRemote());
+  EXPECT_EQ(dir->client_end(), unowned_client);
 }
 
 }  // namespace

@@ -27,10 +27,14 @@ class RemoteFile : public Vnode {
  public:
   // Construct with fbl::MakeRefCounted.
 
+  fidl::UnownedClientEnd<fuchsia_io::Directory> client_end() const { return remote_client_; }
+
   // |Vnode| implementation:
   VnodeProtocolSet GetProtocols() const final;
   zx_status_t GetAttributes(VnodeAttributes* a) final;
-  fidl::UnownedClientEnd<fuchsia_io::Directory> GetRemote() const final;
+  bool IsRemote() const final;
+  zx_status_t OpenRemote(fuchsia_io::OpenFlags, uint32_t, fidl::StringView,
+                         fidl::ServerEnd<fuchsia_io::Node>) const final;
   zx_status_t GetNodeInfoForProtocol(VnodeProtocol protocol, Rights rights,
                                      VnodeRepresentation* info) final;
 

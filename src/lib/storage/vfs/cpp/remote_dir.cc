@@ -14,9 +14,9 @@ namespace fio = fuchsia_io;
 
 namespace fs {
 
-RemoteDir::RemoteDir(fidl::ClientEnd<fuchsia_io::Directory> remote_dir_client)
-    : remote_dir_client_(std::move(remote_dir_client)) {
-  ZX_DEBUG_ASSERT(remote_dir_client_);
+RemoteDir::RemoteDir(fidl::ClientEnd<fio::Directory> remote_dir_client)
+    : remote_client_(std::move(remote_dir_client)) {
+  ZX_DEBUG_ASSERT(remote_client_);
 }
 
 RemoteDir::~RemoteDir() = default;
@@ -31,8 +31,11 @@ zx_status_t RemoteDir::GetAttributes(VnodeAttributes* attr) {
   return ZX_OK;
 }
 
-fidl::UnownedClientEnd<fuchsia_io::Directory> RemoteDir::GetRemote() const {
-  return remote_dir_client_.borrow();
+bool RemoteDir::IsRemote() const { return true; }
+
+zx_status_t RemoteDir::OpenRemote(fio::OpenFlags flags, uint32_t mode, fidl::StringView path,
+                                  fidl::ServerEnd<fio::Node> object) const {
+  return fidl::WireCall(remote_client_)->Open(flags, mode, path, std::move(object)).status();
 }
 
 zx_status_t RemoteDir::GetNodeInfoForProtocol([[maybe_unused]] VnodeProtocol protocol,

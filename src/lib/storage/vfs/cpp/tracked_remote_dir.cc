@@ -14,7 +14,7 @@ namespace fs {
 
 TrackedRemoteDir::TrackedRemoteDir(fidl::ClientEnd<fuchsia_io::Directory> remote)
     : RemoteDir(std::move(remote)),
-      tracker_(this, GetRemote().channel()->get(), ZX_CHANNEL_PEER_CLOSED),
+      tracker_(this, client_end().channel()->get(), ZX_CHANNEL_PEER_CLOSED),
       container_(nullptr) {
   ZX_DEBUG_ASSERT(!IsTracked());
 }

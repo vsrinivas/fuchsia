@@ -14,7 +14,7 @@ TEST(RemoteFile, ApiTest) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_EQ(ZX_OK, endpoints.status_value());
 
-  auto unowned_client = endpoints->client.borrow();
+  const fidl::UnownedClientEnd unowned_client = endpoints->client.borrow();
   auto file = fbl::MakeRefCounted<fs::RemoteFile>(std::move(endpoints->client));
 
   // get attributes
@@ -24,8 +24,8 @@ TEST(RemoteFile, ApiTest) {
   EXPECT_EQ(1, attr.link_count);
 
   // get remote properties
-  EXPECT_TRUE(file->IsRemote());
-  EXPECT_EQ(unowned_client, file->GetRemote());
+  ASSERT_TRUE(file->IsRemote());
+  EXPECT_EQ(file->client_end(), unowned_client);
 }
 
 }  // namespace

@@ -31,8 +31,11 @@ zx_status_t RemoteFile::GetAttributes(VnodeAttributes* attr) {
   return ZX_OK;
 }
 
-fidl::UnownedClientEnd<fio::Directory> RemoteFile::GetRemote() const {
-  return remote_client_.borrow();
+bool RemoteFile::IsRemote() const { return true; }
+
+zx_status_t RemoteFile::OpenRemote(fio::OpenFlags flags, uint32_t mode, fidl::StringView path,
+                                   fidl::ServerEnd<fio::Node> object) const {
+  return fidl::WireCall(remote_client_)->Open(flags, mode, path, std::move(object)).status();
 }
 
 zx_status_t RemoteFile::GetNodeInfoForProtocol([[maybe_unused]] VnodeProtocol protocol,
