@@ -351,6 +351,9 @@ impl Assembler {
     pub(super) fn insert(&mut self, Range { start, end }: Range<SeqNum>) -> usize {
         assert!(!start.after(end));
         assert!(!start.before(self.nxt));
+        if start == end {
+            return 0;
+        }
         self.insert_inner(start..end);
 
         let Self { outstanding, nxt } = self;
@@ -615,6 +618,8 @@ mod test {
         }
     }
 
+    #[test_case([Range { start: 0, end: 0 }]
+        => Assembler { outstanding: vec![], nxt: SeqNum::new(0) })]
     #[test_case([Range { start: 0, end: 10 }]
         => Assembler { outstanding: vec![], nxt: SeqNum::new(10) })]
     #[test_case([Range{ start: 10, end: 15 }, Range { start: 5, end: 10 }]
