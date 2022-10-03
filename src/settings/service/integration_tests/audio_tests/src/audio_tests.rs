@@ -6,13 +6,10 @@ use crate::common::{
     AudioCoreRequest, AudioTest, DEFAULT_MEDIA_STREAM_SETTINGS, DEFAULT_VOLUME_LEVEL,
     DEFAULT_VOLUME_MUTED,
 };
-use anyhow::format_err;
 use fidl_fuchsia_media::AudioRenderUsage;
 use fidl_fuchsia_settings::{
     AudioProxy, AudioSettings, AudioStreamSettingSource, AudioStreamSettings, Error, Volume,
 };
-use futures::channel::mpsc::Receiver;
-use futures::StreamExt;
 use test_case::test_case;
 
 mod common;
@@ -66,103 +63,34 @@ fn verify_audio_stream(settings: &AudioSettings, stream: AudioStreamSettings) {
         .expect("contains stream");
 }
 
-/// Verifies that the next requests on the given receiver are equal to the provided requests, though
-/// not necessarily in order.
-///
-/// We don't verify in order since the settings service can send two requests for one volume set, as
-/// well as two requests per usage type on start and there's no requirement for ordering.
-///
-/// Note that this only verifies as many requests as are in the provided vector. If not enough
-/// requests are queued up, this will stall.
-async fn verify_audio_requests(
-    audio_core_request_receiver: &mut Receiver<AudioCoreRequest>,
-    expected_requests: Vec<AudioCoreRequest>,
-) -> Result<(), anyhow::Error> {
-    let mut received_requests = Vec::<AudioCoreRequest>::new();
-    for _ in 0..expected_requests.len() {
-        received_requests
-            .push(audio_core_request_receiver.next().await.expect("received audio core request"));
-    }
-    for request in expected_requests.iter() {
-        if !received_requests.contains(request) {
-            return Err(format_err!("Request {:?} not found in {:?}", request, received_requests));
-        }
-    }
-    Ok(())
-}
-
-/// Waits for the set of initial audio requests to be processed and clears them out of the receiver
-/// queue.
-async fn wait_for_initial_audio_requests(
-    audio_core_request_receiver: &mut Receiver<AudioCoreRequest>,
-    audio_renderer_usages: &[AudioRenderUsage],
-) -> Result<(), anyhow::Error> {
-    let expected_requests = audio_renderer_usages
-        .iter()
-        .map(|&usage| {
-            [
-                AudioCoreRequest::SetVolume(usage, DEFAULT_VOLUME_LEVEL),
-                AudioCoreRequest::SetMute(usage, DEFAULT_VOLUME_MUTED),
-            ]
-        })
-        .flatten()
-        .collect();
-
-    verify_audio_requests(audio_core_request_receiver, expected_requests).await
-}
-
 // Verifies that basic get and set functionality works.
 #[fuchsia::test]
 async fn test_audio() {
-    // Set buffer size to one so that we can buffer two calls, since volume sets happen in pairs,
-    // one request for volume and one for mute.
-    let (audio_request_sender, mut audio_request_receiver) =
-        futures::channel::mpsc::channel::<AudioCoreRequest>(1);
-
-    let audio_test = AudioTest::create();
-    let instance = audio_test
-        .create_realm(audio_request_sender, vec![AudioRenderUsage::Media])
+    let mut audio_test = AudioTest::create_and_init(&[AudioRenderUsage::Media])
         .await
         .expect("setting up test realm");
 
     // Spawn a client that we'll use for a watch call later on to verify that Set calls are observed
     // by all clients.
-    let watch_client = AudioTest::connect_to_audio_marker(&instance);
-
-    // Verify that audio core receives the initial volume settings on start.
-    verify_audio_requests(
-        &mut audio_request_receiver,
-        vec![
-            AudioCoreRequest::SetVolume(AudioRenderUsage::Media, DEFAULT_VOLUME_LEVEL),
-            AudioCoreRequest::SetMute(AudioRenderUsage::Media, DEFAULT_VOLUME_MUTED),
-        ],
-    )
-    .await
-    .expect("initial audio requests received");
+    let watch_client = audio_test.connect_to_audio_marker();
 
     // Verify that the settings matches the default on start.
     let settings = watch_client.watch().await.expect("watch completed");
     verify_audio_stream(&settings, DEFAULT_MEDIA_STREAM_SETTINGS);
 
-    {
-        let set_client = AudioTest::connect_to_audio_marker(&instance);
+    // Verify that a Set call changes the audio settings.
+    set_volume(audio_test.proxy(), vec![CHANGED_MEDIA_STREAM_SETTINGS]).await;
+    let settings = audio_test.proxy().watch().await.expect("watch completed");
+    verify_audio_stream(&settings, CHANGED_MEDIA_STREAM_SETTINGS);
 
-        // Verify that a Set call changes the audio settings.
-        set_volume(&set_client, vec![CHANGED_MEDIA_STREAM_SETTINGS]).await;
-        let settings = set_client.watch().await.expect("watch completed");
-        verify_audio_stream(&settings, CHANGED_MEDIA_STREAM_SETTINGS);
-
-        // Verify that audio core received the changed audio settings.
-        verify_audio_requests(
-            &mut audio_request_receiver,
-            vec![
-                AudioCoreRequest::SetVolume(AudioRenderUsage::Media, CHANGED_VOLUME_LEVEL),
-                AudioCoreRequest::SetMute(AudioRenderUsage::Media, CHANGED_VOLUME_MUTED),
-            ],
-        )
+    // Verify that audio core received the changed audio settings.
+    audio_test
+        .verify_audio_requests(&[
+            AudioCoreRequest::SetVolume(AudioRenderUsage::Media, CHANGED_VOLUME_LEVEL),
+            AudioCoreRequest::SetMute(AudioRenderUsage::Media, CHANGED_VOLUME_MUTED),
+        ])
         .await
         .expect("changed audio requests received");
-    }
 
     // Verify that a separate client receives the changed settings on a Watch call.
     let settings = watch_client.watch().await.expect("watch completed");
@@ -172,63 +100,40 @@ async fn test_audio() {
 // Verifies that the correct value is returned after two successive watch calls.
 #[fuchsia::test]
 async fn test_consecutive_volume_changes() {
-    // Set buffer size to one so that we can buffer two calls, since volume sets happen in pairs,
-    // one request for volume and one for mute.
-    let (audio_request_sender, mut audio_request_receiver) =
-        futures::channel::mpsc::channel::<AudioCoreRequest>(1);
-
-    let audio_test = AudioTest::create();
-    let instance = audio_test
-        .create_realm(audio_request_sender, vec![AudioRenderUsage::Media])
+    let mut audio_test = AudioTest::create_and_init(&[AudioRenderUsage::Media])
         .await
         .expect("setting up test realm");
 
     // Spawn a client that we'll use for a watch call later on to verify that Set calls are observed
     // by all clients.
-    let watch_client = AudioTest::connect_to_audio_marker(&instance);
+    let watch_client = audio_test.connect_to_audio_marker();
 
-    // Verify that audio core receives the initial volume settings on start.
-    verify_audio_requests(
-        &mut audio_request_receiver,
-        vec![
-            AudioCoreRequest::SetVolume(AudioRenderUsage::Media, DEFAULT_VOLUME_LEVEL),
-            AudioCoreRequest::SetMute(AudioRenderUsage::Media, DEFAULT_VOLUME_MUTED),
-        ],
-    )
-    .await
-    .expect("initial audio requests received");
+    // Make a set call and verify the value returned from watch changes.
+    set_volume(audio_test.proxy(), vec![CHANGED_MEDIA_STREAM_SETTINGS]).await;
+    let settings = audio_test.proxy().watch().await.expect("watch completed");
+    verify_audio_stream(&settings, CHANGED_MEDIA_STREAM_SETTINGS);
 
-    {
-        let set_client = AudioTest::connect_to_audio_marker(&instance);
-
-        // Make a set call and verify the value returned from watch changes.
-        set_volume(&set_client, vec![CHANGED_MEDIA_STREAM_SETTINGS]).await;
-        let settings = set_client.watch().await.expect("watch completed");
-        verify_audio_stream(&settings, CHANGED_MEDIA_STREAM_SETTINGS);
-
-        verify_audio_requests(
-            &mut audio_request_receiver,
-            vec![
-                AudioCoreRequest::SetVolume(AudioRenderUsage::Media, CHANGED_VOLUME_LEVEL),
-                AudioCoreRequest::SetMute(AudioRenderUsage::Media, CHANGED_VOLUME_MUTED),
-            ],
-        )
+    audio_test
+        .verify_audio_requests(&[
+            AudioCoreRequest::SetVolume(AudioRenderUsage::Media, CHANGED_VOLUME_LEVEL),
+            AudioCoreRequest::SetMute(AudioRenderUsage::Media, CHANGED_VOLUME_MUTED),
+        ])
         .await
         .expect("changed audio requests received");
 
-        // Make a second set call and verify the value returned from watch changes again.
-        set_volume(&set_client, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
-        let settings = set_client.watch().await.expect("watch completed");
-        verify_audio_stream(&settings, CHANGED_MEDIA_STREAM_SETTINGS_2);
+    // Make a second set call and verify the value returned from watch changes again.
+    set_volume(audio_test.proxy(), vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
+    let settings = audio_test.proxy().watch().await.expect("watch completed");
+    verify_audio_stream(&settings, CHANGED_MEDIA_STREAM_SETTINGS_2);
 
-        // There won't be a muted request since the mute state doesn't change.
-        verify_audio_requests(
-            &mut audio_request_receiver,
-            vec![AudioCoreRequest::SetVolume(AudioRenderUsage::Media, CHANGED_VOLUME_LEVEL_2)],
-        )
+    // There won't be a muted request since the mute state doesn't change.
+    audio_test
+        .verify_audio_requests(&[AudioCoreRequest::SetVolume(
+            AudioRenderUsage::Media,
+            CHANGED_VOLUME_LEVEL_2,
+        )])
         .await
         .expect("second changed audio requests received");
-    }
 
     // Verify that a separate client receives the changed settings on a Watch call.
     let settings = watch_client.watch().await.expect("watch completed");
@@ -238,17 +143,12 @@ async fn test_consecutive_volume_changes() {
 // Verifies that clients aren't notified for duplicate audio changes.
 #[fuchsia::test]
 async fn test_deduped_volume_changes() {
-    let (audio_request_sender, _audio_request_receiver) =
-        futures::channel::mpsc::channel::<AudioCoreRequest>(1);
-
-    let audio_test = AudioTest::create();
-    let instance = audio_test
-        .create_realm(audio_request_sender, vec![AudioRenderUsage::Media])
+    let audio_test = AudioTest::create_and_init(&[AudioRenderUsage::Media])
         .await
         .expect("setting up test realm");
 
     {
-        let set_client = AudioTest::connect_to_audio_marker(&instance);
+        let set_client = audio_test.proxy();
 
         // Get the initial value.
         let _ = set_client.watch().await;
@@ -268,50 +168,23 @@ async fn test_deduped_volume_changes() {
 // Verifies that changing one stream's volume does not affect the volume of other streams.
 #[fuchsia::test]
 async fn test_volume_not_overwritten() {
-    // Set buffer size to three so that we can buffer up to four calls. On service start, the
-    // service will send a set call for volume and mute for each setting. Since this test uses two
-    // settings, we need to buffer up to four calls.
-    let (audio_request_sender, mut audio_request_receiver) =
-        futures::channel::mpsc::channel::<AudioCoreRequest>(3);
-
-    let audio_test = AudioTest::create();
-    let instance = audio_test
-        .create_realm(
-            audio_request_sender,
-            vec![AudioRenderUsage::Media, AudioRenderUsage::Background],
-        )
-        .await
-        .expect("setting up test realm");
-
-    let audio_proxy = AudioTest::connect_to_audio_marker(&instance);
-
-    // Verify that audio core receives the initial volume settings on start.
-    verify_audio_requests(
-        &mut audio_request_receiver,
-        vec![
-            AudioCoreRequest::SetVolume(AudioRenderUsage::Media, DEFAULT_VOLUME_LEVEL),
-            AudioCoreRequest::SetMute(AudioRenderUsage::Media, DEFAULT_VOLUME_MUTED),
-            AudioCoreRequest::SetVolume(AudioRenderUsage::Background, DEFAULT_VOLUME_LEVEL),
-            AudioCoreRequest::SetMute(AudioRenderUsage::Background, DEFAULT_VOLUME_MUTED),
-        ],
-    )
-    .await
-    .expect("initial audio requests received");
+    let mut audio_test =
+        AudioTest::create_and_init(&[AudioRenderUsage::Media, AudioRenderUsage::Background])
+            .await
+            .expect("setting up test realm");
 
     // Change the media stream and verify a watch call returns the updated value.
-    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS]).await;
-    let settings = audio_proxy.watch().await.expect("watch completed");
+    set_volume(audio_test.proxy(), vec![CHANGED_MEDIA_STREAM_SETTINGS]).await;
+    let settings = audio_test.proxy().watch().await.expect("watch completed");
     verify_audio_stream(&settings, CHANGED_MEDIA_STREAM_SETTINGS);
 
-    verify_audio_requests(
-        &mut audio_request_receiver,
-        vec![
+    audio_test
+        .verify_audio_requests(&[
             AudioCoreRequest::SetVolume(AudioRenderUsage::Media, CHANGED_VOLUME_LEVEL),
             AudioCoreRequest::SetMute(AudioRenderUsage::Media, CHANGED_VOLUME_MUTED),
-        ],
-    )
-    .await
-    .expect("changed audio requests received");
+        ])
+        .await
+        .expect("changed audio requests received");
 
     // Change the background stream and verify a watch call returns the updated value.
     const CHANGED_BACKGROUND_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
@@ -321,8 +194,8 @@ async fn test_volume_not_overwritten() {
         ..AudioStreamSettings::EMPTY
     };
 
-    set_volume(&audio_proxy, vec![CHANGED_BACKGROUND_STREAM_SETTINGS]).await;
-    let settings = audio_proxy.watch().await.expect("watch completed");
+    set_volume(audio_test.proxy(), vec![CHANGED_BACKGROUND_STREAM_SETTINGS]).await;
+    let settings = audio_test.proxy().watch().await.expect("watch completed");
 
     // Changing the background volume should not affect media volume.
     verify_audio_stream(&settings, CHANGED_MEDIA_STREAM_SETTINGS);
@@ -332,34 +205,14 @@ async fn test_volume_not_overwritten() {
 // Tests that the volume level gets rounded to two decimal places.
 #[fuchsia::test]
 async fn test_volume_rounding() {
-    // Set buffer size to one so that we can buffer two calls, since volume sets happen in pairs,
-    // one request for volume and one for mute.
-    let (audio_request_sender, mut audio_request_receiver) =
-        futures::channel::mpsc::channel::<AudioCoreRequest>(1);
-
-    let audio_test = AudioTest::create();
-    let instance = audio_test
-        .create_realm(audio_request_sender, vec![AudioRenderUsage::Media])
+    let mut audio_test = AudioTest::create_and_init(&[AudioRenderUsage::Media])
         .await
         .expect("setting up test realm");
-
-    let audio_proxy = AudioTest::connect_to_audio_marker(&instance);
-
-    // Verify that audio core receives the initial volume settings on start.
-    verify_audio_requests(
-        &mut audio_request_receiver,
-        vec![
-            AudioCoreRequest::SetVolume(AudioRenderUsage::Media, DEFAULT_VOLUME_LEVEL),
-            AudioCoreRequest::SetMute(AudioRenderUsage::Media, DEFAULT_VOLUME_MUTED),
-        ],
-    )
-    .await
-    .expect("initial audio requests received");
 
     // Set the volume to a level that's slightly more than CHANGED_VOLUME_LEVEL, but small enough
     // that it should be rounded away.
     set_volume(
-        &audio_proxy,
+        audio_test.proxy(),
         vec![AudioStreamSettings {
             stream: Some(AudioRenderUsage::Media),
             source: Some(AudioStreamSettingSource::User),
@@ -373,18 +226,16 @@ async fn test_volume_rounding() {
     )
     .await;
 
-    let settings = audio_proxy.watch().await.expect("watch completed");
+    let settings = audio_test.proxy().watch().await.expect("watch completed");
     verify_audio_stream(&settings, CHANGED_MEDIA_STREAM_SETTINGS);
 
-    verify_audio_requests(
-        &mut audio_request_receiver,
-        vec![
+    audio_test
+        .verify_audio_requests(&[
             AudioCoreRequest::SetVolume(AudioRenderUsage::Media, CHANGED_VOLUME_LEVEL),
             AudioCoreRequest::SetMute(AudioRenderUsage::Media, CHANGED_VOLUME_MUTED),
-        ],
-    )
-    .await
-    .expect("changed audio requests received");
+        ])
+        .await
+        .expect("changed audio requests received");
 }
 
 // Verifies that invalid inputs return an error for Set calls.
@@ -426,24 +277,12 @@ async fn test_volume_rounding() {
 } ; "missing source")]
 #[fuchsia::test]
 async fn invalid_missing_input_tests(setting: AudioStreamSettings) {
-    let usages = vec![AudioRenderUsage::Media];
-    let audio_test = AudioTest::create();
-
-    let (audio_request_sender, mut audio_request_receiver) =
-        futures::channel::mpsc::channel::<AudioCoreRequest>(0);
-    let instance = audio_test
-        .create_realm(audio_request_sender, usages.clone())
+    let mut audio_test = AudioTest::create_and_init(&[AudioRenderUsage::Media])
         .await
         .expect("setting up test realm");
 
-    let audio_proxy = AudioTest::connect_to_audio_marker(&instance);
-
-    // Verify that audio core receives the initial volume settings on start.
-    wait_for_initial_audio_requests(&mut audio_request_receiver, &usages)
-        .await
-        .expect("initial audio requests received");
-
-    let result = audio_proxy
+    let result = audio_test
+        .proxy()
         .set(AudioSettings { streams: Some(vec![setting]), ..AudioSettings::EMPTY })
         .await
         .expect("set completed");
@@ -451,18 +290,16 @@ async fn invalid_missing_input_tests(setting: AudioStreamSettings) {
 
     // The best way to test that audio core *didn't* receive an event is to
     // trigger another request and verify that it shows up next.
-    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS]).await;
+    set_volume(audio_test.proxy(), vec![CHANGED_MEDIA_STREAM_SETTINGS]).await;
 
     // Verify that audio core received the changed audio settings.
-    verify_audio_requests(
-        &mut audio_request_receiver,
-        vec![
+    audio_test
+        .verify_audio_requests(&[
             AudioCoreRequest::SetVolume(AudioRenderUsage::Media, CHANGED_VOLUME_LEVEL),
             AudioCoreRequest::SetMute(AudioRenderUsage::Media, CHANGED_VOLUME_MUTED),
-        ],
-    )
-    .await
-    .expect("changed audio requests received");
+        ])
+        .await
+        .expect("changed audio requests received");
 }
 
 // Verifies that the input to Set calls can be missing certain parts and still be valid.
@@ -493,31 +330,19 @@ async fn valid_missing_input_tests(
     setting: AudioStreamSettings,
     expected_request: AudioCoreRequest,
 ) {
-    let usages = vec![AudioRenderUsage::Media];
-
-    let audio_test = AudioTest::create();
-
-    let (audio_request_sender, mut audio_request_receiver) =
-        futures::channel::mpsc::channel::<AudioCoreRequest>(0);
-    let instance = audio_test
-        .create_realm(audio_request_sender, usages.clone())
+    let mut audio_test = AudioTest::create_and_init(&[AudioRenderUsage::Media])
         .await
         .expect("setting up test realm");
 
-    let audio_proxy = AudioTest::connect_to_audio_marker(&instance);
-
-    // Verify that audio core receives the initial volume settings on start.
-    wait_for_initial_audio_requests(&mut audio_request_receiver, &usages)
-        .await
-        .expect("initial audio requests received");
-
-    let result = audio_proxy
+    let result = audio_test
+        .proxy()
         .set(AudioSettings { streams: Some(vec![setting]), ..AudioSettings::EMPTY })
         .await
         .expect("set completed");
 
     // Verify that the valid request comes through.
-    verify_audio_requests(&mut audio_request_receiver, vec![expected_request])
+    audio_test
+        .verify_audio_requests(&[expected_request])
         .await
         .expect("changed audio requests received");
 
