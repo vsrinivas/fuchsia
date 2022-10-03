@@ -44,6 +44,8 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType {
   static zx_status_t Create(zx_device_t* parent, const SdmmcDevice& sdmmc,
                             std::unique_ptr<SdmmcBlockDevice>* out_dev);
 
+  // Probe for SD first, then MMC.
+  zx_status_t Probe() { return ProbeSd() == ZX_OK ? ZX_OK : ProbeMmc(); }
   zx_status_t ProbeSd();
   zx_status_t ProbeMmc();
 

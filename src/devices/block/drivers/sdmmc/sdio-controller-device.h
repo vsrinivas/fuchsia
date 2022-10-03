@@ -45,7 +45,7 @@ class SdioControllerDevice : public SdioControllerDeviceType,
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
-  zx_status_t ProbeSdio();
+  zx_status_t Probe();
   zx_status_t AddDevice();
 
   zx_status_t SdioGetDevHwInfo(sdio_hw_info_t* out_hw_info);

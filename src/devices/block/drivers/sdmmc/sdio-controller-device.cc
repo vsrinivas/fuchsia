@@ -68,7 +68,7 @@ zx_status_t SdioControllerDevice::Create(zx_device_t* parent, const SdmmcDevice&
   return ZX_OK;
 }
 
-zx_status_t SdioControllerDevice::ProbeSdio() {
+zx_status_t SdioControllerDevice::Probe() {
   fbl::AutoLock lock(&lock_);
 
   zx_status_t st = SdioReset();

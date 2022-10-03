@@ -55,6 +55,27 @@ zx_status_t SdmmcRootDevice::Init() {
   return ZX_OK;
 }
 
+// TODO(hanbinyoon): Simplify further using templated lambda come C++20.
+template <class DeviceType>
+static int MaybeAddDevice(const std::string& name, zx_device_t* zxdev, SdmmcDevice& sdmmc) {
+  std::unique_ptr<DeviceType> device;
+  if (zx_status_t st = DeviceType::Create(zxdev, sdmmc, &device) != ZX_OK) {
+    zxlogf(ERROR, "Failed to create %s device, retcode = %d", name.c_str(), st);
+    return thrd_error;
+  }
+
+  if (device->Probe() != ZX_OK) {
+    return thrd_busy;  // Use this to mean probe failure.
+  }
+
+  if (device->AddDevice() != ZX_OK) {
+    return thrd_error;
+  }
+
+  __UNUSED auto* placeholder = device.release();
+  return thrd_success;
+}
+
 int SdmmcRootDevice::WorkerThread() {
   auto remove_device_on_error = fit::defer([&]() { DdkAsyncRemove(); });
 
@@ -72,18 +93,6 @@ int SdmmcRootDevice::WorkerThread() {
   // Reset the card.
   sdmmc.host().HwReset();
 
-  std::unique_ptr<SdmmcBlockDevice> block_dev;
-  if ((st = SdmmcBlockDevice::Create(zxdev(), sdmmc, &block_dev)) != ZX_OK) {
-    zxlogf(ERROR, "Failed to create block device, retcode = %d", st);
-    return thrd_error;
-  }
-
-  std::unique_ptr<SdioControllerDevice> sdio_dev;
-  if ((st = SdioControllerDevice::Create(zxdev(), sdmmc, &sdio_dev)) != ZX_OK) {
-    zxlogf(ERROR, "Failed to create block device, retcode = %d", st);
-    return thrd_error;
-  }
-
   // No matter what state the card is in, issuing the GO_IDLE_STATE command will
   // put the card into the idle state.
   if ((st = sdmmc.SdmmcGoIdle()) != ZX_OK) {
@@ -91,27 +100,20 @@ int SdmmcRootDevice::WorkerThread() {
     return thrd_error;
   }
 
-  // Probe for SDIO, SD and then MMC
-  if ((st = sdio_dev->ProbeSdio()) == ZX_OK) {
-    if ((st = sdio_dev->AddDevice()) == ZX_OK) {
-      __UNUSED auto* placeholder = sdio_dev.release();
+  // Probe for SDIO first, then SD/MMC.
+  if (auto st = MaybeAddDevice<SdioControllerDevice>("sdio", zxdev(), sdmmc); st != thrd_busy) {
+    if (st == thrd_success)
       remove_device_on_error.cancel();
-      return thrd_success;
-    }
-
-    return thrd_error;
-  } else if ((st = block_dev->ProbeSd()) != ZX_OK && (st = block_dev->ProbeMmc()) != ZX_OK) {
-    zxlogf(ERROR, "failed to probe");
-    return thrd_error;
+    return st;
+  }
+  if (auto st = MaybeAddDevice<SdmmcBlockDevice>("block", zxdev(), sdmmc); st != thrd_busy) {
+    if (st == thrd_success)
+      remove_device_on_error.cancel();
+    return st;
   }
 
-  if ((st = block_dev->AddDevice()) != ZX_OK) {
-    return thrd_error;
-  }
-
-  __UNUSED auto* placeholder = block_dev.release();
-  remove_device_on_error.cancel();
-  return thrd_success;
+  zxlogf(ERROR, "failed to probe");
+  return thrd_error;
 }
 
 void SdmmcRootDevice::DdkRelease() {
