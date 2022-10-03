@@ -19,6 +19,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_rust",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//sdk/fidl/fuchsia.power.manager:fuchsia.power.manager_rust",
+    "//sdk/fidl/fuchsia.power.profile:fuchsia.power.profile_rust",
     "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
     "//sdk/fidl/fuchsia.thermal:fuchsia.thermal_rust",
@@ -47,6 +48,7 @@ rustc_library("lib") {
 
   sources = [
     "src/client_connectors/mod.rs",
+    "src/client_connectors/power_profile_client.rs",
     "src/client_connectors/reboot_watcher_client.rs",
     "src/client_connectors/thermal_client.rs",
     "src/lib.rs",

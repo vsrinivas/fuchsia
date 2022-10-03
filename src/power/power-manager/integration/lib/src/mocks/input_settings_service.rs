@@ -80,7 +80,7 @@ impl MockInputSettingsService {
                     };
 
                     info!("MockInputSettingsService: sending input settings: {:?}", settings);
-                    responder.send(settings).unwrap();
+                    let _ = responder.send(settings);
                 }
 
                 info!("MockInputSettingsService: closing connection")

@@ -208,6 +208,7 @@ impl TestEnvBuilder {
             .capability(Capability::protocol_by_name(
                 "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
             ))
+            .capability(Capability::protocol_by_name("fuchsia.power.profile.Watcher"))
             .capability(Capability::protocol_by_name("fuchsia.thermal.ClientStateConnector"))
             .capability(Capability::protocol_by_name("fuchsia.hardware.power.statecontrol.Admin"));
         realm_builder
