@@ -89,7 +89,10 @@ static_library("gvisor_test_util") {
   public_configs = [ ":gvisor_test_util_config" ]
 }
 
-source_set("gvisor_socket_tests") {
+raw_packet_test_label = "raw_packet"
+generic_test_label = "generic"
+
+source_set("${raw_packet_test_label}_socket_tests") {
   sources = [
     "gvisor/test/syscalls/linux/ip_socket_test_util.cc",
     "gvisor/test/syscalls/linux/ip_socket_test_util.h",
@@ -99,6 +102,23 @@ source_set("gvisor_socket_tests") {
     "gvisor/test/syscalls/linux/raw_socket.cc",
     "gvisor/test/syscalls/linux/raw_socket_hdrincl.cc",
     "gvisor/test/syscalls/linux/raw_socket_icmp.cc",
+    "gvisor/test/syscalls/linux/unix_domain_socket_test_util.cc",
+    "gvisor/test/syscalls/linux/unix_domain_socket_test_util.h",
+  ]
+
+  deps = [
+    ":gvisor_test_util",
+    "//third_party/abseil-cpp/absl/base:endian",
+    "//third_party/abseil-cpp/absl/strings",
+  ]
+
+  testonly = true
+}
+
+source_set("${generic_test_label}_socket_tests") {
+  sources = [
+    "gvisor/test/syscalls/linux/ip_socket_test_util.cc",
+    "gvisor/test/syscalls/linux/ip_socket_test_util.h",
     "gvisor/test/syscalls/linux/socket.cc",
     "gvisor/test/syscalls/linux/socket_blocking.cc",
     "gvisor/test/syscalls/linux/socket_blocking.h",
@@ -179,76 +199,109 @@ source_set("gtest_main") {
   testonly = true
 }
 
-source_set("netstack3_expectations") {
-  sources = [ "netstack3/expectations.cc" ]
-  deps = [
-    ":expectations",
-    ":gvisor_test_util",
-    "//third_party/abseil-cpp/absl/strings",
-  ]
-  testonly = true
-}
-
-source_set("netstack2_expectations") {
-  sources = [ "netstack2/expectations.cc" ]
-  deps = [
-    ":expectations",
-    ":gvisor_test_util",
-    "//third_party/abseil-cpp/absl/strings",
-  ]
-  testonly = true
-}
-
-stacks = [
+tests = [
   {
-    label = "netstack2_fastudp"
-    component =
-        "//src/connectivity/network/netstack:component-with-fast-udp-debug"
-    expectations = ":netstack2_expectations"
-    manifest = "netstack2/meta/fastudp_syscall_tests.cml"
+    label = generic_test_label
+    cq = false
   },
   {
-    label = "netstack2_syncudp"
-    component = "//src/connectivity/network/netstack:component-debug"
-    expectations = ":netstack2_expectations"
-    manifest = "netstack2/meta/syncudp_syscall_tests.cml"
-  },
-  {
-    label = "netstack3"
-    component = "//src/connectivity/network/netstack3:component"
-    expectations = ":netstack3_expectations"
-    manifest = "netstack3/meta/syscall_tests.cml"
+    label = raw_packet_test_label
+    cq = true
   },
 ]
 
 test_deps = []
+local_test_deps = []
 
-foreach(stack, stacks) {
-  test("${stack.label}_socket_tests") {
+foreach(test, tests) {
+  source_set("netstack3_${test.label}_expectations") {
+    sources = [ "netstack3/${test.label}_expectations.cc" ]
     deps = [
-      ":gtest_main",
-      ":gvisor_socket_tests",
-      stack.expectations,
+      ":expectations",
+      ":gvisor_test_util",
+      "//third_party/abseil-cpp/absl/strings",
     ]
-
-    # In-tree executables automatically get a logging backend dep unless we opt
-    # out.
-    disable_syslog_backend = true
+    testonly = true
   }
 
-  fuchsia_unittest_package("${stack.label}_syscall_tests") {
-    package_name = "${stack.label}_syscall_tests"
-    manifest = stack.manifest
+  source_set("netstack2_${test.label}_expectations") {
+    sources = [ "netstack2/${test.label}_expectations.cc" ]
     deps = [
-      ":${stack.label}_socket_tests",
-      stack.component,
+      ":expectations",
+      ":gvisor_test_util",
+      "//third_party/abseil-cpp/absl/strings",
     ]
+    testonly = true
   }
 
-  test_deps += [ ":${stack.label}_syscall_tests" ]
+  # Clear the list before overwriting it to satisfy GN.
+  stacks = []
+  stacks = [
+    {
+      label = "netstack2_fastudp"
+      component =
+          "//src/connectivity/network/netstack:component-with-fast-udp-debug"
+      expectations = ":netstack2_${test.label}_expectations"
+      manifest = "netstack2/meta/fastudp_${test.label}_syscall_tests.cml"
+    },
+    {
+      label = "netstack2_syncudp"
+      component = "//src/connectivity/network/netstack:component-debug"
+      expectations = ":netstack2_${test.label}_expectations"
+      manifest = "netstack2/meta/syncudp_${test.label}_syscall_tests.cml"
+    },
+    {
+      label = "netstack3"
+      component = "//src/connectivity/network/netstack3:component"
+      expectations = ":netstack3_${test.label}_expectations"
+      manifest = "netstack3/meta/${test.label}_syscall_tests.cml"
+    },
+  ]
+
+  foreach(stack, stacks) {
+    combined_label = "${stack.label}_${test.label}"
+
+    socket_tests_label = "${combined_label}_socket_tests"
+    test(socket_tests_label) {
+      deps = [
+        ":${test.label}_socket_tests",
+        ":gtest_main",
+        stack.expectations,
+      ]
+
+      # In-tree executables automatically get a logging backend dep unless we opt
+      # out.
+      disable_syslog_backend = true
+    }
+
+    syscall_tests_label = "${combined_label}_syscall_tests"
+    fuchsia_unittest_package(syscall_tests_label) {
+      package_name = syscall_tests_label
+      manifest = stack.manifest
+      deps = [
+        ":${socket_tests_label}",
+        stack.component,
+      ]
+    }
+
+    local_test_deps += [ ":${syscall_tests_label}" ]
+    if (test.cq) {
+      test_deps += [ ":${syscall_tests_label}" ]
+    }
+  }
 }
 
 group("tests") {
   testonly = true
   public_deps = test_deps
+}
+
+# This target contains all tests, including those currently too long
+# to run in CQ, and is provided for the benefit of developers iterating
+# locally.
+#
+# TODO(https://fxbug.dev/110881): Remove once all tests run in CQ.
+group("local-testing") {
+  testonly = true
+  public_deps = local_test_deps
 }

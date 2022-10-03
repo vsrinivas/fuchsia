@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "third_party/gvisor_syscall_tests/expectations.h"
-
 #include <cstdlib>
+
+#include "third_party/gvisor_syscall_tests/expectations.h"
 
 namespace netstack_syscall_test {
 
@@ -63,9 +63,6 @@ void AddNonPassingTests(TestMap& tests) {
   ExpectFailure(tests, "AllUnixDomainSockets/AllSocketPairTest.RecvWaitAllDontWait/*");
   // Fuchsia does not support Unix sockets.
   ExpectFailure(tests, "AllUnixDomainSockets/AllSocketPairTest.RecvTimeoutWaitAll/*");
-  // https://fxbug.dev/82596
-  ExpectFailure(tests, "AllInetTests/RawSocketTest.SetSocketDetachFilterNoInstalledFilter/*");
-  ExpectFailure(tests, "AllInetTests/RawPacketTest.SetSocketDetachFilterNoInstalledFilter/*");
   // https://fxbug.dev/20628
   ExpectFailure(tests, "AllInetTests/TcpSocketTest.MsgTrunc/*");
   // https://fxbug.dev/20628
@@ -239,18 +236,6 @@ void AddNonPassingTests(TestMap& tests) {
 
   // https://fxbug.dev/84687
   ExpectFailure(tests, "AllInetTests/UdpSocketTest.DisconnectAfterBindToUnspecAndConnect/*");
-
-  // https://fxbug.dev/46102
-  ExpectFailure(tests, "RawSocketTest.ReceiveIPPacketInfo");
-
-  // TODO(https://fxbug.dev/87235): Expect success once Fuchsia supports sending
-  // packets with the maximum possible payload length. Currently, this is
-  // limited by a channel's maximum message size.
-  ExpectFailure(tests, "AllRawPacketMsgSizeTest/RawPacketMsgSizeTest.SendTooLong/*");
-
-  // https://fxbug.dev/90501
-  ExpectFailure(tests, "RawSocketICMPTest.IPv6ChecksumNotSupported");
-  ExpectFailure(tests, "RawSocketICMPTest.ICMPv6FilterNotSupported");
 
   // https://fxbug.dev/85279
   SkipTest(tests, "AllInetTests/SimpleTcpSocketTest.ShutdownReadConnectingSocket/*");

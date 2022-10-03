@@ -267,6 +267,7 @@ group("tests") {
     "getifaddrs:tests",
     "integration:tests",
     "multi_nic:tests",
+    "//third_party/gvisor_syscall_tests:tests",
   ]
   if (host_os == "linux") {
     public_deps += [

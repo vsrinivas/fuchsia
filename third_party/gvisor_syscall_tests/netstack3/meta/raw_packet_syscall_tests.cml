@@ -4,6 +4,6 @@
 {
     include: [ "//third_party/gvisor_syscall_tests/netstack3/meta/syscall_tests.shard.cml" ],
     program: {
-        binary: "test/netstack3_socket_tests",
+        binary: "test/netstack3_raw_packet_socket_tests",
     },
 }

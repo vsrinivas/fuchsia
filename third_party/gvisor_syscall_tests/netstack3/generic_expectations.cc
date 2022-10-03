@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "third_party/gvisor_syscall_tests/expectations.h"
-
 #include <string>
+
+#include "third_party/gvisor_syscall_tests/expectations.h"
 
 namespace netstack_syscall_test {
 
@@ -17,19 +17,6 @@ void AddNonPassingTests(TestMap& tests) {
   ExpectFailure(tests, "SocketTest.UnixSocketStatFS");
   ExpectFailure(tests, "OpenModes/SocketOpenTest.Unix/*");
 
-  // TODO(b/243164162): Stop skipping these manually once NS3 is returning EPERM
-  // for raw and packet socket creation.
-  SkipTest(tests, "AllInetTests/RawPacketTest.*/*");
-  SkipTest(tests, "AllInetTests/CookedPacketTest.*/*");
-  SkipTest(tests, "AllPacketSocketTests/*.*/*");
-  SkipTest(tests, "AllRawPacketMsgSizeTest/*.*/*");
-  SkipTest(tests, "BasicCookedPacketTest.WrongType");
-  SkipTest(tests, "RawHDRINCL.*");
-  SkipTest(tests, "RawSocketICMPTest.*");
-  SkipTest(tests, "RawSocketICMPv6Test.*");
-  SkipTest(tests, "AllInetTests/RawSocketTest.*/*");
-  SkipTest(tests, "AllRawSocketTests/*.*/*");
-  SkipTest(tests, "RawSocketTest.*");
   SkipTest(tests, "IPv4Sockets/*.*/*");
 
   // Netstack3-produced entries for getifaddrs() do not all have interface
