@@ -395,12 +395,11 @@ double Lp8556Device::GetBacklightPower(double backlight_brightness) {
 }
 
 double Lp8556Device::GetBrightnesstoCurrentScalar() {
-  double setpoint_current_setting = scale_ / kMaxCurrentSetting;
   double max_current_amp = max_current_ / kMilliampPerAmp;
   // The setpoint current refers to the backlight current for a single driver
   // channel, assuming that the backlight brightness setting is at its max value
   // of 4095 (100%).
-  double setpoint_current_amp = (setpoint_current_setting / kMaxCurrentSetting) * max_current_amp;
+  double setpoint_current_amp = (scale_ / kMaxCurrentSetting) * max_current_amp;
   // The scalar returned is equal to:
   // 6 Driver Channels * Setpoint Current per Channel / Max Brightness Setting
   // When this value is multiplied by the backlight brightness setting, it

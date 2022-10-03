@@ -479,46 +479,65 @@ TEST_F(Lp8556DeviceTest, Inspect) {
 }
 
 TEST_F(Lp8556DeviceTest, GetBackLightPower) {
+  TiLp8556Metadata kDeviceMetadata = {
+      .panel_id = 2,
+      .registers = {},
+      .register_count = 0,
+  };
+
+  fake_parent_->AddProtocol(ZX_PROTOCOL_PDEV, nullptr, nullptr, "pdev");
+  fake_parent_->SetMetadata(DEVICE_METADATA_PRIVATE, &kDeviceMetadata, sizeof(kDeviceMetadata));
+
   mock_i2c_.ExpectWrite({kCfg2Reg})
       .ExpectReadStop({kCfg2Default})
       .ExpectWrite({kCurrentLsbReg})
-      .ExpectReadStop({0x05, 0x4e})
+      .ExpectReadStop({0x42, 0x36})
       .ExpectWrite({kBacklightBrightnessLsbReg})
       .ExpectReadStop({0xab, 0x05})
       .ExpectWrite({kDeviceControlReg})
       .ExpectReadStop({0x85})
       .ExpectWrite({kCfgReg})
-      .ExpectReadStop({0x01});
+      .ExpectReadStop({0x36});
   mock_regs_[BrightnessStickyReg::Get().addr()].ExpectRead();
 
   EXPECT_OK(dev_->Init());
 
   VerifySetBrightness(false, 0.0);
-  EXPECT_LT(abs(dev_->GetBacklightPower(0) - 0.000002), 0.000001f);
+  EXPECT_LT(abs(dev_->GetBacklightPower(0) - 0.0141694967), 0.000001f);
+
   VerifySetBrightness(true, 0.5);
-  EXPECT_LT(abs(dev_->GetBacklightPower(2047) - 0.000073), 0.000001f);
+  EXPECT_LT(abs(dev_->GetBacklightPower(2048) - 0.5352831254), 0.000001f);
 
   VerifySetBrightness(true, 1.0);
-  EXPECT_LT(abs(dev_->GetBacklightPower(4095) - 0.000144), 0.000001f);
+  EXPECT_LT(abs(dev_->GetBacklightPower(4095) - 1.0637770353), 0.000001f);
 }
 
 TEST_F(Lp8556DeviceTest, GetPowerWatts) {
+  TiLp8556Metadata kDeviceMetadata = {
+      .panel_id = 2,
+      .registers = {},
+      .register_count = 0,
+  };
+
+  fake_parent_->AddProtocol(ZX_PROTOCOL_PDEV, nullptr, nullptr, "pdev");
+  fake_parent_->SetMetadata(DEVICE_METADATA_PRIVATE, &kDeviceMetadata, sizeof(kDeviceMetadata));
+
   mock_i2c_.ExpectWrite({kCfg2Reg})
       .ExpectReadStop({kCfg2Default})
       .ExpectWrite({kCurrentLsbReg})
-      .ExpectReadStop({0x05, 0x4e})
+      .ExpectReadStop({0x42, 0x36})
       .ExpectWrite({kBacklightBrightnessLsbReg})
       .ExpectReadStop({0xab, 0x05})
       .ExpectWrite({kDeviceControlReg})
       .ExpectReadStop({0x85})
       .ExpectWrite({kCfgReg})
-      .ExpectReadStop({0x01});
+      .ExpectReadStop({0x36});
   mock_regs_[BrightnessStickyReg::Get().addr()].ExpectRead();
 
   EXPECT_OK(dev_->Init());
 
   VerifySetBrightness(true, 1.0);
-  EXPECT_LT(abs(dev_->GetBacklightPower(4095) - 0.000144), 0.000001f);
+  EXPECT_LT(abs(dev_->GetBacklightPower(4095) - 1.0637770353), 0.000001f);
 
   fidl::WireSyncClient<fuchsia_hardware_power_sensor::Device> sensor_client(sensorSyncClient());
   auto result = sensor_client->GetPowerWatts();
