@@ -296,6 +296,9 @@ void MultipleDeviceTestCase::TearDown() {
     coordinator_loop_.RunUntilIdle();
   }
 
+  coordinator().device_manager()->RemoveDevice(coordinator().root_device(), /* forced */ false);
+  coordinator_loop_.RunUntilIdle();
+
   // We no longer need the async loop.
   // If we do not shutdown here, the destructor
   // could be cleaning up the vfs, before the loop clears the
