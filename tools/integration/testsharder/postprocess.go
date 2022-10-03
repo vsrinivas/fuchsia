@@ -32,7 +32,7 @@ const (
 
 	// The maximum number of tests that a multiplier can match. testsharder will
 	// fail if this is exceeded.
-	maxMatchesPerMultiplier = 5
+	maxMatchesPerMultiplier = 50
 
 	// The maximum number of multiplied shards allowed per environment.
 	maxMultipliedShardsPerEnv = 3

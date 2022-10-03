@@ -191,6 +191,17 @@ func TestAffectedModifiers(t *testing.T) {
 func TestMatchModifiersToTests(t *testing.T) {
 	aemuEnv := build.Environment{Dimensions: build.DimensionSet{DeviceType: "AEMU"}}
 	otherDeviceEnv := build.Environment{Dimensions: build.DimensionSet{DeviceType: "other-device"}}
+	makeTestSpecs := func(count int, envs []build.Environment) []build.TestSpec {
+		var specs []build.TestSpec
+		for i := 0; i < count; i++ {
+			specs = append(specs, build.TestSpec{
+				Test: build.Test{Name: fullTestName(i, "fuchsia"), OS: fuchsia, CPU: x64},
+				Envs: envs,
+			})
+		}
+		return specs
+	}
+
 	cases := []struct {
 		name        string
 		specs       []build.TestSpec
@@ -199,41 +210,31 @@ func TestMatchModifiersToTests(t *testing.T) {
 		err         error
 	}{
 		{
-			name: "one match per test-env",
-			specs: []build.TestSpec{
-				{
-					Test: build.Test{Name: fullTestName(1, "fuchsia"), OS: fuchsia, CPU: x64},
-					Envs: []build.Environment{aemuEnv, otherDeviceEnv},
-				},
-			},
+			name:  "one match per test-env",
+			specs: makeTestSpecs(1, []build.Environment{aemuEnv, otherDeviceEnv}),
 			multipliers: []TestModifier{
-				{Name: "1", TotalRuns: 1},
+				{Name: "0", TotalRuns: 1},
 			},
 			expected: []ModifierMatch{
 				{
-					Test: fullTestName(1, "fuchsia"), Env: aemuEnv,
-					Modifier: TestModifier{Name: "1", TotalRuns: 1},
+					Test: fullTestName(0, "fuchsia"), Env: aemuEnv,
+					Modifier: TestModifier{Name: "0", TotalRuns: 1},
 				},
 				{
-					Test: fullTestName(1, "fuchsia"), Env: otherDeviceEnv,
-					Modifier: TestModifier{Name: "1", TotalRuns: 1},
+					Test: fullTestName(0, "fuchsia"), Env: otherDeviceEnv,
+					Modifier: TestModifier{Name: "0", TotalRuns: 1},
 				},
 			},
 		},
 		{
-			name: "uses regex matches if no tests match exactly",
-			specs: []build.TestSpec{
-				{
-					Test: build.Test{Name: fullTestName(210, "fuchsia"), OS: fuchsia, CPU: x64},
-					Envs: []build.Environment{aemuEnv},
-				},
-			},
+			name:  "uses regex matches if no tests match exactly",
+			specs: makeTestSpecs(1, []build.Environment{aemuEnv}),
 			multipliers: []TestModifier{
-				{Name: "1", TotalRuns: 1},
+				{Name: "0", TotalRuns: 1},
 			},
 			expected: []ModifierMatch{{
-				Test: fullTestName(210, "fuchsia"), Env: aemuEnv,
-				Modifier: TestModifier{Name: "1", TotalRuns: 1},
+				Test: fullTestName(0, "fuchsia"), Env: aemuEnv,
+				Modifier: TestModifier{Name: "0", TotalRuns: 1},
 			}},
 		},
 		{
@@ -257,46 +258,16 @@ func TestMatchModifiersToTests(t *testing.T) {
 			}},
 		},
 		{
-			name: "rejects multiplier that matches too many tests",
-			specs: []build.TestSpec{
-				{
-					Test: build.Test{Name: fullTestName(10, "fuchsia"), OS: fuchsia, CPU: x64},
-					Envs: []build.Environment{aemuEnv},
-				},
-				{
-					Test: build.Test{Name: fullTestName(11, "fuchsia"), OS: fuchsia, CPU: x64},
-					Envs: []build.Environment{aemuEnv},
-				},
-				{
-					Test: build.Test{Name: fullTestName(12, "fuchsia"), OS: fuchsia, CPU: x64},
-					Envs: []build.Environment{aemuEnv},
-				},
-				{
-					Test: build.Test{Name: fullTestName(13, "fuchsia"), OS: fuchsia, CPU: x64},
-					Envs: []build.Environment{aemuEnv},
-				},
-				{
-					Test: build.Test{Name: fullTestName(14, "fuchsia"), OS: fuchsia, CPU: x64},
-					Envs: []build.Environment{aemuEnv},
-				},
-				{
-					Test: build.Test{Name: fullTestName(15, "fuchsia"), OS: fuchsia, CPU: x64},
-					Envs: []build.Environment{aemuEnv},
-				},
-			},
+			name:  "rejects multiplier that matches too many tests",
+			specs: makeTestSpecs(maxMatchesPerMultiplier+1, []build.Environment{aemuEnv}),
 			multipliers: []TestModifier{
-				{Name: "1", TotalRuns: 1},
+				{Name: "fuchsia-pkg", TotalRuns: 1},
 			},
 			err: errTooManyMultiplierMatches,
 		},
 		{
-			name: "rejects invalid multiplier regex",
-			specs: []build.TestSpec{
-				{
-					Test: build.Test{Name: fullTestName(10, "fuchsia"), OS: fuchsia, CPU: x64},
-					Envs: []build.Environment{aemuEnv},
-				},
-			},
+			name:  "rejects invalid multiplier regex",
+			specs: makeTestSpecs(1, []build.Environment{aemuEnv}),
 			multipliers: []TestModifier{
 				{Name: "["},
 			},
