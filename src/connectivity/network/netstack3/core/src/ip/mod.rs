@@ -2497,6 +2497,16 @@ pub(crate) mod testutil {
         }
     }
 
+    impl<I: Ip, Outer, S, Meta, D: IpDeviceId + 'static> IpDeviceIdContext<I>
+        for crate::context::testutil::WrappedDummySyncCtx<Outer, S, Meta, D>
+    {
+        type DeviceId = D;
+
+        fn loopback_id(&self) -> Option<Self::DeviceId> {
+            None
+        }
+    }
+
     /// A dummy device ID for use in testing.
     ///
     /// `DummyDeviceId` is provided for use in implementing

@@ -53,8 +53,11 @@ use crate::{
         socketmap::{IterShadows as _, SocketMap, Tagged},
     },
     ip::{
-        socket::{DefaultSendOptions, IpSock, IpSockCreationError},
-        BufferTransportIpContext, IpDeviceId, IpDeviceIdContext, IpExt, TransportIpContext,
+        socket::{
+            BufferIpSocketHandler as _, DefaultSendOptions, IpSock, IpSockCreationError,
+            IpSocketHandler as _,
+        },
+        BufferTransportIpContext, IpDeviceId, IpDeviceIdContext, IpExt, TransportIpContext as _,
     },
     socket::{
         address::{ConnAddr, ConnIpAddr, IpPortSpec, ListenerAddr, ListenerIpAddr},
@@ -134,22 +137,45 @@ pub trait TcpNonSyncContext: TimerContext<TimerId> {
 pub(crate) trait TcpSyncContext<I: IpExt, C: TcpNonSyncContext>:
     IpDeviceIdContext<I>
 {
-    /// Calls the function with an immutable reference to an initial sequence
-    /// number generator and a mutable reference to TCP socket state.
-    fn with_isn_generator_and_tcp_sockets_mut<
+    type IpTransportCtx: BufferTransportIpContext<I, C, Buf<Vec<u8>>, DeviceId = Self::DeviceId>;
+
+    /// Calls the function with a `Self::IpTransportCtx`, immutable reference to
+    /// an initial sequence number generator and a mutable reference to TCP
+    /// socket state.
+    fn with_ip_transport_ctx_isn_generator_and_tcp_sockets_mut<
         O,
-        F: FnOnce(&IsnGenerator<C::Instant>, &mut TcpSockets<I, Self::DeviceId, C>) -> O,
+        F: FnOnce(
+            &mut Self::IpTransportCtx,
+            &IsnGenerator<C::Instant>,
+            &mut TcpSockets<I, Self::DeviceId, C>,
+        ) -> O,
     >(
         &mut self,
         cb: F,
     ) -> O;
+
+    /// Calls the function with a `Self::IpTransportCtx` and a mutable reference
+    /// to TCP socket state.
+    fn with_ip_transport_ctx_and_tcp_sockets_mut<
+        O,
+        F: FnOnce(&mut Self::IpTransportCtx, &mut TcpSockets<I, Self::DeviceId, C>) -> O,
+    >(
+        &mut self,
+        cb: F,
+    ) -> O {
+        self.with_ip_transport_ctx_isn_generator_and_tcp_sockets_mut(|ctx, _isn, sockets| {
+            cb(ctx, sockets)
+        })
+    }
 
     /// Calls the function with a mutable reference to TCP socket state.
     fn with_tcp_sockets_mut<O, F: FnOnce(&mut TcpSockets<I, Self::DeviceId, C>) -> O>(
         &mut self,
         cb: F,
     ) -> O {
-        self.with_isn_generator_and_tcp_sockets_mut(|_isn, sockets| cb(sockets))
+        self.with_ip_transport_ctx_isn_generator_and_tcp_sockets_mut(|_ctx, _isn, sockets| {
+            cb(sockets)
+        })
     }
 
     /// Calls the function with an immutable reference to TCP socket state.
@@ -478,14 +504,7 @@ pub(crate) trait TcpSocketHandler<I: Ip, C: TcpNonSyncContext>:
     fn do_send(&mut self, ctx: &mut C, conn_id: ConnectionId);
 }
 
-impl<
-        I: IpExt,
-        C: TcpNonSyncContext,
-        SC: TcpSyncContext<I, C>
-            + TransportIpContext<I, C>
-            + BufferTransportIpContext<I, C, Buf<Vec<u8>>>,
-    > TcpSocketHandler<I, C> for SC
-{
+impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<I, C> for SC {
     fn create_socket(&mut self, ctx: &mut C) -> UnboundId {
         UnboundId(self.with_tcp_sockets_mut(|sockets| sockets.inactive.push(Unbound::default())))
     }
@@ -498,20 +517,44 @@ impl<
         port: Option<NonZeroU16>,
     ) -> Result<BoundId, BindError> {
         // TODO(https://fxbug.dev/104300): Check if local_ip is a unicast address.
-        let port = match port {
-            None => {
-                self.with_tcp_sockets_mut(|TcpSockets { port_alloc, inactive: _, socketmap }| {
-                    match port_alloc.try_alloc(&local_ip, &socketmap) {
+        self.with_ip_transport_ctx_and_tcp_sockets_mut(
+            |mut ip_transport_ctx, TcpSockets { port_alloc, inactive, socketmap }| {
+                let port = match port {
+                    None => match port_alloc.try_alloc(&local_ip, &socketmap) {
                         Some(port) => {
-                            Ok(NonZeroU16::new(port).expect("ephemeral ports must be non-zero"))
+                            NonZeroU16::new(port).expect("ephemeral ports must be non-zero")
                         }
-                        None => Err(BindError::NoPort),
+                        None => return Err(BindError::NoPort),
+                    },
+                    Some(port) => port,
+                };
+
+                let idmap_key = id.into();
+                let inactive_state = inactive.remove(idmap_key).expect("invalid unbound socket id");
+                let local_ip = SpecifiedAddr::new(local_ip);
+                if let Some(ip) = local_ip {
+                    if ip_transport_ctx.get_device_with_assigned_addr(ip).is_none() {
+                        return Err(BindError::NoLocalAddr);
                     }
-                })?
-            }
-            Some(port) => port,
-        };
-        bind_inner(self, ctx, id, local_ip, port)
+                }
+                socketmap
+                    .listeners_mut()
+                    .try_insert(
+                        ListenerAddr {
+                            ip: ListenerIpAddr { addr: local_ip, identifier: port },
+                            device: None,
+                        },
+                        MaybeListener::Bound,
+                        // TODO(https://fxbug.dev/101596): Support sharing for TCP sockets.
+                        (),
+                    )
+                    .map(|MaybeListenerId(x)| BoundId(x))
+                    .map_err(|_: (InsertError, MaybeListener<_>, ())| {
+                        assert_eq!(inactive.insert(idmap_key, inactive_state), None);
+                        BindError::Conflict
+                    })
+            },
+        )
     }
 
     fn listen(&mut self, _ctx: &mut C, id: BoundId, backlog: NonZeroUsize) -> ListenerId {
@@ -561,29 +604,43 @@ impl<
         netstack_buffers: C::ProvidedBuffers,
     ) -> Result<ConnectionId, ConnectError> {
         let bound_id = MaybeListenerId::from(id);
-        let ListenerAddr { ip: ListenerIpAddr { addr: local_ip, identifier: local_port }, device } =
-            self.with_tcp_sockets_mut(|sockets| {
+        self.with_ip_transport_ctx_isn_generator_and_tcp_sockets_mut(
+            |ip_transport_ctx, isn, sockets| {
                 let (bound, (), bound_addr) =
                     sockets.socketmap.listeners().get_by_id(&bound_id).expect("invalid socket id");
                 assert_matches!(bound, MaybeListener::Bound);
-                *bound_addr
-            });
-        let ip_sock = self
-            .new_ip_socket(
-                ctx,
-                device,
-                local_ip,
-                remote.ip,
-                IpProto::Tcp.into(),
-                DefaultSendOptions,
-            )
-            .map_err(|(err, DefaultSendOptions {})| match err {
-                IpSockCreationError::Route(_) => ConnectError::NoRoute,
-            })?;
-        let conn_id = connect_inner(self, ctx, ip_sock, local_port, remote.port, netstack_buffers)?;
-        let _: Option<_> = self
-            .with_tcp_sockets_mut(|sockets| sockets.socketmap.listeners_mut().remove(&bound_id));
-        Ok(conn_id)
+                let ListenerAddr {
+                    ip: ListenerIpAddr { addr: local_ip, identifier: local_port },
+                    device,
+                } = *bound_addr;
+
+                let ip_sock = ip_transport_ctx
+                    .new_ip_socket(
+                        ctx,
+                        device,
+                        local_ip,
+                        remote.ip,
+                        IpProto::Tcp.into(),
+                        DefaultSendOptions,
+                    )
+                    .map_err(|(err, DefaultSendOptions {})| match err {
+                        IpSockCreationError::Route(_) => ConnectError::NoRoute,
+                    })?;
+
+                let conn_id = connect_inner(
+                    isn,
+                    &mut sockets.socketmap,
+                    ip_transport_ctx,
+                    ctx,
+                    ip_sock,
+                    local_port,
+                    remote.port,
+                    netstack_buffers,
+                )?;
+                let _: Option<_> = sockets.socketmap.listeners_mut().remove(&bound_id);
+                Ok(conn_id)
+            },
+        )
     }
 
     fn connect_unbound(
@@ -593,23 +650,43 @@ impl<
         remote: SocketAddr<I::Addr>,
         netstack_buffers: C::ProvidedBuffers,
     ) -> Result<ConnectionId, ConnectError> {
-        let ip_sock = self
-            .new_ip_socket(ctx, None, None, remote.ip, IpProto::Tcp.into(), DefaultSendOptions)
-            .map_err(|(err, DefaultSendOptions)| match err {
-                IpSockCreationError::Route(_) => ConnectError::NoRoute,
-            })?;
-        let local_port =
-            self.with_tcp_sockets_mut(|TcpSockets { port_alloc, inactive: _, socketmap }| {
-                match port_alloc.try_alloc(&*ip_sock.local_ip(), &socketmap) {
-                    Some(port) => {
-                        Ok(NonZeroU16::new(port).expect("ephemeral ports must be non-zero"))
-                    }
-                    None => Err(ConnectError::NoPort),
-                }
-            })?;
-        let conn_id = connect_inner(self, ctx, ip_sock, local_port, remote.port, netstack_buffers)?;
-        let _: Option<_> = self.with_tcp_sockets_mut(|sockets| sockets.inactive.remove(id.into()));
-        Ok(conn_id)
+        self.with_ip_transport_ctx_isn_generator_and_tcp_sockets_mut(
+            |ip_transport_ctx, isn, sockets| {
+                let ip_sock = ip_transport_ctx
+                    .new_ip_socket(
+                        ctx,
+                        None,
+                        None,
+                        remote.ip,
+                        IpProto::Tcp.into(),
+                        DefaultSendOptions,
+                    )
+                    .map_err(|(err, DefaultSendOptions)| match err {
+                        IpSockCreationError::Route(_) => ConnectError::NoRoute,
+                    })?;
+
+                let local_port = match sockets
+                    .port_alloc
+                    .try_alloc(&*ip_sock.local_ip(), &sockets.socketmap)
+                {
+                    Some(port) => NonZeroU16::new(port).expect("ephemeral ports must be non-zero"),
+                    None => return Err(ConnectError::NoPort),
+                };
+
+                let conn_id = connect_inner(
+                    isn,
+                    &mut sockets.socketmap,
+                    ip_transport_ctx,
+                    ctx,
+                    ip_sock,
+                    local_port,
+                    remote.port,
+                    netstack_buffers,
+                )?;
+                let _: Option<_> = sockets.inactive.remove(id.into());
+                Ok(conn_id)
+            },
+        )
     }
 
     fn get_unbound_info(&self, id: UnboundId) -> UnboundInfo<SC::DeviceId> {
@@ -650,34 +727,57 @@ impl<
     }
 
     fn do_send(&mut self, ctx: &mut C, conn_id: ConnectionId) {
-        let send_more = self.with_tcp_sockets_mut(|sockets| {
-            let (conn, (), addr) = sockets.socketmap.conns_mut().get_by_id_mut(&conn_id)?;
-            conn.state
-                .poll_send(DEFAULT_MAXIMUM_SEGMENT_SIZE, ctx.now())
-                .map(|seg| (conn.ip_sock.clone(), tcp_serialize_segment(seg, addr.ip.clone())))
-                .map(|(ip_sock, ser)| (ip_sock, ser, conn.state.poll_send_at()))
-        });
-        if let Some((ip_sock, ser, poll_send_at)) = send_more {
-            self.send_ip_packet(ctx, &ip_sock, ser, None).unwrap_or_else(|(body, err)| {
-                // Currently there are a few call sites to `do_send` and they
-                // don't really care about the error, with Rust's strict
-                // `unused_result` lint, not returning an error that no one
-                // would care makes the code less cumbersome to write. So We do
-                // not return the error to caller but just log it instead. If
-                // we find a case where the caller is interested in the error,
-                // then we can always come back and change this.
-                log::debug!(
-                    "failed to send an ip packet on {:?}, body: {:?}, err: {:?}",
-                    conn_id,
-                    body,
-                    err
-                )
-            });
-            if let Some(instant) = poll_send_at {
-                let _: Option<_> =
-                    ctx.schedule_timer_instant(instant, TimerId(conn_id, I::VERSION));
+        self.with_ip_transport_ctx_and_tcp_sockets_mut(|ip_transport_ctx, sockets| {
+            if let Some((conn, (), addr)) = sockets.socketmap.conns_mut().get_by_id_mut(&conn_id) {
+                do_send_inner(conn_id, conn, addr, ip_transport_ctx, ctx)
             }
-        }
+        })
+    }
+}
+
+fn do_send_inner<I, SC, C>(
+    conn_id: ConnectionId,
+    conn: &mut Connection<
+        I,
+        SC::DeviceId,
+        C::Instant,
+        C::ReceiveBuffer,
+        C::SendBuffer,
+        C::ProvidedBuffers,
+    >,
+    addr: &ConnAddr<I::Addr, SC::DeviceId, NonZeroU16, NonZeroU16>,
+    ip_transport_ctx: &mut SC,
+    ctx: &mut C,
+) where
+    I: IpExt,
+    C: TcpNonSyncContext,
+    SC: BufferTransportIpContext<I, C, Buf<Vec<u8>>>,
+{
+    let (ip_sock, ser) =
+        if let Some(seg) = conn.state.poll_send(DEFAULT_MAXIMUM_SEGMENT_SIZE, ctx.now()) {
+            (conn.ip_sock.clone(), tcp_serialize_segment(seg, addr.ip.clone()))
+        } else {
+            return;
+        };
+
+    let poll_send_at = conn.state.poll_send_at();
+    ip_transport_ctx.send_ip_packet(ctx, &ip_sock, ser, None).unwrap_or_else(|(body, err)| {
+        // Currently there are a few call sites to `do_send_inner` and they
+        // don't really care about the error, with Rust's strict
+        // `unused_result` lint, not returning an error that no one
+        // would care makes the code less cumbersome to write. So We do
+        // not return the error to caller but just log it instead. If
+        // we find a case where the caller is interested in the error,
+        // then we can always come back and change this.
+        log::debug!(
+            "failed to send an ip packet on {:?}, body: {:?}, err: {:?}",
+            conn_id,
+            body,
+            err
+        )
+    });
+    if let Some(instant) = poll_send_at {
+        let _: Option<_> = ctx.schedule_timer_instant(instant, TimerId(conn_id, I::VERSION));
     }
 }
 
@@ -730,51 +830,6 @@ where
     C: NonSyncContext,
 {
     with_ip_version!(Address, local_ip, bind(&mut sync_ctx, ctx, id, local_ip, port))
-}
-
-fn bind_inner<I, SC, C>(
-    sync_ctx: &mut SC,
-    _ctx: &mut C,
-    id: UnboundId,
-    local_ip: I::Addr,
-    port: NonZeroU16,
-) -> Result<BoundId, BindError>
-where
-    I: IpExt,
-    C: TcpNonSyncContext,
-    SC: TcpSyncContext<I, C> + TransportIpContext<I, C>,
-{
-    let idmap_key = id.into();
-    let inactive = sync_ctx
-        .with_tcp_sockets_mut(|sockets| sockets.inactive.remove(idmap_key))
-        .expect("invalid unbound socket id");
-    let local_ip = SpecifiedAddr::new(local_ip);
-    if let Some(ip) = local_ip {
-        if sync_ctx.get_device_with_assigned_addr(ip).is_none() {
-            return Err(BindError::NoLocalAddr);
-        }
-    }
-    sync_ctx
-        .with_tcp_sockets_mut(|sockets| {
-            sockets.socketmap.listeners_mut().try_insert(
-                ListenerAddr {
-                    ip: ListenerIpAddr { addr: local_ip, identifier: port },
-                    device: None,
-                },
-                MaybeListener::Bound,
-                // TODO(https://fxbug.dev/101596): Support sharing for TCP sockets.
-                (),
-            )
-        })
-        .map(|MaybeListenerId(x)| BoundId(x))
-        .map_err(|_: (InsertError, MaybeListener<_>, ())| {
-            assert_eq!(
-                sync_ctx
-                    .with_tcp_sockets_mut(|sockets| sockets.inactive.insert(idmap_key, inactive)),
-                None
-            );
-            BindError::Conflict
-        })
 }
 
 /// Listens on an already bound socket.
@@ -872,7 +927,9 @@ where
 }
 
 fn connect_inner<I, SC, C>(
-    sync_ctx: &mut SC,
+    isn: &IsnGenerator<C::Instant>,
+    socketmap: &mut BoundSocketMap<IpPortSpec<I, SC::DeviceId>, TcpSocketSpec<I, SC::DeviceId, C>>,
+    ip_transport_ctx: &mut SC,
     ctx: &mut C,
     ip_sock: IpSock<I, SC::DeviceId, DefaultSendOptions>,
     local_port: NonZeroU16,
@@ -882,49 +939,40 @@ fn connect_inner<I, SC, C>(
 where
     I: IpExt,
     C: TcpNonSyncContext,
-    SC: TcpSyncContext<I, C> + BufferTransportIpContext<I, C, Buf<Vec<u8>>>,
+    SC: BufferTransportIpContext<I, C, Buf<Vec<u8>>>,
 {
-    let (syn, conn_addr, conn_id, poll_send_at) = sync_ctx.with_isn_generator_and_tcp_sockets_mut(
-        |isn, TcpSockets { port_alloc: _, inactive: _, socketmap }| {
-            let isn = isn.generate(
-                ctx.now(),
-                SocketAddr { ip: ip_sock.local_ip().clone(), port: local_port },
-                SocketAddr { ip: ip_sock.remote_ip().clone(), port: remote_port },
-            );
-            let conn_addr = ConnAddr {
-                ip: ConnIpAddr {
-                    local: (ip_sock.local_ip().clone(), local_port),
-                    remote: (ip_sock.remote_ip().clone(), remote_port),
-                },
-                // TODO(https://fxbug.dev/102103): Support SO_BINDTODEVICE.
-                device: None,
-            };
-            let now = ctx.now();
-            let (syn_sent, syn) = Closed::<Initial>::connect(isn, now, netstack_buffers);
-            let state = State::SynSent(syn_sent);
-            let poll_send_at = state.poll_send_at().expect("no retrans timer");
-            let conn_id = socketmap
-                .conns_mut()
-                .try_insert(
-                    conn_addr.clone(),
-                    Connection { acceptor: None, state, ip_sock: ip_sock.clone() },
-                    // TODO(https://fxbug.dev/101596): Support sharing for TCP sockets.
-                    (),
-                )
-                .expect("failed to insert connection");
-            (syn, conn_addr, conn_id, poll_send_at)
-        },
+    let isn = isn.generate(
+        ctx.now(),
+        SocketAddr { ip: ip_sock.local_ip().clone(), port: local_port },
+        SocketAddr { ip: ip_sock.remote_ip().clone(), port: remote_port },
     );
+    let conn_addr = ConnAddr {
+        ip: ConnIpAddr {
+            local: (ip_sock.local_ip().clone(), local_port),
+            remote: (ip_sock.remote_ip().clone(), remote_port),
+        },
+        // TODO(https://fxbug.dev/102103): Support SO_BINDTODEVICE.
+        device: None,
+    };
+    let now = ctx.now();
+    let (syn_sent, syn) = Closed::<Initial>::connect(isn, now, netstack_buffers);
+    let state = State::SynSent(syn_sent);
+    let poll_send_at = state.poll_send_at().expect("no retrans timer");
+    let conn_id = socketmap
+        .conns_mut()
+        .try_insert(
+            conn_addr.clone(),
+            Connection { acceptor: None, state, ip_sock: ip_sock.clone() },
+            // TODO(https://fxbug.dev/101596): Support sharing for TCP sockets.
+            (),
+        )
+        .expect("failed to insert connection");
 
-    sync_ctx
+    ip_transport_ctx
         .send_ip_packet(ctx, &ip_sock, tcp_serialize_segment(syn, conn_addr.ip), None)
         .map_err(|(body, err)| {
             warn!("tcp: failed to send ip packet {:?}: {:?}", body, err);
-            assert_matches!(
-                sync_ctx
-                    .with_tcp_sockets_mut(|sockets| sockets.socketmap.conns_mut().remove(&conn_id)),
-                Some(_)
-            );
+            assert_matches!(socketmap.conns_mut().remove(&conn_id), Some(_));
             ConnectError::NoRoute
         })?;
     assert_eq!(ctx.schedule_timer_instant(poll_send_at, TimerId(conn_id, I::VERSION)), None);
@@ -1061,10 +1109,7 @@ pub(crate) fn handle_timer<SC, C>(
     TimerId(conn_id, version): TimerId,
 ) where
     C: TcpNonSyncContext,
-    SC: TcpSyncContext<Ipv4, C>
-        + BufferTransportIpContext<Ipv4, C, Buf<Vec<u8>>>
-        + TcpSyncContext<Ipv6, C>
-        + BufferTransportIpContext<Ipv6, C, Buf<Vec<u8>>>,
+    SC: TcpSyncContext<Ipv4, C> + TcpSyncContext<Ipv6, C>,
 {
     match version {
         IpVersion::V4 => TcpSocketHandler::<Ipv4, _>::do_send(sync_ctx, ctx, conn_id),
@@ -1138,8 +1183,9 @@ mod tests {
 
     use crate::{
         context::testutil::{
-            DummyCtx, DummyInstant, DummyNetwork, DummyNetworkLinks, DummyNonSyncCtx, DummySyncCtx,
-            InstantAndData, PendingFrameData, StepResult,
+            DummyCtx, DummyCtxWithSyncCtx, DummyFrameCtx, DummyInstant, DummyNetwork,
+            DummyNetworkContext, DummyNetworkLinks, DummyNonSyncCtx, DummySyncCtx, InstantAndData,
+            PendingFrameData, StepResult, WrappedDummySyncCtx,
         },
         ip::{
             device::state::{
@@ -1147,7 +1193,8 @@ mod tests {
             },
             socket::{testutil::DummyIpSocketCtx, BufferIpSocketHandler},
             testutil::DummyDeviceId,
-            BufferIpTransportContext as _, HopLimits, SendIpPacketMeta, DEFAULT_HOP_LIMITS,
+            BufferIpTransportContext as _, HopLimits, SendIpPacketMeta, TransportIpContext,
+            DEFAULT_HOP_LIMITS,
         },
         socket::SocketTypeStateMut,
         testutil::{new_rng, run_with_many_seeds, set_logger_for_test, FakeCryptoRng, TestIpExt},
@@ -1166,26 +1213,76 @@ mod tests {
         fn new_device_state(addr: Self::Addr, prefix: u8) -> IpDeviceState<DummyInstant, Self>;
     }
 
-    struct TcpState<I: TcpTestIpExt> {
-        isn_generator: IsnGenerator<DummyInstant>,
-        sockets: TcpSockets<I, DummyDeviceId, TcpNonSyncCtx>,
+    #[derive(Default)]
+    struct MockBufferIpTransportCtxState<I: TcpTestIpExt> {
         ip_socket_ctx: DummyIpSocketCtx<I, DummyDeviceId>,
     }
 
-    type TcpCtx<I> = DummyCtx<
-        TcpState<I>,
-        TimerId,
+    type MockBufferIpTransportCtx<I> = DummySyncCtx<
+        MockBufferIpTransportCtxState<I>,
         SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<<I as Ip>::Addr>>,
-        (),
         DummyDeviceId,
-        (),
     >;
 
-    type TcpSyncCtx<I> = DummySyncCtx<
-        TcpState<I>,
+    impl<I: TcpTestIpExt> AsMut<DummyIpSocketCtx<I, DummyDeviceId>>
+        for MockBufferIpTransportCtxState<I>
+    {
+        fn as_mut(&mut self) -> &mut DummyIpSocketCtx<I, DummyDeviceId> {
+            &mut self.ip_socket_ctx
+        }
+    }
+
+    impl<I: TcpTestIpExt> AsRef<DummyIpSocketCtx<I, DummyDeviceId>>
+        for MockBufferIpTransportCtxState<I>
+    {
+        fn as_ref(&self) -> &DummyIpSocketCtx<I, DummyDeviceId> {
+            &self.ip_socket_ctx
+        }
+    }
+
+    impl<I: TcpTestIpExt> TransportIpContext<I, TcpNonSyncCtx> for MockBufferIpTransportCtx<I> {
+        fn get_device_with_assigned_addr(
+            &self,
+            _addr: SpecifiedAddr<I::Addr>,
+        ) -> Option<DummyDeviceId> {
+            Some(DummyDeviceId)
+        }
+
+        fn get_default_hop_limits(&self, _device: Option<Self::DeviceId>) -> HopLimits {
+            DEFAULT_HOP_LIMITS
+        }
+    }
+
+    struct MockTcpState<I: TcpTestIpExt> {
+        isn_generator: IsnGenerator<DummyInstant>,
+        sockets: TcpSockets<I, DummyDeviceId, TcpNonSyncCtx>,
+    }
+
+    type TcpSyncCtx<I> = WrappedDummySyncCtx<
+        MockTcpState<I>,
+        MockBufferIpTransportCtxState<I>,
         SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<<I as Ip>::Addr>>,
         DummyDeviceId,
     >;
+
+    type TcpCtx<I> = DummyCtxWithSyncCtx<TcpSyncCtx<I>, TimerId, (), ()>;
+
+    impl<I: TcpTestIpExt>
+        AsMut<DummyFrameCtx<SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<<I as Ip>::Addr>>>>
+        for TcpCtx<I>
+    {
+        fn as_mut(
+            &mut self,
+        ) -> &mut DummyFrameCtx<SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<<I as Ip>::Addr>>>
+        {
+            self.sync_ctx.inner.as_mut()
+        }
+    }
+
+    impl<I: TcpTestIpExt> DummyNetworkContext for TcpCtx<I> {
+        type TimerId = TimerId;
+        type SendMeta = SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<<I as Ip>::Addr>>;
+    }
 
     type TcpNonSyncCtx = DummyNonSyncCtx<TimerId, (), ()>;
 
@@ -1269,26 +1366,17 @@ mod tests {
         }
     }
 
-    impl<I: TcpTestIpExt> TransportIpContext<I, TcpNonSyncCtx> for TcpSyncCtx<I>
+    impl<I: TcpTestIpExt> TcpSyncContext<I, TcpNonSyncCtx> for TcpSyncCtx<I>
     where
-        TcpSyncCtx<I>: IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
+        MockBufferIpTransportCtx<I>:
+            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = DummyDeviceId>,
     {
-        fn get_device_with_assigned_addr(
-            &self,
-            _addr: SpecifiedAddr<I::Addr>,
-        ) -> Option<DummyDeviceId> {
-            Some(DummyDeviceId)
-        }
+        type IpTransportCtx = MockBufferIpTransportCtx<I>;
 
-        fn get_default_hop_limits(&self, _device: Option<Self::DeviceId>) -> HopLimits {
-            DEFAULT_HOP_LIMITS
-        }
-    }
-
-    impl<I: TcpTestIpExt> TcpSyncContext<I, TcpNonSyncCtx> for TcpSyncCtx<I> {
-        fn with_isn_generator_and_tcp_sockets_mut<
+        fn with_ip_transport_ctx_isn_generator_and_tcp_sockets_mut<
             O,
             F: FnOnce(
+                &mut MockBufferIpTransportCtx<I>,
                 &IsnGenerator<DummyInstant>,
                 &mut TcpSockets<I, DummyDeviceId, TcpNonSyncCtx>,
             ) -> O,
@@ -1296,47 +1384,40 @@ mod tests {
             &mut self,
             cb: F,
         ) -> O {
-            let TcpState { isn_generator, sockets, ip_socket_ctx: _ } = self.get_mut();
-            cb(isn_generator, sockets)
+            let WrappedDummySyncCtx {
+                outer: MockTcpState { isn_generator, sockets },
+                inner: ip_transport_ctx,
+            } = self;
+            cb(ip_transport_ctx, isn_generator, sockets)
         }
 
         fn with_tcp_sockets<O, F: FnOnce(&TcpSockets<I, DummyDeviceId, TcpNonSyncCtx>) -> O>(
             &self,
             cb: F,
         ) -> O {
-            let TcpState { sockets, isn_generator: _, ip_socket_ctx: _ } = self.get_ref();
+            let WrappedDummySyncCtx { outer: MockTcpState { isn_generator: _, sockets }, inner: _ } =
+                self;
             cb(sockets)
         }
     }
 
-    impl<I: TcpTestIpExt> AsMut<DummyIpSocketCtx<I, DummyDeviceId>> for TcpState<I> {
-        fn as_mut(&mut self) -> &mut DummyIpSocketCtx<I, DummyDeviceId> {
-            &mut self.ip_socket_ctx
-        }
-    }
-
-    impl<I: TcpTestIpExt> AsRef<DummyIpSocketCtx<I, DummyDeviceId>> for TcpState<I> {
-        fn as_ref(&self) -> &DummyIpSocketCtx<I, DummyDeviceId> {
-            &self.ip_socket_ctx
-        }
-    }
-
-    impl<I: TcpTestIpExt> TcpState<I> {
+    impl<I: TcpTestIpExt> TcpSyncCtx<I> {
         fn new(addr: SpecifiedAddr<I::Addr>, peer: SpecifiedAddr<I::Addr>, prefix: u8) -> Self {
-            let ip_socket_ctx = DummyIpSocketCtx::<I, _>::with_devices_state(core::iter::once((
-                DummyDeviceId,
-                I::new_device_state(*addr, prefix),
-                alloc::vec![peer],
-            )));
-            Self {
-                isn_generator: Default::default(),
-                sockets: TcpSockets {
-                    inactive: IdMap::new(),
-                    socketmap: BoundSocketMap::default(),
-                    port_alloc: PortAlloc::new(&mut FakeCryptoRng::new_xorshift(0)),
+            Self::with_inner_and_outer_state(
+                MockBufferIpTransportCtxState {
+                    ip_socket_ctx: DummyIpSocketCtx::<I, _>::with_devices_state(core::iter::once(
+                        (DummyDeviceId, I::new_device_state(*addr, prefix), alloc::vec![peer]),
+                    )),
                 },
-                ip_socket_ctx,
-            }
+                MockTcpState {
+                    isn_generator: Default::default(),
+                    sockets: TcpSockets {
+                        inactive: IdMap::new(),
+                        socketmap: BoundSocketMap::default(),
+                        port_alloc: PortAlloc::new(&mut FakeCryptoRng::new_xorshift(0)),
+                    },
+                },
+            )
         }
     }
 
@@ -1391,7 +1472,7 @@ mod tests {
             [
                 (
                     LOCAL,
-                    TcpCtx::with_state(TcpState::new(
+                    TcpCtx::with_sync_ctx(TcpSyncCtx::new(
                         I::DUMMY_CONFIG.local_ip,
                         I::DUMMY_CONFIG.remote_ip,
                         I::DUMMY_CONFIG.subnet.prefix(),
@@ -1399,7 +1480,7 @@ mod tests {
                 ),
                 (
                     REMOTE,
-                    TcpCtx::with_state(TcpState::new(
+                    TcpCtx::with_sync_ctx(TcpSyncCtx::new(
                         I::DUMMY_CONFIG.remote_ip,
                         I::DUMMY_CONFIG.local_ip,
                         I::DUMMY_CONFIG.subnet.prefix(),
@@ -1421,8 +1502,8 @@ mod tests {
         meta: SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<I::Addr>>,
         buffer: Buf<Vec<u8>>,
     ) where
-        TcpSyncCtx<I>: BufferIpSocketHandler<I, TcpNonSyncCtx, Buf<Vec<u8>>>
-            + IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
+        MockBufferIpTransportCtx<I>:
+            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = DummyDeviceId>,
     {
         TcpIpTransportContext::receive_ip_packet(
             sync_ctx,
@@ -1440,11 +1521,11 @@ mod tests {
         _: &mut (),
         TimerId(conn_id, version): TimerId,
     ) where
-        TcpSyncCtx<I>: BufferIpSocketHandler<I, TcpNonSyncCtx, Buf<Vec<u8>>>
-            + IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
+        MockBufferIpTransportCtx<I>:
+            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = DummyDeviceId>,
     {
         assert_eq!(I::VERSION, version);
-        let DummyCtx { sync_ctx, non_sync_ctx } = ctx;
+        let DummyCtxWithSyncCtx { sync_ctx, non_sync_ctx } = ctx;
         TcpSocketHandler::<I, _>::do_send(sync_ctx, non_sync_ctx, conn_id)
     }
 
@@ -1462,8 +1543,8 @@ mod tests {
         seed: u128,
         drop_rate: f64,
     ) where
-        TcpSyncCtx<I>: BufferIpSocketHandler<I, TcpNonSyncCtx, Buf<Vec<u8>>>
-            + IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
+        MockBufferIpTransportCtx<I>:
+            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = DummyDeviceId>,
     {
         let mut net = new_test_net::<I>();
         let mut rng = new_rng(seed);
@@ -1526,7 +1607,7 @@ mod tests {
             let _: StepResult = net.step(handle_frame, handle_timer);
             // The listener should create a pending socket.
             assert_matches!(
-                net.sync_ctx(REMOTE).get_mut().sockets.get_listener_by_id_mut(server),
+                net.sync_ctx(REMOTE).outer.sockets.get_listener_by_id_mut(server),
                 Some(Listener { backlog: _, ready, pending }) => {
                     assert_eq!(ready.len(), 0);
                     assert_eq!(pending.len(), 1);
@@ -1556,7 +1637,7 @@ mod tests {
         let mut assert_connected = |name: &'static str, conn_id: ConnectionId| {
             let (state, (), _): (_, _, &ConnAddr<_, _, _, _>) = net
                 .sync_ctx(name)
-                .get_mut()
+                .outer
                 .sockets
                 .socketmap
                 .conns_mut()
@@ -1595,7 +1676,7 @@ mod tests {
 
         // Check the listener is in correct state.
         assert_eq!(
-            net.sync_ctx(REMOTE).get_mut().sockets.get_listener_by_id_mut(server),
+            net.sync_ctx(REMOTE).outer.sockets.get_listener_by_id_mut(server),
             Some(&mut Listener::new(backlog)),
         );
     }
@@ -1603,13 +1684,13 @@ mod tests {
     #[ip_test]
     fn bind_listen_connect_accept<I: Ip + TcpTestIpExt>()
     where
-        TcpSyncCtx<I>: BufferIpSocketHandler<I, TcpNonSyncCtx, Buf<Vec<u8>>>
-            + IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
+        MockBufferIpTransportCtx<I>:
+            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = DummyDeviceId>,
     {
         set_logger_for_test();
         for bind_client in [true, false] {
             for listen_addr in [I::UNSPECIFIED_ADDRESS, *I::DUMMY_CONFIG.remote_ip] {
-                bind_listen_connect_accept_inner(listen_addr, bind_client, 0, 0.0);
+                bind_listen_connect_accept_inner::<I>(listen_addr, bind_client, 0, 0.0);
             }
         }
     }
@@ -1619,15 +1700,16 @@ mod tests {
     #[test_case(I::UNSPECIFIED_ADDRESS; "any addr")]
     fn bind_conflict<I: Ip + TcpTestIpExt>(conflict_addr: I::Addr)
     where
-        TcpSyncCtx<I>: BufferIpSocketHandler<I, TcpNonSyncCtx, Buf<Vec<u8>>>
-            + IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
+        MockBufferIpTransportCtx<I>:
+            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = DummyDeviceId>,
     {
         set_logger_for_test();
-        let TcpCtx { mut sync_ctx, mut non_sync_ctx } = TcpCtx::with_state(TcpState::new(
-            I::DUMMY_CONFIG.local_ip,
-            I::DUMMY_CONFIG.local_ip,
-            I::DUMMY_CONFIG.subnet.prefix(),
-        ));
+        let TcpCtx { mut sync_ctx, mut non_sync_ctx } =
+            TcpCtx::<I>::with_sync_ctx(TcpSyncCtx::new(
+                I::DUMMY_CONFIG.local_ip,
+                I::DUMMY_CONFIG.local_ip,
+                I::DUMMY_CONFIG.subnet.prefix(),
+            ));
         let s1 = TcpSocketHandler::create_socket(&mut sync_ctx, &mut non_sync_ctx);
         let s2 = TcpSocketHandler::create_socket(&mut sync_ctx, &mut non_sync_ctx);
 
@@ -1664,8 +1746,8 @@ mod tests {
     #[ip_test]
     fn connect_reset<I: Ip + TcpTestIpExt>()
     where
-        TcpSyncCtx<I>: BufferIpSocketHandler<I, TcpNonSyncCtx, Buf<Vec<u8>>>
-            + IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
+        MockBufferIpTransportCtx<I>:
+            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = DummyDeviceId>,
     {
         set_logger_for_test();
         let mut net = new_test_net::<I>();
@@ -1712,7 +1794,7 @@ mod tests {
         // Finally, the connection should be reset.
         let (state, (), _): &(_, _, ConnAddr<_, _, _, _>) = net
             .sync_ctx(LOCAL)
-            .get_ref()
+            .outer
             .sockets
             .socketmap
             .conns()
@@ -1731,26 +1813,27 @@ mod tests {
     #[ip_test]
     fn retransmission<I: Ip + TcpTestIpExt>()
     where
-        TcpSyncCtx<I>: BufferIpSocketHandler<I, TcpNonSyncCtx, Buf<Vec<u8>>>
-            + IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
+        MockBufferIpTransportCtx<I>:
+            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = DummyDeviceId>,
     {
         set_logger_for_test();
         run_with_many_seeds(|seed| {
-            bind_listen_connect_accept_inner(I::UNSPECIFIED_ADDRESS, false, seed, 0.2)
+            bind_listen_connect_accept_inner::<I>(I::UNSPECIFIED_ADDRESS, false, seed, 0.2)
         });
     }
 
     #[ip_test]
     fn bound_info<I: Ip + TcpTestIpExt>()
     where
-        TcpSyncCtx<I>: BufferIpSocketHandler<I, TcpNonSyncCtx, Buf<Vec<u8>>>
-            + IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
+        MockBufferIpTransportCtx<I>:
+            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = DummyDeviceId>,
     {
-        let TcpCtx { mut sync_ctx, mut non_sync_ctx } = TcpCtx::with_state(TcpState::<I>::new(
-            I::DUMMY_CONFIG.local_ip,
-            I::DUMMY_CONFIG.remote_ip,
-            I::DUMMY_CONFIG.subnet.prefix(),
-        ));
+        let TcpCtx { mut sync_ctx, mut non_sync_ctx } =
+            TcpCtx::with_sync_ctx(TcpSyncCtx::<I>::new(
+                I::DUMMY_CONFIG.local_ip,
+                I::DUMMY_CONFIG.remote_ip,
+                I::DUMMY_CONFIG.subnet.prefix(),
+            ));
         let unbound = TcpSocketHandler::create_socket(&mut sync_ctx, &mut non_sync_ctx);
 
         let (addr, port) = (I::DUMMY_CONFIG.local_ip, PORT_1);
@@ -1765,14 +1848,15 @@ mod tests {
     #[ip_test]
     fn listener_info<I: Ip + TcpTestIpExt>()
     where
-        TcpSyncCtx<I>: BufferIpSocketHandler<I, TcpNonSyncCtx, Buf<Vec<u8>>>
-            + IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
+        MockBufferIpTransportCtx<I>:
+            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = DummyDeviceId>,
     {
-        let TcpCtx { mut sync_ctx, mut non_sync_ctx } = TcpCtx::with_state(TcpState::<I>::new(
-            I::DUMMY_CONFIG.local_ip,
-            I::DUMMY_CONFIG.remote_ip,
-            I::DUMMY_CONFIG.subnet.prefix(),
-        ));
+        let TcpCtx { mut sync_ctx, mut non_sync_ctx } =
+            TcpCtx::with_sync_ctx(TcpSyncCtx::<I>::new(
+                I::DUMMY_CONFIG.local_ip,
+                I::DUMMY_CONFIG.remote_ip,
+                I::DUMMY_CONFIG.subnet.prefix(),
+            ));
         let unbound = TcpSocketHandler::create_socket(&mut sync_ctx, &mut non_sync_ctx);
 
         let (addr, port) = (I::DUMMY_CONFIG.local_ip, PORT_1);
@@ -1789,14 +1873,15 @@ mod tests {
     #[ip_test]
     fn connection_info<I: Ip + TcpTestIpExt>()
     where
-        TcpSyncCtx<I>: BufferIpSocketHandler<I, TcpNonSyncCtx, Buf<Vec<u8>>>
-            + IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
+        MockBufferIpTransportCtx<I>:
+            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = DummyDeviceId>,
     {
-        let TcpCtx { mut sync_ctx, mut non_sync_ctx } = TcpCtx::with_state(TcpState::<I>::new(
-            I::DUMMY_CONFIG.local_ip,
-            I::DUMMY_CONFIG.remote_ip,
-            I::DUMMY_CONFIG.subnet.prefix(),
-        ));
+        let TcpCtx { mut sync_ctx, mut non_sync_ctx } =
+            TcpCtx::with_sync_ctx(TcpSyncCtx::<I>::new(
+                I::DUMMY_CONFIG.local_ip,
+                I::DUMMY_CONFIG.remote_ip,
+                I::DUMMY_CONFIG.subnet.prefix(),
+            ));
         let local = SocketAddr { ip: I::DUMMY_CONFIG.local_ip, port: PORT_1 };
         let remote = SocketAddr { ip: I::DUMMY_CONFIG.remote_ip, port: PORT_2 };
 

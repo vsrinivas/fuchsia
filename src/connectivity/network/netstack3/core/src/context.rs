@@ -1098,18 +1098,14 @@ pub(crate) mod testutil {
         }
     }
 
-    pub(crate) struct DummyCtx<S, TimerId, Meta, Event: Debug, DeviceId, NonSyncCtxState> {
-        pub(crate) sync_ctx: DummySyncCtx<S, Meta, DeviceId>,
+    #[derive(Default)]
+    pub(crate) struct DummyCtxWithSyncCtx<SC, TimerId, Event: Debug, NonSyncCtxState> {
+        pub(crate) sync_ctx: SC,
         pub(crate) non_sync_ctx: DummyNonSyncCtx<TimerId, Event, NonSyncCtxState>,
     }
 
-    impl<S: Default, Id, Meta, Event: Debug, DeviceId, NonSyncCtxState: Default> Default
-        for DummyCtx<S, Id, Meta, Event, DeviceId, NonSyncCtxState>
-    {
-        fn default() -> DummyCtx<S, Id, Meta, Event, DeviceId, NonSyncCtxState> {
-            DummyCtx::with_state(S::default())
-        }
-    }
+    pub(crate) type DummyCtx<S, TimerId, Meta, Event, DeviceId, NonSyncCtxState> =
+        DummyCtxWithSyncCtx<DummySyncCtx<S, Meta, DeviceId>, TimerId, Event, NonSyncCtxState>;
 
     impl<S, Id, Meta, Event: Debug, DeviceId, NonSyncCtxState> DummyNetworkContext
         for DummyCtx<S, Id, Meta, Event, DeviceId, NonSyncCtxState>
@@ -1118,24 +1114,24 @@ pub(crate) mod testutil {
         type SendMeta = Meta;
     }
 
-    impl<S, Id, Meta, Event: Debug, DeviceId, NonSyncCtxState> AsRef<DummyInstantCtx>
-        for DummyCtx<S, Id, Meta, Event, DeviceId, NonSyncCtxState>
+    impl<SC, Id, Event: Debug, NonSyncCtxState> AsRef<DummyInstantCtx>
+        for DummyCtxWithSyncCtx<SC, Id, Event, NonSyncCtxState>
     {
         fn as_ref(&self) -> &DummyInstantCtx {
             self.non_sync_ctx.timers.as_ref()
         }
     }
 
-    impl<S, Id, Meta, Event: Debug, DeviceId, NonSyncCtxState> AsRef<DummyTimerCtx<Id>>
-        for DummyCtx<S, Id, Meta, Event, DeviceId, NonSyncCtxState>
+    impl<SC, Id, Event: Debug, NonSyncCtxState> AsRef<DummyTimerCtx<Id>>
+        for DummyCtxWithSyncCtx<SC, Id, Event, NonSyncCtxState>
     {
         fn as_ref(&self) -> &DummyTimerCtx<Id> {
             &self.non_sync_ctx.timers
         }
     }
 
-    impl<S, Id, Meta, Event: Debug, DeviceId, NonSyncCtxState> AsMut<DummyTimerCtx<Id>>
-        for DummyCtx<S, Id, Meta, Event, DeviceId, NonSyncCtxState>
+    impl<SC, Id, Event: Debug, NonSyncCtxState> AsMut<DummyTimerCtx<Id>>
+        for DummyCtxWithSyncCtx<SC, Id, Event, NonSyncCtxState>
     {
         fn as_mut(&mut self) -> &mut DummyTimerCtx<Id> {
             &mut self.non_sync_ctx.timers
@@ -1165,9 +1161,41 @@ pub(crate) mod testutil {
                 non_sync_ctx: DummyNonSyncCtx::default(),
             }
         }
+    }
 
-        pub(crate) fn with_sync_ctx(sync_ctx: DummySyncCtx<S, Meta, DeviceId>) -> Self {
-            DummyCtx { sync_ctx, non_sync_ctx: DummyNonSyncCtx::default() }
+    impl<SC, Id, Event: Debug, NonSyncCtxState: Default>
+        DummyCtxWithSyncCtx<SC, Id, Event, NonSyncCtxState>
+    {
+        pub(crate) fn with_sync_ctx(sync_ctx: SC) -> Self {
+            DummyCtxWithSyncCtx { sync_ctx, non_sync_ctx: DummyNonSyncCtx::default() }
+        }
+    }
+
+    #[derive(Default)]
+    pub(crate) struct WrappedDummySyncCtx<Outer, S, Meta, DeviceId> {
+        pub(crate) inner: DummySyncCtx<S, Meta, DeviceId>,
+        pub(crate) outer: Outer,
+    }
+
+    impl<Outer, S, Meta, DeviceId> WrappedDummySyncCtx<Outer, S, Meta, DeviceId> {
+        pub(crate) fn with_inner_and_outer_state(inner: S, outer: Outer) -> Self {
+            Self { inner: DummySyncCtx::with_state(inner), outer }
+        }
+    }
+
+    impl<Outer, S, Meta, DeviceId> AsRef<DummySyncCtx<S, Meta, DeviceId>>
+        for WrappedDummySyncCtx<Outer, S, Meta, DeviceId>
+    {
+        fn as_ref(&self) -> &DummySyncCtx<S, Meta, DeviceId> {
+            &self.inner
+        }
+    }
+
+    impl<Outer, S, Meta, DeviceId> AsMut<DummySyncCtx<S, Meta, DeviceId>>
+        for WrappedDummySyncCtx<Outer, S, Meta, DeviceId>
+    {
+        fn as_mut(&mut self) -> &mut DummySyncCtx<S, Meta, DeviceId> {
+            &mut self.inner
         }
     }
 
@@ -1177,6 +1205,18 @@ pub(crate) mod testutil {
         state: S,
         frames: DummyFrameCtx<Meta>,
         _devices_marker: PhantomData<DeviceId>,
+    }
+
+    impl<S, Meta, DeviceId> AsRef<DummySyncCtx<S, Meta, DeviceId>> for DummySyncCtx<S, Meta, DeviceId> {
+        fn as_ref(&self) -> &DummySyncCtx<S, Meta, DeviceId> {
+            self
+        }
+    }
+
+    impl<S, Meta, DeviceId> AsMut<DummySyncCtx<S, Meta, DeviceId>> for DummySyncCtx<S, Meta, DeviceId> {
+        fn as_mut(&mut self) -> &mut DummySyncCtx<S, Meta, DeviceId> {
+            self
+        }
     }
 
     impl<S: Default, Meta, DeviceId> Default for DummySyncCtx<S, Meta, DeviceId> {
@@ -1224,6 +1264,14 @@ pub(crate) mod testutil {
     impl<S, Meta, DeviceId> AsMut<DummyFrameCtx<Meta>> for DummySyncCtx<S, Meta, DeviceId> {
         fn as_mut(&mut self) -> &mut DummyFrameCtx<Meta> {
             &mut self.frames
+        }
+    }
+
+    impl<Outer, S, Meta, DeviceId> AsMut<DummyFrameCtx<Meta>>
+        for WrappedDummySyncCtx<Outer, S, Meta, DeviceId>
+    {
+        fn as_mut(&mut self) -> &mut DummyFrameCtx<Meta> {
+            &mut self.inner.frames
         }
     }
 
@@ -1622,23 +1670,24 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<RecvMeta, S, Id, SendMeta, Event, DeviceId, CtxId, Links, NonSyncCtxState>
+    impl<RecvMeta, SC, Id, Event, CtxId, Links, NonSyncCtxState>
         DummyNetwork<
             CtxId,
             RecvMeta,
-            DummyCtx<S, Id, SendMeta, Event, DeviceId, NonSyncCtxState>,
+            DummyCtxWithSyncCtx<SC, Id, Event, NonSyncCtxState>,
             Links,
         >
     where
         Id: Copy,
         Event: Debug,
         CtxId: Eq + Hash + Copy + Debug,
-        Links: DummyNetworkLinks<SendMeta, RecvMeta, CtxId>,
+        Links: DummyNetworkLinks<<DummyCtxWithSyncCtx<SC, Id, Event, NonSyncCtxState> as DummyNetworkContext>::SendMeta, RecvMeta, CtxId>,
+        DummyCtxWithSyncCtx<SC, Id, Event, NonSyncCtxState>: DummyNetworkContext<TimerId=Id> + AsMut<DummyFrameCtx<<DummyCtxWithSyncCtx<SC, Id, Event, NonSyncCtxState> as DummyNetworkContext>::SendMeta>>
     {
         pub(crate) fn with_context<
             K: Into<CtxId>,
             O,
-            F: FnOnce(&mut DummyCtx<S, Id, SendMeta, Event, DeviceId, NonSyncCtxState>) -> O,
+            F: FnOnce(&mut DummyCtxWithSyncCtx<SC, Id, Event, NonSyncCtxState>) -> O,
         >(
             &mut self,
             context: K,
@@ -1651,8 +1700,8 @@ pub(crate) mod testutil {
         pub(crate) fn sync_ctx<K: Into<CtxId>>(
             &mut self,
             context: K,
-        ) -> &mut DummySyncCtx<S, SendMeta, DeviceId> {
-            let DummyCtx { sync_ctx, non_sync_ctx: _ } = self.context(context);
+        ) -> &mut SC {
+            let DummyCtxWithSyncCtx { sync_ctx, non_sync_ctx: _ } = self.context(context);
             sync_ctx
         }
     }

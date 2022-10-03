@@ -112,15 +112,18 @@ pub(crate) struct TransportLayerState<C: TcpNonSyncContext> {
 }
 
 impl<C: NonSyncContext> TcpSyncContext<Ipv4, C> for &'_ SyncCtx<C> {
-    fn with_isn_generator_and_tcp_sockets_mut<
+    type IpTransportCtx = Self;
+
+    fn with_ip_transport_ctx_isn_generator_and_tcp_sockets_mut<
         O,
-        F: FnOnce(&IsnGenerator<C::Instant>, &mut TcpSockets<Ipv4, Self::DeviceId, C>) -> O,
+        F: FnOnce(&mut Self, &IsnGenerator<C::Instant>, &mut TcpSockets<Ipv4, Self::DeviceId, C>) -> O,
     >(
         &mut self,
         cb: F,
     ) -> O {
-        let TcpState { isn_generator, sockets } = &self.state.transport.tcpv4;
-        cb(isn_generator, &mut sockets.lock())
+        let mut s = *self;
+        let TcpState { isn_generator, sockets } = &s.state.transport.tcpv4;
+        cb(&mut s, isn_generator, &mut sockets.lock())
     }
 
     fn with_tcp_sockets<O, F: FnOnce(&TcpSockets<Ipv4, Self::DeviceId, C>) -> O>(
@@ -133,15 +136,18 @@ impl<C: NonSyncContext> TcpSyncContext<Ipv4, C> for &'_ SyncCtx<C> {
 }
 
 impl<C: NonSyncContext> TcpSyncContext<Ipv6, C> for &'_ SyncCtx<C> {
-    fn with_isn_generator_and_tcp_sockets_mut<
+    type IpTransportCtx = Self;
+
+    fn with_ip_transport_ctx_isn_generator_and_tcp_sockets_mut<
         O,
-        F: FnOnce(&IsnGenerator<C::Instant>, &mut TcpSockets<Ipv6, Self::DeviceId, C>) -> O,
+        F: FnOnce(&mut Self, &IsnGenerator<C::Instant>, &mut TcpSockets<Ipv6, Self::DeviceId, C>) -> O,
     >(
         &mut self,
         cb: F,
     ) -> O {
-        let TcpState { isn_generator, sockets } = &self.state.transport.tcpv6;
-        cb(isn_generator, &mut sockets.lock())
+        let mut s = *self;
+        let TcpState { isn_generator, sockets } = &s.state.transport.tcpv6;
+        cb(&mut s, isn_generator, &mut sockets.lock())
     }
 
     fn with_tcp_sockets<O, F: FnOnce(&TcpSockets<Ipv6, Self::DeviceId, C>) -> O>(
