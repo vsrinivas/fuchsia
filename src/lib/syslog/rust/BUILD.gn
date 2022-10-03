@@ -74,7 +74,6 @@ rust_fuchsia_syslog_visibility_allowlist = [
   "//src/media/stream_processors/test:*",
   "//src/power/power-manager:*",
   "//src/recovery/factory-reset-trigger:*",
-  "//src/recovery/progress-ui:*",
   "//src/security/tee_manager:*",
   "//src/settings/service:*",
   "//src/settings/service/integration_tests:*",

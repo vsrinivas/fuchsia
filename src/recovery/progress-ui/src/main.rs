@@ -25,7 +25,6 @@ use fidl_fuchsia_recovery_ui::{
     ProgressRendererMarker, ProgressRendererRequest, ProgressRendererRequestStream, Status,
 };
 use fuchsia_async as fasync;
-use fuchsia_syslog::{fx_log_err, fx_log_info};
 use fuchsia_zircon::{Duration, Event};
 use futures::prelude::*;
 #[cfg(feature = "debug_touch_to_update")]
@@ -38,6 +37,7 @@ use recovery_util::ui::progress_bar::{
 use rive_rs::File;
 #[cfg(feature = "debug_touch_to_update")]
 use std::time::Instant;
+use tracing::{error, info};
 
 const LOGO_IMAGE_PATH: &str = "/pkg/data/logo.riv";
 const BG_COLOR: Color = Color::white();
@@ -220,19 +220,19 @@ impl ProgressBarAppAssistant {
                     make_message(ProgressBarMessages::SetProgress(1.0)),
                 );
             }
-            _ => fx_log_err!("Unhandled progress update {:?}", status),
+            _ => error!("Unhandled progress update {:?}", status),
         };
     }
 }
 
 impl AppAssistant for ProgressBarAppAssistant {
     fn setup(&mut self) -> Result<(), Error> {
-        fx_log_info!("AppAssistant setup");
+        info!("AppAssistant setup");
         Ok(())
     }
 
     fn create_view_assistant(&mut self, view_key: ViewKey) -> Result<ViewAssistantPtr, Error> {
-        fx_log_info!("Create view assistant");
+        info!("Create view assistant");
         self.progress_view_key = Some(view_key.clone());
         Ok(Box::new(ProgressBarViewAssistant::new(self.app_sender.clone(), view_key, 0.0)?))
     }
@@ -258,7 +258,7 @@ impl AppAssistant for ProgressBarAppAssistant {
         service_name: &str,
         channel: fasync::Channel,
     ) -> Result<(), Error> {
-        fx_log_info!("Handle Service Connection Request");
+        info!("Handle Service Connection Request");
         match service_name {
             ProgressRendererMarker::PROTOCOL_NAME => {
                 let app_sender = self.app_sender.clone();
@@ -319,9 +319,9 @@ impl AppAssistant for ProgressBarAppAssistant {
 fn make_app_assistant_fut(
     app_sender: &AppSender,
 ) -> LocalBoxFuture<'_, Result<AppAssistantPtr, Error>> {
-    fx_log_info!("make_app_assistant_fut");
+    info!("make_app_assistant_fut");
     let f = async move {
-        fx_log_info!("in async move");
+        info!("in async move");
         let assistant = Box::new(ProgressBarAppAssistant::new(app_sender));
         Ok::<AppAssistantPtr, Error>(assistant)
     };
@@ -329,7 +329,7 @@ fn make_app_assistant_fut(
 }
 
 pub fn make_app_assistant() -> AssistantCreatorFunc {
-    fx_log_info!("Make app assistant");
+    info!("Make app assistant");
     Box::new(make_app_assistant_fut)
 }
 
