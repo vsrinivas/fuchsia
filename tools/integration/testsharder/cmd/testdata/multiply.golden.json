@@ -30,7 +30,6 @@
                 "log_settings": {},
                 "runs": 50,
                 "run_algorithm": "STOP_ON_FAILURE",
-                "stop_repeating_after_secs": 5,
                 "tags": [
                     {
                         "key": "expected_duration_milliseconds",

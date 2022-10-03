@@ -77,7 +77,6 @@
                 "log_settings": {},
                 "runs": 100,
                 "run_algorithm": "STOP_ON_FAILURE",
-                "stop_repeating_after_secs": 120,
                 "affected": true,
                 "tags": [
                     {

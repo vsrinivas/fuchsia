@@ -132,7 +132,6 @@ func SplitOutMultipliers(
 			if test.RunAlgorithm != StopOnFailure {
 				continue
 			}
-			test.StopRepeatingAfterSecs = int(targetDuration.Seconds())
 			shard.Tests[ti] = test
 			shardIdxToMatches[si][ti] = struct{}{}
 		}

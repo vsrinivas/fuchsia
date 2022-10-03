@@ -388,15 +388,15 @@ func TestSplitOutMultipliers(t *testing.T) {
 			expected: []*Shard{
 				withStopRepeatingAfterSecs(
 					multShardWithIndex(env1, "fuchsia", 500, 10, 1, 6, 1),
-					map[int]int{0: 10, 1: 10},
+					map[int]int{0: 0, 1: 0},
 				),
 				withStopRepeatingAfterSecs(
 					multShardWithIndex(env1, "fuchsia", 500, 10, 2, 4, 2),
-					map[int]int{0: 10, 1: 10},
+					map[int]int{0: 0, 1: 0},
 				),
 				withStopRepeatingAfterSecs(
 					multShardWithIndex(env1, "fuchsia", 500, 10, 3, 5, 3),
-					map[int]int{0: 10, 1: 10},
+					map[int]int{0: 0, 1: 0},
 				),
 			},
 		},
@@ -414,8 +414,14 @@ func TestSplitOutMultipliers(t *testing.T) {
 			},
 			targetDuration: 10 * time.Second,
 			expected: []*Shard{
-				multShardWithIndex(env1, "fuchsia", 50, 10, 1, 1),
-				multShardWithIndex(env1, "fuchsia", 50, 10, 2, 2),
+				withStopRepeatingAfterSecs(
+					multShardWithIndex(env1, "fuchsia", 50, 10, 1, 1),
+					map[int]int{0: 0},
+				),
+				withStopRepeatingAfterSecs(
+					multShardWithIndex(env1, "fuchsia", 50, 10, 2, 2),
+					map[int]int{0: 0},
+				),
 			},
 		},
 		{
