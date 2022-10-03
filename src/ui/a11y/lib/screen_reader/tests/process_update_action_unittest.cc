@@ -73,8 +73,8 @@ TEST_F(ProcessUpdateActionTest, ChangeInDescribableContentOfFocusedNodeCausesNod
   action.Run({});
   RunLoopUntilIdle();
   EXPECT_TRUE(mock_speaker()->ReceivedSpeak());
-  ASSERT_EQ(mock_speaker()->node_ids().size(), 1u);
-  EXPECT_EQ(mock_speaker()->node_ids()[0], 0u);
+  ASSERT_EQ(mock_speaker()->speak_node_ids().size(), 1u);
+  EXPECT_EQ(mock_speaker()->speak_node_ids()[0], 0u);
 }
 
 TEST_F(ProcessUpdateActionTest, TtsShouldBeNonInterrupting) {
@@ -87,7 +87,7 @@ TEST_F(ProcessUpdateActionTest, TtsShouldBeNonInterrupting) {
   RunLoopUntilIdle();
   EXPECT_TRUE(mock_speaker()->ReceivedSpeak());
 
-  ASSERT_EQ(mock_speaker()->node_ids().size(), 1u);
+  ASSERT_EQ(mock_speaker()->speak_node_ids().size(), 1u);
   ASSERT_EQ(mock_speaker()->speak_node_options().size(), 1u);
   // Most screen reader TTSes are interrupting, but the TTSes from this action
   // should be noninterrupting.
@@ -114,17 +114,17 @@ TEST_F(ProcessUpdateActionTest, FrequentNodeUpdatesRespectDelayOfOutputs) {
   action.Run({});
   RunLoopUntilIdle();
   EXPECT_TRUE(mock_speaker()->ReceivedSpeak());
-  ASSERT_EQ(mock_speaker()->node_ids().size(), 1u);
-  EXPECT_EQ(mock_speaker()->node_ids()[0], 0u);
+  ASSERT_EQ(mock_speaker()->speak_node_ids().size(), 1u);
+  EXPECT_EQ(mock_speaker()->speak_node_ids()[0], 0u);
   RunLoopFor(zx::msec(50));
   action.Run({});
   RunLoopUntilIdle();
   // No extra output should be spoken at this point.
-  ASSERT_EQ(mock_speaker()->node_ids().size(), 1u);
+  ASSERT_EQ(mock_speaker()->speak_node_ids().size(), 1u);
   RunLoopFor(zx::sec(1));
   action.Run({});
   RunLoopUntilIdle();
-  ASSERT_EQ(mock_speaker()->node_ids().size(), 2u);
+  ASSERT_EQ(mock_speaker()->speak_node_ids().size(), 2u);
 }
 
 TEST_F(ProcessUpdateActionTest, FocusedNodeIsNotDescribable) {
@@ -147,13 +147,13 @@ TEST_F(ProcessUpdateActionTest, AvoidsSpeakingWhenuserIsNotActive) {
   action.Run({});
   RunLoopUntilIdle();
   EXPECT_TRUE(mock_speaker()->ReceivedSpeak());
-  ASSERT_EQ(mock_speaker()->node_ids().size(), 1u);
-  EXPECT_EQ(mock_speaker()->node_ids()[0], 0u);
+  ASSERT_EQ(mock_speaker()->speak_node_ids().size(), 1u);
+  EXPECT_EQ(mock_speaker()->speak_node_ids()[0], 0u);
   RunLoopFor(zx::min(6));
   action.Run({});
   RunLoopUntilIdle();
   // No extra output should be spoken at this point.
-  ASSERT_EQ(mock_speaker()->node_ids().size(), 1u);
+  ASSERT_EQ(mock_speaker()->speak_node_ids().size(), 1u);
 }
 
 }  // namespace

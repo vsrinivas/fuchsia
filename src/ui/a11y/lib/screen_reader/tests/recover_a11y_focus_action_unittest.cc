@@ -98,7 +98,7 @@ TEST_F(RecoverA11YFocusActionTest, InvalidFocusRecoversToFirstDescribableNode) {
   ASSERT_TRUE(focus);
   EXPECT_EQ(mock_semantic_provider()->koid(), focus->view_ref_koid);
   EXPECT_EQ(focus->node_id, 1u);
-  EXPECT_TRUE(mock_speaker()->node_ids().empty());
+  EXPECT_TRUE(mock_speaker()->speak_node_ids().empty());
   EXPECT_TRUE(mock_screen_reader_context()->current_navigation_context().containers.empty());
 }
 

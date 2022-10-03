@@ -58,10 +58,10 @@ class MockScreenReaderContext : public a11y::ScreenReaderContext {
     // The following three methods return parallel vectors of the arguments sent
     // to calls of SpeakNodePromise() or
     // SpeakNodeCanonicalizedLabelPromise().
-    std::vector<uint32_t>& node_ids() { return speak_node_ids_; }
+    std::vector<uint32_t>& speak_node_ids() { return speak_node_ids_; }
     std::vector<Options>& speak_node_options() { return speak_node_options_; }
     std::vector<a11y::ScreenReaderMessageGenerator::ScreenReaderMessageContext>&
-    message_contexts() {
+    speak_node_message_contexts() {
       return speak_node_message_contexts_;
     }
 

@@ -66,8 +66,8 @@ TEST_F(ExploreActionTest, SuccessfulExploreActionReadsNode) {
   EXPECT_EQ(focus->node_id, 0u);
   EXPECT_EQ(focus->view_ref_koid, mock_semantic_provider()->koid());
   EXPECT_TRUE(mock_speaker()->ReceivedSpeak());
-  ASSERT_EQ(mock_speaker()->node_ids().size(), 1u);
-  EXPECT_EQ(mock_speaker()->node_ids()[0], 0u);
+  ASSERT_EQ(mock_speaker()->speak_node_ids().size(), 1u);
+  EXPECT_EQ(mock_speaker()->speak_node_ids()[0], 0u);
 }
 
 TEST_F(ExploreActionTest, HitTestFails) {
@@ -87,7 +87,7 @@ TEST_F(ExploreActionTest, HitTestFails) {
 
   EXPECT_FALSE(mock_a11y_focus_manager()->IsSetA11yFocusCalled());
   EXPECT_FALSE(mock_speaker()->ReceivedSpeak());
-  ASSERT_TRUE(mock_speaker()->node_ids().empty());
+  ASSERT_TRUE(mock_speaker()->speak_node_ids().empty());
 }
 
 TEST_F(ExploreActionTest, SetA11yFocusFails) {
@@ -114,7 +114,7 @@ TEST_F(ExploreActionTest, SetA11yFocusFails) {
   EXPECT_NE(focus->view_ref_koid, mock_semantic_provider()->koid());
 
   EXPECT_FALSE(mock_speaker()->ReceivedSpeak());
-  ASSERT_TRUE(mock_speaker()->node_ids().empty());
+  ASSERT_TRUE(mock_speaker()->speak_node_ids().empty());
 }
 
 TEST_F(ExploreActionTest, GettingA11yFocusFails) {
@@ -144,7 +144,7 @@ TEST_F(ExploreActionTest, GettingA11yFocusFails) {
   EXPECT_EQ(focus->view_ref_koid, mock_semantic_provider()->koid());
 
   EXPECT_FALSE(mock_speaker()->ReceivedSpeak());
-  ASSERT_TRUE(mock_speaker()->node_ids().empty());
+  ASSERT_TRUE(mock_speaker()->speak_node_ids().empty());
 }
 
 TEST_F(ExploreActionTest, HitTestNodeIDResultIsNotPresentInTheTree) {
@@ -186,8 +186,8 @@ TEST_F(ExploreActionTest, HitTestNodeNotDescribable) {
 
   EXPECT_TRUE(mock_a11y_focus_manager()->IsSetA11yFocusCalled());
   EXPECT_TRUE(mock_speaker()->ReceivedSpeak());
-  ASSERT_FALSE(mock_speaker()->node_ids().empty());
-  EXPECT_EQ(mock_speaker()->node_ids()[0], 0u);
+  ASSERT_FALSE(mock_speaker()->speak_node_ids().empty());
+  EXPECT_EQ(mock_speaker()->speak_node_ids()[0], 0u);
 }
 
 TEST_F(ExploreActionTest, IgnoresRedundantNodes) {
@@ -227,9 +227,9 @@ TEST_F(ExploreActionTest, IgnoresRedundantNodes) {
 
   EXPECT_TRUE(mock_a11y_focus_manager()->IsSetA11yFocusCalled());
   EXPECT_TRUE(mock_speaker()->ReceivedSpeak());
-  ASSERT_EQ(mock_speaker()->node_ids().size(), 1u);
+  ASSERT_EQ(mock_speaker()->speak_node_ids().size(), 1u);
   // We walk up to node 1 because nodes 2 and 3 are rendundant.
-  EXPECT_EQ(mock_speaker()->node_ids()[0], 1u);
+  EXPECT_EQ(mock_speaker()->speak_node_ids()[0], 1u);
 }
 
 TEST_F(ExploreActionTest, ContinuousExploreSpeaksNodeWhenA11yFocusIsDifferent) {
@@ -280,7 +280,7 @@ TEST_F(ExploreActionTest, ContinuousExploreDropsWhenA11yFocusIsTheSame) {
   explore_action.Run(gesture_context);
   RunLoopUntilIdle();
   EXPECT_FALSE(mock_speaker()->ReceivedSpeak());
-  ASSERT_TRUE(mock_speaker()->node_ids().empty());
+  ASSERT_TRUE(mock_speaker()->speak_node_ids().empty());
 }
 
 TEST_F(ExploreActionTest, ReadsKeyboardKey) {
@@ -300,8 +300,8 @@ TEST_F(ExploreActionTest, ReadsKeyboardKey) {
   RunLoopUntilIdle();
 
   EXPECT_TRUE(mock_speaker()->ReceivedSpeakLabel());
-  ASSERT_EQ(mock_speaker()->node_ids().size(), 1u);
-  EXPECT_EQ(mock_speaker()->node_ids()[0], 0u);
+  ASSERT_EQ(mock_speaker()->speak_node_ids().size(), 1u);
+  EXPECT_EQ(mock_speaker()->speak_node_ids()[0], 0u);
 }
 
 TEST_F(ExploreActionTest, UpdatesNavigationContext) {
@@ -416,9 +416,9 @@ TEST_F(ExploreActionTest, UserExitsTableInSeparateView) {
   EXPECT_EQ(mock_a11y_focus_manager()->GetA11yFocus().value().view_ref_koid,
             semantic_provider_2.koid());
   EXPECT_TRUE(mock_speaker()->ReceivedSpeak());
-  EXPECT_EQ(mock_speaker()->node_ids().size(), 1u);
-  EXPECT_EQ(mock_speaker()->node_ids()[0], 0u);
-  ASSERT_TRUE(mock_speaker()->message_contexts()[0].entered_containers.empty());
+  EXPECT_EQ(mock_speaker()->speak_node_ids().size(), 1u);
+  EXPECT_EQ(mock_speaker()->speak_node_ids()[0], 0u);
+  ASSERT_TRUE(mock_speaker()->speak_node_message_contexts()[0].entered_containers.empty());
 }
 
 TEST_F(ExploreActionTest, NextActionEnteringAndExitingMultipleNestedContainers) {
@@ -544,18 +544,18 @@ TEST_F(ExploreActionTest, NextActionEnteringAndExitingMultipleNestedContainers) 
   EXPECT_EQ(mock_semantic_provider()->koid(),
             mock_a11y_focus_manager()->GetA11yFocus().value().view_ref_koid);
   EXPECT_TRUE(mock_speaker()->ReceivedSpeak());
-  ASSERT_EQ(mock_speaker()->node_ids().size(), 1u);
-  EXPECT_EQ(mock_speaker()->node_ids()[0], 10u);
+  ASSERT_EQ(mock_speaker()->speak_node_ids().size(), 1u);
+  EXPECT_EQ(mock_speaker()->speak_node_ids()[0], 10u);
 
-  ASSERT_EQ(mock_speaker()->message_contexts().size(), 1u);
-  ASSERT_EQ(mock_speaker()->message_contexts()[0].exited_containers.size(), 3u);
-  EXPECT_EQ(mock_speaker()->message_contexts()[0].exited_containers[0]->node_id(), 4u);
-  EXPECT_EQ(mock_speaker()->message_contexts()[0].exited_containers[1]->node_id(), 3u);
-  EXPECT_EQ(mock_speaker()->message_contexts()[0].exited_containers[2]->node_id(), 1u);
-  ASSERT_EQ(mock_speaker()->message_contexts()[0].entered_containers.size(), 3u);
-  EXPECT_EQ(mock_speaker()->message_contexts()[0].entered_containers[0]->node_id(), 6u);
-  EXPECT_EQ(mock_speaker()->message_contexts()[0].entered_containers[1]->node_id(), 8u);
-  EXPECT_EQ(mock_speaker()->message_contexts()[0].entered_containers[2]->node_id(), 9u);
+  ASSERT_EQ(mock_speaker()->speak_node_message_contexts().size(), 1u);
+  ASSERT_EQ(mock_speaker()->speak_node_message_contexts()[0].exited_containers.size(), 3u);
+  EXPECT_EQ(mock_speaker()->speak_node_message_contexts()[0].exited_containers[0]->node_id(), 4u);
+  EXPECT_EQ(mock_speaker()->speak_node_message_contexts()[0].exited_containers[1]->node_id(), 3u);
+  EXPECT_EQ(mock_speaker()->speak_node_message_contexts()[0].exited_containers[2]->node_id(), 1u);
+  ASSERT_EQ(mock_speaker()->speak_node_message_contexts()[0].entered_containers.size(), 3u);
+  EXPECT_EQ(mock_speaker()->speak_node_message_contexts()[0].entered_containers[0]->node_id(), 6u);
+  EXPECT_EQ(mock_speaker()->speak_node_message_contexts()[0].entered_containers[1]->node_id(), 8u);
+  EXPECT_EQ(mock_speaker()->speak_node_message_contexts()[0].entered_containers[2]->node_id(), 9u);
 }
 
 }  // namespace
