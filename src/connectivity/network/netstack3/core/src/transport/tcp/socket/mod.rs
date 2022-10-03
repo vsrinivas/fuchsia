@@ -1191,7 +1191,7 @@ mod tests {
 
     use super::*;
 
-    trait TcpTestIpExt: IpExt + TestIpExt + IpDeviceStateIpExt<DummyInstant> {
+    trait TcpTestIpExt: IpExt + TestIpExt + IpDeviceStateIpExt {
         fn recv_src_addr(addr: Self::Addr) -> Self::RecvSrcAddr;
 
         fn new_device_state(addr: Self::Addr, prefix: u8) -> IpDeviceState<DummyInstant, Self>;

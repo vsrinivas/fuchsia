@@ -1102,7 +1102,6 @@ mod test {
     use nonzero_ext::nonzero;
 
     use crate::{
-        context::testutil::DummyInstant,
         data_structures::socketmap::SocketMap,
         ip::{
             device::state::IpDeviceStateIpExt, socket::testutil::DummyIpSocketCtx,
@@ -1114,7 +1113,7 @@ mod test {
 
     use super::*;
 
-    trait DatagramIpExt: Ip + IpExt + IpDeviceStateIpExt<DummyInstant> {}
+    trait DatagramIpExt: Ip + IpExt + IpDeviceStateIpExt {}
 
     impl DatagramIpExt for Ipv4 {}
     impl DatagramIpExt for Ipv6 {}

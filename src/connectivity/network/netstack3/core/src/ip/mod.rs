@@ -407,40 +407,31 @@ pub(crate) enum Ipv6PresentAddressStatus {
 /// An extension trait providing IP layer properties.
 pub(crate) trait IpLayerIpExt: IpExt {
     type AddressStatus;
+    type State<I: Instant, DeviceId>: AsRef<IpStateInner<Self, I, DeviceId>>;
 }
 
 impl IpLayerIpExt for Ipv4 {
     type AddressStatus = Ipv4PresentAddressStatus;
+    type State<I: Instant, DeviceId> = Ipv4State<I, DeviceId>;
 }
 
 impl IpLayerIpExt for Ipv6 {
     type AddressStatus = Ipv6PresentAddressStatus;
-}
-
-/// An extension trait providing IP layer state properties.
-pub(crate) trait IpLayerStateIpExt<I: Instant, DeviceId>: IpLayerIpExt {
-    type State: AsRef<IpStateInner<Self, I, DeviceId>>;
-}
-
-impl<I: Instant, DeviceId> IpLayerStateIpExt<I, DeviceId> for Ipv4 {
-    type State = Ipv4State<I, DeviceId>;
-}
-
-impl<I: Instant, DeviceId> IpLayerStateIpExt<I, DeviceId> for Ipv6 {
-    type State = Ipv6State<I, DeviceId>;
+    type State<I: Instant, DeviceId> = Ipv6State<I, DeviceId>;
 }
 
 /// The state context provided to the IP layer.
 // TODO(https://fxbug.dev/48578): Do not return references to state. Instead,
 // callers of methods on this trait should provide a callback that takes a state
 // reference.
-pub(crate) trait IpStateContext<
-    I: IpLayerStateIpExt<Instant, Self::DeviceId>,
-    Instant: crate::Instant,
->: IpDeviceIdContext<I>
+pub(crate) trait IpStateContext<I: IpLayerIpExt, Instant: crate::Instant>:
+    IpDeviceIdContext<I>
 {
     /// Calls the function with an immutable reference to IP layer state.
-    fn with_ip_layer_state<O, F: FnOnce(&I::State) -> O>(&self, cb: F) -> O;
+    fn with_ip_layer_state<O, F: FnOnce(&I::State<Instant, Self::DeviceId>) -> O>(
+        &self,
+        cb: F,
+    ) -> O;
 }
 
 /// The IP device context provided to the IP layer.
@@ -519,14 +510,14 @@ impl<
 
 /// The execution context for the IP layer.
 pub(crate) trait IpLayerContext<
-    I: IpLayerStateIpExt<C::Instant, Self::DeviceId>,
+    I: IpLayerIpExt,
     C: IpLayerNonSyncContext<I, <Self as IpDeviceIdContext<I>>::DeviceId>,
 >: IpStateContext<I, C::Instant> + IpDeviceContext<I, C>
 {
 }
 
 impl<
-        I: IpLayerStateIpExt<C::Instant, SC::DeviceId>,
+        I: IpLayerIpExt,
         C: IpLayerNonSyncContext<I, <SC as IpDeviceIdContext<I>>::DeviceId>,
         SC: IpStateContext<I, C::Instant> + IpDeviceContext<I, C>,
     > IpLayerContext<I, C> for SC
@@ -717,7 +708,7 @@ pub(crate) trait BufferIpDeviceContext<I: IpLayerIpExt, C, B: BufferMut>:
 
 /// The execution context for the IP layer requiring buffer.
 pub(crate) trait BufferIpLayerContext<
-    I: IpLayerStateIpExt<C::Instant, Self::DeviceId> + IcmpHandlerIpExt,
+    I: IpLayerIpExt + IcmpHandlerIpExt,
     C: IpLayerNonSyncContext<I, Self::DeviceId>,
     B: BufferMut,
 >:
@@ -730,7 +721,7 @@ pub(crate) trait BufferIpLayerContext<
 }
 
 impl<
-        I: IpLayerStateIpExt<C::Instant, Self::DeviceId> + IcmpHandlerIpExt,
+        I: IpLayerIpExt + IcmpHandlerIpExt,
         C: IpLayerNonSyncContext<I, SC::DeviceId>,
         B: BufferMut,
         SC: BufferTransportContext<I, C, B>
@@ -1994,7 +1985,7 @@ fn receive_ipv6_packet_action<
 /// Computes the remaining protocol-agnostic actions on behalf of
 /// [`receive_ipv4_packet_action`] and [`receive_ipv6_packet_action`].
 fn receive_ip_packet_action_common<
-    I: IpLayerStateIpExt<C::Instant, SC::DeviceId>,
+    I: IpLayerIpExt,
     C: IpLayerNonSyncContext<I, SC::DeviceId>,
     SC: IpLayerContext<I, C>,
 >(
@@ -2035,7 +2026,7 @@ fn receive_ip_packet_action_common<
 
 // Look up the route to a host.
 fn lookup_route<
-    I: IpLayerStateIpExt<C::Instant, SC::DeviceId>,
+    I: IpLayerIpExt,
     C: IpLayerNonSyncContext<I, SC::DeviceId>,
     SC: IpLayerContext<I, C>,
 >(
@@ -2051,7 +2042,7 @@ fn lookup_route<
 
 fn with_ip_layer_state_inner<
     'a,
-    I: IpLayerStateIpExt<C::Instant, SC::DeviceId>,
+    I: IpLayerIpExt,
     C: IpLayerNonSyncContext<I, SC::DeviceId>,
     SC: IpLayerContext<I, C>,
     O,
@@ -2066,7 +2057,7 @@ fn with_ip_layer_state_inner<
 /// Add a route to the forwarding table, returning `Err` if the subnet
 /// is already in the table.
 pub(crate) fn add_route<
-    I: IpLayerStateIpExt<C::Instant, SC::DeviceId>,
+    I: IpLayerIpExt,
     C: IpLayerNonSyncContext<I, SC::DeviceId>,
     SC: IpLayerContext<I, C>,
 >(
@@ -2081,7 +2072,7 @@ pub(crate) fn add_route<
 /// Add a device route to the forwarding table, returning `Err` if the
 /// subnet is already in the table.
 pub(crate) fn add_device_route<
-    I: IpLayerStateIpExt<C::Instant, SC::DeviceId>,
+    I: IpLayerIpExt,
     C: IpLayerNonSyncContext<I, SC::DeviceId>,
     SC: IpLayerContext<I, C>,
 >(
@@ -2100,7 +2091,7 @@ pub(crate) fn add_device_route<
 /// Delete a route from the forwarding table, returning `Err` if no
 /// route was found to be deleted.
 pub(crate) fn del_route<
-    I: IpLayerStateIpExt<C::Instant, SC::DeviceId>,
+    I: IpLayerIpExt,
     C: IpLayerNonSyncContext<I, SC::DeviceId>,
     SC: IpLayerContext<I, C>,
 >(
@@ -2119,7 +2110,7 @@ pub(crate) fn del_route<
 }
 
 pub(crate) fn del_device_routes<
-    I: IpLayerStateIpExt<C::Instant, SC::DeviceId>,
+    I: IpLayerIpExt,
     SC: IpLayerContext<I, C>,
     C: IpLayerNonSyncContext<I, SC::DeviceId>,
 >(

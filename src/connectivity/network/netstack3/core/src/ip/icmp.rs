@@ -3857,7 +3857,7 @@ mod tests {
         err: I::ErrorCode,
     }
 
-    struct DummyIcmpCtx<I: IcmpIpExt + IpDeviceStateIpExt<DummyInstant>, D> {
+    struct DummyIcmpCtx<I: IcmpIpExt + IpDeviceStateIpExt, D> {
         receive_icmp_error: Vec<I::ErrorCode>,
         pmtu_state: DummyPmtuState<I::Addr>,
         socket_ctx: DummyIpSocketCtx<I, D>,
@@ -3881,7 +3881,7 @@ mod tests {
         }
     }
 
-    impl<I: IcmpIpExt + IpDeviceStateIpExt<DummyInstant>, D> DummyIcmpCtx<I, D> {
+    impl<I: IcmpIpExt + IpDeviceStateIpExt, D> DummyIcmpCtx<I, D> {
         fn new(socket_ctx: DummyIpSocketCtx<I, D>) -> Self {
             DummyIcmpCtx {
                 receive_icmp_error: Vec::new(),

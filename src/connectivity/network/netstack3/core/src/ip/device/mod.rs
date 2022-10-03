@@ -187,21 +187,21 @@ pub(crate) fn handle_ipv6_timer<
 }
 
 /// An extension trait adding IP device properties.
-pub(crate) trait IpDeviceIpExt<Instant, DeviceId>: IpDeviceStateIpExt<Instant> {
-    type State: AsRef<IpDeviceState<Instant, Self>>
-        + AsMut<IpDeviceState<Instant, Self>>
+pub(crate) trait IpDeviceIpExt: IpDeviceStateIpExt {
+    type State<I: Instant>: AsRef<IpDeviceState<I, Self>>
+        + AsMut<IpDeviceState<I, Self>>
         + AsRef<IpDeviceConfiguration>;
-    type Timer;
+    type Timer<DeviceId>;
 }
 
-impl<I: Instant, DeviceId> IpDeviceIpExt<I, DeviceId> for Ipv4 {
-    type State = Ipv4DeviceState<I>;
-    type Timer = Ipv4DeviceTimerId<DeviceId>;
+impl IpDeviceIpExt for Ipv4 {
+    type State<I: Instant> = Ipv4DeviceState<I>;
+    type Timer<DeviceId> = Ipv4DeviceTimerId<DeviceId>;
 }
 
-impl<I: Instant, DeviceId> IpDeviceIpExt<I, DeviceId> for Ipv6 {
-    type State = Ipv6DeviceState<I>;
-    type Timer = Ipv6DeviceTimerId<DeviceId>;
+impl IpDeviceIpExt for Ipv6 {
+    type State<I: Instant> = Ipv6DeviceState<I>;
+    type Timer<DeviceId> = Ipv6DeviceTimerId<DeviceId>;
 }
 
 /// IP address assignment states.
@@ -291,11 +291,11 @@ impl<C: DualStackDeviceNonSyncContext, SC: DualStackDeviceContext<C>> DualStackD
             let addrs_v4 = ipv4
                 .ip_state
                 .iter_addrs()
-                .filter_map(<Ipv4 as IpDeviceStateIpExt<C::Instant>>::assigned_addr);
+                .filter_map(<Ipv4 as IpDeviceStateIpExt>::assigned_addr::<C::Instant>);
             let addrs_v6 = ipv6
                 .ip_state
                 .iter_addrs()
-                .filter_map(<Ipv6 as IpDeviceStateIpExt<C::Instant>>::assigned_addr);
+                .filter_map(<Ipv6 as IpDeviceStateIpExt>::assigned_addr::<C::Instant>);
 
             addrs_v4.map(AddrSubnetEither::V4).chain(addrs_v6.map(AddrSubnetEither::V6)).collect()
         })
@@ -303,18 +303,18 @@ impl<C: DualStackDeviceNonSyncContext, SC: DualStackDeviceContext<C>> DualStackD
 }
 
 /// The non-synchronized execution context for IP devices.
-pub(crate) trait IpDeviceNonSyncContext<
-    I: IpDeviceIpExt<<Self as InstantContext>::Instant, DeviceId>,
-    DeviceId,
->:
-    RngContext + TimerContext<I::Timer> + EventContext<IpDeviceEvent<DeviceId, I>> + CounterContext
+pub(crate) trait IpDeviceNonSyncContext<I: IpDeviceIpExt, DeviceId>:
+    RngContext
+    + TimerContext<I::Timer<DeviceId>>
+    + EventContext<IpDeviceEvent<DeviceId, I>>
+    + CounterContext
 {
 }
 impl<
         DeviceId,
-        I: IpDeviceIpExt<<C as InstantContext>::Instant, DeviceId>,
+        I: IpDeviceIpExt,
         C: RngContext
-            + TimerContext<I::Timer>
+            + TimerContext<I::Timer<DeviceId>>
             + EventContext<IpDeviceEvent<DeviceId, I>>
             + CounterContext,
     > IpDeviceNonSyncContext<I, DeviceId> for C
@@ -322,21 +322,20 @@ impl<
 }
 
 /// The execution context for IP devices.
-pub(crate) trait IpDeviceContext<
-    I: IpDeviceIpExt<C::Instant, Self::DeviceId>,
-    C: IpDeviceNonSyncContext<I, Self::DeviceId>,
->: IpDeviceIdContext<I> where
-    I::State: AsRef<IpDeviceState<C::Instant, I>>,
+pub(crate) trait IpDeviceContext<I: IpDeviceIpExt, C: IpDeviceNonSyncContext<I, Self::DeviceId>>:
+    IpDeviceIdContext<I>
+where
+    I::State<C::Instant>: AsRef<IpDeviceState<C::Instant, I>>,
 {
     /// Calls the function with an immutable reference to IP device state.
-    fn with_ip_device_state<O, F: FnOnce(&I::State) -> O>(
+    fn with_ip_device_state<O, F: FnOnce(&I::State<C::Instant>) -> O>(
         &self,
         device_id: Self::DeviceId,
         cb: F,
     ) -> O;
 
     /// Calls the function with a mutable reference to IP device state.
-    fn with_ip_device_state_mut<O, F: FnOnce(&mut I::State) -> O>(
+    fn with_ip_device_state_mut<O, F: FnOnce(&mut I::State<C::Instant>) -> O>(
         &mut self,
         device_id: Self::DeviceId,
         cb: F,
@@ -401,11 +400,8 @@ pub(crate) trait IpDeviceHandler<I: Ip, C>: IpDeviceIdContext<I> {
     fn set_default_hop_limit(&mut self, device_id: Self::DeviceId, hop_limit: NonZeroU8);
 }
 
-impl<
-        I: IpDeviceIpExt<C::Instant, SC::DeviceId>,
-        C: IpDeviceNonSyncContext<I, SC::DeviceId>,
-        SC: IpDeviceContext<I, C>,
-    > IpDeviceHandler<I, C> for SC
+impl<I: IpDeviceIpExt, C: IpDeviceNonSyncContext<I, SC::DeviceId>, SC: IpDeviceContext<I, C>>
+    IpDeviceHandler<I, C> for SC
 {
     fn is_router_device(&self, device_id: Self::DeviceId) -> bool {
         is_ip_routing_enabled(self, device_id)
@@ -515,7 +511,7 @@ impl<
 
 /// The execution context for an IP device with a buffer.
 pub(crate) trait BufferIpDeviceContext<
-    I: IpDeviceIpExt<C::Instant, Self::DeviceId>,
+    I: IpDeviceIpExt,
     C: IpDeviceNonSyncContext<I, Self::DeviceId>,
     B: BufferMut,
 >: IpDeviceContext<I, C>
@@ -732,7 +728,7 @@ fn disable_ipv4_device<
 }
 
 pub(crate) fn with_assigned_addr_subnets<
-    I: Ip + IpDeviceIpExt<C::Instant, SC::DeviceId>,
+    I: Ip + IpDeviceIpExt,
     C: IpDeviceNonSyncContext<I, SC::DeviceId>,
     SC: IpDeviceContext<I, C>,
     O,
@@ -789,7 +785,7 @@ pub(crate) fn get_ipv6_hop_limit<
 
 /// Is IP packet routing enabled?
 pub(crate) fn is_ip_routing_enabled<
-    I: IpDeviceIpExt<C::Instant, SC::DeviceId>,
+    I: IpDeviceIpExt,
     C: IpDeviceNonSyncContext<I, SC::DeviceId>,
     SC: IpDeviceContext<I, C>,
 >(
@@ -900,7 +896,7 @@ pub(crate) fn set_ipv6_routing_enabled<
 /// new `device` and `multicast_addr` pair, the device will actually join the
 /// multicast group.
 pub(crate) fn join_ip_multicast<
-    I: IpDeviceIpExt<C::Instant, SC::DeviceId>,
+    I: IpDeviceIpExt,
     C: IpDeviceNonSyncContext<I, SC::DeviceId>,
     SC: IpDeviceContext<I, C> + GmpHandler<I, C>,
 >(
@@ -932,7 +928,7 @@ pub(crate) fn join_ip_multicast<
 ///
 /// If `device_id` is not currently in the multicast group `multicast_addr`.
 pub(crate) fn leave_ip_multicast<
-    I: IpDeviceIpExt<C::Instant, SC::DeviceId>,
+    I: IpDeviceIpExt,
     C: IpDeviceNonSyncContext<I, SC::DeviceId>,
     SC: IpDeviceContext<I, C> + GmpHandler<I, C>,
 >(
@@ -1118,7 +1114,7 @@ pub(crate) fn del_ipv6_addr_with_reason<
 
 /// Sends an IP packet through the device.
 pub(crate) fn send_ip_frame<
-    I: IpDeviceIpExt<C::Instant, SC::DeviceId>,
+    I: IpDeviceIpExt,
     C: IpDeviceNonSyncContext<I, SC::DeviceId>,
     SC: BufferIpDeviceContext<I, C, B>,
     B: BufferMut,
@@ -1198,7 +1194,7 @@ pub(crate) fn update_ipv4_configuration<
 }
 
 pub(super) fn is_ip_device_enabled<
-    I: IpDeviceIpExt<C::Instant, SC::DeviceId>,
+    I: IpDeviceIpExt,
     C: IpDeviceNonSyncContext<I, SC::DeviceId>,
     SC: IpDeviceContext<I, C>,
 >(

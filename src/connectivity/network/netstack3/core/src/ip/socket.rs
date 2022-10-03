@@ -319,7 +319,7 @@ impl<C: InstantContext + CounterContext> IpSocketNonSyncContext for C {}
 pub(super) trait IpSocketContext<I, C: IpSocketNonSyncContext>:
     IpDeviceIdContext<I>
 where
-    I: IpDeviceStateIpExt<C::Instant>,
+    I: IpDeviceStateIpExt,
 {
     /// Returns a route for a socket.
     ///
@@ -341,7 +341,7 @@ where
 pub(super) trait BufferIpSocketContext<I, C: IpSocketNonSyncContext, B: BufferMut>:
     IpSocketContext<I, C>
 where
-    I: IpDeviceStateIpExt<C::Instant> + packet_formats::ip::IpExt,
+    I: IpDeviceStateIpExt + packet_formats::ip::IpExt,
 {
     /// Send an IP packet to the next-hop node.
     fn send_ip_packet<S: Serializer<Buffer = B>>(
@@ -352,11 +352,8 @@ where
     ) -> Result<(), S>;
 }
 
-impl<
-        I: Ip + IpExt + IpDeviceStateIpExt<C::Instant>,
-        C: IpSocketNonSyncContext,
-        SC: IpSocketContext<I, C>,
-    > IpSocketHandler<I, C> for SC
+impl<I: Ip + IpExt + IpDeviceStateIpExt, C: IpSocketNonSyncContext, SC: IpSocketContext<I, C>>
+    IpSocketHandler<I, C> for SC
 {
     fn new_ip_socket<O>(
         &mut self,
@@ -409,7 +406,7 @@ impl<I: Ip> SendOptions<I> for DefaultSendOptions {
 }
 
 fn send_ip_packet<
-    I: IpExt + IpDeviceStateIpExt<C::Instant> + packet_formats::ip::IpExt,
+    I: IpExt + IpDeviceStateIpExt + packet_formats::ip::IpExt,
     B: BufferMut,
     S: Serializer<Buffer = B>,
     C: IpSocketNonSyncContext,
@@ -820,13 +817,13 @@ pub(crate) mod testutil {
     /// implements `AsRef` and `AsMut` for `DummyIpSocketCtx`.
     #[derive(Derivative)]
     #[derivative(Default(bound = ""))]
-    pub(crate) struct DummyIpSocketCtx<I: IpDeviceStateIpExt<DummyInstant>, D> {
+    pub(crate) struct DummyIpSocketCtx<I: IpDeviceStateIpExt, D> {
         pub(crate) table: ForwardingTable<I, D>,
         device_state: HashMap<D, IpDeviceState<DummyInstant, I>>,
     }
 
     impl<
-            I: IpDeviceStateIpExt<DummyInstant>,
+            I: IpDeviceStateIpExt,
             S: AsRef<DummyIpSocketCtx<I, DeviceId>> + AsMut<DummyIpSocketCtx<I, DeviceId>>,
             Id,
             Meta,
@@ -881,7 +878,7 @@ pub(crate) mod testutil {
     }
 
     impl<
-            I: IpDeviceStateIpExt<DummyInstant> + packet_formats::ip::IpExt,
+            I: IpDeviceStateIpExt + packet_formats::ip::IpExt,
             B: BufferMut,
             S: AsRef<DummyIpSocketCtx<I, DeviceId>> + AsMut<DummyIpSocketCtx<I, DeviceId>>,
             Id,
@@ -908,7 +905,7 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<I: IpDeviceStateIpExt<DummyInstant>, D: IpDeviceId> DummyIpSocketCtx<I, D> {
+    impl<I: IpDeviceStateIpExt, D: IpDeviceId> DummyIpSocketCtx<I, D> {
         pub(crate) fn with_devices_state(
             devices: impl IntoIterator<
                 Item = (D, IpDeviceState<DummyInstant, I>, Vec<SpecifiedAddr<I::Addr>>),
@@ -939,7 +936,7 @@ pub(crate) mod testutil {
         pub(crate) fn find_device_with_addr(&self, addr: SpecifiedAddr<I::Addr>) -> Option<D> {
             let Self { table: _, device_state } = self;
             device_state.iter().find_map(|(device, state)| {
-                state.find_addr(&addr).map(|_: &I::AssignedAddress| *device)
+                state.find_addr(&addr).map(|_: &I::AssignedAddress<DummyInstant>| *device)
             })
         }
 
@@ -1054,7 +1051,7 @@ mod tests {
                 IpDeviceContext as DeviceIpDeviceContext, IpDeviceEvent, IpDeviceIpExt,
                 IpDeviceNonSyncContext,
             },
-            IpDeviceContext, IpLayerEvent, IpLayerIpExt, IpLayerStateIpExt, IpStateContext,
+            IpDeviceContext, IpLayerEvent, IpLayerIpExt, IpStateContext,
         },
         testutil::*,
         Ctx, TimerContext, TimerId,
@@ -1116,7 +1113,7 @@ mod tests {
         }
     }
 
-    fn remove_all_local_addrs<I: Ip + IpLayerIpExt + IpDeviceIpExt<DummyInstant, DeviceId>>(
+    fn remove_all_local_addrs<I: Ip + IpLayerIpExt + IpDeviceIpExt>(
         sync_ctx: &mut &DummySyncCtx,
         ctx: &mut DummyNonSyncCtx,
     ) where
@@ -1223,13 +1220,12 @@ mod tests {
             )
             .into()),
         }; "new remote to local")]
-    fn test_new<I: Ip + IpSocketIpExt + IpLayerIpExt + IpDeviceIpExt<DummyInstant, DeviceId>>(
-        test_case: NewSocketTestCase,
-    ) where
+    fn test_new<I: Ip + IpSocketIpExt + IpLayerIpExt + IpDeviceIpExt>(test_case: NewSocketTestCase)
+    where
         for<'a> &'a DummySyncCtx: IpSocketHandler<I, DummyNonSyncCtx>
             + IpDeviceIdContext<I, DeviceId = DeviceId>
             + DeviceIpDeviceContext<I, DummyNonSyncCtx, DeviceId = DeviceId>,
-        DummyNonSyncCtx: TimerContext<I::Timer>,
+        DummyNonSyncCtx: TimerContext<I::Timer<DeviceId>>,
         context::testutil::DummyNonSyncCtx<TimerId, DispatchedEvent, DummyNonSyncCtxState>:
             EventContext<IpDeviceEvent<DeviceId, I>>,
     {
@@ -1472,7 +1468,7 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_send<I: Ip + IpSocketIpExt + IpLayerStateIpExt<DummyInstant, DeviceId>>()
+    fn test_send<I: Ip + IpSocketIpExt + IpLayerIpExt>()
     where
         for<'a> &'a DummySyncCtx: BufferIpSocketHandler<I, DummyNonSyncCtx, packet::EmptyBuf>
             + IpDeviceContext<I, DummyNonSyncCtx, DeviceId = DeviceId>
@@ -1611,7 +1607,7 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_send_hop_limits<I: Ip + IpSocketIpExt + IpLayerStateIpExt<DummyInstant, DeviceId>>()
+    fn test_send_hop_limits<I: Ip + IpSocketIpExt + IpLayerIpExt>()
     where
         for<'a> &'a DummySyncCtx: BufferIpSocketHandler<I, DummyNonSyncCtx, packet::EmptyBuf>
             + IpDeviceContext<I, DummyNonSyncCtx, DeviceId = DeviceId>

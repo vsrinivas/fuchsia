@@ -2714,7 +2714,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        context::testutil::{DummyFrameCtx, DummyInstant},
+        context::testutil::DummyFrameCtx,
         error::RemoteAddressError,
         ip::{
             device::state::IpDeviceStateIpExt,
@@ -3026,7 +3026,7 @@ mod tests {
         I::get_other_ip_address(2)
     }
 
-    trait TestIpExt: crate::testutil::TestIpExt + IpExt + IpDeviceStateIpExt<DummyInstant> {
+    trait TestIpExt: crate::testutil::TestIpExt + IpExt + IpDeviceStateIpExt {
         const SOME_MULTICAST_ADDR: MulticastAddr<Self::Addr>;
         fn try_into_recv_src_addr(addr: Self::Addr) -> Option<Self::RecvSrcAddr>;
     }

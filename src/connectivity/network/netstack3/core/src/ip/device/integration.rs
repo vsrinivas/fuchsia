@@ -609,7 +609,7 @@ impl<
 }
 
 impl<
-        I: IpLayerIpExt + IpDeviceIpExt<C::Instant, SC::DeviceId>,
+        I: IpLayerIpExt + IpDeviceIpExt,
         B: BufferMut,
         C: IpDeviceNonSyncContext<I, SC::DeviceId>,
         SC: device::BufferIpDeviceContext<I, C, B> + ip::IpDeviceContext<I, C>,
