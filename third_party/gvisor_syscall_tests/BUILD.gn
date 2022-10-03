@@ -90,6 +90,8 @@ static_library("gvisor_test_util") {
 }
 
 raw_packet_test_label = "raw_packet"
+udp_test_label = "udp"
+udp_unbound_test_label = "udp_unbound"
 generic_test_label = "generic"
 
 source_set("${raw_packet_test_label}_socket_tests") {
@@ -115,6 +117,70 @@ source_set("${raw_packet_test_label}_socket_tests") {
   testonly = true
 }
 
+source_set("${udp_unbound_test_label}_socket_tests") {
+  sources = [
+    "gvisor/test/syscalls/linux/ip_socket_test_util.cc",
+    "gvisor/test/syscalls/linux/ip_socket_test_util.h",
+    "gvisor/test/syscalls/linux/socket_ipv4_datagram_based_socket_unbound.cc",
+    "gvisor/test/syscalls/linux/socket_ipv4_datagram_based_socket_unbound.h",
+    "gvisor/test/syscalls/linux/socket_ipv4_datagram_based_socket_unbound_loopback.cc",
+    "gvisor/test/syscalls/linux/socket_ipv4_udp_unbound.cc",
+    "gvisor/test/syscalls/linux/socket_ipv4_udp_unbound.h",
+    "gvisor/test/syscalls/linux/socket_ipv4_udp_unbound_external_networking.cc",
+    "gvisor/test/syscalls/linux/socket_ipv4_udp_unbound_external_networking_test.cc",
+    "gvisor/test/syscalls/linux/socket_ipv4_udp_unbound_loopback.cc",
+    "gvisor/test/syscalls/linux/socket_ipv4_udp_unbound_loopback_nogotsan.cc",
+    "gvisor/test/syscalls/linux/socket_ipv6_udp_unbound.cc",
+    "gvisor/test/syscalls/linux/socket_ipv6_udp_unbound.h",
+    "gvisor/test/syscalls/linux/socket_ipv6_udp_unbound_external_networking.cc",
+    "gvisor/test/syscalls/linux/socket_ipv6_udp_unbound_external_networking_test.cc",
+    "gvisor/test/syscalls/linux/socket_ipv6_udp_unbound_loopback.cc",
+  ]
+
+  deps = [
+    ":gvisor_test_util",
+    "//third_party/abseil-cpp/absl/memory",
+    "//third_party/abseil-cpp/absl/strings",
+    "//third_party/abseil-cpp/absl/strings:str_format",
+  ]
+
+  testonly = true
+}
+
+source_set("${udp_test_label}_socket_tests") {
+  sources = [
+    "gvisor/test/syscalls/linux/ip_socket_test_util.cc",
+    "gvisor/test/syscalls/linux/ip_socket_test_util.h",
+    "gvisor/test/syscalls/linux/socket_generic.h",
+    "gvisor/test/syscalls/linux/socket_generic.h",
+    "gvisor/test/syscalls/linux/socket_generic_test_cases.cc",
+    "gvisor/test/syscalls/linux/socket_ip_udp_generic.cc",
+    "gvisor/test/syscalls/linux/socket_ip_udp_generic.h",
+    "gvisor/test/syscalls/linux/socket_ip_udp_loopback.cc",
+    "gvisor/test/syscalls/linux/socket_ip_udp_loopback_blocking.cc",
+    "gvisor/test/syscalls/linux/socket_ip_udp_loopback_nonblock.cc",
+    "gvisor/test/syscalls/linux/socket_non_blocking.cc",
+    "gvisor/test/syscalls/linux/socket_non_blocking.h",
+    "gvisor/test/syscalls/linux/socket_non_stream.cc",
+    "gvisor/test/syscalls/linux/socket_non_stream.h",
+    "gvisor/test/syscalls/linux/socket_non_stream_blocking.cc",
+    "gvisor/test/syscalls/linux/socket_non_stream_blocking.h",
+    "gvisor/test/syscalls/linux/udp_bind.cc",
+    "gvisor/test/syscalls/linux/udp_socket.cc",
+    "gvisor/test/syscalls/linux/unix_domain_socket_test_util.cc",
+    "gvisor/test/syscalls/linux/unix_domain_socket_test_util.h",
+  ]
+
+  deps = [
+    ":gvisor_test_util",
+    "//third_party/abseil-cpp/absl/memory",
+    "//third_party/abseil-cpp/absl/strings",
+    "//third_party/abseil-cpp/absl/strings:str_format",
+  ]
+
+  testonly = true
+}
+
 source_set("${generic_test_label}_socket_tests") {
   sources = [
     "gvisor/test/syscalls/linux/ip_socket_test_util.cc",
@@ -134,33 +200,11 @@ source_set("${generic_test_label}_socket_tests") {
     "gvisor/test/syscalls/linux/socket_ip_tcp_loopback_blocking.cc",
     "gvisor/test/syscalls/linux/socket_ip_tcp_loopback_nonblock.cc",
     "gvisor/test/syscalls/linux/socket_ip_tcp_udp_generic.cc",
-    "gvisor/test/syscalls/linux/socket_ip_udp_generic.cc",
-    "gvisor/test/syscalls/linux/socket_ip_udp_generic.h",
-    "gvisor/test/syscalls/linux/socket_ip_udp_loopback.cc",
-    "gvisor/test/syscalls/linux/socket_ip_udp_loopback_blocking.cc",
-    "gvisor/test/syscalls/linux/socket_ip_udp_loopback_nonblock.cc",
     "gvisor/test/syscalls/linux/socket_ip_unbound.cc",
-    "gvisor/test/syscalls/linux/socket_ipv4_datagram_based_socket_unbound.cc",
-    "gvisor/test/syscalls/linux/socket_ipv4_datagram_based_socket_unbound.h",
-    "gvisor/test/syscalls/linux/socket_ipv4_datagram_based_socket_unbound_loopback.cc",
-    "gvisor/test/syscalls/linux/socket_ipv4_udp_unbound.cc",
-    "gvisor/test/syscalls/linux/socket_ipv4_udp_unbound.h",
-    "gvisor/test/syscalls/linux/socket_ipv4_udp_unbound_external_networking.cc",
-    "gvisor/test/syscalls/linux/socket_ipv4_udp_unbound_external_networking_test.cc",
-    "gvisor/test/syscalls/linux/socket_ipv4_udp_unbound_loopback.cc",
-    "gvisor/test/syscalls/linux/socket_ipv4_udp_unbound_loopback_nogotsan.cc",
-    "gvisor/test/syscalls/linux/socket_ipv6_udp_unbound.cc",
-    "gvisor/test/syscalls/linux/socket_ipv6_udp_unbound.h",
-    "gvisor/test/syscalls/linux/socket_ipv6_udp_unbound_external_networking.cc",
-    "gvisor/test/syscalls/linux/socket_ipv6_udp_unbound_external_networking_test.cc",
-    "gvisor/test/syscalls/linux/socket_ipv6_udp_unbound_loopback.cc",
     "gvisor/test/syscalls/linux/socket_non_blocking.cc",
-    "gvisor/test/syscalls/linux/socket_non_stream.cc",
-    "gvisor/test/syscalls/linux/socket_non_stream_blocking.cc",
     "gvisor/test/syscalls/linux/socket_stream_blocking.cc",
+    "gvisor/test/syscalls/linux/socket_stream_blocking.h",
     "gvisor/test/syscalls/linux/tcp_socket.cc",
-    "gvisor/test/syscalls/linux/udp_bind.cc",
-    "gvisor/test/syscalls/linux/udp_socket.cc",
     "gvisor/test/syscalls/linux/unix_domain_socket_test_util.cc",
     "gvisor/test/syscalls/linux/unix_domain_socket_test_util.h",
   ]
@@ -206,6 +250,14 @@ tests = [
   },
   {
     label = raw_packet_test_label
+    cq = true
+  },
+  {
+    label = udp_test_label
+    cq = true
+  },
+  {
+    label = udp_unbound_test_label
     cq = true
   },
 ]
