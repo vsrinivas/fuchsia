@@ -12,25 +12,26 @@ fpromise::promise<> MockScreenReaderContext::MockSpeaker::SpeakNodePromise(
     const fuchsia::accessibility::semantics::Node* node, Options options,
     a11y::ScreenReaderMessageGenerator::ScreenReaderMessageContext message_context) {
   received_speak_ = true;
-  node_ids_.push_back(node->node_id());
-  message_contexts_.push_back(message_context);
+  speak_node_ids_.push_back(node->node_id());
+  speak_node_options_.push_back(options);
+  speak_node_message_contexts_.push_back(message_context);
   return fpromise::make_ok_promise();
 }
 
 fpromise::promise<> MockScreenReaderContext::MockSpeaker::SpeakNodeCanonicalizedLabelPromise(
     const fuchsia::accessibility::semantics::Node* node, Options options) {
   received_speak_label_ = true;
-  node_ids_.push_back(node->node_id());
-  message_contexts_.emplace_back();
+  speak_node_ids_.push_back(node->node_id());
+  speak_node_options_.push_back(options);
+  speak_node_message_contexts_.emplace_back();
   return fpromise::make_ok_promise();
 }
 
 fpromise::promise<> MockScreenReaderContext::MockSpeaker::SpeakMessagePromise(
     fuchsia::accessibility::tts::Utterance utterance, Options options) {
   received_speak_ = true;
-  if (utterance.has_message()) {
-    messages_.push_back(utterance.message());
-  }
+  FX_CHECK(utterance.has_message());
+  messages_.push_back(utterance.message());
   return fpromise::make_ok_promise();
 }
 
@@ -43,7 +44,6 @@ fpromise::promise<> MockScreenReaderContext::MockSpeaker::SpeakMessageByIdPromis
 
 fpromise::promise<> MockScreenReaderContext::MockSpeaker::CancelTts() {
   received_cancel_ = true;
-  messages_.clear();
   return fpromise::make_ok_promise();
 }
 
