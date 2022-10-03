@@ -598,6 +598,10 @@ func (n *ndpDispatcher) handleEvent(event ndpEvent) {
 	n.mu.events[0] = nil
 	n.mu.events = n.mu.events[1:]
 	eventsLeft := len(n.mu.events)
+	if eventsLeft == 0 {
+		// Nil the event slice so that excess capacity can be deallocated.
+		n.mu.events = nil
+	}
 	n.mu.Unlock()
 
 	// Signal tests that are waiting for the event queue to be empty. We
