@@ -7,7 +7,6 @@
 
 #include <zircon/types.h>
 
-#include <optional>
 #include <string>
 
 // APIs exposed by our Rust static library -- should not be called directly.
