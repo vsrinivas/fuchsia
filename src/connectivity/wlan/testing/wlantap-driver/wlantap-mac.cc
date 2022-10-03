@@ -217,15 +217,11 @@ struct WlantapMacImpl : WlantapMac,
     // TODO(fxbug.dev/28907): Evaluate the use and implement
     completer.buffer(arena).ReplySuccess();
   }
-  const fidl::Array<uint8_t, 6> NULL_MAC_ADDR{0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
   void ClearAssoc(ClearAssocRequestView request, fdf::Arena& arena,
                   ClearAssocCompleter::Sync& completer) override {
-    if (memcmp(request->peer_addr.data(), NULL_MAC_ADDR.data(), NULL_MAC_ADDR.size()) != 0) {
-      completer.buffer(arena).ReplyError(ZX_ERR_INVALID_ARGS);
-      return;
-    }
-    // TODO(fxbug.dev/28907): Evaluate the use and implement
+    // TODO(fxbug.dev/28907): Evaluate the use and implement. Association is never
+    // configured, so there is nothing to clear.
     completer.buffer(arena).ReplySuccess();
   }
 
