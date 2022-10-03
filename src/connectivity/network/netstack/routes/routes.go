@@ -309,6 +309,10 @@ func (rt *RouteTable) UpdateRoutesByInterfaceLocked(nicid tcpip.NICID, action Ac
 
 	oldTable := rt.routes
 	rt.routes = oldTable[:0]
+	if cap(oldTable) > 2*len(oldTable) {
+		// Remove excess route table capacity instead of reusing old capacity.
+		rt.routes = make([]ExtendedRoute, 0, len(oldTable))
+	}
 	for _, er := range oldTable {
 		if er.Route.NIC == nicid {
 			switch action {
@@ -330,6 +334,12 @@ func (rt *RouteTable) UpdateRoutesByInterfaceLocked(nicid tcpip.NICID, action Ac
 		}
 		// Keep.
 		rt.routes = append(rt.routes, er)
+	}
+
+	// Zero out unused entries in the routes slice so that they can be garbage collected.
+	deadRoutes := rt.routes[len(rt.routes):cap(rt.routes)]
+	for i := range deadRoutes {
+		deadRoutes[i] = ExtendedRoute{}
 	}
 
 	rt.sortRouteTableLocked()
