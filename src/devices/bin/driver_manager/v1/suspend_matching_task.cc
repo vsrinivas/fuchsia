@@ -27,13 +27,13 @@ fbl::RefPtr<SuspendMatchingTask> SuspendMatchingTask::Create(fbl::RefPtr<Device>
 
 void SuspendMatchingTask::MatchDeviceChildren(Device& device) {
   for (auto& child : device.children()) {
-    if (matches_(child)) {
-      if (child.GetActiveSuspend() == nullptr) {
-        AddDependency(child.RequestSuspendTask(flags_));
+    if (matches_(*child)) {
+      if (child->GetActiveSuspend() == nullptr) {
+        AddDependency(child->RequestSuspendTask(flags_));
         continue;
       }
     } else {
-      MatchDeviceChildren(child);
+      MatchDeviceChildren(*child);
     }
   }
 }

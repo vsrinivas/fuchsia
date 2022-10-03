@@ -40,7 +40,7 @@ void SuspendTask::Run() {
   for (auto& child : device_->children()) {
     // Use a switch statement here so that this gets reconsidered if we add
     // more states.
-    switch (child.state()) {
+    switch (child->state()) {
       // If the device is dead, any existing suspend task would have been forcibly completed.
       case Device::State::kDead:
       case Device::State::kUnbinding:
@@ -53,8 +53,8 @@ void SuspendTask::Run() {
       case Device::State::kResumed:
         break;
     }
-    if (!IsDeviceBeingRemoved(fbl::RefPtr(&child))) {
-      AddDependency(child.RequestSuspendTask(flags_));
+    if (!IsDeviceBeingRemoved(fbl::RefPtr(child))) {
+      AddDependency(child->RequestSuspendTask(flags_));
       found_more_dependencies = true;
     }
   }

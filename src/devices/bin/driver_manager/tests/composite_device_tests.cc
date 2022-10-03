@@ -467,7 +467,7 @@ TEST_F(CompositeTestCase, AddMultipleSharedFragmentCompositeDevices) {
     count++;
     char name[32];
     snprintf(name, sizeof(name), "composite-dev-%zu-comp-device-1", count);
-    if (strcmp(child.name().data(), name)) {
+    if (strcmp(child->name().data(), name)) {
       status = ZX_ERR_INTERNAL;
     }
   }
@@ -1227,9 +1227,9 @@ TEST_F(CompositeTestCase, DeviceIteratorCompositeChild) {
   ASSERT_NO_FATAL_FAILURE(
       CheckCompositeCreation("composite", &parent_index, 1, &fragment_device_indexes, &composite));
 
-  ASSERT_FALSE(device(parent_index)->device->children().is_empty());
+  ASSERT_FALSE(device(parent_index)->device->children().empty());
   for (auto& d : device(parent_index)->device->children()) {
-    ASSERT_EQ(d.name(), "composite-comp-device-0");
+    ASSERT_EQ(d->name(), "composite-comp-device-0");
   }
 }
 
@@ -1259,9 +1259,9 @@ TEST_F(CompositeTestCase, DeviceIteratorCompositeChildNoFragment) {
   ASSERT_NO_FATAL_FAILURE(
       CheckCreateCompositeDeviceReceived(driver_host_server(), "composite", 1, &composite));
 
-  ASSERT_FALSE(device(parent_index)->device->children().is_empty());
+  ASSERT_FALSE(device(parent_index)->device->children().empty());
   for (auto& d : device(parent_index)->device->children()) {
-    ASSERT_EQ(d.name(), "composite");
+    ASSERT_EQ(d->name(), "composite");
   }
 }
 
@@ -1282,7 +1282,7 @@ TEST_F(CompositeTestCase, DeviceIteratorCompositeSibling) {
   ASSERT_NO_FATAL_FAILURE(
       AddDevice(device(parent_index)->device, "sibling-device", 0, "", &child_index));
 
-  ASSERT_TRUE(device(child_index)->device->children().is_empty());
+  ASSERT_TRUE(device(child_index)->device->children().empty());
 }
 
 TEST_F(CompositeTestCase, DeviceIteratorOrphanFragment) {
@@ -1292,7 +1292,7 @@ TEST_F(CompositeTestCase, DeviceIteratorOrphanFragment) {
 
   device(index)->device->DetachFromParent();
 
-  ASSERT_TRUE(device(index)->device->children().is_empty());
+  ASSERT_TRUE(device(index)->device->children().empty());
 }
 
 TEST_F(CompositeTestCase, MultibindWithOutgoingDirectory) {

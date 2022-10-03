@@ -92,14 +92,14 @@ zx::status<std::vector<fdd::wire::DeviceInfo>> GetDeviceInfo(
     device_info.set_parent_ids(allocator, parent_ids);
 
     size_t child_count = 0;
-    for (const auto& child __attribute__((unused)) : device->children()) {
+    for (const Device* child __attribute__((unused)) : device->children()) {
       child_count++;
     }
     if (child_count > 0) {
       fidl::VectorView<uint64_t> child_ids(allocator, child_count);
       size_t i = 0;
-      for (const auto& child : device->children()) {
-        child_ids[i++] = reinterpret_cast<uint64_t>(&child);
+      for (const Device* child : device->children()) {
+        child_ids[i++] = reinterpret_cast<uint64_t>(child);
       }
       device_info.set_child_ids(allocator, child_ids);
     }

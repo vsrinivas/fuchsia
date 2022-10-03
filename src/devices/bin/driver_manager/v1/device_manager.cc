@@ -48,7 +48,7 @@ zx_status_t DeviceManager::AddDevice(
   // Prevent the addition of a device with the same name as another one of the
   // parent's children.
   for (auto& child : parent->children()) {
-    if (child.name() == name.data()) {
+    if (child->name() == name.data()) {
       LOGF(ERROR, "Device name '%.*s' conflicts with existing sibling device",
            static_cast<int>(name.size()), name.data());
       return ZX_ERR_BAD_STATE;
@@ -194,7 +194,7 @@ void DeviceManager::ScheduleDriverHostRequestedRemove(const fbl::RefPtr<Device>&
 
 void DeviceManager::ScheduleDriverHostRequestedUnbindChildren(const fbl::RefPtr<Device>& parent) {
   for (auto& child : parent->children()) {
-    child.CreateUnbindRemoveTasks(
+    child->CreateUnbindRemoveTasks(
         UnbindTaskOpts{.do_unbind = true, .post_on_create = true, .driver_host_requested = true});
   }
 }
@@ -346,7 +346,7 @@ zx_status_t DeviceManager::RemoveDevice(const fbl::RefPtr<Device>& dev, bool for
   if (parent != nullptr) {
     dev->DetachFromParent();
     if (!(dev->flags & DEV_CTX_PROXY)) {
-      if (parent->children().is_empty()) {
+      if (parent->children().empty()) {
         parent->flags &= (~DEV_CTX_BOUND);
 
         // TODO: This code is to cause the bind process to

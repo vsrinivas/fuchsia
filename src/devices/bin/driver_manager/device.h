@@ -131,195 +131,11 @@ class Device final
   zx_status_t CreateProxy();
   zx_status_t CreateNewProxy(fbl::RefPtr<Device>* new_proxy_out);
 
-  // This iterator provides access to a list of devices that does not provide
-  // mechanisms for mutating that list.  With this, a user can get mutable
-  // access to a device in the list.  This is achieved by making the linked
-  // list iterator opaque. It is not safe to modify the underlying list while
-  // this iterator is in use.
-  template <typename ChildIterType, typename FragmentIterType, typename DeviceType>
-  class ChildListIterator {
-   public:
-    ChildListIterator() : state_(Done{}) {}
-    explicit ChildListIterator(DeviceType* device)
-        : state_(device->children_.begin()), device_(device) {
-      SkipInvalidStates();
-    }
-    ChildListIterator operator++(int) {
-      auto other = *this;
-      ++*this;
-      return other;
-    }
-    bool operator==(const ChildListIterator& other) const { return state_ == other.state_; }
-    bool operator!=(const ChildListIterator& other) const { return !(state_ == other.state_); }
-
-    // The iterator implementation for the child list.  This is the source of truth
-    // for what devices are children of the device.
-    ChildListIterator& operator++() {
-      std::visit(
-          [this](auto&& arg) {
-            using T = std::decay_t<decltype(arg)>;
-            if constexpr (std::is_same_v<T, ChildIterType> || std::is_same_v<T, FragmentIterType>) {
-              ++arg;
-            } else if constexpr (std::is_same_v<T, Done>) {
-              state_ = Done{};
-            }
-          },
-          state_);
-      SkipInvalidStates();
-      return *this;
-    }
-
-    DeviceType& operator*() const {
-      return std::visit(
-          [](auto&& arg) -> DeviceType& {
-            using T = std::decay_t<decltype(arg)>;
-            if constexpr (std::is_same_v<T, ChildIterType>) {
-              return *arg;
-            } else if constexpr (std::is_same_v<T, FragmentIterType>) {
-              return *(arg->composite()->device());
-            } else {
-              __builtin_trap();
-            }
-          },
-          state_);
-    }
-
-   private:
-    // Advance the iterator to the next valid state or reach the done state.
-    // This is used to handle advancement between the different state variants.
-    void SkipInvalidStates() {
-      bool more = true;
-      while (more) {
-        more = std::visit(
-            [this](auto&& arg) {
-              using T = std::decay_t<decltype(arg)>;
-              if constexpr (std::is_same_v<T, ChildIterType>) {
-                // Check if there are any more children in the list.  If
-                // there are, we're in a valid state and can stop.
-                // Otherwise, advance to the next variant and check if
-                // it's a valid state.
-                if (arg != device_->children_.end()) {
-                  return false;
-                }
-
-                // If there are no more children and this is a fragment device,
-                // find children of the fragment device by looking at its parent's
-                // fragment list.
-                if (device_->libname() == device_->coordinator->GetFragmentDriverUrl()) {
-                  if (device_->parent_) {
-                    state_ = FragmentIterType{device_->parent()->fragments_.begin()};
-                    return true;
-                  }
-                  state_ = Done{};
-                  return false;
-                }
-
-                // Some composite devices are added directly as fragments without
-                // a proxy fragment device. These don't appear in the children list.
-                state_ = FragmentIterType{device_->fragments_.begin()};
-                return true;
-              } else if constexpr (std::is_same_v<T, FragmentIterType>) {
-                if (device_->libname() == device_->coordinator->GetFragmentDriverUrl()) {
-                  // This device is an internal fragment device.
-                  if (arg == device_->parent()->fragments_.end()) {
-                    state_ = Done{};
-                    return false;
-                  }
-
-                  // Skip composite devices that aren't yet bound.
-                  if (arg->composite()->device() == nullptr) {
-                    state_ = FragmentIterType{++arg};
-                    return true;
-                  }
-
-                  // Skip any fragments that aren't bound to this fragment device.
-                  if (arg->fragment_device().get() != device_) {
-                    state_ = FragmentIterType{++arg};
-                    return true;
-                  }
-
-                  return false;
-                }
-
-                // Check for composite devices that don't have proxy fragment devices.
-
-                if (arg == device_->fragments_.end()) {
-                  state_ = Done{};
-                  return false;
-                }
-
-                // Skip composite devices that aren't yet bound.
-                if (arg->composite()->device() == nullptr) {
-                  state_ = FragmentIterType{++arg};
-                  return true;
-                }
-
-                // Skip fragments that have a fragment device.
-                if (arg->fragment_device() != nullptr) {
-                  state_ = FragmentIterType{++arg};
-                  return true;
-                }
-
-                return false;
-              } else if constexpr (std::is_same_v<T, Done>) {
-                return false;
-              }
-            },
-            state_);
-      }
-    }
-    struct Done {
-      bool operator==(Done) const { return true; }
-    };
-    std::variant<ChildIterType, FragmentIterType, Done> state_;
-    DeviceType* device_;
-  };
-
-  // This class exists to allow consumers of the Device class to write
-  //   for (auto& child : dev->children())
-  // and get mutable access to the children without getting mutable access to
-  // the list.
-  template <typename DeviceType, typename IterType>
-  class ChildListIteratorFactory {
-   public:
-    explicit ChildListIteratorFactory(DeviceType* device) : device_(device) {}
-
-    IterType begin() const { return IterType(device_); }
-    IterType end() const { return IterType(); }
-
-    bool is_empty() const { return begin() == end(); }
-
-   private:
-    DeviceType* device_;
-  };
-
   static void Bind(fbl::RefPtr<Device> dev, async_dispatcher_t*,
                    fidl::ServerEnd<fuchsia_device_manager::Coordinator>);
 
-  // We do not want to expose the list itself for mutation, even if the
-  // children are allowed to be mutated.  We manage this by making the
-  // iterator opaque.
-  using NonConstChildListIterator = ChildListIterator<
-      fbl::TaggedDoublyLinkedList<Device*, ChildListTag>::iterator,
-      fbl::TaggedDoublyLinkedList<CompositeDeviceFragment*,
-                                  CompositeDeviceFragment::DeviceListTag>::iterator,
-      Device>;
-  using ConstChildListIterator = ChildListIterator<
-      fbl::TaggedDoublyLinkedList<Device*, ChildListTag>::const_iterator,
-      fbl::TaggedDoublyLinkedList<CompositeDeviceFragment*,
-                                  CompositeDeviceFragment::DeviceListTag>::const_iterator,
-      const Device>;
-
-  using NonConstFragmentListIterator =
-      fbl::TaggedDoublyLinkedList<CompositeDeviceFragment*,
-                                  CompositeDeviceFragment::DeviceListTag>::iterator;
-
-  using NonConstChildListIteratorFactory =
-      ChildListIteratorFactory<Device, NonConstChildListIterator>;
-  using ConstChildListIteratorFactory =
-      ChildListIteratorFactory<const Device, ConstChildListIterator>;
-  NonConstChildListIteratorFactory children() { return NonConstChildListIteratorFactory(this); }
-  ConstChildListIteratorFactory children() const { return ConstChildListIteratorFactory(this); }
+  std::list<const Device*> children() const;
+  std::list<Device*> children();
 
   // Signal that this device is ready for bind to happen.  This should happen
   // either immediately after the device is created, if it's created visible,
@@ -587,6 +403,11 @@ class Device final
   zx::status<dfv2::DriverHost*> CreateDriverHost() override {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
+
+  // This is a template so we can share the same code between a nonconst and
+  // const version.
+  template <typename DeviceType>
+  static std::list<DeviceType*> GetChildren(DeviceType* device);
 
   fidl::WireSharedClient<fuchsia_device_manager::DeviceController> device_controller_;
   std::optional<fidl::ServerBindingRef<fuchsia_device_manager::Coordinator>> coordinator_binding_;

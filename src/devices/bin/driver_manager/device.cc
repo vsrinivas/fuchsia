@@ -359,6 +359,57 @@ void Device::DetachFromParent() {
   }
 }
 
+template <typename DeviceType>
+std::list<DeviceType*> Device::GetChildren(DeviceType* device) {
+  std::list<DeviceType*> children;
+
+  // Add our obvious children.
+  for (auto& child : device->children_) {
+    children.push_back(&child);
+  }
+
+  // If we are a fragment device, we can find more children by looking
+  // at our parent's fragment list.
+  if (device->libname() == device->coordinator->GetFragmentDriverUrl()) {
+    if (!device->parent_) {
+      return children;
+    }
+    for (auto& fragment : device->parent_->fragments_) {
+      // Skip composite devices that aren't bound.
+      if (fragment.composite()->device() == nullptr) {
+        continue;
+      }
+      // Skip fragments that have a frament device.
+      if (fragment.fragment_device().get() != device) {
+        continue;
+      }
+      children.push_back(fragment.composite()->device().get());
+    }
+    return children;
+  }
+
+  // Some composite devices are added directly as fragments without
+  // a proxy fragment device. These don't appear in the children list.
+  for (auto& fragment : device->fragments_) {
+    // Skip composite devices that aren't bound.
+    if (fragment.composite()->device() == nullptr) {
+      continue;
+    }
+    // Skip fragments that have a fragment device.
+    if (fragment.fragment_device() != nullptr) {
+      continue;
+    }
+    children.push_back(fragment.composite()->device().get());
+  }
+  return children;
+}
+
+std::list<const Device*> Device::children() const {
+  return Device::GetChildren<const Device>(this);
+}
+
+std::list<Device*> Device::children() { return Device::GetChildren<Device>(this); }
+
 zx_status_t Device::SignalReadyForBind(zx::duration delay) {
   return publish_task_.PostDelayed(this->coordinator->dispatcher(), delay);
 }

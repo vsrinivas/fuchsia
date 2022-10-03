@@ -15,7 +15,7 @@ TEST_F(DeviceChildIteratorTest, Empty) {
   ASSERT_NO_FATAL_FAILURE(
       AddDevice(platform_bus()->device, "parent-device", 0 /* protocol id */, "", &parent_index));
   coordinator_loop()->RunUntilIdle();
-  ASSERT_TRUE(device(parent_index)->device->children().is_empty());
+  ASSERT_TRUE(device(parent_index)->device->children().empty());
 }
 
 TEST_F(DeviceChildIteratorTest, OneChild) {
@@ -26,10 +26,10 @@ TEST_F(DeviceChildIteratorTest, OneChild) {
   ASSERT_NO_FATAL_FAILURE(
       AddDevice(device(parent_index)->device, "child-device", 0, "", &child_index));
   coordinator_loop()->RunUntilIdle();
-  ASSERT_FALSE(device(parent_index)->device->children().is_empty());
+  ASSERT_FALSE(device(parent_index)->device->children().empty());
 
   for (auto& d : device(parent_index)->device->children()) {
-    ASSERT_EQ(d.name(), "child-device");
+    ASSERT_EQ(d->name(), "child-device");
   }
 }
 
@@ -49,6 +49,6 @@ TEST_F(DeviceChildIteratorTest, MultipleChildren) {
   size_t i = 0;
   for (auto& d : device(parent_index)->device->children()) {
     fbl::String name = fbl::StringPrintf("child-device-%02zu", i++);
-    ASSERT_EQ(d.name(), name);
+    ASSERT_EQ(d->name(), name);
   }
 }

@@ -86,7 +86,7 @@ void UnbindTask::ScheduleUnbindChildren() {
   for (auto& child : children) {
     // Use a switch statement here so that this gets reconsidered if we add
     // more states.
-    switch (child.state()) {
+    switch (child->state()) {
       case Device::State::kDead:
       case Device::State::kUnbinding:
         continue;
@@ -98,14 +98,14 @@ void UnbindTask::ScheduleUnbindChildren() {
       case Device::State::kActive:
         break;
     }
-    child.CreateUnbindRemoveTasks(
+    child->CreateUnbindRemoveTasks(
         UnbindTaskOpts{.do_unbind = true, .post_on_create = false, .driver_host_requested = false});
 
     auto parent = device_->proxy() != nullptr ? device_->proxy() : device_;
 
     // The child unbind task may have already completed, in which case we only need to wait
     // for the child's remove task.
-    auto child_unbind_task = child.GetActiveUnbind();
+    auto child_unbind_task = child->GetActiveUnbind();
     if (child_unbind_task) {
       auto parent_unbind_task = parent->GetActiveUnbind();
       if (parent_unbind_task) {
@@ -113,7 +113,7 @@ void UnbindTask::ScheduleUnbindChildren() {
       }
     }
     // Since the child is not dead, the remove task must exist.
-    auto child_remove_task = child.GetActiveRemove();
+    auto child_remove_task = child->GetActiveRemove();
     ZX_ASSERT(child_remove_task != nullptr);
     auto parent_remove_task = parent->GetActiveRemove();
     if (parent_remove_task) {
