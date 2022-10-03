@@ -62,12 +62,11 @@ sdk_source_set("wire") {
       "include/lib/fidl/cpp/wire/internal/arrow.h",
       "include/lib/fidl/cpp/wire/internal/client_continuation.h",
       "include/lib/fidl/cpp/wire/internal/client_details.h",
-      "include/lib/fidl/cpp/wire/internal/debug_thread_checker.h",
       "include/lib/fidl/cpp/wire/internal/endpoints.h",
       "include/lib/fidl/cpp/wire/internal/make_response_context.h",
       "include/lib/fidl/cpp/wire/internal/server_details.h",
+      "include/lib/fidl/cpp/wire/internal/synchronization_checker.h",
       "include/lib/fidl/cpp/wire/internal/thenable.h",
-      "include/lib/fidl/cpp/wire/internal/thread_checker.h",
       "include/lib/fidl/cpp/wire/internal/transport_err.h",
       "include/lib/fidl/cpp/wire/message.h",
       "include/lib/fidl/cpp/wire/server.h",
@@ -95,12 +94,11 @@ sdk_source_set("wire") {
       "include/lib/fidl/cpp/wire/internal/arrow.h",
       "include/lib/fidl/cpp/wire/internal/client_continuation.h",
       "include/lib/fidl/cpp/wire/internal/client_details.h",
-      "include/lib/fidl/cpp/wire/internal/debug_thread_checker.h",
       "include/lib/fidl/cpp/wire/internal/endpoints.h",
       "include/lib/fidl/cpp/wire/internal/make_response_context.h",
       "include/lib/fidl/cpp/wire/internal/server_details.h",
       "include/lib/fidl/cpp/wire/internal/thenable.h",
-      "include/lib/fidl/cpp/wire/internal/thread_checker.h",
+      "include/lib/fidl/cpp/wire/internal/synchronization_checker.h",
     ]
   }
   if (is_fuchsia) {
@@ -143,6 +141,8 @@ sdk_source_set("wire") {
   } else {
     sources += [ "transport_channel_host.cc" ]
   }
+
+  deps = [ "//zircon/system/ulib/async:async-cpp" ]
 
   public_deps = [
     # <lib/fidl/cpp/wire/wire_messaging.h> has #include <lib/fit/function.h>.

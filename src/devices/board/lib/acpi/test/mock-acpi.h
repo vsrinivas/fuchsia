@@ -8,6 +8,7 @@
 #include <lib/ddk/debug.h>
 
 #include <cstdint>
+#include <mutex>
 #include <unordered_map>
 
 #include "src/devices/board/lib/acpi/acpi.h"

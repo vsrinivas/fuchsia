@@ -6,10 +6,9 @@
 #define LIB_FIDL_CPP_WIRE_INCLUDE_LIB_FIDL_CPP_WIRE_INTERNAL_TRANSPORT_H_
 
 #include <lib/fidl/coding.h>
-#include <lib/fidl/cpp/wire/internal/thread_checker.h>
 #include <lib/fidl/cpp/wire/status.h>
 #include <lib/fit/function.h>
-#include <lib/fit/thread_checker.h>
+#include <lib/fit/inline_any.h>
 #include <zircon/assert.h>
 #include <zircon/fidl.h>
 
@@ -233,12 +232,6 @@ struct TransportVTable {
                                TransportWaitSuccessHandler success_handler,
                                TransportWaitFailureHandler failure_handler,
                                AnyTransportWaiter& any_transport_waiter);
-
-  // Creates a thread checker object specific to the dispatcher type associated
-  // with the transport. For example, if the dispatcher has a concept of virtual
-  // threads, the thread checker implementation should check virtual threads.
-  void (*create_thread_checker)(async_dispatcher_t* dispatcher, ThreadingPolicy threading_policy,
-                                AnyThreadChecker& any_thread_checker);
 
   // Closes incoming/outgoing transport context contents.
   // Set to nullptr if no close function is needed.

@@ -19,10 +19,12 @@ source_set("client_test_helpers") {
   public = [
     "async_loop_and_endpoints_fixture.h",
     "client_checkers.h",
+    "fake_sequence_dispatcher.h",
     "lsan_disabler.h",
     "mock_client_impl.h",
     "test_messages.h",
   ]
+  sources = [ "fake_sequence_dispatcher.cc" ]
   testonly = true
   visibility = [
     ":*",
@@ -30,6 +32,8 @@ source_set("client_test_helpers") {
   ]
   public_deps = [
     "//sdk/lib/fidl/cpp/wire",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-testing",
     "//zircon/system/ulib/zxtest",
   ]
 }

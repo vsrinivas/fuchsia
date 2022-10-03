@@ -103,79 +103,6 @@ zx_status_t driver_create_waiter(fidl_handle_t handle, async_dispatcher_t* dispa
   return ZX_OK;
 }
 
-void driver_create_thread_checker(async_dispatcher_t* dispatcher, ThreadingPolicy threading_policy,
-                                  AnyThreadChecker& any_thread_checker) {
-  class __TA_CAPABILITY("mutex") DriverThreadChecker final : public ThreadChecker {
-   public:
-    explicit DriverThreadChecker(async_dispatcher_t* dispatcher, ThreadingPolicy policy)
-        : ThreadChecker(policy),
-          initial_dispatcher_(fdf_dispatcher_from_async_dispatcher(dispatcher)) {
-      if (policy == ThreadingPolicy::kCreateAndTeardownFromDispatcherThread) {
-        uint32_t options = fdf_dispatcher_get_options(initial_dispatcher_);
-        if (options & FDF_DISPATCHER_OPTION_UNSYNCHRONIZED) {
-          // This error indicates that the user is using a synchronized FIDL
-          // binding (e.g. |fdf::WireClient|) over an unsynchronized dispatcher.
-          // This is not allowed, as it leads to thread safety issues.
-          resumable_panic(
-              "A synchronized fdf_dispatcher_t is required. "
-              "Ensure the fdf_dispatcher_t does not have the "
-              "|FDF_DISPATCHER_OPTION_UNSYNCHRONIZED| option.");
-        }
-      }
-    }
-
-    // Checks for exclusive access by checking that the current thread is the
-    // same as the constructing thread.
-    void check() const __TA_ACQUIRE() override {
-      if (policy() == ThreadingPolicy::kCreateAndTeardownFromDispatcherThread) {
-        fdf_dispatcher_t* current_dispatcher = fdf_dispatcher_get_current_dispatcher();
-        if (current_dispatcher == nullptr) {
-          // This error indicates that the user is destroying a synchronized
-          // FIDL binding (e.g. |fdf::WireClient|) on a thread that is not
-          // managed by a driver dispatcher. This is not allowed, as it leads to
-          // thread safety issues.
-          resumable_panic(
-              "Current thread is not managed by a driver dispatcher. "
-              "Ensure binding and teardown occur on a dispatcher managed thread.");
-          return;
-        }
-        if (initial_dispatcher_ != current_dispatcher) {
-          // This error indicates that the user is destroying a synchronized
-          // FIDL binding (e.g. |fdf::WireClient|) on a thread whose dispatcher
-          // is not the same as the one it is bound to. This is not allowed, as
-          // it leads to thread safety issues.
-          resumable_panic(
-              "Currently executing on a different dispatcher than the FIDL binding was bound on. "
-              "Ensure binding and teardown occur from the same dispatcher.");
-          return;
-        }
-      }
-    }
-
-    // Generates an exception that could be caught in unit testing, then recovered.
-    //
-    // By comparison, `ZX_PANIC` would put the current thread under an infinite loop
-    // of crashing.
-    static void resumable_panic(const char* msg) {
-      fprintf(stderr, "%s\n", msg);
-      fflush(nullptr);
-      // The following logic is similar to `backtrace_request`.
-      // See zircon/system/ulib/backtrace-request/include/lib/backtrace-request/backtrace-request.h
-#if defined(__aarch64__)
-      __asm__("brk 0");
-#elif defined(__x86_64__)
-      __asm__("int3");
-#else
-#error "what machine?"
-#endif
-    }
-
-   private:
-    fdf_dispatcher_t* initial_dispatcher_;
-  };
-  any_thread_checker.emplace<DriverThreadChecker>(dispatcher, threading_policy);
-}
-
 void driver_close(fidl_handle_t handle) { fdf_handle_close(handle); }
 
 void driver_close_many(const fidl_handle_t* handles, size_t num_handles) {
@@ -193,7 +120,6 @@ const TransportVTable DriverTransport::VTable = {
     .read = driver_read,
     .call = driver_call,
     .create_waiter = driver_create_waiter,
-    .create_thread_checker = driver_create_thread_checker,
 };
 
 DriverWaiter::DriverWaiter(fidl_handle_t handle, async_dispatcher_t* dispatcher,

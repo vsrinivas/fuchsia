@@ -104,6 +104,7 @@ source_set("testing") {
     # This should be migrated to mock_ddk to avoid this.
     "//src/devices/securemem/drivers/aml-securemem:aml-securemem-test-bin",
     "//src/devices/testing/driver-runtime-main/*",
+    "//src/lib/fidl/llcpp/tests/integration:*",
     "//src/tests/benchmarks/fidl/driver_cpp/*",
     "//src/tests/benchmarks/fidl/driver_llcpp/*",
   ]

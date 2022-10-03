@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fidl/cpp/wire/internal/debug_thread_checker.h>
+#include <lib/fidl/cpp/wire/internal/synchronization_checker.h>
 #include <lib/fidl/cpp/wire/internal/transport_channel.h>
 #include <lib/fidl/cpp/wire/message.h>
 #include <lib/fidl/cpp/wire/message_storage.h>
@@ -138,11 +138,6 @@ zx_status_t channel_create_waiter(fidl_handle_t handle, async_dispatcher_t* disp
   return ZX_OK;
 }
 
-void channel_create_thread_checker(async_dispatcher_t* dispatcher, ThreadingPolicy threading_policy,
-                                   AnyThreadChecker& any_thread_checker) {
-  any_thread_checker.emplace<ZirconThreadChecker>(threading_policy);
-}
-
 void channel_close(fidl_handle_t handle) { zx_handle_close(handle); }
 void channel_close_many(const fidl_handle_t* handles, size_t num_handles) {
   zx_handle_close_many(handles, num_handles);
@@ -157,7 +152,6 @@ const TransportVTable ChannelTransport::VTable = {
     .read = channel_read,
     .call = channel_call,
     .create_waiter = channel_create_waiter,
-    .create_thread_checker = channel_create_thread_checker,
 };
 
 zx_status_t ChannelWaiter::Begin() {

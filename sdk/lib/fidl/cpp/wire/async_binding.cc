@@ -47,7 +47,7 @@ AsyncBinding::AsyncBinding(async_dispatcher_t* dispatcher, AnyUnownedTransport t
                            ThreadingPolicy threading_policy)
     : dispatcher_(dispatcher),
       transport_(transport),
-      thread_checker_(transport.vtable(), dispatcher, threading_policy) {
+      thread_checker_(dispatcher, threading_policy) {
   ZX_ASSERT(dispatcher_);
   ZX_ASSERT(transport_.is_valid());
   transport_.create_waiter(

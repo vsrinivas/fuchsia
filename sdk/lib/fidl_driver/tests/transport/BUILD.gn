@@ -23,14 +23,10 @@ fidl("test.transport") {
 source_set("fidl_driver_transport_testing_lib") {
   public = [
     "assert_peer_closed_helper.h",
-    "death_test_helper.h",
     "scoped_fake_driver.h",
     "server_on_unbound_helper.h",
   ]
-  sources = [
-    "assert_peer_closed_helper.cc",
-    "death_test_helper.cc",
-  ]
+  sources = [ "assert_peer_closed_helper.cc" ]
   deps = [
     "//sdk/lib/driver_runtime:testing",
     "//sdk/lib/fidl_driver",
@@ -41,7 +37,6 @@ source_set("fidl_driver_transport_testing_lib") {
 }
 
 test_names = [
-  "api_test",
   "client_test",
   "natural_async_driver_transport_end_test",
   "natural_async_fdf_channel_test",
@@ -83,9 +78,35 @@ foreach(test_name, test_names) {
   }
 }
 
+# This test uses gtest in order to exercise death conditions.
+test("fidl_driver_api_test_bin") {
+  sources = [ "api_test.cc" ]
+  deps = [
+    ":fidl_driver_transport_testing_lib",
+    ":test.transport_cpp_driver",
+    "//sdk/lib/driver_runtime:testing",
+    "//sdk/lib/fidl_driver",
+    "//sdk/lib/fidl_driver:fidl_driver_natural",
+    "//sdk/testing/fidl/protocols_tests:test.unknown.interactions_cpp_driver",
+    "//src/devices/bin/driver_runtime:driver_runtime_impl",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/predicates",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/sync:sync-cpp",
+  ]
+}
+
+fuchsia_unittest_component("fidl_driver_api_test") {
+  # Use `fuchsia.process.Launcher` for death tests
+  manifest = "meta/fidl_driver_api_test.cml"
+  deps = [ ":fidl_driver_api_test_bin" ]
+}
+
 fuchsia_test_package("fidl_driver_transport_tests") {
   test_components = []
   foreach(test_name, test_names) {
     test_components += [ ":fidl_driver_" + test_name ]
   }
+  test_components += [ ":fidl_driver_api_test" ]
 }

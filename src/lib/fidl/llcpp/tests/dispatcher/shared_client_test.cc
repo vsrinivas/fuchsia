@@ -21,6 +21,8 @@
 
 #include "src/lib/fidl/llcpp/tests/dispatcher/async_loop_and_endpoints_fixture.h"
 #include "src/lib/fidl/llcpp/tests/dispatcher/client_checkers.h"
+#include "src/lib/fidl/llcpp/tests/dispatcher/fake_sequence_dispatcher.h"
+#include "src/lib/fidl/llcpp/tests/dispatcher/lsan_disabler.h"
 #include "src/lib/fidl/llcpp/tests/dispatcher/mock_client_impl.h"
 #include "src/lib/fidl/llcpp/tests/dispatcher/test_messages.h"
 
@@ -316,6 +318,33 @@ TEST_F(WireSharedClientTest, CanMakeCallOnAnotherThread) {
     (void)client->OneWayMethod(outgoing);
   });
   foreign_thread.join();
+}
+
+TEST_F(WireSharedClientTest, CanDestroyOnSameSequence) {
+  fidl_testing::RunWithLsanDisabled([&] {
+    auto [local, remote] = std::move(endpoints());
+    fidl_testing::FakeSequenceDispatcher fake_dispatcher(loop().dispatcher());
+
+    fake_dispatcher.SetSequenceId({.value = 1});
+    WireSharedClient client(std::move(local), &fake_dispatcher);
+    loop().RunUntilIdle();
+
+    ASSERT_NO_DEATH([&] { client = {}; });
+  });
+}
+
+TEST_F(WireSharedClientTest, CanDestroyOnAnotherSequence) {
+  fidl_testing::RunWithLsanDisabled([&] {
+    auto [local, remote] = std::move(endpoints());
+    fidl_testing::FakeSequenceDispatcher fake_dispatcher(loop().dispatcher());
+
+    fake_dispatcher.SetSequenceId({.value = 1});
+    WireSharedClient client(std::move(local), &fake_dispatcher);
+    loop().RunUntilIdle();
+
+    fake_dispatcher.SetSequenceId({.value = 2});
+    ASSERT_NO_DEATH([&] { client = {}; });
+  });
 }
 
 }  // namespace

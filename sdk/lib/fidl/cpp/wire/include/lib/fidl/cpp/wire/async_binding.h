@@ -10,8 +10,8 @@
 #include <lib/async/wait.h>
 #include <lib/fidl/cpp/wire/extract_resource_on_destruction.h>
 #include <lib/fidl/cpp/wire/internal/client_details.h>
-#include <lib/fidl/cpp/wire/internal/debug_thread_checker.h>
 #include <lib/fidl/cpp/wire/internal/endpoints.h>
+#include <lib/fidl/cpp/wire/internal/synchronization_checker.h>
 #include <lib/fidl/cpp/wire/message.h>
 #include <lib/fidl/cpp/wire/status.h>
 #include <lib/fidl/cpp/wire/transaction.h>
@@ -174,7 +174,7 @@ class AsyncBinding : public std::enable_shared_from_this<AsyncBinding> {
 
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
 
-  const DebugOnlyThreadChecker& thread_checker() const { return thread_checker_; }
+  const DebugOnlySynchronizationChecker& thread_checker() const { return thread_checker_; }
 
   // Initiates teardown with the provided |info| as reason.
   // This does not have to happen in the context of a dispatcher thread.
@@ -246,7 +246,7 @@ class AsyncBinding : public std::enable_shared_from_this<AsyncBinding> {
   //
   // |thread_checker_| is no-op in release builds, and may be completely
   // optimized out.
-  [[no_unique_address]] DebugOnlyThreadChecker thread_checker_;
+  [[no_unique_address]] DebugOnlySynchronizationChecker thread_checker_;
 
   // A lock protecting the binding |lifecycle|.
   //
