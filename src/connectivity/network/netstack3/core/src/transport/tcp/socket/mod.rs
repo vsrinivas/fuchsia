@@ -183,16 +183,12 @@ pub(crate) trait TcpSyncContext<I: IpExt, C: TcpNonSyncContext>:
 }
 
 /// Socket address includes the ip address and the port number.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, GenericOverIp)]
 pub struct SocketAddr<A: IpAddress> {
     /// The IP component of the address.
     pub ip: SpecifiedAddr<A>,
     /// The port component of the address.
     pub port: NonZeroU16,
-}
-
-impl<A: IpAddress> GenericOverIp for SocketAddr<A> {
-    type Type<I: Ip> = SocketAddr<I::Addr>;
 }
 
 impl<A: IpAddress> From<SocketAddr<A>> for IpAddr<SocketAddr<Ipv4Addr>, SocketAddr<Ipv6Addr>> {
@@ -980,18 +976,14 @@ where
 }
 
 /// Information about an unbound socket.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, GenericOverIp)]
 pub struct UnboundInfo<D> {
     /// The device the socket will be bound to.
     pub device: Option<D>,
 }
 
-impl<D> GenericOverIp for UnboundInfo<D> {
-    type Type<I: Ip> = Self;
-}
-
 /// Information about a bound socket's address.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, GenericOverIp)]
 pub struct BoundInfo<A: IpAddress, D> {
     /// The IP address the socket is bound to, or `None` for all local IPs.
     pub addr: Option<SpecifiedAddr<A>>,
@@ -1001,12 +993,8 @@ pub struct BoundInfo<A: IpAddress, D> {
     pub device: Option<D>,
 }
 
-impl<A: IpAddress, D> GenericOverIp for BoundInfo<A, D> {
-    type Type<I: Ip> = BoundInfo<I::Addr, D>;
-}
-
 /// Information about a connected socket's address.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, GenericOverIp)]
 pub struct ConnectionInfo<A: IpAddress, D> {
     /// The local address the socket is bound to.
     pub local_addr: SocketAddr<A>,
@@ -1014,10 +1002,6 @@ pub struct ConnectionInfo<A: IpAddress, D> {
     pub remote_addr: SocketAddr<A>,
     /// The device the socket is bound to.
     pub device: Option<D>,
-}
-
-impl<A: IpAddress, D> GenericOverIp for ConnectionInfo<A, D> {
-    type Type<I: Ip> = ConnectionInfo<I::Addr, D>;
 }
 
 impl<D> From<Unbound<D>> for UnboundInfo<D> {

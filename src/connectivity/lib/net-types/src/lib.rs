@@ -74,9 +74,11 @@
 pub mod ethernet;
 pub mod ip;
 
-use core::convert::TryFrom;
-use core::fmt::{self, Display, Formatter};
-use core::ops::Deref;
+use core::{
+    convert::TryFrom,
+    fmt::{self, Display, Formatter},
+    ops::Deref,
+};
 
 use crate::ip::{GenericOverIp, Ip, IpAddress};
 

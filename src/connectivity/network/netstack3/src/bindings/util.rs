@@ -751,6 +751,7 @@ where
 impl<A, D1, D2> TryFromFidlWithContext<MulticastMembershipInterfaceSelector<A, D1>>
     for MulticastMembershipInterfaceSelector<A, D2>
 where
+    A: IpAddress,
     D2: TryFromFidlWithContext<D1>,
 {
     type Error = D2::Error;

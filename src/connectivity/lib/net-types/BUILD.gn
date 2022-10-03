@@ -4,8 +4,12 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_macro.gni")
 
-common_deps = [ "//src/lib/zerocopy" ]
+common_deps = [
+  ":net-types-macros",
+  "//src/lib/zerocopy",
+]
 common_sources = [
   "src/ethernet.rs",
   "src/ip.rs",
@@ -41,6 +45,20 @@ rustc_library("net-types-nostd") {
   # enabled in our build system in order to ensure that net-types continues to
   # compile and pass tests when the "std" feature is disabled.
   visibility = [ ":*" ]
+
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
+}
+
+rustc_macro("net-types-macros") {
+  source_root = "src/macros.rs"
+  version = "0.1.0"
+  edition = "2021"
+  deps = [
+    "//third_party/rust_crates:quote",
+    "//third_party/rust_crates:syn",
+  ]
+
+  sources = [ "src/macros.rs" ]
 
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }

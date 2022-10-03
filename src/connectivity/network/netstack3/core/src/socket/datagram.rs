@@ -840,22 +840,20 @@ impl<A, D> GenericOverIp for MulticastInterfaceSelector<A, D> {
 ///
 /// This is like `Option<MulticastInterfaceSelector` except it specifies the
 /// semantics of the `None` value as "pick any device".
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum MulticastMembershipInterfaceSelector<A, D> {
+#[derive(Copy, Clone, Debug, Eq, PartialEq, GenericOverIp)]
+pub enum MulticastMembershipInterfaceSelector<A: IpAddress, D> {
     /// Use the specified interface.
     Specified(MulticastInterfaceSelector<A, D>),
     /// Pick any device with a route to the multicast target address.
     AnyInterfaceWithRoute,
 }
 
-impl<A, D> From<MulticastInterfaceSelector<A, D>> for MulticastMembershipInterfaceSelector<A, D> {
+impl<A: IpAddress, D> From<MulticastInterfaceSelector<A, D>>
+    for MulticastMembershipInterfaceSelector<A, D>
+{
     fn from(selector: MulticastInterfaceSelector<A, D>) -> Self {
         Self::Specified(selector)
     }
-}
-
-impl<A, D> GenericOverIp for MulticastMembershipInterfaceSelector<A, D> {
-    type Type<I: Ip> = MulticastMembershipInterfaceSelector<I::Addr, D>;
 }
 
 /// Sets the specified socket's membership status for the given group.

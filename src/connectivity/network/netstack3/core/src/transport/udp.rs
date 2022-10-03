@@ -536,7 +536,7 @@ impl<I: IpExt, D: IpDeviceId> PortAllocImpl for UdpBoundSocketMap<I, D> {
 }
 
 /// Information associated with a UDP connection.
-#[derive(Debug)]
+#[derive(Debug, GenericOverIp)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct UdpConnInfo<A: IpAddress, D> {
     /// The local address associated with a UDP connection.
@@ -583,6 +583,7 @@ impl<A: IpAddress, D: Clone + Debug> From<ConnAddr<A, D, NonZeroU16, NonZeroU16>
 }
 
 /// Information associated with a UDP listener
+#[derive(GenericOverIp)]
 pub struct UdpListenerInfo<A: IpAddress, D> {
     /// The local address associated with a UDP listener, or `None` for any
     /// address.
@@ -615,7 +616,7 @@ impl<A: IpAddress, D> From<NonZeroU16> for UdpListenerInfo<A, D> {
 /// New UDP sockets are created in an unbound state, and are assigned opaque
 /// identifiers. These identifiers can then be used to connect the socket or
 /// make it a listener.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, GenericOverIp)]
 pub struct UdpUnboundId<I: Ip>(usize, IpVersionMarker<I>);
 
 impl<I: Ip> UdpUnboundId<I> {
@@ -636,26 +637,6 @@ impl<I: Ip> From<UdpUnboundId<I>> for usize {
     }
 }
 
-impl<I: Ip> GenericOverIp for UdpUnboundId<I> {
-    type Type<P: Ip> = UdpUnboundId<P>;
-}
-
-impl<I: Ip> GenericOverIp for UdpListenerId<I> {
-    type Type<P: Ip> = UdpListenerId<P>;
-}
-
-impl<I: Ip> GenericOverIp for UdpConnId<I> {
-    type Type<P: Ip> = UdpConnId<P>;
-}
-
-impl<I: Ip> GenericOverIp for UdpBoundId<I> {
-    type Type<P: Ip> = UdpBoundId<P>;
-}
-
-impl<I: Ip> GenericOverIp for UdpSocketId<I> {
-    type Type<P: Ip> = UdpSocketId<P>;
-}
-
 impl<I: Ip> IdMapCollectionKey for UdpUnboundId<I> {
     const VARIANT_COUNT: usize = 1;
 
@@ -674,7 +655,7 @@ impl<I: Ip> IdMapCollectionKey for UdpUnboundId<I> {
 /// are opaque `usize`s which are intentionally allocated as densely as possible
 /// around 0, making it possible to store any associated data in a `Vec` indexed
 /// by the ID. `UdpConnId` implements `Into<usize>`.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, GenericOverIp)]
 pub struct UdpConnId<I: Ip>(usize, IpVersionMarker<I>);
 
 impl<I: Ip> UdpConnId<I> {
@@ -714,7 +695,7 @@ impl<I: Ip> From<usize> for UdpConnId<I> {
 /// possible around 0, making it possible to store any associated data in a
 /// `Vec` indexed by the ID. The `listener_type` field is used to look at the
 /// correct backing `Vec`: `listeners` or `wildcard_listeners`.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, GenericOverIp)]
 pub struct UdpListenerId<I: Ip> {
     id: usize,
     _marker: IpVersionMarker<I>,
@@ -752,7 +733,7 @@ impl<I: Ip> From<usize> for UdpListenerId<I> {
 ///
 /// Contains either a [`UdpConnId`] or [`UdpListenerId`] in contexts where either
 /// can be present.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, GenericOverIp)]
 pub enum UdpBoundId<I: Ip> {
     /// A UDP connection.
     Connected(UdpConnId<I>),
@@ -785,7 +766,7 @@ impl<I: Ip + IpExt, D: IpDeviceId> From<UdpBoundId<I>> for DatagramBoundId<Udp<I
 ///
 /// Contains either a [`UdpBoundId`] or [`UdpUnboundId`] in contexts where
 /// either can be present.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, GenericOverIp)]
 pub enum UdpSocketId<I: Ip> {
     /// A bound UDP socket ID.
     Bound(UdpBoundId<I>),
@@ -2558,10 +2539,6 @@ pub fn reconnect_udp<I: IpExt, C: NonSyncContext>(
     .map_err(|(IpInv(a), b)| (a, b))
 }
 
-impl<A: IpAddress, D> GenericOverIp for UdpConnInfo<A, D> {
-    type Type<I: Ip> = UdpConnInfo<I::Addr, D>;
-}
-
 /// Removes a previously registered UDP connection.
 ///
 /// `remove_udp_conn` removes a previously registered UDP connection indexed by
@@ -2641,10 +2618,6 @@ pub fn listen_udp<I: IpExt, C: NonSyncContext>(
         },
     )
     .map_err(|IpInv(a)| a)
-}
-
-impl<A: IpAddress, D> GenericOverIp for UdpListenerInfo<A, D> {
-    type Type<I: Ip> = UdpListenerInfo<I::Addr, D>;
 }
 
 /// Removes a previously registered UDP listener.

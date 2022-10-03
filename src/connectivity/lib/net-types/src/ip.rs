@@ -64,6 +64,7 @@ use core::ops::Deref;
 #[cfg(feature = "std")]
 use std::net;
 
+pub use net_types_macros::GenericOverIp;
 use zerocopy::{AsBytes, FromBytes, Unaligned};
 
 use crate::{
@@ -92,7 +93,7 @@ pub enum IpVersion {
 /// `IpVersionMarker` behaves similarly to [`PhantomData`].
 ///
 /// [`PhantomData`]: core::marker::PhantomData
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, GenericOverIp)]
 pub struct IpVersionMarker<I: Ip> {
     _marker: core::marker::PhantomData<I>,
 }
@@ -107,10 +108,6 @@ impl<I: Ip> Debug for IpVersionMarker<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "IpVersionMarker<{}>", I::NAME)
     }
-}
-
-impl<I: Ip> GenericOverIp for IpVersionMarker<I> {
-    type Type<P: Ip> = IpVersionMarker<P>;
 }
 
 /// An IP address.
@@ -3251,5 +3248,182 @@ mod tests {
             let converted: net::Ipv6Addr = v6.into();
             assert_eq!(converted, std_v6);
         }
+    }
+}
+
+/// Tests of the [`GenericOverIp`] derive macro.
+#[cfg(test)]
+mod macro_test {
+    use super::*;
+
+    /// No-op function that will only compile if `T::Type<I> = Other`.
+    fn assert_ip_generic_is<T, I, Other>()
+    where
+        I: Ip,
+        T: GenericOverIp<Type<I> = Other>,
+    {
+        // Do nothing; this function just serves to assert that the argument
+        // does in fact implement GenericOverIp.
+    }
+
+    macro_rules! assert_ip_generic {
+        ($name:ident, Ip $(,$($param:ident),*)?) => {
+            assert_ip_generic_is::<$name<Ipv4 $(, $($param,)*)?>, Ipv4, $name<Ipv4 $(, $($param,)*)?>>();
+            assert_ip_generic_is::<$name<Ipv4 $(, $($param,)*)?>, Ipv6, $name<Ipv6 $(, $($param,)*)?>>();
+            assert_ip_generic_is::<$name<Ipv6 $(, $($param,)*)?>, Ipv4, $name<Ipv4 $(, $($param,)*)?>>();
+            assert_ip_generic_is::<$name<Ipv6 $(, $($param,)*)?>, Ipv6, $name<Ipv6 $(, $($param,)*)?>>();
+        };
+        ($name:ident, IpAddress $(,$($param:ident),*)?) => {
+            assert_ip_generic_is::<$name<Ipv4Addr $(, $($param,)*)?>, Ipv4, $name<Ipv4Addr $(, $($param,)*)?>>();
+            assert_ip_generic_is::<$name<Ipv4Addr $(, $($param,)*)?>, Ipv6, $name<Ipv6Addr $(, $($param,)*)?>>();
+            assert_ip_generic_is::<$name<Ipv6Addr $(, $($param,)*)?>, Ipv4, $name<Ipv4Addr $(, $($param,)*)?>>();
+            assert_ip_generic_is::<$name<Ipv6Addr $(, $($param,)*)?>, Ipv6, $name<Ipv6Addr $(, $($param,)*)?>>();
+        };
+        ($name:ident $(,$($param:ident),*)?) => {
+            assert_ip_generic_is::<$name<$($($param,)*)?>, Ipv4, $name<$($($param,)*)?>>();
+            assert_ip_generic_is::<$name<$($($param,)*)?>, Ipv6, $name<$($($param,)*)?>>();
+            assert_ip_generic_is::<$name<$($($param,)*)?>, Ipv4, $name<$($($param,)*)?>>();
+            assert_ip_generic_is::<$name<$($($param,)*)?>, Ipv6, $name<$($($param,)*)?>>();
+        };
+    }
+
+    #[test]
+    fn struct_with_ip_version_parameter() {
+        #[allow(dead_code)]
+        #[derive(GenericOverIp)]
+        struct Generic<I: Ip> {
+            addr: I::Addr,
+        }
+
+        assert_ip_generic!(Generic, Ip);
+    }
+
+    #[test]
+    fn struct_with_ip_address_parameter() {
+        #[allow(dead_code)]
+        #[derive(GenericOverIp)]
+        struct Generic<A: IpAddress> {
+            addr: A,
+        }
+
+        assert_ip_generic!(Generic, IpAddress);
+    }
+
+    #[test]
+    fn enum_with_ip_version_parameter() {
+        #[allow(dead_code)]
+        #[derive(GenericOverIp)]
+        enum Generic<I: Ip> {
+            A(I::Addr),
+            B(I::Addr),
+        }
+
+        assert_ip_generic!(Generic, Ip);
+    }
+
+    #[test]
+    fn enum_with_ip_address_parameter() {
+        #[allow(dead_code)]
+        #[derive(GenericOverIp)]
+        enum Generic<A: IpAddress> {
+            A(A),
+            B(A),
+        }
+
+        assert_ip_generic!(Generic, IpAddress);
+    }
+
+    #[test]
+    fn struct_with_ip_version_and_other_parameters() {
+        #[allow(dead_code)]
+        #[derive(GenericOverIp)]
+        struct AddrAndDevice<I: Ip, D> {
+            addr: I::Addr,
+            device: D,
+        }
+        struct Device;
+
+        assert_ip_generic!(AddrAndDevice, Ip, Device);
+    }
+
+    #[test]
+    fn enum_with_ip_version_and_other_parameters() {
+        #[allow(dead_code)]
+        #[derive(GenericOverIp)]
+        enum AddrOrDevice<I: Ip, D> {
+            Addr(I::Addr),
+            Device(D),
+        }
+        struct Device;
+
+        assert_ip_generic!(AddrOrDevice, Ip, Device);
+    }
+
+    #[test]
+    fn struct_with_ip_address_and_other_parameters() {
+        #[allow(dead_code)]
+        #[derive(GenericOverIp)]
+        struct AddrAndDevice<A: IpAddress, D> {
+            addr: A,
+            device: D,
+        }
+        struct Device;
+
+        assert_ip_generic!(AddrAndDevice, IpAddress, Device);
+    }
+
+    #[test]
+    fn enum_with_ip_address_and_other_parameters() {
+        #[allow(dead_code)]
+        #[derive(GenericOverIp, Debug, PartialEq)]
+        enum AddrOrDevice<A: IpAddress, D> {
+            Addr(A),
+            Device(D),
+        }
+        struct Device;
+
+        assert_ip_generic!(AddrOrDevice, IpAddress, Device);
+    }
+
+    #[test]
+    fn struct_invariant_over_ip() {
+        #[allow(dead_code)]
+        #[derive(GenericOverIp)]
+        struct Invariant(usize);
+
+        assert_ip_generic!(Invariant);
+    }
+
+    #[test]
+    fn enum_invariant_over_ip() {
+        #[allow(dead_code)]
+        #[derive(GenericOverIp)]
+        enum Invariant {
+            Usize(usize),
+        }
+
+        assert_ip_generic!(Invariant);
+    }
+
+    #[test]
+    fn struct_invariant_over_ip_with_other_params() {
+        #[allow(dead_code)]
+        #[derive(GenericOverIp)]
+        struct Invariant<B, C, D>(B, C, D);
+
+        assert_ip_generic!(Invariant, usize, bool, char);
+    }
+
+    #[test]
+    fn enum_invariant_over_ip_with_other_params() {
+        #[allow(dead_code)]
+        #[derive(GenericOverIp)]
+        enum Invariant<A, B, C> {
+            A(A),
+            B(B),
+            C(C),
+        }
+
+        assert_ip_generic!(Invariant, usize, bool, char);
     }
 }
