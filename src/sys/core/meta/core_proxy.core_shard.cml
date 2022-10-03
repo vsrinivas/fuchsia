@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "syslog/client.shard.cml" ],
-
     // TODO(fxbug.dev/104628): remove this.
     program: {
         runner: "elf",
