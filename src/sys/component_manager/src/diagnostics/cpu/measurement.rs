@@ -35,13 +35,17 @@ pub struct Measurement {
 }
 
 impl Measurement {
-    /// An empty measurement (zeros) at the given `timestamp`.
+    #[cfg(test)]
     pub fn empty(timestamp: zx::Time) -> Self {
         Self {
             timestamp,
             cpu_time: zx::Duration::from_nanos(0),
             queue_time: zx::Duration::from_nanos(0),
         }
+    }
+
+    pub fn clone_with_time(m: &Self, timestamp: zx::Time) -> Self {
+        Self { timestamp, cpu_time: *m.cpu_time(), queue_time: *m.queue_time() }
     }
 
     /// Records the measurement data to the given inspect `node`.

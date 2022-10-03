@@ -85,7 +85,13 @@ pub struct ComponentTreeStats<T: RuntimeStatsSource + Debug> {
 
     time_source: Arc<dyn TimeSource + Send + Sync>,
 
+    /// A queue of data taken from tasks which have been terminated.
+    /// If the ComponentTreeStats object has too many dead tasks, it will begin to drop
+    /// the individual `TaskInfo<T>` objects and aggregate their data into this queue.
     aggregated_dead_task_data: Mutex<MeasurementsQueue>,
+
+    /// Cumulative CPU time of tasks that are terminated.
+    exited_measurements: Mutex<Measurement>,
 }
 
 impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T> {
@@ -127,6 +133,7 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
                 COMPONENT_CPU_MAX_SAMPLES,
                 time_source,
             )),
+            exited_measurements: Mutex::new(Measurement::default()),
         });
 
         let weak_self = Arc::downgrade(&this);
@@ -259,14 +266,20 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
             .iter()
             .map(|(k, v)| (k.clone(), Arc::downgrade(&v)))
             .collect::<Vec<_>>();
-        let mut aggregated = Measurement::empty(start);
+        let mut locked_exited_measurements = self.exited_measurements.lock().await;
+        let mut aggregated = Measurement::clone_with_time(&*locked_exited_measurements, start);
         let mut stats_to_remove = vec![];
         let mut koids_to_remove = vec![];
         for (moniker, weak_stats) in stats.into_iter() {
             if let Some(stats) = weak_stats.upgrade() {
                 let mut stat_guard = stats.lock().await;
+                // Order is important: measure, then measure_tracked_dead_tasks, then clean_stale
                 aggregated += &stat_guard.measure().await;
-                koids_to_remove.append(&mut stat_guard.clean_stale().await);
+                aggregated += &stat_guard.measure_tracked_dead_tasks().await;
+                let (mut stale_koids, exited_cpu_of_deleted) = stat_guard.clean_stale().await;
+                aggregated += &exited_cpu_of_deleted;
+                *locked_exited_measurements += &exited_cpu_of_deleted;
+                koids_to_remove.append(&mut stale_koids);
                 if !stat_guard.is_alive().await {
                     stats_to_remove.push(moniker);
                 }
@@ -519,6 +532,297 @@ mod tests {
     };
 
     #[fuchsia::test]
+    async fn total_tracks_cpu_after_termination() {
+        let inspector = inspect::Inspector::new();
+        let clock = Arc::new(FakeTime::new());
+        let stats = ComponentTreeStats::new_with_timesource(
+            inspector.root().create_child("cpu_stats"),
+            clock.clone(),
+        )
+        .await;
+
+        let mut previous_task_count = 0;
+        for i in 0..10 {
+            clock.add_ticks(1);
+            let component_task = FakeTask::new(
+                i as u64,
+                create_measurements_vec_for_fake_task(COMPONENT_CPU_MAX_SAMPLES as i64 * 3, 2, 4),
+            );
+
+            let moniker = AbsoluteMoniker::from(vec![format!("moniker-{}", i).as_ref()]);
+            let fake_runtime =
+                FakeRuntime::new(FakeDiagnosticsContainer::new(component_task, None));
+            stats.on_component_started(&moniker, &fake_runtime).await;
+
+            loop {
+                let current = stats.tree.lock().await.len();
+                if current != previous_task_count {
+                    previous_task_count = current;
+                    break;
+                }
+                fasync::Timer::new(fasync::Time::after(100i64.millis())).await;
+            }
+        }
+
+        assert_eq!(stats.tasks.lock().await.len(), 10);
+        assert_eq!(stats.tree.lock().await.len(), 10);
+
+        for _ in 0..=COMPONENT_CPU_MAX_SAMPLES - 2 {
+            stats.measure().await;
+            clock.add_ticks(CPU_SAMPLE_PERIOD.as_nanos() as i64);
+        }
+
+        // Data is produced by `measure`
+        // Both recent and previous exist
+        assert_eq!(
+            stats.totals.lock().await.recent_measurement.as_ref().unwrap().cpu_time().into_nanos(),
+            1180,
+        );
+        assert_eq!(
+            stats
+                .totals
+                .lock()
+                .await
+                .recent_measurement
+                .as_ref()
+                .unwrap()
+                .queue_time()
+                .into_nanos(),
+            2360,
+        );
+        assert_eq!(
+            stats
+                .totals
+                .lock()
+                .await
+                .previous_measurement
+                .as_ref()
+                .unwrap()
+                .cpu_time()
+                .into_nanos(),
+            1160,
+        );
+        assert_eq!(
+            stats
+                .totals
+                .lock()
+                .await
+                .previous_measurement
+                .as_ref()
+                .unwrap()
+                .queue_time()
+                .into_nanos(),
+            2320,
+        );
+
+        // Terminate all tasks
+        for i in 0..10 {
+            let moniker = AbsoluteMoniker::from(vec![format!("moniker-{}", i).as_ref()]);
+            for task in stats
+                .tree
+                .lock()
+                .await
+                .get(&moniker.into())
+                .unwrap()
+                .lock()
+                .await
+                .tasks_mut()
+                .iter_mut()
+            {
+                task.lock().await.force_terminate().await;
+                // the timestamp for termination is used as a key when pruning,
+                // so all of the tasks cannot be removed at exactly the same time
+                clock.add_ticks(1);
+            }
+        }
+
+        // Data is produced by measure_dead_tasks
+        assert_eq!(
+            stats.totals.lock().await.recent_measurement.as_ref().unwrap().cpu_time().into_nanos(),
+            1180,
+        );
+        assert_eq!(
+            stats
+                .totals
+                .lock()
+                .await
+                .recent_measurement
+                .as_ref()
+                .unwrap()
+                .queue_time()
+                .into_nanos(),
+            2360,
+        );
+        assert_eq!(
+            stats
+                .totals
+                .lock()
+                .await
+                .previous_measurement
+                .as_ref()
+                .unwrap()
+                .cpu_time()
+                .into_nanos(),
+            1160,
+        );
+        assert_eq!(
+            stats
+                .totals
+                .lock()
+                .await
+                .previous_measurement
+                .as_ref()
+                .unwrap()
+                .queue_time()
+                .into_nanos(),
+            2320,
+        );
+
+        // Data is produced by measure_dead_tasks
+        stats.measure().await;
+        clock.add_ticks(CPU_SAMPLE_PERIOD.as_nanos() as i64);
+
+        assert_eq!(
+            stats.totals.lock().await.recent_measurement.as_ref().unwrap().cpu_time().into_nanos(),
+            1200,
+        );
+        assert_eq!(
+            stats
+                .totals
+                .lock()
+                .await
+                .recent_measurement
+                .as_ref()
+                .unwrap()
+                .queue_time()
+                .into_nanos(),
+            2400,
+        );
+        assert_eq!(
+            stats
+                .totals
+                .lock()
+                .await
+                .previous_measurement
+                .as_ref()
+                .unwrap()
+                .cpu_time()
+                .into_nanos(),
+            1180,
+        );
+        assert_eq!(
+            stats
+                .totals
+                .lock()
+                .await
+                .previous_measurement
+                .as_ref()
+                .unwrap()
+                .queue_time()
+                .into_nanos(),
+            2360,
+        );
+
+        stats.measure().await;
+        clock.add_ticks(CPU_SAMPLE_PERIOD.as_nanos() as i64);
+
+        assert_eq!(
+            stats.totals.lock().await.recent_measurement.as_ref().unwrap().cpu_time().into_nanos(),
+            1200,
+        );
+        assert_eq!(
+            stats
+                .totals
+                .lock()
+                .await
+                .recent_measurement
+                .as_ref()
+                .unwrap()
+                .queue_time()
+                .into_nanos(),
+            2400,
+        );
+        assert_eq!(
+            stats
+                .totals
+                .lock()
+                .await
+                .previous_measurement
+                .as_ref()
+                .unwrap()
+                .cpu_time()
+                .into_nanos(),
+            1200, // 1200 now because "previous" and "most recent" mean the same thing when
+                  // everything is dead
+        );
+        assert_eq!(
+            stats
+                .totals
+                .lock()
+                .await
+                .previous_measurement
+                .as_ref()
+                .unwrap()
+                .queue_time()
+                .into_nanos(),
+            2400,
+        );
+
+        // Push all the measurements in the queues out. @totals should still be accurate
+        for _ in 0..COMPONENT_CPU_MAX_SAMPLES {
+            stats.measure().await;
+            clock.add_ticks(CPU_SAMPLE_PERIOD.as_nanos() as i64);
+        }
+
+        // Data is produced by clean_stale
+        assert_eq!(stats.tasks.lock().await.len(), 0);
+        assert_eq!(stats.tree.lock().await.len(), 0);
+
+        // Expect that cumulative totals are still around, plus a post-termination measurement
+        assert_eq!(
+            stats.totals.lock().await.recent_measurement.as_ref().unwrap().cpu_time().into_nanos(),
+            1200,
+        );
+        assert_eq!(
+            stats
+                .totals
+                .lock()
+                .await
+                .recent_measurement
+                .as_ref()
+                .unwrap()
+                .queue_time()
+                .into_nanos(),
+            2400,
+        );
+        assert_eq!(
+            stats
+                .totals
+                .lock()
+                .await
+                .previous_measurement
+                .as_ref()
+                .unwrap()
+                .cpu_time()
+                .into_nanos(),
+            1200, // 1200 now because "previous" and "most recent" mean the same thing when
+                  // everything is dead
+        );
+        assert_eq!(
+            stats
+                .totals
+                .lock()
+                .await
+                .previous_measurement
+                .as_ref()
+                .unwrap()
+                .queue_time()
+                .into_nanos(),
+            2400,
+        );
+    }
+
+    #[fuchsia::test]
     async fn components_are_deleted_when_all_tasks_are_gone() {
         let inspector = inspect::Inspector::new();
         let clock = Arc::new(FakeTime::new());
@@ -546,6 +850,7 @@ mod tests {
             stats.tree.lock().await.get(&moniker).unwrap().lock().await.tasks_mut().iter_mut()
         {
             task.lock().await.force_terminate().await;
+            clock.add_ticks(1);
         }
 
         // All post-invalidation measurements; this will push out true measurements
@@ -634,6 +939,7 @@ mod tests {
                 .iter_mut()
             {
                 task.lock().await.force_terminate().await;
+                clock.add_ticks(1);
             }
         }
 
@@ -1155,6 +1461,7 @@ mod tests {
         for task in stats.tree.lock().await.get(&extended_moniker).unwrap().lock().await.tasks_mut()
         {
             task.lock().await.force_terminate().await;
+            clock.add_ticks(1);
         }
 
         // This will perform the (last) post-termination sample.

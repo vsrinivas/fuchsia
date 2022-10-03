@@ -60,7 +60,8 @@ pub struct TaskInfo<T: RuntimeStatsSource + Debug> {
     pub(crate) task: Arc<Mutex<TaskState<T>>>,
     pub(crate) time_source: Arc<dyn TimeSource + Sync + Send>,
     pub(crate) has_parent_task: bool,
-    measurements: MeasurementsQueue,
+    pub(crate) measurements: MeasurementsQueue,
+    exited_cpu: Option<Measurement>,
     histogram: Option<UintLinearHistogramProperty>,
     previous_cpu: zx::Duration,
     previous_histogram_timestamp: i64,
@@ -136,6 +137,7 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> TaskInfo<T> {
             time_source,
             _terminated_task,
             most_recent_measurement_nanos,
+            exited_cpu: None,
         })
     }
 
@@ -148,6 +150,7 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> TaskInfo<T> {
         if self.has_parent_task {
             return None;
         }
+
         self.measure_subtree().await
     }
 
@@ -175,7 +178,7 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> TaskInfo<T> {
 
     fn measure_subtree<'a>(&'a mut self) -> BoxFuture<'a, Option<&'a Measurement>> {
         async move {
-            let runtime_info_res = {
+            let (task_terminated_can_measure, runtime_info_res) = {
                 let mut guard = self.task.lock().await;
                 match &*guard {
                     TaskState::TerminatedAndMeasured => {
@@ -188,9 +191,9 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> TaskInfo<T> {
                         let mut terminated_at_nanos_guard =
                             self.most_recent_measurement_nanos.lock().await;
                         *terminated_at_nanos_guard = Some(self.time_source.now());
-                        result
+                        (true, result)
                     }
-                    TaskState::Alive(task) => task.get_runtime_info().await,
+                    TaskState::Alive(task) => (false, task.get_runtime_info().await),
                 }
             };
             if let Ok(runtime_info) = runtime_info_res {
@@ -217,6 +220,10 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> TaskInfo<T> {
                 self.add_to_histogram(current_cpu - self.previous_cpu, *measurement.timestamp());
                 self.previous_cpu = current_cpu;
                 self.measurements.insert(measurement);
+                if task_terminated_can_measure {
+                    self.exited_cpu = self.measurements.most_recent_measurement().cloned();
+                    return None;
+                }
                 return self.measurements.most_recent_measurement();
             }
             None
@@ -247,8 +254,15 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> TaskInfo<T> {
     /// - Its handle is valid, or
     /// - There's at least one measurement saved.
     pub async fn is_alive(&self) -> bool {
-        return !matches!(*self.task.lock().await, TaskState::TerminatedAndMeasured)
-            || !self.measurements.no_true_measurements();
+        let task_state_terminated_and_measured =
+            matches!(*self.task.lock().await, TaskState::TerminatedAndMeasured);
+        let task_has_real_measurements = !self.measurements.no_true_measurements();
+
+        !task_state_terminated_and_measured || task_has_real_measurements
+    }
+
+    pub async fn exited_cpu(&self) -> Option<&Measurement> {
+        self.exited_cpu.as_ref()
     }
 
     /// Writes the task measurements under the given inspect node `parent`.

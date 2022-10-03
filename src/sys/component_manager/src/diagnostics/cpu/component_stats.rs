@@ -43,6 +43,8 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentStats<T> {
 
     /// Takes a runtime info measurement and records it. Drops old ones if the maximum amount is
     /// exceeded.
+    ///
+    /// Applies to tasks which have TaskState::Alive or TaskState::Terminated.
     pub async fn measure(&mut self) -> Measurement {
         let mut result = Measurement::default();
         for task in self.tasks.iter_mut() {
@@ -50,26 +52,58 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentStats<T> {
                 result += measurement;
             }
         }
+
         result
     }
 
-    /// Removes all tasks that are not alive. Returns the koids of the ones that were deleted.
-    pub async fn clean_stale(&mut self) -> Vec<zx::sys::zx_koid_t> {
+    /// This produces measurements for tasks which have TaskState::TerminatedAndMeasured
+    /// but also have measurement data for the past hour.
+    pub async fn measure_tracked_dead_tasks(&self) -> Measurement {
+        let mut result = Measurement::default();
+
+        for task in self.tasks.iter() {
+            let locked_task = task.lock().await;
+
+            // this implies that `clean_stale()` will take the measurement
+            if locked_task.measurements.no_true_measurements() {
+                continue;
+            }
+
+            if let Some(m) = locked_task.exited_cpu().await {
+                result += m;
+            }
+        }
+
+        result
+    }
+
+    /// Removes all tasks that are not alive.
+    ///
+    /// Returns the koids of the ones that were deleted and the sum of the final measurements
+    /// of the dead tasks. The measurement produced is of Tasks with
+    /// TaskState::TerminatedAndMeasured.
+    pub async fn clean_stale(&mut self) -> (Vec<zx::sys::zx_koid_t>, Measurement) {
         let mut deleted_koids = vec![];
         let mut final_tasks = vec![];
+        let mut exited_cpu_time = Measurement::default();
         while let Some(task) = self.tasks.pop() {
             let (is_alive, koid) = {
                 let task_guard = task.lock().await;
                 (task_guard.is_alive().await, task_guard.koid())
             };
+
             if is_alive {
                 final_tasks.push(task);
             } else {
                 deleted_koids.push(koid);
+                let locked_task = task.lock().await;
+                if let Some(m) = locked_task.exited_cpu().await {
+                    exited_cpu_time += m;
+                }
             }
         }
         self.tasks = final_tasks;
-        deleted_koids
+        (deleted_koids, exited_cpu_time)
     }
 
     pub async fn remove_by_koids(&mut self, remove: &[zx::sys::zx_koid_t]) {
