@@ -20,7 +20,12 @@ install_host_tools("host") {
 group("tests") {
   testonly = true
   deps = [
+    "cmd:tests",
+    "directory:tests",
     "file:tests",
+    "license:tests",
     "project:tests",
+    "result:tests",
+    "util:tests",
   ]
 }

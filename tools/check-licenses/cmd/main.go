@@ -8,12 +8,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 )
 
 const (
@@ -40,7 +38,8 @@ var (
 	buildInfoProduct = flag.String("build_info_product", "product", "Version of fuchsia being built. Used for uploading results.")
 	buildInfoBoard   = flag.String("build_info_board", "board", "Version of fuchsia being built. Used for uploading results.")
 
-	gnPath = flag.String("gn_path", "{FUCHSIA_DIR}/prebuilt/third_party/gn/linux-x64/gn", "Path to GN executable. Required when target is specified.")
+	gnPath    = flag.String("gn_path", "{FUCHSIA_DIR}/prebuilt/third_party/gn/linux-x64/gn", "Path to GN executable. Required when target is specified.")
+	gnGenFile = flag.String("gn_gen_file", "{BUILD_DIR}/project.json", "Path to 'project.json' output file.")
 
 	outputLicenseFile = flag.Bool("output_license_file", true, "Flag for enabling template expansions.")
 )
@@ -71,24 +70,12 @@ func mainImpl() error {
 
 	// fuchsiaDir
 	if *fuchsiaDir == "" {
-		// TODO: Update CQ to provide the fuchsia home directory.
-		//return fmt.Errorf("--fuchsia_dir cannot be empty.")
 		*fuchsiaDir = "."
 	}
 	if *fuchsiaDir, err = filepath.Abs(*fuchsiaDir); err != nil {
 		return fmt.Errorf("Failed to get absolute directory for *fuchsiaDir %v: %v", *fuchsiaDir, err)
 	}
 	ConfigVars["{FUCHSIA_DIR}"] = *fuchsiaDir
-
-	// diffTarget
-	if *diffTarget != "" {
-		*diffTarget, err = filepath.Abs(*diffTarget)
-		if err != nil {
-			return fmt.Errorf("Failed to get absolute directory for *diffTarget %v: %v", *diffTarget, err)
-		}
-	}
-
-	ConfigVars["{DIFF_TARGET}"] = *diffTarget
 
 	// buildDir
 	if *buildDir == "" && *outputLicenseFile {
@@ -131,15 +118,15 @@ func mainImpl() error {
 		return fmt.Errorf("Failed to get absolute directory for *gnPath %v: %v", *gnPath, err)
 	}
 
-	ConfigVars["{GN_PATH}"] = *gnPath
-	ConfigVars["{OUTPUT_LICENSE_FILE}"] = strconv.FormatBool(*outputLicenseFile)
-
-	// logLevel
-	w, err := getLogWriters(*logLevel, *outDir)
+	*gnGenFile = strings.ReplaceAll(*gnGenFile, "{BUILD_DIR}", *buildDir)
+	*gnGenFile, err = filepath.Abs(*gnGenFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to get absolute directory for *gnGenFile %v: %v", *gnGenFile, err)
 	}
-	log.SetOutput(w)
+
+	ConfigVars["{GN_PATH}"] = *gnPath
+	ConfigVars["{GN_GEN_FILE}"] = *gnPath
+	ConfigVars["{OUTPUT_LICENSE_FILE}"] = strconv.FormatBool(*outputLicenseFile)
 
 	// target
 	if flag.NArg() > 1 {
@@ -148,46 +135,16 @@ func mainImpl() error {
 	if flag.NArg() == 1 {
 		target = flag.Arg(0)
 	}
-	if *outputLicenseFile {
-		if isPath(target) {
-			target, _ = filepath.Abs(target)
-		} else {
-			// Run "fx gn <>" command to generate a filter file.
-			gn, err := NewGn(*gnPath, *buildDir)
-			if err != nil {
-				return err
-			}
+	ConfigVars["{TARGET}"] = target
 
-			filterDir := filepath.Join(*outDir, "filter")
-			gnFilterFile := filepath.Join(filterDir, "gnFilter.json")
-			if _, err := os.Stat(filterDir); os.IsNotExist(err) {
-				err := os.Mkdir(filterDir, 0755)
-				if err != nil {
-					return fmt.Errorf("Failed to create filter directory [%v]: %v\n", filterDir, err)
-				}
-			}
-
-			startGn := time.Now()
-			if target != "" {
-				log.Printf("Running 'fx gn desc %v' command...", target)
-				if err := gn.Dependencies(context.Background(), gnFilterFile, target); err != nil {
-					return err
-				}
-			} else {
-				log.Print("Running 'fx gn gen' command...")
-				if err := gn.Gen(context.Background(), gnFilterFile); err != nil {
-					return err
-				}
-			}
-			if *filter == "" {
-				*filter = gnFilterFile
-			} else {
-				*filter = fmt.Sprintf("%v,%v", gnFilterFile, *filter)
-			}
-			log.Printf("Done. [%v]\n", time.Since(startGn))
+	// diffTarget
+	if *diffTarget != "" {
+		*diffTarget, err = filepath.Abs(*diffTarget)
+		if err != nil {
+			return fmt.Errorf("Failed to get absolute directory for *diffTarget %v: %v", *diffTarget, err)
 		}
 	}
-	ConfigVars["{TARGET}"] = target
+	ConfigVars["{DIFF_TARGET}"] = *diffTarget
 
 	// configFile
 	configFile := strings.ReplaceAll(defaultConfigFile, "{FUCHSIA_DIR}", *fuchsiaDir)
@@ -196,33 +153,14 @@ func mainImpl() error {
 		return err
 	}
 
-	// Set non-string config values directly.
-	Config.Result.OutputLicenseFile = *outputLicenseFile
-	Config.OutputLicenseFile = *outputLicenseFile
-	Config.World.Filters = strings.Split(*filter, ",")
-	Config.Filters = strings.Split(*filter, ",")
-
 	if err := os.Chdir(*fuchsiaDir); err != nil {
 		return err
 	}
 
-	if err := Execute(context.Background(), Config); err != nil {
+	if err := Execute(context.Background()); err != nil {
 		return fmt.Errorf("failed to analyze the given directory: %v", err)
 	}
 	return nil
-}
-
-func isPath(target string) bool {
-	if strings.HasPrefix(target, "//") {
-		return false
-	}
-	if strings.HasPrefix(target, ":") {
-		return false
-	}
-	if target == "" {
-		return false
-	}
-	return true
 }
 
 func main() {

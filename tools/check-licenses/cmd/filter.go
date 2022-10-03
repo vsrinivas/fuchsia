@@ -5,101 +5,82 @@
 package main
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/file"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/project"
+	"go.fuchsia.dev/fuchsia/tools/check-licenses/util"
 )
 
+// Filter out projects that do not contribute to the build graph.
 func FilterProjects() error {
-	projects := make([]*project.Project, 0)
-	projectsMap := make(map[*project.Project]bool, 0)
-
-	filepaths := make([]string, 0)
+	var filepaths []string
 	var err error
 
-	if isDir(Config.Target) {
-		log.Printf(fmt.Sprintf(" -> Filtering projects using a folder prefix check: `%s`\n", Config.Target))
-		filepaths = FilterProjectsUsingDirectoryPrefix(filepaths)
+	// Get dependencies of the target or current workspace.
+	if filepaths, err = getDependencies(); err != nil {
+		return err
 	}
 
-	filepaths, err = FilterExtraProjects(filepaths)
+	// Get a mapping of file to project.
+	var fileMap map[string]*project.Project
+	fileMap, err = getFileMap()
 	if err != nil {
 		return err
 	}
 
-	fileMap, err := getFileMap()
-	if err != nil {
-		return err
-	}
-
-	// Loop through the content, cleaning up the path strings
-	// so we can map them to entries in our project map.
+	projectsMap := make(map[string]*project.Project, 0)
 	for _, fp := range filepaths {
 		if p, ok := fileMap[fp]; ok {
-			projectsMap[p] = true
+			projectsMap[p.Root] = p
 		}
 	}
+	project.FilteredProjects = projectsMap
 
-	for p := range projectsMap {
-		projects = append(projects, p)
-	}
-	sort.Sort(project.Order(projects))
-
-	for _, p := range projects {
-		project.FilteredProjects[p.Root] = p
-	}
-
-	filteredCount := len(project.FilteredProjects)
-	totalCount := len(project.AllProjects)
-	filteredOutCount := totalCount - filteredCount
-	log.Printf(" -> %v projects remain (filtered out %v from the full list of %v projects).\n", filteredCount, filteredOutCount, totalCount)
+	log.Printf(" -> %v projects remain (from the full list of %v projects).\n",
+		len(projectsMap),
+		len(project.AllProjects))
 	return nil
 }
 
-func FilterProjectsUsingDirectoryPrefix(filepaths []string) []string {
-	for _, p := range project.AllProjects {
-		for _, f := range p.Files {
-			if strings.HasPrefix(f.AbsPath, Config.Target) {
-				filepaths = append(filepaths, f.AbsPath)
-			}
-		}
+func getDependencies() ([]string, error) {
+	// Run "fx gn <>" command to generate a filter file.
+	gn, err := util.NewGn(*gnPath, *buildDir)
+	if err != nil {
+		return nil, err
 	}
-	return filepaths
-}
 
-func FilterExtraProjects(filepaths []string) ([]string, error) {
-	for _, projectFile := range Config.Filters {
-		log.Printf(" -> Adding additional projects from json file: `%s`\n", projectFile)
-
-		f, err := os.Open(projectFile)
+	filterDir := filepath.Join(*outDir, "filter")
+	gnFilterFile := filepath.Join(filterDir, "gnFilter.json")
+	if _, err := os.Stat(filterDir); os.IsNotExist(err) {
+		err := os.Mkdir(filterDir, 0755)
 		if err != nil {
-			return filepaths, err
-		}
-		defer f.Close()
-
-		content, err := io.ReadAll(f)
-		if err != nil {
-			return filepaths, err
-		}
-
-		projects := make([]string, 0)
-		if err = json.Unmarshal(content, &projects); err != nil {
-			return filepaths, fmt.Errorf("Failed to unmarshal project json file [%v]: %v\n", projectFile, err)
-		}
-		for _, p := range projects {
-			filepaths = append(filepaths, p)
+			return nil, fmt.Errorf("Failed to create filter directory [%v]: %v\n",
+				filterDir, err)
 		}
 	}
 
-	return filepaths, nil
+	if Config.Target != "" {
+		log.Printf(" -> Running 'fx gn desc %v' command...", Config.Target)
+		if content, err := gn.Dependencies(context.Background(),
+			gnFilterFile, Config.Target); err != nil {
+			return nil, err
+		} else {
+			return content, nil
+		}
+	}
+
+	log.Print(" -> Running 'fx gn gen' command...")
+	if content, err := gn.Gen(context.Background(), gnFilterFile); err != nil {
+		return nil, err
+	} else {
+		return content, nil
+	}
 }
 
 func getFileMap() (map[string]*project.Project, error) {
@@ -123,16 +104,22 @@ func getFileMap() (map[string]*project.Project, error) {
 			filePath := "//" + path
 			folderPath := "//" + filepath.Dir(path)
 
-			// "gn gen" may reveal that the current workspace has a a dependency on a LICENSE file.
-			// That LICENSE file may be used in two or more different projects across fuchsia.git.
-			// There's no way for us to tell which project actually contributes to the build.
+			// "gn gen" may reveal that the current workspace
+			// has a dependency on a LICENSE file.
+			// That LICENSE file may be used in two or more
+			// different projects across fuchsia.git.
+			// There's no way for us to tell which project
+			// actually contributes to the build.
 			//
-			// We want to deterministically generate the final NOTICE file, so in this situation
-			// we simply choose the project that comes first alphabetically.
+			// We want to deterministically generate the final
+			// NOTICE file, so in this situation we simply choose
+			// the project that comes first alphabetically.
 			//
-			// In practice this simple strategy should be OK. "gn desc" / "gn gen" will undoubtedly
-			// also have dependencies on other files in the project, which will ensure that the correct
-			// project is included (even if we also occasionally include an unrelated one).
+			// In practice this simple strategy should be OK.
+			// "gn desc" / "gn gen" will undoubtedly also have
+			// dependencies on other files in the project, which
+			// will ensure that the correct project is included
+			// (even if we occasionally include an unrelated one).
 			if otherP, ok := fileMap[filePath]; ok {
 				if p.Root < otherP.Root {
 					fileMap[filePath] = p
@@ -146,15 +133,4 @@ func getFileMap() (map[string]*project.Project, error) {
 	}
 
 	return fileMap, nil
-}
-
-func isDir(str string) bool {
-	_, err := os.Stat(str)
-	if err == nil {
-		return true
-	}
-	if os.IsNotExist(err) {
-		return false
-	}
-	return false
 }

@@ -27,10 +27,16 @@ const (
 )
 
 // SaveResults saves the results to the output files defined in the config file.
-func SaveResults() (string, error) {
+func SaveResults(cmdConfig interface{}, cmdMetrics MetricsInterface) (string, error) {
 	var b strings.Builder
 
-	s, err := savePackageInfo("license", license.Config, license.Metrics)
+	s, err := savePackageInfo("cmd", cmdConfig, cmdMetrics)
+	if err != nil {
+		return "", err
+	}
+	b.WriteString(s)
+
+	s, err = savePackageInfo("license", license.Config, license.Metrics)
 	if err != nil {
 		return "", err
 	}
@@ -96,6 +102,7 @@ func SaveResults() (string, error) {
 	} else {
 		b.WriteString("Set the 'outputdir' arg in the config file to save detailed information to disk.\n")
 	}
+
 	return b.String(), nil
 }
 
@@ -189,9 +196,7 @@ func compressGZ(path string) error {
 	}
 	path, err = filepath.Rel(Config.OutDir, path)
 	if err != nil {
-		return fmt.Errorf("Failed to get relative directory [%v] of [%v]: %v",
-			Config.OutDir, path, err)
-
+		return err
 	}
 	return writeFile(path+".gz", buf.Bytes())
 }

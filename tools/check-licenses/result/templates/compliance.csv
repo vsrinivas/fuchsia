@@ -1,3 +1,3 @@
 External Library Name	Link to the library's LICENSE file	License Name	The name of the binary that links the external library	Copyright notice and license text for library included in third-party notices being surfaced in the product?*	Source code for library included the mirrored source included on the product?**
 {{ $csvData := .GetCSVEntries }}{{ range $_, $entry := $csvData.Entries }}
-{{ $entry.Package }}	{{ $entry.Url }}	{{ $entry.Left}}	{{ $entry.LicenseType }}	{{ $entry.Project }}	{{ $entry.BeingSurfaced }}	{{ $entry.SourceCodeIncluded }}{{ end }}
+{{ $entry.Package }}	{{ $entry.Url }}	{{ $entry.LicenseType }}	{{ $entry.Project }}	{{ $entry.BeingSurfaced }}	{{ $entry.SourceCodeIncluded }}	{{ $entry.Path }}{{ end }}

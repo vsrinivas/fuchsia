@@ -91,22 +91,22 @@ func NewSpecialProject(projectRootPath string) (*Project, error) {
 
 		switch {
 		case strings.Contains(l, "dart-pkg"):
-			licenseFile.Url = fmt.Sprintf("%v/license", p.URL)
+			licenseFile.URL = fmt.Sprintf("%v/license", p.URL)
 
 		case strings.Contains(l, "golibs"):
-			licenseFile.Url = fmt.Sprintf("%v?tab=licenses", p.URL)
+			licenseFile.URL = fmt.Sprintf("%v?tab=licenses", p.URL)
 
 		case strings.Contains(l, "rust_crates"):
 			rel := l
 			if strings.Contains(l, Config.FuchsiaDir) {
 				rel, _ = filepath.Rel(Config.FuchsiaDir, l)
 			}
-			licenseFile.Url = fmt.Sprintf("https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/%v", rel)
+			licenseFile.URL = fmt.Sprintf("https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/%v", rel)
 		}
 	}
 
 	plusVal(NumProjects, p.Root)
+	plusVal(ProjectURLs, fmt.Sprintf("%v - %v", p.Root, p.URL))
 	AllProjects[p.Root] = p
-
 	return p, nil
 }
