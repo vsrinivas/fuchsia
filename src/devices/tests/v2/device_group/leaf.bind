@@ -1,0 +1,17 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+composite leaf;
+
+using fuchsia.devicegroupbind.test;
+
+primary node "left" {
+  fuchsia.devicegroupbind.test.TEST_BIND_PROPERTY ==
+    fuchsia.devicegroupbind.test.TEST_BIND_PROPERTY.DRIVER_LEFT;
+}
+
+node "right" {
+  fuchsia.devicegroupbind.test.TEST_BIND_PROPERTY ==
+    fuchsia.devicegroupbind.test.TEST_BIND_PROPERTY.DRIVER_RIGHT;
+}

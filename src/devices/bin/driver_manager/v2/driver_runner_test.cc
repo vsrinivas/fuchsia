@@ -1738,7 +1738,7 @@ TEST_F(DriverRunnerTest, CreateAndBindDeviceGroup) {
 
   fidl::Arena<> arena;
   auto added = driver_runner.device_group_manager().AddDeviceGroup(fidl::ToWire(arena, group));
-  ASSERT_EQ(ZX_OK, added.status_value());
+  ASSERT_TRUE(added.is_ok());
 
   RunLoopUntilIdle();
 

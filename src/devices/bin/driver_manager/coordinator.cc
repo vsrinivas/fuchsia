@@ -904,9 +904,12 @@ zx_status_t Coordinator::AddDeviceGroup(
                           .Build();
   auto result = device_group_manager_->AddDeviceGroup(device_group);
   if (!result.is_ok()) {
-    LOGF(ERROR, "Failed to add device group to the device group manager.");
+    LOGF(ERROR, "Failed to add device group to the device group manager: %d.",
+         result.error_value());
+    return ZX_ERR_INVALID_ARGS;
   }
-  return result.status_value();
+
+  return ZX_OK;
 }
 
 zx_status_t Coordinator::BindDriver(Driver* drv) {
@@ -1085,6 +1088,11 @@ void Coordinator::PublishDriverDevelopmentService(component::OutgoingDirectory& 
         });
   };
   auto result = outgoing.AddProtocol<fdd::DriverDevelopment>(driver_dev);
+  ZX_ASSERT(result.is_ok());
+}
+
+void Coordinator::PublishDeviceGroupManager(component::OutgoingDirectory& outgoing) {
+  auto result = outgoing.AddProtocol<fdf::DeviceGroupManager>(device_group_manager_.get());
   ZX_ASSERT(result.is_ok());
 }
 

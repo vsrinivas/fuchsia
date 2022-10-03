@@ -126,11 +126,13 @@ TEST_F(DeviceGroupManagerTest, TestAddMatchDeviceGroup) {
       {.composite = composite_match, .node_names = {{"node-0", "node-1"}}}};
 
   bridge_.AddDeviceGroupMatch(device_group_path, match);
-  ASSERT_OK(device_group_manager_->AddDeviceGroup(
-      fdf::wire::DeviceGroup::Builder(allocator)
-          .topological_path(fidl::StringView(allocator, device_group_path))
-          .nodes(std::move(nodes))
-          .Build()));
+  ASSERT_TRUE(
+      device_group_manager_
+          ->AddDeviceGroup(fdf::wire::DeviceGroup::Builder(allocator)
+                               .topological_path(fidl::StringView(allocator, device_group_path))
+                               .nodes(std::move(nodes))
+                               .Build())
+          .is_ok());
   ASSERT_EQ(
       2, device_group_manager_->device_groups().at(device_group_path)->device_group_nodes().size());
   ASSERT_FALSE(
@@ -226,11 +228,13 @@ TEST_F(DeviceGroupManagerTest, TestBindSameNodeTwice) {
       {.composite = composite_match, .node_names = {{"node-0", "node-1"}}}};
 
   bridge_.AddDeviceGroupMatch(device_group_path, match);
-  ASSERT_OK(device_group_manager_->AddDeviceGroup(
-      fdf::wire::DeviceGroup::Builder(allocator)
-          .topological_path(fidl::StringView(allocator, device_group_path))
-          .nodes(std::move(nodes))
-          .Build()));
+  ASSERT_TRUE(
+      device_group_manager_
+          ->AddDeviceGroup(fdf::wire::DeviceGroup::Builder(allocator)
+                               .topological_path(fidl::StringView(allocator, device_group_path))
+                               .nodes(std::move(nodes))
+                               .Build())
+          .is_ok());
   ASSERT_EQ(
       2, device_group_manager_->device_groups().at(device_group_path)->device_group_nodes().size());
 
@@ -315,11 +319,13 @@ TEST_F(DeviceGroupManagerTest, TestMultibind) {
       {.composite = matched_info_1, .node_names = {{"node-0", "node-1"}}}};
 
   bridge_.AddDeviceGroupMatch(device_group_path_1, match_1);
-  ASSERT_OK(device_group_manager_->AddDeviceGroup(
-      fdf::wire::DeviceGroup::Builder(allocator)
-          .topological_path(fidl::StringView(allocator, device_group_path_1))
-          .nodes(std::move(nodes_1))
-          .Build()));
+  ASSERT_TRUE(
+      device_group_manager_
+          ->AddDeviceGroup(fdf::wire::DeviceGroup::Builder(allocator)
+                               .topological_path(fidl::StringView(allocator, device_group_path_1))
+                               .nodes(std::move(nodes_1))
+                               .Build())
+          .is_ok());
   ASSERT_EQ(
       2,
       device_group_manager_->device_groups().at(device_group_path_1)->device_group_nodes().size());
@@ -338,11 +344,13 @@ TEST_F(DeviceGroupManagerTest, TestMultibind) {
   fdi::MatchedDeviceGroupInfo match_2{{.composite = matched_info_2, .node_names = {{"node-0"}}}};
 
   bridge_.AddDeviceGroupMatch(device_group_path_2, match_2);
-  ASSERT_OK(device_group_manager_->AddDeviceGroup(
-      fdf::wire::DeviceGroup::Builder(allocator)
-          .topological_path(fidl::StringView(allocator, device_group_path_2))
-          .nodes(std::move(nodes_2))
-          .Build()));
+  ASSERT_TRUE(
+      device_group_manager_
+          ->AddDeviceGroup(fdf::wire::DeviceGroup::Builder(allocator)
+                               .topological_path(fidl::StringView(allocator, device_group_path_2))
+                               .nodes(std::move(nodes_2))
+                               .Build())
+          .is_ok());
   ASSERT_EQ(
       1,
       device_group_manager_->device_groups().at(device_group_path_2)->device_group_nodes().size());
@@ -431,7 +439,7 @@ TEST_F(DeviceGroupManagerTest, TestBindWithNoCompositeMatch) {
                           .topological_path(fidl::StringView(allocator, device_group_path))
                           .nodes(std::move(nodes))
                           .Build();
-  ASSERT_OK(device_group_manager_->AddDeviceGroup(device_group));
+  ASSERT_TRUE(device_group_manager_->AddDeviceGroup(device_group).is_ok());
   ASSERT_EQ(nullptr, device_group_manager_->device_groups().at(device_group_path));
 
   //  Bind device group node 1.
@@ -517,14 +525,14 @@ TEST_F(DeviceGroupManagerTest, TestAddDuplicate) {
                           .topological_path(fidl::StringView(allocator, device_group_path))
                           .nodes(std::move(nodes))
                           .Build();
-  ASSERT_OK(device_group_manager_->AddDeviceGroup(device_group));
+  ASSERT_TRUE(device_group_manager_->AddDeviceGroup(device_group).is_ok());
 
   auto device_group_2 = fdf::wire::DeviceGroup::Builder(allocator)
                             .topological_path(fidl::StringView(allocator, device_group_path))
                             .nodes(std::move(nodes_2))
                             .Build();
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
-            device_group_manager_->AddDeviceGroup(device_group_2).status_value());
+  ASSERT_EQ(fuchsia_driver_framework::DeviceGroupError::kAlreadyExists,
+            device_group_manager_->AddDeviceGroup(device_group_2).error_value());
 }
 
 TEST_F(DeviceGroupManagerTest, TestRebindCompositeMatch) {
@@ -583,10 +591,10 @@ TEST_F(DeviceGroupManagerTest, TestRebindCompositeMatch) {
                           .topological_path(fidl::StringView(allocator, device_group_path))
                           .nodes(std::move(nodes))
                           .Build();
-  ASSERT_OK(device_group_manager_->AddDeviceGroup(device_group));
+  ASSERT_TRUE(device_group_manager_->AddDeviceGroup(device_group).is_ok());
   ASSERT_EQ(
       2, device_group_manager_->device_groups().at(device_group_path)->device_group_nodes().size());
 
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
-            device_group_manager_->AddDeviceGroup(device_group).status_value());
+  ASSERT_EQ(fuchsia_driver_framework::DeviceGroupError::kAlreadyExists,
+            device_group_manager_->AddDeviceGroup(device_group).error_value());
 }

@@ -43,3 +43,25 @@ type DeviceGroup = table {
     /// the primary node.
     2: nodes vector<DeviceGroupNode>:MAX;
 };
+
+/// Error codes for the DeviceGroupManager protocol.
+type DeviceGroupError = strict enum {
+    /// An argument of the device group was not provided.
+    MISSING_ARGS = 1;
+    /// The given device group's `nodes` is empty.
+    EMPTY_NODES = 2;
+    /// The `topological_path` in the given device group is a duplicate
+    /// of an already created device group.
+    ALREADY_EXISTS = 3;
+};
+
+/// Protocol through which board drivers can create device groups.
+///
+/// Device groups are created at runtime to dynamically bridge the
+/// static bind rules of a composite driver with the dynamic bind properties
+/// of nodes in the system so that the driver bind rules are more generic and reusable.
+@discoverable
+protocol DeviceGroupManager {
+    /// Creates the given device group in the driver framework.
+    CreateDeviceGroup(DeviceGroup) -> (struct {}) error DeviceGroupError;
+};

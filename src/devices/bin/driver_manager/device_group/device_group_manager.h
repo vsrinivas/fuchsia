@@ -21,16 +21,21 @@ struct CompositeNodeAndDriver {
 // This class is responsible for managing device groups. It keeps track of the device
 // groups and its matching composite driver and nodes. DeviceGroupManager is owned by a
 // CompositeManagerBridge and must be outlived by it.
-class DeviceGroupManager {
+class DeviceGroupManager : public fidl::WireServer<fuchsia_driver_framework::DeviceGroupManager> {
  public:
   using DeviceGroupMap = std::unordered_map<std::string, std::unique_ptr<DeviceGroup>>;
 
   explicit DeviceGroupManager(CompositeManagerBridge* bridge);
 
+  // fidl::WireServer<fuchsia_driver_framework::DeviceGroupManager>
+  void CreateDeviceGroup(CreateDeviceGroupRequestView request,
+                         CreateDeviceGroupCompleter::Sync& completer) override;
+
   // Adds a device group to the driver index. If it's successfully added, then the
   // DeviceGroupManager stores the device group in a map. After that, it sends a call to
   // CompositeManagerBridge to bind all unbound devices.
-  zx::status<> AddDeviceGroup(fuchsia_driver_framework::wire::DeviceGroup group);
+  fitx::result<fuchsia_driver_framework::DeviceGroupError> AddDeviceGroup(
+      fuchsia_driver_framework::wire::DeviceGroup group);
 
   // Binds the device to one of the device group nodes that it was matched to.
   // DeviceGroupManager will go through the list of device groups until it finds one with

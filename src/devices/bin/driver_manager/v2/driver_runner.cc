@@ -233,6 +233,11 @@ void DriverRunner::PublishComponentRunner(component::OutgoingDirectory& outgoing
   composite_device_manager_.Publish(outgoing);
 }
 
+void DriverRunner::PublishDeviceGroupManager(component::OutgoingDirectory& outgoing) {
+  auto result = outgoing.AddProtocol<fdf::DeviceGroupManager>(&device_group_manager_);
+  ZX_ASSERT(result.is_ok());
+}
+
 zx::status<> DriverRunner::StartRootDriver(std::string_view url) {
   return StartDriver(*root_node_, url, fdi::DriverPackageType::kBase);
 }

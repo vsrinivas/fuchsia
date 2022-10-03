@@ -44,6 +44,7 @@ sdk_source_set("cpp") {
   include_base = "//sdk"
 
   sources = [
+    "device_group.h",
     "driver2_cpp.h",
     "driver_base.h",
     "driver_context.cc",

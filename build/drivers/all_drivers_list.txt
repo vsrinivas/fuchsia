@@ -260,6 +260,8 @@
 //src/devices/tests/v2/interop:leaf_driver
 //src/devices/tests/v2/interop:root_driver
 //src/devices/tests/v2/interop:v1_driver
+//src/devices/tests/v2/device_group:leaf_driver
+//src/devices/tests/v2/device_group:root_driver
 //src/devices/tests/v2/runtime-dispatcher:leaf-driver
 //src/devices/tests/v2/runtime-dispatcher:root-driver
 //src/devices/tests/v2/runtime-protocol:leaf-driver

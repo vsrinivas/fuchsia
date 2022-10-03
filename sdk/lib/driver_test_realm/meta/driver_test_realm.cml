@@ -51,6 +51,7 @@
             protocol: [
                 "fuchsia.device.composite.DeprecatedCompositeCreator",
                 "fuchsia.device.fs.Exporter",
+                "fuchsia.driver.framework.DeviceGroupManager",
             ],
             from: "#driver_manager",
             to: [
@@ -153,8 +154,8 @@
         },
         {
             directory: "dev-topological",
-            as: "dev",
             from: "#driver_manager",
+            as: "dev",
         },
         {
             directory: "dev-class",

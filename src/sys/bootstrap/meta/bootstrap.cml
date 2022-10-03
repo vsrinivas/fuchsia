@@ -419,9 +419,7 @@
             ],
         },
         {
-            protocol: [
-                "fuchsia.metrics.MetricEventLoggerFactory",
-            ],
+            protocol: [ "fuchsia.metrics.MetricEventLoggerFactory" ],
             from: "parent",
             to: [
                 "#fshost",
@@ -487,6 +485,7 @@
             protocol: [
                 "fuchsia.device.composite.DeprecatedCompositeCreator",
                 "fuchsia.device.fs.Exporter",
+                "fuchsia.driver.framework.DeviceGroupManager",
             ],
             from: "#driver_manager",
             to: [

@@ -1,0 +1,16 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.devicegroupbind.test;
+
+enum TEST_BIND_PROPERTY {
+    DRIVER_LEFT,
+    DRIVER_RIGHT,
+    ONE_LEFT,
+    ONE_RIGHT,
+    TWO_LEFT,
+    TWO_RIGHT,
+    THREE_LEFT,
+    THREE_RIGHT,
+};

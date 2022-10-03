@@ -15,6 +15,7 @@
                 "fuchsia.boot.Items",
                 "fuchsia.device.composite.DeprecatedCompositeCreator",
                 "fuchsia.device.fs.Exporter",
+                "fuchsia.driver.framework.DeviceGroupManager",
             ],
         },
         { service: "fuchsia.driver.compat.Service" },

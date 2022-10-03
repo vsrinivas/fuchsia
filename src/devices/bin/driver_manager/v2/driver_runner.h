@@ -57,6 +57,7 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
   fpromise::promise<inspect::Inspector> Inspect() const;
   size_t NumOrphanedNodes() const;
   void PublishComponentRunner(component::OutgoingDirectory& outgoing);
+  void PublishDeviceGroupManager(component::OutgoingDirectory& outgoing);
   zx::status<> StartRootDriver(std::string_view url);
   std::shared_ptr<Node> root_node();
   // This function schedules a callback to attempt to bind all orphaned nodes against
@@ -84,6 +85,7 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
   void Bind(Node& node, std::shared_ptr<BindResultTracker> result_tracker) override;
 
   zx::status<DriverHost*> CreateDriverHost() override;
+
   // The untracked version of TryBindAllOrphans.
   void TryBindAllOrphansUntracked();
 

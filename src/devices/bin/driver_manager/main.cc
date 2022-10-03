@@ -271,6 +271,7 @@ int main(int argc, char** argv) {
   if (!driver_manager_params.use_dfv2) {
     coordinator.set_driver_runner(&driver_runner);
     coordinator.PublishDriverDevelopmentService(outgoing);
+    coordinator.PublishDeviceGroupManager(outgoing);
 
     // V1 Drivers.
     status = system_instance.CreateDriverHostJob(root_job, &config.driver_host_job);
@@ -289,7 +290,7 @@ int main(int argc, char** argv) {
     }
     driver_development_service.emplace(driver_runner, loop.dispatcher());
     driver_development_service->Publish(outgoing);
-
+    driver_runner.PublishDeviceGroupManager(outgoing);
     driver_runner.ScheduleBaseDriversBinding();
   }
 
