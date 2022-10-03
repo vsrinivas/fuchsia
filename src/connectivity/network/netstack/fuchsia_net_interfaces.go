@@ -122,7 +122,14 @@ func (wi *interfaceWatcherImpl) Watch(ctx fidl.Context) (interfaces.Event, error
 	for {
 		if len(wi.mu.queue) > 0 {
 			event := wi.mu.queue[0]
+			wi.mu.queue[0] = interfaces.Event{}
 			wi.mu.queue = wi.mu.queue[1:]
+			if len(wi.mu.queue) == 0 {
+				// Drop the whole slice so that the backing array can be garbage
+				// collected. Otherwise, the now-inaccessible front of wi.mu.queue could
+				// be retained in memory forever.
+				wi.mu.queue = nil
+			}
 			return event, nil
 		}
 
