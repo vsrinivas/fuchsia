@@ -193,8 +193,23 @@ if (is_fuchsia) {
       ]
 
   recovery_installer_packages =
-      recovery_eng_packages - [ "//src/recovery/system:system_recovery" ] +
-      [ "//src/recovery/system:system_recovery_installer" ]
+      recovery_eng_packages - [
+        "//src/recovery/system:system_recovery",
+
+        # After issuing device reboot when `ffx target flash`, ffx will block
+        # on the first mdns respond from the target as a signal of re-discovery.
+        # It also seems to temporarily stop updating the target according to
+        # later responds that follow. If we are unlucky and this first responds
+        # is _fuchsia._udp instead of _fastboot._tcp, ffx will fail to
+        # recognize the device as being in the fastboot state. For now remove
+        # _fuchsia._udp service as a workaround in favor of _fastboot._tcp
+        # until we need both.
+        "//src/connectivity/network/mdns/service:mdns_fuchsia_udp_config",
+      ] +
+      [
+        "//src/recovery/system:system_recovery_installer",
+        "//src/firmware/fastboot-tcp:fastboot_tcp_mdns_config",
+      ]
 
   recovery_fdr_packages = recovery_packages
   recovery_fdr_packages -= [ "//src/recovery/system:system_recovery" ]
