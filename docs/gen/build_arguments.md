@@ -1087,9 +1087,9 @@ From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.
 
 ### crashpad_http_transport_impl
 
-**Current value (from the default):** `"libcurl"`
+**Current value (from the default):** `"socket"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/09ab2d0c37986d36f609dab98d1116165c0eaf5e/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:19](https://fuchsia.googlesource.com/third_party/crashpad/+/09ab2d0c37986d36f609dab98d1116165c0eaf5e/util/net/tls.gni#19)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
@@ -2365,7 +2365,7 @@ From [//third_party/perfetto/gn/perfetto.gni:193](https://fuchsia.googlesource.c
 
 ### enable_perfetto_ipc
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
 From [//third_party/perfetto/gn/perfetto.gni:150](https://fuchsia.googlesource.com/third_party/android.googlesource.com/platform/external/perfetto//+/6b54769fde8e593a5ad7142596935d8198b511f1/gn/perfetto.gni#150)
 
@@ -2389,7 +2389,7 @@ From [//third_party/perfetto/gn/perfetto.gni:235](https://fuchsia.googlesource.c
 
 ### enable_perfetto_system_consumer
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
 From [//third_party/perfetto/gn/perfetto.gni:251](https://fuchsia.googlesource.com/third_party/android.googlesource.com/platform/external/perfetto//+/6b54769fde8e593a5ad7142596935d8198b511f1/gn/perfetto.gni#251)
 
@@ -7085,7 +7085,7 @@ VkInstances or VkDevice will fail.
 This argument will affect all vulkan_{executable/test} build targets.
 
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
 From //src/lib/vulkan/build/config.gni:40
 
