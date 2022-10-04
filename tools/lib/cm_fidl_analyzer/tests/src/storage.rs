@@ -215,7 +215,6 @@ mod tests {
                 CheckUse::Storage {
                     path: "/storage".try_into().unwrap(),
                     storage_relation: Some(InstancedRelativeMoniker::new(
-                        vec![],
                         vec!["consumer:0".into()],
                     )),
                     from_cm_namespace: false,

@@ -30,57 +30,29 @@ pub trait AbsoluteMonikerBase:
         Ok(Self::new(path?))
     }
 
-    fn parse_str(input: &str) -> Result<Self, MonikerError>;
+    fn parse_str(input: &str) -> Result<Self, MonikerError> {
+        if input.chars().nth(0) != Some('/') {
+            return Err(MonikerError::invalid_moniker(input));
+        }
+        if input == "/" {
+            return Ok(Self::root());
+        }
+        let path =
+            input[1..].split('/').map(Self::Part::parse).collect::<Result<_, MonikerError>>()?;
+        Ok(Self::new(path))
+    }
+
+    // Creates an absolute moniker for a descendant of this component instance.
+    fn descendant<T: RelativeMonikerBase<Part = Self::Part>>(&self, descendant: &T) -> Self {
+        let mut path = self.path().clone();
+        let mut relative_path = descendant.path().clone();
+        path.append(&mut relative_path);
+        Self::new(path)
+    }
 
     fn path(&self) -> &Vec<Self::Part>;
 
-    /// Given an absolute moniker realm `start`, and a relative moniker from `start` to an `end`
-    /// realm, returns the absolute moniker of the `end` realm.
-    ///
-    /// If an absolute moniker cannot be computed, then a MonikerError::InvalidMoniker error is
-    /// returned.
-    ///
-    /// Example:
-    ///
-    ///          a
-    ///        /   \
-    ///      b      c
-    ///    /
-    ///  d
-    ///
-    ///  Given:
-    ///    `start` = /a/c
-    ///    `start_to_end` (c -> d) = .\c/b/d
-    ///  Returns:
-    ///    /a/b/d
-    fn from_relative<
-        S: AbsoluteMonikerBase<Part = Self::Part>,
-        T: RelativeMonikerBase<Part = Self::Part>,
-    >(
-        start: &S,
-        start_to_end: &T,
-    ) -> Result<Self, MonikerError> {
-        // Verify that `start.path`'s tail is of `start_to_end.up_path`.
-        if start_to_end.up_path().len() > start.path().len()
-            || !start_to_end.up_path().iter().eq(start
-                .path()
-                .iter()
-                .rev()
-                .take(start_to_end.up_path().len()))
-        {
-            return Err(MonikerError::invalid_moniker(start.to_string()));
-        }
-
-        Ok(Self::new(
-            start
-                .path()
-                .iter()
-                .take(start.path().len() - start_to_end.up_path().len()) // remove the first `start_to_end.up_path` elements from `from`
-                .chain(start_to_end.down_path().iter()) // append the `start_to_end.down_path` elements
-                .cloned()
-                .collect(),
-        ))
-    }
+    fn path_mut(&mut self) -> &mut Vec<Self::Part>;
 
     /// Indicates whether `other` is contained within the realm specified by
     /// this AbsoluteMonikerBase.
@@ -171,25 +143,22 @@ impl AbsoluteMonikerBase for AbsoluteMoniker {
         &self.path
     }
 
-    /// Parse the given string as an absolute moniker. The string should be a '/' delimited series
-    /// of child monikers without any instance identifiers, e.g. "/", or "/name1/name2" or
-    /// "/name1:collection1".
-    fn parse_str(input: &str) -> Result<AbsoluteMoniker, MonikerError> {
-        if input.chars().nth(0) != Some('/') {
-            return Err(MonikerError::invalid_moniker(input));
-        }
-        if input == "/" {
-            return Ok(AbsoluteMoniker::root());
-        }
-        let path =
-            input[1..].split('/').map(ChildMoniker::parse).collect::<Result<_, MonikerError>>()?;
-        Ok(AbsoluteMoniker::new(path))
+    fn path_mut(&mut self) -> &mut Vec<Self::Part> {
+        &mut self.path
     }
 }
 
 impl From<Vec<&str>> for AbsoluteMoniker {
     fn from(rep: Vec<&str>) -> Self {
         Self::parse(&rep).expect(&format!("absolute moniker failed to parse: {:?}", &rep))
+    }
+}
+
+impl TryFrom<&str> for AbsoluteMoniker {
+    type Error = MonikerError;
+
+    fn try_from(input: &str) -> Result<Self, MonikerError> {
+        Self::parse_str(input)
     }
 }
 
@@ -214,6 +183,8 @@ impl fmt::Display for AbsoluteMoniker {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::relative_moniker::RelativeMoniker;
+
     #[test]
     fn absolute_monikers() {
         let root = AbsoluteMoniker::root();
@@ -248,5 +219,18 @@ mod tests {
         assert_eq!("/", format!("{}", m.parent().unwrap().parent().unwrap()));
         assert_eq!(None, m.parent().unwrap().parent().unwrap().parent());
         assert_eq!(m.leaf(), Some(&ChildMoniker::from("b")));
+    }
+
+    #[test]
+    fn absolute_moniker_descendant() {
+        let scope_root: AbsoluteMoniker = vec!["a:test1", "b:test2"].into();
+
+        let relative: RelativeMoniker = vec!["c:test3", "d:test4"].try_into().unwrap();
+        let descendant = scope_root.descendant(&relative);
+        assert_eq!("/a:test1/b:test2/c:test3/d:test4", format!("{}", descendant));
+
+        let relative: RelativeMoniker = vec![].try_into().unwrap();
+        let descendant = scope_root.descendant(&relative);
+        assert_eq!("/a:test1/b:test2", format!("{}", descendant));
     }
 }

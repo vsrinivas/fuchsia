@@ -5,7 +5,7 @@
 use {
     crate::instanced_child_moniker::InstancedChildMoniker,
     core::cmp::{self, Ord, Ordering},
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, MonikerError},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker},
     std::{fmt, hash::Hash},
 };
 
@@ -47,21 +47,8 @@ impl AbsoluteMonikerBase for InstancedAbsoluteMoniker {
         &self.path
     }
 
-    /// Parse the given string as an instanced absolute moniker. The string should b a '/'
-    /// delimited series of child monikers *with* instance identifiers, e.g. "/", or
-    /// "/name1:0/name2:0" or "/name1:collection1:0".
-    fn parse_str(input: &str) -> Result<InstancedAbsoluteMoniker, MonikerError> {
-        if input.chars().nth(0) != Some('/') {
-            return Err(MonikerError::invalid_moniker(input));
-        }
-        if input == "/" {
-            return Ok(InstancedAbsoluteMoniker::root());
-        }
-        let path = input[1..]
-            .split('/')
-            .map(InstancedChildMoniker::parse)
-            .collect::<Result<_, MonikerError>>()?;
-        Ok(InstancedAbsoluteMoniker::new(path))
+    fn path_mut(&mut self) -> &mut Vec<Self::Part> {
+        &mut self.path
     }
 }
 

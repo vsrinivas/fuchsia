@@ -320,21 +320,22 @@ pub(crate) fn allowlist_entry_matches(
         }
         AllowlistEntry::Realm(realm) => {
             // For a Realm entry we are looking for the target_moniker to be
-            // contained in the realm (i.e. empty up path) and the down_path to be
-            // non-empty (i.e. children are allowed but not the realm itself).
-            let relative = RelativeMoniker::from_absolute(realm, target_moniker);
-            relative.up_path().is_empty() && !relative.down_path().is_empty()
+            // contained in the realm. Children are allowed but not the realm itself.
+            if let Ok(relative) = RelativeMoniker::scope_down(realm, target_moniker) {
+                !relative.path().is_empty()
+            } else {
+                false
+            }
         }
         AllowlistEntry::Collection(realm, collection) => {
             // For a Collection entry we are looking for the target_moniker to be
-            // contained in the realm (i.e. empty up path) and that the first element of
+            // contained in the realm and that the first element of
             // the down path is in a collection with a matching name.
-            let relative = RelativeMoniker::from_absolute(realm, target_moniker);
-            relative.up_path().is_empty()
-                && relative
-                    .down_path()
-                    .first()
-                    .map_or(false, |first| first.collection() == Some(collection))
+            if let Ok(relative) = RelativeMoniker::scope_down(realm, target_moniker) {
+                relative.path().get(0).map_or(false, |first| first.collection() == Some(collection))
+            } else {
+                false
+            }
         }
     }
 }

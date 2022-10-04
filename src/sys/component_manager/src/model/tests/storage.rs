@@ -200,7 +200,7 @@ async fn use_in_collection_from_parent() {
         vec!["b", "coll:c"].into(),
         CheckUse::Storage {
             path: "/data".try_into().unwrap(),
-            storage_relation: Some(InstancedRelativeMoniker::new(vec![], vec!["coll:c:1".into()])),
+            storage_relation: Some(InstancedRelativeMoniker::new(vec!["coll:c:1".into()])),
             from_cm_namespace: false,
             storage_subdir: Some("data".to_string()),
             expected_res: ExpectedResult::Ok,
@@ -211,7 +211,7 @@ async fn use_in_collection_from_parent() {
         vec!["b", "coll:c"].into(),
         CheckUse::Storage {
             path: "/cache".try_into().unwrap(),
-            storage_relation: Some(InstancedRelativeMoniker::new(vec![], vec!["coll:c:1".into()])),
+            storage_relation: Some(InstancedRelativeMoniker::new(vec!["coll:c:1".into()])),
             from_cm_namespace: false,
             storage_subdir: Some("cache".to_string()),
             expected_res: ExpectedResult::Ok,
@@ -222,7 +222,7 @@ async fn use_in_collection_from_parent() {
     assert_eq!(
         test.list_directory_in_storage(
             Some("data"),
-            InstancedRelativeMoniker::new(vec![], vec![]),
+            InstancedRelativeMoniker::new(vec![]),
             None,
             ""
         )
@@ -232,7 +232,7 @@ async fn use_in_collection_from_parent() {
     assert_eq!(
         test.list_directory_in_storage(
             Some("cache"),
-            InstancedRelativeMoniker::new(vec![], vec![]),
+            InstancedRelativeMoniker::new(vec![]),
             None,
             ""
         )
@@ -245,7 +245,7 @@ async fn use_in_collection_from_parent() {
     assert_eq!(
         test.list_directory_in_storage(
             Some("data"),
-            InstancedRelativeMoniker::new(vec![], vec![]),
+            InstancedRelativeMoniker::new(vec![]),
             None,
             ""
         )
@@ -255,7 +255,7 @@ async fn use_in_collection_from_parent() {
     assert_eq!(
         test.list_directory_in_storage(
             Some("cache"),
-            InstancedRelativeMoniker::new(vec![], vec![]),
+            InstancedRelativeMoniker::new(vec![]),
             None,
             ""
         )
@@ -380,10 +380,10 @@ async fn use_in_collection_from_grandparent() {
         vec!["b", "coll:c"].into(),
         CheckUse::Storage {
             path: "/data".try_into().unwrap(),
-            storage_relation: Some(InstancedRelativeMoniker::new(
-                vec![],
-                vec!["b:0".into(), "coll:c:1".into()],
-            )),
+            storage_relation: Some(InstancedRelativeMoniker::new(vec![
+                "b:0".into(),
+                "coll:c:1".into(),
+            ])),
             from_cm_namespace: false,
             storage_subdir: Some("data".to_string()),
             expected_res: ExpectedResult::Ok,
@@ -394,10 +394,10 @@ async fn use_in_collection_from_grandparent() {
         vec!["b", "coll:c"].into(),
         CheckUse::Storage {
             path: "/cache".try_into().unwrap(),
-            storage_relation: Some(InstancedRelativeMoniker::new(
-                vec![],
-                vec!["b:0".into(), "coll:c:1".into()],
-            )),
+            storage_relation: Some(InstancedRelativeMoniker::new(vec![
+                "b:0".into(),
+                "coll:c:1".into(),
+            ])),
             from_cm_namespace: false,
             storage_subdir: Some("cache".to_string()),
             expected_res: ExpectedResult::Ok,
@@ -407,7 +407,7 @@ async fn use_in_collection_from_grandparent() {
     assert_eq!(
         test.list_directory_in_storage(
             Some("data"),
-            InstancedRelativeMoniker::new(vec![], vec!["b:0".into()]),
+            InstancedRelativeMoniker::new(vec!["b:0".into()]),
             None,
             "children",
         )
@@ -417,7 +417,7 @@ async fn use_in_collection_from_grandparent() {
     assert_eq!(
         test.list_directory_in_storage(
             Some("cache"),
-            InstancedRelativeMoniker::new(vec![], vec!["b:0".into()]),
+            InstancedRelativeMoniker::new(vec!["b:0".into()]),
             None,
             "children",
         )
@@ -430,7 +430,7 @@ async fn use_in_collection_from_grandparent() {
     assert_eq!(
         test.list_directory_in_storage(
             Some("data"),
-            InstancedRelativeMoniker::new(vec![], vec!["b:0".into()]),
+            InstancedRelativeMoniker::new(vec!["b:0".into()]),
             None,
             "children"
         )
@@ -440,7 +440,7 @@ async fn use_in_collection_from_grandparent() {
     assert_eq!(
         test.list_directory_in_storage(
             Some("cache"),
-            InstancedRelativeMoniker::new(vec![], vec!["b:0".into()]),
+            InstancedRelativeMoniker::new(vec!["b:0".into()]),
             None,
             "children"
         )
@@ -1013,7 +1013,7 @@ async fn storage_persistence_relative_moniker_path() {
     capability_util::confirm_storage_is_deleted_for_component(
         None,
         true,
-        InstancedRelativeMoniker::new(vec![], vec!["b:0".into(), "persistent_coll:c:0".into()]),
+        InstancedRelativeMoniker::new(vec!["b:0".into(), "persistent_coll:c:0".into()]),
         None,
         &test.test_dir_proxy,
     )
@@ -1195,7 +1195,7 @@ async fn storage_persistence_instance_id_path() {
     capability_util::confirm_storage_is_deleted_for_component(
         None,
         true,
-        InstancedRelativeMoniker::new(vec![], vec!["b:0".into(), "persistent_coll:c:0".into()]),
+        InstancedRelativeMoniker::new(vec!["b:0".into(), "persistent_coll:c:0".into()]),
         Some(&instance_id),
         &test.test_dir_proxy,
     )
@@ -1367,10 +1367,10 @@ async fn storage_persistence_inheritance() {
         vec!["b", "persistent_coll:c"].into(),
         CheckUse::Storage {
             path: "/data".try_into().unwrap(),
-            storage_relation: Some(InstancedRelativeMoniker::new(
-                vec![],
-                vec!["b:0".into(), "persistent_coll:c:1".into()],
-            )),
+            storage_relation: Some(InstancedRelativeMoniker::new(vec![
+                "b:0".into(),
+                "persistent_coll:c:1".into(),
+            ])),
             from_cm_namespace: false,
             storage_subdir: None,
             expected_res: ExpectedResult::Ok,
@@ -1383,10 +1383,11 @@ async fn storage_persistence_inheritance() {
         vec!["b", "persistent_coll:c", "d"].into(),
         CheckUse::Storage {
             path: "/data".try_into().unwrap(),
-            storage_relation: Some(InstancedRelativeMoniker::new(
-                vec![],
-                vec!["b:0".into(), "persistent_coll:c:1".into(), "d:0".into()],
-            )),
+            storage_relation: Some(InstancedRelativeMoniker::new(vec![
+                "b:0".into(),
+                "persistent_coll:c:1".into(),
+                "d:0".into(),
+            ])),
             from_cm_namespace: false,
             storage_subdir: None,
             expected_res: ExpectedResult::Ok,
@@ -1413,10 +1414,11 @@ async fn storage_persistence_inheritance() {
         vec!["b", "persistent_coll:c", "lower_coll:e"].into(),
         CheckUse::Storage {
             path: "/data".try_into().unwrap(),
-            storage_relation: Some(InstancedRelativeMoniker::new(
-                vec![],
-                vec!["b:0".into(), "persistent_coll:c:1".into(), "lower_coll:e:1".into()],
-            )),
+            storage_relation: Some(InstancedRelativeMoniker::new(vec![
+                "b:0".into(),
+                "persistent_coll:c:1".into(),
+                "lower_coll:e:1".into(),
+            ])),
             from_cm_namespace: false,
             storage_subdir: None,
             expected_res: ExpectedResult::Ok,
@@ -1631,10 +1633,10 @@ async fn storage_persistence_disablement() {
         vec!["b", "persistent_coll:c"].into(),
         CheckUse::Storage {
             path: "/data".try_into().unwrap(),
-            storage_relation: Some(InstancedRelativeMoniker::new(
-                vec![],
-                vec!["b:0".into(), "persistent_coll:c:1".into()],
-            )),
+            storage_relation: Some(InstancedRelativeMoniker::new(vec![
+                "b:0".into(),
+                "persistent_coll:c:1".into(),
+            ])),
             from_cm_namespace: false,
             storage_subdir: None,
             expected_res: ExpectedResult::Ok,
@@ -1647,10 +1649,11 @@ async fn storage_persistence_disablement() {
         vec!["b", "persistent_coll:c", "d"].into(),
         CheckUse::Storage {
             path: "/data".try_into().unwrap(),
-            storage_relation: Some(InstancedRelativeMoniker::new(
-                vec![],
-                vec!["b:0".into(), "persistent_coll:c:1".into(), "d:0".into()],
-            )),
+            storage_relation: Some(InstancedRelativeMoniker::new(vec![
+                "b:0".into(),
+                "persistent_coll:c:1".into(),
+                "d:0".into(),
+            ])),
             from_cm_namespace: false,
             storage_subdir: None,
             expected_res: ExpectedResult::Ok,
@@ -1677,10 +1680,11 @@ async fn storage_persistence_disablement() {
         vec!["b", "persistent_coll:c", "non_persistent_coll:e"].into(),
         CheckUse::Storage {
             path: "/data".try_into().unwrap(),
-            storage_relation: Some(InstancedRelativeMoniker::new(
-                vec![],
-                vec!["b:0".into(), "persistent_coll:c:1".into(), "non_persistent_coll:e:1".into()],
-            )),
+            storage_relation: Some(InstancedRelativeMoniker::new(vec![
+                "b:0".into(),
+                "persistent_coll:c:1".into(),
+                "non_persistent_coll:e:1".into(),
+            ])),
             from_cm_namespace: false,
             storage_subdir: None,
             expected_res: ExpectedResult::Ok,
@@ -1726,10 +1730,11 @@ async fn storage_persistence_disablement() {
     capability_util::confirm_storage_is_deleted_for_component(
         None,
         false,
-        InstancedRelativeMoniker::new(
-            vec![],
-            vec!["b:0".into(), "persistent_coll:c:1".into(), "non_persistent_coll:e:1".into()],
-        ),
+        InstancedRelativeMoniker::new(vec![
+            "b:0".into(),
+            "persistent_coll:c:1".into(),
+            "non_persistent_coll:e:1".into(),
+        ]),
         None,
         &test.test_dir_proxy,
     )

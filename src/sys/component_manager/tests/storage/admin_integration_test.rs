@@ -108,10 +108,12 @@ async fn single_storage_user() {
     assert_eq!(
         storage_users
             .iter()
-            .map(|moniker_with_instances| InstancedRelativeMoniker::parse(moniker_with_instances)
-                .unwrap()
-                .without_instance_ids()
-                .to_string())
+            .map(|moniker_with_instances| InstancedRelativeMoniker::parse_str(
+                moniker_with_instances
+            )
+            .unwrap()
+            .without_instance_ids()
+            .to_string())
             .collect::<HashSet<_>>(),
         hashset! {
             storage_user_moniker.clone()
@@ -180,10 +182,12 @@ async fn multiple_storage_users() {
     assert_eq!(
         storage_users
             .iter()
-            .map(|moniker_with_instances| InstancedRelativeMoniker::parse(moniker_with_instances)
-                .unwrap()
-                .without_instance_ids()
-                .to_string())
+            .map(|moniker_with_instances| InstancedRelativeMoniker::parse_str(
+                moniker_with_instances
+            )
+            .unwrap()
+            .without_instance_ids()
+            .to_string())
             .collect::<HashSet<_>>(),
         expected_storage_users
     );
@@ -216,10 +220,12 @@ async fn destroyed_storage_user() {
     assert_eq!(
         storage_users
             .iter()
-            .map(|moniker_with_instances| InstancedRelativeMoniker::parse(moniker_with_instances)
-                .unwrap()
-                .without_instance_ids()
-                .to_string())
+            .map(|moniker_with_instances| InstancedRelativeMoniker::parse_str(
+                moniker_with_instances
+            )
+            .unwrap()
+            .without_instance_ids()
+            .to_string())
             .collect::<HashSet<_>>(),
         hashset! {
             storage_user_moniker.clone()
@@ -239,7 +245,7 @@ async fn destroyed_storage_user() {
         .await
         .iter()
         .map(|moniker_with_instances| {
-            InstancedRelativeMoniker::parse(moniker_with_instances)
+            InstancedRelativeMoniker::parse_str(moniker_with_instances)
                 .unwrap()
                 .without_instance_ids()
                 .to_string()

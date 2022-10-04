@@ -122,7 +122,7 @@ async fn route_events(
     while let Ok(events) = event_stream.get_next().await {
         for event in events {
             let header = event.header.as_ref().unwrap();
-            let moniker = RelativeMoniker::parse(&header.moniker.as_ref().unwrap()).unwrap();
+            let moniker = RelativeMoniker::parse_str(&header.moniker.as_ref().unwrap()).unwrap();
             let mut locked_sets = sets.lock().await;
             let mut active_sets = vec![];
             locked_sets.retain(|weak_set| match Weak::upgrade(weak_set) {
@@ -146,7 +146,7 @@ async fn route_events(
                 }
             }
             if !matched {
-                match moniker.down_path().get(0) {
+                match moniker.path().get(0) {
                     Some(child_moniker) if child_moniker.collection().is_some() => {
                         warn!("Unhandled event moniker {}", moniker)
                     }
@@ -351,10 +351,7 @@ mod inner {
 
         pub fn includes_moniker(&self, moniker: &RelativeMoniker) -> bool {
             // Assumes that the test realm is contained in a collection under test_manager.
-            if !moniker.up_path().is_empty() {
-                return false;
-            }
-            match moniker.down_path().iter().next() {
+            match moniker.path().iter().next() {
                 None => false,
                 Some(child_moniker) => self.realms.contains_key(child_moniker),
             }
@@ -370,9 +367,9 @@ mod inner {
             let moniker_child = realm_moniker_child(moniker)?;
             self.realms.remove(&moniker_child);
             self.running_components
-                .retain(|component_moniker| component_moniker.down_path()[0] != moniker_child);
+                .retain(|component_moniker| component_moniker.path()[0] != moniker_child);
             self.destroyed_before_start
-                .retain(|component_moniker| component_moniker.down_path()[0] != moniker_child);
+                .retain(|component_moniker| component_moniker.path()[0] != moniker_child);
             self.seen_realms.remove(&moniker_child);
             self.close_sink_if_done().await;
             Ok(())
@@ -399,10 +396,10 @@ mod inner {
             let header = event.header.as_ref().ok_or(anyhow!("Event contained no header"))?;
             let unparsed_moniker =
                 header.moniker.as_ref().ok_or(anyhow!("Event contained no moniker"))?;
-            let moniker = RelativeMoniker::parse(unparsed_moniker)?;
+            let moniker = RelativeMoniker::parse_str(unparsed_moniker)?;
 
             let realm_id = moniker
-                .down_path()
+                .path()
                 .iter()
                 .next()
                 .ok_or(anyhow!("Event moniker contains empty down path"))?
@@ -460,10 +457,10 @@ mod inner {
     }
 
     fn realm_moniker_child(realm_moniker: String) -> Result<ChildMoniker, Error> {
-        let moniker = RelativeMoniker::parse(&realm_moniker)?;
-        let moniker_is_valid = moniker.up_path().is_empty() && moniker.down_path().len() == 1;
+        let moniker = RelativeMoniker::parse_str(&realm_moniker)?;
+        let moniker_is_valid = moniker.path().len() == 1;
         match moniker_is_valid {
-            true => Ok(moniker.down_path()[0].clone()),
+            true => Ok(moniker.path()[0].clone()),
             false => {
                 Err(anyhow!("Moniker {:?} invalidates assumptions about test topology", moniker))
             }
@@ -508,7 +505,6 @@ mod inner {
             ];
             let excluded_monikers = vec![
                 ".",
-                ".\\super/test:child-1",
                 "./test:child-3",
                 "./test:child-3/sub1",
                 "./realm",
@@ -522,11 +518,11 @@ mod inner {
                 set.add_realm(realm.to_string(), url.to_string()).expect("add realm");
             }
             for moniker in included_monikers {
-                let parsed = RelativeMoniker::parse(moniker).unwrap();
+                let parsed = RelativeMoniker::parse_str(moniker).unwrap();
                 assert!(set.includes_moniker(&parsed), "Expected {} to be in the set", moniker);
             }
             for moniker in excluded_monikers {
-                let parsed = RelativeMoniker::parse(moniker).unwrap();
+                let parsed = RelativeMoniker::parse_str(moniker).unwrap();
                 assert!(
                     !set.includes_moniker(&parsed),
                     "Expected {} to not be in the set",

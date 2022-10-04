@@ -37,7 +37,7 @@ use {
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{TryFutureExt, TryStreamExt},
     lazy_static::lazy_static,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker, RelativeMonikerBase},
+    moniker::{AbsoluteMonikerBase, RelativeMoniker, RelativeMonikerBase},
     routing::component_instance::ComponentInstanceInterface,
     std::{
         convert::TryFrom,
@@ -212,10 +212,9 @@ impl StorageAdmin {
                 } => {
                     let instanced_relative_moniker =
                         InstancedRelativeMoniker::try_from(relative_moniker.as_str())?;
-                    let abs_moniker = AbsoluteMoniker::from_relative(
-                        component.abs_moniker(),
-                        &instanced_relative_moniker.without_instance_ids(),
-                    )?;
+                    let abs_moniker = component
+                        .abs_moniker()
+                        .descendant(&instanced_relative_moniker.without_instance_ids());
                     let instance_id = component
                         .try_get_component_id_index()?
                         .look_up_moniker(&abs_moniker)
@@ -237,13 +236,9 @@ impl StorageAdmin {
                 } => {
                     let fut = async {
                         let model = self.model.upgrade().ok_or(fcomponent::Error::Internal)?;
-                        let relative_moniker = RelativeMoniker::parse(&relative_moniker)
+                        let relative_moniker = RelativeMoniker::parse_str(&relative_moniker)
                             .map_err(|_| fcomponent::Error::InvalidArguments)?;
-                        let absolute_moniker = AbsoluteMoniker::from_relative(
-                            &component.abs_moniker,
-                            &relative_moniker,
-                        )
-                        .map_err(|_| fcomponent::Error::InvalidArguments)?;
+                        let absolute_moniker = component.abs_moniker.descendant(&relative_moniker);
                         let root_component = model
                             .look_up(&absolute_moniker)
                             .await
@@ -302,10 +297,9 @@ impl StorageAdmin {
                             Err(fcomponent::Error::InvalidArguments)
                         }
                         Ok(instanced_relative_moniker) => {
-                            let abs_moniker = AbsoluteMoniker::from_relative(
-                                component.abs_moniker(),
-                                &instanced_relative_moniker.without_instance_ids(),
-                            )?;
+                            let abs_moniker = component
+                                .abs_moniker()
+                                .descendant(&instanced_relative_moniker.without_instance_ids());
                             let instance_id = component
                                 .try_get_component_id_index()?
                                 .look_up_moniker(&abs_moniker)

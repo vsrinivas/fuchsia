@@ -233,9 +233,8 @@ pub async fn get_all_cml_instances(explorer: &fsys::RealmExplorerProxy) -> Resul
     let mut instances = vec![];
 
     for info in instance_infos {
-        let mut moniker = RelativeMoniker::parse(&info.moniker)?;
-        let path = moniker.down_path_mut().drain(..).collect();
-        let moniker = AbsoluteMoniker::new(path);
+        let moniker = RelativeMoniker::parse_str(&info.moniker)?;
+        let moniker = AbsoluteMoniker::root().descendant(&moniker);
         let instance = Instance {
             moniker,
             url: Some(info.url),

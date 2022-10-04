@@ -20,7 +20,7 @@ use {
     futures::lock::Mutex,
     futures::StreamExt,
     lazy_static::lazy_static,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker, RelativeMonikerBase},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker},
     std::{
         convert::TryFrom,
         path::PathBuf,
@@ -79,10 +79,12 @@ impl RealmQuery {
     async fn get_instance_info_and_resolved_state(
         self: &Arc<Self>,
         scope_moniker: &AbsoluteMoniker,
-        moniker_str: String,
+        moniker_str: &str,
     ) -> Result<(fsys::InstanceInfo, Option<Box<fsys::ResolvedState>>), fsys::RealmQueryError> {
         // Construct the complete moniker using the scope moniker and the relative moniker string.
-        let moniker = join_monikers(scope_moniker, &moniker_str)?;
+        let relative_moniker = RelativeMoniker::try_from(moniker_str)
+            .map_err(|_| fsys::RealmQueryError::BadMoniker)?;
+        let moniker = scope_moniker.descendant(&relative_moniker);
 
         // TODO(https://fxbug.dev/108532): Close the connection if the scope root cannot be found.
         let instance =
@@ -90,7 +92,6 @@ impl RealmQuery {
 
         let resolved = instance.create_fidl_resolved_state().await;
 
-        let relative_moniker = extract_relative_moniker(scope_moniker, &moniker);
         let instance_id = self.model.component_id_index().look_up_moniker(&moniker).cloned();
 
         let state = match &resolved {
@@ -117,10 +118,12 @@ impl RealmQuery {
     async fn get_instance_directories(
         self: &Arc<Self>,
         scope_moniker: &AbsoluteMoniker,
-        moniker_str: String,
+        moniker_str: &str,
     ) -> Result<Option<Box<fsys::ResolvedDirectories>>, fsys::RealmQueryError> {
         // Construct the complete moniker using the scope moniker and the relative moniker string.
-        let moniker = join_monikers(scope_moniker, &moniker_str)?;
+        let relative_moniker = RelativeMoniker::try_from(moniker_str)
+            .map_err(|_| fsys::RealmQueryError::BadMoniker)?;
+        let moniker = scope_moniker.descendant(&relative_moniker);
 
         let instance =
             self.model.find(&moniker).await.ok_or(fsys::RealmQueryError::InstanceNotFound)?;
@@ -148,11 +151,11 @@ impl RealmQuery {
             let result = match request {
                 fsys::RealmQueryRequest::GetInstanceInfo { moniker, responder } => {
                     let mut result =
-                        self.get_instance_info_and_resolved_state(&scope_moniker, moniker).await;
+                        self.get_instance_info_and_resolved_state(&scope_moniker, &moniker).await;
                     responder.send(&mut result)
                 }
                 fsys::RealmQueryRequest::GetInstanceDirectories { moniker, responder } => {
-                    let mut result = self.get_instance_directories(&scope_moniker, moniker).await;
+                    let mut result = self.get_instance_directories(&scope_moniker, &moniker).await;
                     responder.send(&mut result)
                 }
             };
@@ -226,33 +229,6 @@ impl CapabilityProvider for RealmQueryCapabilityProvider {
 
         Ok(())
     }
-}
-
-/// Takes the scoped component's moniker and a relative moniker string and join them into an
-/// absolute moniker.
-fn join_monikers(
-    scope_moniker: &AbsoluteMoniker,
-    moniker_str: &str,
-) -> Result<AbsoluteMoniker, fsys::RealmQueryError> {
-    let relative_moniker =
-        RelativeMoniker::try_from(moniker_str).map_err(|_| fsys::RealmQueryError::BadMoniker)?;
-    if !relative_moniker.up_path().is_empty() {
-        return Err(fsys::RealmQueryError::BadMoniker);
-    }
-    let abs_moniker = AbsoluteMoniker::from_relative(scope_moniker, &relative_moniker)
-        .map_err(|_| fsys::RealmQueryError::BadMoniker)?;
-
-    Ok(abs_moniker)
-}
-
-/// Takes a parent and child absolute moniker, strips out the parent portion from the child
-/// and creates a relative moniker.
-fn extract_relative_moniker(parent: &AbsoluteMoniker, child: &AbsoluteMoniker) -> RelativeMoniker {
-    assert!(parent.contains_in_realm(child));
-    let parent_len = parent.path().len();
-    let mut children = child.path().clone();
-    children.drain(0..parent_len);
-    RelativeMoniker::new(vec![], children)
 }
 
 #[cfg(test)]

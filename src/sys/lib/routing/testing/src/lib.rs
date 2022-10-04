@@ -191,16 +191,15 @@ pub fn generate_storage_path(
     if let Some(id) = instance_id {
         return [id].iter().collect();
     }
-    assert!(relative_moniker.up_path().is_empty());
-    let mut down_path = relative_moniker.down_path().iter();
+    let mut path = relative_moniker.path().iter();
     let mut dir_path = vec![];
     if let Some(subdir) = subdir {
         dir_path.push(subdir);
     }
-    if let Some(p) = down_path.next() {
+    if let Some(p) = path.next() {
         dir_path.push(p.as_str().to_string());
     }
-    while let Some(p) = down_path.next() {
+    while let Some(p) = path.next() {
         dir_path.push("children".to_string());
         dir_path.push(p.as_str().to_string());
     }

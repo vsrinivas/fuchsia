@@ -3,30 +3,12 @@
 // found in the LICENSE file.
 
 /// A relative moniker describes the identity of a component instance in terms of its path
-/// relative to another (unspecified) component in the component instance tree.
+/// relative to an (unspecified) parent component in the component instance tree.
+/// In other words, relative monikers describe a sequence of downward parent-to-child traversals.
 ///
-/// A self-reference moniker is a moniker with both empty "up" and "down" paths.
+/// A self-referenced relative moniker is a moniker with an empty path.
 ///
-/// Relative monikers consist of two paths called "up" and "down".
-/// - The "up" path describes a sequence of child-to-parent traversals heading towards the root of
-///   the component instance tree.
-/// - The "down" path describes a sequence of parent-to-child traversals heading towards a
-///   different component instance in the tree.
-///
-/// These paths are minimal: no suffix segments of the "up" path can be a prefix segments of the
-/// "down" path.  All such common segments must be elided as part of canonicalizing the relative
-/// moniker prior to construction.
-///
-/// Naming child monikers along both the "upwards" and "downwards" paths provides a strong
-/// guarantee that relative monikers are only meaningful when interpreted within isomorphic
-/// component instance subtrees.  (Compare with relative filesystem path notations which use ".."
-/// to perform upwards traversal and offer correspondingly weaker guarantees.)
-///
-/// For example, if two sibling component instances named "A" and "B" both possess relative
-/// monikers for another component instance named "C", then A's moniker for C and B's moniker
-/// for C will be distinct.
-///
-/// Display notation: ".", "./down1", ".\up1/down1", ".\up1\up2/down1", ...
+/// Display notation: ".", "./down1", "./down1/down2", ...
 use {
     crate::{
         abs_moniker::AbsoluteMonikerBase,
@@ -39,126 +21,118 @@ use {
 pub trait RelativeMonikerBase: Sized {
     type Part: ChildMonikerBase;
 
-    fn new(up_path: Vec<Self::Part>, down_path: Vec<Self::Part>) -> Self;
+    fn new(part: Vec<Self::Part>) -> Self;
 
-    fn up_path(&self) -> &Vec<Self::Part>;
+    fn parse(path: &Vec<&str>) -> Result<Self, MonikerError> {
+        let path: Result<Vec<Self::Part>, MonikerError> =
+            path.iter().map(|x| Self::Part::parse(x)).collect();
+        Ok(Self::new(path?))
+    }
 
-    fn up_path_mut(&mut self) -> &mut Vec<Self::Part>;
-
-    fn down_path(&self) -> &Vec<Self::Part>;
-
-    fn down_path_mut(&mut self) -> &mut Vec<Self::Part>;
-
-    fn from_absolute<S: AbsoluteMonikerBase<Part = Self::Part>>(from: &S, to: &S) -> Self {
-        let mut from_path = from.path().iter().peekable();
-        let mut to_path = to.path().iter().peekable();
-
-        while from_path.peek().is_some() && from_path.peek() == to_path.peek() {
-            from_path.next();
-            to_path.next();
+    fn parse_str(input: &str) -> Result<Self, MonikerError> {
+        if input == "." || input == "./" {
+            return Ok(Self::new(vec![]));
+        }
+        if input.chars().nth(0) != Some('.') {
+            return Err(MonikerError::invalid_moniker(input));
+        }
+        if input.chars().nth(1) != Some('/') {
+            return Err(MonikerError::invalid_moniker(input));
         }
 
-        let mut res = Self::new(from_path.cloned().collect(), to_path.cloned().collect());
-        res.up_path_mut().reverse();
-        res
+        let path =
+            input[2..].split('/').map(Self::Part::parse).collect::<Result<_, MonikerError>>()?;
+
+        Ok(Self::new(path))
+    }
+
+    // Creates a relative moniker from a parent's scope to a child instance.
+    // The parent scope must contain the child, otherwise an error is returned.
+    fn scope_down<T: AbsoluteMonikerBase<Part = Self::Part>>(
+        parent_scope: &T,
+        child: &T,
+    ) -> Result<Self, MonikerError> {
+        if !parent_scope.contains_in_realm(child) {
+            return Err(MonikerError::ParentDoesNotContainChild {
+                parent: parent_scope.to_string(),
+                child: child.to_string(),
+            });
+        }
+
+        let parent_len = parent_scope.path().len();
+        let mut children = child.path().clone();
+        children.drain(0..parent_len);
+        Ok(Self::new(children))
+    }
+
+    fn path(&self) -> &Vec<Self::Part>;
+
+    fn path_mut(&mut self) -> &mut Vec<Self::Part>;
+
+    fn leaf(&self) -> Option<&Self::Part> {
+        self.path().last()
     }
 
     fn is_self(&self) -> bool {
-        self.up_path().is_empty() && self.down_path().is_empty()
+        self.path().is_empty()
     }
 
-    fn parse_up_down_paths(rep: &str) -> Result<(Vec<&str>, Vec<&str>), MonikerError> {
-        if rep.chars().nth(0) != Some('.') {
-            return Err(MonikerError::invalid_moniker(rep));
-        }
-        let stripped_input = rep.strip_prefix(".").unwrap();
-
-        let mut up_vs_down = stripped_input.splitn(2, '/');
-        let set_one = up_vs_down.next().unwrap();
-        let set_two = up_vs_down.next();
-
-        let up_string = set_one.strip_prefix("\\").unwrap_or(set_one);
-        let down_string = set_two.unwrap_or("");
-
-        if down_string.contains("\\") {
-            return Err(MonikerError::invalid_moniker(rep));
-        }
-
-        let up_path: Vec<&str> = match up_string {
-            "" => vec![],
-            _ => up_string.split("\\").collect(),
-        };
-
-        let down_path: Vec<&str>;
-        if down_string == "" {
-            down_path = vec![];
+    fn parent(&self) -> Option<Self> {
+        if self.is_self() {
+            None
         } else {
-            down_path = down_string.split("/").collect()
+            let l = self.path().len() - 1;
+            Some(Self::new(self.path()[..l].to_vec()))
         }
-
-        Ok((up_path, down_path))
     }
 
-    /// Parses n `RelativeMoniker` from a string.
-    ///
-    /// Input strings should be of the format
-    /// `.(\<name>(:<collection>)?)*(/<name>(:<collection>)?)*`, such
-    /// as `.\foo/bar/baz` or `./biz:foo`.
-    fn parse(rep: &str) -> Result<Self, MonikerError> {
-        let (up_path, down_path) = Self::parse_up_down_paths(rep)?;
+    fn child(&self, child: Self::Part) -> Self {
+        let mut path = self.path().clone();
+        path.push(child);
+        Self::new(path)
+    }
 
-        let up_path = up_path
-            .iter()
-            .map(Self::Part::parse)
-            .collect::<Result<Vec<Self::Part>, MonikerError>>()?;
-        let down_path = down_path
-            .iter()
-            .map(Self::Part::parse)
-            .collect::<Result<Vec<Self::Part>, MonikerError>>()?;
-
-        Ok(Self::new(up_path, down_path))
+    fn format(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, ".")?;
+        for segment in self.path() {
+            write!(f, "/{}", segment)?
+        }
+        Ok(())
     }
 }
+
 #[derive(Debug, Eq, PartialEq, Clone, Hash, Default)]
 pub struct RelativeMoniker {
-    up_path: Vec<ChildMoniker>,
-    down_path: Vec<ChildMoniker>,
+    path: Vec<ChildMoniker>,
 }
 
 impl RelativeMonikerBase for RelativeMoniker {
     type Part = ChildMoniker;
 
-    fn new(up_path: Vec<Self::Part>, down_path: Vec<Self::Part>) -> Self {
-        Self { up_path, down_path }
+    fn new(path: Vec<Self::Part>) -> Self {
+        Self { path }
     }
 
-    fn up_path(&self) -> &Vec<Self::Part> {
-        &self.up_path
+    fn path(&self) -> &Vec<Self::Part> {
+        &self.path
     }
 
-    fn up_path_mut(&mut self) -> &mut Vec<Self::Part> {
-        &mut self.up_path
-    }
-
-    fn down_path(&self) -> &Vec<Self::Part> {
-        &self.down_path
-    }
-
-    fn down_path_mut(&mut self) -> &mut Vec<Self::Part> {
-        &mut self.down_path
+    fn path_mut(&mut self) -> &mut Vec<Self::Part> {
+        &mut self.path
     }
 }
 
 impl fmt::Display for RelativeMoniker {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, ".")?;
-        for segment in self.up_path() {
-            write!(f, "\\{}", segment)?
-        }
-        for segment in self.down_path() {
-            write!(f, "/{}", segment)?
-        }
-        Ok(())
+        self.format(f)
+    }
+}
+
+impl TryFrom<Vec<&str>> for RelativeMoniker {
+    type Error = MonikerError;
+
+    fn try_from(rep: Vec<&str>) -> Result<Self, MonikerError> {
+        Self::parse(&rep)
     }
 }
 
@@ -166,81 +140,135 @@ impl TryFrom<&str> for RelativeMoniker {
     type Error = MonikerError;
 
     fn try_from(input: &str) -> Result<Self, MonikerError> {
-        Self::parse(input)
+        Self::parse_str(input)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use {super::*, crate::abs_moniker::AbsoluteMoniker};
+
     #[test]
-    fn relative_monikers_from_absolute() {
-        let me = RelativeMoniker::from_absolute::<AbsoluteMoniker>(&vec![].into(), &vec![].into());
+    fn instanced_relative_monikers() {
+        let me = RelativeMoniker::new(vec![]);
         assert_eq!(true, me.is_self());
         assert_eq!(".", format!("{}", me));
 
-        let me = RelativeMoniker::from_absolute::<AbsoluteMoniker>(
-            &vec!["a:1", "b:2", "c:3"].into(),
-            &vec!["a:1", "b:2", "c:3"].into(),
-        );
+        let descendant = RelativeMoniker::new(vec![
+            ChildMoniker::try_new("a", None).unwrap(),
+            ChildMoniker::try_new("b", None).unwrap(),
+        ]);
+        assert_eq!(false, descendant.is_self());
+        assert_eq!("./a/b", format!("{}", descendant));
+    }
 
+    #[test]
+    fn relative_monikers_scope_down() {
+        let me =
+            RelativeMoniker::scope_down::<AbsoluteMoniker>(&vec![].into(), &vec![].into()).unwrap();
         assert_eq!(true, me.is_self());
         assert_eq!(".", format!("{}", me));
 
-        let ancestor = RelativeMoniker::from_absolute::<AbsoluteMoniker>(
-            &vec!["a:1", "b:2"].into(),
+        let me = RelativeMoniker::scope_down::<AbsoluteMoniker>(
+            &vec!["a:test1", "b:test2", "c:test3"].into(),
+            &vec!["a:test1", "b:test2", "c:test3"].into(),
+        )
+        .unwrap();
+        assert_eq!(true, me.is_self());
+        assert_eq!(".", format!("{}", me));
+
+        RelativeMoniker::scope_down::<AbsoluteMoniker>(
+            &vec!["a:test1", "b:test2"].into(),
             &vec![].into(),
-        );
-        assert_eq!(false, ancestor.is_self());
-        assert_eq!(".\\b:2\\a:1", format!("{}", ancestor));
+        )
+        .unwrap_err();
 
-        let ancestor = RelativeMoniker::from_absolute::<AbsoluteMoniker>(
-            &vec!["a:1", "b:2", "c:3", "d:4"].into(),
-            &vec!["a:1", "b:2"].into(),
-        );
-        assert_eq!(false, ancestor.is_self());
-        assert_eq!(".\\d:4\\c:3", format!("{}", ancestor));
+        RelativeMoniker::scope_down::<AbsoluteMoniker>(
+            &vec!["a:test1", "b:test2", "c:test3", "d:test4"].into(),
+            &vec!["a:test1", "b:test2"].into(),
+        )
+        .unwrap_err();
 
-        let descendant = RelativeMoniker::from_absolute::<AbsoluteMoniker>(
+        let descendant = RelativeMoniker::scope_down::<AbsoluteMoniker>(
             &vec![].into(),
-            &vec!["a:1", "b:2"].into(),
-        );
+            &vec!["a:test1", "b:test2"].into(),
+        )
+        .unwrap();
         assert_eq!(false, descendant.is_self());
-        assert_eq!("./a:1/b:2", format!("{}", descendant));
+        assert_eq!("./a:test1/b:test2", format!("{}", descendant));
 
-        let descendant = RelativeMoniker::from_absolute::<AbsoluteMoniker>(
-            &vec!["a:1", "b:2"].into(),
-            &vec!["a:1", "b:2", "c:3", "d:4"].into(),
-        );
+        let descendant = RelativeMoniker::scope_down::<AbsoluteMoniker>(
+            &vec!["a:test1", "b:test2"].into(),
+            &vec!["a:test1", "b:test2", "c:test3", "d:test4"].into(),
+        )
+        .unwrap();
         assert_eq!(false, descendant.is_self());
-        assert_eq!("./c:3/d:4", format!("{}", descendant));
+        assert_eq!("./c:test3/d:test4", format!("{}", descendant));
 
-        let sibling = RelativeMoniker::from_absolute::<AbsoluteMoniker>(
-            &vec!["a:1"].into(),
-            &vec!["b:2"].into(),
-        );
-        assert_eq!(false, sibling.is_self());
-        assert_eq!(".\\a:1/b:2", format!("{}", sibling));
+        RelativeMoniker::scope_down::<AbsoluteMoniker>(
+            &vec!["a:test1"].into(),
+            &vec!["b:test2"].into(),
+        )
+        .unwrap_err();
 
-        let sibling = RelativeMoniker::from_absolute::<AbsoluteMoniker>(
-            &vec!["c:3", "a:1"].into(),
-            &vec!["c:3", "b:2"].into(),
-        );
-        assert_eq!(false, sibling.is_self());
-        assert_eq!(".\\a:1/b:2", format!("{}", sibling));
+        RelativeMoniker::scope_down::<AbsoluteMoniker>(
+            &vec!["c:test3", "a:test1"].into(),
+            &vec!["c:test3", "b:test2"].into(),
+        )
+        .unwrap_err();
 
-        let cousin = RelativeMoniker::from_absolute::<AbsoluteMoniker>(
-            &vec!["a0:1", "a:1"].into(),
-            &vec!["b0:2", "b:2"].into(),
-        );
-        assert_eq!(false, cousin.is_self());
-        assert_eq!(".\\a:1\\a0:1/b0:2/b:2", format!("{}", cousin));
+        RelativeMoniker::scope_down::<AbsoluteMoniker>(
+            &vec!["a0:test1", "a:test1"].into(),
+            &vec!["b0:test2", "b:test2"].into(),
+        )
+        .unwrap_err();
 
-        let cousin = RelativeMoniker::from_absolute::<AbsoluteMoniker>(
-            &vec!["c:3", "d:4", "a0:1", "a:1"].into(),
-            &vec!["c:3", "d:4", "b0:2", "b:2"].into(),
-        );
-        assert_eq!(false, cousin.is_self());
-        assert_eq!(".\\a:1\\a0:1/b0:2/b:2", format!("{}", cousin));
+        RelativeMoniker::scope_down::<AbsoluteMoniker>(
+            &vec!["c:test3", "d:test4", "a0:test1", "a:test1"].into(),
+            &vec!["c:test3", "d:test4", "b0:test2", "b:test2"].into(),
+        )
+        .unwrap_err();
+    }
+
+    #[test]
+    fn relative_monikers_parse() {
+        for (path, string_to_parse) in vec![
+            (vec![], "."),
+            (vec![], "./"),
+            (vec!["a"], "./a"),
+            (vec!["a", "b"], "./a/b"),
+            (vec!["a:test1"], "./a:test1"),
+            (vec!["a:test1", "b:test2"], "./a:test1/b:test2"),
+        ] {
+            let path = path
+                .into_iter()
+                .map(|s| ChildMoniker::parse(s).unwrap())
+                .collect::<Vec<ChildMoniker>>();
+            assert_eq!(RelativeMoniker::new(path), string_to_parse.try_into().unwrap());
+        }
+
+        for invalid_string_to_parse in
+            vec!["/", "\\", ".\\", "/test", ".test", ".//", "./no:instance-id:test1"]
+        {
+            let res: Result<RelativeMoniker, MonikerError> = invalid_string_to_parse.try_into();
+            assert!(
+                res.is_err(),
+                "didn't expect to correctly parse this: {:?}",
+                invalid_string_to_parse
+            );
+        }
+    }
+
+    #[test]
+    fn descendant_scope_down() {
+        let scope_root: AbsoluteMoniker = vec!["a:test1", "b:test2"].into();
+        let scope_child = vec!["a:test1", "b:test2", "c:test3", "d:test4"].into();
+
+        let relative =
+            RelativeMoniker::scope_down::<AbsoluteMoniker>(&scope_root, &scope_child).unwrap();
+        assert_eq!(false, relative.is_self());
+        assert_eq!("./c:test3/d:test4", format!("{}", relative));
+
+        assert_eq!(scope_root.descendant(&relative), scope_child);
     }
 }

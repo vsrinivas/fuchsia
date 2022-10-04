@@ -27,7 +27,7 @@ use {
     futures::StreamExt,
     lazy_static::lazy_static,
     measure_tape_for_instance_info::Measurable,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker, RelativeMonikerBase},
+    moniker::{AbsoluteMoniker, RelativeMoniker, RelativeMonikerBase},
     std::{
         path::PathBuf,
         sync::{Arc, Weak},
@@ -96,7 +96,8 @@ impl RealmExplorer {
         scope_moniker: &AbsoluteMoniker,
         instance: &Arc<ComponentInstance>,
     ) -> (fsys::InstanceInfo, Vec<Arc<ComponentInstance>>) {
-        let relative_moniker = extract_relative_moniker(scope_moniker, &instance.abs_moniker);
+        let relative_moniker = RelativeMoniker::scope_down(scope_moniker, &instance.abs_moniker)
+            .expect("instance must have been a child of scope root");
         let instance_id =
             self.model.component_id_index().look_up_moniker(&instance.abs_moniker).cloned();
 
@@ -287,16 +288,6 @@ impl CapabilityProvider for RealmExplorerCapabilityProvider {
 
         Ok(())
     }
-}
-
-/// Takes a parent and child absolute moniker, strips out the parent portion from the child
-/// and creates a relative moniker.
-fn extract_relative_moniker(parent: &AbsoluteMoniker, child: &AbsoluteMoniker) -> RelativeMoniker {
-    assert!(parent.contains_in_realm(child));
-    let parent_len = parent.path().len();
-    let mut children = child.path().clone();
-    children.drain(0..parent_len);
-    RelativeMoniker::new(vec![], children)
 }
 
 #[cfg(test)]

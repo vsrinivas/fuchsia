@@ -352,10 +352,8 @@ impl Instance {
             None
         };
 
-        let mut moniker = RelativeMoniker::parse(&info.moniker)?;
-        assert!(moniker.up_path().is_empty());
-        let path = moniker.down_path_mut().drain(..).collect();
-        let moniker = AbsoluteMoniker::new(path);
+        let moniker = RelativeMoniker::parse_str(&info.moniker)?;
+        let moniker = AbsoluteMoniker::root().descendant(&moniker);
 
         Ok(Instance {
             moniker,

@@ -296,13 +296,13 @@ impl RunningSuite {
             // components from the path.
             let moniker_parsed =
                 cm_moniker::InstancedRelativeMoniker::try_from(storage_moniker.as_str()).unwrap();
-            let down_path = moniker_parsed
-                .down_path()
+            let path = moniker_parsed
+                .path()
                 .iter()
                 .skip(3)
                 .map(Clone::clone)
                 .collect::<Vec<cm_moniker::InstancedChildMoniker>>();
-            let instanced_moniker = cm_moniker::InstancedRelativeMoniker::new(vec![], down_path);
+            let instanced_moniker = cm_moniker::InstancedRelativeMoniker::new(path);
             let moniker_relative_to_test_root = instanced_moniker.without_instance_ids();
             sender
                 .send(Ok(SuiteEvents::suite_custom_artifact(ftest_manager::CustomArtifact {

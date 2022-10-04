@@ -15,6 +15,8 @@ pub enum MonikerError {
     InvalidMoniker { rep: String },
     #[error(transparent)]
     InvalidMonikerPart(#[from] cm_types::ParseError),
+    #[error("parent scope {} does not contain child {}", parent, child)]
+    ParentDoesNotContainChild { parent: String, child: String },
 }
 
 impl MonikerError {

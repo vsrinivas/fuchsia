@@ -928,11 +928,8 @@ impl RoutingTestModel for RoutingTest {
                 let (storage_proxy, server_end) = create_proxy().unwrap();
                 let flags = fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE;
                 let relative_moniker_string = format!("{}", storage_relation);
-                let component_abs_moniker = AbsoluteMoniker::from_relative(
-                    &moniker,
-                    &storage_relation.without_instance_ids(),
-                )
-                .unwrap();
+                let component_abs_moniker =
+                    moniker.descendant(&storage_relation.without_instance_ids());
                 let component_instance_id = self
                     .model
                     .root()

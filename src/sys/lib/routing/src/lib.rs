@@ -284,10 +284,13 @@ where
         _ => unreachable!("unexpected storage source"),
     };
 
-    let instanced_relative_moniker = InstancedRelativeMoniker::from_absolute(
-        storage_component_instance.instanced_moniker(),
-        target.instanced_moniker(),
-    );
+    // As of today, the storage component instance must contain the target. This is because it is
+    // impossible to expose storage declarations up.
+    let storage_source_moniker = storage_component_instance.instanced_moniker();
+    let target_moniker = target.instanced_moniker();
+
+    let instanced_relative_moniker =
+        InstancedRelativeMoniker::scope_down(storage_source_moniker, target_moniker).unwrap();
 
     // Now route the backing directory capability.
     match route_capability(

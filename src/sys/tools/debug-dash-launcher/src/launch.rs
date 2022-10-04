@@ -201,10 +201,7 @@ async fn get_resolved_directories(
     query: &fsys::RealmQueryProxy,
     moniker: &str,
 ) -> Result<Box<fsys::ResolvedDirectories>, LauncherError> {
-    let moniker = RelativeMoniker::parse(&moniker).map_err(|_| LauncherError::BadMoniker)?;
-    if !moniker.up_path().is_empty() {
-        return Err(LauncherError::BadMoniker);
-    }
+    let moniker = RelativeMoniker::parse_str(moniker).map_err(|_| LauncherError::BadMoniker)?;
     let moniker = moniker.to_string();
 
     let resolved_dirs = query

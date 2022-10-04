@@ -23,7 +23,7 @@ use {
     futures::lock::Mutex,
     futures::prelude::*,
     lazy_static::lazy_static,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker, RelativeMonikerBase},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker},
     routing::component_instance::ComponentInstanceInterface,
     std::convert::TryFrom,
     std::path::PathBuf,
@@ -372,12 +372,7 @@ fn join_monikers(
 ) -> Result<AbsoluteMoniker, fcomponent::Error> {
     let relative_moniker =
         RelativeMoniker::try_from(moniker_str).map_err(|_| fcomponent::Error::InvalidArguments)?;
-    if !relative_moniker.up_path().is_empty() {
-        return Err(fcomponent::Error::InvalidArguments);
-    }
-    let abs_moniker = AbsoluteMoniker::from_relative(scope_moniker, &relative_moniker)
-        .map_err(|_| fcomponent::Error::InvalidArguments)?;
-
+    let abs_moniker = scope_moniker.descendant(&relative_moniker);
     Ok(abs_moniker)
 }
 

@@ -580,10 +580,14 @@ async fn create_event_fidl_object(event: Event) -> Result<fsys::Event, fidl::Err
     let moniker_string = match (&event.event.target_moniker, &event.scope_moniker) {
         (moniker @ ExtendedMoniker::ComponentManager, _) => moniker.to_string(),
         (ExtendedMoniker::ComponentInstance(target), ExtendedMoniker::ComponentManager) => {
-            RelativeMoniker::from_absolute(&AbsoluteMoniker::root(), target).to_string()
+            RelativeMoniker::scope_down(&AbsoluteMoniker::root(), target)
+                .expect("every component can be scoped down from the root")
+                .to_string()
         }
         (ExtendedMoniker::ComponentInstance(target), ExtendedMoniker::ComponentInstance(scope)) => {
-            RelativeMoniker::from_absolute::<AbsoluteMoniker>(&scope, &target).to_string()
+            RelativeMoniker::scope_down(scope, target)
+                .expect("target must be a child of event scope")
+                .to_string()
         }
     };
     let header = Some(fsys::EventHeader {
