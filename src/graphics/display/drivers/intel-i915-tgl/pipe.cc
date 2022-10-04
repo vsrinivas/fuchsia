@@ -81,7 +81,8 @@ Pipe::Pipe(fdf::MmioBuffer* mmio_space, tgl_registers::Platform platform, tgl_re
       pipe_power_(std::move(pipe_power)) {}
 
 // static
-void Pipe::ResetTranscoder(tgl_registers::Trans transcoder, fdf::MmioBuffer* mmio_space) {
+void Pipe::ResetTranscoder(tgl_registers::Trans transcoder, tgl_registers::Platform platform,
+                           fdf::MmioBuffer* mmio_space) {
   tgl_registers::TranscoderRegs transcoder_regs(transcoder);
 
   // Disable transcoder and wait for it to stop. These are the "Disable
@@ -111,6 +112,22 @@ void Pipe::ResetTranscoder(tgl_registers::Trans transcoder, fdf::MmioBuffer* mmi
   // caution on Kaby Lake and Skylake display engines as well.
   if (transcoder_config.enabled()) {
     transcoder_config.set_enabled_target(false).WriteTo(mmio_space);
+  }
+
+  if (platform == tgl_registers::Platform::kTigerLake) {
+    auto transcoder_chicken = transcoder_regs.Chicken().ReadFrom(mmio_space);
+    zxlogf(TRACE, "ResetTranscoder() - Transcoder %d chicken register: %x", transcoder,
+           transcoder_chicken.reg_value());
+    if (transcoder_chicken.override_forward_error_correction_tiger_lake()) {
+      zxlogf(INFO, "Disabling FEC override chicken bit for transcoder %d", transcoder);
+      transcoder_chicken.set_override_forward_error_correction_tiger_lake(false).WriteTo(
+          mmio_space);
+
+      // TODO(fxbug.dev/110411): Remove this warning once we support DisplayPort
+      // MST (Multi-Stream).
+      zxlogf(WARNING, "Transcoder %d was using a DisplayPort MST feature. Reset may be incomplete.",
+             transcoder);
+    }
   }
 
   // Wait for off status in TRANS_CONF, timeout after two frames.
@@ -197,7 +214,7 @@ void Pipe::ResetPlanes() {
 
 void Pipe::ResetActiveTranscoder() {
   if (in_use()) {
-    ResetTranscoder(connected_transcoder_id(), mmio_space_);
+    ResetTranscoder(connected_transcoder_id(), platform_, mmio_space_);
     zxlogf(DEBUG, "Reset active transcoder %d for pipe %d", connected_transcoder_id(), pipe_id());
   }
 }

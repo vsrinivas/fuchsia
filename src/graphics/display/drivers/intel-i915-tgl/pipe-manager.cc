@@ -87,21 +87,22 @@ void PipeManagerSkylake::ResetInactiveTranscoders() {
         edp_transcoder_in_use = true;
 
         const tgl_registers::Trans unused_transcoder = pipe->tied_transcoder_id();
-        Pipe::ResetTranscoder(unused_transcoder, mmio_space_);
+        Pipe::ResetTranscoder(unused_transcoder, tgl_registers::Platform::kSkylake, mmio_space_);
         zxlogf(
             DEBUG,
             "Reset unused transcoder %d tied to pipe %d, which is connected to the EDP transcoder",
             unused_transcoder, pipe->pipe_id());
       }
     } else {
-      Pipe::ResetTranscoder(pipe->tied_transcoder_id(), mmio_space_);
+      Pipe::ResetTranscoder(pipe->tied_transcoder_id(), tgl_registers::Platform::kSkylake,
+                            mmio_space_);
       zxlogf(DEBUG, "Reset unused transcoder %d tied to inactive pipe %d",
              pipe->tied_transcoder_id(), pipe->pipe_id());
     }
   }
 
   if (!edp_transcoder_in_use) {
-    Pipe::ResetTranscoder(tgl_registers::TRANS_EDP, mmio_space_);
+    Pipe::ResetTranscoder(tgl_registers::TRANS_EDP, tgl_registers::Platform::kSkylake, mmio_space_);
     zxlogf(DEBUG, "Reset unused transcoder TRANS_EDP (not used by any pipe)");
   }
 }
@@ -185,7 +186,8 @@ Pipe* PipeManagerTigerLake::GetPipeFromHwState(tgl_registers::Ddi ddi,
 void PipeManagerTigerLake::ResetInactiveTranscoders() {
   for (Pipe* pipe : *this) {
     if (!pipe->in_use()) {
-      Pipe::ResetTranscoder(pipe->connected_transcoder_id(), mmio_space_);
+      Pipe::ResetTranscoder(pipe->connected_transcoder_id(), tgl_registers::Platform::kTigerLake,
+                            mmio_space_);
       zxlogf(DEBUG, "Reset unused transcoder %d for pipe %d (pipe inactive)",
              pipe->connected_transcoder_id(), pipe->pipe_id());
     }

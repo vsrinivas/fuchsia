@@ -926,6 +926,99 @@ class TranscoderMainStreamAttributeMisc
   }
 };
 
+// Per-transcoder chicken register.
+//
+// This register is not officially documented in any register listing. It is
+// implicitly documented in display engine PRMs and workaround PRMs, via
+// instructions to flip specific bits at transcoder-dependent MMIO addresses.
+//
+// On Kaby Lake, the transcoder chicken registers also store some DDI-specific
+// chicken bits. The GetForKabyLakeDdi() helper will retrieve the register that
+// contains the chicken bits for a specific DDI.
+class TranscoderChicken : public hwreg::RegisterBase<TranscoderChicken, uint32_t> {
+ public:
+  // FEC (Forward Error Correction) workaround.
+  //
+  // This field must be set for correct functioning in DisplayPort 1.4 MST
+  // (Multi-Stream) mode with FEC (Forward Error Correction), before the
+  // `enabled_target` field in the TranscoderConfig register is set to true.
+  //
+  // This field must be set to false before  the `enabled_target` field in the
+  // TranscoderConfig register is set back to false.
+  //
+  // This bit is only indirectly docuumented in IHD-OS-TGL-Vol 12-1.22-Rev2.0
+  // sections "Sequences for DisplayPort" > "Enable Sequence" (page 144) and
+  // "Disable Sequence" (page 147). The register is mentioned by its MMIO
+  // address.
+  DEF_BIT(23, override_forward_error_correction_tiger_lake);
+
+  // HDMI port voltage swing programming workaround.
+  //
+  // By default, each HDMI port in Kaby Lake display engines uses the voltage
+  // swing setting specified when the port is first enabled. A new voltage swing
+  // setting can be programmed by setting this field to 3 (0b11) right before
+  // setting the `enabled` field in the DdiBufferControl register, waiting for
+  // 1us, and then setting this field to zero (0b00).
+  //
+  // This field is scoped to DDIs, not to transcoders. GetForKabyLakeDdi() will
+  // return the correct register for applying this workaround to a DDI.
+  //
+  // IHD-OS-KBL-Vol 16-1.17 workaround BSpec ID 1143, pages 29-30
+  DEF_FIELD(19, 18, override_ddi_hdmi_voltage_swing_kaby_lake);
+
+  // DisplayPort audio corruption or video underflow workaround.
+  //
+  // This field must be set to true for DisplayPort x4 (4 main link lanes) ports
+  // that use the HBR2 rate, when the CDCLK (core display clock) frequency is
+  // below 432 MHz. This workaround is only valid for audio clock frequencies <=
+  // 96 KHz, and fewer than 8 audio channels -- audio must not be used over
+  // DisplayPort otherwise.
+  //
+  // IHD-OS-KBL-Vol 16-1.17 workaround BSpec ID 1144, pages 30-31
+  DEF_BIT(13, override_display_port_audio_island_kaby_lake);
+
+  // Returns the register that holds DDI-scoped chicken bits for `ddi`.
+  //
+  // On Kaby Lake, the transcoder chicken registers are also used for DDI-scoped
+  // chicken bits. The mapping of DDIs to registers is not straightforward. This
+  // method returns the correct register for accessing a DDI's chicken bits.
+  static auto GetForKabyLakeDdi(Ddi ddi) {
+    ZX_ASSERT(ddi >= Ddi::DDI_A);
+    ZX_ASSERT(ddi <= Ddi::DDI_D);
+
+    // The DDI-to-MMIO address mapping is specified implicitly in
+    // IHD-OS-KBL-Vol 16-1.17 BSpec (workaround) ID 1143, page 30.
+    static constexpr uint32_t kMmioAddress[] = {0x420cc, 0x420c0, 0x420c4, 0x420c8};
+    const int ddi_index = ddi - Ddi::DDI_A;
+    return hwreg::RegisterAddr<TranscoderChicken>(kMmioAddress[ddi_index]);
+  }
+
+  static auto GetForKabyLakeTranscoder(Trans transcoder) {
+    ZX_ASSERT(transcoder >= Trans::TRANS_A);
+    ZX_ASSERT(transcoder <= Trans::TRANS_C);
+
+    // The transcoder-to-MMIO address mapping is specified implicitly in
+    // IHD-OS-KBL-Vol 16-1.17 BSpec (workaround) ID 1144, page 31.
+    const int transcoder_index = transcoder - Trans::TRANS_A;
+    return hwreg::RegisterAddr<TranscoderChicken>(0x420c0 + transcoder_index * 4);
+  }
+
+  static auto GetForTigerLakeTranscoder(Trans transcoder) {
+    ZX_ASSERT(transcoder >= Trans::TRANS_A);
+
+    // TODO(fxbug.dev/109278): Allow transcoder D, once we support it.
+    ZX_ASSERT(transcoder <= Trans::TRANS_C);
+
+    // The transcoder-to-MMIO address mapping is presented in section "Variable
+    // Refresh Rate" in the display engine PRMs.
+    // Tiger Lake: IHD-OS-TGL-Vol 12-1.22-Rev2.0 page 240
+    // DG1: IHD-OS-DG1-Vol 12-2.21 page 192
+    static constexpr uint32_t kMmioAddress[] = {0x420c0, 0x420c4, 0x420c8, 0x420d8};
+    const int transcoder_index = transcoder - Trans::TRANS_A;
+    return hwreg::RegisterAddr<TranscoderChicken>(kMmioAddress[transcoder_index]);
+  }
+};
+
 class TranscoderRegs {
  public:
   explicit TranscoderRegs(Trans transcoder)
@@ -944,12 +1037,14 @@ class TranscoderRegs {
     // This works for Tiger Lake too, because the supported transcoders are a
     // subset of the Kaby Lake transcoders, and the MMIO addresses for these
     // transcoders are the same.
+    // TODO(fxbug.dev/109278): This won't be true once we support transcoder D.
     return TranscoderDdiControl::GetForKabyLakeTranscoder(transcoder_);
   }
   hwreg::RegisterAddr<TranscoderConfig> Config() {
     // This works for Tiger Lake too, because the supported transcoders are a
     // subset of the Kaby Lake transcoders, and the MMIO addresses for these
     // transcoders are the same.
+    // TODO(fxbug.dev/109278): This won't be true once we support transcoder D.
     return TranscoderConfig::GetForKabyLakeTranscoder(transcoder_);
   }
   hwreg::RegisterAddr<TranscoderClockSelect> ClockSelect() {
@@ -961,29 +1056,40 @@ class TranscoderRegs {
     // transcoders are the same.
     return TranscoderMainStreamAttributeMisc::GetForKabyLakeTranscoder(transcoder_);
   }
+  hwreg::RegisterAddr<TranscoderChicken> Chicken() {
+    // This works for Tiger Lake too, because the supported transcoders are a
+    // subset of the Kaby Lake transcoders, and the MMIO addresses for these
+    // transcoders are the same.
+    // TODO(fxbug.dev/109278): This won't be true once we support transcoder D.
+    return TranscoderChicken::GetForKabyLakeTranscoder(transcoder_);
+  }
 
   hwreg::RegisterAddr<TranscoderDataM> DataM() {
     // This works for Tiger Lake too, because the supported transcoders are a
     // subset of the Kaby Lake transcoders, and the MMIO addresses for these
     // transcoders are the same.
+    // TODO(fxbug.dev/109278): This won't be true once we support transcoder D.
     return TranscoderDataM::GetForKabyLakeTranscoder(transcoder_);
   }
   hwreg::RegisterAddr<TranscoderDataN> DataN() {
     // This works for Tiger Lake too, because the supported transcoders are a
     // subset of the Kaby Lake transcoders, and the MMIO addresses for these
     // transcoders are the same.
+    // TODO(fxbug.dev/109278): This won't be true once we support transcoder D.
     return TranscoderDataN::GetForKabyLakeTranscoder(transcoder_);
   }
   hwreg::RegisterAddr<TranscoderLinkM> LinkM() {
     // This works for Tiger Lake too, because the supported transcoders are a
     // subset of the Kaby Lake transcoders, and the MMIO addresses for these
     // transcoders are the same.
+    // TODO(fxbug.dev/109278): This won't be true once we support transcoder D.
     return TranscoderLinkM::GetForKabyLakeTranscoder(transcoder_);
   }
   hwreg::RegisterAddr<TranscoderLinkN> LinkN() {
     // This works for Tiger Lake too, because the supported transcoders are a
     // subset of the Kaby Lake transcoders, and the MMIO addresses for these
     // transcoders are the same.
+    // TODO(fxbug.dev/109278): This won't be true once we support transcoder D.
     return TranscoderLinkN::GetForKabyLakeTranscoder(transcoder_);
   }
 

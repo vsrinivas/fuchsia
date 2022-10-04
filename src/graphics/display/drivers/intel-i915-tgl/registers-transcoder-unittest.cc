@@ -777,6 +777,75 @@ TEST(TranscoderMainStreamAttributeMiscTest, GetForTigerLakeTranscoder) {
   // The MMIO address is 0x63410.
 }
 
+TEST(TranscoderChickenTest, GetForKabyLakeDdi) {
+  // The register MMIO addresses come from the Kaby Lake Workarounds description
+  // at IHD-OS-KBL-Vol 16-1.17 page 30.
+  //
+  // The registers used by DDIs A-D are not the same as the registers used by
+  // the transcoders A-D. This can be confirmed by cross-checking the
+  // workarounds with BSpec IDs 1143 and 1144, on pages 30-31.
+
+  auto transcoder_chicken_a =
+      tgl_registers::TranscoderChicken::GetForKabyLakeDdi(tgl_registers::Ddi::DDI_B).FromValue(0);
+  EXPECT_EQ(0x420c0u, transcoder_chicken_a.reg_addr());
+
+  auto transcoder_chicken_b =
+      tgl_registers::TranscoderChicken::GetForKabyLakeDdi(tgl_registers::Ddi::DDI_C).FromValue(0);
+  EXPECT_EQ(0x420c4u, transcoder_chicken_b.reg_addr());
+
+  auto transcoder_chicken_c =
+      tgl_registers::TranscoderChicken::GetForKabyLakeDdi(tgl_registers::Ddi::DDI_D).FromValue(0);
+  EXPECT_EQ(0x420c8u, transcoder_chicken_c.reg_addr());
+
+  auto transcoder_chicken_edp =
+      tgl_registers::TranscoderChicken::GetForKabyLakeDdi(tgl_registers::Ddi::DDI_A).FromValue(0);
+  EXPECT_EQ(0x420ccu, transcoder_chicken_edp.reg_addr());
+}
+
+TEST(TranscoderChickenTest, GetForKabyLakeTranscoder) {
+  // The register MMIO addresses come from the Kaby Lake Workarounds description
+  // at IHD-OS-KBL-Vol 16-1.17 page 31.
+
+  auto transcoder_chicken_a =
+      tgl_registers::TranscoderChicken::GetForKabyLakeTranscoder(tgl_registers::Trans::TRANS_A)
+          .FromValue(0);
+  EXPECT_EQ(0x420c0u, transcoder_chicken_a.reg_addr());
+
+  auto transcoder_chicken_b =
+      tgl_registers::TranscoderChicken::GetForKabyLakeTranscoder(tgl_registers::Trans::TRANS_B)
+          .FromValue(0);
+  EXPECT_EQ(0x420c4u, transcoder_chicken_b.reg_addr());
+
+  auto transcoder_chicken_c =
+      tgl_registers::TranscoderChicken::GetForKabyLakeTranscoder(tgl_registers::Trans::TRANS_C)
+          .FromValue(0);
+  EXPECT_EQ(0x420c8u, transcoder_chicken_c.reg_addr());
+}
+
+TEST(TranscoderChickenTest, GetForTigerLakeTranscoder) {
+  // The register MMIO addresses come from the reference manual.
+  //
+  // Tiger Lake: IHD-OS-DG1-Vol 12-2.21 page 192
+
+  auto transcoder_chicken_a =
+      tgl_registers::TranscoderChicken::GetForTigerLakeTranscoder(tgl_registers::Trans::TRANS_A)
+          .FromValue(0);
+  EXPECT_EQ(0x420c0u, transcoder_chicken_a.reg_addr());
+
+  auto transcoder_chicken_b =
+      tgl_registers::TranscoderChicken::GetForTigerLakeTranscoder(tgl_registers::Trans::TRANS_B)
+          .FromValue(0);
+  EXPECT_EQ(0x420c4u, transcoder_chicken_b.reg_addr());
+
+  auto transcoder_chicken_c =
+      tgl_registers::TranscoderChicken::GetForTigerLakeTranscoder(tgl_registers::Trans::TRANS_C)
+          .FromValue(0);
+  EXPECT_EQ(0x420c8u, transcoder_chicken_c.reg_addr());
+
+  // TODO(fxbug.dev/109278): Add a test for transcoder D, when we support it.
+  // The MMIO address is 0x420d8.
+}
+
 }  // namespace
 
 }  // namespace i915_tgl
