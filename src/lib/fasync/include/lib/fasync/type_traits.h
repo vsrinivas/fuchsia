@@ -15,13 +15,13 @@ namespace fasync {
 
 namespace internal {
 
-using ::fitx::internal::requires_conditions;
+using ::fit::internal::requires_conditions;
 
-using ::fitx::internal::is_result;
-using ::fitx::internal::is_result_v;
+using ::fit::internal::is_result;
+using ::fit::internal::is_result_v;
 
-using ::fitx::internal::is_match;
-using ::fitx::internal::is_match_v;
+using ::fit::internal::is_match;
+using ::fit::internal::is_match_v;
 
 }  // namespace internal
 

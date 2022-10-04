@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FITX_INTERNAL_RESULT_H_
-#define LIB_FITX_INTERNAL_RESULT_H_
+#ifndef LIB_FIT_INCLUDE_LIB_FIT_INTERNAL_RESULT_H_
+#define LIB_FIT_INCLUDE_LIB_FIT_INTERNAL_RESULT_H_
 
-#include <lib/fitx/internal/compiler.h>
+#include <lib/fit/internal/compiler.h>
 #include <lib/stdcompat/type_traits.h>
 
 #include <cstddef>
@@ -14,7 +14,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace fitx {
+namespace fit {
 
 // Forward declarations.
 template <typename E>
@@ -63,32 +63,32 @@ struct is_match<T, U, requires_conditions<std::is_void<T>>> : std::false_type {}
 template <typename T, template <typename...> class U>
 static constexpr bool is_match_v = is_match<T, U>::value;
 
-// Predicate indicating whether type T is an instantiation of fitx::error.
+// Predicate indicating whether type T is an instantiation of fit::error.
 template <typename T>
-struct is_error : is_match<T, ::fitx::error>::type {};
+struct is_error : is_match<T, ::fit::error>::type {};
 
 template <typename T>
 static constexpr bool is_error_v = is_error<T>::value;
 
-// Predicate indicating whether type T is not an instantiation of fitx::error.
+// Predicate indicating whether type T is not an instantiation of fit::error.
 template <typename T>
 struct not_error_type : cpp17::negation<is_error<T>>::type {};
 
-// Predicate indicating whether type T is an instantiation of fitx::success.
+// Predicate indicating whether type T is an instantiation of fit::success.
 template <typename T>
-struct is_success : is_match<T, ::fitx::success>::type {};
+struct is_success : is_match<T, ::fit::success>::type {};
 
 template <typename T>
 static constexpr bool is_success_v = is_success<T>::value;
 
-// Predicate indicating whether type T is an instantiation of fitx::result.
+// Predicate indicating whether type T is an instantiation of fit::result.
 template <typename T>
-struct is_result : is_match<T, ::fitx::result>::type {};
+struct is_result : is_match<T, ::fit::result>::type {};
 
 template <typename T>
 static constexpr bool is_result_v = is_result<T>::value;
 
-// Predicate indicating whether type T is not an instantiation of fitx::result.
+// Predicate indicating whether type T is not an instantiation of fit::result.
 template <typename T>
 struct not_result_type : cpp17::negation<is_result<T>>::type {};
 
@@ -435,6 +435,6 @@ template <typename E, typename... Ts>
 using storage = storage_type<storage_class_trait<E, Ts...>, E, Ts...>;
 
 }  // namespace internal
-}  // namespace fitx
+}  // namespace fit
 
-#endif  // LIB_FITX_INTERNAL_RESULT_H_
+#endif  // LIB_FIT_INCLUDE_LIB_FIT_INTERNAL_RESULT_H_

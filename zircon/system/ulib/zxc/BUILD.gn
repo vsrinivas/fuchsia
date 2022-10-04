@@ -7,11 +7,9 @@ import("//build/zircon/migrated_targets.gni")
 sdk_source_set("fitx") {
   category = "experimental"
   sdk_name = "fitx"
-  sources = [
-    "include/lib/fitx/internal/compiler.h",
-    "include/lib/fitx/internal/result.h",
-    "include/lib/fitx/result.h",
-  ]
+  sources = [ "include/lib/fitx/result.h" ]
+
+  public_deps = [ "//sdk/lib/fit" ]
 }
 
 sdk_source_set("zx") {
@@ -29,8 +27,6 @@ zx_library("zxc") {
 
   sdk_publishable = "experimental"
   sdk_headers = [
-    "lib/fitx/internal/compiler.h",
-    "lib/fitx/internal/result.h",
     "lib/fitx/result.h",
     "lib/zx/status.h",
   ]

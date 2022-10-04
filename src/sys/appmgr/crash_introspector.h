@@ -7,13 +7,13 @@
 
 #include <fuchsia/sys/internal/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/fit/result.h>
 #include <zircon/types.h>
 
 #include <memory>
 
 #include "lib/async/cpp/task.h"
 #include "lib/async/cpp/wait.h"
-#include "lib/fitx/internal/result.h"
 #include "lib/zx/channel.h"
 #include "lib/zx/thread.h"
 #include "src/lib/fxl/macros.h"
@@ -65,7 +65,7 @@ class CrashIntrospector : public fuchsia::sys::internal::CrashIntrospect {
 
   // Removes thread from the cache and returns |component_info| if available.
   // Returns false if thread is not in the cache.
-  fitx::result<bool, fuchsia::sys::internal::SourceIdentity> RemoveThreadFromCache(
+  fit::result<bool, fuchsia::sys::internal::SourceIdentity> RemoveThreadFromCache(
       zx_koid_t thread_koid);
 
   std::unique_ptr<CrashMonitor> ExtractMonitor(const CrashMonitor* monitor);

@@ -230,16 +230,16 @@ class LIB_FASYNC_NODISCARD LIB_FASYNC_OWNER_OF(T) poll<T> {
   constexpr poll(pending) {}
 
   // Since we only have one parameter, we pretend it's an error so we don't have to pass void as the
-  // first template parameter to ::fitx::internal::storage
+  // first template parameter to ::fit::internal::storage
   template <typename U, ::fasync::internal::requires_conditions<std::is_constructible<T, U>> = true>
-  constexpr poll(ready<U>&& ready) : storage_(::fitx::internal::error_v, std::move(ready.value_)) {}
+  constexpr poll(ready<U>&& ready) : storage_(::fit::internal::error_v, std::move(ready.value_)) {}
 
   template <typename U,
             ::fasync::internal::requires_conditions<cpp17::negation<std::is_same<poll<T>, poll<U>>>,
                                                     std::is_constructible<T, U>> = true>
   constexpr poll(poll<U>&& other) : storage_(std::move(other.storage_)) {}
 
-  constexpr bool is_pending() const { return storage_.state == ::fitx::internal::state_e::empty; }
+  constexpr bool is_pending() const { return storage_.state == ::fit::internal::state_e::empty; }
   constexpr bool is_ready() const { return !is_pending(); }
 
   constexpr T& output() & {
@@ -270,7 +270,7 @@ class LIB_FASYNC_NODISCARD LIB_FASYNC_OWNER_OF(T) poll<T> {
   template <typename... Us>
   friend class poll;
 
-  ::fitx::internal::storage<T> storage_;
+  ::fit::internal::storage<T> storage_;
 };
 
 #if LIB_FASYNC_HAS_CPP_FEATURE(deduction_guides)
@@ -353,113 +353,113 @@ constexpr bool operator!=(pending, const poll<Ts...>& rhs) {
 }
 
 template <typename T, typename U,
-          ::fitx::internal::enable_rel_op<decltype(std::declval<T>() == std::declval<U>())> = true>
+          ::fit::internal::enable_rel_op<decltype(std::declval<T>() == std::declval<U>())> = true>
 constexpr bool operator==(const poll<T>& lhs, const poll<U>& rhs) {
   return lhs.is_pending() == rhs.is_pending() && (lhs.is_pending() || lhs.output() == rhs.output());
 }
 template <typename T, typename U,
-          ::fitx::internal::enable_rel_op<decltype(std::declval<poll<T>>() ==
-                                                   std::declval<poll<U>>())> = true>
+          ::fit::internal::enable_rel_op<decltype(std::declval<poll<T>>() ==
+                                                  std::declval<poll<U>>())> = true>
 constexpr bool operator!=(const poll<T>& lhs, const poll<U>& rhs) {
   return !(lhs == rhs);
 }
 
 template <typename T, typename U,
-          ::fitx::internal::enable_rel_op<decltype(std::declval<T>() == std::declval<U>()),
-                                          cpp17::negation<is_poll<U>>> = true>
+          ::fit::internal::enable_rel_op<decltype(std::declval<T>() == std::declval<U>()),
+                                         cpp17::negation<is_poll<U>>> = true>
 constexpr bool operator==(const poll<T>& lhs, const U& rhs) {
   return lhs.is_ready() && lhs.output() == rhs;
 }
 template <typename T, typename U,
-          ::fitx::internal::enable_rel_op<decltype(std::declval<poll<T>>() == std::declval<U>()),
-                                          cpp17::negation<is_poll<U>>> = true>
+          ::fit::internal::enable_rel_op<decltype(std::declval<poll<T>>() == std::declval<U>()),
+                                         cpp17::negation<is_poll<U>>> = true>
 constexpr bool operator!=(const poll<T>& lhs, const U& rhs) {
   return !(lhs == rhs);
 }
 
 template <typename T, typename U,
-          ::fitx::internal::enable_rel_op<decltype(std::declval<T>() == std::declval<U>()),
-                                          cpp17::negation<is_poll<T>>> = true>
+          ::fit::internal::enable_rel_op<decltype(std::declval<T>() == std::declval<U>()),
+                                         cpp17::negation<is_poll<T>>> = true>
 constexpr bool operator==(const T& lhs, const poll<U>& rhs) {
   return rhs.is_ready() && rhs.output() == lhs;
 }
 template <typename T, typename U,
-          ::fitx::internal::enable_rel_op<decltype(std::declval<T>() == std::declval<poll<U>>()),
-                                          cpp17::negation<is_poll<T>>> = true>
+          ::fit::internal::enable_rel_op<decltype(std::declval<T>() == std::declval<poll<U>>()),
+                                         cpp17::negation<is_poll<T>>> = true>
 constexpr bool operator!=(const T& lhs, const poll<U>& rhs) {
   return !(lhs == rhs);
 }
 
 template <typename T, typename U,
-          ::fitx::internal::enable_rel_op<decltype(std::declval<T>() < std::declval<U>())> = true>
+          ::fit::internal::enable_rel_op<decltype(std::declval<T>() < std::declval<U>())> = true>
 constexpr bool operator<(const poll<T>& lhs, const poll<U>& rhs) {
   return rhs.is_ready() && (lhs.is_pending() || lhs.output() < rhs.output());
 }
 template <typename T, typename U,
-          ::fitx::internal::enable_rel_op<decltype(std::declval<poll<T>>() <
-                                                   std::declval<poll<U>>())> = true>
+          ::fit::internal::enable_rel_op<decltype(std::declval<poll<T>>() <
+                                                  std::declval<poll<U>>())> = true>
 constexpr bool operator>=(const poll<T>& lhs, const poll<U>& rhs) {
   return !(lhs < rhs);
 }
 template <typename T, typename U,
-          ::fitx::internal::enable_rel_op<decltype(std::declval<poll<T>>() >=
-                                                   std::declval<poll<U>>())> = true>
+          ::fit::internal::enable_rel_op<decltype(std::declval<poll<T>>() >=
+                                                  std::declval<poll<U>>())> = true>
 constexpr bool operator>(const poll<T>& lhs, const poll<U>& rhs) {
   return (lhs >= rhs) && (lhs != rhs);
 }
 template <typename T, typename U,
-          ::fitx::internal::enable_rel_op<decltype(std::declval<poll<T>>() >
-                                                   std::declval<poll<U>>())> = true>
+          ::fit::internal::enable_rel_op<decltype(std::declval<poll<T>>() >
+                                                  std::declval<poll<U>>())> = true>
 constexpr bool operator<=(const poll<T>& lhs, const poll<U>& rhs) {
   return !(lhs > rhs);
 }
 
 template <typename T, typename U,
-          ::fitx::internal::enable_rel_op<decltype(std::declval<T>() < std::declval<U>()),
-                                          cpp17::negation<is_poll<U>>> = true>
+          ::fit::internal::enable_rel_op<decltype(std::declval<T>() < std::declval<U>()),
+                                         cpp17::negation<is_poll<U>>> = true>
 constexpr bool operator<(const poll<T>& lhs, const U& rhs) {
   return !lhs.is_ready() || lhs.output() < rhs;
 }
 template <typename T, typename U,
-          ::fitx::internal::enable_rel_op<decltype(std::declval<poll<T>>() < std::declval<U>()),
-                                          cpp17::negation<is_poll<U>>> = true>
+          ::fit::internal::enable_rel_op<decltype(std::declval<poll<T>>() < std::declval<U>()),
+                                         cpp17::negation<is_poll<U>>> = true>
 constexpr bool operator>=(const poll<T>& lhs, const U& rhs) {
   return !(lhs < rhs);
 }
 template <typename T, typename U,
-          ::fitx::internal::enable_rel_op<decltype(std::declval<poll<T>>() >= std::declval<U>()),
-                                          cpp17::negation<is_poll<U>>> = true>
+          ::fit::internal::enable_rel_op<decltype(std::declval<poll<T>>() >= std::declval<U>()),
+                                         cpp17::negation<is_poll<U>>> = true>
 constexpr bool operator>(const poll<T>& lhs, const U& rhs) {
   return (lhs >= rhs) && (lhs != rhs);
 }
 template <typename T, typename U,
-          ::fitx::internal::enable_rel_op<decltype(std::declval<poll<T>>() > std::declval<U>()),
-                                          cpp17::negation<is_poll<U>>> = true>
+          ::fit::internal::enable_rel_op<decltype(std::declval<poll<T>>() > std::declval<U>()),
+                                         cpp17::negation<is_poll<U>>> = true>
 constexpr bool operator<=(const poll<T>& lhs, const U& rhs) {
   return !(lhs > rhs);
 }
 
 template <typename T, typename U,
-          ::fitx::internal::enable_rel_op<decltype(std::declval<T>() < std::declval<U>()),
-                                          cpp17::negation<is_poll<T>>> = true>
+          ::fit::internal::enable_rel_op<decltype(std::declval<T>() < std::declval<U>()),
+                                         cpp17::negation<is_poll<T>>> = true>
 constexpr bool operator<(const T& lhs, const poll<U>& rhs) {
   return rhs.is_ready() && lhs < rhs.output();
 }
 template <typename T, typename U,
-          ::fitx::internal::enable_rel_op<decltype(std::declval<T>() < std::declval<poll<U>>()),
-                                          cpp17::negation<is_poll<T>>> = true>
+          ::fit::internal::enable_rel_op<decltype(std::declval<T>() < std::declval<poll<U>>()),
+                                         cpp17::negation<is_poll<T>>> = true>
 constexpr bool operator>=(const T& lhs, const poll<U>& rhs) {
   return !(lhs < rhs);
 }
 template <typename T, typename U,
-          ::fitx::internal::enable_rel_op<decltype(std::declval<T>() >= std::declval<poll<U>>()),
-                                          cpp17::negation<is_poll<T>>> = true>
+          ::fit::internal::enable_rel_op<decltype(std::declval<T>() >= std::declval<poll<U>>()),
+                                         cpp17::negation<is_poll<T>>> = true>
 constexpr bool operator>(const T& lhs, const poll<U>& rhs) {
   return (lhs >= rhs) && (lhs != rhs);
 }
 template <typename T, typename U,
-          ::fitx::internal::enable_rel_op<decltype(std::declval<T>() > std::declval<poll<U>>()),
-                                          cpp17::negation<is_poll<T>>> = true>
+          ::fit::internal::enable_rel_op<decltype(std::declval<T>() > std::declval<poll<U>>()),
+                                         cpp17::negation<is_poll<T>>> = true>
 constexpr bool operator<=(const T& lhs, const poll<U>& rhs) {
   return !(lhs > rhs);
 }

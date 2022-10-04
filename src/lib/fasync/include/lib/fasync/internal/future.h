@@ -38,19 +38,19 @@ class context;
 
 namespace internal {
 
-using ::fitx::internal::requires_conditions;
+using ::fit::internal::requires_conditions;
 
-using ::fitx::internal::is_match;
-using ::fitx::internal::is_match_v;
+using ::fit::internal::is_match;
+using ::fit::internal::is_match_v;
 
-using ::fitx::internal::is_error;
-using ::fitx::internal::is_error_v;
+using ::fit::internal::is_error;
+using ::fit::internal::is_error_v;
 
-using ::fitx::internal::is_success;
-using ::fitx::internal::is_success_v;
+using ::fit::internal::is_success;
+using ::fit::internal::is_success_v;
 
-using ::fitx::internal::is_result;
-using ::fitx::internal::is_result_v;
+using ::fit::internal::is_result;
+using ::fit::internal::is_result_v;
 
 template <typename T, requires_conditions<cpp17::negation<std::is_move_assignable<T>>> = true>
 constexpr void move_construct_optional(cpp17::optional<T>& to, T&& from) {

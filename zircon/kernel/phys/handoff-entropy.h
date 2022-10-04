@@ -9,8 +9,7 @@
 
 #include <lib/boot-options/boot-options.h>
 #include <lib/crypto/entropy_pool.h>
-#include <lib/fitx/internal/result.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/zbitl/view.h>
 #include <stdio.h>
 #include <zircon/boot/image.h>

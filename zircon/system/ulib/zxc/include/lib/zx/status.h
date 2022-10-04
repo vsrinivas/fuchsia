@@ -5,7 +5,8 @@
 #ifndef LIB_ZX_STATUS_H_
 #define LIB_ZX_STATUS_H_
 
-#include <lib/fitx/internal/compiler.h>
+#include <lib/fit/internal/compiler.h>
+#include <lib/fit/result.h>
 #include <lib/fitx/result.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -13,7 +14,7 @@
 namespace zx {
 
 // Simplified result type for returning either a zx_status_t error or zero/one values. See
-// lib/fitx/result.h for an explanation of the general result type.
+// lib/fit/result.h for an explanation of the general result type.
 //
 // To make a zx::status:
 //
@@ -38,7 +39,7 @@ namespace zx {
 //   T&& operator*()             // Moves the value.
 //   T* operator->()             // Accesses the value.
 //   success<T> take_value()     // Generates a zx::success() which can be implicitly converted to
-//                               // another fitx::result with the same "success" type.
+//                               // another fit::result with the same "success" type.
 //
 // Available only when is_error():
 //
@@ -67,12 +68,12 @@ namespace zx {
 //   }
 //
 
-// Import supporting types and functions from fitx.
-using fitx::as_error;
-using fitx::error;
-using fitx::failed;
-using fitx::ok;
-using fitx::success;
+// Import supporting types and functions from fit.
+using fit::as_error;
+using fit::error;
+using fit::failed;
+using fit::ok;
+using fit::success;
 
 // Base type.
 template <typename... Ts>
@@ -80,8 +81,8 @@ class status;
 
 // Specialization of status for returning a single value.
 template <typename T>
-class LIB_FITX_NODISCARD status<T> : public ::fitx::result<zx_status_t, T> {
-  using base = ::fitx::result<zx_status_t, T>;
+class LIB_FIT_NODISCARD status<T> : public ::fit::result<zx_status_t, T> {
+  using base = ::fit::result<zx_status_t, T>;
 
  public:
   using base::base;
@@ -110,8 +111,8 @@ class LIB_FITX_NODISCARD status<T> : public ::fitx::result<zx_status_t, T> {
 
 // Specialization of status for empty value type.
 template <>
-class LIB_FITX_NODISCARD status<> : public ::fitx::result<zx_status_t> {
-  using base = ::fitx::result<zx_status_t>;
+class LIB_FIT_NODISCARD status<> : public ::fit::result<zx_status_t> {
+  using base = ::fit::result<zx_status_t>;
 
  public:
   using base::base;

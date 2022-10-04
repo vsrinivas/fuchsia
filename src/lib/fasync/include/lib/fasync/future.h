@@ -10,7 +10,7 @@
 LIB_FASYNC_CPP_VERSION_COMPAT_BEGIN
 
 #include <lib/fasync/internal/future.h>
-#include <lib/fitx/internal/result.h>
+#include <lib/fit/internal/result.h>
 #include <lib/fitx/result.h>
 #include <lib/stdcompat/optional.h>
 #include <lib/stdcompat/span.h>

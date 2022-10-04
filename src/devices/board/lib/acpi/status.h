@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BOARD_LIB_ACPI_STATUS_H_
 #define SRC_DEVICES_BOARD_LIB_ACPI_STATUS_H_
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
@@ -74,19 +74,19 @@ namespace acpi {
 
 // This is almost a direct copy of zx::status, but wrapping ACPI_STATUS instead of zx_status_t.
 // See //zircon/system/ulib/zxc/include/lib/zx/status.h for more information.
-using fitx::as_error;
-using fitx::error;
-using fitx::failed;
-using fitx::ok;
-using fitx::success;
+using fit::as_error;
+using fit::error;
+using fit::failed;
+using fit::ok;
+using fit::success;
 
 template <typename... Ts>
 class status;
 
 // Specialization of status for returning a single value.
 template <typename T>
-class LIB_FITX_NODISCARD status<T> : public ::fitx::result<ACPI_STATUS, T> {
-  using base = ::fitx::result<ACPI_STATUS, T>;
+class LIB_FIT_NODISCARD status<T> : public ::fit::result<ACPI_STATUS, T> {
+  using base = ::fit::result<ACPI_STATUS, T>;
 
  public:
   using base::base;
@@ -112,8 +112,8 @@ class LIB_FITX_NODISCARD status<T> : public ::fitx::result<ACPI_STATUS, T> {
 
 // Specialization of status for empty value type.
 template <>
-class LIB_FITX_NODISCARD status<> : public ::fitx::result<ACPI_STATUS> {
-  using base = ::fitx::result<ACPI_STATUS>;
+class LIB_FIT_NODISCARD status<> : public ::fit::result<ACPI_STATUS> {
+  using base = ::fit::result<ACPI_STATUS>;
 
  public:
   using base::base;
