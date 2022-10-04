@@ -7,9 +7,11 @@ package clangdoc
 
 import (
 	"archive/zip"
+	"fmt"
 	"io"
 	"log"
 	"os"
+	"path"
 	"strings"
 
 	"gopkg.in/yaml.v2"
@@ -298,7 +300,7 @@ type dirInput struct {
 }
 
 func (d dirInput) ReadFile(name string) ([]byte, error) {
-	return os.ReadFile(d.dir + "/" + name)
+	return os.ReadFile(path.Join(d.dir, name))
 }
 
 func LoadRecord(reader fileReader, subdir string, rec Reference) *RecordInfo {
@@ -311,7 +313,7 @@ func LoadRecord(reader fileReader, subdir string, rec Reference) *RecordInfo {
 		recname = rec.Name
 	}
 
-	filename := subdir + "/" + recname + ".yaml"
+	filename := path.Join(subdir, recname+".yaml")
 	content, err := reader.ReadFile(filename)
 	if err != nil {
 		log.Fatal(err)
@@ -339,11 +341,11 @@ func LoadRecord(reader fileReader, subdir string, rec Reference) *RecordInfo {
 // siblings of this directory if the `IsInGlobalNamespace` attribute is set. Otherwise, the
 // directory is described by the `Path` attribute.
 func LoadNamespace(reader fileReader, subdir string) *NamespaceInfo {
-	filename := subdir + "/index.yaml"
+	filename := path.Join(subdir, "index.yaml")
 	content, err := reader.ReadFile(filename)
 	if os.IsNotExist(err) {
 		// index.yaml may not exist if the child namespace has no additional attributes
-		log.Printf("warning: %v ", err)
+		fmt.Printf("WARNING: %v.\n", err)
 		// Return an empty namespace object
 		return &NamespaceInfo{}
 	} else if err != nil {
@@ -359,9 +361,9 @@ func LoadNamespace(reader fileReader, subdir string) *NamespaceInfo {
 	for _, c := range ns.ChildNamespaceRefs {
 		var child_path string
 		if c.IsInGlobalNamespace {
-			child_path = "/" + c.Name
+			child_path = c.Name
 		} else {
-			child_path = c.Path + "/" + c.Name
+			child_path = path.Join(c.Path, c.Name)
 		}
 		ns.ChildNamespaces = append(ns.ChildNamespaces, LoadNamespace(reader, child_path))
 	}

@@ -247,20 +247,20 @@ func (h *Header) groupFunctions(f []*clangdoc.FunctionInfo) []*FunctionGroup {
 		return g
 	}
 
-	curGroup := makeNewGroup(f[0])
+	curGroup := makeNewGroup(byLoc[0])
 
 	for i := 1; i < len(byLoc); i++ {
 		// Assume if there's no location info there is no separator.
-		hasSeparators := len(f[i-1].Location) == 0 || len(f[i].Location) == 0 ||
-			h.hasSeparatorsBetweenLocations(f[i-1].Location[0], f[i].Location[0])
+		hasSeparators := len(byLoc[i-1].Location) == 0 || len(byLoc[i].Location) == 0 ||
+			h.hasSeparatorsBetweenLocations(byLoc[i-1].Location[0], byLoc[i].Location[0])
 		nameMatches := curGroup.Funcs[0].Name == f[i].Name
 
 		if !hasSeparators && (nameMatches || len(curGroup.ExplicitTitle) > 0) {
 			// Grouped with previous function
-			curGroup.Funcs = append(curGroup.Funcs, f[i])
+			curGroup.Funcs = append(curGroup.Funcs, byLoc[i])
 		} else {
 			// Not grouped, this function starts a new one.
-			curGroup = makeNewGroup(f[i])
+			curGroup = makeNewGroup(byLoc[i])
 		}
 	}
 
@@ -291,20 +291,20 @@ func (h *Header) groupDefines(allDefines []*Define) []*DefineGroup {
 		return g
 	}
 
-	curGroup := makeNewGroup(allDefines[0])
+	curGroup := makeNewGroup(byLoc[0])
 
 	for i := 1; i < len(byLoc); i++ {
 		// Assume if there's no location info there is no separator.
-		hasSeparators := h.hasSeparatorsBetweenLocations(allDefines[i-1].Location, allDefines[i].Location)
+		hasSeparators := h.hasSeparatorsBetweenLocations(byLoc[i-1].Location, byLoc[i].Location)
 
 		// Unlike functions, there is no name matching logic because defines can't have
 		// overloaded names.
 		if !hasSeparators && len(curGroup.ExplicitTitle) > 0 {
 			// Grouped with previous function
-			curGroup.Defines = append(curGroup.Defines, allDefines[i])
+			curGroup.Defines = append(curGroup.Defines, byLoc[i])
 		} else {
 			// Not grouped, this function starts a new one.
-			curGroup = makeNewGroup(allDefines[i])
+			curGroup = makeNewGroup(byLoc[i])
 		}
 	}
 
