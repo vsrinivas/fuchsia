@@ -73,16 +73,20 @@ impl InputPipelineAssembly {
     pub fn add_handler(self, handler: Rc<dyn input_handler::InputHandler>) -> Self {
         let (sender, mut receiver, mut tasks) = self.into_components();
         let (next_sender, next_receiver) = mpsc::unbounded();
-        let handler_index = tasks.len();
+        let handler_name = handler.get_name();
         tasks.push(fasync::Task::local(async move {
             while let Some(event) = receiver.next().await {
+                // Note: the `handler_name` _should not_ be used as ABI (e.g. referenced from
+                // data processing scripts), as `handler_name` is not guaranteed to be consistent
+                // between releases.
+                fuchsia_trace::duration!("input", "handle_input_event", "name" => handler_name);
                 for out_event in handler.clone().handle_input_event(event).await.into_iter() {
                     if let Err(e) = next_sender.unbounded_send(out_event) {
                         // Not the greatest of error reports, but at least gives an indication
                         // of which stage in the stage sequence had a problem.
                         fx_log_err!(
                             "could not forward event output from handler: {:?}: {:?}",
-                            handler_index,
+                            handler_name,
                             &e
                         );
                         // This is not a recoverable error, break here.
@@ -90,7 +94,7 @@ impl InputPipelineAssembly {
                     }
                 }
             }
-            panic!("receive loop is not supposed to terminate for handler: {:?}", handler_index);
+            panic!("receive loop is not supposed to terminate for handler: {:?}", handler_name);
         }));
         receiver = next_receiver;
         InputPipelineAssembly { sender, receiver, tasks }

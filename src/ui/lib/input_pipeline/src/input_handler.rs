@@ -46,6 +46,18 @@ pub trait InputHandler: AsRcAny {
         self: std::rc::Rc<Self>,
         input_event: input_device::InputEvent,
     ) -> Vec<input_device::InputEvent>;
+
+    /// Returns the name of the input handler.
+    ///
+    /// The default implementation returns the name of the struct implementing
+    /// the trait.
+    fn get_name(&self) -> &'static str {
+        let full_name = std::any::type_name::<Self>();
+        match full_name.rmatch_indices("::").nth(0) {
+            Some((i, _matched_substr)) => &full_name[i + 2..],
+            None => full_name,
+        }
+    }
 }
 
 /// An [`UnhandledInputHandler`] is like an [`InputHandler`], but only deals in unhandled events.
@@ -97,7 +109,7 @@ where
 #[cfg(test)]
 mod tests {
     use {
-        super::{async_trait, InputHandler as _, UnhandledInputHandler},
+        super::{async_trait, InputHandler, UnhandledInputHandler},
         crate::input_device::{
             Handled, InputDeviceDescriptor, InputDeviceEvent, InputEvent, UnhandledInputEvent,
         },
@@ -227,5 +239,22 @@ mod tests {
                 trace_id: None,
             }]
         );
+    }
+
+    #[fuchsia::test]
+    fn get_name() {
+        struct NeuralInputHandler {}
+        #[async_trait(?Send)]
+        impl InputHandler for NeuralInputHandler {
+            async fn handle_input_event(
+                self: std::rc::Rc<Self>,
+                _input_event: InputEvent,
+            ) -> Vec<InputEvent> {
+                unimplemented!()
+            }
+        }
+
+        let handler = std::rc::Rc::new(NeuralInputHandler {});
+        assert_eq!(handler.get_name(), "NeuralInputHandler");
     }
 }
