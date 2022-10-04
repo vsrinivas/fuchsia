@@ -6,6 +6,7 @@ mod account;
 mod account_manager;
 mod account_metadata;
 mod keys;
+mod password_interaction;
 mod pinweaver;
 mod scrypt;
 mod storage_unlock_mechanism;
