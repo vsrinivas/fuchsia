@@ -15,9 +15,9 @@
 #include <type_traits>
 #include <utility>
 
-#include "inline_any_internal.h"
+#include "internal/inline_any.h"
+#include "internal/utility.h"
 #include "traits.h"
-#include "utility_internal.h"
 
 namespace fit {
 

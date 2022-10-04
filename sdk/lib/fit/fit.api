@@ -1,15 +1,13 @@
 {
-  "pkg/fit/include/lib/fit/constructors_internal.h": "8bfa14d14273b96823adfd2ae9f002bd",
   "pkg/fit/include/lib/fit/defer.h": "848d5a2b9fbde5581fc412ee4428920e",
-  "pkg/fit/include/lib/fit/function.h": "125f204ab4693f0f9256854e2fa3bbcf",
-  "pkg/fit/include/lib/fit/function_internal.h": "ddbcf477f2c941f9059e62536ae00719",
+  "pkg/fit/include/lib/fit/function.h": "abff3133410cb6578d8f99b71e90b956",
   "pkg/fit/include/lib/fit/function_traits.h": "4db000fe2c2daba6d1b999c21c851da9",
-  "pkg/fit/include/lib/fit/inline_any.h": "4dc3144bff0e1b33780e9c08ac75644b",
-  "pkg/fit/include/lib/fit/inline_any_internal.h": "9da525319ec337760c48636be22734e9",
+  "pkg/fit/include/lib/fit/inline_any.h": "9fe4466cfa91be3d4e5bb71aa7952283",
+  "pkg/fit/include/lib/fit/internal/function.h": "5b02a9472d1a4176760b3395b1fb494f",
+  "pkg/fit/include/lib/fit/internal/inline_any.h": "87c691e1775070e7e922ac2f46270026",
+  "pkg/fit/include/lib/fit/internal/utility.h": "efad68bc25805e7c3d649163a57a116c",
   "pkg/fit/include/lib/fit/nullable.h": "dff1ba0db70e1db407f5a5649305531f",
-  "pkg/fit/include/lib/fit/storage_internal.h": "2487e966d949d93255d6cf420f31be3b",
   "pkg/fit/include/lib/fit/thread_checker.h": "20016b30e7c2c137c9cb16bebf4dd33f",
   "pkg/fit/include/lib/fit/thread_safety.h": "0df6c9f73fc6b7e13c9cedd8cdcac250",
-  "pkg/fit/include/lib/fit/traits.h": "9ec9ad61f0cbe79984f63c62e526707a",
-  "pkg/fit/include/lib/fit/utility_internal.h": "c0cb4fa324bae9d7b9c3a279fee02264"
+  "pkg/fit/include/lib/fit/traits.h": "9ec9ad61f0cbe79984f63c62e526707a"
 }

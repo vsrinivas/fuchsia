@@ -8,19 +8,17 @@ zx_library("fit") {
   sdk = "source"
   sdk_publishable = true
   sdk_headers = [
-    "lib/fit/constructors_internal.h",
     "lib/fit/defer.h",
     "lib/fit/function.h",
-    "lib/fit/function_internal.h",
     "lib/fit/function_traits.h",
+    "lib/fit/internal/function.h",
+    "lib/fit/internal/utility.h",
+    "lib/fit/internal/inline_any.h",
     "lib/fit/nullable.h",
-    "lib/fit/storage_internal.h",
     "lib/fit/thread_checker.h",
     "lib/fit/thread_safety.h",
     "lib/fit/traits.h",
-    "lib/fit/utility_internal.h",
     "lib/fit/inline_any.h",
-    "lib/fit/inline_any_internal.h",
   ]
 
   sources = []

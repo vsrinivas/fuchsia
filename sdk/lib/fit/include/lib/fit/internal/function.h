@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIT_INCLUDE_LIB_FIT_FUNCTION_INTERNAL_H_
-#define LIB_FIT_INCLUDE_LIB_FIT_FUNCTION_INTERNAL_H_
+#ifndef LIB_FIT_INCLUDE_LIB_FIT_INTERNAL_FUNCTION_H_
+#define LIB_FIT_INCLUDE_LIB_FIT_INTERNAL_FUNCTION_H_
 
 #include <stddef.h>
 #include <stdlib.h>
@@ -15,7 +15,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "nullable.h"
+#include "../nullable.h"
 
 namespace fit {
 namespace internal {
@@ -546,4 +546,4 @@ class function_base<inline_target_size, require_inline, Result(Args...)>
 }  // namespace internal
 }  // namespace fit
 
-#endif  // LIB_FIT_INCLUDE_LIB_FIT_FUNCTION_INTERNAL_H_
+#endif  // LIB_FIT_INCLUDE_LIB_FIT_INTERNAL_FUNCTION_H_
