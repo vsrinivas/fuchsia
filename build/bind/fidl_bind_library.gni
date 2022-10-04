@@ -42,8 +42,6 @@ template("fidl_bind_library") {
       "$fidl_target_gen_dir/$target_name/fidl_bindlibs/$bind_library_file_name"
 
   if (current_toolchain == fidl_toolchain) {
-    not_needed(invoker, [ "visibility" ])
-
     compiled_action(generation_target_name) {
       forward_variables_from(invoker,
                              [
@@ -74,16 +72,22 @@ template("fidl_bind_library") {
       }
     }
   } else {
-    bind_library("${target_name}_bindlib") {
-      forward_variables_from(invoker,
-                             [
-                               "testonly",
-                               "visibility",
-                             ])
+    not_needed(invoker,
+               [
+                 "fidl_ir_json",
+                 "fidl_ir_target",
+               ])
+  }
 
-      source_dep = ":$generation_target_name($fidl_toolchain)"
-      source = generated_bind_library
-      name = library_name
-    }
+  bind_library("${target_name}_bindlib") {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    source_dep = ":$generation_target_name($fidl_toolchain)"
+    source = generated_bind_library
+    name = library_name
   }
 }

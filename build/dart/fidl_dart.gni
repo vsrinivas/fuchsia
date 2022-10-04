@@ -45,7 +45,7 @@ template("fidl_dart") {
 
   main_target = "${target_name}_dart"
   generation_target = "${target_name}_dart_generate"
-  copy_pubspec_target = "${target_name}_dart_pubspec"
+  copy_pubspec_target = "_fidl_dart.${target_name}_dart.pubspec"
 
   forward_variables_from(invoker,
                          [

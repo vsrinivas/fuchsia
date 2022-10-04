@@ -34,8 +34,8 @@ template("fidl_rust") {
   assert(defined(invoker.fidl_ir_target),
          "fidl_rust(\"$target_name\") must define `fidl_ir_target`")
 
-  rust_target_name = "${target_name}_rust"
-  generation_target_name = "${rust_target_name}_generate"
+  main_target = "${target_name}_rust"
+  generation_target = "${target_name}_rust_generate"
 
   crate_name = "fidl_" + string_replace(invoker.library_name, ".", "_")
 
@@ -44,21 +44,14 @@ template("fidl_rust") {
   file_stem = "$fidl_target_gen_dir/$target_name/$crate_name"
 
   if (current_toolchain == fidl_toolchain) {
-    not_needed(invoker,
-               [
-                 "public_deps",
-                 "visibility",
-               ])
-
     filename = "$file_stem.rs"
-    compiled_action(generation_target_name) {
+    compiled_action(generation_target) {
       forward_variables_from(invoker,
                              [
                                "testonly",
                                "fidl_ir_json",
                                "fidl_ir_target",
                              ])
-
       visibility = [
         ":*",
         "//tools/fidl/fidlgen_rust:*",
@@ -93,50 +86,56 @@ template("fidl_rust") {
       }
     }
   } else {
-    rustc_library(rust_target_name) {
-      forward_variables_from(invoker,
-                             [
-                               "testonly",
-                               "visibility",
-                             ])
+    not_needed(invoker,
+               [
+                 "fidl_ir_json",
+                 "fidl_ir_target",
+               ])
+  }
 
-      name = crate_name
-      output_dir = "$target_out_dir/$target_name"
-      version = "0.1.0"
-      edition = "2018"
-      disable_clippy = true
+  rustc_library(main_target) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
 
-      deps = [
-        "//src/lib/fidl/rust/fidl",
-        "//src/lib/zircon/rust:fuchsia-zircon-status",
-        "//third_party/rust_crates:bitflags",
-        "//third_party/rust_crates:futures",
-      ]
+    name = crate_name
+    output_dir = "$target_out_dir/$target_name"
+    version = "0.1.0"
+    edition = "2018"
+    disable_clippy = true
 
-      # TODO(https://fxbug.dev/104019): Avoid this suppression. At the time of
-      # writing it is needed because this target might depend on another FIDL
-      # library *only* for type aliases; the generated Rust code will not
-      # reference this external alias, producing an unused crate dependency. We
-      # cannot know here whether that's the case or not, so we just suppress
-      # the warning.
-      configs += [ "//build/config/rust/lints:allow_unused_crate_dependencies" ]
+    deps = [
+      "//src/lib/fidl/rust/fidl",
+      "//src/lib/zircon/rust:fuchsia-zircon-status",
+      "//third_party/rust_crates:bitflags",
+      "//third_party/rust_crates:futures",
+    ]
 
-      if (is_fuchsia) {
-        deps += [ "//src/lib/zircon/rust:fuchsia-zircon" ]
-      }
+    # TODO(https://fxbug.dev/104019): Avoid this suppression. At the time of
+    # writing it is needed because this target might depend on another FIDL
+    # library *only* for type aliases; the generated Rust code will not
+    # reference this external alias, producing an unused crate dependency. We
+    # cannot know here whether that's the case or not, so we just suppress
+    # the warning.
+    configs += [ "//build/config/rust/lints:allow_unused_crate_dependencies" ]
 
-      if (defined(invoker.public_deps)) {
-        foreach(dep, invoker.public_deps) {
-          label = get_label_info(dep, "label_no_toolchain")
-          deps += [ "${label}_rust" ]
-        }
-      }
-
-      non_rust_deps = [ ":$generation_target_name($fidl_toolchain)" ]
-      source_root = "$file_stem.rs"
-      sources = [ "$file_stem.rs" ]
-
-      configs -= [ "//build/config/rust/lints:allow_unused_results" ]
+    if (is_fuchsia) {
+      deps += [ "//src/lib/zircon/rust:fuchsia-zircon" ]
     }
+
+    if (defined(invoker.public_deps)) {
+      foreach(dep, invoker.public_deps) {
+        label = get_label_info(dep, "label_no_toolchain")
+        deps += [ "${label}_rust" ]
+      }
+    }
+
+    non_rust_deps = [ ":$generation_target($fidl_toolchain)" ]
+    source_root = "$file_stem.rs"
+    sources = [ "$file_stem.rs" ]
+
+    configs -= [ "//build/config/rust/lints:allow_unused_results" ]
   }
 }
