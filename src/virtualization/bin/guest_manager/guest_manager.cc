@@ -88,13 +88,12 @@ void GuestManager::LaunchGuest(GuestConfig user_config,
 
   if (!lifecycle_.is_bound()) {
     // Opening the lifecycle channel will start the VMM component, and closing the channel will
-    // destroy the VMM component. The VMM component will never intentionally close the channel so
-    // if it is closed, it means that the component has terminated unexpectedly.
+    // destroy the VMM component.
     //
     // This error handler is only invoked if the server side of the channel is closed, not if the
-    // guest manager closes the channel to destroy the VMM component like we're doing now in Run's
-    // callback (see fxbug.dev/104989 -- devices aren't being destroyed without destroying the
-    // VMM component).
+    // guest manager closes the channel to destroy the VMM component. As the VMM component will
+    // never intentionally close the channel, this channel closing means that the component has
+    // terminated unexpectedly.
     context_->svc()->Connect(lifecycle_.NewRequest());
     lifecycle_.set_error_handler(
         [this](zx_status_t) { state_ = GuestStatus::VMM_UNEXPECTED_TERMINATION; });

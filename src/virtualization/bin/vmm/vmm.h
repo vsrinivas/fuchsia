@@ -103,8 +103,7 @@ class Vmm : public fuchsia::virtualization::Guest {
   std::unique_ptr<VirtioSound> sound_;
   std::vector<std::unique_ptr<VirtioNet>> net_devices_;
 
-  // TODO(fxbug.dev/104989): Unowned pointers. Convert to unique_ptrs and assert on expected size.
-  std::vector<PlatformDevice*> platform_devices_;
+  std::vector<PlatformDevice*> platform_devices_;  // Unowned pointers.
 
   // The start of the next valid dynamic device memory range.
   zx_gpaddr_t next_device_address_ = kFirstDynamicDeviceAddr;
