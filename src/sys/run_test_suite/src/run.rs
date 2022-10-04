@@ -493,7 +493,7 @@ async fn request_scheduling_options(
 /// the caller should do this instead.
 async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
     builder_proxy: RunBuilderProxy,
-    test_params: Vec<TestParams>,
+    test_params: impl IntoIterator<Item = TestParams>,
     run_params: RunParams,
     min_severity_logs: Option<Severity>,
     run_reporter: &'a RunReporter,
@@ -738,7 +738,7 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
 /// option for output, it will likely soon be moved to a reporter.
 pub async fn run_tests_and_get_outcome<F: Future<Output = ()>>(
     builder_proxy: RunBuilderProxy,
-    test_params: Vec<TestParams>,
+    test_params: impl IntoIterator<Item = TestParams>,
     run_params: RunParams,
     min_severity_logs: Option<Severity>,
     run_reporter: RunReporter,

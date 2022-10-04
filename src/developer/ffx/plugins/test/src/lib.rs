@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::fmt::Debug;
+
 use suite_definition::TestParamsOptions;
 
 mod output_directory;
@@ -9,6 +11,7 @@ mod suite_definition;
 
 use {
     anyhow::{anyhow, format_err, Context, Result},
+    either::Either,
     errors::{ffx_bail, ffx_bail_with_code, ffx_error, ffx_error_with_code, FfxError},
     ffx_core::ffx_plugin,
     ffx_test_args::{
@@ -223,7 +226,7 @@ fn test_params_from_args<F, R>(
     cmd: RunCommand,
     stdin_handle_fn: F,
     json_input_experiment_enabled: bool,
-) -> Result<Vec<run_test_suite_lib::TestParams>, FfxError>
+) -> Result<impl ExactSizeIterator<Item = run_test_suite_lib::TestParams> + Debug, FfxError>
 where
     F: Fn() -> R,
     R: std::io::Read,
@@ -256,6 +259,7 @@ where
                 .map_err(|e| ffx_error!("Failed to read test definitions: {:?}", e))
             }
         }
+        .map(|file_params| Either::Left(file_params.into_iter())),
         None => {
             let mut test_args_iter = cmd.test_args.iter();
             let (test_url, test_args) = match test_args_iter.next() {
@@ -265,28 +269,25 @@ where
                 }
             };
 
+            let test_params = run_test_suite_lib::TestParams {
+                test_url,
+                timeout_seconds: cmd.timeout.and_then(std::num::NonZeroU32::new),
+                test_filters: if cmd.test_filter.len() == 0 { None } else { Some(cmd.test_filter) },
+                max_severity_logs: cmd.max_severity_logs,
+                also_run_disabled_tests: cmd.run_disabled,
+                parallel: cmd.parallel,
+                test_args,
+                show_full_moniker: cmd.show_full_moniker_in_logs,
+                tags: vec![],
+            };
+
             let count = cmd.count.unwrap_or(1);
             let count = std::num::NonZeroU32::new(count)
                 .ok_or_else(|| ffx_error!("--count should be greater than zero."))?;
-            Ok(vec![
-                run_test_suite_lib::TestParams {
-                    test_url,
-                    timeout_seconds: cmd.timeout.and_then(std::num::NonZeroU32::new),
-                    test_filters: if cmd.test_filter.len() == 0 {
-                        None
-                    } else {
-                        Some(cmd.test_filter)
-                    },
-                    max_severity_logs: cmd.max_severity_logs,
-                    also_run_disabled_tests: cmd.run_disabled,
-                    parallel: cmd.parallel,
-                    test_args,
-                    show_full_moniker: cmd.show_full_moniker_in_logs,
-                    tags: vec![],
-                };
-                count.get() as usize
-            ])
+            let repeated = (0..count.get()).map(move |_: u32| test_params.clone());
+            Ok(repeated)
         }
+        .map(Either::Right),
     }
 }
 
@@ -785,8 +786,40 @@ mod test {
                 run_command,
                 result.unwrap_err()
             );
-            assert_eq!(result.unwrap(), expected_test_params);
+            assert_eq!(result.unwrap().into_iter().collect::<Vec<_>>(), expected_test_params);
         }
+    }
+
+    #[test]
+    fn test_get_test_params_count() {
+        // Regression test for https://fxbug.dev/111145: using an extremely
+        // large test count should result in a modest memory allocation. If
+        // that wasn't the case, this test would fail.
+        const COUNT: u32 = u32::MAX;
+        let params = test_params_from_args(
+            RunCommand {
+                test_args: vec!["my-test-url".to_string()],
+                count: Some(COUNT),
+                timeout: None,
+                test_file: None,
+                test_filter: vec![],
+                run_disabled: false,
+                filter_ansi: false,
+                parallel: None,
+                min_severity_logs: None,
+                show_full_moniker_in_logs: false,
+                max_severity_logs: Some(diagnostics_data::Severity::Warn),
+                output_directory: None,
+                disable_output_directory: false,
+                continue_on_timeout: false,
+                stop_after_failures: None,
+                experimental_parallel_execution: None,
+            },
+            || std::io::Cursor::new(&*VALID_STDIN_INPUT),
+            true,
+        )
+        .expect("should succeed");
+        assert_eq!(params.len(), usize::try_from(COUNT).unwrap());
     }
 
     #[test]
