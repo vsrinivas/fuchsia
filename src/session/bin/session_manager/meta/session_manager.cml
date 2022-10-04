@@ -442,10 +442,7 @@
         {
             directory: [
                 "dev-block",
-                "dev-nelson-emmc",
-                "dev-sherlock-emmc",
                 "dev-skip-block",
-                "dev-sys",
             ],
             from: "parent",
             to: "#session",

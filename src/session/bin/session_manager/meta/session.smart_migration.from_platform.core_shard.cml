@@ -24,26 +24,5 @@
             to: "#session-manager",
             subdir: "class/skip-block",
         },
-        {
-            directory: "dev",
-            from: "parent",
-            as: "dev-nelson-emmc",
-            to: "#session-manager",
-            subdir: "nelson-emmc",
-        },
-        {
-            directory: "dev",
-            from: "parent",
-            as: "dev-sherlock-emmc",
-            to: "#session-manager",
-            subdir: "sherlock-emmc",
-        },
-        {
-            directory: "dev",
-            from: "parent",
-            as: "dev-sys",
-            to: "#session-manager",
-            subdir: "sys",
-        },
     ],
 }
