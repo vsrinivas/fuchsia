@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/clang/clang.gni")
 import("//build/config/profile/config.gni")
 import("//build/toolchain/variant.gni")
 
@@ -119,6 +120,19 @@ variant("coverage-rust") {
 variant("profile") {
   common_flags = [ "-fprofile-generate" ]
 
+  # We need to link the profile runtime manually into Rust binaries to satisfy
+  # compiler generated symbol references in the instrumented C++ code.
+  libclang_rt_profile =
+      rebase_path(exec_script("/usr/bin/env",
+                              [
+                                "${rebased_clang_prefix}/clang",
+                                "--target=${current_target_tuple}",
+                                "-print-file-name=libclang_rt.profile.a",
+                              ],
+                              "trim string"),
+                  root_build_dir)
+  rustflags = [ "-Clink-arg=${libclang_rt_profile}" ]
+
   if (!is_kernel && is_fuchsia) {
     # The statically-linked profiling runtime depends on libzircon.
     # TODO(fxbug.dev/61522): Ensure this works with shared_library() instances too!
@@ -126,6 +140,6 @@ variant("profile") {
 
     dynamic_linker_flags = "-dynamic-linker=profile/ld.so.1"
     ldflags = [ "-Wl,$dynamic_linker_flags" ]
-    rustflags = [ "-Clink-arg=$dynamic_linker_flags" ]
+    rustflags += [ "-Clink-arg=$dynamic_linker_flags" ]
   }
 }
