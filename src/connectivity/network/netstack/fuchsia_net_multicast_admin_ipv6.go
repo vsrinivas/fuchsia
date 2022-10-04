@@ -27,7 +27,13 @@ func addMulticastIpv6RoutingTableControllerService(componentCtx *component.Conte
 	componentCtx.OutgoingService.AddService(
 		admin.Ipv6RoutingTableControllerName,
 		func(ctx context.Context, c zx.Channel) error {
-			cancelCtx, cancel := context.WithCancel(ctx)
+			ctx, cancel := context.WithCancel(ctx)
+			errorPathCleanup := cancel
+			defer func() {
+				if errorPathCleanup != nil {
+					errorPathCleanup()
+				}
+			}()
 
 			eventDispatcher := newMulticastEventDispatcher(cancel)
 			alreadyEnabled, err := stack.EnableMulticastForwardingForProtocol(ipv6.ProtocolNumber, eventDispatcher)
@@ -51,8 +57,10 @@ func addMulticastIpv6RoutingTableControllerService(componentCtx *component.Conte
 				},
 			}
 
+			errorPathCleanup = nil
 			go func() {
-				component.Serve(cancelCtx, &multicastIPv6Stub, c, component.ServeOptions{
+				defer cancel()
+				component.Serve(ctx, &multicastIPv6Stub, c, component.ServeOptions{
 					Concurrent: true,
 					OnError: func(err error) {
 						_ = syslog.WarnTf(admin.Ipv6RoutingTableControllerName, "%s", err)

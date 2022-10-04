@@ -113,6 +113,8 @@ func newDnsServerWatcherCollection(getServersCacheAndChannel func() ([]dns.Serve
 func (c *dnsServerWatcherCollection) Bind(request name.DnsServerWatcherWithCtxInterfaceRequest) error {
 	go func() {
 		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
 		watcher := dnsServerWatcher{
 			parent:      c,
 			cancelServe: cancel,

@@ -369,6 +369,7 @@ func (ci *adminControlImpl) AddAddress(_ fidl.Context, interfaceAddr net.Subnet,
 
 		return 0
 	}(); reason != 0 {
+		defer cancel()
 		if err := impl.mu.eventProxy.OnAddressRemoved(reason); err != nil {
 			var zxError *zx.Error
 			if !errors.As(err, &zxError) || (zxError.Status != zx.ErrPeerClosed && zxError.Status != zx.ErrBadHandle) {
@@ -382,6 +383,7 @@ func (ci *adminControlImpl) AddAddress(_ fidl.Context, interfaceAddr net.Subnet,
 	}
 
 	go func() {
+		defer cancel()
 		component.Serve(ctx, &admin.AddressStateProviderWithCtxStub{Impl: impl}, request.Channel, component.ServeOptions{
 			Concurrent: true,
 			OnError: func(err error) {
@@ -594,7 +596,7 @@ func (c *adminControlCollection) onInterfaceRemove(reason admin.InterfaceRemoved
 
 func (ifs *ifState) addAdminConnection(request admin.ControlWithCtxInterfaceRequest, strong bool) {
 
-	impl, ctx := func() (*adminControlImpl, context.Context) {
+	impl, ctx, cancel := func() (*adminControlImpl, context.Context, context.CancelFunc) {
 		ifs.adminControls.mu.Lock()
 		defer ifs.adminControls.mu.Unlock()
 
@@ -603,7 +605,7 @@ func (ifs *ifState) addAdminConnection(request admin.ControlWithCtxInterfaceRequ
 			if err := request.Channel.Close(); err != nil {
 				_ = syslog.ErrorTf(controlName, "request.channel.Close() = %s", err)
 			}
-			return nil, nil
+			return nil, nil, nil
 		}
 
 		ctx, cancel := context.WithCancel(context.Background())
@@ -620,13 +622,14 @@ func (ifs *ifState) addAdminConnection(request admin.ControlWithCtxInterfaceRequ
 			ifs.adminControls.mu.strongRefCount++
 		}
 
-		return impl, ctx
+		return impl, ctx, cancel
 	}()
 	if impl == nil {
 		return
 	}
 
 	go func() {
+		defer cancel()
 		defer close(impl.doneChannel)
 
 		requestChannel := request.Channel

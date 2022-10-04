@@ -269,6 +269,7 @@ func (n *neighborImpl) OpenEntryIterator(_ fidl.Context, req neighbor.EntryItera
 	it.mu.items = items
 	it.mu.Unlock()
 	go func() {
+		defer cancel()
 		component.Serve(ctx, &neighbor.EntryIteratorWithCtxStub{Impl: it}, req.Channel, component.ServeOptions{
 			Concurrent: true,
 			OnError: func(err error) {

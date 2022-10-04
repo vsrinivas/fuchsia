@@ -27,7 +27,13 @@ func addMulticastIpv4RoutingTableControllerService(componentCtx *component.Conte
 	componentCtx.OutgoingService.AddService(
 		admin.Ipv4RoutingTableControllerName,
 		func(ctx context.Context, c zx.Channel) error {
-			cancelCtx, cancel := context.WithCancel(ctx)
+			ctx, cancel := context.WithCancel(ctx)
+			errorPathCleanup := cancel
+			defer func() {
+				if errorPathCleanup != nil {
+					errorPathCleanup()
+				}
+			}()
 
 			eventDispatcher := newMulticastEventDispatcher(cancel)
 			alreadyEnabled, err := stack.EnableMulticastForwardingForProtocol(ipv4.ProtocolNumber, eventDispatcher)
@@ -51,8 +57,10 @@ func addMulticastIpv4RoutingTableControllerService(componentCtx *component.Conte
 				},
 			}
 
+			errorPathCleanup = nil
 			go func() {
-				component.Serve(cancelCtx, &multicastIPv4Stub, c, component.ServeOptions{
+				defer cancel()
+				component.Serve(ctx, &multicastIPv4Stub, c, component.ServeOptions{
 					Concurrent: true,
 					OnError: func(err error) {
 						_ = syslog.WarnTf(admin.Ipv4RoutingTableControllerName, "%s", err)

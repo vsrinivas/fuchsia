@@ -2215,6 +2215,8 @@ func (s *datagramSocketImpl) addConnection(_ fidl.Context, channel zx.Channel) {
 			defer s.ns.stats.SocketCount.Decrement()
 
 			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
 			s.cancel = cancel
 			defer func() {
 				// Avoid double close when the peer calls Close and then hangs up.
@@ -2948,6 +2950,8 @@ func (s *synchronousDatagramSocket) addConnection(prefix string, channel zx.Chan
 		defer s.ns.stats.SocketCount.Decrement()
 
 		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
 		s.cancel = cancel
 		defer func() {
 			// Avoid double close when the peer calls Close and then hangs up.
@@ -3281,6 +3285,8 @@ func (s *streamSocketImpl) addConnection(_ fidl.Context, channel zx.Channel) {
 			defer s.ns.stats.SocketCount.Decrement()
 
 			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
 			s.cancel = cancel
 			defer func() {
 				// Avoid double close when the peer calls Close and then hangs up.

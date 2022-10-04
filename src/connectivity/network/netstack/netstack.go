@@ -777,10 +777,12 @@ func (ifs *ifState) runDHCPLocked(name string) {
 	}
 	if c := ifs.mu.dhcp.Client; c != nil {
 		go func() {
+			defer cancel()
 			completeCh <- c.Run(ctx)
 			close(completeCh)
 		}()
 	} else {
+		cancel()
 		panic(fmt.Sprintf("nil DHCP client on interface %s", name))
 	}
 }

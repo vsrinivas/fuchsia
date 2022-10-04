@@ -251,6 +251,7 @@ func (p *Port) Attach(dispatcher stack.NetworkDispatcher) {
 	go func() {
 		p.dispatcherWg.Wait()
 		onLinkClosed()
+		cancel()
 	}()
 }
 
@@ -334,6 +335,8 @@ func (c *Client) Run(ctx context.Context) {
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	detachWithError := func(reason error) {
 		cancel()
 		c.handler.DetachTx()
