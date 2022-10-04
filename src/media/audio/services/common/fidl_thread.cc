@@ -30,25 +30,27 @@ std::shared_ptr<FidlThread> FidlThread::CreateFromNewThread(std::string name) {
       << "Deadlock in FidlThread::Create while creating thread '" << name << "'";
   FX_CHECK(thread_id.has_value());
 
-  return Create(std::move(name), *thread_id, std::move(loop));
+  return Create(std::move(name), *thread_id, loop->dispatcher(), std::move(loop));
 }
 
 // static
-std::shared_ptr<FidlThread> FidlThread::CreateFromCurrentThread(std::string name) {
-  // This loop is unstarted.
-  auto loop = std::make_unique<async::Loop>(&kAsyncLoopConfigNeverAttachToThread);
-  return Create(std::move(name), std::this_thread::get_id(), std::move(loop));
+std::shared_ptr<FidlThread> FidlThread::CreateFromCurrentThread(std::string name,
+                                                                async_dispatcher_t* dispatcher) {
+  return Create(std::move(name), std::this_thread::get_id(), dispatcher, nullptr);
 }
 
 // static
 std::shared_ptr<FidlThread> FidlThread::Create(std::string name, std::thread::id thread_id,
+                                               async_dispatcher_t* dispatcher,
                                                std::unique_ptr<async::Loop> loop) {
   struct WithPublicCtor : public FidlThread {
    public:
-    WithPublicCtor(std::string name, std::thread::id thread_id, std::unique_ptr<async::Loop> loop)
-        : FidlThread(std::move(name), thread_id, std::move(loop)) {}
+    WithPublicCtor(std::string name, std::thread::id thread_id, async_dispatcher_t* dispatcher,
+                   std::unique_ptr<async::Loop> loop)
+        : FidlThread(std::move(name), thread_id, dispatcher, std::move(loop)) {}
   };
-  return std::make_shared<WithPublicCtor>(std::string(name), thread_id, std::move(loop));
+  return std::make_shared<WithPublicCtor>(std::string(name), thread_id, dispatcher,
+                                          std::move(loop));
 }
 
 }  // namespace media_audio

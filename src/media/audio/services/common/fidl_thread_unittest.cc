@@ -11,7 +11,7 @@
 namespace media_audio {
 namespace {
 
-TEST(FidlThreadTest, CreateNewThread) {
+TEST(FidlThreadTest, CreateFromNewThread) {
   auto thread = FidlThread::CreateFromNewThread("test_fidl_thread");
   EXPECT_FALSE(thread->checker().IsValid());
 
@@ -24,8 +24,9 @@ TEST(FidlThreadTest, CreateNewThread) {
   EXPECT_EQ(done.Wait(zx::sec(5)), ZX_OK);
 }
 
-TEST(FidlThreadTest, CreateCurrentThread) {
-  auto thread = FidlThread::CreateFromCurrentThread("test_fidl_thread");
+TEST(FidlThreadTest, CreateFromCurrentThread) {
+  const async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+  auto thread = FidlThread::CreateFromCurrentThread("test_fidl_thread", loop.dispatcher());
   EXPECT_TRUE(thread->checker().IsValid());
 
   libsync::Completion done;
