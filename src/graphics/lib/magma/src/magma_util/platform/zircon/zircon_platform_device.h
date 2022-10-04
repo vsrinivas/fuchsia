@@ -20,14 +20,6 @@ class ZirconPlatformDeviceWithoutProtocol : public PlatformDevice {
 
   bool GetProtocol(uint32_t proto_id, void* proto_out) override;
 
-  std::unique_ptr<PlatformHandle> GetSchedulerProfile(Priority priority,
-                                                      const char* name) const override;
-
-  std::unique_ptr<PlatformHandle> GetDeadlineSchedulerProfile(std::chrono::nanoseconds capacity_ns,
-                                                              std::chrono::nanoseconds deadline_ns,
-                                                              std::chrono::nanoseconds period_ns,
-                                                              const char* name) const override;
-
   Status LoadFirmware(const char* filename, std::unique_ptr<PlatformBuffer>* firmware_out,
                       uint64_t* size_out) const override;
 

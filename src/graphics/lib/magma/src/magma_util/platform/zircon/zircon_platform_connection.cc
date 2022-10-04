@@ -535,7 +535,6 @@ void ZirconPlatformConnection::ClearPerformanceCounters(
 
 std::shared_ptr<PlatformConnection> PlatformConnection::Create(
     std::unique_ptr<PlatformConnection::Delegate> delegate, msd_client_id_t client_id,
-    std::unique_ptr<magma::PlatformHandle> thread_profile,
     std::unique_ptr<magma::PlatformHandle> server_endpoint,
     std::unique_ptr<magma::PlatformHandle> server_notification_endpoint) {
   if (!delegate)
@@ -547,7 +546,7 @@ std::shared_ptr<PlatformConnection> PlatformConnection::Create(
 
   auto connection = std::make_shared<ZirconPlatformConnection>(
       std::move(delegate), client_id, zx::channel(server_notification_endpoint->release()),
-      std::shared_ptr<magma::PlatformEvent>(std::move(shutdown_event)), std::move(thread_profile));
+      std::shared_ptr<magma::PlatformEvent>(std::move(shutdown_event)));
 
   if (!connection->Bind(zx::channel(server_endpoint->release())))
     return DRETP(nullptr, "Bind failed");

@@ -6,5 +6,13 @@
     "fuchsia.netstack.go-worker": { "priority": 25 },
     "fuchsia.devices.usb.xhci.interrupter": { "capacity": "100us", "deadline": "125us", "period": "125us" },
     "fuchsia.devices.usb.audio": { "capacity": "250us", "deadline": "1ms", "period": "1ms" },
+
+    // Msd Arm Mali / Vsi Vip profiles.
+    "fuchsia.graphics.drivers.msd-arm-mali.gpu-interrupt": { "capacity": "60us", "deadline": "125us", "period": "125us" },
+    "fuchsia.graphics.drivers.msd-arm-mali.job-interrupt": { "capacity": "60us", "deadline": "125us", "period": "125us" },
+    "fuchsia.graphics.drivers.msd-arm-mali.mmu-interrupt": { "capacity": "60us", "deadline": "125us", "period": "125us" },
+    "fuchsia.graphics.drivers.msd-arm-mali.device": { "capacity": "500us", "deadline": "1ms", "period": "1ms" },
+    "fuchsia.graphics.drivers.msd-vsi-vip.device": { "priority": 25 },
+    "fuchsia.graphics.drivers.msd-vsi-vip.vsi-interrupt": { "priority": 25 },
   },
 }

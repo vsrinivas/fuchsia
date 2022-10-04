@@ -24,18 +24,6 @@ class LinuxPlatformDevice : public PlatformDevice {
 
   void* GetDeviceHandle() override { return reinterpret_cast<void*>(fd()); }
 
-  std::unique_ptr<PlatformHandle> GetSchedulerProfile(Priority priority,
-                                                      const char* name) const override {
-    return DRETP(nullptr, "GetSchedulerProfile not implemented");
-  }
-
-  std::unique_ptr<PlatformHandle> GetDeadlineSchedulerProfile(std::chrono::nanoseconds capacity_ns,
-                                                              std::chrono::nanoseconds deadline_ns,
-                                                              std::chrono::nanoseconds period_ns,
-                                                              const char* name) const override {
-    return DRETP(nullptr, "GetDeadlineSchedulerProfile not implemented");
-  }
-
   std::unique_ptr<PlatformHandle> GetBusTransactionInitiator() const override;
 
   std::unique_ptr<PlatformHandle> GetIommuConnector() const override;

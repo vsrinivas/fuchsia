@@ -39,9 +39,9 @@ class PlatformThreadHelper {
   static void SetCurrentThreadName(const std::string& name);
   static std::string GetCurrentThreadName();
 
-  static bool SetProfile(PlatformHandle* profile);
+  static bool SetRole(void* device_handle, const std::string& role_name);
 #ifndef __STDC_NO_THREADS__
-  static bool SetThreadProfile(thrd_t thread, PlatformHandle* profile);
+  static bool SetThreadRole(void* device_handle, thrd_t thread, const std::string& role_name);
 #endif
 };
 

@@ -71,17 +71,6 @@ class FakePlatformDevice : public magma::PlatformDevice {
     return nullptr;
   }
 
-  std::unique_ptr<magma::PlatformHandle> GetSchedulerProfile(Priority priority,
-                                                             const char* name) const override {
-    return CreateArbitraryProfile();
-  }
-
-  virtual std::unique_ptr<magma::PlatformHandle> GetDeadlineSchedulerProfile(
-      std::chrono::nanoseconds capacity_ns, std::chrono::nanoseconds deadline_ns,
-      std::chrono::nanoseconds period_ns, const char* name) const override {
-    return CreateArbitraryProfile();
-  }
-
   magma::Status LoadFirmware(const char* filename,
                              std::unique_ptr<magma::PlatformBuffer>* firmware_out,
                              uint64_t* size_out) const override {
@@ -101,24 +90,6 @@ class FakePlatformDevice : public magma::PlatformDevice {
 
   std::unique_ptr<magma::PlatformInterrupt> RegisterInterrupt(unsigned int index) override {
     return std::make_unique<FakePlatformInterrupt>();
-  }
-
- private:
-  static std::unique_ptr<magma::PlatformHandle> CreateArbitraryProfile() {
-    fuchsia::scheduler::ProfileProviderSyncPtr provider;
-    zx_status_t status = fdio_service_connect(
-        (std::string("/svc/") + fuchsia::scheduler::ProfileProvider::Name_).c_str(),
-        provider.NewRequest().TakeChannel().release());
-    if (status != ZX_OK)
-      return DRETP(nullptr, "Failed to connect to profiler provider");
-    zx_status_t fidl_status;
-    zx::profile profile;
-    status = provider->GetProfile(16u, "TestMsdArmMali", &fidl_status, &profile);
-    if (status != ZX_OK)
-      return DRETP(nullptr, "Failed to connect to get profile");
-    if (fidl_status != ZX_OK)
-      return DRETP(nullptr, "Failed to get profile due to channel error");
-    return magma::PlatformHandle::Create(profile.release());
   }
 };
 class FakePlatformDeviceWithProtocol : public FakePlatformDevice {

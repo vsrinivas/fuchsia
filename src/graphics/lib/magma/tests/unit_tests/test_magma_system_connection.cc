@@ -58,8 +58,8 @@ TEST(MagmaSystemConnection, ContextManagement) {
   auto msd_connection = new MsdMockConnection_ContextManagement();
 
   auto msd_dev = new MsdMockDevice();
-  auto dev =
-      std::shared_ptr<MagmaSystemDevice>(MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev)));
+  auto dev = std::shared_ptr<MagmaSystemDevice>(
+      MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev), nullptr));
   MagmaSystemConnection connection(dev, MsdConnectionUniquePtr(msd_connection));
 
   EXPECT_EQ(msd_connection->NumActiveContexts(), 0u);
@@ -84,8 +84,8 @@ TEST(MagmaSystemConnection, ContextManagement) {
 
 TEST(MagmaSystemConnection, BufferManagement) {
   auto msd_dev = new MsdMockDevice();
-  auto dev =
-      std::shared_ptr<MagmaSystemDevice>(MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev)));
+  auto dev = std::shared_ptr<MagmaSystemDevice>(
+      MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev), nullptr));
   auto msd_connection = msd_device_open(msd_dev, 0);
   ASSERT_NE(msd_connection, nullptr);
   MagmaSystemConnection connection(dev, MsdConnectionUniquePtr(msd_connection));
@@ -130,8 +130,8 @@ TEST(MagmaSystemConnection, BufferManagement) {
 
 TEST(MagmaSystemConnection, Semaphores) {
   auto msd_dev = new MsdMockDevice();
-  auto dev =
-      std::shared_ptr<MagmaSystemDevice>(MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev)));
+  auto dev = std::shared_ptr<MagmaSystemDevice>(
+      MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev), nullptr));
   auto msd_connection = msd_device_open(msd_dev, 0);
   ASSERT_NE(msd_connection, nullptr);
   MagmaSystemConnection connection(dev, MsdConnectionUniquePtr(msd_connection));
@@ -173,8 +173,8 @@ TEST(MagmaSystemConnection, Semaphores) {
 
 TEST(MagmaSystemConnection, BadSemaphoreImport) {
   auto msd_dev = new MsdMockDevice();
-  auto dev =
-      std::shared_ptr<MagmaSystemDevice>(MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev)));
+  auto dev = std::shared_ptr<MagmaSystemDevice>(
+      MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev), nullptr));
 
   auto msd_connection = msd_device_open(msd_dev, 0);
   ASSERT_TRUE(msd_connection);
@@ -196,8 +196,8 @@ TEST(MagmaSystemConnection, BadSemaphoreImport) {
 
 TEST(MagmaSystemConnection, BufferSharing) {
   auto msd_dev = new MsdMockDevice();
-  auto dev =
-      std::shared_ptr<MagmaSystemDevice>(MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev)));
+  auto dev = std::shared_ptr<MagmaSystemDevice>(
+      MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev), nullptr));
 
   auto msd_connection = msd_device_open(msd_dev, 0);
   ASSERT_NE(msd_connection, nullptr);
@@ -243,8 +243,8 @@ TEST(MagmaSystemConnection, BufferSharing) {
 
 TEST(MagmaSystemConnection, BadBufferImport) {
   auto msd_dev = new MsdMockDevice();
-  auto dev =
-      std::shared_ptr<MagmaSystemDevice>(MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev)));
+  auto dev = std::shared_ptr<MagmaSystemDevice>(
+      MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev), nullptr));
 
   auto msd_connection = msd_device_open(msd_dev, 0);
   ASSERT_TRUE(msd_connection);
@@ -266,8 +266,8 @@ TEST(MagmaSystemConnection, BadBufferImport) {
 
 TEST(MagmaSystemConnection, MapBufferGpu) {
   auto msd_dev = new MsdMockDevice();
-  auto dev =
-      std::shared_ptr<MagmaSystemDevice>(MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev)));
+  auto dev = std::shared_ptr<MagmaSystemDevice>(
+      MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev), nullptr));
 
   auto msd_connection = msd_device_open(msd_dev, 0);
   ASSERT_TRUE(msd_connection);
@@ -311,8 +311,8 @@ TEST(MagmaSystemConnection, MapBufferGpu) {
 
 TEST(MagmaSystemConnection, PerformanceCounters) {
   auto msd_dev = new MsdMockDevice();
-  auto dev =
-      std::shared_ptr<MagmaSystemDevice>(MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev)));
+  auto dev = std::shared_ptr<MagmaSystemDevice>(
+      MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev), nullptr));
   auto msd_connection = msd_device_open(msd_dev, 0);
   ASSERT_NE(msd_connection, nullptr);
   MagmaSystemConnection connection(dev, MsdConnectionUniquePtr(msd_connection));
