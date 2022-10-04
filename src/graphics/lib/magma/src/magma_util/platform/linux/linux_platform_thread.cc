@@ -6,7 +6,9 @@
 
 namespace magma {
 
-bool PlatformThreadHelper::SetProfile(PlatformHandle* profile) { return false; }
+bool PlatformThreadHelper::SetRole(void* device_handle, const std::string& role_name) {
+  return true;
+}
 
 std::string PlatformThreadHelper::GetCurrentThreadName() { return ""; }
 

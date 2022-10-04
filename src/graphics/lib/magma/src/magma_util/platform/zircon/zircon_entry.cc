@@ -94,7 +94,6 @@ class GpuDevice : public fidl::WireServer<DeviceType>,
 
     auto connection = MagmaSystemDevice::Open(
         this->magma_system_device_, request->client_id,
-        /*thread_profile*/ nullptr,
         magma::PlatformHandle::Create(request->primary_channel.channel().release()),
         magma::PlatformHandle::Create(request->notification_channel.channel().release()));
 

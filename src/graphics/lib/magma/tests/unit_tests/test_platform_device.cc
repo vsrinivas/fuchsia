@@ -42,33 +42,16 @@ TEST(PlatformDevice, MapMmio) {
   EXPECT_TRUE(mmio3);
 }
 
-TEST(PlatformDevice, SchedulerProfile) {
+TEST(PlatformDevice, SetRole) {
   magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
   ASSERT_TRUE(platform_device);
 
-  auto profile = platform_device->GetSchedulerProfile(magma::PlatformDevice::kPriorityHigher,
-                                                      "msd/test-profile");
-  ASSERT_TRUE(profile);
+  void* device_handle = platform_device->GetDeviceHandle();
+  ASSERT_TRUE(device_handle);
 
-  std::thread test_thread(
-      [&profile]() { EXPECT_TRUE(magma::PlatformThreadHelper::SetProfile(profile.get())); });
-
-  test_thread.join();
-}
-
-TEST(PlatformDevice, DeadlineSchedulerProfile) {
-  magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
-  ASSERT_TRUE(platform_device);
-
-  const std::chrono::nanoseconds capacity_ns = 5ms;
-  const std::chrono::nanoseconds deadline_ns = 10ms;
-  const std::chrono::nanoseconds period_ns = deadline_ns;
-  auto profile = platform_device->GetDeadlineSchedulerProfile(capacity_ns, deadline_ns, period_ns,
-                                                              "msd/test-profile");
-  ASSERT_TRUE(profile);
-
-  std::thread test_thread(
-      [&profile]() { EXPECT_TRUE(magma::PlatformThreadHelper::SetProfile(profile.get())); });
+  std::thread test_thread([device_handle]() {
+    EXPECT_TRUE(magma::PlatformThreadHelper::SetRole(device_handle, "fuchsia.test-role:ok"));
+  });
 
   test_thread.join();
 }
@@ -80,13 +63,12 @@ static int thread_function(void* input) {
   return 0;
 }
 
-TEST(PlatformDevice, SchedulerThreadProfile) {
+TEST(PlatformDevice, SetThreadRole) {
   magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
   ASSERT_TRUE(platform_device);
 
-  auto profile = platform_device->GetSchedulerProfile(magma::PlatformDevice::kPriorityHigher,
-                                                      "msd/test-profile");
-  ASSERT_TRUE(profile);
+  void* device_handle = platform_device->GetDeviceHandle();
+  ASSERT_TRUE(device_handle);
 
   // Block the thread to prevent it from exiting before we set the profile
   std::mutex mutex;
@@ -94,8 +76,8 @@ TEST(PlatformDevice, SchedulerThreadProfile) {
 
   thrd_t thread;
   ASSERT_EQ(0, thrd_create(&thread, &thread_function, &mutex));
-
-  EXPECT_TRUE(magma::PlatformThreadHelper::SetThreadProfile(thread, profile.get()));
+  EXPECT_TRUE(
+      magma::PlatformThreadHelper::SetThreadRole(device_handle, thread, "fuchsia.test-role:ok"));
 
   lock.unlock();
   thrd_join(thread, nullptr);
