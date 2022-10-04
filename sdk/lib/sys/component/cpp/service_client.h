@@ -110,6 +110,22 @@ zx::status<fidl::ClientEnd<Protocol>> Connect(
   return zx::ok(fidl::ClientEnd<Protocol>(std::move(channel.value())));
 }
 
+// Typed channel wrapper around |fdio_service_connect|.
+//
+// Connects to the |Protocol| protocol in the default namespace for the current
+// process. |path| defaults to `/svc/{name}`, where `{name}` is the fully
+// qualified name of the FIDL protocol. The path may be overridden to
+// a custom value.
+//
+// See `Connect(const char*)` for details.
+template <typename Protocol>
+zx::status<> Connect(fidl::ServerEnd<Protocol> server_end,
+                     const char* path = fidl::DiscoverableProtocolDefaultPath<Protocol>) {
+  return internal::ConnectRaw(server_end.TakeChannel(), path);
+}
+
+// Typed channel wrapper around |fdio_service_connect_at|.
+//
 // Connects to the |Protocol| protocol relative to the |svc_dir| directory.
 // |protocol_name| defaults to the fully qualified name of the FIDL protocol,
 // but may be overridden to a custom value.
@@ -146,6 +162,8 @@ zx::status<> ConnectAt(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
   return zx::ok();
 }
 
+// Typed channel wrapper around |fdio_service_connect_at|.
+//
 // Connects to the |Protocol| protocol relative to the |svc_dir| directory.
 // |protocol_name| defaults to the fully qualified name of the FIDL protocol,
 // but may be overridden to a custom value.

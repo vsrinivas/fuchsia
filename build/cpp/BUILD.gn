@@ -20,7 +20,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//examples/drivers/dotmatrix_display:bin2",
     "//sdk/lib/sys/component/cpp/tests:service_client_test",
     "//src/bringup/bin/pwrbtn-monitor",
-    "//src/bringup/bin/sysinfo",
     "//src/bringup/bin/waitfor",
     "//src/cobalt/bin/system-metrics:system_metrics_daemon_lib",
     "//src/connectivity/telephony/drivers/qmi-fake-transport:fake_qmi_driver-driver",
