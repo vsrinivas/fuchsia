@@ -95,10 +95,10 @@ Created Breakpoint 1 @ QemuEduServer::ComputeFactorial
 
 ## Step through the driver function
 
-In a separate terminal, run the `eductl` tools component again:
+In a separate terminal, run the `eductl` tool again:
 
 ```posix-terminal
-bazel run --config=fuchsia_x64 //fuchsia-codelab/qemu_edu/tools:pkg.component
+bazel run --config=fuchsia_x64 //fuchsia-codelab/qemu_edu/tools:pkg.eductl_tool -- fact 12
 ```
 
 In the `zxdb` terminal, verify that the debugger has hit the breakpoint in the driver's
