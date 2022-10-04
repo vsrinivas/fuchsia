@@ -29,10 +29,6 @@
             name: "regulatory_region",
             url: "#meta/regulatory_region.cm",
         },
-        {
-            name: "emergency_location",
-            url: "#meta/emergency.cm",
-        },
     ],
     use: [
         { protocol: "fuchsia.diagnostics.ArchiveAccessor" },
@@ -57,7 +53,6 @@
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
             to: [
-                "#emergency_location",
                 "#regulatory_region",
                 "#stash",
                 "#wlancfg",
@@ -73,11 +68,6 @@
         {
             protocol: "fuchsia.location.namedplace.RegulatoryRegionWatcher",
             from: "#regulatory_region",
-            to: "#wlancfg",
-        },
-        {
-            protocol: "fuchsia.location.sensor.WlanBaseStationWatcher",
-            from: "#emergency_location",
             to: "#wlancfg",
         },
         {
@@ -122,12 +112,6 @@
             storage: "cache",
             from: "parent",
             to: "#regulatory_region",
-        },
-        {
-            directory: "config-data",
-            from: "parent",
-            to: "#emergency_location",
-            subdir: "emergency",
         },
     ],
 }

@@ -30,10 +30,6 @@
             name: "wlandevicemonitor",
             url: "#meta/wlandevicemonitor.cm",
         },
-        {
-            name: "emergency_location",
-            url: "#meta/emergency.cm",
-        },
     ],
     use: [
         {
@@ -66,7 +62,6 @@
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
             to: [
-                "#emergency_location",
                 "#stash",
                 "#wlancfg",
                 "#wlandevicemonitor",
@@ -76,11 +71,6 @@
         {
             protocol: "fuchsia.stash.SecureStore",
             from: "#stash",
-            to: "#wlancfg",
-        },
-        {
-            protocol: "fuchsia.location.sensor.WlanBaseStationWatcher",
-            from: "#emergency_location",
             to: "#wlancfg",
         },
         {
@@ -120,12 +110,6 @@
                 "#stash",
                 "#wlancfg",
             ],
-        },
-        {
-            directory: "config-data",
-            from: "parent",
-            to: "#emergency_location",
-            subdir: "emergency",
         },
     ],
 }
