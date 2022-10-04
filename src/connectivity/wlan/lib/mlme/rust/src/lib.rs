@@ -387,9 +387,19 @@ impl<T: 'static + MlmeImpl> Mlme<T> {
             select! {
                 // Process requests from SME.
                 mlme_request = self.mlme_request_stream.next() => match mlme_request {
-                    Some(req) => if let Err(e) = req.map_err(|e| e.into())
-                        .and_then(|r| self.mlme_impl.handle_mlme_message(r)) {
-                            info!("Failed to handle mlme request: {}", e);
+                    Some(req) => {
+                        match req {
+                            Ok(req) => {
+                                let method_name = req.method_name();
+                                if let Err(e) = self.mlme_impl.handle_mlme_message(req) {
+                                    info!("Failed to handle mlme {} request: {}", method_name, e);
+                                }
+                            }
+                            Err(e) => {
+                                info!("Failure while receiving mlme request: {}", e);
+                            }
+                        }
+
                     }
                     None => bail!("MLME request stream terminated unexpectedly."),
                 },
