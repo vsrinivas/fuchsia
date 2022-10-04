@@ -177,6 +177,7 @@ action("dart_sdk_docs") {
     rebase_path("//sdk/dart/fuchsia_scenic_flutter"),
     rebase_path("//sdk/dart/fuchsia_services"),
     rebase_path("//sdk/dart/fuchsia_vfs"),
+    rebase_path("//sdk/dart/fuchsia_view"),
     rebase_path("//sdk/dart/zircon"),
   ]
 

@@ -20,6 +20,6 @@ dart_library("fuchsia_view") {
   deps = [
     "//sdk/dart/fuchsia",
     "//sdk/dart/zircon",
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_dart",
   ]
 }
