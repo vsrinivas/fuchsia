@@ -5,7 +5,6 @@
 #include "src/devices/bin/driver_manager/devfs_exporter.h"
 
 #include "src/devices/lib/log/log.h"
-#include "src/lib/storage/vfs/cpp/service.h"
 
 namespace fdfs = fuchsia_device_fs;
 
@@ -50,9 +49,7 @@ zx_status_t ExportWatcher::MakeVisible() {
       return ZX_ERR_BAD_STATE;
     }
     *options &= ~fuchsia_device_fs::wire::ExportOptions::kInvisible;
-    Devnode* parent = node->parent();
-    ZX_ASSERT(parent != nullptr);
-    parent->notify(node->name(), fuchsia_io::wire::WatchEvent::kAdded);
+    node->publish();
   }
 
   return ZX_OK;

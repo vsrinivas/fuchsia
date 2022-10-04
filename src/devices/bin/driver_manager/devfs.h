@@ -22,7 +22,8 @@ class Device;
 class DcIostate;
 struct Watcher;
 
-struct Devnode : public fbl::DoublyLinkedListable<Devnode*> {
+struct Devnode
+    : public fbl::DoublyLinkedListable<Devnode*, fbl::NodeOptions::AllowRemoveFromContainer> {
   using ExportOptions = fuchsia_device_fs::wire::ExportOptions;
   struct NoRemote {
     mutable ExportOptions export_options;
@@ -82,6 +83,9 @@ struct Devnode : public fbl::DoublyLinkedListable<Devnode*> {
   ExportOptions export_options() const;
   ExportOptions* export_options();
 
+  // Publishes the node to devfs. Asserts if called more than once.
+  void publish();
+
  private:
   friend class DcIostate;
   friend class Devfs;
@@ -89,7 +93,6 @@ struct Devnode : public fbl::DoublyLinkedListable<Devnode*> {
   // A devnode is a directory (from stat's perspective) if it has children, or
   // if it doesn't have a device, or if its device has no rpc handle.
   bool is_dir() const;
-  bool is_invisible() const;
 
   void open(async_dispatcher_t* dispatcher, fidl::ServerEnd<fuchsia_io::Node> ipc,
             std::string_view path, fuchsia_io::OpenFlags flags);
@@ -116,7 +119,10 @@ struct Devnode : public fbl::DoublyLinkedListable<Devnode*> {
   fbl::DoublyLinkedList<std::unique_ptr<Watcher>> watchers;
 
   // list of our child devnodes
-  fbl::DoublyLinkedList<Devnode*> children;
+  struct {
+    fbl::DoublyLinkedList<Devnode*> unpublished;
+    fbl::DoublyLinkedList<Devnode*> published;
+  } children;
 
   // list of attached iostates
   fbl::DoublyLinkedList<DcIostate*> iostate;
@@ -130,8 +136,8 @@ class Devfs {
 
   zx::status<fidl::ClientEnd<fuchsia_io::Directory>> Connect(async_dispatcher_t* dispatcher);
 
-  zx_status_t publish(Device& parent, Device& dev);
-  void advertise(Device& device);
+  zx_status_t initialize(Device& parent, Device& device);
+  void publish(Device& device);
   void advertise_modified(Device& dev);
 
   // For testing only.

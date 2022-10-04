@@ -189,12 +189,14 @@ zx_status_t Device::Create(
     dev->flags |= DEV_CTX_INVISIBLE;
   }
 
-  if ((status = coordinator->devfs().publish(*real_parent, *dev)) != ZX_OK) {
+  status = coordinator->devfs().initialize(*real_parent, *dev);
+  if (status != ZX_OK) {
     return status;
   }
 
   real_parent->children_.push_back(dev.get());
-  VLOGF(1, "Created device %p '%s' (child)", real_parent.get(), real_parent->name().data());
+  VLOGF(1, "Created device %p '%s' (child of %p '%s')", dev.get(), dev->name().c_str(),
+        real_parent.get(), real_parent->name().c_str());
 
   if (want_init_task) {
     dev->CreateInitTask();
@@ -253,11 +255,12 @@ zx_status_t Device::CreateComposite(
 
   // TODO(teisenbe): Figure out how to manifest in devfs?  For now just hang it off of
   // the root device?
-  if ((status = coordinator->devfs().publish(*coordinator->root_device(), *dev)) < 0) {
+  status = coordinator->devfs().initialize(*coordinator->root_device(), *dev);
+  if (status != ZX_OK) {
     return status;
   }
 
-  VLOGF(1, "Created composite device %p '%s'", dev.get(), dev->name().data());
+  VLOGF(1, "Created composite device %p '%s'", dev.get(), dev->name().c_str());
 
   dev->InitializeInspectValues();
   *device = std::move(dev);

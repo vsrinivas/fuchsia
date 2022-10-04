@@ -18,6 +18,7 @@
 #include <string.h>
 #include <zircon/types.h>
 
+#include <functional>
 #include <memory>
 #include <variant>
 
@@ -47,19 +48,6 @@ template <class... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
 
 }  // namespace
-
-bool Devnode::is_invisible() const {
-  return std::visit(
-      overloaded{
-          [](const NoRemote& no_remote) {
-            return static_cast<bool>(no_remote.export_options & ExportOptions::kInvisible);
-          },
-          [](const Service& service) {
-            return static_cast<bool>(service.export_options & ExportOptions::kInvisible);
-          },
-          [](const Device& device) { return static_cast<bool>(device.flags & DEV_CTX_INVISIBLE); }},
-      target_);
-}
 
 struct Watcher : fbl::DoublyLinkedListable<std::unique_ptr<Watcher>,
                                            fbl::NodeOptions::AllowRemoveFromContainer> {
@@ -153,7 +141,10 @@ class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
 };
 
 bool Devnode::is_dir() const {
-  if (!children.is_empty()) {
+  if (!children.published.is_empty()) {
+    return true;
+  }
+  if (!children.unpublished.is_empty()) {
     return true;
   }
   return std::visit(
@@ -257,10 +248,7 @@ zx_status_t Devnode::watch(async_dispatcher_t* dispatcher,
   // If the watcher has asked for all existing entries, send it all of them
   // followed by the end-of-existing marker (IDLE).
   if (mask & fio::wire::WatchMask::kExisting) {
-    for (const auto& child : children) {
-      if (child.is_invisible()) {
-        continue;
-      }
+    for (const auto& child : children.published) {
       // TODO: send multiple per write
       devfs_notify_single(&watcher, child.name(), fio::wire::WatchEvent::kExisting);
     }
@@ -313,18 +301,24 @@ Devnode::ExportOptions* Devnode::export_options() {
 }
 
 Devnode* Devnode::lookup(std::string_view name) {
-  for (Devnode& child : children) {
-    if (child.name() == name) {
-      return &child;
+  for (auto& list :
+       {std::reference_wrapper(children.published), std::reference_wrapper(children.unpublished)}) {
+    for (Devnode& child : list.get()) {
+      if (child.name() == name) {
+        return &child;
+      }
     }
   }
   return nullptr;
 }
 
 const Devnode* Devnode::lookup(std::string_view name) const {
-  for (const Devnode& child : children) {
-    if (child.name() == name) {
-      return &child;
+  for (const auto& list :
+       {std::reference_wrapper(children.published), std::reference_wrapper(children.unpublished)}) {
+    for (const Devnode& child : list.get()) {
+      if (child.name() == name) {
+        return &child;
+      }
     }
   }
   return nullptr;
@@ -353,35 +347,33 @@ zx_status_t Devnode::readdir(uint64_t* ino_inout, void* data, size_t len) {
   char* ptr = static_cast<char*>(data);
   uint64_t ino = *ino_inout;
 
-  for (const auto& child : children) {
+  for (const auto& child : children.published) {
     if (child.ino_ <= ino) {
       continue;
     }
-    const bool show =
-        !child.is_invisible() &&
-        std::visit(
-            overloaded{[&child](const NoRemote&) {
-                         // "pure" directories (like /dev/class/$NAME) do
-                         // not show up if they have no children, to
-                         // avoid clutter and confusion.  They remain
-                         // openable, so they can be watched.
-                         //
-                         // An exception being /dev/diagnostics which is
-                         // served by different VFS and should be listed
-                         // even though it has no devnode children.
-                         if (child.ino_ == child.devfs_.diagnostics_devnode.ino_) {
-                           return true;
-                         }
-                         if (child.ino_ == child.devfs_.null_devnode.ino_) {
-                           return true;
-                         }
-                         if (child.ino_ == child.devfs_.zero_devnode.ino_) {
-                           return true;
-                         }
-                         return !child.children.is_empty();
-                       },
-                       [](const Service&) { return true; }, [](const Device&) { return true; }},
-            child.target_);
+    const bool show = std::visit(
+        overloaded{[&child](const NoRemote&) {
+                     // "pure" directories (like /dev/class/$NAME) do
+                     // not show up if they have no children, to
+                     // avoid clutter and confusion.  They remain
+                     // openable, so they can be watched.
+                     //
+                     // An exception being /dev/diagnostics which is
+                     // served by different VFS and should be listed
+                     // even though it has no devnode children.
+                     if (child.ino_ == child.devfs_.diagnostics_devnode.ino_) {
+                       return true;
+                     }
+                     if (child.ino_ == child.devfs_.null_devnode.ino_) {
+                       return true;
+                     }
+                     if (child.ino_ == child.devfs_.zero_devnode.ino_) {
+                       return true;
+                     }
+                     return !child.children.published.is_empty();
+                   },
+                   [](const Service&) { return true; }, [](const Device&) { return true; }},
+        child.target_);
     if (!show) {
       continue;
     }
@@ -414,16 +406,10 @@ zx::status<Devnode*> Devnode::walk(std::string_view path) {
     } else {
       path = {};
     }
-    auto it = std::find_if(dn->children.begin(), dn->children.end(), [name](const Devnode& child) {
-      if (child.name() != name) {
-        return false;
-      }
-      if (child.is_invisible()) {
-        return false;
-      }
-      return true;
-    });
-    if (it == dn->children.end()) {
+    fbl::DoublyLinkedList<Devnode*>& list = dn->children.published;
+    const fbl::DoublyLinkedList<Devnode*>::iterator it =
+        list.find_if([name](const Devnode& child) { return child.name() == name; });
+    if (it == list.end()) {
       // The path only partially matched.
       return zx::error(ZX_ERR_NOT_FOUND);
     }
@@ -563,14 +549,22 @@ Devnode::Devnode(Devfs& devfs, Devnode& parent, Target target, fbl::String name)
          fxl::JoinStrings(segments, "/").c_str(), this, other);
     return;
   }
-  parent.children.push_back(this);
+  parent.children.unpublished.push_back(this);
 }
 
 Devnode::~Devnode() {
+  bool was_visible = false;
   if (InContainer()) {
-    if (parent_ != nullptr) {
-      parent_->children.erase(*this);
+    ZX_ASSERT_MSG(parent_ != nullptr, "'%.*s' is in container but does not have a parent",
+                  static_cast<int>(name().size()), name().data());
+    Devnode& parent = *parent_;
+    for (Devnode& dn : parent.children.published) {
+      if (&dn == this) {
+        was_visible = true;
+        break;
+      }
     }
+    RemoveFromContainer();
   }
 
   // detach all connected iostates
@@ -579,12 +573,12 @@ Devnode::~Devnode() {
   }
 
   // notify own file watcher
-  if (!is_invisible()) {
+  if (was_visible) {
     notify({}, fio::wire::WatchEvent::kDeleted);
   }
 
   // disconnect from device and notify parent/link directory watchers
-  if (!is_invisible()) {
+  if (was_visible) {
     std::visit(overloaded{[](const NoRemote&) {}, [](const Service&) {},
                           [this](Device& device) {
                             if (device.parent() == nullptr) {
@@ -607,10 +601,13 @@ Devnode::~Devnode() {
   watchers.clear();
 
   // detach children
-  for (auto& child : children) {
-    child.parent_ = nullptr;
+  for (auto& list :
+       {std::reference_wrapper(children.published), std::reference_wrapper(children.unpublished)}) {
+    for (Devnode& child : list.get()) {
+      child.parent_ = nullptr;
+    }
+    list.get().clear();
   }
-  children.clear();
 }
 
 DcIostate::DcIostate(Devnode& dn, async_dispatcher_t* dispatcher)
@@ -636,20 +633,37 @@ void DcIostate::DetachFromDevnode() {
   }
 }
 
-void Devfs::advertise(Device& device) {
+void Devnode::publish() {
+  // parent is nullptr if this node's name collides with another node. Hopefully that node is also
+  // being advertised.
+  //
+  // TODO(https://fxbug.dev/110922): Remove this condition when composite devices no longer surface
+  // this way in devfs.
+  if (parent_ == nullptr) {
+    return;
+  }
+  Devnode& parent = *parent_;
+  // NB: We can't blindly erase from the unpublished list because it is an error to erase a
+  // `fbl::DoublyLinkedListable` from a `fbl::DoublyLinkedList` which it is not an entry in.
+  [this, &parent]() {
+    for (Devnode& dn : parent.children.unpublished) {
+      if (&dn == this) {
+        return;
+      }
+    }
+    ZX_PANIC("'%.*s' not in parent's unpublished list", static_cast<int>(name().size()),
+             name().data());
+  }();
+  RemoveFromContainer();
+  parent.children.published.push_back(this);
+  parent.notify(name(), fio::wire::WatchEvent::kAdded);
+}
+
+void Devfs::publish(Device& device) {
   for (auto* ptr : {&device.link, &device.self}) {
     auto& dn_opt = *ptr;
     if (dn_opt.has_value()) {
-      const Devnode& dn = dn_opt.value();
-      // parent is nullptr if this node's name collides with another node. Hopefully that node is
-      // also being advertised.
-      //
-      // TODO(https://fxbug.dev/110922): Remove this condition when composite devices no longer
-      // surface this way in devfs.
-      if (dn.parent_ != nullptr) {
-        Devnode& parent = *dn.parent_;
-        parent.notify(dn.name(), fio::wire::WatchEvent::kAdded);
-      }
+      dn_opt.value().publish();
     }
   }
 }
@@ -666,8 +680,9 @@ void Devfs::advertise_modified(Device& device) {
       // surface this way in devfs.
       if (dn.parent_ != nullptr) {
         Devnode& parent = *dn.parent_;
-        parent.notify(dn.name(), fio::wire::WatchEvent::kRemoved);
-        parent.notify(dn.name(), fio::wire::WatchEvent::kAdded);
+        for (const auto event : {fio::wire::WatchEvent::kRemoved, fio::wire::WatchEvent::kAdded}) {
+          parent.notify(dn.name(), event);
+        }
       }
     }
   }
@@ -685,7 +700,7 @@ zx::status<fbl::String> Devnode::seq_name() {
   return zx::error(ZX_ERR_ALREADY_EXISTS);
 }
 
-zx_status_t Devfs::publish(Device& parent, Device& device) {
+zx_status_t Devfs::initialize(Device& parent, Device& device) {
   if (!parent.self.has_value() || device.self.has_value() || device.link.has_value()) {
     return ZX_ERR_INTERNAL;
   }
@@ -718,7 +733,7 @@ zx_status_t Devfs::publish(Device& parent, Device& device) {
   }
 
   if (!(device.flags & DEV_CTX_INVISIBLE)) {
-    advertise(device);
+    publish(device);
   }
   return ZX_OK;
 }
@@ -830,13 +845,19 @@ Devfs::Devfs(std::optional<Devnode>& root, Device* device,
       null_devnode(*this, *root_devnode_, Devnode::NoRemote{}, "null"),
       zero_devnode(*this, *root_devnode_, Devnode::NoRemote{}, "zero"),
       diagnostics_(std::move(diagnostics)) {
+  class_devnode.publish();
+  diagnostics_devnode.publish();
+  null_devnode.publish();
+  zero_devnode.publish();
+
   // Pre-populate the class directories.
   for (const auto& info : proto_infos) {
     if (!(info.flags & PF_NOPUB)) {
       const auto [it, inserted] = proto_info_nodes.try_emplace(info.id, *this, class_devnode,
                                                                Devnode::NoRemote{}, info.name);
-      const auto& [key, value] = *it;
+      auto& [key, value] = *it;
       ZX_ASSERT_MSG(inserted, "duplicate protocol with id %d", key);
+      value.publish();
     }
   }
 }
@@ -879,8 +900,8 @@ zx_status_t Devnode::export_dir(fidl::ClientEnd<fio::Directory> service_dir,
                                                                        .export_options = options,
                                                                    },
                                                                    name));
-      if (!child.is_invisible()) {
-        dn->notify(name, fio::wire::WatchEvent::kAdded);
+      if (!(options & ExportOptions::kInvisible)) {
+        child.publish();
       }
       dn = &child;
       continue;
@@ -915,7 +936,7 @@ zx_status_t Devnode::export_dir(fidl::ClientEnd<fio::Directory> service_dir,
         return result.status();
       }
 
-      const Devnode& child =
+      Devnode& child =
           *out.emplace_back(std::make_unique<Devnode>(devfs_, dn,
                                                       Service{
                                                           .remote = std::move(client),
@@ -923,13 +944,13 @@ zx_status_t Devnode::export_dir(fidl::ClientEnd<fio::Directory> service_dir,
                                                           .export_options = options,
                                                       },
                                                       name));
-      if (!child.is_invisible()) {
-        dn.notify(name, fio::wire::WatchEvent::kAdded);
+      if (!(options & ExportOptions::kInvisible)) {
+        child.publish();
       }
     }
 
     {
-      const Devnode& child =
+      Devnode& child =
           *out.emplace_back(std::make_unique<Devnode>(devfs_, *dn,
                                                       Service{
                                                           .remote = std::move(service_dir),
@@ -937,8 +958,8 @@ zx_status_t Devnode::export_dir(fidl::ClientEnd<fio::Directory> service_dir,
                                                           .export_options = options,
                                                       },
                                                       name));
-      if (!child.is_invisible()) {
-        dn->notify(name, fio::wire::WatchEvent::kAdded);
+      if (!(options & ExportOptions::kInvisible)) {
+        child.publish();
       }
     }
   }

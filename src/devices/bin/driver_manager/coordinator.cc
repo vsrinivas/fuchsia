@@ -290,8 +290,8 @@ Coordinator::~Coordinator() {
   // Device::~Device needs to call into Devfs to complete its cleanup; we must
   // do this ahead of the normal destructor order to avoid reaching into devfs_
   // after it has been dropped.
-  root_device_ = nullptr;
   sys_device_ = nullptr;
+  root_device_ = nullptr;
 }
 
 void Coordinator::LoadV1Drivers(std::string_view sys_device_driver) {
@@ -318,7 +318,7 @@ void Coordinator::LoadV1Drivers(std::string_view sys_device_driver) {
     bind_driver_manager_->BindAllDevicesDriverIndex(config);
   });
 
-  devfs_.publish(*root_device_, *sys_device_);
+  devfs_.initialize(*root_device_, *sys_device_);
 
   // TODO(https://fxbug.dev/99076) Remove this when this issue is fixed.
   LOGF(INFO, "V1 drivers loaded and published");
@@ -556,7 +556,7 @@ zx_status_t Coordinator::MakeVisible(const fbl::RefPtr<Device>& dev) {
   }
   if (dev->flags & DEV_CTX_INVISIBLE) {
     dev->flags &= ~DEV_CTX_INVISIBLE;
-    devfs_.advertise(*dev);
+    devfs_.publish(*dev);
     zx_status_t r = dev->SignalReadyForBind();
     if (r != ZX_OK) {
       return r;
