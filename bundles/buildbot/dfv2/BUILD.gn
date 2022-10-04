@@ -22,11 +22,6 @@ group("bringup") {
   # TODO(fxbug.dev/108148): Add //src/tests/reboot/dm_reboot_bringup_test:tests
   # to deps when all tests in //src/tests/reboot/dm_reboot_bringup_test:tests
   # pass with DFv2 enabled.
-  # TODO(fxbug.dev/106517): Add
-  # //zircon/system/utest/device-enumeration:device-enumeration-bootfs-test to
-  # deps when all tests in
-  # //zircon/system/utest/device-enumeration:device-enumeration-bootfs-test pass
-  # with DFv2 enabled.
   deps += [
     "//bundles/bringup:manual_testing",
     "//src/bringup/bin/console-launcher:shell-permissions-bootfs-test",
@@ -104,6 +99,7 @@ group("bringup") {
     "//zircon/system/utest/core:core-vmo-bootfs-test",
     "//zircon/system/utest/core-display:core-display-bootfs-test",
     "//zircon/system/utest/debugger:debugger-bootfs-test",
+    "//zircon/system/utest/device-enumeration:device-enumeration-bootfs-test",
     "//zircon/system/utest/dlfcn:dlfcn-bootfs-test",
     "//zircon/system/utest/kernel-unittests:kernel-unittests-bootfs-test",
     "//zircon/system/utest/log:log-bootfs-test",
