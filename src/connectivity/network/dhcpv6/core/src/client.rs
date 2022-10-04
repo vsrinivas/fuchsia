@@ -399,7 +399,7 @@ impl InformationReceived {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-struct IdentityAssociation {
+pub(crate) struct IdentityAssociation {
     // TODO(https://fxbug.dev/86950): use UnicastAddr.
     address: Ipv6Addr,
     preferred_lifetime: v6::TimeValue,
@@ -1323,10 +1323,18 @@ impl ServerDiscovery {
         //    Advertise messages that contained the corresponding option
         //    specified the same value.
         if let Some(advertise) = collected_advertise.pop() {
+            let AdvertiseMessage {
+                server_id,
+                addresses: advertised_addresses,
+                dns_servers: _,
+                preference: _,
+                receive_time: _,
+                preferred_addresses_count: _,
+            } = advertise;
             return Requesting::start(
                 client_id,
-                configured_addresses,
-                advertise,
+                server_id,
+                advertise_to_address_entries(advertised_addresses, configured_addresses),
                 &options_to_request,
                 collected_advertise,
                 solicit_max_rt,
@@ -1541,10 +1549,18 @@ impl ServerDiscovery {
             || is_retransmitting
         {
             let solicit_max_rt = get_common_value(&collected_sol_max_rt).unwrap_or(solicit_max_rt);
+            let AdvertiseMessage {
+                server_id,
+                addresses: advertised_addresses,
+                dns_servers: _,
+                preference: _,
+                receive_time: _,
+                preferred_addresses_count: _,
+            } = advertise;
             return Requesting::start(
                 client_id,
-                configured_addresses,
-                advertise,
+                server_id,
+                advertise_to_address_entries(advertised_addresses, configured_addresses),
                 &options_to_request,
                 collected_advertise,
                 solicit_max_rt,
@@ -1755,29 +1771,51 @@ struct Requesting {
     solicit_max_rt: Duration,
 }
 
-// Helper function to send a request to an alternate server, or if there are no
-// other collected servers, restart server discovery.
+/// Helper function to send a request to an alternate server, or if there are no
+/// other collected servers, restart server discovery.
+///
+/// The client removes currently assigned addresses, per RFC 8415, section
+/// 18.2.10.1:
+///
+///    Whenever a client restarts the DHCP server discovery process or
+///    selects an alternate server as described in Section 18.2.9, the client
+///    SHOULD stop using all the addresses and delegated prefixes for which
+///    it has bindings and try to obtain all required leases from the new
+///    server.
 fn request_from_alternate_server_or_restart_server_discovery<R: Rng>(
     client_id: [u8; CLIENT_ID_LEN],
-    configured_addresses: HashMap<v6::IAID, Option<Ipv6Addr>>,
+    addresses: HashMap<v6::IAID, AddressEntry>,
     options_to_request: &[v6::OptionCode],
     mut collected_advertise: BinaryHeap<AdvertiseMessage>,
     solicit_max_rt: Duration,
     rng: &mut R,
     now: Instant,
 ) -> Transition {
+    let configured_addresses = to_configured_addresses(addresses);
     if let Some(advertise) = collected_advertise.pop() {
+        // TODO(https://fxbug.dev/96674): Before selecting a different server,
+        // add actions to remove the existing assigned addresses, if any.
+        let AdvertiseMessage {
+            server_id,
+            addresses: advertised_addresses,
+            dns_servers: _,
+            preference: _,
+            receive_time: _,
+            preferred_addresses_count: _,
+        } = advertise;
         return Requesting::start(
             client_id,
-            configured_addresses,
-            advertise,
-            options_to_request,
+            server_id,
+            advertise_to_address_entries(advertised_addresses, configured_addresses),
+            &options_to_request,
             collected_advertise,
             solicit_max_rt,
             rng,
             now,
         );
     }
+    // TODO(https://fxbug.dev/96674): Before restarting server discovery, add
+    // actions to remove the existing assigned addresses, if any.
     return ServerDiscovery::start(
         transaction_id(),
         client_id,
@@ -1835,6 +1873,7 @@ enum ReplyWithLeasesError {
 enum IaNaStatusError {
     Retry { without_hints: bool },
     Invalid,
+    Rerequest,
 }
 
 fn process_ia_na_error_status(
@@ -1883,11 +1922,28 @@ fn process_ia_na_error_status(
             RequestLeasesMessageType::Request | RequestLeasesMessageType::Renew,
             v6::ErrorStatusCode::NoAddrsAvail | v6::ErrorStatusCode::UnspecFail,
         ) => IaNaStatusError::Retry { without_hints: false },
-        (
+        (RequestLeasesMessageType::Renew, v6::ErrorStatusCode::NoBinding) => {
+            // Per RFC 8415 section 18.2.10.1:
+            //
+            //    When the client receives a Reply message in response
+            //    to a Renew or Rebind message, the client:
+            //
+            //    -  Sends a Request message to the server that responded
+            //    if any of the IAs in the Reply message contain the
+            //    NoBinding status code.  The client places IA options
+            //    in this message for all IAs.  The client continues to
+            //    use other bindings for which the server did not return
+            //    an error.
+            //
+            // The client removes the IA not found by the server,
+            // and transitions to Requesting after processing all the
+            // received IAs.
+            IaNaStatusError::Rerequest
+        }
+        (RequestLeasesMessageType::Request, v6::ErrorStatusCode::NoBinding)
+        | (
             RequestLeasesMessageType::Request | RequestLeasesMessageType::Renew,
-            v6::ErrorStatusCode::NoBinding
-            | v6::ErrorStatusCode::UseMulticast
-            | v6::ErrorStatusCode::NoPrefixAvail,
+            v6::ErrorStatusCode::UseMulticast | v6::ErrorStatusCode::NoPrefixAvail,
         ) => IaNaStatusError::Invalid,
     }
 }
@@ -1898,6 +1954,7 @@ enum StateAfterReplyWithLeases {
     RequestNextServer,
     Assigned,
     StayRenewingRebinding,
+    Requesting,
 }
 
 #[derive(Debug)]
@@ -1908,6 +1965,9 @@ struct ProcessedReplyWithLeases {
     next_state: StateAfterReplyWithLeases,
 }
 
+// Processes a Reply to Solicit (with fast commit), Request, Renew, or Rebind.
+//
+// If an error is returned, the message should be ignored.
 fn process_reply_with_leases<B: ByteSlice>(
     client_id: [u8; CLIENT_ID_LEN],
     server_id: &[u8],
@@ -1957,9 +2017,9 @@ fn process_reply_with_leases<B: ByteSlice>(
         }
     }
 
-    let mut addresses = addresses
-        .into_iter()
-        .map(|(iaid, ia_na)| {
+    let (mut addresses, go_to_requesting) = addresses.into_iter().try_fold(
+        (HashMap::new(), false),
+        |(mut addresses, mut go_to_requesting), (iaid, ia_na)| {
             let current_address_entry = match current_addresses.get(&iaid) {
                 Some(address_entry) => address_entry,
                 None => {
@@ -1995,8 +2055,16 @@ fn process_reply_with_leases<B: ByteSlice>(
                             );
                             false
                         }
+                        IaNaStatusError::Rerequest => {
+                            go_to_requesting = true;
+                            false
+                        }
                     };
-                    return Ok((iaid, current_address_entry.to_request(without_hints)));
+                    assert_eq!(
+                        addresses.insert(iaid, current_address_entry.to_request(without_hints)),
+                        None
+                    );
+                    return Ok((addresses, go_to_requesting));
                 }
             };
             if let Some(success_status_message) = success_status_message {
@@ -2020,7 +2088,8 @@ fn process_reply_with_leases<B: ByteSlice>(
                     //
                     // The address remains assigned until the end of its valid
                     // lifetime, or it is requested later if it was not assigned.
-                    return Ok((iaid, *current_address_entry));
+                    assert_eq!(addresses.insert(iaid, *current_address_entry), None);
+                    return Ok((addresses, go_to_requesting));
                 }
             };
             let Lifetimes { preferred_lifetime, valid_lifetime } = match lifetimes {
@@ -2031,12 +2100,16 @@ fn process_reply_with_leases<B: ByteSlice>(
                         request_type, iaid, e
                     );
                     discard_leases(&current_address_entry);
-                    return Ok((
-                        iaid,
-                        AddressEntry::ToRequest(AddressToRequest::Configured(
-                            current_address_entry.configured_address(),
-                        )),
-                    ));
+                    assert_eq!(
+                        addresses.insert(
+                            iaid,
+                            AddressEntry::ToRequest(AddressToRequest::Configured(
+                                current_address_entry.configured_address(),
+                            )),
+                        ),
+                        None
+                    );
+                    return Ok((addresses, go_to_requesting));
                 }
             };
             // Per RFC 8415 section 21.13:
@@ -2098,9 +2171,10 @@ fn process_reply_with_leases<B: ByteSlice>(
                 },
                 current_address_entry.configured_address(),
             ));
-            Ok((iaid, entry))
-        })
-        .collect::<Result<HashMap<_, _>, _>>()?;
+            assert_eq!(addresses.insert(iaid, entry), None);
+            Ok((addresses, go_to_requesting))
+        },
+    )?;
 
     // Per RFC 8415, section 18.2.10.1:
     //
@@ -2121,6 +2195,8 @@ fn process_reply_with_leases<B: ByteSlice>(
     }) {
         warn!("Reply to {}: no usable lease returned", request_type);
         StateAfterReplyWithLeases::RequestNextServer
+    } else if go_to_requesting {
+        StateAfterReplyWithLeases::Requesting
     } else {
         match request_type {
             RequestLeasesMessageType::Request => StateAfterReplyWithLeases::Assigned,
@@ -2197,10 +2273,45 @@ fn process_reply_with_leases<B: ByteSlice>(
                 .collect::<Vec<_>>()
         }
         StateAfterReplyWithLeases::RequestNextServer
-        | StateAfterReplyWithLeases::StayRenewingRebinding => Vec::new(),
+        | StateAfterReplyWithLeases::StayRenewingRebinding
+        | StateAfterReplyWithLeases::Requesting => Vec::new(),
     };
 
     Ok(ProcessedReplyWithLeases { addresses, dns_servers, actions, next_state })
+}
+
+/// Create a map of addresses entries to be requested, combining the IAs in the
+/// Advertise with the configured IAs that are not included in the Advertise.
+fn advertise_to_address_entries(
+    advertised_addresses: HashMap<v6::IAID, IdentityAssociation>,
+    configured_addresses: HashMap<v6::IAID, Option<Ipv6Addr>>,
+) -> HashMap<v6::IAID, AddressEntry> {
+    configured_addresses
+        .iter()
+        .map(|(iaid, configured_address)| {
+            let address_to_request = match advertised_addresses.get(iaid) {
+                Some(IdentityAssociation {
+                    address: advertised_address,
+                    preferred_lifetime: _,
+                    valid_lifetime: _,
+                }) => {
+                    // Note that the advertised address for an IAID may
+                    // be different from what was solicited by the
+                    // client.
+                    AddressToRequest::new(Some(*advertised_address), *configured_address)
+                }
+                // The configured address was not advertised; the client
+                // will continue to request it in subsequent messages, per
+                // RFC 8415 section 18.2:
+                //
+                //    When possible, the client SHOULD use the best
+                //    configuration available and continue to request the
+                //    additional IAs in subsequent messages.
+                None => AddressToRequest::Configured(*configured_address),
+            };
+            (*iaid, AddressEntry::ToRequest(address_to_request))
+        })
+        .collect::<HashMap<_, _>>()
 }
 
 impl Requesting {
@@ -2209,70 +2320,14 @@ impl Requesting {
     /// [RFC 8415, Section 18.2.2]: https://tools.ietf.org/html/rfc8415#section-18.2.2
     fn start<R: Rng>(
         client_id: [u8; CLIENT_ID_LEN],
-        configured_addresses: HashMap<v6::IAID, Option<Ipv6Addr>>,
-        advertise: AdvertiseMessage,
+        server_id: Vec<u8>,
+        addresses: HashMap<v6::IAID, AddressEntry>,
         options_to_request: &[v6::OptionCode],
         collected_advertise: BinaryHeap<AdvertiseMessage>,
         solicit_max_rt: Duration,
         rng: &mut R,
         now: Instant,
     ) -> Transition {
-        let AdvertiseMessage {
-            server_id,
-            addresses: advertised_addresses,
-            dns_servers: _,
-            preference: _,
-            receive_time: _,
-            preferred_addresses_count: _,
-        } = advertise;
-        // Create a map of addresses to be requested, combining the IA in the selected
-        // Advertise with the configured IAs that were not received in the Advertise
-        // message.
-        let addresses = configured_addresses.iter().fold(
-            HashMap::new(),
-            |mut addrs, (iaid, configured_address)| {
-                // Note that the advertised address for an IAID may be different
-                // from what was solicited by the client.
-                match advertised_addresses.get(iaid) {
-                    Some(ia) => {
-                        let IdentityAssociation {
-                            address: advertised_address,
-                            preferred_lifetime: _,
-                            valid_lifetime: _,
-                        } = ia;
-                        assert_eq!(
-                            addrs.insert(
-                                *iaid,
-                                AddressEntry::ToRequest(AddressToRequest::new(
-                                    Some(*advertised_address),
-                                    *configured_address
-                                ))
-                            ),
-                            None
-                        );
-                    }
-                    // The configured address was not advertised; the client
-                    // will continue to request it in subsequent messages, per
-                    // RFC 8415 section 18.2:
-                    //
-                    //    When possible, the client SHOULD use the best
-                    //    configuration available and continue to request the
-                    //    additional IAs in subsequent messages.
-                    None => {
-                        assert_eq!(
-                            addrs.insert(
-                                *iaid,
-                                AddressEntry::ToRequest(AddressToRequest::Configured(
-                                    *configured_address
-                                ))
-                            ),
-                            None
-                        );
-                    }
-                }
-                addrs
-            },
-        );
         Self {
             client_id,
             addresses,
@@ -2462,7 +2517,7 @@ impl Requesting {
             client_id,
             addresses,
             server_id,
-            mut collected_advertise,
+            collected_advertise,
             first_request_time,
             retrans_timeout,
             retrans_count,
@@ -2486,27 +2541,15 @@ impl Requesting {
                 now,
             );
         }
-        if let Some(advertise) = collected_advertise.pop() {
-            return Requesting::start(
-                client_id,
-                to_configured_addresses(addresses),
-                advertise,
-                &options_to_request,
-                collected_advertise,
-                solicit_max_rt,
-                rng,
-                now,
-            );
-        }
-        return ServerDiscovery::start(
-            transaction_id(),
+        request_from_alternate_server_or_restart_server_discovery(
             client_id,
-            to_configured_addresses(addresses),
+            addresses,
             &options_to_request,
+            collected_advertise,
             solicit_max_rt,
             rng,
             now,
-        );
+        )
     }
 
     fn reply_message_received<R: Rng, B: ByteSlice>(
@@ -2672,11 +2715,17 @@ impl Requesting {
             StateAfterReplyWithLeases::StayRenewingRebinding => {
                 unreachable!("cannot stay in Renewing/Rebinding state while in Requesting state");
             }
+            StateAfterReplyWithLeases::Requesting => {
+                unreachable!(
+                    "cannot go back to Requesting from Requesting \
+                    (only possible from Renewing/Rebinding)"
+                );
+            }
             StateAfterReplyWithLeases::RequestNextServer => {
                 warn!("Reply to Request: trying next server");
                 request_from_alternate_server_or_restart_server_discovery(
                     client_id,
-                    to_configured_addresses(current_addresses),
+                    current_addresses,
                     &options_to_request,
                     collected_advertise,
                     solicit_max_rt,
@@ -3124,7 +3173,7 @@ impl Renewing {
             StateAfterReplyWithLeases::RequestNextServer => {
                 request_from_alternate_server_or_restart_server_discovery(
                     client_id,
-                    to_configured_addresses(current_addresses),
+                    current_addresses,
                     &options_to_request,
                     collected_advertise,
                     solicit_max_rt,
@@ -3162,6 +3211,16 @@ impl Renewing {
                     transaction_id: None,
                 }
             }
+            StateAfterReplyWithLeases::Requesting => Requesting::start(
+                client_id,
+                server_id,
+                addresses,
+                &options_to_request,
+                collected_advertise,
+                solicit_max_rt,
+                rng,
+                now,
+            ),
         }
     }
 }
@@ -3613,6 +3672,15 @@ pub(crate) mod testutil {
         let configured_addresses: HashMap<v6::IAID, Option<Ipv6Addr>> =
             (0..).map(v6::IAID::new).zip(addresses).collect();
         configured_addresses
+    }
+
+    pub(crate) fn to_default_ias_map(
+        addresses: &[Ipv6Addr],
+    ) -> HashMap<v6::IAID, IdentityAssociation> {
+        (0..)
+            .map(v6::IAID::new)
+            .zip(addresses.iter().map(|address| IdentityAssociation::new_default(*address)))
+            .collect()
     }
 
     /// Creates a stateful client and asserts that:
@@ -5043,12 +5111,6 @@ mod tests {
         let options_to_request = vec![];
         let configured_addresses = testutil::to_configured_addresses(1, vec![]);
         let advertised_addresses = [CONFIGURED_ADDRESSES[0]];
-        let selected_advertise = AdvertiseMessage::new_default(
-            SERVER_ID[0],
-            &advertised_addresses,
-            &[],
-            &configured_addresses,
-        );
         let mut want_collected_advertise = [
             AdvertiseMessage::new_default(
                 SERVER_ID[1],
@@ -5070,8 +5132,11 @@ mod tests {
         let time = Instant::now();
         let Transition { state, actions: _, transaction_id } = Requesting::start(
             CLIENT_ID,
-            configured_addresses.clone(),
-            selected_advertise,
+            SERVER_ID[0].to_vec(),
+            advertise_to_address_entries(
+                testutil::to_default_ias_map(&advertised_addresses),
+                configured_addresses.clone(),
+            ),
             &options_to_request[..],
             want_collected_advertise.clone(),
             MAX_SOLICIT_TIMEOUT,
@@ -5258,19 +5323,16 @@ mod tests {
         let options_to_request = vec![];
         let configured_addresses =
             testutil::to_configured_addresses(2, vec![CONFIGURED_ADDRESSES[0]]);
-        let selected_advertise = AdvertiseMessage::new_default(
-            SERVER_ID[0],
-            &CONFIGURED_ADDRESSES[0..2],
-            &[],
-            &configured_addresses,
-        );
         let mut rng = StepRng::new(std::u64::MAX / 2, 0);
 
         let time = Instant::now();
         let Transition { state, actions: _, transaction_id } = Requesting::start(
             CLIENT_ID,
-            configured_addresses.clone(),
-            selected_advertise,
+            SERVER_ID[0].to_vec(),
+            advertise_to_address_entries(
+                testutil::to_default_ias_map(&CONFIGURED_ADDRESSES[0..2]),
+                configured_addresses.clone(),
+            ),
             &options_to_request[..],
             BinaryHeap::new(),
             MAX_SOLICIT_TIMEOUT,
@@ -5374,19 +5436,16 @@ mod tests {
     ) {
         let options_to_request = vec![];
         let configured_addresses = testutil::to_configured_addresses(1, vec![]);
-        let selected_advertise = AdvertiseMessage::new_default(
-            SERVER_ID[0],
-            &CONFIGURED_ADDRESSES[0..1],
-            &[],
-            &configured_addresses,
-        );
         let mut rng = StepRng::new(std::u64::MAX / 2, 0);
 
         let time = Instant::now();
         let Transition { state, actions: _, transaction_id } = Requesting::start(
             CLIENT_ID,
-            configured_addresses.clone(),
-            selected_advertise,
+            SERVER_ID[0].to_vec(),
+            advertise_to_address_entries(
+                testutil::to_default_ias_map(&CONFIGURED_ADDRESSES[0..1]),
+                configured_addresses.clone(),
+            ),
             &options_to_request[..],
             BinaryHeap::new(),
             MAX_SOLICIT_TIMEOUT,
@@ -5461,14 +5520,6 @@ mod tests {
     // Test that T1/T2 are calculated correctly on receiving a Reply to Request.
     #[test]
     fn compute_t1_t2_on_reply_to_request() {
-        let configured_addresses =
-            testutil::to_configured_addresses(2, std::iter::once(CONFIGURED_ADDRESSES[0]));
-        let selected_advertise = AdvertiseMessage::new_default(
-            SERVER_ID[0],
-            &CONFIGURED_ADDRESSES[0..2],
-            &[],
-            &configured_addresses,
-        );
         let mut rng = StepRng::new(std::u64::MAX / 2, 0);
 
         for (
@@ -5516,8 +5567,11 @@ mod tests {
             let time = Instant::now();
             let Transition { state, actions: _, transaction_id } = Requesting::start(
                 CLIENT_ID,
-                configured_addresses.clone(),
-                selected_advertise.clone(),
+                SERVER_ID[0].to_vec(),
+                advertise_to_address_entries(
+                    testutil::to_default_ias_map(&CONFIGURED_ADDRESSES[0..2]),
+                    testutil::to_configured_addresses(2, std::iter::once(CONFIGURED_ADDRESSES[0])),
+                ),
                 &[],
                 BinaryHeap::new(),
                 MAX_SOLICIT_TIMEOUT,
@@ -5885,18 +5939,15 @@ mod tests {
     fn update_sol_max_rt_on_reply_to_request() {
         let options_to_request = vec![];
         let configured_addresses = testutil::to_configured_addresses(1, vec![]);
-        let selected_advertise = AdvertiseMessage::new_default(
-            SERVER_ID[0],
-            &CONFIGURED_ADDRESSES[0..1],
-            &[],
-            &configured_addresses,
-        );
         let mut rng = StepRng::new(std::u64::MAX / 2, 0);
         let time = Instant::now();
         let Transition { state, actions: _, transaction_id } = Requesting::start(
             CLIENT_ID,
-            configured_addresses.clone(),
-            selected_advertise,
+            SERVER_ID[0].to_vec(),
+            advertise_to_address_entries(
+                testutil::to_default_ias_map(&CONFIGURED_ADDRESSES[0..1]),
+                configured_addresses.clone(),
+            ),
             &options_to_request[..],
             BinaryHeap::new(),
             MAX_SOLICIT_TIMEOUT,
@@ -6583,6 +6634,119 @@ mod tests {
                 // removed.
                 // TODO(https://fxbug.dev/95265): expect new address is added.
             ] if *t1 == Duration::from_secs(RENEWED_T1.get().into())
+        );
+    }
+
+    #[test]
+    fn renewing_no_binding() {
+        let time = Instant::now();
+        let mut client = testutil::send_renew_and_assert(
+            CLIENT_ID,
+            SERVER_ID[0],
+            CONFIGURED_ADDRESSES[0..2]
+                .iter()
+                .copied()
+                .map(TestIdentityAssociation::new_default)
+                .collect(),
+            T1,
+            StepRng::new(std::u64::MAX / 2, 0),
+            time,
+        );
+        let ClientStateMachine { transaction_id, options_to_request: _, state: _, rng: _ } =
+            &client;
+
+        // Build a reply with NoBinding status in one of the IA options.
+        let iaaddr_opts = [
+            vec![v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+                CONFIGURED_ADDRESSES[0],
+                RENEWED_PREFERRED_LIFETIME.get(),
+                RENEWED_VALID_LIFETIME.get(),
+                &[],
+            ))],
+            vec![v6::DhcpOption::StatusCode(
+                v6::ErrorStatusCode::NoBinding.into(),
+                "Binding not found.",
+            )],
+        ];
+        let options = (0..2)
+            .map(|id| {
+                v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                    v6::IAID::new(id),
+                    RENEWED_T1.get(),
+                    RENEWED_T2.get(),
+                    &iaaddr_opts[id as usize],
+                ))
+            })
+            .chain([v6::DhcpOption::ClientId(&CLIENT_ID), v6::DhcpOption::ServerId(&SERVER_ID[0])])
+            .collect::<Vec<_>>();
+
+        let builder = v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        let actions = client.handle_message_receive(msg, time);
+        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
+            &client;
+        let expected_addresses = HashMap::from([
+            (
+                v6::IAID::new(0),
+                AddressEntry::new_assigned(
+                    CONFIGURED_ADDRESSES[0],
+                    RENEWED_PREFERRED_LIFETIME,
+                    RENEWED_VALID_LIFETIME,
+                ),
+            ),
+            // Expect that the address entry for the IA with NoBinding status is
+            // no longer assigned, and replaced by an address entry to be
+            // requested in subsequent messages.
+            (
+                v6::IAID::new(1),
+                AddressEntry::ToRequest(AddressToRequest::new(
+                    Some(CONFIGURED_ADDRESSES[1]),
+                    Some(CONFIGURED_ADDRESSES[1]),
+                )),
+            ),
+        ]);
+        // Expect the client to transition to Requesting.
+        {
+            let Requesting {
+                client_id,
+                addresses,
+                server_id,
+                collected_advertise: _,
+                first_request_time: _,
+                retrans_timeout: _,
+                retrans_count: _,
+                solicit_max_rt,
+            } = assert_matches!(
+                &state,
+                Some(ClientState::Requesting(requesting)) => requesting
+            );
+            assert_eq!(*client_id, CLIENT_ID);
+            assert_eq!(*addresses, expected_addresses);
+            assert_eq!(*server_id, SERVER_ID[0]);
+            assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
+        }
+        let mut buf = assert_matches!(
+            &actions[..],
+            [
+                // TODO(https://fxbug.dev/96674): should include action to
+                // remove the address of IA with NoBinding status.
+                Action::CancelTimer(ClientTimerType::Retransmission),
+                Action::SendMessage(buf),
+                Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_REQUEST_TIMEOUT)
+            ] => buf
+        );
+        // Expect that the Request message contains both the assigned address
+        // and the address to request.
+        testutil::assert_outgoing_stateful_message(
+            &mut buf,
+            v6::MessageType::Request,
+            &CLIENT_ID,
+            Some(&SERVER_ID[0]),
+            &[],
+            &(0..2).map(v6::IAID::new).zip(CONFIGURED_ADDRESSES.into_iter().map(Some)).collect(),
         );
     }
 
