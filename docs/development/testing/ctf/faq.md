@@ -159,13 +159,11 @@ target in `//sdk/ctf/release/BUILD.gn`.
 For example, a test running in Fuchsia's canary release might have the package
 URL:
 
-```
-fuchsia-pkg://fuchsia.com/my_test_8.20220629.3.1#meta/my_test_component.cm
-```
+`fuchsia-pkg://fuchsia.com/my_test_8.20220629.3.1#meta/my_test_component.cm`
 
 This can be disabled as follows:
 
-```
+```gn
 compatibility_test_suite("canary") {
   {{ '<strong>' }}disabled_tests = [
     {
@@ -184,9 +182,8 @@ Tests should be enabled again within 72 hours.
 For questions and clarification on this document, please reach out to this
 directory's owners or file a bug in the [CTF bug component].
 
-
-[CTF bug component]: https://bugs.fuchsia.dev/p/fuchsia/templates/detail?saved=1&template=Fuchsia%20Compatibility%20Test%20Suite%20%28CTS%29&ts=1627669234
-[CTS overview]: /docs/development/testing/ctf/overview.md
+[CTF bug component]: https://bugs.fuchsia.dev/p/fuchsia/issues/entry?template=Fuchsia+Compatibility+Test+Suite+%28CTS%29
+[CTF overview]: /docs/development/testing/ctf/overview.md
 [Run Fuchsia Tests]: /docs/development/testing/run_fuchsia_tests.md
-[//sdk/ctf/examples]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/sdk/ctf/examples/
-[//sdk/ctf/tests]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/sdk/ctf/tests/
+[//sdk/ctf/examples]: /sdk/ctf/tests/examples/
+[//sdk/ctf/tests]: /sdk/ctf/tests/
