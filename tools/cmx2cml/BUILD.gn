@@ -55,7 +55,7 @@ group("injected_service_v2_providers") {
     "//src/fonts/tests/integration:mock_font_resolver_cm($default_toolchain)",
     "//src/media/audio/audio_core:audio_core_audio_core_component($default_toolchain)",
     "//src/media/codec/factory:fake_codec_factory($default_toolchain)",
-    "//src/performance/trace_manager:component_cfv2($default_toolchain)",
+    "//src/performance/trace_manager:component($default_toolchain)",
     "//src/sys/stash:stash_v2($default_toolchain)",
     "//src/testing/fidl/intl_property_manager:intl_property_manager_component($default_toolchain)",
     "//src/ui/a11y/bin/a11y_manager:component_v2($default_toolchain)",

@@ -7,28 +7,20 @@
         runner: "elf",
         binary: "bin/trace_manager",
     },
-
-    // TODO(fxbug.dev/104206): Having eager startup means that these providers
-    // need to be included in the base package set along with trace_manager.
-    //
-    // A better way to do this would be via subpackages (RFC-0154:
-    // Subpackages). This will allow us to configure these at compile time and
-    // ensure they are always distributed with trace_manager when it expects to
-    // have them.
     children: [
         {
             name: "ktrace_provider",
-            url: "fuchsia-pkg://fuchsia.com/ktrace_provider#meta/ktrace_provider.cm",
+            url: "#meta/ktrace_provider.cm",
             startup: "eager",
         },
         {
             name: "cpuperf_provider",
-            url: "fuchsia-pkg://fuchsia.com/cpuperf_provider#meta/cpuperf_provider.cm",
+            url: "#meta/cpuperf_provider.cm",
             startup: "eager",
         },
         {
             name: "perfetto-bridge",
-            url: "fuchsia-pkg://fuchsia.com/perfetto-bridge#meta/perfetto-bridge.cm",
+            url: "#meta/perfetto-bridge.cm",
             startup: "eager",
         },
     ],

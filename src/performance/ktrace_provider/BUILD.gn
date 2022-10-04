@@ -56,9 +56,14 @@ executable("bin") {
   configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
-fuchsia_package_with_single_component("ktrace_provider") {
+fuchsia_component("component") {
+  component_name = "ktrace_provider"
   manifest = "meta/ktrace_provider.cml"
   deps = [ ":bin" ]
+}
+
+fuchsia_package("ktrace_provider") {
+  deps = [ ":component" ]
 }
 
 executable("importer_test_app") {

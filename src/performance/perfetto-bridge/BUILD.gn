@@ -4,7 +4,6 @@
 
 import("//build/components.gni")
 import("//build/config.gni")
-import("//src/sys/core/build/core_shard.gni")
 
 source_set("perfetto_bridge_lib") {
   sources = [
@@ -66,8 +65,12 @@ executable("bin") {
   ]
 }
 
-fuchsia_package_with_single_component("perfetto-bridge") {
+fuchsia_component("component") {
+  component_name = "perfetto-bridge"
   manifest = "meta/perfetto_bridge.cml"
-
   deps = [ ":bin" ]
+}
+
+fuchsia_package("perfetto-bridge") {
+  deps = [ ":component" ]
 }

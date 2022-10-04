@@ -129,7 +129,7 @@
         },
         "#meta/trace_manager.cm": {
             name: "trace_manager",
-            gn_target: "//src/performance/trace_manager:component_cfv2",
+            gn_target: "//src/performance/trace_manager:component",
         },
     },
 }
