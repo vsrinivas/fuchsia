@@ -20,7 +20,7 @@ class TestDirectoryServerBase : public fidl::testing::WireTestBase<fuchsia_io::D
   virtual ~TestDirectoryServerBase() = default;
 
   void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) final {
-    ADD_FAILURE("unexpected message received: %s", name.c_str());
+    ADD_FAILURE() << "unexpected message received: " << name;
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 

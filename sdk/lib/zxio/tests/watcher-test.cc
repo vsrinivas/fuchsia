@@ -26,7 +26,7 @@ class Server final : public fidl::testing::WireTestBase<fuchsia_io::Directory> {
   explicit Server(F on_watch) : on_watch_(std::move(on_watch)) {}
 
   void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
-    ADD_FAILURE("%s should not be called", name.c_str());
+    ADD_FAILURE() << "method should not be called: " << name;
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 

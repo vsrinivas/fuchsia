@@ -615,12 +615,14 @@ TEST_F(CreateTest, Tty) {
   // Closing the zxio object should close our eventpair's peer event.
   zx_signals_t pending = 0;
   ASSERT_STATUS(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
-  EXPECT_NE(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED, "pending is %u", pending);
+  EXPECT_NE(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED)
+      << "pending is " << std::showbase << std::hex << pending;
 
   ASSERT_OK(zxio_close(zxio()));
 
   ASSERT_STATUS(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
-  EXPECT_EQ(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED, "pending is %u", pending);
+  EXPECT_EQ(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED)
+      << "pending is " << std::showbase << std::hex << pending;
 }
 
 TEST_F(CreateWithOnOpenTest, Tty) {
@@ -636,14 +638,16 @@ TEST_F(CreateWithOnOpenTest, Tty) {
   // Closing the zxio object should close our eventpair's peer event.
   zx_signals_t pending = 0;
   ASSERT_STATUS(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
-  EXPECT_NE(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED, "pending is %u", pending);
+  EXPECT_NE(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED)
+      << "pending is " << std::showbase << std::hex << pending;
 
   StartServerThread();
 
   ASSERT_OK(zxio_close(zxio()));
 
   ASSERT_STATUS(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
-  EXPECT_EQ(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED, "pending is %u", pending);
+  EXPECT_EQ(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED)
+      << "pending is " << std::showbase << std::hex << pending;
 }
 
 class TestVmofileServerWithDescribe : public zxio_tests::TestVmofileServer {

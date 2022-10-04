@@ -13,15 +13,12 @@
 
 class WindowSizeTtyServer : public fidl::testing::WireTestBase<fuchsia_hardware_pty::Device> {
  public:
-  WindowSizeTtyServer() {
-    zx_status_t status = zx::eventpair::create(0, &event0_, &event1_);
-    if (status != ZX_OK) {
-      FAIL("failed to allocate eventpair: %s", zx_status_get_string(status));
-    }
+  void Init() {
+    ASSERT_OK(zx::eventpair::create(0, &event0_, &event1_)) << "failed to allocate eventpair";
   }
 
   void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) final {
-    ADD_FAILURE("unexpected message received: %s", name.c_str());
+    ADD_FAILURE() << "unexpected message received: " << name;
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -35,7 +32,7 @@ class WindowSizeTtyServer : public fidl::testing::WireTestBase<fuchsia_hardware_
     zx::eventpair event;
     zx_status_t status = event1_.duplicate(ZX_RIGHT_SAME_RIGHTS, &event);
     if (status != ZX_OK) {
-      ADD_FAILURE("failed to duplicate event: %s", zx_status_get_string(status));
+      ADD_FAILURE() << "failed to duplicate event: " << zx_status_get_string(status);
       completer.Close(status);
       return;
     }
@@ -81,6 +78,7 @@ TEST(Tty, Basic) {
 
   async::Loop device_control_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   WindowSizeTtyServer server;
+  ASSERT_NO_FATAL_FAILURE(server.Init());
   fidl::BindServer(device_control_loop.dispatcher(), std::move(device_server), &server);
   device_control_loop.StartThread("device_control_thread");
 

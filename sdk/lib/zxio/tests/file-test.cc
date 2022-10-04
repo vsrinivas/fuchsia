@@ -27,6 +27,8 @@ class CloseCountingFileServer : public zxio_tests::TestFileServerBase {
   CloseCountingFileServer() = default;
   ~CloseCountingFileServer() override = default;
 
+  virtual void Init() {}
+
   // Exercised by |zxio_close|.
   void Close(CloseCompleter::Sync& completer) final {
     num_close_.fetch_add(1);
@@ -50,15 +52,17 @@ class File : public zxtest::Test {
   ~File() override { binding_->Unbind(); }
 
   template <typename ServerImpl>
-  ServerImpl* StartServer() {
+  void StartServer() {
     server_ = std::make_unique<ServerImpl>();
+    ASSERT_NO_FATAL_FAILURE(server_->Init());
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
-    zx_status_t status;
-    EXPECT_OK(status = loop_->StartThread("fake-filesystem"));
-    if (status != ZX_OK) {
-      return nullptr;
-    }
-    return static_cast<ServerImpl*>(server_.get());
+    ASSERT_OK(loop_->StartThread("fake-filesystem"));
+  }
+
+  template <typename ServerImpl>
+  void StartAndGetServer(ServerImpl** out_server) {
+    ASSERT_NO_FATAL_FAILURE(StartServer<ServerImpl>());
+    *out_server = static_cast<ServerImpl*>(server_.get());
   }
 
   zx::status<fidl::ClientEnd<fio::File>> OpenConnection() {
@@ -103,7 +107,7 @@ class File : public zxtest::Test {
 
 class TestServerEvent final : public CloseCountingFileServer {
  public:
-  TestServerEvent() { ASSERT_OK(zx::event::create(0, &event_)); }
+  void Init() override { ASSERT_OK(zx::event::create(0, &event_)); }
 
   const zx::event& event() const { return event_; }
 
@@ -134,7 +138,7 @@ TEST_F(File, WaitTimeOut) {
 
 TEST_F(File, WaitForReadable) {
   TestServerEvent* server;
-  ASSERT_NO_FAILURES(server = StartServer<TestServerEvent>());
+  ASSERT_NO_FAILURES(StartAndGetServer<TestServerEvent>(&server));
   ASSERT_NO_FAILURES(OpenFile());
 
   zxio_signals_t observed = ZX_SIGNAL_NONE;
@@ -146,7 +150,7 @@ TEST_F(File, WaitForReadable) {
 
 TEST_F(File, WaitForWritable) {
   TestServerEvent* server;
-  ASSERT_NO_FAILURES(server = StartServer<TestServerEvent>());
+  ASSERT_NO_FAILURES(StartAndGetServer<TestServerEvent>(&server));
   ASSERT_NO_FAILURES(OpenFile());
 
   zxio_signals_t observed = ZX_SIGNAL_NONE;
@@ -183,7 +187,7 @@ TEST_F(File, GetVmoPropagatesError) {
 
 class TestServerChannel final : public CloseCountingFileServer {
  public:
-  TestServerChannel() {
+  void Init() override {
     ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &store_));
     const size_t kZero = 0u;
     ASSERT_OK(store_.set_property(ZX_PROP_VMO_CONTENT_SIZE, &kZero, sizeof(kZero)));
@@ -288,7 +292,7 @@ TEST_F(File, ReadWriteChannel) {
 
 class TestServerStream final : public CloseCountingFileServer {
  public:
-  TestServerStream() {
+  void Init() override {
     ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &store_));
     const size_t kZero = 0u;
     ASSERT_OK(store_.set_property(ZX_PROP_VMO_CONTENT_SIZE, &kZero, sizeof(kZero)));

@@ -14,7 +14,7 @@ namespace zxio_tests {
 // creates a test failure for all other messages.
 class CloseOnlyNodeServer : public fidl::testing::WireTestBase<fuchsia_io::Node> {
   void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) final {
-    ADD_FAILURE("unexpected message received: %s", name.c_str());
+    ADD_FAILURE() << "unexpected message received: " << name;
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 

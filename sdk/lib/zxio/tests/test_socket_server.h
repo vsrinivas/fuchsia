@@ -19,7 +19,7 @@ class DatagramSocketServer final
   DatagramSocketServer() = default;
 
   void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) final {
-    ADD_FAILURE("unexpected message received: %s", name.c_str());
+    ADD_FAILURE() << "unexpected message received: " << name;
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -35,7 +35,7 @@ class PacketSocketServer final
   PacketSocketServer() = default;
 
   void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) final {
-    ADD_FAILURE("unexpected message received: %s", name.c_str());
+    ADD_FAILURE() << "unexpected message received: " << name;
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -54,7 +54,7 @@ class RawSocketServer final : public fidl::testing::WireTestBase<fuchsia_posix_s
   RawSocketServer() = default;
 
   void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) final {
-    ADD_FAILURE("unexpected message received: %s", name.c_str());
+    ADD_FAILURE() << "unexpected message received: " << name;
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -74,7 +74,7 @@ class StreamSocketServer final
   StreamSocketServer() = default;
 
   void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) final {
-    ADD_FAILURE("unexpected message received: %s", name.c_str());
+    ADD_FAILURE() << "unexpected message received: " << name;
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -90,7 +90,7 @@ class SynchronousDatagramSocketServer final
   SynchronousDatagramSocketServer() = default;
 
   void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) final {
-    ADD_FAILURE("unexpected message received: %s", name.c_str());
+    ADD_FAILURE() << "unexpected message received: " << name;
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 

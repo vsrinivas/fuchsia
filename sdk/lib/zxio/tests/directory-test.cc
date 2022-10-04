@@ -20,9 +20,9 @@ constexpr std::string_view kTestPath("test_path");
 
 class TestDirectoryServer : public zxio_tests::TestDirectoryServerBase {
  public:
-  explicit TestDirectoryServer(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {
-    ASSERT_OK(zx::event::create(0, &token_));
-  }
+  explicit TestDirectoryServer(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
+
+  void Init(zx::event token) { token_ = std::move(token); }
 
   void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) final {
     completer.Reply(fuchsia_io::wire::NodeInfoDeprecated::WithDirectory({}));
@@ -32,25 +32,28 @@ class TestDirectoryServer : public zxio_tests::TestDirectoryServerBase {
     constexpr fuchsia_io::wire::OpenFlags kExpectedFlags =
         fuchsia_io::wire::OpenFlags::kRightReadable | fuchsia_io::wire::OpenFlags::kDescribe;
     if (request->flags != kExpectedFlags) {
-      ADD_FAILURE("unexpected flags for Open request: 0x%x vs 0x%x",
-                  static_cast<uint32_t>(request->flags), static_cast<uint32_t>(kExpectedFlags));
+      ADD_FAILURE() << "unexpected flags for Open request: " << std::showbase << std::showbase
+                    << std::hex << static_cast<uint32_t>(request->flags) << " vs " << std::showbase
+                    << std::showbase << std::hex << static_cast<uint32_t>(kExpectedFlags);
       completer.Close(ZX_ERR_INVALID_ARGS);
       return;
     }
     constexpr uint32_t kExpectedMode = 0u;
     if (request->mode != kExpectedMode) {
-      ADD_FAILURE("unexpected mode for Open request: 0x%x vs 0x%x", request->mode, kExpectedMode);
+      ADD_FAILURE() << "unexpected mode for Open request: " << std::showbase << std::showbase
+                    << std::hex << request->mode << " vs " << std::showbase << std::showbase
+                    << std::hex << kExpectedMode;
       completer.Close(ZX_ERR_INVALID_ARGS);
       return;
     }
     if (request->path.get() != kTestPath) {
-      ADD_FAILURE("unexpected path for Open request: \"%s\" vs \"%s\"", request->path.data(),
-                  kTestPath.data());
+      ADD_FAILURE() << "unexpected path for Open request: \"" << request->path.get() << "\" vs \""
+                    << kTestPath << "\"";
       completer.Close(ZX_ERR_INVALID_ARGS);
       return;
     }
     if (open_calls_ != 0) {
-      ADD_FAILURE("unexpected number of open calls: %d", open_calls_);
+      ADD_FAILURE() << "unexpected number of open calls: " << open_calls_;
       completer.Close(ZX_ERR_BAD_STATE);
       return;
     }
@@ -74,7 +77,7 @@ class TestDirectoryServer : public zxio_tests::TestDirectoryServerBase {
     zx::event dup;
     zx_status_t status = token_.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
     if (status != ZX_OK) {
-      ADD_FAILURE("Could not duplicate token handle: %d", status);
+      ADD_FAILURE() << "Could not duplicate token handle: " << zx_status_get_string(status);
       completer.Close(ZX_ERR_INTERNAL);
       return;
     }
@@ -127,6 +130,9 @@ class Directory : public zxtest::Test {
     ASSERT_OK(node_ends.status_value());
     auto [node_client_end, node_server_end] = std::move(node_ends.value());
 
+    zx::event token;
+    ASSERT_OK(zx::event::create(0, &token));
+    ASSERT_NO_FATAL_FAILURE(directory_server_.Init(std::move(token)));
     fidl::BindServer(server_loop_.dispatcher(), std::move(directory_server_end),
                      &directory_server_);
 

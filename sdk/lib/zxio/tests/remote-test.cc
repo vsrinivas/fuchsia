@@ -27,7 +27,7 @@ class TestServerBase : public fidl::testing::WireTestBase<fio::Node> {
   ~TestServerBase() override = default;
 
   void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) final {
-    ADD_FAILURE("unexpected message received: %s", name.c_str());
+    ADD_FAILURE() << "unexpected message received: " << name;
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -169,7 +169,7 @@ class CloneTest : public zxtest::Test {
               ->OnOpen(ZX_OK,
                        fio::wire::NodeInfoDeprecated::WithFile(
                            fidl::ObjectView<fio::wire::FileObject>::FromExternal(&file_object)));
-      ASSERT_TRUE(result.ok(), "%s", result.FormatDescription().c_str());
+      ASSERT_TRUE(result.ok()) << result.FormatDescription();
     }
   }
 
