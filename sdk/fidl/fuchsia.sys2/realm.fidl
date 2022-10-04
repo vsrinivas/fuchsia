@@ -132,7 +132,7 @@ type RealmQueryError = flexible enum {
 /// Offers detailed introspection into component instances under a realm.
 @discoverable
 protocol RealmQuery {
-    /// Gets the detailed information of a particular instance identified by its moniker.
+    /// Gets the detailed information of a particular instance identified by its relative moniker.
     /// This response contains handles to resources of the instance. As a result, component manager
     /// pays a non-trivial cost when this method is invoked.
     GetInstanceInfo(struct {
