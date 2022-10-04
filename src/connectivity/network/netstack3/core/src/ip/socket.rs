@@ -806,13 +806,70 @@ pub(crate) mod testutil {
 
     /// A dummy implementation of [`IpSocketContext`].
     ///
-    /// `IpSocketContext` is implemented for any `DummyCtx<S>` where `S`
-    /// implements `AsRef` and `AsMut` for `DummyIpSocketCtx`.
+    /// `IpSocketContext` is implemented for `DummyIpSocketCtx` and any
+    /// `DummyCtx<S>` where `S` implements `AsRef` and `AsMut` for
+    /// `DummyIpSocketCtx`.
     #[derive(Derivative)]
     #[derivative(Default(bound = ""))]
     pub(crate) struct DummyIpSocketCtx<I: IpDeviceStateIpExt, D> {
         pub(crate) table: ForwardingTable<I, D>,
         device_state: HashMap<D, IpDeviceState<DummyInstant, I>>,
+    }
+
+    impl<I: IpDeviceStateIpExt, DeviceId: IpDeviceId + 'static> IpDeviceIdContext<I>
+        for DummyIpSocketCtx<I, DeviceId>
+    {
+        type DeviceId = DeviceId;
+
+        fn loopback_id(&self) -> Option<Self::DeviceId> {
+            None
+        }
+    }
+
+    impl<
+            I: IpDeviceStateIpExt,
+            Id,
+            Event: Debug,
+            DeviceId: IpDeviceId + 'static,
+            NonSyncCtxState,
+        > IpSocketContext<I, DummyNonSyncCtx<Id, Event, NonSyncCtxState>>
+        for DummyIpSocketCtx<I, DeviceId>
+    {
+        fn lookup_route(
+            &self,
+            _ctx: &mut DummyNonSyncCtx<Id, Event, NonSyncCtxState>,
+            device: Option<&Self::DeviceId>,
+            local_ip: Option<SpecifiedAddr<I::Addr>>,
+            addr: SpecifiedAddr<I::Addr>,
+        ) -> Result<IpSockRoute<I, Self::DeviceId>, IpSockRouteError> {
+            let DummyIpSocketCtx { device_state, table } = self;
+            let destination =
+                table.lookup(device, addr).ok_or(IpSockUnroutableError::NoRouteToRemoteAddr)?;
+
+            let Destination { device, next_hop: _ } = &destination;
+            local_ip
+                .map_or_else(
+                    || {
+                        device_state
+                            .get(&device)
+                            .unwrap()
+                            .iter_addrs()
+                            .map(|e| e.addr())
+                            .next()
+                            .ok_or(IpSockRouteError::NoLocalAddrAvailable)
+                    },
+                    |local_ip| {
+                        device_state
+                            .get(&device)
+                            .unwrap()
+                            .iter_addrs()
+                            .any(|e| e.addr() == local_ip)
+                            .then(|| local_ip)
+                            .ok_or(IpSockUnroutableError::LocalAddrNotAssigned.into())
+                    },
+                )
+                .map(|local_ip| IpSockRoute { local_ip, destination })
+        }
     }
 
     impl<
@@ -828,45 +885,12 @@ pub(crate) mod testutil {
     {
         fn lookup_route(
             &self,
-            _ctx: &mut DummyNonSyncCtx<Id, Event, NonSyncCtxState>,
+            ctx: &mut DummyNonSyncCtx<Id, Event, NonSyncCtxState>,
             device: Option<&Self::DeviceId>,
             local_ip: Option<SpecifiedAddr<I::Addr>>,
             addr: SpecifiedAddr<I::Addr>,
         ) -> Result<IpSockRoute<I, Self::DeviceId>, IpSockRouteError> {
-            let destination = self
-                .get_ref()
-                .as_ref()
-                .table
-                .lookup(device, addr)
-                .ok_or(IpSockUnroutableError::NoRouteToRemoteAddr)?;
-
-            let Destination { device, next_hop: _ } = &destination;
-            local_ip
-                .map_or_else(
-                    || {
-                        self.get_ref()
-                            .as_ref()
-                            .device_state
-                            .get(&device)
-                            .unwrap()
-                            .iter_addrs()
-                            .map(|e| e.addr())
-                            .next()
-                            .ok_or(IpSockRouteError::NoLocalAddrAvailable)
-                    },
-                    |local_ip| {
-                        self.get_ref()
-                            .as_ref()
-                            .device_state
-                            .get(&device)
-                            .unwrap()
-                            .iter_addrs()
-                            .any(|e| e.addr() == local_ip)
-                            .then(|| local_ip)
-                            .ok_or(IpSockUnroutableError::LocalAddrNotAssigned.into())
-                    },
-                )
-                .map(|local_ip| IpSockRoute { local_ip, destination })
+            self.get_ref().as_ref().lookup_route(ctx, device, local_ip, addr)
         }
     }
 

@@ -44,7 +44,7 @@ use crate::{
     error::{LocalAddressError, SocketError, ZonedAddressError},
     ip::{
         icmp::IcmpIpExt,
-        socket::{IpSock, IpSockCreationError, IpSockSendError, IpSocketHandler},
+        socket::{IpSockCreationError, IpSockSendError, IpSocketHandler},
         BufferIpTransportContext, BufferTransportIpContext, IpDeviceId, IpDeviceIdContext, IpExt,
         IpTransportContext, TransportIpContext, TransportReceiveError,
     },
@@ -841,6 +841,10 @@ impl<I: IpExt, C: InstantContext + RngContext + UdpContext<I> + CounterContext>
 pub(crate) trait UdpStateContext<I: IpExt, C: UdpStateNonSyncContext<I>>:
     TransportIpContext<I, C>
 {
+    /// The synchronized context passed to the callback provided to
+    /// `with_sockets_mut`.
+    type IpSocketsCtx: IpSocketHandler<I, C, DeviceId = Self::DeviceId>;
+
     /// Requests that the specified device join the given multicast group.
     ///
     /// If this method is called multiple times with the same device and
@@ -870,7 +874,10 @@ pub(crate) trait UdpStateContext<I: IpExt, C: UdpStateNonSyncContext<I>>:
     fn with_sockets<O, F: FnOnce(&UdpSockets<I, Self::DeviceId>) -> O>(&self, cb: F) -> O;
 
     /// Calls the function with a mutable reference to UDP sockets.
-    fn with_sockets_mut<O, F: FnOnce(&mut UdpSockets<I, Self::DeviceId>) -> O>(
+    fn with_sockets_mut<
+        O,
+        F: FnOnce(&mut Self::IpSocketsCtx, &mut UdpSockets<I, Self::DeviceId>) -> O,
+    >(
         &mut self,
         cb: F,
     ) -> O;
@@ -1224,7 +1231,8 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> UdpSocke
         // First remove the unbound socket being promoted.
         let (remote_ip, device, sharing, ip_options) = self
             .with_sockets_mut(
-                |UdpSockets {
+                |_sync_ctx,
+                 UdpSockets {
                      sockets: DatagramSockets { bound: _, unbound },
                      lazy_port_alloc: _,
                  }| {
@@ -1257,7 +1265,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> UdpSocke
         )
         .map_err(|(e, ip_options)| {
             assert_matches::assert_matches!(
-                self.with_sockets_mut(|state| {
+                self.with_sockets_mut(|_sync_ctx, state| {
                     let UdpSockets {
                         sockets: DatagramSockets { unbound, bound: _ },
                         lazy_port_alloc: _,
@@ -1304,7 +1312,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> UdpSocke
     }
 
     fn set_udp_posix_reuse_port(&mut self, _ctx: &mut C, id: UdpUnboundId<I>, reuse_port: bool) {
-        self.with_sockets_mut(|state| {
+        self.with_sockets_mut(|_sync_ctx, state| {
             let UdpSockets { sockets: DatagramSockets { unbound, bound: _ }, lazy_port_alloc: _ } =
                 state;
 
@@ -1411,7 +1419,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> UdpSocke
         remote_port: NonZeroU16,
     ) -> Result<UdpConnId<I>, (UdpConnectListenerError, UdpListenerId<I>)> {
         let (ip, remote_ip, device, original_addr, ip_options, sharing, clear_device_on_disconnect) =
-            self.with_sockets_mut(|state| {
+            self.with_sockets_mut(|_sync_ctx, state| {
                 let UdpSockets {
                     sockets: DatagramSockets { bound, unbound: _ },
                     lazy_port_alloc: _,
@@ -1465,7 +1473,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> UdpSocke
                 UdpSockCreationError::Ip(ip) => ip.into(),
                 UdpSockCreationError::Zone(e) => UdpConnectListenerError::Zone(e),
             };
-            self.with_sockets_mut(|state| {
+            self.with_sockets_mut(|_sync_ctx, state| {
                 let UdpSockets {
                     sockets: DatagramSockets { bound, unbound: _ },
                     lazy_port_alloc: _,
@@ -1491,7 +1499,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> UdpSocke
         remote_port: NonZeroU16,
     ) -> Result<UdpConnId<I>, (UdpConnectListenerError, UdpConnId<I>)> {
         let ((local_ip, local_port), remote_ip, device, original_addr, conn_state, sharing) = self
-            .with_sockets_mut(|state| {
+            .with_sockets_mut(|_sync_ctx, state| {
                 let UdpSockets {
                     sockets: DatagramSockets { bound, unbound: _ },
                     lazy_port_alloc: _,
@@ -1538,7 +1546,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> UdpSocke
             };
             let _: IpOptions<_, _> = socket.replace_options(ip_options);
             // Restore the original socket if creation of the new socket fails.
-            self.with_sockets_mut(|state| {
+            self.with_sockets_mut(|_sync_ctx, state| {
                 let UdpSockets {
                     sockets: DatagramSockets { bound, unbound: _ },
                     lazy_port_alloc: _,
@@ -1935,6 +1943,8 @@ pub fn send_udp_listener<I: IpExt, B: BufferMut, C: BufferNonSyncContext<B>>(
 impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>
     DatagramStateContext<IpPortSpec<I, SC::DeviceId>, C, Udp<I, SC::DeviceId>> for SC
 {
+    type IpSocketsCtx = SC::IpSocketsCtx;
+
     fn join_multicast_group(
         &mut self,
         ctx: &mut C,
@@ -1969,28 +1979,21 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>
 
     fn with_sockets_mut<
         O,
-        F: FnOnce(&mut DatagramSockets<IpPortSpec<I, SC::DeviceId>, Udp<I, SC::DeviceId>>) -> O,
+        F: FnOnce(
+            &mut Self::IpSocketsCtx,
+            &mut DatagramSockets<IpPortSpec<I, SC::DeviceId>, Udp<I, SC::DeviceId>>,
+        ) -> O,
     >(
         &mut self,
         cb: F,
     ) -> O {
-        self.with_sockets_mut(|UdpSockets { sockets: state, lazy_port_alloc: _ }| cb(state))
+        self.with_sockets_mut(|sync_ctx, UdpSockets { sockets: state, lazy_port_alloc: _ }| {
+            cb(sync_ctx, state)
+        })
     }
 
     fn get_default_hop_limits(&self, device: Option<&SC::DeviceId>) -> crate::ip::HopLimits {
         TransportIpContext::get_default_hop_limits(self, device)
-    }
-
-    fn new_ip_socket<O>(
-        &mut self,
-        ctx: &mut C,
-        device: Option<&SC::DeviceId>,
-        local_ip: Option<SpecifiedAddr<I::Addr>>,
-        remote: SpecifiedAddr<I::Addr>,
-        proto: I::Proto,
-        options: O,
-    ) -> Result<IpSock<I, SC::DeviceId, O>, (IpSockCreationError, O)> {
-        IpSocketHandler::new_ip_socket(self, ctx, device, local_ip, remote, proto, options)
     }
 }
 
@@ -2111,7 +2114,7 @@ fn create_udp_conn<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I
     let local_ip = *ip_sock.local_ip();
     let remote_ip = *ip_sock.remote_ip();
 
-    sync_ctx.with_sockets_mut(|state| {
+    sync_ctx.with_sockets_mut(|_sync_ctx, state| {
         let local_port = if let Some(local_port) = local_port {
             local_port
         } else {
@@ -2921,9 +2924,9 @@ mod tests {
 
     impl<I: TestIpExt, D: IpDeviceId + 'static> UdpStateContext<I, DummyDeviceNonSyncCtx<I>>
         for DummyDeviceSyncCtx<I, D>
-    where
-        Self: IpSocketHandler<I, DummyDeviceNonSyncCtx<I>> + IpDeviceIdContext<I, DeviceId = D>,
     {
+        type IpSocketsCtx = DummyIpSocketCtx<I, D>;
+
         fn join_multicast_group(
             &mut self,
             _ctx: &mut DummyDeviceNonSyncCtx<I>,
@@ -2967,11 +2970,15 @@ mod tests {
             cb(&self.get_ref().sockets)
         }
 
-        fn with_sockets_mut<O, F: FnOnce(&mut UdpSockets<I, Self::DeviceId>) -> O>(
+        fn with_sockets_mut<
+            O,
+            F: FnOnce(&mut Self::IpSocketsCtx, &mut UdpSockets<I, Self::DeviceId>) -> O,
+        >(
             &mut self,
             cb: F,
         ) -> O {
-            cb(&mut self.get_mut().sockets)
+            let DummyUdpCtx { sockets, ip_socket_ctx, ip_options: _ } = self.get_mut();
+            cb(ip_socket_ctx, sockets)
         }
 
         fn should_send_port_unreachable(&self) -> bool {
