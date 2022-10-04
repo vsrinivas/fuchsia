@@ -10,10 +10,13 @@
 
 #include "fidl/fuchsia.audio.effects/cpp/markers.h"
 #include "fidl/fuchsia.audio.effects/cpp/wire_types.h"
+#include "fidl/fuchsia.audio.mixer/cpp/common_types.h"
 #include "fidl/fuchsia.audio.mixer/cpp/natural_types.h"
+#include "fidl/fuchsia.audio.mixer/cpp/wire_types.h"
 #include "fidl/fuchsia.mediastreams/cpp/wire_types.h"
 #include "fidl/fuchsia.mem/cpp/wire_types.h"
 #include "lib/fidl/cpp/wire/arena.h"
+#include "lib/fidl/cpp/wire/wire_types.h"
 #include "src/media/audio/lib/clock/testing/clock_test.h"
 #include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/common/testing/test_server_and_client.h"
@@ -116,6 +119,16 @@ fidl::WireTableBuilder<fuchsia_audio::wire::RingBuffer> MakeDefaultRingBuffer(
   builder.consumer_bytes(512);
   builder.reference_clock(MakeClock());
   return builder;
+}
+
+fidl::WireTableBuilder<fuchsia_audio_mixer::wire::GraphCreateMixerRequest>
+MakeDefaultCreateMixerRequest(fidl::AnyArena& arena) {
+  return fuchsia_audio_mixer::wire::GraphCreateMixerRequest::Builder(arena)
+      .name(fidl::StringView::FromExternal("mixer"))
+      .direction(PipelineDirection::kInput)
+      .dest_format(kFormat.ToWireFidl(arena))
+      .dest_reference_clock(MakeReferenceClock(arena))
+      .dest_buffer_frame_count(10);
 }
 
 fidl::WireTableBuilder<fuchsia_audio_mixer::wire::GraphCreateThreadRequest>
@@ -733,6 +746,181 @@ TEST_F(GraphServerTest, CreateConsumerRingBufferSuccess) {
 }
 
 //
+// CreateMixer
+//
+
+TEST_F(GraphServerTest, CreateMixerFails) {
+  struct TestCase {
+    std::string name;
+    std::function<void(fidl::WireTableBuilder<fuchsia_audio_mixer::wire::GraphCreateMixerRequest>&)>
+        edit;
+    CreateNodeError expected_error;
+  };
+
+  const std::vector<TestCase> cases = {
+      {
+          .name = "MissingDestFormat",
+          .edit = [](auto request) { request.dest_format({}); },
+          .expected_error = CreateNodeError::kMissingRequiredField,
+      },
+      {
+          .name = "MissingDestReferenceClock",
+          .edit = [](auto request) { request.dest_reference_clock({}); },
+          .expected_error = CreateNodeError::kMissingRequiredField,
+      },
+      {
+          .name = "MissingDestBufferFrameCount",
+          .edit = [](auto request) { request.dest_buffer_frame_count({}); },
+          .expected_error = CreateNodeError::kMissingRequiredField,
+      },
+      {
+          .name = "InvalidDestFormat",
+          .edit = [this](auto request) { request.dest_format(MakeInvalidFormatFidl(arena_)); },
+          .expected_error = CreateNodeError::kInvalidParameter,
+      },
+      {
+          .name = "InvalidDestFormatNonFloatSampleType",
+          .edit =
+              [this](auto request) {
+                request.dest_format(fuchsia_audio::wire::Format::Builder(arena_)
+                                        .sample_type(fuchsia_audio::SampleType::kInt16)
+                                        .channel_count(2)
+                                        .frames_per_second(48000)
+                                        .Build());
+              },
+          .expected_error = CreateNodeError::kInvalidParameter,
+      },
+      {
+          .name = "InvalidDestBufferFrameCount",
+          .edit = [](auto request) { request.dest_buffer_frame_count(0); },
+          .expected_error = CreateNodeError::kInvalidParameter,
+      },
+  };
+
+  for (auto& tc : cases) {
+    SCOPED_TRACE("TestCase: " + tc.name);
+    auto request = MakeDefaultCreateMixerRequest(arena_);
+    tc.edit(request);
+
+    auto result = client()->CreateMixer(request.Build());
+    if (!result.ok()) {
+      ADD_FAILURE() << "failed to send method call: " << result;
+      continue;
+    }
+    if (!result->is_error()) {
+      ADD_FAILURE() << "CreateMixer did not fail";
+      continue;
+    }
+    EXPECT_EQ(result->error_value(), tc.expected_error);
+  }
+}
+
+// TODO(fxbug.dev/109458): This can be moved to `CreateMixerFails` above after fix.
+TEST_F(GraphServerTest, CreateMixerFailsMissingDirection) {
+  const auto result =
+      client()->CreateMixer(fuchsia_audio_mixer::wire::GraphCreateMixerRequest::Builder(arena_)
+                                .name(fidl::StringView::FromExternal("mixer"))
+                                // no direction()
+                                .dest_format(kFormat.ToWireFidl(arena_))
+                                .dest_reference_clock(MakeReferenceClock(arena_))
+                                .dest_buffer_frame_count(10)
+                                .Build());
+
+  ASSERT_TRUE(result.ok()) << result;
+  ASSERT_TRUE(result->is_error());
+  ASSERT_EQ(result->error_value(), CreateNodeError::kMissingRequiredField);
+}
+
+TEST_F(GraphServerTest, CreateMixerSuccess) {
+  const auto result = client()->CreateMixer(MakeDefaultCreateMixerRequest(arena_).Build());
+  ASSERT_TRUE(result.ok()) << result;
+  ASSERT_FALSE(result->is_error()) << result->error_value();
+  EXPECT_TRUE(result->value()->has_id());
+}
+
+//
+// CreateCustom
+//
+
+TEST_F(GraphServerTest, CreateCustomFailsMissingReferenceClock) {
+  auto result = client()->CreateCustom(
+      fuchsia_audio_mixer::wire::GraphCreateCustomRequest::Builder(arena_)
+          .name(fidl::StringView::FromExternal("custom"))
+          .direction(PipelineDirection::kInput)
+          .config(MakeDefaultProcessorConfig(arena_).Build())
+          .consumer(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_).thread(1).Build())
+          // no reference_clock()
+          .Build());
+
+  ASSERT_TRUE(result.ok()) << result;
+  ASSERT_TRUE(result->is_error());
+  ASSERT_EQ(result->error_value(), CreateNodeError::kMissingRequiredField);
+}
+
+TEST_F(GraphServerTest, CreateCustomFailsMissingDirection) {
+  auto result = client()->CreateCustom(
+      fuchsia_audio_mixer::wire::GraphCreateCustomRequest::Builder(arena_)
+          .name(fidl::StringView::FromExternal("custom"))
+          // no direction()
+          .config(MakeDefaultProcessorConfig(arena_).Build())
+          .consumer(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_).thread(1).Build())
+          .reference_clock(MakeReferenceClock(arena_))
+          .Build());
+
+  ASSERT_TRUE(result.ok()) << result;
+  ASSERT_TRUE(result->is_error());
+  ASSERT_EQ(result->error_value(), CreateNodeError::kMissingRequiredField);
+}
+
+TEST_F(GraphServerTest, CreateCustomFailsMissingConfig) {
+  auto result = client()->CreateCustom(
+      fuchsia_audio_mixer::wire::GraphCreateCustomRequest::Builder(arena_)
+          .name(fidl::StringView::FromExternal("custom"))
+          .direction(PipelineDirection::kInput)
+          // no config()
+          .consumer(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_).thread(1).Build())
+          .reference_clock(MakeReferenceClock(arena_))
+          .Build());
+
+  ASSERT_TRUE(result.ok()) << result;
+  ASSERT_TRUE(result->is_error());
+  ASSERT_EQ(result->error_value(), CreateNodeError::kMissingRequiredField);
+}
+
+TEST_F(GraphServerTest, CreateCustomFailsInvalidConfig) {
+  auto result = client()->CreateCustom(
+      fuchsia_audio_mixer::wire::GraphCreateCustomRequest::Builder(arena_)
+          .name(fidl::StringView::FromExternal("custom"))
+          .direction(PipelineDirection::kInput)
+          .config(MakeDefaultProcessorConfig(arena_).block_size_frames(-1).Build())
+          .consumer(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_).thread(1).Build())
+          .reference_clock(MakeReferenceClock(arena_))
+          .Build());
+
+  ASSERT_TRUE(result.ok()) << result;
+  ASSERT_TRUE(result->is_error());
+  ASSERT_EQ(result->error_value(), CreateNodeError::kInvalidParameter);
+}
+
+TEST_F(GraphServerTest, CreateCustomSuccess) {
+  auto result = client()->CreateCustom(
+      fuchsia_audio_mixer::wire::GraphCreateCustomRequest::Builder(arena_)
+          .name(fidl::StringView::FromExternal("custom"))
+          .direction(PipelineDirection::kInput)
+          .config(MakeDefaultProcessorConfig(arena_).Build())
+          .consumer(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_).thread(1).Build())
+          .reference_clock(MakeReferenceClock(arena_))
+          .Build());
+
+  ASSERT_TRUE(result.ok()) << result;
+  ASSERT_FALSE(result->is_error()) << result->error_value();
+  EXPECT_TRUE(result->value()->has_id());
+  ASSERT_TRUE(result->value()->has_node_properties());
+  EXPECT_EQ(result->value()->node_properties().source_ids().count(), 1ul);
+  EXPECT_EQ(result->value()->node_properties().dest_ids().count(), 1ul);
+}
+
+//
 // DeleteNode
 //
 
@@ -1048,88 +1236,6 @@ TEST_F(GraphServerTest, DeleteEdgeSuccess) {
     ASSERT_TRUE(result.ok()) << result;
     ASSERT_FALSE(result->is_error()) << result->error_value();
   }
-}
-
-//
-// CreateCustom
-//
-
-TEST_F(GraphServerTest, CreateCustomFailsMissingReferenceClock) {
-  auto result = client()->CreateCustom(
-      fuchsia_audio_mixer::wire::GraphCreateCustomRequest::Builder(arena_)
-          .name(fidl::StringView::FromExternal("custom"))
-          .direction(PipelineDirection::kInput)
-          .config(MakeDefaultProcessorConfig(arena_).Build())
-          .consumer(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_).thread(1).Build())
-          // no reference_clock()
-          .Build());
-
-  ASSERT_TRUE(result.ok()) << result;
-  ASSERT_TRUE(result->is_error());
-  ASSERT_EQ(result->error_value(), CreateNodeError::kMissingRequiredField);
-}
-
-TEST_F(GraphServerTest, CreateCustomFailsMissingDirection) {
-  auto result = client()->CreateCustom(
-      fuchsia_audio_mixer::wire::GraphCreateCustomRequest::Builder(arena_)
-          .name(fidl::StringView::FromExternal("custom"))
-          // no direction()
-          .config(MakeDefaultProcessorConfig(arena_).Build())
-          .consumer(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_).thread(1).Build())
-          .reference_clock(MakeReferenceClock(arena_))
-          .Build());
-
-  ASSERT_TRUE(result.ok()) << result;
-  ASSERT_TRUE(result->is_error());
-  ASSERT_EQ(result->error_value(), CreateNodeError::kMissingRequiredField);
-}
-
-TEST_F(GraphServerTest, CreateCustomFailsMissingConfig) {
-  auto result = client()->CreateCustom(
-      fuchsia_audio_mixer::wire::GraphCreateCustomRequest::Builder(arena_)
-          .name(fidl::StringView::FromExternal("custom"))
-          .direction(PipelineDirection::kInput)
-          // no config()
-          .consumer(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_).thread(1).Build())
-          .reference_clock(MakeReferenceClock(arena_))
-          .Build());
-
-  ASSERT_TRUE(result.ok()) << result;
-  ASSERT_TRUE(result->is_error());
-  ASSERT_EQ(result->error_value(), CreateNodeError::kMissingRequiredField);
-}
-
-TEST_F(GraphServerTest, CreateCustomFailsInvalidConfig) {
-  auto result = client()->CreateCustom(
-      fuchsia_audio_mixer::wire::GraphCreateCustomRequest::Builder(arena_)
-          .name(fidl::StringView::FromExternal("custom"))
-          .direction(PipelineDirection::kInput)
-          .config(MakeDefaultProcessorConfig(arena_).block_size_frames(-1).Build())
-          .consumer(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_).thread(1).Build())
-          .reference_clock(MakeReferenceClock(arena_))
-          .Build());
-
-  ASSERT_TRUE(result.ok()) << result;
-  ASSERT_TRUE(result->is_error());
-  ASSERT_EQ(result->error_value(), CreateNodeError::kInvalidParameter);
-}
-
-TEST_F(GraphServerTest, CreateCustomSuccess) {
-  auto result = client()->CreateCustom(
-      fuchsia_audio_mixer::wire::GraphCreateCustomRequest::Builder(arena_)
-          .name(fidl::StringView::FromExternal("custom"))
-          .direction(PipelineDirection::kInput)
-          .config(MakeDefaultProcessorConfig(arena_).Build())
-          .consumer(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_).thread(1).Build())
-          .reference_clock(MakeReferenceClock(arena_))
-          .Build());
-
-  ASSERT_TRUE(result.ok()) << result;
-  ASSERT_FALSE(result->is_error()) << result->error_value();
-  EXPECT_TRUE(result->value()->has_id());
-  ASSERT_TRUE(result->value()->has_node_properties());
-  EXPECT_EQ(result->value()->node_properties().source_ids().count(), 1ul);
-  EXPECT_EQ(result->value()->node_properties().dest_ids().count(), 1ul);
 }
 
 //

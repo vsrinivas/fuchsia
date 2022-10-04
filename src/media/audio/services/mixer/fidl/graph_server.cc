@@ -11,11 +11,13 @@
 
 #include <type_traits>
 
+#include "fidl/fuchsia.audio/cpp/wire_types.h"
 #include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/common/memory_mapped_buffer.h"
 #include "src/media/audio/services/mixer/fidl/consumer_node.h"
 #include "src/media/audio/services/mixer/fidl/custom_node.h"
 #include "src/media/audio/services/mixer/fidl/meta_producer_node.h"
+#include "src/media/audio/services/mixer/fidl/mixer_node.h"
 #include "src/media/audio/services/mixer/fidl_realtime/stream_sink_client.h"
 #include "src/media/audio/services/mixer/fidl_realtime/stream_sink_server.h"
 #include "src/media/audio/services/mixer/mix/ring_buffer.h"
@@ -53,6 +55,18 @@ zx::status<std::shared_ptr<Clock>> LookupClock(ClockRegistry& registry, ClockFac
 
   registry.Add(clock_result.value());
   return zx::ok(std::move(clock_result.value()));
+}
+
+// Looks up a clock by `reference_clock` and `node_name`. If none exists in `registry`, creates an
+// unadjustable wrapper clock with `factory` and adds that clock to `registry`.
+zx::status<std::shared_ptr<Clock>> LookupClock(
+    ClockRegistry& registry, ClockFactory& factory,
+    fuchsia_audio_mixer::wire::ReferenceClock& reference_clock, std::string_view node_name) {
+  return LookupClock(
+      registry, factory, std::move(reference_clock.handle()),
+      reference_clock.has_domain() ? reference_clock.domain() : Clock::kExternalDomain,
+      reference_clock.has_name() ? std::string(reference_clock.name().get())
+                                 : ClockNameFromNodeName(node_name));
 }
 
 // Validates `stream_sink` and translates from FIDL types to internal C++ types. This is intended to
@@ -106,11 +120,8 @@ ValidateStreamSink(std::string_view debug_description, std::string_view node_nam
     return fpromise::error(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
   }
 
-  auto& rc = stream_sink.reference_clock();
   const auto clock_result =
-      LookupClock(clock_registry, clock_factory, std::move(rc.handle()),
-                  rc.has_domain() ? rc.domain() : Clock::kExternalDomain,
-                  rc.has_name() ? std::string(rc.name().get()) : ClockNameFromNodeName(node_name));
+      LookupClock(clock_registry, clock_factory, stream_sink.reference_clock(), node_name);
   if (!clock_result.is_ok()) {
     FX_LOGS(WARNING) << debug_description << ": invalid clock: " << clock_result.status_string();
     return fpromise::error(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
@@ -401,7 +412,64 @@ void GraphServer::CreateMixer(CreateMixerRequestView request,
                               CreateMixerCompleter::Sync& completer) {
   TRACE_DURATION("audio", "Graph:::CreateMixer");
   ScopedThreadChecker checker(thread().checker());
-  FX_CHECK(false) << "not implemented";
+
+  if (!request->has_direction() || !request->has_dest_format() ||
+      !request->has_dest_reference_clock() || !request->has_dest_buffer_frame_count()) {
+    FX_LOGS(WARNING) << "CreateMixer: missing field";
+    completer.ReplyError(fuchsia_audio_mixer::CreateNodeError::kMissingRequiredField);
+    return;
+  }
+
+  // Validate format.
+  const auto format = Format::Create(request->dest_format());
+  if (!format.is_ok()) {
+    FX_LOGS(WARNING) << "CreateMixer: invalid destination format: " << format.error();
+    completer.ReplyError(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
+    return;
+  }
+  // TODO(fxbug.dev/87651): This check blelow is not a strict FIDL API requirement, but an
+  // enforcement by the underlying `MixerStage`. Revisit if we want to support non-float types.
+  if (format.value().sample_type() != fuchsia_audio::wire::SampleType::kFloat32) {
+    FX_LOGS(WARNING) << "CreateMixer: destination format must use float";
+    completer.ReplyError(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
+    return;
+  }
+
+  // Validate internal buffer frame count.
+  const auto dest_buffer_frame_count = static_cast<int64_t>(request->dest_buffer_frame_count());
+  if (dest_buffer_frame_count < 1) {
+    FX_LOGS(WARNING) << "CreateMixer: internal buffer frame count must be positive";
+    completer.ReplyError(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
+    return;
+  }
+
+  // Validate reference clock.
+  const auto name = NameOrEmpty(*request);
+
+  auto clock_result =
+      LookupClock(*clock_registry_, *clock_factory_, request->dest_reference_clock(), name);
+  if (!clock_result.is_ok()) {
+    FX_LOGS(WARNING) << "CreateMixer: invalid reference clock";
+    completer.ReplyError(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
+    return;
+  }
+
+  // Register mixer.
+  const auto id = NextNodeId();
+  const auto mixer = MixerNode::Create({
+      .name = name,
+      .pipeline_direction = request->direction(),
+      .format = format.value(),
+      .reference_clock = std::move(clock_result.value()),
+      .dest_buffer_frame_count = dest_buffer_frame_count,
+      .detached_thread = detached_thread_,
+  });
+  FX_CHECK(mixer);
+  nodes_[id] = mixer;
+
+  fidl::Arena arena;
+  completer.ReplySuccess(
+      fuchsia_audio_mixer::wire::GraphCreateMixerResponse::Builder(arena).id(id).Build());
 }
 
 void GraphServer::CreateSplitter(CreateSplitterRequestView request,
@@ -425,10 +493,8 @@ void GraphServer::CreateCustom(CreateCustomRequestView request,
   // Validate reference clock.
   const auto name = NameOrEmpty(*request);
 
-  auto& rc = request->reference_clock();
   auto clock_result =
-      LookupClock(*clock_registry_, *clock_factory_, std::move(rc.handle()), rc.domain(),
-                  rc.has_name() ? std::string(rc.name().get()) : ClockNameFromNodeName(name));
+      LookupClock(*clock_registry_, *clock_factory_, request->reference_clock(), name);
   if (!clock_result.is_ok()) {
     FX_LOGS(WARNING) << "CreateCustom: invalid reference clock";
     completer.ReplyError(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
@@ -437,11 +503,13 @@ void GraphServer::CreateCustom(CreateCustomRequestView request,
 
   // Register parent node.
   const auto id = NextNodeId();
-  const auto custom = CustomNode::Create({.name = name,
-                                          .reference_clock = std::move(clock_result.value()),
-                                          .pipeline_direction = request->direction(),
-                                          .config = request->config(),
-                                          .detached_thread = detached_thread_});
+  const auto custom = CustomNode::Create({
+      .name = name,
+      .reference_clock = std::move(clock_result.value()),
+      .pipeline_direction = request->direction(),
+      .config = request->config(),
+      .detached_thread = detached_thread_,
+  });
   if (!custom) {
     FX_LOGS(WARNING) << "CreateCustom: failed to create CustomNode";
     completer.ReplyError(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
