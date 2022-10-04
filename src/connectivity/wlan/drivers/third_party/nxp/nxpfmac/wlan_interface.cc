@@ -45,7 +45,7 @@ WlanInterface::WlanInterface(zx_device_t* parent, uint32_t iface_index, wlan_mac
       key_ring_(context->ioctl_adapter_, iface_index),
       client_connection_(this, context, &key_ring_, iface_index),
       scanner_(&fullmac_ifc_, context, iface_index),
-      soft_ap_(context, iface_index),
+      soft_ap_(this, context, iface_index),
       context_(context) {
   memcpy(mac_address_, mac_address, ETH_ALEN);
 }
@@ -541,6 +541,42 @@ void WlanInterface::OnDisconnectEvent(uint16_t reason_code) {
   fullmac_ifc_.DeauthInd(&ind);
 }
 
+// Handle STA connect event for SoftAP.
+void WlanInterface::OnStaConnectEvent(uint8_t* sta_mac_addr, uint8_t* ies, uint32_t ie_length) {
+  // This is the only event from FW for STA connect. Indicate both auth and assoc to SME.
+  std::lock_guard lock(mutex_);
+  wlan_fullmac_auth_ind_t auth_ind_params = {};
+  memcpy(auth_ind_params.peer_sta_address, sta_mac_addr, ETH_ALEN);
+  // We always authenticate as an open system for WPA
+  auth_ind_params.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
+  fullmac_ifc_.AuthInd(&auth_ind_params);
+
+  // Indicate assoc.
+  wlan_fullmac_assoc_ind_t assoc_ind_params = {};
+  memcpy(assoc_ind_params.peer_sta_address, sta_mac_addr, ETH_ALEN);
+  if (ie_length && ies && (ie_length <= sizeof(assoc_ind_params.vendor_ie))) {
+    memcpy(assoc_ind_params.vendor_ie, ies, ie_length);
+    assoc_ind_params.vendor_ie_len = ie_length;
+  }
+  fullmac_ifc_.AssocInd(&assoc_ind_params);
+}
+
+// Handle STA disconnect event for SoftAP.
+void WlanInterface::OnStaDisconnectEvent(uint8_t* sta_mac_addr, uint16_t reason_code) {
+  // This is the only event from FW for STA disconnect. Indicate both deauth and disassoc to SME.
+  std::lock_guard lock(mutex_);
+  wlan_fullmac_deauth_indication_t deauth_ind_params = {};
+  // Disconnect event contains the STA's mac address at offset 2.
+  memcpy(deauth_ind_params.peer_sta_address, sta_mac_addr, ETH_ALEN);
+  deauth_ind_params.reason_code = reason_code;
+
+  // Indicate disassoc.
+  fullmac_ifc_.DeauthInd(&deauth_ind_params);
+  wlan_fullmac_disassoc_indication_t disassoc_ind_params = {};
+  memcpy(disassoc_ind_params.peer_sta_address, sta_mac_addr, ETH_ALEN);
+  disassoc_ind_params.reason_code = reason_code;
+  fullmac_ifc_.DisassocInd(&disassoc_ind_params);
+}
 uint32_t WlanInterface::PortGetMtu() { return 1500u; }
 
 void WlanInterface::MacGetAddress(uint8_t out_mac[MAC_SIZE]) {

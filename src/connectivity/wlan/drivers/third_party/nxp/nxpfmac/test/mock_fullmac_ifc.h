@@ -31,12 +31,18 @@ class MockFullmacIfc : public ::ddk::WlanFullmacImplIfcProtocol<MockFullmacIfc> 
   void WlanFullmacImplIfcConnectConf(const wlan_fullmac_connect_confirm_t* resp) {
     on_connect_conf.Call(resp);
   }
-  void WlanFullmacImplIfcAuthInd(const wlan_fullmac_auth_ind_t* resp) {}
+  void WlanFullmacImplIfcAuthInd(const wlan_fullmac_auth_ind_t* ind) { on_auth_ind_conf.Call(ind); }
   void WlanFullmacImplIfcDeauthConf(const wlan_fullmac_deauth_confirm_t* resp) {}
-  void WlanFullmacImplIfcDeauthInd(const wlan_fullmac_deauth_indication_t* ind) {}
-  void WlanFullmacImplIfcAssocInd(const wlan_fullmac_assoc_ind_t* resp) {}
+  void WlanFullmacImplIfcDeauthInd(const wlan_fullmac_deauth_indication_t* ind) {
+    on_deauth_ind_conf.Call(ind);
+  }
+  void WlanFullmacImplIfcAssocInd(const wlan_fullmac_assoc_ind_t* ind) {
+    on_assoc_ind_conf.Call(ind);
+  }
   void WlanFullmacImplIfcDisassocConf(const wlan_fullmac_disassoc_confirm_t* resp) {}
-  void WlanFullmacImplIfcDisassocInd(const wlan_fullmac_disassoc_indication_t* ind) {}
+  void WlanFullmacImplIfcDisassocInd(const wlan_fullmac_disassoc_indication_t* ind) {
+    on_disassoc_ind_conf.Call(ind);
+  }
   void WlanFullmacImplIfcStartConf(const wlan_fullmac_start_confirm_t* resp) {
     on_start_conf.Call(resp);
   }
@@ -59,6 +65,10 @@ class MockFullmacIfc : public ::ddk::WlanFullmacImplIfcProtocol<MockFullmacIfc> 
   mock_function::MockFunction<void, const wlan_fullmac_connect_confirm_t*> on_connect_conf;
   mock_function::MockFunction<void, const wlan_fullmac_start_confirm_t*> on_start_conf;
   mock_function::MockFunction<void, const wlan_fullmac_stop_confirm_t*> on_stop_conf;
+  mock_function::MockFunction<void, const wlan_fullmac_auth_ind_t*> on_auth_ind_conf;
+  mock_function::MockFunction<void, const wlan_fullmac_deauth_indication_t*> on_deauth_ind_conf;
+  mock_function::MockFunction<void, const wlan_fullmac_assoc_ind_t*> on_assoc_ind_conf;
+  mock_function::MockFunction<void, const wlan_fullmac_disassoc_indication_t*> on_disassoc_ind_conf;
 
  private:
   wlan_fullmac_impl_ifc_protocol_t proto_;

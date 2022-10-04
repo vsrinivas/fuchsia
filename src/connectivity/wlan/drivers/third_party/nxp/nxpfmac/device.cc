@@ -377,8 +377,9 @@ zx_status_t Device::SetCountryCodeInFw(char country[3]) {
   // Bss index shouldn't matter here, set it to zero.
   IoctlRequest<mlan_ds_misc_cfg> ioctl_request(
       MLAN_IOCTL_MISC_CFG, MLAN_ACT_SET, 0,
-      mlan_ds_misc_cfg{.sub_command = MLAN_OID_MISC_COUNTRY_CODE,
-                       .param{.country_code{.country_code{(uint8_t)country[0], (uint8_t)country[1], '\0'}}}});
+      mlan_ds_misc_cfg{
+          .sub_command = MLAN_OID_MISC_COUNTRY_CODE,
+          .param{.country_code{.country_code{(uint8_t)country[0], (uint8_t)country[1], '\0'}}}});
 
   IoctlStatus io_status = ioctl_adapter_->IssueIoctlSync(&ioctl_request);
   if (io_status != IoctlStatus::Success) {

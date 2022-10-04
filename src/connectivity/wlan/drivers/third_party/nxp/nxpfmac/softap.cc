@@ -25,8 +25,15 @@
 
 namespace wlan::nxpfmac {
 
-SoftAp::SoftAp(DeviceContext* context, uint32_t bss_index)
-    : context_(context), bss_index_(bss_index) {}
+SoftAp::SoftAp(SoftApIfc* ifc, DeviceContext* context, uint32_t bss_index)
+    : ifc_(ifc), context_(context), bss_index_(bss_index) {
+  client_connect_event_ = context_->event_handler_->RegisterForInterfaceEvent(
+      MLAN_EVENT_ID_UAP_FW_STA_CONNECT, bss_index,
+      [this](pmlan_event event) { OnStaConnect(event); });
+  client_disconnect_event_ = context_->event_handler_->RegisterForInterfaceEvent(
+      MLAN_EVENT_ID_UAP_FW_STA_DISCONNECT, bss_index,
+      [this](pmlan_event event) { OnStaDisconnect(event); });
+}
 
 SoftAp::~SoftAp() {
   // Attempt to stop the Soft AP and ignore the error.
@@ -106,6 +113,31 @@ wlan_stop_result_t SoftAp::Stop(const wlan_fullmac_stop_req* req) {
 
   started_ = false;
   return WLAN_STOP_RESULT_SUCCESS;
+}
+
+void SoftAp::OnStaConnect(pmlan_event event) {
+  // Handle the STA connect event
+  if (event->event_len < ETH_ALEN) {
+    NXPF_ERR("Invalid STA connect event len: %d", event->event_len);
+    return;
+  }
+  uint8_t* sta_mac = event->event_buf;
+  uint8_t* ies = event->event_buf + ETH_ALEN;
+  uint32_t ie_len = event->event_len - ETH_ALEN;
+  if (!ie_len)
+    ies = nullptr;
+  ifc_->OnStaConnectEvent(sta_mac, ies, ie_len);
+}
+
+void SoftAp::OnStaDisconnect(pmlan_event event) {
+  // Handle the STA connect event
+  if (event->event_len < ETH_ALEN + sizeof(uint16_t)) {
+    NXPF_ERR("STA Disconnect invalid event len: %d", event->event_len);
+    return;
+  }
+  auto reason_code = reinterpret_cast<uint16_t*>(event->event_buf);
+  uint8_t* sta_mac = event->event_buf + sizeof(uint16_t);
+  ifc_->OnStaDisconnectEvent(sta_mac, *reason_code);
 }
 
 }  // namespace wlan::nxpfmac

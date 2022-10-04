@@ -220,6 +220,7 @@ mlan_status moal_recv_packet(t_void *pmoal, pmlan_buffer pmbuf) {
   uint8_t *data = pmbuf->pbuf + pmbuf->data_offset;
   frame->ShrinkHead(static_cast<uint32_t>(data - frame->Data()));
   frame->SetSize(pmbuf->data_len);
+  frame->SetPortId((uint8_t)pmbuf->bss_index);
 
   plane->CompleteRx(std::move(*frame));
   return MLAN_STATUS_SUCCESS;

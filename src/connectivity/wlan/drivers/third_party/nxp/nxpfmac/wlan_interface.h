@@ -39,6 +39,7 @@ using WlanInterfaceDeviceType = ::ddk::Device<WlanInterface>;
 class WlanInterface : public WlanInterfaceDeviceType,
                       public ::ddk::WlanFullmacImplProtocol<WlanInterface, ::ddk::base_protocol>,
                       public ClientConnectionIfc,
+                      public SoftApIfc,
                       public wlan::drivers::components::NetworkPort,
                       public wlan::drivers::components::NetworkPort::Callbacks {
  public:
@@ -99,6 +100,10 @@ class WlanInterface : public WlanInterfaceDeviceType,
 
   // ClientConnectionIfc implementation.
   void OnDisconnectEvent(uint16_t reason_code) override;
+
+  // SoftApIfc implementation.
+  void OnStaConnectEvent(uint8_t* sta_mac_addr, uint8_t* ies, uint32_t ie_length) override;
+  void OnStaDisconnectEvent(uint8_t* sta_mac_addr, uint16_t reason_code) override;
 
   // NetworkPort::Callbacks implementation
   uint32_t PortGetMtu() override;

@@ -31,11 +31,19 @@ namespace wlan::nxpfmac {
 
 struct DeviceContext;
 
+class SoftApIfc {
+ public:
+  virtual ~SoftApIfc() = default;
+
+  virtual void OnStaConnectEvent(uint8_t* sta_mac_addr, uint8_t* ies, uint32_t ie_len) = 0;
+  virtual void OnStaDisconnectEvent(uint8_t* sta_mac_addr, uint16_t reason_code) = 0;
+};
+
 class SoftAp {
  public:
   using StatusCode = fuchsia_wlan_ieee80211::StatusCode;
 
-  SoftAp(DeviceContext* context, uint32_t bss_index);
+  SoftAp(SoftApIfc* ifc, DeviceContext* context, uint32_t bss_index);
   ~SoftAp();
   // Attempt to start the SoftAP on the given bss and channel. Returns ZX_ERR_ALREADY_EXISTS if a
   // SoftAP has already been started. Returns ZX_OK if the start request is successful.
@@ -45,12 +53,16 @@ class SoftAp {
   wlan_stop_result_t Stop(const wlan_fullmac_stop_req* req) __TA_EXCLUDES(mutex_);
 
  private:
-  // SoftApIfc* ifc_ = nullptr;
+  SoftApIfc* ifc_ = nullptr;
+  void OnStaConnect(pmlan_event event) __TA_EXCLUDES(mutex_);
+  void OnStaDisconnect(pmlan_event event) __TA_EXCLUDES(mutex_);
   DeviceContext* context_ = nullptr;
   const uint32_t bss_index_;
   cssid_t ssid_ = {};
   bool started_ __TA_GUARDED(mutex_) = false;
   std::mutex mutex_;
+  EventRegistration client_connect_event_;
+  EventRegistration client_disconnect_event_;
 };
 
 }  // namespace wlan::nxpfmac
