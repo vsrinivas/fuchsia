@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::{device::Device, fxfs, zxcrypt},
+    crate::{
+        crypt::{fxfs, zxcrypt},
+        device::Device,
+    },
     anyhow::{anyhow, Error},
     async_trait::async_trait,
     fidl::endpoints::{create_proxy, Proxy, ServerEnd},

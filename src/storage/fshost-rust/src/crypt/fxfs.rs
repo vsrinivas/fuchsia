@@ -3,21 +3,64 @@
 // found in the LICENSE file.
 
 use {
+    super::{format_sources, get_policy, unseal_sources, KeyConsumer},
     anyhow::{anyhow, Context, Error},
     fidl::endpoints::Proxy,
     fidl_fuchsia_fxfs::{CryptManagementMarker, CryptMarker, KeyPurpose},
     fs_management::filesystem::{ServingMultiVolumeFilesystem, ServingVolume},
     fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon as zx,
-    key_bag::{Aes256Key, KeyBagManager, WrappingKey, AES128_KEY_SIZE},
+    key_bag::{Aes256Key, KeyBagManager, WrappingKey, AES128_KEY_SIZE, AES256_KEY_SIZE},
     std::{ops::Deref, path::Path},
 };
 
-// As an invariant, `name` must be shorter than `key_bag::AES128_KEY_SIZE`.
-fn generate_insecure_key(name: &[u8]) -> WrappingKey {
-    let mut bytes = [0u8; AES128_KEY_SIZE];
-    bytes[..name.len()].copy_from_slice(&name);
-    WrappingKey::Aes128(bytes)
+async fn unwrap_or_create_keys(
+    mut keybag: KeyBagManager,
+    create: bool,
+) -> Result<(Aes256Key, Aes256Key), Error> {
+    let policy = get_policy().await?;
+    let sources = if create { format_sources(policy) } else { unseal_sources(policy) };
+
+    let mut last_err = anyhow!("no keys?");
+    for source in sources {
+        let key = source.get_key(KeyConsumer::Fxfs).await?;
+        let wrapping_key = match key.len() {
+            // unwrap is safe because we know the length of the requested array is the same length
+            // as the Vec in both branches.
+            AES128_KEY_SIZE => WrappingKey::Aes128(key.try_into().unwrap()),
+            AES256_KEY_SIZE => WrappingKey::Aes256(key.try_into().unwrap()),
+            _ => {
+                tracing::warn!("key from {:?} source was an invalid size - skipping", source);
+                last_err = anyhow!("invalid key size");
+                continue;
+            }
+        };
+
+        let mut unwrap_fn = |slot| {
+            if create {
+                keybag.new_key(slot, &wrapping_key).context("new key")
+            } else {
+                keybag.unwrap_key(slot, &wrapping_key).context("unwrapping key")
+            }
+        };
+
+        let data_unwrapped = match unwrap_fn(0) {
+            Ok(data_unwrapped) => data_unwrapped,
+            Err(e) => {
+                last_err = e.context("data key");
+                continue;
+            }
+        };
+        let metadata_unwrapped = match unwrap_fn(1) {
+            Ok(metadata_unwrapped) => metadata_unwrapped,
+            Err(e) => {
+                last_err = e.context("metadata key");
+                continue;
+            }
+        };
+        return Ok((data_unwrapped, metadata_unwrapped));
+    }
+    Err(last_err)
 }
 
 // Unwraps the data volume in `fs`.  Any failures should be treated as fatal and the filesystem
@@ -49,25 +92,10 @@ async fn unlock_or_init_data_volume<'a>(
     if create {
         std::fs::create_dir("/unencrypted_volume/keys")?;
     }
-    let mut keybag = KeyBagManager::open(Path::new("/unencrypted_volume/keys/fxfs-data"))?;
+    let keybag = KeyBagManager::open(Path::new("/unencrypted_volume/keys/fxfs-data"))?;
 
-    // TODO(fxbug.dev/94587): Use real hardware keys where available (i.e. load the policy from
-    // /pkg/config/zxcrypt).
-    // For legacy reasons, the key name is "zxcrypt"; this is so old recovery images will correctly
-    // wipe the data key when performing a factory reset.
-    // zxcrypt is the legacy crypto mechanism for minfs, which doesn't have its own encryption.
-    let unwrap_key = generate_insecure_key(b"zxcrypt");
+    let (data_unwrapped, metadata_unwrapped) = unwrap_or_create_keys(keybag, create).await?;
 
-    let mut unwrap_fn = |slot, wrapping_key| {
-        if create {
-            keybag.new_key(slot, wrapping_key).map_err(|e| anyhow!(e))
-        } else {
-            keybag.unwrap_key(slot, wrapping_key).map_err(|e| anyhow!(e))
-        }
-    };
-    let data_unwrapped = unwrap_fn(0, &unwrap_key).context("Failed to add or unwrap data key")?;
-    let metadata_unwrapped =
-        unwrap_fn(1, &unwrap_key).context("Failed to add or unwrap metadata key")?;
     init_crypt_service(data_unwrapped, metadata_unwrapped).await?;
 
     // OK, crypt is seeded with the stored keys, so we can finally open the data volume.

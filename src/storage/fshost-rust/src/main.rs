@@ -17,14 +17,13 @@ use {
 };
 
 mod config;
+mod crypt;
 mod device;
 mod environment;
-mod fxfs;
 mod manager;
 mod matcher;
 mod service;
 mod watcher;
-mod zxcrypt;
 
 #[fuchsia::main]
 async fn main() -> Result<()> {
