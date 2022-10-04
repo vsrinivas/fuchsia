@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/hw/reg.h>
@@ -12,31 +14,33 @@
 #include <soc/aml-common/aml-thermal.h>
 
 #include "av400.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 
 namespace av400 {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
-static constexpr pbus_mmio_t thermal_pll_mmios[] = {
-    {
+static const std::vector<fpbus::Mmio> thermal_pll_mmios{
+    {{
         .base = A5_TEMP_SENSOR_PLL_BASE,
         .length = A5_TEMP_SENSOR_PLL_LENGTH,
-    },
-    {
+    }},
+    {{
         // we read the trim info from the secure register
         // and save it in the sticky register
         .base = A5_TEMP_SENSOR_PLL_TRIM,
         .length = A5_TEMP_SENSOR_PLL_TRIM_LENGTH,
-    },
-    {
+    }},
+    {{
         .base = A5_CLK_BASE,
         .length = A5_CLK_LENGTH,
-    },
+    }},
 };
 
-static constexpr pbus_irq_t thermal_pll_irqs[] = {
-    {
+static const std::vector<fpbus::Irq> thermal_pll_irqs{
+    {{
         .irq = A5_TS_PLL_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
+    }},
 };
 
 constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c,
@@ -66,37 +70,43 @@ static constexpr fuchsia_hardware_thermal_ThermalDeviceInfo thermal_pll_config =
     .opps = {},
 };
 
-const pbus_metadata_t thermal_pll_metadata[] = {
-    {
+static const std::vector<fpbus::Metadata> thermal_pll_metadata{
+    {{
         .type = DEVICE_METADATA_THERMAL_CONFIG,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&thermal_pll_config),
-        .data_size = sizeof(thermal_pll_config),
-    },
+        .data = std::vector<uint8_t>(
+            reinterpret_cast<const uint8_t*>(&thermal_pll_config),
+            reinterpret_cast<const uint8_t*>(&thermal_pll_config) + sizeof(thermal_pll_config)),
+    }},
 };
 
-static constexpr pbus_dev_t thermal_pll_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "aml-thermal-pll";
-  dev.vid = PDEV_VID_AMLOGIC;
-  dev.pid = PDEV_PID_AMLOGIC_A5;
-  dev.did = PDEV_DID_AMLOGIC_THERMAL_PLL;
-  dev.mmio_list = thermal_pll_mmios;
-  dev.mmio_count = std::size(thermal_pll_mmios);
-  dev.irq_list = thermal_pll_irqs;
-  dev.irq_count = std::size(thermal_pll_irqs);
-  dev.metadata_list = thermal_pll_metadata;
-  dev.metadata_count = std::size(thermal_pll_metadata);
+static const fpbus::Node thermal_pll_dev = []() {
+  fpbus::Node dev = {};
+  dev.name() = "aml-thermal-pll";
+  dev.vid() = PDEV_VID_AMLOGIC;
+  dev.pid() = PDEV_PID_AMLOGIC_A5;
+  dev.did() = PDEV_DID_AMLOGIC_THERMAL_PLL;
+  dev.mmio() = thermal_pll_mmios;
+  dev.irq() = thermal_pll_irqs;
+  dev.metadata() = thermal_pll_metadata;
   return dev;
 }();
 
 zx_status_t Av400::ThermalInit() {
-  auto status = pbus_.DeviceAdd(&thermal_pll_dev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "DeviceAdd failed: %s", zx_status_get_string(status));
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('THER');
+  auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, thermal_pll_dev));
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: NodeAdd Thermal(thermal_pll_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: NodeAdd Thermal(thermal_pll_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
-  return status;
+  return ZX_OK;
 }
 
 }  // namespace av400

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/metadata.h>
@@ -12,26 +14,28 @@
 
 #include "av400.h"
 #include "src/devices/board/drivers/av400/pwm_init_bind.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 
 namespace av400 {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
-static const pbus_mmio_t pwm_mmios[] = {
-    {
+static const std::vector<fpbus::Mmio> pwm_mmios{
+    {{
         .base = A5_PWM_AB_BASE,
         .length = A5_PWM_LENGTH,
-    },
-    {
+    }},
+    {{
         .base = A5_PWM_CD_BASE,
         .length = A5_PWM_LENGTH,
-    },
-    {
+    }},
+    {{
         .base = A5_PWM_EF_BASE,
         .length = A5_PWM_LENGTH,
-    },
-    {
+    }},
+    {{
         .base = A5_PWM_GH_BASE,
         .length = A5_PWM_LENGTH,
-    },
+    }},
 };
 
 static const pwm_id_t pwm_ids[] = {
@@ -49,32 +53,38 @@ static const pwm_id_t pwm_ids[] = {
     {A5_PWM_H},
 };
 
-static const pbus_metadata_t pwm_metadata[] = {
-    {
+static const std::vector<fpbus::Metadata> pwm_metadata{
+    {{
         .type = DEVICE_METADATA_PWM_IDS,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&pwm_ids),
-        .data_size = sizeof(pwm_ids),
-    },
+        .data = std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(&pwm_ids),
+                                     reinterpret_cast<const uint8_t*>(&pwm_ids) + sizeof(pwm_ids)),
+    }},
 };
 
-static pbus_dev_t pwm_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "pwm";
-  dev.vid = PDEV_VID_AMLOGIC;
-  dev.pid = PDEV_PID_AMLOGIC_A5;
-  dev.did = PDEV_DID_AMLOGIC_PWM;
-  dev.mmio_list = pwm_mmios;
-  dev.mmio_count = std::size(pwm_mmios);
-  dev.metadata_list = pwm_metadata;
-  dev.metadata_count = std::size(pwm_metadata);
+static const fpbus::Node pwm_dev = []() {
+  fpbus::Node dev = {};
+  dev.name() = "pwm";
+  dev.vid() = PDEV_VID_AMLOGIC;
+  dev.pid() = PDEV_PID_AMLOGIC_A5;
+  dev.did() = PDEV_DID_AMLOGIC_PWM;
+  dev.mmio() = pwm_mmios;
+  dev.metadata() = pwm_metadata;
   return dev;
 }();
 
 zx_status_t Av400::PwmInit() {
-  zx_status_t status = pbus_.DeviceAdd(&pwm_dev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed %s", __func__, zx_status_get_string(status));
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('PWM_');
+  auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, pwm_dev));
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: NodeAdd Pwm(pwm_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: NodeAdd Pwm(pwm_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   // Add a composite device for pwm init driver.
@@ -95,7 +105,7 @@ zx_status_t Av400::PwmInit() {
       .metadata_count = 0,
   };
 
-  status = DdkAddComposite("pwm-init", &comp_desc);
+  zx_status_t status = DdkAddComposite("pwm-init", &comp_desc);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DdkAddComposite failed: %d", __func__, status);
     return status;

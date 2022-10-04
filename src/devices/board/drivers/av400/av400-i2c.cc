@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/metadata.h>
@@ -12,33 +14,35 @@
 #include <soc/aml-a5/a5-hw.h>
 
 #include "av400.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 #include "src/devices/lib/fidl-metadata/i2c.h"
 
 namespace av400 {
+namespace fpbus = fuchsia_hardware_platform_bus;
 using i2c_channel_t = fidl_metadata::i2c::Channel;
 
 // Only the I2C_C and I2C_D busses are used on AV400
 
-static const pbus_mmio_t i2c_mmios[] = {
-    {
+static const std::vector<fpbus::Mmio> i2c_mmios{
+    {{
         .base = A5_I2C_C_BASE,
         .length = A5_I2C_LENGTH,
-    },
-    {
+    }},
+    {{
         .base = A5_I2C_D_BASE,
         .length = A5_I2C_LENGTH,
-    },
+    }},
 };
 
-static const pbus_irq_t i2c_irqs[] = {
-    {
+static const std::vector<fpbus::Irq> i2c_irqs{
+    {{
         .irq = A5_I2C_C_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
-    {
+    }},
+    {{
         .irq = A5_I2C_D_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
+    }},
 };
 
 static const i2c_channel_t i2c_channels[] = {
@@ -117,15 +121,13 @@ static const i2c_channel_t i2c_channels[] = {
 };
 
 zx_status_t Av400::I2cInit() {
-  pbus_dev_t i2c_dev = {};
-  i2c_dev.name = "i2c";
-  i2c_dev.vid = PDEV_VID_AMLOGIC;
-  i2c_dev.pid = PDEV_PID_GENERIC;
-  i2c_dev.did = PDEV_DID_AMLOGIC_I2C;
-  i2c_dev.mmio_list = i2c_mmios;
-  i2c_dev.mmio_count = std::size(i2c_mmios);
-  i2c_dev.irq_list = i2c_irqs;
-  i2c_dev.irq_count = std::size(i2c_irqs);
+  fpbus::Node i2c_dev;
+  i2c_dev.name() = "i2c";
+  i2c_dev.vid() = PDEV_VID_AMLOGIC;
+  i2c_dev.pid() = PDEV_PID_GENERIC;
+  i2c_dev.did() = PDEV_DID_AMLOGIC_I2C;
+  i2c_dev.mmio() = i2c_mmios;
+  i2c_dev.irq() = i2c_irqs;
 
   auto i2c_status = fidl_metadata::i2c::I2CChannelsToFidl(i2c_channels);
   if (i2c_status.is_error()) {
@@ -135,13 +137,13 @@ zx_status_t Av400::I2cInit() {
 
   auto& data = i2c_status.value();
 
-  pbus_metadata_t i2c_metadata = {
-      .type = DEVICE_METADATA_I2C_CHANNELS,
-      .data_buffer = data.data(),
-      .data_size = data.size(),
+  std::vector<fpbus::Metadata> i2c_metadata{
+      {{
+          .type = DEVICE_METADATA_I2C_CHANNELS,
+          .data = std::move(data),
+      }},
   };
-  i2c_dev.metadata_list = &i2c_metadata;
-  i2c_dev.metadata_count = 1;
+  i2c_dev.metadata() = std::move(i2c_metadata);
 
   // I2C_C
   gpio_impl_.SetAltFunction(A5_GPIOD(15), A5_GPIOD_15_I2C2_SCL_FN);
@@ -151,10 +153,18 @@ zx_status_t Av400::I2cInit() {
   gpio_impl_.SetAltFunction(A5_GPIOD(13), A5_GPIOD_13_I2C3_SCL_FN);
   gpio_impl_.SetAltFunction(A5_GPIOD(12), A5_GPIOD_12_I2C3_SDA_FN);
 
-  zx_status_t status = pbus_.DeviceAdd(&i2c_dev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "I2cInit: DeviceAdd failed: %s", zx_status_get_string(status));
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('I2C_');
+  auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, i2c_dev));
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: NodeAdd I2c(i2c_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: NodeAdd I2c(i2c_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   return ZX_OK;

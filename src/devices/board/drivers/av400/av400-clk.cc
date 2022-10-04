@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/metadata.h>
@@ -14,25 +15,24 @@
 #include <soc/aml-meson/a5-clk.h>
 
 #include "av400.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 
 namespace av400 {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
-constexpr pbus_mmio_t clk_mmios[] = {
-    // CLK Registers
-    {
+static const std::vector<fpbus::Mmio> clk_mmios{
+    {{
         .base = A5_CLK_BASE,
         .length = A5_CLK_LENGTH,
-    },
-    // ANA Registers - kDosbusMmio
-    {
+    }},
+    {{
         .base = A5_ANACTRL_BASE,
         .length = A5_ANACTRL_LENGTH,
-    },
-    // CLK MSR block
-    {
+    }},
+    {{
         .base = A5_MSR_CLK_BASE,
         .length = A5_MSR_CLK_LENGTH,
-    },
+    }},
 };
 
 constexpr clock_id_t clock_ids[] = {
@@ -41,42 +41,49 @@ constexpr clock_id_t clock_ids[] = {
     {a5_clk::CLK_HIFI_PLL},    {a5_clk::CLK_MPLL0},
 };
 
-const pbus_metadata_t clock_metadata[] = {
-    {
+static const std::vector<fpbus::Metadata> clock_metadata{
+    {{
         .type = DEVICE_METADATA_CLOCK_IDS,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&clock_ids),
-        .data_size = sizeof(clock_ids),
-    },
+        .data =
+            std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(&clock_ids),
+                                 reinterpret_cast<const uint8_t*>(&clock_ids) + sizeof(clock_ids)),
+    }},
 };
 
-static constexpr pbus_smc_t clk_smcs[] = {
-    {
+static const std::vector<fpbus::Smc> clk_smcs{
+    {{
         .service_call_num_base = ARM_SMC_SERVICE_CALL_NUM_SIP_SERVICE_BASE,
         .count = ARM_SMC_SERVICE_CALL_NUM_SIP_SERVICE_LENGTH,
         .exclusive = false,
-    },
+    }},
 };
 
-static const pbus_dev_t clk_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "av400-clk";
-  dev.vid = PDEV_VID_AMLOGIC;
-  dev.pid = PDEV_PID_AMLOGIC_A5;
-  dev.did = PDEV_DID_AMLOGIC_A5_CLK;
-  dev.mmio_list = clk_mmios;
-  dev.mmio_count = std::size(clk_mmios);
-  dev.metadata_list = clock_metadata;
-  dev.metadata_count = std::size(clock_metadata);
-  dev.smc_list = clk_smcs;
-  dev.smc_count = std::size(clk_smcs);
+static const fpbus::Node clk_dev = []() {
+  fpbus::Node dev = {};
+  dev.name() = "av400-clk";
+  dev.vid() = PDEV_VID_AMLOGIC;
+  dev.pid() = PDEV_PID_AMLOGIC_A5;
+  dev.did() = PDEV_DID_AMLOGIC_A5_CLK;
+  dev.mmio() = clk_mmios;
+  dev.metadata() = clock_metadata;
+  dev.smc() = clk_smcs;
   return dev;
 }();
 
 zx_status_t Av400::ClkInit() {
-  zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_CLOCK_IMPL, &clk_dev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed, st = %s", __func__, zx_status_get_string(status));
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('CLK_');
+  auto result = pbus_.buffer(arena)->ProtocolNodeAdd(ZX_PROTOCOL_CLOCK_IMPL,
+                                                     fidl::ToWire(fidl_arena, clk_dev));
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: ProtocolNodeAdd Clk(clk_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: ProtocolNodeAdd Clk(clk_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   clk_impl_ = ddk::ClockImplProtocolClient(parent());

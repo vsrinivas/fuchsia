@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <fuchsia/hardware/sdmmc/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/hw/reg.h>
@@ -15,25 +17,29 @@
 
 #include "src/devices/board/drivers/av400/av400-emmc-bind.h"
 #include "src/devices/board/drivers/av400/av400.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 
 namespace av400 {
-static const pbus_mmio_t emmc_mmios[] = {{
-    .base = A5_EMMC_C_BASE,
-    .length = A5_EMMC_C_LENGTH,
-}};
-
-static const pbus_irq_t emmc_irqs[] = {
-    {
-        .irq = A5_SD_EMMC_C_IRQ,
-        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
+namespace fpbus = fuchsia_hardware_platform_bus;
+static const std::vector<fpbus::Mmio> emmc_mmios{
+    {{
+        .base = A5_EMMC_C_BASE,
+        .length = A5_EMMC_C_LENGTH,
+    }},
 };
 
-static const pbus_bti_t emmc_btis[] = {
-    {
+static const std::vector<fpbus::Irq> emmc_irqs{
+    {{
+        .irq = A5_SD_EMMC_C_IRQ,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    }},
+};
+
+static const std::vector<fpbus::Bti> emmc_btis{
+    {{
         .iommu_index = 0,
         .bti_id = BTI_EMMC,
-    },
+    }},
 };
 
 static aml_sdmmc_config_t config = {
@@ -45,39 +51,32 @@ static aml_sdmmc_config_t config = {
     .use_new_tuning = true,
 };
 
-static const pbus_metadata_t emmc_metadata[] = {
-    {
+static const std::vector<fpbus::Metadata> emmc_metadata{
+    {{
         .type = DEVICE_METADATA_PRIVATE,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&config),
-        .data_size = sizeof(config),
-    },
+        .data = std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(&config),
+                                     reinterpret_cast<const uint8_t*>(&config) + sizeof(config)),
+    }},
 };
 
-static const pbus_boot_metadata_t emmc_boot_metadata[] = {
-    {
+static const std::vector<fpbus::BootMetadata> emmc_boot_metadata{
+    {{
         .zbi_type = DEVICE_METADATA_PARTITION_MAP,
         .zbi_extra = 0,
-    },
+    }},
 };
 
 zx_status_t Av400::EmmcInit() {
-  zx_status_t status;
-
-  pbus_dev_t emmc_dev = {};
-  emmc_dev.name = "aml_emmc";
-  emmc_dev.vid = PDEV_VID_AMLOGIC;
-  emmc_dev.pid = PDEV_PID_AMLOGIC_A5;
-  emmc_dev.did = PDEV_DID_AMLOGIC_SDMMC_C;
-  emmc_dev.mmio_list = emmc_mmios;
-  emmc_dev.mmio_count = std::size(emmc_mmios);
-  emmc_dev.irq_list = emmc_irqs;
-  emmc_dev.irq_count = std::size(emmc_irqs);
-  emmc_dev.bti_list = emmc_btis;
-  emmc_dev.bti_count = std::size(emmc_btis);
-  emmc_dev.metadata_list = emmc_metadata;
-  emmc_dev.metadata_count = std::size(emmc_metadata);
-  emmc_dev.boot_metadata_list = emmc_boot_metadata;
-  emmc_dev.boot_metadata_count = std::size(emmc_boot_metadata);
+  fpbus::Node emmc_dev;
+  emmc_dev.name() = "aml_emmc";
+  emmc_dev.vid() = PDEV_VID_AMLOGIC;
+  emmc_dev.pid() = PDEV_PID_AMLOGIC_A5;
+  emmc_dev.did() = PDEV_DID_AMLOGIC_SDMMC_C;
+  emmc_dev.mmio() = emmc_mmios;
+  emmc_dev.irq() = emmc_irqs;
+  emmc_dev.bti() = emmc_btis;
+  emmc_dev.metadata() = emmc_metadata;
+  emmc_dev.boot_metadata() = emmc_boot_metadata;
 
   // set alternate functions to enable EMMC
   gpio_impl_.SetAltFunction(A5_GPIOB(0), A5_GPIOB_0_EMMC_D0_FN);
@@ -92,11 +91,22 @@ zx_status_t Av400::EmmcInit() {
   gpio_impl_.SetAltFunction(A5_GPIOB(10), A5_GPIOB_10_EMMC_CMD_FN);
   gpio_impl_.SetAltFunction(A5_GPIOB(11), A5_GPIOB_11_EMMC_DS_FN);
 
-  status = pbus_.AddComposite(&emmc_dev, reinterpret_cast<uint64_t>(av400_emmc_fragments),
-                              std::size(av400_emmc_fragments), "pdev");
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "SdEmmcInit could not add emmc_dev: %s\n", zx_status_get_string(status));
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('EMMC');
+  auto result = pbus_.buffer(arena)->AddComposite(
+      fidl::ToWire(fidl_arena, emmc_dev),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, av400_emmc_fragments,
+                                               std::size(av400_emmc_fragments)),
+      "pdev");
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddComposite Emmc(emmc_dev) request failed: %s", __func__,
+           result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddComposite Emmc(emmc_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   return ZX_OK;

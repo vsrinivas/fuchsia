@@ -5,10 +5,11 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_AV400_AV400_H_
 #define SRC_DEVICES_BOARD_DRIVERS_AV400_AV400_H_
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <fuchsia/hardware/clockimpl/cpp/banjo.h>
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
 #include <fuchsia/hardware/iommu/cpp/banjo.h>
-#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <lib/ddk/device.h>
 #include <threads.h>
 
@@ -18,7 +19,10 @@
 #include <fbl/macros.h>
 #include <soc/aml-a5/a5-hw.h>
 
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
+
 namespace av400 {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 // BTI IDs for our devices
 enum {
@@ -59,8 +63,9 @@ using Av400Type = ddk::Device<Av400, ddk::Initializable>;
 // This is the main class for the platform bus driver.
 class Av400 : public Av400Type {
  public:
-  Av400(zx_device_t* parent, iommu_protocol_t* iommu)
-      : Av400Type(parent), pbus_(parent), iommu_(iommu) {}
+  Av400(zx_device_t* parent, fdf::ClientEnd<fuchsia_hardware_platform_bus::PlatformBus> pbus,
+        iommu_protocol_t* iommu)
+      : Av400Type(parent), pbus_(std::move(pbus)), iommu_(iommu) {}
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
@@ -95,7 +100,7 @@ class Av400 : public Av400Type {
 
   int Thread();
 
-  ddk::PBusProtocolClient pbus_;
+  fdf::WireSyncClient<fuchsia_hardware_platform_bus::PlatformBus> pbus_;
   std::optional<ddk::InitTxn> init_txn_;
   ddk::IommuProtocolClient iommu_;
   thrd_t thread_;

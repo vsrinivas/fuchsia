@@ -5,6 +5,8 @@
 #include "src/devices/board/drivers/av400/av400.h"
 
 #include <assert.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -19,25 +21,31 @@
 #include <fbl/alloc_checker.h>
 
 #include "src/devices/board/drivers/av400/av400-bind.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 
 namespace av400 {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
 zx_status_t Av400::Create(void* ctx, zx_device_t* parent) {
   iommu_protocol_t iommu;
 
-  zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_IOMMU, &iommu);
+  auto endpoints = fdf::CreateEndpoints<fuchsia_hardware_platform_bus::PlatformBus>();
+  if (endpoints.is_error()) {
+    return endpoints.error_value();
+  }
+  zx_status_t status = device_connect_runtime_protocol(
+      parent, fpbus::Service::PlatformBus::ServiceName, fpbus::Service::PlatformBus::Name,
+      endpoints->server.TakeHandle().release());
+
+  status = device_get_protocol(parent, ZX_PROTOCOL_IOMMU, &iommu);
   if (status != ZX_OK) {
     return status;
   }
 
   fbl::AllocChecker ac;
-  auto board = fbl::make_unique_checked<Av400>(&ac, parent, &iommu);
+  auto board = fbl::make_unique_checked<Av400>(&ac, parent, std::move(endpoints->client), &iommu);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
-  }
-
-  if (!board->pbus_.is_valid()) {
-    return ZX_ERR_INTERNAL;
   }
 
   status = board->DdkAdd("av400");

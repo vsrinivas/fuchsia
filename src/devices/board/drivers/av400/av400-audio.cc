@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
+#include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/metadata.h>
@@ -18,66 +20,72 @@
 #include "av400.h"
 #include "src/devices/board/drivers/av400/audio-tas5707-stereo-bind.h"
 #include "src/devices/board/drivers/av400/tdm-i2s-bind.h"
+#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 
 namespace av400 {
+namespace fpbus = fuchsia_hardware_platform_bus;
 
-static constexpr pbus_mmio_t audio_mmios[] = {{
-    .base = A5_EE_AUDIO_BASE,
-    .length = A5_EE_AUDIO_LENGTH,
-}};
+static const std::vector<fpbus::Mmio> audio_mmios{
+    {{
+        .base = A5_EE_AUDIO_BASE,
+        .length = A5_EE_AUDIO_LENGTH,
+    }},
+};
 
-static constexpr pbus_bti_t tdm_btis[] = {
-    {
+static const std::vector<fpbus::Bti> tdm_btis{
+    {{
         .iommu_index = 0,
         .bti_id = BTI_AUDIO_OUT,
-    },
+    }},
 };
 
-static constexpr pbus_bti_t tdm_in_btis[] = {
-    {
+static const std::vector<fpbus::Bti> tdm_in_btis{
+    {{
         .iommu_index = 0,
         .bti_id = BTI_AUDIO_IN,
-    },
+    }},
 };
 
-static constexpr pbus_irq_t frddr_b_irqs[] = {
-    {
+static const std::vector<fpbus::Irq> frddr_b_irqs{
+    {{
         .irq = A5_AUDIO_FRDDR_B,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
+    }},
 };
 
-static constexpr pbus_irq_t toddr_a_irqs[] = {
-    {
+static const std::vector<fpbus::Irq> toddr_a_irqs{
+    {{
         .irq = A5_AUDIO_TODDR_A,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
+    }},
 };
 
-static constexpr pbus_mmio_t pdm_mmios[] = {{
-                                                .base = A5_EE_PDM_BASE,
-                                                .length = A5_EE_PDM_LENGTH,
-                                            },
-                                            {
-                                                .base = A5_EE_AUDIO_BASE,
-                                                .length = A5_EE_AUDIO_LENGTH,
-                                            },
-                                            {
-                                                .base = A5_EE_AUDIO2_BASE,
-                                                .length = A5_EE_AUDIO2_LENGTH,
-                                            }};
-static constexpr pbus_bti_t pdm_btis[] = {
-    {
+static const std::vector<fpbus::Mmio> pdm_mmios{
+    {{
+        .base = A5_EE_PDM_BASE,
+        .length = A5_EE_PDM_LENGTH,
+    }},
+    {{
+        .base = A5_EE_AUDIO_BASE,
+        .length = A5_EE_AUDIO_LENGTH,
+    }},
+    {{
+        .base = A5_EE_AUDIO2_BASE,
+        .length = A5_EE_AUDIO2_LENGTH,
+    }},
+};
+static const std::vector<fpbus::Bti> pdm_btis{
+    {{
         .iommu_index = 0,
         .bti_id = BTI_AUDIO_IN,
-    },
+    }},
 };
 
-static constexpr pbus_irq_t toddr_b_irqs[] = {
-    {
+static const std::vector<fpbus::Irq> toddr_b_irqs{
+    {{
         .irq = A5_AUDIO_TODDR_B,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
+    }},
 };
 
 static zx_status_t InitAudioTop(void) {
@@ -267,37 +275,44 @@ zx_status_t Av400::AudioInit() {
   metadata.codecs.channels_to_use_bitmask[0] = 0x1;
   metadata.codecs.ring_buffer_channels_to_use_bitmask[0] = 0x3;
 
-  pbus_metadata_t tdm_metadata[] = {
-      {
+  std::vector<fpbus::Metadata> tdm_metadata{
+      {{
           .type = DEVICE_METADATA_PRIVATE,
-          .data_buffer = reinterpret_cast<uint8_t*>(&metadata),
-          .data_size = sizeof(metadata),
-      },
+          .data =
+              std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(&metadata),
+                                   reinterpret_cast<const uint8_t*>(&metadata) + sizeof(metadata)),
+      }},
   };
 
-  pbus_dev_t tdm_dev = {};
+  fpbus::Node tdm_dev;
   char name[32];
   snprintf(name, sizeof(name), "av400-i2s-audio-out");
-  tdm_dev.name = name;
-  tdm_dev.vid = PDEV_VID_AMLOGIC;
-  tdm_dev.pid = PDEV_PID_AMLOGIC_A5;
-  tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
-  tdm_dev.instance_id = tdm_instance_id++;
-  tdm_dev.mmio_list = audio_mmios;
-  tdm_dev.mmio_count = std::size(audio_mmios);
-  tdm_dev.bti_list = tdm_btis;
-  tdm_dev.bti_count = std::size(tdm_btis);
-  tdm_dev.irq_list = frddr_b_irqs;
-  tdm_dev.irq_count = std::size(frddr_b_irqs);
-  tdm_dev.metadata_list = tdm_metadata;
-  tdm_dev.metadata_count = std::size(tdm_metadata);
+  tdm_dev.name() = name;
+  tdm_dev.vid() = PDEV_VID_AMLOGIC;
+  tdm_dev.pid() = PDEV_PID_AMLOGIC_A5;
+  tdm_dev.did() = PDEV_DID_AMLOGIC_TDM;
+  tdm_dev.instance_id() = tdm_instance_id++;
+  tdm_dev.mmio() = audio_mmios;
+  tdm_dev.bti() = tdm_btis;
+  tdm_dev.irq() = frddr_b_irqs;
+  tdm_dev.metadata() = tdm_metadata;
 
-  status = pbus_.CompositeDeviceAdd(&tdm_dev, reinterpret_cast<uint64_t>(tdm_i2s_fragments),
-                                    std::size(tdm_i2s_fragments), nullptr);
-
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: I2S CompositeDeviceAdd failed: %d", __FILE__, status);
-    return status;
+  fidl::Arena<> fidl_arena;
+  fdf::Arena arena('AUDI');
+  auto result = pbus_.buffer(arena)->AddCompositeImplicitPbusFragment(
+      fidl::ToWire(fidl_arena, tdm_dev),
+      platform_bus_composite::MakeFidlFragment(fidl_arena, tdm_i2s_fragments,
+                                               std::size(tdm_i2s_fragments)),
+      {});
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment Audio(tdm_dev) request failed: %s",
+           __func__, result.FormatDescription().data());
+    return result.status();
+  }
+  if (result->is_error()) {
+    zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment Audio(tdm_dev) failed: %s", __func__,
+           zx_status_get_string(result->error_value()));
+    return result->error_value();
   }
 
   {
@@ -331,35 +346,39 @@ zx_status_t Av400::AudioInit() {
     metadata.swaps = 0x10;
     metadata.lanes_enable_mask[0] = 3;
 
-    pbus_metadata_t tdm_metadata[] = {
-        {
+    std::vector<fpbus::Metadata> tdm_metadata{
+        {{
             .type = DEVICE_METADATA_PRIVATE,
-            .data_buffer = reinterpret_cast<uint8_t*>(&metadata),
-            .data_size = sizeof(metadata),
-        },
+            .data = std::vector<uint8_t>(
+                reinterpret_cast<const uint8_t*>(&metadata),
+                reinterpret_cast<const uint8_t*>(&metadata) + sizeof(metadata)),
+        }},
     };
 
-    pbus_dev_t tdm_dev = {};
+    fpbus::Node tdm_dev;
     char name[32];
     snprintf(name, sizeof(name), "av400-i2s-audio-in");
-    tdm_dev.name = name;
-    tdm_dev.vid = PDEV_VID_AMLOGIC;
-    tdm_dev.pid = PDEV_PID_AMLOGIC_A5;
-    tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
-    tdm_dev.instance_id = tdm_instance_id++;
-    tdm_dev.mmio_list = audio_mmios;
-    tdm_dev.mmio_count = std::size(audio_mmios);
-    tdm_dev.bti_list = tdm_in_btis;
-    tdm_dev.bti_count = std::size(tdm_in_btis);
-    tdm_dev.irq_list = toddr_a_irqs;
-    tdm_dev.irq_count = std::size(toddr_a_irqs);
-    tdm_dev.metadata_list = tdm_metadata;
-    tdm_dev.metadata_count = std::size(tdm_metadata);
+    tdm_dev.name() = name;
+    tdm_dev.vid() = PDEV_VID_AMLOGIC;
+    tdm_dev.pid() = PDEV_PID_AMLOGIC_A5;
+    tdm_dev.did() = PDEV_DID_AMLOGIC_TDM;
+    tdm_dev.instance_id() = tdm_instance_id++;
+    tdm_dev.mmio() = audio_mmios;
+    tdm_dev.bti() = tdm_in_btis;
+    tdm_dev.irq() = toddr_a_irqs;
+    tdm_dev.metadata() = tdm_metadata;
 
-    status = pbus_.CompositeDeviceAdd(&tdm_dev, 0, 0, nullptr);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "CompositeDeviceAdd failed: %s", zx_status_get_string(status));
-      return status;
+    result = pbus_.buffer(arena)->AddCompositeImplicitPbusFragment(
+        fidl::ToWire(fidl_arena, tdm_dev), {}, {});
+    if (!result.ok()) {
+      zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment Audio(tdm_dev) request failed: %s",
+             __func__, result.FormatDescription().data());
+      return result.status();
+    }
+    if (result->is_error()) {
+      zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment Audio(tdm_dev) failed: %s", __func__,
+             zx_status_get_string(result->error_value()));
+      return result->error_value();
     }
   }
 
@@ -381,35 +400,38 @@ zx_status_t Av400::AudioInit() {
     metadata.version = metadata::AmlVersion::kA5;
     metadata.sysClockDivFactor = 6;  // 770Mhz / 6   = 125Mhz
     metadata.dClockDivFactor = 250;  // 770Mhz / 250 = 3.072Mhz
-    pbus_metadata_t pdm_metadata[] = {
-        {
+    std::vector<fpbus::Metadata> pdm_metadata{
+        {{
             .type = DEVICE_METADATA_PRIVATE,
-            .data_buffer = reinterpret_cast<uint8_t*>(&metadata),
-            .data_size = sizeof(metadata),
-        },
+            .data = std::vector<uint8_t>(
+                reinterpret_cast<const uint8_t*>(&metadata),
+                reinterpret_cast<const uint8_t*>(&metadata) + sizeof(metadata)),
+        }},
     };
 
-    pbus_dev_t pdm_dev = {};
+    fpbus::Node pdm_dev;
     char pdm_name[32];
     snprintf(pdm_name, sizeof(pdm_name), "av400-pdm-audio-in");
-    pdm_dev.name = pdm_name;
-    pdm_dev.vid = PDEV_VID_AMLOGIC;
-    pdm_dev.pid = PDEV_PID_AMLOGIC_A5;
-    pdm_dev.did = PDEV_DID_AMLOGIC_PDM;
-    pdm_dev.mmio_list = pdm_mmios;
-    pdm_dev.mmio_count = std::size(pdm_mmios);
-    pdm_dev.bti_list = pdm_btis;
-    pdm_dev.bti_count = std::size(pdm_btis);
+    pdm_dev.name() = pdm_name;
+    pdm_dev.vid() = PDEV_VID_AMLOGIC;
+    pdm_dev.pid() = PDEV_PID_AMLOGIC_A5;
+    pdm_dev.did() = PDEV_DID_AMLOGIC_PDM;
+    pdm_dev.mmio() = pdm_mmios;
+    pdm_dev.bti() = pdm_btis;
     // pdm use toddr_b by default; (src/media/audio/drivers/aml-g12-pdm/audio-stream-in.cc)
-    pdm_dev.irq_list = toddr_b_irqs;
-    pdm_dev.irq_count = std::size(toddr_b_irqs);
-    pdm_dev.metadata_list = pdm_metadata;
-    pdm_dev.metadata_count = std::size(pdm_metadata);
+    pdm_dev.irq() = toddr_b_irqs;
+    pdm_dev.metadata() = pdm_metadata;
 
-    status = pbus_.DeviceAdd(&pdm_dev);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s adding audio input device failed %d", __FILE__, status);
-      return status;
+    auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, pdm_dev));
+    if (!result.ok()) {
+      zxlogf(ERROR, "%s: NodeAdd Audio(pdm_dev) request failed: %s", __func__,
+             result.FormatDescription().data());
+      return result.status();
+    }
+    if (result->is_error()) {
+      zxlogf(ERROR, "%s: NodeAdd Audio(pdm_dev) failed: %s", __func__,
+             zx_status_get_string(result->error_value()));
+      return result->error_value();
     }
   }
 
