@@ -44,34 +44,25 @@ Examples:
 ## Relative Monikers {#relative}
 
 Represented by the minimal sequence of child monikers encountered when tracing
-upwards from a source to the common ancestor of the source and target and then
 downwards to the target.
 
-A relative path begins with `.` and is followed by path segments. ` \ ` denotes
-an upwards traversal segment. `/` denotes a downwards traversal segment. There
-is no trailing ` \ ` or `/`.
+A relative path begins with `.` and is followed by path segments. `/` denotes a
+downwards traversal segment. There is no trailing `/`. Relative monikers do not
+support upward traversal (from child to parent).
 
 Relative monikers are invertible; a path from source to target can be
-transformed into a path from target to the source because information about
-both endpoints are fully encoded by the representation.
+transformed into a path from target to the source because information about both
+endpoints are fully encoded by the representation.
 
-In contrast, file system paths are not invertible because they use `..`
-to denote upwards traversal so some inverse traversal information is missing.
+In contrast, file system paths are not invertible because they use `..` to
+denote upwards traversal so some inverse traversal information is missing.
 
-To maintain invertibility, the syntax for denoting paths varies slightly
-for upward and downward traversals. A downward path segment is a child moniker
-of one of the current component instance's children: `./carol:2`. Conversely,
-an upward path segment *is* the child moniker of one of the current component
-instances, according to its parent: `.\alice:2/bob:0`.
-The reason that the child moniker is explicitly specified in the upward path
-(instead of a generic "upward traversal" marker like `..`) is that otherwise the
-relative moniker would not be invertible, and would not uniquely identify a
-component instance. For downward traversals, the paths don't need to include
-the parent's name to be traceable because a child only has *one* parent.
-However, for upward traversals the source path can be one of many children of
-its parent path.
+A downward path segment is a child moniker of one of the current component
+instance's children: `./carol:2`. For downward traversals, the paths don't need
+to include the parent's name to be traceable because a child only has *one*
+parent.
 
-Syntax: `.\{path from source to ancestor}/{path from ancestor to target}`
+Syntax: `./{path from ancestor to target}`
 
 The following diagram shows an example component topology, with all relative
 monikers that can be derived from the source component `alice` labeled. Note
@@ -85,7 +76,6 @@ Examples:
 - `.`: self - no traversal needed
 - `./carol:0`: a child - traverse down `carol:0`
 - `./carol:0/sandy:0`: a grandchild - traverse down `carol:0` then down `sandy:0`
-- `.\alice:0/bob:0`: a cousin - traverse up `alice:0` then down `bob:0`
 - `./support:dan:1`: a child - traverse down into collection child `support:dan:1`
 
 ## Absolute Monikers {#absolute}
