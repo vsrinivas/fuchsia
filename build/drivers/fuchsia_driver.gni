@@ -13,7 +13,7 @@ import("//build/zircon/c_utils.gni")
 # Parameters
 #
 # Flags: cflags, cflags_c, cflags_cc,  asmflags, defines, include_dirs,
-#        ldflags, lib_dirs, libs,
+#        ldflags, lib_dirs, libs
 # Deps: data_deps, deps, public_deps
 # Dependent configs: all_dependent_configs, public_configs
 # General: check_includes, configs, data, inputs, output_name,
@@ -89,6 +89,17 @@ template("fuchsia_driver") {
     }
     _output_file = "$output_dir/$_output_file_name"
     _rebased_output_file = rebase_path(_output_file, root_build_dir)
+
+    if (!defined(ldflags)) {
+      ldflags = []
+    }
+    if (!defined(inputs)) {
+      inputs = []
+    }
+    _version_script = "//build/drivers/fuchsia_driver.ld"
+    ldflags += [ "-Wl,--version-script=" +
+                 rebase_path(_version_script, root_build_dir) ]
+    inputs += [ _version_script ]
 
     has_syslog_backend = false
 

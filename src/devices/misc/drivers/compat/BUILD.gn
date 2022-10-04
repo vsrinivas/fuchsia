@@ -73,6 +73,10 @@ source_set("lib") {
 fuchsia_driver("driver") {
   output_name = "compat"
   deps = [ ":lib" ]
+  _version_script = "//src/devices/misc/drivers/compat/compat.ld"
+  ldflags =
+      [ "-Wl,--version-script=" + rebase_path(_version_script, root_build_dir) ]
+  inputs = [ _version_script ]
 }
 
 driver_bind_rules("v1_test_bind") {
