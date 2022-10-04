@@ -78,13 +78,13 @@ bool CompositeDeviceFragment::BindNode(std::shared_ptr<Node> node) {
   return true;
 }
 
-void CompositeDeviceFragment::Inspect(inspect::Inspector& inspector, inspect::Node& root) const {
+void CompositeDeviceFragment::Inspect(inspect::Node& root) const {
   std::string moniker = "<unbound>";
   if (auto node = bound_node_.lock()) {
     moniker = node->TopoName();
   }
-  auto name = root.CreateString(name_, moniker);
-  inspector.emplace(std::move(name));
+
+  root.RecordString(name_, moniker);
 }
 
 zx::status<std::unique_ptr<CompositeDeviceAssembler>> CompositeDeviceAssembler::Create(
@@ -206,16 +206,15 @@ void CompositeDeviceAssembler::TryToAssemble() {
   node_manager_->Bind(*node.value(), nullptr);
 }
 
-void CompositeDeviceAssembler::Inspect(inspect::Inspector& inspector, inspect::Node& root) const {
+void CompositeDeviceAssembler::Inspect(inspect::Node& root) const {
   auto node = root.CreateChild(root.UniqueName("assembler-"));
-  auto str = node.CreateString("name", name_);
+  node.RecordString("name", name_);
 
   for (auto& fragment : fragments_) {
-    fragment.Inspect(inspector, node);
+    fragment.Inspect(node);
   }
 
-  inspector.emplace(std::move(str));
-  inspector.emplace(std::move(node));
+  root.Record(std::move(node));
 }
 
 CompositeDeviceManager::CompositeDeviceManager(NodeManager* node_manager,
@@ -278,9 +277,9 @@ void CompositeDeviceManager::Publish(component::OutgoingDirectory& outgoing) {
   ZX_ASSERT(result.is_ok());
 }
 
-void CompositeDeviceManager::Inspect(inspect::Inspector& inspector, inspect::Node& root) const {
+void CompositeDeviceManager::Inspect(inspect::Node& root) const {
   for (auto& assembler : assemblers_) {
-    assembler->Inspect(inspector, root);
+    assembler->Inspect(root);
   }
 }
 

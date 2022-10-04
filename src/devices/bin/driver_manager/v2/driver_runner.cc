@@ -103,20 +103,20 @@ void InspectNode(inspect::Inspector& inspector, InspectStack& stack) {
         auto string = VisitOffer<std::string_view>(offer, inspect_decl);
         strings.push_back(string.value_or("unknown"));
       }
-      root->CreateString("offers", fxl::JoinStrings(strings, ", "), &inspector);
+      root->RecordString("offers", fxl::JoinStrings(strings, ", "));
     }
     if (auto symbols = node->symbols(); !symbols.empty()) {
       std::vector<std::string_view> strings;
       for (auto& symbol : symbols) {
         strings.push_back(symbol.name().get());
       }
-      root->CreateString("symbols", fxl::JoinStrings(strings, ", "), &inspector);
+      root->RecordString("symbols", fxl::JoinStrings(strings, ", "));
     }
     std::string driver_string = "unbound";
     if (node->driver_component()) {
       driver_string = std::string(node->driver_component()->url());
     }
-    root->CreateString("driver", driver_string, &inspector);
+    root->RecordString("driver", driver_string);
 
     // Push children of this node onto the stack. We do this in reverse order to
     // ensure the children are handled in order, from first to last.
@@ -130,7 +130,7 @@ void InspectNode(inspect::Inspector& inspector, InspectStack& stack) {
 
   // Store all of the roots in the inspector.
   for (auto& root : roots) {
-    inspector.emplace(std::move(root));
+    inspector.GetRoot().Record(std::move(root));
   }
 }
 
@@ -200,26 +200,27 @@ fpromise::promise<inspect::Inspector> DriverRunner::Inspect() const {
   auto root = device_tree.CreateChild(root_node_->name());
   InspectStack stack{{std::make_pair(&root, root_node_.get())}};
   InspectNode(inspector, stack);
-  inspector.emplace(std::move(root));
-  inspector.emplace(std::move(device_tree));
+  device_tree.Record(std::move(root));
+  inspector.GetRoot().Record(std::move(device_tree));
 
   // Make the unbound composite devices inspect nodes.
   auto composite = inspector.GetRoot().CreateChild("unbound_composites");
-  composite_node_manager_.Inspect(inspector, composite);
-  inspector.emplace(std::move(composite));
+  composite_node_manager_.Inspect(composite);
+  inspector.GetRoot().Record(std::move(composite));
 
   // Make the orphaned devices inspect nodes.
   auto orphans = inspector.GetRoot().CreateChild("orphan_nodes");
   for (size_t i = 0; i < orphaned_nodes_.size(); i++) {
     if (auto node = orphaned_nodes_[i].lock()) {
-      orphans.CreateString(std::to_string(i), node->TopoName(), &inspector);
+      orphans.RecordString(std::to_string(i), node->TopoName());
     }
   }
-  inspector.emplace(std::move(orphans));
+
+  inspector.GetRoot().Record(std::move(orphans));
 
   auto dfv1_composites = inspector.GetRoot().CreateChild("dfv1_composites");
-  composite_device_manager_.Inspect(inspector, dfv1_composites);
-  inspector.emplace(std::move(dfv1_composites));
+  composite_device_manager_.Inspect(dfv1_composites);
+  inspector.GetRoot().Record(std::move(dfv1_composites));
 
   return fpromise::make_ok_promise(inspector);
 }

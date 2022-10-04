@@ -31,7 +31,7 @@ class CompositeDeviceFragment {
   std::shared_ptr<Node> bound_node() { return bound_node_.lock(); }
   std::string_view name() const { return name_; }
 
-  void Inspect(inspect::Inspector& inspector, inspect::Node& root) const;
+  void Inspect(inspect::Node& root) const;
 
  private:
   std::string name_;
@@ -58,7 +58,7 @@ class CompositeDeviceAssembler {
   // will also create the composite node.
   bool BindNode(std::shared_ptr<Node> node);
 
-  void Inspect(inspect::Inspector& inspector, inspect::Node& root) const;
+  void Inspect(inspect::Node& root) const;
 
  private:
   // Check if we have all of our fragments bound. If we do, then create the
@@ -99,7 +99,7 @@ class CompositeDeviceManager : fidl::Server<fuchsia_device_composite::Deprecated
   // in callbacks when other components connect to the capabilities.
   void Publish(component::OutgoingDirectory& outgoing);
 
-  void Inspect(inspect::Inspector& inspector, inspect::Node& root) const;
+  void Inspect(inspect::Node& root) const;
 
   // Trigger a rebind of all the nodes that are currently used in composite
   // devices. This should only be used by tests.

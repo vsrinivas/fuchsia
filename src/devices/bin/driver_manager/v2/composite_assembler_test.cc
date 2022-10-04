@@ -412,7 +412,7 @@ TEST_F(CompositeAssemblerTest, InspectNodes) {
   // Check the inspect data with an unbound node.
   {
     inspect::Inspector inspector;
-    manager.Inspect(inspector, inspector.GetRoot());
+    manager.Inspect(inspector.GetRoot());
     auto heirarchy = inspect::ReadFromInspector(inspector)(context).take_value();
     ASSERT_EQ(1ul, heirarchy.children().size());
     auto& assembler = heirarchy.children()[0];
@@ -431,7 +431,7 @@ TEST_F(CompositeAssemblerTest, InspectNodes) {
   // Check the inspect data with a bound node.
   {
     inspect::Inspector inspector;
-    manager.Inspect(inspector, inspector.GetRoot());
+    manager.Inspect(inspector.GetRoot());
     auto heirarchy = inspect::ReadFromInspector(inspector)(context).take_value();
     ASSERT_EQ(1ul, heirarchy.children().size());
     auto& assembler = heirarchy.children()[0];

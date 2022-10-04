@@ -115,19 +115,18 @@ zx::status<Node*> CompositeNodeManager::HandleMatchedCompositeInfo(
   return zx::ok(composite.value().get());
 }
 
-void CompositeNodeManager::Inspect(inspect::Inspector& inspector, inspect::Node& root) const {
+void CompositeNodeManager::Inspect(inspect::Node& root) const {
   for (auto& [url, parent_set] : incomplete_parent_sets_) {
     auto child = root.CreateChild(url);
     for (uint32_t i = 0; i < parent_set.size(); i++) {
       auto& node = parent_set.get(i);
       if (auto real = node.lock()) {
-        child.CreateString(std::string("parent-").append(std::to_string(i)), real->TopoName(),
-                           &inspector);
+        child.RecordString(std::string("parent-").append(std::to_string(i)), real->TopoName());
       } else {
-        child.CreateString(std::string("parent-").append(std::to_string(i)), "<empty>", &inspector);
+        child.RecordString(std::string("parent-").append(std::to_string(i)), "<empty>");
       }
     }
-    inspector.emplace(std::move(child));
+    root.Record(std::move(child));
   }
 }
 

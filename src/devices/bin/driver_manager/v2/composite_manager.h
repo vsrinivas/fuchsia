@@ -40,7 +40,7 @@ class CompositeNodeManager {
   zx::status<Node*> HandleMatchedCompositeInfo(
       Node& node, const fuchsia_driver_index::wire::MatchedCompositeInfo& matched_driver);
 
-  void Inspect(inspect::Inspector& inspector, inspect::Node& root) const;
+  void Inspect(inspect::Node& root) const;
 
  private:
   // Get an existing composite parent set that can add the `composite_info`, or creates
