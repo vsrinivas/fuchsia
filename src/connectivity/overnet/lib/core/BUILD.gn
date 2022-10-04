@@ -12,6 +12,7 @@ CORE_DEPS = [
   "//sdk/fidl/fuchsia.overnet:fuchsia.overnet_rust",
   "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol_rust",
   "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
+  "//src/connectivity/overnet/lib/circuit",
   "//src/connectivity/overnet/lib/quic",
   "//src/lib/cutex",
   "//src/lib/async-utils",

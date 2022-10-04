@@ -20,12 +20,12 @@ pub const CIRCUIT_VERSION: u8 = 0;
 
 mod error;
 mod protocol;
-mod stream;
 #[cfg(test)]
 mod test;
 
 mod connection;
 pub mod multi_stream;
+pub mod stream;
 
 use protocol::{EncodableString, Identify, NodeState};
 

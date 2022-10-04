@@ -94,28 +94,56 @@ impl MessageStats {
 }
 
 #[derive(Debug)]
+/// Underlying streams for a `FramedStreamWriter`
+enum FramedStreamWriterInner {
+    Quic(AsyncQuicStreamWriter),
+    Circuit(circuit::stream::Writer, u64),
+}
+
+#[derive(Debug)]
 pub(crate) struct FramedStreamWriter {
-    /// The underlying QUIC stream
-    quic: AsyncQuicStreamWriter,
+    /// The underlying stream
+    inner: FramedStreamWriterInner,
     /// The peer node id
     peer_node_id: NodeId,
 }
 
 impl FramedStreamWriter {
     pub fn from_quic(quic: AsyncQuicStreamWriter, peer_node_id: NodeId) -> Self {
-        Self { quic, peer_node_id }
+        Self { inner: FramedStreamWriterInner::Quic(quic), peer_node_id }
+    }
+
+    #[allow(unused)]
+    pub fn from_circuit(writer: circuit::stream::Writer, id: u64, peer_node_id: NodeId) -> Self {
+        Self { inner: FramedStreamWriterInner::Circuit(writer, id), peer_node_id }
     }
 
     pub async fn abandon(&mut self) {
-        self.quic.abandon().await
+        match &mut self.inner {
+            FramedStreamWriterInner::Quic(quic) => quic.abandon().await,
+            FramedStreamWriterInner::Circuit(writer, _) => {
+                let (_reader, dead_writer) = circuit::stream::stream();
+                *writer = dead_writer;
+            }
+        }
     }
 
     pub fn conn(&self) -> PeerConnRef<'_> {
-        PeerConnRef::from_quic(self.quic.conn(), self.peer_node_id)
+        match &self.inner {
+            FramedStreamWriterInner::Quic(quic) => {
+                PeerConnRef::from_quic(quic.conn(), self.peer_node_id)
+            }
+            FramedStreamWriterInner::Circuit(_, _) => {
+                unimplemented!("TODO: implement this after PeerConnRef supports it")
+            }
+        }
     }
 
     pub fn id(&self) -> u64 {
-        self.quic.id()
+        match &self.inner {
+            FramedStreamWriterInner::Quic(quic) => quic.id(),
+            FramedStreamWriterInner::Circuit(_, id) => *id,
+        }
     }
 
     pub async fn send(
@@ -143,9 +171,26 @@ impl FramedStreamWriter {
         assert!(frame_len <= 0xffff_ffff);
         let mut header = FrameHeader { frame_type, length: frame_len }.to_bytes()?;
         tracing::trace!(?header);
-        self.quic.send(&mut header, false).await?;
-        if bytes.len() > 0 {
-            self.quic.send(bytes, fin).await?;
+        match &mut self.inner {
+            FramedStreamWriterInner::Quic(quic) => {
+                quic.send(&mut header, false).await?;
+                if bytes.len() > 0 {
+                    quic.send(bytes, fin).await?;
+                }
+            }
+            FramedStreamWriterInner::Circuit(writer, _) => {
+                writer.write(header.len(), |buf| {
+                    buf[..header.len()].copy_from_slice(&header);
+                    Ok(header.len())
+                })?;
+
+                if !bytes.is_empty() {
+                    writer.write(bytes.len(), |buf| {
+                        buf[..bytes.len()].copy_from_slice(bytes);
+                        Ok(bytes.len())
+                    })?;
+                }
+            }
         }
         message_stats.sent_message(header.len() as u64 + bytes.len() as u64);
         Ok(())
@@ -153,9 +198,34 @@ impl FramedStreamWriter {
 }
 
 #[derive(Debug)]
+/// Underlying streams for a `FramedStreamReader`
+enum FramedStreamReaderInner {
+    Quic(AsyncQuicStreamReader),
+    Circuit(circuit::stream::Reader, bool),
+}
+
+impl FramedStreamReaderInner {
+    /// Read an exact-sized chunk from whatever our backing stream is to the given buffer.
+    async fn read_exact(&mut self, buf: &mut [u8]) -> Result<bool, Error> {
+        match self {
+            FramedStreamReaderInner::Quic(quic) => quic.read_exact(buf).await,
+            FramedStreamReaderInner::Circuit(reader, _) => {
+                reader
+                    .read(buf.len(), |input| {
+                        buf.copy_from_slice(&input[..buf.len()]);
+                        Ok(((), buf.len()))
+                    })
+                    .await?;
+                Ok(reader.is_closed())
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
 pub(crate) struct FramedStreamReader {
-    /// The underlying QUIC stream
-    quic: AsyncQuicStreamReader,
+    /// The underlying stream
+    inner: FramedStreamReaderInner,
     /// Peer node id
     peer_node_id: NodeId,
     /// Current read state
@@ -166,24 +236,59 @@ pub(crate) struct FramedStreamReader {
 
 impl FramedStreamReader {
     pub fn from_quic(quic: AsyncQuicStreamReader, peer_node_id: NodeId) -> Self {
-        Self { quic, peer_node_id, read_state: ReadState::Initial, hdr: [0u8; FRAME_HEADER_LENGTH] }
+        Self {
+            inner: FramedStreamReaderInner::Quic(quic),
+            peer_node_id,
+            read_state: ReadState::Initial,
+            hdr: [0u8; FRAME_HEADER_LENGTH],
+        }
+    }
+
+    #[allow(unused)]
+    pub fn from_circuit(
+        reader: circuit::stream::Reader,
+        is_initiator: bool,
+        peer_node_id: NodeId,
+    ) -> Self {
+        Self {
+            inner: FramedStreamReaderInner::Circuit(reader, is_initiator),
+            peer_node_id,
+            read_state: ReadState::Initial,
+            hdr: [0u8; FRAME_HEADER_LENGTH],
+        }
     }
 
     pub(crate) async fn abandon(&mut self) {
-        self.quic.abandon().await
+        match &mut self.inner {
+            FramedStreamReaderInner::Quic(quic) => quic.abandon().await,
+            FramedStreamReaderInner::Circuit(reader, _) => {
+                let (dead_reader, _writer) = circuit::stream::stream();
+                *reader = dead_reader;
+            }
+        }
     }
 
     pub fn conn(&self) -> PeerConnRef<'_> {
-        PeerConnRef::from_quic(self.quic.conn(), self.peer_node_id)
+        match &self.inner {
+            FramedStreamReaderInner::Quic(quic) => {
+                PeerConnRef::from_quic(quic.conn(), self.peer_node_id)
+            }
+            FramedStreamReaderInner::Circuit(_, _) => {
+                unimplemented!("TODO: implement this after PeerConnRef supports it")
+            }
+        }
     }
 
     pub fn is_initiator(&self) -> bool {
-        self.quic.is_initiator()
+        match &self.inner {
+            FramedStreamReaderInner::Quic(quic) => quic.is_initiator(),
+            FramedStreamReaderInner::Circuit(_, is_initiator) => *is_initiator,
+        }
     }
 
     pub(crate) async fn next<'b>(&'b mut self) -> Result<(FrameType, Vec<u8>, bool), Error> {
         if let ReadState::Initial = self.read_state {
-            let fin = self.quic.read_exact(&mut self.hdr).await?;
+            let fin = self.inner.read_exact(&mut self.hdr).await?;
             let hdr = FrameHeader::from_bytes(&self.hdr)?;
 
             if hdr.length == 0 {
@@ -200,7 +305,7 @@ impl FramedStreamReader {
         if let ReadState::GotHeader(hdr) = &self.read_state {
             let mut payload = Vec::new();
             payload.resize(hdr.length, 0);
-            let fin = self.quic.read_exact(&mut payload).await?;
+            let fin = self.inner.read_exact(&mut payload).await?;
             let frame_type = hdr.frame_type;
             self.read_state = ReadState::Initial;
             Ok((frame_type, payload, fin))

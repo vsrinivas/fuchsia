@@ -161,6 +161,19 @@ impl Reader {
 
         Ok(())
     }
+
+    /// Whether this stream is closed. Returns false so long as there is unread data in the buffer,
+    /// even if the writer has hung up.
+    pub fn is_closed(&self) -> bool {
+        let state = self.0.lock().unwrap();
+        state.closed && state.readable == 0
+    }
+}
+
+impl std::fmt::Debug for Reader {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Reader({:?})", Arc::as_ptr(&self.0))
+    }
 }
 
 impl Drop for Reader {
@@ -242,6 +255,12 @@ impl Writer {
     /// `ProtocolObject::write_bytes` in to `write`.
     pub fn write_protocol_message<P: protocol::ProtocolMessage>(&self, message: &P) -> Result<()> {
         self.write(message.byte_size(), |mut buf| message.write_bytes(&mut buf))
+    }
+}
+
+impl std::fmt::Debug for Writer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Writer({:?})", Arc::as_ptr(&self.0))
     }
 }
 
