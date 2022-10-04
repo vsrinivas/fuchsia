@@ -1957,7 +1957,6 @@ VMO_VMAR_TEST(Pager, FailSinglePage) {
   TestThread t([vmo, check_vmar]() -> bool { return check_buffer(vmo, 0, 1, check_vmar); });
   ASSERT_TRUE(t.Start());
 
-  ASSERT_TRUE(t.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE));
 
   ASSERT_TRUE(pager.FailPages(vmo, 0, 1));
@@ -1986,7 +1985,6 @@ TEST(Pager, FailExactRange) {
   TestThread t([vmo]() -> bool { return vmo->Commit(0, kNumPages); });
   ASSERT_TRUE(t.Start());
 
-  ASSERT_TRUE(t.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, kNumPages, ZX_TIME_INFINITE));
 
   ASSERT_TRUE(pager.FailPages(vmo, 0, kNumPages));
@@ -2046,7 +2044,6 @@ TEST(Pager, FailMultipleCommits) {
 
   // Fail the entire range.
   ASSERT_TRUE(pager.FailPages(vmo, 0, kNumPages));
-  printf("failed pages [0, %zu)\n", kNumPages);
 
   ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 
@@ -2071,7 +2068,6 @@ TEST(Pager, FailMultipleVmos) {
   TestThread t2([vmo2]() -> bool { return vmo2->Commit(0, 1); });
 
   ASSERT_TRUE(t1.Start());
-  ASSERT_TRUE(t1.WaitForBlocked());
 
   ASSERT_TRUE(pager.WaitForPageRead(vmo1, 0, 1, ZX_TIME_INFINITE));
 
@@ -2080,7 +2076,6 @@ TEST(Pager, FailMultipleVmos) {
   ASSERT_FALSE(pager.GetPageReadRequest(vmo2, 0, &offset, &length));
 
   ASSERT_TRUE(t2.Start());
-  ASSERT_TRUE(t2.WaitForBlocked());
 
   ASSERT_TRUE(pager.WaitForPageRead(vmo2, 0, 1, ZX_TIME_INFINITE));
 
@@ -2117,15 +2112,12 @@ TEST(Pager, FailOverlappingRange) {
   TestThread t3([vmo]() -> bool { return vmo->Commit(5, 2); });
 
   ASSERT_TRUE(t1.Start());
-  ASSERT_TRUE(t1.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 2, ZX_TIME_INFINITE));
 
   ASSERT_TRUE(t2.Start());
-  ASSERT_TRUE(t2.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageRead(vmo, 9, 2, ZX_TIME_INFINITE));
 
   ASSERT_TRUE(t3.Start());
-  ASSERT_TRUE(t3.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageRead(vmo, 5, 2, ZX_TIME_INFINITE));
 
   ASSERT_TRUE(pager.FailPages(vmo, 1, 9));
@@ -2151,7 +2143,6 @@ TEST(Pager, FailRedundant) {
   TestThread t([vmo]() -> bool { return vmo->Commit(0, kNumPages); });
   ASSERT_TRUE(t.Start());
 
-  ASSERT_TRUE(t.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, kNumPages, ZX_TIME_INFINITE));
 
   for (uint64_t i = 0; i < kNumPages; i++) {
@@ -2178,7 +2169,6 @@ TEST(Pager, FailAfterDetach) {
   TestThread t([vmo]() -> bool { return vmo->Commit(0, kNumPages); });
   ASSERT_TRUE(t.Start());
 
-  ASSERT_TRUE(t.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, kNumPages, ZX_TIME_INFINITE));
 
   ASSERT_TRUE(pager.DetachVmo(vmo));
@@ -2206,7 +2196,6 @@ TEST(Pager, SupplyAfterFail) {
   TestThread t1([vmo]() -> bool { return vmo->Commit(0, kNumPages); });
   ASSERT_TRUE(t1.Start());
 
-  ASSERT_TRUE(t1.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, kNumPages, ZX_TIME_INFINITE));
 
   ASSERT_TRUE(pager.FailPages(vmo, 0, kNumPages));
@@ -2219,7 +2208,6 @@ TEST(Pager, SupplyAfterFail) {
   TestThread t2([vmo]() -> bool { return vmo->Commit(0, kNumPages); });
   ASSERT_TRUE(t2.Start());
 
-  ASSERT_TRUE(t2.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, kNumPages, ZX_TIME_INFINITE));
 
   // This should supply the pages as expected.
