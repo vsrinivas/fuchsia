@@ -13,8 +13,6 @@
 
 #include <mutex>
 
-#include "src/ui/scenic/lib/utils/dispatcher_holder.h"
-
 namespace flatland {
 /// A helper class for managing [hanging get
 /// semantics](https://fuchsia.dev/fuchsia-src/development/api/fidl.md#delay-responses-using-hanging-gets).
@@ -36,14 +34,7 @@ class HangingGetHelper {
  public:
   using Callback = fit::function<void(Data)>;
 
-  // Hanging get responses are sent on the provided |dispatcher|.
-  // TODO(fxbug.dev/76183): |dispatcher| is used because the FIDL HLCPP bindings require method
-  // responses to be sent from the same thread that handled the method.  This may change in the
-  // future; if so the |dispatcher| may no longer be necessary.
-  explicit HangingGetHelper(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder)
-      : dispatcher_holder_(std::move(dispatcher_holder)) {
-    FX_DCHECK(dispatcher_holder_);
-  }
+  HangingGetHelper() = default;
 
   void Update(Data data) {
     std::lock_guard<std::mutex> guard(mutex_);
@@ -74,20 +65,13 @@ class HangingGetHelper {
       last_data_ = Data();
       fidl::Clone(data_.value(), &last_data_.value());
 
-      // Invoke callback on the appropriate Flatland instance thread.
-      auto status = async::PostTask(
-          dispatcher_holder_->dispatcher(),
-          [data{std::move(data_.value())}, callback{std::move(callback_)}]() mutable {
-            callback(std::move(data));
-          });
-      FX_DCHECK(status == ZX_OK);
+      callback_(std::move(data_.value()));
 
       data_.reset();
       callback_ = nullptr;
     }
   }
 
-  std::shared_ptr<utils::DispatcherHolder> dispatcher_holder_;
   std::mutex mutex_;
   std::optional<Data> data_;
   std::optional<Data> last_data_;

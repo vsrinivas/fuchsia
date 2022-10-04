@@ -53,9 +53,7 @@ class ParentViewportWatcherImpl
                fidl::ServerEnd<fuchsia_ui_composition::ParentViewportWatcher> /*unused*/) {
               OnUnbound(info);
             })),
-        error_callback_(std::move(error_callback)),
-        layout_helper_(dispatcher_holder),
-        status_helper_(std::move(dispatcher_holder)) {}
+        error_callback_(std::move(error_callback)) {}
 
   ~ParentViewportWatcherImpl() override {
     // `ServerBindingRef` doesn't have RAII semantics for destroying the underlying channel, so it
@@ -134,9 +132,7 @@ class ChildViewWatcherImpl : public fidl::Server<fuchsia_ui_composition::ChildVi
                fidl::ServerEnd<fuchsia_ui_composition::ChildViewWatcher> /*unused*/) {
               OnUnbound(info);
             })),
-        error_callback_(std::move(error_callback)),
-        status_helper_(dispatcher_holder),
-        viewref_helper_(std::move(dispatcher_holder)) {}
+        error_callback_(std::move(error_callback)) {}
 
   ~ChildViewWatcherImpl() override {
     // `ServerBindingRef` doesn't have RAII semantics for destroying the underlying channel, so it
