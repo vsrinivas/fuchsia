@@ -398,3 +398,5 @@ toc:
     path: /docs/contribute/governance/rfcs/0190_fidl_support_for_syscalls.md
   - title: "RFC-0191: Fuchsia-on-GCE as a supported system configuration"
     path: /docs/contribute/governance/rfcs/0191_fuchsia-on-gce_as_a_supported_system_configuration.md
+  - title: "RFC-0192: Device Trees on Fuchsia"
+    path: /docs/contribute/governance/rfcs/0192_device_trees_on_fuchsia.md

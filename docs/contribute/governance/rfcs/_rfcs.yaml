@@ -2497,3 +2497,16 @@
   reviewers: ['cpu@google.com', 'curtisgalloway@google.com', 'tkilbourn@google.com', 'travisg@google.com']
   submitted: '2022-08-29'
   reviewed: '2022-09-28'
+
+- name: 'RFC-0192'
+  title: 'Device Trees on Fuchsia'
+  short_description: 'A strategy for using device trees to describe hardware layout'
+  authors: ['simonshields@google.com']
+  file: '0192_device_trees_on_fuchsia.md'
+  area: ['Devices']
+  issue: ['107029']
+  gerrit_change_id: ['706886']
+  status: 'Accepted'
+  reviewers: ['surajmalhotra@google.com', 'curtisgalloway@google.com', 'gkalsi@google.com', 'bradenkell@google.com', 'cja@google.com', 'dpursell@google.com']
+  submitted: '2022-08-03'
+  reviewed: '2022-10-01'
