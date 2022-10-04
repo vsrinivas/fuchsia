@@ -37,7 +37,6 @@ VMO_VMAR_TEST(PagerWriteback, SimpleTrapDirty) {
 
   TestThread t1([vmo, check_vmar]() -> bool { return check_buffer(vmo, 0, 1, check_vmar); });
   ASSERT_TRUE(t1.Start());
-  ASSERT_TRUE(t1.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE));
 
   // Supply the page first and then attempt to write to it.
@@ -54,7 +53,6 @@ VMO_VMAR_TEST(PagerWriteback, SimpleTrapDirty) {
     return vmo->vmo().write(&data, 0, sizeof(data)) == ZX_OK;
   });
   ASSERT_TRUE(t2.Start());
-  ASSERT_TRUE(t2.WaitForBlocked());
 
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
 
@@ -160,16 +158,13 @@ TEST(PagerWriteback, DirtyRequestsOnVmoWrite) {
   ASSERT_TRUE(t.Start());
 
   for (uint64_t i = 0; i < kNumPages / 2; i += 2) {
-    ASSERT_TRUE(t.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, i, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, i, 1));
   }
 
-  ASSERT_TRUE(t.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 3, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.DirtyPages(vmo, 3, 1));
 
-  ASSERT_TRUE(t.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 11, 5, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.DirtyPages(vmo, 11, 5));
 
@@ -237,16 +232,13 @@ TEST(PagerWriteback, DirtyRequestsViaMapping) {
   ASSERT_TRUE(t.Start());
 
   for (uint64_t i = 0; i < kNumPages / 2; i += 2) {
-    ASSERT_TRUE(t.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, i, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, i, 1));
   }
 
-  ASSERT_TRUE(t.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 3, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.DirtyPages(vmo, 3, 1));
 
-  ASSERT_TRUE(t.WaitForBlocked());
   // We're touching pages one by one via the mapping, so we'll see page requests for individual
   // pages. Wait for the first page request and dirty the whole range.
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 11, 1, ZX_TIME_INFINITE));
@@ -300,7 +292,6 @@ TEST(PagerWriteback, NoDirtyRequestsOnRead) {
 
   ASSERT_TRUE(t.Start());
 
-  ASSERT_TRUE(t.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.SupplyPages(vmo, 0, kNumPages));
 
@@ -364,7 +355,6 @@ TEST(PagerWriteback, DirtyRequestsRepeatedWrites) {
 
   ASSERT_TRUE(t1.Start());
 
-  ASSERT_TRUE(t1.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
 
@@ -449,7 +439,6 @@ TEST(PagerWriteback, DirtyRequestsOnWriteAfterRead) {
 
   ASSERT_TRUE(t2.Start());
 
-  ASSERT_TRUE(t2.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
 
@@ -489,7 +478,6 @@ TEST(PagerWriteback, NoDirtyRequestsForClones) {
   });
   ASSERT_TRUE(t1.Start());
 
-  ASSERT_TRUE(t1.WaitForBlocked());
   // Writing the pages in the clone should trigger faults in the parent. Wait to see the first one.
   ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.SupplyPages(vmo, 0, kNumPages));
@@ -521,7 +509,6 @@ TEST(PagerWriteback, NoDirtyRequestsForClones) {
   });
   ASSERT_TRUE(t2.Start());
 
-  ASSERT_TRUE(t2.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, kNumPages, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.DirtyPages(vmo, 0, kNumPages));
 
@@ -611,7 +598,7 @@ TEST(PagerWriteback, DirtyRequestsOverlap) {
     return vmo->vmo().write((void*)&data, 11 * zx_system_get_page_size(), sizeof(data)) == ZX_OK;
   });
   ASSERT_TRUE(t3.Start());
-  ASSERT_TRUE(t3.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 11, 5, ZX_TIME_INFINITE));
 
   TestThread t4([vmo, &expected]() -> bool {
     // write pages [15,19).
@@ -623,7 +610,6 @@ TEST(PagerWriteback, DirtyRequestsOverlap) {
   ASSERT_TRUE(t4.Start());
   ASSERT_TRUE(t4.WaitForBlocked());
 
-  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 11, 5, ZX_TIME_INFINITE));
   // No remaining requests.
   ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
 
@@ -699,12 +685,10 @@ TEST(PagerWriteback, DirtyRequestsRandomOffsets) {
       // Page is not present.
       // This might break an in-progress clean run, resolve that first.
       if (clean_len > 0) {
-        ASSERT_TRUE(t.WaitForBlocked());
         ASSERT_TRUE(pager.WaitForPageDirty(vmo, clean_start, clean_len, ZX_TIME_INFINITE));
         ASSERT_TRUE(pager.DirtyPages(vmo, clean_start, clean_len));
       }
       // Should see a read request for this page now.
-      ASSERT_TRUE(t.WaitForBlocked());
       ASSERT_TRUE(pager.WaitForPageRead(vmo, i, 1, ZX_TIME_INFINITE));
       ASSERT_TRUE(pager.SupplyPages(vmo, i, 1));
 
@@ -724,7 +708,6 @@ TEST(PagerWriteback, DirtyRequestsRandomOffsets) {
       // Page is present and dirty.
       // This might break an in-progress clean run, resolve that first.
       if (clean_len > 0) {
-        ASSERT_TRUE(t.WaitForBlocked());
         ASSERT_TRUE(pager.WaitForPageDirty(vmo, clean_start, clean_len, ZX_TIME_INFINITE));
         ASSERT_TRUE(pager.DirtyPages(vmo, clean_start, clean_len));
       }
@@ -735,7 +718,6 @@ TEST(PagerWriteback, DirtyRequestsRandomOffsets) {
 
   // Resolve the last clean run if any.
   if (clean_len > 0) {
-    ASSERT_TRUE(t.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, clean_start, clean_len, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, clean_start, clean_len));
   }
@@ -783,7 +765,6 @@ TEST(PagerWriteback, FailDirtyRequests) {
 
   ASSERT_TRUE(t1.Start());
 
-  ASSERT_TRUE(t1.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.FailPages(vmo, 0, 1));
 
@@ -802,7 +783,6 @@ TEST(PagerWriteback, FailDirtyRequests) {
 
   ASSERT_TRUE(t2.Start());
 
-  ASSERT_TRUE(t2.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 1, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.FailPages(vmo, 1, 1));
 
@@ -842,7 +822,6 @@ TEST(PagerWriteback, PartialFailDirtyRequests) {
   ASSERT_TRUE(t1.Start());
 
   // Should see a dirty request spanning all pages.
-  ASSERT_TRUE(t1.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, kNumPages, ZX_TIME_INFINITE));
 
   // Succeed a portion of the request, and fail the remaining.
@@ -853,7 +832,6 @@ TEST(PagerWriteback, PartialFailDirtyRequests) {
   // We partially succeeded the previous request, so when the write resumes after blocking, we
   // should see another one for the failed portion. Fail it again to indicate failure starting at
   // the start offset of the new request, which will stop further retry attempts.
-  ASSERT_TRUE(t1.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, kNumSuccess, kNumPages - kNumSuccess, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.FailPages(vmo, kNumSuccess, kNumPages - kNumSuccess));
 
@@ -882,7 +860,6 @@ TEST(PagerWriteback, PartialFailDirtyRequests) {
   ASSERT_TRUE(t2.Start());
 
   // Should see a dirty request spanning all pages.
-  ASSERT_TRUE(t2.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, kNumPages, ZX_TIME_INFINITE));
 
   // Fail at the start of the request. This should terminate the blocked thread.
@@ -932,7 +909,6 @@ TEST(PagerWriteback, DirtyRequestsForZeroPages) {
     return vmo->vmo().write(&data, 0, sizeof(data)) == ZX_OK;
   });
   ASSERT_TRUE(t1.Start());
-  ASSERT_TRUE(t1.WaitForBlocked());
 
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
 
@@ -971,7 +947,6 @@ TEST(PagerWriteback, DirtyRequestsForZeroPages) {
 
   ASSERT_TRUE(t2.Start());
 
-  ASSERT_TRUE(t2.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 1, 1, ZX_TIME_INFINITE));
 
   // Dirty the second page.
@@ -1079,7 +1054,6 @@ TEST(PagerWriteback, FailDirtyRequestsForZeroPages) {
     return vmo->vmo().write(&data, 0, sizeof(data)) == ZX_OK;
   });
   ASSERT_TRUE(t.Start());
-  ASSERT_TRUE(t.WaitForBlocked());
 
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
 
@@ -1132,7 +1106,6 @@ TEST(PagerWriteback, DirtyRequestsForZeroRanges) {
   });
 
   ASSERT_TRUE(t1.Start());
-  ASSERT_TRUE(t1.WaitForBlocked());
 
   // We should see a dirty request for the range [0, 2). Verifies that the range is extended to
   // include another marker.
@@ -1159,7 +1132,6 @@ TEST(PagerWriteback, DirtyRequestsForZeroRanges) {
   });
 
   ASSERT_TRUE(t2.Start());
-  ASSERT_TRUE(t2.WaitForBlocked());
 
   // We should see a dirty request for the range [2, 4). Verifies that the range is extended to
   // include a non-zero clean page.
@@ -1192,18 +1164,15 @@ TEST(PagerWriteback, DirtyRequestsForZeroRanges) {
   });
 
   ASSERT_TRUE(t3.Start());
-  ASSERT_TRUE(t3.WaitForBlocked());
 
   // We should see a dirty request for pages [4, 9). Verifies that zero and non-zero clean pages get
   // picked up in a single range, and that the range stops before a gap.
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 4, 5, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.DirtyPages(vmo, 4, 5));
-  ASSERT_TRUE(t3.WaitForBlocked());
 
   // We should now see a read request followed by a dirty request for the last gap.
   ASSERT_TRUE(pager.WaitForPageRead(vmo, 9, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.SupplyPages(vmo, 9, 1));
-  ASSERT_TRUE(t3.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 9, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.DirtyPages(vmo, 9, 1));
   ASSERT_TRUE(t3.Wait());
@@ -1237,7 +1206,6 @@ TEST(PagerWriteback, NoDirtyRequestsOnCommit) {
   });
   ASSERT_TRUE(t.Start());
 
-  ASSERT_TRUE(t.WaitForBlocked());
   // Should see a read request for the uncommitted portion.
   ASSERT_TRUE(pager.WaitForPageRead(vmo, 2, kNumPages - 2, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.SupplyPages(vmo, 2, kNumPages - 2));
@@ -1334,7 +1302,6 @@ TEST(PagerWriteback, NoDirtyRequestsOnMapRange) {
 
   // The thread will block on dirty requests for each page.
   for (uint64_t i = 0; i < kNumPages; i++) {
-    ASSERT_TRUE(t3.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, i, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, i, 1));
   }
@@ -1375,7 +1342,6 @@ TEST(PagerWriteback, NoDirtyRequestsMapExistingDirty) {
 
   ASSERT_TRUE(t1.Start());
 
-  ASSERT_TRUE(t1.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
 
@@ -1439,7 +1405,6 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(NoQueryOnClone, 0) {
   ASSERT_TRUE(t.Start());
 
   if (create_option & ZX_VMO_TRAP_DIRTY) {
-    ASSERT_TRUE(t.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
   }
@@ -1498,7 +1463,6 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(SimpleWriteback, 0) {
   ASSERT_TRUE(t1.Start());
 
   if (create_option & ZX_VMO_TRAP_DIRTY) {
-    ASSERT_TRUE(t1.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
   }
@@ -1536,7 +1500,6 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(SimpleWriteback, 0) {
 
   if (create_option & ZX_VMO_TRAP_DIRTY) {
     // We should see a dirty request now.
-    ASSERT_TRUE(t2.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
   }
@@ -1590,7 +1553,6 @@ TEST(PagerWriteback, DirtyDuringWriteback) {
 
   // Verify that we saw the dirty request but do not acknowledge it yet. The write will remain
   // blocked.
-  ASSERT_TRUE(t1.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
 
   // End the writeback. This should transition the page to clean.
@@ -1624,7 +1586,6 @@ TEST(PagerWriteback, DirtyDuringWriteback) {
   ASSERT_TRUE(t2.Start());
 
   // Verify that we saw the dirty request.
-  ASSERT_TRUE(t2.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
 
   // This should reset the page state to dirty so that it is not moved to clean when the writeback
@@ -1683,7 +1644,6 @@ TEST(PagerWriteback, WritebackWithMapping) {
 
   ASSERT_TRUE(t1.Start());
 
-  ASSERT_TRUE(t1.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
 
   // Dirty the page.
@@ -1718,7 +1678,6 @@ TEST(PagerWriteback, WritebackWithMapping) {
 
   ASSERT_TRUE(t2.Start());
 
-  ASSERT_TRUE(t2.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
 
   // Fail the dirty request so the writeback can complete.
@@ -1745,7 +1704,6 @@ TEST(PagerWriteback, WritebackWithMapping) {
 
   ASSERT_TRUE(t3.Start());
 
-  ASSERT_TRUE(t3.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
 
@@ -1813,7 +1771,6 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(CannotOverwriteZeroPage, 0) {
 
   // Wait for and acknowledge the dirty request if configured to trap dirty transitions.
   if (create_option == ZX_VMO_TRAP_DIRTY) {
-    ASSERT_TRUE(t1.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
     // Dirty the first page.
     ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
@@ -2019,7 +1976,6 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(DirtyAfterMapProtect, 0) {
   ASSERT_TRUE(t.Start());
 
   if (create_option == ZX_VMO_TRAP_DIRTY) {
-    ASSERT_TRUE(t.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
     // Dirty the page.
     ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
@@ -2057,11 +2013,9 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ResizeSupplyZero, ZX_VMO_RESIZABLE) {
     return vmo->vmo().read(&data[0], 0, sizeof(data)) == ZX_OK;
   });
   ASSERT_TRUE(t.Start());
-  ASSERT_TRUE(t.WaitForBlocked());
 
   ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
-  ASSERT_TRUE(t.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageRead(vmo, 1, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.SupplyPages(vmo, 1, 1));
 
@@ -2209,12 +2163,10 @@ TEST(PagerWriteback, ResizeDirtyRequest) {
   // We should see a dirty request for page 0.
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
-  ASSERT_TRUE(t3.WaitForBlocked());
 
   // We should see a dirty request for page 3.
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 3, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.DirtyPages(vmo, 3, 1));
-  ASSERT_TRUE(t3.WaitForBlocked());
 
   // We should see a dirty request for pages 5,6,7.
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 5, 3, ZX_TIME_INFINITE));
@@ -2259,10 +2211,8 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ResizeWriteback, ZX_VMO_RESIZABLE) {
   ASSERT_TRUE(t.Start());
 
   if (create_option & ZX_VMO_TRAP_DIRTY) {
-    ASSERT_TRUE(t.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
-    ASSERT_TRUE(t.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 2, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 2, 1));
   }
@@ -2347,13 +2297,9 @@ TEST(PagerWriteback, ResizeWithOutstandingDirtyRequests) {
 
   // All four threads should block.
   ASSERT_TRUE(t1.Start());
-  ASSERT_TRUE(t1.WaitForBlocked());
   ASSERT_TRUE(t2.Start());
-  ASSERT_TRUE(t2.WaitForBlocked());
   ASSERT_TRUE(t3.Start());
-  ASSERT_TRUE(t3.WaitForBlocked());
   ASSERT_TRUE(t4.Start());
-  ASSERT_TRUE(t4.WaitForBlocked());
 
   // We should see dirty requests for pages 1, 3 and 5.
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 1, 1, ZX_TIME_INFINITE));
@@ -2412,7 +2358,6 @@ TEST(PagerWriteback, ResizeWritebackWithOutstandingDirtyRequests) {
   });
   ASSERT_TRUE(t1.Start());
 
-  ASSERT_TRUE(t1.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 4, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.DirtyPages(vmo, 4, 1));
   ASSERT_TRUE(t1.Wait());
@@ -2438,7 +2383,6 @@ TEST(PagerWriteback, ResizeWritebackWithOutstandingDirtyRequests) {
            ZX_ERR_OUT_OF_RANGE;
   });
   ASSERT_TRUE(t2.Start());
-  ASSERT_TRUE(t2.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 1, 2, ZX_TIME_INFINITE));
 
   // Try to write to pages 3 and 4. This will also trigger a DIRTY request.
@@ -2449,7 +2393,6 @@ TEST(PagerWriteback, ResizeWritebackWithOutstandingDirtyRequests) {
            ZX_ERR_OUT_OF_RANGE;
   });
   ASSERT_TRUE(t3.Start());
-  ASSERT_TRUE(t3.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 3, 2, ZX_TIME_INFINITE));
 
   // Complete writeback for the start of the dirty range so that the zero tail can be advanced. This
@@ -2503,7 +2446,6 @@ TEST(PagerWriteback, ResizeWritebackNewDirtyRequestsInterleaved) {
   });
   ASSERT_TRUE(t1.Start());
 
-  ASSERT_TRUE(t1.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 2, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.DirtyPages(vmo, 2, 1));
   ASSERT_TRUE(t1.Wait());
@@ -2527,7 +2469,6 @@ TEST(PagerWriteback, ResizeWritebackNewDirtyRequestsInterleaved) {
     return vmo->vmo().write(&data[0], zx_system_get_page_size(), sizeof(data)) == ZX_OK;
   });
   ASSERT_TRUE(t2.Start());
-  ASSERT_TRUE(t2.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 1, 1, ZX_TIME_INFINITE));
 
   // Try to write to page 2. This will trigger a DIRTY request.
@@ -2537,7 +2478,6 @@ TEST(PagerWriteback, ResizeWritebackNewDirtyRequestsInterleaved) {
     return vmo->vmo().write(&data[0], 2 * zx_system_get_page_size(), sizeof(data)) == ZX_OK;
   });
   ASSERT_TRUE(t3.Start());
-  ASSERT_TRUE(t3.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 2, 1, ZX_TIME_INFINITE));
 
   // Resolve the DIRTY requests and wait for the threads to complete.
@@ -2596,7 +2536,6 @@ TEST(PagerWriteback, ResizeWritebackNewDirtyRequests) {
   });
   ASSERT_TRUE(t1.Start());
 
-  ASSERT_TRUE(t1.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 2, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.DirtyPages(vmo, 2, 1));
   ASSERT_TRUE(t1.Wait());
@@ -2624,11 +2563,9 @@ TEST(PagerWriteback, ResizeWritebackNewDirtyRequests) {
     return vmo->vmo().write(&data[0], zx_system_get_page_size(), sizeof(data)) == ZX_OK;
   });
   ASSERT_TRUE(t2.Start());
-  ASSERT_TRUE(t2.WaitForBlocked());
   // This was a gap that we've written back. So we'll first need to supply the page.
   ASSERT_TRUE(pager.WaitForPageRead(vmo, 1, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.SupplyPages(vmo, 1, 1));
-  ASSERT_TRUE(t2.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 1, 1, ZX_TIME_INFINITE));
 
   // Try to write to page 2. This will trigger a DIRTY request.
@@ -2638,7 +2575,6 @@ TEST(PagerWriteback, ResizeWritebackNewDirtyRequests) {
     return vmo->vmo().write(&data[0], 2 * zx_system_get_page_size(), sizeof(data)) == ZX_OK;
   });
   ASSERT_TRUE(t3.Start());
-  ASSERT_TRUE(t3.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 2, 1, ZX_TIME_INFINITE));
 
   // Resolve the DIRTY requests and wait for the threads to complete.
@@ -2689,7 +2625,6 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ResizeWritebackIntersectingWrite, ZX_VMO_RESIZA
 
   ASSERT_TRUE(t1.Start());
   if (create_option & ZX_VMO_TRAP_DIRTY) {
-    ASSERT_TRUE(t1.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 2, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 2, 1));
   }
@@ -2758,7 +2693,6 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ResizeWritebackNonIntersectingWrite, ZX_VMO_RES
 
   ASSERT_TRUE(t1.Start());
   if (create_option & ZX_VMO_TRAP_DIRTY) {
-    ASSERT_TRUE(t1.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 3, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 3, 1));
   }
@@ -2773,7 +2707,6 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ResizeWritebackNonIntersectingWrite, ZX_VMO_RES
 
   ASSERT_TRUE(t2.Start());
   if (create_option & ZX_VMO_TRAP_DIRTY) {
-    ASSERT_TRUE(t2.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
   }
@@ -2995,7 +2928,6 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ResizeWritebackAfterGap, ZX_VMO_RESIZABLE) {
 
   ASSERT_TRUE(t1.Start());
   if (create_option & ZX_VMO_TRAP_DIRTY) {
-    ASSERT_TRUE(t1.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 2, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 2, 1));
   }
@@ -3028,7 +2960,6 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ResizeWritebackAfterGap, ZX_VMO_RESIZABLE) {
 
   ASSERT_TRUE(t2.Start());
   if (create_option & ZX_VMO_TRAP_DIRTY) {
-    ASSERT_TRUE(t2.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 2, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 2, 1));
   }
@@ -3075,10 +3006,8 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ResizeWritebackMulipleGaps, ZX_VMO_RESIZABLE) {
 
   ASSERT_TRUE(t1.Start());
   if (create_option & ZX_VMO_TRAP_DIRTY) {
-    ASSERT_TRUE(t1.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 2, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 2, 1));
-    ASSERT_TRUE(t1.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 4, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 4, 1));
   }
@@ -3113,7 +3042,6 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ResizeWritebackMulipleGaps, ZX_VMO_RESIZABLE) {
 
   ASSERT_TRUE(t2.Start());
   if (create_option & ZX_VMO_TRAP_DIRTY) {
-    ASSERT_TRUE(t2.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 3, 2, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 3, 2));
   }
@@ -3163,10 +3091,8 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ResizeWritebackSequential, ZX_VMO_RESIZABLE) {
 
   ASSERT_TRUE(t1.Start());
   if (create_option & ZX_VMO_TRAP_DIRTY) {
-    ASSERT_TRUE(t1.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 2, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 2, 1));
-    ASSERT_TRUE(t1.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 4, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 4, 1));
   }
@@ -3365,7 +3291,6 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ResizeWritebackWithMapping, ZX_VMO_RESIZABLE) {
 
   ASSERT_TRUE(t1.Start());
   if (create_option & ZX_VMO_TRAP_DIRTY) {
-    ASSERT_TRUE(t1.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 1, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 1, 1));
   }
@@ -3398,7 +3323,6 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ResizeWritebackWithMapping, ZX_VMO_RESIZABLE) {
 
   ASSERT_TRUE(t2.Start());
   if (create_option & ZX_VMO_TRAP_DIRTY) {
-    ASSERT_TRUE(t2.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 1, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 1, 1));
   }
@@ -3458,10 +3382,8 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ResizeWritebackInterleavedWriteWithMapping, ZX_
 
   ASSERT_TRUE(t1.Start());
   if (create_option & ZX_VMO_TRAP_DIRTY) {
-    ASSERT_TRUE(t1.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 2, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 2, 1));
-    ASSERT_TRUE(t1.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 4, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 4, 1));
   }
@@ -3512,12 +3434,10 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ResizeWritebackInterleavedWriteWithMapping, ZX_
   });
   ASSERT_TRUE(t3.Start());
 
-  ASSERT_TRUE(t3.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageRead(vmo, 3, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.SupplyPages(vmo, 3, 1));
 
   if (create_option & ZX_VMO_TRAP_DIRTY) {
-    ASSERT_TRUE(t3.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 3, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 3, 1));
   }
@@ -3571,7 +3491,6 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ResizeWritebackDirtyAfterQuery, ZX_VMO_RESIZABL
   ASSERT_TRUE(t.Start());
 
   if (create_option & ZX_VMO_TRAP_DIRTY) {
-    ASSERT_TRUE(t.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 2, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 2, 1));
   }
@@ -3619,7 +3538,6 @@ TEST(PagerWriteback, OpZero) {
   ASSERT_TRUE(t.Start());
 
   // We should see a read request for the second page.
-  ASSERT_TRUE(t.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageRead(vmo, 1, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.SupplyPages(vmo, 1, 1));
   ASSERT_TRUE(t.Wait());
@@ -3681,7 +3599,6 @@ TEST(PagerWriteback, OpZeroTrapDirty) {
   ASSERT_TRUE(t.Start());
 
   // We should see a dirty request for the page as the zero'ing is equivalent to a VMO write.
-  ASSERT_TRUE(t.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
   ASSERT_TRUE(t.Wait());
@@ -3788,7 +3705,6 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(OpZeroDecommit, ZX_VMO_RESIZABLE) {
   ASSERT_TRUE(t1.Start());
 
   if (create_option & ZX_VMO_TRAP_DIRTY) {
-    ASSERT_TRUE(t1.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 2, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 2, 1));
   }
@@ -3962,7 +3878,6 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(OpZeroResize, ZX_VMO_RESIZABLE) {
     return status == ZX_ERR_OUT_OF_RANGE;
   });
   ASSERT_TRUE(t.Start());
-  ASSERT_TRUE(t.WaitForBlocked());
 
   // If we're trapping writes, the thread will block on a dirty request for page 1. Otherwise it
   // will block on a read request for page 2.
@@ -4018,7 +3933,6 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(OpZeroPartialPage, ZX_VMO_RESIZABLE) {
   ASSERT_TRUE(t.Start());
 
   if (create_option & ZX_VMO_TRAP_DIRTY) {
-    ASSERT_TRUE(t.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
   }
@@ -4096,12 +4010,10 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(OpZeroExpandsTail, ZX_VMO_RESIZABLE) {
   });
   ASSERT_TRUE(t2.Start());
 
-  ASSERT_TRUE(t2.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
 
   if (create_option & ZX_VMO_TRAP_DIRTY) {
-    ASSERT_TRUE(t2.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
   }
@@ -4276,14 +4188,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(OpZeroPinned, ZX_VMO_RESIZABLE) {
   // We should see dirty and read requests as required, i.e. we should not be able to simply expand
   // the zero tail across a pinned page.
   if (create_option & ZX_VMO_TRAP_DIRTY) {
-    ASSERT_TRUE(t.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
-    ASSERT_TRUE(t.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 1, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 1, 1));
   }
-  ASSERT_TRUE(t.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageRead(vmo, 2, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.SupplyPages(vmo, 2, 1));
 
@@ -4322,7 +4231,6 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(OpZeroUnblocksReadRequest, 0) {
   });
   ASSERT_TRUE(t.Start());
 
-  ASSERT_TRUE(t.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageRead(vmo, 1, 1, ZX_TIME_INFINITE));
 
   // Now zero the last page.
@@ -4368,7 +4276,6 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(WritebackDirtyPagesAfterDetach, 0) {
 
   if (create_option & ZX_VMO_TRAP_DIRTY) {
     // Dirty the page.
-    ASSERT_TRUE(t.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
   }
@@ -4432,7 +4339,6 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(WritebackResizedRangeAfterDetach, ZX_VMO_RESIZA
 
   if (create_option & ZX_VMO_TRAP_DIRTY) {
     // Dirty the page.
-    ASSERT_TRUE(t.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 2, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 2, 1));
   }
@@ -4622,7 +4528,6 @@ VMO_VMAR_TEST(PagerWriteback, DetachWithPendingDirtyRequest) {
   ASSERT_TRUE(t.Start());
 
   // Wait for the dirty request.
-  ASSERT_TRUE(t.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
 
   // Detach the VMO.
@@ -4664,7 +4569,6 @@ TEST(PagerWriteback, FailDirtyRequestAfterDetach) {
   });
   ASSERT_TRUE(t.Start());
 
-  ASSERT_TRUE(t.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
 
   // Detach the VMO.
@@ -4981,7 +4885,6 @@ TEST(PagerWriteback, NotModifiedOnFailedDirtyRequest) {
   });
   ASSERT_TRUE(t1.Start());
 
-  ASSERT_TRUE(t1.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
 
   // Fail the dirty request.
@@ -5013,7 +4916,6 @@ TEST(PagerWriteback, NotModifiedOnFailedDirtyRequest) {
   });
   ASSERT_TRUE(t2.Start());
 
-  ASSERT_TRUE(t2.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
 
   // Fail the dirty request.
@@ -5078,7 +4980,6 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(NotModifiedOnFailedVmoWrite, 0) {
   ASSERT_TRUE(t.Start());
 
   // We should see a read request when the VMO write attempts reading from the source VMO.
-  ASSERT_TRUE(t.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageRead(src_vmo, 0, 1, ZX_TIME_INFINITE));
 
   // Fail the read request so that the write fails.
@@ -5205,7 +5106,6 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ModifiedOnPartialVmoWrite, 0) {
   ASSERT_TRUE(t.Start());
 
   // We should see a read request when the VMO write attempts reading from the source VMO.
-  ASSERT_TRUE(t.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageRead(src_vmo, 1, 1, ZX_TIME_INFINITE));
 
   // Fail the read request so that the write fails.
@@ -5245,7 +5145,6 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ModifiedOnPartialVmoWrite, 0) {
   ASSERT_TRUE(t1.Start());
 
   // Should see a dirty request for page 1.
-  ASSERT_TRUE(t1.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 1, 1, ZX_TIME_INFINITE));
 
   // Fail the dirty request.
@@ -5468,7 +5367,6 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(PinForWrite, 0) {
 
   // If we're trapping dirty transitions, the pin will generate a DIRTY request.
   if (create_option & ZX_VMO_TRAP_DIRTY) {
-    ASSERT_TRUE(t.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
   }
@@ -5542,7 +5440,6 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(PinnedWriteback, 0) {
 
   // If we're trapping dirty transitions, the pin will generate a DIRTY request.
   if (create_option & ZX_VMO_TRAP_DIRTY) {
-    ASSERT_TRUE(t.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
   }
@@ -5636,7 +5533,6 @@ TEST(PagerWriteback, DirtyAfterPin) {
   ASSERT_TRUE(t.Start());
 
   // The pin will generate a DIRTY request.
-  ASSERT_TRUE(t.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
   ASSERT_TRUE(t.Wait());
@@ -5700,7 +5596,6 @@ TEST(PagerWriteback, PinAfterDirty) {
 
   // We should see a DIRTY request.
   ASSERT_TRUE(t.Start());
-  ASSERT_TRUE(t.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
   ASSERT_TRUE(t.Wait());
@@ -5806,19 +5701,16 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(PinForWriteUnpopulated, 0) {
   // If we're trapping dirty transitions, the pin will generate a DIRTY request for the page already
   // present.
   if (create_option & ZX_VMO_TRAP_DIRTY) {
-    ASSERT_TRUE(t.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
   }
 
   // We should see a READ request for the unpopulated page.
-  ASSERT_TRUE(t.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageRead(vmo, 1, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.SupplyPages(vmo, 1, 1));
 
   // If we're trapping dirty transitions, the pin will generate a DIRTY request for the second page.
   if (create_option & ZX_VMO_TRAP_DIRTY) {
-    ASSERT_TRUE(t.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 1, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 1, 1));
   }
@@ -5891,7 +5783,6 @@ TEST(PagerWriteback, NotModifiedFailedPinWrite) {
   ASSERT_TRUE(t.Start());
 
   // We should see a DIRTY request.
-  ASSERT_TRUE(t.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
 
   // Fail the DIRTY request, so that the overall pin fails.
@@ -5961,13 +5852,11 @@ TEST(PagerWriteback, NotModifiedPartialFailedPinWrite) {
   ASSERT_TRUE(t.Start());
 
   // We should see a DIRTY request for both pages.
-  ASSERT_TRUE(t.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 2, ZX_TIME_INFINITE));
 
   // Dirty one page but fail the other and wait for the overall pin to fail.
   ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
   ASSERT_TRUE(pager.FailPages(vmo, 1, 1));
-  ASSERT_TRUE(t.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 1, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.FailPages(vmo, 1, 1));
   ASSERT_TRUE(t.WaitForFailure());
@@ -6041,7 +5930,6 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(SlicePinWrite, 0) {
 
   // If we're trapping dirty transitions, we should see a DIRTY request for both pages.
   if (create_option & ZX_VMO_TRAP_DIRTY) {
-    ASSERT_TRUE(t.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 2, ZX_TIME_INFINITE));
     // Dirty the pages and wait for the pin to succeed.
     ASSERT_TRUE(pager.DirtyPages(vmo, 0, 2));
@@ -6102,7 +5990,6 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(SliceWrite, 0) {
 
   // If we're trapping dirty transitions, we should see a DIRTY request.
   if (create_option & ZX_VMO_TRAP_DIRTY) {
-    ASSERT_TRUE(t1.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
   }
@@ -6157,7 +6044,6 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(SliceWrite, 0) {
 
   // If we're trapping dirty transitions, we should see a DIRTY request.
   if (create_option & ZX_VMO_TRAP_DIRTY) {
-    ASSERT_TRUE(t2.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
   }
@@ -6215,7 +6101,6 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(SliceOpZero, 0) {
 
   // If we're trapping dirty transitions, we should see a DIRTY request.
   if (create_option & ZX_VMO_TRAP_DIRTY) {
-    ASSERT_TRUE(t.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
   }
@@ -6268,7 +6153,6 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(CommitResizeRace, ZX_VMO_RESIZABLE) {
   ASSERT_TRUE(t.Start());
 
   // We should see a READ request for the unpopulated page.
-  ASSERT_TRUE(t.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageRead(vmo, 1, 1, ZX_TIME_INFINITE));
 
   // Resize down the VMO invalidating the unpopulated page, so that the commit has no work to do
@@ -6331,7 +6215,6 @@ TEST(PagerWriteback, EvictAfterDirtyRequest) {
   ASSERT_TRUE(t.Start());
 
   // We should see a DIRTY request.
-  ASSERT_TRUE(t.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, kNumPages, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
 
@@ -6366,17 +6249,14 @@ TEST(PagerWriteback, EvictAfterDirtyRequest) {
   ASSERT_FALSE(pager.DirtyPages(vmo, 0, kNumPages));
 
   // The thread is still blocked. We should now see a DIRTY request for the first page.
-  ASSERT_TRUE(t.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
 
   // We should now see a READ request for the second page.
-  ASSERT_TRUE(t.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageRead(vmo, 1, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.SupplyPages(vmo, 1, 1));
 
   // We should now see a DIRTY request for the remaining pages.
-  ASSERT_TRUE(t.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageDirty(vmo, 1, 2, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.DirtyPages(vmo, 1, 2));
 
@@ -6495,12 +6375,10 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(CommitExtendedTail, ZX_VMO_RESIZABLE) {
   });
   ASSERT_TRUE(t.Start());
 
-  ASSERT_TRUE(t.WaitForBlocked());
   ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
 
   if (create_option & ZX_VMO_TRAP_DIRTY) {
-    ASSERT_TRUE(t.WaitForBlocked());
     ASSERT_TRUE(pager.WaitForPageDirty(vmo, 1, 1, ZX_TIME_INFINITE));
     ASSERT_TRUE(pager.DirtyPages(vmo, 1, 1));
   }
