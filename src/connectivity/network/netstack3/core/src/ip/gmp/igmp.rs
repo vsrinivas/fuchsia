@@ -76,13 +76,13 @@ pub(crate) trait IgmpContext<C: IgmpNonSyncContext<Self::DeviceId>>:
     IpDeviceIdContext<Ipv4> + FrameContext<C, EmptyBuf, IgmpPacketMetadata<Self::DeviceId>>
 {
     /// Gets an IP address and subnet associated with this device.
-    fn get_ip_addr_subnet(&self, device: Self::DeviceId) -> Option<AddrSubnet<Ipv4Addr>>;
+    fn get_ip_addr_subnet(&self, device: &Self::DeviceId) -> Option<AddrSubnet<Ipv4Addr>>;
 
     /// Calls the function with a mutable reference to the device's IGMP state
     /// and whether or not IGMP is enabled for the `device`.
     fn with_igmp_state_mut<O, F: FnOnce(GmpState<'_, Ipv4Addr, IgmpGroupState<C::Instant>>) -> O>(
         &mut self,
-        device: Self::DeviceId,
+        device: &Self::DeviceId,
         cb: F,
     ) -> O;
 }
@@ -95,7 +95,7 @@ pub(crate) trait IgmpPacketHandler<C, DeviceId, B: BufferMut> {
     fn receive_igmp_packet(
         &mut self,
         ctx: &mut C,
-        device: DeviceId,
+        device: &DeviceId,
         src_ip: Ipv4Addr,
         dst_ip: SpecifiedAddr<Ipv4Addr>,
         buffer: B,
@@ -108,7 +108,7 @@ impl<C: IgmpNonSyncContext<SC::DeviceId>, SC: IgmpContext<C>, B: BufferMut>
     fn receive_igmp_packet(
         &mut self,
         ctx: &mut C,
-        device: SC::DeviceId,
+        device: &SC::DeviceId,
         _src_ip: Ipv4Addr,
         _dst_ip: SpecifiedAddr<Ipv4Addr>,
         mut buffer: B,
@@ -186,7 +186,7 @@ impl<C: IgmpNonSyncContext<SC::DeviceId>, SC: IgmpContext<C>> GmpContext<Ipv4, C
     fn send_message(
         &mut self,
         ctx: &mut C,
-        device: Self::DeviceId,
+        device: &Self::DeviceId,
         group_addr: MulticastAddr<Ipv4Addr>,
         msg_type: GmpMessageType<Igmpv2ProtocolSpecific>,
     ) {
@@ -231,11 +231,11 @@ impl<C: IgmpNonSyncContext<SC::DeviceId>, SC: IgmpContext<C>> GmpContext<Ipv4, C
         }
     }
 
-    fn run_actions(&mut self, ctx: &mut C, device: Self::DeviceId, actions: Igmpv2Actions) {
+    fn run_actions(&mut self, ctx: &mut C, device: &Self::DeviceId, actions: Igmpv2Actions) {
         match actions {
             Igmpv2Actions::ScheduleV1RouterPresentTimer(duration) => {
-                let _: Option<C::Instant> =
-                    ctx.schedule_timer(duration, IgmpTimerId::new_v1_router_present(device));
+                let _: Option<C::Instant> = ctx
+                    .schedule_timer(duration, IgmpTimerId::new_v1_router_present(device.clone()));
             }
         }
     }
@@ -246,7 +246,7 @@ impl<C: IgmpNonSyncContext<SC::DeviceId>, SC: IgmpContext<C>> GmpContext<Ipv4, C
 
     fn with_gmp_state_mut<O, F: FnOnce(GmpState<'_, Ipv4Addr, IgmpGroupState<C::Instant>>) -> O>(
         &mut self,
-        device: Self::DeviceId,
+        device: &Self::DeviceId,
         cb: F,
     ) -> O {
         self.with_igmp_state_mut(device, cb)
@@ -302,13 +302,15 @@ impl<C: IgmpNonSyncContext<SC::DeviceId>, SC: IgmpContext<C>>
     fn handle_timer(&mut self, ctx: &mut C, timer: IgmpTimerId<SC::DeviceId>) {
         match timer {
             IgmpTimerId::Gmp(id) => gmp_handle_timer(self, ctx, id),
-            IgmpTimerId::V1RouterPresent { device } => {
-                IgmpContext::with_igmp_state_mut(self, device, |GmpState { enabled: _, groups }| {
+            IgmpTimerId::V1RouterPresent { device } => IgmpContext::with_igmp_state_mut(
+                self,
+                &device,
+                |GmpState { enabled: _, groups }| {
                     for (_, IgmpGroupState(state)) in groups.iter_mut() {
                         state.v1_router_present_timer_expired();
                     }
-                })
-            }
+                },
+            ),
         }
     }
 }
@@ -316,7 +318,7 @@ impl<C: IgmpNonSyncContext<SC::DeviceId>, SC: IgmpContext<C>>
 fn send_igmp_message<C: IgmpNonSyncContext<SC::DeviceId>, SC: IgmpContext<C>, M>(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device: SC::DeviceId,
+    device: &SC::DeviceId,
     group_addr: MulticastAddr<Ipv4Addr>,
     dst_ip: MulticastAddr<Ipv4Addr>,
     max_resp_time: M::MaxRespTime,
@@ -350,7 +352,7 @@ where
     let body = body.into_serializer().encapsulate(builder);
 
     sync_ctx
-        .send_frame(ctx, IgmpPacketMetadata::new(device, dst_ip), body)
+        .send_frame(ctx, IgmpPacketMetadata::new(device.clone(), dst_ip), body)
         .map_err(|_| IgmpError::SendFailure { addr: *group_addr })
 }
 
@@ -562,7 +564,7 @@ mod tests {
         crate::context::testutil::DummyNonSyncCtx<IgmpTimerId<DummyDeviceId>, (), ()>;
 
     impl IgmpContext<DummyNonSyncCtx> for DummySyncCtx {
-        fn get_ip_addr_subnet(&self, _device: DummyDeviceId) -> Option<AddrSubnet<Ipv4Addr>> {
+        fn get_ip_addr_subnet(&self, _device: &DummyDeviceId) -> Option<AddrSubnet<Ipv4Addr>> {
             self.get_ref().addr_subnet
         }
 
@@ -571,7 +573,7 @@ mod tests {
             F: FnOnce(GmpState<'_, Ipv4Addr, IgmpGroupState<DummyInstant>>) -> O,
         >(
             &mut self,
-            DummyDeviceId: DummyDeviceId,
+            &DummyDeviceId: &DummyDeviceId,
             cb: F,
         ) -> O {
             let DummyIgmpCtx { groups, igmp_enabled, addr_subnet: _ } = self.get_mut();
@@ -681,7 +683,7 @@ mod tests {
             resp_time.try_into().unwrap(),
         );
         let buff = ser.into_serializer().serialize_vec_outer().unwrap();
-        sync_ctx.receive_igmp_packet(ctx, DummyDeviceId, ROUTER_ADDR, MY_ADDR, buff);
+        sync_ctx.receive_igmp_packet(ctx, &DummyDeviceId, ROUTER_ADDR, MY_ADDR, buff);
     }
 
     fn receive_igmp_general_query(
@@ -694,13 +696,13 @@ mod tests {
             resp_time.try_into().unwrap(),
         );
         let buff = ser.into_serializer().serialize_vec_outer().unwrap();
-        sync_ctx.receive_igmp_packet(ctx, DummyDeviceId, ROUTER_ADDR, MY_ADDR, buff);
+        sync_ctx.receive_igmp_packet(ctx, &DummyDeviceId, ROUTER_ADDR, MY_ADDR, buff);
     }
 
     fn receive_igmp_report(sync_ctx: &mut DummySyncCtx, ctx: &mut DummyNonSyncCtx) {
         let ser = IgmpPacketBuilder::<Buf<Vec<u8>>, IgmpMembershipReportV2>::new(GROUP_ADDR.get());
         let buff = ser.into_serializer().serialize_vec_outer().unwrap();
-        sync_ctx.receive_igmp_packet(ctx, DummyDeviceId, OTHER_HOST_ADDR, MY_ADDR, buff);
+        sync_ctx.receive_igmp_packet(ctx, &DummyDeviceId, OTHER_HOST_ADDR, MY_ADDR, buff);
     }
 
     fn setup_simple_test_environment_with_addr_subnet(
@@ -762,7 +764,7 @@ mod tests {
 
             // Joining a group should send a report.
             assert_eq!(
-                sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
                 GroupJoinResult::Joined(())
             );
             check_report(&mut sync_ctx);
@@ -782,7 +784,7 @@ mod tests {
         run_with_many_seeds(|seed| {
             let DummyCtx { mut sync_ctx, mut non_sync_ctx } = setup_simple_test_environment(seed);
             assert_eq!(
-                sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
                 GroupJoinResult::Joined(())
             );
             assert_eq!(sync_ctx.frames().len(), 1);
@@ -818,7 +820,7 @@ mod tests {
             let DummyCtx { mut sync_ctx, mut non_sync_ctx } = setup_simple_test_environment(seed);
 
             assert_eq!(
-                sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
                 GroupJoinResult::Joined(())
             );
             let now = non_sync_ctx.now();
@@ -894,7 +896,7 @@ mod tests {
         // This seed value was chosen to later produce a timer duration > 100ms.
         let DummyCtx { mut sync_ctx, mut non_sync_ctx } = setup_simple_test_environment(123456);
         assert_eq!(
-            sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
+            sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
             GroupJoinResult::Joined(())
         );
         let now = non_sync_ctx.now();
@@ -931,7 +933,7 @@ mod tests {
         run_with_many_seeds(|seed| {
             let DummyCtx { mut sync_ctx, mut non_sync_ctx } = setup_simple_test_environment(seed);
             assert_eq!(
-                sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
                 GroupJoinResult::Joined(())
             );
             let now = non_sync_ctx.now();
@@ -948,7 +950,7 @@ mod tests {
             // The report after the delay.
             assert_eq!(sync_ctx.frames().len(), 2);
             assert_eq!(
-                sync_ctx.gmp_leave_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_leave_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
                 GroupLeaveResult::Left(())
             );
             // Our leave message.
@@ -972,7 +974,7 @@ mod tests {
         run_with_many_seeds(|seed| {
             let DummyCtx { mut sync_ctx, mut non_sync_ctx } = setup_simple_test_environment(seed);
             assert_eq!(
-                sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
                 GroupJoinResult::Joined(())
             );
             let now = non_sync_ctx.now();
@@ -987,7 +989,7 @@ mod tests {
             // someone else.
             assert_eq!(sync_ctx.frames().len(), 1);
             assert_eq!(
-                sync_ctx.gmp_leave_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_leave_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
                 GroupLeaveResult::Left(())
             );
             // A leave message is not sent.
@@ -1001,11 +1003,11 @@ mod tests {
         run_with_many_seeds(|seed| {
             let DummyCtx { mut sync_ctx, mut non_sync_ctx } = setup_simple_test_environment(seed);
             assert_eq!(
-                sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
                 GroupJoinResult::Joined(())
             );
             assert_eq!(
-                sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR_2),
+                sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR_2),
                 GroupJoinResult::Joined(())
             );
             let now = non_sync_ctx.now();
@@ -1057,7 +1059,7 @@ mod tests {
             };
 
             assert_eq!(
-                sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
                 GroupJoinResult::Joined(())
             );
             // We should join the group but left in the GMP's non-member
@@ -1076,7 +1078,7 @@ mod tests {
             assert_no_effect(&sync_ctx, &non_sync_ctx);
 
             assert_eq!(
-                sync_ctx.gmp_leave_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_leave_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
                 GroupLeaveResult::Left(())
             );
             // We should have left the group but not executed any `Actions`.
@@ -1094,7 +1096,7 @@ mod tests {
             let DummyCtx { mut sync_ctx, mut non_sync_ctx } = setup_simple_test_environment(seed);
 
             assert_eq!(
-                sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
                 GroupJoinResult::Joined(())
             );
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, Delaying);
@@ -1107,7 +1109,7 @@ mod tests {
             ensure_ttl_ihl_rtr(&sync_ctx);
 
             assert_eq!(
-                sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
                 GroupJoinResult::AlreadyMember
             );
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, Delaying);
@@ -1117,7 +1119,7 @@ mod tests {
                 .assert_timers_installed([(REPORT_DELAY_TIMER_ID, range.clone())]);
 
             assert_eq!(
-                sync_ctx.gmp_leave_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_leave_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
                 GroupLeaveResult::StillMember
             );
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, Delaying);
@@ -1125,7 +1127,7 @@ mod tests {
             non_sync_ctx.timer_ctx().assert_timers_installed([(REPORT_DELAY_TIMER_ID, range)]);
 
             assert_eq!(
-                sync_ctx.gmp_leave_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_leave_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
                 GroupLeaveResult::Left(())
             );
             assert_eq!(sync_ctx.frames().len(), 2);
@@ -1141,7 +1143,7 @@ mod tests {
             assert_eq!(sync_ctx.take_frames(), []);
 
             assert_eq!(
-                sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
                 GroupJoinResult::Joined(())
             );
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, Delaying);
@@ -1166,12 +1168,12 @@ mod tests {
             );
 
             // Should do nothing.
-            sync_ctx.gmp_handle_maybe_enabled(&mut non_sync_ctx, DummyDeviceId);
+            sync_ctx.gmp_handle_maybe_enabled(&mut non_sync_ctx, &DummyDeviceId);
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, Delaying);
             assert_eq!(sync_ctx.take_frames(), []);
 
             // Should send done message.
-            sync_ctx.gmp_handle_disabled(&mut non_sync_ctx, DummyDeviceId);
+            sync_ctx.gmp_handle_disabled(&mut non_sync_ctx, &DummyDeviceId);
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, NonMember);
             assert_matches::assert_matches!(
                 &sync_ctx.take_frames()[..],
@@ -1194,12 +1196,12 @@ mod tests {
             );
 
             // Should do nothing.
-            sync_ctx.gmp_handle_disabled(&mut non_sync_ctx, DummyDeviceId);
+            sync_ctx.gmp_handle_disabled(&mut non_sync_ctx, &DummyDeviceId);
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, NonMember);
             assert_eq!(sync_ctx.take_frames(), []);
 
             // Should send report message.
-            sync_ctx.gmp_handle_maybe_enabled(&mut non_sync_ctx, DummyDeviceId);
+            sync_ctx.gmp_handle_maybe_enabled(&mut non_sync_ctx, &DummyDeviceId);
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, Delaying);
             assert_matches::assert_matches!(
                 &sync_ctx.take_frames()[..],
@@ -1241,7 +1243,7 @@ mod tests {
         crate::ip::device::add_ipv4_addr_subnet(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            device_id,
+            &device_id,
             AddrSubnet::new(MY_ADDR.get(), 24).unwrap(),
         )
         .unwrap();
@@ -1267,7 +1269,7 @@ mod tests {
             crate::ip::device::update_ipv4_configuration(
                 sync_ctx,
                 non_sync_ctx,
-                device_id,
+                &device_id,
                 |config| {
                     config.ip_config.ip_enabled = ip_enabled;
                     config.ip_config.gmp_enabled = gmp_enabled;
@@ -1330,7 +1332,7 @@ mod tests {
             &mut non_sync_ctx,
             TestConfig { ip_enabled: true, gmp_enabled: true },
         );
-        non_sync_ctx.timer_ctx().assert_timers_installed([(timer_id, range.clone())]);
+        non_sync_ctx.timer_ctx().assert_timers_installed([(timer_id.clone(), range.clone())]);
         check_sent_report(&mut non_sync_ctx);
 
         // Disable IGMP.
@@ -1370,7 +1372,7 @@ mod tests {
             &mut non_sync_ctx,
             TestConfig { ip_enabled: true, gmp_enabled: true },
         );
-        non_sync_ctx.timer_ctx().assert_timers_installed([(timer_id, range.clone())]);
+        non_sync_ctx.timer_ctx().assert_timers_installed([(timer_id.clone(), range.clone())]);
         check_sent_report(&mut non_sync_ctx);
 
         // Disable IPv4.

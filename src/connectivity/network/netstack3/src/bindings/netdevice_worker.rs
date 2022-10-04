@@ -115,7 +115,7 @@ impl NetdeviceWorker {
             netstack3_core::device::receive_frame(
                 sync_ctx,
                 non_sync_ctx,
-                id,
+                &id,
                 packet::Buf::new(&mut buff[..], ..len),
             )
             .unwrap_or_else(|e| {

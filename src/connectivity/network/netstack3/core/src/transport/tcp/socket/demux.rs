@@ -68,7 +68,7 @@ where
     fn receive_ip_packet(
         sync_ctx: &mut SC,
         ctx: &mut C,
-        device: SC::DeviceId,
+        device: &SC::DeviceId,
         remote_ip: I::RecvSrcAddr,
         local_ip: SpecifiedAddr<I::Addr>,
         mut buffer: B,
@@ -105,8 +105,10 @@ where
         let conn_addr =
             ConnIpAddr { local: (local_ip, local_port), remote: (remote_ip, remote_port) };
 
-        let mut addrs_to_search =
-            AddrVecIter::<IpPortSpec<I, SC::DeviceId>>::with_device(conn_addr.into(), device);
+        let mut addrs_to_search = AddrVecIter::<IpPortSpec<I, SC::DeviceId>>::with_device(
+            conn_addr.into(),
+            device.clone(),
+        );
 
         sync_ctx.with_ip_transport_ctx_isn_generator_and_tcp_sockets_mut(|ip_transport_ctx, isn, sockets| {
             let any_usable_conn = addrs_to_search.any(|addr| {

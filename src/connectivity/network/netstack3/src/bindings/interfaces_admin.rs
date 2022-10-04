@@ -583,7 +583,7 @@ async fn remove_interface(ctx: NetstackContext, id: BindingId) {
             .devices
             .remove_device(id)
             .expect("device lifetime should be tied to channel lifetime");
-        netstack3_core::device::remove_device(sync_ctx, non_sync_ctx, info.core_id());
+        netstack3_core::device::remove_device(sync_ctx, non_sync_ctx, info.core_id().clone());
         info
     };
     let handler = match device_info.into_info() {
@@ -839,7 +839,7 @@ async fn run_address_state_provider(
         let mut ctx = ctx.lock().await;
         let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
         let device_id = non_sync_ctx.devices.get_core_id(id).expect("interface not found");
-        netstack3_core::add_ip_addr_subnet(sync_ctx, non_sync_ctx, device_id, addr_subnet_either)
+        netstack3_core::add_ip_addr_subnet(sync_ctx, non_sync_ctx, &device_id, addr_subnet_either)
     };
     let should_remove_from_core = match add_to_core_result {
         Err(netstack3_core::error::ExistsError) => {
@@ -901,7 +901,7 @@ async fn run_address_state_provider(
     if should_remove_from_core {
         let device_id = non_sync_ctx.devices.get_core_id(id).expect("interface not found");
         assert_matches!(
-            netstack3_core::del_ip_addr(sync_ctx, non_sync_ctx, device_id, address),
+            netstack3_core::del_ip_addr(sync_ctx, non_sync_ctx, &device_id, address),
             Ok(())
         );
     }

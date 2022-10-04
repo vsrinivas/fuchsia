@@ -213,21 +213,19 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
     /// routable and will return None even if they have been added to the table.
     pub(crate) fn lookup(
         &self,
-        local_device: Option<D>,
+        local_device: Option<&D>,
         address: SpecifiedAddr<I::Addr>,
     ) -> Option<Destination<I::Addr, D>> {
         let Self { table } = self;
 
         // Get all potential routes we could take to reach `address`.
         table.iter().find_map(|ip::types::Entry { subnet, device, gateway }| {
-            (subnet.contains(&address) && local_device.as_ref().map_or(true, |d| d == device)).then(
-                || {
-                    let next_hop =
-                        if let Some(next_hop) = gateway { next_hop.clone() } else { address };
+            (subnet.contains(&address) && local_device.map_or(true, |d| d == device)).then(|| {
+                let next_hop =
+                    if let Some(next_hop) = gateway { next_hop.clone() } else { address };
 
-                    Destination { next_hop, device: device.clone() }
-                },
-            )
+                Destination { next_hop, device: device.clone() }
+            })
         })
     }
 
@@ -488,12 +486,12 @@ mod tests {
             "matches route"
         );
         assert_eq!(
-            table.lookup(Some(LESS_SPECIFIC_SUB_DEVICE), next_hop),
+            table.lookup(Some(&LESS_SPECIFIC_SUB_DEVICE), next_hop),
             Some(Destination { next_hop, device: LESS_SPECIFIC_SUB_DEVICE }),
             "route matches specified device"
         );
         assert_eq!(
-            table.lookup(Some(MORE_SPECIFIC_SUB_DEVICE), next_hop),
+            table.lookup(Some(&MORE_SPECIFIC_SUB_DEVICE), next_hop),
             None,
             "no route with the specified device"
         );
@@ -505,12 +503,12 @@ mod tests {
             "matches most specific route"
         );
         assert_eq!(
-            table.lookup(Some(LESS_SPECIFIC_SUB_DEVICE), next_hop),
+            table.lookup(Some(&LESS_SPECIFIC_SUB_DEVICE), next_hop),
             Some(Destination { next_hop, device: LESS_SPECIFIC_SUB_DEVICE }),
             "matches less specific route with the specified device"
         );
         assert_eq!(
-            table.lookup(Some(MORE_SPECIFIC_SUB_DEVICE), next_hop).unwrap(),
+            table.lookup(Some(&MORE_SPECIFIC_SUB_DEVICE), next_hop).unwrap(),
             Destination { next_hop, device: MORE_SPECIFIC_SUB_DEVICE },
             "matches the most specific route with the specified device"
         );
@@ -537,11 +535,11 @@ mod tests {
             lookup
         );
         assert_eq!(
-            table.lookup(Some(DEVICE1), next_hop),
+            table.lookup(Some(&DEVICE1), next_hop),
             Some(Destination { next_hop, device: DEVICE1 }),
         );
         assert_eq!(
-            table.lookup(Some(DEVICE2), next_hop),
+            table.lookup(Some(&DEVICE2), next_hop),
             Some(Destination { next_hop, device: DEVICE2 }),
         );
     }

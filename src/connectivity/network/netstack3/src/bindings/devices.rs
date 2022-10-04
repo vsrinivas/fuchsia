@@ -172,7 +172,7 @@ pub(crate) fn spawn_rx_task<C: LockableContext + Send + Sync + 'static>(
         while let Some(()) = watcher.next().await {
             let mut ctx = ns.lock().await;
             let Ctx { sync_ctx, non_sync_ctx } = &mut *ctx;
-            handle_queued_rx_packets(sync_ctx, non_sync_ctx, device_id)
+            handle_queued_rx_packets(sync_ctx, non_sync_ctx, &device_id)
         }
     })
     .detach()
@@ -270,8 +270,8 @@ impl<C, I> DeviceInfo<C, I>
 where
     C: Clone,
 {
-    pub fn core_id(&self) -> C {
-        self.core_id.clone()
+    pub fn core_id(&self) -> &C {
+        &self.core_id
     }
 
     pub fn id(&self) -> BindingId {

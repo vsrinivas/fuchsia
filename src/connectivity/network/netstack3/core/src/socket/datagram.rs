@@ -133,13 +133,15 @@ pub(crate) enum MulticastMembershipChange {
     Leave,
 }
 
-impl<A: Eq + Hash, D: Eq + Hash> MulticastMemberships<A, D> {
+impl<A: Eq + Hash, D: Eq + Hash + Clone> MulticastMemberships<A, D> {
     pub(crate) fn apply_membership_change(
         &mut self,
         address: MulticastAddr<A>,
-        device: D,
+        device: &D,
         want_membership: bool,
     ) -> Option<MulticastMembershipChange> {
+        let device = device.clone();
+
         let Self(map) = self;
         if want_membership {
             map.insert((address, device)).then(|| MulticastMembershipChange::Join)
@@ -185,7 +187,7 @@ fn leave_all_joined_groups<
     memberships: MulticastMemberships<A::IpAddr, A::DeviceId>,
 ) {
     for (addr, device) in memberships {
-        sync_ctx.leave_multicast_group(ctx, device, addr)
+        sync_ctx.leave_multicast_group(ctx, &device, addr)
     }
 }
 
@@ -198,7 +200,7 @@ pub(crate) trait DatagramStateContext<A: SocketMapAddrSpec, C, S> {
     fn join_multicast_group(
         &mut self,
         ctx: &mut C,
-        device: A::DeviceId,
+        device: &A::DeviceId,
         addr: MulticastAddr<A::IpAddr>,
     );
 
@@ -211,7 +213,7 @@ pub(crate) trait DatagramStateContext<A: SocketMapAddrSpec, C, S> {
     fn leave_multicast_group(
         &mut self,
         ctx: &mut C,
-        device: A::DeviceId,
+        device: &A::DeviceId,
         addr: MulticastAddr<A::IpAddr>,
     );
 
@@ -226,12 +228,12 @@ pub(crate) trait DatagramStateContext<A: SocketMapAddrSpec, C, S> {
     /// Calls the function with a mutable reference to the datagram sockets.
     fn with_sockets_mut<O, F: FnOnce(&mut DatagramSockets<A, S>) -> O>(&mut self, cb: F) -> O;
 
-    fn get_default_hop_limits(&self, device: Option<A::DeviceId>) -> HopLimits;
+    fn get_default_hop_limits(&self, device: Option<&A::DeviceId>) -> HopLimits;
 
     fn new_ip_socket<O>(
         &mut self,
         ctx: &mut C,
-        device: Option<A::DeviceId>,
+        device: Option<&A::DeviceId>,
         local_ip: Option<SpecifiedAddr<A::IpAddr>>,
         remote: SpecifiedAddr<A::IpAddr>,
         proto: <A::IpVersion as packet_formats::ip::IpProtoExt>::Proto,
@@ -392,20 +394,20 @@ where
 /// for the socket. If `addr` and `device` require inconsistent devices,
 /// or if `addr` requires a zone but there is none specified (by `addr` or
 /// `device`), an error is returned.
-pub(crate) fn resolve_addr_with_device<A: IpAddress, D: PartialEq>(
+pub(crate) fn resolve_addr_with_device<A: IpAddress, D: PartialEq + Clone>(
     addr: ZonedAddr<A, D>,
-    device: Option<D>,
+    device: Option<&D>,
 ) -> Result<(SpecifiedAddr<A>, Option<D>), ZonedAddressError> {
     let (addr, zone) = addr.into_addr_zone();
     let device = match (zone, device) {
         (Some(zone), Some(device)) => {
-            if zone != device {
+            if &zone != device {
                 return Err(ZonedAddressError::DeviceZoneMismatch);
             }
-            Some(device)
+            Some(device.clone())
         }
         (Some(zone), None) => Some(zone),
-        (None, Some(device)) => Some(device),
+        (None, Some(device)) => Some(device.clone()),
         (None, None) => {
             if socket::must_have_zone(&addr) {
                 return Err(ZonedAddressError::RequiredZoneNotProvided);
@@ -443,7 +445,7 @@ where
             let identifier = match local_id {
                 Some(local_id) => Ok(local_id),
                 None => {
-                    let addr = addr.map(|addr| addr.into_addr_zone().0);
+                    let addr = addr.clone().map(|addr| addr.into_addr_zone().0);
                     let sharing_options = Default::default();
                     ctx.try_alloc_listen_identifier(|identifier| {
                         let check_addr =
@@ -469,7 +471,7 @@ where
                     // Extract the specified address and the device. The device
                     // is either the one from the address or the one to which
                     // the socket was previously bound.
-                    let (addr, device) = resolve_addr_with_device(addr, *device)?;
+                    let (addr, device) = resolve_addr_with_device(addr, device.as_ref())?;
 
                     // Binding to multicast addresses is allowed regardless.
                     // Other addresses can only be bound to if they are assigned
@@ -478,13 +480,13 @@ where
                         let assigned_to = sync_ctx
                             .get_device_with_assigned_addr(addr)
                             .ok_or(LocalAddressError::CannotBindToAddress)?;
-                        if device.map_or(false, |device| assigned_to != device) {
+                        if device.as_ref().map_or(false, |device| &assigned_to != device) {
                             return Err(LocalAddressError::AddressMismatch);
                         }
                     }
                     (Some(addr), device, identifier)
                 }
-                None => (None, *device, identifier),
+                None => (None, device.clone(), identifier),
             })
         })?;
 
@@ -544,7 +546,7 @@ pub(crate) fn set_unbound_device<
     sync_ctx: &mut SC,
     _ctx: &mut C,
     id: S::UnboundId,
-    device_id: Option<A::DeviceId>,
+    device_id: Option<&A::DeviceId>,
 ) where
     Bound<S>: Tagged<AddrVec<A>>,
 {
@@ -552,7 +554,7 @@ pub(crate) fn set_unbound_device<
         let DatagramSockets { unbound, bound: _ } = state;
         let UnboundSocketState { ref mut device, sharing: _, ip_options: _ } =
             unbound.get_mut(id.into()).expect("unbound UDP socket not found");
-        *device = device_id;
+        *device = device_id.cloned();
     })
 }
 
@@ -612,7 +614,7 @@ pub(crate) fn set_listener_device<
     sync_ctx: &mut SC,
     _ctx: &mut C,
     id: S::ListenerId,
-    device_id: Option<A::DeviceId>,
+    device_id: Option<&A::DeviceId>,
 ) -> Result<(), LocalAddressError>
 where
     Bound<S>: Tagged<AddrVec<A>>,
@@ -629,7 +631,7 @@ where
         let ListenerAddr { device, ip: ListenerIpAddr { addr, identifier: _ } } = addr;
         let must_have_zone = addr.as_ref().map_or(false, socket::must_have_zone);
 
-        if device != &device_id && must_have_zone {
+        if device.as_ref() != device_id && must_have_zone {
             return Err(LocalAddressError::Zone(ZonedAddressError::DeviceZoneMismatch));
         }
 
@@ -638,7 +640,7 @@ where
             .entry(&id)
             .unwrap_or_else(|| panic!("invalid listener ID {:?}", id));
         let (_, _, addr): &(S::ListenerState, S::ListenerSharingState, _) = entry.get();
-        let new_addr = ListenerAddr { device: device_id, ..addr.clone() };
+        let new_addr = ListenerAddr { device: device_id.cloned(), ..addr.clone() };
         entry
             .try_update_addr(new_addr)
             .map_err(|(ExistsError {}, _entry)| LocalAddressError::AddressInUse)
@@ -655,7 +657,7 @@ pub(crate) fn set_connected_device<
     sync_ctx: &mut SC,
     ctx: &mut C,
     id: S::ConnId,
-    device_id: Option<A::DeviceId>,
+    device_id: Option<&A::DeviceId>,
 ) -> Result<(), SocketError>
 where
     Bound<S>: Tagged<AddrVec<A>>,
@@ -674,7 +676,7 @@ where
             let must_have_zone =
                 [local_ip, remote_ip].into_iter().any(|a| socket::must_have_zone(a));
 
-            if device != &device_id && must_have_zone {
+            if device.as_ref() != device_id && must_have_zone {
                 return Err(SocketError::Local(LocalAddressError::Zone(
                     ZonedAddressError::DeviceZoneMismatch,
                 )));
@@ -699,7 +701,7 @@ where
         let entry =
             bound.conns_mut().entry(&id).unwrap_or_else(|| panic!("invalid conn ID {:?}", id));
         let (_, _, addr): &(_, S::ConnSharingState, _) = entry.get();
-        let new_addr = ConnAddr { device: device_id, ..addr.clone() };
+        let new_addr = ConnAddr { device: device_id.cloned(), ..addr.clone() };
 
         let mut entry = match entry.try_update_addr(new_addr) {
             Err((ExistsError, _entry)) => {
@@ -744,19 +746,19 @@ where
             DatagramSocketId::Unbound(id) => {
                 let UnboundSocketState { device, sharing: _, ip_options: _ } =
                     unbound.get(id.into()).expect("unbound socket not found");
-                *device
+                device.clone()
             }
             DatagramSocketId::Bound(DatagramBoundId::Listener(id)) => {
                 let (_, _, addr): &(S::ListenerState, S::ListenerSharingState, _) =
                     bound.listeners().get_by_id(&id).expect("UDP listener not found");
                 let ListenerAddr { device, ip: _ } = addr;
-                *device
+                device.clone()
             }
             DatagramSocketId::Bound(DatagramBoundId::Connected(id)) => {
                 let (_, _, addr): &(S::ConnState, S::ConnSharingState, _) =
                     bound.conns().get_by_id(&id).expect("UDP connected socket not found");
                 let ConnAddr { device, ip: _ } = addr;
-                *device
+                device.clone()
             }
         }
     })
@@ -912,9 +914,9 @@ where
         // interface ID. If none was provided, use the bound device. If there is
         // none, try to pick a device using the provided address.
         match (bound_device, interface) {
-            (Some(bound_device), None) => Ok(*bound_device),
+            (Some(bound_device), None) => Ok(bound_device.clone()),
             (None, Some(interface)) => Ok(interface),
-            (Some(bound_device), Some(interface)) => (*bound_device == interface)
+            (Some(bound_device), Some(interface)) => (bound_device == &interface)
                 .then(|| interface)
                 .ok_or(SetMulticastMembershipError::WrongDevice),
             (None, None) => pick_interface_for_addr(sync_ctx, multicast_group)
@@ -954,16 +956,16 @@ where
 
         let IpOptions { multicast_memberships, hop_limits: _ } = ip_options;
         multicast_memberships
-            .apply_membership_change(multicast_group, interface, want_membership)
+            .apply_membership_change(multicast_group, &interface, want_membership)
             .ok_or(SetMulticastMembershipError::NoMembershipChange)
     })?;
 
     match change {
         MulticastMembershipChange::Join => {
-            sync_ctx.join_multicast_group(ctx, interface, multicast_group)
+            sync_ctx.join_multicast_group(ctx, &interface, multicast_group)
         }
         MulticastMembershipChange::Leave => {
-            sync_ctx.leave_multicast_group(ctx, interface, multicast_group)
+            sync_ctx.leave_multicast_group(ctx, &interface, multicast_group)
         }
     }
 
@@ -1087,7 +1089,7 @@ where
     sync_ctx.with_sockets(|sockets| {
         let (options, device) = get_options_device(sockets, id.into());
         let IpOptions { hop_limits, multicast_memberships: _ } = options;
-        hop_limits.get_limits_with_defaults(&sync_ctx.get_default_hop_limits(*device))
+        hop_limits.get_limits_with_defaults(&sync_ctx.get_default_hop_limits(device.as_ref()))
     })
 }
 
@@ -1251,7 +1253,7 @@ mod test {
         fn join_multicast_group(
             &mut self,
             _ctx: &mut DummyNonSyncCtx,
-            _device: <DummyAddrSpec<I, D> as SocketMapAddrSpec>::DeviceId,
+            _device: &<DummyAddrSpec<I, D> as SocketMapAddrSpec>::DeviceId,
             _addr: MulticastAddr<<DummyAddrSpec<I, D> as SocketMapAddrSpec>::IpAddr>,
         ) {
             unimplemented!("not required for any existing tests")
@@ -1260,7 +1262,7 @@ mod test {
         fn leave_multicast_group(
             &mut self,
             _ctx: &mut DummyNonSyncCtx,
-            _device: <DummyAddrSpec<I, D> as SocketMapAddrSpec>::DeviceId,
+            _device: &<DummyAddrSpec<I, D> as SocketMapAddrSpec>::DeviceId,
             _addr: MulticastAddr<<DummyAddrSpec<I, D> as SocketMapAddrSpec>::IpAddr>,
         ) {
             unimplemented!("not required for any existing tests")
@@ -1276,7 +1278,7 @@ mod test {
 
         fn get_default_hop_limits(
             &self,
-            _device: Option<<DummyAddrSpec<I, D> as SocketMapAddrSpec>::DeviceId>,
+            _device: Option<&<DummyAddrSpec<I, D> as SocketMapAddrSpec>::DeviceId>,
         ) -> HopLimits {
             DEFAULT_HOP_LIMITS
         }
@@ -1306,7 +1308,7 @@ mod test {
         fn new_ip_socket<O>(
             &mut self,
             _ctx: &mut DummyNonSyncCtx,
-            _device: Option<D>,
+            _device: Option<&D>,
             _local_ip: Option<SpecifiedAddr<I::Addr>>,
             _remote: SpecifiedAddr<I::Addr>,
             _proto: I::Proto,
@@ -1377,7 +1379,7 @@ mod test {
 
         let unbound = create_unbound(&mut sync_ctx);
 
-        set_unbound_device(&mut sync_ctx, &mut non_sync_ctx, unbound, Some(DummyDeviceId));
+        set_unbound_device(&mut sync_ctx, &mut non_sync_ctx, unbound, Some(&DummyDeviceId));
         assert_eq!(get_bound_device(&sync_ctx, &non_sync_ctx, unbound), Some(DummyDeviceId));
 
         set_unbound_device(&mut sync_ctx, &mut non_sync_ctx, unbound, None);

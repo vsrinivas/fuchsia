@@ -18,7 +18,7 @@ impl<I: IcmpIpExt, C, SC: IpDeviceIdContext<I> + ?Sized> IpTransportContext<I, C
     fn receive_icmp_error(
         _sync_ctx: &mut SC,
         _ctx: &mut C,
-        _device: SC::DeviceId,
+        _device: &SC::DeviceId,
         _original_src_ip: Option<SpecifiedAddr<I::Addr>>,
         _original_dst_ip: SpecifiedAddr<I::Addr>,
         _original_body: &[u8],

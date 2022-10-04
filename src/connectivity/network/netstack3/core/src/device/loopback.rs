@@ -95,7 +95,7 @@ pub(super) fn send_ip_frame<
     match BufferReceiveQueueHandler::queue_rx_packet(
         &mut sync_ctx,
         ctx,
-        device_id,
+        &device_id,
         A::Version::VERSION,
         frame,
     ) {
@@ -137,7 +137,7 @@ impl<C: NonSyncContext> ReceiveQueueContext<LoopbackDevice, C> for &'_ SyncCtx<C
         F: FnOnce(&mut ReceiveQueueState<Self::Meta, Self::Buffer>) -> O,
     >(
         &mut self,
-        LoopbackDeviceId: LoopbackDeviceId,
+        &LoopbackDeviceId: &LoopbackDeviceId,
         cb: F,
     ) -> O {
         let loopback = {
@@ -152,7 +152,7 @@ impl<C: NonSyncContext> ReceiveQueueContext<LoopbackDevice, C> for &'_ SyncCtx<C
     fn handle_packet(
         &mut self,
         ctx: &mut C,
-        device_id: LoopbackDeviceId,
+        device_id: &LoopbackDeviceId,
         meta: IpVersion,
         buf: Buf<Vec<u8>>,
     ) {
@@ -160,14 +160,14 @@ impl<C: NonSyncContext> ReceiveQueueContext<LoopbackDevice, C> for &'_ SyncCtx<C
             IpVersion::V4 => crate::ip::receive_ip_packet::<_, _, Ipv4>(
                 self,
                 ctx,
-                device_id.into(),
+                &device_id.clone().into(),
                 FrameDestination::Unicast,
                 buf,
             ),
             IpVersion::V6 => crate::ip::receive_ip_packet::<_, _, Ipv6>(
                 self,
                 ctx,
-                device_id.into(),
+                &device_id.clone().into(),
                 FrameDestination::Unicast,
                 buf,
             ),
@@ -183,7 +183,7 @@ impl<C: NonSyncContext> ReceiveDequeContext<LoopbackDevice, C> for &'_ SyncCtx<C
         F: FnOnce(&mut ReceiveDequeueState<IpVersion, Buf<Vec<u8>>>, &mut Self::ReceiveQueueCtx) -> O,
     >(
         &mut self,
-        LoopbackDeviceId: LoopbackDeviceId,
+        &LoopbackDeviceId: &LoopbackDeviceId,
         cb: F,
     ) -> O {
         let mut me = *self;
@@ -221,16 +221,16 @@ mod tests {
         let mut sync_ctx = &sync_ctx;
         let device = crate::device::add_loopback_device(&mut sync_ctx, &mut non_sync_ctx, MTU)
             .expect("error adding loopback device");
-        crate::device::testutil::enable_device(&mut sync_ctx, &mut non_sync_ctx, device);
+        crate::device::testutil::enable_device(&mut sync_ctx, &mut non_sync_ctx, &device);
 
-        assert_eq!(crate::ip::IpDeviceContext::<Ipv4, _>::get_mtu(&sync_ctx, device), MTU);
-        assert_eq!(crate::ip::IpDeviceContext::<Ipv6, _>::get_mtu(&sync_ctx, device), MTU);
+        assert_eq!(crate::ip::IpDeviceContext::<Ipv4, _>::get_mtu(&sync_ctx, &device), MTU);
+        assert_eq!(crate::ip::IpDeviceContext::<Ipv6, _>::get_mtu(&sync_ctx, &device), MTU);
 
         fn test<I: TestIpExt + IpDeviceStateIpExt, NonSyncCtx: NonSyncContext>(
             sync_ctx: &mut &SyncCtx<NonSyncCtx>,
             ctx: &mut NonSyncCtx,
-            device: DeviceId,
-            get_addrs: fn(&mut &SyncCtx<NonSyncCtx>, DeviceId) -> Vec<SpecifiedAddr<I::Addr>>,
+            device: &DeviceId,
+            get_addrs: fn(&mut &SyncCtx<NonSyncCtx>, &DeviceId) -> Vec<SpecifiedAddr<I::Addr>>,
         ) {
             assert_eq!(get_addrs(sync_ctx, device), []);
 
@@ -243,27 +243,27 @@ mod tests {
             } = I::DUMMY_CONFIG;
             let addr = AddrSubnet::from_witness(local_ip, subnet.prefix())
                 .expect("error creating AddrSubnet");
-            assert_eq!(crate::device::add_ip_addr_subnet(sync_ctx, ctx, device, addr,), Ok(()));
+            assert_eq!(crate::device::add_ip_addr_subnet(sync_ctx, ctx, device, addr), Ok(()));
             let addr = addr.addr();
             assert_eq!(&get_addrs(sync_ctx, device)[..], [addr]);
 
-            assert_eq!(crate::device::del_ip_addr(sync_ctx, ctx, device, &addr,), Ok(()));
+            assert_eq!(crate::device::del_ip_addr(sync_ctx, ctx, device, &addr), Ok(()));
             assert_eq!(get_addrs(sync_ctx, device), []);
 
             assert_eq!(
-                crate::device::del_ip_addr(sync_ctx, ctx, device, &addr,),
+                crate::device::del_ip_addr(sync_ctx, ctx, device, &addr),
                 Err(NotFoundError)
             );
         }
 
-        test::<Ipv4, _>(&mut sync_ctx, &mut non_sync_ctx, device, |sync_ctx, device| {
+        test::<Ipv4, _>(&mut sync_ctx, &mut non_sync_ctx, &device, |sync_ctx, device| {
             crate::ip::device::IpDeviceContext::<Ipv4, _>::with_ip_device_state(
                 sync_ctx,
                 device,
                 |state| state.ip_state.iter_addrs().map(AssignedAddress::addr).collect::<Vec<_>>(),
             )
         });
-        test::<Ipv6, _>(&mut sync_ctx, &mut non_sync_ctx, device, |sync_ctx, device| {
+        test::<Ipv6, _>(&mut sync_ctx, &mut non_sync_ctx, &device, |sync_ctx, device| {
             crate::ip::device::IpDeviceContext::<Ipv6, _>::with_ip_device_state(
                 sync_ctx,
                 device,

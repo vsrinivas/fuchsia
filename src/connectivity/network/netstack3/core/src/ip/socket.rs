@@ -47,7 +47,7 @@ pub(crate) trait IpSocketHandler<I: IpExt, C>: IpDeviceIdContext<I> {
     fn new_ip_socket<O>(
         &mut self,
         ctx: &mut C,
-        device: Option<Self::DeviceId>,
+        device: Option<&Self::DeviceId>,
         local_ip: Option<SpecifiedAddr<I::Addr>>,
         remote_ip: SpecifiedAddr<I::Addr>,
         proto: I::Proto,
@@ -149,7 +149,7 @@ pub(crate) trait BufferIpSocketHandler<I: IpExt, C, B: BufferMut>:
     >(
         &mut self,
         ctx: &mut C,
-        device: Option<Self::DeviceId>,
+        device: Option<&Self::DeviceId>,
         local_ip: Option<SpecifiedAddr<I::Addr>>,
         remote_ip: SpecifiedAddr<I::Addr>,
         proto: I::Proto,
@@ -328,7 +328,7 @@ where
     fn lookup_route(
         &self,
         ctx: &mut C,
-        device: Option<Self::DeviceId>,
+        device: Option<&Self::DeviceId>,
         src_ip: Option<SpecifiedAddr<I::Addr>>,
         dst_ip: SpecifiedAddr<I::Addr>,
     ) -> Result<IpSockRoute<I, Self::DeviceId>, IpSockRouteError>;
@@ -358,7 +358,7 @@ impl<I: Ip + IpExt + IpDeviceStateIpExt, C: IpSocketNonSyncContext, SC: IpSocket
     fn new_ip_socket<O>(
         &mut self,
         ctx: &mut C,
-        device: Option<SC::DeviceId>,
+        device: Option<&SC::DeviceId>,
         local_ip: Option<SpecifiedAddr<I::Addr>>,
         remote_ip: SpecifiedAddr<I::Addr>,
         proto: I::Proto,
@@ -374,7 +374,7 @@ impl<I: Ip + IpExt + IpDeviceStateIpExt, C: IpSocketNonSyncContext, SC: IpSocket
                 Err(e) => return Err((e.into(), options)),
             };
 
-        let definition = IpSockDefinition { local_ip, remote_ip, device, proto };
+        let definition = IpSockDefinition { local_ip, remote_ip, device: device.cloned(), proto };
         Ok(IpSock { definition: definition, options })
     }
 }
@@ -424,7 +424,7 @@ fn send_ip_packet<
     let IpSock { definition: IpSockDefinition { remote_ip, local_ip, device, proto }, options } =
         socket;
     let IpSockRoute { local_ip: got_local_ip, destination: Destination { device, next_hop } } =
-        match sync_ctx.lookup_route(ctx, *device, Some(*local_ip), *remote_ip) {
+        match sync_ctx.lookup_route(ctx, device.as_ref(), Some(*local_ip), *remote_ip) {
             Ok(o) => o,
             Err(IpSockRouteError::NoLocalAddrAvailable) => {
                 unreachable!("local IP {} was specified", local_ip)
@@ -515,12 +515,12 @@ pub(super) mod ipv6_source_address_selection {
     /// to a set of selection criteria.
     pub(crate) fn select_ipv6_source_address<
         'a,
-        D: Copy + PartialEq,
+        D: PartialEq,
         Instant: 'a,
         I: Iterator<Item = (&'a Ipv6AddressEntry<Instant>, D)>,
     >(
         remote_ip: SpecifiedAddr<Ipv6Addr>,
-        outbound_device: D,
+        outbound_device: &D,
         addresses: I,
     ) -> Option<UnicastAddr<Ipv6Addr>> {
         // Source address selection as defined in RFC 6724 Section 5.
@@ -539,26 +539,19 @@ pub(super) mod ipv6_source_address_selection {
             // selection algorithm.
             .filter(|(a, _)| !a.state.is_tentative())
             .max_by(|(a, a_device), (b, b_device)| {
-                select_ipv6_source_address_cmp(
-                    remote_ip,
-                    outbound_device,
-                    a,
-                    *a_device,
-                    b,
-                    *b_device,
-                )
+                select_ipv6_source_address_cmp(remote_ip, outbound_device, a, a_device, b, b_device)
             })
             .map(|(addr, _device)| addr.addr_sub().addr())
     }
 
     /// Comparison operator used by `select_ipv6_source_address`.
-    fn select_ipv6_source_address_cmp<Instant, D: Copy + PartialEq>(
+    fn select_ipv6_source_address_cmp<Instant, D: PartialEq>(
         remote_ip: SpecifiedAddr<Ipv6Addr>,
-        outbound_device: D,
+        outbound_device: &D,
         a: &Ipv6AddressEntry<Instant>,
-        a_device: D,
+        a_device: &D,
         b: &Ipv6AddressEntry<Instant>,
-        b_device: D,
+        b_device: &D,
     ) -> Ordering {
         // TODO(fxbug.dev/46822): Implement rules 2, 4, 5.5, 6, and 7.
 
@@ -617,7 +610,7 @@ pub(super) mod ipv6_source_address_selection {
         }
     }
 
-    fn rule_5<D: PartialEq>(outbound_device: D, a_device: D, b_device: D) -> Ordering {
+    fn rule_5<D: PartialEq>(outbound_device: &D, a_device: &D, b_device: &D) -> Ordering {
         if (a_device == outbound_device) != (b_device == outbound_device) {
             // Rule 5: Prefer outgoing interface.
             if a_device == outbound_device {
@@ -695,9 +688,9 @@ pub(super) mod ipv6_source_address_selection {
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 3,
             ]))
             .unwrap();
-            let dev0 = DeviceId::new_ethernet(0);
-            let dev1 = DeviceId::new_ethernet(1);
-            let dev2 = DeviceId::new_ethernet(2);
+            let dev0 = &DeviceId::new_ethernet(0);
+            let dev1 = &DeviceId::new_ethernet(1);
+            let dev2 = &DeviceId::new_ethernet(2);
 
             // Rule 1: Prefer same address
             assert_eq!(rule_1(remote, remote, local0), Ordering::Greater);
@@ -836,7 +829,7 @@ pub(crate) mod testutil {
         fn lookup_route(
             &self,
             _ctx: &mut DummyNonSyncCtx<Id, Event, NonSyncCtxState>,
-            device: Option<Self::DeviceId>,
+            device: Option<&Self::DeviceId>,
             local_ip: Option<SpecifiedAddr<I::Addr>>,
             addr: SpecifiedAddr<I::Addr>,
         ) -> Result<IpSockRoute<I, Self::DeviceId>, IpSockRouteError> {
@@ -918,13 +911,13 @@ pub(crate) mod testutil {
                     assert_eq!(
                         table.add_device_route(
                             Subnet::new(ip.get(), <I::Addr as IpAddress>::BYTES * 8).unwrap(),
-                            device,
+                            device.clone(),
                         ),
                         Ok(())
                     );
                 }
                 assert!(
-                    device_state.insert(device, state).is_none(),
+                    device_state.insert(device.clone(), state).is_none(),
                     "duplicate entries for {}",
                     device
                 );
@@ -936,7 +929,7 @@ pub(crate) mod testutil {
         pub(crate) fn find_device_with_addr(&self, addr: SpecifiedAddr<I::Addr>) -> Option<D> {
             let Self { table: _, device_state } = self;
             device_state.iter().find_map(|(device, state)| {
-                state.find_addr(&addr).map(|_: &I::AssignedAddress<DummyInstant>| *device)
+                state.find_addr(&addr).map(|_: &I::AssignedAddress<DummyInstant>| device.clone())
             })
         }
 
@@ -1127,12 +1120,12 @@ mod tests {
             let subnets =
                 crate::ip::device::with_assigned_addr_subnets::<I, DummyNonSyncCtx, _, _, _>(
                     sync_ctx,
-                    device,
+                    &device,
                     |addrs| addrs.collect::<Vec<_>>(),
                 );
 
             for subnet in subnets {
-                crate::device::del_ip_addr(sync_ctx, ctx, device, &subnet.addr())
+                crate::device::del_ip_addr(sync_ctx, ctx, &device, &subnet.addr())
                     .expect("failed to remove addr from device");
             }
         }
@@ -1243,7 +1236,7 @@ mod tests {
         crate::device::testutil::enable_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            loopback_device_id,
+            &loopback_device_id,
         );
 
         let NewSocketTestCase { local_ip_type, remote_ip_type, expected_result, device_type } =
@@ -1309,7 +1302,7 @@ mod tests {
         let res = IpSocketHandler::<I, _>::new_ip_socket(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            local_device,
+            local_device.as_ref(),
             from_ip,
             to_ip,
             proto,
@@ -1324,7 +1317,7 @@ mod tests {
             IpSocketHandler::new_ip_socket(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                local_device,
+                local_device.as_ref(),
                 from_ip,
                 to_ip,
                 proto,
@@ -1373,14 +1366,14 @@ mod tests {
         crate::device::add_ip_addr_subnet(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            device_id,
+            &device_id,
             AddrSubnet::new(local_ip.get(), 16).unwrap(),
         )
         .unwrap();
         crate::device::add_ip_addr_subnet(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            device_id,
+            &device_id,
             AddrSubnet::new(remote_ip.get(), 16).unwrap(),
         )
         .unwrap();
@@ -1407,7 +1400,7 @@ mod tests {
         crate::device::testutil::enable_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            loopback_device_id,
+            &loopback_device_id,
         );
 
         let (expected_from_ip, from_ip) = match from_addr_type {
@@ -1642,7 +1635,7 @@ mod tests {
         crate::device::add_ip_addr_subnet(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            device_id,
+            &device_id,
             AddrSubnet::new(local_ip.get(), 16).unwrap(),
         )
         .unwrap();

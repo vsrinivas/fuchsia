@@ -156,7 +156,7 @@ pub(crate) trait IpTransportContext<I: IcmpIpExt, C, SC: IpDeviceIdContext<I> + 
     fn receive_icmp_error(
         sync_ctx: &mut SC,
         ctx: &mut C,
-        device: SC::DeviceId,
+        device: &SC::DeviceId,
         original_src_ip: Option<SpecifiedAddr<I::Addr>>,
         original_dst_ip: SpecifiedAddr<I::Addr>,
         original_body: &[u8],
@@ -181,7 +181,7 @@ pub(crate) trait BufferIpTransportContext<
     fn receive_ip_packet(
         sync_ctx: &mut SC,
         ctx: &mut C,
-        device: SC::DeviceId,
+        device: &SC::DeviceId,
         src_ip: I::RecvSrcAddr,
         dst_ip: SpecifiedAddr<I::Addr>,
         buffer: B,
@@ -192,7 +192,7 @@ impl<I: IcmpIpExt, C, SC: IpDeviceIdContext<I> + ?Sized> IpTransportContext<I, C
     fn receive_icmp_error(
         _sync_ctx: &mut SC,
         _ctx: &mut C,
-        _device: SC::DeviceId,
+        _device: &SC::DeviceId,
         _original_src_ip: Option<SpecifiedAddr<I::Addr>>,
         _original_dst_ip: SpecifiedAddr<I::Addr>,
         _original_body: &[u8],
@@ -208,7 +208,7 @@ impl<I: IpExt, C, SC: IpDeviceIdContext<I> + ?Sized, B: BufferMut>
     fn receive_ip_packet(
         _sync_ctx: &mut SC,
         _ctx: &mut C,
-        _device: SC::DeviceId,
+        _device: &SC::DeviceId,
         _src_ip: I::RecvSrcAddr,
         _dst_ip: SpecifiedAddr<I::Addr>,
         buffer: B,
@@ -237,7 +237,7 @@ pub(crate) trait TransportIpContext<I: IpExt, C>:
     ///
     /// If `device` is not `None` and exists, its hop limits will be returned.
     /// Otherwise the system defaults are returned.
-    fn get_default_hop_limits(&self, device: Option<Self::DeviceId>) -> HopLimits;
+    fn get_default_hop_limits(&self, device: Option<&Self::DeviceId>) -> HopLimits;
 }
 
 /// The execution context provided by the IP layer to transport layer protocols
@@ -317,7 +317,7 @@ impl<C, SC: IpDeviceContext<Ipv4, C> + IpSocketHandler<Ipv4, C>> TransportIpCont
         }
     }
 
-    fn get_default_hop_limits(&self, device: Option<Self::DeviceId>) -> HopLimits {
+    fn get_default_hop_limits(&self, device: Option<&Self::DeviceId>) -> HopLimits {
         match device {
             Some(device) => HopLimits { unicast: self.get_hop_limit(device), ..DEFAULT_HOP_LIMITS },
             None => DEFAULT_HOP_LIMITS,
@@ -339,7 +339,7 @@ impl<C, SC: IpDeviceContext<Ipv6, C> + IpSocketHandler<Ipv6, C>> TransportIpCont
         }
     }
 
-    fn get_default_hop_limits(&self, device: Option<Self::DeviceId>) -> HopLimits {
+    fn get_default_hop_limits(&self, device: Option<&Self::DeviceId>) -> HopLimits {
         match device {
             Some(device) => HopLimits { unicast: self.get_hop_limit(device), ..DEFAULT_HOP_LIMITS },
             None => DEFAULT_HOP_LIMITS,
@@ -348,7 +348,7 @@ impl<C, SC: IpDeviceContext<Ipv6, C> + IpSocketHandler<Ipv6, C>> TransportIpCont
 }
 
 /// An IP device ID.
-pub trait IpDeviceId: Copy + Display + Debug + Eq + Hash + PartialEq + Send + Sync {
+pub trait IpDeviceId: Clone + Display + Debug + Eq + Hash + PartialEq + Send + Sync {
     /// Returns true if the device is a loopback device.
     fn is_loopback(&self) -> bool;
 }
@@ -437,12 +437,12 @@ pub(crate) trait IpStateContext<I: IpLayerIpExt, Instant: crate::Instant>:
 /// The IP device context provided to the IP layer.
 pub(crate) trait IpDeviceContext<I: IpLayerIpExt, C>: IpDeviceIdContext<I> {
     /// Is the device enabled?
-    fn is_ip_device_enabled(&self, device_id: Self::DeviceId) -> bool;
+    fn is_ip_device_enabled(&self, device_id: &Self::DeviceId) -> bool;
 
     /// Returns the best local address with communicating with the remote.
     fn get_local_addr_for_remote(
         &self,
-        device_id: Self::DeviceId,
+        device_id: &Self::DeviceId,
         remote: SpecifiedAddr<I::Addr>,
     ) -> Option<SpecifiedAddr<I::Addr>>;
 
@@ -463,17 +463,17 @@ pub(crate) trait IpDeviceContext<I: IpLayerIpExt, C>: IpDeviceIdContext<I> {
     fn address_status_for_device(
         &self,
         addr: SpecifiedAddr<I::Addr>,
-        device_id: Self::DeviceId,
+        device_id: &Self::DeviceId,
     ) -> AddressStatus<I::AddressStatus>;
 
     /// Returns true iff the device has routing enabled.
-    fn is_device_routing_enabled(&self, device_id: Self::DeviceId) -> bool;
+    fn is_device_routing_enabled(&self, device_id: &Self::DeviceId) -> bool;
 
     /// Returns the hop limit.
-    fn get_hop_limit(&self, device_id: Self::DeviceId) -> NonZeroU8;
+    fn get_hop_limit(&self, device_id: &Self::DeviceId) -> NonZeroU8;
 
     /// Returns the MTU of the device.
-    fn get_mtu(&self, device_id: Self::DeviceId) -> u32;
+    fn get_mtu(&self, device_id: &Self::DeviceId) -> u32;
 }
 
 /// Events observed at the IP layer.
@@ -532,11 +532,11 @@ impl<
     fn lookup_route(
         &self,
         ctx: &mut C,
-        device: Option<SC::DeviceId>,
+        device: Option<&SC::DeviceId>,
         local_ip: Option<SpecifiedAddr<Ipv4Addr>>,
         addr: SpecifiedAddr<Ipv4Addr>,
     ) -> Result<IpSockRoute<Ipv4, SC::DeviceId>, IpSockRouteError> {
-        let get_local_addr = |device, local_ip| {
+        let get_local_addr = |device: &SC::DeviceId, local_ip| {
             if let Some(local_ip) = local_ip {
                 match self.address_status_for_device(local_ip, device) {
                     AddressStatus::Present(Ipv4PresentAddressStatus::Unicast) => Ok(local_ip),
@@ -562,7 +562,7 @@ impl<
                     Ok(IpSockRoute {
                         // TODO(https://fxbug.dev/94965): Allow local IPs from any
                         // interface for locally-destined packets.
-                        local_ip: get_local_addr(device_id, local_ip)?,
+                        local_ip: get_local_addr(&device_id, local_ip)?,
                         destination: Destination { device: loopback, next_hop: addr },
                     })
                 } else {
@@ -578,7 +578,7 @@ impl<
             | AddressStatus::Unassigned => lookup_route(self, ctx, device, addr)
                 .map(|destination| {
                     let Destination { device, next_hop: _ } = &destination;
-                    Ok(IpSockRoute { local_ip: get_local_addr(*device, local_ip)?, destination })
+                    Ok(IpSockRoute { local_ip: get_local_addr(device, local_ip)?, destination })
                 })
                 .unwrap_or(Err(IpSockUnroutableError::NoRouteToRemoteAddr.into())),
         }
@@ -593,11 +593,11 @@ impl<
     fn lookup_route(
         &self,
         ctx: &mut C,
-        device: Option<SC::DeviceId>,
+        device: Option<&SC::DeviceId>,
         local_ip: Option<SpecifiedAddr<Ipv6Addr>>,
         addr: SpecifiedAddr<Ipv6Addr>,
     ) -> Result<IpSockRoute<Ipv6, SC::DeviceId>, IpSockRouteError> {
-        let get_local_addr = |device, local_ip| {
+        let get_local_addr = |device: &SC::DeviceId, local_ip| {
             if let Some(local_ip) = local_ip {
                 // TODO(joshlf):
                 // - Allow the specified local IP to be the local IP of a
@@ -633,7 +633,7 @@ impl<
                     Ok(IpSockRoute {
                         // TODO(https://fxbug.dev/94965): Allow local IPs from any
                         // interface for locally-destined packets.
-                        local_ip: get_local_addr(device_id, local_ip)?,
+                        local_ip: get_local_addr(&device_id, local_ip)?,
                         destination: Destination { device: loopback, next_hop: addr },
                     })
                 } else {
@@ -647,7 +647,7 @@ impl<
             | AddressStatus::Unassigned => lookup_route(self, ctx, device, addr)
                 .map(|destination| {
                     let Destination { device, next_hop: _ } = &destination;
-                    Ok(IpSockRoute { local_ip: get_local_addr(*device, local_ip)?, destination })
+                    Ok(IpSockRoute { local_ip: get_local_addr(device, local_ip)?, destination })
                 })
                 .unwrap_or(Err(IpSockUnroutableError::NoRouteToRemoteAddr.into())),
         }
@@ -684,7 +684,7 @@ pub(crate) trait BufferTransportContext<I: IpLayerIpExt, C, B: BufferMut>:
     fn dispatch_receive_ip_packet(
         &mut self,
         ctx: &mut C,
-        device: Self::DeviceId,
+        device: &Self::DeviceId,
         src_ip: I::RecvSrcAddr,
         dst_ip: SpecifiedAddr<I::Addr>,
         proto: I::Proto,
@@ -700,7 +700,7 @@ pub(crate) trait BufferIpDeviceContext<I: IpLayerIpExt, C, B: BufferMut>:
     fn send_ip_frame<S: Serializer<Buffer = B>>(
         &mut self,
         ctx: &mut C,
-        device_id: Self::DeviceId,
+        device_id: &Self::DeviceId,
         next_hop: SpecifiedAddr<I::Addr>,
         packet: S,
     ) -> Result<(), S>;
@@ -744,7 +744,7 @@ where
     fn dispatch_receive_ip_packet(
         &mut self,
         ctx: &mut C,
-        device: SC::DeviceId,
+        device: &SC::DeviceId,
         src_ip: Ipv4Addr,
         dst_ip: SpecifiedAddr<Ipv4Addr>,
         proto: Ipv4Proto,
@@ -803,7 +803,7 @@ where
     fn dispatch_receive_ip_packet(
         &mut self,
         ctx: &mut C,
-        device: SC::DeviceId,
+        device: &SC::DeviceId,
         src_ip: Ipv6SourceAddr,
         dst_ip: SpecifiedAddr<Ipv6Addr>,
         proto: Ipv6Proto,
@@ -1030,7 +1030,7 @@ fn dispatch_receive_ipv4_packet<
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device: <SC as IpDeviceIdContext<Ipv4>>::DeviceId,
+    device: &SC::DeviceId,
     frame_dst: FrameDestination,
     src_ip: Ipv4Addr,
     dst_ip: SpecifiedAddr<Ipv4Addr>,
@@ -1104,7 +1104,7 @@ fn dispatch_receive_ipv6_packet<
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device: <SC as IpDeviceIdContext<Ipv6>>::DeviceId,
+    device: &SC::DeviceId,
     frame_dst: FrameDestination,
     src_ip: Ipv6SourceAddr,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
@@ -1313,7 +1313,7 @@ macro_rules! try_parse_ip_packet {
 pub(crate) fn receive_ip_packet<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>, I: Ip>(
     mut sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
-    device: DeviceId,
+    device: &DeviceId,
     frame_dst: FrameDestination,
     buffer: B,
 ) {
@@ -1334,11 +1334,11 @@ pub(crate) fn receive_ipv4_packet<
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device: SC::DeviceId,
+    device: &SC::DeviceId,
     frame_dst: FrameDestination,
     mut buffer: B,
 ) {
-    if !sync_ctx.is_ip_device_enabled(device) {
+    if !sync_ctx.is_ip_device_enabled(&device) {
         return;
     }
 
@@ -1456,7 +1456,7 @@ pub(crate) fn receive_ipv4_packet<
                 match BufferIpDeviceContext::<Ipv4, _, _>::send_ip_frame(
                     sync_ctx,
                     ctx,
-                    dst.device,
+                    &dst.device,
                     dst.next_hop,
                     buffer,
                 ) {
@@ -1548,11 +1548,11 @@ pub(crate) fn receive_ipv6_packet<
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device: SC::DeviceId,
+    device: &SC::DeviceId,
     frame_dst: FrameDestination,
     mut buffer: B,
 ) {
-    if !sync_ctx.is_ip_device_enabled(device) {
+    if !sync_ctx.is_ip_device_enabled(&device) {
         return;
     }
 
@@ -1736,7 +1736,7 @@ pub(crate) fn receive_ipv6_packet<
                 if let Err(buffer) = BufferIpDeviceContext::<Ipv6, _, _>::send_ip_frame(
                     sync_ctx,
                     ctx,
-                    dst.device,
+                    &dst.device,
                     dst.next_hop,
                     buffer,
                 ) {
@@ -1754,7 +1754,7 @@ pub(crate) fn receive_ipv6_packet<
                         // the sender's ability to figure out the minimum path
                         // MTU. This may break other logic, though, so we should
                         // still fix it eventually.
-                        let mtu = sync_ctx.get_mtu(device);
+                        let mtu = sync_ctx.get_mtu(&device);
                         BufferIcmpHandler::<Ipv6, _, _>::send_icmp_error_message(
                             sync_ctx,
                             ctx,
@@ -1872,7 +1872,7 @@ fn receive_ipv4_packet_action<
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device: SC::DeviceId,
+    device: &SC::DeviceId,
     dst_ip: SpecifiedAddr<Ipv4Addr>,
 ) -> ReceivePacketAction<Ipv4Addr, SC::DeviceId> {
     // If the packet arrived at the loopback interface, check if any local
@@ -1914,7 +1914,7 @@ fn receive_ipv6_packet_action<
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device: SC::DeviceId,
+    device: &SC::DeviceId,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
 ) -> ReceivePacketAction<Ipv6Addr, SC::DeviceId> {
     // If the packet arrived at the loopback interface, check if any local
@@ -1992,7 +1992,7 @@ fn receive_ip_packet_action_common<
     sync_ctx: &mut SC,
     ctx: &mut C,
     dst_ip: SpecifiedAddr<I::Addr>,
-    device_id: SC::DeviceId,
+    device_id: &SC::DeviceId,
 ) -> ReceivePacketAction<I::Addr, SC::DeviceId> {
     // The packet is not destined locally, so we attempt to forward it.
     if !sync_ctx.is_device_routing_enabled(device_id) {
@@ -2032,7 +2032,7 @@ fn lookup_route<
 >(
     sync_ctx: &SC,
     _ctx: &mut C,
-    device: Option<SC::DeviceId>,
+    device: Option<&SC::DeviceId>,
     dst_ip: SpecifiedAddr<I::Addr>,
 ) -> Option<Destination<I::Addr, SC::DeviceId>> {
     sync_ctx.with_ip_layer_state(|state| {
@@ -2082,7 +2082,7 @@ pub(crate) fn add_device_route<
     device: SC::DeviceId,
 ) -> Result<(), ExistsError> {
     with_ip_layer_state_inner(sync_ctx, |state| {
-        state.table.write().add_device_route(subnet, device).map(|()| {
+        state.table.write().add_device_route(subnet, device.clone()).map(|()| {
             ctx.on_event(IpLayerEvent::DeviceRouteAdded { device, subnet });
         })
     })
@@ -2270,7 +2270,7 @@ pub(crate) fn send_ipv4_packet_from_device<
         let mut builder = Ipv4PacketBuilder::new(
             src_ip,
             dst_ip,
-            ttl.unwrap_or_else(|| sync_ctx.get_hop_limit(device)).get(),
+            ttl.unwrap_or_else(|| sync_ctx.get_hop_limit(&device)).get(),
             proto,
         );
         builder.id(gen_ipv4_packet_id(sync_ctx));
@@ -2281,10 +2281,10 @@ pub(crate) fn send_ipv4_packet_from_device<
     if let Some(mtu) = mtu {
         let body = body.with_mtu(mtu as usize);
         sync_ctx
-            .send_ip_frame(ctx, device, next_hop, body)
+            .send_ip_frame(ctx, &device, next_hop, body)
             .map_err(|ser| ser.into_inner().into_inner())
     } else {
-        sync_ctx.send_ip_frame(ctx, device, next_hop, body).map_err(|ser| ser.into_inner())
+        sync_ctx.send_ip_frame(ctx, &device, next_hop, body).map_err(|ser| ser.into_inner())
     }
 }
 
@@ -2318,7 +2318,7 @@ pub(crate) fn send_ipv6_packet_from_device<
         Ipv6PacketBuilder::new(
             src_ip,
             dst_ip,
-            ttl.unwrap_or_else(|| sync_ctx.get_hop_limit(device)).get(),
+            ttl.unwrap_or_else(|| sync_ctx.get_hop_limit(&device)).get(),
             proto,
         )
     };
@@ -2328,10 +2328,10 @@ pub(crate) fn send_ipv6_packet_from_device<
     if let Some(mtu) = mtu {
         let body = body.with_mtu(mtu as usize);
         sync_ctx
-            .send_ip_frame(ctx, device, next_hop, body)
+            .send_ip_frame(ctx, &device, next_hop, body)
             .map_err(|ser| ser.into_inner().into_inner())
     } else {
-        sync_ctx.send_ip_frame(ctx, device, next_hop, body).map_err(|ser| ser.into_inner())
+        sync_ctx.send_ip_frame(ctx, &device, next_hop, body).map_err(|ser| ser.into_inner())
     }
 }
 
@@ -2339,7 +2339,7 @@ impl<C: NonSyncContext> InnerIcmpContext<Ipv4, C> for &'_ SyncCtx<C> {
     fn receive_icmp_error(
         &mut self,
         ctx: &mut C,
-        device: DeviceId,
+        device: &DeviceId,
         original_src_ip: Option<SpecifiedAddr<Ipv4Addr>>,
         original_dst_ip: SpecifiedAddr<Ipv4Addr>,
         original_proto: Ipv4Proto,
@@ -2402,7 +2402,7 @@ impl<C: NonSyncContext> InnerIcmpContext<Ipv6, C> for &'_ SyncCtx<C> {
     fn receive_icmp_error(
         &mut self,
         ctx: &mut C,
-        device: DeviceId,
+        device: &DeviceId,
         original_src_ip: Option<SpecifiedAddr<Ipv6Addr>>,
         original_dst_ip: SpecifiedAddr<Ipv6Addr>,
         original_next_header: Ipv6Proto,
@@ -2545,7 +2545,7 @@ pub(crate) mod testutil {
 
     pub(crate) fn is_in_ip_multicast<A: IpAddress>(
         sync_ctx: &DummySyncCtx,
-        device: DeviceId,
+        device: &DeviceId,
         addr: MulticastAddr<A>,
     ) -> bool {
         match addr.into() {
@@ -2772,7 +2772,7 @@ mod tests {
         body.extend(fragment_offset * 8..fragment_offset * 8 + 8);
         let buffer =
             Buf::new(body, ..).encapsulate(builder).serialize_vec_outer().unwrap().into_inner();
-        receive_ipv4_packet(sync_ctx, ctx, device, FrameDestination::Unicast, buffer);
+        receive_ipv4_packet(sync_ctx, ctx, &device, FrameDestination::Unicast, buffer);
     }
 
     /// Generate and 'receive' an IPv6 fragment packet.
@@ -2806,7 +2806,7 @@ mod tests {
         let payload_len = u16::try_from(bytes.len() - 40).unwrap();
         bytes[4..6].copy_from_slice(&payload_len.to_be_bytes());
         let buffer = Buf::new(bytes, ..);
-        receive_ipv6_packet(sync_ctx, ctx, device, FrameDestination::Unicast, buffer);
+        receive_ipv6_packet(sync_ctx, ctx, &device, FrameDestination::Unicast, buffer);
     }
 
     #[test]
@@ -2841,7 +2841,7 @@ mod tests {
         receive_ipv6_packet(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            device,
+            &device,
             FrameDestination::Unicast,
             buf,
         );
@@ -2892,7 +2892,7 @@ mod tests {
         receive_ipv6_packet(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            device,
+            &device,
             FrameDestination::Unicast,
             buf,
         );
@@ -2925,7 +2925,7 @@ mod tests {
             ExtensionHeaderOptionAction::SkipAndContinue,
             false,
         );
-        receive_ipv6_packet(&mut sync_ctx, &mut non_sync_ctx, device, frame_dst, buf);
+        receive_ipv6_packet(&mut sync_ctx, &mut non_sync_ctx, &device, frame_dst, buf);
         assert_eq!(get_counter_val(&non_sync_ctx, "send_icmpv6_parameter_problem"), expected_icmps);
         assert_eq!(get_counter_val(&non_sync_ctx, "dispatch_receive_ipv6_packet"), 1);
         assert_eq!(non_sync_ctx.frames_sent().len(), expected_icmps);
@@ -2938,7 +2938,7 @@ mod tests {
             ExtensionHeaderOptionAction::DiscardPacket,
             false,
         );
-        receive_ipv6_packet(&mut sync_ctx, &mut non_sync_ctx, device, frame_dst, buf);
+        receive_ipv6_packet(&mut sync_ctx, &mut non_sync_ctx, &device, frame_dst, buf);
         assert_eq!(get_counter_val(&non_sync_ctx, "send_icmpv6_parameter_problem"), expected_icmps);
         assert_eq!(non_sync_ctx.frames_sent().len(), expected_icmps);
 
@@ -2951,7 +2951,7 @@ mod tests {
             ExtensionHeaderOptionAction::DiscardPacketSendIcmp,
             false,
         );
-        receive_ipv6_packet(&mut sync_ctx, &mut non_sync_ctx, device, frame_dst, buf);
+        receive_ipv6_packet(&mut sync_ctx, &mut non_sync_ctx, &device, frame_dst, buf);
         expected_icmps += 1;
         assert_eq!(get_counter_val(&non_sync_ctx, "send_icmpv6_parameter_problem"), expected_icmps);
         assert_eq!(non_sync_ctx.frames_sent().len(), expected_icmps);
@@ -2971,7 +2971,7 @@ mod tests {
             ExtensionHeaderOptionAction::DiscardPacketSendIcmp,
             true,
         );
-        receive_ipv6_packet(&mut sync_ctx, &mut non_sync_ctx, device, frame_dst, buf);
+        receive_ipv6_packet(&mut sync_ctx, &mut non_sync_ctx, &device, frame_dst, buf);
         expected_icmps += 1;
         assert_eq!(get_counter_val(&non_sync_ctx, "send_icmpv6_parameter_problem"), expected_icmps);
         assert_eq!(non_sync_ctx.frames_sent().len(), expected_icmps);
@@ -2991,7 +2991,7 @@ mod tests {
             ExtensionHeaderOptionAction::DiscardPacketSendIcmpNoMulticast,
             false,
         );
-        receive_ipv6_packet(&mut sync_ctx, &mut non_sync_ctx, device, frame_dst, buf);
+        receive_ipv6_packet(&mut sync_ctx, &mut non_sync_ctx, &device, frame_dst, buf);
         expected_icmps += 1;
         assert_eq!(get_counter_val(&non_sync_ctx, "send_icmpv6_parameter_problem"), expected_icmps);
         assert_eq!(non_sync_ctx.frames_sent().len(), expected_icmps);
@@ -3012,7 +3012,7 @@ mod tests {
             true,
         );
         // Do not expect an ICMP response for this packet
-        receive_ipv6_packet(&mut sync_ctx, &mut non_sync_ctx, device, frame_dst, buf);
+        receive_ipv6_packet(&mut sync_ctx, &mut non_sync_ctx, &device, frame_dst, buf);
         assert_eq!(get_counter_val(&non_sync_ctx, "send_icmpv6_parameter_problem"), expected_icmps);
         assert_eq!(non_sync_ctx.frames_sent().len(), expected_icmps);
 
@@ -3187,7 +3187,7 @@ mod tests {
         let mut alice = DummyEventDispatcherBuilder::from_config(dummy_config.swap()).build();
         {
             let Ctx { sync_ctx, non_sync_ctx } = &mut alice;
-            set_routing_enabled::<_, _, I>(&mut &*sync_ctx, non_sync_ctx, device, true)
+            set_routing_enabled::<_, _, I>(&mut &*sync_ctx, non_sync_ctx, &device, true)
                 .expect("qerror setting routing enabled");
         }
         let bob = DummyEventDispatcherBuilder::from_config(dummy_config).build();
@@ -3266,7 +3266,7 @@ mod tests {
         let Ctx { sync_ctx, mut non_sync_ctx } = dispatcher_builder.build();
         let mut sync_ctx = &sync_ctx;
         let device = DeviceId::new_ethernet(0);
-        set_routing_enabled::<_, _, Ipv6>(&mut sync_ctx, &mut non_sync_ctx, device, true)
+        set_routing_enabled::<_, _, Ipv6>(&mut sync_ctx, &mut non_sync_ctx, &device, true)
             .expect("error setting routing enabled");
         let frame_dst = FrameDestination::Unicast;
 
@@ -3291,7 +3291,7 @@ mod tests {
         receive_ipv6_packet(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            device,
+            &device,
             frame_dst,
             ipv6_packet_buf.clone(),
         );
@@ -3420,7 +3420,7 @@ mod tests {
         receive_ip_packet::<_, _, I>(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            device,
+            &device,
             frame_dst,
             packet_buf,
         );
@@ -3451,7 +3451,7 @@ mod tests {
         receive_ip_packet::<_, _, I>(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            device,
+            &device,
             frame_dst,
             packet_buf,
         );
@@ -3483,7 +3483,7 @@ mod tests {
         receive_ip_packet::<_, _, I>(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            device,
+            &device,
             frame_dst,
             packet_buf,
         );
@@ -3528,7 +3528,7 @@ mod tests {
         receive_ip_packet::<_, _, I>(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            device,
+            &device,
             frame_dst,
             packet_buf,
         );
@@ -3578,7 +3578,7 @@ mod tests {
         );
 
         // Receive the IP packet.
-        receive_ipv4_packet(&mut sync_ctx, &mut non_sync_ctx, device, frame_dst, packet_buf);
+        receive_ipv4_packet(&mut sync_ctx, &mut non_sync_ctx, &device, frame_dst, packet_buf);
 
         // Should have dispatched the packet.
         assert_eq!(get_counter_val(&non_sync_ctx, "dispatch_receive_ipv4_packet"), 1);
@@ -3607,7 +3607,7 @@ mod tests {
         );
 
         // Receive the IP packet.
-        receive_ipv4_packet(&mut sync_ctx, &mut non_sync_ctx, device, frame_dst, packet_buf);
+        receive_ipv4_packet(&mut sync_ctx, &mut non_sync_ctx, &device, frame_dst, packet_buf);
 
         // Should have dispatched the packet.
         assert_eq!(get_counter_val(&non_sync_ctx, "dispatch_receive_ipv4_packet"), 2);
@@ -3636,7 +3636,7 @@ mod tests {
         );
 
         // Receive the IP packet.
-        receive_ipv4_packet(&mut sync_ctx, &mut non_sync_ctx, device, frame_dst, packet_buf);
+        receive_ipv4_packet(&mut sync_ctx, &mut non_sync_ctx, &device, frame_dst, packet_buf);
 
         // Should have dispatched the packet.
         assert_eq!(get_counter_val(&non_sync_ctx, "dispatch_receive_ipv4_packet"), 3);
@@ -3668,7 +3668,7 @@ mod tests {
         );
 
         // Receive the IP packet.
-        receive_ipv4_packet(&mut sync_ctx, &mut non_sync_ctx, device, frame_dst, packet_buf);
+        receive_ipv4_packet(&mut sync_ctx, &mut non_sync_ctx, &device, frame_dst, packet_buf);
 
         // Should have dispatched the packet.
         assert_eq!(get_counter_val(&non_sync_ctx, "dispatch_receive_ipv4_packet"), 4);
@@ -3715,8 +3715,8 @@ mod tests {
             .serialize_vec_outer()
             .unwrap();
 
-        crate::device::testutil::enable_device(&mut sync_ctx, &mut non_sync_ctx, device);
-        receive_ipv6_packet(&mut sync_ctx, &mut non_sync_ctx, device, frame_dst, buf);
+        crate::device::testutil::enable_device(&mut sync_ctx, &mut non_sync_ctx, &device);
+        receive_ipv6_packet(&mut sync_ctx, &mut non_sync_ctx, &device, frame_dst, buf);
 
         // Should not have dispatched the packet.
         assert_eq!(get_counter_val(&non_sync_ctx, "receive_ipv6_packet"), 1);
@@ -3760,7 +3760,7 @@ mod tests {
             .serialize_vec_outer()
             .unwrap();
 
-        receive_ipv4_packet(&mut sync_ctx, &mut non_sync_ctx, device, frame_dst, buf);
+        receive_ipv4_packet(&mut sync_ctx, &mut non_sync_ctx, &device, frame_dst, buf);
 
         // Should have dispatched the packet but resulted in an ICMP error.
         assert_eq!(get_counter_val(&non_sync_ctx, "dispatch_receive_ipv4_packet"), 1);
@@ -3804,8 +3804,8 @@ mod tests {
         let multi_addr = MulticastAddr::new(multi_addr).unwrap();
         // Should not have dispatched the packet since we are not in the
         // multicast group `multi_addr`.
-        assert!(!is_in_ip_multicast(&sync_ctx, device, multi_addr));
-        receive_frame(&mut sync_ctx, &mut non_sync_ctx, device, buf.clone())
+        assert!(!is_in_ip_multicast(&sync_ctx, &device, multi_addr));
+        receive_frame(&mut sync_ctx, &mut non_sync_ctx, &device, buf.clone())
             .expect("error receiving frame");
         assert_eq!(get_counter_val(&non_sync_ctx, dispatch_receive_ip_packet_name::<I>()), 0);
 
@@ -3815,18 +3815,18 @@ mod tests {
             IpAddr::V4(multicast_addr) => crate::ip::device::join_ip_multicast::<Ipv4, _, _>(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                device,
+                &device,
                 multicast_addr,
             ),
             IpAddr::V6(multicast_addr) => crate::ip::device::join_ip_multicast::<Ipv6, _, _>(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                device,
+                &device,
                 multicast_addr,
             ),
         }
-        assert!(is_in_ip_multicast(&sync_ctx, device, multi_addr));
-        receive_frame(&mut sync_ctx, &mut non_sync_ctx, device, buf.clone())
+        assert!(is_in_ip_multicast(&sync_ctx, &device, multi_addr));
+        receive_frame(&mut sync_ctx, &mut non_sync_ctx, &device, buf.clone())
             .expect("error receiving frame");
         assert_eq!(get_counter_val(&non_sync_ctx, dispatch_receive_ip_packet_name::<I>()), 1);
 
@@ -3836,18 +3836,18 @@ mod tests {
             IpAddr::V4(multicast_addr) => crate::ip::device::leave_ip_multicast::<Ipv4, _, _>(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                device,
+                &device,
                 multicast_addr,
             ),
             IpAddr::V6(multicast_addr) => crate::ip::device::leave_ip_multicast::<Ipv6, _, _>(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                device,
+                &device,
                 multicast_addr,
             ),
         }
-        assert!(!is_in_ip_multicast(&sync_ctx, device, multi_addr));
-        receive_frame(&mut sync_ctx, &mut non_sync_ctx, device, buf.clone())
+        assert!(!is_in_ip_multicast(&sync_ctx, &device, multi_addr));
+        receive_frame(&mut sync_ctx, &mut non_sync_ctx, &device, buf.clone())
             .expect("error receiving frame");
         assert_eq!(get_counter_val(&non_sync_ctx, dispatch_receive_ip_packet_name::<I>()), 1);
     }
@@ -3870,7 +3870,7 @@ mod tests {
         crate::ip::device::update_ipv6_configuration(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            device,
+            &device,
             |config| {
                 config.ip_config.ip_enabled = true;
 
@@ -3890,7 +3890,7 @@ mod tests {
             .into_inner();
 
         // Received packet should not have been dispatched.
-        receive_ipv6_packet(&mut sync_ctx, &mut non_sync_ctx, device, frame_dst, buf.clone());
+        receive_ipv6_packet(&mut sync_ctx, &mut non_sync_ctx, &device, frame_dst, buf.clone());
         assert_eq!(get_counter_val(&non_sync_ctx, "dispatch_receive_ipv6_packet"), 0);
 
         // Wait until DAD is complete. Arbitrarily choose a year in the future
@@ -3907,7 +3907,7 @@ mod tests {
         );
 
         // Received packet should have been dispatched.
-        receive_ipv6_packet(&mut sync_ctx, &mut non_sync_ctx, device, frame_dst, buf);
+        receive_ipv6_packet(&mut sync_ctx, &mut non_sync_ctx, &device, frame_dst, buf);
         assert_eq!(get_counter_val(&non_sync_ctx, "dispatch_receive_ipv6_packet"), 1);
 
         // Set the new IP (this should trigger DAD).
@@ -3915,7 +3915,7 @@ mod tests {
         crate::device::add_ip_addr_subnet(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            device,
+            &device,
             AddrSubnet::new(ip, 128).unwrap(),
         )
         .unwrap();
@@ -3927,7 +3927,7 @@ mod tests {
             .into_inner();
 
         // Received packet should not have been dispatched.
-        receive_ipv6_packet(&mut sync_ctx, &mut non_sync_ctx, device, frame_dst, buf.clone());
+        receive_ipv6_packet(&mut sync_ctx, &mut non_sync_ctx, &device, frame_dst, buf.clone());
         assert_eq!(get_counter_val(&non_sync_ctx, "dispatch_receive_ipv6_packet"), 1);
 
         // Make sure all timers are done (DAD to complete on the interface due
@@ -3941,7 +3941,7 @@ mod tests {
         );
 
         // Received packet should have been dispatched.
-        receive_ipv6_packet(&mut sync_ctx, &mut non_sync_ctx, device, frame_dst, buf);
+        receive_ipv6_packet(&mut sync_ctx, &mut non_sync_ctx, &device, frame_dst, buf);
         assert_eq!(get_counter_val(&non_sync_ctx, "dispatch_receive_ipv6_packet"), 2);
     }
 
@@ -3959,7 +3959,7 @@ mod tests {
             cfg.local_mac,
             Ipv6::MINIMUM_LINK_MTU.into(),
         );
-        crate::device::testutil::enable_device(&mut sync_ctx, &mut non_sync_ctx, device);
+        crate::device::testutil::enable_device(&mut sync_ctx, &mut non_sync_ctx, &device);
 
         let ip: Ipv6Addr = cfg.local_mac.to_ipv6_link_local().addr().get();
         let buf = Buf::new(vec![0; 10], ..)
@@ -3976,7 +3976,7 @@ mod tests {
         receive_ipv6_packet(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            device,
+            &device,
             FrameDestination::Unicast,
             buf.clone(),
         );
@@ -4009,7 +4009,7 @@ mod tests {
             receive_ipv4_packet_action(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                v4_dev,
+                &v4_dev,
                 v4_config.local_ip
             ),
             ReceivePacketAction::Deliver
@@ -4018,7 +4018,7 @@ mod tests {
             receive_ipv6_packet_action(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                v6_dev,
+                &v6_dev,
                 v6_config.local_ip
             ),
             ReceivePacketAction::Deliver
@@ -4029,7 +4029,7 @@ mod tests {
             receive_ipv4_packet_action(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                v4_dev,
+                &v4_dev,
                 SpecifiedAddr::new(v4_subnet.broadcast()).unwrap()
             ),
             ReceivePacketAction::Deliver
@@ -4040,7 +4040,7 @@ mod tests {
             receive_ipv4_packet_action(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                v4_dev,
+                &v4_dev,
                 Ipv4::LIMITED_BROADCAST_ADDRESS
             ),
             ReceivePacketAction::Deliver
@@ -4050,14 +4050,14 @@ mod tests {
         crate::ip::device::join_ip_multicast::<Ipv4, _, _>(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            v4_dev,
+            &v4_dev,
             Ipv4::ALL_ROUTERS_MULTICAST_ADDRESS,
         );
         assert_eq!(
             receive_ipv4_packet_action(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                v4_dev,
+                &v4_dev,
                 Ipv4::ALL_ROUTERS_MULTICAST_ADDRESS.into_specified()
             ),
             ReceivePacketAction::Deliver
@@ -4068,7 +4068,7 @@ mod tests {
             receive_ipv6_packet_action(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                v6_dev,
+                &v6_dev,
                 Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.into_specified()
             ),
             ReceivePacketAction::Deliver
@@ -4079,7 +4079,7 @@ mod tests {
             receive_ipv6_packet_action(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                v6_dev,
+                &v6_dev,
                 v6_config.local_ip.to_solicited_node_address().into_specified(),
             ),
             ReceivePacketAction::Deliver
@@ -4102,7 +4102,7 @@ mod tests {
             crate::ip::device::update_ipv6_configuration(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                device,
+                &device,
                 |config| {
                     config.ip_config.ip_enabled = true;
 
@@ -4115,7 +4115,7 @@ mod tests {
                 receive_ipv6_packet_action(
                     &mut sync_ctx,
                     &mut non_sync_ctx,
-                    device,
+                    &device,
                     tentative.into_specified()
                 ),
                 ReceivePacketAction::Drop { reason: DropReason::Tentative }
@@ -4128,7 +4128,7 @@ mod tests {
             receive_ipv4_packet_action(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                v4_dev,
+                &v4_dev,
                 v4_config.remote_ip
             ),
             ReceivePacketAction::Drop { reason: DropReason::ForwardingDisabledInboundIface }
@@ -4137,7 +4137,7 @@ mod tests {
             receive_ipv6_packet_action(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                v6_dev,
+                &v6_dev,
                 v6_config.remote_ip
             ),
             ReceivePacketAction::Drop { reason: DropReason::ForwardingDisabledInboundIface }
@@ -4145,15 +4145,15 @@ mod tests {
 
         // Receive packet destined to a remote address when forwarding is
         // enabled both globally and on the inbound device.
-        set_routing_enabled::<_, _, Ipv4>(&mut sync_ctx, &mut non_sync_ctx, v4_dev, true)
+        set_routing_enabled::<_, _, Ipv4>(&mut sync_ctx, &mut non_sync_ctx, &v4_dev, true)
             .expect("error setting routing enabled");
-        set_routing_enabled::<_, _, Ipv6>(&mut sync_ctx, &mut non_sync_ctx, v6_dev, true)
+        set_routing_enabled::<_, _, Ipv6>(&mut sync_ctx, &mut non_sync_ctx, &v6_dev, true)
             .expect("error setting routing enabled");
         assert_eq!(
             receive_ipv4_packet_action(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                v4_dev,
+                &v4_dev,
                 v4_config.remote_ip
             ),
             ReceivePacketAction::Forward {
@@ -4164,7 +4164,7 @@ mod tests {
             receive_ipv6_packet_action(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                v6_dev,
+                &v6_dev,
                 v6_config.remote_ip
             ),
             ReceivePacketAction::Forward {
@@ -4180,7 +4180,7 @@ mod tests {
             receive_ipv4_packet_action(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                v4_dev,
+                &v4_dev,
                 v4_config.remote_ip
             ),
             ReceivePacketAction::SendNoRouteToDest
@@ -4189,7 +4189,7 @@ mod tests {
             receive_ipv6_packet_action(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                v6_dev,
+                &v6_dev,
                 v6_config.remote_ip
             ),
             ReceivePacketAction::SendNoRouteToDest

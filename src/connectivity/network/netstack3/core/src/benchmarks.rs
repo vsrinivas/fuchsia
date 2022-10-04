@@ -57,7 +57,7 @@ fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
     crate::ip::device::set_routing_enabled::<_, _, Ipv4>(
         &mut sync_ctx,
         &mut non_sync_ctx,
-        DeviceId::new_ethernet(0),
+        &DeviceId::new_ethernet(0),
         true,
     )
     .expect("error setting routing enabled");
@@ -108,7 +108,7 @@ fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
             receive_frame(
                 black_box(&mut sync_ctx),
                 black_box(&mut non_sync_ctx),
-                black_box(device),
+                black_box(&device),
                 black_box(Buf::new(&mut buf[..], range.clone())),
             )
             .expect("error receiving frame"),

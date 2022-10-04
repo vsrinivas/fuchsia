@@ -545,16 +545,16 @@ impl DummyEventDispatcherBuilder {
                     mac,
                     Ipv6::MINIMUM_LINK_MTU.into(),
                 );
-                crate::device::testutil::enable_device(sync_ctx, non_sync_ctx, id);
+                crate::device::testutil::enable_device(sync_ctx, non_sync_ctx, &id);
                 match ip_subnet {
                     Some((IpAddr::V4(ip), SubnetEither::V4(subnet))) => {
                         let addr_sub = AddrSubnet::new(ip, subnet.prefix()).unwrap();
-                        crate::device::add_ip_addr_subnet(sync_ctx, non_sync_ctx, id, addr_sub)
+                        crate::device::add_ip_addr_subnet(sync_ctx, non_sync_ctx, &id, addr_sub)
                             .unwrap();
                     }
                     Some((IpAddr::V6(ip), SubnetEither::V6(subnet))) => {
                         let addr_sub = AddrSubnet::new(ip, subnet.prefix()).unwrap();
-                        crate::device::add_ip_addr_subnet(sync_ctx, non_sync_ctx, id, addr_sub)
+                        crate::device::add_ip_addr_subnet(sync_ctx, non_sync_ctx, &id, addr_sub)
                             .unwrap();
                     }
                     None => {}
@@ -565,12 +565,12 @@ impl DummyEventDispatcherBuilder {
             .collect();
         for (idx, ip, mac) in arp_table_entries {
             let device = *idx_to_device_id.get(&idx).unwrap();
-            crate::device::insert_static_arp_table_entry(sync_ctx, non_sync_ctx, device, ip, mac)
+            crate::device::insert_static_arp_table_entry(sync_ctx, non_sync_ctx, &device, ip, mac)
                 .expect("error inserting static ARP entry");
         }
         for (idx, ip, mac) in ndp_table_entries {
             let device = *idx_to_device_id.get(&idx).unwrap();
-            crate::device::insert_ndp_table_entry(sync_ctx, non_sync_ctx, device, ip, mac.get())
+            crate::device::insert_ndp_table_entry(sync_ctx, non_sync_ctx, &device, ip, mac.get())
                 .expect("error inserting static NDP entry");
         }
         for (subnet, idx) in device_routes {
@@ -723,7 +723,7 @@ pub(crate) fn handle_queued_rx_packets(sync_ctx: &DummySyncCtx, ctx: &mut DummyN
         }
 
         for id in rx_available.into_iter() {
-            crate::device::handle_queued_rx_packets(sync_ctx, ctx, id);
+            crate::device::handle_queued_rx_packets(sync_ctx, ctx, &id);
         }
     }
 }
@@ -996,13 +996,13 @@ mod tests {
         set_logger_for_test();
         // Create a network that takes 5ms to get any packet to go through.
         let latency = Duration::from_millis(5);
-        let device_id = DeviceId::new_ethernet(0);
         let mut net = DummyNetwork::new(
             [
                 ("alice", DUMMY_CONFIG_V4.into_builder().build()),
                 ("bob", DUMMY_CONFIG_V4.swap().into_builder().build()),
             ],
             move |net: &'static str, _device_id: DeviceId| {
+                let device_id = DeviceId::new_ethernet(0);
                 if net == "alice" {
                     vec![("bob", device_id, Some(latency))]
                 } else {
@@ -1158,8 +1158,8 @@ mod tests {
         let mut net = DummyNetwork::new(
             [("alice", alice.build()), ("bob", bob.build()), ("calvin", calvin.build())],
             move |net: &'static str, _device_id: DeviceId| match net {
-                "alice" => vec![("bob", device, None), ("calvin", device, None)],
-                "bob" => vec![("alice", device, None)],
+                "alice" => vec![("bob", device.clone(), None), ("calvin", device.clone(), None)],
+                "bob" => vec![("alice", device.clone(), None)],
                 "calvin" => Vec::new(),
                 _ => unreachable!(),
             },

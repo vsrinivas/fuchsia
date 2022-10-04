@@ -678,13 +678,13 @@ impl TestSetupBuilder {
                         DEFAULT_LOOPBACK_MTU,
                     )
                     .expect("add loopback device");
-                    crate::bindings::add_loopback_ip_addrs(sync_ctx, non_sync_ctx, loopback)
+                    crate::bindings::add_loopback_ip_addrs(sync_ctx, non_sync_ctx, &loopback)
                         .expect("add loopback addresses");
 
                     netstack3_core::device::update_ipv4_configuration(
                         sync_ctx,
                         non_sync_ctx,
-                        loopback,
+                        &loopback,
                         |config| {
                             config.ip_config.ip_enabled = true;
                         },
@@ -692,7 +692,7 @@ impl TestSetupBuilder {
                     netstack3_core::device::update_ipv6_configuration(
                         sync_ctx,
                         non_sync_ctx,
-                        loopback,
+                        &loopback,
                         |config| {
                             config.ip_config.ip_enabled = true;
                         },
@@ -903,8 +903,8 @@ async fn test_ethernet_link_up_down() {
     // Ensure that the device has been enabled in the core.
     let core_id = {
         let mut ctx = test_stack.ctx().await;
-        let core_id = ctx.non_sync_ctx.get_device_info(if_id).unwrap().core_id();
-        check_ip_enabled(ctx.deref_mut(), core_id, true);
+        let core_id = ctx.non_sync_ctx.get_device_info(if_id).unwrap().core_id().clone();
+        check_ip_enabled(ctx.deref_mut(), &core_id, true);
         core_id
     };
 
@@ -920,7 +920,7 @@ async fn test_ethernet_link_up_down() {
     assert!(if_info.admin_enabled);
 
     // Ensure that the device has been disabled in the core.
-    check_ip_enabled(test_stack.ctx().await.deref_mut(), core_id, false);
+    check_ip_enabled(test_stack.ctx().await.deref_mut(), &core_id, false);
 
     // Setting the link down again should cause no effect on the device state,
     // and should be handled gracefully.
@@ -933,7 +933,7 @@ async fn test_ethernet_link_up_down() {
     assert!(if_info.admin_enabled);
 
     // Ensure that the device has been disabled in the core.
-    check_ip_enabled(test_stack.ctx().await.deref_mut(), core_id, false);
+    check_ip_enabled(test_stack.ctx().await.deref_mut(), &core_id, false);
 
     // Setting the link up should reenable the interface and enable it in
     // the core.
@@ -947,7 +947,7 @@ async fn test_ethernet_link_up_down() {
     assert!(if_info.admin_enabled);
 
     // Ensure that the device has been enabled in the core.
-    check_ip_enabled(test_stack.ctx().await.deref_mut(), core_id, true);
+    check_ip_enabled(test_stack.ctx().await.deref_mut(), &core_id, true);
 
     // Setting the link up again should cause no effect on the device state,
     // and should be handled gracefully.
@@ -963,8 +963,8 @@ async fn test_ethernet_link_up_down() {
     let core_id = t
         .get(0)
         .with_ctx(|ctx| {
-            let core_id = ctx.non_sync_ctx.get_device_info(if_id).unwrap().core_id();
-            check_ip_enabled(ctx, core_id, true);
+            let core_id = ctx.non_sync_ctx.get_device_info(if_id).unwrap().core_id().clone();
+            check_ip_enabled(ctx, &core_id, true);
             core_id
         })
         .await;
@@ -974,13 +974,13 @@ async fn test_ethernet_link_up_down() {
     // hasn't been called)
     let mut ctx = t.ctx(0).await;
     let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
-    netstack3_core::device::receive_frame(sync_ctx, non_sync_ctx, core_id, Buf::new(&mut [], ..))
+    netstack3_core::device::receive_frame(sync_ctx, non_sync_ctx, &core_id, Buf::new(&mut [], ..))
         .expect("error receiving frame");
 }
 
 fn check_ip_enabled<NonSyncCtx: NonSyncContext>(
     Ctx { sync_ctx, non_sync_ctx: _ }: &mut Ctx<NonSyncCtx>,
-    core_id: DeviceId,
+    core_id: &DeviceId,
     expected: bool,
 ) {
     let ipv4_enabled =

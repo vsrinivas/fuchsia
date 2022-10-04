@@ -1377,7 +1377,7 @@ pub(crate) mod testutil {
             + AsRef<DummyTimerCtx<Ctx::TimerId>>
             + AsMut<DummyTimerCtx<Ctx::TimerId>>
             + AsMut<DummyFrameCtx<Ctx::SendMeta>>,
-        Ctx::TimerId: Copy,
+        Ctx::TimerId: Clone,
         Links: DummyNetworkLinks<Ctx::SendMeta, RecvMeta, CtxId>,
     {
         /// Creates a new `DummyNetwork`.
@@ -1533,7 +1533,7 @@ pub(crate) mod testutil {
                     if *t > ctx.as_ref().now() {
                         break;
                     }
-                    timers.push(*id);
+                    timers.push(id.clone());
                     assert_ne!(AsMut::<DummyTimerCtx<_>>::as_mut(ctx).timers.pop(), None);
                 }
 
@@ -1723,8 +1723,8 @@ pub(crate) mod testutil {
         impl DummyNetworkLinks<DeviceId, DeviceId, CtxId>,
     > {
         let contexts = vec![(a_id, a), (b_id, b)].into_iter();
-        let device_id = DeviceId::new_ethernet(0);
         DummyNetwork::new(contexts, move |net, _device_id: DeviceId| {
+            let device_id = DeviceId::new_ethernet(0);
             if net == a_id {
                 vec![(b_id, device_id, None)]
             } else {

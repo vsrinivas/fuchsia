@@ -849,7 +849,7 @@ pub(crate) trait UdpStateContext<I: IpExt, C: UdpStateNonSyncContext<I>>:
     fn join_multicast_group(
         &mut self,
         ctx: &mut C,
-        device: Self::DeviceId,
+        device: &Self::DeviceId,
         addr: MulticastAddr<I::Addr>,
     );
 
@@ -862,7 +862,7 @@ pub(crate) trait UdpStateContext<I: IpExt, C: UdpStateNonSyncContext<I>>:
     fn leave_multicast_group(
         &mut self,
         ctx: &mut C,
-        device: Self::DeviceId,
+        device: &Self::DeviceId,
         addr: MulticastAddr<I::Addr>,
     );
 
@@ -950,7 +950,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> IpTransp
     fn receive_icmp_error(
         sync_ctx: &mut SC,
         ctx: &mut C,
-        device: SC::DeviceId,
+        device: &SC::DeviceId,
         src_ip: Option<SpecifiedAddr<I::Addr>>,
         dst_ip: SpecifiedAddr<I::Addr>,
         mut udp_packet: &[u8],
@@ -974,7 +974,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> IpTransp
             sync_ctx.with_sockets(|state| {
         let UdpSockets {sockets: DatagramSockets{bound, unbound: _, }, lazy_port_alloc: _} = state;
                 let receiver = bound
-                    .lookup(src_ip, dst_ip, src_port, dst_port, device)
+                    .lookup(src_ip, dst_ip, src_port, dst_port, device.clone())
                     .next();
 
                 if let Some(id) = receiver {
@@ -1003,7 +1003,7 @@ impl<
     fn receive_ip_packet(
         sync_ctx: &mut SC,
         ctx: &mut C,
-        device: SC::DeviceId,
+        device: &SC::DeviceId,
         src_ip: I::RecvSrcAddr,
         dst_ip: SpecifiedAddr<I::Addr>,
         mut buffer: B,
@@ -1028,7 +1028,7 @@ impl<
             let recipients: Vec<LookupResult<_, _>> = SpecifiedAddr::new(src_ip)
                 .and_then(|src_ip| {
                     packet.src_port().map(|src_port| {
-                        bound.lookup(dst_ip, src_ip, packet.dst_port(), src_port, device)
+                        bound.lookup(dst_ip, src_ip, packet.dst_port(), src_port, device.clone())
                     })
                 })
                 .into_iter()
@@ -1102,21 +1102,21 @@ pub(crate) trait UdpSocketHandler<I: IpExt, C>: IpDeviceIdContext<I> {
         &mut self,
         ctx: &mut C,
         id: UdpUnboundId<I>,
-        device_id: Option<Self::DeviceId>,
+        device_id: Option<&Self::DeviceId>,
     );
 
     fn set_listener_udp_device(
         &mut self,
         ctx: &mut C,
         id: UdpListenerId<I>,
-        device_id: Option<Self::DeviceId>,
+        device_id: Option<&Self::DeviceId>,
     ) -> Result<(), LocalAddressError>;
 
     fn set_conn_udp_device(
         &mut self,
         ctx: &mut C,
         id: UdpConnId<I>,
-        device_id: Option<Self::DeviceId>,
+        device_id: Option<&Self::DeviceId>,
     ) -> Result<(), SocketError>;
 
     fn get_udp_bound_device(&self, ctx: &C, id: UdpSocketId<I>) -> Option<Self::DeviceId>;
@@ -1235,7 +1235,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> UdpSocke
                     let UnboundSocketState { device, sharing: _, ip_options: _ } = occupied.get();
 
                     let (remote_ip, socket_device) =
-                        datagram::resolve_addr_with_device(remote_ip, *device)?;
+                        datagram::resolve_addr_with_device(remote_ip, device.as_ref())?;
 
                     let UnboundSocketState { device: _, sharing, ip_options } = occupied.remove();
                     Ok((remote_ip, socket_device, sharing, ip_options))
@@ -1248,7 +1248,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> UdpSocke
             ctx,
             None,
             None,
-            device,
+            device.as_ref(),
             remote_ip,
             remote_port,
             sharing,
@@ -1276,7 +1276,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> UdpSocke
         &mut self,
         ctx: &mut C,
         id: UdpUnboundId<I>,
-        device_id: Option<Self::DeviceId>,
+        device_id: Option<&Self::DeviceId>,
     ) {
         datagram::set_unbound_device(self, ctx, id, device_id)
     }
@@ -1285,7 +1285,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> UdpSocke
         &mut self,
         ctx: &mut C,
         id: UdpListenerId<I>,
-        device_id: Option<Self::DeviceId>,
+        device_id: Option<&Self::DeviceId>,
     ) -> Result<(), LocalAddressError> {
         datagram::set_listener_device(self, ctx, id, device_id)
     }
@@ -1294,7 +1294,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> UdpSocke
         &mut self,
         ctx: &mut C,
         id: UdpConnId<I>,
-        device_id: Option<Self::DeviceId>,
+        device_id: Option<&Self::DeviceId>,
     ) -> Result<(), SocketError> {
         datagram::set_connected_device(self, ctx, id, device_id)
     }
@@ -1417,17 +1417,17 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> UdpSocke
                     lazy_port_alloc: _,
                 } = state;
                 let entry = bound.listeners_mut().entry(&id).expect("Invalid UDP listener ID");
-                let (_, _, ListenerAddr { ip, device }): (
+                let (_, _, ListenerAddr { ip, device }): &(
                     ListenerState<_, _>,
                     PosixSharingOptions,
                     _,
-                ) = *entry.get();
+                ) = entry.get();
 
                 let (remote_ip, socket_device) =
-                    datagram::resolve_addr_with_device(remote_ip, device)?;
-
-                let (ListenerState { ip_options }, sharing, original_addr) = entry.remove();
+                    datagram::resolve_addr_with_device(remote_ip, device.as_ref())?;
                 let clear_device_on_disconnect = device.is_none() && socket_device.is_some();
+                let ip = *ip;
+                let (ListenerState { ip_options }, sharing, original_addr) = entry.remove();
                 Ok((
                     ip,
                     remote_ip,
@@ -1447,7 +1447,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> UdpSocke
             ctx,
             local_ip,
             Some(local_port),
-            device,
+            device.as_ref(),
             remote_ip,
             remote_port,
             sharing,
@@ -1497,15 +1497,15 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> UdpSocke
                     lazy_port_alloc: _,
                 } = state;
                 let entry = bound.conns_mut().entry(&id).expect("Invalid UDP conn ID");
-                let (_, _, ConnAddr { ip: ConnIpAddr { local, remote: _ }, device }): (
+                let (_, _, ConnAddr { ip: ConnIpAddr { local, remote: _ }, device }): &(
                     ConnState<_, _>,
                     PosixSharingOptions,
                     _,
-                ) = *entry.get();
+                ) = entry.get();
 
                 let (remote_ip, socket_device) =
-                    datagram::resolve_addr_with_device(remote_ip, device)?;
-
+                    datagram::resolve_addr_with_device(remote_ip, device.as_ref())?;
+                let local = *local;
                 let (state, sharing, original_addr) = entry.remove();
                 Ok((local, remote_ip, socket_device, original_addr, state, sharing))
             })
@@ -1518,7 +1518,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> UdpSocke
             ctx,
             Some(local_ip),
             Some(local_port),
-            device,
+            device.as_ref(),
             remote_ip,
             remote_port,
             sharing,
@@ -1695,27 +1695,28 @@ impl<
         let ((local_ip, local_port), device, ip_options) = self.with_sockets(|state| {
             let UdpSockets { sockets: DatagramSockets { bound, unbound: _ }, lazy_port_alloc: _ } =
                 state;
-            let (ConnState { socket, clear_device_on_disconnect: _ }, _, addr): &(
+            let (
+                ConnState { socket, clear_device_on_disconnect: _ },
                 _,
-                PosixSharingOptions,
-                _,
-            ) = bound.conns().get_by_id(&conn).expect("no such connection");
-            let ConnAddr { ip: ConnIpAddr { local, remote: _ }, device } = *addr;
+                ConnAddr { ip: ConnIpAddr { local, remote: _ }, device },
+            ): &(_, PosixSharingOptions, _) =
+                bound.conns().get_by_id(&conn).expect("no such connection");
 
             // This must clone the socket options because we don't yet have access
             // to a context here that will allow creating IP sockets and sending
             // packets.
-            (local, device, socket.options().clone())
+            (*local, device.clone(), socket.options().clone())
         });
 
-        let (remote_ip, device) = match datagram::resolve_addr_with_device(remote_ip, device) {
-            Ok(addr) => addr,
-            Err(e) => return Err((body, UdpSendError::Zone(e))),
-        };
+        let (remote_ip, device) =
+            match datagram::resolve_addr_with_device(remote_ip, device.as_ref()) {
+                Ok(addr) => addr,
+                Err(e) => return Err((body, UdpSendError::Zone(e))),
+            };
 
         let sock = match self.new_ip_socket(
             ctx,
-            device,
+            device.as_ref(),
             Some(local_ip),
             remote_ip,
             IpProto::Udp.into(),
@@ -1757,22 +1758,25 @@ impl<
         let (device, local_ip, local_port, ip_options) = self.with_sockets(|state| {
             let UdpSockets { sockets: DatagramSockets { bound, unbound: _ }, lazy_port_alloc: _ } =
                 state;
-            let (ListenerState { ip_options }, _, addr): &(_, PosixSharingOptions, _) =
+            let (
+                ListenerState { ip_options },
+                _,
+                ListenerAddr {
+                    ip: ListenerIpAddr { addr: local_ip, identifier: local_port },
+                    device,
+                },
+            ): &(_, PosixSharingOptions, _) =
                 bound.listeners().get_by_id(&listener).expect("specified listener not found");
-            let ListenerAddr {
-                ip: ListenerIpAddr { addr: local_ip, identifier: local_port },
-                device,
-            } = *addr;
 
             // This must clone the socket options because we don't yet have access
             // to a context here that will allow creating IP sockets and sending
             // packets.
-            (device, local_ip, local_port, ip_options.clone())
+            (device.clone(), *local_ip, *local_port, ip_options.clone())
         });
 
         let sock = match self.new_ip_socket(
             ctx,
-            device,
+            device.as_ref(),
             local_ip,
             remote_ip,
             IpProto::Udp.into(),
@@ -1934,7 +1938,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>
     fn join_multicast_group(
         &mut self,
         ctx: &mut C,
-        device: SC::DeviceId,
+        device: &SC::DeviceId,
         addr: MulticastAddr<I::Addr>,
     ) {
         UdpStateContext::join_multicast_group(self, ctx, device, addr)
@@ -1943,7 +1947,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>
     fn leave_multicast_group(
         &mut self,
         ctx: &mut C,
-        device: SC::DeviceId,
+        device: &SC::DeviceId,
         addr: MulticastAddr<I::Addr>,
     ) {
         UdpStateContext::leave_multicast_group(self, ctx, device, addr)
@@ -1973,14 +1977,14 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>
         self.with_sockets_mut(|UdpSockets { sockets: state, lazy_port_alloc: _ }| cb(state))
     }
 
-    fn get_default_hop_limits(&self, device: Option<SC::DeviceId>) -> crate::ip::HopLimits {
+    fn get_default_hop_limits(&self, device: Option<&SC::DeviceId>) -> crate::ip::HopLimits {
         TransportIpContext::get_default_hop_limits(self, device)
     }
 
     fn new_ip_socket<O>(
         &mut self,
         ctx: &mut C,
-        device: Option<SC::DeviceId>,
+        device: Option<&SC::DeviceId>,
         local_ip: Option<SpecifiedAddr<I::Addr>>,
         remote: SpecifiedAddr<I::Addr>,
         proto: I::Proto,
@@ -2085,7 +2089,7 @@ fn create_udp_conn<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I
     ctx: &mut C,
     local_ip: Option<SpecifiedAddr<I::Addr>>,
     local_port: Option<NonZeroU16>,
-    device: Option<SC::DeviceId>,
+    device: Option<&SC::DeviceId>,
     remote_ip: SpecifiedAddr<I::Addr>,
     remote_port: NonZeroU16,
     sharing: PosixSharingOptions,
@@ -2129,7 +2133,7 @@ fn create_udp_conn<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I
             state;
         let c = ConnAddr {
             ip: ConnIpAddr { local: (local_ip, local_port), remote: (remote_ip, remote_port) },
-            device,
+            device: device.cloned(),
         };
         bound
             .conns_mut()
@@ -2155,7 +2159,7 @@ pub fn set_unbound_udp_device<I: IpExt, C: NonSyncContext>(
     mut sync_ctx: &SyncCtx<C>,
     ctx: &mut C,
     id: UdpUnboundId<I>,
-    device_id: Option<DeviceId>,
+    device_id: Option<&DeviceId>,
 ) {
     I::map_ip(
         (IpInv((&mut sync_ctx, ctx, device_id)), id),
@@ -2180,7 +2184,7 @@ pub fn set_listener_udp_device<I: IpExt, C: NonSyncContext>(
     mut sync_ctx: &SyncCtx<C>,
     ctx: &mut C,
     id: UdpListenerId<I>,
-    device_id: Option<DeviceId>,
+    device_id: Option<&DeviceId>,
 ) -> Result<(), LocalAddressError> {
     I::map_ip::<_, Result<_, _>>(
         (IpInv((&mut sync_ctx, ctx, device_id)), id),
@@ -2208,7 +2212,7 @@ pub fn set_conn_udp_device<I: IpExt, C: NonSyncContext>(
     mut sync_ctx: &SyncCtx<C>,
     ctx: &mut C,
     id: UdpConnId<I>,
-    device_id: Option<DeviceId>,
+    device_id: Option<&DeviceId>,
 ) -> Result<(), SocketError> {
     I::map_ip::<_, Result<_, _>>(
         (IpInv((&mut sync_ctx, ctx, device_id)), id),
@@ -2898,11 +2902,12 @@ mod tests {
             ip.ip_socket_ctx.find_device_with_addr(addr)
         }
 
-        fn get_default_hop_limits(&self, device: Option<Self::DeviceId>) -> HopLimits {
+        fn get_default_hop_limits(&self, device: Option<&Self::DeviceId>) -> HopLimits {
             let ip = &self.get_ref();
             let mut limits = DEFAULT_HOP_LIMITS;
             if let Some(device) = device {
-                limits.unicast = ip.ip_socket_ctx.get_device_state(device).default_hop_limit;
+                limits.unicast =
+                    ip.ip_socket_ctx.get_device_state(device.clone()).default_hop_limit;
             }
             limits
         }
@@ -2922,10 +2927,10 @@ mod tests {
         fn join_multicast_group(
             &mut self,
             _ctx: &mut DummyDeviceNonSyncCtx<I>,
-            device: Self::DeviceId,
+            device: &Self::DeviceId,
             addr: MulticastAddr<<I>::Addr>,
         ) {
-            match self.get_mut().ip_options.entry((device, addr)) {
+            match self.get_mut().ip_options.entry((device.clone(), addr)) {
                 HashMapEntry::Vacant(v) => {
                     let _: &mut NonZeroUsize = v.insert(nonzero!(1usize));
                 }
@@ -2939,10 +2944,10 @@ mod tests {
         fn leave_multicast_group(
             &mut self,
             _ctx: &mut DummyDeviceNonSyncCtx<I>,
-            device: Self::DeviceId,
+            device: &Self::DeviceId,
             addr: MulticastAddr<<I>::Addr>,
         ) {
-            match self.get_mut().ip_options.entry((device, addr)) {
+            match self.get_mut().ip_options.entry((device.clone(), addr)) {
                 HashMapEntry::Vacant(_) => {
                     panic!("not a member of group {:?} on {:?}", addr, device)
                 }
@@ -3068,7 +3073,7 @@ mod tests {
         UdpIpTransportContext::receive_ip_packet(
             sync_ctx,
             ctx,
-            device,
+            &device,
             I::try_into_recv_src_addr(src_ip).unwrap(),
             SpecifiedAddr::new(dst_ip).unwrap(),
             buffer,
@@ -4215,7 +4220,7 @@ mod tests {
                 sync_ctx,
                 &mut non_sync_ctx,
                 conn.into(),
-                Some(MultipleDevicesId::A),
+                Some(&MultipleDevicesId::A),
             )
             .expect("bind should succeed");
             conn
@@ -4227,7 +4232,7 @@ mod tests {
                 sync_ctx,
                 &mut non_sync_ctx,
                 unbound,
-                Some(MultipleDevicesId::B),
+                Some(&MultipleDevicesId::B),
             );
             UdpSocketHandler::listen_udp(
                 sync_ctx,
@@ -4292,7 +4297,7 @@ mod tests {
                 sync_ctx,
                 &mut non_sync_ctx,
                 unbound,
-                Some(device),
+                Some(&device),
             );
             UdpSocketHandler::listen_udp(
                 sync_ctx,
@@ -4382,7 +4387,7 @@ mod tests {
                 sync_ctx,
                 &mut non_sync_ctx,
                 unbound,
-                Some(MultipleDevicesId::A),
+                Some(&MultipleDevicesId::A),
             );
             UdpSocketHandler::listen_udp(
                 sync_ctx,
@@ -4426,7 +4431,7 @@ mod tests {
                 sync_ctx,
                 &mut non_sync_ctx,
                 unbound,
-                Some(device),
+                Some(&device),
             );
             UdpSocketHandler::listen_udp(
                 sync_ctx,
@@ -4499,7 +4504,7 @@ mod tests {
                 &mut sync_ctx,
                 &mut non_sync_ctx,
                 socket,
-                Some(MultipleDevicesId::B)
+                Some(&MultipleDevicesId::B)
             ),
             Err(SocketError::Remote(RemoteAddressError::NoRoute))
         );
@@ -4509,7 +4514,7 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             socket,
-            Some(MultipleDevicesId::A),
+            Some(&MultipleDevicesId::A),
         )
         .expect("routing picked A already");
     }
@@ -4538,7 +4543,7 @@ mod tests {
                 sync_ctx,
                 &mut non_sync_ctx,
                 unbound,
-                Some(device),
+                Some(&device),
             );
             UdpSocketHandler::set_udp_posix_reuse_port(sync_ctx, &mut non_sync_ctx, unbound, true);
             let listener = UdpSocketHandler::listen_udp(
@@ -5164,7 +5169,7 @@ mod tests {
                     sync_ctx,
                     non_sync_ctx,
                     unbound,
-                    Some(bound_device),
+                    Some(&bound_device),
                 );
                 make_socket(sync_ctx, non_sync_ctx, unbound)
             },
@@ -5498,7 +5503,7 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound.into(),
-            Some(DummyDeviceId),
+            Some(&DummyDeviceId),
         );
         assert_eq!(
             UdpSocketHandler::get_udp_bound_device(&sync_ctx, &mut non_sync_ctx, unbound.into()),
@@ -5519,7 +5524,7 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            Some(DummyDeviceId),
+            Some(&DummyDeviceId),
         );
         let listen = UdpSocketHandler::listen_udp(
             &mut sync_ctx,
@@ -5560,7 +5565,7 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            Some(DummyDeviceId),
+            Some(&DummyDeviceId),
         );
         let conn = UdpSocketHandler::connect_udp(
             &mut sync_ctx,
@@ -5687,7 +5692,7 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            Some(MultipleDevicesId::A),
+            Some(&MultipleDevicesId::A),
         );
 
         let result = UdpSocketHandler::<I, _>::listen_udp(
@@ -5787,7 +5792,7 @@ mod tests {
                 &mut sync_ctx,
                 &mut non_sync_ctx,
                 listener.into(),
-                new_device
+                new_device.as_ref()
             ),
             expected_result,
         );
@@ -5870,7 +5875,7 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            Some(MultipleDevicesId::A),
+            Some(&MultipleDevicesId::A),
         );
 
         let zoned_local_addr =
@@ -5988,7 +5993,7 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            Some(MultipleDevicesId::A),
+            Some(&MultipleDevicesId::A),
         );
 
         let result = UdpSocketHandler::<I, _>::listen_udp(
@@ -6020,7 +6025,7 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            bind_device,
+            bind_device.as_ref(),
         );
 
         let listener = UdpSocketHandler::<Ipv6, _>::listen_udp(
@@ -6141,7 +6146,7 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             conn,
-            Some(DummyDeviceId),
+            Some(&DummyDeviceId),
         )
         .expect("binding same device should succeed");
 
@@ -6437,7 +6442,7 @@ mod tests {
                 let dst_ip = SpecifiedAddr::new(packet.dst_ip()).unwrap();
                 let body = packet.body().into_inner();
                 <UdpIpTransportContext as IpTransportContext<Ipv4, _, _>>::receive_icmp_error(
-                    sync_ctx, ctx, device, src_ip, dst_ip, body, error_code,
+                    sync_ctx, ctx, &device, src_ip, dst_ip, body, error_code,
                 )
             },
             Ipv4Addr::new([1, 2, 3, 4]),
@@ -6455,7 +6460,7 @@ mod tests {
                 let dst_ip = SpecifiedAddr::new(packet.dst_ip()).unwrap();
                 let body = packet.body().unwrap().into_inner();
                 <UdpIpTransportContext as IpTransportContext<Ipv6, _, _>>::receive_icmp_error(
-                    sync_ctx, ctx, device, src_ip, dst_ip, body, error_code,
+                    sync_ctx, ctx, &device, src_ip, dst_ip, body, error_code,
                 )
             },
             Ipv6Addr::from_bytes([1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8]),

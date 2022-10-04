@@ -86,7 +86,7 @@ pub(crate) trait ReceiveQueueContext<D: Device, C>: DeviceIdContext<D> {
     /// Calls the function with the RX queue state.
     fn with_receive_queue_mut<O, F: FnOnce(&mut ReceiveQueueState<Self::Meta, Self::Buffer>) -> O>(
         &mut self,
-        device_id: Self::DeviceId,
+        device_id: &Self::DeviceId,
         cb: F,
     ) -> O;
 
@@ -94,7 +94,7 @@ pub(crate) trait ReceiveQueueContext<D: Device, C>: DeviceIdContext<D> {
     fn handle_packet(
         &mut self,
         ctx: &mut C,
-        device_id: Self::DeviceId,
+        device_id: &Self::DeviceId,
         meta: Self::Meta,
         buf: Self::Buffer,
     );
@@ -115,7 +115,7 @@ pub(crate) trait ReceiveDequeContext<D: Device, C>: ReceiveQueueContext<D, C> {
         F: FnOnce(&mut ReceiveDequeueState<Self::Meta, Self::Buffer>, &mut Self::ReceiveQueueCtx) -> O,
     >(
         &mut self,
-        device_id: Self::DeviceId,
+        device_id: &Self::DeviceId,
         cb: F,
     ) -> O;
 }
@@ -132,7 +132,7 @@ pub(crate) trait ReceiveQueueHandler<D: Device, C>: DeviceIdContext<D> {
     type Meta;
 
     /// Handle any queued RX packets.
-    fn handle_queued_rx_packets(&mut self, ctx: &mut C, device_id: Self::DeviceId);
+    fn handle_queued_rx_packets(&mut self, ctx: &mut C, device_id: &Self::DeviceId);
 }
 
 /// An implementation of a receive queue, with a buffer.
@@ -147,7 +147,7 @@ pub(crate) trait BufferReceiveQueueHandler<D: Device, B: ParseBuffer, C>:
     fn queue_rx_packet(
         &mut self,
         ctx: &mut C,
-        device_id: Self::DeviceId,
+        device_id: &Self::DeviceId,
         meta: Self::Meta,
         body: B,
     ) -> Result<(), ReceiveQueueFullError<(Self::Meta, B)>>;
@@ -158,7 +158,7 @@ impl<D: Device, C: ReceiveQueueNonSyncContext<D, SC::DeviceId>, SC: ReceiveDeque
 {
     type Meta = SC::Meta;
 
-    fn handle_queued_rx_packets(&mut self, ctx: &mut C, device_id: SC::DeviceId) {
+    fn handle_queued_rx_packets(&mut self, ctx: &mut C, device_id: &SC::DeviceId) {
         self.with_dequed_packets_and_rx_queue_ctx(
             device_id,
             |ReceiveDequeueState { dequed_packets }, rx_queue_ctx| {
@@ -180,7 +180,9 @@ impl<D: Device, C: ReceiveQueueNonSyncContext<D, SC::DeviceId>, SC: ReceiveDeque
                 }
 
                 match ret {
-                    DequeuedRxQueueResult::MorePacketsStillQueued => ctx.wake_rx_task(device_id),
+                    DequeuedRxQueueResult::MorePacketsStillQueued => {
+                        ctx.wake_rx_task(device_id.clone())
+                    }
                     DequeuedRxQueueResult::NoMorePacketsLeft => {
                         // There are no more packets left after the batch we
                         // just handled. When the next RX packet gets enqueued,
@@ -198,13 +200,15 @@ impl<D: Device, C: ReceiveQueueNonSyncContext<D, SC::DeviceId>, SC: ReceiveDeque
     fn queue_rx_packet(
         &mut self,
         ctx: &mut C,
-        device_id: SC::DeviceId,
+        device_id: &SC::DeviceId,
         meta: SC::Meta,
         body: SC::Buffer,
     ) -> Result<(), ReceiveQueueFullError<(Self::Meta, SC::Buffer)>> {
         self.with_receive_queue_mut(device_id, |ReceiveQueueState { queue }| {
             queue.queue_rx_packet(meta, body).map(|res| match res {
-                EnqueuedRxQueueResult::QueueWasPreviouslyEmpty => ctx.wake_rx_task(device_id),
+                EnqueuedRxQueueResult::QueueWasPreviouslyEmpty => {
+                    ctx.wake_rx_task(device_id.clone())
+                }
                 EnqueuedRxQueueResult::QueuePreviouslyHadPackets => {
                     // We have already woken up the RX task when the queue was
                     // previously empty so there is no need to do it again.
@@ -253,7 +257,7 @@ mod tests {
 
         fn with_receive_queue_mut<O, F: FnOnce(&mut ReceiveQueueState<(), Buf<Vec<u8>>>) -> O>(
             &mut self,
-            DummyLinkDeviceId: DummyLinkDeviceId,
+            &DummyLinkDeviceId: &DummyLinkDeviceId,
             cb: F,
         ) -> O {
             cb(&mut self.get_mut().queue)
@@ -262,7 +266,7 @@ mod tests {
         fn handle_packet(
             &mut self,
             _ctx: &mut MockNonSyncCtx,
-            DummyLinkDeviceId: DummyLinkDeviceId,
+            &DummyLinkDeviceId: &DummyLinkDeviceId,
             (): (),
             buf: Buf<Vec<u8>>,
         ) {
@@ -281,7 +285,7 @@ mod tests {
             ) -> O,
         >(
             &mut self,
-            DummyLinkDeviceId: DummyLinkDeviceId,
+            &DummyLinkDeviceId: &DummyLinkDeviceId,
             cb: F,
         ) -> O {
             cb(&mut ReceiveDequeueState::default(), self)
@@ -300,7 +304,7 @@ mod tests {
                     BufferReceiveQueueHandler::queue_rx_packet(
                         &mut sync_ctx,
                         &mut non_sync_ctx,
-                        DummyLinkDeviceId,
+                        &DummyLinkDeviceId,
                         (),
                         body
                     ),
@@ -316,7 +320,7 @@ mod tests {
                 BufferReceiveQueueHandler::queue_rx_packet(
                     &mut sync_ctx,
                     &mut non_sync_ctx,
-                    DummyLinkDeviceId,
+                    &DummyLinkDeviceId,
                     (),
                     body.clone(),
                 ),
@@ -334,7 +338,7 @@ mod tests {
                 ReceiveQueueHandler::handle_queued_rx_packets(
                     &mut sync_ctx,
                     &mut non_sync_ctx,
-                    DummyLinkDeviceId,
+                    &DummyLinkDeviceId,
                 );
                 assert_eq!(
                     core::mem::take(&mut sync_ctx.get_mut().handled_packets),
@@ -354,7 +358,7 @@ mod tests {
             ReceiveQueueHandler::handle_queued_rx_packets(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                DummyLinkDeviceId,
+                &DummyLinkDeviceId,
             );
             assert_eq!(
                 core::mem::take(&mut sync_ctx.get_mut().handled_packets),

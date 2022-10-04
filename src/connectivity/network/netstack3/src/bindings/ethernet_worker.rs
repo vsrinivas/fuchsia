@@ -138,7 +138,7 @@ impl<C: EthernetWorkerContext> EthernetWorker<C> {
                             if let Some(id) =
                                 AsRef::<Devices>::as_ref(non_sync_ctx).get_core_id(id)
                             {
-                                receive_frame(sync_ctx, non_sync_ctx,id, Buf::new(&mut buf[..len], ..))
+                                receive_frame(sync_ctx, non_sync_ctx, &id, Buf::new(&mut buf[..len], ..))
                                     .unwrap_or_else(|e| error!("error receiving frame: {}", e))
                             } else {
                                 debug!("received ethernet frame on disabled device: {}", id);

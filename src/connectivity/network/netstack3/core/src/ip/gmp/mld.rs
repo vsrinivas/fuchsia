@@ -83,14 +83,14 @@ pub(crate) trait MldContext<C: MldNonSyncContext<Self::DeviceId>>:
     /// Gets the IPv6 link local address on `device`.
     fn get_ipv6_link_local_addr(
         &self,
-        device: Self::DeviceId,
+        device: &Self::DeviceId,
     ) -> Option<LinkLocalUnicastAddr<Ipv6Addr>>;
 
     /// Calls the function with a mutable reference to the device's MLD state
     /// and whether or not MLD is enabled for the `device`.
     fn with_mld_state_mut<O, F: FnOnce(GmpState<'_, Ipv6Addr, MldGroupState<C::Instant>>) -> O>(
         &mut self,
-        device: Self::DeviceId,
+        device: &Self::DeviceId,
         cb: F,
     ) -> O;
 }
@@ -103,7 +103,7 @@ pub(crate) trait MldPacketHandler<C, DeviceId> {
     fn receive_mld_packet<B: ByteSlice>(
         &mut self,
         ctx: &mut C,
-        device: DeviceId,
+        device: &DeviceId,
         src_ip: Ipv6SourceAddr,
         dst_ip: SpecifiedAddr<Ipv6Addr>,
         packet: MldPacket<B>,
@@ -116,7 +116,7 @@ impl<C: MldNonSyncContext<SC::DeviceId>, SC: MldContext<C>> MldPacketHandler<C, 
     fn receive_mld_packet<B: ByteSlice>(
         &mut self,
         ctx: &mut C,
-        device: SC::DeviceId,
+        device: &SC::DeviceId,
         _src_ip: Ipv6SourceAddr,
         _dst_ip: SpecifiedAddr<Ipv6Addr>,
         packet: MldPacket<B>,
@@ -190,7 +190,7 @@ impl<C: MldNonSyncContext<SC::DeviceId>, SC: MldContext<C>> GmpContext<Ipv6, C> 
     fn send_message(
         &mut self,
         ctx: &mut C,
-        device: Self::DeviceId,
+        device: &Self::DeviceId,
         group_addr: MulticastAddr<Ipv6Addr>,
         msg_type: GmpMessageType<MldProtocolSpecific>,
     ) {
@@ -224,7 +224,7 @@ impl<C: MldNonSyncContext<SC::DeviceId>, SC: MldContext<C>> GmpContext<Ipv6, C> 
         }
     }
 
-    fn run_actions(&mut self, _ctx: &mut C, device: SC::DeviceId, actions: Never) {
+    fn run_actions(&mut self, _ctx: &mut C, device: &SC::DeviceId, actions: Never) {
         unreachable!("actions ({:?} should not be constructable; device = {}", actions, device)
     }
 
@@ -234,7 +234,7 @@ impl<C: MldNonSyncContext<SC::DeviceId>, SC: MldContext<C>> GmpContext<Ipv6, C> 
 
     fn with_gmp_state_mut<O, F: FnOnce(GmpState<'_, Ipv6Addr, MldGroupState<C::Instant>>) -> O>(
         &mut self,
-        device: Self::DeviceId,
+        device: &Self::DeviceId,
         cb: F,
     ) -> O {
         self.with_mld_state_mut(device, cb)
@@ -371,7 +371,7 @@ fn send_mld_packet<
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device: SC::DeviceId,
+    device: &SC::DeviceId,
     dst_ip: MulticastAddr<Ipv6Addr>,
     msg: M,
     group_addr: M::GroupAddr,
@@ -402,7 +402,7 @@ fn send_mld_packet<
             .unwrap(),
         );
     sync_ctx
-        .send_frame(ctx, MldFrameMetadata::new(device, dst_ip), body)
+        .send_frame(ctx, MldFrameMetadata::new(device.clone(), dst_ip), body)
         .map_err(|_| MldError::SendFailure { addr: group_addr.into() })
 }
 
@@ -478,7 +478,7 @@ mod tests {
     impl MldContext<MockNonSyncCtx> for MockSyncCtx {
         fn get_ipv6_link_local_addr(
             &self,
-            _device: DummyDeviceId,
+            _device: &DummyDeviceId,
         ) -> Option<LinkLocalUnicastAddr<Ipv6Addr>> {
             self.get_ref().ipv6_link_local
         }
@@ -488,7 +488,7 @@ mod tests {
             F: FnOnce(GmpState<'_, Ipv6Addr, MldGroupState<DummyInstant>>) -> O,
         >(
             &mut self,
-            DummyDeviceId: DummyDeviceId,
+            &DummyDeviceId: &DummyDeviceId,
             cb: F,
         ) -> O {
             let DummyMldCtx { groups, mld_enabled, ipv6_link_local: _ } = self.get_mut();
@@ -564,7 +564,7 @@ mod tests {
         {
             Icmpv6Packet::Mld(packet) => sync_ctx.receive_mld_packet(
                 non_sync_ctx,
-                DummyDeviceId,
+                &DummyDeviceId,
                 router_addr.try_into().unwrap(),
                 MY_IP,
                 packet,
@@ -596,7 +596,7 @@ mod tests {
         {
             Icmpv6Packet::Mld(packet) => sync_ctx.receive_mld_packet(
                 non_sync_ctx,
-                DummyDeviceId,
+                &DummyDeviceId,
                 router_addr.try_into().unwrap(),
                 MY_IP,
                 packet,
@@ -654,7 +654,7 @@ mod tests {
             non_sync_ctx.seed_rng(seed);
 
             assert_eq!(
-                sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
                 GroupJoinResult::Joined(())
             );
 
@@ -689,7 +689,7 @@ mod tests {
             non_sync_ctx.seed_rng(seed);
 
             assert_eq!(
-                sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
                 GroupJoinResult::Joined(())
             );
             assert_eq!(sync_ctx.frames().len(), 1);
@@ -718,7 +718,7 @@ mod tests {
             non_sync_ctx.seed_rng(seed);
 
             assert_eq!(
-                sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
                 GroupJoinResult::Joined(())
             );
             assert_eq!(sync_ctx.frames().len(), 1);
@@ -765,7 +765,7 @@ mod tests {
             non_sync_ctx.seed_rng(seed);
 
             assert_eq!(
-                sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
                 GroupJoinResult::Joined(())
             );
             assert_eq!(sync_ctx.frames().len(), 1);
@@ -808,7 +808,7 @@ mod tests {
         // value below.
         non_sync_ctx.seed_rng(123456);
         assert_eq!(
-            sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
+            sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
             GroupJoinResult::Joined(())
         );
         non_sync_ctx.timer_ctx().assert_timers_installed([(
@@ -849,7 +849,7 @@ mod tests {
             non_sync_ctx.seed_rng(seed);
 
             assert_eq!(
-                sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
                 GroupJoinResult::Joined(())
             );
             let now = non_sync_ctx.now();
@@ -866,7 +866,7 @@ mod tests {
             // The report after the delay.
             assert_eq!(sync_ctx.frames().len(), 2);
             assert_eq!(
-                sync_ctx.gmp_leave_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_leave_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
                 GroupLeaveResult::Left(())
             );
             // Our leave message.
@@ -896,7 +896,7 @@ mod tests {
             non_sync_ctx.seed_rng(seed);
 
             assert_eq!(
-                sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
                 GroupJoinResult::Joined(())
             );
             let now = non_sync_ctx.now();
@@ -911,7 +911,7 @@ mod tests {
             // else.
             assert_eq!(sync_ctx.frames().len(), 1);
             assert_eq!(
-                sync_ctx.gmp_leave_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_leave_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
                 GroupLeaveResult::Left(())
             );
             // A leave message is not sent.
@@ -933,7 +933,7 @@ mod tests {
 
             sync_ctx.get_mut().ipv6_link_local = Some(MY_MAC.to_ipv6_link_local().addr());
             assert_eq!(
-                sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
                 GroupJoinResult::Joined(())
             );
             assert_eq!(
@@ -962,7 +962,7 @@ mod tests {
                 };
 
                 assert_eq!(
-                    sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, group),
+                    sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, group),
                     GroupJoinResult::Joined(())
                 );
                 // We should join the group but left in the GMP's non-member
@@ -981,7 +981,7 @@ mod tests {
                 assert_no_effect(&sync_ctx, &non_sync_ctx);
 
                 assert_eq!(
-                    sync_ctx.gmp_leave_group(&mut non_sync_ctx, DummyDeviceId, group),
+                    sync_ctx.gmp_leave_group(&mut non_sync_ctx, &DummyDeviceId, group),
                     GroupLeaveResult::Left(())
                 );
                 // We should have left the group but not executed any `Actions`.
@@ -1026,7 +1026,7 @@ mod tests {
             non_sync_ctx.seed_rng(seed);
 
             assert_eq!(
-                sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
                 GroupJoinResult::Joined(())
             );
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, Delaying);
@@ -1039,7 +1039,7 @@ mod tests {
             ensure_slice_addr(frame, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);
 
             assert_eq!(
-                sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
                 GroupJoinResult::AlreadyMember
             );
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, Delaying);
@@ -1047,7 +1047,7 @@ mod tests {
             non_sync_ctx.timer_ctx().assert_timers_installed([(TIMER_ID, range.clone())]);
 
             assert_eq!(
-                sync_ctx.gmp_leave_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_leave_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
                 GroupLeaveResult::StillMember
             );
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, Delaying);
@@ -1055,7 +1055,7 @@ mod tests {
             non_sync_ctx.timer_ctx().assert_timers_installed([(TIMER_ID, range)]);
 
             assert_eq!(
-                sync_ctx.gmp_leave_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_leave_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
                 GroupLeaveResult::Left(())
             );
             assert_eq!(sync_ctx.frames().len(), 2);
@@ -1084,14 +1084,14 @@ mod tests {
             assert_eq!(
                 sync_ctx.gmp_join_group(
                     &mut non_sync_ctx,
-                    DummyDeviceId,
+                    &DummyDeviceId,
                     Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS
                 ),
                 GroupJoinResult::Joined(())
             );
             assert_gmp_state!(sync_ctx, &Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS, NonMember);
             assert_eq!(
-                sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
                 GroupJoinResult::Joined(())
             );
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, Delaying);
@@ -1105,13 +1105,13 @@ mod tests {
             );
 
             // Should do nothing.
-            sync_ctx.gmp_handle_maybe_enabled(&mut non_sync_ctx, DummyDeviceId);
+            sync_ctx.gmp_handle_maybe_enabled(&mut non_sync_ctx, &DummyDeviceId);
             assert_gmp_state!(sync_ctx, &Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS, NonMember);
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, Delaying);
             assert_eq!(sync_ctx.take_frames(), []);
 
             // Should send done message.
-            sync_ctx.gmp_handle_disabled(&mut non_sync_ctx, DummyDeviceId);
+            sync_ctx.gmp_handle_disabled(&mut non_sync_ctx, &DummyDeviceId);
             assert_gmp_state!(sync_ctx, &Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS, NonMember);
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, NonMember);
             assert_matches::assert_matches!(
@@ -1124,13 +1124,13 @@ mod tests {
             );
 
             // Should do nothing.
-            sync_ctx.gmp_handle_disabled(&mut non_sync_ctx, DummyDeviceId);
+            sync_ctx.gmp_handle_disabled(&mut non_sync_ctx, &DummyDeviceId);
             assert_gmp_state!(sync_ctx, &Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS, NonMember);
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, NonMember);
             assert_eq!(sync_ctx.take_frames(), []);
 
             // Should send report message.
-            sync_ctx.gmp_handle_maybe_enabled(&mut non_sync_ctx, DummyDeviceId);
+            sync_ctx.gmp_handle_maybe_enabled(&mut non_sync_ctx, &DummyDeviceId);
             assert_gmp_state!(sync_ctx, &Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS, NonMember);
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, Delaying);
             assert_matches::assert_matches!(
@@ -1181,7 +1181,7 @@ mod tests {
             crate::ip::device::update_ipv6_configuration(
                 sync_ctx,
                 non_sync_ctx,
-                device_id,
+                &device_id,
                 |config| {
                     // TODO(https://fxbug.dev/98534): Make sure that DAD resolving
                     // for a link-local address results in reports sent with a
@@ -1265,7 +1265,7 @@ mod tests {
             &mut non_sync_ctx,
             TestConfig { ip_enabled: true, gmp_enabled: true },
         );
-        non_sync_ctx.timer_ctx().assert_timers_installed([(snmc_timer_id, range.clone())]);
+        non_sync_ctx.timer_ctx().assert_timers_installed([(snmc_timer_id.clone(), range.clone())]);
         check_sent_report(&mut non_sync_ctx, false);
 
         // Disable MLD.
@@ -1305,7 +1305,7 @@ mod tests {
             &mut non_sync_ctx,
             TestConfig { ip_enabled: true, gmp_enabled: true },
         );
-        non_sync_ctx.timer_ctx().assert_timers_installed([(snmc_timer_id, range.clone())]);
+        non_sync_ctx.timer_ctx().assert_timers_installed([(snmc_timer_id.clone(), range.clone())]);
         check_sent_report(&mut non_sync_ctx, true);
 
         // Disable IPv6.

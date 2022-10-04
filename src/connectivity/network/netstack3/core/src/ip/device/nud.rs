@@ -85,7 +85,7 @@ pub(crate) mod testutil {
         neighbor: SpecifiedAddr<I::Addr>,
         expected_link_addr: D::Address,
     ) {
-        sync_ctx.with_nud_state_mut(device_id, |NudState { neighbors }| {
+        sync_ctx.with_nud_state_mut(&device_id, |NudState { neighbors }| {
             assert_matches!(
                 neighbors.get(&neighbor),
                 Some(
@@ -107,7 +107,7 @@ pub(crate) mod testutil {
         device_id: SC::DeviceId,
         neighbor: SpecifiedAddr<I::Addr>,
     ) {
-        sync_ctx.with_nud_state_mut(device_id, |NudState { neighbors }| {
+        sync_ctx.with_nud_state_mut(&device_id, |NudState { neighbors }| {
             assert_matches!(neighbors.get(&neighbor), None)
         })
     }
@@ -143,12 +143,12 @@ pub(crate) trait NudContext<I: Ip, D: LinkDevice, C: NonSyncNudContext<I, D, Sel
     DeviceIdContext<D>
 {
     /// Returns the amount of time between neighbor probe/solicitation messages.
-    fn retrans_timer(&self, device_id: Self::DeviceId) -> NonZeroDuration;
+    fn retrans_timer(&self, device_id: &Self::DeviceId) -> NonZeroDuration;
 
     /// Calls the function with a mutable reference to the NUD state.
     fn with_nud_state_mut<O, F: FnOnce(&mut NudState<I, D::Address>) -> O>(
         &mut self,
-        device_id: Self::DeviceId,
+        device_id: &Self::DeviceId,
         cb: F,
     ) -> O;
 
@@ -156,7 +156,7 @@ pub(crate) trait NudContext<I: Ip, D: LinkDevice, C: NonSyncNudContext<I, D, Sel
     fn send_neighbor_solicitation(
         &mut self,
         ctx: &mut C,
-        device_id: Self::DeviceId,
+        device_id: &Self::DeviceId,
         lookup_addr: SpecifiedAddr<I::Addr>,
     );
 }
@@ -173,7 +173,7 @@ pub(crate) trait BufferNudContext<
     fn send_ip_packet_to_neighbor_link_addr<S: Serializer<Buffer = B>>(
         &mut self,
         ctx: &mut C,
-        device_id: Self::DeviceId,
+        device_id: &Self::DeviceId,
         neighbor_link_addr: D::Address,
         body: S,
     ) -> Result<(), S>;
@@ -188,7 +188,7 @@ pub(crate) trait NudIpHandler<I: Ip, C>: IpDeviceIdContext<I> {
     fn handle_neighbor_probe(
         &mut self,
         ctx: &mut C,
-        device_id: Self::DeviceId,
+        device_id: &Self::DeviceId,
         neighbor: SpecifiedAddr<I::Addr>,
         link_addr: &[u8],
     );
@@ -199,13 +199,13 @@ pub(crate) trait NudIpHandler<I: Ip, C>: IpDeviceIdContext<I> {
     fn handle_neighbor_confirmation(
         &mut self,
         ctx: &mut C,
-        device_id: Self::DeviceId,
+        device_id: &Self::DeviceId,
         neighbor: SpecifiedAddr<I::Addr>,
         link_addr: &[u8],
     );
 
     /// Clears the neighbor table.
-    fn flush_neighbor_table(&mut self, ctx: &mut C, device_id: Self::DeviceId);
+    fn flush_neighbor_table(&mut self, ctx: &mut C, device_id: &Self::DeviceId);
 }
 
 /// An implementation of NUD for a link device.
@@ -215,7 +215,7 @@ pub(crate) trait NudHandler<I: Ip, D: LinkDevice, C>: DeviceIdContext<D> {
     fn set_dynamic_neighbor(
         &mut self,
         ctx: &mut C,
-        device_id: Self::DeviceId,
+        device_id: &Self::DeviceId,
         neighbor: SpecifiedAddr<I::Addr>,
         link_addr: D::Address,
         source: DynamicNeighborUpdateSource,
@@ -231,13 +231,13 @@ pub(crate) trait NudHandler<I: Ip, D: LinkDevice, C>: DeviceIdContext<D> {
     fn set_static_neighbor(
         &mut self,
         ctx: &mut C,
-        device_id: Self::DeviceId,
+        device_id: &Self::DeviceId,
         neighbor: SpecifiedAddr<I::Addr>,
         link_addr: D::Address,
     );
 
     /// Clears the neighbor table.
-    fn flush(&mut self, ctx: &mut C, device_id: Self::DeviceId);
+    fn flush(&mut self, ctx: &mut C, device_id: &Self::DeviceId);
 }
 
 /// An implementation of NUD for a link device, with a buffer.
@@ -251,7 +251,7 @@ pub(crate) trait BufferNudHandler<B: BufferMut, I: Ip, D: LinkDevice, C>:
     fn send_ip_packet_to_neighbor<S: Serializer<Buffer = B>>(
         &mut self,
         ctx: &mut C,
-        device_id: Self::DeviceId,
+        device_id: &Self::DeviceId,
         neighbor: SpecifiedAddr<I::Addr>,
         body: S,
     ) -> Result<(), S>;
@@ -265,7 +265,7 @@ impl<I: Ip, D: LinkDevice, C: NonSyncNudContext<I, D, SC::DeviceId>, SC: NudCont
         ctx: &mut C,
         NudTimerId { device_id, lookup_addr, _marker }: NudTimerId<I, D, SC::DeviceId>,
     ) {
-        let do_solicit = self.with_nud_state_mut(device_id, |NudState { neighbors }| {
+        let do_solicit = self.with_nud_state_mut(&device_id, |NudState { neighbors }| {
             let transmit_counter = match neighbors
                 .get_mut(&lookup_addr)
                 .expect("timer fired for invalid entry")
@@ -300,7 +300,7 @@ impl<I: Ip, D: LinkDevice, C: NonSyncNudContext<I, D, SC::DeviceId>, SC: NudCont
         });
 
         if do_solicit {
-            solicit_neighbor(self, ctx, device_id, lookup_addr)
+            solicit_neighbor(self, ctx, &device_id, lookup_addr)
         }
     }
 }
@@ -313,7 +313,7 @@ fn solicit_neighbor<
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device_id: SC::DeviceId,
+    device_id: &SC::DeviceId,
     lookup_addr: SpecifiedAddr<I::Addr>,
 ) {
     sync_ctx.send_neighbor_solicitation(ctx, device_id, lookup_addr);
@@ -322,7 +322,7 @@ fn solicit_neighbor<
     assert_eq!(
         ctx.schedule_timer(
             retrans_timer.get(),
-            NudTimerId { device_id, lookup_addr, _marker: PhantomData },
+            NudTimerId { device_id: device_id.clone(), lookup_addr, _marker: PhantomData },
         ),
         None
     );
@@ -338,7 +338,7 @@ impl<
     fn set_dynamic_neighbor(
         &mut self,
         ctx: &mut C,
-        device_id: SC::DeviceId,
+        device_id: &SC::DeviceId,
         neighbor: SpecifiedAddr<I::Addr>,
         link_address: D::Address,
         source: DynamicNeighborUpdateSource,
@@ -368,7 +368,7 @@ impl<
                             } => {
                                 assert_ne!(
                                     ctx.cancel_timer(NudTimerId {
-                                        device_id,
+                                        device_id: device_id.clone(),
                                         lookup_addr: neighbor,
                                         _marker: PhantomData,
                                     }),
@@ -396,7 +396,7 @@ impl<
     fn set_static_neighbor(
         &mut self,
         ctx: &mut C,
-        device_id: SC::DeviceId,
+        device_id: &SC::DeviceId,
         neighbor: SpecifiedAddr<I::Addr>,
         link_address: D::Address,
     ) {
@@ -408,7 +408,7 @@ impl<
                 })) => {
                     assert_ne!(
                         ctx.cancel_timer(NudTimerId {
-                            device_id,
+                            device_id: device_id.clone(),
                             lookup_addr: neighbor,
                             _marker: PhantomData,
                         }),
@@ -433,7 +433,7 @@ impl<
         }
     }
 
-    fn flush(&mut self, ctx: &mut C, device_id: Self::DeviceId) {
+    fn flush(&mut self, ctx: &mut C, device_id: &Self::DeviceId) {
         let previously_incomplete = self.with_nud_state_mut(device_id, |NudState { neighbors }| {
             let mut previously_incomplete = Vec::new();
 
@@ -463,7 +463,7 @@ impl<
         previously_incomplete.into_iter().for_each(|neighbor| {
             assert_ne!(
                 ctx.cancel_timer(NudTimerId {
-                    device_id,
+                    device_id: device_id.clone(),
                     lookup_addr: neighbor,
                     _marker: PhantomData,
                 }),
@@ -486,7 +486,7 @@ impl<
     fn send_ip_packet_to_neighbor<S: Serializer<Buffer = B>>(
         &mut self,
         ctx: &mut C,
-        device_id: Self::DeviceId,
+        device_id: &Self::DeviceId,
         lookup_addr: SpecifiedAddr<I::Addr>,
         body: S,
     ) -> Result<(), S> {
@@ -615,13 +615,13 @@ mod tests {
         DummyNonSyncCtx<NudTimerId<I, DummyLinkDevice, DummyLinkDeviceId>, (), ()>;
 
     impl<I: Ip> NudContext<I, DummyLinkDevice, MockNonSyncCtx<I>> for MockCtx<I> {
-        fn retrans_timer(&self, DummyLinkDeviceId: DummyLinkDeviceId) -> NonZeroDuration {
+        fn retrans_timer(&self, &DummyLinkDeviceId: &DummyLinkDeviceId) -> NonZeroDuration {
             self.get_ref().retrans_timer
         }
 
         fn with_nud_state_mut<O, F: FnOnce(&mut NudState<I, DummyLinkAddress>) -> O>(
             &mut self,
-            DummyLinkDeviceId: DummyLinkDeviceId,
+            &DummyLinkDeviceId: &DummyLinkDeviceId,
             cb: F,
         ) -> O {
             cb(&mut self.get_mut().nud)
@@ -630,7 +630,7 @@ mod tests {
         fn send_neighbor_solicitation(
             &mut self,
             ctx: &mut MockNonSyncCtx<I>,
-            DummyLinkDeviceId: DummyLinkDeviceId,
+            &DummyLinkDeviceId: &DummyLinkDeviceId,
             lookup_addr: SpecifiedAddr<I::Addr>,
         ) {
             self.send_frame(
@@ -648,7 +648,7 @@ mod tests {
         fn send_ip_packet_to_neighbor_link_addr<S: Serializer<Buffer = B>>(
             &mut self,
             ctx: &mut MockNonSyncCtx<I>,
-            _device_id: DummyLinkDeviceId,
+            _device_id: &DummyLinkDeviceId,
             dst_link_address: DummyLinkAddress,
             body: S,
         ) -> Result<(), S> {
@@ -715,7 +715,7 @@ mod tests {
         NudHandler::set_dynamic_neighbor(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            DummyLinkDeviceId,
+            &DummyLinkDeviceId,
             I::LOOKUP_ADDR1,
             link_addr,
             DynamicNeighborUpdateSource::Confirmation,
@@ -752,7 +752,7 @@ mod tests {
                 BufferNudHandler::send_ip_packet_to_neighbor(
                     &mut sync_ctx,
                     &mut non_sync_ctx,
-                    DummyLinkDeviceId,
+                    &DummyLinkDeviceId,
                     I::LOOKUP_ADDR1,
                     body.clone()
                 ),
@@ -782,7 +782,7 @@ mod tests {
             BufferNudHandler::send_ip_packet_to_neighbor(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                DummyLinkDeviceId,
+                &DummyLinkDeviceId,
                 I::LOOKUP_ADDR1,
                 Buf::new([123], ..),
             ),
@@ -804,7 +804,7 @@ mod tests {
             NudHandler::set_dynamic_neighbor(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                DummyLinkDeviceId,
+                &DummyLinkDeviceId,
                 I::LOOKUP_ADDR1,
                 LINK_ADDR1,
                 DynamicNeighborUpdateSource::Confirmation,
@@ -813,7 +813,7 @@ mod tests {
             NudHandler::set_static_neighbor(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                DummyLinkDeviceId,
+                &DummyLinkDeviceId,
                 I::LOOKUP_ADDR1,
                 LINK_ADDR1,
             );
@@ -842,7 +842,7 @@ mod tests {
         NudHandler::set_static_neighbor(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            DummyLinkDeviceId,
+            &DummyLinkDeviceId,
             I::LOOKUP_ADDR1,
             LINK_ADDR1,
         );
@@ -854,7 +854,7 @@ mod tests {
         NudHandler::set_dynamic_neighbor(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            DummyLinkDeviceId,
+            &DummyLinkDeviceId,
             I::LOOKUP_ADDR1,
             LINK_ADDR2,
             DynamicNeighborUpdateSource::Probe,
@@ -873,7 +873,7 @@ mod tests {
         NudHandler::set_dynamic_neighbor(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            DummyLinkDeviceId,
+            &DummyLinkDeviceId,
             I::LOOKUP_ADDR1,
             LINK_ADDR1,
             DynamicNeighborUpdateSource::Probe,
@@ -886,7 +886,7 @@ mod tests {
         NudHandler::set_dynamic_neighbor(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            DummyLinkDeviceId,
+            &DummyLinkDeviceId,
             I::LOOKUP_ADDR1,
             LINK_ADDR2,
             DynamicNeighborUpdateSource::Probe,
@@ -898,7 +898,7 @@ mod tests {
         NudHandler::set_static_neighbor(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            DummyLinkDeviceId,
+            &DummyLinkDeviceId,
             I::LOOKUP_ADDR1,
             LINK_ADDR3,
         );
@@ -924,7 +924,7 @@ mod tests {
                     BufferNudHandler::send_ip_packet_to_neighbor(
                         sync_ctx,
                         non_sync_ctx,
-                        DummyLinkDeviceId,
+                        &DummyLinkDeviceId,
                         I::LOOKUP_ADDR1,
                         Buf::new(body, ..),
                     ),
@@ -970,7 +970,7 @@ mod tests {
         NudHandler::set_dynamic_neighbor(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            DummyLinkDeviceId,
+            &DummyLinkDeviceId,
             I::LOOKUP_ADDR1,
             LINK_ADDR1,
             DynamicNeighborUpdateSource::Confirmation,
@@ -1013,7 +1013,7 @@ mod tests {
             BufferNudHandler::send_ip_packet_to_neighbor(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                DummyLinkDeviceId,
+                &DummyLinkDeviceId,
                 I::LOOKUP_ADDR1,
                 Buf::new(body, ..),
             ),
@@ -1079,14 +1079,14 @@ mod tests {
         NudHandler::set_static_neighbor(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            DummyLinkDeviceId,
+            &DummyLinkDeviceId,
             I::LOOKUP_ADDR1,
             LINK_ADDR1,
         );
         NudHandler::set_dynamic_neighbor(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            DummyLinkDeviceId,
+            &DummyLinkDeviceId,
             I::LOOKUP_ADDR2,
             LINK_ADDR2,
             DynamicNeighborUpdateSource::Probe,
@@ -1097,7 +1097,7 @@ mod tests {
             BufferNudHandler::send_ip_packet_to_neighbor(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                DummyLinkDeviceId,
+                &DummyLinkDeviceId,
                 I::LOOKUP_ADDR3,
                 Buf::new(body, ..),
             ),
@@ -1134,7 +1134,7 @@ mod tests {
         )]);
 
         // Flushing the table should clear all dynamic entries and timers.
-        NudHandler::flush(&mut sync_ctx, &mut non_sync_ctx, DummyLinkDeviceId);
+        NudHandler::flush(&mut sync_ctx, &mut non_sync_ctx, &DummyLinkDeviceId);
         let MockNudContext { retrans_timer: _, nud } = sync_ctx.get_ref();
         assert_eq!(
             nud.neighbors,
@@ -1150,7 +1150,7 @@ mod tests {
         SC: NudContext<I, D, C>,
     >(
         sync_ctx: &mut SC,
-        device_id: SC::DeviceId,
+        device_id: &SC::DeviceId,
         expected: HashMap<SpecifiedAddr<I::Addr>, NeighborState<D::Address>>,
     ) {
         sync_ctx.with_nud_state_mut(device_id, |NudState { neighbors }| {
@@ -1176,7 +1176,7 @@ mod tests {
         crate::ip::device::update_ipv6_configuration(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            device_id,
+            &device_id,
             |config| {
                 config.ip_config.ip_enabled = true;
             },
@@ -1212,24 +1212,24 @@ mod tests {
         receive_ipv6_packet(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            device_id,
+            &device_id,
             FrameDestination::Multicast,
             ra_packet_buf(&[][..]),
         );
         let link_device_id = device_id.try_into().unwrap();
-        assert_neighbors::<Ipv6, _, _, _>(&mut sync_ctx, link_device_id, Default::default());
+        assert_neighbors::<Ipv6, _, _, _>(&mut sync_ctx, &link_device_id, Default::default());
 
         // RA with a source link layer option should create a new entry.
         receive_ipv6_packet(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            device_id,
+            &device_id,
             FrameDestination::Multicast,
             ra_packet_buf(&options[..]),
         );
         assert_neighbors::<Ipv6, _, _, _>(
             &mut sync_ctx,
-            link_device_id,
+            &link_device_id,
             HashMap::from([(
                 {
                     let src_ip: UnicastAddr<_> = src_ip.into_addr();
@@ -1260,7 +1260,7 @@ mod tests {
         crate::ip::device::update_ipv6_configuration(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            device_id,
+            &device_id,
             |config| {
                 config.ip_config.ip_enabled = true;
             },
@@ -1302,20 +1302,20 @@ mod tests {
         receive_ipv6_packet(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            device_id,
+            &device_id,
             FrameDestination::Multicast,
             na_packet_buf(false, false),
         );
         let link_device_id = device_id.try_into().unwrap();
-        assert_neighbors::<Ipv6, _, _, _>(&mut sync_ctx, link_device_id, Default::default());
+        assert_neighbors::<Ipv6, _, _, _>(&mut sync_ctx, &link_device_id, Default::default());
         receive_ipv6_packet(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            device_id,
+            &device_id,
             FrameDestination::Multicast,
             na_packet_buf(true, true),
         );
-        assert_neighbors::<Ipv6, _, _, _>(&mut sync_ctx, link_device_id, Default::default());
+        assert_neighbors::<Ipv6, _, _, _>(&mut sync_ctx, &link_device_id, Default::default());
 
         assert_eq!(non_sync_ctx.take_frames(), []);
 
@@ -1326,7 +1326,7 @@ mod tests {
             BufferNudHandler::<_, Ipv6, _, _>::send_ip_packet_to_neighbor(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                link_device_id,
+                &link_device_id,
                 neighbor_ip.into_specified(),
                 Buf::new(body, ..),
             ),
@@ -1357,7 +1357,7 @@ mod tests {
         );
         assert_neighbors::<Ipv6, _, _, _>(
             &mut sync_ctx,
-            link_device_id,
+            &link_device_id,
             HashMap::from([(
                 neighbor_ip.into_specified(),
                 NeighborState::Dynamic(DynamicNeighborState::Incomplete {
@@ -1371,13 +1371,13 @@ mod tests {
         receive_ipv6_packet(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            device_id,
+            &device_id,
             FrameDestination::Multicast,
             na_packet_buf(true, true),
         );
         assert_neighbors::<Ipv6, _, _, _>(
             &mut sync_ctx,
-            link_device_id,
+            &link_device_id,
             HashMap::from([(
                 neighbor_ip.into_specified(),
                 NeighborState::Dynamic(DynamicNeighborState::Complete {
@@ -1404,10 +1404,10 @@ mod tests {
         );
 
         // Disabling the device should clear the neighbor table.
-        update_ipv6_configuration(&mut sync_ctx, &mut non_sync_ctx, device_id, |config| {
+        update_ipv6_configuration(&mut sync_ctx, &mut non_sync_ctx, &device_id, |config| {
             config.ip_config.ip_enabled = false;
         });
-        assert_neighbors::<Ipv6, _, _, _>(&mut sync_ctx, link_device_id, HashMap::new());
+        assert_neighbors::<Ipv6, _, _, _>(&mut sync_ctx, &link_device_id, HashMap::new());
         non_sync_ctx.timer_ctx().assert_no_timers_installed();
     }
 }

@@ -307,7 +307,7 @@ pub(crate) trait TransportState<I: Ip>: Transport<I> {
         sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         id: SocketId<I, Self>,
-        device: Option<DeviceId>,
+        device: Option<&DeviceId>,
     ) -> Result<(), Self::SetSocketDeviceError>;
 
     fn get_bound_device<C: NonSyncContext>(
@@ -544,7 +544,7 @@ impl<I: IpExt> TransportState<I> for Udp {
         sync_ctx: &SyncCtx<C>,
         ctx: &mut C,
         id: SocketId<I, Self>,
-        device: Option<DeviceId>,
+        device: Option<&DeviceId>,
     ) -> Result<(), Self::SetSocketDeviceError> {
         match id {
             SocketId::Unbound(id) => {
@@ -1067,7 +1067,7 @@ impl<I: IcmpEchoIpExt> TransportState<I> for IcmpEcho {
         _sync_ctx: &SyncCtx<NonSyncCtx>,
         _ctx: &mut NonSyncCtx,
         _id: SocketId<I, Self>,
-        _device: Option<DeviceId>,
+        _device: Option<&DeviceId>,
     ) -> Result<(), Self::SetSocketDeviceError> {
         todo!("https://fxbug.dev/47321: needs Core implementation")
     }
@@ -2682,14 +2682,15 @@ where
                 non_sync_ctx
                     .as_ref()
                     .get_device_by_name(name)
-                    .map(|d| d.core_id())
+                    .map(|d| d.core_id().clone())
                     .ok_or(fposix::Errno::Enodev)
             })
             .transpose()?;
         let state: &SocketState<_, _> = &self.data.info.state;
         let id = state.into();
 
-        T::set_socket_device(sync_ctx, non_sync_ctx, id, device).map_err(IntoErrno::into_errno)
+        T::set_socket_device(sync_ctx, non_sync_ctx, id, device.as_ref())
+            .map_err(IntoErrno::into_errno)
     }
 
     async fn get_bound_device(self) -> Result<Option<String>, fposix::Errno> {

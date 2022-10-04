@@ -286,19 +286,19 @@ pub(crate) trait GmpHandler<I: Ip, C>: IpDeviceIdContext<I> {
     /// state. Should be called anytime a configuration change occurs which
     /// results in GMP potentially being enabled. E.g. when IP or GMP
     /// transitions to being enabled.
-    fn gmp_handle_maybe_enabled(&mut self, ctx: &mut C, device: Self::DeviceId);
+    fn gmp_handle_maybe_enabled(&mut self, ctx: &mut C, device: &Self::DeviceId);
 
     /// Handles GMP being disabled.
     ///
     /// All joined groups will transition to the non-member state but still
     /// remain locally joined.
-    fn gmp_handle_disabled(&mut self, ctx: &mut C, device: Self::DeviceId);
+    fn gmp_handle_disabled(&mut self, ctx: &mut C, device: &Self::DeviceId);
 
     /// Joins the given multicast group.
     fn gmp_join_group(
         &mut self,
         ctx: &mut C,
-        device: Self::DeviceId,
+        device: &Self::DeviceId,
         group_addr: MulticastAddr<I::Addr>,
     ) -> GroupJoinResult;
 
@@ -306,7 +306,7 @@ pub(crate) trait GmpHandler<I: Ip, C>: IpDeviceIdContext<I> {
     fn gmp_leave_group(
         &mut self,
         ctx: &mut C,
-        device: Self::DeviceId,
+        device: &Self::DeviceId,
         group_addr: MulticastAddr<I::Addr>,
     ) -> GroupLeaveResult;
 }
@@ -314,18 +314,18 @@ pub(crate) trait GmpHandler<I: Ip, C>: IpDeviceIdContext<I> {
 impl<I: IpExt, C: GmpNonSyncContext<I, SC::DeviceId>, SC: GmpContext<I, C>> GmpHandler<I, C>
     for SC
 {
-    fn gmp_handle_maybe_enabled(&mut self, ctx: &mut C, device: Self::DeviceId) {
+    fn gmp_handle_maybe_enabled(&mut self, ctx: &mut C, device: &Self::DeviceId) {
         gmp_handle_maybe_enabled(self, ctx, device)
     }
 
-    fn gmp_handle_disabled(&mut self, ctx: &mut C, device: Self::DeviceId) {
+    fn gmp_handle_disabled(&mut self, ctx: &mut C, device: &Self::DeviceId) {
         gmp_handle_disabled(self, ctx, device)
     }
 
     fn gmp_join_group(
         &mut self,
         ctx: &mut C,
-        device: SC::DeviceId,
+        device: &SC::DeviceId,
         group_addr: MulticastAddr<I::Addr>,
     ) -> GroupJoinResult {
         gmp_join_group(self, ctx, device, group_addr)
@@ -334,7 +334,7 @@ impl<I: IpExt, C: GmpNonSyncContext<I, SC::DeviceId>, SC: GmpContext<I, C>> GmpH
     fn gmp_leave_group(
         &mut self,
         ctx: &mut C,
-        device: SC::DeviceId,
+        device: &SC::DeviceId,
         group_addr: MulticastAddr<I::Addr>,
     ) -> GroupLeaveResult {
         gmp_leave_group(self, ctx, device, group_addr)
@@ -890,7 +890,7 @@ trait GmpContext<I: IpExt, C: GmpNonSyncContext<I, Self::DeviceId>>: IpDeviceIdC
     fn send_message(
         &mut self,
         ctx: &mut C,
-        device: Self::DeviceId,
+        device: &Self::DeviceId,
         group_addr: MulticastAddr<I::Addr>,
         msg_type: GmpMessageType<Self::ProtocolSpecific>,
     );
@@ -899,7 +899,7 @@ trait GmpContext<I: IpExt, C: GmpNonSyncContext<I, Self::DeviceId>>: IpDeviceIdC
     fn run_actions(
         &mut self,
         ctx: &mut C,
-        device: Self::DeviceId,
+        device: &Self::DeviceId,
         actions: <Self::ProtocolSpecific as ProtocolSpecific>::Actions,
     );
 
@@ -909,7 +909,7 @@ trait GmpContext<I: IpExt, C: GmpNonSyncContext<I, Self::DeviceId>>: IpDeviceIdC
     /// an mutable reference to GMP state.
     fn with_gmp_state_mut<O, F: FnOnce(GmpState<'_, I::Addr, Self::GroupState>) -> O>(
         &mut self,
-        device: Self::DeviceId,
+        device: &Self::DeviceId,
         cb: F,
     ) -> O;
 }
@@ -924,7 +924,7 @@ fn gmp_handle_timer<I, C, SC>(
     I: IpExt,
 {
     let ReportTimerExpiredActions { send_report } =
-        sync_ctx.with_gmp_state_mut(device, |GmpState { enabled: _, groups }| {
+        sync_ctx.with_gmp_state_mut(&device, |GmpState { enabled: _, groups }| {
             groups
                 .get_mut(&group_addr)
                 .expect("get state for group with expired report timer")
@@ -932,7 +932,7 @@ fn gmp_handle_timer<I, C, SC>(
                 .report_timer_expired()
         });
 
-    sync_ctx.send_message(ctx, device, group_addr, GmpMessageType::Report(send_report));
+    sync_ctx.send_message(ctx, &device, group_addr, GmpMessageType::Report(send_report));
 }
 
 trait GmpMessage<I: Ip> {
@@ -942,7 +942,7 @@ trait GmpMessage<I: Ip> {
 fn handle_report_message<I, C, SC>(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device: SC::DeviceId,
+    device: &SC::DeviceId,
     group_addr: MulticastAddr<I::Addr>,
 ) -> Result<(), SC::Err>
 where
@@ -959,7 +959,10 @@ where
         })?;
 
     if stop_timer {
-        assert_matches!(ctx.cancel_timer(GmpDelayedReportTimerId { device, group_addr }), Some(_));
+        assert_matches!(
+            ctx.cancel_timer(GmpDelayedReportTimerId { device: device.clone(), group_addr }),
+            Some(_)
+        );
     }
 
     Ok(())
@@ -974,7 +977,7 @@ enum QueryTarget<A> {
 fn handle_query_message<I, C, SC>(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device: SC::DeviceId,
+    device: &SC::DeviceId,
     target: QueryTarget<I::Addr>,
     max_response_time: Duration,
 ) -> Result<(), SC::Err>
@@ -1018,9 +1021,10 @@ where
     {
         if let Some(generic_actions) = generic_actions {
             let _: Option<C::Instant> = match generic_actions {
-                QueryReceivedGenericAction::ScheduleTimer(delay) => {
-                    ctx.schedule_timer(delay, GmpDelayedReportTimerId { device, group_addr })
-                }
+                QueryReceivedGenericAction::ScheduleTimer(delay) => ctx.schedule_timer(
+                    delay,
+                    GmpDelayedReportTimerId { device: device.clone(), group_addr },
+                ),
                 QueryReceivedGenericAction::StopTimerAndSendReport(protocol_specific) => {
                     sync_ctx.send_message(
                         ctx,
@@ -1028,7 +1032,7 @@ where
                         group_addr,
                         GmpMessageType::Report(protocol_specific),
                     );
-                    ctx.cancel_timer(GmpDelayedReportTimerId { device, group_addr })
+                    ctx.cancel_timer(GmpDelayedReportTimerId { device: device.clone(), group_addr })
                 }
             };
         }
@@ -1041,7 +1045,7 @@ where
     Ok(())
 }
 
-fn gmp_handle_maybe_enabled<C, SC, I>(sync_ctx: &mut SC, ctx: &mut C, device: SC::DeviceId)
+fn gmp_handle_maybe_enabled<C, SC, I>(sync_ctx: &mut SC, ctx: &mut C, device: &SC::DeviceId)
 where
     C: GmpNonSyncContext<I, SC::DeviceId>,
     SC: GmpContext<I, C>,
@@ -1075,14 +1079,17 @@ where
             );
 
             assert_matches!(
-                ctx.schedule_timer(delay, GmpDelayedReportTimerId { device, group_addr }),
+                ctx.schedule_timer(
+                    delay,
+                    GmpDelayedReportTimerId { device: device.clone(), group_addr }
+                ),
                 None
             );
         }
     }
 }
 
-fn gmp_handle_disabled<C, SC, I>(sync_ctx: &mut SC, ctx: &mut C, device: SC::DeviceId)
+fn gmp_handle_disabled<C, SC, I>(sync_ctx: &mut SC, ctx: &mut C, device: &SC::DeviceId)
 where
     C: GmpNonSyncContext<I, SC::DeviceId>,
     SC: GmpContext<I, C>,
@@ -1104,7 +1111,7 @@ where
     for (group_addr, LeaveGroupActions { send_leave, stop_timer }) in actions {
         if stop_timer {
             assert_matches!(
-                ctx.cancel_timer(GmpDelayedReportTimerId { device, group_addr }),
+                ctx.cancel_timer(GmpDelayedReportTimerId { device: device.clone(), group_addr }),
                 Some(_)
             );
         }
@@ -1118,7 +1125,7 @@ where
 fn gmp_join_group<C, SC, I>(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device: SC::DeviceId,
+    device: &SC::DeviceId,
     group_addr: MulticastAddr<I::Addr>,
 ) -> GroupJoinResult
 where
@@ -1148,7 +1155,10 @@ where
                 );
 
                 assert_matches!(
-                    ctx.schedule_timer(delay, GmpDelayedReportTimerId { device, group_addr }),
+                    ctx.schedule_timer(
+                        delay,
+                        GmpDelayedReportTimerId { device: device.clone(), group_addr }
+                    ),
                     None
                 );
             }
@@ -1158,7 +1168,7 @@ where
 fn gmp_leave_group<C, SC, I>(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device: SC::DeviceId,
+    device: &SC::DeviceId,
     group_addr: MulticastAddr<I::Addr>,
 ) -> GroupLeaveResult
 where
@@ -1173,7 +1183,10 @@ where
         .map(|LeaveGroupActions { send_leave, stop_timer }| {
             if stop_timer {
                 assert_matches!(
-                    ctx.cancel_timer(GmpDelayedReportTimerId { device, group_addr }),
+                    ctx.cancel_timer(GmpDelayedReportTimerId {
+                        device: device.clone(),
+                        group_addr
+                    }),
                     Some(_)
                 );
             }

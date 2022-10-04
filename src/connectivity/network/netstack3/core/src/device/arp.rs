@@ -78,7 +78,7 @@ pub(crate) trait BufferArpContext<D: ArpDevice, C: ArpNonSyncCtx<D, Self::Device
     fn send_ip_packet_to_neighbor_link_addr<S: Serializer<Buffer = B>>(
         &mut self,
         ctx: &mut C,
-        device_id: Self::DeviceId,
+        device_id: &Self::DeviceId,
         dst_link_address: D::HType,
         body: S,
     ) -> Result<(), S>;
@@ -121,15 +121,15 @@ pub(crate) trait ArpContext<D: ArpDevice, C: ArpNonSyncCtx<D, Self::DeviceId>>:
     ///
     /// If `device_id` does not have any addresses associated with it, return
     /// `None`.
-    fn get_protocol_addr(&self, ctx: &mut C, device_id: Self::DeviceId) -> Option<Ipv4Addr>;
+    fn get_protocol_addr(&self, ctx: &mut C, device_id: &Self::DeviceId) -> Option<Ipv4Addr>;
 
     /// Get the hardware address of this interface.
-    fn get_hardware_addr(&self, ctx: &mut C, device_id: Self::DeviceId) -> UnicastAddr<D::HType>;
+    fn get_hardware_addr(&self, ctx: &mut C, device_id: &Self::DeviceId) -> UnicastAddr<D::HType>;
 
     /// Calls the function with a mutable reference to ARP state.
     fn with_arp_state_mut<O, F: FnOnce(&mut ArpState<D>) -> O>(
         &mut self,
-        device_id: Self::DeviceId,
+        device_id: &Self::DeviceId,
         cb: F,
     ) -> O;
 }
@@ -137,13 +137,13 @@ pub(crate) trait ArpContext<D: ArpDevice, C: ArpNonSyncCtx<D, Self::DeviceId>>:
 impl<D: ArpDevice, C: ArpNonSyncCtx<D, SC::DeviceId>, SC: ArpContext<D, C>> NudContext<Ipv4, D, C>
     for SC
 {
-    fn retrans_timer(&self, _device_id: SC::DeviceId) -> NonZeroDuration {
+    fn retrans_timer(&self, _device_id: &SC::DeviceId) -> NonZeroDuration {
         NonZeroDuration::new(DEFAULT_ARP_REQUEST_PERIOD).unwrap()
     }
 
     fn with_nud_state_mut<O, F: FnOnce(&mut NudState<Ipv4, D::Address>) -> O>(
         &mut self,
-        device_id: SC::DeviceId,
+        device_id: &SC::DeviceId,
         cb: F,
     ) -> O {
         self.with_arp_state_mut(device_id, |ArpState { nud }| cb(nud))
@@ -152,7 +152,7 @@ impl<D: ArpDevice, C: ArpNonSyncCtx<D, SC::DeviceId>, SC: ArpContext<D, C>> NudC
     fn send_neighbor_solicitation(
         &mut self,
         ctx: &mut C,
-        device_id: SC::DeviceId,
+        device_id: &SC::DeviceId,
         lookup_addr: SpecifiedAddr<Ipv4Addr>,
     ) {
         send_arp_request(self, ctx, device_id, lookup_addr.get())
@@ -169,7 +169,7 @@ impl<
     fn send_ip_packet_to_neighbor_link_addr<S: Serializer<Buffer = B>>(
         &mut self,
         ctx: &mut C,
-        device_id: SC::DeviceId,
+        device_id: &SC::DeviceId,
         dst_mac: D::HType,
         body: S,
     ) -> Result<(), S> {
@@ -280,7 +280,7 @@ fn handle_packet<
     let target_addr = packet.target_protocol_address();
     let (source, kind) = match (
         sender_addr == target_addr,
-        Some(target_addr) == sync_ctx.get_protocol_addr(ctx, device_id),
+        Some(target_addr) == sync_ctx.get_protocol_addr(ctx, &device_id),
     ) {
         (true, false) => {
             // Treat all GARP messages as neighbor probes as GARPs are not
@@ -335,7 +335,7 @@ fn handle_packet<
         NudHandler::<Ipv4, D, _>::set_dynamic_neighbor(
             sync_ctx,
             ctx,
-            device_id,
+            &device_id,
             addr,
             sender_hw_addr,
             source,
@@ -346,7 +346,7 @@ fn handle_packet<
         PacketKind::Gratuitous => return,
         PacketKind::AddressedToMe => match source {
             DynamicNeighborUpdateSource::Probe => {
-                let self_hw_addr = sync_ctx.get_hardware_addr(ctx, device_id);
+                let self_hw_addr = sync_ctx.get_hardware_addr(ctx, &device_id);
 
                 // TODO(joshlf): Do something if send_frame returns an error?
                 let _: Result<(), _> = FrameContext::send_frame(
@@ -374,7 +374,7 @@ const DEFAULT_ARP_REQUEST_PERIOD: Duration = Duration::from_secs(20);
 fn send_arp_request<D: ArpDevice, C: ArpNonSyncCtx<D, SC::DeviceId>, SC: ArpContext<D, C>>(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device_id: SC::DeviceId,
+    device_id: &SC::DeviceId,
     lookup_addr: Ipv4Addr,
 ) {
     if let Some(sender_protocol_addr) = sync_ctx.get_protocol_addr(ctx, device_id) {
@@ -383,7 +383,7 @@ fn send_arp_request<D: ArpDevice, C: ArpNonSyncCtx<D, SC::DeviceId>, SC: ArpCont
         let _ = FrameContext::send_frame(
             sync_ctx,
             ctx,
-            ArpFrameMetadata { device_id, dst_addr: D::HType::BROADCAST },
+            ArpFrameMetadata { device_id: device_id.clone(), dst_addr: D::HType::BROADCAST },
             ArpPacketBuilder::new(
                 ArpOp::Request,
                 self_hw_addr.get(),
@@ -491,7 +491,7 @@ mod tests {
         fn get_protocol_addr(
             &self,
             _ctx: &mut MockNonSyncCtx,
-            _device_id: DummyLinkDeviceId,
+            _device_id: &DummyLinkDeviceId,
         ) -> Option<Ipv4Addr> {
             self.get_ref().proto_addr
         }
@@ -499,14 +499,14 @@ mod tests {
         fn get_hardware_addr(
             &self,
             _ctx: &mut MockNonSyncCtx,
-            _device_id: DummyLinkDeviceId,
+            _device_id: &DummyLinkDeviceId,
         ) -> UnicastAddr<Mac> {
             self.get_ref().hw_addr
         }
 
         fn with_arp_state_mut<O, F: FnOnce(&mut ArpState<EthernetLinkDevice>) -> O>(
             &mut self,
-            DummyLinkDeviceId: DummyLinkDeviceId,
+            DummyLinkDeviceId: &DummyLinkDeviceId,
             cb: F,
         ) -> O {
             cb(&mut self.get_mut().arp_state)
@@ -517,7 +517,7 @@ mod tests {
         fn send_ip_packet_to_neighbor_link_addr<S: Serializer<Buffer = B>>(
             &mut self,
             _ctx: &mut MockNonSyncCtx,
-            _device_id: DummyLinkDeviceId,
+            _device_id: &DummyLinkDeviceId,
             _dst_link_address: Mac,
             _body: S,
         ) -> Result<(), S> {
@@ -656,7 +656,7 @@ mod tests {
             BufferNudHandler::send_ip_packet_to_neighbor(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                DummyLinkDeviceId,
+                &DummyLinkDeviceId,
                 SpecifiedAddr::new(TEST_REMOTE_IPV4).unwrap(),
                 Buf::new([1], ..),
             ),
@@ -822,7 +822,7 @@ mod tests {
                 BufferNudHandler::send_ip_packet_to_neighbor(
                     sync_ctx,
                     non_sync_ctx,
-                    DummyLinkDeviceId,
+                    &DummyLinkDeviceId,
                     SpecifiedAddr::new(requested_remote_proto_addr).unwrap(),
                     Buf::new([1], ..),
                 ),

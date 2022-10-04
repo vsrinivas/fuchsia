@@ -68,7 +68,7 @@ fn with_iter_slaac_addrs_mut<
     F: FnOnce(Box<dyn Iterator<Item = SlaacAddressEntryMut<'_, C::Instant>> + '_>) -> O,
 >(
     sync_ctx: &mut SC,
-    device_id: SC::DeviceId,
+    device_id: &SC::DeviceId,
     cb: F,
 ) -> O {
     SC::with_ip_device_state_mut(sync_ctx, device_id, |state| {
@@ -97,7 +97,7 @@ impl<
         cb: F,
     ) -> O {
         let SlaacAddrs { sync_ctx, device_id, _marker } = self;
-        with_iter_slaac_addrs_mut(*sync_ctx, *device_id, cb)
+        with_iter_slaac_addrs_mut(*sync_ctx, device_id, cb)
     }
 
     fn with_addrs<
@@ -108,7 +108,7 @@ impl<
         cb: F,
     ) -> O {
         let SlaacAddrs { sync_ctx, device_id, _marker } = self;
-        sync_ctx.with_ip_device_state(*device_id, |state| {
+        sync_ctx.with_ip_device_state(device_id, |state| {
             cb(Box::new(state.ip_state.iter_addrs().cloned().filter_map(
                 |Ipv6AddressEntry { addr_sub, state: _, config, deprecated }| match config {
                     AddrConfig::Slaac(config) => {
@@ -132,12 +132,12 @@ impl<
         add_ipv6_addr_subnet(
             *sync_ctx,
             ctx,
-            *device_id,
+            device_id,
             add_addr_sub.to_witness(),
             AddrConfig::Slaac(slaac_config),
         )
         .map(|()| {
-            with_iter_slaac_addrs_mut(*sync_ctx, *device_id, |mut addrs| {
+            with_iter_slaac_addrs_mut(*sync_ctx, device_id, |mut addrs| {
                 and_then(
                     addrs
                         .find(|SlaacAddressEntryMut { addr_sub, config: _, deprecated: _ }| {
@@ -157,7 +157,7 @@ impl<
     ) -> Result<(AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>, SlaacConfig<C::Instant>), NotFoundError>
     {
         let SlaacAddrs { sync_ctx, device_id, _marker } = self;
-        del_ipv6_addr(*sync_ctx, ctx, *device_id, &addr.into_specified()).map(
+        del_ipv6_addr(*sync_ctx, ctx, device_id, &addr.into_specified()).map(
             |Ipv6AddressEntry { addr_sub, state: _, config, deprecated: _ }| {
                 assert_eq!(&addr_sub.addr(), addr);
                 match config {
@@ -188,11 +188,11 @@ impl<
         F: FnOnce(SlaacAddrsMutAndConfig<'_, C, SlaacAddrs<'_, C, SC>>) -> O,
     >(
         &mut self,
-        device_id: Self::DeviceId,
+        device_id: &Self::DeviceId,
         cb: F,
     ) -> O {
         let (config, dad_transmits, retrans_timer) =
-            self.with_ip_device_state(device_id, |state| {
+            self.with_ip_device_state(&device_id, |state| {
                 let Ipv6DeviceState {
                     retrans_timer,
                     route_discovery: _,
@@ -212,7 +212,8 @@ impl<
         let interface_identifier =
             SC::get_eui64_iid(self, device_id).unwrap_or_else(Default::default);
 
-        let mut addrs = SlaacAddrs { sync_ctx: self, device_id, _marker: PhantomData };
+        let mut addrs =
+            SlaacAddrs { sync_ctx: self, device_id: device_id.clone(), _marker: PhantomData };
 
         cb(SlaacAddrsMutAndConfig {
             addrs: &mut addrs,
@@ -230,10 +231,10 @@ impl<C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>, SC: device::IpDeviceContext<
 {
     fn with_discovered_routes_mut<F: FnOnce(&mut Ipv6RouteDiscoveryState)>(
         &mut self,
-        device_id: SC::DeviceId,
+        device_id: &SC::DeviceId,
         cb: F,
     ) {
-        self.with_ip_device_state_mut(device_id, |state| cb(&mut state.route_discovery))
+        self.with_ip_device_state_mut(&device_id, |state| cb(&mut state.route_discovery))
     }
 }
 
@@ -242,7 +243,7 @@ impl<
         SC: device::BufferIpDeviceContext<Ipv4, C, EmptyBuf>,
     > IgmpContext<C> for SC
 {
-    fn get_ip_addr_subnet(&self, device: SC::DeviceId) -> Option<AddrSubnet<Ipv4Addr>> {
+    fn get_ip_addr_subnet(&self, device: &SC::DeviceId) -> Option<AddrSubnet<Ipv4Addr>> {
         get_ipv4_addr_subnet(self, device)
     }
 
@@ -251,7 +252,7 @@ impl<
         F: FnOnce(GmpState<'_, Ipv4Addr, IgmpGroupState<C::Instant>>) -> O,
     >(
         &mut self,
-        device: Self::DeviceId,
+        device: &Self::DeviceId,
         cb: F,
     ) -> O {
         self.with_ip_device_state_mut(device, |state| {
@@ -280,7 +281,7 @@ impl<
         meta: IgmpPacketMetadata<SC::DeviceId>,
         body: S,
     ) -> Result<(), S> {
-        SC::send_ip_frame(self, ctx, meta.device, meta.dst_ip.into_specified(), body)
+        SC::send_ip_frame(self, ctx, &meta.device, meta.dst_ip.into_specified(), body)
     }
 }
 
@@ -291,7 +292,7 @@ impl<
 {
     fn get_ipv6_link_local_addr(
         &self,
-        device: SC::DeviceId,
+        device: &SC::DeviceId,
     ) -> Option<LinkLocalUnicastAddr<Ipv6Addr>> {
         self.with_ip_device_state(device, |state| {
             state.ip_state.iter_addrs().find_map(|a| {
@@ -306,7 +307,7 @@ impl<
 
     fn with_mld_state_mut<O, F: FnOnce(GmpState<'_, Ipv6Addr, MldGroupState<C::Instant>>) -> O>(
         &mut self,
-        device: Self::DeviceId,
+        device: &Self::DeviceId,
         cb: F,
     ) -> O {
         self.with_ip_device_state_mut(device, |state| {
@@ -337,7 +338,7 @@ impl<C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>, SC: device::Ipv6DeviceContex
         F: FnOnce(Option<(&mut AddressState, Duration)>) -> O,
     >(
         &mut self,
-        device_id: Self::DeviceId,
+        device_id: &Self::DeviceId,
         addr: UnicastAddr<Ipv6Addr>,
         cb: F,
     ) -> O {
@@ -360,7 +361,7 @@ impl<
     fn send_dad_packet(
         &mut self,
         ctx: &mut C,
-        device_id: Self::DeviceId,
+        device_id: &Self::DeviceId,
         dst_ip: MulticastAddr<Ipv6Addr>,
         message: NeighborSolicitation,
     ) -> Result<(), ()> {
@@ -388,15 +389,15 @@ impl<C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>, SC: device::Ipv6DeviceContex
         F: FnOnce(&mut Option<NonZeroU8>, Option<NonZeroU8>) -> O,
     >(
         &mut self,
-        device_id: Self::DeviceId,
+        device_id: &Self::DeviceId,
         cb: F,
     ) -> O {
-        self.with_ip_device_state_mut(device_id, |state| {
+        self.with_ip_device_state_mut(&device_id, |state| {
             cb(&mut state.router_soliciations_remaining, state.config.max_router_solicitations)
         })
     }
 
-    fn get_link_layer_addr_bytes(&self, device_id: SC::DeviceId) -> Option<SC::LinkLayerAddr> {
+    fn get_link_layer_addr_bytes(&self, device_id: &SC::DeviceId) -> Option<SC::LinkLayerAddr> {
         device::Ipv6DeviceContext::get_link_layer_addr_bytes(self, device_id)
     }
 }
@@ -412,7 +413,7 @@ impl<
     >(
         &mut self,
         ctx: &mut C,
-        device_id: Self::DeviceId,
+        device_id: &Self::DeviceId,
         message: RouterSolicitation,
         body: F,
     ) -> Result<(), S> {
@@ -421,7 +422,7 @@ impl<
             crate::ip::socket::ipv6_source_address_selection::select_ipv6_source_address(
                 dst_ip,
                 device_id,
-                state.ip_state.iter_addrs().map(move |a| (a, device_id)),
+                state.ip_state.iter_addrs().map(move |a| (a, device_id.clone())),
             )
         });
         crate::ip::icmp::send_ndp_packet(
@@ -440,13 +441,13 @@ impl<
 impl<C: IpDeviceNonSyncContext<Ipv4, SC::DeviceId>, SC: device::IpDeviceContext<Ipv4, C>>
     ip::IpDeviceContext<Ipv4, C> for SC
 {
-    fn is_ip_device_enabled(&self, device_id: SC::DeviceId) -> bool {
+    fn is_ip_device_enabled(&self, device_id: &SC::DeviceId) -> bool {
         is_ip_device_enabled(self, device_id)
     }
 
     fn get_local_addr_for_remote(
         &self,
-        device_id: Self::DeviceId,
+        device_id: &Self::DeviceId,
         _remote: SpecifiedAddr<Ipv4Addr>,
     ) -> Option<SpecifiedAddr<Ipv4Addr>> {
         self.with_ip_device_state(device_id, |state| {
@@ -461,7 +462,7 @@ impl<C: IpDeviceNonSyncContext<Ipv4, SC::DeviceId>, SC: device::IpDeviceContext<
         let devices = self.with_devices(|devices| devices.collect::<Vec<_>>());
         devices
             .into_iter()
-            .find_map(|device_id| match self.address_status_for_device(dst_ip, device_id) {
+            .find_map(|device_id| match self.address_status_for_device(dst_ip, &device_id) {
                 AddressStatus::Present(a) => Some(AddressStatus::Present((device_id, a))),
                 AddressStatus::Unassigned => None,
             })
@@ -471,7 +472,7 @@ impl<C: IpDeviceNonSyncContext<Ipv4, SC::DeviceId>, SC: device::IpDeviceContext<
     fn address_status_for_device(
         &self,
         dst_ip: SpecifiedAddr<Ipv4Addr>,
-        device_id: Self::DeviceId,
+        device_id: &Self::DeviceId,
     ) -> AddressStatus<Ipv4PresentAddressStatus> {
         if dst_ip.is_limited_broadcast() {
             return AddressStatus::Present(Ipv4PresentAddressStatus::LimitedBroadcast);
@@ -503,15 +504,15 @@ impl<C: IpDeviceNonSyncContext<Ipv4, SC::DeviceId>, SC: device::IpDeviceContext<
         })
     }
 
-    fn is_device_routing_enabled(&self, device_id: SC::DeviceId) -> bool {
+    fn is_device_routing_enabled(&self, device_id: &SC::DeviceId) -> bool {
         is_ip_routing_enabled(self, device_id)
     }
 
-    fn get_hop_limit(&self, _device_id: SC::DeviceId) -> NonZeroU8 {
+    fn get_hop_limit(&self, _device_id: &SC::DeviceId) -> NonZeroU8 {
         DEFAULT_TTL
     }
 
-    fn get_mtu(&self, device_id: Self::DeviceId) -> u32 {
+    fn get_mtu(&self, device_id: &Self::DeviceId) -> u32 {
         self.get_mtu(device_id)
     }
 }
@@ -519,20 +520,20 @@ impl<C: IpDeviceNonSyncContext<Ipv4, SC::DeviceId>, SC: device::IpDeviceContext<
 impl<C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>, SC: device::IpDeviceContext<Ipv6, C>>
     ip::IpDeviceContext<Ipv6, C> for SC
 {
-    fn is_ip_device_enabled(&self, device_id: SC::DeviceId) -> bool {
+    fn is_ip_device_enabled(&self, device_id: &SC::DeviceId) -> bool {
         is_ip_device_enabled(self, device_id)
     }
 
     fn get_local_addr_for_remote(
         &self,
-        device_id: Self::DeviceId,
+        device_id: &Self::DeviceId,
         remote: SpecifiedAddr<Ipv6Addr>,
     ) -> Option<SpecifiedAddr<Ipv6Addr>> {
         self.with_ip_device_state(device_id, |state| {
             crate::ip::socket::ipv6_source_address_selection::select_ipv6_source_address(
                 remote,
                 device_id,
-                state.ip_state.iter_addrs().map(move |a| (a, device_id)),
+                state.ip_state.iter_addrs().map(move |a| (a, device_id.clone())),
             )
             .map(|a| a.into_specified())
         })
@@ -545,7 +546,7 @@ impl<C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>, SC: device::IpDeviceContext<
         let devices = self.with_devices(|devices| devices.collect::<Vec<_>>());
         devices
             .into_iter()
-            .find_map(|device_id| match self.address_status_for_device(addr, device_id) {
+            .find_map(|device_id| match self.address_status_for_device(addr, &device_id) {
                 AddressStatus::Present(a) => Some(AddressStatus::Present((device_id, a))),
                 AddressStatus::Unassigned => None,
             })
@@ -555,7 +556,7 @@ impl<C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>, SC: device::IpDeviceContext<
     fn address_status_for_device(
         &self,
         addr: SpecifiedAddr<Ipv6Addr>,
-        device_id: Self::DeviceId,
+        device_id: &Self::DeviceId,
     ) -> AddressStatus<<Ipv6 as IpLayerIpExt>::AddressStatus> {
         self.with_ip_device_state(device_id, |state| {
             let dev_state = &state.ip_state;
@@ -580,15 +581,15 @@ impl<C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>, SC: device::IpDeviceContext<
         })
     }
 
-    fn is_device_routing_enabled(&self, device_id: SC::DeviceId) -> bool {
+    fn is_device_routing_enabled(&self, device_id: &SC::DeviceId) -> bool {
         is_ip_routing_enabled(self, device_id)
     }
 
-    fn get_hop_limit(&self, device_id: SC::DeviceId) -> NonZeroU8 {
+    fn get_hop_limit(&self, device_id: &SC::DeviceId) -> NonZeroU8 {
         get_ipv6_hop_limit(self, device_id)
     }
 
-    fn get_mtu(&self, device_id: Self::DeviceId) -> u32 {
+    fn get_mtu(&self, device_id: &Self::DeviceId) -> u32 {
         self.get_mtu(device_id)
     }
 }
@@ -604,7 +605,7 @@ impl<
         meta: MldFrameMetadata<SC::DeviceId>,
         body: S,
     ) -> Result<(), S> {
-        SC::send_ip_frame(self, ctx, meta.device, meta.dst_ip.into_specified(), body)
+        SC::send_ip_frame(self, ctx, &meta.device, meta.dst_ip.into_specified(), body)
     }
 }
 
@@ -618,7 +619,7 @@ impl<
     fn send_ip_frame<S: Serializer<Buffer = B>>(
         &mut self,
         ctx: &mut C,
-        device_id: SC::DeviceId,
+        device_id: &SC::DeviceId,
         next_hop: SpecifiedAddr<I::Addr>,
         packet: S,
     ) -> Result<(), S> {

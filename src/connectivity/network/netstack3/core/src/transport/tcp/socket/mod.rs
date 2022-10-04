@@ -233,7 +233,7 @@ impl<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext>
         addr: &ListenerAddr<I::Addr, D, NonZeroU16>,
         socketmap: &SocketMap<AddrVec<IpPortSpec<I, D>>, Bound<Self>>,
     ) -> Result<(), InsertError> {
-        let addr = AddrVec::Listen(*addr);
+        let addr = AddrVec::Listen(addr.clone());
         // Check if any shadow address is present, specifically, if
         // there is an any-listener with the same port.
         if addr.iter_shadows().any(|a| socketmap.get(&a).is_some()) {
@@ -605,15 +605,13 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
                 let (bound, (), bound_addr) =
                     sockets.socketmap.listeners().get_by_id(&bound_id).expect("invalid socket id");
                 assert_matches!(bound, MaybeListener::Bound);
-                let ListenerAddr {
-                    ip: ListenerIpAddr { addr: local_ip, identifier: local_port },
-                    device,
-                } = *bound_addr;
+                let ListenerAddr { ip, device } = bound_addr;
+                let ListenerIpAddr { addr: local_ip, identifier: local_port } = *ip;
 
                 let ip_sock = ip_transport_ctx
                     .new_ip_socket(
                         ctx,
-                        device,
+                        device.as_ref(),
                         local_ip,
                         remote.ip,
                         IpProto::Tcp.into(),
@@ -698,7 +696,7 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
             let (bound, (), bound_addr) =
                 sockets.socketmap.listeners().get_by_id(&id.into()).expect("invalid bound ID");
             assert_matches!(bound, MaybeListener::Bound);
-            *bound_addr
+            bound_addr.clone()
         })
         .into()
     }
@@ -708,7 +706,7 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
             let (listener, (), addr) =
                 sockets.socketmap.listeners().get_by_id(&id.into()).expect("invalid listener ID");
             assert_matches!(listener, MaybeListener::Listener(_));
-            *addr
+            addr.clone()
         })
         .into()
     }
@@ -717,7 +715,7 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
         self.with_tcp_sockets(|sockets| {
             let (_, (), addr): &(Connection<_, _, _, _, _, _>, _, _) =
                 sockets.socketmap.conns().get_by_id(&id.into()).expect("invalid conn ID");
-            *addr
+            addr.clone()
         })
         .into()
     }
@@ -1232,7 +1230,7 @@ mod tests {
             Some(DummyDeviceId)
         }
 
-        fn get_default_hop_limits(&self, _device: Option<Self::DeviceId>) -> HopLimits {
+        fn get_default_hop_limits(&self, _device: Option<&Self::DeviceId>) -> HopLimits {
             DEFAULT_HOP_LIMITS
         }
     }
@@ -1492,7 +1490,7 @@ mod tests {
         TcpIpTransportContext::receive_ip_packet(
             sync_ctx,
             non_sync_ctx,
-            DummyDeviceId,
+            &DummyDeviceId,
             I::recv_src_addr(*meta.src_ip),
             meta.dst_ip,
             buffer,

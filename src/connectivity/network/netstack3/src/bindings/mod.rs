@@ -603,7 +603,7 @@ fn set_interface_enabled<NonSyncCtx: NonSyncContext + AsRef<Devices> + AsMut<Dev
     should_enable: bool,
 ) -> Result<(), fidl_net_stack::Error> {
     let device = non_sync_ctx.as_mut().get_device_mut(id).ok_or(fidl_net_stack::Error::NotFound)?;
-    let core_id = device.core_id();
+    let core_id = device.core_id().clone();
 
     let dev_enabled = match device.info_mut() {
         DeviceSpecificInfo::Ethernet(EthernetInfo {
@@ -642,10 +642,10 @@ fn set_interface_enabled<NonSyncCtx: NonSyncContext + AsRef<Devices> + AsMut<Dev
         assert!(!dev_enabled, "caller attemped to disable an interface that is considered enabled");
     }
 
-    netstack3_core::device::update_ipv4_configuration(sync_ctx, non_sync_ctx, core_id, |config| {
+    netstack3_core::device::update_ipv4_configuration(sync_ctx, non_sync_ctx, &core_id, |config| {
         config.ip_config.ip_enabled = should_enable;
     });
-    netstack3_core::device::update_ipv6_configuration(sync_ctx, non_sync_ctx, core_id, |config| {
+    netstack3_core::device::update_ipv6_configuration(sync_ctx, non_sync_ctx, &core_id, |config| {
         config.ip_config.ip_enabled = should_enable;
     });
 
@@ -655,7 +655,7 @@ fn set_interface_enabled<NonSyncCtx: NonSyncContext + AsRef<Devices> + AsMut<Dev
 fn add_loopback_ip_addrs<NonSyncCtx: NonSyncContext>(
     sync_ctx: &mut SyncCtx<NonSyncCtx>,
     non_sync_ctx: &mut NonSyncCtx,
-    loopback: DeviceId,
+    loopback: &DeviceId,
 ) -> Result<(), NetstackError> {
     for addr_subnet in [
         AddrSubnetEither::V4(
@@ -862,7 +862,7 @@ impl NetstackSeed {
             netstack3_core::device::update_ipv4_configuration(
                 sync_ctx,
                 non_sync_ctx,
-                loopback,
+                &loopback,
                 |config| {
                     *config = Ipv4DeviceConfiguration {
                         ip_config: IpDeviceConfiguration { ip_enabled: true, gmp_enabled: false },
@@ -872,7 +872,7 @@ impl NetstackSeed {
             netstack3_core::device::update_ipv6_configuration(
                 sync_ctx,
                 non_sync_ctx,
-                loopback,
+                &loopback,
                 |config| {
                     *config = Ipv6DeviceConfiguration {
                         dad_transmits: None,
@@ -885,7 +885,7 @@ impl NetstackSeed {
                     };
                 },
             );
-            add_loopback_ip_addrs(sync_ctx, non_sync_ctx, loopback)
+            add_loopback_ip_addrs(sync_ctx, non_sync_ctx, &loopback)
                 .expect("error adding loopback addresses");
 
             // Start servicing timers.

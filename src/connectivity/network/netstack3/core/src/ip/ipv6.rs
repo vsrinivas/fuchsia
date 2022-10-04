@@ -46,7 +46,7 @@ pub(crate) enum Ipv6PacketAction {
 /// present) as per RFC 8200 section 4.
 pub(crate) fn handle_extension_headers<C: IpDeviceIdContext<Ipv6>, B: ByteSlice>(
     ctx: &mut C,
-    device: C::DeviceId,
+    device: &C::DeviceId,
     frame_dst: FrameDestination,
     packet: &Ipv6Packet<B>,
     at_destination: bool,
@@ -123,7 +123,7 @@ fn handle_hop_by_hop_options_ext_hdr<
     I: Iterator<Item = ExtensionHeaderOption<HopByHopOptionData<'a>>>,
 >(
     _ctx: &mut C,
-    _device: C::DeviceId,
+    _device: &C::DeviceId,
     _frame_dst: FrameDestination,
     _packet: &Ipv6Packet<B>,
     options: I,
@@ -147,7 +147,7 @@ fn handle_hop_by_hop_options_ext_hdr<
 // TODO(rheacock): Remove `_` prefix when this is used.
 fn _handle_routing_ext_hdr<'a, C: IpDeviceIdContext<Ipv6>, B: ByteSlice>(
     _ctx: &mut C,
-    _device: C::DeviceId,
+    _device: &C::DeviceId,
     _frame_dst: FrameDestination,
     _packet: &Ipv6Packet<B>,
     _routing_data: &RoutingData<'a>,
@@ -161,7 +161,7 @@ fn _handle_routing_ext_hdr<'a, C: IpDeviceIdContext<Ipv6>, B: ByteSlice>(
 /// Handles a fragment extension header for a `packet`.
 fn handle_fragment_ext_hdr<'a, C: IpDeviceIdContext<Ipv6>, B: ByteSlice>(
     _ctx: &mut C,
-    _device: C::DeviceId,
+    _device: &C::DeviceId,
     _frame_dst: FrameDestination,
     _packet: &Ipv6Packet<B>,
     _fragment_data: &FragmentData<'a>,
@@ -181,7 +181,7 @@ fn handle_destination_options_ext_hdr<
     I: Iterator<Item = ExtensionHeaderOption<DestinationOptionData<'a>>>,
 >(
     _ctx: &mut C,
-    _device: C::DeviceId,
+    _device: &C::DeviceId,
     _frame_dst: FrameDestination,
     _packet: &Ipv6Packet<B>,
     options: I,
@@ -237,7 +237,7 @@ mod tests {
         let packet = buffer.parse::<Ipv6Packet<_>>().unwrap();
 
         assert_eq!(
-            handle_extension_headers(&mut sync_ctx, device_id, frame_dst, &packet, false),
+            handle_extension_headers(&mut sync_ctx, &device_id, frame_dst, &packet, false),
             Ipv6PacketAction::Continue
         );
     }

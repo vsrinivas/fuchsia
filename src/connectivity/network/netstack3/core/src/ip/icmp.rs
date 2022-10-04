@@ -423,7 +423,7 @@ pub(crate) trait BufferIcmpHandler<I: IcmpHandlerIpExt, C, B: BufferMut>:
     fn send_icmp_error_message(
         &mut self,
         ctx: &mut C,
-        device: Self::DeviceId,
+        device: &Self::DeviceId,
         frame_dst: FrameDestination,
         src_ip: I::SourceAddress,
         dst_ip: SpecifiedAddr<I::Addr>,
@@ -438,7 +438,7 @@ impl<B: BufferMut, C: BufferIcmpNonSyncCtx<Ipv4, B>, SC: InnerBufferIcmpv4Contex
     fn send_icmp_error_message(
         &mut self,
         ctx: &mut C,
-        device: SC::DeviceId,
+        device: &SC::DeviceId,
         frame_dst: FrameDestination,
         src_ip: SpecifiedAddr<Ipv4Addr>,
         dst_ip: SpecifiedAddr<Ipv4Addr>,
@@ -517,7 +517,7 @@ impl<B: BufferMut, C: BufferIcmpNonSyncCtx<Ipv6, B>, SC: InnerBufferIcmpv6Contex
     fn send_icmp_error_message(
         &mut self,
         ctx: &mut C,
-        device: SC::DeviceId,
+        device: &SC::DeviceId,
         frame_dst: FrameDestination,
         src_ip: UnicastAddr<Ipv6Addr>,
         dst_ip: SpecifiedAddr<Ipv6Addr>,
@@ -672,7 +672,7 @@ pub(crate) trait InnerIcmpContext<I: IcmpIpExt + IpExt, C: IcmpNonSyncCtx<I>>:
     fn receive_icmp_error(
         &mut self,
         ctx: &mut C,
-        device: Self::DeviceId,
+        device: &Self::DeviceId,
         original_src_ip: Option<SpecifiedAddr<I::Addr>>,
         original_dst_ip: SpecifiedAddr<I::Addr>,
         original_proto: I::Proto,
@@ -838,7 +838,7 @@ where
     fn receive_icmp_error(
         sync_ctx: &mut SC,
         ctx: &mut C,
-        _device: SC::DeviceId,
+        _device: &SC::DeviceId,
         original_src_ip: Option<SpecifiedAddr<I::Addr>>,
         original_dst_ip: SpecifiedAddr<I::Addr>,
         mut original_body: &[u8],
@@ -891,7 +891,7 @@ impl<
     fn receive_ip_packet(
         sync_ctx: &mut SC,
         ctx: &mut C,
-        device: SC::DeviceId,
+        device: &SC::DeviceId,
         src_ip: Ipv4Addr,
         dst_ip: SpecifiedAddr<Ipv4Addr>,
         mut buffer: B,
@@ -1104,7 +1104,7 @@ pub(crate) fn send_ndp_packet<
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device_id: SC::DeviceId,
+    device_id: &SC::DeviceId,
     src_ip: Option<SpecifiedAddr<Ipv6Addr>>,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
     body: S,
@@ -1116,7 +1116,7 @@ pub(crate) fn send_ndp_packet<
         sync_ctx,
         ctx,
         SendIpPacketMeta {
-            device: device_id,
+            device: device_id.clone(),
             src_ip,
             dst_ip,
             next_hop: dst_ip,
@@ -1140,7 +1140,7 @@ fn send_neighbor_advertisement<
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device_id: SC::DeviceId,
+    device_id: &SC::DeviceId,
     solicited: bool,
     device_addr: UnicastAddr<Ipv6Addr>,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
@@ -1160,13 +1160,13 @@ fn send_neighbor_advertisement<
     // carry that information, but it is not necessary. So it is perfectly valid
     // that trying to send this advertisement will end up triggering a neighbor
     // solicitation to be sent.
-    let src_ll = sync_ctx.get_link_layer_addr_bytes(device_id);
+    let src_ll = sync_ctx.get_link_layer_addr_bytes(&device_id);
 
     // Nothing reasonable to do with the error.
     let _: Result<(), _> = send_ndp_packet(
         sync_ctx,
         ctx,
-        device_id,
+        &device_id,
         Some(device_addr.into_specified()),
         dst_ip,
         OptionSequenceBuilder::new(
@@ -1175,7 +1175,7 @@ fn send_neighbor_advertisement<
         .into_serializer(),
         IcmpUnusedCode,
         NeighborAdvertisement::new(
-            sync_ctx.is_router_device(device_id),
+            sync_ctx.is_router_device(&device_id),
             solicited,
             false,
             device_addr.get(),
@@ -1195,7 +1195,7 @@ fn receive_ndp_packet<
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device_id: SC::DeviceId,
+    device_id: &SC::DeviceId,
     src_ip: Ipv6SourceAddr,
     packet: NdpPacket<B>,
 ) {
@@ -1234,7 +1234,7 @@ fn receive_ndp_packet<
                     match Ipv6DeviceHandler::remove_duplicate_tentative_address(
                         sync_ctx,
                         ctx,
-                        device_id,
+                        &device_id,
                         target_address,
                     ) {
                         Ok(tentative) => {
@@ -1245,7 +1245,7 @@ fn receive_ndp_packet<
                                 send_neighbor_advertisement(
                                     sync_ctx,
                                     ctx,
-                                    device_id,
+                                    &device_id,
                                     false,
                                     target_address,
                                     Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.into_specified(),
@@ -1280,7 +1280,7 @@ fn receive_ndp_packet<
                         NudIpHandler::handle_neighbor_probe(
                             sync_ctx,
                             ctx,
-                            device_id,
+                            &device_id,
                             src_ip.into_specified(),
                             link_addr,
                         );
@@ -1289,7 +1289,7 @@ fn receive_ndp_packet<
                     send_neighbor_advertisement(
                         sync_ctx,
                         ctx,
-                        device_id,
+                        &device_id,
                         true,
                         target_address,
                         src_ip.into_specified(),
@@ -1328,7 +1328,7 @@ fn receive_ndp_packet<
             match Ipv6DeviceHandler::remove_duplicate_tentative_address(
                 sync_ctx,
                 ctx,
-                device_id,
+                &device_id,
                 target_address,
             ) {
                 Ok(tentative) => {
@@ -1391,7 +1391,7 @@ fn receive_ndp_packet<
             NudIpHandler::handle_neighbor_confirmation(
                 sync_ctx,
                 ctx,
-                device_id,
+                &device_id,
                 target_address.into_specified(),
                 link_addr,
             );
@@ -1431,7 +1431,7 @@ fn receive_ndp_packet<
                 Ipv6DeviceHandler::set_discovered_retrans_timer(
                     sync_ctx,
                     ctx,
-                    device_id,
+                    &device_id,
                     retransmit_timer,
                 );
             }
@@ -1444,13 +1444,13 @@ fn receive_ndp_packet<
             // update the default hop limit.
             if let Some(hop_limit) = ra.current_hop_limit() {
                 trace!("receive_ndp_packet: NDP RA: updating device's hop limit to {:?} for router: {:?}", ra.current_hop_limit(), src_ip);
-                IpDeviceHandler::set_default_hop_limit(sync_ctx, device_id, hop_limit);
+                IpDeviceHandler::set_default_hop_limit(sync_ctx, &device_id, hop_limit);
             }
 
             RouteDiscoveryHandler::update_route(
                 sync_ctx,
                 ctx,
-                device_id,
+                &device_id,
                 Ipv6DiscoveredRoute { subnet: IPV6_DEFAULT_SUBNET, gateway: Some(src_ip) },
                 p.message().router_lifetime().map(NonZeroNdpLifetime::Finite),
             );
@@ -1490,7 +1490,7 @@ fn receive_ndp_packet<
                         NudIpHandler::handle_neighbor_probe(
                             sync_ctx,
                             ctx,
-                            device_id,
+                            &device_id,
                             {
                                 let src_ip: UnicastAddr<_> = src_ip.into_addr();
                                 src_ip.into_specified()
@@ -1538,7 +1538,7 @@ fn receive_ndp_packet<
                             RouteDiscoveryHandler::update_route(
                                 sync_ctx,
                                 ctx,
-                                device_id,
+                                &device_id,
                                 Ipv6DiscoveredRoute { subnet, gateway: None },
                                 valid_lifetime,
                             )
@@ -1548,7 +1548,7 @@ fn receive_ndp_packet<
                             SlaacHandler::apply_slaac_update(
                                 sync_ctx,
                                 ctx,
-                                device_id,
+                                &device_id,
                                 subnet,
                                 prefix_info.preferred_lifetime(),
                                 valid_lifetime,
@@ -1560,7 +1560,7 @@ fn receive_ndp_packet<
                         // not we should update the link's MTU in response to
                         // RAs.
                         if let Some(mtu) = NonZeroU32::new(mtu) {
-                            Ipv6DeviceHandler::set_link_mtu(sync_ctx, device_id, mtu);
+                            Ipv6DeviceHandler::set_link_mtu(sync_ctx, &device_id, mtu);
                         }
                     }
                 }
@@ -1586,7 +1586,7 @@ impl<
     fn receive_ip_packet(
         sync_ctx: &mut SC,
         ctx: &mut C,
-        device: SC::DeviceId,
+        device: &SC::DeviceId,
         src_ip: Ipv6SourceAddr,
         dst_ip: SpecifiedAddr<Ipv6Addr>,
         mut buffer: B,
@@ -1675,7 +1675,7 @@ impl<
                 );
             }
             Icmpv6Packet::Mld(packet) => {
-                sync_ctx.receive_mld_packet(ctx, device, src_ip, dst_ip, packet);
+                sync_ctx.receive_mld_packet(ctx, &device, src_ip, dst_ip, packet);
             }
             Icmpv6Packet::DestUnreachable(dest_unreachable) => receive_icmpv6_error(
                 sync_ctx,
@@ -1726,7 +1726,7 @@ fn send_icmp_reply<
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device: Option<SC::DeviceId>,
+    device: Option<&SC::DeviceId>,
     original_src_ip: SpecifiedAddr<I::Addr>,
     original_dst_ip: SpecifiedAddr<I::Addr>,
     get_body_from_src_ip: F,
@@ -1763,7 +1763,7 @@ fn receive_icmpv4_error<
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device: SC::DeviceId,
+    device: &SC::DeviceId,
     packet: &IcmpPacket<Ipv4, BB, M>,
     err: Icmpv4ErrorCode,
 ) {
@@ -1806,7 +1806,7 @@ fn receive_icmpv6_error<
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device: SC::DeviceId,
+    device: &SC::DeviceId,
     packet: &IcmpPacket<Ipv6, BB, M>,
     err: Icmpv6ErrorCode,
 ) {
@@ -1864,7 +1864,7 @@ pub(crate) fn send_icmpv4_protocol_unreachable<
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device: SC::DeviceId,
+    device: &SC::DeviceId,
     frame_dst: FrameDestination,
     src_ip: SpecifiedAddr<Ipv4Addr>,
     dst_ip: SpecifiedAddr<Ipv4Addr>,
@@ -1908,7 +1908,7 @@ pub(crate) fn send_icmpv6_protocol_unreachable<
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device: SC::DeviceId,
+    device: &SC::DeviceId,
     frame_dst: FrameDestination,
     src_ip: UnicastAddr<Ipv6Addr>,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
@@ -1962,7 +1962,7 @@ pub(crate) fn send_icmpv4_port_unreachable<
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device: SC::DeviceId,
+    device: &SC::DeviceId,
     frame_dst: FrameDestination,
     src_ip: SpecifiedAddr<Ipv4Addr>,
     dst_ip: SpecifiedAddr<Ipv4Addr>,
@@ -2005,7 +2005,7 @@ pub(crate) fn send_icmpv6_port_unreachable<
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device: SC::DeviceId,
+    device: &SC::DeviceId,
     frame_dst: FrameDestination,
     src_ip: UnicastAddr<Ipv6Addr>,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
@@ -2043,7 +2043,7 @@ pub(crate) fn send_icmpv4_net_unreachable<
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device: SC::DeviceId,
+    device: &SC::DeviceId,
     frame_dst: FrameDestination,
     src_ip: SpecifiedAddr<Ipv4Addr>,
     dst_ip: SpecifiedAddr<Ipv4Addr>,
@@ -2091,7 +2091,7 @@ pub(crate) fn send_icmpv6_net_unreachable<
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device: SC::DeviceId,
+    device: &SC::DeviceId,
     frame_dst: FrameDestination,
     src_ip: UnicastAddr<Ipv6Addr>,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
@@ -2137,7 +2137,7 @@ pub(crate) fn send_icmpv4_ttl_expired<
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device: SC::DeviceId,
+    device: &SC::DeviceId,
     frame_dst: FrameDestination,
     src_ip: SpecifiedAddr<Ipv4Addr>,
     dst_ip: SpecifiedAddr<Ipv4Addr>,
@@ -2186,7 +2186,7 @@ pub(crate) fn send_icmpv6_ttl_expired<
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device: SC::DeviceId,
+    device: &SC::DeviceId,
     frame_dst: FrameDestination,
     src_ip: UnicastAddr<Ipv6Addr>,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
@@ -2232,7 +2232,7 @@ pub(crate) fn send_icmpv6_packet_too_big<
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device: SC::DeviceId,
+    device: &SC::DeviceId,
     frame_dst: FrameDestination,
     src_ip: UnicastAddr<Ipv6Addr>,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
@@ -2287,7 +2287,7 @@ pub(crate) fn send_icmpv4_parameter_problem<
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device: SC::DeviceId,
+    device: &SC::DeviceId,
     frame_dst: FrameDestination,
     src_ip: SpecifiedAddr<Ipv4Addr>,
     dst_ip: SpecifiedAddr<Ipv4Addr>,
@@ -2331,7 +2331,7 @@ pub(crate) fn send_icmpv6_parameter_problem<
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device: SC::DeviceId,
+    device: &SC::DeviceId,
     frame_dst: FrameDestination,
     src_ip: UnicastAddr<Ipv6Addr>,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
@@ -2369,7 +2369,7 @@ fn send_icmpv4_dest_unreachable<
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device: SC::DeviceId,
+    device: &SC::DeviceId,
     frame_dst: FrameDestination,
     src_ip: SpecifiedAddr<Ipv4Addr>,
     dst_ip: SpecifiedAddr<Ipv4Addr>,
@@ -2401,7 +2401,7 @@ fn send_icmpv6_dest_unreachable<
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device: SC::DeviceId,
+    device: &SC::DeviceId,
     frame_dst: FrameDestination,
     src_ip: UnicastAddr<Ipv6Addr>,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
@@ -2432,7 +2432,7 @@ fn send_icmpv4_error_message<
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device: SC::DeviceId,
+    device: &SC::DeviceId,
     frame_dst: FrameDestination,
     original_src_ip: SpecifiedAddr<Ipv4Addr>,
     original_dst_ip: SpecifiedAddr<Ipv4Addr>,
@@ -2489,7 +2489,7 @@ fn send_icmpv6_error_message<
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    device: SC::DeviceId,
+    device: &SC::DeviceId,
     frame_dst: FrameDestination,
     original_src_ip: UnicastAddr<Ipv6Addr>,
     original_dst_ip: SpecifiedAddr<Ipv6Addr>,
@@ -3150,20 +3150,20 @@ mod tests {
         let mut sync_ctx = &sync_ctx;
 
         let device = DeviceId::new_ethernet(0);
-        set_routing_enabled::<_, _, I>(&mut sync_ctx, &mut non_sync_ctx, device, true)
+        set_routing_enabled::<_, _, I>(&mut sync_ctx, &mut non_sync_ctx, &device, true)
             .expect("error setting routing enabled");
         match I::VERSION {
             IpVersion::V4 => receive_ipv4_packet(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                device,
+                &device,
                 FrameDestination::Unicast,
                 buffer,
             ),
             IpVersion::V6 => receive_ipv6_packet(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                device,
+                &device,
                 FrameDestination::Unicast,
                 buffer,
             ),
@@ -3752,7 +3752,7 @@ mod tests {
             crate::device::testutil::enable_device(
                 &mut &*sync_ctx,
                 non_sync_ctx,
-                loopback_device_id,
+                &loopback_device_id,
             );
 
             let conn = I::new_icmp_connection(
@@ -4016,7 +4016,7 @@ mod tests {
                 fn receive_icmp_error(
                     &mut self,
                     ctx: &mut $outer_non_sync_ctx,
-                    device: DummyDeviceId,
+                    device: &DummyDeviceId,
                     original_src_ip: Option<SpecifiedAddr<<$ip as Ip>::Addr>>,
                     original_dst_ip: SpecifiedAddr<<$ip as Ip>::Addr>,
                     original_proto: <$ip as packet_formats::ip::IpProtoExt>::Proto,
@@ -4093,7 +4093,7 @@ mod tests {
         fn receive_mld_packet<B: ByteSlice>(
             &mut self,
             _ctx: &mut Dummyv6NonSyncCtx,
-            _device: DummyDeviceId,
+            _device: &DummyDeviceId,
             _src_ip: Ipv6SourceAddr,
             _dst_ip: SpecifiedAddr<Ipv6Addr>,
             _packet: MldPacket<B>,
@@ -4106,14 +4106,14 @@ mod tests {
         fn update_route(
             &mut self,
             _ctx: &mut Dummyv6NonSyncCtx,
-            _device_id: Self::DeviceId,
+            _device_id: &Self::DeviceId,
             _route: Ipv6DiscoveredRoute,
             _lifetime: Option<NonZeroNdpLifetime>,
         ) {
             unimplemented!()
         }
 
-        fn invalidate_routes(&mut self, _ctx: &mut Dummyv6NonSyncCtx, _device_id: Self::DeviceId) {
+        fn invalidate_routes(&mut self, _ctx: &mut Dummyv6NonSyncCtx, _device_id: &Self::DeviceId) {
             unimplemented!()
         }
     }
@@ -4122,7 +4122,7 @@ mod tests {
         fn apply_slaac_update(
             &mut self,
             _ctx: &mut Dummyv6NonSyncCtx,
-            _device_id: Self::DeviceId,
+            _device_id: &Self::DeviceId,
             _subnet: Subnet<Ipv6Addr>,
             _preferred_lifetime: Option<NonZeroNdpLifetime>,
             _valid_lifetime: Option<NonZeroNdpLifetime>,
@@ -4133,7 +4133,7 @@ mod tests {
         fn on_address_removed(
             &mut self,
             _ctx: &mut Dummyv6NonSyncCtx,
-            _device_id: Self::DeviceId,
+            _device_id: &Self::DeviceId,
             _addr: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
             _state: SlaacConfig<DummyInstant>,
             _reason: DelIpv6AddrReason,
@@ -4144,18 +4144,18 @@ mod tests {
         fn remove_all_slaac_addresses(
             &mut self,
             _ctx: &mut Dummyv6NonSyncCtx,
-            _device_id: Self::DeviceId,
+            _device_id: &Self::DeviceId,
         ) {
             unimplemented!()
         }
     }
 
     impl IpDeviceHandler<Ipv6, Dummyv6NonSyncCtx> for Dummyv6SyncCtx {
-        fn is_router_device(&self, _device_id: Self::DeviceId) -> bool {
+        fn is_router_device(&self, _device_id: &Self::DeviceId) -> bool {
             unimplemented!()
         }
 
-        fn set_default_hop_limit(&mut self, _device_id: Self::DeviceId, _hop_limit: NonZeroU8) {
+        fn set_default_hop_limit(&mut self, _device_id: &Self::DeviceId, _hop_limit: NonZeroU8) {
             unreachable!()
         }
     }
@@ -4163,14 +4163,14 @@ mod tests {
     impl Ipv6DeviceHandler<Dummyv6NonSyncCtx> for Dummyv6SyncCtx {
         type LinkLayerAddr = [u8; 0];
 
-        fn get_link_layer_addr_bytes(&self, _device_id: Self::DeviceId) -> Option<[u8; 0]> {
+        fn get_link_layer_addr_bytes(&self, _device_id: &Self::DeviceId) -> Option<[u8; 0]> {
             unimplemented!()
         }
 
         fn set_discovered_retrans_timer(
             &mut self,
             _ctx: &mut Dummyv6NonSyncCtx,
-            _device_id: Self::DeviceId,
+            _device_id: &Self::DeviceId,
             _retrans_timer: NonZeroDuration,
         ) {
             unimplemented!()
@@ -4179,13 +4179,13 @@ mod tests {
         fn remove_duplicate_tentative_address(
             &mut self,
             _ctx: &mut Dummyv6NonSyncCtx,
-            _device_id: Self::DeviceId,
+            _device_id: &Self::DeviceId,
             _addr: UnicastAddr<Ipv6Addr>,
         ) -> Result<bool, NotFoundError> {
             unimplemented!()
         }
 
-        fn set_link_mtu(&mut self, _device_id: Self::DeviceId, _mtu: NonZeroU32) {
+        fn set_link_mtu(&mut self, _device_id: &Self::DeviceId, _mtu: NonZeroU32) {
             unimplemented!()
         }
     }
@@ -4205,7 +4205,7 @@ mod tests {
         fn handle_neighbor_probe(
             &mut self,
             _ctx: &mut Dummyv6NonSyncCtx,
-            _device_id: Self::DeviceId,
+            _device_id: &Self::DeviceId,
             _neighbor: SpecifiedAddr<Ipv6Addr>,
             _link_addr: &[u8],
         ) {
@@ -4215,7 +4215,7 @@ mod tests {
         fn handle_neighbor_confirmation(
             &mut self,
             _ctx: &mut Dummyv6NonSyncCtx,
-            _device_id: Self::DeviceId,
+            _device_id: &Self::DeviceId,
             _neighbor: SpecifiedAddr<Ipv6Addr>,
             _link_addr: &[u8],
         ) {
@@ -4225,7 +4225,7 @@ mod tests {
         fn flush_neighbor_table(
             &mut self,
             _ctx: &mut Dummyv6NonSyncCtx,
-            _device_id: Self::DeviceId,
+            _device_id: &Self::DeviceId,
         ) {
             unimplemented!()
         }
@@ -4290,7 +4290,7 @@ mod tests {
             <IcmpIpTransportContext as BufferIpTransportContext<Ipv4, _, _, _>>::receive_ip_packet(
                 sync_ctx,
                 non_sync_ctx,
-                DummyDeviceId,
+                &DummyDeviceId,
                 DUMMY_CONFIG_V4.remote_ip.get(),
                 DUMMY_CONFIG_V4.local_ip,
                 Buf::new(original_packet, ..)
@@ -4611,7 +4611,7 @@ mod tests {
             <IcmpIpTransportContext as BufferIpTransportContext<Ipv6, _, _, _>>::receive_ip_packet(
                 sync_ctx,
                 non_sync_ctx,
-                DummyDeviceId,
+                &DummyDeviceId,
                 DUMMY_CONFIG_V6.remote_ip.get().try_into().unwrap(),
                 DUMMY_CONFIG_V6.local_ip,
                 Buf::new(original_packet, ..)
@@ -4877,7 +4877,7 @@ mod tests {
             send_icmpv4_ttl_expired(
                 sync_ctx,
                 non_sync_ctx,
-                DummyDeviceId,
+                &DummyDeviceId,
                 FrameDestination::Unicast,
                 DUMMY_CONFIG_V4.remote_ip,
                 DUMMY_CONFIG_V4.local_ip,
@@ -4895,7 +4895,7 @@ mod tests {
             send_icmpv4_parameter_problem(
                 sync_ctx,
                 non_sync_ctx,
-                DummyDeviceId,
+                &DummyDeviceId,
                 FrameDestination::Unicast,
                 DUMMY_CONFIG_V4.remote_ip,
                 DUMMY_CONFIG_V4.local_ip,
@@ -4914,7 +4914,7 @@ mod tests {
             send_icmpv4_dest_unreachable(
                 sync_ctx,
                 non_sync_ctx,
-                DummyDeviceId,
+                &DummyDeviceId,
                 FrameDestination::Unicast,
                 DUMMY_CONFIG_V4.remote_ip,
                 DUMMY_CONFIG_V4.local_ip,
@@ -4930,7 +4930,7 @@ mod tests {
             send_icmpv6_ttl_expired(
                 sync_ctx,
                 non_sync_ctx,
-                DummyDeviceId,
+                &DummyDeviceId,
                 FrameDestination::Unicast,
                 UnicastAddr::from_witness(DUMMY_CONFIG_V6.remote_ip).unwrap(),
                 DUMMY_CONFIG_V6.local_ip,
@@ -4945,7 +4945,7 @@ mod tests {
             send_icmpv6_packet_too_big(
                 sync_ctx,
                 non_sync_ctx,
-                DummyDeviceId,
+                &DummyDeviceId,
                 FrameDestination::Unicast,
                 UnicastAddr::from_witness(DUMMY_CONFIG_V6.remote_ip).unwrap(),
                 DUMMY_CONFIG_V6.local_ip,
@@ -4963,7 +4963,7 @@ mod tests {
             send_icmpv6_parameter_problem(
                 sync_ctx,
                 non_sync_ctx,
-                DummyDeviceId,
+                &DummyDeviceId,
                 FrameDestination::Unicast,
                 UnicastAddr::new(*DUMMY_CONFIG_V6.remote_ip).expect("unicast source address"),
                 DUMMY_CONFIG_V6.local_ip,
@@ -4981,7 +4981,7 @@ mod tests {
             send_icmpv6_dest_unreachable(
                 sync_ctx,
                 non_sync_ctx,
-                DummyDeviceId,
+                &DummyDeviceId,
                 FrameDestination::Unicast,
                 UnicastAddr::from_witness(DUMMY_CONFIG_V6.remote_ip).unwrap(),
                 DUMMY_CONFIG_V6.local_ip,

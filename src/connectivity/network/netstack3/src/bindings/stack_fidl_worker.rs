@@ -332,12 +332,12 @@ where
 
         let device_info =
             non_sync_ctx.as_ref().get_device(id).ok_or(fidl_net_stack::Error::NotFound)?;
-        let device_id = device_info.core_id();
+        let device_id = device_info.core_id().clone();
 
         add_ip_addr_subnet(
             sync_ctx,
             non_sync_ctx,
-            device_id,
+            &device_id,
             addr.try_into_core().map_err(IntoFidl::into_fidl)?,
         )
         .map_err(IntoFidl::into_fidl)
@@ -352,10 +352,10 @@ where
 
         let device_info =
             non_sync_ctx.as_ref().get_device(id).ok_or(fidl_net_stack::Error::NotFound)?;
-        let device_id = device_info.core_id();
+        let device_id = device_info.core_id().clone();
         let addr: SpecifiedAddr<_> = addr.addr.try_into_core().map_err(IntoFidl::into_fidl)?;
 
-        del_ip_addr(sync_ctx, non_sync_ctx, device_id, addr.into()).map_err(IntoFidl::into_fidl)
+        del_ip_addr(sync_ctx, non_sync_ctx, &device_id, addr.into()).map_err(IntoFidl::into_fidl)
     }
 
     fn fidl_get_forwarding_table(self) -> Vec<fidl_net_stack::ForwardingEntry> {
