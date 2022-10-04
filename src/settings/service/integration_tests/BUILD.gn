@@ -9,6 +9,7 @@ group("integration_tests") {
     "audio_tests",
     "display_tests",
     "do_not_disturb_tests",
+    "earcons_tests",
     "factory_reset_tests",
     "hanging_get_tests",
     "input_tests",
@@ -18,6 +19,5 @@ group("integration_tests") {
     "night_mode_tests",
     "privacy_tests",
     "setup_tests",
-    "volume_change_earcons_tests",
   ]
 }

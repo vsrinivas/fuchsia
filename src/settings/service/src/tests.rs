@@ -40,7 +40,6 @@ mod agent_tests;
 mod audio_policy_handler_tests;
 mod audio_policy_tests;
 mod audio_tests;
-mod bluetooth_earcons_tests;
 mod camera_watcher_agent_tests;
 mod display_tests;
 mod environment_tests;

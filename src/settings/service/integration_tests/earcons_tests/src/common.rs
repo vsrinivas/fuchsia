@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::mock_audio_core_service::audio_core_service_mock;
-use crate::mock_discovery::discovery_service_mock;
+use crate::mock_discovery::{discovery_service_mock, remove_session, update_session};
 use crate::mock_input_device_registry::{
     input_device_registry_mock, ButtonEventReceiver, ButtonEventSender,
 };
@@ -14,7 +14,7 @@ use anyhow::Error;
 use fidl::endpoints::DiscoverableProtocolMarker;
 use fidl_fuchsia_media::AudioCoreMarker;
 use fidl_fuchsia_media::AudioRenderUsage;
-use fidl_fuchsia_media_sessions2::DiscoveryMarker;
+use fidl_fuchsia_media_sessions2::{DiscoveryMarker, SessionsWatcherProxy};
 use fidl_fuchsia_media_sounds::PlayerMarker;
 use fidl_fuchsia_settings::{AudioMarker, AudioProxy, AudioSettings, AudioStreamSettings};
 use fidl_fuchsia_ui_policy::DeviceListenerRegistryMarker;
@@ -26,6 +26,8 @@ use futures::StreamExt;
 use std::collections::HashMap;
 use std::sync::Arc;
 use utils;
+
+pub use crate::mock_discovery::SessionId;
 
 mod mock_audio_core_service;
 mod mock_discovery;
@@ -42,6 +44,9 @@ pub struct VolumeChangeEarconsTest {
     /// sound id, and the second u32 is the number of times.
     play_counts: Arc<Mutex<HashMap<u32, u32>>>,
 
+    /// Watchers on the discovery service that have called WatchSession.
+    discovery_watchers: Arc<Mutex<Vec<SessionsWatcherProxy>>>,
+
     /// The listeners to notify that a sound was played.
     sound_played_listeners: Arc<Mutex<Vec<SoundEventSender>>>,
 
@@ -53,6 +58,7 @@ impl VolumeChangeEarconsTest {
     pub fn create() -> Self {
         Self {
             play_counts: Arc::new(Mutex::new(HashMap::new())),
+            discovery_watchers: Arc::new(Mutex::new(Vec::new())),
             sound_played_listeners: Arc::new(Mutex::new(Vec::new())),
             media_button_listener: None,
         }
@@ -60,6 +66,10 @@ impl VolumeChangeEarconsTest {
 
     pub fn play_counts(&self) -> Arc<Mutex<HashMap<u32, u32>>> {
         Arc::clone(&self.play_counts)
+    }
+
+    pub fn discovery_watchers(&self) -> Arc<Mutex<Vec<SessionsWatcherProxy>>> {
+        Arc::clone(&self.discovery_watchers)
     }
 
     pub fn sound_played_listeners(&self) -> Arc<Mutex<Vec<SoundEventSender>>> {
@@ -70,10 +80,21 @@ impl VolumeChangeEarconsTest {
         self.media_button_listener.clone()
     }
 
+    /// Simulates updating a media session.
+    pub async fn update_session(&self, id: SessionId, domain: &str) {
+        update_session(self.discovery_watchers(), id, domain).await;
+    }
+
+    /// Simulates removing a media session.
+    pub async fn remove_session(&self, id: SessionId) {
+        remove_session(self.discovery_watchers(), id).await;
+    }
+
     async fn add_common_basic(
         &self,
         info: &utils::SettingsRealmInfo<'_>,
         usage_control_bound_sender: Sender<()>,
+        discovery_watcher_notifier: Option<Sender<()>>,
     ) -> Result<(), Error> {
         // Add basic Settings service realm information.
         utils::create_realm_basic(&info).await?;
@@ -131,11 +152,20 @@ impl VolumeChangeEarconsTest {
             .await?;
 
         // Add mock discovery service.
+        let discovery_watchers = self.discovery_watchers();
         let discovery_service = info
             .builder
             .add_local_child(
                 "discovery_service",
-                move |handles: LocalComponentHandles| Box::pin(discovery_service_mock(handles)),
+                move |handles: LocalComponentHandles| {
+                    let discovery_watchers = Arc::clone(&discovery_watchers);
+                    let discovery_watcher_notifier = discovery_watcher_notifier.clone();
+                    Box::pin(discovery_service_mock(
+                        handles,
+                        discovery_watchers,
+                        discovery_watcher_notifier,
+                    ))
+                },
                 ChildOptions::new().eager(),
             )
             .await?;
@@ -180,7 +210,30 @@ impl VolumeChangeEarconsTest {
             capabilities: vec![AudioMarker::PROTOCOL_NAME],
         };
 
-        self.add_common_basic(&info, usage_control_bound_sender).await?;
+        self.add_common_basic(&info, usage_control_bound_sender, None).await?;
+
+        let instance = info.builder.build().await?;
+        Ok(instance)
+    }
+
+    pub async fn create_realm_with_real_discovery(
+        &self,
+        usage_control_bound_sender: Sender<()>,
+        discovery_watcher_notifier: Sender<()>,
+    ) -> Result<RealmInstance, Error> {
+        let builder = RealmBuilder::new().await?;
+        // Add setui_service as child of the realm builder.
+        let setui_service =
+            builder.add_child("setui_service", COMPONENT_URL, ChildOptions::new()).await?;
+        let info = utils::SettingsRealmInfo {
+            builder,
+            settings: &setui_service,
+            has_config_data: true,
+            capabilities: vec![AudioMarker::PROTOCOL_NAME],
+        };
+
+        self.add_common_basic(&info, usage_control_bound_sender, Some(discovery_watcher_notifier))
+            .await?;
 
         let instance = info.builder.build().await?;
         Ok(instance)
@@ -202,7 +255,7 @@ impl VolumeChangeEarconsTest {
             capabilities: vec![AudioMarker::PROTOCOL_NAME],
         };
 
-        self.add_common_basic(&info, usage_control_bound_sender).await?;
+        self.add_common_basic(&info, usage_control_bound_sender, None).await?;
 
         self.media_button_listener = Some(Arc::new(Mutex::new(media_button_sender)));
         let media_button_listener = self.media_button_listener.clone().unwrap();

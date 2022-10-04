@@ -10,7 +10,6 @@ use crate::ingress::fidl::Interface;
 use crate::storage::testing::InMemoryStorageFactory;
 use crate::tests::fakes::audio_core_service::{self, AudioCoreService};
 use crate::tests::fakes::service_registry::ServiceRegistry;
-use crate::tests::fakes::sound_player_service::SoundPlayerService;
 use crate::tests::test_failure_utils::create_test_env_with_failures;
 use crate::EnvironmentBuilder;
 use assert_matches::assert_matches;
@@ -81,9 +80,6 @@ async fn create_services() -> (Arc<Mutex<ServiceRegistry>>, FakeServices) {
     let service_registry = ServiceRegistry::create();
     let audio_core_service_handle = audio_core_service::Builder::new().build();
     service_registry.lock().await.register_service(audio_core_service_handle.clone());
-
-    let sound_player_service_handle = Arc::new(Mutex::new(SoundPlayerService::new()));
-    service_registry.lock().await.register_service(sound_player_service_handle.clone());
 
     (service_registry, FakeServices { audio_core: audio_core_service_handle })
 }
@@ -235,9 +231,6 @@ async fn test_invalid_stream_fails() {
     let audio_core_service_handle =
         audio_core_service::Builder::new().set_suppress_client_errors(true).build();
     service_registry.lock().await.register_service(audio_core_service_handle.clone());
-
-    let sound_player_service_handle = Arc::new(Mutex::new(SoundPlayerService::new()));
-    service_registry.lock().await.register_service(sound_player_service_handle.clone());
 
     // AudioInfo has to have 5 streams, but make them all the same stream type so that we can
     // perform a set call with a stream that isn't in the AudioInfo.

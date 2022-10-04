@@ -22,6 +22,7 @@ config_data_for_pkg_allowlist = [
   "audio_integration_test_pkg",
   "base_unittests",
   "basemgr",
+  "bluetooth_earcons_integration_test_pkg",
   "chrome",
   "cobalt",
   "cobalt_tests",

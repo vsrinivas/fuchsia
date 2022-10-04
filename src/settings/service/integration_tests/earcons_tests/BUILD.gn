@@ -134,9 +134,55 @@ config_data("with_input_tests_config") {
   ]
 }
 
-group("volume_change_earcons_tests") {
+rustc_test("bluetooth_test_bin") {
+  name = "bluetooth_earcons_integration_test"
+  edition = "2021"
+  source_root = "src/bluetooth_earcons_tests.rs"
+  sources = [ "src/bluetooth_earcons_tests.rs" ]
+  deps = [
+    ":common",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
+    "//src/lib/fuchsia",
+    "//third_party/rust_crates:futures",
+  ]
+
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
+}
+
+fuchsia_component("bluetooth_earcons_integration_test") {
+  testonly = true
+  manifest = "meta/bluetooth_earcons_integration_test.cml"
+  deps = [ ":bluetooth_test_bin" ]
+}
+
+fuchsia_test_package("bluetooth_earcons_integration_test_pkg") {
+  package_name = "bluetooth_earcons_integration_test"
+  test_components = [ ":bluetooth_earcons_integration_test" ]
+  deps = [
+    ":bluetooth_earcons_integration_test",
+    ":bluetooth_tests_config",
+    "//src/settings/service:setui_service_v2",
+    "//src/sys/stash:pkg",
+  ]
+}
+
+config_data("bluetooth_tests_config") {
+  for_pkg = "bluetooth_earcons_integration_test_pkg"
+  sources = [
+    "testdata/agent_configuration.json",
+    "testdata/bluetooth-connected.wav",
+    "testdata/bluetooth-disconnected.wav",
+    "testdata/interface_configuration.json",
+    "testdata/volume-changed.wav",
+    "testdata/volume-max.wav",
+  ]
+}
+
+group("earcons_tests") {
   testonly = true
   public_deps = [
+    ":bluetooth_earcons_integration_test_pkg",
     ":earcons_with_input_integration_test_pkg",
     ":volume_change_earcons_integration_test_pkg",
   ]
