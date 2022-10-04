@@ -403,6 +403,9 @@ func infraToolLogChecks() []FailureModeCheck {
 		&stringInLogCheck{
 			String: "Failed to stream partitions to FVM",
 			Type:   swarmingOutputType,
+			// This error may be emitted, but since we retry paving, this may not be
+			// fatal.
+			SkipPassedTask: true,
 		},
 		// Emitted by the GCS Go library during image download.
 		&stringInLogCheck{
