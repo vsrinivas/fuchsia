@@ -2,99 +2,62 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fcntl.h>
 #include <fidl/fuchsia.sysinfo/cpp/wire.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/zx/channel.h>
-#include <lib/zx/handle.h>
-#include <unistd.h>
-#include <zircon/boot/image.h>
-#include <zircon/syscalls.h>
-#include <zircon/syscalls/object.h>
+#include <lib/sys/component/cpp/service_client.h>
 
-#include <array>
-
-#include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
-
-using fuchsia_sysinfo::SysInfo;
-using fuchsia_sysinfo::wire::InterruptControllerType;
 
 namespace sysinfo {
 
-namespace {
-
-const std::string kSysinfoPath = fidl::DiscoverableProtocolDefaultPath<SysInfo>;
-
-}  // namespace
-
 TEST(SysinfoTest, GetBoardName) {
   // Get the resource handle from the driver.
-  fbl::unique_fd fd(open(kSysinfoPath.c_str(), O_RDWR));
-  ASSERT_TRUE(fd.is_valid(), "Can't open sysinfo");
-
-  zx::channel channel;
-  ASSERT_OK(fdio_get_service_handle(fd.release(), channel.reset_and_get_address()),
-            "Failed to get channel");
-  fidl::WireSyncClient<SysInfo> sysinfo(std::move(channel));
+  zx::status client_end = component::Connect<fuchsia_sysinfo::SysInfo>();
+  ASSERT_OK(client_end.status_value());
 
   // Test fuchsia::sysinfo::SysInfo.GetBoardName().
-  auto result = sysinfo->GetBoardName();
-  ASSERT_TRUE(result.ok(), "Failed to get board name");
-  ASSERT_OK(result->status, "Failed to get board name");
-  ASSERT_GT(result->name.size(), 0, "board name is empty");
+  const fidl::WireResult result = fidl::WireCall(client_end.value())->GetBoardName();
+  ASSERT_OK(result.status());
+  const fidl::WireResponse response = result.value();
+  ASSERT_OK(response.status);
+  ASSERT_FALSE(response.name.empty());
 }
 
 TEST(SysinfoTest, GetBoardRevision) {
   // Get the resource handle from the driver.
-  fbl::unique_fd fd(open(kSysinfoPath.c_str(), O_RDWR));
-  ASSERT_TRUE(fd.is_valid(), "Can't open sysinfo");
-
-  zx::channel channel;
-  ASSERT_OK(fdio_get_service_handle(fd.release(), channel.reset_and_get_address()),
-            "Failed to get channel");
-  fidl::WireSyncClient<SysInfo> sysinfo(std::move(channel));
+  zx::status client_end = component::Connect<fuchsia_sysinfo::SysInfo>();
+  ASSERT_OK(client_end.status_value());
 
   // Test fuchsia::sysinfo::SysInfo.GetBoardRevision().
-  auto result = sysinfo->GetBoardRevision();
-  ASSERT_TRUE(result.ok(), "Failed to get board revision");
-  ASSERT_OK(result->status, "Failed to get board revision");
+  const fidl::WireResult result = fidl::WireCall(client_end.value())->GetBoardRevision();
+  ASSERT_OK(result.status());
+  const fidl::WireResponse response = result.value();
+  ASSERT_OK(response.status);
 }
 
 TEST(SysinfoTest, GetBootloaderVendor) {
   // Get the resource handle from the driver.
-  fbl::unique_fd fd(open(kSysinfoPath.c_str(), O_RDWR));
-  ASSERT_TRUE(fd.is_valid(), "Can't open sysinfo");
-
-  zx::channel channel;
-  ASSERT_OK(fdio_get_service_handle(fd.release(), channel.reset_and_get_address()),
-            "Failed to get channel");
-  fidl::WireSyncClient<SysInfo> sysinfo(std::move(channel));
+  zx::status client_end = component::Connect<fuchsia_sysinfo::SysInfo>();
+  ASSERT_OK(client_end.status_value());
 
   // Test fuchsia::sysinfo::SysInfo.GetBootloaderVendor().
-  auto result = sysinfo->GetBootloaderVendor();
-  ASSERT_TRUE(result.ok(), "Failed to get bootloader vendor");
-  ASSERT_OK(result->status, "Failed to get bootloader vendor");
+  const fidl::WireResult result = fidl::WireCall(client_end.value())->GetBootloaderVendor();
+  ASSERT_OK(result.status());
+  const fidl::WireResponse response = result.value();
+  ASSERT_OK(response.status);
 }
 
 TEST(SysinfoTest, GetInterruptControllerInfo) {
   // Get the resource handle from the driver.
-  fbl::unique_fd fd(open(kSysinfoPath.c_str(), O_RDWR));
-  ASSERT_TRUE(fd.is_valid(), "Can't open sysinfo");
-
-  zx::channel channel;
-  ASSERT_OK(fdio_get_service_handle(fd.release(), channel.reset_and_get_address()),
-            "Failed to get channel");
-  fidl::WireSyncClient<SysInfo> sysinfo(std::move(channel));
+  zx::status client_end = component::Connect<fuchsia_sysinfo::SysInfo>();
+  ASSERT_OK(client_end.status_value());
 
   // Test fuchsia::sysinfo::SysInfo.GetInterruptControllerInfo().
-  auto result = sysinfo->GetInterruptControllerInfo();
-  ASSERT_TRUE(result.ok(), "Failed to get interrupt controller info");
-  ASSERT_OK(result->status, "Failed to get interrupt controller info");
-  ASSERT_NOT_NULL(result->info.get(), "interrupt controller type is unknown");
-  EXPECT_NE(result->info->type, InterruptControllerType::kUnknown,
+  const fidl::WireResult result = fidl::WireCall(client_end.value())->GetInterruptControllerInfo();
+  ASSERT_OK(result.status());
+  const fidl::WireResponse response = result.value();
+  ASSERT_OK(response.status);
+  ASSERT_NOT_NULL(response.info.get(), "interrupt controller type is unknown");
+  EXPECT_NE(response.info->type, fuchsia_sysinfo::wire::InterruptControllerType::kUnknown,
             "interrupt controller type is unknown");
 }
 
