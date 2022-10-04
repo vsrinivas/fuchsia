@@ -318,31 +318,46 @@ pub mod host {
     use std::path::Path;
 
     impl PackageManifest {
-        pub fn try_load_from(path: impl AsRef<Path>) -> anyhow::Result<Self> {
-            let manifest_path = path.as_ref();
-            let manifest_str = manifest_path.path_to_string()?;
-            let file = File::open(manifest_path)
-                .context(format!("Opening package manifest: {}", &manifest_str))?;
-            let versioned: VersionedPackageManifest = serde_json::from_reader(BufReader::new(file))
-                .context(format!("Reading package manifest: {}", &manifest_str))?;
-            let versioned = match versioned {
-                VersionedPackageManifest::Version1(manifest) => VersionedPackageManifest::Version1(
-                    manifest.resolve_blob_source_paths(&manifest_path)?,
-                ),
-            };
-            Ok(Self(versioned))
+        pub fn try_load_from(manifest_path: impl AsRef<Path>) -> anyhow::Result<Self> {
+            fn inner(manifest_path: &Path) -> anyhow::Result<PackageManifest> {
+                let file = File::open(manifest_path).with_context(|| {
+                    format!("Opening package manifest: {}", manifest_path.display())
+                })?;
+
+                let versioned: VersionedPackageManifest =
+                    serde_json::from_reader(BufReader::new(file)).with_context(|| {
+                        format!("Reading package manifest: {}", manifest_path.display())
+                    })?;
+
+                let versioned = match versioned {
+                    VersionedPackageManifest::Version1(manifest) => {
+                        VersionedPackageManifest::Version1(
+                            manifest.resolve_blob_source_paths(&manifest_path)?,
+                        )
+                    }
+                };
+
+                Ok(Self(versioned))
+            }
+            inner(manifest_path.as_ref())
         }
 
         pub fn write_with_relative_blob_paths(
             self,
             path: impl AsRef<Path>,
         ) -> anyhow::Result<Self> {
-            let versioned = match self.0 {
-                VersionedPackageManifest::Version1(manifest) => VersionedPackageManifest::Version1(
-                    manifest.write_with_relative_blob_paths(path)?,
-                ),
-            };
-            Ok(PackageManifest(versioned))
+            fn inner(this: PackageManifest, path: &Path) -> anyhow::Result<PackageManifest> {
+                let versioned = match this.0 {
+                    VersionedPackageManifest::Version1(manifest) => {
+                        VersionedPackageManifest::Version1(
+                            manifest.write_with_relative_blob_paths(path)?,
+                        )
+                    }
+                };
+
+                Ok(PackageManifest(versioned))
+            }
+            inner(self, path.as_ref())
         }
     }
 
@@ -350,23 +365,32 @@ pub mod host {
         pub fn write_with_relative_blob_paths(
             self,
             manifest_path: impl AsRef<Path>,
-        ) -> anyhow::Result<Self> {
-            let manifest = if let RelativeTo::WorkingDir = &self.blob_sources_relative {
-                // manifest contains working-dir relative source paths, make
-                // them relative to the file, instead.
-                let blobs = self
-                    .blobs
-                    .into_iter()
-                    .map(|blob| relativize_blob_source_path(blob, &manifest_path))
-                    .collect::<anyhow::Result<_>>()?;
-                Self { blobs, blob_sources_relative: RelativeTo::File, ..self }
-            } else {
-                self
-            };
-            let versioned_manifest = VersionedPackageManifest::Version1(manifest.clone());
-            let file = File::create(manifest_path)?;
-            serde_json::to_writer(file, &versioned_manifest)?;
-            Ok(manifest)
+        ) -> anyhow::Result<PackageManifestV1> {
+            fn inner(
+                this: PackageManifestV1,
+                manifest_path: &Path,
+            ) -> anyhow::Result<PackageManifestV1> {
+                let manifest = if let RelativeTo::WorkingDir = &this.blob_sources_relative {
+                    // manifest contains working-dir relative source paths, make
+                    // them relative to the file, instead.
+                    let blobs = this
+                        .blobs
+                        .into_iter()
+                        .map(|blob| relativize_blob_source_path(blob, &manifest_path))
+                        .collect::<anyhow::Result<_>>()?;
+                    PackageManifestV1 { blobs, blob_sources_relative: RelativeTo::File, ..this }
+                } else {
+                    this
+                };
+
+                let versioned_manifest = VersionedPackageManifest::Version1(manifest.clone());
+
+                let file = File::create(manifest_path)?;
+                serde_json::to_writer(file, &versioned_manifest)?;
+
+                Ok(manifest)
+            }
+            inner(self, manifest_path.as_ref())
         }
     }
 
@@ -375,22 +399,28 @@ pub mod host {
             self,
             manifest_path: impl AsRef<Path>,
         ) -> anyhow::Result<Self> {
-            if let RelativeTo::File = &self.blob_sources_relative {
-                let blobs = self
-                    .blobs
-                    .into_iter()
-                    .map(|blob| resolve_blob_source_path(blob, &manifest_path))
-                    .collect::<anyhow::Result<_>>()?;
-                Ok(Self { blobs, ..self })
-            } else {
-                Ok(self)
+            fn inner(
+                this: PackageManifestV1,
+                manifest_path: &Path,
+            ) -> anyhow::Result<PackageManifestV1> {
+                if let RelativeTo::File = &this.blob_sources_relative {
+                    let blobs = this
+                        .blobs
+                        .into_iter()
+                        .map(|blob| resolve_blob_source_path(blob, manifest_path))
+                        .collect::<anyhow::Result<_>>()?;
+                    Ok(PackageManifestV1 { blobs, ..this })
+                } else {
+                    Ok(this)
+                }
             }
+            inner(self, manifest_path.as_ref())
         }
     }
 
     fn relativize_blob_source_path(
         blob: BlobInfo,
-        manifest_path: impl AsRef<Path>,
+        manifest_path: &Path,
     ) -> anyhow::Result<BlobInfo> {
         let source_path = path_relative_from_file(blob.source_path, manifest_path)?;
         let source_path = source_path.path_to_string().with_context(|| {
@@ -403,10 +433,7 @@ pub mod host {
         Ok(BlobInfo { source_path, ..blob })
     }
 
-    fn resolve_blob_source_path(
-        blob: BlobInfo,
-        manifest_path: impl AsRef<Path>,
-    ) -> anyhow::Result<BlobInfo> {
+    fn resolve_blob_source_path(blob: BlobInfo, manifest_path: &Path) -> anyhow::Result<BlobInfo> {
         let source_path = resolve_path_from_file(&blob.source_path, manifest_path)?
             .path_to_string()
             .context(format!("Resolving blob path: {}", &blob.source_path))?;
