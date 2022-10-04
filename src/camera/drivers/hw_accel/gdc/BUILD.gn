@@ -58,7 +58,7 @@ source_set("lib") {
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/syslog",
     "//zircon/system/ulib/trace",
-    "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/trace",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

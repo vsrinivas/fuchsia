@@ -42,7 +42,7 @@ fuchsia_driver("i2c-driver") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/svc",
     "//zircon/system/ulib/sync",
-    "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/trace",
     "//zircon/system/ulib/zx",
   ]
 }
@@ -82,7 +82,7 @@ test("i2c-test-bin") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/svc",
     "//zircon/system/ulib/sync",
-    "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/trace",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

@@ -52,7 +52,7 @@ source_set("sources") {
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/sync",
-    "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/trace",
   ]
 }
 

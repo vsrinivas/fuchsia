@@ -74,7 +74,7 @@ source_set("sysmem_common_srcs") {
     "//zircon/system/ulib/region-alloc",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/sysmem-version",
-    "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/trace",
     "//zircon/system/ulib/zx",
   ]
 

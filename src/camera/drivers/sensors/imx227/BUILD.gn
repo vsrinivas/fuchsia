@@ -48,7 +48,7 @@ source_set("lib") {
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//zircon/system/ulib/driver-unit-test",
-    "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/trace",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

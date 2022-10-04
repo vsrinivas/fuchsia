@@ -75,16 +75,6 @@ trace_engine_library("trace-engine-static") {
   extra_configs = [ "//build/config:Wno-conversion" ]
 }
 
-# And again, but this time for drivers.
-# This gets linked into libdriver.so.
-trace_engine_library("trace-engine-driver") {
-  sdk = "static"
-  defines = [ "DDK_TRACING" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  extra_configs = [ "//build/config:Wno-conversion" ]
-}
-
 # Header-only source package for use by trace-provider:handler,
 # which is engine-agnostic.
 zx_library("trace-engine-headers-for-handler") {

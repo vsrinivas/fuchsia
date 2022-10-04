@@ -13,7 +13,6 @@ import("//build/zircon/zx_library.gni")
 #     trace-engine is needed. This is for very special cases. Please DO NOT
 #     use this unless you KNOW you need to. Generally you do not. If in doubt,
 #     ask.
-# (4) trace-provider-driver: This copy is for use by libdriver.so for the DDK.
 
 template("trace_provider_library") {
   zx_library(target_name) {
@@ -155,12 +154,6 @@ trace_provider_library("trace-provider-with-static-engine") {
     "//sdk/lib/fdio",
     "//zircon/system/ulib/async-default",
   ]
-}
-
-# Version for the DDK.
-trace_provider_library("trace-provider-driver") {
-  public_deps = [ "//zircon/system/ulib/trace-engine:trace-engine-driver" ]
-  deps = [ "//zircon/system/ulib/trace-engine:trace-engine-driver" ]
 }
 
 # For apps that use the trace engine, but not via a trace provider.

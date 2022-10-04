@@ -46,7 +46,7 @@ group("common") {
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/sync",
-    "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/trace",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]

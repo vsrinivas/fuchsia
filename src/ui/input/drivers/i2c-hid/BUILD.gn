@@ -51,7 +51,7 @@ fuchsia_driver("i2c-hid-driver") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/sync",
-    "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/trace",
   ]
 }
 
@@ -98,7 +98,7 @@ test("i2c-hid-test") {
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/sync",
-    "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/trace",
     "//zircon/system/ulib/zxtest",
   ]
 }

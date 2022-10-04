@@ -49,7 +49,7 @@ source_set("lib") {
     "//src/devices/lib/driver",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/image-format",
-    "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/trace",
     "//zircon/system/ulib/zx",
   ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]

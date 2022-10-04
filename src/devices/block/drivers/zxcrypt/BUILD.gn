@@ -46,7 +46,7 @@ fuchsia_driver("zxcrypt-driver") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/sync",
-    "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/trace",
     "//zircon/system/ulib/zx",
   ]
 

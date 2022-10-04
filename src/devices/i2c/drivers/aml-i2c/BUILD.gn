@@ -36,7 +36,7 @@ fuchsia_driver("aml-i2c-driver") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//zircon/system/ulib/sync",
-    "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/trace",
   ]
 }
 

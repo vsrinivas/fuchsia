@@ -35,7 +35,7 @@ fuchsia_driver("usb-cdc-function-driver") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/trace",
-    "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/trace",
   ]
 }
 

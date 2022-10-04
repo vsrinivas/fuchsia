@@ -24,13 +24,10 @@
 // like libvulkan which want tracing but do not have access to
 // libtrace-engine.so.
 // Two preprocessor symbols are provided by the build system to select which
-// variant we are building: STATIC_LIBRARY and DDK_TRACING. Either neither of
-// them are defined (normal case), or exactly one of them is defined.
+// variant we are building: STATIC_LIBRARY. If it is not defined
+// (normal case), or exactly one of them is defined.
 #if defined(STATIC_LIBRARY)
 #define EXPORT
-#define EXPORT_NO_DDK
-#elif defined(DDK_TRACING)
-#define EXPORT __EXPORT
 #define EXPORT_NO_DDK
 #else
 #define EXPORT __EXPORT

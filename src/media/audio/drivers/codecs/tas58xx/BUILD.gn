@@ -38,7 +38,7 @@ fuchsia_driver("tas58xx-driver") {
     "//src/media/audio/lib/simple-codec",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/trace",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
   ]
@@ -77,7 +77,7 @@ test("tas58xx-test") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/sync",
-    "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/trace",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",

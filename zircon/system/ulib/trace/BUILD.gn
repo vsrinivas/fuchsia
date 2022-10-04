@@ -65,6 +65,11 @@ trace_library("trace") {
   ]
 }
 
+# TODO(fxbug.dev/111104): Remove this after all users have been migrated.
+group("trace-driver") {
+  public_deps = [ ":trace" ]
+}
+
 # A special version for programs and shared libraries that can't use
 # libtrace-engine.so.
 # N.B. Please verify that you really need this before using it.
@@ -73,18 +78,6 @@ trace_library("trace-with-static-engine") {
   sdk = "static"
   public_deps = [ "//zircon/system/ulib/trace-engine:trace-engine-static" ]
   deps = [ "//zircon/system/ulib/trace-engine:trace-engine-static" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
-}
-
-# And again, but this time for drivers.
-# This gets linked into each driver.
-# TODO(fxbug.dev/23057): Move to ddk.
-trace_library("trace-driver") {
-  sdk = "static"
-  public_deps = [ "//zircon/system/ulib/trace-engine:trace-engine-driver" ]
-  deps = [ "//zircon/system/ulib/trace-engine:trace-engine-driver" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]

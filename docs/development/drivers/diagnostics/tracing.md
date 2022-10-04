@@ -66,7 +66,7 @@ fuchsia_driver("my_driver") {
   deps = [
     ...
     "//zircon/system/ulib/trace",
-    "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/trace",
   ]
 }
 ```

@@ -46,7 +46,7 @@ fuchsia_driver("goodix-module-driver") {
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/sync",
-    "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/trace",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]
@@ -115,7 +115,7 @@ test("gt92xx-test") {
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/mock-function",
     "//zircon/system/ulib/sync",
-    "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/trace",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
