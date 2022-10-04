@@ -94,9 +94,11 @@ mod tests {
         matcher::EventMatcher,
     };
     use fidl_fuchsia_sys2 as fsys;
+    use fuchsia_async as fasync;
     use fuchsia_component::{client, server::ServiceObj};
     use fuchsia_component_test::ScopedInstance;
     use fuchsia_inspect::{reader, testing::assert_data_tree, Inspector};
+    use fuchsia_zircon::DurationNum;
 
     const TEST_COMPONENT_URL: &str = "#meta/inspect_test_component.cm";
 
@@ -128,16 +130,21 @@ mod tests {
         started_stream.await.expect("failed to observe Started event");
 
         let realm_query = client::connect_to_protocol::<fsys::RealmQueryMarker>().unwrap();
-        let (_, maybe_resolved) = realm_query
-            .get_instance_info(&format!("./coll:{}", app.child_name()))
-            .await
-            .expect("fidl call succeeds")
-            .expect("the component exists");
-        let resolved = maybe_resolved.expect("the instance is resolved");
-        let execution = resolved.execution.expect("the instance has an execution state");
-
-        let out_dir = execution.out_dir.expect("out dir exists");
-        let out_dir = out_dir.into_proxy().expect("dir into proxy");
+        let out_dir = loop {
+            let (_, maybe_resolved) = realm_query
+                .get_instance_info(&format!("./coll:{}", app.child_name()))
+                .await
+                .expect("fidl call succeeds")
+                .expect("the component exists");
+            if let Some(resolved) = maybe_resolved {
+                if let Some(execution) = resolved.execution {
+                    if let Some(out_dir) = execution.out_dir {
+                        break out_dir.into_proxy().expect("dir into proxy");
+                    }
+                }
+            }
+            fasync::Timer::new(fasync::Time::after(100_i64.millis())).await;
+        };
         let diagnostics_dir = fuchsia_fs::directory::open_directory(
             &out_dir,
             "diagnostics",
