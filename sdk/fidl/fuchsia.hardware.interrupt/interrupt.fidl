@@ -1,0 +1,12 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.hardware.interrupt;
+
+using zx;
+
+@discoverable
+protocol Provider {
+    /// Get the interrupt represented by this provider.
+    Get() -> (resource struct { interrupt zx.handle:INTERRUPT; }) error zx.status;
+};
