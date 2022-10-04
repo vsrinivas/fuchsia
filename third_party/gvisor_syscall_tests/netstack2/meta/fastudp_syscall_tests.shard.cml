@@ -9,4 +9,7 @@
             url: "#meta/netstack-with-fast-udp-debug.cm",
         },
     ],
+    program: {
+        environ: [ "FAST_UDP=1" ],
+    },
 }

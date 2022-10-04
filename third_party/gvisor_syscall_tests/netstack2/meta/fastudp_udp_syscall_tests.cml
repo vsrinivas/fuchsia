@@ -5,6 +5,5 @@
     include: [ "//third_party/gvisor_syscall_tests/netstack2/meta/fastudp_syscall_tests.shard.cml" ],
     program: {
         binary: "test/netstack2_fastudp_udp_socket_tests",
-        environ: [ "FAST_UDP=true" ],
     },
 }
