@@ -23,6 +23,17 @@ pub enum AddressStateProviderError {
     ChannelClosed,
 }
 
+impl From<TerminalError<fnet_interfaces_admin::AddressRemovalReason>>
+    for AddressStateProviderError
+{
+    fn from(e: TerminalError<fnet_interfaces_admin::AddressRemovalReason>) -> Self {
+        match e {
+            TerminalError::Fidl(e) => AddressStateProviderError::Fidl(e),
+            TerminalError::Terminal(r) => AddressStateProviderError::AddressRemoved(r),
+        }
+    }
+}
+
 // TODO(https://fxbug.dev/81964): Introduce type with better concurrency safety
 // for hanging gets.
 /// Returns a stream of assignment states obtained by watching on `address_state_provider`.

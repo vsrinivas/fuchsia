@@ -1435,13 +1435,12 @@ impl<'a> NetCfg<'a> {
                 ..fnet_interfaces_admin::Configuration::EMPTY
             })
             .await
-            .context("setting configuration")
+            .map_err(map_control_error("setting configuration"))
             .and_then(|res| {
                 res.map_err(|e: fnet_interfaces_admin::ControlSetConfigurationError| {
-                    anyhow::anyhow!("{:?}", e)
+                    errors::Error::Fatal(anyhow::anyhow!("{:?}", e))
                 })
-            })
-            .map_err(errors::Error::Fatal)?;
+            })?;
         info!("installed configuration with result {:?}", config);
 
         if info.is_wlan_ap() {
@@ -1506,15 +1505,14 @@ impl<'a> NetCfg<'a> {
             let _did_enable: bool = control
                 .enable()
                 .await
-                .context("error sending enable request")
+                .map_err(map_control_error("error sending enable request"))
                 .and_then(|res| {
                     // ControlEnableError is an empty *flexible* enum, so we can't match on it, but
                     // the operation is infallible at the time of writing.
                     res.map_err(|e: fidl_fuchsia_net_interfaces_admin::ControlEnableError| {
-                        anyhow::anyhow!("enable interface: {:?}", e)
+                        errors::Error::Fatal(anyhow::anyhow!("enable interface: {:?}", e))
                     })
-                })
-                .map_err(errors::Error::Fatal)?;
+                })?;
         }
 
         Ok(())
@@ -1610,25 +1608,7 @@ impl<'a> NetCfg<'a> {
                 fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
                 server_end,
             )
-            .map_err(|e| {
-                let severity = match e {
-                    fidl_fuchsia_net_interfaces_ext::admin::TerminalError::Fidl(_) => {
-                        errors::Error::Fatal
-                    },
-                    fidl_fuchsia_net_interfaces_ext::admin::TerminalError::Terminal(e) => match e {
-                        fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::DuplicateName
-                            | fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::PortAlreadyBound
-                            | fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::BadPort => {
-                                errors::Error::Fatal
-                            }
-                        fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::PortClosed
-                            | fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::User | _ => {
-                                errors::Error::NonFatal
-                            }
-                    },
-                };
-                severity(anyhow::Error::new(e).context("error sending add address request"))
-            })?;
+            .map_err(map_control_error("error sending add address request"))?;
 
         // Allow the address to outlive this scope. At the time of writing its lifetime is
         // identical to the interface's lifetime and no updates to its properties are made. We may
@@ -1637,22 +1617,21 @@ impl<'a> NetCfg<'a> {
         // critical user journey).
         let () = address_state_provider
             .detach()
-            .context("error sending detach request")
-            .map_err(errors::Error::Fatal)?;
+            .map_err(Into::into)
+            .map_err(map_address_state_provider_error("error sending detach request"))?;
 
         // Enable the interface to allow DAD to proceed.
         let _did_enable: bool = control
             .enable()
             .await
-            .context("error sending enable request")
+            .map_err(map_control_error("error sending enable request"))
             .and_then(|res| {
                 // ControlEnableError is an empty *flexible* enum, so we can't match on it, but the
                 // operation is infallible at the time of writing.
                 res.map_err(|e: fidl_fuchsia_net_interfaces_admin::ControlEnableError| {
-                    anyhow::anyhow!("enable interface: {:?}", e)
+                    errors::Error::Fatal(anyhow::anyhow!("enable interface: {:?}", e))
                 })
-            })
-            .map_err(errors::Error::Fatal)?;
+            })?;
 
         let state_stream =
             fidl_fuchsia_net_interfaces_ext::admin::assignment_state_stream(address_state_provider);
@@ -1662,30 +1641,7 @@ impl<'a> NetCfg<'a> {
             fidl_fuchsia_net_interfaces_admin::AddressAssignmentState::Assigned,
         )
         .await
-        .map_err(|e| {
-            let severity = match e {
-                fidl_fuchsia_net_interfaces_ext::admin::AddressStateProviderError::AddressRemoved(
-                    reason,
-                ) => {
-                    match reason {
-                        fnet_interfaces_admin::AddressRemovalReason::Invalid => errors::Error::Fatal,
-                        fnet_interfaces_admin::AddressRemovalReason::AlreadyAssigned
-                            | fnet_interfaces_admin::AddressRemovalReason::DadFailed
-                            | fnet_interfaces_admin::AddressRemovalReason::InterfaceRemoved
-                            | fnet_interfaces_admin::AddressRemovalReason::UserRemoved => {
-                                errors::Error::NonFatal
-                            }
-                    }
-                }
-                fidl_fuchsia_net_interfaces_ext::admin::AddressStateProviderError::Fidl(_)
-                    | fidl_fuchsia_net_interfaces_ext::admin::AddressStateProviderError::ChannelClosed => {
-                        // TODO(https://fxbug.dev/89290): Reconsider whether this should be a fatal
-                        // error, as it can be caused by a netstack bug.
-                        errors::Error::Fatal
-                    }
-            };
-            severity(anyhow::Error::new(e).context("failed to add interface address for WLAN AP"))
-        })?;
+        .map_err(map_address_state_provider_error("failed to add interface address for WLAN AP"))?;
 
         let subnet = fidl_fuchsia_net_ext::apply_subnet_mask(addr);
         let () = stack
@@ -1915,6 +1871,73 @@ impl Mode for VirtualizationEnabled {
             netcfg.installer.clone(),
         );
         netcfg.run(handler).await.context("event loop")
+    }
+}
+
+fn map_control_error(
+    ctx: &'static str,
+) -> impl FnOnce(
+    fnet_interfaces_ext::admin::TerminalError<fnet_interfaces_admin::InterfaceRemovedReason>,
+) -> errors::Error {
+    move |e| {
+        let severity = match &e {
+            fidl_fuchsia_net_interfaces_ext::admin::TerminalError::Fidl(e) => {
+                if e.is_closed() {
+                    // Control handle can close when interface is
+                    // removed; not a fatal error.
+                    errors::Error::NonFatal
+                } else {
+                    errors::Error::Fatal
+                }
+            }
+            fidl_fuchsia_net_interfaces_ext::admin::TerminalError::Terminal(e) => match e {
+                fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::DuplicateName
+                | fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::PortAlreadyBound
+                | fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::BadPort => {
+                    errors::Error::Fatal
+                }
+                fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::PortClosed
+                | fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::User
+                | _ => errors::Error::NonFatal,
+            },
+        };
+        severity(anyhow::Error::new(e).context(ctx))
+    }
+}
+
+fn map_address_state_provider_error(
+    ctx: &'static str,
+) -> impl FnOnce(fnet_interfaces_ext::admin::AddressStateProviderError) -> errors::Error {
+    move |e| {
+        let severity = match &e {
+            fnet_interfaces_ext::admin::AddressStateProviderError::Fidl(e) => {
+                if e.is_closed() {
+                    // TODO(https://fxbug.dev/89290): Reconsider whether this
+                    // should be a fatal error, as it can be caused by a
+                    // netstack bug.
+                    errors::Error::NonFatal
+                } else {
+                    errors::Error::Fatal
+                }
+            }
+            fnet_interfaces_ext::admin::AddressStateProviderError::ChannelClosed => {
+                // TODO(https://fxbug.dev/89290): Reconsider whether this should
+                // be a fatal error, as it can be caused by a netstack bug.
+                errors::Error::NonFatal
+            }
+            fnet_interfaces_ext::admin::AddressStateProviderError::AddressRemoved(e) => match e {
+                fidl_fuchsia_net_interfaces_admin::AddressRemovalReason::Invalid => {
+                    errors::Error::Fatal
+                }
+                fidl_fuchsia_net_interfaces_admin::AddressRemovalReason::AlreadyAssigned
+                | fidl_fuchsia_net_interfaces_admin::AddressRemovalReason::DadFailed
+                | fidl_fuchsia_net_interfaces_admin::AddressRemovalReason::InterfaceRemoved
+                | fidl_fuchsia_net_interfaces_admin::AddressRemovalReason::UserRemoved => {
+                    errors::Error::NonFatal
+                }
+            },
+        };
+        severity(anyhow::Error::new(e).context(ctx))
     }
 }
 
