@@ -256,6 +256,11 @@ class PBusProtocolClient {
   // would cause the driver to spawn in the platform bus's driver host.
   zx_status_t CompositeDeviceAdd(const pbus_dev_t* dev, uint64_t fragments,
                                  uint64_t fragments_count, const char* primary_fragment) const {
+    if (!primary_fragment) {
+      zxlogf(ERROR, "%s: primary_fragment cannot be null", __func__);
+      return ZX_ERR_INVALID_ARGS;
+    }
+
     fidl::Arena<> fidl_arena;
     auto result =
         client_.buffer(fdf::Arena('PBCD'))
