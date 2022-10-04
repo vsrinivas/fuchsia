@@ -34,14 +34,14 @@ fn to_writer_json_pretty<S: Serialize>(writer: impl Write, value: S) -> Result<(
 
 pub async fn cmd_package_build(cmd: PackageBuildCommand) -> Result<()> {
     let creation_manifest = File::open(&cmd.creation_manifest_path)
-        .with_context(|| format!("opening {}", cmd.creation_manifest_path.display()))?;
+        .with_context(|| format!("opening {}", cmd.creation_manifest_path))?;
 
     let creation_manifest = CreationManifest::from_pm_fini(BufReader::new(creation_manifest))
-        .with_context(|| format!("reading {}", cmd.creation_manifest_path.display()))?;
+        .with_context(|| format!("reading {}", cmd.creation_manifest_path))?;
 
     let mut builder =
         PackageBuilder::from_creation_manifest(&creation_manifest).with_context(|| {
-            format!("creating package manifest from {}", cmd.creation_manifest_path.display())
+            format!("creating package manifest from {}", cmd.creation_manifest_path)
         })?;
 
     if let Some(abi_revision) = get_abi_revision(&cmd)? {
@@ -73,7 +73,7 @@ pub async fn cmd_package_build(cmd: PackageBuildCommand) -> Result<()> {
     }
 
     if !cmd.out.exists() {
-        create_dir_all(&cmd.out).with_context(|| format!("creating {}", cmd.out.display()))?;
+        create_dir_all(&cmd.out).with_context(|| format!("creating {}", cmd.out))?;
     }
 
     // Build the package.
@@ -81,12 +81,12 @@ pub async fn cmd_package_build(cmd: PackageBuildCommand) -> Result<()> {
     let meta_far_path = cmd.out.join(META_FAR_NAME);
     let package_manifest = builder
         .build(gendir.path(), &meta_far_path)
-        .with_context(|| format!("creating package manifest {}", meta_far_path.display()))?;
+        .with_context(|| format!("creating package manifest {}", meta_far_path))?;
 
     // Write out the package manifest to `package_manifest.json`.
     let package_manifest_path = cmd.out.join(PACKAGE_MANIFEST_NAME);
     let file = File::create(&package_manifest_path)
-        .with_context(|| format!("creating {}", package_manifest_path.display()))?;
+        .with_context(|| format!("creating {}", package_manifest_path))?;
     to_writer_json_pretty(file, &package_manifest)?;
 
     // FIXME(fxbug.dev/101306): We're replicating `pm build --depfile` here, and directly expressing
@@ -96,11 +96,11 @@ pub async fn cmd_package_build(cmd: PackageBuildCommand) -> Result<()> {
     // systems support this, and remove the `--depfile` here.
     if cmd.depfile {
         let depfile_path = cmd.out.join(META_FAR_DEPFILE_NAME);
-        let file = File::create(&depfile_path)
-            .with_context(|| format!("creating {}", depfile_path.display()))?;
+        let file =
+            File::create(&depfile_path).with_context(|| format!("creating {}", depfile_path))?;
         let mut file = BufWriter::new(file);
 
-        write!(file, "{}:", meta_far_path.display())?;
+        write!(file, "{}:", meta_far_path)?;
 
         let mut deps = creation_manifest
             .far_contents()
@@ -149,7 +149,7 @@ pub async fn cmd_package_build(cmd: PackageBuildCommand) -> Result<()> {
     if cmd.blobs_json {
         let blobs_json_path = cmd.out.join(BLOBS_JSON_NAME);
         let file = File::create(&blobs_json_path)
-            .with_context(|| format!("creating {}", blobs_json_path.display()))?;
+            .with_context(|| format!("creating {}", blobs_json_path))?;
         to_writer_json_pretty(file, package_manifest.blobs())?;
     }
 
@@ -158,7 +158,7 @@ pub async fn cmd_package_build(cmd: PackageBuildCommand) -> Result<()> {
     if cmd.blobs_manifest {
         let blobs_manifest_path = cmd.out.join(BLOBS_MANIFEST_NAME);
         let file = File::create(&blobs_manifest_path)
-            .with_context(|| format!("creating {}", blobs_manifest_path.display()))?;
+            .with_context(|| format!("creating {}", blobs_manifest_path))?;
         let mut file = BufWriter::new(file);
 
         for entry in package_manifest.blobs() {
@@ -201,7 +201,7 @@ fn get_abi_revision(cmd: &PackageBuildCommand) -> Result<Option<u64>> {
 mod test {
     use {
         super::*,
-        camino::Utf8Path,
+        camino::{Utf8Path, Utf8PathBuf},
         fuchsia_pkg::{MetaPackage, MetaSubpackages},
         fuchsia_url::RelativePackageUrl,
         pretty_assertions::assert_eq,
@@ -210,7 +210,6 @@ mod test {
             convert::TryInto as _,
             fs::{read_dir, read_to_string},
             io::Write,
-            path::{Path, PathBuf},
         },
     };
 
@@ -219,7 +218,7 @@ mod test {
         fuchsia_merkle::from_read(&mut f).unwrap().root()
     }
 
-    fn read_meta_far_contents(path: &Path) -> BTreeMap<String, String> {
+    fn read_meta_far_contents(path: &Utf8Path) -> BTreeMap<String, String> {
         let mut metafar = File::open(path).unwrap();
         let mut far_reader = fuchsia_archive::Utf8Reader::new(&mut metafar).unwrap();
         let far_paths = far_reader.list().map(|e| e.path().to_string()).collect::<Vec<_>>();
@@ -241,11 +240,11 @@ mod test {
     #[fuchsia::test]
     async fn test_creation_manifest_not_exist() {
         let tempdir = tempfile::tempdir().unwrap();
-        let root = tempdir.path();
+        let root = Utf8Path::from_path(tempdir.path()).unwrap();
 
         let cmd = PackageBuildCommand {
             creation_manifest_path: root.join("invalid path"),
-            out: PathBuf::from("out"),
+            out: Utf8PathBuf::from("out"),
             api_level: Some(8),
             abi_revision: None,
             repository: None,
@@ -263,7 +262,7 @@ mod test {
     #[fuchsia::test]
     async fn test_package_manifest_not_exist() {
         let tempdir = tempfile::tempdir().unwrap();
-        let root = tempdir.path();
+        let root = Utf8Path::from_path(tempdir.path()).unwrap();
         let out = root.join("out");
 
         let creation_manifest_path = root.join("creation.manifest");
@@ -271,7 +270,7 @@ mod test {
 
         let cmd = PackageBuildCommand {
             creation_manifest_path,
-            out: out,
+            out,
             api_level: Some(8),
             abi_revision: None,
             repository: None,
@@ -289,7 +288,7 @@ mod test {
     #[fuchsia::test]
     async fn test_generate_empty_package_manifest() {
         let tempdir = tempfile::tempdir().unwrap();
-        let root = tempdir.path();
+        let root = Utf8Path::from_path(tempdir.path()).unwrap();
         let out = root.join("out");
 
         let meta_package_path = root.join("package");
@@ -301,7 +300,7 @@ mod test {
         let mut creation_manifest = File::create(&creation_manifest_path).unwrap();
 
         creation_manifest
-            .write_all(format!("meta/package={}", meta_package_path.display()).as_bytes())
+            .write_all(format!("meta/package={}", meta_package_path).as_bytes())
             .unwrap();
 
         cmd_package_build(PackageBuildCommand {
@@ -372,7 +371,7 @@ mod test {
     #[fuchsia::test]
     async fn test_generate_empty_package_manifest_latest_version() {
         let tempdir = tempfile::tempdir().unwrap();
-        let root = tempdir.path();
+        let root = Utf8Path::from_path(tempdir.path()).unwrap();
         let out = root.join("out");
 
         let meta_package_path = root.join("package");
@@ -384,7 +383,7 @@ mod test {
         let mut creation_manifest = File::create(&creation_manifest_path).unwrap();
 
         creation_manifest
-            .write_all(format!("meta/package={}", meta_package_path.display()).as_bytes())
+            .write_all(format!("meta/package={}", meta_package_path).as_bytes())
             .unwrap();
 
         cmd_package_build(PackageBuildCommand {
@@ -456,7 +455,7 @@ mod test {
     #[fuchsia::test]
     async fn test_generate_cannot_specify_both_api_and_abi() {
         let tempdir = tempfile::tempdir().unwrap();
-        let root = tempdir.path();
+        let root = Utf8Path::from_path(tempdir.path()).unwrap();
         let out = root.join("out");
 
         let meta_package_path = root.join("package");
@@ -468,7 +467,7 @@ mod test {
         let mut creation_manifest = File::create(&creation_manifest_path).unwrap();
 
         creation_manifest
-            .write_all(format!("meta/package={}", meta_package_path.display()).as_bytes())
+            .write_all(format!("meta/package={}", meta_package_path).as_bytes())
             .unwrap();
 
         assert!(cmd_package_build(PackageBuildCommand {
@@ -491,7 +490,7 @@ mod test {
     #[fuchsia::test]
     async fn test_build_package_with_contents() {
         let tempdir = tempfile::tempdir().unwrap();
-        let root = tempdir.path();
+        let root = Utf8Path::from_path(tempdir.path()).unwrap();
 
         let out = root.join("out");
 
@@ -508,12 +507,8 @@ mod test {
 
         creation_manifest
             .write_all(
-                format!(
-                    "empty-file={}\nmeta/package={}\n",
-                    empty_file_path.display(),
-                    meta_package_path.display(),
-                )
-                .as_bytes(),
+                format!("empty-file={}\nmeta/package={}\n", empty_file_path, meta_package_path,)
+                    .as_bytes(),
             )
             .unwrap();
 
@@ -647,8 +642,8 @@ mod test {
 
         // Build the package.
         cmd_package_build(PackageBuildCommand {
-            creation_manifest_path: creation_manifest_path.into_std_path_buf(),
-            out: out.clone().into_std_path_buf(),
+            creation_manifest_path: creation_manifest_path,
+            out: out.clone(),
             api_level: Some(8),
             abi_revision: None,
             repository: None,
@@ -669,7 +664,7 @@ mod test {
 
         // Make sure the meta.far is correct.
         assert_eq!(
-            read_meta_far_contents(meta_far_path.as_std_path()),
+            read_meta_far_contents(&meta_far_path),
             BTreeMap::from([
                 ("meta/contents".into(), format!("empty-file={}\n", empty_file_hash)),
                 ("meta/package".into(), r#"{"name":"my-package","version":"0"}"#.into()),

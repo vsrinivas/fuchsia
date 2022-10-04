@@ -11,10 +11,10 @@ pub struct PackageBuildCommand {
     #[argh(
         option,
         short = 'o',
-        default = "PathBuf::from(\"./out\")",
+        default = "Utf8PathBuf::from(\"./out\")",
         description = "directory to save package artifacts"
     )]
-    pub out: PathBuf,
+    pub out: Utf8PathBuf,
 
     #[argh(option, description = "package API level")]
     pub api_level: Option<u64>,
@@ -44,7 +44,7 @@ pub struct PackageBuildCommand {
     pub subpackages_manifest_path: Option<Utf8PathBuf>,
 
     #[argh(positional, description = "path to the creation manifest file")]
-    pub creation_manifest_path: PathBuf,
+    pub creation_manifest_path: Utf8PathBuf,
 }
 
 /// Create a repository.
@@ -72,10 +72,10 @@ pub struct RepoPublishCommand {
     pub keys: Option<Utf8PathBuf>,
 
     #[argh(option, long = "package", description = "path to a package manifest")]
-    pub package_manifests: Vec<PathBuf>,
+    pub package_manifests: Vec<Utf8PathBuf>,
 
     #[argh(option, long = "package-list", description = "path to a packages list manifest")]
-    pub package_list_manifests: Vec<PathBuf>,
+    pub package_list_manifests: Vec<Utf8PathBuf>,
 
     #[argh(
         switch,
