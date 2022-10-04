@@ -1,0 +1,46 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/go/toolchain.gni")
+
+go_binary("bin") {
+  output_name = "client_suite_under_test_go"
+  gopackage = "client_suite_under_test_go"
+  deps = [ ":lib" ]
+}
+
+go_library("lib") {
+  name = "client_suite_under_test_go"
+  deps = [
+    "//src/lib/component",
+    "//src/tests/fidl/client_suite/fidl:fidl.clientsuite_go($go_toolchain)",
+  ]
+  sources = [ "main.go" ]
+}
+
+fuchsia_component("go_client") {
+  component_name = "client"
+  manifest = "meta/client.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_component("harness_go") {
+  testonly = true
+  component_name = "harness"
+  manifest = "meta/harness_go.cml"
+  deps = [ "//src/tests/fidl/client_suite/harness:bin" ]
+}
+
+fuchsia_test_package("fidl-client-suite-go-test") {
+  test_components = [ ":harness_go" ]
+  deps = [ ":go_client" ]
+}
+
+group("go") {
+  testonly = true
+  deps = [ ":fidl-client-suite-go-test" ]
+}
