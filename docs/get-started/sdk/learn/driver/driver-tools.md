@@ -80,11 +80,11 @@ to open a connection to the `edu` device using its devfs path:
 ```cpp
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/tools/eductl.cc" region_tag="imports" adjust_indentation="auto" %}
 
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/tools/eductl.cc" region_tag="fidl_imports" adjust_indentation="auto" highlight="1" %}
+{{ '<strong>' }}{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/tools/eductl.cc" region_tag="fidl_imports" adjust_indentation="auto" %}{{ '</strong>' }}
 
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/tools/eductl.cc" region_tag="device_path" adjust_indentation="auto" highlight="1,2" %}
+{{ '<strong>' }}{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/tools/eductl.cc" region_tag="device_path" adjust_indentation="auto" %}{{ '</strong>' }}
 
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/tools/eductl.cc" region_tag="device_client" adjust_indentation="auto" highlight="1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18" %}
+{{ '<strong>' }}{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/tools/eductl.cc" region_tag="device_client" adjust_indentation="auto" %}{{ '</strong>' }}
 
 // ...
 ```
@@ -99,9 +99,9 @@ function based on the argument passed on the command line:
 ```cpp
 // ...
 
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/tools/eductl.cc" region_tag="liveness_check" adjust_indentation="auto" highlight="1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23" %}
+{{ '<strong>' }}{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/tools/eductl.cc" region_tag="liveness_check" adjust_indentation="auto" %}{{ '</strong>' }}
 
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/tools/eductl.cc" region_tag="compute_factorial" adjust_indentation="auto" highlight="1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25" %}
+{{ '<strong>' }}{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/tools/eductl.cc" region_tag="compute_factorial" adjust_indentation="auto" %}{{ '</strong>' }}
 
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/tools/eductl.cc" region_tag="main" adjust_indentation="auto" highlight="4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20" %}
 ```

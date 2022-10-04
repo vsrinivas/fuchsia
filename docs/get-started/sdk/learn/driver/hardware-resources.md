@@ -47,7 +47,7 @@ component manifest:
 ```json5
 {
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/meta/qemu_edu.cml" region_tag="driver" %}
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/meta/qemu_edu.cml" region_tag="use_capabilities" exclude_regexp="protocol" highlight="1,2,3" %}
+{{ '<strong>' }}{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/meta/qemu_edu.cml" region_tag="use_capabilities" exclude_regexp="protocol" %}{{ '</strong>' }}
 }
 ```
 
@@ -83,13 +83,13 @@ offered by the parent device during driver initialization:
 ```cpp
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="imports" adjust_indentation="auto" %}
 
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="compat_imports" adjust_indentation="auto" highlight="1" %}
+{{ '<strong>' }}{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="compat_imports" adjust_indentation="auto" %}{{ '</strong>' }}
 
 // ...
 
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="run_method_start" adjust_indentation="auto" %}
 
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="connect_device" highlight="1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20" %}
+{{ '<strong>' }}{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="connect_device" %}{{ '</strong>' }}
 
   FDF_SLOG(INFO, "edu driver loaded successfully");
 
@@ -156,7 +156,7 @@ Add the new device resources to the driver class:
 ```cpp
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.h" region_tag="imports" adjust_indentation="auto" %}
 
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.h" region_tag="hw_imports" adjust_indentation="auto" highlight="1" %}
+{{ '<strong>' }}{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.h" region_tag="hw_imports" adjust_indentation="auto" %}{{ '</strong>' }}
 
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.h" region_tag="namespace_start" adjust_indentation="auto" %}
 
@@ -168,7 +168,7 @@ Add the new device resources to the driver class:
 
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.h" region_tag="fields_main" %}
 
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.h" region_tag="fields_hw" highlight="1" %}
+{{ '<strong>' }}{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.h" region_tag="fields_hw" %}{{ '</strong>' }}
 
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.h" region_tag="class_footer" adjust_indentation="auto" %}
 
@@ -185,7 +185,7 @@ initialization:
 
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="connect_device" %}
 
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="hw_resources" highlight="1,2,3,4,5,6" %}
+{{ '<strong>' }}{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="hw_resources" %}{{ '</strong>' }}
 
   FDF_SLOG(INFO, "edu driver loaded successfully");
 
@@ -210,18 +210,18 @@ registers. Add the following register definitions to the
 `qemu_edu/drivers/edu_device.h`:
 
 ```cpp
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/edu_device.h" region_tag="imports" adjust_indentation="auto" highlight="1" %}
+{{ '<strong>' }}{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/edu_device.h" region_tag="imports" adjust_indentation="auto" %}{{ '</strong>' }}
 
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/edu_device.h" region_tag="hw_imports" adjust_indentation="auto" %}
 
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/edu_device.h" region_tag="namespace_start" adjust_indentation="auto" %}
 
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/edu_device.h" region_tag="register_definitions" adjust_indentation="auto" highlight="1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29" %}
+{{ '<strong>' }}{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/edu_device.h" region_tag="register_definitions" adjust_indentation="auto" %}{{ '</strong>' }}
 
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/edu_device.h" region_tag="class_header" adjust_indentation="auto" %}
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/edu_device.h" region_tag="public_main" %}
 
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/edu_device.h" region_tag="public_registers" highlight="1,2" %}
+{{ '<strong>' }}{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/edu_device.h" region_tag="public_registers" %}{{ '</strong>' }}
 
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/edu_device.h" region_tag="private_main"%}
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/edu_device.h" region_tag="class_footer" adjust_indentation="auto" %}
@@ -239,8 +239,10 @@ to interact with the MMIO region to read and write data into the respective
 `edu` device registers:
 
 *   `ComputeFactorial()`: Write an input value to the factorial computation
-    register and wait for the status register to report that the computation is
-    complete.
+    register and wait for the device to asynchronously signal completion using
+    an interrupt.
+*   `HandleIrq()`: Read the computation result from the factorial register and
+    report it to the pending callback.
 *   `LivenessCheck()`: Write a challenge value to the liveness check register
     and confirm the expected result.
 
@@ -252,9 +254,9 @@ to interact with the MMIO region to read and write data into the respective
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/edu_device.cc" region_tag="namespace_start" adjust_indentation="auto" %}
 // ...
 
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/edu_device.cc" region_tag="compute_factorial" adjust_indentation="auto" highlight="1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16" %}
+{{ '<strong>' }}{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/edu_device.cc" region_tag="compute_factorial" adjust_indentation="auto" %}{{ '</strong>' }}
 
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/edu_device.cc" region_tag="liveness_check" adjust_indentation="auto" highlight="1,2,3,4,5,6,7,8,9" %}
+{{ '<strong>' }}{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/edu_device.cc" region_tag="liveness_check" adjust_indentation="auto" %}{{ '</strong>' }}
 
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/edu_device.cc" region_tag="namespace_end" adjust_indentation="auto" %}
 ```
@@ -270,7 +272,7 @@ from the identification register from the MMIO region and print it to the log:
 
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="hw_resources" %}
 
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="device_registers" highlight="1,2,3,4" %}
+{{ '<strong>' }}{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="device_registers" %}{{ '</strong>' }}
 
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="run_method_end" adjust_indentation="auto" %}
 ```
