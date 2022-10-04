@@ -20,6 +20,24 @@ declare_args() {
   # by the board definition rather than the product definition.
   board_driver_package_labels = []
 
+  # A list of scopes that describe drivers provided by the board, which are
+  # added to the product assembly configuration as "product-provided" drivers.
+  # These will later be migrated to a "board-provided" driver input to assembly,
+  # but that mechanism is still under development.
+  #
+  # Each scope added to this list needs to be in the following form:
+  #   {
+  #     # This is the label that creates the package, this can not be a group
+  #     package_target = "//gn/label/that/to/the/driver:package"
+  #
+  #     # These are paths to the driver components within the above package.
+  #     driver_components = [
+  #       "meta/driver_1.cm",
+  #       "meta/driver_2.cm",
+  #     ]
+  #   }
+  board_provided_drivers = []
+
   # A list of package labels to include in the 'base' package set. Used by the
   # board definition rather than the product definition.
   board_package_labels = []
