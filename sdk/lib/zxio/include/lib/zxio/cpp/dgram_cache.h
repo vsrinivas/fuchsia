@@ -11,6 +11,7 @@
 #include <lib/zxio/cpp/socket_address.h>
 #include <zircon/types.h>
 
+#include <list>
 #include <mutex>
 #include <optional>
 #include <unordered_map>
@@ -74,6 +75,10 @@ class RouteCache {
              const zx_wait_item_t& err_wait_item,
              fidl::WireSyncClient<fuchsia_posix_socket::DatagramSocket>& client);
 
+  // Chosen to be arbitrarily large enough for the cache to be useful for most
+  // clients, while preventing unbounded memory growth.
+  static constexpr size_t kMaxEntries = 512;
+
  private:
   struct Key {
     SocketAddress remote_addr;
@@ -87,9 +92,13 @@ class RouteCache {
   struct Value {
     std::vector<zx::eventpair> eventpairs;
     uint32_t maximum_size;
+    std::list<Key>::iterator lru;
   };
 
+  std::list<Key>::iterator LruAddToFrontLocked(const Key& k) __TA_REQUIRES(lock_);
+
   std::unordered_map<Key, Value, KeyHasher> cache_ __TA_GUARDED(lock_);
+  std::list<Key> lru_ __TA_GUARDED(lock_);
   std::optional<SocketAddress> connected_ __TA_GUARDED(lock_);
   std::mutex lock_;
 };

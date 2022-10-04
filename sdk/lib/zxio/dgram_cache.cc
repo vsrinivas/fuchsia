@@ -172,8 +172,11 @@ size_t RouteCache::KeyHasher::operator()(const Key& k) const {
   return h;
 }
 
-// TODO(https://fxbug.dev/97260): Implement cache eviction strategy to avoid unbounded cache
-// growth.
+std::list<RouteCache::Key>::iterator RouteCache::LruAddToFrontLocked(const Key& k) {
+  lru_.push_front(k);
+  return lru_.begin();
+}
+
 using RouteCacheResult = fitx::result<ErrOrOutCode, uint32_t>;
 RouteCacheResult RouteCache::Get(
     std::optional<SocketAddress>& remote_addr,
@@ -201,12 +204,17 @@ RouteCacheResult RouteCache::Get(
     // TODO(https://fxbug.dev/103655): Test errors are returned when connected
     // addr looked up for the first time.
     if (addr_to_lookup.has_value()) {
-      if (auto it = cache_.find({
-              .remote_addr = addr_to_lookup.value(),
-              .local_iface_and_addr = local_iface_and_addr,
-          });
-          it != cache_.end()) {
-        const Value& value = it->second;
+      const Key key = {
+          .remote_addr = addr_to_lookup.value(),
+          .local_iface_and_addr = local_iface_and_addr,
+      };
+      if (auto it = cache_.find(key); it != cache_.end()) {
+        Value& value = it->second;
+
+        // Mark this entry in the cache as the most recently-used.
+        lru_.erase(value.lru);
+        value.lru = LruAddToFrontLocked(key);
+
         ZX_ASSERT_MSG(value.eventpairs.size() + 1 <= ZX_WAIT_MANY_MAX_ITEMS,
                       "number of wait_items (%lu) exceeds maximum allowed (%zu)",
                       value.eventpairs.size() + 1, ZX_WAIT_MANY_MAX_ITEMS);
@@ -293,12 +301,24 @@ RouteCacheResult RouteCache::Get(
     eventpairs.reserve(res.validity().count());
     std::move(res.validity().begin(), res.validity().end(), std::back_inserter(eventpairs));
 
-    cache_[{
+    // Remove least-recently-used element if cache is at capacity.
+    if (cache_.size() == kMaxEntries) {
+      const Key& k = lru_.back();
+      size_t removed = cache_.erase(k);
+      ZX_ASSERT_MSG(removed == 1,
+                    "tried to remove least-recently-used item from route cache; removed %zu items",
+                    removed);
+      lru_.pop_back();
+    }
+
+    const Key key = {
         .remote_addr = addr_to_store.value(),
         .local_iface_and_addr = local_iface_and_addr,
-    }] = {
+    };
+    cache_[key] = {
         .eventpairs = std::move(eventpairs),
         .maximum_size = res.maximum_size(),
+        .lru = LruAddToFrontLocked(key),
     };
 
     if (!remote_addr.has_value()) {
