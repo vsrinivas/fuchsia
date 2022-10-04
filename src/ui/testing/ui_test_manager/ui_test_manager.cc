@@ -38,16 +38,6 @@ std::optional<fuchsia::ui::observation::geometry::ViewDescriptor> ViewDescriptor
 
 UITestManager::UITestManager(UITestRealm::Config config)
     : realm_(config), focus_chain_listener_binding_(this) {
-  // Save the scene owner as a workaround for fxbug.dev/103985. We can't use
-  // scene provider with web-semantics-test reliably yet, so for now, we force
-  // UITestManager to use the raw scene manager / root presenter APIs for that
-  // test. In order to choose the correct API, UITestManager needs to know which
-  // scene owner the test realm is configured to use.
-  //
-  // TODO(fxbug.dev/103985): Remove once web-semantics-test runs reliably with
-  // scene provider.
-  scene_owner_ = config.scene_owner;
-
   FX_CHECK(config.display_rotation % 90 == 0);
   display_rotation_ = config.display_rotation;
 }
@@ -73,7 +63,7 @@ std::unique_ptr<sys::ServiceDirectory> UITestManager::CloneExposedServicesDirect
   return realm_.CloneExposedServicesDirectory();
 }
 
-void UITestManager::InitializeScene(bool use_scene_provider) {
+void UITestManager::InitializeScene() {
   FX_CHECK(!view_tree_watcher_) << "InitializeScene() called twice";
 
   // Register focus chain listener.
@@ -81,52 +71,14 @@ void UITestManager::InitializeScene(bool use_scene_provider) {
       realm_.realm_root()->Connect<fuchsia::ui::focus::FocusChainListenerRegistry>();
   focus_chain_listener_registry->Register(focus_chain_listener_binding_.NewBinding());
 
-  // TODO(fxbug.dev/103985): Remove the use_scene_provider == false code path
-  // once we stabilize web-semantics-test.
-  if (use_scene_provider) {
-    // Use scene provider helper component to attach client view to the scene.
-    fuchsia::ui::test::scene::ControllerAttachClientViewRequest request;
-    request.set_view_provider(realm_.realm_root()->Connect<fuchsia::ui::app::ViewProvider>());
-    scene_controller_ = realm_.realm_root()->Connect<fuchsia::ui::test::scene::Controller>();
-    scene_controller_->RegisterViewTreeWatcher(view_tree_watcher_.NewRequest(), []() {});
-    scene_controller_->AttachClientView(std::move(request), [this](zx_koid_t client_view_ref_koid) {
-      client_view_ref_koid_ = client_view_ref_koid;
-    });
-  } else {
-    // Register geometry watcher. We should do this before attaching the client
-    // view, so that we see all the view tree snapshots.
-    realm_.realm_root()->Connect<fuchsia::ui::observation::test::Registry>(
-        observer_registry_.NewRequest());
-    observer_registry_->RegisterGlobalViewTreeWatcher(view_tree_watcher_.NewRequest());
-
-    if (scene_owner_ == UITestRealm::SceneOwnerType::ROOT_PRESENTER) {
-      root_presenter_ = realm_.realm_root()->Connect<fuchsia::ui::policy::Presenter>();
-
-      auto client_view_tokens = scenic::ViewTokenPair::New();
-      auto [client_control_ref, client_view_ref] = scenic::ViewRefPair::New();
-      client_view_ref_koid_ = fsl::GetKoid(client_view_ref.reference.get());
-
-      root_presenter_->PresentOrReplaceView2(std::move(client_view_tokens.view_holder_token),
-                                             fidl::Clone(client_view_ref),
-                                             /* presentation */ nullptr);
-
-      auto client_view_provider = realm_.realm_root()->Connect<fuchsia::ui::app::ViewProvider>();
-      client_view_provider->CreateViewWithViewRef(std::move(client_view_tokens.view_token.value),
-                                                  std::move(client_control_ref),
-                                                  std::move(client_view_ref));
-    } else if (scene_owner_ == UITestRealm::SceneOwnerType::SCENE_MANAGER) {
-      scene_manager_ = realm_.realm_root()->Connect<fuchsia::session::scene::Manager>();
-      auto view_provider = realm_.realm_root()->Connect<fuchsia::ui::app::ViewProvider>();
-      scene_manager_->SetRootView(
-          std::move(view_provider),
-          [this](fuchsia::session::scene::Manager_SetRootView_Result result) {
-            FX_CHECK(result.is_response());
-            client_view_ref_koid_ = fsl::GetKoid(result.response().view_ref.reference.get());
-          });
-    } else {
-      FX_LOGS(FATAL) << "Unsupported scene owner";
-    }
-  }
+  // Use scene provider helper component to attach client view to the scene.
+  fuchsia::ui::test::scene::ControllerAttachClientViewRequest request;
+  request.set_view_provider(realm_.realm_root()->Connect<fuchsia::ui::app::ViewProvider>());
+  scene_controller_ = realm_.realm_root()->Connect<fuchsia::ui::test::scene::Controller>();
+  scene_controller_->RegisterViewTreeWatcher(view_tree_watcher_.NewRequest(), []() {});
+  scene_controller_->AttachClientView(std::move(request), [this](zx_koid_t client_view_ref_koid) {
+    client_view_ref_koid_ = client_view_ref_koid;
+  });
 
   screenshotter_ = realm_.realm_root()->ConnectSync<fuchsia::ui::composition::Screenshot>();
 

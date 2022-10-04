@@ -115,10 +115,7 @@ class UITestManager : public fuchsia::ui::focus::FocusChainListener {
   // `use_scene_provider` indicates whether UITestManager should use
   // `fuchsia.ui.test.scene.Controller` to initialize the scene, or use the raw
   // root presenter / scene manager APIs.
-  //
-  // TODO(fxbug.dev/103985): Remove the raw API option once web-semantics-test
-  // can use `fuchsia.ui.test.scene.Controller` without flaking.
-  void InitializeScene(bool use_scene_provider = true);
+  void InitializeScene();
 
   // Returns the view ref koid of the client view if it's available, and false
   // otherwise.
@@ -187,11 +184,6 @@ class UITestManager : public fuchsia::ui::focus::FocusChainListener {
   fuchsia::ui::test::scene::ControllerPtr scene_controller_;
   fuchsia::ui::composition::ScreenshotSyncPtr screenshotter_;
 
-  // Connection to scene owner service. At most one will be active for a given
-  // UITestManager instance.
-  fuchsia::session::scene::ManagerPtr scene_manager_;
-  fuchsia::ui::policy::PresenterPtr root_presenter_;
-
   // Client view's `ViewRef` kernel object ID.
   std::optional<zx_koid_t> client_view_ref_koid_ = std::nullopt;
 
@@ -204,16 +196,6 @@ class UITestManager : public fuchsia::ui::focus::FocusChainListener {
 
   // Holds the most recent focus chain received from the view tree watcher.
   std::optional<fuchsia::ui::focus::FocusChain> last_focus_chain_;
-
-  // Save the scene owner as a workaround for fxbug.dev/103985. We can't use
-  // scene provider with web-semantics-test reliably yet, so for now, we force
-  // UITestManager to use the raw scene manager / root presenter APIs for that
-  // test. In order to choose the correct API, UITestManager needs to know which
-  // scene owner the test realm is configured to use.
-  //
-  // TODO(fxbug.dev/103985): Remove once web-semantics-test runs reliably with
-  // scene provider.
-  std::optional<UITestRealm::SceneOwnerType> scene_owner_;
 
   uint64_t display_width_ = 0;
 
