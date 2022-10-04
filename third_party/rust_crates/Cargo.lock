@@ -1485,7 +1485,7 @@ dependencies = [
  "untrusted",
  "url 2.1.0",
  "utf8parse",
- "uuid 0.7.2",
+ "uuid 1.1.2",
  "valico",
  "vk-sys",
  "void",
@@ -4503,7 +4503,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0238db0c5b605dd1cf51de0f21766f97fba2645897024461d6a00c036819a768"
 dependencies = [
  "rand 0.6.5",
- "serde",
 ]
 
 [[package]]
@@ -4513,6 +4512,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bc5cf98d8186244414c848017f0e2676b3fcb46807f6668a97dfe67359a3c4b7"
 dependencies = [
  "getrandom",
+]
+
+[[package]]
+name = "uuid"
+version = "1.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dd6469f4314d5f1ffec476e05f17cc9a78bc7a27a6a857842170bdf8d6f98d2f"
+dependencies = [
+ "getrandom",
+ "serde",
 ]
 
 [[package]]

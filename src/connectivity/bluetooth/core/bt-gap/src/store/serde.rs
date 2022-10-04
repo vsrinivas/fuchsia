@@ -724,7 +724,7 @@ mod tests {
         }"#;
 
         assert_eq!(
-            "invalid length: expected one of [36, 32], found 16 at line 23 column 48",
+            "UUID parsing failed: invalid length: expected length 32 for simple format, found 16 at line 23 column 48",
             BondingDataDeserializer::from_json(json_input).unwrap_err().to_string()
         );
     }

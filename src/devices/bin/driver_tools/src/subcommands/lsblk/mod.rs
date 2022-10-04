@@ -107,15 +107,7 @@ fn size_to_string(size: u64) -> String {
 }
 
 fn type_guid_to_name(type_guid: &[u8; 16]) -> String {
-    // We get d1-d3 in little endian when in array form, but uuid::Uuid expects them in big endian
-    // when in array form. This bit shifting rearranges the bytes around.
-    let d1: u32 = (type_guid[0] as u32) << 24
-        | (type_guid[1] as u32) << 16
-        | (type_guid[2] as u32) << 8
-        | type_guid[3] as u32;
-    let d2: u16 = (type_guid[4] as u16) << 8 | type_guid[5] as u16;
-    let d3: u16 = (type_guid[6] as u16) << 8 | type_guid[7] as u16;
-    let guid = uuid::Uuid::from_fields_le(d1, d2, d3, &type_guid[8..]).unwrap();
+    let guid = uuid::Uuid::from_bytes_le(*type_guid);
     guids::TYPE_GUID_TO_NAME.get(&guid).unwrap_or(&"").to_string()
 }
 

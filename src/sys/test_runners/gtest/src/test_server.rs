@@ -764,7 +764,7 @@ mod tests {
 
     impl TestDataDir {
         fn new() -> Result<Self, Error> {
-            let dir = format!("/tmp/{}", Uuid::new_v4().to_simple());
+            let dir = format!("/tmp/{}", Uuid::new_v4().simple());
             fs::create_dir(&dir).context("cannot create test output directory")?;
             Ok(Self { dir_name: dir })
         }

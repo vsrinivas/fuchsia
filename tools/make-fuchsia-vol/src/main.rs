@@ -307,9 +307,9 @@ fn run(mut args: TopLevel) -> Result<(), Error> {
 
         rng.fill_bytes(&mut bytes);
         let uuid = uuid::Builder::from_bytes(bytes)
-            .set_variant(uuid::Variant::RFC4122)
-            .set_version(uuid::Version::Random)
-            .build();
+            .with_variant(uuid::Variant::RFC4122)
+            .with_version(uuid::Version::Random)
+            .into_uuid();
 
         // Unfortunately, the at time o writing, the GPT crate is using a different version of
         // the uuid crate than we have access to.
@@ -319,9 +319,9 @@ fn run(mut args: TopLevel) -> Result<(), Error> {
         for (_id, partition) in &mut partitions {
             rng.fill_bytes(&mut bytes);
             let uuid = uuid::Builder::from_bytes(bytes)
-                .set_variant(uuid::Variant::RFC4122)
-                .set_version(uuid::Version::Random)
-                .build();
+                .with_variant(uuid::Variant::RFC4122)
+                .with_version(uuid::Version::Random)
+                .into_uuid();
             partition.part_guid = FromStr::from_str(&uuid.to_string()).unwrap();
         }
         gpt_disk.update_partitions(partitions)?;

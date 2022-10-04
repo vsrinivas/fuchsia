@@ -26,26 +26,23 @@ const BASE_UUID_FINAL_EIGHT_BYTES: [u8; 8] = [0x80, 0x00, 0x00, 0x80, 0x5F, 0x9B
 
 impl Uuid {
     /// Create a new Uuid from a little-endian array of 16 bytes.
-    pub fn from_bytes(mut bytes_little_endian: uuid::Bytes) -> Uuid {
-        let bytes_big_endian = {
-            bytes_little_endian.reverse();
-            bytes_little_endian
-        };
-        Uuid(uuid::Uuid::from_bytes(bytes_big_endian))
+    pub const fn from_bytes(bytes_little_endian: uuid::Bytes) -> Uuid {
+        let u = u128::from_le_bytes(bytes_little_endian);
+        Uuid(uuid::Uuid::from_u128(u))
     }
 
-    pub fn new16(value: u16) -> Uuid {
+    pub const fn new16(value: u16) -> Uuid {
         Uuid::new32(value as u32)
     }
 
-    pub fn new32(value: u32) -> Uuid {
+    pub const fn new32(value: u32) -> Uuid {
         // Note: It is safe to unwrap the result here a `from_fields` only errors if the final
         // slice length != 8, and here we are enforcing a constant value of length 8.
-        Uuid(uuid::Uuid::from_fields(value, 0x0000, 0x1000, &BASE_UUID_FINAL_EIGHT_BYTES).unwrap())
+        Uuid(uuid::Uuid::from_fields(value, 0x0000, 0x1000, &BASE_UUID_FINAL_EIGHT_BYTES))
     }
 
     pub fn to_string(&self) -> String {
-        self.0.to_hyphenated().to_string()
+        self.0.as_hyphenated().to_string()
     }
 
     fn get_base_u32(&self) -> Result<u32, anyhow::Error> {
@@ -118,7 +115,7 @@ impl From<Uuid> for fidlbredr::DataElement {
 }
 
 impl FromStr for Uuid {
-    type Err = uuid::parser::ParseError;
+    type Err = uuid::Error;
 
     fn from_str(s: &str) -> Result<Uuid, Self::Err> {
         uuid::Uuid::parse_str(s).map(|uuid| Uuid(uuid))

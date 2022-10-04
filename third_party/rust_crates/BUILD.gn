@@ -1044,7 +1044,7 @@ group("utf8parse") {
 }
 
 group("uuid") {
-  public_deps = [ ":uuid-v0_7_2" ]
+  public_deps = [ ":uuid-v1_1_2" ]
 }
 
 group("valico") {
@@ -11630,7 +11630,6 @@ rust_library("uuid-v0_7_2") {
 
   deps = []
   deps += [ ":rand-v0_6_5" ]
-  deps += [ ":serde-v1_0_116" ]
 
   rustenv = []
 
@@ -11641,7 +11640,6 @@ rust_library("uuid-v0_7_2") {
     "-Cextra-filename=-9a6c95af1cabc2e6",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"rand\"",
-    "--cfg=feature=\"serde\"",
     "--cfg=feature=\"std\"",
     "--cfg=feature=\"v4\"",
   ]
@@ -11651,7 +11649,7 @@ rust_library("uuid-v0_7_2") {
 
 rust_library("uuid-v0_8_2") {
   crate_name = "uuid"
-  crate_root = "//third_party/rust_crates/vendor/uuid/src/lib.rs"
+  crate_root = "//third_party/rust_crates/vendor/uuid-0.8.2/src/lib.rs"
   output_name = "uuid-919b1371cee9e3ba"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
@@ -11671,6 +11669,37 @@ rust_library("uuid-v0_8_2") {
     "--cfg=feature=\"v4\"",
   ]
 
+  visibility = [ ":*" ]
+}
+
+rust_library("uuid-v1_1_2") {
+  crate_name = "uuid"
+  crate_root = "//third_party/rust_crates/vendor/uuid/src/lib.rs"
+  output_name = "uuid-10961005f47a1748"
+  configs -= [ "//build/config/rust:2018_idioms" ]
+
+  deps = []
+  deps += [ ":getrandom-v0_2_2" ]
+  deps += [ ":serde-v1_0_116" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=10961005f47a1748",
+    "-Cextra-filename=-10961005f47a1748",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"private_getrandom\"",
+    "--cfg=feature=\"rng\"",
+    "--cfg=feature=\"serde\"",
+    "--cfg=feature=\"std\"",
+    "--cfg=feature=\"v4\"",
+  ]
+
+  aliased_deps = {
+    private_getrandom = ":getrandom-v0_2_2"
+  }
   visibility = [ ":*" ]
 }
 

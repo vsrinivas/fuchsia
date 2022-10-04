@@ -59,8 +59,7 @@ async fn main() -> Result<(), Error> {
     match Config::from_file() {
         Ok(config) => {
             for app_uuid in config.application_uuids {
-                let service_name =
-                    format!("fuchsia.tee.Application.{}", app_uuid.to_hyphenated_ref());
+                let service_name = format!("fuchsia.tee.Application.{}", app_uuid.as_hyphenated());
                 fx_log_debug!("Serving {}", service_name);
                 let fidl_uuid = uuid_to_fuchsia_tee_uuid(&app_uuid);
                 fs.dir("svc").add_service_at(service_name, move |channel| {
