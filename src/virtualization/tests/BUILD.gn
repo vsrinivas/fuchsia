@@ -22,16 +22,6 @@ config("guest_test_util") {
   }
 }
 
-# Increase the max file size supported by memfs to allow us to store some larger disk image files.
-fuchsia_structured_config_values("large_file_memfs_config") {
-  cm_label = "//src/storage/memfs:manifest"
-  component_name = "memfs"
-  values = {
-    # 2 GiB
-    max_file_size = 2147483648
-  }
-}
-
 # Packages required to run the guest integration tests.
 guest_packages = [
   "//src/virtualization/bin/vmm",
@@ -39,8 +29,6 @@ guest_packages = [
   "//src/virtualization/bin/guest_manager:zircon_guest_manager",
   "//src/virtualization/bin/termina_guest_manager:termina_guest_manager_cmp",
   "//src/virtualization/packages",
-  "//src/storage/memfs:memfs_component_only",
-  ":large_file_memfs_config",
 ]
 
 linux_tests_label = "//src/virtualization/packages/debian_guest:tests"

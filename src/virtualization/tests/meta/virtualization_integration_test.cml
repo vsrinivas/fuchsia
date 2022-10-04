@@ -10,23 +10,6 @@
         "syslog/client.shard.cml",
         "vulkan/client.shard.cml",
     ],
-
-    // Use a custom memfs for data. The default memfs only supports 512MiB files and we include a
-    // structured config that increases this limit.
-    children: [
-        {
-            name: "virtualization_memfs",
-            url: "#meta/memfs.cm",
-        },
-    ],
-    capabilities: [
-        {
-            storage: "data",
-            from: "#virtualization_memfs",
-            backing_dir: "memfs",
-            storage_id: "static_instance_id_or_moniker",
-        },
-    ],
     use: [
         {
             directory: "hub",
@@ -66,7 +49,7 @@
         },
         {
             storage: "data",
-            from: "self",
+            from: "parent",
             to: "#realm_builder",
         },
     ],
