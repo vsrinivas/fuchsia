@@ -27,7 +27,6 @@ import 'exceptions.dart';
 ///
 ///  * Instead of `run` use [Component.launch] or [Modular.startBasemgr].
 ///  * Instead of `cs` to see running component names use [Component.list].
-///  * Instead of `sessionctl` look at the [Modular] class.
 ///  * Instead of `trace` use the [Performance] class.
 class Ssh {
   static const _sshUser = 'fuchsia';
