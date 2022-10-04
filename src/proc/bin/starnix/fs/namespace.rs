@@ -449,12 +449,6 @@ impl NamespaceNode {
         }
     }
 
-    /// Whether the child is a mount point in this NamespaceNode.
-    pub fn child_is_mountpoint(&self, child_entry: &DirEntryHandle) -> bool {
-        let child = self.with_new_entry(child_entry.clone());
-        self.namespace().map(|ns| ns.mount_points.read().contains_key(&child)).unwrap_or(false)
-    }
-
     /// If this is the root of a mount, go up a level and return the mount point. Otherwise return
     /// the same node.
     ///

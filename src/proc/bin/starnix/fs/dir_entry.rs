@@ -15,6 +15,14 @@ use crate::task::CurrentTask;
 use crate::types::*;
 
 struct DirEntryState {
+    /// The parent DirEntry.
+    ///
+    /// The DirEntry tree has strong references from child-to-parent and weak
+    /// references from parent-to-child. This design ensures that the parent
+    /// chain is always populated in the cache, but some children might be
+    /// missing from the cache.
+    parent: Option<DirEntryHandle>,
+
     /// The name that this parent calls this child.
     ///
     /// This name might not be reflected in the full path in the namespace that
@@ -24,12 +32,6 @@ struct DirEntryState {
     /// Most callers that want to work with names for DirEntries should use the
     /// NamespaceNodes.
     local_name: FsString,
-
-    /// A partial cache of the children of this DirEntry.
-    ///
-    /// DirEntries are added to this cache when they are looked up and removed
-    /// when they are no longer referenced.
-    children: BTreeMap<FsString, Weak<DirEntry>>,
 
     /// The number of filesystem mounted on the directory entry.
     mount_count: u32,
@@ -54,19 +56,23 @@ pub struct DirEntry {
     pub node: FsNodeHandle,
 
     /// The mutable state for this DirEntry.
+    ///
+    /// Leaf lock - do not acquire other locks while holding this one.
     state: RwLock<DirEntryState>,
 
-    /// The parent DirEntry.
+    /// A partial cache of the children of this DirEntry.
     ///
-    /// The DirEntry tree has strong references from child-to-parent and weak
-    /// references from parent-to-child. This design ensures that the parent
-    /// chain is always populated in the cache, but some children might be
-    /// missing from the cache.
+    /// DirEntries are added to this cache when they are looked up and removed
+    /// when they are no longer referenced.
     ///
-    /// It is independent from RwLock because it is acquired by readdir and introduces lock cycles.
-    /// No lock should be acquired while this lock is acquired.
-    parent: RwLock<Option<DirEntryHandle>>,
+    /// This is separated from the DirEntryState for lock ordering. rename needs to lock the source
+    /// parent, the target parent, the source, and the target - four (4) DirEntries in total.
+    /// Getting the ordering right on these is nearly impossible. However, we only need to lock the
+    /// children map on the two parents and we don't need to lock the children map on the two
+    /// children. So splitting the children out into its own lock resolves this.
+    children: RwLock<DirEntryChildren>,
 }
+type DirEntryChildren = BTreeMap<FsString, Weak<DirEntry>>;
 
 pub type DirEntryHandle = Arc<DirEntry>;
 
@@ -78,17 +84,13 @@ impl DirEntry {
     ) -> DirEntryHandle {
         let result = Arc::new(DirEntry {
             node,
-            state: RwLock::new(DirEntryState {
-                local_name,
-                children: BTreeMap::new(),
-                mount_count: 0,
-            }),
-            parent: RwLock::new(parent),
+            state: RwLock::new(DirEntryState { parent, local_name, mount_count: 0 }),
+            children: Default::default(),
         });
         #[cfg(any(test, debug_assertions))]
         {
-            let _l1 = result.state.read();
-            let _l2 = result.parent.read();
+            let _l1 = result.children.read();
+            let _l2 = result.state.read();
         }
         result
     }
@@ -105,6 +107,10 @@ impl DirEntry {
             NamespaceNode::new_anonymous(self.clone()),
             flags,
         ))
+    }
+
+    fn lock_children<'a>(self: &'a DirEntryHandle) -> DirEntryLockedChildren<'a> {
+        DirEntryLockedChildren { entry: self, children: self.children.write() }
     }
 
     /// Register that a filesystem is mounted on the directory.
@@ -137,7 +143,7 @@ impl DirEntry {
     /// NamespaceNode tree (which understands mounts) rather than the DirEntry
     /// tree.
     pub fn parent(&self) -> Option<DirEntryHandle> {
-        self.parent.read().clone()
+        self.state.read().parent.clone()
     }
 
     /// The parent DirEntry object or this DirEntry if this entry is the root.
@@ -150,7 +156,7 @@ impl DirEntry {
     /// NamespaceNode tree (which understands mounts) rather than the DirEntry
     /// tree.
     pub fn parent_or_self(self: &DirEntryHandle) -> DirEntryHandle {
-        self.parent.read().as_ref().unwrap_or(self).clone()
+        self.state.read().parent.as_ref().unwrap_or(self).clone()
     }
 
     /// Whether the given name has special semantics as a directory entry.
@@ -330,12 +336,12 @@ impl DirEntry {
         kind: UnlinkKind,
     ) -> Result<(), Errno> {
         assert!(!DirEntry::is_reserved_name(name));
-        let mut state = self.state.write();
+        let mut self_children = self.lock_children();
 
-        let child = self.component_lookup_locked(current_task, &mut state, name)?;
-        let child_state = child.state.read();
+        let child = self_children.component_lookup(current_task, name)?;
+        let child_children = child.children.read();
 
-        if child_state.mount_count > 0 {
+        if child.state.read().mount_count > 0 {
             return error!(EBUSY);
         }
 
@@ -347,7 +353,7 @@ impl DirEntry {
                 // This check only covers whether the cache is non-empty.
                 // We actually need to check whether the underlying directory is
                 // empty by asking the node via remove below.
-                if !child_state.children.is_empty() {
+                if !child_children.is_empty() {
                     return error!(ENOTEMPTY);
                 }
             }
@@ -359,13 +365,13 @@ impl DirEntry {
         }
 
         self.node.unlink(current_task, name, &child.node)?;
-        state.children.remove(name);
+        self_children.children.remove(name);
 
-        std::mem::drop(child_state);
-        // We drop the state lock before we drop the child so that we do
+        std::mem::drop(child_children);
+        // We drop our children lock before we drop the child so that we do
         // not trigger a deadlock in the Drop trait for FsNode, which attempts
         // to remove the FsNode from its parent's child list.
-        std::mem::drop(state);
+        std::mem::drop(self_children);
 
         self.node.fs().will_destroy_dir_entry(&child);
 
@@ -455,19 +461,7 @@ impl DirEntry {
 
             // Now that we know the old_parent child list cannot change, we
             // establish the DirEntry that we are going to try to rename.
-            let renamed = old_parent.component_lookup_locked(
-                current_task,
-                state.old_parent(),
-                old_basename,
-            )?;
-
-            // Check whether the renamed entry is a mountpoint.
-            // TODO: We should hold a read lock on the mount points for this
-            //       namespace to prevent the child from becoming a mount point
-            //       while this function is executing.
-            if old_parent_name.child_is_mountpoint(&renamed) {
-                return error!(EBUSY);
-            }
+            let renamed = state.old_parent().component_lookup(current_task, old_basename)?;
 
             // If new_parent is a descendant of renamed, the operation would
             // create a cycle. That's disallowed.
@@ -475,46 +469,51 @@ impl DirEntry {
                 return error!(EINVAL);
             }
 
+            // Check whether the renamed entry is a mountpoint.
+            // TODO: We should hold a read lock on the mount points for this
+            //       namespace to prevent the child from becoming a mount point
+            //       while this function is executing.
+            if renamed.state.read().mount_count > 0 {
+                return error!(EBUSY);
+            }
+
             // We need to check if there is already a DirEntry with
             // new_basename in new_parent. If so, there are additional checks
             // we need to perform.
-            let maybe_replaced = match new_parent.component_lookup_locked(
-                current_task,
-                state.new_parent(),
-                new_basename,
-            ) {
-                Ok(replaced) => {
-                    // Sayeth https://man7.org/linux/man-pages/man2/rename.2.html:
-                    //
-                    // "If oldpath and newpath are existing hard links referring to the
-                    // same file, then rename() does nothing, and returns a success
-                    // status."
-                    if Arc::ptr_eq(&renamed.node, &replaced.node) {
-                        return Ok(());
-                    }
-
-                    // Sayeth https://man7.org/linux/man-pages/man2/rename.2.html:
-                    //
-                    // "oldpath can specify a directory.  In this case, newpath must"
-                    // either not exist, or it must specify an empty directory."
-                    if replaced.node.is_dir() {
-                        // Check whether the replaced entry is a mountpoint.
-                        // TODO: We should hold a read lock on the mount points for this
-                        //       namespace to prevent the child from becoming a mount point
-                        //       while this function is executing.
-                        if new_parent_name.child_is_mountpoint(&replaced) {
-                            return error!(EBUSY);
+            let maybe_replaced =
+                match state.new_parent().component_lookup(current_task, new_basename) {
+                    Ok(replaced) => {
+                        // Sayeth https://man7.org/linux/man-pages/man2/rename.2.html:
+                        //
+                        // "If oldpath and newpath are existing hard links referring to the
+                        // same file, then rename() does nothing, and returns a success
+                        // status."
+                        if Arc::ptr_eq(&renamed.node, &replaced.node) {
+                            return Ok(());
                         }
-                    } else if renamed.node.is_dir() {
-                        return error!(ENOTDIR);
+
+                        // Sayeth https://man7.org/linux/man-pages/man2/rename.2.html:
+                        //
+                        // "oldpath can specify a directory.  In this case, newpath must"
+                        // either not exist, or it must specify an empty directory."
+                        if replaced.node.is_dir() {
+                            // Check whether the replaced entry is a mountpoint.
+                            // TODO: We should hold a read lock on the mount points for this
+                            //       namespace to prevent the child from becoming a mount point
+                            //       while this function is executing.
+                            if replaced.state.read().mount_count > 0 {
+                                return error!(EBUSY);
+                            }
+                        } else if renamed.node.is_dir() {
+                            return error!(ENOTDIR);
+                        }
+                        Some(replaced)
                     }
-                    Some(replaced)
-                }
-                // It's fine for the lookup to fail to find a child.
-                Err(errno) if errno == errno!(ENOENT) => None,
-                // However, other errors are fatal.
-                Err(e) => return Err(e),
-            };
+                    // It's fine for the lookup to fail to find a child.
+                    Err(errno) if errno == ENOENT => None,
+                    // However, other errors are fatal.
+                    Err(e) => return Err(e),
+                };
 
             // We've found all the errors that we know how to find. Ask the
             // file system to actually execute the rename operation. Once the
@@ -534,7 +533,7 @@ impl DirEntry {
                 // We need to update the parent and local name for the DirEntry
                 // we are renaming to reflect its new parent and its new name.
                 let mut renamed_state = renamed.state.write();
-                *renamed.parent.write() = Some(new_parent.clone());
+                renamed_state.parent = Some(new_parent.clone());
                 renamed_state.local_name = new_basename.to_owned();
             }
             // Actually add the renamed child to the new_parent's child list.
@@ -556,33 +555,21 @@ impl DirEntry {
         Ok(())
     }
 
-    fn component_lookup_locked(
-        self: &DirEntryHandle,
-        current_task: &CurrentTask,
-        state: &mut DirEntryState,
-        name: &FsStr,
-    ) -> Result<DirEntryHandle, Errno> {
-        assert!(!DirEntry::is_reserved_name(name));
-        let (node, _) =
-            self.get_or_create_child_locked(state, name, || self.node.lookup(current_task, name))?;
-        Ok(node)
-    }
-
     pub fn get_children<F, T>(&self, callback: F) -> T
     where
-        F: FnOnce(&BTreeMap<FsString, Weak<DirEntry>>) -> T,
+        F: FnOnce(&DirEntryChildren) -> T,
     {
-        let state = self.state.read();
-        callback(&state.children)
+        let children = self.children.read();
+        callback(&children)
     }
 
     /// Remove the child with the given name from the children cache.
     pub fn remove_child(&self, name: &FsStr) {
-        let mut state = self.state.write();
-        let child = state.children.get(name).and_then(Weak::upgrade);
+        let mut children = self.children.write();
+        let child = children.get(name).and_then(Weak::upgrade);
         if let Some(child) = child {
-            state.children.remove(name);
-            std::mem::drop(state);
+            children.remove(name);
+            std::mem::drop(children);
             self.node.fs().will_destroy_dir_entry(&child);
         }
     }
@@ -602,19 +589,63 @@ impl DirEntry {
         }
         // Check if the child is already in children. In that case, we can
         // simply return the child and we do not need to call init_fn.
-        let state = self.state.read();
-        if let Some(child) = state.children.get(name).and_then(Weak::upgrade) {
+        let mut children = self.lock_children();
+        if let Some(child) = children.children.get(name).and_then(Weak::upgrade) {
             return Ok((child, true));
         }
-        std::mem::drop(state);
 
-        let mut state = self.state.write();
-        self.get_or_create_child_locked(&mut state, name, create_fn)
+        children.get_or_create_child(name, create_fn)
     }
 
-    fn get_or_create_child_locked<F>(
-        self: &DirEntryHandle,
-        state: &mut DirEntryState,
+    // This function is only useful for tests and has some oddities.
+    //
+    // For example, not all the children might have been looked up yet, which
+    // means the returned vector could be missing some names.
+    //
+    // Also, the vector might have "extra" names that are in the process of
+    // being looked up. If the lookup fails, they'll be removed.
+    #[cfg(test)]
+    pub fn copy_child_names(&self) -> Vec<FsString> {
+        self.children
+            .read()
+            .values()
+            .filter_map(|child| Weak::upgrade(child).map(|c| c.local_name()))
+            .collect()
+    }
+
+    fn internal_remove_child(&self, child: &mut DirEntry) {
+        let local_name = child.local_name();
+        let mut children = self.children.write();
+        if let Some(weak_child) = children.get(&local_name) {
+            // If this entry is occupied, we need to check whether child is
+            // the current occupant. If so, we should remove the entry
+            // because the child no longer exists.
+            if std::ptr::eq(weak_child.as_ptr(), child) {
+                children.remove(&local_name);
+            }
+        }
+    }
+}
+
+struct DirEntryLockedChildren<'a> {
+    entry: &'a DirEntryHandle,
+    children: RwLockWriteGuard<'a, DirEntryChildren>,
+}
+
+impl<'a> DirEntryLockedChildren<'a> {
+    fn component_lookup(
+        &mut self,
+        current_task: &CurrentTask,
+        name: &FsStr,
+    ) -> Result<DirEntryHandle, Errno> {
+        assert!(!DirEntry::is_reserved_name(name));
+        let (node, _) =
+            self.get_or_create_child(name, || self.entry.node.lookup(current_task, name))?;
+        Ok(node)
+    }
+
+    fn get_or_create_child<F>(
+        &mut self,
         name: &FsStr,
         create_fn: F,
     ) -> Result<(DirEntryHandle, bool), Errno>
@@ -627,7 +658,7 @@ impl DirEntry {
                 node.info().mode & FileMode::IFMT != FileMode::EMPTY,
                 "FsNode initialization did not populate the FileMode in FsNodeInfo."
             );
-            let entry = DirEntry::new(node, Some(self.clone()), name.to_vec());
+            let entry = DirEntry::new(node, Some(self.entry.clone()), name.to_vec());
             #[cfg(any(test, debug_assertions))]
             {
                 // Take the lock on child while holding the one on the parent to ensure any wrong ordering
@@ -637,7 +668,7 @@ impl DirEntry {
             Ok(entry)
         };
 
-        match state.children.entry(name.to_vec()) {
+        match self.children.entry(name.to_vec()) {
             Entry::Vacant(entry) => {
                 let child = create_child()?;
                 entry.insert(Arc::downgrade(&child));
@@ -654,36 +685,6 @@ impl DirEntry {
                 let child = create_child()?;
                 entry.insert(Arc::downgrade(&child));
                 Ok((child, false))
-            }
-        }
-    }
-
-    // This function is only useful for tests and has some oddities.
-    //
-    // For example, not all the children might have been looked up yet, which
-    // means the returned vector could be missing some names.
-    //
-    // Also, the vector might have "extra" names that are in the process of
-    // being looked up. If the lookup fails, they'll be removed.
-    #[cfg(test)]
-    pub fn copy_child_names(&self) -> Vec<FsString> {
-        self.state
-            .read()
-            .children
-            .values()
-            .filter_map(|child| Weak::upgrade(child).map(|c| c.local_name()))
-            .collect()
-    }
-
-    fn internal_remove_child(&self, child: &mut DirEntry) {
-        let local_name = child.local_name();
-        let mut state = self.state.write();
-        if let Some(weak_child) = state.children.get(&local_name) {
-            // If this entry is occupied, we need to check whether child is
-            // the current occupant. If so, we should remove the entry
-            // because the child no longer exists.
-            if std::ptr::eq(weak_child.as_ptr(), child) {
-                state.children.remove(&local_name);
             }
         }
     }
@@ -707,15 +708,15 @@ impl fmt::Debug for DirEntry {
     }
 }
 
-struct RenameGuard<'a, 'b> {
-    old_parent_guard: RwLockWriteGuard<'a, DirEntryState>,
-    new_parent_guard: Option<RwLockWriteGuard<'b, DirEntryState>>,
+struct RenameGuard<'a> {
+    old_parent_guard: DirEntryLockedChildren<'a>,
+    new_parent_guard: Option<DirEntryLockedChildren<'a>>,
 }
 
-impl<'a, 'b> RenameGuard<'a, 'b> {
-    fn lock(old_parent: &'a DirEntryHandle, new_parent: &'b DirEntryHandle) -> Self {
+impl<'a> RenameGuard<'a> {
+    fn lock(old_parent: &'a DirEntryHandle, new_parent: &'a DirEntryHandle) -> Self {
         if Arc::ptr_eq(old_parent, new_parent) {
-            Self { old_parent_guard: old_parent.state.write(), new_parent_guard: None }
+            Self { old_parent_guard: old_parent.lock_children(), new_parent_guard: None }
         } else {
             // Following gVisor, these locks are taken in ancestor-to-descendant order.
             // Moreover, if the node are not comparable, they are taken from smallest inode to
@@ -724,22 +725,22 @@ impl<'a, 'b> RenameGuard<'a, 'b> {
                 || (!old_parent.is_descendant_of(new_parent)
                     && old_parent.node.inode_num < new_parent.node.inode_num)
             {
-                let old_parent_guard = old_parent.state.write();
-                let new_parent_guard = new_parent.state.write();
+                let old_parent_guard = old_parent.lock_children();
+                let new_parent_guard = new_parent.lock_children();
                 Self { old_parent_guard, new_parent_guard: Some(new_parent_guard) }
             } else {
-                let new_parent_guard = new_parent.state.write();
-                let old_parent_guard = old_parent.state.write();
+                let new_parent_guard = new_parent.lock_children();
+                let old_parent_guard = old_parent.lock_children();
                 Self { old_parent_guard, new_parent_guard: Some(new_parent_guard) }
             }
         }
     }
 
-    fn old_parent(&mut self) -> &mut DirEntryState {
+    fn old_parent(&mut self) -> &mut DirEntryLockedChildren<'a> {
         &mut self.old_parent_guard
     }
 
-    fn new_parent(&mut self) -> &mut DirEntryState {
+    fn new_parent(&mut self) -> &mut DirEntryLockedChildren<'a> {
         if let Some(new_guard) = self.new_parent_guard.as_mut() {
             new_guard
         } else {
@@ -753,7 +754,7 @@ impl<'a, 'b> RenameGuard<'a, 'b> {
 /// lock on the parent's child list.
 impl Drop for DirEntry {
     fn drop(&mut self) {
-        let maybe_parent = self.parent.write().take();
+        let maybe_parent = self.state.write().parent.take();
         if let Some(parent) = maybe_parent {
             parent.internal_remove_child(self);
         }
