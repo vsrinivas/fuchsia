@@ -28,21 +28,17 @@ impl SeLinuxFs {
     fn new_fs(kernel: &Kernel) -> Result<FileSystemHandle, Errno> {
         let fs = FileSystem::new_with_permanent_entries(kernel, SeLinuxFs);
         StaticDirectoryBuilder::new(&fs)
-            .add_entry(b"load", SeLinuxNode::new(|| Ok(SeLoad)), mode!(IFREG, 0o600))
-            .add_entry(b"enforce", SeLinuxNode::new(|| Ok(SeEnforce)), mode!(IFREG, 0o644))
-            .add_entry(
-                b"checkreqprot",
-                SeLinuxNode::new(|| Ok(SeCheckReqProt)),
-                mode!(IFREG, 0o644),
-            )
-            .add_entry(b"access", AccessFileNode::new(), mode!(IFREG, 0o666))
-            .add_entry(
+            .entry(b"load", SeLinuxNode::new(|| Ok(SeLoad)), mode!(IFREG, 0o600))
+            .entry(b"enforce", SeLinuxNode::new(|| Ok(SeEnforce)), mode!(IFREG, 0o644))
+            .entry(b"checkreqprot", SeLinuxNode::new(|| Ok(SeCheckReqProt)), mode!(IFREG, 0o644))
+            .entry(b"access", AccessFileNode::new(), mode!(IFREG, 0o666))
+            .entry(
                 b"deny_unknown",
                 // Allow all unknown object classes/permissions.
                 ByteVecFile::new_node(b"0:0\n".to_vec()),
                 mode!(IFREG, 0o444),
             )
-            .add_entry(
+            .entry(
                 b"status",
                 // The status file needs to be mmap-able, so use a VMO-backed file.
                 // When the selinux state changes in the future, the way to update this data (and
@@ -54,8 +50,8 @@ impl SeLinuxFs {
                 )?,
                 mode!(IFREG, 0o444),
             )
-            .add_entry(b"class", SeLinuxClassDirectory::new(), mode!(IFDIR, 0o777))
-            .add_entry(b"context", SeLinuxNode::new(|| Ok(SeContext)), mode!(IFREG, 0o644))
+            .entry(b"class", SeLinuxClassDirectory::new(), mode!(IFDIR, 0o777))
+            .entry(b"context", SeLinuxNode::new(|| Ok(SeContext)), mode!(IFREG, 0o644))
             .build_root();
 
         Ok(fs)
@@ -290,22 +286,20 @@ impl FsNodeOps for Arc<SeLinuxClassDirectory> {
     ) -> Result<FsNodeHandle, Errno> {
         let mut entries = self.entries.write();
         let next_index = entries.len() + 1;
-        let fs = node.fs();
         Ok(entries
             .entry(name.to_vec())
             .or_insert_with(|| {
                 let index = format!("{}\n", next_index).into_bytes();
-                let mut perms = StaticDirectoryBuilder::new(&fs).set_mode(mode!(IFDIR, 0o555));
-                for (i, perm) in SELINUX_PERMS.iter().enumerate() {
-                    perms = perms.add_entry(
-                        perm,
-                        ByteVecFile::new_node(format!("{}\n", i + 1).as_bytes().to_vec()),
-                        mode!(IFREG, 0o444),
-                    );
-                }
                 StaticDirectoryBuilder::new(&node.fs())
-                    .add_entry(b"index", ByteVecFile::new_node(index), mode!(IFREG, 0o444))
-                    .add_node_entry(b"perms", perms.build())
+                    .entry(b"index", ByteVecFile::new_node(index), mode!(IFREG, 0o444))
+                    .subdir(b"perms", 0o555, |mut perms| {
+                        for (i, perm) in SELINUX_PERMS.iter().enumerate() {
+                            let node =
+                                ByteVecFile::new_node(format!("{}\n", i + 1).as_bytes().to_vec());
+                            perms = perms.entry(perm, node, mode!(IFREG, 0o444));
+                        }
+                        perms
+                    })
                     .set_mode(mode!(IFDIR, 0o555))
                     .build()
             })

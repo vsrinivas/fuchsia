@@ -12,20 +12,14 @@ use crate::mm::{ProcMapsFile, ProcStatFile};
 use crate::task::{CurrentTask, Task, ThreadGroup};
 use crate::types::*;
 
-fn directory_with_creds(task: &Arc<Task>, fs: &Arc<FileSystem>, d: impl FsNodeOps) -> FsNodeHandle {
-    fs.create_node_with_ops(d, mode!(IFDIR, 0o777), task.as_fscred())
-}
-
 /// Creates an [`FsNode`] that represents the `/proc/<pid>` directory for `task`.
 pub fn pid_directory(fs: &FileSystemHandle, task: &Arc<Task>) -> Arc<FsNode> {
     static_directory_builder_with_common_task_entries(fs, task)
-        .add_node_entry(
+        .entry_creds(task.as_fscred())
+        .entry(
             b"task",
-            directory_with_creds(
-                task,
-                fs,
-                TaskListDirectory { thread_group: task.thread_group.clone() },
-            ),
+            TaskListDirectory { thread_group: task.thread_group.clone() },
+            mode!(IFDIR, 0o777),
         )
         .build()
 }
@@ -42,33 +36,53 @@ fn static_directory_builder_with_common_task_entries<'a>(
     task: &Arc<Task>,
 ) -> StaticDirectoryBuilder<'a> {
     StaticDirectoryBuilder::new(fs)
-        .add_node_entry(b"exe", ExeSymlink::new_node(fs, task.clone()))
-        .add_node_entry(b"fd", directory_with_creds(task, fs, FdDirectory { task: task.clone() }))
-        .add_node_entry(
-            b"fdinfo",
-            directory_with_creds(task, fs, FdInfoDirectory { task: task.clone() }),
-        )
-        .add_node_entry(b"maps", ProcMapsFile::new_node(fs, task.clone()))
-        .add_node_entry(b"stat", ProcStatFile::new_node(fs, task.clone()))
-        .add_node_entry(b"cmdline", CmdlineFile::new_node(fs, task.clone()))
-        .add_node_entry(b"comm", CommFile::new_node(fs, task.clone()))
-        .add_node_entry(b"attr", attr_directory(task, fs))
-        .add_node_entry(b"ns", directory_with_creds(task, fs, NsDirectory { task: task.clone() }))
-        .set_creds(task.as_fscred())
+        .entry_creds(task.as_fscred())
+        .entry(b"exe", ExeSymlink::new(task), mode!(IFLNK, 0o777))
+        .entry(b"fd", FdDirectory::new(task), mode!(IFDIR, 0o777))
+        .entry(b"fdinfo", FdInfoDirectory::new(task), mode!(IFDIR, 0o777))
+        .entry(b"maps", ProcMapsFile::new_node(task), mode!(IFREG, 0o444))
+        .entry(b"stat", ProcStatFile::new_node(task), mode!(IFREG, 0o444))
+        .entry(b"cmdline", CmdlineFile::new_node(task), mode!(IFREG, 0o444))
+        .entry(b"comm", CommFile::new_node(task), mode!(IFREG, 0o444))
+        .node(b"attr", attr_directory(task, fs))
+        .entry(b"ns", NsDirectory { task: task.clone() }, mode!(IFDIR, 0o777))
+        .dir_creds(task.as_fscred())
 }
 
 /// Creates an [`FsNode`] that represents the `/proc/<pid>/attr` directory.
 fn attr_directory(task: &Arc<Task>, fs: &FileSystemHandle) -> Arc<FsNode> {
     StaticDirectoryBuilder::new(fs)
         // The `current` security context is, with selinux disabled, unconfined.
-        .add_entry_with_creds(
-            b"current",
-            ByteVecFile::new_node(b"unconfined\n".to_vec()),
-            mode!(IFREG, 0o666),
-            task.as_fscred(),
-        )
-        .set_creds(task.as_fscred())
+        .entry_creds(task.as_fscred())
+        .entry(b"current", ByteVecFile::new_node(b"unconfined\n".to_vec()), mode!(IFREG, 0o666))
+        .entry(b"fscreate", SimpleFileNode::new(|| Ok(SeLinuxAttribute)), mode!(IFREG, 0o666))
+        .dir_creds(task.as_fscred())
         .build()
+}
+
+// TODO(tbodt): Make this more than a stub, use for all selinux attributes
+struct SeLinuxAttribute;
+impl FileOps for SeLinuxAttribute {
+    fileops_impl_nonseekable!();
+    fileops_impl_nonblocking!();
+
+    fn read(
+        &self,
+        _file: &FileObject,
+        _current_task: &CurrentTask,
+        _data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        Ok(0)
+    }
+
+    fn write(
+        &self,
+        _file: &FileObject,
+        _current_task: &CurrentTask,
+        data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        UserBuffer::get_total_length(data)
+    }
 }
 
 /// `FdDirectory` implements the directory listing operations for a `proc/<pid>/fd` directory.
@@ -77,6 +91,12 @@ fn attr_directory(task: &Arc<Task>, fs: &FileSystemHandle) -> Arc<FsNode> {
 /// associated task.
 struct FdDirectory {
     task: Arc<Task>,
+}
+
+impl FdDirectory {
+    fn new(task: &Arc<Task>) -> Self {
+        Self { task: Arc::clone(task) }
+    }
 }
 
 impl FsNodeOps for FdDirectory {
@@ -217,6 +237,12 @@ struct FdInfoDirectory {
     task: Arc<Task>,
 }
 
+impl FdInfoDirectory {
+    fn new(task: &Arc<Task>) -> Self {
+        Self { task: Arc::clone(task) }
+    }
+}
+
 impl FsNodeOps for FdInfoDirectory {
     fn create_file_ops(
         &self,
@@ -307,9 +333,8 @@ pub struct ExeSymlink {
 }
 
 impl ExeSymlink {
-    fn new_node(fs: &FileSystemHandle, task: Arc<Task>) -> FsNodeHandle {
-        let creds = task.as_fscred();
-        fs.create_node_with_ops(ExeSymlink { task }, mode!(IFLNK, 0o777), creds)
+    fn new(task: &Arc<Task>) -> Self {
+        Self { task: Arc::clone(task) }
     }
 }
 
@@ -369,15 +394,11 @@ pub struct CmdlineFile {
 }
 
 impl CmdlineFile {
-    fn new_node(fs: &FileSystemHandle, task: Arc<Task>) -> FsNodeHandle {
-        let creds = task.as_fscred();
-        fs.create_node_with_ops(
-            SimpleFileNode::new(move || {
-                Ok(CmdlineFile { task: Arc::clone(&task), seq: Mutex::new(SeqFileState::new()) })
-            }),
-            mode!(IFREG, 0o444),
-            creds,
-        )
+    fn new_node(task: &Arc<Task>) -> impl FsNodeOps {
+        let task = Arc::clone(task);
+        SimpleFileNode::new(move || {
+            Ok(CmdlineFile { task: Arc::clone(&task), seq: Mutex::new(SeqFileState::new()) })
+        })
     }
 }
 
@@ -422,15 +443,11 @@ pub struct CommFile {
 }
 
 impl CommFile {
-    fn new_node(fs: &FileSystemHandle, task: Arc<Task>) -> FsNodeHandle {
-        let creds = task.as_fscred();
-        fs.create_node_with_ops(
-            SimpleFileNode::new(move || {
-                Ok(CommFile { task: Arc::clone(&task), seq: Mutex::new(SeqFileState::new()) })
-            }),
-            mode!(IFREG, 0o444),
-            creds,
-        )
+    fn new_node(task: &Arc<Task>) -> impl FsNodeOps {
+        let task = Arc::clone(task);
+        SimpleFileNode::new(move || {
+            Ok(CommFile { task: Arc::clone(&task), seq: Mutex::new(SeqFileState::new()) })
+        })
     }
 }
 

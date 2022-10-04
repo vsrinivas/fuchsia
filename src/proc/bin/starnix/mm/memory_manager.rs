@@ -1387,15 +1387,11 @@ pub struct ProcMapsFile {
     seq: Mutex<SeqFileState<UserAddress>>,
 }
 impl ProcMapsFile {
-    pub fn new_node(fs: &FileSystemHandle, task: Arc<Task>) -> FsNodeHandle {
-        let creds = task.as_fscred();
-        fs.create_node_with_ops(
-            SimpleFileNode::new(move || {
-                Ok(ProcMapsFile { task: Arc::clone(&task), seq: Mutex::new(SeqFileState::new()) })
-            }),
-            mode!(IFREG, 0o444),
-            creds,
-        )
+    pub fn new_node(task: &Arc<Task>) -> impl FsNodeOps {
+        let task = Arc::clone(task);
+        SimpleFileNode::new(move || {
+            Ok(ProcMapsFile { task: Arc::clone(&task), seq: Mutex::new(SeqFileState::new()) })
+        })
     }
 }
 impl FileOps for ProcMapsFile {
@@ -1461,15 +1457,11 @@ pub struct ProcStatFile {
 }
 
 impl ProcStatFile {
-    pub fn new_node(fs: &FileSystemHandle, task: Arc<Task>) -> FsNodeHandle {
-        let creds = task.as_fscred();
-        fs.create_node_with_ops(
-            SimpleFileNode::new(move || {
-                Ok(ProcStatFile { task: Arc::clone(&task), seq: Mutex::new(SeqFileState::new()) })
-            }),
-            mode!(IFREG, 0o444),
-            creds,
-        )
+    pub fn new_node(task: &Arc<Task>) -> impl FsNodeOps {
+        let task = Arc::clone(task);
+        SimpleFileNode::new(move || {
+            Ok(ProcStatFile { task: Arc::clone(&task), seq: Mutex::new(SeqFileState::new()) })
+        })
     }
 }
 

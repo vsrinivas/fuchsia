@@ -19,15 +19,9 @@ impl SysFs {
     fn new_fs(kernel: &Kernel) -> Result<FileSystemHandle, Errno> {
         let fs = FileSystem::new_with_permanent_entries(kernel, SysFs);
         StaticDirectoryBuilder::new(&fs)
-            .add_node_entry(
-                b"fs",
-                StaticDirectoryBuilder::new(&fs)
-                    .set_mode(mode!(IFDIR, 0o755))
-                    .add_node_entry(
-                        b"selinux",
-                        StaticDirectoryBuilder::new(&fs).set_mode(mode!(IFDIR, 0o755)).build(),
-                    )
-                    .add_node_entry(
+            .subdir(b"fs", 0o755, |dir| {
+                dir.subdir(b"selinux", 0o755, |dir| dir)
+                    .node(
                         b"cgroup",
                         fs.create_node(
                             CgroupDirectoryNode::new(),
@@ -35,20 +29,8 @@ impl SysFs {
                             FsCred::root(),
                         ),
                     )
-                    .add_node_entry(
-                        b"fuse",
-                        StaticDirectoryBuilder::new(&fs)
-                            .set_mode(mode!(IFDIR, 0o755))
-                            .add_node_entry(
-                                b"connections",
-                                StaticDirectoryBuilder::new(&fs)
-                                    .set_mode(mode!(IFDIR, 0o755))
-                                    .build(),
-                            )
-                            .build(),
-                    )
-                    .build(),
-            )
+                    .subdir(b"fuse", 0o755, |dir| dir.subdir(b"connections", 0o755, |dir| dir))
+            })
             .build_root();
         Ok(fs)
     }

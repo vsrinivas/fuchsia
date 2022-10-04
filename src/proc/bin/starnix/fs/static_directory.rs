@@ -4,8 +4,8 @@
 
 use crate::auth::FsCred;
 use crate::fs::{
-    emit_dotdot, fileops_impl_directory, DirectoryEntryType, DirentSink, FileObject, FileOps,
-    FileSystem, FileSystemHandle, FsNode, FsNodeHandle, FsNodeOps, FsStr, SeekOrigin,
+    emit_dotdot, fileops_impl_directory, fs_node_impl_dir_readonly, DirectoryEntryType, DirentSink,
+    FileObject, FileOps, FileSystem, FileSystemHandle, FsNode, FsNodeOps, FsStr, SeekOrigin,
 };
 use crate::task::CurrentTask;
 use crate::types::*;
@@ -18,62 +18,62 @@ pub struct StaticDirectoryBuilder<'a> {
     fs: &'a Arc<FileSystem>,
     mode: FileMode,
     creds: FsCred,
+    entry_creds: FsCred,
     entries: BTreeMap<&'static FsStr, Arc<FsNode>>,
 }
 
 impl<'a> StaticDirectoryBuilder<'a> {
     /// Creates a new builder using the given [`FileSystem`] to acquire inode numbers.
     pub fn new(fs: &'a FileSystemHandle) -> Self {
-        Self { fs, mode: mode!(IFDIR, 0o777), creds: FsCred::root(), entries: BTreeMap::new() }
+        Self {
+            fs,
+            mode: mode!(IFDIR, 0o777),
+            creds: FsCred::root(),
+            entry_creds: FsCred::root(),
+            entries: BTreeMap::new(),
+        }
+    }
+
+    /// Set the creds used for future entries.
+    pub fn entry_creds(mut self, creds: FsCred) -> Self {
+        self.entry_creds = creds;
+        self
     }
 
     /// Adds an entry to the directory. Panics if an entry with the same name was already added.
-    pub fn add_entry(self, name: &'static FsStr, ops: impl FsNodeOps, mode: FileMode) -> Self {
-        self.add_device_entry(name, ops, mode, DeviceType::NONE)
+    pub fn entry(self, name: &'static FsStr, ops: impl FsNodeOps, mode: FileMode) -> Self {
+        self.entry_dev(name, ops, mode, DeviceType::NONE)
     }
 
     /// Adds an entry to the directory. Panics if an entry with the same name was already added.
-    pub fn add_entry_with_creds(
-        self,
-        name: &'static FsStr,
-        ops: impl FsNodeOps,
-        mode: FileMode,
-        creds: FsCred,
-    ) -> Self {
-        self.add_device_entry_with_creds(name, ops, mode, DeviceType::NONE, creds)
-    }
-
-    /// Adds an entry to the directory. Panics if an entry with the same name was already added.
-    pub fn add_device_entry(
-        self,
-        name: &'static FsStr,
-        ops: impl FsNodeOps,
-        mode: FileMode,
-        dev: DeviceType,
-    ) -> Self {
-        self.add_device_entry_with_creds(name, ops, mode, dev, FsCred::root())
-    }
-
-    /// Adds an entry to the directory. Panics if an entry with the same name was already added.
-    pub fn add_device_entry_with_creds(
+    pub fn entry_dev(
         self,
         name: &'static FsStr,
         ops: impl FsNodeOps,
         mode: FileMode,
         dev: DeviceType,
-        creds: FsCred,
     ) -> Self {
-        let node = self.fs.create_node_with_ops(ops, mode, creds);
+        let node = self.fs.create_node_with_ops(ops, mode, self.entry_creds.clone());
         {
             let mut info = node.info_write();
             info.rdev = dev;
         }
-        self.add_node_entry(name, node)
+        self.node(name, node)
+    }
+
+    pub fn subdir(
+        self,
+        name: &'static FsStr,
+        mode: u32,
+        build_subdir: impl Fn(Self) -> Self,
+    ) -> Self {
+        let subdir = build_subdir(Self::new(self.fs));
+        self.node(name, subdir.set_mode(mode!(IFDIR, mode)).build())
     }
 
     /// Adds an [`FsNode`] entry to the directory, which already has an inode number and file mode.
     /// Panics if an entry with the same name was already added.
-    pub fn add_node_entry(mut self, name: &'static FsStr, node: Arc<FsNode>) -> Self {
+    pub fn node(mut self, name: &'static FsStr, node: Arc<FsNode>) -> Self {
         assert!(
             self.entries.insert(name, node).is_none(),
             "adding a duplicate entry into a StaticDirectory",
@@ -88,7 +88,7 @@ impl<'a> StaticDirectoryBuilder<'a> {
         self
     }
 
-    pub fn set_creds(mut self, creds: FsCred) -> Self {
+    pub fn dir_creds(mut self, creds: FsCred) -> Self {
         self.creds = creds;
         self
     }
@@ -117,11 +117,13 @@ impl<'a> StaticDirectoryBuilder<'a> {
     }
 }
 
-struct StaticDirectory {
+pub struct StaticDirectory {
     entries: BTreeMap<&'static FsStr, Arc<FsNode>>,
 }
 
 impl FsNodeOps for Arc<StaticDirectory> {
+    fs_node_impl_dir_readonly!();
+
     fn create_file_ops(
         &self,
         _node: &FsNode,
@@ -149,31 +151,6 @@ impl FsNodeOps for Arc<StaticDirectory> {
                 )
             )
         })
-    }
-
-    fn mknod(
-        &self,
-        _node: &FsNode,
-        _name: &FsStr,
-        _mode: FileMode,
-        _dev: DeviceType,
-        _owner: FsCred,
-    ) -> Result<FsNodeHandle, Errno> {
-        error!(EROFS)
-    }
-
-    fn mkdir(
-        &self,
-        _node: &FsNode,
-        _name: &FsStr,
-        _mode: FileMode,
-        _owner: FsCred,
-    ) -> Result<FsNodeHandle, Errno> {
-        error!(EROFS)
-    }
-
-    fn unlink(&self, _parent: &FsNode, _name: &FsStr, _child: &FsNodeHandle) -> Result<(), Errno> {
-        error!(EROFS)
     }
 }
 

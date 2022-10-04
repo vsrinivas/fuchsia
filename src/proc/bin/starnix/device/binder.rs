@@ -4,13 +4,12 @@
 
 #![allow(non_upper_case_globals)]
 
-use crate::auth::FsCred;
 use crate::device::DeviceOps;
 use crate::fs::devtmpfs::dev_tmp_fs;
 use crate::fs::{
-    FdEvents, FdNumber, FileObject, FileOps, FileSystem, FileSystemHandle, FileSystemOps, FsNode,
-    FsNodeHandle, FsStr, NamespaceNode, SeekOrigin, SpecialNode, StaticDirectoryBuilder,
-    WaitAsyncOptions,
+    fs_node_impl_dir_readonly, DirEntryHandle, FdEvents, FdNumber, FileObject, FileOps, FileSystem,
+    FileSystemHandle, FileSystemOps, FsNode, FsNodeOps, FsStr, MemoryDirectoryFile, NamespaceNode,
+    SeekOrigin, SpecialNode, WaitAsyncOptions,
 };
 use crate::lock::{Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use crate::logging::{not_implemented, not_implemented_log_once};
@@ -2617,44 +2616,41 @@ impl FileSystemOps for BinderFs {
     }
 }
 
+struct BinderFsDir;
+impl FsNodeOps for BinderFsDir {
+    fs_node_impl_dir_readonly!();
+
+    fn create_file_ops(
+        &self,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
+        Ok(Box::new(MemoryDirectoryFile::new()))
+    }
+}
+
 const BINDERS: &[&FsStr] = &[b"binder", b"hwbinder", b"vndbinder"];
+
+fn make_binder_nodes(kernel: &Kernel, dir: &DirEntryHandle) -> Result<(), Errno> {
+    for name in BINDERS {
+        let dev = kernel.device_registry.write().register_misc_chrdev(BinderDev::new())?;
+        dir.add_node_ops_dev(name, mode!(IFCHR, 0o600), dev, SpecialNode)?;
+    }
+    Ok(())
+}
 
 impl BinderFs {
     pub fn new_fs(kernel: &Kernel) -> Result<FileSystemHandle, Errno> {
         let fs = FileSystem::new_with_permanent_entries(kernel, BinderFs);
-        let mut builder = StaticDirectoryBuilder::new(&fs);
-
-        for (name, node) in Self::get_binder_nodes(kernel, &fs)?.into_iter() {
-            builder = builder.add_node_entry(name, node);
-        }
-        builder.build_root();
+        fs.set_root(BinderFsDir);
+        make_binder_nodes(kernel, fs.root())?;
         Ok(fs)
-    }
-
-    fn get_binder_nodes(
-        kernel: &Kernel,
-        fs: &FileSystemHandle,
-    ) -> Result<BTreeMap<&'static FsStr, FsNodeHandle>, Errno> {
-        let mut nodes = BTreeMap::new();
-        for binder in BINDERS {
-            let dev = kernel.device_registry.write().register_misc_chrdev(BinderDev::new())?;
-            let node = fs.create_node_with_ops(SpecialNode, mode!(IFCHR, 0o600), FsCred::root());
-            {
-                let mut info = node.info_write();
-                info.rdev = dev;
-            }
-            nodes.insert(*binder, node);
-        }
-        Ok(nodes)
     }
 }
 
 pub fn create_binders(current_task: &CurrentTask) -> Result<(), Errno> {
     let fs = dev_tmp_fs(current_task);
-    for (name, node) in BinderFs::get_binder_nodes(current_task.kernel(), fs)?.into_iter() {
-        fs.root().create_entry(name, || Ok(node))?;
-    }
-    Ok(())
+    make_binder_nodes(current_task.kernel(), fs.root())
 }
 
 #[cfg(test)]
