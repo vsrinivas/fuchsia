@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 {
     include: [
+        "//sdk/ctf/test_realm/meta/cts.shard.cml",
         "sys/testing/elf_test_runner.shard.cml",
         "syslog/client.shard.cml",
     ],
@@ -18,7 +19,4 @@
             ],
         },
     ],
-    facets: {
-        "fuchsia.test": { type: "cts" },
-    },
 }

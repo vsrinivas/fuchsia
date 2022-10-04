@@ -9,14 +9,12 @@ declaring a facet in their component manifests, as shown below.
 
 {
     include: [
+        {{ '<strong>' }}"//sdk/ctf/test_realm/meta/cts.shard.cml",{{ '</strong>' }}
         "//src/sys/test_runners/rust/default.shard.cml",
     ],
     program: {
         binary: "bin/my_test_binary",
     },
-    {{ '<strong>' }}facets: {
-        "fuchsia.test": { type: "cts" },
-    },{{ '</strong>' }}
 }
 ```
 

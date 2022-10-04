@@ -41,8 +41,8 @@ See the [CTS Contributing Guide].
 To run example tests:
 
 ```
-fx set core.qemu-64 --with //sdk/ctf/examples/
-fx test //sdk/ctf/examples/
+fx set core.qemu-64 --with //sdk/ctf/tests/examples/
+fx test //sdk/ctf/tests/examples/
 ```
 
 #### Language
