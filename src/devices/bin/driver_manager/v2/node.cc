@@ -262,7 +262,8 @@ void BindResultTracker::Complete(size_t current) {
 
 Node::Node(std::string_view name, std::vector<Node*> parents, NodeManager* node_manager,
            async_dispatcher_t* dispatcher)
-    : name_(name),
+    : devfs_name_(name),
+      name_(name),
       parents_(std::move(parents)),
       node_manager_(node_manager),
       dispatcher_(dispatcher) {
@@ -277,7 +278,8 @@ Node::Node(std::string_view name, std::vector<Node*> parents, NodeManager* node_
 
 Node::Node(std::string_view name, std::vector<Node*> parents, NodeManager* node_manager,
            async_dispatcher_t* dispatcher, DriverHost* driver_host)
-    : name_(name),
+    : devfs_name_(name),
+      name_(name),
       parents_(std::move(parents)),
       node_manager_(node_manager),
       dispatcher_(dispatcher),
@@ -611,9 +613,9 @@ zx::status<> Node::StartDriver(
 
   LOGF(INFO, "Binding %.*s to  %s", static_cast<int>(url.size()), url.data(), name().c_str());
   // Start the driver within the driver host.
-  auto start =
-      (*driver_host_)
-          ->Start(std::move(endpoints->client), name(), std::move(symbols), std::move(start_info));
+  auto start = (*driver_host_)
+                   ->Start(std::move(endpoints->client), devfs_name_, std::move(symbols),
+                           std::move(start_info));
   if (start.is_error()) {
     return zx::error(start.error_value());
   }

@@ -139,7 +139,14 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   // Add this Node to its parents. This should be called when the node is created.
   void AddToParents();
 
+  // The node's original name. This should be used for exporting to devfs.
+  // TODO(fxbug.dev/111156): Migrate driver names to only use CF valid characters and simplify
+  //  this logic.
+  std::string devfs_name_;
+  // The node's name which is valid for CF.
+  // This has been transformed from the original name, ":" and "/" have been replaced.
   std::string name_;
+
   // If this is a composite device, this stores the list of each parent's names.
   std::vector<std::string> parents_names_;
   std::vector<Node*> parents_;
