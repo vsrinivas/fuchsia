@@ -2,147 +2,120 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Add the testrunner.
-test_deps = [ "//src/testing/runtests" ]
-
-test_deps += [
-  "//src/bringup/bin/console-launcher:shell-permissions-bootfs-test",
-  "//src/bringup/bin/console-launcher/qemu-tests:tests",
-  "//src/bringup/bin/svchost:crashsvc-test-bootfs-test",
-  "//src/bringup/bin/sysinfo:sysinfo-bootfs-test",
-  "//src/bringup/tests/bootfs_test:running-on-bootfs-test",
-  "//src/devices/block/bin/biotime:biotime-test-bootfs-test",
-  "//src/devices/board/lib/smbios:smbios-bootfs-test",
-  "//src/devices/sysmem/tests/sysmem:sysmem-bootfs-test",
-
-  # The devcoordinator-namespace-test assumes the root filesystem and can't be
-  # migrated as packages are given their own local filesystem.
-  "//src/devices/tests/devcoordinator-namespace:devcoordinator-namespace-bootfs-test",
-  "//src/devices/usb/tests/usb:usb-bootfs-test",  # HW-required.
-  "//src/zircon/tests/entropy:entropy-bootfs-test",
-  "//src/zircon/tests/exception:exception-bootfs-test",
-  "//src/zircon/tests/futex-ownership:futex-ownership-bootfs-test",
-  "//src/zircon/tests/job-policy:policy-bootfs-test",
-  "//src/zircon/tests/kcounter:kcounter-bootfs-test",
-  "//src/zircon/tests/thread-state:thread-state-bootfs-test",
-  "//src/zircon/tests/time:time-bootfs-test",
-  "//src/zircon/tests/timers:timers-bootfs-test",
-  "//src/zircon/tests/vdso:vdso-base-bootfs-test",
-  "//src/zircon/tests/vdso:vdso-bootfs-test",
-  "//src/zircon/tests/vdso:vdso-variant-bootfs-test",
-  "//zircon/system/ulib/c/test/sanitizer",
-  "//zircon/system/ulib/elf-search/test:elf-search-bootfs-test",
-  "//zircon/system/ulib/test-utils/test:test-utils-bootfs-test",
-  "//zircon/system/ulib/trace-reader/test:trace-reader-test-bootfs-test",
-  "//zircon/system/ulib/zx-panic-libc/test:zx-panic-libc-test-bootfs-test",
-  "//zircon/system/ulib/zx/test:zx-bootfs-test",
-  "//zircon/system/ulib/zxtest/test:zxtest-bootfs-test",
-  "//zircon/system/utest/channel-fatal:channel-fatal-bootfs-test",
-  "//zircon/system/utest/core:core-address-tagging-bootfs-test",
-  "//zircon/system/utest/core:core-bad-segsel-bootfs-test",
-  "//zircon/system/utest/core:core-c11-condvar-bootfs-test",
-  "//zircon/system/utest/core:core-c11-mutex-bootfs-test",
-  "//zircon/system/utest/core:core-c11-thread-bootfs-test",
-  "//zircon/system/utest/core:core-channel-bootfs-test",
-  "//zircon/system/utest/core:core-channel-call-etc-bootfs-test",
-  "//zircon/system/utest/core:core-channel-iovec-bootfs-test",
-  "//zircon/system/utest/core:core-channel-write-etc-bootfs-test",
-  "//zircon/system/utest/core:core-clock-bootfs-test",
-  "//zircon/system/utest/core:core-elf-tls-bootfs-test",
-  "//zircon/system/utest/core:core-event-pair-bootfs-test",
-  "//zircon/system/utest/core:core-exceptions-bootfs-test",
-  "//zircon/system/utest/core:core-fifo-bootfs-test",
-  "//zircon/system/utest/core:core-fpu-bootfs-test",
-  "//zircon/system/utest/core:core-futex-bootfs-test",
-  "//zircon/system/utest/core:core-handle-close-bootfs-test",
-  "//zircon/system/utest/core:core-handle-dup-bootfs-test",
-  "//zircon/system/utest/core:core-handle-info-bootfs-test",
-  "//zircon/system/utest/core:core-handle-transfer-bootfs-test",
-  "//zircon/system/utest/core:core-handle-wait-bootfs-test",
-  "//zircon/system/utest/core:core-job-bootfs-test",
-  "//zircon/system/utest/core:core-memory-mapping-bootfs-test",
-  "//zircon/system/utest/core:core-object-child-bootfs-test",
-  "//zircon/system/utest/core:core-object-info-bootfs-test",
-  "//zircon/system/utest/core:core-object-wait-bootfs-test",
-  "//zircon/system/utest/core:core-pager-bootfs-test",
-  "//zircon/system/utest/core:core-port-bootfs-test",
-  "//zircon/system/utest/core:core-process-bootfs-test",
-  "//zircon/system/utest/core:core-pthread-barrier-bootfs-test",
-  "//zircon/system/utest/core:core-pthread-bootfs-test",
-  "//zircon/system/utest/core:core-pthread-tls-bootfs-test",
-  "//zircon/system/utest/core:core-socket-bootfs-test",
-  "//zircon/system/utest/core:core-stack-bootfs-test",
-  "//zircon/system/utest/core:core-stream-bootfs-test",
-  "//zircon/system/utest/core:core-sync-completion-bootfs-test",
-  "//zircon/system/utest/core:core-sync-condition-bootfs-test",
-  "//zircon/system/utest/core:core-sync-mutex-bootfs-test",
-  "//zircon/system/utest/core:core-threads-bootfs-test",
-  "//zircon/system/utest/core:core-time-bootfs-test",
-  "//zircon/system/utest/core:core-version-bootfs-test",
-  "//zircon/system/utest/core:core-vmar-bootfs-test",
-  "//zircon/system/utest/core:core-vmo-bootfs-test",
-  "//zircon/system/utest/core-display:core-display-bootfs-test",
-  "//zircon/system/utest/debugger:debugger-bootfs-test",
-  "//zircon/system/utest/dlfcn:dlfcn-bootfs-test",
-  "//zircon/system/utest/kernel-unittests:kernel-unittests-bootfs-test",
-  "//zircon/system/utest/log:log-bootfs-test",
-  "//zircon/system/utest/miscsvc:miscsvc-bootfs-test",
-  "//zircon/system/utest/namespace:namespace-bootfs-test",
-  "//zircon/system/utest/psutils:ps-bootfs-test",
-  "//zircon/system/utest/race-tests:race-tests-bootfs-test",
-  "//zircon/system/utest/runtests-utils:runtests-utils-bootfs-test",
-  "//zircon/system/utest/svchost:svchost-bootfs-test",
-  "//zircon/system/utest/task-utils:task-utils-bootfs-test",
-  "//zircon/system/utest/trace:trace-bootfs-test",
-  "//zircon/system/utest/utc-procargs:utc-procargs-bootfs-test",
-  "//zircon/third_party/ulib/linenoise/test:linenoise-test-bootfs-test",
-]
-
-if (target_cpu == "x64") {
-  test_deps += [
-    "//src/devices/bin/acpidump:acpidump-test-bootfs-test",
-    "//src/devices/board/drivers/x86/test:x86-board-bootfs-test",
-    "//src/devices/lib/iommu:iommu-bootfs-test",
-    "//src/zircon/tests/mtrace:mtrace-bootfs-test",
-    "//src/zircon/tests/x86-umip:x86-umip-bootfs-test",
-  ]
-}
-
-# Add various drivers and binaries used in manual testing.
-test_deps += [ ":manual_testing" ]
-
-# This includes tests that pass only when DFv1 is enabled.
-# TODO(fxbug.dev/105827): Remove when `test_deps_dfv1` is empty.
-test_deps_dfv1 = []
-
-# TODO(fxbug.dev/106650): Remove from `test_deps_dfv1` and insert into
-# `test_deps` when the test is passing with DFv2 enabled.
-test_deps_dfv1 += [ "//src/tests/drivers_serial_log:bringup_tests" ]
-
-# # TODO(fxbug.dev/108148): Remove from `test_deps_dfv1` and insert into
-# `test_deps` when the test is passing with DFv2 enabled.
-test_deps_dfv1 += [ "//src/tests/reboot/dm_reboot_bringup_test:tests" ]
-
-# TODO(fxbug.dev/105182): Remove from `test_deps_dfv1` and insert into
-# `test_deps` when the test is passing with DFv2 enabled.
-test_deps_dfv1 += [
-  "//zircon/system/utest/device-enumeration:device-enumeration-bootfs-test",
-]
-
 group("tests") {
   testonly = true
 
-  deps = test_deps
+  # Add the testrunner.
+  deps = [ "//src/testing/runtests" ]
 
-  # TODO(fxbug.dev/105827): Remove group when `test_deps_dfv1` is empty.
-  deps += test_deps_dfv1
-}
+  deps += [
+    "//src/bringup/bin/console-launcher:shell-permissions-bootfs-test",
+    "//src/bringup/bin/console-launcher/qemu-tests:tests",
+    "//src/bringup/bin/svchost:crashsvc-test-bootfs-test",
+    "//src/bringup/bin/sysinfo:sysinfo-bootfs-test",
+    "//src/bringup/tests/bootfs_test:running-on-bootfs-test",
+    "//src/devices/block/bin/biotime:biotime-test-bootfs-test",
+    "//src/devices/board/lib/smbios:smbios-bootfs-test",
+    "//src/devices/sysmem/tests/sysmem:sysmem-bootfs-test",
 
-# TODO(fxbug.dev/105827): Remove group when `test_deps_dfv1` is empty.
-group("tests_dfv2") {
-  testonly = true
+    # The devcoordinator-namespace-test assumes the root filesystem and can't be
+    # migrated as packages are given their own local filesystem.
+    "//src/devices/tests/devcoordinator-namespace:devcoordinator-namespace-bootfs-test",
+    "//src/devices/usb/tests/usb:usb-bootfs-test",  # HW-required.
+    "//src/tests/drivers_serial_log:bringup_tests",
+    "//src/tests/reboot/dm_reboot_bringup_test:tests",
+    "//src/zircon/tests/entropy:entropy-bootfs-test",
+    "//src/zircon/tests/exception:exception-bootfs-test",
+    "//src/zircon/tests/futex-ownership:futex-ownership-bootfs-test",
+    "//src/zircon/tests/job-policy:policy-bootfs-test",
+    "//src/zircon/tests/kcounter:kcounter-bootfs-test",
+    "//src/zircon/tests/thread-state:thread-state-bootfs-test",
+    "//src/zircon/tests/time:time-bootfs-test",
+    "//src/zircon/tests/timers:timers-bootfs-test",
+    "//src/zircon/tests/vdso:vdso-base-bootfs-test",
+    "//src/zircon/tests/vdso:vdso-bootfs-test",
+    "//src/zircon/tests/vdso:vdso-variant-bootfs-test",
+    "//zircon/system/ulib/c/test/sanitizer",
+    "//zircon/system/ulib/elf-search/test:elf-search-bootfs-test",
+    "//zircon/system/ulib/test-utils/test:test-utils-bootfs-test",
+    "//zircon/system/ulib/trace-reader/test:trace-reader-test-bootfs-test",
+    "//zircon/system/ulib/zx-panic-libc/test:zx-panic-libc-test-bootfs-test",
+    "//zircon/system/ulib/zx/test:zx-bootfs-test",
+    "//zircon/system/ulib/zxtest/test:zxtest-bootfs-test",
+    "//zircon/system/utest/channel-fatal:channel-fatal-bootfs-test",
+    "//zircon/system/utest/core:core-address-tagging-bootfs-test",
+    "//zircon/system/utest/core:core-bad-segsel-bootfs-test",
+    "//zircon/system/utest/core:core-c11-condvar-bootfs-test",
+    "//zircon/system/utest/core:core-c11-mutex-bootfs-test",
+    "//zircon/system/utest/core:core-c11-thread-bootfs-test",
+    "//zircon/system/utest/core:core-channel-bootfs-test",
+    "//zircon/system/utest/core:core-channel-call-etc-bootfs-test",
+    "//zircon/system/utest/core:core-channel-iovec-bootfs-test",
+    "//zircon/system/utest/core:core-channel-write-etc-bootfs-test",
+    "//zircon/system/utest/core:core-clock-bootfs-test",
+    "//zircon/system/utest/core:core-elf-tls-bootfs-test",
+    "//zircon/system/utest/core:core-event-pair-bootfs-test",
+    "//zircon/system/utest/core:core-exceptions-bootfs-test",
+    "//zircon/system/utest/core:core-fifo-bootfs-test",
+    "//zircon/system/utest/core:core-fpu-bootfs-test",
+    "//zircon/system/utest/core:core-futex-bootfs-test",
+    "//zircon/system/utest/core:core-handle-close-bootfs-test",
+    "//zircon/system/utest/core:core-handle-dup-bootfs-test",
+    "//zircon/system/utest/core:core-handle-info-bootfs-test",
+    "//zircon/system/utest/core:core-handle-transfer-bootfs-test",
+    "//zircon/system/utest/core:core-handle-wait-bootfs-test",
+    "//zircon/system/utest/core:core-job-bootfs-test",
+    "//zircon/system/utest/core:core-memory-mapping-bootfs-test",
+    "//zircon/system/utest/core:core-object-child-bootfs-test",
+    "//zircon/system/utest/core:core-object-info-bootfs-test",
+    "//zircon/system/utest/core:core-object-wait-bootfs-test",
+    "//zircon/system/utest/core:core-pager-bootfs-test",
+    "//zircon/system/utest/core:core-port-bootfs-test",
+    "//zircon/system/utest/core:core-process-bootfs-test",
+    "//zircon/system/utest/core:core-pthread-barrier-bootfs-test",
+    "//zircon/system/utest/core:core-pthread-bootfs-test",
+    "//zircon/system/utest/core:core-pthread-tls-bootfs-test",
+    "//zircon/system/utest/core:core-socket-bootfs-test",
+    "//zircon/system/utest/core:core-stack-bootfs-test",
+    "//zircon/system/utest/core:core-stream-bootfs-test",
+    "//zircon/system/utest/core:core-sync-completion-bootfs-test",
+    "//zircon/system/utest/core:core-sync-condition-bootfs-test",
+    "//zircon/system/utest/core:core-sync-mutex-bootfs-test",
+    "//zircon/system/utest/core:core-threads-bootfs-test",
+    "//zircon/system/utest/core:core-time-bootfs-test",
+    "//zircon/system/utest/core:core-version-bootfs-test",
+    "//zircon/system/utest/core:core-vmar-bootfs-test",
+    "//zircon/system/utest/core:core-vmo-bootfs-test",
+    "//zircon/system/utest/core-display:core-display-bootfs-test",
+    "//zircon/system/utest/debugger:debugger-bootfs-test",
+    "//zircon/system/utest/device-enumeration:device-enumeration-bootfs-test",
+    "//zircon/system/utest/dlfcn:dlfcn-bootfs-test",
+    "//zircon/system/utest/kernel-unittests:kernel-unittests-bootfs-test",
+    "//zircon/system/utest/log:log-bootfs-test",
+    "//zircon/system/utest/miscsvc:miscsvc-bootfs-test",
+    "//zircon/system/utest/namespace:namespace-bootfs-test",
+    "//zircon/system/utest/psutils:ps-bootfs-test",
+    "//zircon/system/utest/race-tests:race-tests-bootfs-test",
+    "//zircon/system/utest/runtests-utils:runtests-utils-bootfs-test",
+    "//zircon/system/utest/svchost:svchost-bootfs-test",
+    "//zircon/system/utest/task-utils:task-utils-bootfs-test",
+    "//zircon/system/utest/trace:trace-bootfs-test",
+    "//zircon/system/utest/utc-procargs:utc-procargs-bootfs-test",
+    "//zircon/third_party/ulib/linenoise/test:linenoise-test-bootfs-test",
+  ]
 
-  deps = test_deps
+  if (target_cpu == "x64") {
+    deps += [
+      "//src/devices/bin/acpidump:acpidump-test-bootfs-test",
+      "//src/devices/board/drivers/x86/test:x86-board-bootfs-test",
+      "//src/devices/lib/iommu:iommu-bootfs-test",
+      "//src/zircon/tests/mtrace:mtrace-bootfs-test",
+      "//src/zircon/tests/x86-umip:x86-umip-bootfs-test",
+    ]
+  }
+
+  # Add various drivers and binaries used in manual testing.
+  deps += [ ":manual_testing" ]
 }
 
 group("manual_testing") {

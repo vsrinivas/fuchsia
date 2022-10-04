@@ -19,7 +19,7 @@ group("bringup") {
 # base package set.
 group("bringup_dfv2") {
   testonly = true
-  deps = [ "//bundles/bringup:tests_dfv2" ]
+  deps = [ "//bundles/buildbot/dfv2:bringup" ]
 }
 
 # This group contains tests that don't depend on any known e2e test libraries.
