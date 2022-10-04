@@ -58,7 +58,6 @@
             "bootstrap/archivist:root/archive_accessor_stats/legacy_metrics/logs/batch_iterator/get_next:result_errors",
             "bootstrap/archivist:root/archive_accessor_stats/legacy_metrics/logs:component_timeouts_count",
             "bootstrap/archivist:root/archive_accessor_stats/legacy_metrics:connections_opened",
-            "bootstrap/archivist:root/events/event_counts:component_started",
         ],
     },
 }

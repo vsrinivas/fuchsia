@@ -431,14 +431,6 @@
         },
         {
             "event_codes": [
-                0
-            ],
-            "metric_id": 107,
-            "metric_type": "Occurrence",
-            "selector": "bootstrap/archivist:root/event_stats:components_started"
-        },
-        {
-            "event_codes": [
                 0,
                 0
             ],

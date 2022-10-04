@@ -33,11 +33,7 @@
             to: "#routing-tests",
         },
         {
-            event: [
-                "running",
-                "started",
-                "stopped",
-            ],
+            event: [ "stopped" ],
             from: "framework",
             to: "#archivist",
         },

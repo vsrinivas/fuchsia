@@ -463,10 +463,6 @@ impl LogsArtifactsContainer {
         }
     }
 
-    pub async fn mark_started(&self) {
-        self.state.lock().await.is_live = true;
-    }
-
     pub async fn mark_stopped(&self) {
         self.state.lock().await.is_live = false;
     }
