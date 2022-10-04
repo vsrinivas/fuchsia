@@ -130,16 +130,19 @@ class GestureRecognizer;
 class GestureArena {
  public:
   enum class State {
-    kContendingInProgress,  // One or more recognizers are still contending.
-    kAssigned,              // A winner has been assigned and processes events.
-    kEmpty,                 // All recognizers have left the arena.
+    kIdle,
+    kInProgress,
+    kWinnerAssigned,
+    kAllDefeated,
+    kContestEndedWinnerAssigned,
+    kContestEndedAllDefeated,
   };
 
   // This arena takes |on_stream_handled_callback|, which is called whenever a
   // stream of pointer events is handled (e.g., is consumed or rejected).
   explicit GestureArena(PointerStreamTracker::OnStreamHandledCallback on_stream_handled_callback =
                             [](auto...) {});
-  ~GestureArena() = default;
+  virtual ~GestureArena() = default;
 
   // Adds a new recognizer to the arena. The new recognizer starts participating in the next
   // contest.
@@ -147,7 +150,9 @@ class GestureArena {
 
   // Dispatches a new pointer event to this arena. This event gets sent to all arena members which
   // are active at the moment.
-  void OnEvent(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event);
+  //
+  // Virtual for testing; overridden by a mock.
+  virtual void OnEvent(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event);
 
   // Tries to resolve the arena if it is not resolved already.
   // It follows two rules:
@@ -156,6 +161,13 @@ class GestureArena {
   // A resolved arena will continue to be so until the winner releases its |ContestMember|, which
   // resets the arena for a new contest.
   void TryToResolve();
+
+  // Get the state of the gesture arena.
+  //
+  // TODO(fxbug.dev/109939): gesture arena provides its state.
+  //
+  // Virtual for testing; overridden by a mock.
+  virtual State GetState();
 
  private:
   class ArenaContestMember;

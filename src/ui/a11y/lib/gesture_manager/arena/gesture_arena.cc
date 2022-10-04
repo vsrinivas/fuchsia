@@ -185,6 +185,11 @@ void GestureArena::TryToResolve() {
   }
 }
 
+GestureArena::State GestureArena::GetState() {
+  FX_DCHECK(false) << "not yet implemented";
+  return State::kInProgress;
+}
+
 void GestureArena::DispatchEvent(
     const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) {
   for (auto& member : arena_members_) {
