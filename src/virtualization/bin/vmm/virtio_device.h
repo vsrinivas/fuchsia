@@ -6,6 +6,7 @@
 #define SRC_VIRTUALIZATION_BIN_VMM_VIRTIO_DEVICE_H_
 
 #include <fidl/fuchsia.virtualization.hardware/cpp/fidl.h>
+#include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/trace-engine/types.h>
@@ -14,7 +15,6 @@
 #include <atomic>
 
 #include "src/lib/fsl/handles/object_info.h"
-#include "src/virtualization/bin/vmm/controller/realm_utils.h"
 #include "src/virtualization/bin/vmm/device/config.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue.h"
 #include "src/virtualization/bin/vmm/virtio_pci.h"
@@ -139,9 +139,41 @@ class VirtioComponentDevice {
       return status;
     }
 
-    // TODO(fxbug.dev/104989): Move this function entirely into the VirtioComponentDevice.
-    return ::CreateDynamicComponent(realm_, collection_name, component_name, component_url,
-                                    std::move(callback));
+    fuchsia::component::decl::Child child_decl;
+    child_decl.set_name(component_name)
+        .set_url(component_url)
+        .set_startup(fuchsia::component::decl::StartupMode::LAZY)
+        .set_on_terminate(fuchsia::component::decl::OnTerminate::NONE);
+
+    fuchsia::component::Realm_CreateChild_Result create_res;
+    status = realm_->CreateChild({.name = collection_name}, std::move(child_decl),
+                                 fuchsia::component::CreateChildArgs(), &create_res);
+
+    if (status != ZX_OK || create_res.is_err()) {
+      FX_PLOGS(ERROR, status) << "Failed to CreateDynamicChild. Realm_CreateChild_Result: "
+                              << static_cast<int64_t>(create_res.err());
+      if (status == ZX_OK) {
+        status = ZX_ERR_NOT_FOUND;
+      }
+      return status;
+    }
+
+    fuchsia::component::Realm_OpenExposedDir_Result open_res;
+    fidl::InterfaceHandle<fuchsia::io::Directory> exposed_dir;
+    status = realm_->OpenExposedDir({.name = component_name, .collection = collection_name},
+                                    exposed_dir.NewRequest(), &open_res);
+    if (status != ZX_OK || open_res.is_err()) {
+      FX_PLOGS(ERROR, status)
+          << "Failed to OpenExposedDir on dynamic child. Realm_OpenExposedDir_Result: "
+          << static_cast<int64_t>(open_res.err());
+      if (status == ZX_OK) {
+        status = ZX_ERR_NOT_FOUND;
+      }
+      return status;
+    }
+
+    auto child_services = std::make_shared<sys::ServiceDirectory>(std::move(exposed_dir));
+    return callback(std::move(child_services));
   }
 
   const PhysMem& phys_mem_;

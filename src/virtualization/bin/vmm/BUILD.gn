@@ -32,8 +32,6 @@ source_set("lib") {
   visibility = [ ":*" ]
 
   sources = [
-    "controller/realm_utils.cc",
-    "controller/realm_utils.h",
     "controller/virtio_balloon.cc",
     "controller/virtio_balloon.h",
     "controller/virtio_block.cc",
