@@ -31,15 +31,7 @@ constexpr uint32_t kSdFreqSetupHz = 400'000;
 
 constexpr int kMaxTuningCount = 40;
 
-constexpr uint32_t Hi32(zx_paddr_t val) { return static_cast<uint32_t>((val >> 32) & 0xffffffff); }
-constexpr uint32_t Lo32(zx_paddr_t val) { return val & 0xffffffff; }
-
-// for 2M max transfer size for fully discontiguous
-// also see SDMMC_PAGES_COUNT in fuchsia/hardware/sdmmc/c/banjo.h
-constexpr int kDmaDescCount = 512;
-
-// 64k max per descriptor
-static constexpr size_t kMaxDescriptorLength = 0x1'0000;  // 64k
+constexpr zx_paddr_t k32BitPhysAddrMask = 0xffff'ffff;
 
 constexpr zx::duration kResetTime = zx::sec(1);
 constexpr zx::duration kClockStabilizationTime = zx::msec(150);
@@ -335,18 +327,41 @@ int Sdhci::IrqThread() {
            InterruptSignalEnable::Get().ReadFrom(&regs_mmio_buffer_).reg_value());
 
     fbl::AutoLock lock(&mtx_);
-    if (irq.command_complete()) {
-      CmdStageCompleteLocked();
+    // cmd_req_ and/or data_req_ being set indicate that a non-scatter-gather request is pending,
+    // while pending_request_ being set indicates that a scatter-gather request is pending. It
+    // should not be possible for both conditions to be true, and both conditions being false is
+    // unexpected in cases other than card interrupts.
+    if (cmd_req_ || data_req_) {
+      ZX_ASSERT(!pending_request_.is_pending());
+
+      if (irq.command_complete()) {
+        CmdStageCompleteLocked();
+      }
+      if (irq.buffer_read_ready()) {
+        DataStageReadReadyLocked();
+      }
+      if (irq.buffer_write_ready()) {
+        DataStageWriteReadyLocked();
+      }
+      if (irq.transfer_complete()) {
+        TransferCompleteLocked();
+      }
+      if (irq.ErrorInterrupt()) {
+        if (zxlog_level_enabled(DEBUG)) {
+          if (irq.adma_error()) {
+            zxlogf(DEBUG, "sdhci: ADMA error 0x%x ADMAADDR0 0x%x ADMAADDR1 0x%x",
+                   AdmaErrorStatus::Get().ReadFrom(&regs_mmio_buffer_).reg_value(),
+                   AdmaSystemAddress::Get(0).ReadFrom(&regs_mmio_buffer_).reg_value(),
+                   AdmaSystemAddress::Get(1).ReadFrom(&regs_mmio_buffer_).reg_value());
+          }
+        }
+        ErrorRecoveryLocked();
+      }
+    } else if (pending_request_.is_pending()) {
+      ZX_ASSERT(!cmd_req_ && !data_req_);
+      SgHandleInterrupt(irq);
     }
-    if (irq.buffer_read_ready()) {
-      DataStageReadReadyLocked();
-    }
-    if (irq.buffer_write_ready()) {
-      DataStageWriteReadyLocked();
-    }
-    if (irq.transfer_complete()) {
-      TransferCompleteLocked();
-    }
+
     if (irq.card_interrupt() && interrupt_cb_.is_valid()) {
       // The only way to clear this interrupt at the controller is to disable the interrupt status.
       // If the client driver(s) don't service the interrupt via the callback then it may be
@@ -360,17 +375,6 @@ int Sdhci::IrqThread() {
           .WriteTo(&regs_mmio_buffer_);
 
       interrupt_cb_.Callback();
-    }
-    if (irq.ErrorInterrupt()) {
-      if (zxlog_level_enabled(DEBUG)) {
-        if (irq.adma_error()) {
-          zxlogf(DEBUG, "sdhci: ADMA error 0x%x ADMAADDR0 0x%x ADMAADDR1 0x%x",
-                 AdmaErrorStatus::Get().ReadFrom(&regs_mmio_buffer_).reg_value(),
-                 AdmaSystemAddress::Get(0).ReadFrom(&regs_mmio_buffer_).reg_value(),
-                 AdmaSystemAddress::Get(1).ReadFrom(&regs_mmio_buffer_).reg_value());
-        }
-      }
-      ErrorRecoveryLocked();
     }
   }
   return thrd_success;
@@ -900,19 +904,6 @@ zx_status_t Sdhci::SdmmcRegisterInBandInterrupt(const in_band_interrupt_protocol
   return ZX_OK;
 }
 
-zx_status_t Sdhci::SdmmcRegisterVmo(uint32_t vmo_id, uint8_t client_id, zx::vmo vmo,
-                                    uint64_t offset, uint64_t size, uint32_t vmo_rights) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t Sdhci::SdmmcUnregisterVmo(uint32_t vmo_id, uint8_t client_id, zx::vmo* out_vmo) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t Sdhci::SdmmcRequestNew(const sdmmc_req_new_t* req, uint32_t out_response[4]) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
 void Sdhci::DdkUnbind(ddk::UnbindTxn txn) {
   // stop irq thread
   irq_.destroy();
@@ -1014,6 +1005,11 @@ zx_status_t Sdhci::Init() {
       status = iobuf_.Init(bti_.get(), kDmaDescCount * sizeof(AdmaDescriptor64),
                            IO_BUFFER_RW | IO_BUFFER_CONTIG);
       host_control1.set_dma_select(HostControl1::kDmaSelect32BitAdma2);
+
+      if ((iobuf_.phys() & k32BitPhysAddrMask) != iobuf_.phys()) {
+        zxlogf(ERROR, "Got 64-bit physical address, only 32-bit DMA is supported");
+        return ZX_ERR_NOT_SUPPORTED;
+      }
     }
 
     if (status != ZX_OK) {
@@ -1116,7 +1112,9 @@ zx_status_t Sdhci::Create(void* ctx, zx_device_t* parent) {
   uint64_t dma_boundary_alignment = 0;
   uint64_t quirks = sdhci.GetQuirks(&dma_boundary_alignment);
 
-  if ((quirks & SDHCI_QUIRK_USE_DMA_BOUNDARY_ALIGNMENT) && dma_boundary_alignment == 0) {
+  if (!(quirks & SDHCI_QUIRK_USE_DMA_BOUNDARY_ALIGNMENT)) {
+    dma_boundary_alignment = 0;
+  } else if (dma_boundary_alignment == 0) {
     zxlogf(ERROR, "sdhci: DMA boundary alignment is zero");
     return ZX_ERR_OUT_OF_RANGE;
   }

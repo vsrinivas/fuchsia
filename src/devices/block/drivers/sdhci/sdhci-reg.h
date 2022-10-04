@@ -154,7 +154,7 @@ class InterruptStatus : public hwreg::RegisterBase<InterruptStatus, uint32_t> {
 
   auto& ClearAll() { return set_reg_value(0xffff'ffff); }
 
-  bool ErrorInterrupt() {
+  bool ErrorInterrupt() const {
     return tuning_error() || adma_error() || auto_cmd_error() || current_limit_error() ||
            data_end_bit_error() || data_crc_error() || data_timeout_error() ||
            command_index_error() || command_end_bit_error() || command_crc_error() ||

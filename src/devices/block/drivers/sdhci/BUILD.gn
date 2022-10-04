@@ -20,7 +20,10 @@ fuchsia_driver("sdhci-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  sources = [ "sdhci.cc" ]
+  sources = [
+    "sdhci-scatter-gather.cc",
+    "sdhci.cc",
+  ]
   deps = [
     ":sdhci-bind",
     "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",
@@ -30,6 +33,7 @@ fuchsia_driver("sdhci-driver") {
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
+    "//src/lib/vmo_store",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hwreg",
     "//zircon/system/ulib/sync",
@@ -49,6 +53,7 @@ test("sdhci-test-bin") {
   output_name = "sdhci-test"
   configs += [ "//build/config:all_source" ]
   sources = [
+    "sdhci-scatter-gather.cc",
     "sdhci-test.cc",
     "sdhci.cc",
   ]
@@ -63,6 +68,7 @@ test("sdhci-test-bin") {
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
+    "//src/lib/vmo_store",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hwreg",
     "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
