@@ -20,6 +20,6 @@ group("echo_test") {
   deps = [
     ":echo_test_legacy",
     ":echo_test_modern",
-    "//src/sys/test_manager/cmx_runner/tests:echo_legacy_server",
+    "//src/sys/lib/legacy_component/tests:echo_legacy_server",
   ]
 }

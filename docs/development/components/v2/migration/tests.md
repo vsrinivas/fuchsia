@@ -262,9 +262,7 @@ To migrate this test to the Test Runner Framework, do the following:
     ```
 
 1.  Ensure each component providing capabilities to this test has a CML manifest
-    file. If this manifest does not already exist, consider creating it at this
-    point. You can also temporarily wrap a legacy (CMX) provider component using
-    the `cmx_runner` in your migrated test.
+    file. If this manifest does not already exist, create it at this point.
 
     * {CML provider}
 
@@ -294,47 +292,6 @@ To migrate this test to the Test Runner Framework, do the following:
             ],
         }
         ```
-
-    * {CMX provider}
-
-        ```json5
-        // mock_font_resolver.cml (capability provider)
-        {
-            include: [
-                // Use `cmx_runner` to wrap the component.
-                "//src/sys/test_manager/cmx_runner/default.shard.cml",
-                "syslog/client.shard.cml",
-            ],
-            program: {
-                // wrap v1 component
-                legacy_url: "fuchsia-pkg://fuchsia.com/font_provider_test#meta/mock_font_resolver.cmx",
-            },
-            use: [
-                // if `mock_font_resolver.cmx` depends on some other protocol.
-                {
-                    protocol: [ "fuchsia.proto.SomeProtocol" ],
-                },
-            ],
-            // expose capability provided by mock component.
-            capabilities: [
-                {
-                    protocol: [ "fuchsia.pkg.FontResolver" ],
-                },
-            ],
-            expose: [
-                {
-                    protocol: "fuchsia.pkg.FontResolver",
-                    from: "self",
-                },
-            ],
-        }
-        ```
-
-        Note: Component manifests wrapping a legacy component can only `use`
-        protocol capabilities. The `.cmx` file of the legacy component defines
-        the remaining non-protocol capabilities (`isolated-tmp`, `/dev`, etc).
-        These capabilities will come directly from the system and can't be mocked
-        or forwarded from the test to legacy components.
 
     Note: The CML files for the capability providers can be distributed in the
     same package that contained the v1 test. Follow the same instructions in

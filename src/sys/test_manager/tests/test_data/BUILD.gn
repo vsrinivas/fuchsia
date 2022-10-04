@@ -253,6 +253,6 @@ group("test_data") {
     ":simple_system_realm_test",
     ":v2_test_runs_v1_component",
     "//examples/tests/rust:custom_artifact_user_cmp",
-    "//src/sys/test_manager/cmx_runner/tests:echo_legacy_server",
+    "//src/sys/lib/legacy_component/tests:echo_legacy_server",
   ]
 }

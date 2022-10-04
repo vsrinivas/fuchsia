@@ -25,7 +25,6 @@ rustc_library("legacy_component_lib") {
     ":*",
     "tests:*",
     "//src/lib/fuchsia-component-test/*",
-    "//src/sys/test_manager/cmx_runner:*",
   ]
 
   sources = [ "src/legacy_component.rs" ]

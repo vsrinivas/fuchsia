@@ -29,6 +29,14 @@ rustc_test("legacy_component_lib_tests_bin") {
   sources = [ "legacy_component_lib_tests.rs" ]
 }
 
+fuchsia_component("echo_legacy_server") {
+  testonly = true
+  component_name = "echo_server"
+  manifest = "meta/echo_server.cmx"
+  deps =
+      [ "//src/sys/component_manager/testing/echo_server:echo_server_testing" ]
+}
+
 fuchsia_test_component("legacy_component_lib_tests_cmp") {
   component_name = "legacy_component_lib_tests"
   manifest = "meta/legacy_component_lib_tests.cml"
@@ -37,7 +45,7 @@ fuchsia_test_component("legacy_component_lib_tests_cmp") {
 
 fuchsia_test_package("legacy_component_lib_tests") {
   test_components = [ ":legacy_component_lib_tests_cmp" ]
-  deps = [ "//src/sys/test_manager/cmx_runner/tests:echo_legacy_server" ]
+  deps = [ ":echo_legacy_server" ]
 }
 
 group("tests") {

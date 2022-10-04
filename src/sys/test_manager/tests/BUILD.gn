@@ -38,7 +38,6 @@ fuchsia_unittest_package("test_manager_test") {
     ":test_manager_test_bin",
     "test_data",
     "//src/sys/test_manager:test_manager_for_test_cmp",
-    "//src/sys/test_manager/cmx_runner",
   ]
 
   # There's expected error logs that happen during the test such as not resolving an instance when

@@ -100,7 +100,7 @@
         {
             // The test-env above is used by the hermetic test realm, which
             // should not be able to run CFv1 components, so the env does not
-            // provide the legacy_test_runner and cmx_runner. However, the
+            // provide the legacy_test_runner. However, the
             // other test realms need to be able to run CFv1 components, so
             // we intialize a legacy-test-env that provides these runners.
             name: "legacy-test-env",
@@ -166,10 +166,6 @@
                 {
                     runner: "legacy_test_runner",
                     from: "#legacy_test_runner",
-                },
-                {
-                    runner: "cmx_runner",
-                    from: "#cmx_runner",
                 },
                 {
                     runner: "stress_test_runner",

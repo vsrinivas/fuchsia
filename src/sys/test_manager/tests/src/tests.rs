@@ -298,31 +298,6 @@ async fn launch_and_test_echo_test() {
 }
 
 #[fuchsia::test]
-async fn launch_and_test_tests_with_legacy_components() {
-    let test_url = "fuchsia-pkg://fuchsia.com/cmx_runner_tests#meta/echo_proxy_test.cm";
-    let (events, logs) = run_single_test(test_url, default_run_option()).await.unwrap();
-
-    let expected_events = vec![
-        RunEvent::suite_started(),
-        RunEvent::case_found("test_echo"),
-        RunEvent::case_started("test_echo"),
-        RunEvent::case_stopped("test_echo", CaseStatus::Passed),
-        RunEvent::case_finished("test_echo"),
-        RunEvent::suite_stopped(SuiteStatus::Passed),
-    ];
-
-    // make sure we can collect logs from legacy component.
-    assert_eq!(
-        logs,
-        vec![
-            "proxy echo request: Some(\"Hello, world!\")".to_string(),
-            "echo proxy response 'Some(\"Hello, world!\")' sent successfully".to_string(),
-        ]
-    );
-    assert_eq!(&expected_events, &events);
-}
-
-#[fuchsia::test]
 async fn launch_and_test_no_on_finished() {
     let test_url =
         "fuchsia-pkg://fuchsia.com/example-tests#meta/no-onfinished-after-test-example.cm";
