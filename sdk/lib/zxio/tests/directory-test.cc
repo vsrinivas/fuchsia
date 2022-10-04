@@ -32,17 +32,16 @@ class TestDirectoryServer : public zxio_tests::TestDirectoryServerBase {
     constexpr fuchsia_io::wire::OpenFlags kExpectedFlags =
         fuchsia_io::wire::OpenFlags::kRightReadable | fuchsia_io::wire::OpenFlags::kDescribe;
     if (request->flags != kExpectedFlags) {
-      ADD_FAILURE() << "unexpected flags for Open request: " << std::showbase << std::showbase
-                    << std::hex << static_cast<uint32_t>(request->flags) << " vs " << std::showbase
-                    << std::showbase << std::hex << static_cast<uint32_t>(kExpectedFlags);
+      ADD_FAILURE() << "unexpected flags for Open request: " << std::showbase << std::hex
+                    << static_cast<uint32_t>(request->flags) << " vs " << std::showbase << std::hex
+                    << static_cast<uint32_t>(kExpectedFlags);
       completer.Close(ZX_ERR_INVALID_ARGS);
       return;
     }
     constexpr uint32_t kExpectedMode = 0u;
     if (request->mode != kExpectedMode) {
-      ADD_FAILURE() << "unexpected mode for Open request: " << std::showbase << std::showbase
-                    << std::hex << request->mode << " vs " << std::showbase << std::showbase
-                    << std::hex << kExpectedMode;
+      ADD_FAILURE() << "unexpected mode for Open request: " << std::showbase << std::hex
+                    << request->mode << " vs " << std::showbase << std::hex << kExpectedMode;
       completer.Close(ZX_ERR_INVALID_ARGS);
       return;
     }

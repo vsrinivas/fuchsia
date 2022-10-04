@@ -8,6 +8,8 @@
 #include <fidl/fuchsia.io/cpp/wire_test_base.h>
 #include <lib/fit/function.h>
 
+#include <zxtest/zxtest.h>
+
 namespace zxio_tests {
 
 // Implementation of a fuchsia_io::Node server that implements Close() and
