@@ -777,6 +777,33 @@ TEST(TranscoderMainStreamAttributeMiscTest, GetForTigerLakeTranscoder) {
   // The MMIO address is 0x63410.
 }
 
+TEST(TranscoderVariableRateRefreshControlTest, GetForTigerLakeTranscoder) {
+  // The register MMIO addresses come from the reference manual.
+  //
+  // Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 2 page 1406
+
+  auto transcoder_variable_rate_refresh_control_a =
+      tgl_registers::TranscoderVariableRateRefreshControl::GetForTigerLakeTranscoder(
+          tgl_registers::Trans::TRANS_A)
+          .FromValue(0);
+  EXPECT_EQ(0x60420u, transcoder_variable_rate_refresh_control_a.reg_addr());
+
+  auto transcoder_variable_rate_refresh_control_b =
+      tgl_registers::TranscoderVariableRateRefreshControl::GetForTigerLakeTranscoder(
+          tgl_registers::Trans::TRANS_B)
+          .FromValue(0);
+  EXPECT_EQ(0x61420u, transcoder_variable_rate_refresh_control_b.reg_addr());
+
+  auto transcoder_variable_rate_refresh_control_c =
+      tgl_registers::TranscoderVariableRateRefreshControl::GetForTigerLakeTranscoder(
+          tgl_registers::Trans::TRANS_C)
+          .FromValue(0);
+  EXPECT_EQ(0x62420u, transcoder_variable_rate_refresh_control_c.reg_addr());
+
+  // TODO(fxbug.dev/109278): Add a test for transcoder D, when we support it.
+  // The MMIO address is 0x63420.
+}
+
 TEST(TranscoderChickenTest, GetForKabyLakeDdi) {
   // The register MMIO addresses come from the Kaby Lake Workarounds description
   // at IHD-OS-KBL-Vol 16-1.17 page 30.

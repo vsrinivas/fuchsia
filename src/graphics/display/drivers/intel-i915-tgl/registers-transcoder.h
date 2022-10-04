@@ -926,6 +926,72 @@ class TranscoderMainStreamAttributeMisc
   }
 };
 
+// TRANS_VRR_CTL (VRR Control Register Transcoder)
+//
+// This register is not documented for Kaby Lake or Skylake. These display
+// engines do not support the VRR (Variable Refresh Rate) feature.
+//
+// Tiger Lake:  IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 2 pages 1406-1407
+class TranscoderVariableRateRefreshControl
+    : public hwreg::RegisterBase<TranscoderVariableRateRefreshControl, uint32_t> {
+ public:
+  // If true, VRR (Variable Rate Refresh) is enabled.
+  DEF_BIT(31, enabled);
+
+  // If true, hardware varies Vblank.
+  //
+  // If this field is true, Vblank (the Vertical Blank period) varies between
+  // the minimum set in the TRANS_VRR_VMIN register and the maximum set in the
+  // TRANS_VRR_VMAX register.
+  //
+  // If this field is false, the Vblank (Vertical Blank period) in the
+  // TRANS_VBLANK register is used.
+  DEF_BIT(30, vblank_max_shift_ignored);
+
+  // If true, the Flip Line feature is enabled.
+  //
+  // Changes to this field take effect at the next vertical blank.
+  //
+  // This field must be set to true before `enabled` is true. If this field is
+  // true, `vblank_max_shift_ignored` and `use_pipeline_full_line_count_delay`
+  // must also be true.
+  DEF_BIT(29, flip_line_enabled);
+
+  DEF_RSVDZ_FIELD(28, 11);
+
+  // Delay from frame start to Pipeline Full Line Count signal generation.
+  //
+  // When `use_pipeline_full_line_count_delay` is true, this field indicates the
+  // delay (in number of scanlines) from the start of Vblank (Vertical Blank)
+  // start until the Pipeline Full Line Count signal is triggered. This signal
+  // causes the start of Vactive (Vertical Active).
+  //
+  // This field must be set to VRR Vmin - Vblank start - 4.
+  DEF_FIELD(10, 3, pipeline_full_line_count_delay_from_frame_start);
+
+  DEF_RSVDZ_FIELD(2, 1);
+
+  // If true, Vertical Active starts at a programmed delay from frame start.
+  //
+  // If this field is false, Vactive (Vertical Active) starts when a
+  // hardware-generated Pipeline Full Line Count signal is triggered.
+  //
+  // If this field is true, `use_pipeline_full_line_count_delay` must be
+  // programmed correctly.
+  DEF_BIT(0, use_pipeline_full_line_count_delay);
+
+  static auto GetForTigerLakeTranscoder(Trans transcoder) {
+    ZX_ASSERT(transcoder >= Trans::TRANS_A);
+
+    // TODO(fxbug.dev/109278): Allow transcoder D, once we support it.
+    ZX_ASSERT(transcoder <= Trans::TRANS_C);
+
+    const int transcoder_index = transcoder - Trans::TRANS_A;
+    return hwreg::RegisterAddr<TranscoderVariableRateRefreshControl>(0x60420 +
+                                                                     0x1000 * transcoder_index);
+  }
+};
+
 // Per-transcoder chicken register.
 //
 // This register is not officially documented in any register listing. It is
@@ -1062,6 +1128,11 @@ class TranscoderRegs {
     // transcoders are the same.
     // TODO(fxbug.dev/109278): This won't be true once we support transcoder D.
     return TranscoderChicken::GetForKabyLakeTranscoder(transcoder_);
+  }
+
+  hwreg::RegisterAddr<TranscoderVariableRateRefreshControl> VariableRateRefreshControl() {
+    // We should only be using this code on Tiger Lake.
+    return TranscoderVariableRateRefreshControl::GetForTigerLakeTranscoder(transcoder_);
   }
 
   hwreg::RegisterAddr<TranscoderDataM> DataM() {

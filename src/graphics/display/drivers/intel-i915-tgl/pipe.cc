@@ -142,6 +142,17 @@ void Pipe::ResetTranscoder(tgl_registers::Trans transcoder, tgl_registers::Platf
     return;
   }
 
+  if (platform == tgl_registers::Platform::kTigerLake) {
+    auto transcoder_variable_rate_refresh_control =
+        transcoder_regs.VariableRateRefreshControl().ReadFrom(mmio_space);
+    zxlogf(TRACE, "ResetTranscoder() - Transcoder %d VRR register: %x", transcoder,
+           transcoder_variable_rate_refresh_control.reg_value());
+    if (transcoder_variable_rate_refresh_control.enabled()) {
+      zxlogf(INFO, "Disabling VRR (Variable Refresh Rate) for transcoder %d", transcoder);
+      transcoder_variable_rate_refresh_control.set_enabled(false).WriteTo(mmio_space);
+    }
+  }
+
   // Disable transcoder DDI select and clock select.
   auto transcoder_ddi_control = transcoder_regs.DdiControl().ReadFrom(mmio_space);
 
