@@ -211,3 +211,7 @@ protocol Codec {
         plug_state PlugState;
     });
 };
+
+service CodecService {
+    codec client_end:Codec;
+};

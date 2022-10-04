@@ -271,3 +271,7 @@ protocol StreamConfig {
         plug_state PlugState;
     });
 };
+
+service StreamConfigService {
+    stream_config client_end:StreamConfig;
+};

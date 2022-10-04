@@ -71,3 +71,7 @@ protocol Dai {
         ring_buffer server_end:RingBuffer;
     });
 };
+
+service DaiService {
+    dai client_end:Dai;
+};
