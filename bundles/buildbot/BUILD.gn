@@ -131,6 +131,12 @@ group("workstation") {
   deps += [ ":workstation_host_tests" ]
 }
 
+# This group contains tests to run on workstation_eng_paused product.
+group("workstation_eng_paused_tests") {
+  testonly = true
+  deps = [ "//src/testing/system-validation:tests" ]
+}
+
 # This group contains tests that can only run with the enable_suspend flag set.
 group("host_suspend_tests_e2e") {
   testonly = true
