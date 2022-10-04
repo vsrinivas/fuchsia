@@ -24,10 +24,12 @@ mod stream;
 #[cfg(test)]
 mod test;
 
+mod connection;
 pub mod multi_stream;
 
 use protocol::{EncodableString, Identify, NodeState};
 
+pub use connection::{Connection, ConnectionNode};
 pub use error::{Error, Result};
 pub use protocol::Quality;
 

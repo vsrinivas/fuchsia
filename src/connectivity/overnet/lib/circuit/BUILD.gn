@@ -9,6 +9,7 @@ rustc_library("circuit") {
   edition = "2021"
   with_unit_tests = true
   sources = [
+    "src/connection.rs",
     "src/error.rs",
     "src/lib.rs",
     "src/multi_stream.rs",
@@ -20,7 +21,9 @@ rustc_library("circuit") {
     "//src/connectivity/overnet/lib/quic",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:rand",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:tracing",
     "//third_party/rust_crates/mirrors/quiche/quiche",
   ]
   test_deps = [ "//src/lib/fuchsia" ]
