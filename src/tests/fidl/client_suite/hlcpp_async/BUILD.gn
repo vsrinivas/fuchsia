@@ -1,0 +1,41 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+executable("bin") {
+  output_name = "client_suite_under_test_hlcpp_async"
+  sources = [ "main.cc" ]
+  deps = [
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/tests/fidl/client_suite/fidl:fidl.clientsuite_hlcpp",
+    "//src/tests/fidl/client_suite/hlcpp_util:hlcpp_util",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_component("hlcpp_async_client") {
+  component_name = "client"
+  manifest = "meta/client.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_component("harness_hlcpp_async") {
+  testonly = true
+  component_name = "harness"
+  manifest = "meta/harness_hlcpp_async.cml"
+  deps = [ "//src/tests/fidl/client_suite/harness:bin" ]
+}
+
+fuchsia_test_package("fidl-client-suite-hlcpp-async-test") {
+  test_components = [ ":harness_hlcpp_async" ]
+  deps = [ ":hlcpp_async_client" ]
+}
+
+group("hlcpp_async") {
+  testonly = true
+  deps = [ ":fidl-client-suite-hlcpp-async-test" ]
+}

@@ -20,6 +20,9 @@ fidl::clientsuite::FidlErrorKind ClassifyError(zx_status_t status) {
       return fidl::clientsuite::FidlErrorKind::CHANNEL_PEER_CLOSED;
     case ZX_ERR_INVALID_ARGS:
       return fidl::clientsuite::FidlErrorKind::DECODING_ERROR;
+    case ZX_ERR_NOT_SUPPORTED:
+    case ZX_ERR_NOT_FOUND:
+      return fidl::clientsuite::FidlErrorKind::UNEXPECTED_MESSAGE;
     default:
       return fidl::clientsuite::FidlErrorKind::OTHER_ERROR;
   }
