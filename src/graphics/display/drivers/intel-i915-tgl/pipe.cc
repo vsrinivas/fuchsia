@@ -112,6 +112,10 @@ void Pipe::ResetTranscoder(tgl_registers::Trans transcoder, tgl_registers::Platf
   // caution on Kaby Lake and Skylake display engines as well.
   if (transcoder_config.enabled()) {
     transcoder_config.set_enabled_target(false).WriteTo(mmio_space);
+  } else {
+    zxlogf(TRACE, "ResetTranscoder() skipping already-disabled control for transcoder %d",
+           transcoder);
+    zxlogf(TRACE, "Transcoder %d control register: %x", transcoder, transcoder_config.reg_value());
   }
 
   if (platform == tgl_registers::Platform::kTigerLake) {
@@ -156,11 +160,25 @@ void Pipe::ResetTranscoder(tgl_registers::Trans transcoder, tgl_registers::Platf
   // Disable transcoder DDI select and clock select.
   auto transcoder_ddi_control = transcoder_regs.DdiControl().ReadFrom(mmio_space);
 
-  // `set_ddi_tiger_lake()` works on both Tiger Lake and Skylake / Kaby Lake
-  // when passed std::nullopt, because nullopt translates to zeroing out all the
-  // field's bits, and on Kaby Lake the highest bit of "ddi_tiger_lake" is
-  // reserved to be zero, so it is safe to set the whole field to zero.
-  transcoder_ddi_control.set_enabled(false).set_ddi_tiger_lake(std::nullopt).WriteTo(mmio_space);
+  // Our experiments on Dell 5420 with Tiger Lake CPU indicate that the display
+  // engine may crash the whole system if the driver sets `enabled` to false and
+  // writes the transcoder DDI functionality configuration register when the DDI
+  // functionality is already disabled. We avoid crashing the system by only
+  // writing the register when the transcoder is currently enabled. To be on the
+  // safe side, we use the same caution on Kaby Lake and Skylake display engines
+  // as well.
+  if (transcoder_ddi_control.enabled()) {
+    // `set_ddi_tiger_lake()` works on both Tiger Lake and Skylake / Kaby Lake
+    // when passed std::nullopt, because nullopt translates to zeroing out all the
+    // field's bits, and on Kaby Lake the highest bit of "ddi_tiger_lake" is
+    // reserved to be zero, so it is safe to set the whole field to zero.
+    transcoder_ddi_control.set_enabled(false).set_ddi_tiger_lake(std::nullopt).WriteTo(mmio_space);
+  } else {
+    zxlogf(TRACE, "ResetTranscoder() skipping already-disabled DDI functionality for transcoder %d",
+           transcoder);
+    zxlogf(TRACE, "Transcoder %d DDI functionality control register: %x", transcoder,
+           transcoder_ddi_control.reg_value());
+  }
 
   if (transcoder != tgl_registers::TRANS_EDP) {
     auto transcoder_clock_select = transcoder_regs.ClockSelect().ReadFrom(mmio_space);
