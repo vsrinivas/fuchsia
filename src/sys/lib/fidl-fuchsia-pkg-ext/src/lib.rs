@@ -29,3 +29,6 @@ pub mod cache;
 
 mod serve_fidl_iterator;
 pub use serve_fidl_iterator::{serve_fidl_iterator_from_slice, serve_fidl_iterator_from_stream};
+
+mod fidl_iterator_to_stream;
+pub use fidl_iterator_to_stream::fidl_iterator_to_stream;

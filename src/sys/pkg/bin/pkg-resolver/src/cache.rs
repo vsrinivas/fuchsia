@@ -154,7 +154,8 @@ pub async fn cache_package<'a>(
             .expect("processor exists")
             .map_err(|e| CacheError::FetchMetaFar(e, merkle))?;
 
-        let missing_blobs = get.get_missing_blobs().await?;
+        // TODO(fxbug.dev/110674) Handle this concurrently with fetching the missing blobs.
+        let missing_blobs = get.get_missing_blobs().try_concat().await?;
 
         // Fetch the missing content blobs with some amount of concurrency.
         fx_log_info!(
@@ -373,9 +374,7 @@ impl ToResolveError for pkg::cache::OpenBlobError {
 
 impl ToResolveError for pkg::cache::ListMissingBlobsError {
     fn to_resolve_error(&self) -> pkg::ResolveError {
-        match self {
-            pkg::cache::ListMissingBlobsError(_) => pkg::ResolveError::Internal,
-        }
+        pkg::ResolveError::Internal
     }
 }
 

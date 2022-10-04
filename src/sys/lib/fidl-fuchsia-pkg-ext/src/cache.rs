@@ -6,36 +6,32 @@
 
 //! Wrapper types for [`fidl_fuchsia_pkg::PackageCacheProxy`] and its related protocols.
 
-use crate::types::{BlobId, BlobInfo};
-use fidl::client::QueryResponseFut;
-use fidl_fuchsia_io as fio;
-use fidl_fuchsia_pkg::{
-    BlobInfoIteratorMarker, BlobInfoIteratorProxy, NeededBlobsMarker, NeededBlobsProxy,
-    PackageCacheProxy,
+use {
+    crate::types::{BlobId, BlobInfo},
+    fidl_fuchsia_io as fio, fidl_fuchsia_pkg as fpkg,
+    fuchsia_pkg::PackageDirectory,
+    fuchsia_zircon_status::Status,
+    futures::prelude::*,
+    std::sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
 };
-use fuchsia_pkg::PackageDirectory;
-use fuchsia_zircon_status::Status;
-use futures::prelude::*;
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
-use thiserror::Error;
 
 /// An open connection to a provider of the `fuchsia.pkg.PackageCache`.
 #[derive(Debug, Clone)]
 pub struct Client {
-    proxy: PackageCacheProxy,
+    proxy: fpkg::PackageCacheProxy,
 }
 
 impl Client {
     /// Constructs a client from the given proxy.
-    pub fn from_proxy(proxy: PackageCacheProxy) -> Self {
+    pub fn from_proxy(proxy: fpkg::PackageCacheProxy) -> Self {
         Self { proxy }
     }
 
     /// Returns a reference to the underlying PackageCacheProxy connection.
-    pub fn proxy(&self) -> &PackageCacheProxy {
+    pub fn proxy(&self) -> &fpkg::PackageCacheProxy {
         &self.proxy
     }
 
@@ -58,7 +54,7 @@ impl Client {
     /// using the returned [`Get`] type if needed.
     pub fn get(&self, meta_far_blob: BlobInfo) -> Result<Get, fidl::Error> {
         let (needed_blobs, needed_blobs_server_end) =
-            fidl::endpoints::create_proxy::<NeededBlobsMarker>()?;
+            fidl::endpoints::create_proxy::<fpkg::NeededBlobsMarker>()?;
         let (pkg_dir, pkg_dir_server_end) = PackageDirectory::create_request()?;
 
         let get_fut = self.proxy.get(
@@ -83,11 +79,16 @@ impl Client {
         if let Some(_) = get.open_meta_blob().await.map_err(GetAlreadyCachedError::OpenMetaBlob)? {
             return Err(GetAlreadyCachedError::MissingMetaFar);
         }
-        let missing_blobs =
-            get.get_missing_blobs().await.map_err(GetAlreadyCachedError::GetMissingBlobs)?;
-        if !missing_blobs.is_empty() {
+
+        if let Some(missing_blobs) = get
+            .get_missing_blobs()
+            .try_next()
+            .await
+            .map_err(GetAlreadyCachedError::GetMissingBlobs)?
+        {
             return Err(GetAlreadyCachedError::MissingContentBlobs(missing_blobs));
         }
+
         get.finish().await.map_err(GetAlreadyCachedError::FinishGet)
     }
 }
@@ -132,7 +133,7 @@ impl SharedBoolEvent {
 }
 
 async fn open_blob(
-    needed_blobs: &NeededBlobsProxy,
+    needed_blobs: &fpkg::NeededBlobsProxy,
     kind: OpenKind,
     pkg_present: Option<&SharedBoolEvent>,
 ) -> Result<Option<NeededBlob>, OpenBlobError> {
@@ -171,7 +172,7 @@ enum OpenKind {
 /// A deferred call to [`Get::open_meta_blob`] or [`Get::open_blob`].
 #[derive(Debug)]
 pub struct DeferredOpenBlob {
-    needed_blobs: NeededBlobsProxy,
+    needed_blobs: fpkg::NeededBlobsProxy,
     kind: OpenKind,
     pkg_present: Option<SharedBoolEvent>,
 }
@@ -203,8 +204,8 @@ impl std::cmp::Eq for DeferredOpenBlob {}
 /// 4. finish() to complete the Get() request.
 #[derive(Debug)]
 pub struct Get {
-    get_fut: QueryResponseFut<Result<(), i32>>,
-    needed_blobs: NeededBlobsProxy,
+    get_fut: fidl::client::QueryResponseFut<Result<(), i32>>,
+    needed_blobs: fpkg::NeededBlobsProxy,
     pkg_dir: PackageDirectory,
     pkg_present: SharedBoolEvent,
 }
@@ -226,13 +227,15 @@ impl Get {
         open_blob(&self.needed_blobs, OpenKind::Meta, Some(&self.pkg_present)).await
     }
 
-    fn start_get_missing_blobs(&mut self) -> Result<Option<BlobInfoIteratorProxy>, fidl::Error> {
+    fn start_get_missing_blobs(
+        &mut self,
+    ) -> Result<Option<fpkg::BlobInfoIteratorProxy>, fidl::Error> {
         if self.pkg_present.get() {
             return Ok(None);
         }
 
         let (blob_iterator, blob_iterator_server_end) =
-            fidl::endpoints::create_proxy::<BlobInfoIteratorMarker>()?;
+            fidl::endpoints::create_proxy::<fpkg::BlobInfoIteratorMarker>()?;
 
         match self.needed_blobs.get_missing_blobs(blob_iterator_server_end) {
             Ok(()) => Ok(Some(blob_iterator)),
@@ -243,27 +246,25 @@ impl Get {
 
     /// Determines the set of blobs that the caller must open/write to complete this `Get()`
     /// operation.
+    /// The returned stream will never yield an empty `Vec`.
+    /// Callers should process the missing blobs (via `make_open_blob` or `open_blob`) concurrently
+    /// with reading the stream to guarantee stream termination.
     pub fn get_missing_blobs(
         &mut self,
-    ) -> impl Future<Output = Result<Vec<BlobInfo>, ListMissingBlobsError>> {
-        let res = self.start_get_missing_blobs();
-
-        async move {
-            let blob_iterator = match res? {
-                Some(blob_iterator) => blob_iterator,
-                None => return Ok(vec![]),
-            };
-
-            let mut res = vec![];
-            loop {
-                let chunk = blob_iterator.next().await?;
-                if chunk.is_empty() {
-                    break;
-                }
-                res.extend(chunk.into_iter().map(BlobInfo::from));
+    ) -> impl Stream<Item = Result<Vec<BlobInfo>, ListMissingBlobsError>> {
+        match self.start_get_missing_blobs() {
+            Ok(option_iter) => match option_iter {
+                Some(iterator) => crate::fidl_iterator_to_stream(iterator)
+                    .map_ok(|v| v.into_iter().map(BlobInfo::from).collect())
+                    .map_err(ListMissingBlobsError::CallNextOnBlobIterator)
+                    .left_stream(),
+                None => futures::stream::empty().right_stream(),
             }
-
-            Ok(res)
+            .left_stream(),
+            Err(e) => {
+                futures::stream::iter(Some(Err(ListMissingBlobsError::CallGetMissingBlobs(e))))
+                    .right_stream()
+            }
         }
     }
 
@@ -489,7 +490,7 @@ impl Blob<NeedsData> {
 }
 
 /// An error encountered while opening a package.
-#[derive(Debug, Error)]
+#[derive(Debug, thiserror::Error)]
 #[allow(missing_docs)]
 pub enum OpenError {
     #[error("the package does not exist")]
@@ -502,7 +503,7 @@ pub enum OpenError {
     Fidl(#[from] fidl::Error),
 }
 /// An error encountered while caching a package.
-#[derive(Debug, Error)]
+#[derive(Debug, thiserror::Error)]
 #[allow(missing_docs)]
 pub enum GetError {
     #[error("Get() responded with an unexpected status")]
@@ -513,7 +514,7 @@ pub enum GetError {
 }
 
 /// An error encountered while opening a metadata or content blob for write.
-#[derive(Debug, Error)]
+#[derive(Debug, thiserror::Error)]
 #[allow(missing_docs)]
 pub enum OpenBlobError {
     #[error("there is insufficient storage space available to persist this blob")]
@@ -544,12 +545,18 @@ impl From<fidl_fuchsia_pkg::OpenBlobError> for OpenBlobError {
 }
 
 /// An error encountered while enumerating missing content blobs.
-#[derive(Debug, Error)]
-#[error("while listing missing content blobs")]
-pub struct ListMissingBlobsError(#[from] pub fidl::Error);
+#[derive(Debug, thiserror::Error)]
+#[allow(missing_docs)]
+pub enum ListMissingBlobsError {
+    #[error("while obtaining the missing blobs fidl iterator")]
+    CallGetMissingBlobs(#[source] fidl::Error),
+
+    #[error("while obtaining the next chunk of blobs from the fidl iterator")]
+    CallNextOnBlobIterator(#[source] fidl::Error),
+}
 
 /// An error encountered while truncating a blob
-#[derive(Debug, Error)]
+#[derive(Debug, thiserror::Error)]
 #[allow(missing_docs)]
 pub enum TruncateBlobError {
     #[error("insufficient storage space is available")]
@@ -563,7 +570,7 @@ pub enum TruncateBlobError {
 }
 
 /// An error encountered while writing a blob.
-#[derive(Debug, Error)]
+#[derive(Debug, thiserror::Error)]
 #[allow(missing_docs)]
 pub enum WriteBlobError {
     #[error("file endpoint reported it wrote more bytes than were actually provided to the file endpoint")]
@@ -746,6 +753,48 @@ mod tests {
             self
         }
 
+        async fn expect_get_missing_blobs_client_closes_channel(
+            mut self,
+            response_chunks: Vec<Vec<BlobInfo>>,
+        ) -> Self {
+            match self.stream.next().await {
+                Some(Ok(NeededBlobsRequest::GetMissingBlobs { iterator, control_handle: _ })) => {
+                    let mut stream = iterator.into_stream().unwrap();
+
+                    // Respond to each next request with the next chunk.
+                    for chunk in response_chunks {
+                        let mut chunk = chunk
+                            .into_iter()
+                            .map(fidl_fuchsia_pkg::BlobInfo::from)
+                            .collect::<Vec<_>>();
+
+                        let BlobInfoIteratorRequest::Next { responder } =
+                            stream.next().await.unwrap().unwrap();
+                        responder.send(&mut chunk.iter_mut()).unwrap();
+                    }
+
+                    // The client closes the channel before we can respond with an empty chunk.
+                    assert_matches!(stream.next().await, None);
+                }
+                r => panic!("Unexpected request: {:?}", r),
+            }
+            self
+        }
+
+        async fn expect_get_missing_blobs_inject_iterator_error(mut self) -> Self {
+            match self.stream.next().await {
+                Some(Ok(NeededBlobsRequest::GetMissingBlobs { iterator, control_handle: _ })) => {
+                    iterator
+                        .into_stream_and_control_handle()
+                        .unwrap()
+                        .1
+                        .shutdown_with_epitaph(Status::ADDRESS_IN_USE);
+                }
+                r => panic!("Unexpected request: {:?}", r),
+            }
+            self
+        }
+
         #[cfg(target_os = "fuchsia")]
         async fn expect_abort(mut self) -> Self {
             match self.stream.next().await {
@@ -836,7 +885,7 @@ mod tests {
                 let mut get = client.get(blob_info(2)).unwrap();
 
                 assert_matches!(get.open_meta_blob().await.unwrap(), None);
-                assert_eq!(get.get_missing_blobs().await.unwrap(), vec![]);
+                assert_eq!(get.get_missing_blobs().try_concat().await.unwrap(), vec![]);
                 let pkg_dir = get.finish().await.unwrap();
 
                 assert_matches!(
@@ -872,9 +921,9 @@ mod tests {
                 // ensure sending the request doesn't fail, then unblock closing the channel, then
                 // ensure the get_missing_blobs call detects the closed iterator as success instead
                 // of a PEER_CLOSED error.
-                let missing_blobs_fut = get.get_missing_blobs();
+                let missing_blobs_stream = get.get_missing_blobs();
                 drop(send);
-                assert_eq!(missing_blobs_fut.await.unwrap(), vec![]);
+                assert_eq!(missing_blobs_stream.try_concat().await.unwrap(), vec![]);
                 let pkg_dir = get.finish().await.unwrap();
 
                 assert_matches!(
@@ -967,7 +1016,7 @@ mod tests {
         let (mut get, pending_get) = PendingGet::new().await;
         let _ = pending_get.finish();
 
-        assert_eq!(get.get_missing_blobs().await.unwrap(), vec![]);
+        assert_eq!(get.get_missing_blobs().try_concat().await.unwrap(), vec![]);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -985,12 +1034,43 @@ mod tests {
             },
             async {
                 assert_eq!(
-                    get.get_missing_blobs().await.unwrap(),
+                    get.get_missing_blobs().try_concat().await.unwrap(),
                     vec![blob_info(1), blob_info(2), blob_info(3)]
                 );
             },
         )
         .await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn needed_blobs_get_missing_blobs_fail_to_obtain_iterator() {
+        let (mut get, pending_get) = PendingGet::new().await;
+        drop(pending_get);
+
+        assert_matches!(
+            get.get_missing_blobs().try_concat().await,
+            Err(ListMissingBlobsError::CallGetMissingBlobs(
+                fidl::Error::ClientChannelClosed{status, ..})
+            )
+                if status == Status::PEER_CLOSED
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn needed_blobs_get_missing_blobs_iterator_contains_error() {
+        let (mut get, pending_get) = PendingGet::new().await;
+
+        let (_, ()) =
+            future::join(pending_get.expect_get_missing_blobs_inject_iterator_error(), async {
+                assert_matches!(
+                    get.get_missing_blobs().try_concat().await,
+                    Err(ListMissingBlobsError::CallNextOnBlobIterator(
+                        fidl::Error::ClientChannelClosed{status, ..}
+                    ))
+                        if status == Status::ADDRESS_IN_USE
+                );
+            })
+            .await;
     }
 
     #[cfg(target_os = "fuchsia")]
@@ -1297,7 +1377,7 @@ mod tests {
                     .await
                     .expect_open_meta_blob(Ok(false))
                     .await
-                    .expect_get_missing_blobs(vec![vec![BlobInfo {
+                    .expect_get_missing_blobs_client_closes_channel(vec![vec![BlobInfo {
                         blob_id: [0; 32].into(),
                         length: 0,
                     }]])
@@ -1306,7 +1386,11 @@ mod tests {
             async move {
                 assert_matches!(
                     client.get_already_cached(blob_info(2)).await,
-                    Err(GetAlreadyCachedError::MissingContentBlobs(_))
+                    Err(GetAlreadyCachedError::MissingContentBlobs(v))
+                        if v == vec![BlobInfo {
+                            blob_id: [0; 32].into(),
+                            length: 0,
+                        }]
                 );
             },
         )

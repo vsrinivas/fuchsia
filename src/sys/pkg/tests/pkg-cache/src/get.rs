@@ -245,7 +245,7 @@ async fn handles_partially_written_pkg() {
         let mut get = pkg_cache.get(meta_blob_info.into()).unwrap();
 
         assert_matches!(get.open_meta_blob().await.unwrap(), None);
-        let missing = get.get_missing_blobs().await.unwrap();
+        let missing = get.get_missing_blobs().try_concat().await.unwrap();
         assert_eq!(
             missing,
             vec![fidl_fuchsia_pkg_ext::BlobInfo { blob_id: hash.into(), length: 0 }]

@@ -57,6 +57,7 @@ rustc_library("fidl-fuchsia-pkg-ext") {
     "src/base_package_index.rs",
     "src/cache.rs",
     "src/errors.rs",
+    "src/fidl_iterator_to_stream.rs",
     "src/lib.rs",
     "src/measure.rs",
     "src/repo.rs",
