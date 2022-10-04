@@ -9,9 +9,6 @@ source_set("pager-writeback") {
   sources = [ "pager-writeback.cc" ]
   deps = [
     "//src/zircon/testing/maybe-standalone-test",
-    "//zircon/system/ulib/elf-search",
-    "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
     "//zircon/system/utest/core/pager:userpager",

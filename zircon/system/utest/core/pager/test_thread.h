@@ -33,7 +33,10 @@ class TestThread {
   // Block until the test thread crashes due to an access to |crash_addr|. The exception report's
   // |synth_code| field should be set to |error_status|.
   bool WaitForCrash(uintptr_t crash_addr, zx_status_t error_status);
-  // Block until the test thread is blocked.
+  // Block until the test thread is blocked against a pager.
+  // NOTE: It is only valid to call this in an environment where there is no interference from an
+  // external pager. More specifically, if the test is meant to be run as a component, the caller
+  // cannot rely on a true return value since the thread might be blocked against a system pager.
   bool WaitForBlocked();
   // Block until the thread terminates.
   bool WaitForTerm() {

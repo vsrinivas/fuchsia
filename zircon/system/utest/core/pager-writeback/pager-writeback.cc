@@ -528,6 +528,17 @@ TEST(PagerWriteback, NoDirtyRequestsForClones) {
 
 // Tests that writes for overlapping ranges generate the expected DIRTY requests.
 TEST(PagerWriteback, DirtyRequestsOverlap) {
+  // This test cannot run as a component due to its usage of WaitForBlocked() which will return true
+  // if the test thread is blocked on pagers outside of the test. WaitForBlocked() can only be
+  // relied upon in a non-component environment. The pager-writeback tests cannot run as standalone
+  // bootfs tests either because they need the next vDSO. Hence the only supported mode for this
+  // test is unified mode, where the root resource will be available.
+  zx::unowned_resource root_resource = maybe_standalone::GetRootResource();
+  if (!root_resource->is_valid()) {
+    printf("Root resource not available, skipping\n");
+    return;
+  }
+
   UserPager pager;
   ASSERT_TRUE(pager.Init());
 
@@ -1517,6 +1528,17 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(SimpleWriteback, 0) {
 
 // Tests that a write after WRITEBACK_BEGIN but before WRITEBACK_END is handled correctly.
 TEST(PagerWriteback, DirtyDuringWriteback) {
+  // This test cannot run as a component due to its usage of WaitForBlocked() which will return true
+  // if the test thread is blocked on pagers outside of the test. WaitForBlocked() can only be
+  // relied upon in a non-component environment. The pager-writeback tests cannot run as standalone
+  // bootfs tests either because they need the next vDSO. Hence the only supported mode for this
+  // test is unified mode, where the root resource will be available.
+  zx::unowned_resource root_resource = maybe_standalone::GetRootResource();
+  if (!root_resource->is_valid()) {
+    printf("Root resource not available, skipping\n");
+    return;
+  }
+
   UserPager pager;
   ASSERT_TRUE(pager.Init());
 
@@ -2074,6 +2096,17 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ResizeSupplyZero, ZX_VMO_RESIZABLE) {
 // Tests that writing to the newly extended range after a resize can generate DIRTY requests as
 // expected.
 TEST(PagerWriteback, ResizeDirtyRequest) {
+  // This test cannot run as a component due to its usage of WaitForBlocked() which will return true
+  // if the test thread is blocked on pagers outside of the test. WaitForBlocked() can only be
+  // relied upon in a non-component environment. The pager-writeback tests cannot run as standalone
+  // bootfs tests either because they need the next vDSO. Hence the only supported mode for this
+  // test is unified mode, where the root resource will be available.
+  zx::unowned_resource root_resource = maybe_standalone::GetRootResource();
+  if (!root_resource->is_valid()) {
+    printf("Root resource not available, skipping\n");
+    return;
+  }
+
   UserPager pager;
   ASSERT_TRUE(pager.Init());
 
