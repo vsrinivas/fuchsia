@@ -84,8 +84,9 @@ class ZirconPlatformConnection : public fidl::WireServer<fuchsia_gpu_magma::Prim
 
   ZirconPlatformConnection(std::unique_ptr<Delegate> delegate, msd_client_id_t client_id,
                            zx::channel server_notification_endpoint,
-                           std::shared_ptr<magma::PlatformEvent> shutdown_event)
-      : magma::PlatformConnection(shutdown_event, client_id),
+                           std::shared_ptr<magma::PlatformEvent> shutdown_event,
+                           std::unique_ptr<magma::PlatformHandle> thread_profile)
+      : magma::PlatformConnection(shutdown_event, client_id, std::move(thread_profile)),
         delegate_(std::move(delegate)),
         server_notification_endpoint_(std::move(server_notification_endpoint)),
         async_loop_(&kAsyncLoopConfigNeverAttachToThread),

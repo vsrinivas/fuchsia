@@ -84,7 +84,6 @@ entry_deps = [
   ":dependency_injection_device",
   ":performance_counter_device",
   ":status",
-  ":thread_profile",
   "..:logger",
   "..:trace",
   "..:trace_provider",
@@ -193,7 +192,6 @@ source_set("connection") {
   public_deps = [
     ":event",
     ":status",
-    ":thread_profile",
     "$magma_build_root/include:msd",
     "$magma_build_root/src/magma_util:macros",
     "..:connection_header",
@@ -260,18 +258,6 @@ source_set("thread") {
     ":handle",
     "..:object",
     "..:thread_header",
-  ]
-}
-
-source_set("thread_profile") {
-  configs += [ "..:platform_include_config" ]
-
-  sources = [ "zircon_platform_thread_profile.cc" ]
-
-  deps = [
-    "$magma_build_root/src/magma_util:macros",
-    "..:thread_header",
-    "//src/lib/ddk",
   ]
 }
 

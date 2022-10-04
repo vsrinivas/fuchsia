@@ -30,25 +30,25 @@ class MagmaSystemSemaphore;
 
 class MagmaSystemDevice {
  public:
-  static std::unique_ptr<MagmaSystemDevice> Create(msd_device_unique_ptr_t msd_device,
-                                                   void* device_handle) {
-    return std::make_unique<MagmaSystemDevice>(std::move(msd_device), device_handle);
+  static std::unique_ptr<MagmaSystemDevice> Create(msd_device_unique_ptr_t msd_device) {
+    return std::make_unique<MagmaSystemDevice>(std::move(msd_device));
   }
 
-  MagmaSystemDevice(msd_device_unique_ptr_t msd_dev, void* device_handle)
-      : msd_dev_(std::move(msd_dev)), device_handle_(device_handle) {
+  MagmaSystemDevice(msd_device_unique_ptr_t msd_dev) : msd_dev_(std::move(msd_dev)) {
     connection_map_ = std::make_unique<std::unordered_map<std::thread::id, Connection>>();
   }
 
   // Opens a connection to the device. On success, returns the connection handle
-  // to be passed to the client.
+  // to be passed to the client. A scheduler profile may be passed to
+  // |thread_profile| to apply to the connection handler or nullptr to use the
+  // default profile.
   static std::shared_ptr<magma::PlatformConnection> Open(
-      std::shared_ptr<MagmaSystemDevice> device, msd_client_id_t client_id,
+      std::shared_ptr<MagmaSystemDevice>, msd_client_id_t client_id,
+      std::unique_ptr<magma::PlatformHandle> thread_profile,
       std::unique_ptr<magma::PlatformHandle> server_endpoint,
       std::unique_ptr<magma::PlatformHandle> server_notification_endpoint);
 
   msd_device_t* msd_dev() { return msd_dev_.get(); }
-  void* device_handle() const { return device_handle_; }
 
   // Returns the device id. 0 is invalid.
   uint32_t GetDeviceId();
@@ -77,7 +77,6 @@ class MagmaSystemDevice {
 
  private:
   msd_device_unique_ptr_t msd_dev_;
-  void* device_handle_;
   uint64_t perf_count_access_token_id_ = 0u;
 
   struct Connection {

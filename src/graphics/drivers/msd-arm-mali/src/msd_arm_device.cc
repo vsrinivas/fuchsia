@@ -253,6 +253,13 @@ bool MsdArmDevice::Init(std::unique_ptr<magma::PlatformDevice> platform_device,
   scheduler_ = std::make_unique<JobScheduler>(this, 3);
   address_manager_ = std::make_unique<AddressManager>(this, gpu_features_.address_space_count);
 
+  default_profile_ = platform_device_->GetSchedulerProfile(magma::PlatformDevice::kPriorityDefault,
+                                                           "msd-arm-mali/default-thread-priority");
+
+  if (!default_profile_) {
+    return DRETF(0, "Failed to get normal priority");
+  }
+
   if (!InitializeInterrupts())
     return false;
 
@@ -440,10 +447,22 @@ int MsdArmDevice::DeviceThreadLoop() {
 
   DLOG("DeviceThreadLoop starting thread 0x%lx", device_thread_id_->id());
 
-  const bool applied_role = magma::PlatformThreadHelper::SetRole(
-      platform_device_->GetDeviceHandle(), "fuchsia.graphics.drivers.msd-arm-mali.device");
-  if (!applied_role) {
-    DLOG("Failed to get higher priority!");
+  // TODO(fxbug.dev/40858): Migrate to the role-based API when available, instead of hard
+  // coding parameters.
+  //
+  // These parameters permit 500us at 1kHz, 250us at 2kHz, ... 50us at 10kHz.
+  const std::chrono::nanoseconds capacity_ns = 500us;
+  const std::chrono::nanoseconds deadline_ns = 1ms;
+  const std::chrono::nanoseconds period_ns = deadline_ns;
+
+  std::unique_ptr<magma::PlatformHandle> profile = platform_device_->GetDeadlineSchedulerProfile(
+      capacity_ns, deadline_ns, period_ns, "msd-arm-mali/device-thread");
+
+  if (!profile) {
+    return DRETF(0, "Failed to get higher priority");
+  }
+  if (!magma::PlatformThreadHelper::SetProfile(profile.get())) {
+    return DRETF(0, "Failed to set priority");
   }
 
   std::unique_lock<std::mutex> lock(device_request_mutex_, std::defer_lock);
@@ -519,10 +538,22 @@ int MsdArmDevice::GpuInterruptThreadLoop() {
   magma::PlatformThreadHelper::SetCurrentThreadName("Gpu InterruptThread");
   DLOG("GPU Interrupt thread started");
 
-  const bool applied_role = magma::PlatformThreadHelper::SetRole(
-      platform_device_->GetDeviceHandle(), "fuchsia.graphics.drivers.msd-arm-mali.gpu-interrupt");
-  if (!applied_role) {
-    DLOG("Failed to get higher priority!");
+  // TODO(fxbug.dev/40858): Migrate to the role-based API when available, instead of hard
+  // coding parameters.
+  //
+  // These parameters permit 60us at 8kHz worst case, 30us at 16kHz, etc...
+  const std::chrono::nanoseconds capacity_ns = 60us;
+  const std::chrono::nanoseconds deadline_ns = 125us;
+  const std::chrono::nanoseconds period_ns = deadline_ns;
+
+  std::unique_ptr<magma::PlatformHandle> profile = platform_device_->GetDeadlineSchedulerProfile(
+      capacity_ns, deadline_ns, period_ns, "msd-arm-mali/gpu-interrupt-thread");
+
+  if (!profile) {
+    return DRETF(0, "Failed to get higher priority");
+  }
+  if (!magma::PlatformThreadHelper::SetProfile(profile.get())) {
+    return DRETF(0, "Failed to set priority");
   }
 
   while (!interrupt_thread_quit_flag_) {
@@ -627,10 +658,22 @@ int MsdArmDevice::JobInterruptThreadLoop() {
   magma::PlatformThreadHelper::SetCurrentThreadName("Job InterruptThread");
   DLOG("Job Interrupt thread started");
 
-  const bool applied_role = magma::PlatformThreadHelper::SetRole(
-      platform_device_->GetDeviceHandle(), "fuchsia.graphics.drivers.msd-arm-mali.job-interrupt");
-  if (!applied_role) {
-    DLOG("Failed to get higher priority!");
+  // TODO(fxbug.dev/40858): Migrate to the role-based API when available, instead of hard
+  // coding parameters.
+  //
+  // These parameters permit 60us at 8kHz worst case, 30us at 16kHz, etc...
+  const std::chrono::nanoseconds capacity_ns = 60us;
+  const std::chrono::nanoseconds deadline_ns = 125us;
+  const std::chrono::nanoseconds period_ns = deadline_ns;
+
+  std::unique_ptr<magma::PlatformHandle> profile = platform_device_->GetDeadlineSchedulerProfile(
+      capacity_ns, deadline_ns, period_ns, "msd-arm-mali/job-interrupt-thread");
+
+  if (!profile) {
+    return DRETF(0, "Failed to get higher priority");
+  }
+  if (!magma::PlatformThreadHelper::SetProfile(profile.get())) {
+    return DRETF(0, "Failed to set priority");
   }
 
   while (!interrupt_thread_quit_flag_) {
@@ -795,10 +838,22 @@ int MsdArmDevice::MmuInterruptThreadLoop() {
   magma::PlatformThreadHelper::SetCurrentThreadName("MMU InterruptThread");
   DLOG("MMU Interrupt thread started");
 
-  const bool applied_role = magma::PlatformThreadHelper::SetRole(
-      platform_device_->GetDeviceHandle(), "fuchsia.graphics.drivers.msd-arm-mali.mmu-interrupt");
-  if (!applied_role) {
-    DLOG("Failed to get higher priority!");
+  // TODO(fxbug.dev/40858): Migrate to the role-based API when available, instead of hard
+  // coding parameters.
+  //
+  // These parameters permit 60us at 8kHz worst case, 30us at 16kHz, etc...
+  const std::chrono::nanoseconds capacity_ns = 60us;
+  const std::chrono::nanoseconds deadline_ns = 125us;
+  const std::chrono::nanoseconds period_ns = deadline_ns;
+
+  std::unique_ptr<magma::PlatformHandle> profile = platform_device_->GetDeadlineSchedulerProfile(
+      capacity_ns, deadline_ns, period_ns, "msd-arm-mali/mmu-interrupt-thread");
+
+  if (!profile) {
+    return DRETF(0, "Failed to get higher priority");
+  }
+  if (!magma::PlatformThreadHelper::SetProfile(profile.get())) {
+    return DRETF(0, "Failed to set priority");
   }
 
   while (!interrupt_thread_quit_flag_) {
@@ -1570,7 +1625,7 @@ std::shared_ptr<DeviceRequest::Reply> MsdArmDevice::RunTaskOnDeviceThread(FitCal
 }
 
 void MsdArmDevice::SetCurrentThreadToDefaultPriority() {
-  magma::PlatformThreadHelper::SetRole(platform_device_->GetDeviceHandle(), "fuchsia.default");
+  magma::PlatformThreadHelper::SetProfile(default_profile_.get());
 }
 
 MsdArmDevice::InspectEvent::InspectEvent(inspect::Node* parent, std::string type) {

@@ -472,7 +472,7 @@ class TestPlatformConnection {
 
  private:
   static void IpcThreadFunc(std::shared_ptr<magma::PlatformConnection> connection) {
-    magma::PlatformConnection::RunLoop(connection, nullptr);
+    magma::PlatformConnection::RunLoop(connection);
   }
 
   std::shared_ptr<magma::PlatformConnectionClient> client_connection_;
@@ -725,7 +725,8 @@ std::unique_ptr<TestPlatformConnection> TestPlatformConnection::Create(
     return DRETP(nullptr, "zx::channel::create failed");
 
   auto connection = magma::PlatformConnection::Create(
-      std::move(delegate), 1u, magma::PlatformHandle::Create(endpoints->server.channel().release()),
+      std::move(delegate), 1u, /*thread_profile*/ nullptr,
+      magma::PlatformHandle::Create(endpoints->server.channel().release()),
       magma::PlatformHandle::Create(server_notification_endpoint.release()));
   if (!connection)
     return DRETP(nullptr, "failed to create PlatformConnection");

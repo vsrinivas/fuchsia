@@ -21,6 +21,7 @@ uint32_t MagmaSystemDevice::GetDeviceId() {
 
 std::shared_ptr<magma::PlatformConnection> MagmaSystemDevice::Open(
     std::shared_ptr<MagmaSystemDevice> device, msd_client_id_t client_id,
+    std::unique_ptr<magma::PlatformHandle> thread_profile,
     std::unique_ptr<magma::PlatformHandle> server_endpoint,
     std::unique_ptr<magma::PlatformHandle> server_notification_endpoint) {
   msd_connection_t* msd_connection = msd_device_open(device->msd_dev(), client_id);
@@ -30,7 +31,8 @@ std::shared_ptr<magma::PlatformConnection> MagmaSystemDevice::Open(
   return magma::PlatformConnection::Create(
       std::make_unique<MagmaSystemConnection>(std::move(device),
                                               MsdConnectionUniquePtr(msd_connection)),
-      client_id, std::move(server_endpoint), std::move(server_notification_endpoint));
+      client_id, std::move(thread_profile), std::move(server_endpoint),
+      std::move(server_notification_endpoint));
 }
 
 void MagmaSystemDevice::StartConnectionThread(
@@ -38,8 +40,7 @@ void MagmaSystemDevice::StartConnectionThread(
   std::unique_lock<std::mutex> lock(connection_list_mutex_);
 
   auto shutdown_event = platform_connection->ShutdownEvent();
-  std::thread thread(magma::PlatformConnection::RunLoop, std::move(platform_connection),
-                     device_handle());
+  std::thread thread(magma::PlatformConnection::RunLoop, std::move(platform_connection));
 
   connection_map_->insert(std::pair<std::thread::id, Connection>(
       thread.get_id(), Connection{std::move(thread), std::move(shutdown_event)}));

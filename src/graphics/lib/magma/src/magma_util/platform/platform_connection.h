@@ -83,14 +83,19 @@ class PlatformConnection {
   };
 
   PlatformConnection(std::shared_ptr<magma::PlatformEvent> shutdown_event,
-                     msd_client_id_t client_id)
-      : client_id_(client_id), shutdown_event_(std::move(shutdown_event)) {}
+                     msd_client_id_t client_id,
+                     std::unique_ptr<magma::PlatformHandle> thread_profile)
+      : client_id_(client_id),
+        shutdown_event_(std::move(shutdown_event)),
+        thread_profile_(std::move(thread_profile)) {}
 
   virtual ~PlatformConnection() {}
 
-  // Creates a PlatformConnection.
+  // Creates a PlatformConnection. The argument |thread_profile| may be nullptr
+  // if no specific profile is needed.
   static std::shared_ptr<PlatformConnection> Create(
       std::unique_ptr<Delegate> Delegate, msd_client_id_t client_id,
+      std::unique_ptr<magma::PlatformHandle> thread_profile,
       std::unique_ptr<magma::PlatformHandle> server_endpoint,
       std::unique_ptr<magma::PlatformHandle> server_notification_endpoint);
 
@@ -103,12 +108,14 @@ class PlatformConnection {
 
   std::shared_ptr<magma::PlatformEvent> ShutdownEvent() { return shutdown_event_; }
 
-  static void RunLoop(std::shared_ptr<magma::PlatformConnection> connection, void* device_handle) {
+  static void RunLoop(std::shared_ptr<magma::PlatformConnection> connection) {
     magma::PlatformThreadHelper::SetCurrentThreadName("ConnectionThread " +
                                                       std::to_string(connection->client_id_));
 
-    // Apply the thread role before entering the handler loop.
-    magma::PlatformThreadHelper::SetRole(device_handle, "fuchsia.graphics.magma.connection");
+    // Apply the thread profile before entering the handler loop.
+    if (connection->thread_profile_) {
+      magma::PlatformThreadHelper::SetProfile(connection->thread_profile_.get());
+    }
 
     while (connection->HandleRequest()) {
       connection->request_count_ += 1;
@@ -122,6 +129,7 @@ class PlatformConnection {
  private:
   msd_client_id_t client_id_;
   std::shared_ptr<magma::PlatformEvent> shutdown_event_;
+  std::unique_ptr<magma::PlatformHandle> thread_profile_;
   std::atomic_uint request_count_{};
 };
 

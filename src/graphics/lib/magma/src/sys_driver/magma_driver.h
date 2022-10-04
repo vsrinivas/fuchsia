@@ -20,14 +20,14 @@ static inline msd_driver_unique_ptr_t MsdDriverUniquePtr(msd_driver_t* driver) {
 
 class MagmaDriver {
  public:
-  explicit MagmaDriver(msd_driver_unique_ptr_t msd_drv) : msd_drv_(std::move(msd_drv)) {}
+  MagmaDriver(msd_driver_unique_ptr_t msd_drv) : msd_drv_(std::move(msd_drv)) {}
 
-  std::unique_ptr<MagmaSystemDevice> CreateDevice(void* device_handle) {
-    msd_device_t* msd_dev = msd_driver_create_device(msd_drv_.get(), device_handle);
+  std::unique_ptr<MagmaSystemDevice> CreateDevice(void* device) {
+    msd_device_t* msd_dev = msd_driver_create_device(msd_drv_.get(), device);
     if (!msd_dev)
       return DRETP(nullptr, "msd_create_device failed");
 
-    return MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev), device_handle);
+    return MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev));
   }
 
   static std::unique_ptr<MagmaDriver> Create() {

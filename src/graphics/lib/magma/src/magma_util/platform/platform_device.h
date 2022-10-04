@@ -41,6 +41,13 @@ class PlatformDevice {
 
   virtual std::unique_ptr<PlatformHandle> GetBusTransactionInitiator() const = 0;
 
+  virtual std::unique_ptr<PlatformHandle> GetSchedulerProfile(Priority priority,
+                                                              const char* name) const = 0;
+
+  virtual std::unique_ptr<PlatformHandle> GetDeadlineSchedulerProfile(
+      std::chrono::nanoseconds capacity_ns, std::chrono::nanoseconds deadline_ns,
+      std::chrono::nanoseconds period_ns, const char* name) const = 0;
+
   virtual std::unique_ptr<PlatformHandle> GetIommuConnector() const {
     return DRETP(nullptr, "GetIommuConnector not implemented");
   }

@@ -331,11 +331,14 @@ int MsdVsiDevice::DeviceThreadLoop() {
 
   DLOG("DeviceThreadLoop starting thread 0x%lx", device_thread_id_->id());
 
-  const bool applied_role =
-      magma::PlatformThreadHelper::SetRole(platform_device_->platform_device()->GetDeviceHandle(),
-                                           "fuchsia.graphics.drivers.msd-vsi-vip.device");
-  if (!applied_role) {
-    return DRETF(0, "Failed to get higher priority!");
+  std::unique_ptr<magma::PlatformHandle> profile =
+      platform_device_->platform_device()->GetSchedulerProfile(
+          magma::PlatformDevice::kPriorityHigher, "msd-vsi-vip/device-thread");
+  if (!profile) {
+    return DRETF(false, "Failed to get higher priority");
+  }
+  if (!magma::PlatformThreadHelper::SetProfile(profile.get())) {
+    return DRETF(false, "Failed to set priority");
   }
 
   std::unique_lock<std::mutex> lock(device_request_mutex_, std::defer_lock);
@@ -405,11 +408,14 @@ int MsdVsiDevice::InterruptThreadLoop() {
   magma::PlatformThreadHelper::SetCurrentThreadName("VSI InterruptThread");
   DLOG("VSI Interrupt thread started");
 
-  const bool applied_role =
-      magma::PlatformThreadHelper::SetRole(platform_device_->platform_device()->GetDeviceHandle(),
-                                           "fuchsia.graphics.drivers.msd-vsi-vip.vsi-interrupt");
-  if (!applied_role) {
-    return DRETF(0, "Failed to get higher priority!");
+  std::unique_ptr<magma::PlatformHandle> profile =
+      platform_device_->platform_device()->GetSchedulerProfile(
+          magma::PlatformDevice::kPriorityHigher, "msd-vsi-vip/vsi-interrupt-thread");
+  if (!profile) {
+    return DRETF(0, "Failed to get higher priority");
+  }
+  if (!magma::PlatformThreadHelper::SetProfile(profile.get())) {
+    return DRETF(0, "Failed to set priority");
   }
 
   while (!stop_interrupt_thread_) {

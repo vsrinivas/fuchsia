@@ -309,6 +309,8 @@ class MsdArmDevice : public msd_device_t,
   std::unique_ptr<magma::PlatformInterrupt> job_interrupt_;
   std::unique_ptr<magma::PlatformInterrupt> mmu_interrupt_;
 
+  std::unique_ptr<magma::PlatformHandle> default_profile_;
+
   mali_properties_t mali_properties_{};
   GpuFeatures gpu_features_;
   ArmMaliCacheCoherencyStatus cache_coherency_status_ = kArmMaliCacheCoherencyNone;

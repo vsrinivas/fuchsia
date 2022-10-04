@@ -225,12 +225,12 @@ class Test {
     platform_device_ = TestPlatformDevice::GetInstance();
     if (!platform_device_)
       DLOG("TestCommandBuffer: No platform device");
-    void* device_handle = platform_device_ ? platform_device_->GetDeviceHandle() : nullptr;
-    auto msd_dev = msd_driver_create_device(msd_drv_.get(), device_handle);
+    auto msd_dev = msd_driver_create_device(
+        msd_drv_.get(), platform_device_ ? platform_device_->GetDeviceHandle() : nullptr);
     if (!msd_dev)
       return DRETP(nullptr, "failed to create msd device");
-    system_dev_ = std::shared_ptr<MagmaSystemDevice>(
-        MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev), device_handle));
+    system_dev_ =
+        std::shared_ptr<MagmaSystemDevice>(MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev)));
     uint32_t ctx_id = 0;
     auto msd_connection_t = msd_device_open(msd_dev, 0);
     if (!msd_connection_t)

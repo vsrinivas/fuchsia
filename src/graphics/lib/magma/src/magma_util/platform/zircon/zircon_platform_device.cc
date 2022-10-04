@@ -42,6 +42,26 @@ Status ZirconPlatformDeviceWithoutProtocol::LoadFirmware(
   return MAGMA_STATUS_OK;
 }
 
+std::unique_ptr<PlatformHandle> ZirconPlatformDeviceWithoutProtocol::GetSchedulerProfile(
+    Priority priority, const char* name) const {
+  zx_handle_t handle;
+  zx_status_t status = device_get_profile(zx_device_, priority, name, &handle);
+  if (status != ZX_OK)
+    return DRETP(nullptr, "Failed to get profile: %d", status);
+  return PlatformHandle::Create(handle);
+}
+
+std::unique_ptr<PlatformHandle> ZirconPlatformDeviceWithoutProtocol::GetDeadlineSchedulerProfile(
+    std::chrono::nanoseconds capacity_ns, std::chrono::nanoseconds deadline_ns,
+    std::chrono::nanoseconds period_ns, const char* name) const {
+  zx_handle_t handle;
+  zx_status_t status = device_get_deadline_profile(
+      zx_device_, capacity_ns.count(), deadline_ns.count(), period_ns.count(), name, &handle);
+  if (status != ZX_OK)
+    return DRETP(nullptr, "Failed to get profile: %d", status);
+  return PlatformHandle::Create(handle);
+}
+
 std::unique_ptr<PlatformMmio> ZirconPlatformDevice::CpuMapMmio(
     unsigned int index, PlatformMmio::CachePolicy cache_policy) {
   DLOG("CpuMapMmio index %d", index);
