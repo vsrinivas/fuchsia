@@ -359,8 +359,15 @@ case "$cc" in
 esac
 
 test -n "$target" || {
-  msg "For remote compiling, an explicit --target is required, but is missing."
-  exit 1
+  _cc_base="$(basename "$cc")"
+  case "$_cc_base" in
+    *-*-gcc | *-*-g++ ) ;;  # Already bears implicit target in the tool name
+      # e.g. aarch64-elf-g++, x64_86-elf-g++
+    *)  # For all other general compiler cases:
+      msg "For remote compiling, an explicit --target is required, but is missing."
+      exit 1
+      ;;
+  esac
 }
 
 # -E tells the compiler to stop after C-preprocessing
