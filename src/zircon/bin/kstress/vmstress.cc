@@ -142,8 +142,12 @@ class TestInstance {
 
 class SingleVmoTestInstance : public TestInstance {
  public:
-  SingleVmoTestInstance(VmStressTest* test, uint64_t instance_id, bool use_pager, uint64_t vmo_size)
-      : TestInstance(test, instance_id), use_pager_(use_pager), vmo_size_(vmo_size) {}
+  SingleVmoTestInstance(VmStressTest* test, uint64_t instance_id, bool use_pager, bool trap_dirty,
+                        uint64_t vmo_size)
+      : TestInstance(test, instance_id),
+        use_pager_(use_pager),
+        trap_dirty_(trap_dirty),
+        vmo_size_(vmo_size) {}
 
   zx_status_t Start() final;
   zx_status_t Stop() final;
@@ -155,6 +159,7 @@ class SingleVmoTestInstance : public TestInstance {
   void CheckVmoThreadError(zx_status_t status, const char* error);
 
   const bool use_pager_;
+  const bool trap_dirty_;
   const uint64_t vmo_size_;
 
   static constexpr uint64_t kNumVmoThreads = 3;
@@ -357,6 +362,19 @@ int SingleVmoTestInstance::pager_thread() {
     }
   };
 
+  auto dirty_pages = [this](uint64_t off, uint64_t len) {
+    // ZX_PAGER_OP_DIRTY is not supported if the VMO wasn't created with ZX_VMO_TRAP_DIRTY.
+    ZX_ASSERT(trap_dirty_);
+    zx_status_t status = pager_.op_range(ZX_PAGER_OP_DIRTY, vmo_, off, len, 0);
+    // ZX_ERR_NOT_FOUND is an acceptable error status as pages that have yet to be dirtied are clean
+    // and can get evicted.
+    if (status != ZX_OK && status != ZX_ERR_NOT_FOUND) {
+      fprintf(stderr, "[test instance 0x%zx]: failed to dirty pages %d, error %d (%s)\n",
+              test_instance_id_, pager_.get(), status, zx_status_get_string(status));
+      return;
+    }
+  };
+
   auto rng = RngGen();
 
 #if VMSTRESS_DEBUG
@@ -385,14 +403,23 @@ int SingleVmoTestInstance::pager_thread() {
 
     int r = uniform_rand<int>(100, rng);
     switch (r) {
-      case 0 ... 4:  // supply a random range of pages
+      case 0 ... 3:  // supply a random range of pages
       {
         off = uniform_rand(vmo_page_count, rng);
         size = std::min(uniform_rand(vmo_page_count, rng), vmo_page_count - off);
         supply_pages(off * zx_system_get_page_size(), size * zx_system_get_page_size());
         break;
       }
-      case 5 ... 54:  // read from the port
+      case 4 ... 5:  // dirty a random range of pages
+      {
+        if (trap_dirty_) {
+          off = uniform_rand(vmo_page_count, rng);
+          size = std::min(uniform_rand(vmo_page_count, rng), vmo_page_count - off);
+          dirty_pages(off * zx_system_get_page_size(), size * zx_system_get_page_size());
+        }
+        break;
+      }
+      case 6 ... 55:  // read from the port
       {
         fbl::AutoLock lock(&mtx_);
         if (requests_.size() == kNumVmoThreads) {
@@ -418,7 +445,8 @@ int SingleVmoTestInstance::pager_thread() {
                     test_instance_id_, status, zx_status_get_string(status));
           }
         } else if (packet.type != ZX_PKT_TYPE_PAGE_REQUEST ||
-                   packet.page_request.command != ZX_PAGER_VMO_READ) {
+                   (packet.page_request.command != ZX_PAGER_VMO_READ &&
+                    packet.page_request.command != ZX_PAGER_VMO_DIRTY)) {
           fprintf(stderr, "[test instance 0x%zx]: unexpected packet, error %d %d\n",
                   test_instance_id_, packet.type, packet.page_request.command);
         } else {
@@ -426,7 +454,7 @@ int SingleVmoTestInstance::pager_thread() {
           requests_.push_back(packet.page_request);
         }
         break;
-      case 55 ... 99:  // fullfil a random request
+      case 56 ... 99:  // fullfil a random request
         zx_packet_page_request_t req;
         {
           fbl::AutoLock lock(&mtx_);
@@ -437,7 +465,11 @@ int SingleVmoTestInstance::pager_thread() {
           req = requests_.erase(off);
         }
 
-        supply_pages(req.offset, req.length);
+        if (req.command == ZX_PAGER_VMO_READ) {
+          supply_pages(req.offset, req.length);
+        } else if (req.command == ZX_PAGER_VMO_DIRTY) {
+          dirty_pages(req.offset, req.length);
+        }
         break;
     }
 
@@ -475,8 +507,12 @@ zx_status_t SingleVmoTestInstance::Start() {
       return status;
     }
 
+    uint32_t options = 0;
+    if (trap_dirty_) {
+      options |= ZX_VMO_TRAP_DIRTY;
+    }
     // create a test vmo
-    status = pager_.create_vmo(0, port_, 0, vmo_size_, &vmo_);
+    status = pager_.create_vmo(options, port_, 0, vmo_size_, &vmo_);
 
     // create an event to signal when the VMO threads can start generating requests.
     status = zx::event::create(0, &pager_threads_ready_);
@@ -1570,12 +1606,17 @@ int VmStressTest::test_thread() {
     } else {
       switch (uniform_rand(3, rng)) {
         case 0:
-          test_instances[r] = std::make_unique<SingleVmoTestInstance>(this, total_test_instances++,
-                                                                      true, vmo_test_size);
+          if (uniform_rand(2, rng)) {
+            test_instances[r] = std::make_unique<SingleVmoTestInstance>(
+                this, total_test_instances++, true, true, vmo_test_size);
+          } else {
+            test_instances[r] = std::make_unique<SingleVmoTestInstance>(
+                this, total_test_instances++, true, false, vmo_test_size);
+          }
           break;
         case 1:
           test_instances[r] = std::make_unique<SingleVmoTestInstance>(this, total_test_instances++,
-                                                                      false, vmo_test_size);
+                                                                      false, false, vmo_test_size);
           break;
         case 2:
           test_instances[r] = std::make_unique<CowCloneTestInstance>(this, total_test_instances++);
