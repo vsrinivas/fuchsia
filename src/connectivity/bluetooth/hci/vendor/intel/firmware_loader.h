@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_CONNECTIVITY_BLUETOOTH_HCI_VENDOR_INTEL_FIRMWARE_LOADER_H_
+#define SRC_CONNECTIVITY_BLUETOOTH_HCI_VENDOR_INTEL_FIRMWARE_LOADER_H_
 
 // A loader for Intel Bluetooth Firmware files.
 
@@ -41,8 +42,10 @@ class FirmwareLoader {
   // Loads "sfi" firmware into the controller using the channels.
   // |firmware| should be a pointer to firmware, which is at
   // least |len| bytes long.
+  // if |boot_addr| is not null, the boot params boot address written to the device will be placed
+  // within it.
   // Returns kComplete if the file was loaded, kError otherwise.
-  LoadStatus LoadSfi(const void* firmware, const size_t& len);
+  LoadStatus LoadSfi(const void* firmware, const size_t& len, uint32_t* boot_addr);
 
  private:
   bool ParseBseq();
@@ -54,3 +57,5 @@ class FirmwareLoader {
 };
 
 }  // namespace btintel
+
+#endif  // SRC_CONNECTIVITY_BLUETOOTH_HCI_VENDOR_INTEL_FIRMWARE_LOADER_H_

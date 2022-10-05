@@ -29,7 +29,7 @@ void Device::DdkInit(ddk::InitTxn init_txn) {
 }
 
 zx_status_t Device::LoadFirmware(ddk::InitTxn init_txn, bool secure) {
-  tracef("LoadFirmware(secure: %s)\n", (secure ? "yes" : "no"));
+  infof("LoadFirmware(secure: %s)", (secure ? "yes" : "no"));
 
   // TODO(armansito): Track metrics for initialization failures.
 
@@ -81,12 +81,12 @@ zx_handle_t Device::MapFirmware(const char* name, uintptr_t* fw_addr, size_t* fw
   size_t size;
   zx_status_t status = load_firmware(zxdev(), name, &vmo, &size);
   if (status != ZX_OK) {
-    errorf("failed to load firmware '%s': %s\n", name, zx_status_get_string(status));
+    errorf("failed to load firmware '%s': %s", name, zx_status_get_string(status));
     return ZX_HANDLE_INVALID;
   }
   status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, vmo, 0, size, fw_addr);
   if (status != ZX_OK) {
-    errorf("firmware map failed: %s\n", zx_status_get_string(status));
+    errorf("firmware map failed: %s", zx_status_get_string(status));
     return ZX_HANDLE_INVALID;
   }
   *fw_size = size;
@@ -94,7 +94,7 @@ zx_handle_t Device::MapFirmware(const char* name, uintptr_t* fw_addr, size_t* fw
 }
 
 void Device::DdkUnbind(ddk::UnbindTxn txn) {
-  tracef("unbind\n");
+  tracef("unbind");
   txn.Reply();
 }
 
@@ -143,7 +143,7 @@ zx_status_t Device::LoadSecureFirmware(zx::channel* cmd, zx::channel* acl) {
   // bootloader mode and we can ignore the error.
   auto hci_status = hci.SendHciReset();
   if (hci_status == bt::hci_spec::StatusCode::kUnknownCommand) {
-    tracef("Ignoring \"Unknown Command\" error while in bootloader mode\n");
+    infof("Ignoring \"Unknown Command\" error while in bootloader mode");
   } else if (hci_status != bt::hci_spec::StatusCode::kSuccess) {
     errorf("HCI_Reset failed (status: 0x%02x)", hci_status);
     return ZX_ERR_BAD_STATE;
@@ -156,25 +156,25 @@ zx_status_t Device::LoadSecureFirmware(zx::channel* cmd, zx::channel* acl) {
 
   ReadVersionReturnParams version = hci.SendReadVersion();
   if (version.status != bt::hci_spec::StatusCode::kSuccess) {
-    errorf("failed to obtain version information\n");
+    errorf("failed to obtain version information");
     return ZX_ERR_BAD_STATE;
   }
 
   // If we're already in firmware mode, we're done.
   if (version.fw_variant == kFirmwareFirmwareVariant) {
-    infof("firmware already loaded\n");
+    infof("firmware loaded (variant %d, revision %d)", version.hw_variant, version.hw_revision);
     return ZX_OK;
   }
 
   // If we reached here then the controller must be in bootloader mode.
   if (version.fw_variant != kBootloaderFirmwareVariant) {
-    errorf("unsupported firmware variant (0x%x)\n", version.fw_variant);
+    errorf("unsupported firmware variant (0x%x)", version.fw_variant);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   ReadBootParamsReturnParams boot_params = hci.SendReadBootParams();
   if (boot_params.status != bt::hci_spec::StatusCode::kSuccess) {
-    errorf("failed to read boot parameters\n");
+    errorf("failed to read boot parameters");
     return ZX_ERR_BAD_STATE;
   }
 
@@ -185,22 +185,25 @@ zx_status_t Device::LoadSecureFirmware(zx::channel* cmd, zx::channel* acl) {
   size_t fw_size;
   fw_vmo.reset(MapFirmware(fw_filename.c_str(), &fw_addr, &fw_size));
   if (!fw_vmo) {
-    errorf("failed to map firmware\n");
+    errorf("failed to map firmware");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   FirmwareLoader loader(cmd, acl);
-  auto status = loader.LoadSfi(reinterpret_cast<void*>(fw_addr), fw_size);
+
+  // The boot addr differs for different firmware.  Save it for later.
+  uint32_t boot_addr = 0x00000000;
+  auto status = loader.LoadSfi(reinterpret_cast<void*>(fw_addr), fw_size, &boot_addr);
   zx_vmar_unmap(zx_vmar_root_self(), fw_addr, fw_size);
   if (status == FirmwareLoader::LoadStatus::kError) {
-    errorf("failed to load SFI firmware\n");
+    errorf("failed to load SFI firmware");
     return ZX_ERR_BAD_STATE;
   }
 
   // Switch the controller into firmware mode.
-  hci.SendVendorReset();
+  hci.SendVendorReset(boot_addr);
 
-  infof("firmware loaded using %s\n", fw_filename.c_str());
+  infof("firmware loaded using %s", fw_filename.c_str());
   return ZX_OK;
 }
 
@@ -219,12 +222,12 @@ zx_status_t Device::LoadLegacyFirmware(zx::channel* cmd, zx::channel* acl) {
 
   ReadVersionReturnParams version = hci.SendReadVersion();
   if (version.status != bt::hci_spec::StatusCode::kSuccess) {
-    errorf("failed to obtain version information\n");
+    errorf("failed to obtain version information");
     return ZX_ERR_BAD_STATE;
   }
 
   if (version.fw_patch_num > 0) {
-    infof("controller already patched\n");
+    infof("controller already patched");
     return ZX_OK;
   }
 
@@ -247,7 +250,7 @@ zx_status_t Device::LoadLegacyFirmware(zx::channel* cmd, zx::channel* acl) {
 
   // Abort if the fallback file failed to load too.
   if (!fw_vmo) {
-    errorf("failed to map firmware\n");
+    errorf("failed to map firmware");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -260,11 +263,11 @@ zx_status_t Device::LoadLegacyFirmware(zx::channel* cmd, zx::channel* acl) {
   zx_vmar_unmap(zx_vmar_root_self(), fw_addr, fw_size);
 
   if (result == FirmwareLoader::LoadStatus::kError) {
-    errorf("failed to patch controller\n");
+    errorf("failed to patch controller");
     return ZX_ERR_BAD_STATE;
   }
 
-  infof("controller patched using %s\n", fw_filename.c_str());
+  infof("controller patched using %s", fw_filename.c_str());
   return ZX_OK;
 }
 

@@ -77,7 +77,17 @@ FirmwareLoader::LoadStatus FirmwareLoader::LoadBseq(const void* firmware, const 
   return patched ? LoadStatus::kPatched : LoadStatus::kComplete;
 }
 
-FirmwareLoader::LoadStatus FirmwareLoader::LoadSfi(const void* firmware, const size_t& len) {
+constexpr uint16_t kOpcodeWriteBootParams = bt::hci_spec::VendorOpCode(0x000e);
+
+struct WriteBootParamsCommandParams {
+  uint32_t boot_address;
+  uint8_t firmware_build_number;
+  uint8_t firmware_build_ww;
+  uint8_t firmware_build_yy;
+} __PACKED;
+
+FirmwareLoader::LoadStatus FirmwareLoader::LoadSfi(const void* firmware, const size_t& len,
+                                                   uint32_t* boot_addr) {
   BufferView file(firmware, len);
 
   if (file.size() < 644) {
@@ -114,8 +124,18 @@ FirmwareLoader::LoadStatus FirmwareLoader::LoadSfi(const void* firmware, const s
   // param size can be a multiple of 4 bytes]
   while (offset < file.size()) {
     auto next_cmd = file.view(offset + frag_len);
-    PacketView<bt::hci_spec::CommandHeader> header(&next_cmd);
-    size_t cmd_size = sizeof(bt::hci_spec::CommandHeader) + header.header().parameter_total_size;
+    PacketView<bt::hci_spec::CommandHeader> cmd(&next_cmd);
+    size_t cmd_size = sizeof(bt::hci_spec::CommandHeader) + cmd.header().parameter_total_size;
+    if (cmd.header().opcode == kOpcodeWriteBootParams) {
+      cmd.Resize(cmd.header().parameter_total_size);
+      auto params = cmd.payload<WriteBootParamsCommandParams>();
+      if (boot_addr != nullptr) {
+        *boot_addr = letoh32(params.boot_address);
+      }
+      infof("FirmwareLoader: Loading fw %d ww %d yy %d - boot addr %x",
+            params.firmware_build_number, params.firmware_build_ww, params.firmware_build_yy,
+            letoh32(params.boot_address));
+    }
     frag_len += cmd_size;
     if ((frag_len % 4) == 0) {
       if (!hci_acl_.SendSecureSend(0x01, file.view(offset, frag_len))) {

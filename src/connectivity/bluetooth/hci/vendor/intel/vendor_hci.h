@@ -64,7 +64,11 @@ struct ReadBootParamsReturnParams {
 constexpr bt::hci_spec::OpCode kReset = bt::hci_spec::VendorOpCode(0x0001);
 
 struct ResetCommandParams {
-  uint8_t data[8];
+  uint8_t reset_type;
+  uint8_t patch_enable;
+  uint8_t ddc_reload;
+  uint8_t boot_option;
+  uint32_t boot_address;
 } __PACKED;
 
 constexpr bt::hci_spec::OpCode kMfgModeChange = bt::hci_spec::VendorOpCode(0x0011);
@@ -109,7 +113,7 @@ class VendorHci {
 
   bt::hci_spec::StatusCode SendHciReset() const;
 
-  void SendVendorReset() const;
+  void SendVendorReset(uint32_t boot_address) const;
 
   bool SendSecureSend(uint8_t type, const bt::BufferView& bytes) const;
 

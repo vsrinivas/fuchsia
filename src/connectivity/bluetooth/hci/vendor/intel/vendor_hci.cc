@@ -38,7 +38,7 @@ ReadVersionReturnParams VendorHci::SendReadVersion() const {
     if (params)
       return *params;
   }
-  errorf("VendorHci: ReadVersion: Error reading response!\n");
+  errorf("VendorHci: ReadVersion: Error reading response!");
   return ReadVersionReturnParams{.status = bt::hci_spec::StatusCode::kUnspecifiedError};
 }
 
@@ -51,7 +51,7 @@ ReadBootParamsReturnParams VendorHci::SendReadBootParams() const {
     if (params)
       return *params;
   }
-  errorf("VendorHci: ReadBootParams: Error reading response!\n");
+  errorf("VendorHci: ReadBootParams: Error reading response!");
   return ReadBootParamsReturnParams{.status = bt::hci_spec::StatusCode::kUnspecifiedError};
 }
 
@@ -64,30 +64,27 @@ bt::hci_spec::StatusCode VendorHci::SendHciReset() const {
   // these timeouts should be.
   auto evt_packet = WaitForEventPacket(kInitTimeoutMs, bt::hci_spec::kCommandCompleteEventCode);
   if (!evt_packet) {
-    errorf("VendorHci: failed while waiting for HCI_Reset response\n");
+    errorf("VendorHci: failed while waiting for HCI_Reset response");
     return bt::hci_spec::StatusCode::kUnspecifiedError;
   }
 
   const auto* params = evt_packet->return_params<bt::hci_spec::SimpleReturnParams>();
   if (!params) {
-    errorf("VendorHci: HCI_Reset: received malformed response\n");
+    errorf("VendorHci: HCI_Reset: received malformed response");
     return bt::hci_spec::StatusCode::kUnspecifiedError;
   }
 
   return params->status;
 }
 
-void VendorHci::SendVendorReset() const {
+void VendorHci::SendVendorReset(uint32_t boot_address) const {
   auto packet = CommandPacket::New(kReset, sizeof(ResetCommandParams));
   auto params = packet->mutable_payload<ResetCommandParams>();
-  params->data[0] = 0x00;
-  params->data[1] = 0x01;
-  params->data[2] = 0x00;
-  params->data[3] = 0x01;
-  params->data[4] = 0x00;
-  params->data[5] = 0x08;
-  params->data[6] = 0x04;
-  params->data[7] = 0x00;
+  params->reset_type = 0x00;
+  params->patch_enable = 0x01;
+  params->ddc_reload = 0x00;
+  params->boot_option = 0x01;
+  params->boot_address = htobe32(boot_address);
 
   SendCommand(packet->view());
 
@@ -107,24 +104,24 @@ bool VendorHci::SendSecureSend(uint8_t type, const bt::BufferView& bytes) const 
     SendCommand(cmd->view());
     std::unique_ptr<bt::hci::EventPacket> event = WaitForEventPacket();
     if (!event) {
-      errorf("VendorHci: SecureSend: Error reading response!\n");
+      errorf("VendorHci: SecureSend: Error reading response!");
       return false;
     }
     if (event->event_code() == bt::hci_spec::kCommandCompleteEventCode) {
       const auto& event_params = event->view().payload<bt::hci_spec::CommandCompleteEventParams>();
       if (le16toh(event_params.command_opcode) != kSecureSend) {
-        errorf("VendorHci: Received command complete for something else!\n");
+        errorf("VendorHci: Received command complete for something else!");
       } else if (event_params.return_parameters[0] != 0x00) {
-        errorf("VendorHci: Received 0x%x instead of zero in command complete!\n",
+        errorf("VendorHci: Received 0x%x instead of zero in command complete!",
                event_params.return_parameters[0]);
         return false;
       }
     } else if (event->event_code() == bt::hci_spec::kVendorDebugEventCode) {
       const auto& params = event->view().template payload<SecureSendEventParams>();
-      infof("VendorHci: SecureSend result 0x%x, opcode: 0x%x, status: 0x%x\n", params.result,
+      infof("VendorHci: SecureSend result 0x%x, opcode: 0x%x, status: 0x%x", params.result,
             params.opcode, params.status);
       if (params.result) {
-        errorf("VendorHci: Result of %d indicates some error!\n", params.result);
+        errorf("VendorHci: Result of %d indicates some error!", params.result);
         return false;
       }
     }
@@ -145,7 +142,7 @@ bool VendorHci::SendAndExpect(const bt::PacketView<bt::hci_spec::CommandHeader>&
     auto expected = events.front();
     if ((evt_packet->view().size() != expected.size()) ||
         (memcmp(evt_packet->view().data().data(), expected.data(), expected.size()) != 0)) {
-      errorf("VendorHci: SendAndExpect: unexpected event received\n");
+      errorf("VendorHci: SendAndExpect: unexpected event received");
       return false;
     }
     events.pop_front();
@@ -197,7 +194,7 @@ bool VendorHci::ExitManufacturerMode(MfgDisableMode mode) {
 void VendorHci::SendCommand(const bt::PacketView<bt::hci_spec::CommandHeader>& command) const {
   zx_status_t status = ctrl_->write(0, command.data().data(), command.size(), nullptr, 0);
   if (status < 0) {
-    errorf("VendorHci: SendCommand failed: %s\n", zx_status_get_string(status));
+    errorf("VendorHci: SendCommand failed: %s", zx_status_get_string(status));
   }
 }
 
@@ -223,7 +220,7 @@ std::unique_ptr<bt::hci::EventPacket> VendorHci::WaitForEventPacket(
     zx_status_t status = zx_object_wait_many(wait_items, wait_item_count,
                                              zx::deadline_after(timeout - elapsed).get());
     if (status != ZX_OK) {
-      errorf("VendorHci: channel error: %s\n", zx_status_get_string(status));
+      errorf("VendorHci: channel error: %s", zx_status_get_string(status));
       return nullptr;
     }
 
@@ -242,7 +239,7 @@ std::unique_ptr<bt::hci::EventPacket> VendorHci::WaitForEventPacket(
     // beforehand we allocate the largest possible buffer.
     auto packet = bt::hci::EventPacket::New(bt::hci_spec::kMaxCommandPacketPayloadSize);
     if (!packet) {
-      errorf("VendorHci: Failed to allocate event packet!\n");
+      errorf("VendorHci: Failed to allocate event packet!");
       return nullptr;
     }
 
@@ -251,12 +248,12 @@ std::unique_ptr<bt::hci::EventPacket> VendorHci::WaitForEventPacket(
     zx_status_t read_status = zx_channel_read(evt_handle, 0u, packet_bytes.mutable_data(), nullptr,
                                               packet_bytes.size(), 0, &read_size, nullptr);
     if (read_status < 0) {
-      errorf("VendorHci: Failed to read event bytes: %s\n", zx_status_get_string(read_status));
+      errorf("VendorHci: Failed to read event bytes: %sn", zx_status_get_string(read_status));
       return nullptr;
     }
 
     if (read_size < sizeof(bt::hci_spec::EventHeader)) {
-      errorf("VendorHci: Malformed event packet expected >%zu bytes, got %d\n",
+      errorf("VendorHci: Malformed event packet expected >%zu bytes, got %d",
              sizeof(bt::hci_spec::EventHeader), read_size);
       return nullptr;
     }
@@ -267,13 +264,13 @@ std::unique_ptr<bt::hci::EventPacket> VendorHci::WaitForEventPacket(
     if (size_from_header != rx_payload_size) {
       errorf(
           "VendorHci: Malformed event packet - header payload size (%zu) != "
-          "received (%zu)\n",
+          "received (%zu)",
           size_from_header, rx_payload_size);
       return nullptr;
     }
 
     if (expected_event && expected_event != packet->event_code()) {
-      tracef("VendorHci: keep waiting (expected: 0x%02x, got: 0x%02x)\n", expected_event,
+      tracef("VendorHci: keep waiting (expected: 0x%02x, got: 0x%02x)", expected_event,
              packet->event_code());
       continue;
     }
@@ -282,7 +279,7 @@ std::unique_ptr<bt::hci::EventPacket> VendorHci::WaitForEventPacket(
     return packet;
   }
 
-  errorf("VendorHci: timed out waiting for event\n");
+  errorf("VendorHci: timed out waiting for event");
   return nullptr;
 }
 
