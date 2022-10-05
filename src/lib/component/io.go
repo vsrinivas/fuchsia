@@ -453,8 +453,9 @@ func (*directoryState) Query(fidl.Context) ([]uint8, error) {
 }
 
 type File interface {
+	// If error is non-nil, GetReader returns a component.Reader for the file
+	// contents, and the length of the file contents.
 	GetReader() (Reader, uint64, error)
-	GetVMO() zx.VMO
 }
 
 var _ File = (*pprofFile)(nil)
@@ -468,11 +469,7 @@ func (p *pprofFile) GetReader() (Reader, uint64, error) {
 	if err := p.p.WriteTo(&b, 0); err != nil {
 		return nil, 0, err
 	}
-	return NopCloser(bytes.NewReader(b.Bytes())), uint64(b.Len()), nil
-}
-
-func (*pprofFile) GetVMO() zx.VMO {
-	return zx.VMO(zx.HandleInvalid)
+	return NoVMO(NopCloser(bytes.NewReader(b.Bytes()))), uint64(b.Len()), nil
 }
 
 var _ File = (*stackTraceFile)(nil)
@@ -486,14 +483,10 @@ func (f *stackTraceFile) GetReader() (Reader, uint64, error) {
 	for {
 		n := runtime.Stack(buf, true)
 		if n < len(buf) {
-			return NopCloser(bytes.NewReader(buf[:n])), uint64(n), nil
+			return NoVMO(NopCloser(bytes.NewReader(buf[:n]))), uint64(n), nil
 		}
 		buf = make([]byte, 2*len(buf))
 	}
-}
-
-func (f *stackTraceFile) GetVMO() zx.VMO {
-	return zx.VMO(zx.HandleInvalid)
 }
 
 var _ Node = (*FileWrapper)(nil)
@@ -549,9 +542,16 @@ type ReaderWithoutCloser interface {
 	stdio.Seeker
 }
 
-type Reader interface {
+type ReaderWithoutGetVMO interface {
 	ReaderWithoutCloser
 	stdio.Closer
+}
+
+type Reader interface {
+	ReaderWithoutGetVMO
+	// GetVMO returns a pointer to the Reader's handle to its backing VMO, if the
+	// Reader is backed by a VMO.
+	GetVMO() *zx.VMO
 }
 
 type nopCloser struct {
@@ -562,8 +562,21 @@ func (nopCloser) Close() error { return nil }
 
 // NopCloser implements Closer for Readers that don't need closing. We can't just use io.NopCloser()
 // because it doesn't compose with stdio.ReaderAt.
-func NopCloser(r ReaderWithoutCloser) Reader {
+func NopCloser(r ReaderWithoutCloser) ReaderWithoutGetVMO {
 	return nopCloser{ReaderWithoutCloser: r}
+}
+
+type noVMO struct {
+	ReaderWithoutGetVMO
+}
+
+func (*noVMO) GetVMO() *zx.VMO {
+	return nil
+}
+
+// NoVMO implements GetVMO for Readers that don't have a backing VMO.
+func NoVMO(r ReaderWithoutGetVMO) Reader {
+	return &noVMO{ReaderWithoutGetVMO: r}
 }
 
 type fileState struct {
@@ -703,7 +716,7 @@ func (fState *fileState) AdvisoryLock(fidl.Context, io.AdvisoryLockRequest) (io.
 }
 
 func (fState *fileState) GetBackingMemory(fidl.Context, io.VmoFlags) (io.File2GetBackingMemoryResult, error) {
-	if vmo := fState.File.GetVMO(); vmo.Handle().IsValid() {
+	if vmo := fState.reader.GetVMO(); vmo != nil {
 		// TODO(https://fxbug.dev/77623): The rights on this VMO should be capped at the connection's.
 		h, err := vmo.Handle().Duplicate(zx.RightSameRights)
 		switch err := err.(type) {

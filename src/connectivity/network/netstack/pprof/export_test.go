@@ -32,12 +32,19 @@ func TestStdioFile(t *testing.T) {
 	// It should be OK to define the file before it actually exists on disk.
 	file := newStdioFile(path)
 
-	reader, length, err := file.GetReader()
-	if !errors.Is(err, os.ErrNotExist) {
-		t.Errorf("got %s, want %s", err, os.ErrNotExist)
-	}
-	if length != 0 {
-		t.Errorf("got reader length %d, expected 0", length)
+	{
+		reader, length, err := file.GetReader()
+		if !errors.Is(err, os.ErrNotExist) {
+			t.Errorf("got %s, want %s", err, os.ErrNotExist)
+		}
+		if err == nil {
+			if err := reader.Close(); err != nil {
+				t.Error(err)
+			}
+		}
+		if length != 0 {
+			t.Errorf("got reader length %d, expected 0", length)
+		}
 	}
 
 	content := "Hello World"
@@ -46,10 +53,16 @@ func TestStdioFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	reader, length, err = file.GetReader()
+	reader, length, err := file.GetReader()
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() {
+		if err := reader.Close(); err != nil {
+			t.Error(err)
+		}
+	})
+
 	if length != uint64(len(content)) {
 		t.Errorf("got length %d, expected %d", length, len(content))
 	}
@@ -59,10 +72,6 @@ func TestStdioFile(t *testing.T) {
 
 	if gotContent != content {
 		t.Errorf("got content %s, expected %s", gotContent, content)
-	}
-
-	if err := reader.Close(); err != nil {
-		t.Fatal(err)
 	}
 }
 
@@ -93,8 +102,10 @@ func TestNowFile(t *testing.T) {
 		t.Errorf("\"goroutine\" did not appear within %q", content)
 	}
 
-	vmo := nowFile.File.GetVMO()
-	if vmo == zx.VMO(zx.HandleInvalid) {
-		t.Errorf("got invalid VMO from nowFile.File.GetVMO()")
+	vmo := reader.GetVMO()
+	if vmo == nil {
+		t.Errorf("got nil VMO from reader.GetVMO()")
+	} else if *vmo == zx.VMO(zx.HandleInvalid) {
+		t.Errorf("got invalid VMO from reader.GetVMO()")
 	}
 }

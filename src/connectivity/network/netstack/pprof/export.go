@@ -15,10 +15,10 @@ import (
 	"path/filepath"
 	"runtime/pprof"
 	"sort"
-	"syscall/zx"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/inspect"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/inspect/vmobuffer"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
@@ -187,31 +187,22 @@ func writeProfilesInspectVMOBytesWriter(writer io.Writer) error {
 const vmoBufferSizeBytes uint64 = 4096
 
 func (p *pprofFile) GetReader() (component.Reader, uint64, error) {
-	b, err := newVmoBuffer(vmoBufferSizeBytes)
+	b, err := vmobuffer.NewVMOBuffer(vmoBufferSizeBytes, "pprof-VMOBuffer")
 	if err != nil {
 		return nil, 0, err
 	}
+	defer b.Close()
+
 	if err := writeProfilesInspectVMOBytesWriter(b); err != nil {
 		return nil, 0, err
 	}
 
-	r, err := b.toVmoReader()
+	r, err := b.ToVMOReader()
 	if err != nil {
 		return nil, 0, err
 	}
 
-	return r, r.size, nil
-}
-
-func (*pprofFile) GetVMO() zx.VMO {
-	b, err := newVmoBuffer(vmoBufferSizeBytes)
-	if err != nil {
-		return zx.VMO(zx.HandleInvalid)
-	}
-	if err := writeProfilesInspectVMOBytesWriter(b); err != nil {
-		return zx.VMO(zx.HandleInvalid)
-	}
-	return b.vmo
+	return r, r.Size(), nil
 }
 
 var _ component.File = (*stdioFile)(nil)
@@ -236,9 +227,5 @@ func (f *stdioFile) GetReader() (component.Reader, uint64, error) {
 		return nil, 0, err
 	}
 
-	return file, uint64(fileInfo.Size()), nil
-}
-
-func (f *stdioFile) GetVMO() zx.VMO {
-	return zx.VMO(zx.HandleInvalid)
+	return component.NoVMO(file), uint64(fileInfo.Size()), nil
 }

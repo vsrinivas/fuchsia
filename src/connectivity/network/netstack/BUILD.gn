@@ -115,12 +115,11 @@ go_library("pprof") {
   sources = [
     "export.go",
     "export_test.go",
-    "vmobuffer.go",
-    "vmobuffer_test.go",
   ]
   deps = [
     "inspect",
     "sync",
+    "//src/connectivity/network/netstack/inspect/vmobuffer",
     "//src/lib/component",
     "//src/lib/syslog/go",
     "//third_party/golibs:go.uber.org/multierr",
@@ -130,10 +129,7 @@ go_library("pprof") {
 go_test("pprof_test") {
   gopackages =
       [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/pprof" ]
-  deps = [
-    ":pprof",
-    "//third_party/golibs:github.com/google/go-cmp",
-  ]
+  deps = [ ":pprof" ]
 }
 
 go_library("lib") {

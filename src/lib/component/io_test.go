@@ -8,6 +8,7 @@ package component_test
 
 import (
 	"context"
+	"errors"
 	"syscall/zx"
 	"testing"
 
@@ -57,12 +58,34 @@ type vmoFileImpl struct {
 	vmo zx.VMO
 }
 
-func (i *vmoFileImpl) GetReader() (component.Reader, uint64, error) {
-	return nil, 0, nil
+var errUnimplemented = errors.New("unimplemented")
+
+type vmoReader struct {
+	vmo zx.VMO
 }
 
-func (i *vmoFileImpl) GetVMO() zx.VMO {
-	return i.vmo
+func (r *vmoReader) Read([]byte) (int, error) {
+	return 0, errUnimplemented
+}
+
+func (r *vmoReader) ReadAt([]byte, int64) (int, error) {
+	return 0, errUnimplemented
+}
+
+func (r *vmoReader) Seek(int64, int) (int64, error) {
+	return 0, errUnimplemented
+}
+
+func (r *vmoReader) Close() error {
+	return errUnimplemented
+}
+
+func (r *vmoReader) GetVMO() *zx.VMO {
+	return &r.vmo
+}
+
+func (i *vmoFileImpl) GetReader() (component.Reader, uint64, error) {
+	return &vmoReader{vmo: i.vmo}, 0, nil
 }
 
 func TestGetBackingMemory(t *testing.T) {
@@ -74,6 +97,12 @@ func TestGetBackingMemory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("zx.NewVMO() = %s", err)
 	}
+	t.Cleanup(func() {
+		if err := vmo.Close(); err != nil {
+			t.Error(err)
+		}
+	})
+
 	if err := vmo.Write(content, 0); err != nil {
 		t.Fatalf("vmo.Write() = %s", err)
 	}

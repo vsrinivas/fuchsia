@@ -12,5 +12,8 @@ go_library("inspect") {
 
 group("tests") {
   testonly = true
-  deps = [ "validator:tests" ]
+  deps = [
+    "validator:tests",
+    "vmobuffer:tests",
+  ]
 }

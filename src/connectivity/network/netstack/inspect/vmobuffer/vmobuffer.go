@@ -4,7 +4,7 @@
 
 //go:build !build_with_native_toolchain
 
-package pprof
+package vmobuffer
 
 import (
 	"io"
@@ -14,24 +14,28 @@ import (
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 )
 
-var _ io.WriteCloser = (*vmoBuffer)(nil)
+var _ io.WriteCloser = (*VMOBuffer)(nil)
 
-// vmoBuffer implements a self-resizing io.WriteCloser backed by a VMO.
-type vmoBuffer struct {
+// VMOBuffer implements a self-resizing io.WriteCloser backed by a VMO.
+type VMOBuffer struct {
 	vmo    zx.VMO
 	size   uint64
 	offset uint64
 }
 
-func newVmoBuffer(size uint64) (*vmoBuffer, error) {
+func NewVMOBuffer(size uint64, name string) (*VMOBuffer, error) {
 	vmo, err := zx.NewVMO(size, zx.VMOOptionResizable)
 	if err != nil {
 		return nil, err
 	}
-	return &vmoBuffer{vmo: vmo, size: size, offset: 0}, nil
+	if err := vmo.Handle().SetProperty(zx.PropName, []byte(name)); err != nil {
+		vmo.Close()
+		return nil, err
+	}
+	return &VMOBuffer{vmo: vmo, size: size, offset: 0}, nil
 }
 
-func (b *vmoBuffer) grow() error {
+func (b *VMOBuffer) grow() error {
 	newSize := b.size * 2
 	if err := b.vmo.SetSize(newSize); err != nil {
 		return err
@@ -40,7 +44,7 @@ func (b *vmoBuffer) grow() error {
 	return nil
 }
 
-func (b *vmoBuffer) Write(p []byte) (int, error) {
+func (b *VMOBuffer) Write(p []byte) (int, error) {
 	if b.vmo == zx.VMO(zx.HandleInvalid) {
 		return 0, os.ErrClosed
 	}
@@ -58,17 +62,19 @@ func (b *vmoBuffer) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-func (b *vmoBuffer) Close() error {
-	vmo := b.vmo
-	b.vmo = zx.VMO(zx.HandleInvalid)
-	return vmo.Close()
+func (b *VMOBuffer) Close() error {
+	return b.vmo.Close()
 }
 
-// toVmoReader converts the vmoBuffer into a vmoReader that outputs the data
-// that has been written into the vmoBuffer. The vmoBuffer should be considered
-// to be consumed after calling toVmoReader(), and it is not valid to perform
+func (b *VMOBuffer) GetVMO() *zx.VMO {
+	return &b.vmo
+}
+
+// ToVMOReader converts the VMOBuffer into a VMOReader that outputs the data
+// that has been written into the VMOBuffer. The VMOBuffer should be considered
+// to be consumed after calling ToVMOReader(), and it is not valid to perform
 // operations on it afterward.
-func (b *vmoBuffer) toVmoReader() (*vmoReader, error) {
+func (b *VMOBuffer) ToVMOReader() (*VMOReader, error) {
 	if b.vmo == zx.VMO(zx.HandleInvalid) {
 		return nil, os.ErrClosed
 	}
@@ -79,29 +85,33 @@ func (b *vmoBuffer) toVmoReader() (*vmoReader, error) {
 	vmo := b.vmo
 	b.vmo = zx.VMO(zx.HandleInvalid)
 
-	return &vmoReader{
+	return &VMOReader{
 		vmo:    vmo,
 		size:   b.offset,
 		offset: 0,
 	}, nil
 }
 
-// vmoReader implements a component.Reader backed by a VMO.
-type vmoReader struct {
+// VMOReader implements a component.Reader backed by a VMO.
+type VMOReader struct {
 	vmo    zx.VMO
 	size   uint64
 	offset uint64
 }
 
-var _ component.Reader = (*vmoReader)(nil)
+var _ component.Reader = (*VMOReader)(nil)
 
-func (r *vmoReader) Read(p []byte) (int, error) {
+func NewVMOReader(vmo zx.VMO, size uint64) *VMOReader {
+	return &VMOReader{vmo: vmo, size: size, offset: 0}
+}
+
+func (r *VMOReader) Read(p []byte) (int, error) {
 	n, err := r.ReadAt(p, int64(r.offset))
 	r.offset += uint64(n)
 	return n, err
 }
 
-func (r *vmoReader) ReadAt(p []byte, off int64) (int, error) {
+func (r *VMOReader) ReadAt(p []byte, off int64) (int, error) {
 	if r.vmo == zx.VMO(zx.HandleInvalid) {
 		return 0, os.ErrClosed
 	}
@@ -118,7 +128,7 @@ func (r *vmoReader) ReadAt(p []byte, off int64) (int, error) {
 	return numBytesToRead, nil
 }
 
-func (r *vmoReader) Seek(offset int64, whence int) (int64, error) {
+func (r *VMOReader) Seek(offset int64, whence int) (int64, error) {
 	offset, err := func() (int64, error) {
 		switch whence {
 		case io.SeekCurrent:
@@ -143,8 +153,14 @@ func (r *vmoReader) Seek(offset int64, whence int) (int64, error) {
 	return offset, nil
 }
 
-func (r *vmoReader) Close() error {
-	vmo := r.vmo
-	r.vmo = zx.VMO(zx.HandleInvalid)
-	return vmo.Close()
+func (r *VMOReader) Close() error {
+	return r.vmo.Close()
+}
+
+func (r *VMOReader) Size() uint64 {
+	return r.size
+}
+
+func (r *VMOReader) GetVMO() *zx.VMO {
+	return &r.vmo
 }

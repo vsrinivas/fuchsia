@@ -9,76 +9,19 @@ package main
 import (
 	"bytes"
 	"context"
-	"fmt"
-	"io"
 	"syscall/zx"
 	"syscall/zx/fidl"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/inspect"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/inspect/vmobuffer"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 
 	fidlinspect "fidl/fuchsia/inspect"
 	"fidl/test/inspect/validate"
 )
 
-type vmoReader struct {
-	vmo    zx.VMO
-	offset int64
-}
-
-func (r *vmoReader) Read(b []byte) (int, error) {
-	n, err := r.ReadAt(b, r.offset)
-	if err == nil {
-		r.offset += int64(n)
-	}
-	return n, err
-}
-
-func (r *vmoReader) ReadAt(b []byte, offset int64) (int, error) {
-	if err := r.vmo.Read(b, uint64(offset)); err != nil {
-		return 0, err
-	}
-	return len(b), nil
-}
-
-func (r *vmoReader) Seek(offset int64, whence int) (int64, error) {
-	var abs int64
-	switch whence {
-	case io.SeekStart:
-		abs = offset
-	case io.SeekCurrent:
-		abs = r.offset + offset
-	case io.SeekEnd:
-		size, err := r.vmo.Size()
-		if err != nil {
-			return r.offset, err
-		}
-		abs = int64(size) + offset
-	default:
-		return 0, fmt.Errorf("%T.Seek: invalid whence: %d", r, whence)
-	}
-	if abs < 0 {
-		return 0, fmt.Errorf("%T.Seek: negative position: %d", r, abs)
-	}
-	r.offset = abs
-	return abs, nil
-}
-
-type vmoWriter struct {
-	vmo    zx.VMO
-	offset uint64
-}
-
-func (w *vmoWriter) Write(b []byte) (int, error) {
-	if err := w.vmo.Write(b, w.offset); err != nil {
-		return 0, err
-	}
-	w.offset += uint64(len(b))
-	return len(b), nil
-}
-
 type impl struct {
-	vmo       zx.VMO
+	vmo       *zx.VMO
 	writer    *inspect.Writer
 	nodes     map[uint32]uint32
 	published bool
@@ -112,15 +55,10 @@ func (i *impl) GetReader() (component.Reader, uint64, error) {
 	vmo := zx.VMO(h)
 	size, err := vmo.Size()
 	if err != nil {
+		vmo.Close()
 		return nil, 0, err
 	}
-	return component.NopCloser(&vmoReader{
-		vmo: vmo,
-	}), size, nil
-}
-
-func (i *impl) GetVMO() zx.VMO {
-	return i.vmo
+	return vmobuffer.NewVMOReader(vmo, size), size, nil
 }
 
 func (i *impl) Initialize(_ fidl.Context, params validate.InitializationParams) (zx.Handle, validate.TestResult, error) {
@@ -129,16 +67,12 @@ func (i *impl) Initialize(_ fidl.Context, params validate.InitializationParams) 
 	}
 	size := params.GetVmoSize()
 	{
-		vmo, err := zx.NewVMO(size, 0)
+		vmoBuffer, err := vmobuffer.NewVMOBuffer(size, "validator-VMOBuffer")
 		if err != nil {
 			panic(err)
 		}
-		i.vmo = vmo
-	}
-	{
-		w, err := inspect.NewWriter(&vmoWriter{
-			vmo: i.vmo,
-		})
+		i.vmo = vmoBuffer.GetVMO()
+		w, err := inspect.NewWriter(vmoBuffer)
 		if err != nil {
 			panic(err)
 		}

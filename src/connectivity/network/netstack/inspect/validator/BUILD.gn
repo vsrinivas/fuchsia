@@ -12,6 +12,7 @@ go_library("validator") {
 
   deps = [
     "//src/connectivity/network/netstack/inspect",
+    "//src/connectivity/network/netstack/inspect/vmobuffer",
     "//src/lib/component",
   ]
 

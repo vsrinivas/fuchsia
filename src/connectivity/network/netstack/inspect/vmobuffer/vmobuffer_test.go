@@ -4,7 +4,7 @@
 
 //go:build !build_with_native_toolchain
 
-package pprof
+package vmobuffer
 
 import (
 	"bytes"
@@ -151,14 +151,14 @@ func executeWithBuffer(writes BufferWriteCmdSequence, reads BufferReadCmdSequenc
 }
 
 func executeWithVmo(t *testing.T, writes BufferWriteCmdSequence, reads BufferReadCmdSequence) ([]string, []string) {
-	buf, err := newVmoBuffer(4096)
+	buf, err := NewVMOBuffer(4096, "test-VMOBuffer")
 	if err != nil {
 		t.Error(err)
 	}
 
 	writeResults := executeWrites(buf, writes)
 
-	reader, err := buf.toVmoReader()
+	reader, err := buf.ToVMOReader()
 	if err != nil {
 		t.Error(err)
 	}

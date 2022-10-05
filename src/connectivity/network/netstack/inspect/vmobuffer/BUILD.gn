@@ -1,0 +1,40 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+
+_vmobuffer_go_pkg =
+    "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/inspect/vmobuffer"
+
+go_library("vmobuffer") {
+  name = _vmobuffer_go_pkg
+
+  sources = [
+    "vmobuffer.go",
+    "vmobuffer_test.go",
+  ]
+  deps = [ "//src/lib/component" ]
+}
+
+go_test("vmobuffer_test") {
+  gopackages = [ _vmobuffer_go_pkg ]
+  deps = [
+    ":vmobuffer",
+    "//third_party/golibs:github.com/google/go-cmp",
+  ]
+}
+
+fuchsia_unittest_package("vmobuffer-gotests") {
+  deps = [
+    ":vmobuffer_test",
+    "//src/sys/test_runners:tmp_storage",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":vmobuffer-gotests" ]
+}
