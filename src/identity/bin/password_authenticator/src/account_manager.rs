@@ -835,6 +835,10 @@ mod test {
                 TEST_PINWEAVER_HE_SECRET, TEST_PINWEAVER_LE_SECRET,
             },
             scrypt::test::{TEST_SCRYPT_KEY, TEST_SCRYPT_PASSWORD},
+            testing::{
+                Match, MockBlockDevice, MockDiskManager, MockEncryptedBlockDevice, MockPartition,
+                UnsealBehavior,
+            },
         },
         anyhow::anyhow,
         async_trait::async_trait,
@@ -842,7 +846,7 @@ mod test {
         fuchsia_zircon::Status,
         lazy_static::lazy_static,
         storage_manager::minfs::{
-            disk::{testing::MockMinfs, DiskError, Partition},
+            disk::{testing::MockMinfs, DiskError},
             StorageManager as MinfsStorageManager,
         },
         vfs::execution_scope::ExecutionScope,
@@ -856,203 +860,6 @@ mod test {
 
     // An account ID that should not exist.
     const UNSUPPORTED_ACCOUNT_ID: u64 = 42;
-
-    /// Mock implementation of [`DiskManager`].
-    struct MockDiskManager {
-        scope: ExecutionScope,
-        // If no partition list is given, partitions() (from the DiskManager trait) will return
-        // an error.
-        maybe_partitions: Option<Vec<MockPartition>>,
-        format_minfs_behavior: Result<(), fn() -> DiskError>,
-        serve_minfs_fn: Arc<Mutex<dyn FnMut() -> Result<MockMinfs, DiskError> + Send>>,
-    }
-
-    impl Default for MockDiskManager {
-        fn default() -> Self {
-            let scope = ExecutionScope::build()
-                .entry_constructor(vfs::directory::mutable::simple::tree_constructor(
-                    |_parent, _name| {
-                        Ok(vfs::file::vmo::read_write(
-                            vfs::file::vmo::simple_init_vmo_with_capacity(&[], 100),
-                        ))
-                    },
-                ))
-                .new();
-            Self {
-                scope: scope.clone(),
-                maybe_partitions: None,
-                format_minfs_behavior: Ok(()),
-                serve_minfs_fn: Arc::new(Mutex::new(move || Ok(MockMinfs::simple(scope.clone())))),
-            }
-        }
-    }
-
-    impl Drop for MockDiskManager {
-        fn drop(&mut self) {
-            self.scope.shutdown();
-        }
-    }
-
-    #[async_trait]
-    impl DiskManager for MockDiskManager {
-        type BlockDevice = MockBlockDevice;
-        type Partition = MockPartition;
-        type EncryptedBlockDevice = MockEncryptedBlockDevice;
-        type Minfs = MockMinfs;
-
-        async fn partitions(&self) -> Result<Vec<MockPartition>, DiskError> {
-            self.maybe_partitions
-                .clone()
-                .ok_or_else(|| DiskError::GetBlockInfoFailed(Status::NOT_FOUND))
-        }
-
-        async fn has_zxcrypt_header(&self, block_dev: &MockBlockDevice) -> Result<bool, DiskError> {
-            match &block_dev.zxcrypt_header_behavior {
-                Ok(Match::Any) => Ok(true),
-                Ok(Match::None) => Ok(false),
-                Err(err_factory) => Err(err_factory()),
-            }
-        }
-
-        async fn bind_to_encrypted_block(
-            &self,
-            block_dev: MockBlockDevice,
-        ) -> Result<MockEncryptedBlockDevice, DiskError> {
-            block_dev.bind_behavior.map_err(|err_factory| err_factory())
-        }
-
-        async fn format_minfs(&self, _block_dev: &MockBlockDevice) -> Result<(), DiskError> {
-            self.format_minfs_behavior.clone().map_err(|err_factory| err_factory())
-        }
-
-        async fn serve_minfs(&self, _block_dev: MockBlockDevice) -> Result<MockMinfs, DiskError> {
-            let mut locked_fn = self.serve_minfs_fn.lock().await;
-            (*locked_fn)()
-        }
-    }
-
-    impl MockDiskManager {
-        fn new() -> Self {
-            Self::default()
-        }
-
-        fn with_partition(mut self, partition: MockPartition) -> Self {
-            self.maybe_partitions.get_or_insert_with(Vec::new).push(partition);
-            self
-        }
-
-        fn with_serve_minfs<F>(mut self, serve_minfs: F) -> Self
-        where
-            F: FnMut() -> Result<MockMinfs, DiskError> + Send + 'static,
-        {
-            self.serve_minfs_fn = Arc::new(Mutex::new(serve_minfs));
-            self
-        }
-    }
-
-    /// Whether a mock's input should be considered a match for the test case.
-    #[derive(Debug, Clone, Copy)]
-    enum Match {
-        /// Any input is considered a match.
-        Any,
-        /// Regardless of input, there is no match.
-        None,
-    }
-
-    /// A mock implementation of [`Partition`].
-    #[derive(Debug, Clone)]
-    struct MockPartition {
-        // Whether the mock's `has_guid` method will match any given GUID, or produce an error.
-        guid_behavior: Result<Match, fn() -> DiskError>,
-
-        // Whether the mock's `has_label` method will match any given label, or produce an error.
-        label_behavior: Result<Match, fn() -> DiskError>,
-
-        // BlockDevice representing the partition data.
-        block: MockBlockDevice,
-    }
-
-    #[async_trait]
-    impl Partition for MockPartition {
-        type BlockDevice = MockBlockDevice;
-
-        async fn has_guid(&self, _desired_guid: [u8; 16]) -> Result<bool, DiskError> {
-            match &self.guid_behavior {
-                Ok(Match::Any) => Ok(true),
-                Ok(Match::None) => Ok(false),
-                Err(err_factory) => Err(err_factory()),
-            }
-        }
-
-        async fn has_label(&self, _desired_label: &str) -> Result<bool, DiskError> {
-            match &self.label_behavior {
-                Ok(Match::Any) => Ok(true),
-                Ok(Match::None) => Ok(false),
-                Err(err_factory) => Err(err_factory()),
-            }
-        }
-
-        fn into_block_device(self) -> MockBlockDevice {
-            self.block
-        }
-    }
-
-    #[derive(Debug, Clone)]
-    struct MockBlockDevice {
-        // Whether or not the block device has a zxcrypt header in the first block.
-        zxcrypt_header_behavior: Result<Match, fn() -> DiskError>,
-        // Whether or not the block device should succeed in binding zxcrypt
-        bind_behavior: Result<MockEncryptedBlockDevice, fn() -> DiskError>,
-    }
-
-    #[derive(Debug, Clone)]
-    enum UnsealBehavior {
-        AcceptAnyKey(Box<MockBlockDevice>),
-        AcceptExactKeys((Vec<Key>, Box<MockBlockDevice>)),
-        RejectWithError(fn() -> DiskError),
-    }
-
-    /// A mock implementation of [`EncryptedBlockDevice`].
-    #[derive(Debug, Clone)]
-    struct MockEncryptedBlockDevice {
-        // Whether the block encrypted block device can format successfully.
-        format_behavior: Result<(), fn() -> DiskError>,
-        // What behavior the encrypted block device should have when unseal is attempted.
-        unseal_behavior: UnsealBehavior,
-        // Whether the block encrypted block device can be shredded successfully
-        shred_behavior: Result<(), fn() -> DiskError>,
-    }
-
-    #[async_trait]
-    impl EncryptedBlockDevice for MockEncryptedBlockDevice {
-        type BlockDevice = MockBlockDevice;
-
-        async fn format(&self, _key: &Key) -> Result<(), DiskError> {
-            self.format_behavior.clone().map_err(|err_factory| err_factory())
-        }
-
-        async fn unseal(&self, key: &Key) -> Result<MockBlockDevice, DiskError> {
-            match &self.unseal_behavior {
-                UnsealBehavior::AcceptAnyKey(b) => Ok(*b.clone()),
-                UnsealBehavior::AcceptExactKeys((keys, b)) => {
-                    if keys.contains(&key) {
-                        Ok(*b.clone())
-                    } else {
-                        Err(DiskError::FailedToUnsealZxcrypt(Status::ACCESS_DENIED))
-                    }
-                }
-                UnsealBehavior::RejectWithError(err_factory) => Err(err_factory()),
-            }
-        }
-
-        async fn seal(&self) -> Result<(), DiskError> {
-            Ok(())
-        }
-
-        async fn shred(&self) -> Result<(), DiskError> {
-            self.shred_behavior.clone().map_err(|err_factory| err_factory())
-        }
-    }
 
     #[derive(Debug, Clone)]
     struct MemoryAccountMetadataStore {
