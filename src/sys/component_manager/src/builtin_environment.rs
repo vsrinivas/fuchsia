@@ -149,7 +149,6 @@ pub struct BuiltinEnvironmentBuilder {
     utc_clock: Option<Arc<Clock>>,
     add_environment_resolvers: bool,
     inspector: Option<Inspector>,
-    enable_introspection: bool,
     crash_records: CrashRecords,
 }
 
@@ -163,7 +162,6 @@ impl Default for BuiltinEnvironmentBuilder {
             utc_clock: None,
             add_environment_resolvers: false,
             inspector: None,
-            enable_introspection: true,
             crash_records: CrashRecords::new(),
         }
     }
@@ -190,11 +188,6 @@ impl BuiltinEnvironmentBuilder {
 
     pub fn set_inspector(mut self, inspector: Inspector) -> Self {
         self.inspector = Some(inspector);
-        self
-    }
-
-    pub fn enable_introspection(mut self, val: bool) -> Self {
-        self.enable_introspection = val;
         self
     }
 
@@ -365,7 +358,6 @@ impl BuiltinEnvironmentBuilder {
             realm_builder_resolver,
             self.utc_clock,
             self.inspector.unwrap_or(component::inspector().clone()),
-            self.enable_introspection,
             self.crash_records,
         )
         .await?)
@@ -449,7 +441,6 @@ impl BuiltinEnvironment {
         realm_builder_resolver: Option<Arc<RealmBuilderResolver>>,
         utc_clock: Option<Arc<Clock>>,
         inspector: Inspector,
-        enable_introspection: bool,
         crash_records: CrashRecords,
     ) -> Result<BuiltinEnvironment, Error> {
         let execution_mode = if runtime_config.debug {
@@ -829,44 +820,44 @@ impl BuiltinEnvironment {
         let stop_notifier = Arc::new(RootStopNotifier::new());
         model.root().hooks.install(stop_notifier.hooks()).await;
 
-        let realm_explorer = if enable_introspection {
+        let realm_explorer = if runtime_config.disable_introspection {
+            None
+        } else {
             let realm_explorer = Arc::new(RealmExplorer::new(model.clone()));
             model.root().hooks.install(realm_explorer.hooks()).await;
             Some(realm_explorer)
-        } else {
-            None
         };
 
-        let realm_query = if enable_introspection {
+        let realm_query = if runtime_config.disable_introspection {
+            None
+        } else {
             let realm_query = Arc::new(RealmQuery::new(model.clone()));
             model.root().hooks.install(realm_query.hooks()).await;
             Some(realm_query)
-        } else {
-            None
         };
 
-        let lifecycle_controller = if enable_introspection {
+        let lifecycle_controller = if runtime_config.disable_introspection {
+            None
+        } else {
             let realm_control = Arc::new(LifecycleController::new(model.clone()));
             model.root().hooks.install(realm_control.hooks()).await;
             Some(realm_control)
-        } else {
-            None
         };
 
-        let hub = if enable_introspection {
+        let hub = if runtime_config.disable_introspection {
+            None
+        } else {
             let hub = Arc::new(Hub::new(root_component_url.as_str().to_owned())?);
             model.root().hooks.install(hub.hooks()).await;
             Some(hub)
-        } else {
-            None
         };
 
-        let route_validator = if enable_introspection {
+        let route_validator = if runtime_config.disable_introspection {
+            None
+        } else {
             let route_validator = Arc::new(RouteValidator::new(model.clone()));
             model.root().hooks.install(route_validator.hooks()).await;
             Some(route_validator)
-        } else {
-            None
         };
 
         // Set up the handler for routes involving the "pkg" directory

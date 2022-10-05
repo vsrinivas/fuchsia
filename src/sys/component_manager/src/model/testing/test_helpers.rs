@@ -320,7 +320,6 @@ pub struct TestEnvironmentBuilder {
     components: Vec<(&'static str, ComponentDecl)>,
     config_values: Vec<(&'static str, ValuesData)>,
     runtime_config: RuntimeConfig,
-    enable_introspection: bool,
     component_id_index_path: Option<String>,
 }
 
@@ -331,7 +330,6 @@ impl TestEnvironmentBuilder {
             components: vec![],
             config_values: vec![],
             runtime_config: Default::default(),
-            enable_introspection: true,
             component_id_index_path: None,
         }
     }
@@ -358,11 +356,6 @@ impl TestEnvironmentBuilder {
 
     pub fn set_runtime_config(mut self, runtime_config: RuntimeConfig) -> Self {
         self.runtime_config = runtime_config;
-        self
-    }
-
-    pub fn enable_introspection(mut self, val: bool) -> Self {
-        self.enable_introspection = val;
         self
     }
 
@@ -398,7 +391,6 @@ impl TestEnvironmentBuilder {
                 .add_resolver("test".to_string(), mock_resolver.clone())
                 .add_runner(TEST_RUNNER_NAME.into(), mock_runner.clone())
                 .set_runtime_config(self.runtime_config)
-                .enable_introspection(self.enable_introspection)
                 .build()
                 .await
                 .expect("builtin environment setup failed"),
@@ -437,10 +429,6 @@ impl ActionsTest {
             TestEnvironmentBuilder::new()
                 .set_root_component(root_component)
                 .set_components(components)
-                // Don't install the Hub's hooks because the Hub expects components
-                // to start and stop in a certain lifecycle ordering. In particular, some unit
-                // tests register individual actions in a way that confuses the hub's expectations.
-                .enable_introspection(false)
                 .build()
                 .await;
 

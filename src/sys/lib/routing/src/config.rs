@@ -43,6 +43,10 @@ pub struct RuntimeConfig {
     /// to events before the root component has started.
     pub debug: bool,
 
+    /// Disables Component Manager's introspection APIs (RealmQuery, RealmExplorer,
+    /// RouteValidator, LifecycleController, etc.) for use by components.
+    pub disable_introspection: bool,
+
     /// If true, component_manager will serve an instance of fuchsia.process.Launcher and use this
     /// launcher for the built-in ELF component runner. The root component can additionally
     /// use and/or offer this service using '/builtin/fuchsia.process.Launcher' from realm.
@@ -232,6 +236,7 @@ impl Default for RuntimeConfig {
             // configuration is present or it fails to load.
             security_policy: Default::default(),
             debug: false,
+            disable_introspection: false,
             use_builtin_process_launcher: false,
             maintain_utc_clock: false,
             num_threads: 1,
@@ -400,6 +405,9 @@ impl TryFrom<component_internal::Config> for RuntimeConfig {
                 config.builtin_capabilities,
             )?,
             debug: config.debug.unwrap_or(default.debug),
+            disable_introspection: config
+                .disable_introspection
+                .unwrap_or(default.disable_introspection),
             use_builtin_process_launcher: config
                 .use_builtin_process_launcher
                 .unwrap_or(default.use_builtin_process_launcher),
@@ -634,6 +642,7 @@ mod tests {
     test_config_ok! {
         all_fields_none => (component_internal::Config {
             debug: None,
+            disable_introspection: None,
             list_children_batch_size: None,
             security_policy: None,
             maintain_utc_clock: None,
@@ -648,6 +657,7 @@ mod tests {
         }, RuntimeConfig::default()),
         all_leaf_nodes_none => (component_internal::Config {
             debug: Some(false),
+            disable_introspection: Some(false),
             list_children_batch_size: Some(5),
             maintain_utc_clock: Some(false),
             use_builtin_process_launcher: Some(true),
@@ -672,6 +682,7 @@ mod tests {
             ..component_internal::Config::EMPTY
         }, RuntimeConfig {
             debug: false,
+            disable_introspection: false,
             list_children_batch_size: 5,
             maintain_utc_clock: false,
             use_builtin_process_launcher:true,
@@ -680,6 +691,7 @@ mod tests {
         all_fields_some => (
             component_internal::Config {
                 debug: Some(true),
+                disable_introspection: Some(true),
                 list_children_batch_size: Some(42),
                 maintain_utc_clock: Some(true),
                 use_builtin_process_launcher: Some(false),
@@ -793,6 +805,7 @@ mod tests {
             },
             RuntimeConfig {
                 debug: true,
+                disable_introspection: true,
                 list_children_batch_size: 42,
                 maintain_utc_clock: true,
                 use_builtin_process_launcher: false,
@@ -934,6 +947,7 @@ mod tests {
         invalid_job_policy => (
             component_internal::Config {
                 debug: None,
+                disable_introspection: None,
                 list_children_batch_size: None,
                 maintain_utc_clock: None,
                 use_builtin_process_launcher: None,
@@ -964,6 +978,7 @@ mod tests {
         invalid_capability_policy_empty_allowlist_cap => (
             component_internal::Config {
                 debug: None,
+                disable_introspection: None,
                 list_children_batch_size: None,
                 maintain_utc_clock: None,
                 use_builtin_process_launcher: None,
@@ -996,6 +1011,7 @@ mod tests {
         invalid_capability_policy_empty_source_moniker => (
             component_internal::Config {
                 debug: None,
+                disable_introspection: None,
                 list_children_batch_size: None,
                 maintain_utc_clock: None,
                 use_builtin_process_launcher: None,
@@ -1028,6 +1044,7 @@ mod tests {
         invalid_root_component_url => (
             component_internal::Config {
                 debug: None,
+                disable_introspection: None,
                 list_children_batch_size: None,
                 maintain_utc_clock: None,
                 use_builtin_process_launcher: None,
@@ -1080,6 +1097,7 @@ mod tests {
             &tempdir,
             component_internal::Config {
                 debug: None,
+                disable_introspection: None,
                 list_children_batch_size: Some(42),
                 security_policy: None,
                 namespace_capabilities: None,
