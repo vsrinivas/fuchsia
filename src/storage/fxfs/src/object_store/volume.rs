@@ -99,7 +99,8 @@ impl RootVolume {
         store_object_id: u64,
         crypt: Option<Arc<dyn Crypt>>,
     ) -> Result<Arc<ObjectStore>, Error> {
-        let store = self.filesystem.object_manager().store(store_object_id)?;
+        let store =
+            self.filesystem.object_manager().store(store_object_id).ok_or(FxfsError::NotFound)?;
         store.set_trace(self.filesystem.trace());
         if let Some(crypt) = crypt {
             store.unlock(crypt).await?;
@@ -116,7 +117,7 @@ impl RootVolume {
                 _ => bail!(anyhow!(FxfsError::Inconsistent).context("Expected volume")),
             };
         let root_store = self.filesystem.root_store();
-        let store = self.filesystem.object_manager().store(object_id)?;
+        let store = self.filesystem.object_manager().store(object_id).ok_or(FxfsError::NotFound)?;
 
         // Delete all the layers and encrypted mutations stored in root_store for this volume.
         // This includes the StoreInfo itself.

@@ -48,6 +48,7 @@ struct FsckTest {
 #[derive(Default)]
 struct TestOptions {
     halt_on_error: bool,
+    skip_system_fsck: bool,
     volume_store_id: Option<u64>,
 }
 
@@ -89,7 +90,9 @@ impl FsckTest {
                 self.errors.lock().unwrap().push(err.clone());
             },
         };
-        fsck_with_options(self.filesystem(), &options).await?;
+        if !test_options.skip_system_fsck {
+            fsck_with_options(self.filesystem(), &options).await?;
+        }
         if let Some(store_id) = test_options.volume_store_id {
             fsck_volume_with_options(
                 self.filesystem().as_ref(),
@@ -513,6 +516,94 @@ async fn test_allocation_mismatch() {
 
     test.remount().await.expect("Remount failed");
     test.run(TestOptions::default()).await.expect_err("Fsck should fail");
+    assert_matches!(
+        test.errors()[..],
+        [
+            FsckIssue::Error(FsckError::AllocationForNonexistentOwner(..)),
+            FsckIssue::Error(FsckError::MissingAllocation(..)),
+            FsckIssue::Error(FsckError::AllocatedBytesMismatch(..)),
+        ]
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_volume_allocation_mismatch() {
+    let mut test = FsckTest::new().await;
+    let store_id = {
+        let fs = test.filesystem();
+        let device = fs.device();
+        let store_id = {
+            let root_volume = root_volume(fs.clone()).await.unwrap();
+            let volume = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
+            let root_directory = Directory::open(&volume, volume.root_directory_object_id())
+                .await
+                .expect("open failed");
+
+            let mut transaction = fs
+                .clone()
+                .new_transaction(&[], Options::default())
+                .await
+                .expect("new_transaction failed");
+            let handle = root_directory
+                .create_child_file(&mut transaction, "child_file")
+                .await
+                .expect("create_child_file failed");
+            transaction.commit().await.expect("commit failed");
+            let mut transaction = fs
+                .clone()
+                .new_transaction(&[], Options::default())
+                .await
+                .expect("new_transaction failed");
+            let buf = device.allocate_buffer(1);
+            handle
+                .txn_write(&mut transaction, 1_048_576, buf.as_ref())
+                .await
+                .expect("write failed");
+            transaction.commit().await.expect("commit failed");
+            volume.flush().await.expect("Flush store failed");
+            volume.store_object_id()
+        };
+
+        // Find and break first allocation record for the child store.
+        let allocator = fs.allocator();
+        let range = {
+            let layer_set = allocator.tree().layer_set();
+            let mut merger = layer_set.merger();
+            let mut iter =
+                allocator.iter(&mut merger, Bound::Unbounded).await.expect("iter failed");
+            loop {
+                if let ItemRef {
+                    key: AllocatorKey { device_range },
+                    value: AllocatorValue::Abs { owner_object_id, .. },
+                    ..
+                } = iter.get().expect("no allocations found")
+                {
+                    if *owner_object_id == store_id {
+                        break device_range.clone();
+                    }
+                }
+                iter.advance().await.expect("advance failed");
+            }
+        };
+        allocator
+            .tree()
+            .replace_or_insert(Item::new(
+                AllocatorKey { device_range: range },
+                AllocatorValue::Abs { count: 2, owner_object_id: 42 },
+            ))
+            .await;
+        allocator.flush().await.expect("flush failed");
+        store_id
+    };
+
+    test.remount().await.expect("Remount failed");
+    test.run(TestOptions {
+        skip_system_fsck: true,
+        volume_store_id: Some(store_id),
+        ..Default::default()
+    })
+    .await
+    .expect_err("Fsck should fail");
     assert_matches!(
         test.errors()[..],
         [

@@ -220,15 +220,8 @@ impl ObjectManager {
     }
 
     /// Returns the store which might or might not be locked.
-    pub fn store(&self, store_object_id: u64) -> Result<Arc<ObjectStore>, Error> {
-        Ok(self
-            .inner
-            .read()
-            .unwrap()
-            .stores
-            .get(&store_object_id)
-            .ok_or(FxfsError::NotFound)?
-            .clone())
+    pub fn store(&self, store_object_id: u64) -> Option<Arc<ObjectStore>> {
+        self.inner.read().unwrap().stores.get(&store_object_id).cloned()
     }
 
     /// Tries to unlock a store.
@@ -237,7 +230,7 @@ impl ObjectManager {
         store_object_id: u64,
         crypt: Arc<dyn Crypt>,
     ) -> Result<Arc<ObjectStore>, Error> {
-        let store = self.store(store_object_id)?;
+        let store = self.store(store_object_id).ok_or(FxfsError::NotFound)?;
         store
             .unlock(crypt)
             .await
