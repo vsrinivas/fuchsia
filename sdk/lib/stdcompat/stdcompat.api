@@ -15,7 +15,7 @@
   "pkg/stdcompat/include/lib/stdcompat/internal/functional.h": "aa762453cbc17a286c0f042263932a67",
   "pkg/stdcompat/include/lib/stdcompat/internal/linkage.h": "11c541d22ed8dc7eed82eac37a619b79",
   "pkg/stdcompat/include/lib/stdcompat/internal/span.h": "75532deee4f2a5cebf487e5fc6015d09",
-  "pkg/stdcompat/include/lib/stdcompat/internal/storage.h": "49ddf504b1b4a507bb845b56e2a8057f",
+  "pkg/stdcompat/include/lib/stdcompat/internal/storage.h": "a9678b1c1b6827d4adcb029c41640028",
   "pkg/stdcompat/include/lib/stdcompat/internal/tuple.h": "b41e24ca31031c06c2879d360ec89cd2",
   "pkg/stdcompat/include/lib/stdcompat/internal/type_traits.h": "5007a7aa97c74ee6fe2e4513cbcaebed",
   "pkg/stdcompat/include/lib/stdcompat/internal/utility.h": "22218049acc4308ff86c8fb72a9f1068",
