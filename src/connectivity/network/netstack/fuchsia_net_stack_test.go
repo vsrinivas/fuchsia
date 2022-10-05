@@ -324,8 +324,12 @@ func TestDnsServerWatcher(t *testing.T) {
 		t.Fatalf("failed to create watcher request: %s", err)
 	}
 	defer func() {
-		_ = request.Close()
-		_ = watcher.Close()
+		if err := request.Close(); err != nil {
+			t.Errorf("failed to close DNS server watcher request: %s", err)
+		}
+		if err := watcher.Close(); err != nil {
+			t.Errorf("failed to close DNS server watcher: %s", err)
+		}
 	}()
 	if err := ni.GetDnsServerWatcher(context.Background(), request); err != nil {
 		t.Fatalf("failed to get watcher: %s", err)

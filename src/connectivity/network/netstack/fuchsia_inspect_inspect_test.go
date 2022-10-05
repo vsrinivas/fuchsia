@@ -826,7 +826,9 @@ func TestEthInfoInspectImpl(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() {
-		_ = client.Close()
+		if err := client.Close(); err != nil {
+			t.Errorf("failed to close eth client: %s", err)
+		}
 		client.Wait()
 	}()
 
@@ -1009,7 +1011,7 @@ func TestInspectGetMissingChild(t *testing.T) {
 	}
 	defer func() {
 		if err := proxy.Close(); err != nil {
-			t.Fatalf("proxy.Close() = %s", err)
+			t.Errorf("proxy.Close() = %s", err)
 		}
 	}()
 	found, err := impl.OpenChild(context.Background(), "non-existing-child", req)

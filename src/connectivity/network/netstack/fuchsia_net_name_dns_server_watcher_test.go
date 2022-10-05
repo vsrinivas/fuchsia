@@ -89,7 +89,9 @@ func TestDnsWatcherResolvesAndBlocks(t *testing.T) {
 
 	watcher := bindWatcher(t, watcherCollection)
 	defer func() {
-		_ = watcher.Close()
+		if err := watcher.Close(); err != nil {
+			t.Errorf("failed to close DNS server watcher: %s", err)
+		}
 	}()
 
 	servers, err := watcher.WatchServers(context.Background())
@@ -165,7 +167,9 @@ func TestDnsWatcherDisallowMultiplePending(t *testing.T) {
 
 	watcher := bindWatcher(t, watcherCollection)
 	defer func() {
-		_ = watcher.Close()
+		if err := watcher.Close(); err != nil {
+			t.Errorf("failed to close DNS server watcher: %s", err)
+		}
 	}()
 
 	var wg sync.WaitGroup
@@ -192,12 +196,16 @@ func TestDnsWatcherMultipleWatchers(t *testing.T) {
 
 	watcher1 := bindWatcher(t, watcherCollection)
 	defer func() {
-		_ = watcher1.Close()
+		if err := watcher1.Close(); err != nil {
+			t.Errorf("failed to close watcher1: %s", err)
+		}
 	}()
 
 	watcher2 := bindWatcher(t, watcherCollection)
 	defer func() {
-		_ = watcher2.Close()
+		if err := watcher2.Close(); err != nil {
+			t.Errorf("failed to close watcher2: %s", err)
+		}
 	}()
 
 	var wg sync.WaitGroup
@@ -270,7 +278,9 @@ func TestDnsWatcherDifferentAddressTypes(t *testing.T) {
 	watcherCollection, serverConfig := createCollection()
 	watcher := bindWatcher(t, watcherCollection)
 	defer func() {
-		_ = watcher.Close()
+		if err := watcher.Close(); err != nil {
+			t.Errorf("failed to close DNS server watcher: %s", err)
+		}
 	}()
 
 	serverConfig.SetDefaultServers([]tcpip.Address{defaultServerIpv4})

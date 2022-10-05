@@ -120,7 +120,11 @@ func TestInterfacesChangeEvent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create interface watcher protocol channel pair: %s", err)
 	}
-	defer watcher.Close()
+	defer func() {
+		if err := watcher.Close(); err != nil {
+			t.Errorf("failed to close interface watcher: %s", err)
+		}
+	}()
 
 	if err := si.GetWatcher(context.Background(), interfaces.WatcherOptions{}, request); err != nil {
 		t.Fatalf("failed to initialize interface watcher: %s", err)

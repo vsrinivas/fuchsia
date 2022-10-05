@@ -129,7 +129,7 @@ func TestInterfacesWatcherExisting(t *testing.T) {
 	watcher := initWatcher(t, si)
 	defer func() {
 		if err := watcher.Close(); err != nil {
-			t.Fatalf("failed to close watcher: %s", err)
+			t.Errorf("failed to close watcher: %s", err)
 		}
 	}()
 
@@ -157,7 +157,7 @@ func TestInterfacesWatcher(t *testing.T) {
 		// NB: The blocking watcher closed at the end of the test instead of deferred as
 		// additional assertions are made with it.
 		if err := nonBlockingWatcher.Close(); err != nil {
-			t.Fatalf("failed to close non-blocking watcher: %s", err)
+			t.Errorf("failed to close non-blocking watcher: %s", err)
 		}
 		close(ch)
 	}()
@@ -375,7 +375,7 @@ func TestInterfacesWatcherDuplicateAddress(t *testing.T) {
 	watcher := initWatcher(t, si)
 	defer func() {
 		if err := watcher.Close(); err != nil {
-			t.Fatalf("failed to close watcher: %s", err)
+			t.Errorf("failed to close watcher: %s", err)
 		}
 	}()
 
@@ -452,7 +452,7 @@ func TestInterfacesWatcherDeepCopyAddresses(t *testing.T) {
 			var watcher watcherHelper
 			defer func() {
 				if err := watcher.Close(); err != nil {
-					t.Fatalf("failed to close watcher: %s", err)
+					t.Errorf("failed to close watcher: %s", err)
 				}
 			}()
 			if !tc.existing {
