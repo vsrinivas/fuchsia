@@ -32,7 +32,12 @@ void InjectPointerEventAction::Run(GestureContext gesture_context) {
   // bounding box, and transform them to client-view-root space.
   auto* node = action_context_->semantics_source->GetSemanticNode(a11y_focus->view_ref_koid,
                                                                   a11y_focus->node_id);
-  FX_DCHECK(node);
+  if (!node) {
+    FX_LOGS(ERROR) << "Failed to inject pointer event into view. GetSemanticNode("
+                   << a11y_focus->view_ref_koid << ", " << a11y_focus->node_id
+                   << ") returned nullptr";
+    return;
+  }
 
   auto node_to_root_transform = action_context_->semantics_source->GetNodeToRootTransform(
       a11y_focus->view_ref_koid, a11y_focus->node_id);
