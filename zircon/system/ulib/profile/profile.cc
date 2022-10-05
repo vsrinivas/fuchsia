@@ -11,6 +11,7 @@
 #include <lib/profile/profile.h>
 #include <lib/syslog/global.h>
 #include <lib/zx/profile.h>
+#include <lib/zx/thread.h>
 #include <string.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
@@ -102,14 +103,15 @@ zx_status_t GetCpuAffinityProfileSimple(void* ctx, const fuchsia_scheduler_CpuSe
       txn, status, status == ZX_OK ? profile.release() : ZX_HANDLE_INVALID);
 }
 
-zx_status_t SetProfileByRoleSimple(void* ctx, zx_handle_t thread, const char* role_data,
+zx_status_t SetProfileByRoleSimple(void* ctx, zx_handle_t thread_handle, const char* role_data,
                                    size_t role_size, fidl_txn_t* txn) {
+  zx::thread thread{thread_handle};
   Context* const context = Context::Get(ctx);
 
   // Log the requested role and PID:TID of the thread being assigned.
   zx_info_handle_basic_t handle_info{};
-  zx_status_t status = zx_object_get_info(thread, ZX_INFO_HANDLE_BASIC, &handle_info,
-                                          sizeof(handle_info), nullptr, nullptr);
+  zx_status_t status =
+      thread.get_info(ZX_INFO_HANDLE_BASIC, &handle_info, sizeof(handle_info), nullptr, nullptr);
   if (status != ZX_OK) {
     FX_LOGF(WARNING, "ProfileProvider", "Failed to get info for thread handle: %s",
             zx_status_get_string(status));
@@ -174,7 +176,7 @@ zx_status_t SetProfileByRoleSimple(void* ctx, zx_handle_t thread, const char* ro
     return fuchsia_scheduler_ProfileProviderSetProfileByRole_reply(txn, ZX_ERR_INTERNAL);
   }
 
-  status = zx_object_set_profile(thread, profile.get(), 0);
+  status = thread.set_profile(profile, 0);
   return fuchsia_scheduler_ProfileProviderSetProfileByRole_reply(txn, status);
 }
 
