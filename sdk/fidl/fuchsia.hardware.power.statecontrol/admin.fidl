@@ -86,6 +86,9 @@ protocol RebootMethodsWatcherRegister {
     /// impending reboot and allow it the chance to respond.
     ///
     /// Watchers can unregister by closing the underlying channel.
+    // TODO(fxbug.dev/110357): Remove this method after all clients have been
+    // moved to `RegisterWithAck`. After removal, consider renaming
+    // `RegisterWithAck` back to `Register`.
     @available(deprecated=HEAD)
     Register(resource struct {
         watcher client_end:RebootMethodsWatcher;
