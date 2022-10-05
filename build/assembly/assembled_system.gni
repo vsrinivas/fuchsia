@@ -673,7 +673,7 @@ template("assembled_system") {
                              invoker.create_legacy_aib_archive
 
     base_driver_packages = _base_driver_packages
-    if (include_shell_commands && generate_fvm) {
+    if (include_shell_commands) {
       shell_command_packages =
           _base_packages + _universe_packages + _cache_packages
     }
