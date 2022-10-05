@@ -7,7 +7,6 @@
 
 #include <lib/fit/internal/compiler.h>
 #include <lib/fit/result.h>
-#include <lib/fitx/result.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 

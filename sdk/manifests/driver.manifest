@@ -49,7 +49,6 @@ sdk://pkg/fidl_cpp_wire
 sdk://pkg/fidl_driver_transport
 sdk://pkg/fit
 sdk://pkg/fit-promise
-sdk://pkg/fitx
 sdk://pkg/hwreg
 sdk://pkg/input_report_reader
 sdk://pkg/magma_client
@@ -65,7 +64,6 @@ sdk://pkg/trace
 sdk://pkg/trace-engine
 sdk://pkg/utf-utils
 sdk://pkg/zx
-sdk://pkg/zx-status
 sdk://pkg/zxc
 sdk://tools/arm64/bindc
 sdk://tools/arm64/fidlgen_banjo

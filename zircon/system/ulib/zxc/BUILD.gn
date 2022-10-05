@@ -4,38 +4,15 @@
 
 import("//build/zircon/migrated_targets.gni")
 
-sdk_source_set("fitx") {
-  category = "experimental"
-  sdk_name = "fitx"
-  sources = [ "include/lib/fitx/result.h" ]
-
-  public_deps = [ "//sdk/lib/fit" ]
-}
-
-sdk_source_set("zx") {
-  category = "experimental"
-  sdk_name = "zx-status"
-  sources = [ "include/lib/zx/status.h" ]
-  public_deps = [ ":fitx" ]
-  if (zircon_toolchain != false) {
-    public_deps += [ "//zircon/system/public" ]
-  }
-}
-
 zx_library("zxc") {
   sdk = "source"
-
   sdk_publishable = "experimental"
-  sdk_headers = [
-    "lib/fitx/result.h",
-    "lib/zx/status.h",
-  ]
+  sdk_headers = [ "lib/zx/status.h" ]
 
   sources = []
   deps = []
   public_deps = [
-    ":fitx",
-    ":zx",
+    "//sdk/lib/fit",
     "//sdk/lib/stdcompat",
   ]
 

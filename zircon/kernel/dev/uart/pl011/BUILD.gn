@@ -17,7 +17,7 @@ source_set("pl011") {
     "//zircon/kernel/lib/arch",
     "//zircon/kernel/lib/cbuf",
     "//zircon/kernel/lib/debuglog",
-    "//zircon/system/ulib/zxc:zx",
+    "//zircon/system/ulib/zxc",
   ]
   public_configs = [ ":includes" ]
 }
