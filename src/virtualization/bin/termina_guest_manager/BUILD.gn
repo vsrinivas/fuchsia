@@ -64,51 +64,48 @@ resource("extras_img") {
   }
 }
 
-_LIB_SOURCES = [
-  "block_devices.cc",
-  "block_devices.h",
-  "crash_listener.h",
-  "guest.cc",
-  "guest.h",
-  "log_collector.cc",
-  "log_collector.h",
-  "ports.h",
-  "termina_guest_manager.cc",
-  "termina_guest_manager.h",
-]
-
-_LIB_PUBLIC_DEPS = [
-  ":termina_config",
-  "//sdk/fidl/fuchsia.device:fuchsia.device_hlcpp",
-  "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_hlcpp",
-  "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_hlcpp",
-  "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
-  "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization_hlcpp",
-  "//sdk/fidl/fuchsia.wayland:fuchsia.wayland_hlcpp",
-  "//sdk/lib/fit-promise",
-  "//sdk/lib/sys/cpp",
-  "//src/lib/fsl",
-  "//src/lib/fxl",
-  "//src/lib/storage/block_client/cpp",
-  "//src/lib/storage/vfs/cpp",
-  "//src/virtualization/bin/guest_manager:lib",
-  "//src/virtualization/lib/grpc",
-  "//src/virtualization/lib/guest_config",
-  "//src/virtualization/third_party/vm_tools:vm_cc_proto",
-  "//third_party/grpc:grpc++",
-  "//third_party/protobuf:protobuf_lite",
-  "//zircon/system/ulib/async:async-cpp",
-  "//zircon/system/ulib/async-loop:async-loop-cpp",
-  "//zircon/system/ulib/async-loop:async-loop-default",
-  "//zircon/system/ulib/fdio-caller",
-  "//zircon/system/ulib/fzl",
-  "//zircon/system/ulib/trace-provider",
-  "//zircon/system/ulib/zxc",
-]
-
 source_set("lib") {
-  sources = _LIB_SOURCES
-  public_deps = _LIB_PUBLIC_DEPS
+  sources = [
+    "block_devices.cc",
+    "block_devices.h",
+    "crash_listener.h",
+    "guest.cc",
+    "guest.h",
+    "log_collector.cc",
+    "log_collector.h",
+    "ports.h",
+    "termina_guest_manager.cc",
+    "termina_guest_manager.h",
+  ]
+
+  public_deps = [
+    ":termina_config",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_hlcpp",
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_hlcpp",
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_hlcpp",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
+    "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization_hlcpp",
+    "//sdk/fidl/fuchsia.wayland:fuchsia.wayland_hlcpp",
+    "//sdk/lib/fit-promise",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fsl",
+    "//src/lib/fxl",
+    "//src/lib/storage/block_client/cpp",
+    "//src/lib/storage/vfs/cpp",
+    "//src/virtualization/bin/guest_manager:lib",
+    "//src/virtualization/lib/grpc",
+    "//src/virtualization/lib/guest_config",
+    "//src/virtualization/third_party/vm_tools:vm_cc_proto",
+    "//third_party/grpc:grpc++",
+    "//third_party/protobuf:protobuf_lite",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/trace-provider",
+    "//zircon/system/ulib/zxc",
+  ]
 
   defines = []
   if (termina_volatile_block) {
