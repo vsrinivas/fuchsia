@@ -28,6 +28,7 @@ use {
         get_dynamic_linker, Message, MessageContents, ProcessBuilderError, StartupHandle,
     },
     std::ffi::CString,
+    std::num::TryFromIntError,
     std::str::from_utf8,
 };
 
@@ -40,7 +41,8 @@ pub struct Process {
 impl Process {
     /// Run the initial thread.
     pub fn run(&self) -> Result<()> {
-        run_thread(&self.vcpu, &self.guest, &vmar_root_self())
+        run_thread(&self.vcpu, &self.guest, &vmar_root_self())?;
+        Ok(())
     }
 }
 
@@ -334,7 +336,7 @@ fn load_vcpu_state(stack_pointer: u64, arg1: u64, arg2: u64) -> zx_vcpu_state_t 
 // Do not allocate in this function, as the thread has not been set up by host
 // user-space.
 fn thread_entry(args: &VcpuArgs<'_>, _arg2: usize) {
-    let _res = || -> Result<()> {
+    let _res = || -> Result<(), Status> {
         let vcpu = Vcpu::create(args.guest, args.entry)?;
         let vcpu_state = load_vcpu_state(args.stack_pointer, args.arg1, args.arg2);
         vcpu.write_state(&vcpu_state)?;
@@ -351,6 +353,10 @@ fn thread_entry(args: &VcpuArgs<'_>, _arg2: usize) {
     }
 }
 
+fn invalid_args(_: TryFromIntError) -> Status {
+    Status::INVALID_ARGS
+}
+
 // SAFETY: We assume that `args` points to a valid memory location, and that the
 // CPU register we are reading a handle value from points to a valid handle.
 #[cfg(target_arch = "aarch64")]
@@ -361,12 +367,12 @@ unsafe fn load_thread<'a>(
     root_vmar: &'a Vmar,
     stack_base: usize,
     stack_size: usize,
-) -> Result<Unowned<'a, Thread>> {
+) -> Result<Unowned<'a, Thread>, Status> {
     std::ptr::write(
         args,
         VcpuArgs {
             guest,
-            entry: vcpu_state.x[1].try_into()?,
+            entry: vcpu_state.x[1].try_into().map_err(invalid_args)?,
             stack_pointer: vcpu_state.x[2],
             arg1: vcpu_state.x[3],
             arg2: vcpu_state.x[4],
@@ -375,7 +381,7 @@ unsafe fn load_thread<'a>(
             stack_size,
         },
     );
-    let handle = vcpu_state.x[0].try_into()?;
+    let handle = vcpu_state.x[0].try_into().map_err(invalid_args)?;
     Ok(Unowned::<Thread>::from_raw_handle(handle))
 }
 
@@ -389,12 +395,12 @@ unsafe fn load_thread<'a>(
     root_vmar: &'a Vmar,
     stack_base: usize,
     stack_size: usize,
-) -> Result<Unowned<'a, Thread>> {
+) -> Result<Unowned<'a, Thread>, Status> {
     std::ptr::write(
         args,
         VcpuArgs {
             guest,
-            entry: vcpu_state.rsi.try_into()?,
+            entry: vcpu_state.rsi.try_into().map_err(invalid_args)?,
             stack_pointer: vcpu_state.rdx,
             arg1: vcpu_state.r10,
             arg2: vcpu_state.r8,
@@ -403,42 +409,46 @@ unsafe fn load_thread<'a>(
             stack_size,
         },
     );
-    let handle = vcpu_state.rdi.try_into()?;
+    let handle = vcpu_state.rdi.try_into().map_err(invalid_args)?;
     Ok(Unowned::<Thread>::from_raw_handle(handle))
 }
 
-fn run_thread(vcpu: &Vcpu, guest: &Guest, root_vmar: &Vmar) -> Result<()> {
+// Note: This function **can not** allocate. We may enter this function from a
+// thread that was created within the guest. This means that the allocator was
+// not setup for the host. Without that setup, any allocations will fail.
+fn run_thread(vcpu: &Vcpu, guest: &Guest, root_vmar: &Vmar) -> Result<(), Status> {
     loop {
-        match vcpu.enter()?.contents() {
-            GuestVcpu(packet) => match packet.contents() {
-                VcpuContents::Startup { .. } => {
-                    let stack_size: usize = system_get_page_size().try_into()?;
-                    let reduced_stack_size = stack_size - std::mem::size_of::<VcpuArgs<'_>>();
-                    let vmo = Vmo::create(stack_size.try_into()?)?;
-                    let stack_base = root_vmar.map(
-                        0,
-                        &vmo,
-                        0,
-                        stack_size,
-                        VmarFlags::PERM_READ | VmarFlags::PERM_WRITE,
-                    )?;
-                    let vcpu_state = vcpu.read_state()?;
-                    // Allocate `VcpuArgs` directly on the thread's stack.
-                    let args = (stack_base + reduced_stack_size) as *mut VcpuArgs<'_>;
-                    let thread = unsafe {
-                        load_thread(args, guest, &vcpu_state, root_vmar, stack_base, stack_size)?
-                    };
-                    thread.start(
-                        thread_entry as usize,
-                        compute_initial_stack_pointer(stack_base, reduced_stack_size),
-                        args as usize,
-                        0,
-                    )?;
-                }
-                VcpuContents::Exit { .. } => return Ok(()),
-                _ => return Err(anyhow!("Unexpected VCPU packet type")),
-            },
-            _ => return Err(anyhow!("Unexpected packet type")),
-        }
+        let packet = match vcpu.enter()?.contents() {
+            GuestVcpu(packet) => packet,
+            _ => return Err(Status::BAD_STATE),
+        };
+        match packet.contents() {
+            VcpuContents::Startup { .. } => {
+                let stack_size: usize = system_get_page_size().try_into().map_err(invalid_args)?;
+                let reduced_stack_size = stack_size - std::mem::size_of::<VcpuArgs<'_>>();
+                let vmo = Vmo::create(stack_size.try_into().map_err(invalid_args)?)?;
+                let stack_base = root_vmar.map(
+                    0,
+                    &vmo,
+                    0,
+                    stack_size,
+                    VmarFlags::PERM_READ | VmarFlags::PERM_WRITE,
+                )?;
+                let vcpu_state = vcpu.read_state()?;
+                // Allocate `VcpuArgs` directly on the thread's stack.
+                let args = (stack_base + reduced_stack_size) as *mut VcpuArgs<'_>;
+                let thread = unsafe {
+                    load_thread(args, guest, &vcpu_state, root_vmar, stack_base, stack_size)?
+                };
+                thread.start(
+                    thread_entry as usize,
+                    compute_initial_stack_pointer(stack_base, reduced_stack_size),
+                    args as usize,
+                    0,
+                )?;
+            }
+            VcpuContents::Exit { .. } => return Ok(()),
+            _ => return Err(Status::BAD_STATE),
+        };
     }
 }
