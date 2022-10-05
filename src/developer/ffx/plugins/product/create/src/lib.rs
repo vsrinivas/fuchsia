@@ -10,9 +10,31 @@ use assembly_manifest::{AssemblyManifest, BlobfsContents, Image};
 use assembly_partitions_config::PartitionsConfig;
 use ffx_core::ffx_plugin;
 use ffx_product_create_args::CreateCommand;
+use pathdiff::diff_paths;
 use sdk_metadata::{ProductBundle, ProductBundleV2};
+use serde::Serialize;
 use std::fs::File;
+use std::io::Write;
 use std::path::{Path, PathBuf};
+use tempfile::NamedTempFile;
+
+#[derive(Serialize, Debug)]
+#[serde(tag = "version")]
+enum UploadManifest {
+    #[serde(rename = "1")]
+    V1(UploadManifestV1),
+}
+
+#[derive(Serialize, Debug, Default)]
+struct UploadManifestV1 {
+    entries: Vec<UploadEntry>,
+}
+
+#[derive(Serialize, Debug, Default)]
+struct UploadEntry {
+    source: PathBuf,
+    destination: PathBuf,
+}
 
 /// Create a product bundle.
 #[ffx_plugin("product.experimental")]
@@ -23,15 +45,76 @@ fn pb_create(cmd: CreateCommand) -> Result<()> {
     }
     std::fs::create_dir_all(&cmd.out_dir).context("Creating the out_dir")?;
 
-    let product_bundle = ProductBundle::V2(ProductBundleV2 {
+    let product_bundle = ProductBundleV2 {
         name: "product.board".into(),
         partitions: load_partitions_config(&cmd.partitions, &cmd.out_dir.join("partitions"))?,
         system_a: load_assembly_manifest(&cmd.system_a, &cmd.out_dir.join("system_a"))?,
         system_b: load_assembly_manifest(&cmd.system_b, &cmd.out_dir.join("system_b"))?,
         system_r: load_assembly_manifest(&cmd.system_r, &cmd.out_dir.join("system_r"))?,
-    });
+    };
+
+    if cmd.include_upload_manifest {
+        let upload_manifest_file =
+            NamedTempFile::new_in(&cmd.out_dir).context("Creating upload manifest file")?;
+        write_upload_manifest(&cmd.out_dir, &product_bundle, &upload_manifest_file)?;
+        upload_manifest_file
+            .persist(&cmd.out_dir.join("upload.json"))
+            .context("Persisting upload manifest file")?;
+    }
+
+    let product_bundle = ProductBundle::V2(product_bundle);
     product_bundle.write(&cmd.out_dir).context("writing product bundle")?;
     Ok(())
+}
+
+fn write_upload_manifest<W: Write>(
+    out_dir: impl AsRef<Path>,
+    product_bundle: &ProductBundleV2,
+    writer: W,
+) -> Result<()> {
+    let mut upload_manifest = UploadManifestV1::default();
+
+    // Add the images from the partitions config.
+    for partition in &product_bundle.partitions.bootstrap_partitions {
+        upload_manifest.entries.push(UploadEntry {
+            source: partition.image.clone(),
+            destination: diff_paths(&partition.image, &out_dir)
+                .context("rebasing bootstrap image")?,
+        });
+    }
+    for partition in &product_bundle.partitions.bootloader_partitions {
+        upload_manifest.entries.push(UploadEntry {
+            source: partition.image.clone(),
+            destination: diff_paths(&partition.image, &out_dir)
+                .context("rebasing bootloader image")?,
+        });
+    }
+    for credential in &product_bundle.partitions.unlock_credentials {
+        upload_manifest.entries.push(UploadEntry {
+            source: credential.clone(),
+            destination: diff_paths(credential, &out_dir).context("rebasing unlock credential")?,
+        });
+    }
+
+    // Add the images from the systems.
+    let mut upload_system = |system: &Option<AssemblyManifest>| -> Result<()> {
+        if let Some(system) = system {
+            for image in &system.images {
+                upload_manifest.entries.push(UploadEntry {
+                    source: image.source().clone(),
+                    destination: diff_paths(image.source(), &out_dir)
+                        .context("rebasing system image")?,
+                });
+            }
+        }
+        Ok(())
+    };
+    upload_system(&product_bundle.system_a)?;
+    upload_system(&product_bundle.system_b)?;
+    upload_system(&product_bundle.system_r)?;
+
+    let upload_manifest = UploadManifest::V1(upload_manifest);
+    serde_json::to_writer(writer, &upload_manifest).context("Writing upload manifest")
 }
 
 /// Open and parse a PartitionsConfig from a path, copying the images into `out_dir`.
@@ -114,7 +197,8 @@ fn copy_file(source: impl AsRef<Path>, out_dir: impl AsRef<Path>) -> Result<Path
 mod test {
     use super::*;
     use assembly_manifest::AssemblyManifest;
-    use assembly_partitions_config::PartitionsConfig;
+    use assembly_partitions_config::{BootloaderPartition, BootstrapPartition, PartitionsConfig};
+    use assembly_util::PathToStringExt;
     use std::io::Write;
     use tempfile::TempDir;
 
@@ -186,6 +270,7 @@ mod test {
             system_a: None,
             system_b: None,
             system_r: None,
+            include_upload_manifest: false,
             out_dir: pb_dir.clone(),
         })
         .unwrap();
@@ -221,6 +306,7 @@ mod test {
             system_a: Some(system_path.clone()),
             system_b: None,
             system_r: Some(system_path.clone()),
+            include_upload_manifest: false,
             out_dir: pb_dir.clone(),
         })
         .unwrap();
@@ -235,6 +321,74 @@ mod test {
                 system_b: None,
                 system_r: Some(AssemblyManifest::default()),
             })
+        );
+    }
+
+    #[test]
+    fn test_write_upload_manifest() {
+        let tempdir = TempDir::new().unwrap();
+
+        let create_test_file = |name: &str| -> PathBuf {
+            let path = tempdir.path().join(name);
+            let mut file = File::create(&path).unwrap();
+            write!(&mut file, "contents").unwrap();
+            path
+        };
+        let bootstrap_path = create_test_file("bootstrap");
+        let bootloader_path = create_test_file("bootloader");
+        let unlock_credential_path = create_test_file("unlock_credential");
+        let zbi_path = create_test_file("zbi");
+
+        let pb = ProductBundleV2 {
+            name: "product.board".into(),
+            partitions: PartitionsConfig {
+                bootstrap_partitions: vec![BootstrapPartition {
+                    name: "bootstrap".into(),
+                    image: bootstrap_path.clone(),
+                    condition: None,
+                }],
+                bootloader_partitions: vec![BootloaderPartition {
+                    name: None,
+                    image: bootloader_path.clone(),
+                    partition_type: "type".into(),
+                }],
+                partitions: vec![],
+                hardware_revision: "".into(),
+                unlock_credentials: vec![unlock_credential_path.clone()],
+            },
+            system_a: Some(AssemblyManifest {
+                images: vec![Image::ZBI { signed: false, path: zbi_path.clone() }],
+            }),
+            system_b: None,
+            system_r: None,
+        };
+
+        let mut buf = Vec::new();
+        write_upload_manifest(tempdir, &pb, &mut buf).unwrap();
+        let json: serde_json::Value = serde_json::de::from_slice(&buf).unwrap();
+        assert_eq!(
+            serde_json::json!({
+                "version": "1",
+                "entries": [
+                    {
+                        "source": bootstrap_path.path_to_string().unwrap(),
+                        "destination": "bootstrap",
+                    },
+                    {
+                        "source": bootloader_path.path_to_string().unwrap(),
+                        "destination": "bootloader",
+                    },
+                    {
+                        "source": unlock_credential_path.path_to_string().unwrap(),
+                        "destination": "unlock_credential",
+                    },
+                    {
+                        "source": zbi_path.path_to_string().unwrap(),
+                        "destination": "zbi",
+                    },
+                ]
+            }),
+            json
         );
     }
 }

@@ -139,11 +139,15 @@ template("product_bundle") {
       "create",
       "--partitions",
       rebase_path(invoker.partitions, root_build_dir),
+      "--include-upload-manifest",
       "--out-dir",
       rebase_path(files.outdir, root_build_dir),
     ]
 
-    outputs += [ "${files.outdir}/product_bundle.json" ]
+    outputs += [
+      "${files.outdir}/product_bundle.json",
+      "${files.outdir}/upload.json",
+    ]
 
     inputs = [ invoker.partitions ]
 

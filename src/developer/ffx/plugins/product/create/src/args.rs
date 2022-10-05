@@ -27,6 +27,11 @@ pub struct CreateCommand {
     #[argh(option)]
     pub system_r: Option<PathBuf>,
 
+    /// construct an upload manifest in the `out_dir` that lists all the files in the product
+    /// bundle that should be uploaded to a storage bucket.
+    #[argh(switch)]
+    pub include_upload_manifest: bool,
+
     /// directory to write the product bundle.
     #[argh(option)]
     pub out_dir: PathBuf,
