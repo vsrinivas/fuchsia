@@ -75,18 +75,24 @@ pub async fn handle_input(
     node: &inspect::Node,
     display_ownership_event: zx::Event,
     focus_chain_publisher: FocusChainProviderPublisher,
-    _supported_input_devices: Vec<String>,
+    supported_input_devices: Vec<String>,
 ) -> Result<InputPipeline, Error> {
     let factory_reset_handler = FactoryResetHandler::new();
     let media_buttons_handler = MediaButtonsHandler::new();
 
-    // TODO(https://fxbug.dev/98692): Get supported devices from structured config.
-    let supported_input_devices = vec![
-        input_pipeline::input_device::InputDeviceType::Mouse,
-        input_pipeline::input_device::InputDeviceType::Touch,
-        input_pipeline::input_device::InputDeviceType::Keyboard,
-        input_pipeline::input_device::InputDeviceType::ConsumerControls,
-    ];
+    let supported_input_devices: Vec<input_device::InputDeviceType> = supported_input_devices
+        .iter()
+        .filter_map(|device| match device.as_str() {
+            "button" => Some(input_device::InputDeviceType::ConsumerControls),
+            "keyboard" => Some(input_device::InputDeviceType::Keyboard),
+            "mouse" => Some(input_device::InputDeviceType::Mouse),
+            "touchscreen" => Some(input_device::InputDeviceType::Touch),
+            unsupported => {
+                warn!("Ignoring unsupported device configuration: {}", unsupported);
+                None
+            }
+        })
+        .collect();
     let input_pipeline = InputPipeline::new(
         supported_input_devices.clone(),
         build_input_pipeline_assembly(
