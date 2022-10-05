@@ -788,7 +788,7 @@ log3 for Example.Test1
 [RUNNING]	Example.Test3
 [SKIPPED]	Example.Test3
 
-1 out of 3 tests passed...
+1 out of 1 attempted tests passed, 2 tests skipped...
 fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-example.cm completed with result: PASSED
 ";
     assert_output!(output.lock().as_slice(), expected_output);

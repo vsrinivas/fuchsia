@@ -206,7 +206,9 @@ impl<W: 'static + Write + Send + Sync> Reporter for ShellReporter<W> {
                 let executed: Vec<_> = cases
                     .iter()
                     .filter(|case| match &case.run_state {
-                        EntityRunningState::Finished(_) | EntityRunningState::Started => true,
+                        EntityRunningState::Started => true,
+                        EntityRunningState::Finished(ReportedOutcome::Skipped) => false,
+                        EntityRunningState::Finished(_) => true,
                         EntityRunningState::NotRunning => false,
                     })
                     .collect();
@@ -244,6 +246,15 @@ impl<W: 'static + Write + Send + Sync> Reporter for ShellReporter<W> {
                         )
                     })
                     .count();
+                let num_skipped = cases
+                    .iter()
+                    .filter(|case| {
+                        matches!(
+                            &case.run_state,
+                            EntityRunningState::Finished(ReportedOutcome::Skipped)
+                        )
+                    })
+                    .count();
 
                 let suite_number =
                     self.completed_suites.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
@@ -265,8 +276,21 @@ impl<W: 'static + Write + Send + Sync> Reporter for ShellReporter<W> {
                         writeln!(writer, "{}", t)?;
                     }
                 }
-                writeln!(writer, "{} out of {} tests passed...", num_passed, executed.len())?;
-
+                match num_skipped {
+                    0 => writeln!(
+                        writer,
+                        "{} out of {} tests passed...",
+                        num_passed,
+                        executed.len()
+                    )?,
+                    skipped => writeln!(
+                        writer,
+                        "{} out of {} attempted tests passed, {} tests skipped...",
+                        num_passed,
+                        executed.len(),
+                        skipped,
+                    )?,
+                }
                 if let Some(restricted_logs) = &entity_entry.restricted_logs {
                     writeln!(writer, "\nTest {} produced unexpected high-severity logs:", &name)?;
                     writeln!(writer, "----------------xxxxx----------------")?;
@@ -387,6 +411,53 @@ mod test {
         expected.push_str("Failed tests: case-2\n");
         expected.push_str("1 out of 2 tests passed...\n");
         expected.push_str("test-suite completed with result: FAILED\n");
+        assert_eq!(String::from_utf8(output.lock().clone()).unwrap(), expected,);
+    }
+
+    #[fuchsia::test]
+    async fn report_case_skipped() {
+        let (shell_reporter, output) = ShellReporter::new_expose_writer_for_test();
+        let run_reporter = RunReporter::new_for_test(shell_reporter);
+        let suite_reporter =
+            run_reporter.new_suite("test-suite", &SuiteId(0)).await.expect("create suite");
+        suite_reporter.started(Timestamp::Unknown).await.expect("case started");
+        let mut expected = "Running test 'test-suite'\n".to_string();
+        assert_eq!(String::from_utf8(output.lock().clone()).unwrap(), expected,);
+
+        let case_1_reporter =
+            suite_reporter.new_case("case-1", &CaseId(0)).await.expect("create case");
+        let case_2_reporter =
+            suite_reporter.new_case("case-2", &CaseId(1)).await.expect("create case");
+
+        case_1_reporter.started(Timestamp::Unknown).await.expect("case started");
+        expected.push_str("[RUNNING]\tcase-1\n");
+        assert_eq!(String::from_utf8(output.lock().clone()).unwrap(), expected,);
+
+        case_1_reporter
+            .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
+            .await
+            .expect("stop case");
+        expected.push_str("[PASSED]\tcase-1\n");
+        assert_eq!(String::from_utf8(output.lock().clone()).unwrap(), expected,);
+
+        case_2_reporter
+            .stopped(&ReportedOutcome::Skipped, Timestamp::Unknown)
+            .await
+            .expect("stop case");
+        expected.push_str("[SKIPPED]\tcase-2\n");
+        assert_eq!(String::from_utf8(output.lock().clone()).unwrap(), expected,);
+
+        case_1_reporter.finished().await.expect("finish case");
+        case_2_reporter.finished().await.expect("finish case");
+        suite_reporter
+            .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
+            .await
+            .expect("stop suite");
+        suite_reporter.finished().await.expect("finish suite");
+
+        expected.push_str("\n");
+        expected.push_str("1 out of 1 attempted tests passed, 1 tests skipped...\n");
+        expected.push_str("test-suite completed with result: PASSED\n");
         assert_eq!(String::from_utf8(output.lock().clone()).unwrap(), expected,);
     }
 
