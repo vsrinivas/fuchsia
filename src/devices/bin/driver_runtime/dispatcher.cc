@@ -114,15 +114,19 @@ Dispatcher::AsyncWait::AsyncWait(async_wait_t* original_wait, Dispatcher& dispat
                    original_wait->trigger,
                    0},
       original_wait_(original_wait) {
+  // Use one of the async_wait_t's reserved fields to stash a pointer to the AsyncWait object.
   original_wait_->state.reserved[0] = reinterpret_cast<uintptr_t>(this);
 
   auto async_dispatcher = dispatcher.GetAsyncDispatcher();
   driver_runtime::Callback callback =
       [this, async_dispatcher](std::unique_ptr<driver_runtime::CallbackRequest> callback_request,
                                zx_status_t status) {
+        // Clear the pointer to the AsyncWait object.
         original_wait_->state.reserved[0] = 0;
         original_wait_->handler(async_dispatcher, original_wait_, status, &signal_packet_);
       };
+  // Note that this callback is called *after* |OnSignal|, which is the immediate callback that is
+  // invoked when the async wait is signaled.
   SetCallback(static_cast<fdf_dispatcher_t*>(&dispatcher), std::move(callback), original_wait_);
 }
 
@@ -152,7 +156,7 @@ zx_status_t Dispatcher::AsyncWait::BeginWait(std::unique_ptr<AsyncWait> wait,
 }
 
 bool Dispatcher::AsyncWait::Cancel() {
-  // We do a load here rather than a exchange as OnSignal may still be triggered and we need to
+  // We do a load here rather than an exchange as OnSignal may still be triggered and we need to
   // avoid preventing it from accessing the |dispatcher_ref_|.
   auto* dispatcher_ref = dispatcher_ref_.load();
   if (dispatcher_ref == nullptr) {
@@ -579,12 +583,15 @@ zx_status_t Dispatcher::BeginWait(async_wait_t* wait) {
 }
 
 zx_status_t Dispatcher::CancelWait(async_wait_t* wait) {
-  // TODO: This can currently fail when the async wait has been completed in another thread,
-  // but has not yet had an callback request posted. We should try to make it not fail in that
-  // scenario as it is not consistent with expected behavior. fidl::Client may assert that
-  // this doesn't fail for instance.
+  // The implementation of this method has to be more complicated than simply
+  //
+  //   return async_cancel_wait(wait);
+  //
+  // because the dispatcher wraps the wait's callback with its own custom callback,
+  // |OnSignal|, so there is an interval between the wait being pulled off the port and the wait's
+  // callback being invoked, during which we need to implement custom logic to cancel the wait.
 
-  // First try to cancel the async wait from the shared dispatcher.
+  // First, try to cancel the async wait from the shared dispatcher.
   auto* async_wait = reinterpret_cast<AsyncWait*>(wait->state.reserved[0]);
   if (async_wait != nullptr) {
     if (async_wait->Cancel()) {
@@ -592,12 +599,33 @@ zx_status_t Dispatcher::CancelWait(async_wait_t* wait) {
       ZX_ASSERT(RemoveWait(async_wait) != nullptr);
       return ZX_OK;
     }
+
+    // async_wait->Cancel() will fail in the case that the wait has already been pulled off the
+    // port.
   }
 
-  // Second try to cancel it from the callback queue.
+  // Second, try to cancel it from the callback queue.
   fbl::AutoLock lock(&callback_lock_);
   auto callback_request = CancelAsyncOperationLocked(wait);
-  return callback_request ? ZX_OK : ZX_ERR_NOT_FOUND;
+  if (callback_request) {
+    return ZX_OK;
+  } else if (unsynchronized()) {
+    return ZX_ERR_NOT_FOUND;
+  } else {
+    // The async_wait is set to null right before the callback is invoked, so if it is null it's too
+    // late to cancel. If the caller of |CancelWait| is not a dispatcher-managed thread then we
+    // can't guarantee the dispatcher isn't currently invoking the callback.
+    if (async_wait == nullptr || driver_context::GetCurrentDispatcher() != this) {
+      return ZX_ERR_NOT_FOUND;
+    }
+
+    // If we failed to cancel it from the callback queue and we are a synchronized dispatcher,
+    // then another thread must have pulled the packet from the port and is about to queue the
+    // callback (i.e., it is sitting in |OnSignal| right before |QueueWait|). We mark the wait as
+    // pending cancellation so that it is cancelled rather than invoked when |QueueWait| is called.
+    async_wait->MarkPendingCancellation();
+    return ZX_OK;
+  }
 }
 
 zx::time Dispatcher::GetNextTimeoutLocked() const {
@@ -937,7 +965,14 @@ std::unique_ptr<Dispatcher::AsyncWait> Dispatcher::RemoveWaitLocked(Dispatcher::
 
 void Dispatcher::QueueWait(Dispatcher::AsyncWait* wait, zx_status_t status) {
   fbl::AutoLock al(&callback_lock_);
+
   ZX_DEBUG_ASSERT(fbl::InContainer<AsyncWaitTag>(*wait));
+  if (wait->is_pending_cancellation()) {
+    // Wait was cancelled so we return immediately without invoking the callback.
+    waits_.erase(*wait);
+    return;
+  }
+
   if (!IsRunningLocked()) {
     // We are waiting for all outstanding waits to be completed. They will be serviced in
     // CompleteDestroy.

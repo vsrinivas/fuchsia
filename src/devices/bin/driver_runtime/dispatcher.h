@@ -357,12 +357,26 @@ class Dispatcher : public async_dispatcher_t,
     void OnSignal(async_dispatcher_t* async_dispatcher, zx_status_t status,
                   const zx_packet_signal_t* signal);
 
+    // Sets the pending_cancellation_ flag to true. See that field's comment for details.
+    void MarkPendingCancellation() { pending_cancellation_ = true; }
+    bool is_pending_cancellation() const { return pending_cancellation_; }
+
    private:
     // Implementing a specialization of std::atomic<fbl::RefPtr<T>> is more challenging than just
     // manipulating it as a raw pointer. It must be stored as an atomic because it is mutated from
     // multiple threads after AsyncWait is constructed, and we wish to avoid a lock.
     std::atomic<Dispatcher*> dispatcher_ref_;
     async_wait_t* original_wait_;
+
+    // If true, CancelWait() has been called on another thread and we should cancel the wait rather
+    // than invoking the callback.
+    //
+    // This condition occurs when a wait has been pulled off the dispatcher's port but the callback
+    // has not yet been invoked. AsyncWait wraps the underlying async_wait_t callback in its own
+    // custom callback (OnSignal), so there is an interval between when OnSignal is invoked and the
+    // underlying callback is invoked during which a race with Dispatcher::CancelWait() can occur.
+    // See fxbug.dev/109988 for details.
+    bool pending_cancellation_ = false;
 
     // driver_runtime::Callback can store only 2 pointers, so we store other state in the async
     // wait.

@@ -1416,6 +1416,55 @@ TEST_F(DispatcherTest, CancelWaitFromWithinCanceledWait) {
   ASSERT_OK(driver_shutdown_completion.Wait());
 }
 
+TEST_F(DispatcherTest, CancelWaitRaceCondition) {
+  // Regression test for fxbug.dev/109988, a tricky race condition when cancelling a wait.
+  fdf_dispatcher_t* dispatcher;
+  ASSERT_NO_FATAL_FAILURE(
+      CreateDispatcher(0, __func__, "scheduler_role", CreateFakeDriver(), &dispatcher));
+
+  async_dispatcher_t* async_dispatcher = fdf_dispatcher_get_async_dispatcher(dispatcher);
+  ASSERT_NOT_NULL(async_dispatcher);
+
+  // Start a second thread as this race condition depends on the dispatcher being multi-threaded.
+  loop_.StartThread();
+
+  zx::event event;
+  ASSERT_OK(zx::event::create(0, &event));
+
+  // Run the body a bunch of times to increase the chances of hitting the race condition.
+  for (int i = 0; i < 100; i++) {
+    libsync::Completion completion;
+    async::PostTask(async_dispatcher, [&] {
+      async::WaitOnce wait(event.get(), ZX_USER_SIGNAL_0);
+      ASSERT_OK(
+          wait.Begin(async_dispatcher, [](async_dispatcher_t* dispatcher, async::WaitOnce* wait,
+                                          zx_status_t status, const zx_packet_signal_t* signal) {
+            // Since we are going to cancel the wait, the callback should not be invoked.
+            ZX_ASSERT(false);
+          }));
+
+      // Signal the event, which queues up the wait callback to be invoked.
+      event.signal(0, ZX_USER_SIGNAL_0);
+
+      // Cancel should always succeed. This is because the dispatcher is synchronized and should
+      // appear to the user as if it is single-threaded. Since the wait is cancelled in the same
+      // block as the event is signaled, the code never yields to the dispatcher and it never has a
+      // chance to receive the event signal and invoke the callback. However, in our multi-threaded
+      // dispatcher, it *is* possible that another thread will receive the signal and queue up the
+      // callback to be invoked, so we need to handle this case without failing.
+      //
+      // In practice, when this test fails it's usually because it hits a debug assert in the
+      // underlying async implementation in zircon/system/ulib/async/wait.cc, rather than failing
+      // this assert.
+      ASSERT_OK(wait.Cancel());
+      completion.Signal();
+    });
+
+    // Make sure all the async tasks finish before exiting the test.
+    ASSERT_OK(completion.Wait());
+  }
+}
+
 TEST_F(DispatcherTest, GetCurrentDispatcherInWait) {
   fdf_dispatcher_t* dispatcher;
   ASSERT_NO_FATAL_FAILURE(
