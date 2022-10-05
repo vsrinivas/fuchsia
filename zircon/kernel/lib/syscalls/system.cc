@@ -278,8 +278,10 @@ zx_status_t sys_system_mexec_payload_get(zx_handle_t resource, user_out_ptr<void
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // Highly priviliged, only root resource should have access.
-  if (zx_status_t result = validate_resource(resource, ZX_RSRC_KIND_ROOT); result != ZX_OK) {
+  // Highly privileged, only mexec resource should have access.
+  if (zx_status_t result =
+          validate_ranged_resource(resource, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_MEXEC_BASE, 1);
+      result != ZX_OK) {
     return result;
   }
 
@@ -310,8 +312,8 @@ NO_ASAN zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vm
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // TODO(fxbug.dev/30918): finer grained validation
-  zx_status_t result = validate_resource(resource, ZX_RSRC_KIND_ROOT);
+  zx_status_t result =
+      validate_ranged_resource(resource, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_MEXEC_BASE, 1);
   if (result != ZX_OK)
     return result;
 
