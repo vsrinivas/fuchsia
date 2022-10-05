@@ -86,6 +86,9 @@ do
   */third_party/clang/*/bin/*)
     remote_only_tok="${tok/third_party\/clang\/*\/bin/third_party/clang/linux-x64/bin}"
     ;;
+  */third_party/gcc/*/bin/*)
+    remote_only_tok="${tok/third_party\/gcc\/*\/bin/third_party/gcc/linux-x64/bin}"
+    ;;
   esac
 
   remote_command+=( "$remote_only_tok" )

@@ -13,14 +13,14 @@ function msg() {
   echo "[$script_basename]: $@"
 }
 
-remote_action_wrapper="$script_dir"/fuchsia-rbe-action.sh
-remote_compiler_swapper="$script_dir"/cxx-swap-remote-compiler.sh
+readonly remote_action_wrapper="$script_dir"/fuchsia-rbe-action.sh
+readonly remote_compiler_swapper="$script_dir"/cxx-swap-remote-compiler.sh
 
 # The project_root must cover all inputs, prebuilt tools, and build outputs.
 # This should point to $FUCHSIA_DIR for the Fuchsia project.
 # ../../ because this script lives in build/rbe.
 # The value is an absolute path.
-default_project_root="$(readlink -f "$script_dir"/../..)"
+readonly default_project_root="$(readlink -f "$script_dir"/../..)"
 
 # This is where the working directory happens to be in remote execution.
 # This assumed constant is only needed for a few workarounds elsewhere
@@ -157,27 +157,6 @@ case "$detected_arch" in
   x86_64) readonly HOST_ARCH="x64" ;;
   *) echo >&2 "Unknown machine architecture: $detected_arch" ; exit 1 ;;
 esac
-
-readonly remote_clang_subdir=prebuilt/third_party/clang/linux-x64
-
-_required_remote_tools=(
-  "$remote_clang_subdir"
-)
-_missing_remote_tools=()
-test "$HOST_OS" = "linux" && test "$HOST_ARCH" = "x64" || {
-  for path in "${_required_remote_tools[@]}"
-  do [[ -d "$project_root_rel"/"$path" ]] || _missing_remote_tools+=( "$path" )
-  done
-}
-
-[[ "${#_missing_remote_tools[@]}" == 0 ]] || {
-  msg "Remote building C++ requires prebuilts for linux.  Missing:"
-  for path in "${_missing_remote_tools[@]}"
-  do echo "        $path"
-  done
-  msg "Add these prebuilt packages to integration/fuchsia/toolchain.  Example: tqr/563535"
-  exit 1
-}
 
 cc=
 cc_command=()
@@ -350,12 +329,24 @@ EOF
   shift
 done
 
+# RBE currently supports linux-x64 workers, so we need linux-x64 tools
+# for remote compilation.
+readonly remote_clang_subdir=prebuilt/third_party/clang/linux-x64
+readonly remote_gcc_subdir=prebuilt/third_party/gcc/linux-x64
+
 # Detect compiler family based on name.
 is_clang=0
 is_gcc=0
+_required_remote_tools=()
 case "$cc" in
-  *clang* ) is_clang=1 ;;
-  *gcc* | *g++* ) is_gcc=1 ;;
+  *clang* )
+    is_clang=1
+    _required_remote_tools+=( "$remote_clang_subdir" )
+    ;;
+  *gcc* | *g++* )
+    is_gcc=1
+    _required_remote_tools+=( "$remote_gcc_subdir" )
+    ;;
 esac
 
 test -n "$target" || {
@@ -369,6 +360,23 @@ test -n "$target" || {
       ;;
   esac
 }
+
+_missing_remote_tools=()
+test "$HOST_OS" = "linux" && test "$HOST_ARCH" = "x64" || {
+  for path in "${_required_remote_tools[@]}"
+  do [[ -d "$project_root_rel"/"$path" ]] || _missing_remote_tools+=( "$path" )
+  done
+}
+
+[[ "${#_missing_remote_tools[@]}" == 0 ]] || {
+  msg "Remote building C++ requires prebuilts for linux.  Missing:"
+  for path in "${_missing_remote_tools[@]}"
+  do echo "        $path"
+  done
+  msg "Add these prebuilt packages to integration/fuchsia/toolchain.  Example: tqr/563535"
+  exit 1
+}
+
 
 # -E tells the compiler to stop after C-preprocessing
 cpreprocess_command+=( -E )
@@ -511,15 +519,23 @@ remote_inputs=(
 )
 
 # RBE backend only has linux-x64 support for now.
-compiler_swapper_prefix=()
+rewrapper_compiler_swapper_prefix=()
 # Substitute the platform portion of cc_relative with linux-x64 (for remote).
-remote_cc_relative="${cc_relative/third_party\/clang\/*\/bin/third_party/clang/linux-x64/bin}"
 test "$HOST_OS" = "linux" && test "$HOST_ARCH" = "x64" || {
   remote_inputs+=(
     "$(relpath "$project_root" "$remote_compiler_swapper")"
-    "$remote_cc_relative"
   )
-  compiler_swapper_prefix+=(
+  if [[ "$is_clang" = 1 ]]
+  then
+    _remote_clang_relative="${cc_relative/third_party\/clang\/*\/bin/third_party/clang/linux-x64/bin}"
+    remote_inputs+=( "$_remote_clang_relative" )
+  elif [[ "$is_gcc" = 1 ]]
+  then
+    _remote_gcc_relative="${cc_relative/third_party\/gcc\/*\/bin/third_party/gcc/linux-x64/bin}"
+    remote_inputs+=( "$_remote_gcc_relative" )
+  fi
+
+  rewrapper_compiler_swapper_prefix+=(
     --remote_wrapper="$remote_compiler_swapper"
   )
 }
@@ -576,7 +592,7 @@ remote_cc_command=(
 #  "${remote_trace_flags[@]}"
   --input_list_paths="$inputs_file_list"
   --output_files="$remote_outputs_joined"
-  "${compiler_swapper_prefix[@]}"
+  "${rewrapper_compiler_swapper_prefix[@]}"
   "${rewrapper_options[@]}"
   --
 )
