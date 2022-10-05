@@ -11,5 +11,6 @@ group("tests") {
 }
 
 prebuilt_package("chromebook-keyboard-backlight") {
-  archive = "//prebuilt/drivers/backlight"
+  package_name = "backlight_driver"
+  archive = "//prebuilt/drivers/backlight/backlight_driver"
 }

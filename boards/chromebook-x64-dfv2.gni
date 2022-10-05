@@ -6,3 +6,10 @@ import("chromebook-x64.gni")
 
 board_bootfs_labels += [ "//bundles/drivers:bootstrap-dfv2" ]
 board_bootfs_labels += [ "//bundles/drivers:disable.drivers_for_dfv2" ]
+
+board_provided_drivers += [
+  {
+    package_target = "//src/ui/backlight/drivers:chromebook-keyboard-backlight"
+    driver_components = [ "meta/backlight_driver.cm" ]
+  },
+]
