@@ -91,9 +91,6 @@ rustc_library("lib") {
     "//third_party/rust_crates:test-case",
   ]
 
-  # TODO(fxbug.dev/61386): Fix the leaks and remove this
-  test_deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   sources = [
     "src/accessibility.rs",
     "src/accessibility/accessibility_controller.rs",
@@ -346,9 +343,6 @@ rustc_binary("bin") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:parking_lot",
   ]
-
-  # TODO(fxbug.dev/61386): Fix the leaks and remove this
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
   sources = [ "src/main.rs" ]
 
