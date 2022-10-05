@@ -272,6 +272,55 @@ async fn open_open_resize_resize_fails() -> Result<(), Error> {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
+async fn open0_open1_resize1_write1_succeeds() {
+    let blobfs_server = BlobfsRamdisk::start().unwrap();
+    let root_dir = blobfs_server.root_dir_proxy().unwrap();
+
+    let (_blob0, _) =
+        open_blob(&root_dir, BLOB_MERKLE, fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE)
+            .await
+            .unwrap();
+
+    let (blob1, _) =
+        open_blob(&root_dir, BLOB_MERKLE, fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE)
+            .await
+            .unwrap();
+    let () = blob1.resize(BLOB_CONTENTS.len() as u64).await.unwrap().unwrap();
+    let () = write_blob(&blob1, BLOB_CONTENTS).await.unwrap();
+
+    let (blob2, _) =
+        open_blob(&root_dir, BLOB_MERKLE, fio::OpenFlags::RIGHT_READABLE).await.unwrap();
+    let () = verify_blob(&blob2, BLOB_CONTENTS).await.unwrap();
+
+    let () = blobfs_server.stop().await.unwrap();
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn open0_open1_resize0_write0_succeeds() {
+    let blobfs_server = BlobfsRamdisk::start().unwrap();
+    let root_dir = blobfs_server.root_dir_proxy().unwrap();
+
+    let (blob0, _) =
+        open_blob(&root_dir, BLOB_MERKLE, fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE)
+            .await
+            .unwrap();
+
+    let (_blob1, _) =
+        open_blob(&root_dir, BLOB_MERKLE, fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE)
+            .await
+            .unwrap();
+
+    let () = blob0.resize(BLOB_CONTENTS.len() as u64).await.unwrap().unwrap();
+    let () = write_blob(&blob0, BLOB_CONTENTS).await.unwrap();
+
+    let (blob2, _) =
+        open_blob(&root_dir, BLOB_MERKLE, fio::OpenFlags::RIGHT_READABLE).await.unwrap();
+    let () = verify_blob(&blob2, BLOB_CONTENTS).await.unwrap();
+
+    let () = blobfs_server.stop().await.unwrap();
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
 async fn open_resize_open_read_fails() -> Result<(), Error> {
     let blobfs_server = BlobfsRamdisk::start()?;
     let root_dir = blobfs_server.root_dir_proxy()?;
