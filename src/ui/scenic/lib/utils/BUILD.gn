@@ -24,6 +24,7 @@ source_set("utils") {
     "metrics.h",
     "metrics_impl.cc",
     "metrics_impl.h",
+    "task_utils.h",
   ]
 
   public_deps = [

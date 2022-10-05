@@ -6,6 +6,9 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/ui/scenic/lib/utils/dispatcher_holder.h"
+#include "src/ui/scenic/lib/utils/task_utils.h"
+
 #include <glm/gtc/matrix_access.hpp>
 
 using fuchsia::ui::composition::ChildViewStatus;
@@ -66,20 +69,43 @@ LinkSystem::LinkToChild LinkSystem::CreateLinkToChild(
   importer.Initialize(
       /* link_resolved = */
       [ref = shared_from_this(), impl, child_transform_handle](LinkToParentInfo info) mutable {
-        *child_transform_handle = info.child_transform_handle;
         if (info.view_ref != nullptr) {
           impl->SetViewRef({.reference = utils::CopyEventpair(info.view_ref->reference)});
         }
-        std::scoped_lock lock(ref->mutex_);
-        ref->child_to_parent_map_[*child_transform_handle] = ParentEnd{.child_view_watcher = impl};
+
+        *child_transform_handle = info.child_transform_handle;
+        {
+          std::scoped_lock lock(ref->mutex_);
+          ref->child_to_parent_map_[*child_transform_handle] =
+              ParentEnd{.child_view_watcher = impl};
+        }
       },
       /* link_invalidated = */
-      [ref = shared_from_this(), impl, child_transform_handle](bool on_link_destruction) {
-        // We expect |child_transform_handle| to be assigned by the "link_resolved" closure, but
-        // this might not happen if the link is being destroyed before it was resolved.
+      [ref = shared_from_this(), impl, child_transform_handle,
+       weak_dispatcher_holder = std::weak_ptr<utils::DispatcherHolder>(dispatcher_holder)](
+          bool on_link_destruction) mutable {
+        // We expect |child_transform_handle| to be assigned by the "link_resolved" closure,
+        // but this might not happen if the link is being destroyed before it was resolved.
         FX_DCHECK(child_transform_handle || on_link_destruction);
-        std::scoped_lock lock(ref->mutex_);
-        ref->child_to_parent_map_.erase(*child_transform_handle);
+
+        {
+          std::scoped_lock lock(ref->mutex_);
+          ref->child_to_parent_map_.erase(*child_transform_handle);
+        }
+
+        // Avoid race conditions by destroying ParentViewportWatcher on its "own" thread.  For
+        // example, if not destroyed on its "own" thread, it might concurrently be handling a FIDL
+        // message.
+        if (auto dispatcher_holder = weak_dispatcher_holder.lock()) {
+          utils::ExecuteOrPostTaskOnDispatcher(
+              dispatcher_holder->dispatcher(),
+              [impl = std::move(impl)]() mutable { impl.reset(); });
+
+          // The point of moving |impl| into the task above is to destroy it on the correct thread.
+          // Verify that we did actually move it (previously, there was a subtle bug where this
+          // closure wasn't declared as mutable, so we copied the shared_ptr instead of moving it).
+          FX_DCHECK(!impl);
+        }
       });
 
   return LinkToChild({
@@ -120,36 +146,56 @@ LinkSystem::LinkToParent LinkSystem::CreateLinkToParent(
         *parent_transform_handle = info.parent_transform_handle;
         *topology_map_key = info.internal_link_handle;
 
-        std::scoped_lock lock(ref->mutex_);
-        // TODO(fxbug.dev/80603): When the same parent relinks to different children, we might be
-        // using an outdated logical_size here. It will be corrected in UpdateLinks(), but we should
-        // figure out a way to set the previous ParentViewportWatcherImpl's size here.
-        LayoutInfo layout_info;
-        layout_info.set_logical_size(info.initial_logical_size);
-        layout_info.set_pixel_scale({1, 1});
-        layout_info.set_device_pixel_ratio({dpr.x, dpr.y});
-        layout_info.set_inset(info.initial_inset);
-        impl->UpdateLayoutInfo(std::move(layout_info));
+        {
+          std::scoped_lock lock(ref->mutex_);
+          // TODO(fxbug.dev/80603): When the same parent relinks to different children, we might be
+          // using an outdated logical_size here. It will be corrected in UpdateLinks(), but we
+          // should figure out a way to set the previous ParentViewportWatcherImpl's size here.
+          LayoutInfo layout_info;
+          layout_info.set_logical_size(info.initial_logical_size);
+          layout_info.set_pixel_scale({1, 1});
+          layout_info.set_device_pixel_ratio({dpr.x, dpr.y});
+          layout_info.set_inset(info.initial_inset);
+          impl->UpdateLayoutInfo(std::move(layout_info));
 
-        ref->parent_to_child_map_[*parent_transform_handle] = ChildEnd{
-            .parent_viewport_watcher = impl, .child_transform_handle = child_transform_handle};
-        // The topology is constructed here, instead of in the link_resolved closure of the
-        // LinkToParent object, so that its destruction (which depends on the internal_link_handle)
-        // can occur on the same endpoint.
-        ref->link_topologies_[*topology_map_key] = child_transform_handle;
+          ref->parent_to_child_map_[*parent_transform_handle] = ChildEnd{
+              .parent_viewport_watcher = impl, .child_transform_handle = child_transform_handle};
+          // The topology is constructed here, instead of in the link_resolved closure of the
+          // LinkToParent object, so that its destruction (which depends on the
+          // internal_link_handle) can occur on the same endpoint.
+          ref->link_topologies_[*topology_map_key] = child_transform_handle;
+        }
       },
       /* link_invalidated = */
-      [ref = shared_from_this(), impl, parent_transform_handle,
-       topology_map_key](bool on_link_destruction) {
-        // We expect |parent_transform_handle| and |topology_map_key| to be assigned by the
-        // "link_resolved" closure, but this might not happen if the link is being destroyed before
-        // it was resolved.
+      [ref = shared_from_this(), impl, parent_transform_handle, topology_map_key,
+       weak_dispatcher_holder = std::weak_ptr<utils::DispatcherHolder>(dispatcher_holder)](
+          bool on_link_destruction) mutable {
+        // We expect |parent_transform_handle| and |topology_map_key| to be assigned by
+        // the "link_resolved" closure, but this might not happen if the link is being destroyed
+        // before it was resolved.
         FX_DCHECK((parent_transform_handle && topology_map_key) || on_link_destruction);
-        std::scoped_lock map_lock(ref->mutex_);
-        ref->parent_to_child_map_.erase(*parent_transform_handle);
 
-        ref->link_topologies_.erase(*topology_map_key);
-        ref->link_graph_.ReleaseTransform(*topology_map_key);
+        {
+          std::scoped_lock map_lock(ref->mutex_);
+          ref->parent_to_child_map_.erase(*parent_transform_handle);
+
+          ref->link_topologies_.erase(*topology_map_key);
+          ref->link_graph_.ReleaseTransform(*topology_map_key);
+        }
+
+        // Avoid race conditions by destroying ParentViewportWatcher on its "own" thread.  For
+        // example, if not destroyed on its "own" thread, it might concurrently be handling a FIDL
+        // message.
+        if (auto dispatcher_holder = weak_dispatcher_holder.lock()) {
+          utils::ExecuteOrPostTaskOnDispatcher(
+              dispatcher_holder->dispatcher(),
+              [impl = std::move(impl)]() mutable { impl.reset(); });
+
+          // The point of moving |impl| into the task above is to destroy it on the correct thread.
+          // Verify that we did actually move it (previously, there was a subtle bug where this
+          // closure wasn't declared as mutable, so we copied the shared_ptr instead of moving it).
+          FX_DCHECK(!impl);
+        }
       });
 
   return LinkToParent({.child_transform_handle = child_transform_handle,

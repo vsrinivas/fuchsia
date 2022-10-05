@@ -8,6 +8,7 @@
 #include <fidl/fuchsia.ui.composition/cpp/fidl.h>
 #include <fidl/fuchsia.ui.composition/cpp/hlcpp_conversion.h>
 #include <fuchsia/ui/composition/cpp/fidl.h>
+#include <lib/async/default.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/syslog/cpp/macros.h>
@@ -47,15 +48,30 @@ class ParentViewportWatcherImpl
       std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
       fidl::InterfaceRequest<fuchsia::ui::composition::ParentViewportWatcher> request,
       LinkProtocolErrorCallback error_callback)
-      : binding_ref_(fidl::BindServer(
+      :
+#ifndef NDEBUG
+        dispatcher_holder_(dispatcher_holder),
+#endif
+        binding_ref_(fidl::BindServer(
             dispatcher_holder->dispatcher(), fidl::HLCPPToNatural(request), this,
             [](ParentViewportWatcherImpl* /*unused*/, fidl::UnbindInfo info,
                fidl::ServerEnd<fuchsia_ui_composition::ParentViewportWatcher> /*unused*/) {
               OnUnbound(info);
             })),
-        error_callback_(std::move(error_callback)) {}
+        error_callback_(std::move(error_callback)) {
+  }
+
+  ParentViewportWatcherImpl(ParentViewportWatcherImpl&&) = delete;
+  ParentViewportWatcherImpl(const ParentViewportWatcherImpl&) = delete;
+  ParentViewportWatcherImpl& operator=(const ParentViewportWatcherImpl&) = delete;
 
   ~ParentViewportWatcherImpl() override {
+#ifndef NDEBUG
+    auto dispatcher_holder = dispatcher_holder_.lock();
+    FX_CHECK(!dispatcher_holder ||
+             (dispatcher_holder->dispatcher() == async_get_default_dispatcher()));
+#endif  // NDEBUG
+
     // `ServerBindingRef` doesn't have RAII semantics for destroying the underlying channel, so it
     // must be done explicitly to avoid "leaking" the channel (not forever, rather for the lifetime
     // of the dispatcher, i.e. the lifetime of the associated View's Flatland session).
@@ -113,6 +129,10 @@ class ParentViewportWatcherImpl
     }
   }
 
+#ifndef NDEBUG
+  // Only used to verify that destruction occurs on the correct thread.
+  std::weak_ptr<utils::DispatcherHolder> dispatcher_holder_;
+#endif
   fidl::ServerBindingRef<fuchsia_ui_composition::ParentViewportWatcher> binding_ref_;
   LinkProtocolErrorCallback error_callback_;
   HangingGetHelper<fuchsia::ui::composition::LayoutInfo> layout_helper_;
@@ -126,15 +146,30 @@ class ChildViewWatcherImpl : public fidl::Server<fuchsia_ui_composition::ChildVi
   ChildViewWatcherImpl(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
                        fidl::InterfaceRequest<fuchsia::ui::composition::ChildViewWatcher> request,
                        LinkProtocolErrorCallback error_callback)
-      : binding_ref_(fidl::BindServer(
+      :
+#ifndef NDEBUG
+        dispatcher_holder_(dispatcher_holder),
+#endif
+        binding_ref_(fidl::BindServer(
             dispatcher_holder->dispatcher(), fidl::HLCPPToNatural(request), this,
             [](ChildViewWatcherImpl* /*unused*/, fidl::UnbindInfo info,
                fidl::ServerEnd<fuchsia_ui_composition::ChildViewWatcher> /*unused*/) {
               OnUnbound(info);
             })),
-        error_callback_(std::move(error_callback)) {}
+        error_callback_(std::move(error_callback)) {
+  }
+
+  ChildViewWatcherImpl(ChildViewWatcherImpl&&) = delete;
+  ChildViewWatcherImpl(const ChildViewWatcherImpl&) = delete;
+  ChildViewWatcherImpl& operator=(const ChildViewWatcherImpl&) = delete;
 
   ~ChildViewWatcherImpl() override {
+#ifndef NDEBUG
+    auto dispatcher_holder = dispatcher_holder_.lock();
+    FX_CHECK(!dispatcher_holder ||
+             (dispatcher_holder->dispatcher() == async_get_default_dispatcher()));
+#endif  // NDEBUG
+
     // `ServerBindingRef` doesn't have RAII semantics for destroying the underlying channel, so it
     // must be done explicitly to avoid "leaking" the channel (not forever, rather for the lifetime
     // of the dispatcher, i.e. the lifetime of the associated Viewport's Flatland session).
@@ -207,6 +242,10 @@ class ChildViewWatcherImpl : public fidl::Server<fuchsia_ui_composition::ChildVi
     }
   }
 
+#ifndef NDEBUG
+  // Only used to verify that destruction occurs on the correct thread.
+  std::weak_ptr<utils::DispatcherHolder> dispatcher_holder_;
+#endif
   fidl::ServerBindingRef<fuchsia_ui_composition::ChildViewWatcher> binding_ref_;
   LinkProtocolErrorCallback error_callback_;
   HangingGetHelper<fuchsia::ui::composition::ChildViewStatus> status_helper_;

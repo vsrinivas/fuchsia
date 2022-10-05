@@ -21,10 +21,18 @@ void ObjectLinkerBase::Link::LinkInvalidated(bool on_destruction) {
   if (link_invalidated_) {
     auto link_invalidated_fn = std::move(link_invalidated_);
     link_invalidated_ = [](auto) {};
-    ExecuteOrPostTaskOnDispatcher([link_invalidated = link_invalidated_fn, on_destruction]() {
-      // Doesn't need to be locked because the closure/argument are no longer owned by the Link.
-      link_invalidated(on_destruction);
-    });
+    // The `std::move(link_invalidated_fn)` is crucial to avoid a subtle race condition when objects
+    // can be destroyed on the wrong thread.  Without the `std::move`, the closure is copied.
+    // Rarely, this thread will be descheduled before the task runs on a different thread.
+    // In other words, `link_invalidated_fn` will outlive the version copied into the task closure.
+    // Then, when this thread next runs, `link_invalidated_fn` is destroyed, and if it contains any
+    // captured objects that were supposed to be destroyed on another thread (e.g. shared_ptr to
+    // whatever), then they are destroyed on this thread instead.  Oops!
+    ExecuteOrPostTaskOnDispatcher(
+        [link_invalidated = std::move(link_invalidated_fn), on_destruction]() {
+          // Doesn't need to be locked because the closure/argument are no longer owned by the Link.
+          link_invalidated(on_destruction);
+        });
   }
 }
 

@@ -333,6 +333,7 @@ void Flatland::Present(fuchsia::ui::composition::PresentArgs args) {
 
 void Flatland::CreateView(ViewCreationToken token,
                           fidl::InterfaceRequest<ParentViewportWatcher> parent_viewport_watcher) {
+  TRACE_DURATION("gfx", "Flatland::CreateView", "debug_name", TA_STRING(debug_name_.c_str()));
   CreateViewHelper(std::move(token), std::move(parent_viewport_watcher), std::nullopt,
                    std::nullopt);
 }
@@ -341,6 +342,7 @@ void Flatland::CreateView2(ViewCreationToken token,
                            fuchsia::ui::views::ViewIdentityOnCreation view_identity,
                            fuchsia::ui::composition::ViewBoundProtocols protocols,
                            fidl::InterfaceRequest<ParentViewportWatcher> parent_viewport_watcher) {
+  TRACE_DURATION("gfx", "Flatland::CreateView2", "debug_name", TA_STRING(debug_name_.c_str()));
   CreateViewHelper(std::move(token), std::move(parent_viewport_watcher), std::move(view_identity),
                    std::move(protocols));
 }
@@ -375,13 +377,16 @@ void Flatland::CreateViewHelper(
   // immediately, parents can inform children of layout changes, and child clients can perform
   // layout decisions before their first call to Present().
   auto child_transform_handle = transform_graph_.CreateTransform();
+
   LinkSystem::LinkToParent new_link_to_parent = link_system_->CreateLinkToParent(
       dispatcher_holder_, std::move(token), std::move(view_identity),
       std::move(parent_viewport_watcher), child_transform_handle,
-      [ref = weak_from_this(),
-       dispatcher_holder = dispatcher_holder_](const std::string& error_log) {
-        FX_CHECK(dispatcher_holder->dispatcher() == async_get_default_dispatcher())
-            << "Link protocol error reported on the wrong dispatcher.";
+      [ref = weak_from_this(), weak_dispatcher_holder = std::weak_ptr<utils::DispatcherHolder>(
+                                   dispatcher_holder_)](const std::string& error_log) {
+        if (auto dispatcher_holder = weak_dispatcher_holder.lock()) {
+          FX_CHECK(dispatcher_holder->dispatcher() == async_get_default_dispatcher())
+              << "Link protocol error reported on the wrong dispatcher.";
+        }
         if (auto impl = ref.lock())
           impl->ReportLinkProtocolError(error_log);
       });
@@ -794,6 +799,8 @@ void Flatland::SetRootTransform(TransformId transform_id) {
 void Flatland::CreateViewport(ContentId link_id, ViewportCreationToken token,
                               ViewportProperties properties,
                               fidl::InterfaceRequest<ChildViewWatcher> child_view_watcher) {
+  TRACE_DURATION("gfx", "Flatland::CreateViewport", "debug_name", TA_STRING(debug_name_.c_str()));
+
   // Attempting to link with an invalid token will never succeed, so its better to fail early and
   // immediately close the link connection.
   if (!token.value.is_valid()) {
@@ -855,10 +862,12 @@ void Flatland::CreateViewport(ContentId link_id, ViewportCreationToken token,
   LinkSystem::LinkToChild link_to_child = link_system_->CreateLinkToChild(
       dispatcher_holder_, std::move(token), std::move(initial_properties),
       std::move(child_view_watcher), parent_transform_handle,
-      [ref = weak_from_this(),
-       dispatcher_holder = dispatcher_holder_](const std::string& error_log) {
-        FX_CHECK(dispatcher_holder->dispatcher() == async_get_default_dispatcher())
-            << "Link protocol error reported on the wrong dispatcher.";
+      [ref = weak_from_this(), weak_dispatcher_holder = std::weak_ptr<utils::DispatcherHolder>(
+                                   dispatcher_holder_)](const std::string& error_log) {
+        if (auto dispatcher_holder = weak_dispatcher_holder.lock()) {
+          FX_CHECK(dispatcher_holder->dispatcher() == async_get_default_dispatcher())
+              << "Link protocol error reported on the wrong dispatcher.";
+        }
         if (auto impl = ref.lock())
           impl->ReportLinkProtocolError(error_log);
       });
@@ -895,6 +904,8 @@ void Flatland::CreateViewport(ContentId link_id, ViewportCreationToken token,
 void Flatland::CreateImage(ContentId image_id,
                            fuchsia::ui::composition::BufferCollectionImportToken import_token,
                            uint32_t vmo_index, ImageProperties properties) {
+  TRACE_DURATION("gfx", "Flatland::CreateImage", "debug_name", TA_STRING(debug_name_.c_str()));
+
   if (image_id.value == kInvalidId) {
     error_reporter_->ERROR() << "CreateImage called with image_id 0";
     ReportBadOperationError();

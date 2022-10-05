@@ -163,7 +163,7 @@ bool DisplayCompositor::ImportBufferCollection(
   // display. The allocation will fail if it the allocation is not directly displayable. In
   // AttemptDisplayConstraints mode, instead of passing a real token, we pass an AttachToken to
   // display. This way, display does not affect the allocation and we directly display if it happens
-  // to work. In RendererOnly mode, we dont attempt directly displaying and fallback to renderer.
+  // to work. In RendererOnly mode, we don't attempt directly displaying and fallback to renderer.
   fuchsia::sysmem::BufferCollectionTokenSyncPtr display_token;
   if (import_mode_ == BufferCollectionImportMode::EnforceDisplayConstraints) {
     status = sync_token->Duplicate(ZX_RIGHT_SAME_RIGHTS, display_token.NewRequest());
@@ -197,6 +197,9 @@ bool DisplayCompositor::ImportBufferCollection(
       FX_LOGS(ERROR) << "Cannot close token. The client may have invalidated the token.";
       return false;
     }
+  } else {
+    // BufferCollectionImportMode::RendererOnly was handled above.
+    FX_NOTREACHED();
   }
 
   // Duplicate display token to check later if attach token can be used in the allocated buffers.
