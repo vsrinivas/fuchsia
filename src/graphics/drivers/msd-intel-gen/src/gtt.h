@@ -22,7 +22,8 @@ class Gtt : public AddressSpace {
 
   virtual bool Init(uint64_t gtt_size) = 0;
 
-  bool InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) override {
+  bool InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping,
+                    uint32_t guard_page_count) override {
     DASSERT(false);
     return false;
   }

@@ -96,7 +96,9 @@ class TestPerProcessGtt {
     check_pte_entries_clear(ppgtt.get(), 0, 10 * PAGE_SIZE);
   }
 
-  static void Insert() {
+  static void Insert(bool with_guard_pages) {
+    uint32_t guard_page_count = with_guard_pages ? PerProcessGtt::ExtraPageCount() : 0;
+
     auto owner = std::make_unique<AddressSpaceOwner>();
     auto ppgtt = PerProcessGtt::Create(owner.get());
 
@@ -105,10 +107,10 @@ class TestPerProcessGtt {
     std::vector<std::unique_ptr<MockBusMapping>> bus_mapping(2);
 
     // Placeholder occupies most of the first page directory
-    addr[0] = 512 * 511 * PAGE_SIZE + PerProcessGtt::ExtraPageCount() * PAGE_SIZE;
+    addr[0] = 512 * 511 * PAGE_SIZE + guard_page_count * PAGE_SIZE;
     buffer[0] = magma::PlatformBuffer::Create(513 * PAGE_SIZE, "test");
 
-    addr[1] = addr[0] + buffer[0]->size() + PerProcessGtt::ExtraPageCount() * PAGE_SIZE;
+    addr[1] = addr[0] + buffer[0]->size() + guard_page_count * PAGE_SIZE;
     buffer[1] = magma::PlatformBuffer::Create(10000, "test");
 
     bus_mapping[0] = std::make_unique<MockBusMapping>(0, buffer[0]->size() / PAGE_SIZE);
@@ -128,11 +130,12 @@ class TestPerProcessGtt {
     EXPECT_TRUE(ppgtt->Insert(addr[1], bus_mapping[1].get()));
     check_pte_entries(ppgtt.get(), bus_mapping[1].get(), addr[1]);
 
-    EXPECT_TRUE(ppgtt->Clear(addr[1], bus_mapping[1].get()));
-    check_pte_entries_clear(ppgtt.get(), addr[1], buffer[1]->size());
-
     EXPECT_TRUE(ppgtt->Clear(addr[0], bus_mapping[0].get()));
     check_pte_entries_clear(ppgtt.get(), addr[0], buffer[0]->size());
+    check_pte_entries(ppgtt.get(), bus_mapping[1].get(), addr[1]);
+
+    EXPECT_TRUE(ppgtt->Clear(addr[1], bus_mapping[1].get()));
+    check_pte_entries_clear(ppgtt.get(), addr[1], buffer[1]->size());
 
     EXPECT_TRUE(ppgtt->Free(addr[0]));
     EXPECT_TRUE(ppgtt->Free(addr[1]));
@@ -177,7 +180,9 @@ class TestPerProcessGtt {
 
 TEST(PerProcessGtt, Init) { TestPerProcessGtt::Init(); }
 
-TEST(PerProcessGtt, Insert) { TestPerProcessGtt::Insert(); }
+TEST(PerProcessGtt, InsertWithGuardPages) { TestPerProcessGtt::Insert(true); }
+
+TEST(PerProcessGtt, Insert) { TestPerProcessGtt::Insert(false); }
 
 TEST(PerProcessGtt, PrivatePat) { TestPerProcessGtt::PrivatePat(); }
 

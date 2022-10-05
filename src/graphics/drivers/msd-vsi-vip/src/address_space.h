@@ -40,7 +40,8 @@ class AddressSpace : public magma::AddressSpace<GpuMapping> {
   // to avoid errors from when a gpu mapping is released and attempts to call |FreeLocked|.
   bool FreeLocked(uint64_t addr) override { return true; }
 
-  bool InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) override;
+  bool InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping,
+                    uint32_t guard_page_count) override;
   bool ClearLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) override;
 
   uint64_t Size() const override { return 1ull << 40; }

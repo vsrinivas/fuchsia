@@ -132,7 +132,7 @@ bool PerProcessGtt::ClearLocked(uint64_t start, magma::PlatformBusMapper::BusMap
   if (start > Size())
     return DRETF(false, "invalid start");
 
-  uint64_t length = (bus_mapping->page_count() + kOverfetchPageCount + kGuardPageCount) * PAGE_SIZE;
+  uint64_t length = bus_mapping->page_count() * PAGE_SIZE;
   if (start + length > Size())
     return DRETF(false, "invalid start + length");
 
@@ -185,7 +185,8 @@ bool PerProcessGtt::AllocLocked(size_t size, uint8_t align_pow2, uint64_t* addr_
 
 bool PerProcessGtt::FreeLocked(uint64_t addr) { return true; }
 
-bool PerProcessGtt::InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) {
+bool PerProcessGtt::InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping,
+                                 uint32_t guard_page_count) {
   auto& bus_addr_array = bus_mapping->Get();
   uint64_t page_count = bus_addr_array.size();
 
@@ -206,16 +207,13 @@ bool PerProcessGtt::InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMap
       page_directory ? page_directory->page_table_entry(page_directory_index, page_table_index)
                      : nullptr;
 
-  for (uint64_t i = 0; i < page_count + kOverfetchPageCount + kGuardPageCount; i++) {
+  for (uint64_t i = 0; i < page_count + guard_page_count; i++) {
     gen_pte_t pte;
     if (i < page_count) {
       // buffer pages
       pte = gen_pte_encode(bus_addr_array[i], CACHING_LLC, true, true);
-    } else if (i < page_count + kOverfetchPageCount) {
-      // overfetch page: readable
-      pte = gen_pte_encode(pml4_table_->scratch_page_bus_addr(), CACHING_NONE, true, false);
     } else {
-      // guard page: also readable, because mesa doesn't properly handle overfetching
+      // guard page: readable, because mesa doesn't properly handle overfetching
       pte = gen_pte_encode(pml4_table_->scratch_page_bus_addr(), CACHING_NONE, true, false);
     }
 

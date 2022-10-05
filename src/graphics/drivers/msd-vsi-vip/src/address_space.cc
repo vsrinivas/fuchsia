@@ -108,8 +108,11 @@ bool AddressSpace::Init() {
   return true;
 }
 
-bool AddressSpace::InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) {
+bool AddressSpace::InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping,
+                                uint32_t guard_page_count) {
   DASSERT(magma::is_page_aligned(addr));
+  DASSERT(guard_page_count == 0);
+
   auto& bus_addr_array = bus_mapping->Get();
   uint64_t page_count = bus_addr_array.size();
 

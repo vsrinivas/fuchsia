@@ -323,6 +323,42 @@ class TestConnection {
     magma_release_buffer(connection_, buffer);
   }
 
+  void BufferMapOverlapError() {
+    ASSERT_TRUE(connection_);
+
+    uint64_t size = page_size() * 2;
+    std::array<magma_buffer_t, 2> buffer;
+
+    {
+      uint64_t actual_size;
+      ASSERT_EQ(MAGMA_STATUS_OK, magma_create_buffer(connection_, size, &actual_size, &buffer[0]));
+      EXPECT_NE(buffer[0], 0u);
+    }
+    {
+      uint64_t actual_size;
+      ASSERT_EQ(MAGMA_STATUS_OK, magma_create_buffer(connection_, size, &actual_size, &buffer[1]));
+      EXPECT_NE(buffer[1], 0u);
+    }
+
+    constexpr uint64_t kGpuAddress = 0x1000;
+
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              magma_map_buffer(connection_, kGpuAddress, buffer[0], 0, size, MAGMA_MAP_FLAG_READ));
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_get_error(connection_));
+
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_map_buffer(connection_, kGpuAddress + size / 2, buffer[1], 0,
+                                                size, MAGMA_MAP_FLAG_READ));
+
+    {
+      magma_status_t status = magma_get_error(connection_);
+      if (status != MAGMA_STATUS_INVALID_ARGS)
+        EXPECT_EQ(MAGMA_STATUS_INTERNAL_ERROR, status);
+    }
+
+    magma_release_buffer(connection_, buffer[1]);
+    magma_release_buffer(connection_, buffer[0]);
+  }
+
   void BufferMapDuplicates(int count) {
     if (is_virtmagma())
       // TODO(fxbug.dev/13278); only images can be exported
@@ -1262,6 +1298,11 @@ TEST_F(Magma, BufferMap) {
 TEST_F(Magma, BufferMapInvalid) {
   TestConnection test;
   test.BufferMapInvalid();
+}
+
+TEST_F(Magma, BufferMapOverlapError) {
+  TestConnection test;
+  test.BufferMapOverlapError();
 }
 
 TEST_F(Magma, BufferMapDuplicates) {

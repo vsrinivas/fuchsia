@@ -20,7 +20,7 @@ class FakeAllocatingAddressSpace : public AddressSpaceBase {
                 "AddressSpaceBase must derive from magma::AddressSpace");
 
   FakeAllocatingAddressSpace(magma::AddressSpaceOwner* owner, uint64_t base, uint64_t size)
-      : AddressSpaceBase(owner), size_(size), next_addr_(base) {}
+      : AddressSpaceBase(owner), size_(base + size), next_addr_(base) {}
 
   uint64_t Size() const override { return size_; }
 
@@ -49,7 +49,8 @@ class FakeAllocatingAddressSpace : public AddressSpaceBase {
     return true;
   }
 
-  bool InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) override {
+  bool InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping,
+                    uint32_t guard_page_count) override {
     auto iter = allocations_.find(addr);
     if (iter == allocations_.end())
       return false;
@@ -99,23 +100,38 @@ class FakeNonAllocatingAddressSpace : public AddressSpaceBase {
 
   uint64_t Size() const override { return size_; }
 
+  uint64_t MaxGuardPageCount() override { return 2; }
+
   bool AllocLocked(size_t size, uint8_t align_pow2, uint64_t* addr_out) override { return false; }
   bool FreeLocked(uint64_t addr) override { return true; }
 
-  // We don't check that multiple insertions overlap; we check that clears match inserts.
-  bool InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) override {
+  bool InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping,
+                    uint32_t guard_page_count) override {
+    uint64_t length = (bus_mapping->page_count() + guard_page_count) * magma::page_size();
+
+    auto iter = map_.upper_bound(addr);
+    if (iter != map_.end() && (addr + length) > iter->first)
+      return false;
+
+    if (iter != map_.begin()) {
+      --iter;
+      if (iter->first + iter->second > addr)
+        return false;
+    }
+
     map_.insert({addr, bus_mapping->page_count() * magma::page_size()});
     return true;
   }
 
   bool ClearLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) override {
     uint64_t length = bus_mapping->page_count() * magma::page_size();
-    auto range = map_.equal_range(addr);
-    for (auto iter = range.first; iter != range.second; iter++) {
-      if (iter->second == length) {
-        map_.erase(iter);
-        return true;
+    auto iter = map_.find(addr);
+    if (iter != map_.end()) {
+      if (iter->second != length) {
+        return false;
       }
+      map_.erase(iter);
+      return true;
     }
     return false;
   }
@@ -128,7 +144,7 @@ class FakeNonAllocatingAddressSpace : public AddressSpaceBase {
 
  private:
   // Map of address, size.
-  std::multimap<uint64_t, uint64_t> map_;
+  std::map<uint64_t, uint64_t> map_;
   uint64_t size_;
 };
 

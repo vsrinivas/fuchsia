@@ -245,6 +245,8 @@ class PerProcessGtt : public AddressSpace {
 
   static constexpr uint32_t ExtraPageCount() { return kOverfetchPageCount + kGuardPageCount; }
 
+  uint64_t MaxGuardPageCount() override { return ExtraPageCount(); }
+
  private:
   PerProcessGtt(Owner* owner, std::unique_ptr<Pml4Table> pml4_table);
 
@@ -260,7 +262,8 @@ class PerProcessGtt : public AddressSpace {
   bool AllocLocked(size_t size, uint8_t align_pow2, uint64_t* addr_out) override;
   bool FreeLocked(uint64_t addr) override;
 
-  bool InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* buffer) override;
+  bool InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* buffer,
+                    uint32_t guard_page_count) override;
   bool ClearLocked(uint64_t start, magma::PlatformBusMapper::BusMapping* buffer) override;
 
   std::unique_ptr<Pml4Table> pml4_table_;

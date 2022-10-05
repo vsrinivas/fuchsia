@@ -78,20 +78,52 @@ TEST_F(TestAddressSpace, OverlappedMapping) {
                                                       &gpu_mapping));
   EXPECT_TRUE(address_space->AddMapping(gpu_mapping));
 
-  // Overlapped existing mappings should fail
-  EXPECT_TRUE(NonAllocatingAddressSpace::MapBufferGpu(address_space, buffer,
-                                                      kGpuAddr - magma::page_size(),  // gpu addr
-                                                      0,                              // page offset
-                                                      kPageCount,                     // page count
-                                                      &gpu_mapping));
-  EXPECT_FALSE(address_space->AddMapping(gpu_mapping));
+  EXPECT_FALSE(NonAllocatingAddressSpace::MapBufferGpu(address_space, buffer,
+                                                       kGpuAddr - magma::page_size(),  // gpu addr
+                                                       0,           // page offset
+                                                       kPageCount,  // page count
+                                                       &gpu_mapping));
 
+  EXPECT_FALSE(NonAllocatingAddressSpace::MapBufferGpu(address_space, buffer,
+                                                       kGpuAddr + magma::page_size(),  // gpu addr
+                                                       0,           // page offset
+                                                       kPageCount,  // page count
+                                                       &gpu_mapping));
+}
+
+TEST_F(TestAddressSpace, AdjacentMappings) {
+  constexpr uint32_t kPageCount = 2;
+  constexpr uint32_t kGpuAddr = 0x10000;  // arbitrary
+
+  auto owner = std::make_unique<AddressSpaceOwner>();
+  auto address_space = std::make_shared<NonAllocatingAddressSpace>(owner.get(), UINT32_MAX);
+  auto buffer = std::shared_ptr<magma::PlatformBuffer>(
+      magma::PlatformBuffer::Create(kPageCount * magma::page_size(), "Test"));
+
+  // Map in the middle
+  std::shared_ptr<GpuMapping> gpu_mapping;
   EXPECT_TRUE(NonAllocatingAddressSpace::MapBufferGpu(address_space, buffer,
-                                                      kGpuAddr + magma::page_size(),  // gpu addr
-                                                      0,                              // page offset
-                                                      kPageCount,                     // page count
+                                                      kGpuAddr,    // gpu addr
+                                                      0,           // page offset
+                                                      kPageCount,  // page count
                                                       &gpu_mapping));
-  EXPECT_FALSE(address_space->AddMapping(gpu_mapping));
+  EXPECT_TRUE(address_space->AddMapping(gpu_mapping));
+
+  // Adjacent above
+  EXPECT_TRUE(NonAllocatingAddressSpace::MapBufferGpu(
+      address_space, buffer,
+      kGpuAddr + (kPageCount * magma::page_size()),  // gpu addr
+      0,                                             // page offset
+      kPageCount,                                    // page count
+      &gpu_mapping));
+
+  // Adjacent below
+  EXPECT_TRUE(NonAllocatingAddressSpace::MapBufferGpu(
+      address_space, buffer,
+      kGpuAddr - (kPageCount * magma::page_size()),  // gpu addr
+      0,                                             // page offset
+      kPageCount,                                    // page count
+      &gpu_mapping));
 }
 
 TEST_F(TestAddressSpace, ReleaseMapping) {
