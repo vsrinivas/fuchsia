@@ -133,12 +133,26 @@ impl<'a> SyscallTemplate<'a> {
         SyscallTemplate { handlebars: handlebars, output_path: output_path.to_path_buf() }
     }
 
-    fn render_syscall(&self, root_json: &Value, syscall_json: &Value) -> Result<(), Error> {
+    fn render_syscall(
+        &self,
+        root_json: &Value,
+        family_name: &String,
+        syscall_json: &Value,
+    ) -> Result<(), Error> {
         let method_name =
             syscall_json["name"].as_str().ok_or_else(|| RenderError::new("Invalid name"))?;
-        info!("Rendering {}", method_name);
 
-        let output_path = self.output_path.join(method_name.to_string() + &".md".to_string());
+        // If `family_name` is set, then the syscall name is
+        // `zx_${family_name}_${method_name}`; else it is `zx_${method_name}`.
+        let mut syscall_name = String::new();
+        if !family_name.is_empty() {
+            syscall_name.push_str(family_name);
+            syscall_name.push_str("_");
+        }
+        syscall_name.push_str(method_name);
+
+        info!("Rendering {}", syscall_name);
+        let output_path = self.output_path.join(syscall_name.clone() + &".md".to_string());
         let mut output_file = File::create(&output_path)
             .with_context(|| format!("Can't create file {}", output_path.display()))?;
 
@@ -146,11 +160,12 @@ impl<'a> SyscallTemplate<'a> {
         // current syscall to render.
         let template_json = json!({
             "config": root_json["config"],
+            "syscall_name": &syscall_name,
             "syscall": syscall_json,
         });
 
         let content = render_template(&self.handlebars, "syscall".to_string(), &template_json)
-            .with_context(|| format!("Can't render syscall {}", method_name))?;
+            .with_context(|| format!("Can't render syscall {}", syscall_name))?;
         output_file.write_all(content.as_bytes())?;
         Ok(())
     }
@@ -169,6 +184,18 @@ impl FidldocTemplate for SyscallTemplate<'_> {
             .ok_or_else(|| RenderError::new("Invalid protocol_declarations"))?;
 
         for protocol in protocols {
+            // If the protocol is annotated with @no_protocol_prefix, then the
+            // method name is the whole syscall name (modulo "zx_"); otherwise,
+            // the name is split across the protocol and methods names.
+            let family_name = if None == attribute_with_name(&protocol, "no_protocol_prefix") {
+                // The protocol name is fully qualified and so is prefixed with
+                // "$libname/".
+                let name = protocol["name"].as_str().unwrap().trim().to_string();
+                let (_, declname) = name.split_once("/").unwrap();
+                declname.to_string()
+            } else {
+                String::new()
+            };
             let methods = protocol["methods"]
                 .as_array()
                 .ok_or_else(|| RenderError::new("Invalid methods definition"))?;
@@ -180,7 +207,7 @@ impl FidldocTemplate for SyscallTemplate<'_> {
                 }
 
                 if !has_prohibited {
-                    self.render_syscall(fidl_json, method)?;
+                    self.render_syscall(fidl_json, &family_name, method)?;
                 }
             }
         }

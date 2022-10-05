@@ -33,7 +33,7 @@ SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
 SYSCALLS_FIDL_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, os.pardir,
                                                   'vdso'))
 
-ZX_JSON_BUILD_RELATIVE = os.path.join('gen', 'zircon', 'vdso', 'zx.fidl.json')
+ZX_JSON_BUILD_RELATIVE = os.path.join('fidling', 'gen', 'zircon', 'vdso', 'zx.fidl.json')
 
 def parse_args():
     parser = argparse.ArgumentParser(
