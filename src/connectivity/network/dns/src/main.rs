@@ -24,7 +24,7 @@ use {
     net_types::ip::IpAddress,
     parking_lot::RwLock,
     std::collections::{BTreeMap, HashMap, VecDeque},
-    std::convert::{TryFrom as _, TryInto as _},
+    std::convert::TryFrom as _,
     std::hash::{Hash, Hasher},
     std::net::IpAddr,
     std::num::NonZeroUsize,
@@ -867,11 +867,30 @@ fn create_ip_lookup_fut<T: ResolverLookup>(
                             };
                             (addrs, error)
                         });
-                    let count =
-                        addrs.len().try_into().map_err(|std::num::TryFromIntError { .. }| {
-                            // Return an error from the resolver.
-                            error.expect("error present when no records are returned")
-                        });
+                    let count = match NonZeroUsize::try_from(addrs.len()) {
+                        Ok(count) => Ok(count),
+                        Err(std::num::TryFromIntError { .. }) => {
+                            match error {
+                                None => {
+                                    // TODO(https://fxbug.dev/111095): Remove
+                                    // this once Trust-DNS enforces that all
+                                    // responses with no records return a
+                                    // `NoRecordsFound` error.
+                                    //
+                                    // Note that returning here means that query
+                                    // stats for inspect will not get logged.
+                                    // This is ok since this case should be rare
+                                    // and is considered to be temporary.
+                                    // Moreover, the failed query counters are
+                                    // based on the `ResolverError::kind`, which
+                                    // isn't applicable here.
+                                    error!("resolver response unexpectedly contained no records and no error. See https://fxbug.dev/111095.");
+                                    return Err(fname::LookupError::NotFound);
+                                },
+                                Some(e) => Err(e),
+                            }
+                        }
+                    };
                     let () = stats
                         .finish_query(
                             start_time,
@@ -1167,6 +1186,8 @@ mod tests {
     const REMOTE_IPV6_HOST_EXTRA: &str = "www.bar2.com";
     // host which has IPv4 and IPv6 address if reset name servers.
     const REMOTE_IPV4_IPV6_HOST: &str = "www.foobar.com";
+    // host which has no records and does not result in an error.
+    const NO_RECORDS_AND_NO_ERROR_HOST: &str = "www.no-records-and-no-error.com";
 
     async fn setup_namelookup_service() -> (fname::LookupProxy, impl futures::Future<Output = ()>) {
         let (name_lookup_proxy, stream) =
@@ -1296,6 +1317,10 @@ mod tests {
         ) -> Result<lookup::Lookup, ResolveError> {
             let name = name.into_name()?;
             let host_name = name.to_utf8();
+
+            if host_name == NO_RECORDS_AND_NO_ERROR_HOST {
+                return Ok(Lookup::new_with_max_ttl(Query::default(), Arc::new([])));
+            }
             let rdatas = match record_type {
                 RecordType::A => [REMOTE_IPV4_HOST, REMOTE_IPV4_IPV6_HOST]
                     .contains(&host_name.as_str())
@@ -1448,6 +1473,37 @@ mod tests {
 
     fn map_ip<T: Into<IpAddr>>(addr: T) -> fnet::IpAddress {
         net_ext::IpAddress(addr.into()).into()
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_no_records_and_no_error() {
+        TestEnvironment::new()
+            .run_lookup(|proxy| async move {
+                let proxy = &proxy;
+                futures::stream::iter([(true, true), (true, false), (false, true)])
+                    .for_each_concurrent(None, move |(ipv4_lookup, ipv6_lookup)| async move {
+                        // Verify that the resolver does not panic when the
+                        // response contains no records and no error. This
+                        // scenario should theoretically not occur, but
+                        // currently does. See https://fxbug.dev/111095.
+                        assert_eq!(
+                            proxy
+                                .lookup_ip(
+                                    NO_RECORDS_AND_NO_ERROR_HOST,
+                                    fname::LookupIpOptions {
+                                        ipv4_lookup: Some(ipv4_lookup),
+                                        ipv6_lookup: Some(ipv6_lookup),
+                                        ..fname::LookupIpOptions::EMPTY
+                                    }
+                                )
+                                .await
+                                .expect("lookup_ip"),
+                            Err(fname::LookupError::NotFound),
+                        );
+                    })
+                    .await
+            })
+            .await;
     }
 
     #[fasync::run_singlethreaded(test)]
