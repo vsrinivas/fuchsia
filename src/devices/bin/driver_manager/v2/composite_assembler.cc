@@ -81,7 +81,8 @@ bool CompositeDeviceFragment::BindNode(std::shared_ptr<Node> node) {
 void CompositeDeviceFragment::Inspect(inspect::Node& root) const {
   std::string moniker = "<unbound>";
   if (auto node = bound_node_.lock()) {
-    moniker = node->TopoName();
+    // TODO(fxbug.dev/107288): Change this back to node->TopoPath() when inspect is fixed.
+    moniker = "bound";
   }
 
   root.RecordString(name_, moniker);

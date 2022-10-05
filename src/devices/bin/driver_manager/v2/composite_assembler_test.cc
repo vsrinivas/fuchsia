@@ -442,6 +442,6 @@ TEST_F(CompositeAssemblerTest, InspectNodes) {
     auto inspect_fragment =
         assembler.node().get_property<inspect::StringPropertyValue>(std::string(kFragmentName));
     ASSERT_NE(inspect_fragment, nullptr);
-    EXPECT_EQ(std::string("parent"), inspect_fragment->value());
+    EXPECT_EQ(std::string("bound"), inspect_fragment->value());
   }
 }
