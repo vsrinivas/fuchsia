@@ -135,7 +135,6 @@ class Coordinator : public CompositeManagerBridge,
 
   void InitOutgoingServices(component::OutgoingDirectory& outgoing);
   void PublishDriverDevelopmentService(component::OutgoingDirectory& outgoing);
-  void PublishDeviceGroupManager(component::OutgoingDirectory& outgoing);
 
   // Initialization functions for DFv1. InitCoreDevices() is public for testing only.
   void LoadV1Drivers(std::string_view sys_device_driver);
@@ -258,9 +257,6 @@ class Coordinator : public CompositeManagerBridge,
 
  private:
   // CompositeManagerBridge interface
-  zx::status<std::unique_ptr<DeviceGroup>> CreateDeviceGroup(
-      DeviceGroupCreateInfo create_info,
-      fuchsia_driver_index::MatchedCompositeInfo driver) override;
   void BindNodesForDeviceGroups() override;
   void AddDeviceGroupToDriverIndex(fuchsia_driver_framework::wire::DeviceGroup group,
                                    AddToIndexCallback callback) override;

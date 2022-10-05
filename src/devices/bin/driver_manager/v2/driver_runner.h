@@ -39,6 +39,7 @@
 namespace dfv2 {
 
 class DriverRunner : public fidl::WireServer<fuchsia_component_runner::ComponentRunner>,
+                     public fidl::WireServer<fuchsia_driver_framework::DeviceGroupManager>,
                      public CompositeManagerBridge,
                      public NodeManager {
  public:
@@ -46,10 +47,11 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
                fidl::ClientEnd<fuchsia_driver_index::DriverIndex> driver_index,
                inspect::Inspector& inspector, async_dispatcher_t* dispatcher);
 
+  // fidl::WireServer<fuchsia_driver_framework::DeviceGroupManager>
+  void CreateDeviceGroup(CreateDeviceGroupRequestView request,
+                         CreateDeviceGroupCompleter::Sync& completer) override;
+
   // CompositeManagerBridge interface
-  zx::status<std::unique_ptr<DeviceGroup>> CreateDeviceGroup(
-      DeviceGroupCreateInfo create_info,
-      fuchsia_driver_index::MatchedCompositeInfo driver) override;
   void BindNodesForDeviceGroups() override;
   void AddDeviceGroupToDriverIndex(fuchsia_driver_framework::wire::DeviceGroup group,
                                    AddToIndexCallback callback) override;

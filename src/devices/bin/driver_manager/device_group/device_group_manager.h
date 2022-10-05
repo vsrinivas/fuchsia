@@ -21,21 +21,18 @@ struct CompositeNodeAndDriver {
 // This class is responsible for managing device groups. It keeps track of the device
 // groups and its matching composite driver and nodes. DeviceGroupManager is owned by a
 // CompositeManagerBridge and must be outlived by it.
-class DeviceGroupManager : public fidl::WireServer<fuchsia_driver_framework::DeviceGroupManager> {
+class DeviceGroupManager {
  public:
   using DeviceGroupMap = std::unordered_map<std::string, std::unique_ptr<DeviceGroup>>;
 
   explicit DeviceGroupManager(CompositeManagerBridge* bridge);
 
-  // fidl::WireServer<fuchsia_driver_framework::DeviceGroupManager>
-  void CreateDeviceGroup(CreateDeviceGroupRequestView request,
-                         CreateDeviceGroupCompleter::Sync& completer) override;
-
   // Adds a device group to the driver index. If it's successfully added, then the
   // DeviceGroupManager stores the device group in a map. After that, it sends a call to
   // CompositeManagerBridge to bind all unbound devices.
   fitx::result<fuchsia_driver_framework::DeviceGroupError> AddDeviceGroup(
-      fuchsia_driver_framework::wire::DeviceGroup group);
+      fuchsia_driver_framework::wire::DeviceGroup group_info,
+      std::unique_ptr<DeviceGroup> device_group);
 
   // Binds the device to one of the device group nodes that it was matched to.
   // DeviceGroupManager will go through the list of device groups until it finds one with
@@ -68,14 +65,7 @@ class DeviceGroupManager : public fidl::WireServer<fuchsia_driver_framework::Dev
   const DeviceGroupMap& device_groups() const { return device_groups_; }
 
  private:
-  // This function creates a DeviceGroup object and adds it into |device_groups_|.
-  // It is called by |AddDeviceGroup| and |BindDeviceGroupNode|.
-  zx::status<> CreateDeviceGroup(DeviceGroupCreateInfo create_info,
-                                 fuchsia_driver_index::MatchedCompositeInfo driver);
-
   // Contains all device groups. This maps the topological path to a DeviceGroup object.
-  // If matching composite driver has not been found for the device group, then the
-  // entry is set to null.
   DeviceGroupMap device_groups_;
 
   // The owner of DeviceGroupManager. CompositeManagerBridge must outlive DeviceGroupManager.

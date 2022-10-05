@@ -6,7 +6,7 @@
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_V1_DEVICE_GROUP_V1_H_
 
 #include "src/devices/bin/driver_manager/composite_device.h"
-#include "src/devices/bin/driver_manager/coordinator.h"
+#include "src/devices/bin/driver_manager/driver_loader.h"
 
 // Wrapper struct for a fbl::RefPtr<Device>. This allows the device_group code
 // to refer to this without any dependencies on the DFv1 code.
@@ -22,20 +22,21 @@ namespace device_group {
 // CompositeDevice object underneath the interface.
 class DeviceGroupV1 : public DeviceGroup {
  public:
-  static zx::status<std::unique_ptr<DeviceGroupV1>> Create(
-      DeviceGroupCreateInfo create_info, fuchsia_driver_index::MatchedCompositeInfo driver,
-      Coordinator* coordinator);
-
-  // Must only be called by Create() to ensure the objects are verified.
-  DeviceGroupV1(DeviceGroupCreateInfo create_info,
-                std::unique_ptr<CompositeDevice> composite_device);
-
- protected:
-  zx::status<std::optional<DeviceOrNode>> BindNodeImpl(uint32_t node_index,
-                                                       const DeviceOrNode& device_or_node) override;
+  DeviceGroupV1(DeviceGroupCreateInfo create_info, DriverLoader* driver_loader);
 
  private:
+  // DeviceGroup interface:
+  zx::status<std::optional<DeviceOrNode>> BindNodeImpl(
+      fuchsia_driver_index::wire::MatchedDeviceGroupInfo info,
+      const DeviceOrNode& device_or_node) override;
+
+  // Should only be called when |composite_device_| is null.
+  void SetCompositeDevice(fuchsia_driver_index::wire::MatchedDeviceGroupInfo info);
+
   std::unique_ptr<CompositeDevice> composite_device_;
+
+  // Must outlive DeviceGroupV1.
+  DriverLoader* driver_loader_;
 };
 
 }  // namespace device_group

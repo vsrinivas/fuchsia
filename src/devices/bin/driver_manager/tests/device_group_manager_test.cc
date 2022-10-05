@@ -16,30 +16,20 @@ namespace fdi = fuchsia_driver_index;
 
 class FakeDeviceGroup : public DeviceGroup {
  public:
-  explicit FakeDeviceGroup(DeviceGroupCreateInfo create_info, std::string_view composite_name)
-      : DeviceGroup(std::move(create_info), composite_name) {}
+  explicit FakeDeviceGroup(DeviceGroupCreateInfo create_info)
+      : DeviceGroup(std::move(create_info)) {}
 
   zx::status<std::optional<DeviceOrNode>> BindNodeImpl(
-      uint32_t node_index, const DeviceOrNode& device_or_node) override {
+      fuchsia_driver_index::wire::MatchedDeviceGroupInfo info,
+      const DeviceOrNode& device_or_node) override {
     return zx::ok(std::nullopt);
   }
 };
 
 class FakeDeviceManagerBridge : public CompositeManagerBridge {
  public:
-  zx::status<std::unique_ptr<DeviceGroup>> CreateDeviceGroup(
-      DeviceGroupCreateInfo create_info, fdi::MatchedCompositeInfo driver) override {
-    auto name = driver.composite_name();
-    if (!name.has_value()) {
-      return zx::error(ZX_ERR_INVALID_ARGS);
-    }
-
-    return zx::ok(std::make_unique<FakeDeviceGroup>(std::move(create_info), name.value()));
-  }
-
-  // Match and bind all unbound nodes.
+  // CompositeManagerBridge:
   void BindNodesForDeviceGroups() override {}
-
   void AddDeviceGroupToDriverIndex(fdf::wire::DeviceGroup group,
                                    AddToIndexCallback callback) override {
     auto iter = device_group_matches_.find(std::string(group.topological_path().get()));
@@ -70,6 +60,15 @@ class FakeDeviceManagerBridge : public CompositeManagerBridge {
 class DeviceGroupManagerTest : public zxtest::Test {
  public:
   void SetUp() override { device_group_manager_ = std::make_unique<DeviceGroupManager>(&bridge_); }
+
+  fitx::result<fuchsia_driver_framework::DeviceGroupError> AddDeviceGroup(
+      fuchsia_driver_framework::wire::DeviceGroup group_info) {
+    auto device_group = std::make_unique<FakeDeviceGroup>(DeviceGroupCreateInfo{
+        .topological_path = std::string(group_info.topological_path().get()),
+        .size = group_info.nodes().count(),
+    });
+    return device_group_manager_->AddDeviceGroup(group_info, std::move(device_group));
+  }
 
   std::unique_ptr<DeviceGroupManager> device_group_manager_;
   FakeDeviceManagerBridge bridge_;
@@ -126,13 +125,11 @@ TEST_F(DeviceGroupManagerTest, TestAddMatchDeviceGroup) {
       {.composite = composite_match, .node_names = {{"node-0", "node-1"}}}};
 
   bridge_.AddDeviceGroupMatch(device_group_path, match);
-  ASSERT_TRUE(
-      device_group_manager_
-          ->AddDeviceGroup(fdf::wire::DeviceGroup::Builder(allocator)
-                               .topological_path(fidl::StringView(allocator, device_group_path))
-                               .nodes(std::move(nodes))
-                               .Build())
-          .is_ok());
+  ASSERT_TRUE(AddDeviceGroup(fdf::wire::DeviceGroup::Builder(allocator)
+                                 .topological_path(fidl::StringView(allocator, device_group_path))
+                                 .nodes(std::move(nodes))
+                                 .Build())
+                  .is_ok());
   ASSERT_EQ(
       2, device_group_manager_->device_groups().at(device_group_path)->device_group_nodes().size());
   ASSERT_FALSE(
@@ -228,13 +225,11 @@ TEST_F(DeviceGroupManagerTest, TestBindSameNodeTwice) {
       {.composite = composite_match, .node_names = {{"node-0", "node-1"}}}};
 
   bridge_.AddDeviceGroupMatch(device_group_path, match);
-  ASSERT_TRUE(
-      device_group_manager_
-          ->AddDeviceGroup(fdf::wire::DeviceGroup::Builder(allocator)
-                               .topological_path(fidl::StringView(allocator, device_group_path))
-                               .nodes(std::move(nodes))
-                               .Build())
-          .is_ok());
+  ASSERT_TRUE(AddDeviceGroup(fdf::wire::DeviceGroup::Builder(allocator)
+                                 .topological_path(fidl::StringView(allocator, device_group_path))
+                                 .nodes(std::move(nodes))
+                                 .Build())
+                  .is_ok());
   ASSERT_EQ(
       2, device_group_manager_->device_groups().at(device_group_path)->device_group_nodes().size());
 
@@ -319,13 +314,11 @@ TEST_F(DeviceGroupManagerTest, TestMultibind) {
       {.composite = matched_info_1, .node_names = {{"node-0", "node-1"}}}};
 
   bridge_.AddDeviceGroupMatch(device_group_path_1, match_1);
-  ASSERT_TRUE(
-      device_group_manager_
-          ->AddDeviceGroup(fdf::wire::DeviceGroup::Builder(allocator)
-                               .topological_path(fidl::StringView(allocator, device_group_path_1))
-                               .nodes(std::move(nodes_1))
-                               .Build())
-          .is_ok());
+  ASSERT_TRUE(AddDeviceGroup(fdf::wire::DeviceGroup::Builder(allocator)
+                                 .topological_path(fidl::StringView(allocator, device_group_path_1))
+                                 .nodes(std::move(nodes_1))
+                                 .Build())
+                  .is_ok());
   ASSERT_EQ(
       2,
       device_group_manager_->device_groups().at(device_group_path_1)->device_group_nodes().size());
@@ -344,13 +337,11 @@ TEST_F(DeviceGroupManagerTest, TestMultibind) {
   fdi::MatchedDeviceGroupInfo match_2{{.composite = matched_info_2, .node_names = {{"node-0"}}}};
 
   bridge_.AddDeviceGroupMatch(device_group_path_2, match_2);
-  ASSERT_TRUE(
-      device_group_manager_
-          ->AddDeviceGroup(fdf::wire::DeviceGroup::Builder(allocator)
-                               .topological_path(fidl::StringView(allocator, device_group_path_2))
-                               .nodes(std::move(nodes_2))
-                               .Build())
-          .is_ok());
+  ASSERT_TRUE(AddDeviceGroup(fdf::wire::DeviceGroup::Builder(allocator)
+                                 .topological_path(fidl::StringView(allocator, device_group_path_2))
+                                 .nodes(std::move(nodes_2))
+                                 .Build())
+                  .is_ok());
   ASSERT_EQ(
       1,
       device_group_manager_->device_groups().at(device_group_path_2)->device_group_nodes().size());
@@ -439,8 +430,8 @@ TEST_F(DeviceGroupManagerTest, TestBindWithNoCompositeMatch) {
                           .topological_path(fidl::StringView(allocator, device_group_path))
                           .nodes(std::move(nodes))
                           .Build();
-  ASSERT_TRUE(device_group_manager_->AddDeviceGroup(device_group).is_ok());
-  ASSERT_EQ(nullptr, device_group_manager_->device_groups().at(device_group_path));
+  ASSERT_TRUE(AddDeviceGroup(device_group).is_ok());
+  ASSERT_TRUE(device_group_manager_->device_groups().at(device_group_path));
 
   //  Bind device group node 1.
   auto matched_node = fdi::MatchedDeviceGroupNodeInfo{{
@@ -525,14 +516,14 @@ TEST_F(DeviceGroupManagerTest, TestAddDuplicate) {
                           .topological_path(fidl::StringView(allocator, device_group_path))
                           .nodes(std::move(nodes))
                           .Build();
-  ASSERT_TRUE(device_group_manager_->AddDeviceGroup(device_group).is_ok());
+  ASSERT_TRUE(AddDeviceGroup(device_group).is_ok());
 
   auto device_group_2 = fdf::wire::DeviceGroup::Builder(allocator)
                             .topological_path(fidl::StringView(allocator, device_group_path))
                             .nodes(std::move(nodes_2))
                             .Build();
   ASSERT_EQ(fuchsia_driver_framework::DeviceGroupError::kAlreadyExists,
-            device_group_manager_->AddDeviceGroup(device_group_2).error_value());
+            AddDeviceGroup(device_group_2).error_value());
 }
 
 TEST_F(DeviceGroupManagerTest, TestRebindCompositeMatch) {
@@ -591,10 +582,10 @@ TEST_F(DeviceGroupManagerTest, TestRebindCompositeMatch) {
                           .topological_path(fidl::StringView(allocator, device_group_path))
                           .nodes(std::move(nodes))
                           .Build();
-  ASSERT_TRUE(device_group_manager_->AddDeviceGroup(device_group).is_ok());
+  ASSERT_TRUE(AddDeviceGroup(device_group).is_ok());
   ASSERT_EQ(
       2, device_group_manager_->device_groups().at(device_group_path)->device_group_nodes().size());
 
   ASSERT_EQ(fuchsia_driver_framework::DeviceGroupError::kAlreadyExists,
-            device_group_manager_->AddDeviceGroup(device_group).error_value());
+            AddDeviceGroup(device_group).error_value());
 }

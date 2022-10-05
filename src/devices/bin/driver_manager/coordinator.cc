@@ -897,12 +897,19 @@ zx_status_t Coordinator::AddDeviceGroup(
   std::string topological_path = "/";
   topological_path.append(name);
 
+  auto device_group = std::make_unique<device_group::DeviceGroupV1>(
+      DeviceGroupCreateInfo{
+          .topological_path = topological_path,
+          .size = group_desc.nodes.count(),
+      },
+      &driver_loader_);
+
   fidl::Arena allocator;
-  auto device_group = fdf::wire::DeviceGroup::Builder(allocator)
-                          .topological_path(fidl::StringView(allocator, topological_path))
-                          .nodes(std::move(group_desc.nodes))
-                          .Build();
-  auto result = device_group_manager_->AddDeviceGroup(device_group);
+  auto fidl_group = fdf::wire::DeviceGroup::Builder(allocator)
+                        .topological_path(fidl::StringView(allocator, topological_path))
+                        .nodes(std::move(group_desc.nodes))
+                        .Build();
+  auto result = device_group_manager_->AddDeviceGroup(fidl_group, std::move(device_group));
   if (!result.is_ok()) {
     LOGF(ERROR, "Failed to add device group to the device group manager: %d.",
          result.error_value());
@@ -1091,11 +1098,6 @@ void Coordinator::PublishDriverDevelopmentService(component::OutgoingDirectory& 
   ZX_ASSERT(result.is_ok());
 }
 
-void Coordinator::PublishDeviceGroupManager(component::OutgoingDirectory& outgoing) {
-  auto result = outgoing.AddProtocol<fdf::DeviceGroupManager>(device_group_manager_.get());
-  ZX_ASSERT(result.is_ok());
-}
-
 void Coordinator::InitOutgoingServices(component::OutgoingDirectory& outgoing) {
   outgoing_ = &outgoing;
   auto result = outgoing.AddProtocol<fdm::Administrator>(this);
@@ -1106,11 +1108,6 @@ void Coordinator::InitOutgoingServices(component::OutgoingDirectory& outgoing) {
 }
 
 std::string Coordinator::GetFragmentDriverUrl() const { return "#driver/fragment.so"; }
-
-zx::status<std::unique_ptr<DeviceGroup>> Coordinator::CreateDeviceGroup(
-    DeviceGroupCreateInfo create_info, fdi::MatchedCompositeInfo driver) {
-  return device_group::DeviceGroupV1::Create(std::move(create_info), std::move(driver), this);
-}
 
 // TODO(fxb/107737): Ideally, we try to match and bind all devices, regardless if they
 // match with a device group or not. However, this causes issues because the driver manager

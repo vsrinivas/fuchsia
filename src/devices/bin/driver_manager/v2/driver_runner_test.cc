@@ -1724,7 +1724,7 @@ TEST_F(DriverRunnerTest, CreateAndBindDeviceGroup) {
   });
   driver_index.AddDeviceGroupMatch(topological_path, match);
 
-  const fuchsia_driver_framework::DeviceGroup group(
+  const fuchsia_driver_framework::DeviceGroup fidl_group(
       {.topological_path = topological_path,
        .nodes = std::vector<fuchsia_driver_framework::DeviceGroupNode>{
            fuchsia_driver_framework::DeviceGroupNode({
@@ -1736,8 +1736,15 @@ TEST_F(DriverRunnerTest, CreateAndBindDeviceGroup) {
                .bind_properties = std::vector<fuchsia_driver_framework::NodeProperty>(),
            })}});
 
+  auto device_group = std::make_unique<DeviceGroupV2>(
+      DeviceGroupCreateInfo{
+          .topological_path = topological_path,
+          .size = 2,
+      },
+      dispatcher(), &driver_runner);
   fidl::Arena<> arena;
-  auto added = driver_runner.device_group_manager().AddDeviceGroup(fidl::ToWire(arena, group));
+  auto added = driver_runner.device_group_manager().AddDeviceGroup(fidl::ToWire(arena, fidl_group),
+                                                                   std::move(device_group));
   ASSERT_TRUE(added.is_ok());
 
   RunLoopUntilIdle();

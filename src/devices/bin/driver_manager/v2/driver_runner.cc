@@ -165,12 +165,28 @@ DriverRunner::DriverRunner(fidl::ClientEnd<fcomponent::Realm> realm,
       "driver_runner", [this] { return Inspect(); }, &inspector);
 }
 
-zx::status<std::unique_ptr<DeviceGroup>> DriverRunner::CreateDeviceGroup(
-    DeviceGroupCreateInfo create_info, fdi::MatchedCompositeInfo driver) {
-  return DeviceGroupV2::Create(std::move(create_info), std::move(driver), dispatcher_, this);
-}
-
 void DriverRunner::BindNodesForDeviceGroups() { TryBindAllOrphansUntracked(); }
+
+void DriverRunner::CreateDeviceGroup(CreateDeviceGroupRequestView request,
+                                     CreateDeviceGroupCompleter::Sync& completer) {
+  if (!request->has_topological_path() || !request->has_nodes()) {
+    completer.Reply(fitx::error(fdf::DeviceGroupError::kMissingArgs));
+    return;
+  }
+
+  if (request->nodes().empty()) {
+    completer.Reply(fitx::error(fdf::DeviceGroupError::kEmptyNodes));
+    return;
+  }
+
+  auto device_group = std::make_unique<DeviceGroupV2>(
+      DeviceGroupCreateInfo{
+          .topological_path = std::string(request->topological_path().get()),
+          .size = request->nodes().count(),
+      },
+      dispatcher_, this);
+  completer.Reply(device_group_manager_.AddDeviceGroup(*request, std::move(device_group)));
+}
 
 void DriverRunner::AddDeviceGroupToDriverIndex(fuchsia_driver_framework::wire::DeviceGroup group,
                                                AddToIndexCallback callback) {
@@ -235,7 +251,7 @@ void DriverRunner::PublishComponentRunner(component::OutgoingDirectory& outgoing
 }
 
 void DriverRunner::PublishDeviceGroupManager(component::OutgoingDirectory& outgoing) {
-  auto result = outgoing.AddProtocol<fdf::DeviceGroupManager>(&device_group_manager_);
+  auto result = outgoing.AddProtocol<fdf::DeviceGroupManager>(this);
   ZX_ASSERT(result.is_ok());
 }
 
