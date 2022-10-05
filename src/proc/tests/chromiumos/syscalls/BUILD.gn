@@ -18,6 +18,7 @@ group("tests") {
 
 test("syscalls_test_bin") {
   sources = [
+    "bpf_test.cc",
     "custom_artifact_test.cc",
     "fcntl_lock_test.cc",
     "fs_test.cc",
@@ -37,6 +38,14 @@ test("syscalls_test_bin") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]
+  include_dirs = [
+    "//third_party/android/platform/bionic/libc/kernel/uapi",
+    "//third_party/android/platform/bionic/libc/kernel/android/uapi",
+  ]
+  if (target_cpu == "x64") {
+    include_dirs +=
+        [ "//third_party/android/platform/bionic/libc/kernel/uapi/asm-x86" ]
+  }
 }
 
 starnix_linux_test_component("syscalls_test") {

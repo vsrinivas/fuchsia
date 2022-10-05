@@ -15,6 +15,7 @@ use super::proc::proc_fs;
 use super::sysfs::sys_fs;
 use super::tmpfs::TmpFs;
 use super::*;
+use crate::bpf::BpfFs;
 use crate::device::BinderFs;
 use crate::lock::RwLock;
 use crate::selinux::selinux_fs;
@@ -209,6 +210,7 @@ pub fn create_filesystem(
         b"sysfs" => sys_fs(kernel).clone(),
         b"tmpfs" => TmpFs::new_fs_with_data(kernel, data),
         b"binder" => BinderFs::new_fs(kernel)?,
+        b"bpf" => BpfFs::new_fs(kernel)?,
         _ => return error!(ENODEV, String::from_utf8_lossy(fs_type)),
     };
 

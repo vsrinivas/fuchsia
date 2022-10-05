@@ -21,6 +21,7 @@ impl SysFs {
         StaticDirectoryBuilder::new(&fs)
             .subdir(b"fs", 0o755, |dir| {
                 dir.subdir(b"selinux", 0o755, |dir| dir)
+                    .subdir(b"bpf", 0o755, |dir| dir)
                     .node(
                         b"cgroup",
                         fs.create_node(

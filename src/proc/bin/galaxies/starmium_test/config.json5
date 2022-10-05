@@ -13,6 +13,10 @@
         "/dev:devtmpfs",
         "/data/tmp:tmpfs",
         "/dev/pts:devpts",
+
+        // TODO(tbodt): Stop overloading /var, create a real /sys.
+        "/var:sysfs",
+        "/var/fs/bpf:bpf",
     ],
     name: "starmium_test",
     startup_file_path: "",

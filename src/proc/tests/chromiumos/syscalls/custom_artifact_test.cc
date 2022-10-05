@@ -14,8 +14,7 @@ TEST(CustomArtifactTest, WriteFile) {
   const std::string contents = "test content";
   {
     std::ofstream file(file_path);
-    if (!file.is_open())
-      exit(1);
+    ASSERT_TRUE(file.is_open());
     file << contents << std::endl;
     file.close();
   }
