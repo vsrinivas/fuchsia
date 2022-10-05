@@ -162,7 +162,12 @@ DriverRunner::DriverRunner(fidl::ClientEnd<fcomponent::Realm> realm,
       composite_node_manager_(dispatcher_, this),
       device_group_manager_(this) {
   inspector.GetRoot().CreateLazyNode(
-      "driver_runner", [this] { return Inspect(); }, &inspector);
+      "driver_runner",
+      [] {
+        // TODO(fxbug.dev/107288): Re-enable inspect once it has been fixed.
+        return fpromise::make_ok_promise(inspect::Inspector());
+      },
+      &inspector);
 }
 
 void DriverRunner::BindNodesForDeviceGroups() { TryBindAllOrphansUntracked(); }
