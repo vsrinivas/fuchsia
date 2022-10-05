@@ -109,6 +109,8 @@ pub enum UnexpectedEventError {
     SuiteDidNotReportStop,
     #[error("received an InternalError suite status")]
     InternalErrorSuiteStatus,
+    #[error("missing required field {field} in {containing_struct}")]
+    MissingRequiredField { containing_struct: &'static str, field: &'static str },
 }
 
 impl RunTestSuiteError {

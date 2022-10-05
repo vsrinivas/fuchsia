@@ -3,19 +3,114 @@
 // found in the LICENSE file.
 
 use {
-    crate::{output, stream_util::StreamUtil},
+    crate::{
+        artifacts,
+        cancel::NamedFutureExt,
+        diagnostics::{self, LogCollectionOutcome},
+        outcome::RunTestSuiteError,
+        outcome::UnexpectedEventError,
+        output::{
+            ArtifactType, DirectoryArtifactType, DynDirectoryArtifact, DynReporter, EntityReporter,
+        },
+        stream_util::StreamUtil,
+    },
     anyhow::{anyhow, Context as _},
+    fidl::Peered,
     fidl_fuchsia_io as fio, fidl_fuchsia_test_manager as ftest_manager, fuchsia_async as fasync,
     futures::{
-        future::join_all,
+        future::{join_all, BoxFuture, Future, FutureExt, TryFutureExt},
         stream::{FuturesUnordered, StreamExt, TryStreamExt},
     },
-    std::{collections::VecDeque, io::Write, path::PathBuf},
+    std::{borrow::Borrow, collections::VecDeque, io::Write, path::PathBuf},
     tracing::{debug, warn},
 };
 
+/// Given an |artifact| reported over fuchsia.test.manager, create the appropriate artifact in the
+/// reporter. Returns a Future, which when polled to completion, drains the results from |artifact|
+/// and saves them to the reporter.
+///
+/// This method is an async method returning a Future so that the lifetime of |reporter| is not
+/// tied to the lifetime of the Future.
+/// The returned Future resolves to LogCollectionOutcome when logs are processed.
+pub(crate) async fn drain_artifact<'a, E, T, F>(
+    reporter: &'a EntityReporter<E, T>,
+    artifact: ftest_manager::Artifact,
+    log_opts: diagnostics::LogCollectionOptions,
+    log_timeout: diagnostics::LogTimeoutOptions<F>,
+) -> Result<
+    BoxFuture<'static, Result<Option<LogCollectionOutcome>, anyhow::Error>>,
+    RunTestSuiteError,
+>
+where
+    T: Borrow<DynReporter>,
+    F: Future + Send + 'static,
+{
+    match artifact {
+        ftest_manager::Artifact::Stdout(socket) => {
+            let stdout = reporter.new_artifact(&ArtifactType::Stdout).await?;
+            Ok(copy_socket_artifact(socket, stdout).map_ok(|()| None).named("stdout").boxed())
+        }
+        ftest_manager::Artifact::Stderr(socket) => {
+            let stderr = reporter.new_artifact(&ArtifactType::Stderr).await?;
+            Ok(copy_socket_artifact(socket, stderr).map_ok(|()| None).named("stderr").boxed())
+        }
+        ftest_manager::Artifact::Log(syslog) => {
+            let syslog_artifact = reporter.new_artifact(&ArtifactType::Syslog).await?;
+            Ok(diagnostics::collect_logs(
+                test_diagnostics::LogStream::from_syslog(syslog)?,
+                syslog_artifact,
+                log_opts,
+                log_timeout,
+            )
+            .map_ok(Some)
+            .named("syslog")
+            .boxed())
+        }
+        ftest_manager::Artifact::Custom(ftest_manager::CustomArtifact {
+            directory_and_token,
+            component_moniker,
+            ..
+        }) => {
+            let ftest_manager::DirectoryAndToken { directory, token, .. } = directory_and_token
+                .ok_or(UnexpectedEventError::MissingRequiredField {
+                    containing_struct: "CustomArtifact",
+                    field: "directory_and_token",
+                })?;
+            let directory_artifact = reporter
+                .new_directory_artifact(&DirectoryArtifactType::Custom, component_moniker)
+                .await?;
+            Ok(async move {
+                let directory = directory.into_proxy()?;
+                let result =
+                    artifacts::copy_custom_artifact_directory(directory, directory_artifact).await;
+                // TODO(fxbug.dev/84882): Remove this signal once Overnet
+                // supports automatically signalling EVENTPAIR_CLOSED when the
+                // handle is closed.
+                let _ = token.signal_peer(fidl::Signals::empty(), fidl::Signals::USER_0);
+                result
+            }
+            .map_ok(|()| None)
+            .named("custom_artifacts")
+            .boxed())
+        }
+        ftest_manager::Artifact::DebugData(iterator) => {
+            let output_directory = reporter
+                .new_directory_artifact(&DirectoryArtifactType::Debug, None /* moniker */)
+                .await?;
+            Ok(artifacts::copy_debug_data(iterator.into_proxy()?, output_directory)
+                .map(|()| Ok(None))
+                .named("debug_data")
+                .boxed())
+        }
+        ftest_manager::ArtifactUnknown!() => {
+            warn!("Encountered an unknown artifact");
+            Ok(futures::future::ready(Ok(None)).boxed())
+        }
+    }
+}
+
 /// Copy an artifact reported over a socket.
-pub(crate) async fn copy_socket_artifact<W: Write>(
+async fn copy_socket_artifact<W: Write>(
     socket: fidl::Socket,
     mut artifact: W,
 ) -> Result<(), anyhow::Error> {
@@ -38,9 +133,9 @@ pub(crate) async fn copy_socket_artifact<W: Write>(
 }
 
 /// Copy debug data reported over a debug data iterator to an output directory.
-pub(crate) async fn copy_debug_data(
+async fn copy_debug_data(
     iterator: ftest_manager::DebugDataIteratorProxy,
-    output_directory: Box<output::DynDirectoryArtifact>,
+    output_directory: Box<DynDirectoryArtifact>,
 ) {
     const PIPELINED_REQUESTS: usize = 4;
     let unprocessed_data_stream =
@@ -86,9 +181,9 @@ pub(crate) async fn copy_debug_data(
 }
 
 /// Copy a directory into a directory artifact.
-pub(crate) async fn copy_custom_artifact_directory(
+async fn copy_custom_artifact_directory(
     directory: fio::DirectoryProxy,
-    out_dir: Box<output::DynDirectoryArtifact>,
+    out_dir: Box<DynDirectoryArtifact>,
 ) -> Result<(), anyhow::Error> {
     let mut paths = vec![];
     let mut enumerate = fuchsia_fs::directory::readdir_recursive(&directory, None);

@@ -32,9 +32,9 @@ pub use {
     shell::{ShellReporter, ShellWriterView},
 };
 
-pub type DynArtifact = dyn 'static + Write + Send + Sync;
-pub type DynDirectoryArtifact = dyn 'static + DirectoryWrite + Send + Sync;
-type DynReporter = dyn 'static + Reporter + Send + Sync;
+pub(crate) type DynArtifact = dyn 'static + Write + Send + Sync;
+pub(crate) type DynDirectoryArtifact = dyn 'static + DirectoryWrite + Send + Sync;
+pub(crate) type DynReporter = dyn 'static + Reporter + Send + Sync;
 
 pub struct EntityReporter<E, T: Borrow<DynReporter>> {
     reporter: T,

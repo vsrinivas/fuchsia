@@ -8,17 +8,13 @@ use {
         cancel::{Cancelled, NamedFutureExt, OrCancel},
         diagnostics::{self, LogDisplayConfiguration},
         outcome::{Outcome, RunTestSuiteError, UnexpectedEventError},
-        output::{
-            self, ArtifactType, CaseId, DirectoryArtifactType, RunReporter, SuiteId, SuiteReporter,
-            Timestamp,
-        },
+        output::{self, ArtifactType, CaseId, RunReporter, SuiteId, SuiteReporter, Timestamp},
         params::{RunParams, TestParams, TimeoutBehavior},
         stream_util::StreamUtil,
         trace::duration,
     },
     async_utils::event,
     diagnostics_data::Severity,
-    fidl::Peered,
     fidl_fuchsia_test_manager::{
         self as ftest_manager, CaseArtifact, CaseFinished, CaseFound, CaseStarted, CaseStopped,
         RunBuilderProxy, SuiteArtifact, SuiteStopped,
@@ -53,12 +49,11 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
     let mut test_cases_in_progress = HashSet::new();
     let mut test_cases_timed_out = HashSet::new();
     let mut test_cases_output = HashMap::new();
-    let mut suite_log_tasks = vec![];
     let mut suite_finish_timestamp = Timestamp::Unknown;
     let mut outcome = Outcome::Passed;
     let mut successful_completion = false;
     let mut cancelled = false;
-    let mut tasks = vec![];
+    let mut suite_tasks = vec![];
     let suite_events_done_event = event::Event::new();
 
     let collect_results_fut = async {
@@ -106,46 +101,23 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
                         ftest_manager::SuiteEventPayload::CaseArtifact(CaseArtifact {
                             identifier,
                             artifact,
-                        }) => match artifact {
-                            ftest_manager::Artifact::Stdout(socket) => {
-                                let reporter = test_case_reporters.get(&identifier).unwrap();
-                                let stdout = reporter.new_artifact(&ArtifactType::Stdout).await?;
-                                test_cases_output.entry(identifier).or_insert(vec![]).push(
-                                    fasync::Task::spawn(
-                                        artifacts::copy_socket_artifact(socket, stdout)
-                                            .named("stdout"),
-                                    ),
-                                );
-                            }
-                            ftest_manager::Artifact::Stderr(socket) => {
-                                let reporter = test_case_reporters.get_mut(&identifier).unwrap();
-                                let stderr = reporter.new_artifact(&ArtifactType::Stderr).await?;
-                                test_cases_output.entry(identifier).or_insert(vec![]).push(
-                                    fasync::Task::spawn(
-                                        artifacts::copy_socket_artifact(socket, stderr)
-                                            .named("stdout"),
-                                    ),
-                                );
-                            }
-                            ftest_manager::Artifact::Log(_) => {
-                                warn!("WARN: per test case logs not supported yet")
-                            }
-                            ftest_manager::Artifact::Custom(artifact) => {
-                                warn!("Got a case custom artifact. Ignoring it.");
-                                if let Some(ftest_manager::DirectoryAndToken { token, .. }) =
-                                    artifact.directory_and_token
-                                {
-                                    // TODO(fxbug.dev/84882): Remove this signal once Overnet
-                                    // supports automatically signalling EVENTPAIR_CLOSED when the
-                                    // handle is closed.
-                                    let _ = token
-                                        .signal_peer(fidl::Signals::empty(), fidl::Signals::USER_0);
-                                }
-                            }
-                            ftest_manager::ArtifactUnknown!() => {
-                                panic!("unknown artifact")
-                            }
-                        },
+                        }) => {
+                            let reporter = test_case_reporters.get(&identifier).unwrap();
+                            let artifact_fut = artifacts::drain_artifact(
+                                reporter,
+                                artifact,
+                                log_opts.clone(),
+                                diagnostics::LogTimeoutOptions {
+                                    timeout_fut: suite_events_done_event.wait_or_dropped(),
+                                    time_between_logs: LOG_TIMEOUT_DURATION,
+                                },
+                            )
+                            .await?;
+                            test_cases_output
+                                .entry(identifier)
+                                .or_insert(vec![])
+                                .push(fasync::Task::spawn(artifact_fut));
+                        }
                         ftest_manager::SuiteEventPayload::CaseStopped(CaseStopped {
                             identifier,
                             status,
@@ -182,81 +154,17 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
                         ftest_manager::SuiteEventPayload::SuiteArtifact(SuiteArtifact {
                             artifact,
                         }) => {
-                            match artifact {
-                                ftest_manager::Artifact::Stdout(_) => {
-                                    warn!("suite level stdout not supported yet");
-                                }
-                                ftest_manager::Artifact::Stderr(_) => {
-                                    warn!("suite level stderr not supported yet");
-                                }
-                                ftest_manager::Artifact::Log(syslog) => {
-                                    suite_log_tasks.push(fasync::Task::spawn(
-                                        diagnostics::collect_logs(
-                                            test_diagnostics::LogStream::from_syslog(syslog)?,
-                                            suite_reporter
-                                                .new_artifact(&ArtifactType::Syslog)
-                                                .await?,
-                                            log_opts.clone(),
-                                            diagnostics::LogTimeoutOptions {
-                                                timeout_fut: suite_events_done_event
-                                                    .wait_or_dropped(),
-                                                time_between_logs: LOG_TIMEOUT_DURATION,
-                                            },
-                                        )
-                                        .named("syslog"),
-                                    ));
-                                }
-                                ftest_manager::Artifact::Custom(
-                                    ftest_manager::CustomArtifact {
-                                        directory_and_token,
-                                        component_moniker,
-                                        ..
-                                    },
-                                ) => {
-                                    if let Some(ftest_manager::DirectoryAndToken {
-                                        directory,
-                                        token,
-                                        ..
-                                    }) = directory_and_token
-                                    {
-                                        let directory = directory.into_proxy()?;
-                                        let directory_artifact = suite_reporter
-                                            .new_directory_artifact(
-                                                &DirectoryArtifactType::Custom,
-                                                component_moniker,
-                                            )
-                                            .await?;
-
-                                        let custom_fut = async move {
-                                            if let Err(e) =
-                                                artifacts::copy_custom_artifact_directory(
-                                                    directory,
-                                                    directory_artifact,
-                                                )
-                                                .await
-                                            {
-                                                warn!(
-                                                    "Error reading suite artifact directory: {:?}",
-                                                    e
-                                                );
-                                            }
-                                            // TODO(fxbug.dev/84882): Remove this signal once Overnet
-                                            // supports automatically signalling EVENTPAIR_CLOSED when the
-                                            // handle is closed.
-                                            let _ = token.signal_peer(
-                                                fidl::Signals::empty(),
-                                                fidl::Signals::USER_0,
-                                            );
-                                        }
-                                        .named("custom_artifacts");
-
-                                        tasks.push(fasync::Task::spawn(custom_fut));
-                                    }
-                                }
-                                ftest_manager::ArtifactUnknown!() => {
-                                    panic!("unknown artifact")
-                                }
-                            }
+                            let artifact_fut = artifacts::drain_artifact(
+                                suite_reporter,
+                                artifact,
+                                log_opts.clone(),
+                                diagnostics::LogTimeoutOptions {
+                                    timeout_fut: suite_events_done_event.wait_or_dropped(),
+                                    time_between_logs: LOG_TIMEOUT_DURATION,
+                                },
+                            )
+                            .await?;
+                            suite_tasks.push(fasync::Task::spawn(artifact_fut));
                         }
                         ftest_manager::SuiteEventPayload::SuiteStarted(_) => {
                             suite_reporter.started(timestamp).await?;
@@ -294,9 +202,13 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
         info!("Awaiting case artifacts");
         for (identifier, test_case_reporter) in test_case_reporters.into_iter() {
             for t in test_cases_output.remove(&identifier).unwrap_or(vec![]) {
-                if let Err(e) = t.await {
-                    let test_case_name = test_cases.get(&identifier).unwrap();
-                    error!("Cannot write output for {}: {:?}", test_case_name, e);
+                match t.await {
+                    Err(e) => {
+                        let test_case_name = test_cases.get(&identifier).unwrap();
+                        error!("Failed to collect artifact for {}: {:?}", test_case_name, e);
+                    }
+                    Ok(Some(_log_result)) => warn!("Unexpectedly got log results for a test case"),
+                    Ok(None) => (),
                 }
             }
             test_case_reporter.finished().await?;
@@ -304,9 +216,12 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
 
         // collect all logs
         info!("Awaiting suite artifacts");
-        for t in suite_log_tasks {
+        for t in suite_tasks {
             match t.await {
-                Ok(r) => match r {
+                Err(e) => {
+                    error!("Failed to collect artifact for suite: {:?}", e);
+                }
+                Ok(Some(log_result)) => match log_result {
                     diagnostics::LogCollectionOutcome::Error { restricted_logs } => {
                         let mut log_artifact =
                             suite_reporter.new_artifact(&ArtifactType::RestrictedLog).await?;
@@ -317,17 +232,12 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
                             outcome = Outcome::Failed;
                         }
                     }
-                    diagnostics::LogCollectionOutcome::Passed => {}
+                    diagnostics::LogCollectionOutcome::Passed => (),
                 },
-                Err(e) => {
-                    warn!("Failed to collect logs: {:?}", e);
-                }
+                Ok(None) => (),
             }
         }
 
-        for t in tasks.into_iter() {
-            t.await;
-        }
         Ok(())
     };
 
@@ -556,7 +466,7 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
             let result = run_suite_and_collect_logs(
                 running_suite,
                 &suite_reporter,
-                log_options.clone(),
+                log_options,
                 cancel_fut.clone(),
             )
             .await;
@@ -611,10 +521,11 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
 
     let handle_run_events_fut = async move {
         duration!("run_events");
+        let mut artifact_tasks = vec![];
         loop {
             let events = run_controller_ref.get_events().named("run_event").await?;
             if events.len() == 0 {
-                return Ok(());
+                break;
             }
 
             for event in events.into_iter() {
@@ -622,56 +533,21 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
                 match payload {
                     // TODO(fxbug.dev/91151): Add support for RunStarted and RunStopped when test_manager sends them.
                     Some(ftest_manager::RunEventPayload::Artifact(artifact)) => {
-                        match artifact {
-                            ftest_manager::Artifact::DebugData(iterator) => {
-                                let output_directory = run_reporter
-                                    .new_directory_artifact(
-                                        &DirectoryArtifactType::Debug,
-                                        None, /* moniker */
-                                    )
-                                    .await?;
-                                artifacts::copy_debug_data(
-                                    iterator.into_proxy()?,
-                                    output_directory,
-                                )
-                                .named("debug_data")
-                                .await;
-                            }
-                            ftest_manager::Artifact::Custom(val) => {
-                                if let Some(ftest_manager::DirectoryAndToken {
-                                    directory,
-                                    token,
-                                    ..
-                                }) = val.directory_and_token
-                                {
-                                    let directory = directory.into_proxy()?;
-                                    let out_dir = run_reporter
-                                        .new_directory_artifact(
-                                            &output::DirectoryArtifactType::Custom,
-                                            None, /* moniker */
-                                        )
-                                        .await?;
-
-                                    if let Err(e) = artifacts::copy_custom_artifact_directory(
-                                        directory, out_dir,
-                                    )
-                                    .named("run_custom_artifact")
-                                    .await
-                                    {
-                                        warn!("Error reading run artifact directory: {:?}", e);
-                                    }
-
-                                    // TODO(fxbug.dev/84882): Remove this signal once Overnet
-                                    // supports automatically signalling EVENTPAIR_CLOSED when the
-                                    // handle is closed.
-                                    let _ = token
-                                        .signal_peer(fidl::Signals::empty(), fidl::Signals::USER_0);
-                                }
-                            }
-                            other => {
-                                warn!("Discarding run artifact: {:?}", other);
-                            }
-                        }
+                        let artifact_fut = artifacts::drain_artifact(
+                            run_reporter,
+                            artifact,
+                            diagnostics::LogCollectionOptions {
+                                min_severity: min_severity_logs,
+                                max_severity: None,
+                                format: LogDisplayConfiguration { show_full_moniker },
+                            },
+                            diagnostics::LogTimeoutOptions {
+                                timeout_fut: futures::future::pending::<()>(),
+                                time_between_logs: LOG_TIMEOUT_DURATION,
+                            },
+                        )
+                        .await?;
+                        artifact_tasks.push(fasync::Task::spawn(artifact_fut));
                     }
                     e => {
                         warn!("Discarding run event: {:?}", e);
@@ -679,6 +555,16 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
                 }
             }
         }
+        for task in artifact_tasks {
+            match task.await {
+                Err(e) => {
+                    error!("Failed to collect artifact for run: {:?}", e);
+                }
+                Ok(Some(_log_result)) => warn!("Unexpectedly got log results for the test run"),
+                Ok(None) => (),
+            }
+        }
+        Ok(())
     };
 
     // Make sure we stop polling run events on cancel. Since cancellation is expected
