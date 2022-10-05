@@ -29,8 +29,7 @@ use {
         repo_info::RepoInfo,
     },
     ::gcs::client::ProgressResponse,
-    anyhow::{anyhow, bail, Context, Result},
-    errors::ffx_bail,
+    anyhow::{bail, Context, Result},
     ffx_config::sdk,
     fms::Entries,
     futures::TryStreamExt as _,
@@ -210,34 +209,49 @@ where
         );
     }
     tracing::info!("Product bundles: {}", formatted);
-    let first = match sdk_version {
-        sdk::SdkVersion::Version(version) => {
-            tracing::info!("Sdk version: `{}`", version);
-            let mut matching_sdk_version = urls.filter(|url| url.to_string().contains(version));
-            let first = matching_sdk_version.next();
-            match first {
-                Some(first) => first,
-                None => {
-                    ffx_bail!("There were no product-bundles for your sdk version: `{}`", version)
+    // If the user is working in-tree, we want to default to any available locally-built bundles.
+    let mut selected: Option<(url::Url, &str)> = if sdk_version == &sdk::SdkVersion::InTree {
+        tracing::info!("In-tree selection");
+        let mut local_builds = urls.clone().filter(|url| url.scheme() == "file");
+        match local_builds.next() {
+            Some(first) => Some((first, "the locally-built product bundle")),
+            None => None,
+        }
+    } else {
+        None
+    };
+    // If there is no locally-built bundle, then we want to match the current SDK version.
+    if selected.is_none() {
+        selected = match sdk_version {
+            sdk::SdkVersion::Version(version) => {
+                tracing::info!("Sdk version: `{}`", version);
+                let mut matching_sdk_version = urls.filter(|url| url.to_string().contains(version));
+                let first = matching_sdk_version.next();
+                match first {
+                    Some(first) => {
+                        Some((first, "the first valid product bundle for this SDK version"))
+                    }
+                    None => {
+                        bail!("There were no product-bundles for your sdk version: `{}`", version)
+                    }
                 }
             }
+            sdk::SdkVersion::InTree | sdk::SdkVersion::Unknown => match urls.next() {
+                Some(first) => Some((first, "the first valid product bundle in sorted order")),
+                None => {
+                    bail!(
+                        "This function should only be called with an iterator with at least 2 entries."
+                    )
+                }
+            },
         }
-        sdk::SdkVersion::InTree | sdk::SdkVersion::Unknown => match urls.next() {
-            Some(first) => first,
-            None => {
-                return Err(anyhow!(
-                    "This function should only be called with an iterator with at least 2 entries."
-                ))
-            }
-        },
     };
+    // If we get here, selected is Some(_,_); if we didn't match, we threw an error.
+    let (url, description) = selected.unwrap();
     if should_print {
-        println!(
-            "Defaulting to the first valid product-bundle in sorted order: `{first}`",
-            first = first.to_string()
-        );
+        println!("Defaulting to {}: `{}`", description, url);
     }
-    Ok(first)
+    Ok(url)
 }
 
 /// Find a product bundle url and name for `product_url`.
