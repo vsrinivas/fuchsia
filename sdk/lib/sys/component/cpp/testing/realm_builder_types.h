@@ -12,6 +12,7 @@
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fdio/namespace.h>
+#include <lib/fit/function.h>
 #include <lib/sys/cpp/outgoing_directory.h>
 #include <lib/sys/cpp/service_directory.h>
 
@@ -24,6 +25,13 @@
 // This file contains structs used by the RealmBuilder library to create realms.
 
 namespace component_testing {
+
+class LocalComponent;
+
+namespace internal {
+class LocalComponentInstance;
+class LocalComponentRunner;
+}  // namespace internal
 
 using DependencyType = fuchsia::component::decl::DependencyType;
 
@@ -97,8 +105,21 @@ class LocalComponentHandles final {
   // "/svc" in the namespace object returned by `ns()`.
   sys::ServiceDirectory svc();
 
+  // If the component calls |handles->Exit()|, the ComponentController binding
+  // will be dropped, which informs component manager that the component has
+  // stopped. For |LocalComponent| created by a |LocalComponentFactory| will
+  // also cause the Realm to drop the |LocalComponent|, which should destruct
+  // the component and the handles and bindings held by the component. Therefore
+  // the |LocalComponent| should not do anything else after calling
+  // |handles->Exit()|.
+  void Exit(zx_status_t return_code = ZX_OK);
+
   // [START_EXCLUDE]
  private:
+  friend internal::LocalComponentInstance;
+  friend internal::LocalComponentRunner;
+  fit::function<void(zx_status_t)> on_exit_;
+  fit::closure on_destruct_;
   fdio_ns_t* namespace_;
   sys::OutgoingDirectory outgoing_dir_;
   // [END_EXCLUDE]
@@ -115,8 +136,28 @@ class LocalComponent {
   // |mock_handles| contains the outgoing directory and namespace of
   // the component.
   virtual void Start(std::unique_ptr<LocalComponentHandles> mock_handles) = 0;
+
+  // This method is only called for LocalComponent instances returned from a
+  // LocalComponentFactory (that is, for a component added to the realm
+  // via |RealmBuilder::AddLocalChild(name, LocalComponentFactory)|).
+  //
+  // The LocalComponent derived class may override this method to be informed if
+  // ComponentController::Stop() was called on the controller associated with
+  // the component instance. The ComponentController binding will be dropped
+  // automatically, immediately after LocalComponent::Stop() returns.
+  virtual void Stop() {}
 };
 // [END mock_interface_cpp]
+
+// Type for a function that returns a new |LocalComponent| when component
+// manager requests a new component instance.
+//
+// See |Realm.AddLocalChild| for more details.
+using LocalComponentFactory = fit::function<std::unique_ptr<LocalComponent>()>;
+
+// Type for either variation of implementation passed to AddLocalChild(): the
+// deprecated raw pointer, or one of the valid callback functions.
+using LocalComponentImpl = cpp17::variant<LocalComponent*, LocalComponentFactory>;
 
 using StartupMode = fuchsia::component::decl::StartupMode;
 
@@ -125,7 +166,7 @@ struct ChildOptions {
   // If started eagerly, then it will start as soon as it's resolved.
   // Otherwise, the component will start once another component requests
   // a capability that it offers.
-  StartupMode startup_mode;
+  StartupMode startup_mode = StartupMode::LAZY;
 
   // Set the environment for this child to run in. The environment specified
   // by this field must already exist by the time this is set.

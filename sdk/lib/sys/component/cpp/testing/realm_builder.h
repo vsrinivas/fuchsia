@@ -102,7 +102,7 @@ class RealmRoot final {
 
   // True if complete, or Error if teardown failed.
   using TeardownStatus = cpp17::variant<bool, fuchsia::component::Error>;
-  RealmRoot(std::shared_ptr<TeardownStatus> teardown_complete,
+  RealmRoot(std::shared_ptr<TeardownStatus> teardown_status,
             std::unique_ptr<internal::LocalComponentRunner> local_component_runner,
             ScopedChild root);
 
@@ -139,13 +139,59 @@ class Realm final {
   Realm& AddLegacyChild(const std::string& child_name, const std::string& url,
                         ChildOptions options = kDefaultChildOptions);
 
-  // Add a component implemented by a C++ class. The class should inherit from
-  // the `Local` class. The pointer must not be nullptr. If it is, this
-  // method will panic. It is expected the pointer will be valid for the lifetime
-  // of the constructed RealmRoot below.
+  // This method signature is DEPRECATED.
+  //
+  // Add a component instance implementation by raw pointer to a
+  // LocalComponent-derived instance. This component implementation can only be
+  // started once.
+  //
+  // The caller is expected to keep the pointer valid for the lifetime of the
+  // component instance (typically the lifetime of the constructed RealmRoot,
+  // unless the component is intentionally stopped earlier). If not, calling
+  // FIDL bindings handled by the LocalComponent would cause undefined behavior.
+  //
+  // |Start()| will be called (asynchronously) sometime after calling
+  // |RealmBuilder::Build()|. Use |ChildOptions| |StartupMode::EAGER| to request
+  // component manager start the component automatically.
+  //
   // Names must be unique. Duplicate names will result in a panic.
+  //
+  // TODO(fxbug.dev/109804): Mark this method [[deprecated]] (if supported in
+  // the Fuchsia SDK), then migrate clients to use |LocalComponentFactory|, and
+  // remove this deprecated method.
+  //
+  // #if __Fuchsia_API_level__ >= 9
+  //   [[deprecated("Use AddLocalChild(..., LocalComponentFactory, ...)")]]
+  // #endif
   Realm& AddLocalChild(const std::string& child_name, LocalComponent* local_impl,
                        ChildOptions options = kDefaultChildOptions);
+
+#if __Fuchsia_API_level__ >= 9
+  // Add a component by implementing a factory function that creates and returns
+  // a new instance of a |LocalComponent|-derived class. The factory function
+  // will be called whenever the local child is started.
+  //
+  // After returning the |LocalComponent|, the RealmBuilder framework will call
+  // |LocalComponent::Start(handles)| with the |LocalComponentHandles|, which
+  // implements the component's runtime. Often, this involves serving
+  // capabilities implemented by the local component.
+  //
+  // Important: In most cases, |Start(handles)| must save the handles, typically
+  // by moving the handles to a field of the |LocalComponent|, before returning.
+  // For example, `handles_ = std::move(handles);` (unless the component calls
+  // `handles->Exit()` before returning from |Start(handles)|).
+  //
+  // If the component's associated |ComponentController| receives a |Stop()|
+  // request, the |LocalComponent::Stop()| method will be called. A derived
+  // |LocalComponent| class can override the |Stop()| method if the component
+  // wishes to take some action during component stop.
+  //
+  // A |LocalComponent| can also self-terminate, by calling `handles->Exit()`.
+  //
+  // Names must be unique. Duplicate names will result in a panic.
+  Realm& AddLocalChild(const std::string& child_name, LocalComponentFactory local_impl,
+                       ChildOptions options = kDefaultChildOptions);
+#endif
 
   // Create a sub realm as child of this Realm instance. The constructed
   // Realm is returned.
@@ -195,6 +241,9 @@ class Realm final {
 
   std::string GetResolvedName(const std::string& child_name);
 
+  Realm& AddLocalChildImpl(const std::string& child_name, LocalComponentImpl local_impl,
+                           ChildOptions options = kDefaultChildOptions);
+
   fuchsia::component::test::RealmSyncPtr realm_proxy_;
   std::shared_ptr<internal::LocalComponentRunner::Builder> runner_builder_;
   std::vector<std::string> scope_;
@@ -229,10 +278,29 @@ class RealmBuilder final {
   RealmBuilder& AddLegacyChild(const std::string& child_name, const std::string& url,
                                ChildOptions options = kDefaultChildOptions);
 
-  // Add a component implemented by a C++ class.
+  // This method signature is DEPRECATED. Use the LocalComponentFactory
+  // implementation of AddLocalChild instead.
+  //
+  // Add a component by raw pointer to a LocalComponent-derived instance.
   // See |Realm.AddLocalChild| for more details.
+  //
+  // TODO(fxbug.dev/109804): Mark this method [[deprecated]] (if supported in
+  // the Fuchsia SDK), then migrate clients to use LocalComponentFactory, and
+  // remove this deprecated method.
+  //
+  // #if __Fuchsia_API_level__ >= 9
+  //   [[deprecated("Use AddLocalChild(..., LocalComponentFactory, ...)")]]
+  // #endif
   RealmBuilder& AddLocalChild(const std::string& child_name, LocalComponent* local_impl,
                               ChildOptions options = kDefaultChildOptions);
+
+#if __Fuchsia_API_level__ >= 9
+  // Add a component by LocalComponentFactory.
+  //
+  // See |Realm.AddLocalChild| for more details.
+  RealmBuilder& AddLocalChild(const std::string& child_name, LocalComponentFactory local_impl,
+                              ChildOptions options = kDefaultChildOptions);
+#endif
 
   // Create a sub realm as child of the root realm. The constructed
   // Realm is returned.

@@ -60,9 +60,18 @@ void TestBase::TearDown() {
 void TestBase::ConnectToBluetoothDevice() {
   std::unique_ptr<AudioDeviceEnumeratorStub> audio_device_enumerator_impl =
       std::make_unique<AudioDeviceEnumeratorStub>();
+  auto audio_device_enumerator_impl_ptr = audio_device_enumerator_impl.get();
 
   auto builder = RealmBuilder::Create();
-  builder.AddLocalChild("audio-device-enumerator", audio_device_enumerator_impl.get());
+  // The component binding must live as long as the Realm, so std::move the
+  // unique_ptr into the component function.
+  builder.AddLocalChild(
+      "audio-device-enumerator",
+      [audio_device_enumerator_impl = std::move(audio_device_enumerator_impl)]() mutable {
+        // Note: This lambda does not create a new instance,
+        // so the component can only be started once.
+        return std::move(audio_device_enumerator_impl);
+      });
   builder.AddChild("audio-device-output-harness", "#meta/audio-device-output-harness.cm");
   builder.AddRoute(Route{.capabilities = {Protocol{fuchsia::media::AudioDeviceEnumerator::Name_}},
                          .source = ChildRef{"audio-device-enumerator"},
@@ -80,12 +89,10 @@ void TestBase::ConnectToBluetoothDevice() {
       [](zx_status_t status) { FAIL() << "audio-device-output-harness exited"; });
 
   // Wait for the Bluetooth harness to AddDeviceByChannel, then pass it on
-  RunLoopUntil([impl = audio_device_enumerator_impl.get()]() {
+  RunLoopUntil([impl = audio_device_enumerator_impl_ptr]() {
     return impl->channel_available() || HasFailure();
   });
-  CreateStreamConfigFromChannel(audio_device_enumerator_impl->TakeChannel());
-
-  // audio_device_enumerator_impl can fall out of scope, now that it has passed the channel onward.
+  CreateStreamConfigFromChannel(audio_device_enumerator_impl_ptr->TakeChannel());
 }
 
 // Given this device_entry, open the device and set the FIDL config_channel

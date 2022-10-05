@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <iostream>
+#include <utility>
 
 #include "lib/async-loop/cpp/loop.h"
 #include "lib/async-loop/default.h"
@@ -14,7 +15,7 @@
 
 class EchoServer : public test::placeholders::Echo {
  public:
-  explicit EchoServer(const std::string& default_reply) : default_reply_(default_reply) {}
+  explicit EchoServer(std::string default_reply) : default_reply_(std::move(default_reply)) {}
 
   void EchoString(::fidl::StringPtr value, EchoStringCallback callback) override {
     std::string reply = value.value_or(default_reply_);

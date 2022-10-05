@@ -56,7 +56,12 @@ LocalComponent::~LocalComponent() = default;
 LocalComponentHandles::LocalComponentHandles(fdio_ns_t* ns, sys::OutgoingDirectory outgoing_dir)
     : namespace_(ns), outgoing_dir_(std::move(outgoing_dir)) {}
 
-LocalComponentHandles::~LocalComponentHandles() { ZX_ASSERT(fdio_ns_destroy(namespace_) == ZX_OK); }
+LocalComponentHandles::~LocalComponentHandles() {
+  if (on_destruct_) {
+    on_destruct_();
+  }
+  ZX_ASSERT(fdio_ns_destroy(namespace_) == ZX_OK);
+}
 
 LocalComponentHandles::LocalComponentHandles(LocalComponentHandles&& other) noexcept
     : namespace_(other.namespace_), outgoing_dir_(std::move(other.outgoing_dir_)) {
@@ -90,6 +95,14 @@ sys::ServiceDirectory LocalComponentHandles::svc() {
                 zx_status_get_string(status));
 
   return sys::ServiceDirectory(std::move(local));
+}
+
+void LocalComponentHandles::Exit(zx_status_t return_code) {
+  // Disable checks for premature LocalComponentHandles destruction:
+  on_destruct_ = nullptr;
+  if (on_exit_) {
+    on_exit_(return_code);
+  }
 }
 
 constexpr size_t kDefaultVmoSize = 4096;

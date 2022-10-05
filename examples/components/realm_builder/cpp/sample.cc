@@ -79,33 +79,6 @@ TEST_F(RealmBuilderTest, RoutesFromEcho) {
   // [END call_echo_cpp]
 }
 
-// This test demonstrates constructing a realm with a single legacy component
-// implementation of the `fidl.examples.routing.Echo` protocol.
-TEST_F(RealmBuilderTest, RoutesFromLegacyEcho) {
-  auto builder = RealmBuilder::Create();
-
-  // [START add_legacy_component_cpp]
-  // Add component to the realm, which is fetched using a legacy URL.
-  builder.AddLegacyChild("echo_server",
-                         "fuchsia-pkg://fuchsia.com/realm-builder-examples#meta/echo_server.cmx");
-  // [END add_legacy_component_cpp]
-
-  builder.AddRoute(Route{.capabilities = {Protocol{"fuchsia.logger.LogSink"}},
-                         .source = ParentRef(),
-                         .targets = {ChildRef{"echo_server"}}});
-
-  builder.AddRoute(Route{.capabilities = {Protocol{"fidl.examples.routing.echo.Echo"}},
-                         .source = ChildRef{"echo_server"},
-                         .targets = {ParentRef()}});
-
-  auto realm = builder.Build(dispatcher());
-
-  auto echo = realm.ConnectSync<fidl::examples::routing::echo::Echo>();
-  fidl::StringPtr response;
-  echo->EchoString("hello", &response);
-  ASSERT_EQ(response, "hello");
-}
-
 // [START mock_component_impl_cpp]
 class LocalEchoServerImpl : public fidl::examples::routing::echo::Echo, public LocalComponent {
  public:
@@ -140,9 +113,9 @@ TEST_F(RealmBuilderTest, RoutesFromMockEcho) {
   auto builder = RealmBuilder::Create();
 
   // [START add_mock_component_cpp]
-  auto mock_echo_server = LocalEchoServerImpl(dispatcher());
   // Add component to the realm, providing a mock implementation
-  builder.AddLocalChild("echo_server", &mock_echo_server);
+  builder.AddLocalChild("echo_server",
+                        [&]() { return std::make_unique<LocalEchoServerImpl>(dispatcher()); });
   // [END add_mock_component_cpp]
 
   builder.AddRoute(Route{.capabilities = {Protocol{"fuchsia.logger.LogSink"}},

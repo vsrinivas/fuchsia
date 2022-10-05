@@ -63,6 +63,7 @@ Realm& Realm::AddChild(const std::string& child_name, const std::string& url,
       realm_proxy_->AddChild(child_name, url, internal::ConvertToFidl(options), &result), result);
   return *this;
 }
+
 Realm& Realm::AddLegacyChild(const std::string& child_name, const std::string& url,
                              ChildOptions options) {
   fuchsia::component::test::Realm_AddLegacyChild_Result result;
@@ -72,10 +73,23 @@ Realm& Realm::AddLegacyChild(const std::string& child_name, const std::string& u
       result);
   return *this;
 }
+
 Realm& Realm::AddLocalChild(const std::string& child_name, LocalComponent* local_impl,
                             ChildOptions options) {
-  ZX_SYS_ASSERT_NOT_NULL(local_impl);
-  runner_builder_->Register(GetResolvedName(child_name), local_impl);
+  return AddLocalChildImpl(child_name, LocalComponentImpl(local_impl), options);
+}
+
+Realm& Realm::AddLocalChild(const std::string& child_name, LocalComponentFactory local_impl,
+                            ChildOptions options) {
+  return AddLocalChildImpl(child_name, LocalComponentImpl(std::move(local_impl)), options);
+}
+
+Realm& Realm::AddLocalChildImpl(const std::string& child_name, LocalComponentImpl local_impl,
+                                ChildOptions options) {
+  if (cpp17::holds_alternative<LocalComponent*>(local_impl)) {
+    ZX_SYS_ASSERT_NOT_NULL(cpp17::get<LocalComponent*>(local_impl));
+  }
+  runner_builder_->Register(GetResolvedName(child_name), std::move(local_impl));
   fuchsia::component::test::Realm_AddLocalChild_Result result;
   ZX_COMPONENT_ASSERT_STATUS_AND_RESULT_OK(
       "Realm/AddLocalChild",
@@ -272,7 +286,14 @@ RealmBuilder& RealmBuilder::AddLocalChild(const std::string& child_name, LocalCo
                                           ChildOptions options) {
   ZX_ASSERT_MSG(!child_name.empty(), "child_name can't be empty");
   ZX_ASSERT_MSG(local_impl != nullptr, "local_impl can't be nullptr");
-  root_.AddLocalChild(child_name, local_impl, options);
+  root_.AddLocalChildImpl(child_name, local_impl, options);
+  return *this;
+}
+
+RealmBuilder& RealmBuilder::AddLocalChild(const std::string& child_name,
+                                          LocalComponentFactory local_impl, ChildOptions options) {
+  ZX_ASSERT_MSG(!child_name.empty(), "child_name can't be empty");
+  root_.AddLocalChildImpl(child_name, LocalComponentImpl(std::move(local_impl)), options);
   return *this;
 }
 
@@ -353,7 +374,7 @@ RealmRoot RealmBuilder::Build(async_dispatcher_t* dispatcher) {
   // the underlying ScopedChild.
   auto callback = [weak_teardown_status = std::move(weak_teardown_status)](
                       cpp17::optional<fuchsia::component::Error> err) {
-    if (std::shared_ptr<RealmRoot::TeardownStatus> p = weak_teardown_status.lock()) {
+    if (std::shared_ptr<RealmRoot::TeardownStatus> const p = weak_teardown_status.lock()) {
       if (err.has_value()) {
         *p = *err;
       } else {
