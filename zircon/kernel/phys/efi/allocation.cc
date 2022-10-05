@@ -25,6 +25,12 @@ constexpr size_t EfiPageCount(size_t bytes) { return (bytes + kEfiPageSize - 1) 
 
 }  // namespace
 
+namespace std {
+
+const nothrow_t nothrow;
+
+}  // namespace std
+
 // This is where actual allocation happens.
 // The returned object is default-constructed if it fails.
 Allocation Allocation::New(fbl::AllocChecker& ac, memalloc::Type type, size_t size,
