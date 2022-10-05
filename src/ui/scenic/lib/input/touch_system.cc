@@ -622,15 +622,36 @@ void TouchSystem::ReportPointerEventToGfxLegacyView(const InternalTouchEvent& ev
 
   const uint64_t trace_id = TRACE_NONCE();
   TRACE_FLOW_BEGIN("input", "dispatch_event_to_client", trace_id);
-  InputEvent input_event;
-  input_event.set_pointer(InternalTouchEventToGfxPointerEvent(
+
+  std::vector<fuchsia::ui::input::PointerEvent> gfx_pointer_events;
+  auto gfx_pointer_event = InternalTouchEventToGfxPointerEvent(
       EventWithReceiverFromViewportTransform(event, /*destination=*/view_ref_koid,
                                              *view_tree_snapshot_),
-      type, trace_id));
-  FX_VLOGS(1) << "Event dispatch to view=" << view_ref_koid << ": " << input_event;
-  ChattyGfxLog(input_event);
-  contender_inspector_.OnInjectedEvents(view_ref_koid, 1);
-  event_reporter->EnqueueEvent(std::move(input_event));
+      type, trace_id);
+
+  // Add in legacy UP and DOWN phases for ADD and REMOVE events respectively.
+  if (gfx_pointer_event.phase == fuchsia::ui::input::PointerEventPhase::ADD) {
+    auto down_event = fidl::Clone(gfx_pointer_event);
+    down_event.phase = fuchsia::ui::input::PointerEventPhase::DOWN;
+    gfx_pointer_events.push_back(std::move(gfx_pointer_event));
+    gfx_pointer_events.push_back(std::move(down_event));
+  } else if (gfx_pointer_event.phase == fuchsia::ui::input::PointerEventPhase::REMOVE) {
+    auto up_event = fidl::Clone(gfx_pointer_event);
+    up_event.phase = fuchsia::ui::input::PointerEventPhase::UP;
+    gfx_pointer_events.push_back(std::move(up_event));
+    gfx_pointer_events.push_back(std::move(gfx_pointer_event));
+  } else {
+    gfx_pointer_events.push_back(std::move(gfx_pointer_event));
+  }
+
+  for (auto& event : gfx_pointer_events) {
+    InputEvent input_event;
+    input_event.set_pointer(std::move(event));
+    FX_VLOGS(1) << "Event dispatch to view=" << view_ref_koid << ": " << input_event;
+    ChattyGfxLog(input_event);
+    contender_inspector_.OnInjectedEvents(view_ref_koid, 1);
+    event_reporter->EnqueueEvent(std::move(input_event));
+  }
 }
 
 }  // namespace scenic_impl::input

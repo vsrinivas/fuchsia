@@ -26,8 +26,7 @@ class TouchInjector : public Injector {
   void CancelStream(uint32_t pointer_id, StreamId stream_id) override;
 
  private:
-  // TODO(fxbug.dev/53316): Reduce to a single return event when legacy code goes away.
-  std::vector<InternalTouchEvent> PointerInjectorEventToInternalTouchEvents(
+  InternalTouchEvent PointerInjectorEventToInternalTouchEvent(
       const fuchsia::ui::pointerinjector::Event& event) const;
 
   // Used to inject the event into InputSystem for dispatch to clients.
