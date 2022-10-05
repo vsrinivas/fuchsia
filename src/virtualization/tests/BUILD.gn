@@ -51,6 +51,7 @@ group("tests") {
   testonly = true
   deps = [
     ":termina_container_tests_pkg",
+    ":virtualization_balloon_tests_pkg",
     ":virtualization_block_tests_pkg",
     ":virtualization_core_tests_pkg",
     ":virtualization_gpu_tests_pkg",
@@ -118,6 +119,44 @@ fuchsia_test_component("virtualization_core_tests_cmp") {
 fuchsia_test_package("virtualization_core_tests_pkg") {
   package_name = "virtualization-core-tests"
   test_components = [ ":virtualization_core_tests_cmp" ]
+  test_specs = {
+    environments = guest_envs
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
+
+executable("virtualization_balloon_tests") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  sources = [ "virtio_balloon_tests.cc" ]
+
+  deps = [
+    "lib",
+    "lib:guest_console",
+    "lib:test_main",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
+    "//src/lib/json_parser",
+    "//third_party/googletest:gmock",
+    "//third_party/re2",
+  ]
+}
+
+fuchsia_test_component("virtualization_balloon_tests_cmp") {
+  component_name = "virtualization_balloon_tests"
+  deps = [
+           ":test_images",
+           ":virtualization_balloon_tests",
+         ] + guest_packages
+  manifest = "meta/virtualization_balloon_tests.cml"
+}
+
+fuchsia_test_package("virtualization_balloon_tests_pkg") {
+  package_name = "virtualization_balloon_tests"
+  test_components = [ ":virtualization_balloon_tests_cmp" ]
   test_specs = {
     environments = guest_envs
     log_settings = {
