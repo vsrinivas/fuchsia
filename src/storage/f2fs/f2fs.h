@@ -80,6 +80,7 @@
 #include "src/storage/f2fs/storage_buffer.h"
 #include "src/storage/f2fs/writeback.h"
 #include "src/storage/f2fs/runner.h"
+#include "src/storage/f2fs/dirty_page_list.h"
 #include "src/storage/f2fs/vnode.h"
 #include "src/storage/f2fs/vnode_cache.h"
 #include "src/storage/f2fs/dir.h"
@@ -140,6 +141,7 @@ class F2fs final {
     return zx::ok(std::move(bc_));
   }
 
+  DirtyPageList &GetDirtyDataPageList() { return dirty_data_page_list_; }
   Bcache &GetBc() const {
     ZX_DEBUG_ASSERT(bc_ != nullptr);
     return *bc_;
@@ -328,6 +330,7 @@ class F2fs final {
   std::unique_ptr<GcManager> gc_manager_;
 
   VnodeCache vnode_cache_;
+  DirtyPageList dirty_data_page_list_;
   std::unique_ptr<Reader> reader_;
   std::unique_ptr<Writer> writer_;
 

@@ -22,6 +22,7 @@ test("f2fs_unit") {
     "unit/checkpoint.cc",
     "unit/dir.cc",
     "unit/dir_entry_cache.cc",
+    "unit/dirty_page_list.cc",
     "unit/f2fs.cc",
     "unit/file.cc",
     "unit/file_cache.cc",

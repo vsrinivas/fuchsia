@@ -107,6 +107,8 @@ void F2fs::SyncFs(bool bShutdown) {
       };
       SyncDirtyDataPages(op);
     }
+    // We don't need to keep dirty data Pages anymore.
+    dirty_data_page_list_.Reset();
   } else {
     WriteCheckpoint(false, false);
   }

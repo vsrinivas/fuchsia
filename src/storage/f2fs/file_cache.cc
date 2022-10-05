@@ -15,7 +15,8 @@ FileCache &Page::GetFileCache() const { return *file_cache_; }
 
 Page::~Page() {
   ZX_DEBUG_ASSERT(IsWriteback() == false);
-  ZX_DEBUG_ASSERT(InContainer() == false);
+  ZX_DEBUG_ASSERT(InTreeContainer() == false);
+  ZX_DEBUG_ASSERT(InListContainer() == false);
   ZX_DEBUG_ASSERT(IsDirty() == false);
   ZX_DEBUG_ASSERT(IsLocked() == false);
   ZX_DEBUG_ASSERT(IsMmapped() == false);
@@ -24,7 +25,7 @@ Page::~Page() {
 void Page::RecyclePage() {
   // Since active Pages are evicted only when having strong references,
   // it is safe to call InContainer().
-  if (InContainer()) {
+  if (InTreeContainer()) {
     ZX_ASSERT(VmoOpUnlock() == ZX_OK);
     file_cache_->Downgrade(this);
   } else {
@@ -51,6 +52,7 @@ bool Page::SetDirty() {
       superblock_info.SetDirty();
     } else {
       superblock_info.IncreasePageCount(CountType::kDirtyData);
+      fs_->GetDirtyDataPageList().AddDirty(this);
     }
     return false;
   }
@@ -73,6 +75,7 @@ bool Page::ClearDirtyForIo() {
       superblock_info.DecreasePageCount(CountType::kDirtyMeta);
     } else {
       superblock_info.DecreasePageCount(CountType::kDirtyData);
+      fs_->GetDirtyDataPageList().RemoveDirty(this);
     }
     return true;
   }
@@ -184,7 +187,7 @@ bool Page::ClearColdData() {
 
 #ifdef __Fuchsia__
 zx_status_t Page::VmoOpUnlock(bool evict) {
-  ZX_DEBUG_ASSERT(InContainer());
+  ZX_DEBUG_ASSERT(InTreeContainer());
   // |evict| can be true only when the Page is clean or subject to invalidation.
   if ((!IsDirty() || evict) && IsVmoLocked()) {
     ClearFlag(PageFlag::kPageVmoLocked);
@@ -194,7 +197,7 @@ zx_status_t Page::VmoOpUnlock(bool evict) {
 }
 
 zx::status<bool> Page::VmoOpLock() {
-  ZX_DEBUG_ASSERT(InContainer());
+  ZX_DEBUG_ASSERT(InTreeContainer());
   ZX_DEBUG_ASSERT(IsLocked());
   if (!SetFlag(PageFlag::kPageVmoLocked)) {
     return file_cache_->GetVmoManager().CreateAndLockVmo(index_);
@@ -236,7 +239,7 @@ void FileCache::Downgrade(Page *raw_page) {
 }
 
 zx_status_t FileCache::AddPageUnsafe(const fbl::RefPtr<Page> &page) {
-  if (page->InContainer()) {
+  if (page->InTreeContainer()) {
     return ZX_ERR_ALREADY_EXISTS;
   }
   page_tree_.insert(page.get());
@@ -380,7 +383,7 @@ zx::status<LockedPage> FileCache::GetLockedPage(fbl::RefPtr<Page> page) {
 }
 
 zx_status_t FileCache::EvictUnsafe(Page *page) {
-  if (!page->InContainer()) {
+  if (!page->InTreeContainer()) {
     return ZX_ERR_NOT_FOUND;
   }
   // Before eviction, check if it requires VMO_OP_UNLOCK

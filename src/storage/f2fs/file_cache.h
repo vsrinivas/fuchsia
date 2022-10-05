@@ -62,7 +62,8 @@ class PageRefCounted : public fs::VnodeRefCounted<T> {
 
 class Page : public PageRefCounted<Page>,
              public fbl::Recyclable<Page>,
-             public fbl::WAVLTreeContainable<Page *> {
+             public fbl::WAVLTreeContainable<Page *>,
+             public fbl::DoublyLinkedListable<Page *> {
  public:
   Page() = delete;
   Page(FileCache *file_cache, pgoff_t index);
@@ -162,6 +163,11 @@ class Page : public PageRefCounted<Page>,
   }
 
   uint32_t BlockSize() const { return kPageSize; }
+
+  // Check that |this| Page exists in FileCache.
+  bool InTreeContainer() const { return fbl::WAVLTreeContainable<Page *>::InContainer(); }
+  // Check that |this| Page exists in DirtyPageList.
+  bool InListContainer() const { return fbl::DoublyLinkedListable<Page *>::InContainer(); }
 
  protected:
   // It notifies VmoManager that there is no reference to |this|.
