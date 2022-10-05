@@ -4,7 +4,7 @@
 #ifndef SRC_GRAPHICS_DRIVERS_MSD_ARM_MALI_INCLUDE_MAGMA_VENDOR_QUERIES_H_
 #define SRC_GRAPHICS_DRIVERS_MSD_ARM_MALI_INCLUDE_MAGMA_VENDOR_QUERIES_H_
 
-#include "magma_common_defs.h"
+#include "magma/magma_common_defs.h"
 
 #define MAGMA_VENDOR_ID_MALI 0x13B5
 

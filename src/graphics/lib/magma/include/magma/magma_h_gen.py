@@ -74,7 +74,7 @@ def externs(begin):
 
 # Includes list.
 def includes():
-    return ('#include "magma_common_defs.h"\n' '#include <stdint.h>\n')
+    return ('#include "magma/magma_common_defs.h"\n' '#include <stdint.h>\n')
 
 
 # Warning comment about auto-generation.

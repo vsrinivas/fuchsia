@@ -7,7 +7,7 @@
 
 #include <cstdint>
 
-#include "magma_common_defs.h"
+#include "magma/magma_common_defs.h"
 
 // These flags can be specified to magma_map_buffer.
 enum MagmaArmMaliGpuMapFlags {

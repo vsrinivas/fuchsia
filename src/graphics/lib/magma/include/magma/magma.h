@@ -10,7 +10,7 @@
 #ifndef SRC_GRAPHICS_LIB_MAGMA_INCLUDE_MAGMA_MAGMA_H_
 #define SRC_GRAPHICS_LIB_MAGMA_INCLUDE_MAGMA_MAGMA_H_
 
-#include "magma_common_defs.h"
+#include "magma/magma_common_defs.h"
 #include <stdint.h>
 
 #if defined(__cplusplus)
