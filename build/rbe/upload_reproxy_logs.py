@@ -319,15 +319,21 @@ def main_single_logdir(
             )
         return 0
 
+    build_id_file = os.path.join(reproxy_logdir, "build_id")
+
     # Use a stamp-file to know whether or not this directory has been uploaded.
     upload_stamp_file = os.path.join(reproxy_logdir, "upload_stamp")
     if not dry_run and os.path.exists(upload_stamp_file):
-        msg(f"Already uploaded logs in {reproxy_logdir}.  Skipping.")
+        # An uploaded log dir already has a build_id.
+        with open(build_id_file) as f:
+            build_id = f.read().strip(" \n")
+        msg(
+            f"Already uploaded {reproxy_logdir} with build_id {build_id}.  Skipping."
+        )
         return 0
 
     # Make sure we have a uuid.
     # "build_id" comes from build/rbe/fuchsia-reproxy-wrap.sh.
-    build_id_file = os.path.join(reproxy_logdir, "build_id")
     if uuid_flag:
         build_id = uuid_flag
     elif os.path.isfile(build_id_file):

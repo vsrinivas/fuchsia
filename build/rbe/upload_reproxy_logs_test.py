@@ -49,6 +49,10 @@ class ReproxyLogdirTestHarness(unittest.TestCase):
         with open(self._metrics_file, "wb") as f:
             f.write("\n".encode())
 
+    def write_build_id_file(self, id: str):
+        with open(self._build_id_file, "w") as build_id_file:
+            build_id_file.write(id + "\n")
+
 
 class MainUploadMetricsTest(ReproxyLogdirTestHarness):
 
@@ -297,6 +301,7 @@ class MainSingleLogdirTest(ReproxyLogdirTestHarness):
 
     def test_already_uploaded(self):
         self.touch_stamp_file()
+        self.write_build_id_file("feed-f4ce")
         with mock.patch.object(upload_reproxy_logs,
                                "main_upload_metrics") as mock_upload_metrics:
             with mock.patch.object(upload_reproxy_logs,
@@ -337,8 +342,7 @@ class MainSingleLogdirTest(ReproxyLogdirTestHarness):
         self.assertEqual(exit_code, 0)
 
     def test_no_stamp_have_uuid_file(self):
-        with open(self._build_id_file, "w") as build_id_file:
-            build_id_file.write("feed-face\n")
+        self.write_build_id_file("feed-face")
         with mock.patch.object(upload_reproxy_logs, "main_upload_metrics",
                                return_value=0) as mock_upload_metrics:
             with mock.patch.object(upload_reproxy_logs, "main_upload_logs",
@@ -382,8 +386,7 @@ class MainSingleLogdirTest(ReproxyLogdirTestHarness):
         self.assertTrue(os.path.isfile(self._build_id_file))
 
     def test_upload_metrics_error(self):
-        with open(self._build_id_file, "w") as build_id_file:
-            build_id_file.write("feed-face\n")
+        self.write_build_id_file("f00d-face")
         with mock.patch.object(upload_reproxy_logs, "main_upload_metrics",
                                return_value=1) as mock_upload_metrics:
             exit_code = upload_reproxy_logs.main_single_logdir(
@@ -402,8 +405,7 @@ class MainSingleLogdirTest(ReproxyLogdirTestHarness):
         self.assertEqual(exit_code, 1)
 
     def test_upload_logs_error(self):
-        with open(self._build_id_file, "w") as build_id_file:
-            build_id_file.write("feed-face\n")
+        self.write_build_id_file("feed-fade")
         with mock.patch.object(upload_reproxy_logs, "main_upload_logs",
                                return_value=1) as mock_upload_logs:
             with mock.patch.object(upload_reproxy_logs, "main_upload_metrics",
