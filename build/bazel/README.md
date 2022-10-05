@@ -80,7 +80,7 @@ Now that you've been warned, here's how this is supposed to work:
   always update the Bazel workspace if needed.
 
   For example, use `fx bazel version` to print information
-  about the version number, of `fx bazel workspace` to print
+  about the version number, of `fx bazel info workspace` to print
   the absolute path to the workspace.
 
   And `fx bazel build ...` or `fx bazel query ...` commands will work
