@@ -110,10 +110,12 @@ void TerminaGuestManager::OnGuestStopped() {
   guest_ = std::make_unique<Guest>(
       structured_config_, fit::bind_member(this, &TerminaGuestManager::OnGuestInfoChanged));
 
-  // The termina guest manager is dropping access to /dev preventing further accesses, so we can't
-  // restart the guest without restarting the guest manager component. Once we transition away from
-  // fvm, this restriction will go away.
-  stop_manager_callback_();
+  if (structured_config_.stateful_partition_type() == "fvm") {
+    // The termina guest manager is dropping access to /dev preventing further accesses, so we
+    // can't restart the guest without restarting the guest manager component unless using fxfs.
+    // Eventually we will only be using fxfs, and this check can go away.
+    stop_manager_callback_();
+  }
 }
 
 void TerminaGuestManager::StartAndGetLinuxGuestInfo(std::string label,
