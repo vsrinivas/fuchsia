@@ -33,9 +33,6 @@ class ComponentEventProviderImpl : public fuchsia::sys::internal::ComponentEvent
   zx_status_t Connect(
       fidl::InterfaceRequest<fuchsia::sys::internal::ComponentEventProvider> request);
 
-  // Requests to notify the listener that a component started.
-  void NotifyComponentStarted(fuchsia::sys::internal::SourceIdentity component);
-
   // Requests to notify the listener that a component stopped.
   void NotifyComponentStopped(fuchsia::sys::internal::SourceIdentity component);
 
@@ -61,8 +58,6 @@ class ComponentEventProviderImpl : public fuchsia::sys::internal::ComponentEvent
   // events of components in this realm and sub-realms, except for realms that have a provider.
   // Not owned.
   fxl::WeakPtr<Realm> const realm_;
-
-  fxl::WeakPtrFactory<ComponentEventProviderImpl> weak_ptr_factory_;
 
   // Returns the relative realm path from the queries |leaf_realm| up to this provider |realm_|.
   std::vector<std::string> RelativeRealmPath(const fxl::WeakPtr<Realm>& leaf_realm);

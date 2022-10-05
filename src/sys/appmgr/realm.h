@@ -187,10 +187,6 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
                                           const std::string& instance_id,
                                           fidl::InterfaceHandle<fuchsia::io::Directory> directory);
 
-  // Notifies the Realm components event subscriber when a component starts.
-  void NotifyComponentStarted(const std::string& component_url, const std::string& component_name,
-                              const std::string& instance_id);
-
   // Notifies the Realm components event subscriber when a component stops.
   void NotifyComponentStopped(const std::string& component_url, const std::string& component_name,
                               const std::string& instance_id);

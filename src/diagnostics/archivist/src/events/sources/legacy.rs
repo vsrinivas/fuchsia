@@ -52,9 +52,6 @@ impl ComponentEventProvider {
         self.proxy.set_listener(events_client_end)?;
         while let Some(request) = stream.next().await {
             match request {
-                Ok(ComponentEventListenerRequest::OnStart { .. }) => {
-                    // Ignore started events, we have no use for them anymore.
-                }
                 Ok(ComponentEventListenerRequest::OnDiagnosticsDirReady {
                     component,
                     directory,
@@ -187,7 +184,6 @@ mod tests {
             component_name: "test.cmx".to_string(),
             instance_id: "12345".to_string(),
         };
-        listener.on_start(identity.clone().into()).expect("failed to send event 1");
         let (dir, _) = fidl::endpoints::create_request_stream::<fio::DirectoryMarker>().unwrap();
         listener
             .on_diagnostics_dir_ready(identity.clone().into(), dir)
