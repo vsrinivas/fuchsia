@@ -1,0 +1,15 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+@available(added=9)
+library fuchsia.version;
+
+/// The ABI revision denotes the semantics of the Fuchsia System Interface that
+/// an application expects the platform to provide. ABI revision values are
+/// chosen at random.
+alias AbiRevision = uint64;
+
+/// The API level denotes a set of APIs available when building an application
+/// for a given release of the FUCHSIA IDK. API levels are assigned in
+/// increasing order.
+alias ApiLevel = uint64;
