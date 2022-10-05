@@ -30,6 +30,16 @@ zx_library("llvm-profdata") {
       "//zircon/kernel/lib/libc",
     ]
   }
+
+  if (is_efi_toolchain) {
+    # Under PE-COFF, it doesn't work for the runtime itself to be instrumented.
+    # There's no way to reconcile direct use of the __llvm_profile_raw_version
+    # symbol in the source with the compiler-generated COMDAT definition in the
+    # same translation unit.
+    _profile_configs = [ "//build/config/profile" ]
+    configs += _profile_configs
+    configs -= _profile_configs
+  }
 }
 
 if (!is_kernel) {
