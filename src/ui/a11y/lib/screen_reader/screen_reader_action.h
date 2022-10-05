@@ -75,7 +75,7 @@ class ScreenReaderAction {
   fpromise::promise<> BuildSpeechTaskForRangeValuePromise(zx_koid_t view_koid, uint32_t node_id);
 
   // Updates the current and previous navigation contexts based on the newly focused node.
-  void UpdateNavigationContext();
+  void UpdateNavigationContext(zx_koid_t newly_focused_view_koid, uint32_t newly_focused_node_id);
 
   // Gets the message context for the currently focused node.
   ScreenReaderMessageGenerator::ScreenReaderMessageContext GetMessageContext();

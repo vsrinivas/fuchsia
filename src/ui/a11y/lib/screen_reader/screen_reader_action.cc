@@ -58,14 +58,15 @@ fpromise::promise<> ScreenReaderAction::SetA11yFocusPromise(const uint32_t node_
   fpromise::bridge<> bridge;
   auto* a11y_focus_manager = screen_reader_context_->GetA11yFocusManager();
   a11y_focus_manager->SetA11yFocus(
-      view_koid, node_id, [this, completer = std::move(bridge.completer)](bool success) mutable {
+      view_koid, node_id,
+      [this, completer = std::move(bridge.completer), view_koid, node_id](bool success) mutable {
         if (!success) {
           return completer.complete_error();
         }
 
         // Update the navigation context to reflect
         // the new focus.
-        UpdateNavigationContext();
+        UpdateNavigationContext(view_koid, node_id);
         completer.complete_ok();
       });
   return bridge.consumer.promise_or(fpromise::error());
@@ -119,15 +120,11 @@ fpromise::promise<> ScreenReaderAction::BuildSpeechTaskForRangeValuePromise(zx_k
   });
 }
 
-void ScreenReaderAction::UpdateNavigationContext() {
-  auto* a11y_focus_manager = screen_reader_context_->GetA11yFocusManager();
-  FX_DCHECK(a11y_focus_manager);
-
-  auto a11y_focus = a11y_focus_manager->GetA11yFocus();
-  auto view_koid = a11y_focus->view_ref_koid;
-  auto node_id = a11y_focus->node_id;
-
+void ScreenReaderAction::UpdateNavigationContext(zx_koid_t newly_focused_view_koid,
+                                                 uint32_t newly_focused_node_id) {
   const auto& previous_navigation_context = screen_reader_context_->previous_navigation_context();
+  auto view_koid = newly_focused_view_koid;
+  auto node_id = newly_focused_node_id;
 
   // If we've entered a new view, then the previous navigation context is no
   // longer relevant, so we should clear it. Otherwise, we should set the
