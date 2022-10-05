@@ -254,11 +254,11 @@ tests = [
   },
   {
     label = udp_test_label
-    cq = true
+    cq = false
   },
   {
     label = udp_unbound_test_label
-    cq = true
+    cq = false
   },
 ]
 
