@@ -180,7 +180,7 @@ mod test {
             .expect("Create reporter");
         let multiplexed_reporter = MultiplexedReporter::new(reporter_1, reporter_2);
 
-        let run_reporter = RunReporter::new_for_test(multiplexed_reporter);
+        let run_reporter = RunReporter::new(multiplexed_reporter);
         run_reporter.started(Timestamp::Unknown).await.expect("start run");
         let mut run_artifact =
             run_reporter.new_artifact(&ArtifactType::Stdout).await.expect("create artifact");

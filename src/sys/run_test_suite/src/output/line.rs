@@ -2,14 +2,87 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::io::{Error, Write};
-use vte::{Parser, Perform};
+use {
+    crate::output::{
+        ArtifactType, DirectoryArtifactType, DynArtifact, DynDirectoryArtifact, EntityId,
+        EntityInfo, ReportedOutcome, Reporter, Timestamp,
+    },
+    async_trait::async_trait,
+    std::io::{Error, Write},
+    vte::{Parser, Perform},
+};
+
+/// A reporter that composes an inner reporter. Filters out ANSI in artifact output.
+pub(crate) struct AnsiFilterReporter<R: Reporter> {
+    inner: R,
+}
+
+impl<R: Reporter> AnsiFilterReporter<R> {
+    pub(crate) fn new(inner: R) -> Self {
+        Self { inner }
+    }
+}
+
+#[async_trait]
+impl<R: Reporter> Reporter for AnsiFilterReporter<R> {
+    async fn new_entity(&self, entity: &EntityId, name: &str) -> Result<(), Error> {
+        self.inner.new_entity(entity, name).await
+    }
+
+    async fn set_entity_info(&self, entity: &EntityId, info: &EntityInfo) {
+        self.inner.set_entity_info(entity, info).await
+    }
+
+    async fn entity_started(&self, entity: &EntityId, timestamp: Timestamp) -> Result<(), Error> {
+        self.inner.entity_started(entity, timestamp).await
+    }
+
+    async fn entity_stopped(
+        &self,
+        entity: &EntityId,
+        outcome: &ReportedOutcome,
+        timestamp: Timestamp,
+    ) -> Result<(), Error> {
+        self.inner.entity_stopped(entity, outcome, timestamp).await
+    }
+
+    async fn entity_finished(&self, entity: &EntityId) -> Result<(), Error> {
+        self.inner.entity_finished(entity).await
+    }
+
+    async fn new_artifact(
+        &self,
+        entity: &EntityId,
+        artifact_type: &ArtifactType,
+    ) -> Result<Box<DynArtifact>, Error> {
+        let inner_artifact = self.inner.new_artifact(entity, artifact_type).await?;
+        match artifact_type {
+            // All the artifact types are enumerated here as we expect future artifacts
+            // should not be filtered.
+            ArtifactType::Stdout
+            | ArtifactType::Stderr
+            | ArtifactType::Syslog
+            | ArtifactType::RestrictedLog => {
+                Ok(Box::new(AnsiFilterWriter::new(inner_artifact)) as Box<DynArtifact>)
+            }
+        }
+    }
+
+    async fn new_directory_artifact(
+        &self,
+        entity: &EntityId,
+        artifact_type: &DirectoryArtifactType,
+        component_moniker: Option<String>,
+    ) -> Result<Box<DynDirectoryArtifact>, Error> {
+        self.inner.new_directory_artifact(entity, artifact_type, component_moniker).await
+    }
+}
 
 /// A wrapper around a `Write` that filters out ANSI escape sequences before writing to the
 /// wrapped object.
 /// AnsiFilterWriter assumes the bytes are valid UTF8, and clears its state on newline in an
 /// attempt to recover from malformed inputs.
-pub struct AnsiFilterWriter<W: Write> {
+struct AnsiFilterWriter<W: Write> {
     inner: W,
     parser: Parser,
 }

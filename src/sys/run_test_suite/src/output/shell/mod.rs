@@ -365,7 +365,7 @@ mod test {
     #[fuchsia::test]
     async fn report_case_events() {
         let (shell_reporter, output) = ShellReporter::new_expose_writer_for_test();
-        let run_reporter = RunReporter::new_for_test(shell_reporter);
+        let run_reporter = RunReporter::new(shell_reporter);
         let suite_reporter =
             run_reporter.new_suite("test-suite", &SuiteId(0)).await.expect("create suite");
         suite_reporter.started(Timestamp::Unknown).await.expect("case started");
@@ -417,7 +417,7 @@ mod test {
     #[fuchsia::test]
     async fn report_case_skipped() {
         let (shell_reporter, output) = ShellReporter::new_expose_writer_for_test();
-        let run_reporter = RunReporter::new_for_test(shell_reporter);
+        let run_reporter = RunReporter::new(shell_reporter);
         let suite_reporter =
             run_reporter.new_suite("test-suite", &SuiteId(0)).await.expect("create suite");
         suite_reporter.started(Timestamp::Unknown).await.expect("case started");
@@ -464,7 +464,7 @@ mod test {
     #[fuchsia::test]
     async fn syslog_artifacts() {
         let (shell_reporter, output) = ShellReporter::new_expose_writer_for_test();
-        let run_reporter = RunReporter::new_for_test(shell_reporter);
+        let run_reporter = RunReporter::new(shell_reporter);
         let suite_reporter =
             run_reporter.new_suite("test-suite", &SuiteId(0)).await.expect("create suite");
         suite_reporter.started(Timestamp::Unknown).await.expect("case started");
@@ -494,7 +494,7 @@ mod test {
     #[fuchsia::test]
     async fn report_retricted_logs() {
         let (shell_reporter, output) = ShellReporter::new_expose_writer_for_test();
-        let run_reporter = RunReporter::new_for_test(shell_reporter);
+        let run_reporter = RunReporter::new(shell_reporter);
         let suite_reporter =
             run_reporter.new_suite("test-suite", &SuiteId(0)).await.expect("create suite");
         suite_reporter.started(Timestamp::Unknown).await.expect("case started");
@@ -539,7 +539,7 @@ mod test {
     #[fuchsia::test]
     async fn stdout_artifacts() {
         let (shell_reporter, output) = ShellReporter::new_expose_writer_for_test();
-        let run_reporter = RunReporter::new_for_test(shell_reporter);
+        let run_reporter = RunReporter::new(shell_reporter);
         let suite_reporter =
             run_reporter.new_suite("test-suite", &SuiteId(0)).await.expect("create suite");
         suite_reporter.started(Timestamp::Unknown).await.expect("case started");
@@ -595,7 +595,7 @@ mod test {
     #[fuchsia::test]
     async fn report_unfinished() {
         let (shell_reporter, output) = ShellReporter::new_expose_writer_for_test();
-        let run_reporter = RunReporter::new_for_test(shell_reporter);
+        let run_reporter = RunReporter::new(shell_reporter);
         let suite_reporter =
             run_reporter.new_suite("test-suite", &SuiteId(0)).await.expect("create suite");
         suite_reporter.started(Timestamp::Unknown).await.expect("suite started");
@@ -649,7 +649,7 @@ mod test {
     #[fuchsia::test]
     async fn report_cancelled_suite() {
         let (shell_reporter, output) = ShellReporter::new_expose_writer_for_test();
-        let run_reporter = RunReporter::new_for_test(shell_reporter);
+        let run_reporter = RunReporter::new(shell_reporter);
         let suite_reporter =
             run_reporter.new_suite("test-suite", &SuiteId(0)).await.expect("create suite");
         suite_reporter.started(Timestamp::Unknown).await.expect("suite started");
@@ -677,7 +677,7 @@ mod test {
     #[fuchsia::test]
     async fn report_suite_did_not_finish() {
         let (shell_reporter, output) = ShellReporter::new_expose_writer_for_test();
-        let run_reporter = RunReporter::new_for_test(shell_reporter);
+        let run_reporter = RunReporter::new(shell_reporter);
         let suite_reporter =
             run_reporter.new_suite("test-suite", &SuiteId(0)).await.expect("create suite");
         suite_reporter.started(Timestamp::Unknown).await.expect("suite started");
