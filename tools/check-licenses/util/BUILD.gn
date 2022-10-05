@@ -16,7 +16,9 @@ go_library("util") {
 
 group("tests") {
   testonly = true
-  deps = [ ":check-licenses_util_tests($host_toolchain)" ]
+
+  # TODO(fxbug.dev/111235): Investigate flakiness, then re-add util tests here.
+  deps = []
 }
 
 if (is_host) {
