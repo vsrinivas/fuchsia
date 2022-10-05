@@ -26,6 +26,11 @@ _environment_service_account =
 #     Conflicts with `downgrade_release_builder`.
 #   - Type: string
 #
+#  downgrade_ota_attempts
+#  - Optional: Number of times to try to OTA from the downgrade build to the
+#    upgrade build before failing.
+#  - Type: integer
+#
 #   upgrade_release_builder
 #   - Optional: Builder from which the upgrade build artifacts will be
 #     downloaded and upgraded to on the device, rather than from the current
@@ -129,6 +134,13 @@ template("system_test_upgrade_suite") {
       _args += [
         "-downgrade-build-id",
         invoker.downgrade_release_build_id,
+      ]
+    }
+
+    if (defined(invoker.downgrade_ota_attempts)) {
+      _args += [
+        "-downgrade-ota-attempts",
+        invoker.downgrade_ota_attempts,
       ]
     }
 
