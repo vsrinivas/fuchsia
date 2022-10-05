@@ -94,7 +94,7 @@ void LinearNavigationAction::Run(GestureContext gesture_context) {
       ExecuteAccessibilityActionPromise(a11y_focus->view_ref_koid, new_node_id,
                                         fuchsia::accessibility::semantics::Action::SHOW_ON_SCREEN)
           .and_then([this, new_node_id, a11y_focus]() mutable {
-            return SetA11yFocusPromise(new_node_id, a11y_focus->view_ref_koid);
+            return SetA11yFocusPromise(a11y_focus->view_ref_koid, new_node_id);
           })
           .and_then([this, a11y_focus, new_node_id]() mutable {
             return BuildSpeechTaskFromNodePromise(a11y_focus->view_ref_koid, new_node_id);

@@ -53,8 +53,8 @@ fpromise::promise<> ScreenReaderAction::ExecuteAccessibilityActionPromise(
   return bridge.consumer.promise_or(fpromise::error());
 }
 
-fpromise::promise<> ScreenReaderAction::SetA11yFocusPromise(const uint32_t node_id,
-                                                            zx_koid_t view_koid) {
+fpromise::promise<> ScreenReaderAction::SetA11yFocusPromise(zx_koid_t view_koid,
+                                                            const uint32_t node_id) {
   fpromise::bridge<> bridge;
   auto* a11y_focus_manager = screen_reader_context_->GetA11yFocusManager();
   a11y_focus_manager->SetA11yFocus(

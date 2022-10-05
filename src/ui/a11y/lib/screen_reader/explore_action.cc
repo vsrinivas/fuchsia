@@ -86,7 +86,7 @@ fpromise::promise<> ExploreAction::SetA11yFocusOrStopPromise(
         return fpromise::make_error_promise();
       }
     }
-    return SetA11yFocusPromise(node_id, view_koid);
+    return SetA11yFocusPromise(view_koid, node_id);
   });
 }
 

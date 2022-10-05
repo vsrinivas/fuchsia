@@ -74,7 +74,7 @@ void RecoverA11YFocusAction::Run(GestureContext gesture_context) {
       ExecuteAccessibilityActionPromise(a11y_focus->view_ref_koid, focused_node_id,
                                         fuchsia::accessibility::semantics::Action::SHOW_ON_SCREEN)
           .and_then([this, focused_node_id, a11y_focus]() mutable {
-            return SetA11yFocusPromise(focused_node_id, a11y_focus->view_ref_koid);
+            return SetA11yFocusPromise(a11y_focus->view_ref_koid, focused_node_id);
           })
           // Cancel any promises if this class goes out of scope.
           .wrap_with(scope_);

@@ -60,7 +60,7 @@ class ScreenReaderAction {
 
   // Returns a promise that sets a new A11y Focus. If the operation is not successful, throws an
   // error.
-  fpromise::promise<> SetA11yFocusPromise(const uint32_t node_id, zx_koid_t view_koid);
+  fpromise::promise<> SetA11yFocusPromise(zx_koid_t view_koid, uint32_t node_id);
 
   // Returns a promise that from a node_id and view_koid, builds a speech task to speak the node
   // description. An error is thrown if the semantic tree or the semantic node are missing data
