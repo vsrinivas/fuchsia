@@ -1,0 +1,19 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.kernel;
+
+using zx;
+
+/// Protocol for providing a `ZX_RSRC_KIND_SYSTEM` with base
+/// `ZX_RSRC_SYSTEM_MEXEC_BASE`.
+@discoverable
+@available(added=HEAD)
+protocol MexecResource {
+    /// Get an MEXEC resource handle as `resource`.
+    @available(added=HEAD)
+    Get() -> (resource struct {
+        resource zx.handle:RESOURCE;
+    });
+};

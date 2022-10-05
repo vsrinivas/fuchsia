@@ -414,6 +414,7 @@ multiconst!(zx_vcpu_state_topic_t, [
     ZX_VCPU_IO      = 1;
 ]);
 
+// From //zircon/system/public/zircon/syscalls/resource.h
 multiconst!(zx_rsrc_kind_t, [
     ZX_RSRC_KIND_MMIO       = 0;
     ZX_RSRC_KIND_IRQ        = 1;
@@ -423,6 +424,7 @@ multiconst!(zx_rsrc_kind_t, [
     ZX_RSRC_KIND_SYSTEM     = 5;
 ]);
 
+// From //zircon/system/public/zircon/syscalls/resource.h
 multiconst!(zx_rsrc_system_base_t, [
     ZX_RSRC_SYSTEM_HYPERVISOR_BASE = 0;
     ZX_RSRC_SYSTEM_VMEX_BASE       = 1;
@@ -430,6 +432,7 @@ multiconst!(zx_rsrc_system_base_t, [
     ZX_RSRC_SYSTEM_INFO_BASE       = 3;
     ZX_RSRC_SYSTEM_CPU_BASE        = 4;
     ZX_RSRC_SYSTEM_POWER_BASE      = 5;
+    ZX_RSRC_SYSTEM_MEXEC_BASE      = 6;
 ]);
 
 pub const ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET: usize = 1;

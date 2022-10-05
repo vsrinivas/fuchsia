@@ -306,6 +306,7 @@
                 "fuchsia.kernel.InfoResource",
                 "fuchsia.kernel.IoportResource",
                 "fuchsia.kernel.IrqResource",
+                "fuchsia.kernel.MexecResource",
                 "fuchsia.kernel.MmioResource",
                 "fuchsia.kernel.PowerResource",
                 "fuchsia.kernel.RootJob",

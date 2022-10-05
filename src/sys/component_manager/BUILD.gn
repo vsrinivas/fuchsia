@@ -96,6 +96,7 @@ template("component_manager") {
     "src/builtin/kernel_stats.rs",
     "src/builtin/lifecycle_controller.rs",
     "src/builtin/log.rs",
+    "src/builtin/mexec_resource.rs",
     "src/builtin/mmio_resource.rs",
     "src/builtin/mod.rs",
     "src/builtin/pkg_dir.rs",

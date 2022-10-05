@@ -563,6 +563,7 @@ fidl/fuchsia.kernel/kernel-counter.fidl
 fidl/fuchsia.kernel/kernel-debug.fidl
 fidl/fuchsia.kernel/kernel-stats.fidl
 fidl/fuchsia.kernel/meta.json
+fidl/fuchsia.kernel/mexec-resource.fidl
 fidl/fuchsia.kernel/mmio-resource.fidl
 fidl/fuchsia.kernel/overview.fidl
 fidl/fuchsia.kernel/power-resource.fidl

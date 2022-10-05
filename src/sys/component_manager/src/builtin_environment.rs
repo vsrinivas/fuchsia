@@ -22,6 +22,7 @@ use {
             kernel_stats::KernelStats,
             lifecycle_controller::LifecycleController,
             log::{ReadOnlyLog, WriteOnlyLog},
+            mexec_resource::MexecResource,
             mmio_resource::MmioResource,
             pkg_dir::PkgDirectory,
             power_resource::PowerResource,
@@ -399,6 +400,7 @@ pub struct BuiltinEnvironment {
     pub write_only_log: Option<Arc<WriteOnlyLog>>,
     pub factory_items_service: Option<Arc<FactoryItems>>,
     pub items_service: Option<Arc<Items>>,
+    pub mexec_resource: Option<Arc<MexecResource>>,
     pub mmio_resource: Option<Arc<MmioResource>>,
     pub power_resource: Option<Arc<PowerResource>>,
     pub root_resource: Option<Arc<RootResource>>,
@@ -728,6 +730,26 @@ impl BuiltinEnvironment {
             model.root().hooks.install(info_resource.hooks()).await;
         }
 
+        // Set up the MexecResource service.
+        let mexec_resource = system_resource_handle
+            .as_ref()
+            .and_then(|handle| {
+                handle
+                    .create_child(
+                        zx::ResourceKind::SYSTEM,
+                        None,
+                        zx::sys::ZX_RSRC_SYSTEM_MEXEC_BASE,
+                        1,
+                        b"mexec",
+                    )
+                    .ok()
+            })
+            .map(MexecResource::new)
+            .and_then(Result::ok);
+        if let Some(mexec_resource) = mexec_resource.as_ref() {
+            model.root().hooks.install(mexec_resource.hooks()).await;
+        }
+
         // Set up the PowerResource service.
         let power_resource_handle = system_resource_handle
             .as_ref()
@@ -914,13 +936,14 @@ impl BuiltinEnvironment {
             items_service,
             cpu_resource,
             debug_resource,
-            mmio_resource,
             hypervisor_resource,
             info_resource,
-            irq_resource,
-            power_resource,
             #[cfg(target_arch = "x86_64")]
             ioport_resource: _ioport_resource,
+            irq_resource,
+            mexec_resource,
+            mmio_resource,
+            power_resource,
             #[cfg(target_arch = "aarch64")]
             smc_resource: _smc_resource,
             vmex_resource,

@@ -69,6 +69,7 @@ const std::unordered_set<std::string> kAllowedSystemServices = {
     fuchsia::kernel::InfoResource::Name_,
     fuchsia::kernel::IoportResource::Name_,
     fuchsia::kernel::IrqResource::Name_,
+    fuchsia::kernel::MexecResource::Name_,
     fuchsia::kernel::MmioResource::Name_,
     fuchsia::kernel::PowerResource::Name_,
     fuchsia::kernel::RootJob::Name_,
