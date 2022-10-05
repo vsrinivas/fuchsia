@@ -16,6 +16,9 @@
 ##  fx build-metrics disable
 ##       Disable build metrics collection in fx build.
 ##
+##  fx build-metrics upload
+##       Upload any logs/metrics that may have accumulated.
+##
 ## If you opt-in to metrics collection, data will be collected and used by
 ## Google in accordance with the Google privacy policy
 ## (https://policies.google.com/privacy)
@@ -78,6 +81,8 @@ if [[ $# -lt 1 ]]; then
 fi
 
 action="$1"
+shift
+action_args=("$@")
 
 function build-metrics-read-config {
   BUILD_METRICS_ENABLED=0
@@ -169,10 +174,22 @@ case "$action" in
     echo "Build metrics collection disabled at user's request"
     ;;
 
+  upload)
+    echo "Uploading accumulated build logs and metrics to BQ."
+    # Does not require that build-metrics be enabled in advance because
+    # the logs and metrics files are always being produced.
+    _upload_script=build/rbe/upload_reproxy_logs.sh
+    # Scan for log dirs where build/rbe/fuchsia-reproxy-wrap.sh produces them.
+    _logs_dir="${TMPDIR:-/tmp}"
+    "$_upload_script" "${action_args[@]}" "$_logs_dir"/reproxy.*
+    exit 0
+    ;;
+
   *)
     fx-error Invalid syntax
     fx-command-help
     exit 1
+    ;;
 esac
 
 echo "Collection of build metrics is now $(styled-status "$BUILD_METRICS_ENABLED") for ${FUCHSIA_DIR}"
