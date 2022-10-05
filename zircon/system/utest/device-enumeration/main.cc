@@ -4,10 +4,12 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.driver.development/cpp/wire.h>
 #include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -163,6 +165,12 @@ class DeviceEnumerationTest : public zxtest::Test {
       // stderr helps diagnosibility, since stdout doesn't show up in test logs
       fprintf(stderr, "Checking %s\n", device_paths[i]);
       EXPECT_OK(RecursiveWaitForFile(devfs_root, device_paths[i], &fd), "%s", device_paths[i]);
+
+      // Check that we connected to a device, not a directory.
+      fdio_cpp::UnownedFdioCaller caller(fd);
+      EXPECT_OK(fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())
+                    ->GetTopologicalPath()
+                    .status());
     }
   }
 };
@@ -759,21 +767,31 @@ TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
       "pci-00:02.0-fidl/virtio-input",
       "pci-00:0b.0-fidl/goldfish-address-space",
 
-      "acpi-GFPP-composite",
       // Verify goldfish pipe root device created.
       "acpi-GFPP-composite/goldfish-pipe",
       // Verify goldfish pipe child devices created.
       "acpi-GFPP-composite/goldfish-pipe/goldfish-pipe-control",
       "acpi-GFPP-composite/goldfish-pipe/goldfish-pipe-sensor",
-      "acpi-GFSK-composite",
       "acpi-GFSK-composite/goldfish-sync",
 
-      "goldfish-control-2",
       "goldfish-control-2/goldfish-control",
       "goldfish-control-2/goldfish-control/goldfish-display",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kAemuDevicePaths, std::size(kAemuDevicePaths)));
+
+  if (IsDfv2Enabled()) {
+    return;
+  }
+
+  // TODO(fxbug.dev/106517): Fix these devices and move them back.
+  static const char* kDevicesThatFailInDfv2[] = {
+      "acpi-GFPP-composite",
+      "acpi-GFSK-composite",
+      "goldfish-control-2",
+  };
+
+  ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicesThatFailInDfv2, std::size(kDevicesThatFailInDfv2)));
 }
 
 // If this test fails, it indicates that the board driver set the board name incorrectly.

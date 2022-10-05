@@ -13,6 +13,7 @@ test("device-enumeration") {
     "main.cc",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
     "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_cpp_wire",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_c",
@@ -23,6 +24,7 @@ test("device-enumeration") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
