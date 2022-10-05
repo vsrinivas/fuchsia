@@ -232,7 +232,7 @@ class WebApp : public fuchsia::ui::app::ViewProvider {
     // screen for easy navigation.
     const bodyHtml = `
     <p id='some-text'>Some text below:</p>
-    <textarea id="text-input" rows="3" cols="20" autofocus></textarea>
+    <textarea id="text-input" rows="3" cols="20"></textarea>
     `;
 
     document.head.innerHTML += headHtml;
