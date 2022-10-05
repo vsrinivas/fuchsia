@@ -183,11 +183,18 @@ EOF
 }
 
 # Startup reproxy.
-# Use the same config for bootstrap as for reproxy
+# Use the same config for bootstrap as for reproxy.
+# This also checks for authentication, and prompts the user to
+# re-authenticate if needed.
 "$bootstrap" --re_proxy="$reproxy" --cfg="$reproxy_cfg" "${bootstrap_options[@]}"
 
-# Generate a uuid for uploading logs and metrics.
-test "$BUILD_METRICS_ENABLED" = 0 || echo "$build_uuid" > "$reproxy_tmpdir"/build_id
+test "$BUILD_METRICS_ENABLED" = 0 || {
+  # Pre-authenticate for uploading metrics and logs
+  "$script_dir"/upload_reproxy_logs.sh --auth-only
+
+  # Generate a uuid for uploading logs and metrics.
+  echo "$build_uuid" > "$reproxy_tmpdir"/build_id
+}
 
 shutdown() {
   # b/188923283 -- added --cfg to shut down properly
@@ -201,7 +208,6 @@ shutdown() {
     cloud_project=fuchsia-engprod-metrics-prod
     dataset=metrics
     "$script_dir"/upload_reproxy_logs.sh \
-      --verbose \
       --reclient-bindir="$reclient_bindir" \
       --uuid="$build_uuid" \
       --bq-logs-table="$cloud_project:$dataset".rbe_client_command_logs_developer \

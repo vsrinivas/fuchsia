@@ -113,6 +113,13 @@ def main_arg_parser() -> argparse.ArgumentParser:
         default=False,
         help="Show upload steps and progress.",
     )
+    parser.add_argument(
+        "--auth-only",
+        action="store_true",
+        default=False,
+        help=
+        "Authenticate by inserting a null entry to a table, and do nothing else.",
+    )
 
     # Positional args are the reproxy logdirs to process.
     parser.add_argument(
@@ -384,6 +391,13 @@ def main_single_logdir(
 def main(argv: Sequence[str]) -> int:
     parser = main_arg_parser()
     args = parser.parse_args(argv)
+
+    if args.auth_only:
+        # Ignore any args.reproxy_logdirs.
+        # A `bq insert` should trigger authentication and get a refresh token.
+        if args.verbose:
+            msg("Authenticating BQ upload access for metrics and logs.")
+        return bq_table_insert(args.bq_logs_table, "")
 
     exit_code = 0
     for logdir in args.reproxy_logdirs:
