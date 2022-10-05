@@ -1599,7 +1599,8 @@ void Controller::DisplayControllerImplApplyConfiguration(const display_config_t*
       display->ApplyConfiguration(config, config_stamp);
     } else {
       if (display->pipe()) {
-        display->pipe()->Reset();
+        // Only reset the planes so that it will display a blank screen.
+        display->pipe()->ResetPlanes();
         ResetPipePlaneBuffers(display->pipe()->pipe_id());
       }
     }

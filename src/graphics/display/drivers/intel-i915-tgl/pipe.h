@@ -51,8 +51,11 @@ class Pipe {
   void ApplyConfiguration(const display_config_t* config, const config_stamp_t* config_stamp,
                           const SetupGttImageFunc& setup_gtt_image);
 
-  // Reset pipe registers.
+  // Reset pipe registers and transcoders.
   void Reset();
+
+  // Reset the pipe planes (layers).
+  void ResetPlanes();
 
   // A helper method to reset |transcoder| given its transcoder number.
   static void ResetTranscoder(tgl_registers::Trans transcoder, tgl_registers::Platform platform,
@@ -109,7 +112,6 @@ class Pipe {
   void SetColorConversionOffsets(bool preoffsets, const float vals[3]);
   void ResetActiveTranscoder();
   void ResetScaler();
-  void ResetPlanes();
 
   // Borrowed reference to Controller instance
   fdf::MmioBuffer* mmio_space_ = nullptr;
