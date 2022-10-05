@@ -32,9 +32,11 @@ async fn main() -> Result<()> {
             info: HandleInfo::new(HandleType::FileDescriptor, 2),
         },
     ];
-    let config_vmo_info = HandleInfo::new(HandleType::ComponentConfigVmo, 0);
-    if let Some(config_vmo) = take_startup_handle(config_vmo_info) {
-        handles.push(StartupHandle { handle: config_vmo, info: config_vmo_info })
+    if let Some(handle) = take_startup_handle(HandleType::DirectoryRequest.into()) {
+        handles.push(StartupHandle { handle: handle, info: HandleType::DirectoryRequest.into() })
+    }
+    if let Some(handle) = take_startup_handle(HandleType::ComponentConfigVmo.into()) {
+        handles.push(StartupHandle { handle: handle, info: HandleType::ComponentConfigVmo.into() })
     }
     for entry in Namespace::installed()?.export()? {
         paths.push(CString::new(entry.path)?);
