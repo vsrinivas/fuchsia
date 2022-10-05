@@ -1,0 +1,35 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import("//build/components.gni")
+import("//build/rust/rustc_library.gni")
+
+rustc_library("pointer_fusion") {
+  name = "pointer_fusion"
+  with_unit_tests = true
+  version = "0.1.0"
+  edition = "2018"
+  sources = [
+    "src/lib.rs",
+    "src/pointer/mod.rs",
+    "src/pointer/mouse.rs",
+    "src/pointer/touch.rs",
+    "src/tests.rs",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.ui.pointer:fuchsia.ui.pointer_rust",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:num",
+  ]
+  test_deps = [ "//src/lib/fuchsia" ]
+}
+
+fuchsia_unittest_package("pointer_fusion_tests") {
+  deps = [ ":pointer_fusion_test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":pointer_fusion_tests" ]
+}
