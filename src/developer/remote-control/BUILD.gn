@@ -14,7 +14,7 @@ group("remote-control") {
   testonly = true
 
   public_deps = [
-    ":pkg",
+    ":remote-control-package",
     ":tests",
   ]
 }
@@ -146,7 +146,7 @@ fuchsia_component("remote-control-component") {
   ]
 }
 
-fuchsia_package("pkg") {
+fuchsia_package("remote-control-package") {
   package_name = "remote-control"
   deps = [
     ":maps",
@@ -155,12 +155,16 @@ fuchsia_package("pkg") {
   shell_commands = [ "//src/developer/remote-control/runner" ]
 }
 
+fuchsia_package_archive("remote-control-archive") {
+  package = ":remote-control-package"
+}
+
 # This group is cached in core. Only add dependencies to this
 # if they belong in core.
 group("runtime") {
   deps = [
-    ":pkg",
     ":pkg-diagnostics-bridge",
+    ":remote-control-package",
     "//build/validate:non_production_tag",
     "//src/connectivity/overnet:runtime",
   ]

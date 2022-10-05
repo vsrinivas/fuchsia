@@ -64,6 +64,10 @@ fuchsia_package("overnetstack") {
   deps = [ ":component" ]
 }
 
+fuchsia_package_archive("overnetstack-archive") {
+  package = ":overnetstack"
+}
+
 fuchsia_component("component-with-udp") {
   component_name = "overnetstack-with-udp"
 
