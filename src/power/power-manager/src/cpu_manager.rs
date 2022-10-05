@@ -5,14 +5,17 @@
 use crate::error::PowerManagerError;
 use crate::message::{Message, MessageResult, MessageReturn};
 use crate::node::Node;
+use crate::ok_or_default_err;
 use crate::types::{NormPerfs, PState, Watts};
+use crate::utils::result_debug_panic::ResultDebugPanic;
 use anyhow::{bail, format_err, Error};
 use async_trait::async_trait;
+use async_utils::event::Event as AsyncEvent;
 use fuchsia_inspect::{self as inspect, ArrayProperty as _, Property as _};
 use fuchsia_zircon::sys;
 use serde_derive::Deserialize;
 use serde_json as json;
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::convert::TryInto as _;
 use std::fmt::Debug;
@@ -477,115 +480,44 @@ impl<'a> CpuManagerBuilder<'a> {
         self
     }
 
-    pub async fn build(self) -> Result<Rc<CpuManager>, Error> {
-        let mut clusters = Vec::new();
-        for (cluster_config, handler) in
-            self.cluster_configs.into_iter().zip(self.cluster_handlers.into_iter())
-        {
-            let pstates = match handler.handle_message(&Message::GetCpuPerformanceStates).await {
-                Ok(MessageReturn::GetCpuPerformanceStates(pstates)) => pstates,
-                Ok(r) => {
-                    bail!("GetCpuPerformanceStates returned unexpected value: {:?}", r)
-                }
-                Err(e) => bail!("Error fetching performance states: {}", e),
-            };
-
-            // The current P-state will be set when CpuManager's thermal state is initialized below,
-            // so initialize it to a range of all possible values for now.
-            let pstate_range = Range { lower: 0, upper: pstates.len() - 1 };
-            let current_pstate = Cell::new(RangedValue::InRange(pstate_range));
-
-            clusters.push(CpuCluster {
-                name: cluster_config.name,
-                cluster_index: cluster_config.cluster_index,
-                handler,
-                logical_cpu_numbers: cluster_config.logical_cpu_numbers,
-                performance_per_ghz: NormPerfs(cluster_config.normperfs_per_ghz),
-                pstates,
-                current_pstate,
-            });
-        }
-
-        let get_performance_capacity = |thermal_state_config: &ThermalStateConfig| {
-            clusters
-                .iter()
-                .map(|cluster| {
-                    let pstate_index = thermal_state_config.cluster_pstates[cluster.cluster_index];
-                    cluster.get_performance_capacity(pstate_index)
-                })
-                .sum()
-        };
-
-        let thermal_states = self
-            .thermal_state_configs
-            .into_iter()
-            .map(|t| {
-                let performance_capacity = get_performance_capacity(&t);
-                ThermalState {
-                    cluster_pstates: t.cluster_pstates,
-                    min_performance: NormPerfs(t.min_performance_normperfs),
-                    static_power: Watts(t.static_power_w),
-                    dynamic_power_per_normperf: Watts(t.dynamic_power_per_normperf_w),
-                    performance_capacity,
-                }
-            })
-            .collect();
-
-        validate_thermal_states(&thermal_states)?;
-
+    pub fn build(self) -> Result<Rc<CpuManager>, Error> {
         // Optionally use the default inspect root node
         let inspect_root = self.inspect_root.unwrap_or(inspect::component::inspector().root());
 
-        let cluster_names = clusters.iter().map(|c| c.name.as_str()).collect();
-        let inspect_data = InspectData::new(inspect_root, "CpuManager", cluster_names);
-        inspect_data.set_thermal_states(&thermal_states);
+        let cluster_names = self.cluster_configs.iter().map(|c| c.name.as_str()).collect();
+        let inspect = InspectData::new(inspect_root, "CpuManager", cluster_names);
 
-        // Retrieve the total number of CPUs, and ensure that clusters' logical CPU numbers exactly
-        // span 0..num_cpus.
-        let num_cpus = match self.syscall_handler.handle_message(&Message::GetNumCpus).await {
-            Ok(MessageReturn::GetNumCpus(n)) => n,
-            other => bail!("Unexpected GetNumCpus response: {:?}", other),
+        let mutable_inner = MutableInner {
+            num_cpus: 0,
+            current_thermal_state: None,
+            cluster_configs: Some(self.cluster_configs),
+            cluster_handlers: Some(self.cluster_handlers),
+            clusters: Vec::new(),
+            thermal_state_configs: Some(self.thermal_state_configs),
+            thermal_states: Vec::new(),
         };
-        let mut covered_cpu_numbers = clusters
-            .iter()
-            .map(|c| c.logical_cpu_numbers.iter())
-            .flatten()
-            .map(|v| *v)
-            .collect::<Vec<_>>();
-        covered_cpu_numbers.sort();
-        anyhow::ensure!(
-            covered_cpu_numbers == (0..num_cpus).collect::<Vec<_>>(),
-            "Clusters' logical CPU numbers must exactly span 0..{}",
-            num_cpus
-        );
 
-        let cpu_manager = Rc::new(CpuManager {
-            clusters,
-            num_cpus,
-            thermal_states,
+        Ok(Rc::new(CpuManager {
+            init_done: AsyncEvent::new(),
             cpu_stats_handler: self.cpu_stats_handler,
             syscall_handler: self.syscall_handler,
-            current_thermal_state: Cell::new(None),
-            inspect: inspect_data,
-        });
+            inspect,
+            mutable_inner: RefCell::new(mutable_inner),
+        }))
+    }
 
-        // Update cluster P-states to match the highest power operating condition.
-        cpu_manager.update_thermal_state(0).await?;
-
-        Ok(cpu_manager)
+    #[cfg(test)]
+    pub async fn build_and_init(self) -> Rc<CpuManager> {
+        let node = self.build().unwrap();
+        node.init().await.unwrap();
+        node
     }
 }
 
 pub struct CpuManager {
-    /// All CPU clusters governed by the `CpuManager`.
-    clusters: Vec<CpuCluster>,
-
-    /// Number of CPUs in the system; confirmed to be greater than the max logical CPU number of any
-    /// cluster.
-    num_cpus: u32,
-
-    /// All supported thermal states for the CPU subsystem.
-    thermal_states: Vec<ThermalState>,
+    /// Signalled after `init()` has completed. Used to ensure node doesn't process messages until
+    /// its `init()` has completed.
+    init_done: AsyncEvent,
 
     /// Must service GetNumCpus and SetCpuPerformanceInfo messages.
     syscall_handler: Rc<dyn Node>,
@@ -594,11 +526,10 @@ pub struct CpuManager {
     /// the GetCpuLoads message.
     cpu_stats_handler: Rc<dyn Node>,
 
-    /// The current thermal state of the CPU subsystem. The CPU will be put into its highest-power
-    /// state on startup.
-    current_thermal_state: Cell<Option<usize>>,
-
     inspect: InspectData,
+
+    /// Mutable inner state.
+    mutable_inner: RefCell<MutableInner>,
 }
 
 /// A performance model for a future time interval.
@@ -641,16 +572,18 @@ impl CpuManager {
         available_power: Watts,
         performance_model: PerformanceModel,
     ) -> (usize, PerfAndPower) {
+        let thermal_states = &self.mutable_inner.borrow().thermal_states;
+
         // State 0 is guaranteed to be admissible. If it meets the power criterion, we return it.
         // Otherwise, we use it to initialize the fallback -- the lowest-index admissible state,
         // which will be used if no states meet the power criterion.
-        debug_assert_eq!(self.thermal_states[0].min_performance, NormPerfs(0.0));
-        let mut fallback = (0, self.thermal_states[0].estimate_perf_and_power(performance_model));
+        debug_assert_eq!(thermal_states[0].min_performance, NormPerfs(0.0));
+        let mut fallback = (0, thermal_states[0].estimate_perf_and_power(performance_model));
         if fallback.1.power < available_power {
             return fallback;
         }
 
-        for (i, thermal_state) in self.thermal_states.iter().enumerate().skip(1) {
+        for (i, thermal_state) in thermal_states.iter().enumerate().skip(1) {
             if let FixedValue(performance) = performance_model {
                 if thermal_state.min_performance > performance {
                     continue;
@@ -676,13 +609,15 @@ impl CpuManager {
             "index" => index as u32
         );
 
+        let mut inner = self.mutable_inner.borrow_mut();
+
         // Return early if no update is required. We're assuming that P-states have not changed.
-        if self.current_thermal_state.get() == Some(index) {
+        if inner.current_thermal_state == Some(index) {
             return Ok(());
         }
 
-        let pstate_indices = &self.thermal_states[index].cluster_pstates;
-        let cluster_update_futures: Vec<_> = self
+        let pstate_indices = &inner.thermal_states[index].cluster_pstates;
+        let cluster_update_futures: Vec<_> = inner
             .clusters
             .iter()
             .map(|cluster| {
@@ -699,11 +634,11 @@ impl CpuManager {
 
         // Update the thermal state index.
         if errors.is_empty() {
-            self.current_thermal_state.set(Some(index));
+            inner.current_thermal_state = Some(index);
             self.inspect.thermal_state_index.set(&index.to_string());
             Ok(())
         } else {
-            self.current_thermal_state.set(None);
+            inner.current_thermal_state = None;
 
             let msg = format!("P-state update(s) failed: {:?}", errors);
             self.inspect.thermal_state_index.set(&format!("Unknown; {}", msg));
@@ -720,6 +655,9 @@ impl CpuManager {
             "CpuManager::handle_set_max_power_consumption",
             "available_power" => available_power.0
         );
+
+        self.init_done.wait().await;
+
         self.inspect.available_power.set(available_power.0);
 
         // Gather CPU loads over the last time interval. In the unlikely event of an error, use the
@@ -733,13 +671,13 @@ impl CpuManager {
                     e
                 );
                 self.inspect.last_error.set(&e.to_string());
-                (vec![1.0; self.num_cpus as usize], Some(e))
+                (vec![1.0; self.mutable_inner.borrow().num_cpus as usize], Some(e))
             }
         };
 
         // Determine the normalized performance over the last interval.
         let mut last_performance = NormPerfs(0.0);
-        for cluster in self.clusters.iter() {
+        for cluster in self.mutable_inner.borrow().clusters.iter() {
             let (load, performance) = cluster.process_fractional_loads(&cpu_loads);
             last_performance += performance;
 
@@ -804,10 +742,143 @@ impl CpuManager {
     }
 }
 
+struct MutableInner {
+    /// Number of CPUs in the system; confirmed to be greater than the max logical CPU number of any
+    /// cluster. Populated by querying the `syscall_handler` node.
+    num_cpus: u32,
+
+    /// Cluster configs as supplied in the node config. Wrapped in an Option because they are
+    /// consumed to generate `clusters` in `init()`.
+    cluster_configs: Option<Vec<ClusterConfig>>,
+
+    /// Parallel to `cluster_configs`; contains one `CpuDeviceHandler` node (or equivalent) for each
+    /// CPU cluster.
+    cluster_handlers: Option<Vec<Rc<dyn Node>>>,
+
+    /// All CPU clusters governed by the `CpuManager`.
+    clusters: Vec<CpuCluster>,
+
+    /// Thermal state configs as supplied in the node config. Wrapped in an Option because they are
+    /// consumed to generate `thermal_states` in `init()`.
+    thermal_state_configs: Option<Vec<ThermalStateConfig>>,
+
+    /// All supported thermal states for the CPU subsystem.
+    thermal_states: Vec<ThermalState>,
+
+    /// The current thermal state of the CPU subsystem. The CPU will be put into its highest-power
+    /// state during `init()`.
+    current_thermal_state: Option<usize>,
+}
+
 #[async_trait(?Send)]
 impl Node for CpuManager {
     fn name(&self) -> String {
         "CpuManager".to_string()
+    }
+
+    /// Initializes internal state.
+    async fn init(&self) -> Result<(), Error> {
+        fuchsia_trace::duration!("power_manager", "CpuManager::init");
+
+        let cluster_configs =
+            ok_or_default_err!(self.mutable_inner.borrow_mut().cluster_configs.take())
+                .or_debug_panic()?;
+
+        let cluster_handlers =
+            ok_or_default_err!(self.mutable_inner.borrow_mut().cluster_handlers.take())
+                .or_debug_panic()?;
+
+        let thermal_state_configs =
+            ok_or_default_err!(self.mutable_inner.borrow_mut().thermal_state_configs.take())
+                .or_debug_panic()?;
+
+        // Retrieve the total number of CPUs, and ensure that clusters' logical CPU numbers exactly
+        // span 0..num_cpus.
+        let num_cpus = match self.syscall_handler.handle_message(&Message::GetNumCpus).await {
+            Ok(MessageReturn::GetNumCpus(n)) => n,
+            other => bail!("Unexpected GetNumCpus response: {:?}", other),
+        };
+        let mut covered_cpu_numbers = cluster_configs
+            .iter()
+            .map(|c| c.logical_cpu_numbers.iter())
+            .flatten()
+            .map(|v| *v)
+            .collect::<Vec<_>>();
+        covered_cpu_numbers.sort();
+        anyhow::ensure!(
+            covered_cpu_numbers == (0..num_cpus).collect::<Vec<_>>(),
+            "Clusters' logical CPU numbers must exactly span 0..{}",
+            num_cpus
+        );
+
+        let mut clusters = Vec::new();
+        for (cluster_config, handler) in
+            cluster_configs.into_iter().zip(cluster_handlers.into_iter())
+        {
+            let pstates = match handler.handle_message(&Message::GetCpuPerformanceStates).await {
+                Ok(MessageReturn::GetCpuPerformanceStates(pstates)) => pstates,
+                Ok(r) => {
+                    bail!("GetCpuPerformanceStates returned unexpected value: {:?}", r)
+                }
+                Err(e) => bail!("Error fetching performance states: {}", e),
+            };
+
+            // The current P-state will be set when CpuManager's thermal state is initialized below,
+            // so initialize it to a range of all possible values for now.
+            let pstate_range = Range { lower: 0, upper: pstates.len() - 1 };
+            let current_pstate = Cell::new(RangedValue::InRange(pstate_range));
+
+            clusters.push(CpuCluster {
+                name: cluster_config.name,
+                cluster_index: cluster_config.cluster_index,
+                handler,
+                logical_cpu_numbers: cluster_config.logical_cpu_numbers,
+                performance_per_ghz: NormPerfs(cluster_config.normperfs_per_ghz),
+                pstates,
+                current_pstate,
+            });
+        }
+
+        let get_performance_capacity = |thermal_state_config: &ThermalStateConfig| {
+            clusters
+                .iter()
+                .map(|cluster| {
+                    let pstate_index = thermal_state_config.cluster_pstates[cluster.cluster_index];
+                    cluster.get_performance_capacity(pstate_index)
+                })
+                .sum()
+        };
+
+        let thermal_states = thermal_state_configs
+            .into_iter()
+            .map(|t| {
+                let performance_capacity = get_performance_capacity(&t);
+                ThermalState {
+                    cluster_pstates: t.cluster_pstates,
+                    min_performance: NormPerfs(t.min_performance_normperfs),
+                    static_power: Watts(t.static_power_w),
+                    dynamic_power_per_normperf: Watts(t.dynamic_power_per_normperf_w),
+                    performance_capacity,
+                }
+            })
+            .collect();
+
+        validate_thermal_states(&thermal_states)?;
+        self.inspect.set_thermal_states(&thermal_states);
+
+        {
+            let mut inner = self.mutable_inner.borrow_mut();
+            inner.num_cpus = num_cpus;
+            inner.clusters = clusters;
+            inner.thermal_states = thermal_states;
+        }
+
+        // Update cluster P-states to match the highest power operating condition.
+        self.update_thermal_state(0).await?;
+
+        self.init_done.signal();
+
+        Ok(())
     }
 
     async fn handle_message(&self, msg: &Message) -> MessageResult {
@@ -902,7 +973,7 @@ impl InspectData {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test::mock_node::{MessageMatcher, MockNode, MockNodeMaker};
+    use crate::test::mock_node::{create_dummy_node, MessageMatcher, MockNode, MockNodeMaker};
     use crate::types::{Hertz, Volts};
     use crate::{msg_eq, msg_ok_return};
     use assert_matches::assert_matches;
@@ -1094,7 +1165,7 @@ mod tests {
         });
 
         let builder = CpuManagerBuilder::new_from_json(json_data, &nodes);
-        builder.build().await.unwrap();
+        builder.build_and_init().await;
     }
 
     // Verifies that thermal states are properly validated.
@@ -1123,10 +1194,17 @@ mod tests {
                     )],
                 );
 
+                // The syscall handler provides the number of CPUs during initialization.
+                let num_cpus = BIG_CPU_NUMBERS.len() + LITTLE_CPU_NUMBERS.len();
+                let syscall = mock_maker.make(
+                    "syscall_handler",
+                    vec![(msg_eq!(GetNumCpus), msg_ok_return!(GetNumCpus(num_cpus as u32)))],
+                );
+
                 Self {
                     big_cluster,
                     little_cluster,
-                    syscall: mock_maker.make("syscall_handler", Vec::new()),
+                    syscall,
                     cpu_stats: mock_maker.make("cpu_stats_handler", Vec::new()),
                     _mock_maker: mock_maker,
                 }
@@ -1158,7 +1236,7 @@ mod tests {
             handlers.syscall.clone(),
             handlers.cpu_stats.clone(),
         );
-        assert!(builder.build().await.is_err());
+        assert!(builder.build().unwrap().init().await.is_err());
 
         // Not allowed: Increasing performance capacity.
         let handlers = Handlers::new_for_failed_validation();
@@ -1183,7 +1261,7 @@ mod tests {
             handlers.syscall.clone(),
             handlers.cpu_stats.clone(),
         );
-        assert!(builder.build().await.is_err());
+        assert!(builder.build().unwrap().init().await.is_err());
 
         // Allowed: The second state has higher static power, but its power draw is less than the
         // first state at the first performance at which both states are admissible.
@@ -1209,7 +1287,7 @@ mod tests {
             handlers.syscall.clone(),
             handlers.cpu_stats.clone(),
         );
-        builder.build().await.unwrap();
+        builder.build_and_init().await;
 
         // Not allowed: The second state has higher power draw at the first performance at which
         // both states are admissible.
@@ -1235,7 +1313,7 @@ mod tests {
             handlers.syscall.clone(),
             handlers.cpu_stats.clone(),
         );
-        assert!(builder.build().await.is_err());
+        assert!(builder.build().unwrap().init().await.is_err());
     }
 
     // Tests that CpuManagerBuilder requires that clusters are configured to exactly span the space
@@ -1245,20 +1323,8 @@ mod tests {
         let mut mock_maker = MockNodeMaker::new();
 
         // The big and little cluster handlers are initially queried for all performance states.
-        let big_cluster_handler = mock_maker.make(
-            "big_cluster_handler",
-            vec![(
-                msg_eq!(GetCpuPerformanceStates),
-                msg_ok_return!(GetCpuPerformanceStates(Vec::from(&BIG_PSTATES[..]))),
-            )],
-        );
-        let little_cluster_handler = mock_maker.make(
-            "little_cluster_handler",
-            vec![(
-                msg_eq!(GetCpuPerformanceStates),
-                msg_ok_return!(GetCpuPerformanceStates(Vec::from(&LITTLE_PSTATES[..]))),
-            )],
-        );
+        let big_cluster_handler = create_dummy_node();
+        let little_cluster_handler = create_dummy_node();
 
         // Configure the syscall handler to report one more CPU than is spanned by the clusters.
         let num_cpus = BIG_CPU_NUMBERS.len() + LITTLE_CPU_NUMBERS.len() + 1;
@@ -1282,7 +1348,7 @@ mod tests {
             syscall_handler,
             cpu_stats_handler,
         );
-        assert!(builder.build().await.is_err());
+        assert!(builder.build().unwrap().init().await.is_err());
     }
 
     // Verify that CpuManager responds as expected to SetMaxPowerConsumption messages.
@@ -1318,9 +1384,8 @@ mod tests {
             handlers.syscall.clone(),
             handlers.cpu_stats.clone(),
         )
-        .build()
-        .await
-        .unwrap();
+        .build_and_init()
+        .await;
 
         // The current P-state is 0, so with 0.1 fractional utililzation per core, we have:
         //   Big cluster: 0.2 cores load -> 0.4GHz utilized -> 0.4 NormPerfs
@@ -1402,9 +1467,8 @@ mod tests {
             handlers.syscall.clone(),
             handlers.cpu_stats.clone(),
         )
-        .build()
-        .await
-        .unwrap();
+        .build_and_init()
+        .await;
 
         // Start with low power to force thermal state 2.
         handlers.enqueue_cpu_loads(vec![0.1; 4]);
@@ -1417,10 +1481,14 @@ mod tests {
         handlers.enqueue_cpu_loads(vec![1.0; 4]);
 
         // We choose a max power above state 1's max and below state 0's.
-        let state = &node.thermal_states[1];
-        let state_1_max_power = state.estimate_power(Saturated);
-        let max_power = state_1_max_power + Watts(0.1);
-        assert_lt!(max_power, node.thermal_states[0].estimate_power(Saturated));
+        let (max_power, state_1_max_power) = {
+            let inner = node.mutable_inner.borrow();
+            let state = &inner.thermal_states[1];
+            let state_1_max_power = state.estimate_power(Saturated);
+            let max_power = state_1_max_power + Watts(0.1);
+            assert_lt!(max_power, inner.thermal_states[0].estimate_power(Saturated));
+            (max_power, state_1_max_power)
+        };
 
         // Now we confirm that:
         //  - State 1 is selected, verifying that its min performance was disregarded due to CPU
@@ -1465,7 +1533,7 @@ mod tests {
             handlers.cpu_stats.clone(),
         )
         .with_inspect_root(inspector.root());
-        let node = builder.build().await.unwrap();
+        let node = builder.build_and_init().await;
 
         // The power budget of 1W exceeds the static power of thermal state 0, so we are pushed
         // to thermal state 1.
@@ -1475,7 +1543,8 @@ mod tests {
         let result = node.handle_message(&Message::SetMaxPowerConsumption(Watts(1.0))).await;
         assert_matches!(result, Ok(_));
 
-        let estimate = node.thermal_states[1].estimate_perf_and_power(Saturated);
+        let estimate =
+            node.mutable_inner.borrow().thermal_states[1].estimate_perf_and_power(Saturated);
 
         assert_data_tree!(
             inspector,
