@@ -179,6 +179,7 @@ group("drivers-not-templates") {
     "//sdk/lib/driver_test_realm/fake_driver:component",
     "//src/camera:drivers",
     "//src/connectivity/bundles:drivers",
+    "//src/developer/adb:drivers",
     "//src/devices/bundles:drivers",
     "//src/diagnostics/validator/logs/ddk/log-test-driver",
     "//src/graphics/bundles:drivers",
