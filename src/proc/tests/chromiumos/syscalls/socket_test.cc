@@ -150,3 +150,33 @@ TEST(UnixSocket, ImmediatePeercredCheck) {
   ASSERT_NE(cred.uid, static_cast<uid_t>(-1));
   ASSERT_NE(cred.uid, static_cast<gid_t>(-1));
 }
+
+TEST(UnixSocket, SendZeroFds) {
+  int fds[2];
+  ASSERT_EQ(0, socketpair(AF_UNIX, SOCK_STREAM, 0, fds));
+
+  char data[] = "a";
+  struct iovec iov[] = {{
+      .iov_base = data,
+      .iov_len = 1,
+  }};
+  char buf[CMSG_SPACE(0)];
+  struct msghdr msg = {
+      .msg_iov = iov,
+      .msg_iovlen = 1,
+      .msg_control = buf,
+      .msg_controllen = sizeof(buf),
+  };
+  *CMSG_FIRSTHDR(&msg) = (struct cmsghdr){
+      .cmsg_len = CMSG_LEN(0),
+      .cmsg_level = SOL_SOCKET,
+      .cmsg_type = SCM_RIGHTS,
+  };
+  ASSERT_EQ(sendmsg(fds[0], &msg, 0), 1);
+
+  memset(data, 0, sizeof(data));
+  memset(buf, 0, sizeof(buf));
+  ASSERT_EQ(recvmsg(fds[1], &msg, 0), 1);
+  EXPECT_EQ(data[0], 'a');
+  EXPECT_EQ(msg.msg_controllen, 0u);
+}

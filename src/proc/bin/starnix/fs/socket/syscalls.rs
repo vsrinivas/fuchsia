@@ -409,6 +409,13 @@ fn recvmsg_internal(
     let header_size = std::mem::size_of::<cmsghdr>();
 
     for ancillary_data in info.ancillary_data {
+        if ancillary_data.total_size() == 0 {
+            // Skip zero-byte ancillary data on the receiving end. Not doing this trips this
+            // assert:
+            // https://cs.android.com/android/platform/superproject/+/master:system/libbase/cmsg.cpp;l=144;drc=15ec2c7a23cda814351a064a345a8270ed8c83ab
+            continue;
+        }
+
         let expected_size = header_size + ancillary_data.total_size();
         let message_bytes = ancillary_data.into_bytes(
             current_task,
