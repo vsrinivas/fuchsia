@@ -143,13 +143,13 @@ pub struct ZombieProcess {
 }
 
 impl ZombieProcess {
-    pub fn new<'a>(
-        thread_group: &impl ThreadGroupReadGuard<'a>,
+    pub fn new(
+        thread_group: ThreadGroupStateRef<'_>,
         credentials: &Credentials,
         exit_status: ExitStatus,
     ) -> Self {
         ZombieProcess {
-            pid: thread_group.leader(),
+            pid: thread_group.base.leader,
             pgid: thread_group.process_group.leader,
             uid: credentials.uid,
             exit_status,
@@ -184,7 +184,7 @@ impl ThreadGroup {
             leader,
             signal_actions,
             mutable_state: RwLock::new(ThreadGroupMutableState {
-                parent: parent.as_ref().map(|p| Arc::clone(p.base())),
+                parent: parent.as_ref().map(|p| Arc::clone(p.base)),
                 tasks: BTreeMap::new(),
                 children: BTreeMap::new(),
                 zombie_children: vec![],
@@ -288,7 +288,7 @@ impl ThreadGroup {
                 let mut state = self.write();
                 for (_pid, child) in std::mem::take(&mut state.children) {
                     if let Some(child) = child.upgrade() {
-                        child.write().parent = Some(Arc::clone(reaper.base()));
+                        child.write().parent = Some(Arc::clone(reaper.base));
                         reaper.children.insert(child.leader, Arc::downgrade(&child));
                     }
                 }
@@ -626,7 +626,7 @@ impl ThreadGroup {
 
 state_implementation!(ThreadGroup, ThreadGroupMutableState, {
     pub fn leader(&self) -> pid_t {
-        self.base().leader
+        self.base.leader
     }
 
     pub fn children(&self) -> Box<dyn Iterator<Item = Arc<ThreadGroup>> + '_> {
@@ -654,11 +654,11 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
         }
         self.leave_process_group(pids);
         self.process_group = process_group;
-        self.process_group.insert(self.base());
+        self.process_group.insert(self.base);
     }
 
     fn leave_process_group(&mut self, pids: &mut PidTable) {
-        if self.process_group.remove(self) {
+        if self.process_group.remove(self.base) {
             self.process_group.session.write().remove(self.process_group.leader);
             pids.remove_process_group(self.process_group.leader);
         }
@@ -729,7 +729,7 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
                         child.waitable.take().unwrap()
                     };
                     return Ok(Some(ZombieProcess::new(
-                        &child,
+                        child.as_ref(),
                         &child.get_task()?.creds(),
                         ExitStatus::Continue(siginfo),
                     )));
@@ -741,7 +741,7 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
                         child.waitable.take().unwrap()
                     };
                     return Ok(Some(ZombieProcess::new(
-                        &child,
+                        child.as_ref(),
                         &child.get_task()?.creds(),
                         ExitStatus::Stop(siginfo),
                     )));
@@ -768,15 +768,6 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
         // TODO(fxb/96632): Consider more than the main thread or the first thread in the thread group
         // to dispatch the signal.
         self.get_task().ok()
-    }
-
-    /// Interrupt the thread group.
-    ///
-    /// This will interrupt every task in the thread group.
-    pub fn interrupt(&self) {
-        for task in self.tasks() {
-            task.interrupt();
-        }
     }
 });
 

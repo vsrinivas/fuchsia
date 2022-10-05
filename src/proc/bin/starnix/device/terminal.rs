@@ -383,7 +383,7 @@ state_implementation!(Terminal, TerminalMutableState, {
         let old_canon_enabled = self.termios.has_local_flags(ICANON);
         self.termios = termios;
         if old_canon_enabled && !self.termios.has_local_flags(ICANON) {
-            let signals = with_queue!(self.input_queue.on_canon_disabled(self));
+            let signals = with_queue!(self.input_queue.on_canon_disabled(self.as_mut()));
             self.notify_waiters();
             signals
         } else {
@@ -444,7 +444,7 @@ state_implementation!(Terminal, TerminalMutableState, {
         if self.is_replica_closed() {
             return error!(EIO);
         }
-        let result = with_queue!(self.output_queue.read(self, current_task, data))?;
+        let result = with_queue!(self.output_queue.read(self.as_mut(), current_task, data))?;
         self.notify_waiters();
         Ok(result)
     }
@@ -455,7 +455,7 @@ state_implementation!(Terminal, TerminalMutableState, {
         current_task: &CurrentTask,
         data: &[UserBuffer],
     ) -> Result<(usize, PendingSignals), Errno> {
-        let result = with_queue!(self.input_queue.write(self, current_task, data))?;
+        let result = with_queue!(self.input_queue.write(self.as_mut(), current_task, data))?;
         self.notify_waiters();
         Ok(result)
     }
@@ -513,7 +513,7 @@ state_implementation!(Terminal, TerminalMutableState, {
         if self.is_main_closed() {
             return Ok((0, PendingSignals::new()));
         }
-        let result = with_queue!(self.input_queue.read(self, current_task, data))?;
+        let result = with_queue!(self.input_queue.read(self.as_mut(), current_task, data))?;
         self.notify_waiters();
         Ok(result)
     }
@@ -527,7 +527,7 @@ state_implementation!(Terminal, TerminalMutableState, {
         if self.is_main_closed() {
             return error!(EIO);
         }
-        let result = with_queue!(self.output_queue.write(self, current_task, data))?;
+        let result = with_queue!(self.output_queue.write(self.as_mut(), current_task, data))?;
         self.notify_waiters();
         Ok(result)
     }
@@ -738,7 +738,9 @@ state_implementation!(Terminal, TerminalMutableState, {
 
             // Anything written to the read buffer will have to be echoed.
             if self.termios.has_local_flags(ECHO) {
-                signals.append(with_queue!(self.output_queue.write_bytes(self, &character_bytes)));
+                signals.append(with_queue!(self
+                    .output_queue
+                    .write_bytes(self.as_mut(), &character_bytes)));
             }
 
             // If we finish a line, make it available for reading.
@@ -961,7 +963,7 @@ impl Queue {
     /// Read from the queue into `data`. Returns the number of bytes copied.
     pub fn read(
         &mut self,
-        terminal: &mut TerminalWriteGuard<'_>,
+        terminal: TerminalStateMutRef<'_>,
         current_task: &CurrentTask,
         data: &[UserBuffer],
     ) -> Result<(usize, PendingSignals), Errno> {
@@ -985,7 +987,7 @@ impl Queue {
     /// Writes to the queue from `data`. Returns the number of bytes copied.
     pub fn write(
         &mut self,
-        terminal: &mut TerminalWriteGuard<'_>,
+        terminal: TerminalStateMutRef<'_>,
         current_task: &CurrentTask,
         data: &[UserBuffer],
     ) -> Result<(usize, PendingSignals), Errno> {
@@ -1004,7 +1006,7 @@ impl Queue {
     /// Writes the given `buffer` to the queue.
     fn write_bytes(
         &mut self,
-        terminal: &mut TerminalWriteGuard<'_>,
+        terminal: TerminalStateMutRef<'_>,
         buffer: &[RawByte],
     ) -> PendingSignals {
         self.push_to_waiting_buffer(terminal, buffer.to_vec())
@@ -1013,7 +1015,7 @@ impl Queue {
     /// Pushes the given buffer into the wait_buffers, and process the wait_buffers.
     fn push_to_waiting_buffer(
         &mut self,
-        terminal: &mut TerminalWriteGuard<'_>,
+        terminal: TerminalStateMutRef<'_>,
         buffer: Vec<RawByte>,
     ) -> PendingSignals {
         self.total_wait_buffer_length += buffer.len();
@@ -1022,7 +1024,7 @@ impl Queue {
     }
 
     /// Processes the wait_buffers, filling the read buffer.
-    fn drain_waiting_buffer(&mut self, terminal: &mut TerminalWriteGuard<'_>) -> PendingSignals {
+    fn drain_waiting_buffer(&mut self, mut terminal: TerminalStateMutRef<'_>) -> PendingSignals {
         let mut total = 0;
         let mut signals_to_return = PendingSignals::new();
         while let Some(wait_buffer) = self.wait_buffers.pop_front() {
@@ -1039,7 +1041,7 @@ impl Queue {
     }
 
     /// Called when the queue is moved from canonical mode, to non canonical mode.
-    fn on_canon_disabled(&mut self, terminal: &mut TerminalWriteGuard<'_>) -> PendingSignals {
+    fn on_canon_disabled(&mut self, terminal: TerminalStateMutRef<'_>) -> PendingSignals {
         let signals = self.drain_waiting_buffer(terminal);
         if !self.read_buffer.is_empty() {
             self.readable = true;

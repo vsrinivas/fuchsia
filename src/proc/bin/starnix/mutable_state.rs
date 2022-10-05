@@ -32,27 +32,24 @@
 //! pub struct FooMutableState {
 //!     y: i32,
 //! }
-
+//!
 //! pub struct Foo {
 //!     x: i32,
 //!     mutable_state: RwLock<FooMutableState>,
 //! }
-
+//!
 //! impl Foo {
 //!     fn new() -> Self {
-//!         Self {
-//!             x: 2,
-//!             mutable_state: RwLock::new(FooMutableState { y: 3 }),
-//!         }
+//!         Self { x: 2, mutable_state: RwLock::new(FooMutableState { y: 3 }) }
 //!     }
-
+//!
 //!     state_accessor!(Foo, mutable_state);
 //! }
-
+//!
 //! state_implementation!(Foo, FooMutableState, {
 //!     // Some comment
 //!     fn x_and_y(&self) -> i32 {
-//!         self.base().x + self.y
+//!         self.base.x + self.y
 //!     }
 //!     /// Some rustdoc.
 //!     pub fn pub_x_and_y(&self) -> i32 {
@@ -68,9 +65,14 @@
 //!     fn do_something_mutable(&mut self) {
 //!         self.do_something();
 //!     }
+//!
+//!     #[allow(dead_code)]
 //!     pub fn with_lifecycle<'a>(&self, _n: &'a u32) {}
+//!     #[allow(dead_code)]
 //!     pub fn with_type<T>(&self, _n: &T) {}
+//!     #[allow(dead_code)]
 //!     pub fn with_lifecycle_and_type<'a, T>(&self, _n: &'a T) {}
+//!     #[allow(dead_code)]
 //!     pub fn with_lifecycle_on_self<'a, T>(&'a self, _n: &'a T) {}
 //! });
 //! ```
@@ -92,57 +94,46 @@
 //!             mutable_state: RwLock::new(FooMutableState { y: 3 }),
 //!         }
 //!     }
+//!
 //!     #[allow(dead_code)]
-//!     pub fn read<'a>(self: &'a Arc<Foo>) -> FooReadGuardImpl<'a> {
-//!         FooReadGuardImpl::new(self, self.mutable_state.read())
+//!     pub fn read<'a>(self: &'a Arc<Foo>) -> FooReadGuard<'a> {
+//!         ReadGuard::new(self, self.mutable_state.read())
 //!     }
 //!     #[allow(dead_code)]
 //!     pub fn write<'a>(self: &'a Arc<Foo>) -> FooWriteGuard<'a> {
-//!         FooWriteGuard::new(self, self.mutable_state.write())
+//!         WriteGuard::new(self, self.mutable_state.write())
 //!     }
 //! }
-//! type FooReadGuardImpl<'guard_lifetime> = ReadableState<'guard_lifetime, Foo, FooMutableState>;
-//! pub type FooWriteGuard<'guard_lifetime> = WritableState<'guard_lifetime, Foo, FooMutableState>;
-//! pub trait FooReadGuard<'guard_lifetime>:
-//!     Baseable<'guard_lifetime, Foo> + std::ops::Deref<Target = FooMutableState>
-//! {
+//!
+//! #[allow(dead_code)]
+//! pub type FooReadGuard<'guard_lifetime> = ReadGuard<'guard_lifetime, Foo, FooMutableState>;
+//! #[allow(dead_code)]
+//! pub type FooWriteGuard<'guard_lifetime> = WriteGuard<'guard_lifetime, Foo, FooMutableState>;
+//! #[allow(dead_code)]
+//! pub type FooStateRef<'ref_lifetime> = StateRef<'ref_lifetime, Foo, FooMutableState>;
+//! #[allow(dead_code)]
+//! pub type FooStateMutRef<'ref_lifetime> = StateMutRef<'ref_lifetime, Foo, FooMutableState>;
+//!
+//! impl<'guard, G: 'guard + std::ops::Deref<Target = FooMutableState>> Guard<'guard, Foo, G> {
+//!     fn x_and_y(&self) -> i32 {
+//!         self.base.x + self.y
+//!     }
 //!     /// Some rustdoc.
-//!     fn pub_x_and_y(&self) -> i32;
-//!     fn with_lifecycle<'a>(&self, _n: &'a u32);
-//!     fn with_type<T>(&self, _n: &T);
-//!     fn with_lifecycle_and_type<'a, T>(&self, _n: &'a T);
-//!     pub fn with_lifecycle_on_self<'a, T>(&'a self, _n: &'a T) {}
-//! }
-//! impl<'guard_lifetime> FooReadGuard<'guard_lifetime> for FooReadGuardImpl<'guard_lifetime> {
-//!     /// Some rustdoc.
-//!     fn pub_x_and_y(&self) -> i32 {
+//!     pub fn pub_x_and_y(&self) -> i32 {
 //!         self.x_and_y()
 //!     }
-//!     fn with_lifecycle<'a>(&self, _n: &'a u32) {}
-//!     fn with_type<T>(&self, _n: &T) {}
-//!     fn with_lifecycle_and_type<'a, T>(&self, _n: &'a T) {}
-//! }
-//! impl<'guard_lifetime> FooReadGuard<'guard_lifetime> for FooWriteGuard<'guard_lifetime> {
-//!     /// Some rustdoc.
-//!     fn pub_x_and_y(&self) -> i32 {
-//!         self.x_and_y()
-//!     }
-//!     fn with_lifecycle<'a>(&self, _n: &'a u32) {}
-//!     fn with_type<T>(&self, _n: &T) {}
-//!     fn with_lifecycle_and_type<'a, T>(&self, _n: &'a T) {}
+//!     fn do_something(&self) {}
+//!     #[allow(dead_code)]
+//!     pub fn with_lifecycle<'a>(&self, _n: &'a u32) {}
+//!     #[allow(dead_code)]
+//!     pub fn with_type<T>(&self, _n: &T) {}
+//!     #[allow(dead_code)]
+//!     pub fn with_lifecycle_and_type<'a, T>(&self, _n: &'a T) {}
+//!     #[allow(dead_code)]
 //!     pub fn with_lifecycle_on_self<'a, T>(&'a self, _n: &'a T) {}
 //! }
-//! impl<'guard_lifetime> FooReadGuardImpl<'guard_lifetime> {
-//!     fn x_and_y(&self) -> i32 {
-//!         self.base().x + self.y
-//!     }
-//!     fn do_something(&self) {}
-//! }
-//! impl<'guard_lifetime> FooWriteGuard<'guard_lifetime> {
-//!     fn x_and_y(&self) -> i32 {
-//!         self.base().x + self.y
-//!     }
-//!     fn do_something(&self) {}
+//!
+//! impl<'guard, G: 'guard + std::ops::DerefMut<Target = FooMutableState>> Guard<'guard, Foo, G> {
 //!     fn set_y(&mut self, other_y: i32) {
 //!         self.y = other_y;
 //!     }
@@ -155,32 +146,31 @@
 //! }
 //! ```
 
-use std::ops;
+use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 
 use crate::lock::*;
 
-/// Create the read() and write() accessor to respectively the read guard and write guard.
+/// Create the read() and write() accessor to respectively access the read guard and write guard.
 ///
-/// For a base struct named `Foo`, the read guard will be a trait named `FooReadGuard` and the
+/// For a base struct named `Foo`, the read guard will be a struct named `FooReadGuard` and the
 /// write guard a struct named `FooWriteGuard`.
 macro_rules! state_accessor {
     ($base_name:ident, $field_name:ident) => {
         paste::paste! {
         #[allow(dead_code)]
-        pub fn read<'a>(self: &'a Arc<$base_name>) -> [<$base_name ReadGuardImpl>]<'a> {
-            [<$base_name ReadGuardImpl>]::new(self, self.$field_name.read())
+        pub fn read<'a>(self: &'a Arc<$base_name>) -> [<$base_name ReadGuard>]<'a> {
+            crate::mutable_state::ReadGuard::new(self, self.$field_name.read())
         }
         #[allow(dead_code)]
         pub fn write<'a>(self: &'a Arc<$base_name>) -> [<$base_name WriteGuard>]<'a> {
-            [<$base_name WriteGuard>]::new(self, self.$field_name.write())
+            crate::mutable_state::WriteGuard::new(self, self.$field_name.write())
         }
         }
     };
 }
 
-/// Create the trait and struct for the read and write guards using the methods define inside the
-/// macro.
+/// Create the structs for the read and write guards using the methods defined inside the macro.
 macro_rules! state_implementation {
     ($base_name:ident, $mutable_name: ident, {
         $(
@@ -188,147 +178,92 @@ macro_rules! state_implementation {
         )*
     }) => {
         paste::paste! {
-        type [<$base_name ReadGuardImpl>]<'guard_lifetime> = ReadableState<'guard_lifetime,  $base_name,  $mutable_name>;
-        pub type [<$base_name WriteGuard>]<'guard_lifetime> = WritableState<'guard_lifetime,  $base_name,  $mutable_name>;
+        #[allow(dead_code)]
+        pub type [<$base_name ReadGuard>]<'guard_lifetime> = crate::mutable_state::ReadGuard<'guard_lifetime, $base_name,  $mutable_name>;
+        #[allow(dead_code)]
+        pub type [<$base_name WriteGuard>]<'guard_lifetime> = crate::mutable_state::WriteGuard<'guard_lifetime, $base_name, $mutable_name>;
+        #[allow(dead_code)]
+        pub type [<$base_name StateRef>]<'ref_lifetime> = crate::mutable_state::StateRef<'ref_lifetime, $base_name, $mutable_name>;
+        #[allow(dead_code)]
+        pub type [<$base_name StateMutRef>]<'ref_lifetime> = crate::mutable_state::StateMutRef<'ref_lifetime, $base_name, $mutable_name>;
 
-        pub trait [<$base_name ReadGuard>]<'guard_lifetime>: Baseable<'guard_lifetime, $base_name> + std::ops::Deref<Target = $mutable_name>
-        {
-            filter_methods!(RoPublicMethodSignature, $($tt)*);
+        impl<'guard, G: 'guard + std::ops::Deref<Target=$mutable_name>> crate::mutable_state::Guard<'guard, $base_name, G> {
+            filter_methods!(RoMethod, $($tt)*);
         }
 
-        impl<'guard_lifetime> [<$base_name ReadGuard>]<'guard_lifetime> for [<$base_name ReadGuardImpl>]<'guard_lifetime> {
-            filter_methods!(RoPublicMethod, $($tt)*);
-        }
-        impl<'guard_lifetime> [<$base_name ReadGuard>]<'guard_lifetime> for [<$base_name WriteGuard>]<'guard_lifetime> {
-            filter_methods!(RoPublicMethod, $($tt)*);
-        }
-
-        impl<'guard_lifetime> [<$base_name ReadGuardImpl>]<'guard_lifetime> {
-            filter_methods!(RoPrivateMethod, $($tt)*);
-        }
-
-        impl<'guard_lifetime> [<$base_name WriteGuard>]<'guard_lifetime> {
-            filter_methods!(RoPrivateMethod, $($tt)*);
+        impl<'guard, G: 'guard + std::ops::DerefMut<Target=$mutable_name>> crate::mutable_state::Guard<'guard, $base_name, G> {
             filter_methods!(RwMethod, $($tt)*);
         }
         }
     };
 }
 
-pub trait Baseable<'a, B> {
-    fn base(&self) -> &'a Arc<B>;
+pub struct Guard<'a, B, G> {
+    pub base: &'a Arc<B>,
+    guard: G,
 }
+pub type ReadGuard<'a, B, S> = Guard<'a, B, RwLockReadGuard<'a, S>>;
+pub type WriteGuard<'a, B, S> = Guard<'a, B, RwLockWriteGuard<'a, S>>;
+pub type StateRef<'a, B, S> = Guard<'a, B, &'a S>;
+pub type StateMutRef<'a, B, S> = Guard<'a, B, &'a mut S>;
 
-pub struct ReadableState<'a, B, S> {
-    base: &'a Arc<B>,
-    state: RwLockReadGuard<'a, S>,
-}
-
-impl<'a, B, S> ReadableState<'a, B, S> {
-    pub fn new(base: &'a Arc<B>, state: RwLockReadGuard<'a, S>) -> Self {
-        Self { base, state }
+impl<'guard, B, S, G: 'guard + Deref<Target = S>> Guard<'guard, B, G> {
+    pub fn new(base: &'guard Arc<B>, guard: G) -> Self {
+        Self { base, guard }
+    }
+    pub fn as_ref(&self) -> StateRef<'_, B, S> {
+        Guard { base: self.base, guard: self.guard.deref() }
     }
 }
 
-impl<'a, B, S> Baseable<'a, B> for ReadableState<'a, B, S> {
-    fn base(&self) -> &'a Arc<B> {
-        self.base
+impl<'guard, B, S, G: 'guard + DerefMut<Target = S>> Guard<'guard, B, G> {
+    pub fn as_mut(&mut self) -> StateMutRef<'_, B, S> {
+        Guard { base: self.base, guard: self.guard.deref_mut() }
     }
 }
 
-impl<'a, B, S> ops::Deref for ReadableState<'a, B, S> {
+impl<'a, B, S, G: Deref<Target = S>> Deref for Guard<'a, B, G> {
     type Target = S;
-
     fn deref(&self) -> &Self::Target {
-        self.state.deref()
+        self.guard.deref()
     }
 }
 
-pub struct WritableState<'a, B, S> {
-    base: &'a Arc<B>,
-    state: RwLockWriteGuard<'a, S>,
-}
-
-impl<'a, B, S> WritableState<'a, B, S> {
-    pub fn new(base: &'a Arc<B>, state: RwLockWriteGuard<'a, S>) -> Self {
-        Self { base, state }
-    }
-}
-
-impl<'a, B, S> Baseable<'a, B> for WritableState<'a, B, S> {
-    fn base(&self) -> &'a Arc<B> {
-        self.base
-    }
-}
-
-impl<'a, B, S> ops::Deref for WritableState<'a, B, S> {
-    type Target = S;
-
-    fn deref(&self) -> &Self::Target {
-        self.state.deref()
-    }
-}
-
-impl<'a, B, S> ops::DerefMut for WritableState<'a, B, S> {
+impl<'a, B, S, G: DerefMut<Target = S>> DerefMut for Guard<'a, B, G> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.state.deref_mut()
+        self.guard.deref_mut()
     }
 }
 
 /// This macro matches the methods inside a `state_implementation!` macro depending on their
 /// visibility and mutability so that the `state_implementation!` might dispatch these to the right
-/// trait or implementation.
+/// implementation.
 macro_rules! filter_methods {
     // No more token.
     ($_:ident, ) => {};
-    // Match non mutable, public methods and output their signature.
-    (RoPublicMethodSignature, $(#[$meta:meta])* pub fn $fn:ident $(<$($template:tt),*>)? ( & $self_lifetime:lifetime $self_:tt $(, $name:ident : $type:ty)* $(,)? ) $(-> $ret:ty)* $body:block $($tail:tt)*) => {
-        $(#[$meta])* fn $fn $(<$($template),*>)?( & $self_lifetime $self_ $(, $name : $type)* ) $(-> $ret)*;
-        filter_methods!(RoPublicMethodSignature, $($tail)*);
+    // Match non mutable methods and output them.
+    (RoMethod, $(#[$meta:meta])* $vis:vis fn $fn:ident $(<$($template:tt),*>)? ( & $self_lifetime:lifetime $self_:tt $(, $name:ident : $type:ty)* $(,)? ) $(-> $ret:ty)? $body:block $($tail:tt)*) => {
+        $(#[$meta])* $vis fn $fn $(<$($template),*>)?( & $self_lifetime $self_ $(, $name : $type)* ) $(-> $ret)? $body
+        filter_methods!(RoMethod, $($tail)*);
     };
-    (RoPublicMethodSignature, $(#[$meta:meta])* pub fn $fn:ident $(<$($template:tt),*>)? ( & $self_:tt $(, $name:ident : $type:ty)* $(,)? ) $(-> $ret:ty)* $body:block $($tail:tt)*) => {
-        $(#[$meta])* fn $fn $(<$($template),*>)?( & $self_ $(, $name : $type)* ) $(-> $ret)*;
-        filter_methods!(RoPublicMethodSignature, $($tail)*);
+    (RoMethod, $(#[$meta:meta])* $vis:vis fn $fn:ident $(<$($template:tt),*>)? ( & $self_:tt $(, $name:ident : $type:ty)* $(,)? ) $(-> $ret:ty)? $body:block $($tail:tt)*) => {
+        $(#[$meta])* $vis fn $fn $(<$($template),*>)?( & $self_ $(, $name : $type)* ) $(-> $ret)? $body
+        filter_methods!(RoMethod, $($tail)*);
     };
-    // Match non mutable, public methods and output it.
-    (RoPublicMethod, $(#[$meta:meta])* pub fn $fn:ident $(<$($template:tt),*>)? ( & $self_lifetime:lifetime  $self_:tt $(, $name:ident : $type:ty)* $(,)? ) $(-> $ret:ty)* $body:block $($tail:tt)*) => {
-        $(#[$meta])* fn $fn $(<$($template),*>)?( & $self_lifetime $self_ $(, $name : $type)* ) $(-> $ret)* $body
-        filter_methods!(RoPublicMethod, $($tail)*);
-    };
-    (RoPublicMethod, $(#[$meta:meta])* pub fn $fn:ident $(<$($template:tt),*>)? ( & $self_:tt $(, $name:ident : $type:ty)* $(,)? ) $(-> $ret:ty)* $body:block $($tail:tt)*) => {
-        $(#[$meta])* fn $fn $(<$($template),*>)?( & $self_ $(, $name : $type)* ) $(-> $ret)* $body
-        filter_methods!(RoPublicMethod, $($tail)*);
-    };
-    // Match non mutable, private methods and output it.
-    (RoPrivateMethod, $(#[$meta:meta])* fn $fn:ident $(<$($template:tt),*>)? ( & $self_lifetime:lifetime  $self_:tt $(, $name:ident : $type:ty)* $(,)? ) $(-> $ret:ty)* $body:block $($tail:tt)*) => {
-        $(#[$meta])* fn $fn $(<$($template),*>)?( & $self_lifetime $self_ $(, $name : $type)* ) $(-> $ret)* $body
-        filter_methods!(RoPrivateMethod, $($tail)*);
-    };
-    (RoPrivateMethod, $(#[$meta:meta])* fn $fn:ident $(<$($template:tt),*>)? ( & $self_:tt $(, $name:ident : $type:ty)* $(,)? ) $(-> $ret:ty)* $body:block $($tail:tt)*) => {
-        $(#[$meta])* fn $fn $(<$($template),*>)?( & $self_ $(, $name : $type)* ) $(-> $ret)* $body
-        filter_methods!(RoPrivateMethod, $($tail)*);
-    };
-    // Match mutable methods and output it.
-    (RwMethod, $(#[$meta:meta])* $vis:vis fn $fn:ident $(<$($template:tt),*>)? ( & $self_lifetime:lifetime  mut $self_:tt $(, $name:ident : $type:ty)* $(,)? ) $(-> $ret:ty)* $body:block $($tail:tt)*) => {
-        $(#[$meta])* $vis fn $fn $(<$($template),*>)?( & $self_lifetime mut $self_ $(, $name : $type)* ) $(-> $ret)* $body
+    // Match mutable methods and output them.
+    (RwMethod, $(#[$meta:meta])* $vis:vis fn $fn:ident $(<$($template:tt),*>)? ( & $($self_lifetime:lifetime)? mut $self_:tt $(, $name:ident : $type:ty)* $(,)? ) $(-> $ret:ty)? $body:block $($tail:tt)*) => {
+        $(#[$meta])* $vis fn $fn $(<$($template),*>)?( & $($self_lifetime)? mut $self_ $(, $name : $type)* ) $(-> $ret)? $body
         filter_methods!(RwMethod, $($tail)*);
     };
-    (RwMethod, $(#[$meta:meta])* $vis:vis fn $fn:ident $(<$($template:tt),*>)? ( & mut $self_:tt $(, $name:ident : $type:ty)* $(,)? ) $(-> $ret:ty)* $body:block $($tail:tt)*) => {
-        $(#[$meta])* $vis fn $fn $(<$($template),*>)?( & mut $self_ $(, $name : $type)* ) $(-> $ret)* $body
-        filter_methods!(RwMethod, $($tail)*);
-    };
-    // Next 4 patterns match every type of method. They are used to remove the tokens associated
-    // with a method that has not been match by the previous patterns.
-    ($qualifier:ident, $(#[$meta:meta])* $(pub)? fn $fn:ident $(<$($template:tt),*>)? ( & $self_lifetime:lifetime  $self_:tt $(, $name:ident : $type:ty)* $(,)? ) $(-> $ret:ty)* $body:block $($tail:tt)*) => {
+    // Next patterns match every type of method. They are used to remove the tokens associated with
+    // a method that has not been match by the previous patterns.
+    ($qualifier:ident, $(#[$meta:meta])* $(pub)? fn $fn:ident $(<$($template:tt),*>)? ( & $self_lifetime:lifetime $self_:tt $(, $name:ident : $type:ty)* $(,)? ) $(-> $ret:ty)? $body:block $($tail:tt)*) => {
         filter_methods!($qualifier, $($tail)*);
     };
-    ($qualifier:ident, $(#[$meta:meta])* $(pub)? fn $fn:ident $(<$($template:tt),*>)? ( & $self_lifetime:lifetime mut $self_:tt $(, $name:ident : $type:ty)* $(,)? ) $(-> $ret:ty)* $body:block $($tail:tt)*) => {
+    ($qualifier:ident, $(#[$meta:meta])* $(pub)? fn $fn:ident $(<$($template:tt),*>)? ( & $self_:tt $(, $name:ident : $type:ty)* $(,)? ) $(-> $ret:ty)? $body:block $($tail:tt)*) => {
         filter_methods!($qualifier, $($tail)*);
     };
-    ($qualifier:ident, $(#[$meta:meta])* $(pub)? fn $fn:ident $(<$($template:tt),*>)? ( & $self_:tt $(, $name:ident : $type:ty)* $(,)? ) $(-> $ret:ty)* $body:block $($tail:tt)*) => {
-        filter_methods!($qualifier, $($tail)*);
-    };
-    ($qualifier:ident, $(#[$meta:meta])* $(pub)? fn $fn:ident $(<$($template:tt),*>)? ( &mut $self_:tt $(, $name:ident : $type:ty)* $(,)? ) $(-> $ret:ty)* $body:block $($tail:tt)*) => {
+    ($qualifier:ident, $(#[$meta:meta])* $(pub)? fn $fn:ident $(<$($template:tt),*>)? ( & $($self_lifetime:lifetime)? mut $self_:tt $(, $name:ident : $type:ty)* $(,)? ) $(-> $ret:ty)? $body:block $($tail:tt)*) => {
         filter_methods!($qualifier, $($tail)*);
     };
 }
@@ -362,7 +297,7 @@ mod test {
     state_implementation!(Foo, FooMutableState, {
         // Some comment
         fn x_and_y(&self) -> i32 {
-            self.base().x + self.y
+            self.base.x + self.y
         }
         /// Some rustdoc.
         pub fn pub_x_and_y(&self) -> i32 {
@@ -379,13 +314,17 @@ mod test {
             self.do_something();
         }
 
+        #[allow(dead_code)]
         pub fn with_lifecycle<'a>(&self, _n: &'a u32) {}
+        #[allow(dead_code)]
         pub fn with_type<T>(&self, _n: &T) {}
+        #[allow(dead_code)]
         pub fn with_lifecycle_and_type<'a, T>(&self, _n: &'a T) {}
+        #[allow(dead_code)]
         pub fn with_lifecycle_on_self<'a, T>(&'a self, _n: &'a T) {}
     });
 
-    fn take_foo_state<'a>(foo_state: &impl FooReadGuard<'a>) -> i32 {
+    fn take_foo_state(foo_state: &FooStateRef<'_>) -> i32 {
         foo_state.pub_x_and_y()
     }
 
@@ -400,8 +339,8 @@ mod test {
         assert_eq!(foo.read().pub_x_and_y(), 24);
         assert_eq!(foo.write().pub_x_and_y(), 24);
         foo.write().pub_set_y(20);
-        assert_eq!(take_foo_state(&foo.read()), 22);
-        assert_eq!(take_foo_state(&foo.write()), 22);
+        assert_eq!(take_foo_state(&foo.read().as_ref()), 22);
+        assert_eq!(take_foo_state(&foo.write().as_ref()), 22);
 
         foo.read().do_something();
         foo.write().do_something();

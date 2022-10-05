@@ -72,7 +72,7 @@ impl ProcessGroup {
     }
 
     /// Removes the thread group from the process group. Returns whether the process group is empty.
-    pub fn remove<'a>(self: &Arc<Self>, thread_group: &impl ThreadGroupReadGuard<'a>) -> bool {
+    pub fn remove(self: &Arc<Self>, thread_group: &ThreadGroup) -> bool {
         self.write().remove(thread_group)
     }
 
@@ -141,8 +141,8 @@ state_implementation!(ProcessGroup, ProcessGroupMutableState, {
     }
 
     /// Removes the thread group from the process group. Returns whether the process group is empty.
-    fn remove<'a>(&mut self, thread_group: &impl ThreadGroupReadGuard<'a>) -> bool {
-        self.thread_groups.remove(&thread_group.leader());
+    fn remove(&mut self, thread_group: &ThreadGroup) -> bool {
+        self.thread_groups.remove(&thread_group.leader);
 
         self.thread_groups.is_empty()
     }
