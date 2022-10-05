@@ -26,6 +26,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.power.button:fuchsia.power.button_rust",
     "//sdk/fidl/fuchsia.tpm:fuchsia.tpm_rust",
     "//sdk/fidl/fuchsia.tpm.cr50:fuchsia.tpm.cr50_rust",
+    "//sdk/lib/device-watcher/rust",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",

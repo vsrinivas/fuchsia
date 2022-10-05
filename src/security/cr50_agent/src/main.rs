@@ -12,11 +12,12 @@ use fidl::endpoints::Proxy;
 use fidl_fuchsia_io as fio;
 use fidl_fuchsia_tpm::TpmDeviceProxy;
 use fidl_fuchsia_tpm_cr50::{Cr50RequestStream, PinWeaverRequestStream};
+use fuchsia_async::TimeoutExt;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_fs::OpenFlags;
 use fuchsia_inspect::{component, health::Reporter};
 use fuchsia_zircon as zx;
-use futures::prelude::*;
+use futures::{prelude::*, stream::TryStreamExt};
 use std::{path::Path, sync::Arc};
 use tracing::{debug, info, warn};
 
@@ -66,13 +67,21 @@ async fn find_cr50() -> Result<TpmDeviceProxy, Error> {
     )
     .context("Opening TPM directory")?;
 
-    let contents = fuchsia_fs::directory::readdir(&proxy).await.context("Reading TPM directory")?;
-    for entry in contents.iter() {
-        match is_cr50(&proxy, &entry.name).await {
+    let mut stream = Box::pin(
+        device_watcher::watch_for_files(&proxy).await.context("Starting watch for TPM devices")?,
+    );
+
+    while let Some(entry) = stream
+        .try_next()
+        .on_timeout(fuchsia_zircon::Duration::from_seconds(300), || Ok(None))
+        .await
+        .context("Watching for TPM devices")?
+    {
+        match is_cr50(&proxy, entry.to_str().ok_or(anyhow!("Invalid path"))?).await {
             Ok(Some(proxy)) => return Ok(proxy),
             Ok(None) => {}
             Err(e) => {
-                warn!("Failed to check if {}/{} is a cr50: {:?}", tpm_path, entry.name, e)
+                warn!("Failed to check if {}/{} is a cr50: {:?}", tpm_path, entry.display(), e)
             }
         }
     }
