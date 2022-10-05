@@ -18,7 +18,7 @@
 // This shard should **NOT** include:
 //
 // (1) Routes that are common to all production and test ui realms; these
-//     routes belong in scenic_base_routes.shard.cml.
+//     routes belong in scene_manager_base_routes.shard.cml.
 // (2) Routes to scene manager that differ among production ui realms.
 // (3) Routes **FROM** scene manager to other components in the ui realm; these
 //     routes belong in the target components' routing shards.
