@@ -165,6 +165,22 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
       coded_types_.push_back(std::move(coded_string_type));
       return coded_types_.back().get();
     }
+    case flat::Type::Kind::kZxExperimentalPointer: {
+      auto pointer_type = static_cast<const flat::ZxExperimentalPointerType*>(type);
+      auto iter = pointer_type_map_.find(pointer_type);
+      if (iter != pointer_type_map_.end())
+        return iter->second;
+
+      auto coded_pointee_type =
+          CompileType(pointer_type->pointee_type, coded::CodingContext::kOutsideEnvelope);
+      std::string_view pointee_name = coded_pointee_type->coded_name;
+      auto name = NameCodedZxExperimentalPointer(pointee_name);
+      auto coded_pointer_type =
+          std::make_unique<coded::ZxExperimentalPointerType>(std::move(name), coded_pointee_type);
+      pointer_type_map_[pointer_type] = coded_pointer_type.get();
+      coded_types_.push_back(std::move(coded_pointer_type));
+      return coded_types_.back().get();
+    }
     case flat::Type::Kind::kHandle: {
       auto handle_type = static_cast<const flat::HandleType*>(type);
       auto iter = handle_type_map_.find(handle_type);
@@ -300,6 +316,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
         case coded::Type::Kind::kArray:
         case coded::Type::Kind::kVector:
         case coded::Type::Kind::kString:
+        case coded::Type::Kind::kZxExperimentalPointer:
           ZX_PANIC("anonymous type in named type map");
       }
     }

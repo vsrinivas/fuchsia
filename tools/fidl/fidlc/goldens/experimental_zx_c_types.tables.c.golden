@@ -3,12 +3,18 @@
 #include <lib/fidl/internal.h>
 
 
+__LOCAL extern const struct FidlCodedStruct test_experimentalzxctypes_StructTable;
 __LOCAL extern const struct FidlCodedStruct test_experimentalzxctypes_StructOfExperimentalZxCTypesTable;
 
 
 
+const struct FidlCodedStruct test_experimentalzxctypes_StructTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsEmpty, .elements=NULL, .element_count=0u, .size_v2=1u, .name="test.experimentalzxctypes/Struct"};
+
 static const struct FidlStructElement Fields54test_experimentalzxctypes_StructOfExperimentalZxCTypes[] = {
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v2=16u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding64,.is_resource=kFidlIsResource_NotResource},.mask_64=18446744073709551360ul}}
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v2=16u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding64,.is_resource=kFidlIsResource_NotResource},.mask_64=18446744073709551360ul}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v2=24u, .field_type=(fidl_type_t*)(&ZxExperimentalPointer6uint64Table)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v2=32u, .field_type=(fidl_type_t*)(&ZxExperimentalPointer28ZxExperimentalPointer6uint32Table)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v2=40u, .field_type=(fidl_type_t*)(&ZxExperimentalPointer32test_experimentalzxctypes_StructTable)}}
 };
-const struct FidlCodedStruct test_experimentalzxctypes_StructOfExperimentalZxCTypesTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields54test_experimentalzxctypes_StructOfExperimentalZxCTypes, .element_count=1u, .size_v2=24u, .name="test.experimentalzxctypes/StructOfExperimentalZxCTypes"};
+const struct FidlCodedStruct test_experimentalzxctypes_StructOfExperimentalZxCTypesTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields54test_experimentalzxctypes_StructOfExperimentalZxCTypes, .element_count=4u, .size_v2=48u, .name="test.experimentalzxctypes/StructOfExperimentalZxCTypes"};
 

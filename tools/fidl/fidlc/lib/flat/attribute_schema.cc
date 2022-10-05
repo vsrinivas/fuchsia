@@ -370,6 +370,7 @@ void AttributeSchema::ResolveArgsWithoutSchema(CompileStep* step, Attribute* att
       case Type::Kind::kArray:
       case Type::Kind::kBox:
       case Type::Kind::kVector:
+      case Type::Kind::kZxExperimentalPointer:
       case Type::Kind::kHandle:
       case Type::Kind::kTransportSide:
       case Type::Kind::kUntypedNumeric:
@@ -399,6 +400,7 @@ static bool IsSimple(const Type* type, Reporter* reporter) {
           return true;
         case Type::Kind::kArray:
         case Type::Kind::kVector:
+        case Type::Kind::kZxExperimentalPointer:
         case Type::Kind::kString:
         case Type::Kind::kIdentifier:
         case Type::Kind::kBox:
@@ -413,6 +415,8 @@ static bool IsSimple(const Type* type, Reporter* reporter) {
       auto string_type = static_cast<const StringType*>(type);
       return *string_type->max_size < Size::Max();
     }
+    case Type::Kind::kZxExperimentalPointer:
+      return false;
     case Type::Kind::kArray:
     case Type::Kind::kHandle:
     case Type::Kind::kTransportSide:

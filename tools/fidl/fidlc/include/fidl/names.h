@@ -59,6 +59,7 @@ std::string NameCodedArray(std::string_view element_name, uint64_t size);
 std::string NameCodedVector(std::string_view element_name, uint64_t max_size,
                             types::Nullability nullability);
 std::string NameCodedString(uint64_t max_size, types::Nullability nullability);
+std::string NameCodedZxExperimentalPointer(std::string_view pointee_name);
 
 }  // namespace fidl
 

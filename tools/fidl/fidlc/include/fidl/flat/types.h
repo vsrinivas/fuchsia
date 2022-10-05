@@ -33,6 +33,7 @@ struct Type : public Object {
     kArray,
     kBox,
     kVector,
+    kZxExperimentalPointer,
     kString,
     kHandle,
     kTransportSide,
@@ -354,6 +355,25 @@ struct UntypedNumericType final : public Type {
   explicit UntypedNumericType(const Name& name)
       : Type(name, Kind::kUntypedNumeric, types::Nullability::kNonnullable) {}
   std::any AcceptAny(VisitorAny* visitor) const override;
+  bool ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
+                        const Reference& layout, std::unique_ptr<Type>* out_type,
+                        LayoutInvocation* out_params) const override;
+};
+
+struct ZxExperimentalPointerType final : public Type {
+  explicit ZxExperimentalPointerType(const Name& name, const Type* pointee_type)
+      : Type(name, Kind::kZxExperimentalPointer, types::Nullability::kNonnullable),
+        pointee_type(pointee_type) {}
+
+  const Type* pointee_type;
+
+  std::any AcceptAny(VisitorAny* visitor) const override;
+
+  Comparison Compare(const Type& other) const override {
+    const auto& o = static_cast<const ZxExperimentalPointerType&>(other);
+    return Type::Compare(o).Compare(pointee_type, o.pointee_type);
+  }
+
   bool ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
                         const Reference& layout, std::unique_ptr<Type>* out_type,
                         LayoutInvocation* out_params) const override;

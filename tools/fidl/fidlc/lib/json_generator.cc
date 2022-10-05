@@ -235,6 +235,11 @@ void JSONGenerator::Generate(const flat::Type* value) {
         GenerateObjectMember("protocol_transport", type->protocol_transport);
         break;
       }
+      case flat::Type::Kind::kZxExperimentalPointer: {
+        const auto* type = static_cast<const flat::ZxExperimentalPointerType*>(value);
+        GenerateObjectMember("pointee_type", type->pointee_type);
+        break;
+      }
       case flat::Type::Kind::kArray:
       case flat::Type::Kind::kUntypedNumeric:
         ZX_PANIC("unexpected kind");
@@ -541,6 +546,10 @@ void JSONGenerator::GenerateParameterizedType(TypeKind parent_type_kind, const f
         // `alias Foo = MyProtocol;` is not allowed.
         GenerateObjectMember("nullable", server_end->nullability);
         GenerateObjectMember("protocol_transport", server_end->protocol_transport);
+        break;
+      }
+      case flat::Type::Kind::kZxExperimentalPointer: {
+        GenerateTypeAndFromTypeAlias(TypeKind::kParameterized, invocation.element_type_raw);
         break;
       }
       case flat::Type::Kind::kIdentifier:

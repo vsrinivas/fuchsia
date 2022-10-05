@@ -112,6 +112,8 @@ std::string TableTypeName([[maybe_unused]] const Type& type) {
     return "FidlCodedTable";
   if constexpr (std::is_same_v<T, fidl::coded::XUnionType>)
     return "FidlCodedXUnion";
+  if constexpr (std::is_same_v<T, fidl::coded::ZxExperimentalPointerType>)
+    return "FidlCodedZxExperimentalPointer";
 }
 
 constexpr auto kIndent = "    ";
@@ -414,6 +416,11 @@ void TablesGenerator::Generate(const coded::VectorType& vector_type) {
   Emit(&tables_file_, "};\n\n");
 }
 
+void TablesGenerator::Generate(const coded::ZxExperimentalPointerType& pointer_type) {
+  // TODO(fxbug.dev/111200): Ideally we would panic here and just never
+  // generate output for this case.
+}
+
 void TablesGenerator::Generate(const coded::Type* type, CastToFidlType cast_to_fidl_type) {
   if (type && type->is_coding_needed) {
     if (cast_to_fidl_type == CastToFidlType::kCast) {
@@ -649,6 +656,9 @@ void TablesGenerator::Produce(CodedTypesGenerator* coded_types_generator) {
         break;
       case coded::Type::Kind::kVector:
         Generate(*static_cast<const coded::VectorType*>(coded_type.get()));
+        break;
+      case coded::Type::Kind::kZxExperimentalPointer:
+        Generate(*static_cast<const coded::ZxExperimentalPointerType*>(coded_type.get()));
         break;
       case coded::Type::Kind::kPrimitive:
       case coded::Type::Kind::kInternal:

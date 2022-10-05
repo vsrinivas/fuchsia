@@ -502,14 +502,15 @@ func LocationCmp(a, b Location) bool {
 type TypeKind string
 
 const (
-	ArrayType      TypeKind = "array"
-	VectorType     TypeKind = "vector"
-	StringType     TypeKind = "string"
-	HandleType     TypeKind = "handle"
-	RequestType    TypeKind = "request"
-	PrimitiveType  TypeKind = "primitive"
-	IdentifierType TypeKind = "identifier"
-	InternalType   TypeKind = "internal"
+	ArrayType                 TypeKind = "array"
+	VectorType                TypeKind = "vector"
+	StringType                TypeKind = "string"
+	HandleType                TypeKind = "handle"
+	RequestType               TypeKind = "request"
+	PrimitiveType             TypeKind = "primitive"
+	IdentifierType            TypeKind = "identifier"
+	InternalType              TypeKind = "internal"
+	ZxExperimentalPointerType TypeKind = "experimental_pointer"
 )
 
 type Type struct {
@@ -528,6 +529,7 @@ type Type struct {
 	ResourceIdentifier string
 	TypeShapeV1        TypeShape
 	TypeShapeV2        TypeShape
+	PointeeType        *Type
 }
 
 // UnmarshalJSON customizes the JSON unmarshalling for Type.
@@ -648,6 +650,12 @@ func (t *Type) UnmarshalJSON(b []byte) error {
 		if err != nil {
 			return err
 		}
+	case ZxExperimentalPointerType:
+		t.PointeeType = &Type{}
+		err = json.Unmarshal(*obj["pointee_type"], t.PointeeType)
+		if err != nil {
+			return err
+		}
 	default:
 		return fmt.Errorf("Unknown type kind: %s", t.Kind)
 	}
@@ -695,6 +703,8 @@ func (t *Type) MarshalJSON() ([]byte, error) {
 		obj["protocol_transport"] = t.ProtocolTransport
 	case InternalType:
 		obj["subtype"] = t.InternalSubtype
+	case ZxExperimentalPointerType:
+		obj["pointee_type"] = t.PointeeType
 	default:
 		return nil, fmt.Errorf("unknown type kind: %#v", t)
 	}

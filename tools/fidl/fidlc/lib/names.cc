@@ -194,6 +194,8 @@ std::string NameFlatTypeKind(const flat::Type* type) {
       return "array";
     case flat::Type::Kind::kVector:
       return "vector";
+    case flat::Type::Kind::kZxExperimentalPointer:
+      return "experimental_pointer";
     case flat::Type::Kind::kString:
       return "string";
     case flat::Type::Kind::kHandle:
@@ -344,6 +346,13 @@ void NameFlatTypeHelper(std::ostringstream& buf, const flat::Type* type) {
       }
       break;
     }
+    case flat::Type::Kind::kZxExperimentalPointer: {
+      const auto* pointer_type = static_cast<const flat::ZxExperimentalPointerType*>(type);
+      buf << "<";
+      NameFlatTypeHelper(buf, pointer_type->pointee_type);
+      buf << ">";
+      break;
+    }
     case flat::Type::Kind::kHandle: {
       const auto* handle_type = static_cast<const flat::HandleType*>(type);
       if (handle_type->subtype != types::HandleSubtype::kHandle) {
@@ -446,6 +455,8 @@ std::string NameFlatCType(const flat::Type* type) {
 
       case flat::Type::Kind::kUntypedNumeric:
         ZX_PANIC("should not have untyped numeric here");
+      case flat::Type::Kind::kZxExperimentalPointer:
+        ZX_PANIC("C bindings should not be using experimental_pointer");
     }
   }
 }
@@ -584,6 +595,12 @@ std::string NameCodedString(uint64_t max_size, types::Nullability nullability) {
   std::string name("String");
   name += NameSize(max_size);
   name += NameNullability(nullability);
+  return name;
+}
+
+std::string NameCodedZxExperimentalPointer(std::string_view pointee_name) {
+  std::string name("ZxExperimentalPointer");
+  name += LengthPrefixedString(pointee_name);
   return name;
 }
 

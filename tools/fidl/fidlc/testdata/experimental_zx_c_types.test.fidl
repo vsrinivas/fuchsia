@@ -10,9 +10,15 @@ const UCHAR_CONST uchar = 12;
 alias AliasOfUsize = usize;
 alias AliasOfUintptr = uintptr;
 alias AliasOfUchar = uchar;
+alias AliasOfUint32Pointer = experimental_pointer<uint32>;
+
+type Struct = struct {};
 
 type StructOfExperimentalZxCTypes = struct {
     us usize;
     up uintptr;
     uc uchar;
+    u64_ptr experimental_pointer<uint64>;
+    u32_ptr_ptr experimental_pointer<experimental_pointer<uint32>>;
+    struct_ptr experimental_pointer<Struct>;
 };

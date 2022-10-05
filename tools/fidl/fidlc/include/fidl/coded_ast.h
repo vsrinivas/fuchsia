@@ -124,6 +124,7 @@ struct Type {
     kArray,
     kString,
     kVector,
+    kZxExperimentalPointer,
   };
 
   Type(Kind kind, std::string coded_name, uint32_t size_v2, bool is_coding_needed, bool is_noop)
@@ -346,6 +347,14 @@ struct VectorType : public Type {
   const uint32_t element_size_v2;
   const types::Nullability nullability;
   const MemcpyCompatibility element_memcpy_compatibility;
+};
+
+struct ZxExperimentalPointerType : public Type {
+  ZxExperimentalPointerType(std::string name, const Type* pointee_type)
+      : Type(Kind::kZxExperimentalPointer, std::move(name), 8u, true, false),
+        pointee_type(pointee_type) {}
+
+  const Type* pointee_type;
 };
 
 }  // namespace fidl::coded

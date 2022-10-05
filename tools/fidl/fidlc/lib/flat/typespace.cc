@@ -68,6 +68,8 @@ Typespace::Typespace(const Library* root_library, Reporter* reporter) : Reporter
           std::make_unique<StringType>(builtin->name, &kMaxSize, types::Nullability::kNonnullable);
     } else if (builtin->id == Builtin::Identity::kVector) {
       vector_layout_name_ = builtin->name;
+    } else if (builtin->id == Builtin::Identity::kZxExperimentalPointer) {
+      pointer_type_name_ = builtin->name;
     }
   }
   untyped_numeric_type_ =
@@ -129,6 +131,7 @@ class Typespace::Creator : private ReporterMixin {
   const Type* CreateTransportSideType(TransportSide end);
   const Type* CreateIdentifierType(TypeDecl* type_decl);
   const Type* CreateTypeAliasType(TypeAlias* type_alias);
+  const Type* CreateZxExperimentalPointerType();
 
   Typespace* typespace_;
   TypeResolver* resolver_;
@@ -195,6 +198,8 @@ const Type* Typespace::Creator::Create() {
       return CreateArrayType();
     case Builtin::Identity::kVector:
       return CreateVectorType();
+    case Builtin::Identity::kZxExperimentalPointer:
+      return CreateZxExperimentalPointerType();
     case Builtin::Identity::kClientEnd:
       return CreateTransportSideType(TransportSide::kClient);
     case Builtin::Identity::kServerEnd:
@@ -274,6 +279,22 @@ const Type* Typespace::Creator::CreateVectorType() {
   out_params_->element_type_raw = parameters_.items[0]->AsTypeCtor();
 
   VectorType type(layout_.resolved().name(), element_type);
+  std::unique_ptr<Type> constrained_type;
+  type.ApplyConstraints(resolver_, constraints_, layout_, &constrained_type, out_params_);
+  return typespace_->Intern(std::move(constrained_type));
+}
+
+const Type* Typespace::Creator::CreateZxExperimentalPointerType() {
+  if (!EnsureNumberOfLayoutParams(1))
+    return nullptr;
+
+  const Type* element_type = nullptr;
+  if (!resolver_->ResolveParamAsType(layout_, parameters_.items[0], &element_type))
+    return nullptr;
+  out_params_->element_type_resolved = element_type;
+  out_params_->element_type_raw = parameters_.items[0]->AsTypeCtor();
+
+  ZxExperimentalPointerType type(layout_.resolved().name(), element_type);
   std::unique_ptr<Type> constrained_type;
   type.ApplyConstraints(resolver_, constraints_, layout_, &constrained_type, out_params_);
   return typespace_->Intern(std::move(constrained_type));

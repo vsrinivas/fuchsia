@@ -61,6 +61,7 @@ class TablesGenerator {
   void Generate(const coded::ArrayType& array_type);
   void Generate(const coded::StringType& string_type);
   void Generate(const coded::VectorType& vector_type);
+  void Generate(const coded::ZxExperimentalPointerType& pointer_type);
 
   enum class CastToFidlType {
     kNoCast = 0,

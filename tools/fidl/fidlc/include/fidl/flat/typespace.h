@@ -55,6 +55,7 @@ class Typespace final : private ReporterMixin {
   std::unique_ptr<UntypedNumericType> untyped_numeric_type_;
   std::vector<std::unique_ptr<Size>> sizes_;
   std::optional<Name> vector_layout_name_;
+  std::optional<Name> pointer_type_name_;
 };
 
 }  // namespace fidl::flat

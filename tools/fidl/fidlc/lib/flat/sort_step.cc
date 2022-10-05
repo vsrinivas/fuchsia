@@ -106,7 +106,8 @@ void CalcDependencies::VisitTypeConstructor(const TypeConstructor* type_ctor) {
     case Type::Kind::kBox:
       break;
     case Type::Kind::kArray:
-    case Type::Kind::kVector: {
+    case Type::Kind::kVector:
+    case Type::Kind::kZxExperimentalPointer: {
       if (invocation.element_type_raw != nullptr) {
         VisitTypeConstructor(invocation.element_type_raw);
       }

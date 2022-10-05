@@ -200,6 +200,7 @@ struct Builtin : public Decl {
     kBox,
     kArray,
     kVector,
+    kZxExperimentalPointer,
     kClientEnd,
     kServerEnd,
     // Layouts (aliases)

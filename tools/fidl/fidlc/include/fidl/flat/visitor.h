@@ -35,6 +35,7 @@ struct Object::VisitorAny {
   virtual std::any Visit(const Union::Member&) = 0;
   virtual std::any Visit(const Union::Member::Used&) = 0;
   virtual std::any Visit(const Protocol&) = 0;
+  virtual std::any Visit(const ZxExperimentalPointerType&) = 0;
 };
 
 // This Visitor<T> class is useful so that Object.Accept() can enforce that its return type

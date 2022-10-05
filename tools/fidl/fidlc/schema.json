@@ -447,6 +447,41 @@
             ],
             "type": "object"
         },
+        "experimental-pointer-type": {
+            "additionalProperties": false,
+            "description": "Definition of an experimental pointer type",
+            "patternProperties": {
+                "^experimental_": {}
+            },
+            "properties": {
+                "kind": {
+                    "description": "Selection of base type as experimental pointer type",
+                    "enum": [
+                        "experimental_pointer"
+                    ],
+                    "type": "string"
+                },
+                "pointee_type": {
+                    "$ref": "#/definitions/type",
+                    "description": "Type of what is being pointed to"
+                },
+                "type_shape_v1": {
+                    "$ref": "#/definitions/typeshape",
+                    "description": "Type shape of this declaration"
+                },
+                "type_shape_v2": {
+                    "$ref": "#/definitions/typeshape",
+                    "description": "Type shape of this declaration"
+                }
+            },
+            "required": [
+                "kind",
+                "pointee_type",
+                "type_shape_v1",
+                "type_shape_v2"
+            ],
+            "type": "object"
+        },
         "external-declarations-map": {
             "additionalProperties": false,
             "description": "Definition of declarations of an external library",
@@ -1637,6 +1672,10 @@
                 {
                     "$ref": "#/definitions/internal-type",
                     "description": "Selection of internal type"
+                },
+                {
+                    "$ref": "#/definitions/experimental-pointer-type",
+                    "description": "Selection of an experimental pointer type"
                 }
             ]
         },

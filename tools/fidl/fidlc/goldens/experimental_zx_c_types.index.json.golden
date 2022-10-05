@@ -59,13 +59,25 @@
   "structs": [
     {
       "is_anonymous": false,
+      "identifier": "test.experimentalzxctypes/Struct",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
+        "data": "Struct",
+        "start_offset": 448,
+        "end_offset": 454
+      },
+      "members": []
+    },
+    {
+      "is_anonymous": false,
       "identifier": "test.experimentalzxctypes/StructOfExperimentalZxCTypes",
       "location": {
         "is_virtual": false,
         "file": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
         "data": "StructOfExperimentalZxCTypes",
-        "start_offset": 389,
-        "end_offset": 417
+        "start_offset": 474,
+        "end_offset": 502
       },
       "members": [
         {
@@ -74,8 +86,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
             "data": "us",
-            "start_offset": 433,
-            "end_offset": 435
+            "start_offset": 518,
+            "end_offset": 520
           },
           "type": {
             "kind": "primitive"
@@ -87,8 +99,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
             "data": "up",
-            "start_offset": 447,
-            "end_offset": 449
+            "start_offset": 532,
+            "end_offset": 534
           },
           "type": {
             "kind": "primitive"
@@ -100,11 +112,50 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
             "data": "uc",
-            "start_offset": 463,
-            "end_offset": 465
+            "start_offset": 548,
+            "end_offset": 550
           },
           "type": {
             "kind": "primitive"
+          }
+        },
+        {
+          "name": "u64_ptr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
+            "data": "u64_ptr",
+            "start_offset": 562,
+            "end_offset": 569
+          },
+          "type": {
+            "kind": "experimental_pointer"
+          }
+        },
+        {
+          "name": "u32_ptr_ptr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
+            "data": "u32_ptr_ptr",
+            "start_offset": 604,
+            "end_offset": 615
+          },
+          "type": {
+            "kind": "experimental_pointer"
+          }
+        },
+        {
+          "name": "struct_ptr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
+            "data": "struct_ptr",
+            "start_offset": 672,
+            "end_offset": 682
+          },
+          "type": {
+            "kind": "experimental_pointer"
           }
         }
       ]

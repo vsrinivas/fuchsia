@@ -85,6 +85,9 @@ types::Resourceness VerifyResourcenessStep::EffectiveResourceness(const Type* ty
       return EffectiveResourceness(static_cast<const ArrayType*>(type)->element_type);
     case Type::Kind::kVector:
       return EffectiveResourceness(static_cast<const VectorType*>(type)->element_type);
+    case Type::Kind::kZxExperimentalPointer:
+      return EffectiveResourceness(
+          static_cast<const ZxExperimentalPointerType*>(type)->pointee_type);
     case Type::Kind::kIdentifier:
       break;
     case Type::Kind::kBox:
@@ -231,6 +234,10 @@ void VerifyHandleTransportCompatibilityStep::CheckHandleTransportUsages(
     case Type::Kind::kVector:
       return CheckHandleTransportUsages(static_cast<const VectorType*>(type)->element_type,
                                         transport, protocol, source_span, seen);
+    case Type::Kind::kZxExperimentalPointer:
+      return CheckHandleTransportUsages(
+          static_cast<const ZxExperimentalPointerType*>(type)->pointee_type, transport, protocol,
+          source_span, seen);
     case Type::Kind::kBox:
       return CheckHandleTransportUsages(static_cast<const BoxType*>(type)->boxed_type, transport,
                                         protocol, source_span, seen);

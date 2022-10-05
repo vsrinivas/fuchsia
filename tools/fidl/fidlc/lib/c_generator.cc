@@ -253,6 +253,8 @@ void EmitMethodInParamDecl(std::ostream* file, const CGenerator::Member& member)
       *file << "const char* " << member.name << "_data, "
             << "size_t " << member.name << "_size";
       break;
+    case flat::Type::Kind::kZxExperimentalPointer:
+      ZX_PANIC("C code generator for experimental_pointer not implemented");
     case flat::Type::Kind::kHandle:
     case flat::Type::Kind::kTransportSide:
     case flat::Type::Kind::kPrimitive:
@@ -314,6 +316,8 @@ void EmitMethodOutParamDecl(std::ostream* file, const CGenerator::Member& member
             << "size_t " << member.name << "_capacity, "
             << "size_t* out_" << member.name << "_size";
       break;
+    case flat::Type::Kind::kZxExperimentalPointer:
+      ZX_PANIC("C code generator for experimental_pointer not implemented");
     case flat::Type::Kind::kHandle:
     case flat::Type::Kind::kTransportSide:
     case flat::Type::Kind::kPrimitive:
@@ -540,6 +544,8 @@ void EmitLinearizeMessage(std::ostream* file, std::string_view receiver, std::st
         }
         *file << kIndent << "}\n";
         break;
+      case flat::Type::Kind::kZxExperimentalPointer:
+        ZX_PANIC("C code generator for experimental_pointer not implemented");
       case flat::Type::Kind::kHandle:
       case flat::Type::Kind::kTransportSide:
       case flat::Type::Kind::kPrimitive:
@@ -746,6 +752,8 @@ CGenerator::Member CreateMember(const T& decl, bool* out_allowed = nullptr) {
       max_num_elements = vector_type->element_count->value;
       break;
     }
+    case flat::Type::Kind::kZxExperimentalPointer:
+      ZX_PANIC("C code generator for experimental_pointer not implemented");
     case flat::Type::Kind::kIdentifier: {
       auto identifier_type = static_cast<const flat::IdentifierType*>(type);
       nullability = identifier_type->nullability;
@@ -1469,6 +1477,8 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
                   << ".data, _response->" << name << ".size);\n";
             file_ << kIndent << "*out_" << name << "_size = _response->" << name << ".size;\n";
             break;
+          case flat::Type::Kind::kZxExperimentalPointer:
+            ZX_PANIC("C code generator for experimental_pointer not implemented");
           case flat::Type::Kind::kHandle:
           case flat::Type::Kind::kTransportSide:
           case flat::Type::Kind::kPrimitive:
@@ -1614,6 +1624,8 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
           file_ << ", request->" << member.name << ".data"
                 << ", request->" << member.name << ".size";
           break;
+        case flat::Type::Kind::kZxExperimentalPointer:
+          ZX_PANIC("C code generator for experimental_pointer not implemented");
         case flat::Type::Kind::kIdentifier:
           switch (member.decl_kind.value()) {
             case flat::Decl::Kind::kBuiltin:

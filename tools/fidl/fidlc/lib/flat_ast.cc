@@ -81,6 +81,7 @@ bool Builtin::IsInternal() const {
     case Identity::kBox:
     case Identity::kArray:
     case Identity::kVector:
+    case Identity::kZxExperimentalPointer:
     case Identity::kClientEnd:
     case Identity::kServerEnd:
     case Identity::kByte:
@@ -227,6 +228,7 @@ std::unique_ptr<Library> Library::CreateRootLibrary() {
   insert("box", Builtin::Identity::kBox);
   insert("array", Builtin::Identity::kArray);
   insert("vector", Builtin::Identity::kVector);
+  insert("experimental_pointer", Builtin::Identity::kZxExperimentalPointer);
   insert("client_end", Builtin::Identity::kClientEnd);
   insert("server_end", Builtin::Identity::kServerEnd);
   insert("byte", Builtin::Identity::kByte);

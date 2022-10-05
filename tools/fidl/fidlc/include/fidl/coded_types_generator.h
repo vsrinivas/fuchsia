@@ -107,6 +107,7 @@ class CodedTypesGenerator {
   TypeMap<flat::VectorType, coded::VectorType> vector_type_map_;
   TypeMap<flat::StringType, coded::StringType> string_type_map_;
   TypeMap<flat::IdentifierType, coded::StructPointerType> struct_type_map_;
+  TypeMap<flat::ZxExperimentalPointerType, coded::ZxExperimentalPointerType> pointer_type_map_;
 
   std::map<flat::Name::Key, std::unique_ptr<coded::Type>> named_coded_types_;
   std::vector<std::unique_ptr<coded::Type>> coded_types_;

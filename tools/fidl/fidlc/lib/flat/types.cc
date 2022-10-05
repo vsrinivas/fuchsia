@@ -538,6 +538,24 @@ bool InternalType::ApplyConstraints(TypeResolver* resolver, const TypeConstraint
   return true;
 }
 
+bool ZxExperimentalPointerType::ApplyConstraints(TypeResolver* resolver,
+                                                 const TypeConstraints& constraints,
+                                                 const Reference& layout,
+                                                 std::unique_ptr<Type>* out_type,
+                                                 LayoutInvocation* out_params) const {
+  size_t num_constraints = constraints.items.size();
+  if (num_constraints > 1) {
+    return resolver->Fail(ErrTooManyConstraints, constraints.span.value(), layout.resolved().name(),
+                          0, num_constraints);
+  }
+  if (!resolver->experimental_flags().IsFlagEnabled(ExperimentalFlags::Flag::kZxCTypes)) {
+    return resolver->Fail(ErrExperimentalZxCTypesDisallowed, constraints.span.value(),
+                          layout.resolved().name());
+  }
+  *out_type = std::make_unique<ZxExperimentalPointerType>(name, pointee_type);
+  return true;
+}
+
 types::Resourceness Type::Resourceness() const {
   switch (this->kind) {
     case Type::Kind::kPrimitive:
@@ -551,6 +569,8 @@ types::Resourceness Type::Resourceness() const {
       return static_cast<const ArrayType*>(this)->element_type->Resourceness();
     case Type::Kind::kVector:
       return static_cast<const VectorType*>(this)->element_type->Resourceness();
+    case Type::Kind::kZxExperimentalPointer:
+      return static_cast<const ZxExperimentalPointerType*>(this)->pointee_type->Resourceness();
     case Type::Kind::kIdentifier:
       break;
     case Type::Kind::kBox:
@@ -599,6 +619,9 @@ std::any InternalType::AcceptAny(VisitorAny* visitor) const { return visitor->Vi
 std::any StringType::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
 std::any TransportSideType::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
 std::any VectorType::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
+std::any ZxExperimentalPointerType::AcceptAny(VisitorAny* visitor) const {
+  return visitor->Visit(*this);
+}
 
 std::any UntypedNumericType::AcceptAny(VisitorAny* visitor) const {
   ZX_PANIC("should not have untyped numeric here");

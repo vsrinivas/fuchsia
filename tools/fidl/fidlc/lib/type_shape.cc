@@ -247,6 +247,8 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
 
   std::any Visit(const flat::Protocol& object) override { return DataSize(kHandleSize); }
 
+  std::any Visit(const flat::ZxExperimentalPointerType& object) override { return DataSize(8); }
+
  private:
   DataSize UnalignedSize(const flat::Object& object) { return object.Accept(this); }
 
@@ -362,6 +364,8 @@ class AlignmentVisitor final : public TypeShapeVisitor<DataSize> {
   }
 
   std::any Visit(const flat::Protocol& object) override { return DataSize(kHandleSize); }
+
+  std::any Visit(const flat::ZxExperimentalPointerType& object) override { return DataSize(8); }
 
  private:
   DataSize Alignment(const flat::Object& object) { return object.Accept(this); }
@@ -514,6 +518,10 @@ class DepthVisitor : public TypeShapeVisitor<DataSize> {
 
   std::any Visit(const flat::Protocol& object) override { return DataSize(0); }
 
+  std::any Visit(const flat::ZxExperimentalPointerType& object) override {
+    return DataSize(1) + Depth(object.pointee_type);
+  }
+
  protected:
   DataSize Depth(const flat::Object& object) { return object.Accept(this); }
 
@@ -618,6 +626,7 @@ class MaxHandlesVisitor final : public flat::Object::Visitor<DataSize> {
             return std::numeric_limits<DataSize>::max();
           case flat::Type::Kind::kArray:
           case flat::Type::Kind::kVector:
+          case flat::Type::Kind::kZxExperimentalPointer:
           case flat::Type::Kind::kString:
           case flat::Type::Kind::kPrimitive:
           case flat::Type::Kind::kInternal:
@@ -686,6 +695,10 @@ class MaxHandlesVisitor final : public flat::Object::Visitor<DataSize> {
   }
 
   std::any Visit(const flat::Protocol& object) override { return DataSize(1); }
+
+  std::any Visit(const flat::ZxExperimentalPointerType& object) override {
+    return MaxHandles(object.pointee_type);
+  }
 };
 
 class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
@@ -857,6 +870,10 @@ class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
 
   std::any Visit(const flat::Protocol& object) override { return DataSize(0); }
 
+  std::any Visit(const flat::ZxExperimentalPointerType& object) override {
+    return ObjectAlign(MaxOutOfLine(object.pointee_type));
+  }
+
  private:
   DataSize MaxOutOfLine(const flat::Object& object) { return object.Accept(this); }
 
@@ -998,6 +1015,8 @@ class HasPaddingVisitor final : public TypeShapeVisitor<bool> {
 
   std::any Visit(const flat::Protocol& object) override { return false; }
 
+  std::any Visit(const flat::ZxExperimentalPointerType& object) override { return false; }
+
  private:
   bool HasPadding(const flat::Object& object) { return object.Accept(this); }
 
@@ -1083,6 +1102,8 @@ class HasEnvelopeVisitor final : public TypeShapeVisitor<bool> {
   std::any Visit(const flat::Union::Member::Used& object) override { return true; }
 
   std::any Visit(const flat::Protocol& object) override { return false; }
+
+  std::any Visit(const flat::ZxExperimentalPointerType& object) override { return false; }
 };
 
 class HasFlexibleEnvelopeVisitor final : public TypeShapeVisitor<bool> {
@@ -1200,6 +1221,8 @@ class HasFlexibleEnvelopeVisitor final : public TypeShapeVisitor<bool> {
   }
 
   std::any Visit(const flat::Protocol& object) override { return false; }
+
+  std::any Visit(const flat::ZxExperimentalPointerType& object) override { return false; }
 };
 
 DataSize UnalignedSize(const flat::Object& object, WireFormat wire_format) {

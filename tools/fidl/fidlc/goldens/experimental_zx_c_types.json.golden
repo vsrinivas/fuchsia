@@ -144,13 +144,47 @@
   "service_declarations": [],
   "struct_declarations": [
     {
+      "name": "test.experimentalzxctypes/Struct",
+      "naming_context": [
+        "Struct"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
+        "line": 15,
+        "column": 6,
+        "length": 6
+      },
+      "members": [],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_envelope": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_envelope": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
       "name": "test.experimentalzxctypes/StructOfExperimentalZxCTypes",
       "naming_context": [
         "StructOfExperimentalZxCTypes"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
-        "line": 14,
+        "line": 17,
         "column": 6,
         "length": 28
       },
@@ -183,7 +217,7 @@
           "name": "us",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
-            "line": 15,
+            "line": 18,
             "column": 5,
             "length": 2
           },
@@ -224,7 +258,7 @@
           "name": "up",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
-            "line": 16,
+            "line": 19,
             "column": 5,
             "length": 2
           },
@@ -265,7 +299,7 @@
           "name": "uc",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
-            "line": 17,
+            "line": 20,
             "column": 5,
             "length": 2
           },
@@ -277,13 +311,229 @@
             "offset": 16,
             "padding": 7
           }
+        },
+        {
+          "type": {
+            "kind": "experimental_pointer",
+            "pointee_type": {
+              "kind": "primitive",
+              "subtype": "uint64",
+              "type_shape_v1": {
+                "inline_size": 8,
+                "alignment": 8,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 8,
+                "alignment": 8,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              }
+            },
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "u64_ptr",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
+            "line": 21,
+            "column": 5,
+            "length": 7
+          },
+          "field_shape_v1": {
+            "offset": 24,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 24,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "experimental_pointer",
+            "pointee_type": {
+              "kind": "experimental_pointer",
+              "pointee_type": {
+                "kind": "primitive",
+                "subtype": "uint32",
+                "type_shape_v1": {
+                  "inline_size": 4,
+                  "alignment": 4,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_envelope": false,
+                  "has_flexible_envelope": false
+                },
+                "type_shape_v2": {
+                  "inline_size": 4,
+                  "alignment": 4,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_envelope": false,
+                  "has_flexible_envelope": false
+                }
+              },
+              "type_shape_v1": {
+                "inline_size": 8,
+                "alignment": 8,
+                "depth": 1,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 8,
+                "alignment": 8,
+                "depth": 1,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              }
+            },
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 2,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 2,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "u32_ptr_ptr",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
+            "line": 22,
+            "column": 5,
+            "length": 11
+          },
+          "field_shape_v1": {
+            "offset": 32,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 32,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "experimental_pointer",
+            "pointee_type": {
+              "kind": "identifier",
+              "identifier": "test.experimentalzxctypes/Struct",
+              "nullable": false,
+              "type_shape_v1": {
+                "inline_size": 1,
+                "alignment": 1,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 1,
+                "alignment": 1,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              }
+            },
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "struct_ptr",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
+            "line": 23,
+            "column": 5,
+            "length": 10
+          },
+          "field_shape_v1": {
+            "offset": 40,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 40,
+            "padding": 0
+          }
         }
       ],
       "resource": false,
       "type_shape_v1": {
-        "inline_size": 24,
+        "inline_size": 48,
         "alignment": 8,
-        "depth": 0,
+        "depth": 2,
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": true,
@@ -291,9 +541,9 @@
         "has_flexible_envelope": false
       },
       "type_shape_v2": {
-        "inline_size": 24,
+        "inline_size": 48,
         "alignment": 8,
-        "depth": 0,
+        "depth": 2,
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": true,
@@ -317,6 +567,26 @@
       "partial_type_ctor": {
         "name": "uchar",
         "args": [],
+        "nullable": false
+      }
+    },
+    {
+      "name": "test.experimentalzxctypes/AliasOfUint32Pointer",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/experimental_zx_c_types.test.fidl",
+        "line": 13,
+        "column": 7,
+        "length": 20
+      },
+      "partial_type_ctor": {
+        "name": "experimental_pointer",
+        "args": [
+          {
+            "name": "uint32",
+            "args": [],
+            "nullable": false
+          }
+        ],
         "nullable": false
       }
     },
@@ -354,17 +624,21 @@
     "test.experimentalzxctypes/USIZE_CONST",
     "test.experimentalzxctypes/UINTPTR_CONST",
     "test.experimentalzxctypes/UCHAR_CONST",
+    "test.experimentalzxctypes/Struct",
     "test.experimentalzxctypes/StructOfExperimentalZxCTypes",
     "test.experimentalzxctypes/AliasOfUsize",
     "test.experimentalzxctypes/AliasOfUintptr",
+    "test.experimentalzxctypes/AliasOfUint32Pointer",
     "test.experimentalzxctypes/AliasOfUchar"
   ],
   "declarations": {
     "test.experimentalzxctypes/UCHAR_CONST": "const",
     "test.experimentalzxctypes/UINTPTR_CONST": "const",
     "test.experimentalzxctypes/USIZE_CONST": "const",
+    "test.experimentalzxctypes/Struct": "struct",
     "test.experimentalzxctypes/StructOfExperimentalZxCTypes": "struct",
     "test.experimentalzxctypes/AliasOfUchar": "type_alias",
+    "test.experimentalzxctypes/AliasOfUint32Pointer": "type_alias",
     "test.experimentalzxctypes/AliasOfUintptr": "type_alias",
     "test.experimentalzxctypes/AliasOfUsize": "type_alias"
   }
