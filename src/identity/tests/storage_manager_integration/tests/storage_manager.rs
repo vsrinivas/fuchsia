@@ -15,7 +15,7 @@ lazy_static! {
 async fn test_unimplemented() {
     let manager = EncryptedVolumeStorageManager::new(&*TEST_ACCOUNT_ID).unwrap();
     assert_eq!(
-        manager.provision(&Key::NoCustomKey).await.unwrap_err().api_error,
+        manager.provision(&Key::NoSpecifiedKey).await.unwrap_err().api_error,
         ApiError::UnsupportedOperation
     );
 }

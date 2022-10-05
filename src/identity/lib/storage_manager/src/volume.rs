@@ -57,7 +57,7 @@ mod test {
     async fn test_volume_storage_manager_provision_unimplemented() {
         let manager = EncryptedVolumeStorageManager::new(&ACCOUNT_ID).unwrap();
         assert_eq!(
-            manager.provision(&Key::NoCustomKey).await.unwrap_err().api_error,
+            manager.provision(&Key::NoSpecifiedKey).await.unwrap_err().api_error,
             ApiError::UnsupportedOperation
         )
     }
@@ -66,7 +66,7 @@ mod test {
     async fn test_volume_storage_manager_unlock_unimplemented() {
         let manager = EncryptedVolumeStorageManager::new(&ACCOUNT_ID).unwrap();
         assert_eq!(
-            manager.unlock(&Key::NoCustomKey).await.unwrap_err().api_error,
+            manager.unlock(&Key::NoSpecifiedKey).await.unwrap_err().api_error,
             ApiError::UnsupportedOperation
         )
     }

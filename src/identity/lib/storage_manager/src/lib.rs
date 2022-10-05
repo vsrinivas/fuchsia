@@ -10,6 +10,7 @@ pub use directory::InsecureKeyDirectoryStorageManager;
 pub use volume::EncryptedVolumeStorageManager;
 
 use account_common::AccountManagerError;
+use anyhow::{bail, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_io as fio;
 use serde::{Deserialize, Serialize};
@@ -19,9 +20,22 @@ use serde::{Deserialize, Serialize};
 #[derive(PartialEq, Serialize, Deserialize)]
 pub enum Key {
     /// No caller specified key.
-    NoCustomKey,
-    /// Caller specified key provided.
-    CustomKey(Vec<u8>),
+    NoSpecifiedKey,
+
+    // Caller specified key with 256 bits. Prefer using this over
+    // CustomLength(..) if the length of the key is known upfront.
+    Key256Bit([u8; 32]),
+}
+
+impl TryFrom<&Key> for [u8; 32] {
+    type Error = Error;
+
+    fn try_from(key: &Key) -> Result<Self, Self::Error> {
+        match key {
+            Key::Key256Bit(bits) => Ok(*bits),
+            Key::NoSpecifiedKey => bail!("No custom key."),
+        }
+    }
 }
 
 /// An implementation of `StorageManager` provides access to a directory,

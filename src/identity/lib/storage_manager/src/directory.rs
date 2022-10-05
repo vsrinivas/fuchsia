@@ -267,8 +267,8 @@ mod test {
     use tempfile::TempDir;
 
     lazy_static! {
-        static ref CUSTOM_KEY_CONTENTS: Vec<u8> = vec![0, 1, 2, 3, 4, 5, 6, 7];
-        static ref CUSTOM_KEY: Key = Key::CustomKey(CUSTOM_KEY_CONTENTS.clone());
+        static ref CUSTOM_KEY_CONTENTS: [u8; 32] = [8u8; 32];
+        static ref CUSTOM_KEY: Key = Key::Key256Bit(CUSTOM_KEY_CONTENTS.clone());
     }
 
     /// Creates a TempDir and DirectoryProxy handle to it.  The TempDir must
@@ -311,8 +311,8 @@ mod test {
         F: Fn(Key) -> Fut,
         Fut: Future<Output = ()>,
     {
-        test_fn(Key::NoCustomKey).await;
-        test_fn(Key::CustomKey(CUSTOM_KEY_CONTENTS.clone())).await;
+        test_fn(Key::NoSpecifiedKey).await;
+        test_fn(Key::Key256Bit(CUSTOM_KEY_CONTENTS.clone())).await;
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -393,54 +393,54 @@ mod test {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_directory_storage_manager_unlock_failed_authentication() {
-        // CustomKey given when NoCustomKey expected
+        // Key256Bit given when NoSpecifiedKey expected
         let (_dir, dir_proxy) = create_temp_directory();
         let manager = InsecureKeyDirectoryStorageManager::new(dir_proxy).await.unwrap();
-        manager.provision(&Key::NoCustomKey).await.unwrap();
+        manager.provision(&Key::NoSpecifiedKey).await.unwrap();
         manager.lock().await.unwrap();
         assert_eq!(
             manager.unlock(&*CUSTOM_KEY).await.unwrap_err().api_error,
             ApiError::FailedAuthentication
         );
 
-        // NoCustomKey given when CustomKey expected
+        // NoSpecifiedKey given when Key256Bit expected
         let (_dir, dir_proxy) = create_temp_directory();
         let manager = InsecureKeyDirectoryStorageManager::new(dir_proxy).await.unwrap();
         manager.provision(&*CUSTOM_KEY).await.unwrap();
         manager.lock().await.unwrap();
         assert_eq!(
-            manager.unlock(&Key::NoCustomKey).await.unwrap_err().api_error,
+            manager.unlock(&Key::NoSpecifiedKey).await.unwrap_err().api_error,
             ApiError::FailedAuthentication
         );
 
-        // Wrong CustomKey given
+        // Wrong Key256Bit given
         let (_dir, dir_proxy) = create_temp_directory();
         let manager = InsecureKeyDirectoryStorageManager::new(dir_proxy).await.unwrap();
         manager.provision(&*CUSTOM_KEY).await.unwrap();
         manager.lock().await.unwrap();
-        let wrong_key = vec![99];
+        let wrong_key = [99; 32];
         assert_eq!(
-            manager.unlock(&Key::CustomKey(wrong_key)).await.unwrap_err().api_error,
+            manager.unlock(&Key::Key256Bit(wrong_key)).await.unwrap_err().api_error,
             ApiError::FailedAuthentication
         );
 
-        // Key of length 0 given when NoCustomKey expected
+        // Key of all zeros given when NoSpecifiedKey expected
         let (_dir, dir_proxy) = create_temp_directory();
         let manager = InsecureKeyDirectoryStorageManager::new(dir_proxy).await.unwrap();
-        manager.provision(&Key::NoCustomKey).await.unwrap();
+        manager.provision(&Key::NoSpecifiedKey).await.unwrap();
         manager.lock().await.unwrap();
         assert_eq!(
-            manager.unlock(&Key::CustomKey(vec![])).await.unwrap_err().api_error,
+            manager.unlock(&Key::Key256Bit([0; 32])).await.unwrap_err().api_error,
             ApiError::FailedAuthentication
         );
 
-        // NoCustomKey given when key of length 0 expected
+        // NoSpecifiedKey given when key [0; 32] expected
         let (_dir, dir_proxy) = create_temp_directory();
         let manager = InsecureKeyDirectoryStorageManager::new(dir_proxy).await.unwrap();
-        manager.provision(&Key::CustomKey(vec![])).await.unwrap();
+        manager.provision(&Key::Key256Bit([0; 32])).await.unwrap();
         manager.lock().await.unwrap();
         assert_eq!(
-            manager.unlock(&Key::NoCustomKey).await.unwrap_err().api_error,
+            manager.unlock(&Key::NoSpecifiedKey).await.unwrap_err().api_error,
             ApiError::FailedAuthentication
         );
     }
