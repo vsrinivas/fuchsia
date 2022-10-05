@@ -4,8 +4,8 @@ The table below is a comprehensive index of all guides related to getting
 Fuchsia running on a device. Use the dropdown menu next to the table to filter
 the results. See [Descriptions](#descriptions) for an explanation of each dropdown menu.
 
-{%- set metadata | jsonloads %}
-{% include "docs/development/hardware/provision/_metadata.json" %}
+{%- set metadata | yamlloads %}
+{% include "docs/development/hardware/provision/_metadata.yaml" %}
 {%- endset %}
 
 <section>
