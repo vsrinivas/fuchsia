@@ -7,7 +7,7 @@ use fidl_fuchsia_bluetooth_bredr as bredr;
 use fidl_fuchsia_hardware_audio::{self as audio, DaiFormat, PcmFormat};
 use fidl_fuchsia_media as media;
 use fuchsia_audio_dai::{self as dai, DaiAudioDevice, DigitalAudioInterface};
-use fuchsia_bluetooth::types::PeerId;
+use fuchsia_bluetooth::types::{peer_audio_stream_id, PeerId, Uuid};
 use thiserror::Error;
 use tracing::{info, warn};
 
@@ -112,6 +112,10 @@ impl DaiAudioControl {
         Self { input, output, audio_core, started: false }
     }
 
+    const HF_INPUT_UUID: Uuid = Uuid::new16(bredr::ServiceClassProfileIdentifier::Handsfree as u16);
+    const HF_OUTPUT_UUID: Uuid =
+        Uuid::new16(bredr::ServiceClassProfileIdentifier::HandsfreeAudioGateway as u16);
+
     fn start_device(
         &mut self,
         peer_id: &PeerId,
@@ -119,24 +123,16 @@ impl DaiAudioControl {
         dai_format: DaiFormat,
         pcm_format: PcmFormat,
     ) -> Result<(), anyhow::Error> {
-        let dev = if input { &mut self.input } else { &mut self.output };
-        let dev_id = unique_id_from_peer(&peer_id, input);
+        let (uuid, dev) = if input {
+            (Self::HF_INPUT_UUID, &mut self.input)
+        } else {
+            (Self::HF_OUTPUT_UUID, &mut self.output)
+        };
+
+        let dev_id = peer_audio_stream_id(*peer_id, uuid);
         dev.config(dai_format, pcm_format)?;
         dev.start(self.audio_core.clone(), "HFP Audio", dev_id, "Fuchsia", "Sapphire HFP Headset")
     }
-}
-
-/// Generate a unique ID to use with audio_core for an input, given the `peer_id` and whether it
-/// will be an input device.  Current format is:
-/// [{PeerId in big endian, 8 bytes}, 3, 3, 3, 3, 3, 3, 3, {3 if output, 4 if input} ]
-// TODO(fxbug.dev/78139): centralize format and generation
-fn unique_id_from_peer(peer_id: &PeerId, input: bool) -> [u8; 16] {
-    let mut unique_id = [3; 16];
-    unique_id[0..8].copy_from_slice(&(peer_id.0.to_be_bytes()));
-    if input {
-        unique_id[15] = 4;
-    };
-    unique_id
 }
 
 impl AudioControl for DaiAudioControl {

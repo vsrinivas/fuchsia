@@ -65,7 +65,7 @@ pub fn find_service_uuid(identifier: &str) -> Option<AssignedNumber> {
         .iter()
         .chain(CUSTOM_SERVICE_UUIDS.iter())
         .find(|sn| sn.matches(identifier))
-        .map(|&an| an)
+        .copied()
 }
 
 /// Search for the Bluetooth SIG number for a given characteristic identifier

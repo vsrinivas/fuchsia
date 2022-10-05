@@ -44,14 +44,26 @@ impl Uuid {
     pub fn to_string(&self) -> String {
         self.0.as_hyphenated().to_string()
     }
+}
 
-    fn get_base_u32(&self) -> Result<u32, anyhow::Error> {
-        let (first, second, third, final_bytes) = self.0.as_fields();
+impl TryFrom<Uuid> for u32 {
+    type Error = anyhow::Error;
+
+    fn try_from(u: Uuid) -> Result<u32, <u32 as TryFrom<Uuid>>::Error> {
+        let (first, second, third, final_bytes) = u.0.as_fields();
         if second != 0x0000 || third != 0x1000 || final_bytes != &BASE_UUID_FINAL_EIGHT_BYTES {
-            Err(format_err!("not derived from the base UUID"))
-        } else {
-            Ok(first)
+            return Err(format_err!("not derived from the base UUID"));
         }
+        Ok(first)
+    }
+}
+
+impl TryFrom<Uuid> for u16 {
+    type Error = anyhow::Error;
+
+    fn try_from(u: Uuid) -> Result<u16, <u16 as TryFrom<Uuid>>::Error> {
+        let x: u32 = u.try_into()?;
+        x.try_into().map_err(|_e| format_err!("Not a 16-bit UUID"))
     }
 }
 
@@ -97,7 +109,7 @@ impl TryFrom<Uuid> for fidlbredr::ServiceClassProfileIdentifier {
     type Error = anyhow::Error;
 
     fn try_from(value: Uuid) -> Result<Self, Self::Error> {
-        let short: u16 = value.get_base_u32()?.try_into()?;
+        let short: u16 = value.try_into()?;
         Self::from_primitive(short).ok_or(format_err!("ServiceClassProfileIdentifier unknown"))
     }
 }
@@ -154,6 +166,22 @@ mod tests {
             let uuid = Uuid::new32(n);
             let string = uuid.to_string();
             assert_eq!("-0000-1000-8000-00805f9b34fb", &(string[8..]));
+            let back: u32 = uuid.try_into().expect("can to back to u32");
+            assert_eq!(back, n);
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn all_uuid16_valid(n in prop::num::u16::ANY) {
+            // Ensure that the for all u16, we do not panic and produce a Uuid
+            // with the correct suffix
+            let uuid = Uuid::new16(n);
+            let string = uuid.to_string();
+            assert_eq!("-0000-1000-8000-00805f9b34fb", &(string[8..]));
+            assert_eq!("00", &(string[0..2]));
+            let back: u16 = uuid.try_into().expect("can to back to u16");
+            assert_eq!(back, n);
         }
     }
 

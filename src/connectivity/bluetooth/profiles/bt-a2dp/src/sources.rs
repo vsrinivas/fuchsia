@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 use anyhow::{format_err, Context as _, Error};
+use fidl_fuchsia_bluetooth_bredr as bredr;
 use fidl_fuchsia_media::{AudioDeviceEnumeratorMarker, PcmFormat};
 use fuchsia_async as fasync;
 use fuchsia_audio_device_output::driver::SoftPcmOutput;
-use fuchsia_bluetooth::types::PeerId;
+use fuchsia_bluetooth::types::{peer_audio_stream_id, PeerId, Uuid};
 use fuchsia_inspect_derive::Inspect;
 use fuchsia_zircon::{self as zx, DurationNum};
 use futures::stream::{BoxStream, FusedStream};
@@ -77,23 +78,16 @@ impl SawWaveStream {
 
 pub struct AudioOutStream {}
 
-/// Generate a unique ID to use with audio_core for an input, given the `peer_id` and whether it
-/// will be an input device.  Current format is:
-/// [{PeerId in big endian, 8 bytes}, 2, 2, 2, 2, 2, 2, 2, 2]
-// TODO(fxbug.dev/78139): centralize format and generation
-fn unique_id_from_peer(peer_id: &PeerId) -> [u8; 16] {
-    let mut unique_id = [2; 16];
-    unique_id[0..8].copy_from_slice(&(peer_id.0.to_be_bytes()));
-    unique_id
-}
-
 const LOCAL_MONOTONIC_CLOCK_DOMAIN: u32 = 0;
+const AUDIO_SOURCE_UUID: Uuid =
+    Uuid::new16(bredr::ServiceClassProfileIdentifier::AudioSource as u16);
+
 impl AudioOutStream {
     pub fn new(
         peer_id: &PeerId,
         pcm_format: PcmFormat,
     ) -> Result<fuchsia_audio_device_output::driver::AudioFrameStream, Error> {
-        let id = unique_id_from_peer(peer_id);
+        let id = peer_audio_stream_id(*peer_id, AUDIO_SOURCE_UUID);
         let (client, frame_stream) = SoftPcmOutput::build(
             &id,
             "Google",
@@ -157,19 +151,4 @@ pub fn build_stream(
         }
         AudioSourceType::BigBen => SawWaveStream::new_big_ben(pcm_format).boxed(),
     })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn unique_id_generation() {
-        let peer_id = PeerId(1);
-        let peer_id_same = PeerId(1);
-        let peer_id_different = PeerId(3);
-
-        assert_eq!(unique_id_from_peer(&peer_id_same), unique_id_from_peer(&peer_id));
-        assert_ne!(unique_id_from_peer(&peer_id_different), unique_id_from_peer(&peer_id));
-    }
 }

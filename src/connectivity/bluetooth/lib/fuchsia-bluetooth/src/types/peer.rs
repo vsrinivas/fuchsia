@@ -59,6 +59,30 @@ pub struct Peer {
     pub bredr_services: Vec<Uuid>,
 }
 
+/// Generate a unique ID to use with audio_core for an input, given the `peer_id` and whether it
+/// will be an input device. Current format is:
+/// [
+///   0x42, 0x54, - Prefix reserved for Bluetooth Audio devices
+///   0xUU, 0xID, - UUID for the service being provided locally on this device:
+///      - 0x11, 0x1E Handsfree (for input devices)
+///      - 0x11, 0x1F Handsfree Audio Gateway (for output devices)
+///      - 0x11, 0x0A A2DP AudioSource
+///      - 0x11, 0x0B A2DP AudioSink (unused for now)
+///   0x00, 0x00, 0x00, 0x00 - Reserved for Future Use
+///   (PeerId in big endian, 8 bytes)
+/// ]
+///
+/// Panics if the uuid provided is not a 16-bit Bluetooth Service UUID.
+pub fn peer_audio_stream_id(peer_id: PeerId, uuid: Uuid) -> [u8; 16] {
+    let mut unique_id = [0; 16];
+    unique_id[0] = 0x42;
+    unique_id[1] = 0x54;
+    let short: u16 = uuid.try_into().expect("UUID should be 16-bit");
+    unique_id[2..4].copy_from_slice(&(short.to_be_bytes()));
+    unique_id[8..].copy_from_slice(&(peer_id.0.to_be_bytes()));
+    unique_id
+}
+
 impl ImmutableDataInspect<Peer> for ImmutableDataInspectManager {
     fn new(data: &Peer, manager: Node) -> ImmutableDataInspectManager {
         manager.record_string("technology", &data.technology.debug());
@@ -164,11 +188,10 @@ impl From<&Peer> for fsys::Peer {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        fidl_fuchsia_bluetooth as fbt,
-        proptest::{collection::vec, option, prelude::*},
-    };
+    use super::*;
+
+    use fidl_fuchsia_bluetooth as fbt;
+    use proptest::{collection::vec, option, prelude::*};
 
     #[test]
     fn try_from_sys_id_not_present() {
@@ -282,6 +305,28 @@ mod tests {
 
             let sys = fsys::Peer::from(&peer);
             assert_eq!(Ok(peer), sys.try_into().map_err(|e: anyhow::Error| e.to_string()));
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn peer_audio_stream_id_generation(id1 in prop::num::u64::ANY, id2 in prop::num::u64::ANY, uuid1 in prop::num::u16::ANY, uuid2 in prop::num::u16::ANY) {
+            let peer1 = PeerId(id1);
+            let peer2 = PeerId(id2);
+            let service1: Uuid = Uuid::new16(uuid1);
+            let service2: Uuid = Uuid::new16(uuid2);
+
+            if id1 == id2 {
+                assert_eq!(peer_audio_stream_id(peer1, service1.clone()), peer_audio_stream_id(peer2, service1.clone()));
+            } else {
+                assert_ne!(peer_audio_stream_id(peer1, service1.clone()), peer_audio_stream_id(peer2, service1.clone()));
+            }
+
+            if service1 == service2 {
+                assert_eq!(peer_audio_stream_id(peer1, service1), peer_audio_stream_id(peer1, service2));
+            } else {
+                assert_ne!(peer_audio_stream_id(peer1, service1), peer_audio_stream_id(peer1, service2));
+            }
         }
     }
 }
