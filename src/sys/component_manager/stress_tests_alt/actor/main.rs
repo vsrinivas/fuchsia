@@ -70,8 +70,8 @@ pub fn destroy_child<'a>(
         let instances: Vec<String> = instances.into_iter().filter(|m| m != ".").collect();
 
         if let Some(moniker) = instances.choose(&mut rng) {
-            let mut moniker = RelativeMoniker::parse(moniker).unwrap();
-            let child_moniker = moniker.down_path_mut().pop().unwrap();
+            let mut moniker = RelativeMoniker::parse_str(moniker).unwrap();
+            let child_moniker = moniker.path_mut().pop().unwrap();
             let child_name = child_moniker.name().to_string();
             let parent_moniker = moniker.to_string();
 
